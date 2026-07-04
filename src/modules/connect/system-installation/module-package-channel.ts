@@ -15,6 +15,10 @@ import {
 import { stringValue } from '../../../kernel/json-record.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
 import {
+  MANAGED_UPDATE_OWNER_ACTIONS,
+  ownerBoundaryRef,
+} from '../managed-update-owner-boundary.ts';
+import {
   type DomainModuleSpec,
   normalizeOptionalString,
   runCommand,
@@ -459,7 +463,12 @@ function buildRollbackRef(spec: DomainModuleSpec, previous: PackageChannelActiva
   if (!previous) {
     return null;
   }
-  return `opl://managed-module-package-channel/${spec.module_id}/rollback/${previous.source_git_head_sha ?? previous.tree_sha256}`;
+  return ownerBoundaryRef(
+    'opl://managed-module-package-channel',
+    spec.module_id,
+    MANAGED_UPDATE_OWNER_ACTIONS.revert,
+    previous.source_git_head_sha ?? previous.tree_sha256,
+  );
 }
 
 function selectLayer(manifest: { layers?: OciLayer[] }, mediaType: string, titleSuffix?: string) {
@@ -642,7 +651,7 @@ export function rollbackManagedModulePackageChannel(
   if (!lifecycle?.previous) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'Module package-channel rollback requires a recorded previous root.',
+      'Module package-channel revert requires a recorded previous root.',
       {
         module_id: spec.module_id,
         checkout_path: targetPath,
@@ -654,7 +663,7 @@ export function rollbackManagedModulePackageChannel(
   if (path.resolve(lifecycle.previous.root) !== path.resolve(previousPath)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Module package-channel rollback previous root does not match the managed previous path.',
+      'Module package-channel revert previous root does not match the managed previous path.',
       {
         module_id: spec.module_id,
         checkout_path: targetPath,
@@ -666,7 +675,7 @@ export function rollbackManagedModulePackageChannel(
   if (!fs.existsSync(previousPath)) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'Module package-channel rollback previous root is missing.',
+      'Module package-channel revert previous root is missing.',
       {
         module_id: spec.module_id,
         checkout_path: targetPath,
@@ -679,7 +688,7 @@ export function rollbackManagedModulePackageChannel(
   assertCleanPackageChannelRoot(targetPath, spec);
   assertCleanPackageChannelRoot(previousPath, spec);
 
-  const swapPath = `${targetPath}.rollback-${process.pid}`;
+  const swapPath = `${targetPath}.revert-${process.pid}`;
   fs.rmSync(swapPath, { recursive: true, force: true });
   try {
     fs.renameSync(targetPath, swapPath);

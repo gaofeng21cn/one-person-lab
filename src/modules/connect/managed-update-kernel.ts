@@ -25,7 +25,10 @@ import {
   controlledCommand,
   filterManagedUpdateComponents,
   KERNEL_LIFECYCLE,
+  MANAGED_UPDATE_OWNER_ACTIONS,
+  MANAGED_UPDATE_OWNER_FIELDS,
   MANAGED_UPDATE_KERNEL_ID,
+  managedUpdateComponent,
   managedUpdateOperationMode,
   managedUpdateReceiptWritePolicy,
   manualCommand,
@@ -221,7 +224,7 @@ function buildInstallationCarrierComponent(channel: string): ManagedUpdateCompon
     ],
   });
 
-  return {
+  return managedUpdateComponent({
     component_id: 'installation_carrier',
     provider_id: 'installation_carrier',
     adapter_id: 'installation_carrier_status_adapter',
@@ -294,7 +297,7 @@ function buildInstallationCarrierComponent(channel: string): ManagedUpdateCompon
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: ['carrier_specific_host_route_readback'],
+    postApplyHooks: ['carrier_specific_host_route_readback'],
     auto_apply: {
       mode: 'projection_only',
       eligible: false,
@@ -340,13 +343,13 @@ function buildInstallationCarrierComponent(channel: string): ManagedUpdateCompon
     },
     receipt: componentReceipt({
       component_id: 'installation_carrier',
-      source_manifest_ref: 'one-person-lab-app://contracts/app-release-channel.json#managed_update_plane.planes.installation_carrier',
-      post_apply_hooks: ['carrier_specific_host_route_readback'],
+      sourceManifestRef: 'one-person-lab-app://contracts/app-release-channel.json#managed_update_plane.planes.installation_carrier',
+      postApplyHooks: ['carrier_specific_host_route_readback'],
       apply_mode: 'projection_only',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: 'carrier_specific_host_update_route',
-      content_identity_fields: ['carrier_type', 'image_ref', 'image_digest', 'package_manager', 'host_update_route'],
+      contentIdentityFields: ['carrier_type', 'image_ref', 'image_digest', 'package_manager', 'host_update_route'],
     }),
     authority_boundary: {
       can_mutate_installation_carrier: false,
@@ -364,7 +367,7 @@ function buildInstallationCarrierComponent(channel: string): ManagedUpdateCompon
       'Installation carrier is projected so App Settings can show carrier-specific status and routes without making Framework the host updater.',
       'Docker/WebUI image and Linux package carrier replacement require host readback; this kernel must skip opl update apply for installation_carrier.',
     ],
-  };
+  });
 }
 
 function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknown>, channel: string): ManagedUpdateComponent {
@@ -406,7 +409,7 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
     ],
   });
 
-  return {
+  return managedUpdateComponent({
     component_id: 'runtime_substrate',
     provider_id: 'runtime_substrate',
     adapter_id: 'runtime_substrate_adapter',
@@ -417,7 +420,7 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
       owner_executor_id: 'opl_runtime_substrate_materializer',
       executor_kind: 'controlled_framework_executor',
       runner_can_execute: true,
-      allowed_operations: ['apply', 'repair', 'rollback'], // reuse-first: allow App-owned runtime materializer operations.
+      allowed_operations: ['apply', 'repair', MANAGED_UPDATE_OWNER_ACTIONS.revert], // reuse-first: allow App-owned runtime materializer operations.
       receipt_projection: 'component_receipt_with_owner_route',
       diagnostic_only: false,
       notes: [
@@ -495,7 +498,7 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: postApplyHooks,
+    postApplyHooks,
     auto_apply: {
       mode: 'controlled_apply',
       eligible: state !== 'current',
@@ -538,15 +541,15 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
     },
     receipt: componentReceipt({
       component_id: 'runtime_substrate',
-      source_manifest_ref: 'app-runtime-update-channel.json',
+      sourceManifestRef: 'app-runtime-update-channel.json',
       from_version: typeof codex?.version === 'string' ? codex.version : null,
       to_version: typeof codex?.latest_version === 'string' ? codex.latest_version : null,
-      post_apply_hooks: postApplyHooks,
+      postApplyHooks,
       apply_mode: 'controlled_apply',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: state === 'failed_with_repair' ? 'run_startup_maintenance' : null,
-      content_identity_fields: ['runtime_version', 'sha256', 'current_pointer', 'staged_root', 'opl_framework_runtime'],
+      contentIdentityFields: ['runtime_version', 'sha256', 'current_pointer', 'staged_root', 'opl_framework_runtime'],
     }),
     authority_boundary: {
       can_mutate_app_owned_runtime_root: true,
@@ -563,7 +566,7 @@ function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknow
       'Runtime substrate updates share the managed update kernel lifecycle but keep an App-owned runtime authority boundary.',
       'Compatible newer system tools may be selected at runtime after checks; they are not silently upgraded by OPL.',
     ],
-  };
+  });
 }
 
 function moduleState(module: Record<string, unknown>): ManagedUpdateComponentState {
@@ -668,7 +671,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     ],
   });
 
-  return {
+  return managedUpdateComponent({
     component_id: 'capability_packages',
     provider_id: 'capability_packages',
     adapter_id: 'capability_packages_adapter',
@@ -679,7 +682,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       owner_executor_id: 'opl_connect_managed_module_reconciler',
       executor_kind: 'clean_managed_package_executor',
       runner_can_execute: true,
-      allowed_operations: ['apply', 'repair', 'rollback'], // reuse-first: allow clean content-addressed module roots only.
+      allowed_operations: ['apply', 'repair', MANAGED_UPDATE_OWNER_ACTIONS.revert], // reuse-first: allow clean content-addressed module roots only.
       receipt_projection: 'component_receipt_with_owner_route',
       diagnostic_only: false,
       notes: [
@@ -697,7 +700,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
         channel_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
         tag_role: 'selector_only',
         installed_receipt_must_record_digest: true,
-        digest_field: 'to_digest',
+        digest_field: MANAGED_UPDATE_OWNER_FIELDS.toDigest,
       },
       default_modules_count: defaultModules.length,
       module_states: moduleStates,
@@ -738,7 +741,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: postApplyHooks,
+    postApplyHooks,
     auto_apply: {
       mode: cleanManagedScopeSafe ? 'auto_apply' : 'manual_required',
       eligible: autoApplyEligible,
@@ -795,13 +798,13 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     },
     receipt: componentReceipt({
       component_id: 'capability_packages',
-      source_manifest_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
-      post_apply_hooks: postApplyHooks,
+      sourceManifestRef: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
+      postApplyHooks,
       apply_mode: cleanManagedScopeSafe ? 'auto_apply' : 'manual_required',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: state === 'failed_with_repair' ? 'reconcile_managed_modules' : null,
-      content_identity_fields: ['digest', 'sha256', 'source_fingerprint', 'git_head_sha'],
+      contentIdentityFields: ['digest', 'sha256', 'source_fingerprint', 'git_head_sha'],
     }),
     authority_boundary: {
       can_silently_update_clean_managed_modules: true,
@@ -815,7 +818,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       'GHCR package channel is the ordinary non-development source for managed capability packages.',
       'Package-channel freshness does not claim domain readiness, artifact authority, quality verdict, or export readiness.',
     ],
-  };
+  });
 }
 
 function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, channel: string): ManagedUpdateComponent {
@@ -849,7 +852,7 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
       'managed_update_kernel_is_package_manager',
     ],
   });
-  return {
+  return managedUpdateComponent({
     component_id: 'codex_surface',
     provider_id: 'codex_surface',
     adapter_id: 'codex_surface_status_adapter',
@@ -897,7 +900,7 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: postApplyHooks,
+    postApplyHooks,
     auto_apply: {
       mode: 'projection_only',
       eligible: false,
@@ -940,13 +943,13 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
     },
     receipt: componentReceipt({
       component_id: 'codex_surface',
-      source_manifest_ref: 'module_post_apply_projection',
-      post_apply_hooks: postApplyHooks,
+      sourceManifestRef: 'module_post_apply_projection',
+      postApplyHooks,
       apply_mode: needsReload ? 'auto_apply' : 'projection_only',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: needsReload ? 'sync_codex_skills' : null,
-      content_identity_fields: ['plugin_manifest_hash', 'skill_pack_hash', 'generated_surface_hash'],
+      contentIdentityFields: ['plugin_manifest_hash', 'skill_pack_hash', 'generated_surface_hash'],
     }),
     authority_boundary: {
       can_sync_plugin_registry: true,
@@ -958,7 +961,7 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
     notes: [
       'Codex surface is a capability packages post-apply projection, not a separate package update source.',
     ],
-  };
+  });
 }
 
 function companionToolState(tool: OplCompanionToolSyncItem): ManagedUpdateComponentState {
@@ -1028,7 +1031,7 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
     ],
   });
 
-  return {
+  return managedUpdateComponent({
     component_id: 'companion_tools',
     provider_id: 'companion_tools',
     adapter_id: 'companion_tools_status_adapter',
@@ -1071,7 +1074,7 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: ['inspect_companion_tools'],
+    postApplyHooks: ['inspect_companion_tools'],
     auto_apply: {
       mode: state === 'current' ? 'projection_only' : 'manual_required',
       eligible: false,
@@ -1114,13 +1117,13 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
     },
     receipt: componentReceipt({
       component_id: 'companion_tools',
-      source_manifest_ref: 'opl_companion_skill_sync_tools',
-      post_apply_hooks: ['inspect_companion_tools'],
+      sourceManifestRef: 'opl_companion_skill_sync_tools',
+      postApplyHooks: ['inspect_companion_tools'],
       apply_mode: state === 'current' ? 'projection_only' : 'manual_required',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: state === 'current' ? null : 'inspect_companion_tools',
-      content_identity_fields: ['tool_id', 'binary_path', 'version'],
+      contentIdentityFields: ['tool_id', 'binary_path', 'version'],
     }),
     authority_boundary: {
       can_install_companion_tools: true,
@@ -1135,7 +1138,7 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
       'Companion tools are status-classified separately from the runtime substrate.',
       'The managed update kernel may project companion tool status but does not turn tool availability into domain truth or owner receipts.',
     ],
-  };
+  });
 }
 
 function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent {
@@ -1159,7 +1162,7 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
     ],
   });
 
-  return {
+  return managedUpdateComponent({
     component_id: 'workflow_profile',
     provider_id: 'workflow_profile',
     adapter_id: 'workflow_profile_adapter',
@@ -1203,7 +1206,7 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
       ),
     ],
     lifecycle: KERNEL_LIFECYCLE,
-    post_apply_hooks: ['semantic_merge_packet'],
+    postApplyHooks: ['semantic_merge_packet'],
     auto_apply: {
       mode: 'projection_only',
       eligible: false,
@@ -1231,13 +1234,13 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
     },
     receipt: componentReceipt({
       component_id: 'workflow_profile',
-      source_manifest_ref: 'opl-flow://workflow-profile',
-      post_apply_hooks: ['semantic_merge_packet'],
+      sourceManifestRef: 'opl-flow://workflow-profile',
+      postApplyHooks: ['semantic_merge_packet'],
       apply_mode: 'projection_only',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: null,
-      content_identity_fields: ['profile_id', 'profile_version', 'agents_hash', 'taste_hash', 'prompts_hash'],
+      contentIdentityFields: ['profile_id', 'profile_version', 'agents_hash', 'taste_hash', 'prompts_hash'],
     }),
     authority_boundary: {
       can_write_user_codex_profile: false,
@@ -1254,7 +1257,7 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
       'Workflow profile status is projected in the managed update plane so Settings can show OPL Flow profile merge guidance.',
       'The managed update kernel does not apply workflow profile changes; existing user profiles require Codex semantic merge packets.',
     ],
-  };
+  });
 }
 
 export async function buildManagedUpdateKernelProjection(
@@ -1295,7 +1298,7 @@ export async function buildManagedUpdateKernelProjection(
         lock_id: `${MANAGED_UPDATE_KERNEL_ID}.global`,
         lock_scope: 'single_writer_for_fetch_verify_stage_activate_post_apply_write_receipt',
         read_operations: ['status', 'check', 'plan'],
-        exclusive_operations: ['apply', 'repair', 'rollback'],
+        exclusive_operations: ['apply', 'repair', MANAGED_UPDATE_OWNER_ACTIONS.revert],
         status: 'not_acquired_for_projection',
         lock_file: managedUpdateLockFilePath(),
         stale_after_seconds: MANAGED_UPDATE_LOCK_STALE_AFTER_SECONDS,

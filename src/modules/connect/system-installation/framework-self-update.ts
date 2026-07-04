@@ -21,6 +21,11 @@ import {
   type CommandResult,
 } from './shared.ts';
 import { inspectGitRepo } from './module-git.ts';
+import {
+  MANAGED_UPDATE_OWNER_ACTIONS,
+  managedUpdateCommand,
+  ownerBoundaryRef,
+} from '../managed-update-owner-boundary.ts';
 
 const FRAMEWORK_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.framework.source.v1+gzip';
 const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.channel-manifest.v1+json';
@@ -519,7 +524,7 @@ function extractArchiveToStage(archivePath: string, stageRoot: string) {
 
 function activateFrameworkStage(targetRoot: string, stageRoot: string) {
   const previousRoot = `${targetRoot}${FRAMEWORK_PREVIOUS_ROOT_SUFFIX}`;
-  const rollbackRef = `opl://managed-update/runtime_substrate/framework/rollback/${encodeURIComponent(previousRoot)}`;
+  const rollbackRef = ownerBoundaryRef('opl://managed-update', 'runtime_substrate', 'framework', MANAGED_UPDATE_OWNER_ACTIONS.revert, previousRoot);
   const incomingRoot = `${targetRoot}.incoming-${process.pid}-${Date.now()}`;
   fs.mkdirSync(path.dirname(targetRoot), { recursive: true });
   fs.rmSync(previousRoot, { recursive: true, force: true });
@@ -924,7 +929,7 @@ export function runOplFrameworkSelfRollback(input: { targetRoot: string }): OplF
       sourceArchive: null,
       sourceArchiveSha256: null,
       previousRoot: rollbackRoot,
-      rollbackRef: `opl://managed-update/runtime_substrate/framework/rollback/${encodeURIComponent(rollbackRoot)}`,
+      rollbackRef: ownerBoundaryRef('opl://managed-update', 'runtime_substrate', 'framework', MANAGED_UPDATE_OWNER_ACTIONS.revert, rollbackRoot),
       copiedFileCount: 0,
     });
     return {
@@ -995,10 +1000,10 @@ export function readOplFrameworkRuntimeUpdateStatus(defaultTargetRoot: string) {
     previous_root: previousRoot,
     previous_root_available: fs.existsSync(previousRoot) && fs.statSync(previousRoot).isDirectory() && isOplFrameworkRoot(previousRoot),
     rollback_ref: fs.existsSync(previousRoot)
-      ? `opl://managed-update/runtime_substrate/framework/rollback/${encodeURIComponent(previousRoot)}`
+      ? ownerBoundaryRef('opl://managed-update', 'runtime_substrate', 'framework', MANAGED_UPDATE_OWNER_ACTIONS.revert, previousRoot)
       : null,
     metadata_ref: fs.existsSync(metadataPath) ? metadataPath : null,
     command_ref: 'opl update apply --component runtime_substrate --json',
-    rollback_command_ref: 'opl update rollback --component runtime_substrate --json',
+    rollback_command_ref: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate'),
   };
 }

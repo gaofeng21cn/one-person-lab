@@ -20,10 +20,13 @@ import {
 } from './managed-update-kernel.ts';
 import {
   bindOwnerExecutionResult,
+  MANAGED_UPDATE_OWNER_ACTIONS,
+  managedUpdateCommand,
   managedUpdateComponentMatches,
   managedUpdateComponentReceiptInput,
   managedUpdatePostApplyStatus,
   managedUpdateReloadStatus,
+  ownerBoundaryRef,
   selectedManagedUpdateComponentIds,
   type ManagedUpdateComponentReceiptInput,
   type ManagedUpdateKernelInput,
@@ -101,7 +104,7 @@ function runtimeAdapterReceiptRef(operation: ManagedUpdateKernelInput['operation
 }
 
 function runtimeRollbackRef(receiptRef: string) {
-  return `opl://managed-update/runtime_substrate/rollback/${encodeURIComponent(receiptRef)}`;
+  return ownerBoundaryRef('opl://managed-update', 'runtime_substrate', MANAGED_UPDATE_OWNER_ACTIONS.revert, receiptRef);
 }
 
 function systemActionStatus(value: unknown): ManagedUpdateOwnerExecutionStatus {
@@ -134,7 +137,7 @@ async function runRuntimeSubstrateAdapter(
 ): Promise<AdapterExecutionResult> {
   const receiptRef = runtimeAdapterReceiptRef(operation);
   const rollbackRef = runtimeRollbackRef(receiptRef);
-  if (operation === 'rollback') {
+  if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     const frameworkRollback = runOplFrameworkSelfRollback({
       targetRoot: resolveFrameworkUpdateTargetRoot(resolveProjectRoot()),
     });
@@ -192,11 +195,11 @@ function buildAgentPackagePostApplyActions(
   operation: ManagedUpdateKernelInput['operation'],
   reconcileResult: Record<string, unknown>,
 ): ManagedUpdateOwnerPostApplyAction[] {
-  if (operation === 'rollback') {
+  if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     return [
       {
         action_id: 'rollback_package_channel',
-        command_ref: 'opl update rollback --component capability_packages --json',
+        command_ref: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'capability_packages'),
         status: nestedRecord(reconcileResult, 'summary') ? 'completed' : 'manual_required',
         result_ref: adapterResultRef('capability_packages', operation, reconcileResult),
         result: reconcileResult,
@@ -264,7 +267,7 @@ function agentPackageReloadGuidance(
   operation: ManagedUpdateKernelInput['operation'],
   status: ManagedUpdateOwnerExecutionStatus,
 ): ManagedUpdateReloadGuidance {
-  if (status !== 'completed' || operation === 'rollback') {
+  if (status !== 'completed' || operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     return {
       reload_required: false,
       reload_recommended: false,
@@ -303,7 +306,7 @@ function buildAgentPackageStatusDetail(input: {
 }
 
 function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']): AdapterExecutionResult {
-  if (operation === 'rollback') {
+  if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     const modules = buildOplModules().modules.modules.filter((module) => module.default_install);
     const targets: Record<string, unknown>[] = [];
     for (const module of modules) {
@@ -313,7 +316,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
           target_id: module.module_id,
           status: 'manual_required',
           reason: 'rollback_requires_clean_managed_package_root',
-          action: 'rollback',
+          action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
           result: null,
         });
         continue;
@@ -329,7 +332,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
           target_id: module.module_id,
           status: 'completed',
           reason: 'package_channel_previous_root_restored',
-          action: 'rollback',
+          action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
           result,
         });
       } catch (error) {
@@ -339,7 +342,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
           target_id: module.module_id,
           status: 'manual_required',
           reason: 'package_channel_rollback_unavailable',
-          action: 'rollback',
+          action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
           result: null,
           error: normalized,
         });
@@ -352,7 +355,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
         target_id: 'scholarskills',
         status: 'completed',
         reason: 'package_channel_previous_root_restored',
-        action: 'rollback',
+        action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
         result,
       });
     } catch (error) {
@@ -362,7 +365,7 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
         target_id: 'scholarskills',
         status: 'manual_required',
         reason: 'package_channel_rollback_unavailable',
-        action: 'rollback',
+        action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
         result: null,
         error: normalized,
       });
@@ -558,7 +561,7 @@ async function runCapabilityExposureAdapter(
   contracts: FrameworkContracts,
   operation: ManagedUpdateKernelInput['operation'],
 ): Promise<AdapterExecutionResult> {
-  if (operation === 'rollback') {
+  if (operation === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
     return {
       component_id: 'codex_surface',
       adapter_id: 'codex_surface_status_adapter',

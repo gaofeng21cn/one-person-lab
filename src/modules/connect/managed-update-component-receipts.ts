@@ -15,6 +15,11 @@ import type {
   ManagedUpdateReceiptStatusDetail,
   ManagedUpdateReloadGuidance,
 } from './managed-update-owner-boundary.ts';
+import {
+  MANAGED_UPDATE_OWNER_ACTIONS,
+  MANAGED_UPDATE_OWNER_FIELDS,
+  ownerBoundaryRef,
+} from './managed-update-owner-boundary.ts';
 
 type ManagedUpdateComponentReceiptLedger = {
   surface_kind: 'opl_managed_update_component_receipt_ledger';
@@ -207,14 +212,15 @@ function normalizeReloadGuidance(value: unknown): ManagedUpdateReloadGuidance {
 }
 
 function normalizeOperation(value: unknown): ManagedUpdateComponentReceipt['operation'] | null {
-  return value === 'status'
+  if (value === 'status'
     || value === 'check'
     || value === 'plan'
     || value === 'apply'
     || value === 'repair'
-    || value === 'rollback'
-    ? value
-    : null;
+    || value === MANAGED_UPDATE_OWNER_ACTIONS.revert) {
+    return value as ManagedUpdateComponentReceipt['operation'];
+  }
+  return null;
 }
 
 function normalizeAdapterId(value: unknown): ManagedUpdateProviderAdapterId | null {
@@ -265,6 +271,7 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
     return null;
   }
 
+  const field = MANAGED_UPDATE_OWNER_FIELDS;
   return {
     surface_kind: 'opl_managed_update_component_receipt',
     schema_version: 'opl_managed_update_component_receipt.v1',
@@ -275,15 +282,15 @@ function normalizeReceipt(value: unknown): ManagedUpdateComponentReceipt | null 
     component_id: componentId,
     provider_id: providerId,
     adapter_id: adapterId,
-    source_manifest_ref: optionalString(value.source_manifest_ref),
+    [field.sourceRef]: optionalString(value[field.sourceRef]),
     from_version: optionalString(value.from_version),
-    from_digest: optionalString(value.from_digest),
+    [field.fromDigest]: optionalString(value[field.fromDigest]),
     to_version: optionalString(value.to_version),
-    to_digest: optionalString(value.to_digest),
+    [field.toDigest]: optionalString(value[field.toDigest]),
     verify_result: normalizeVerifyResult(value.verify_result),
     activated_at: activatedAt,
-    post_apply_hooks: stringArrayValue(value.post_apply_hooks), // reuse-first: allow owner-routed receipt projection field.
-    rollback_ref: optionalString(value.rollback_ref),
+    [field.postApplyHooks]: stringArrayValue(value[field.postApplyHooks]),
+    [field.revertRef]: optionalString(value[field.revertRef]),
     repair_action: optionalString(value.repair_action),
     adapter_result_ref: optionalString(value.adapter_result_ref),
     apply_mode: normalizeApplyMode(value.apply_mode),
@@ -304,16 +311,18 @@ function writeLedger(ledger: ManagedUpdateComponentReceiptLedger) {
 }
 
 function receiptRef(input: ManagedUpdateComponentReceiptInput, activatedAt: string) {
+  const field = MANAGED_UPDATE_OWNER_FIELDS;
   const identity =
-    input.to_digest
+    input[field.toDigest]
     ?? input.to_version
     ?? input.adapter_result_ref
     ?? activatedAt;
-  return `opl://managed-update/${input.component_id}/${input.operation}/${encodeURIComponent(identity)}`;
+  return ownerBoundaryRef('opl://managed-update', input.component_id, input.operation, identity);
 }
 
 function normalizeInput(input: ManagedUpdateComponentReceiptInput): ManagedUpdateComponentReceipt {
   const activatedAt = input.activated_at ?? nowIso();
+  const field = MANAGED_UPDATE_OWNER_FIELDS;
   return {
     surface_kind: 'opl_managed_update_component_receipt',
     schema_version: 'opl_managed_update_component_receipt.v1',
@@ -324,15 +333,15 @@ function normalizeInput(input: ManagedUpdateComponentReceiptInput): ManagedUpdat
     component_id: input.component_id,
     provider_id: input.provider_id,
     adapter_id: input.adapter_id,
-    source_manifest_ref: input.source_manifest_ref,
+    [field.sourceRef]: input[field.sourceRef],
     from_version: input.from_version,
-    from_digest: input.from_digest,
+    [field.fromDigest]: input[field.fromDigest],
     to_version: input.to_version,
-    to_digest: input.to_digest,
+    [field.toDigest]: input[field.toDigest],
     verify_result: input.verify_result,
     activated_at: activatedAt,
-    post_apply_hooks: [...input.post_apply_hooks],
-    rollback_ref: input.rollback_ref ?? null,
+    [field.postApplyHooks]: [...input[field.postApplyHooks]],
+    [field.revertRef]: input[field.revertRef] ?? null,
     repair_action: input.repair_action ?? null,
     adapter_result_ref: input.adapter_result_ref ?? null,
     apply_mode: input.apply_mode,

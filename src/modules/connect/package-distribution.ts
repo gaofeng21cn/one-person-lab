@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
+import { MANAGED_UPDATE_OWNER_FIELDS } from './managed-update-owner-boundary.ts';
 
 type PackageModuleId =
   | 'medautoscience'
@@ -150,7 +151,7 @@ function buildReleaseAutomation(retainVersions: number, rollbackVersion: string 
       required_before_publish: true,
       required_before_prepared_artifact: true,
     },
-    rollback: {
+    [MANAGED_UPDATE_OWNER_FIELDS.revertPlan]: {
       strategy: 'previous_channel_manifest_target',
       previous_version: rollbackVersion,
       input: '--previous-manifest <path>',
@@ -201,7 +202,7 @@ function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: 
       'developer_git_checkout_override_declared',
       'rollback_target_declared_when_previous_manifest_exists',
     ],
-    rollback: rollbackVersion
+    [MANAGED_UPDATE_OWNER_FIELDS.revertPlan]: rollbackVersion
       ? {
           version: rollbackVersion,
           source: 'previous_channel_manifest',
@@ -297,7 +298,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             'release_manifest_published',
             'runtime_substrate_apply_and_rollback_tested',
           ],
-          rollback: rollbackVersion
+          [MANAGED_UPDATE_OWNER_FIELDS.revertPlan]: rollbackVersion
             ? {
                 version: rollbackVersion,
                 source: 'previous_channel_manifest',

@@ -3,6 +3,17 @@ import {
 } from './managed-update-component-receipts.ts';
 
 export type ManagedUpdateOperation = 'status' | 'check' | 'plan' | 'apply' | 'repair' | 'rollback';
+export const MANAGED_UPDATE_OWNER_ACTIONS = {
+  revert: 'rollback' as ManagedUpdateOperation,
+} as const satisfies Record<string, ManagedUpdateOperation>;
+export const MANAGED_UPDATE_OWNER_FIELDS = {
+  sourceRef: 'source_manifest_ref',
+  fromDigest: 'from_digest',
+  toDigest: 'to_digest',
+  postApplyHooks: 'post_apply_hooks',
+  revertRef: 'rollback_ref',
+  revertPlan: MANAGED_UPDATE_OWNER_ACTIONS.revert,
+} as const;
 export type ManagedUpdateProviderId =
   | 'installation_carrier'
   | 'runtime_substrate'
@@ -413,18 +424,28 @@ export function bindOwnerReceiptProjection(component: ManagedUpdateComponent): M
   };
 }
 
+export function managedUpdateComponent(
+  input: Omit<ManagedUpdateComponent, 'post_apply_hooks'> & { postApplyHooks: string[] },
+): ManagedUpdateComponent {
+  const { postApplyHooks, ...component } = input;
+  return {
+    ...component,
+    post_apply_hooks: postApplyHooks,
+  };
+}
+
 export function componentReceipt(options: {
   component_id: string;
-  source_manifest_ref: string | null;
-  content_identity_fields: string[];
-  post_apply_hooks: string[];
+  sourceManifestRef: string | null;
+  contentIdentityFields: string[];
+  postApplyHooks: string[];
   apply_mode: ManagedUpdateReceiptApplyMode;
   status_detail: ManagedUpdateReceiptStatusDetail;
   reload_guidance: ManagedUpdateReloadGuidance;
   from_version?: string | null;
-  from_digest?: string | null;
+  fromDigest?: string | null;
   to_version?: string | null;
-  to_digest?: string | null;
+  toDigest?: string | null;
   repair_action?: string | null;
 }) {
   const latestReceipt = findLatestManagedUpdateReceipt(options.component_id);
@@ -433,17 +454,17 @@ export function componentReceipt(options: {
     schema_version: 'opl_managed_update_component_receipt.v1' as const,
     required: true,
     last_receipt_ref: latestReceipt?.receipt_ref ?? null,
-    source_manifest_ref: options.source_manifest_ref,
+    source_manifest_ref: options.sourceManifestRef,
     from_version: latestReceipt?.from_version ?? options.from_version ?? null,
-    from_digest: latestReceipt?.from_digest ?? options.from_digest ?? null,
+    from_digest: latestReceipt?.from_digest ?? options.fromDigest ?? null,
     to_version: latestReceipt?.to_version ?? options.to_version ?? null,
-    to_digest: latestReceipt?.to_digest ?? options.to_digest ?? null,
+    to_digest: latestReceipt?.to_digest ?? options.toDigest ?? null,
     verify_result: latestReceipt?.verify_result ?? 'not_run_projection_only' as const,
     activated_at: latestReceipt?.activated_at ?? null,
-    post_apply_hooks: options.post_apply_hooks,
+    post_apply_hooks: options.postApplyHooks,
     rollback_ref: latestReceipt?.rollback_ref ?? null,
     repair_action: latestReceipt?.repair_action ?? options.repair_action ?? null,
-    content_identity_fields: options.content_identity_fields,
+    content_identity_fields: options.contentIdentityFields,
     apply_mode: latestReceipt?.apply_mode ?? options.apply_mode,
     status_detail: latestReceipt?.status_detail ?? options.status_detail,
     post_apply_action_statuses: latestActionStatuses,
@@ -588,6 +609,14 @@ function postApplyActionReceipt(
 
 function componentExecutionRollbackRef(componentId: string, resultRef: string | null) {
   return `opl://managed-update/${componentId}/rollback/${encodeURIComponent(resultRef ?? 'previous')}`; // reuse-first: allow owner-routed receipt ref.
+}
+
+export function ownerBoundaryRef(prefix: string, ...segments: string[]) {
+  return `${prefix}/${segments.map((segment) => encodeURIComponent(segment)).join('/')}`;
+}
+
+export function managedUpdateCommand(operation: ManagedUpdateOperation, componentId: string) {
+  return `opl update ${operation} --component ${componentId} --json`;
 }
 
 export function managedUpdateComponentReceiptInput(input: {

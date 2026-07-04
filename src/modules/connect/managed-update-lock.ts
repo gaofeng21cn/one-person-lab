@@ -6,16 +6,17 @@ import {
   isRecord,
 } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
-import type { ManagedUpdateOperation } from './managed-update-owner-boundary.ts';
+import type { ManagedUpdateKernelInput } from './managed-update-owner-boundary.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
 const MANAGED_UPDATE_KERNEL_ID = 'opl_managed_updater_kernel';
 const STALE_AFTER_SECONDS = 1800;
+type LockOperation = ManagedUpdateKernelInput['operation'];
 
 type ManagedUpdateLockReceipt = {
   lock_id: string;
   surface_id: string;
-  operation: ManagedUpdateOperation;
+  operation: LockOperation;
   component_id: string | null;
   receipt_id: string | null;
   acquired_at: string;
@@ -67,7 +68,7 @@ export function managedUpdateLockFilePath() {
 }
 
 export function acquireManagedUpdateLock(input: {
-  operation: ManagedUpdateOperation;
+  operation: LockOperation;
   componentId?: string | null;
   receiptId?: string | null;
 }): ManagedUpdateLockHandle {
