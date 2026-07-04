@@ -360,6 +360,15 @@ Phase 3-4 的本轮收薄是 Runway control-loop / reconciler 的 safe-action re
 - Authority：local action 只允许 `read_projection_and_emit_operator_handoff_only`；禁止把 SQLite task status 当 Temporal lifecycle truth、禁止绕过 Temporal retry/dead-letter、禁止声明 provider-backed runtime ready、domain progress 或 domain ready。
 - Fresh evidence：`node --test --experimental-strip-types tests/src/cli/cases/family-runtime.test.ts tests/src/cli/cases/brand-modules-cases/runway-control-loop.ts` 30/30 pass，`npm run typecheck` pass，`npm run reuse-first:scan:diff` gate_status=ok，`git diff --check` pass。该证据只证明 handoff/readback 切片，不证明真实 Temporal history 已接管 durable lifecycle、production ready 或 owner acceptance。
 
+## Phase 3/4 Temporal Durable Lifecycle Readback Binding Lane 2026-07-04
+
+本 lane 只把 `family-runtime attempt query` 的 stage-attempt readback 明确绑定到 Temporal workflow history/query、schedule identity 与 task queue identity；不启动真实生产 Temporal service，不写 runtime DB / provider queue data，不声明 runtime ready、domain ready、production ready 或 owner acceptance。
+
+- Source/readback：`stage_attempt_query.temporal_durable_lifecycle_readback` 与顶层 `family_runtime_stage_attempt_query.temporal_durable_lifecycle_readback` 现在输出 workflow id、run id、StageAttemptQuery ref、history ref、schedule id、task queue、stage attempt identity、required evidence 与 observed evidence；没有 Temporal query/history 时状态保持 `missing_temporal_history_or_query`，本地 SQLite status 只保留 projection role。
+- Contract：`family-runtime-temporal-first-contract.json` / `buildTemporalFirstRuntimeContract()` 新增 `durable_lifecycle_readback`，把 `opl family-runtime attempt query <stage_attempt_id>` 定为该切片的 command surface，并要求 workflow/query/history、stage attempt identity、schedule identity、task queue identity 与 authority event/projection rebuild ref。
+- Authority：该 readback 只证明 OPL Runway command/readback 已能暴露 durable lifecycle handoff 所需 identity，不授权 scheduler mutation、domain truth、owner receipt、typed blocker、provider-backed runtime ready 或 domain progress claim。
+- Fresh evidence：focused `family-runtime-stage-attempts-temporal-provider-cli.test.ts` + `runway-control-loop.ts` 20/20 pass，focused `family-runtime-stage-attempts-temporal-provider.test.ts` 12/12 pass，`npm run typecheck` pass，`npm run source:modules -- --strict-imports` status=ok，`npm run reuse-first:scan:diff -- --strict` gate_status=ok，`git diff --check` pass。该证据只证明 command/contract/readback binding 切片，不证明 durable lifecycle 已完全迁到 Temporal history、production ready、domain ready 或 owner acceptance。
+
 ## Phase 1 / 7 / 9 First-Slice Foldback
 
 Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema boundary、domain-tail matrix 与 observability exporter/readback seed，不是完整 platform closeout。

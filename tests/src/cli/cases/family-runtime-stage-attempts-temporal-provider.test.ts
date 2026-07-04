@@ -815,10 +815,20 @@ test('family-runtime temporal attempt query reads managed local service state wh
     });
 
     const temporalQuery = result.family_runtime_stage_attempt_query.temporal_query;
+    const lifecycleReadback =
+      (result.family_runtime_stage_attempt_query.stage_attempt_query as Record<string, any>)
+        .temporal_durable_lifecycle_readback;
 
     assert.equal(temporalQuery.surface_kind, 'temporal_stage_attempt_query_receipt');
     assert.equal(temporalQuery.stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(temporalQuery.workflow_id, attempt.workflow_id);
+    assert.equal(lifecycleReadback.readback_status, 'bound_to_temporal_query');
+    assert.equal(lifecycleReadback.workflow_history_identity.workflow_id, attempt.workflow_id);
+    assert.equal(lifecycleReadback.workflow_history_identity.run_id, (temporalQuery as Record<string, any>).run_id);
+    assert.equal(lifecycleReadback.schedule_identity.schedule_id, 'opl-family-runtime-provider-scheduler');
+    assert.equal(lifecycleReadback.task_queue_identity.default_task_queue, taskQueue);
+    assert.equal(lifecycleReadback.observed_evidence.includes('temporal_workflow_query_readback'), true);
+    assert.equal(lifecycleReadback.ready_claim_allowed, false);
     assert.ok(temporalQuery.query);
     assert.equal(['registered', 'running', 'checkpointed', 'completed'].includes(temporalQuery.query.status), true);
     assert.equal(temporalQuery.query.provider_kind, 'temporal');

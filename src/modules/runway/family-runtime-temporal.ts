@@ -378,6 +378,27 @@ export function buildTemporalFirstRuntimeContract() {
       ],
       local_provider_role: 'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
     },
+    durable_lifecycle_readback: {
+      command_surface: 'opl family-runtime attempt query <stage_attempt_id>',
+      surface_kind: 'temporal_durable_lifecycle_readback',
+      binds_identity: [
+        'workflow_id',
+        'run_id',
+        'stage_attempt_id',
+        'schedule_id',
+        'task_queue',
+      ],
+      required_evidence: [
+        'workflow_id',
+        'temporal_workflow_history_or_query_readback',
+        'stage_attempt_identity',
+        'temporal_schedule_identity',
+        'temporal_task_queue_identity',
+        'authority_event_ref_or_projection_rebuild_ref',
+      ],
+      sqlite_status_role: 'projection_only_not_temporal_lifecycle_truth',
+      ready_claim_allowed_without_temporal_history: false,
+    },
     false_ready_boundary: {
       live_workflow_execution_ready_requires: [
         'temporal_service_reachable',

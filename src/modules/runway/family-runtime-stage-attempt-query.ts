@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { stringValue } from '../../kernel/json-record.ts';
 import { buildCodexStageActivityInput } from './family-runtime-codex-stage-runner.ts';
 import { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 import { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
@@ -14,7 +15,10 @@ import {
   listStageAttemptCloseouts,
   listStageAttemptSignals,
 } from './family-runtime-stage-attempt-ledger.ts';
-import { buildTemporalStageAttemptWorkflowContract, buildTemporalStageAttemptWorkflowInput } from './family-runtime-temporal.ts';
+import {
+  buildTemporalStageAttemptWorkflowContract,
+  buildTemporalStageAttemptWorkflowInput,
+} from './family-runtime-temporal.ts';
 import { buildAttemptGenericProjections } from './stage-attempt-projections/stage-attempt-generic-projections.ts';
 import { buildAttemptHumanReviewBurdenBudget } from '../stagecraft/index.ts';
 import { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
@@ -53,6 +57,12 @@ function recordListFrom(value: unknown) {
     : [];
 }
 
+function recordFrom(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 function signalPayloadsByKind(db: DatabaseSync, stageAttemptId: string, signalKind: string) {
   return listStageAttemptSignals(db, stageAttemptId).filter((signal) => signal.signal_kind === signalKind);
 }
@@ -72,6 +82,88 @@ function taskDeadLetterForAttempt(db: DatabaseSync, attempt: NonNullable<ReturnT
   return {
     reason: attempt.blocked_reason ?? (typeof task?.dead_letter_reason === 'string' ? task.dead_letter_reason : null),
     task: task ?? null,
+  };
+}
+
+function temporalDurableLifecycleReadback(input: {
+  attempt: NonNullable<ReturnType<typeof inspectStageAttemptPayload>>;
+  temporalQuery: Record<string, unknown> | null;
+  workflowContract: ReturnType<typeof buildTemporalStageAttemptWorkflowContract> | null;
+}) {
+  if (input.attempt.provider_kind !== 'temporal' || !input.workflowContract) {
+    return null;
+  }
+  const query = recordFrom(input.temporalQuery?.query);
+  const querySurface = stringValue(input.temporalQuery?.surface_kind);
+  const runId = stringValue(input.temporalQuery?.run_id);
+  const workflowStatus = stringValue(input.temporalQuery?.workflow_status);
+  const queryStatus = stringValue(query?.status);
+  const queryAvailable = querySurface === 'temporal_stage_attempt_query_receipt';
+  const contract = input.workflowContract.temporal_first_runtime_contract;
+  const observedEvidence = [
+    'workflow_id',
+    'stage_attempt_identity',
+    'temporal_schedule_identity',
+    'temporal_task_queue_identity',
+    queryAvailable ? 'temporal_workflow_query_readback' : null,
+    runId ? 'temporal_run_id' : null,
+  ].filter((entry): entry is string => Boolean(entry));
+
+  return {
+    surface_kind: 'temporal_durable_lifecycle_readback',
+    provider_kind: 'temporal',
+    readback_status: queryAvailable ? 'bound_to_temporal_query' : 'missing_temporal_history_or_query',
+    stage_attempt_identity: {
+      stage_attempt_id: input.attempt.stage_attempt_id,
+      workflow_id: input.attempt.workflow_id,
+      domain_id: input.attempt.domain_id,
+      stage_id: input.attempt.stage_id,
+      task_id: input.attempt.task_id ?? null,
+      source_fingerprint: input.attempt.source_fingerprint,
+    },
+    workflow_history_identity: {
+      workflow_id: input.attempt.workflow_id,
+      run_id: runId,
+      workflow_status: workflowStatus,
+      query_status: queryStatus,
+      workflow_history_ref: runId
+        ? `temporal://workflow/${encodeURIComponent(input.attempt.workflow_id)}/runs/${encodeURIComponent(runId)}/history`
+        : `temporal://workflow/${encodeURIComponent(input.attempt.workflow_id)}/history`,
+      workflow_query_ref: `temporal://workflow/${encodeURIComponent(input.attempt.workflow_id)}/query/StageAttemptQuery`,
+      query_source: stringValue(input.temporalQuery?.query_source)
+        ?? (queryAvailable ? 'workflow_query' : stringValue(input.temporalQuery?.reason)),
+    },
+    schedule_identity: {
+      schedule_id: contract.schedule_mapping.schedule_id,
+      workflow_type: contract.schedule_mapping.workflow_type,
+      cadence_owner: contract.schedule_mapping.cadence_owner,
+      scheduler_may_write_terminal_state: false,
+    },
+    task_queue_identity: {
+      default_task_queue: stringValue(input.attempt.provider_run.task_queue)
+        ?? input.workflowContract.default_task_queue,
+      resolver: contract.task_queue_mapping.resolver,
+      grouping_policy: contract.task_queue_mapping.grouping_policy,
+    },
+    required_evidence: [
+      'workflow_id',
+      'temporal_workflow_history_or_query_readback',
+      'stage_attempt_identity',
+      'temporal_schedule_identity',
+      'temporal_task_queue_identity',
+      'authority_event_ref_or_projection_rebuild_ref',
+    ],
+    observed_evidence: observedEvidence,
+    local_lifecycle_status_role: 'sqlite_stage_attempt_status_projection_only_not_temporal_lifecycle_truth',
+    ready_claim_allowed: false,
+    authority_boundary: {
+      opl: 'temporal_lifecycle_readback_and_projection_only',
+      domain: 'truth_quality_artifact_gate_owner',
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      provider_completion_is_domain_ready: false,
+    },
   };
 }
 
@@ -207,6 +299,11 @@ export function queryStageAttempt(
   const workflowContract = attempt.provider_kind === 'temporal'
     ? buildTemporalStageAttemptWorkflowContract()
     : null;
+  const temporalLifecycleReadback = temporalDurableLifecycleReadback({
+    attempt,
+    temporalQuery: options.temporalQuery ?? null,
+    workflowContract,
+  });
   const modelRouteCostProjection = buildModelRouteCostProjection({
     stageAttemptId: attempt.stage_attempt_id,
     status: attempt.status,
@@ -300,6 +397,7 @@ export function queryStageAttempt(
       ...genericProjections,
       provider_readiness_currentness: readinessCurrentness,
       runtime_currentness: runtimeCurrentness,
+      temporal_durable_lifecycle_readback: temporalLifecycleReadback,
       usage_projection: attempt.usage_projection,
       memory_trace_projection: stageProgressLog.memory_trace_projection,
       model_route_cost_projection: modelRouteCostProjection,
@@ -315,6 +413,7 @@ export function queryStageAttempt(
         status: attempt.status,
         effective_runtime_status: runtimeCurrentness.effective_runtime_status,
         runtime_currentness: runtimeCurrentness,
+        temporal_durable_lifecycle_readback: temporalLifecycleReadback,
         current_provider_readiness: currentProviderReadiness,
         provider_readiness_currentness: readinessCurrentness,
         codex_stage_activity_timeout_policy: workflowContract?.activity_timeout_policy.codex_stage_activity ?? null,

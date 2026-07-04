@@ -140,6 +140,15 @@ test('Runway Temporal-first contract readback maps workflows activities signals 
   assert.equal(contract.event_history_mapping.temporal_history_is_durable_lifecycle_truth, true);
   assert.equal(contract.event_history_mapping.sqlite_projection_only_fields.includes('tasks.status'), true);
   assert.equal(
+    contract.durable_lifecycle_readback.command_surface,
+    'opl family-runtime attempt query <stage_attempt_id>',
+  );
+  assert.equal(
+    contract.durable_lifecycle_readback.required_evidence.includes('temporal_schedule_identity'),
+    true,
+  );
+  assert.equal(contract.durable_lifecycle_readback.ready_claim_allowed_without_temporal_history, false);
+  assert.equal(
     contract.event_history_mapping.local_provider_role,
     'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
   );
