@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { SETTINGS_CONTROL_CENTER_ACTIONS } from '../../src/modules/console/app-state-settings-control-center.ts';
 import './verification-command-surfaces-cases/surface-budget-policy.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -458,6 +459,8 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
 
 test('Settings Control Center contract keeps App and Aion consumer-only', () => {
   const settingsControlCenter = readJson<{
+    allowed_action_ids: string[];
+    action_taxonomy: Record<string, string>;
     settings_ia: { required_fields: string[] };
     app_settings_read_model: { required_fields: string[] };
     consumer_only_enforcement: {
@@ -478,6 +481,15 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
       authority_boundary: Record<string, boolean>;
     };
   }>('contracts/opl-framework/settings-control-center-action-read-model-contract.json');
+
+  assert.deepEqual(
+    settingsControlCenter.allowed_action_ids,
+    SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => action.action_id),
+  );
+  assert.deepEqual(
+    settingsControlCenter.action_taxonomy,
+    Object.fromEntries(SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => [action.action_id, action.taxonomy])),
+  );
 
   const consumerOnly = settingsControlCenter.consumer_only_enforcement;
   assert.equal(

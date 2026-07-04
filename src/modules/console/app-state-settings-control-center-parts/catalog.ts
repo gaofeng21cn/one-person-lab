@@ -83,25 +83,6 @@ export type ConsumerOnlyTruthSurface = {
 export const SETTINGS_CONTROL_CENTER_CONTRACT_REF =
   'contracts/opl-framework/settings-control-center-action-read-model-contract.json';
 
-export const SETTINGS_CONTROL_CENTER_ACTION_IDS = [
-  'settings_repair_model_access',
-  'settings_verify_workspace',
-  'settings_sync_capabilities',
-  'settings_apply_opl_packages',
-  'refresh_registry',
-  'install_from_manifest_url',
-  'settings_reload_codex_surface',
-  'settings_check_app_update',
-  'settings_prune_runtime_roots_dry_run',
-  'settings_rollback_runtime_substrate',
-  'settings_install_docker_webui',
-  'settings_configure_webui_api_key',
-  'settings_select_webui_seed',
-  'settings_run_webui_startup_maintenance',
-  'settings_open_docker_webui',
-  'settings_diagnose_docker_webui',
-] as const;
-
 export const APP_AION_ALLOWED_LOCAL_SCHEDULER_ROLES = [
   'refresh_trigger',
   'ui_maintenance',
@@ -694,6 +675,10 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     verify_action_id: 'settings_diagnose_docker_webui',
   },
 ];
+
+export const SETTINGS_CONTROL_CENTER_ACTION_IDS = SETTINGS_CONTROL_CENTER_ACTIONS.map(
+  (action) => action.action_id,
+);
 
 export const SETTINGS_ISSUE_CATALOG = [
   {

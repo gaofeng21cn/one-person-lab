@@ -67,6 +67,7 @@ exit 1
       'settings_apply_opl_packages',
       'refresh_registry',
       'install_from_manifest_url',
+      'agent_package_home_shortcut_preferences_set',
       'settings_reload_codex_surface',
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
