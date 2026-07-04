@@ -1,4 +1,8 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+
+function readGeneratedJson(filePath: string): any {
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
+}
 
 test('agents scaffold validation blocks stale Foundry policy release pins', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-foundry-policy-pin-missing-'));
@@ -13,7 +17,7 @@ test('agents scaffold validation blocks stale Foundry policy release pins', () =
       'foundry-policy-pin-missing',
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
-    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    const foundryContract = readGeneratedJson(foundryContractPath);
     delete foundryContract.shared_policy_release.policy_bundle_fingerprint;
     foundryContract.shared_policy_release.consumer_alignment_check = 'family:shared-release';
     fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
@@ -49,7 +53,7 @@ test('agents scaffold validation blocks Foundry contracts missing the shared ser
       'foundry-series-profile-missing',
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
-    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    const foundryContract = readGeneratedJson(foundryContractPath);
     delete foundryContract.series_design_profile;
     fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
 
@@ -80,7 +84,7 @@ test('agents scaffold validation blocks Foundry contracts that split standard me
       'foundry-membership-policy-missing',
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
-    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    const foundryContract = readGeneratedJson(foundryContractPath);
     foundryContract.agent_membership_projection_policy.public_agent_list_must_not_split_by_plugin_transport = false;
     foundryContract.agent_membership_projection_policy.generated_surface_is_membership_axis = true;
     foundryContract.agent_membership_projection_policy.generated_surface_is_status_axis = true;
@@ -140,9 +144,7 @@ test('agents scaffold emits pure OPL-hosted public Foundry surface policy', () =
       '--domain-id',
       'foundry-pure-public-surface',
     ]);
-    const foundryContract = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
-    );
+    const foundryContract = readGeneratedJson(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     const publicSurfacePolicy = foundryContract.standard_public_projection_policy;
 
     assert.equal(publicSurfacePolicy.surface_kind, 'opl_foundry_agent_standard_public_projection_policy');
@@ -182,7 +184,7 @@ test('agents scaffold validation blocks active public forbidden Foundry role fie
       'foundry-legacy-public-fields',
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
-    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    const foundryContract = readGeneratedJson(foundryContractPath);
     foundryContract.public_surface_role = 'compatibility_alias';
     foundryContract.foundry_public_surface_role = 'domain_owned_cli_as_standard_surface';
     foundryContract.forbidden_public_surface_roles = [
@@ -233,7 +235,7 @@ test('agents scaffold validation does not treat missing forbidden-role allow fla
       'foundry-implicit-forbidden-role-policy',
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
-    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    const foundryContract = readGeneratedJson(foundryContractPath);
     delete foundryContract.standard_public_projection_policy
       .active_public_projection_allows_forbidden_surface_roles;
     fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
@@ -263,9 +265,7 @@ test('agents scaffold emits canonical Foundry series design profile', () => {
       '--domain-id',
       'foundry-series-profile',
     ]);
-    const foundryContract = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
-    );
+    const foundryContract = readGeneratedJson(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     const membershipPolicy = foundryContract.agent_membership_projection_policy;
     const profile = foundryContract.series_design_profile;
 
@@ -321,9 +321,7 @@ test('agents scaffold emits canonical workspace topology profile', () => {
       '--domain-id',
       'workspace-topology-profile',
     ]);
-    const foundryContract = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/foundry_agent_series.json'), 'utf8'),
-    );
+    const foundryContract = readGeneratedJson(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     const topology = foundryContract.workspace_topology_profile;
 
     assert.equal(topology.surface_kind, 'opl_workspace_topology_profile');
@@ -386,7 +384,7 @@ test('agents scaffold validation blocks Foundry contracts missing workspace topo
       'workspace-topology-profile-missing',
     ]);
     const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
-    const foundryContract = JSON.parse(fs.readFileSync(foundryContractPath, 'utf8'));
+    const foundryContract = readGeneratedJson(foundryContractPath);
     delete foundryContract.workspace_topology_profile;
     fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
 
@@ -436,9 +434,7 @@ test('agents scaffold emits domain-specific controlled StageRun canary evidence'
       '--domain-id',
       'award-foundry',
     ]);
-    const evidence = JSON.parse(
-      fs.readFileSync(path.join(targetDir, 'contracts/stage_run_canary_evidence.json'), 'utf8'),
-    );
+    const evidence = readGeneratedJson(path.join(targetDir, 'contracts/stage_run_canary_evidence.json'));
     assert.equal(evidence.domain_id, 'award-foundry');
     assert.equal(evidence.canary_id, 'award-foundry.controlled-stage-run-canary.v1');
     assert.equal(evidence.strategy_trace.candidate_generation[0], 'candidate-pool-ref:award-foundry/controlled-canary');
@@ -461,7 +457,7 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
       'stage-pack-v2-missing',
     ]);
     const stageControlPlanePath = path.join(targetDir, 'contracts/stage_control_plane.json');
-    const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+    const stageControlPlane = readGeneratedJson(stageControlPlanePath);
     delete stageControlPlane.stage_pack_conformance_version;
     delete stageControlPlane.stages[0].selected_executor;
     delete stageControlPlane.stages[0].stage_contract.expected_receipt_refs;
@@ -472,7 +468,7 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     fs.writeFileSync(stageControlPlanePath, `${JSON.stringify(stageControlPlane, null, 2)}\n`);
 
     const packCompilerPath = path.join(targetDir, 'contracts/pack_compiler_input.json');
-    const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerPath, 'utf8'));
+    const packCompilerInput = readGeneratedJson(packCompilerPath);
     delete packCompilerInput.source_refs.executor_policy_source_ref;
     fs.writeFileSync(packCompilerPath, `${JSON.stringify(packCompilerInput, null, 2)}\n`);
     fs.rmSync(path.join(targetDir, 'contracts/foundry_agent_series.json'));
