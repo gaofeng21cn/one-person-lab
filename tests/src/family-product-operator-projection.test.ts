@@ -55,8 +55,12 @@ test('family product operator projection answers operator status questions with 
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
   const observability = contract.runtime_observability_export as Record<string, unknown>;
-  assert.equal(observability.command, 'opl runtime observability-export [--format json|openmetrics]');
-  assert.deepEqual(observability.formats, ['json', 'openmetrics']);
+  assert.equal(observability.command, 'opl runtime observability-export [--format json|openmetrics|collector-config-json]');
+  assert.equal(
+    observability.metrics_endpoint_command,
+    'opl runtime observability-endpoint [--host <host>] [--port <port>] [--metrics-path <path>]',
+  );
+  assert.deepEqual(observability.formats, ['json', 'openmetrics', 'collector-config-json', 'http_openmetrics_endpoint']);
   assert.equal(observability.authority, 'read_only_non_authoritative');
 });
 

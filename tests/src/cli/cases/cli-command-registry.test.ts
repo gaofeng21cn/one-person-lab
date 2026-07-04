@@ -195,6 +195,50 @@ test('status command options are parsed through the registry adapter', () => {
   }
 });
 
+test('runtime observability commands expose registry metadata in command help', () => {
+  const contract = JSON.parse( // reuse-first: allow contract fixture parser
+    fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
+    'utf8',
+    ),
+  );
+  const expected = [
+    {
+      command: 'runtime observability-export',
+      contractKey: 'runtime_observability_export',
+      options: ['format'],
+    },
+    {
+      command: 'runtime observability-endpoint',
+      contractKey: 'runtime_observability_endpoint',
+      options: ['host', 'port', 'metrics-path', 'once', 'ready-file'],
+    },
+  ];
+
+  assert.equal(contract.protected_command_prefixes.includes('runtime observability'), true);
+  for (const entry of expected) {
+    assert.equal(contract.required_command_ids.includes(entry.command), true);
+    const help = runCli(['help', ...entry.command.split(' ')]).help;
+    const contractCommand = contract.commands[entry.contractKey];
+
+    assert.equal(help.registry.command_id, entry.command);
+    assert.equal(contractCommand.command_id, help.registry.command_id);
+    assert.equal(help.registry.parser_adapter, 'node_util_parse_args');
+    assert.deepEqual(
+      help.registry.options.map((option: { name: string }) => option.name),
+      entry.options,
+    );
+    assert.equal(
+      help.registry.json_output_schema_ref,
+      `contracts/opl-framework/cli-command-registry.json#/commands/${entry.contractKey}/output_schema`,
+    );
+    assert.equal(help.registry.authority_boundary.can_write_domain_truth, false);
+    assert.equal(help.registry.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(help.registry.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
+  }
+});
+
 test('update commands expose registry metadata and parse options through the registry adapter', () => {
   const contract = JSON.parse( // reuse-first: allow contract fixture parser
     fs.readFileSync(

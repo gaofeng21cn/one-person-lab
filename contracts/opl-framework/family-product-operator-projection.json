@@ -28,10 +28,13 @@
     "observability_export"
   ],
   "runtime_observability_export": {
-    "command": "opl runtime observability-export [--format json|openmetrics]",
+    "command": "opl runtime observability-export [--format json|openmetrics|collector-config-json]",
+    "metrics_endpoint_command": "opl runtime observability-endpoint [--host <host>] [--port <port>] [--metrics-path <path>]",
     "formats": [
       "json",
-      "openmetrics"
+      "openmetrics",
+      "collector-config-json",
+      "http_openmetrics_endpoint"
     ],
     "source_surfaces": [
       "opl_runtime_ledger",

@@ -67,6 +67,7 @@ const COLLECTOR_CONSUMPTION_CONFIG = {
   receiver_input_format: 'openmetrics',
   scrape_endpoint: {
     source_export_command: 'opl runtime observability-export --format openmetrics',
+    source_endpoint_command: 'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
     endpoint_kind: 'prometheus_text_endpoint',
     scheme: 'http',
     default_target: '127.0.0.1:9464',

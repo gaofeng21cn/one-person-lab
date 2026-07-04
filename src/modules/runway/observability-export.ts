@@ -1,3 +1,7 @@
+import { writeFile } from 'node:fs/promises';
+import { createServer, type Server, type ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
 import type { FrameworkContracts, JsonRecord } from '../../kernel/types.ts';
 import {
   countValue as numberValue,
@@ -21,6 +25,51 @@ import {
 
 export type ObservabilityExportFormat = 'json' | 'openmetrics' | 'collector-config-json';
 
+export type ObservabilityMetricsEndpointOptions = {
+  contracts: FrameworkContracts;
+  host?: string;
+  port?: number;
+  metricsPath?: string;
+  once?: boolean;
+  readyFile?: string;
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
+};
+
+export type ObservabilityMetricsEndpointReadback = {
+  surface_kind: 'opl_observability_metrics_endpoint';
+  schema_version: 'observability_metrics_endpoint.v1';
+  endpoint: {
+    host: string;
+    port: number;
+    metrics_path: string;
+    url: string;
+  };
+  source_export_command: string;
+  collector_consumption_config_ref: string;
+  runtime_export_ref: string;
+  server_runtime: 'node_http_standard_library';
+  once: boolean;
+  authority_boundary: {
+    can_execute_repair: false;
+    can_write_domain_truth: false;
+    can_create_owner_receipt: false;
+    can_create_typed_blocker: false;
+    can_authorize_ready_verdict: false;
+    can_claim_runtime_ready: false;
+    can_claim_domain_ready: false;
+    can_claim_production_ready: false;
+    external_collector_connected: false;
+    payload_body_exported: false;
+  };
+};
+
+export type ObservabilityMetricsEndpointHandle = {
+  server: Server;
+  readback: ObservabilityMetricsEndpointReadback;
+  closed: Promise<void>;
+  close: () => void;
+};
+
 const AUTHORITY_BOUNDARY = {
   opl: 'read_only_observability_export_projection',
   source_authority: 'opl_runtime_ledger_provider_receipts_snapshot_and_domain_projection_refs',
@@ -31,12 +80,25 @@ const AUTHORITY_BOUNDARY = {
   can_authorize_artifact_export: false,
 };
 
+const DEFAULT_METRICS_ENDPOINT_HOST = '127.0.0.1';
+const DEFAULT_METRICS_ENDPOINT_PORT = 9464;
+const DEFAULT_METRICS_ENDPOINT_PATH = '/metrics';
+
 function firstString(...values: unknown[]) {
   return values.map(stringValue).find((value) => value !== null) ?? null;
 }
 
 function booleanValue(value: unknown) {
   return typeof value === 'boolean' ? value : null;
+}
+
+function normalizeMetricsPath(value: string | undefined) {
+  const metricsPath = stringValue(value) ?? DEFAULT_METRICS_ENDPOINT_PATH;
+  return metricsPath.startsWith('/') ? metricsPath : `/${metricsPath}`;
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function counterRecord(value: unknown) {
@@ -474,4 +536,139 @@ export function renderObservabilityOpenMetrics(exportPayload: Awaited<ReturnType
     '# EOF',
   ];
   return `${lines.join('\n')}\n`;
+}
+
+function writeJsonResponse(response: ServerResponse, statusCode: number, payload: Record<string, unknown>) {
+  response.writeHead(statusCode, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+  response.end(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function buildEndpointReadback(input: {
+  host: string;
+  port: number;
+  metricsPath: string;
+  once: boolean;
+}): ObservabilityMetricsEndpointReadback {
+  return {
+    surface_kind: 'opl_observability_metrics_endpoint',
+    schema_version: 'observability_metrics_endpoint.v1',
+    endpoint: {
+      host: input.host,
+      port: input.port,
+      metrics_path: input.metricsPath,
+      url: `http://${input.host}:${input.port}${input.metricsPath}`,
+    },
+    source_export_command: 'opl runtime observability-export --format openmetrics',
+    collector_consumption_config_ref:
+      'contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/collector_consumption_config',
+    runtime_export_ref: 'opl runtime observability-export --format openmetrics',
+    server_runtime: 'node_http_standard_library',
+    once: input.once,
+    authority_boundary: {
+      can_execute_repair: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_ready_verdict: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      external_collector_connected: false,
+      payload_body_exported: false,
+    },
+  };
+}
+
+export async function startObservabilityMetricsEndpoint(
+  options: ObservabilityMetricsEndpointOptions,
+): Promise<ObservabilityMetricsEndpointHandle> {
+  const host = stringValue(options.host) ?? DEFAULT_METRICS_ENDPOINT_HOST;
+  const port = options.port ?? DEFAULT_METRICS_ENDPOINT_PORT;
+  const metricsPath = normalizeMetricsPath(options.metricsPath);
+  let closeStarted = false;
+
+  const server = createServer((request, response) => {
+    const requestUrl = new URL(request.url ?? '/', `http://${request.headers.host ?? host}`);
+    if (request.method !== 'GET' || requestUrl.pathname !== metricsPath) {
+      if (options.once === true) response.once('finish', () => close());
+      writeJsonResponse(response, 404, {
+        error: 'metrics_endpoint_not_found',
+        metrics_path: metricsPath,
+      });
+      return;
+    }
+
+    void (async () => {
+      try {
+        const exportPayload = await buildObservabilityExport(options.contracts, {
+          format: 'openmetrics',
+          runtimeSnapshotProvider: options.runtimeSnapshotProvider,
+        });
+        response.writeHead(200, {
+          'content-type': 'application/openmetrics-text; version=1.0.0; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-opl-authority-boundary': 'read_only_non_authoritative',
+        });
+        response.end(renderObservabilityOpenMetrics(exportPayload));
+      } catch (error) {
+        writeJsonResponse(response, 500, {
+          error: 'observability_export_failed',
+          message: errorMessage(error),
+        });
+      }
+    })();
+    if (options.once === true) response.once('finish', () => close());
+  });
+
+  const closed = new Promise<void>((resolve) => {
+    server.once('close', resolve);
+  });
+
+  function close() {
+    if (closeStarted) return;
+    closeStarted = true;
+    server.close();
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const onError = (error: Error) => {
+      server.off('listening', onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.off('error', onError);
+      resolve();
+    };
+    server.once('error', onError);
+    server.once('listening', onListening);
+    server.listen(port, host);
+  });
+
+  const address = server.address() as AddressInfo;
+  const readback = buildEndpointReadback({
+    host,
+    port: address.port,
+    metricsPath,
+    once: options.once === true,
+  });
+
+  if (options.readyFile) {
+    await writeFile(options.readyFile, `${JSON.stringify(readback, null, 2)}\n`);
+  }
+
+  return {
+    server,
+    readback,
+    closed,
+    close,
+  };
+}
+
+export async function serveObservabilityMetricsEndpoint(options: ObservabilityMetricsEndpointOptions) {
+  const handle = await startObservabilityMetricsEndpoint(options);
+  await handle.closed;
+  return handle.readback;
 }

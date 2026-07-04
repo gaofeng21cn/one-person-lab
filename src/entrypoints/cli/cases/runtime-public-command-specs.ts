@@ -597,6 +597,16 @@ export function buildPublicRuntimeCommandSpecs(
       ],
       group: 'runtime',
     }),
+    'runtime observability-endpoint': cloneCommandSpec(commandSpecs['runtime observability-endpoint'], {
+      usage:
+        'opl runtime observability-endpoint [--host <host>] [--port <port>] [--metrics-path <path>] [--once] [--ready-file <path>]',
+      examples: [
+        'opl runtime observability-endpoint',
+        'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
+        'opl runtime observability-endpoint --port 0 --once --ready-file /tmp/opl-observability-endpoint.json',
+      ],
+      group: 'runtime',
+    }),
     'runtime index': cloneCommandSpec(commandSpecs['runtime index'], {
       usage: 'opl runtime index',
       examples: ['opl runtime index'],

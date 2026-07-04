@@ -6,7 +6,11 @@ import { buildRuntimeManager, runRuntimeManagerAction } from '../../../modules/r
 import { buildRuntimeTraySnapshot } from '../../../modules/console/runtime-tray-snapshot.ts';
 import { buildMemoryArtifactLifecycleReadback } from '../../../modules/ledger/memory-artifact-lifecycle-readback.ts';
 import { runRuntimeOperatorActionExecute } from '../../../modules/runway/runtime-operator-action-execution.ts';
-import { buildObservabilityExport, renderObservabilityOpenMetrics } from '../../../modules/runway/observability-export.ts';
+import {
+  buildObservabilityExport,
+  renderObservabilityOpenMetrics,
+  serveObservabilityMetricsEndpoint,
+} from '../../../modules/runway/observability-export.ts';
 import { buildNativeIndexSummary } from '../../../modules/runway/native-index-summary.ts';
 import {
   buildStandardDomainAgentScaffold,
@@ -70,7 +74,7 @@ import {
 import { buildRuntimeEnvironmentCommandSpecs } from './runtime-environment-command-spec.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { parseAgentsScaffoldArgs } from './private-command-specs-parts/agents-scaffold.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseObservabilityExportArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseRuntimeAppOperatorDrilldownArgs, parseRuntimeManagerActionArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, printJson, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -474,23 +478,145 @@ export function buildInternalCommandSpecs(
         'opl runtime observability-export --format openmetrics',
         'opl runtime observability-export --format collector-config-json',
       ],
+      registry: {
+        command_id: 'runtime observability-export',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'format',
+            flag: '--format',
+            value_kind: 'string',
+            summary: 'Output format: json, openmetrics, or collector-config-json.',
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_observability_export/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_observability_export_readback',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
       handler: async (args) => {
-        const parsed = parseObservabilityExportArgs(args, commandSpecs['runtime observability-export']);
+        const parsed = parseRegisteredCommandOptions(
+          'runtime observability-export',
+          args,
+          commandSpecs['runtime observability-export'],
+        );
+        if (
+          parsed.format !== undefined
+          && parsed.format !== 'json'
+          && parsed.format !== 'openmetrics'
+          && parsed.format !== 'collector-config-json'
+        ) {
+          throw buildUsageError(
+            'runtime observability-export --format must be json, openmetrics, or collector-config-json.',
+            commandSpecs['runtime observability-export'],
+            {
+              option: '--format',
+              value: parsed.format,
+            },
+          );
+        }
+        const format = parsed.format === 'openmetrics' || parsed.format === 'collector-config-json'
+          ? parsed.format
+          : 'json';
         const exportPayload = await buildObservabilityExport(getContracts(), {
-          format: parsed.format,
+          format,
           runtimeSnapshotProvider: buildRuntimeTraySnapshot,
         });
-        if (parsed.format === 'openmetrics') {
+        if (format === 'openmetrics') {
           process.stdout.write(renderObservabilityOpenMetrics(exportPayload));
           return { __handled: true as const };
         }
-        if (parsed.format === 'collector-config-json') {
+        if (format === 'collector-config-json') {
           process.stdout.write(
             `${JSON.stringify(exportPayload.semantic_conventions.collector_consumption_config.config, null, 2)}\n`,
           );
           return { __handled: true as const };
         }
         return { observability_export: exportPayload };
+      },
+    },
+    'runtime observability-endpoint': {
+      usage:
+        'opl runtime observability-endpoint [--host <host>] [--port <port>] [--metrics-path <path>] [--once] [--ready-file <path>]',
+      summary:
+        'Serve the read-only OpenMetrics export over an HTTP /metrics endpoint for Prometheus/OpenTelemetry Collector scraping.',
+      examples: [
+        'opl runtime observability-endpoint',
+        'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
+        'opl runtime observability-endpoint --port 0 --once --ready-file /tmp/opl-observability-endpoint.json',
+      ],
+      registry: {
+        command_id: 'runtime observability-endpoint',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'host',
+            flag: '--host',
+            value_kind: 'string',
+            summary: 'HTTP host to bind.',
+          },
+          {
+            name: 'port',
+            flag: '--port',
+            value_kind: 'integer',
+            summary: 'HTTP port to bind; 0 lets the OS choose an ephemeral port.',
+            allowed_range: {
+              min: 0,
+              max: 65535,
+            },
+          },
+          {
+            name: 'metrics-path',
+            flag: '--metrics-path',
+            value_kind: 'string',
+            summary: 'HTTP path that serves OpenMetrics text.',
+          },
+          {
+            name: 'once',
+            flag: '--once',
+            value_kind: 'boolean',
+            summary: 'Close the endpoint after the first request; useful for tests and one-shot readback.',
+          },
+          {
+            name: 'ready-file',
+            flag: '--ready-file',
+            value_kind: 'string',
+            summary: 'Optional JSON file written after the endpoint is listening.',
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_observability_endpoint/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_observability_metrics_endpoint',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: async (args) => {
+        const parsed = parseRegisteredCommandOptions(
+          'runtime observability-endpoint',
+          args,
+          commandSpecs['runtime observability-endpoint'],
+        );
+        await serveObservabilityMetricsEndpoint({
+          contracts: getContracts(),
+          host: parsed.host as string | undefined,
+          port: parsed.port as number | undefined,
+          metricsPath: parsed['metrics-path'] as string | undefined,
+          once: parsed.once === true,
+          readyFile: parsed['ready-file'] as string | undefined,
+          runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+        });
+        return { __handled: true as const };
       },
     },
     'runtime index': {

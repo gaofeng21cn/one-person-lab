@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
 
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
-import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, runCliRaw, test } from '../helpers.ts';
+import { startObservabilityMetricsEndpoint } from '../../../../src/modules/runway/observability-export.ts';
+import { assert, createFamilyContractsFixtureRoot, fs, loadFrameworkContracts, os, path, repoRoot, runCli, runCliRaw, test } from '../helpers.ts';
 
 test('runtime observability export aggregates provider, stage, gate, memory, and SLO receipt counters read-only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-observability-export-state-'));
@@ -219,6 +220,10 @@ db.close();`,
       observability.semantic_conventions.collector_consumption_config.receiver_input_format,
       'openmetrics',
     );
+    assert.equal(
+      observability.semantic_conventions.collector_consumption_config.scrape_endpoint.source_endpoint_command,
+      'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
+    );
     assert.deepEqual(
       observability.semantic_conventions.collector_consumption_config.config.service.pipelines.metrics,
       {
@@ -290,5 +295,129 @@ db.close();`,
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime observability metrics endpoint serves the OpenMetrics export over HTTP read-only', async () => {
+  const handle = await startObservabilityMetricsEndpoint({
+    contracts: loadFrameworkContracts(repoRoot),
+    host: '127.0.0.1',
+    port: 0,
+    once: true,
+    runtimeSnapshotProvider: async () => ({
+      runtime_tray_snapshot: {
+        last_updated: '2026-07-04T00:00:00.000Z',
+        runtime_health: {
+          provider_kind: 'local_sqlite',
+          provider_ready: true,
+          status: 'ready',
+        },
+        provider_continuous_proof: {
+          proof_event_count: 0,
+          proven_event_count: 0,
+          continuous_proof_status: 'not_claimed',
+          proof_slo_status: 'not_claimed',
+          proof_freshness_status: 'not_claimed',
+          operator_slo_repair_loop: {
+            execution_receipts: {
+              event_count: 0,
+              executed_count: 0,
+              skipped_count: 0,
+              blocked_count: 0,
+              proven_count: 0,
+              receipt_policy: 'refs_only',
+            },
+          },
+        },
+        stage_attempt_workbench: {
+          summary: {
+            total: 1,
+            by_status: {
+              completed: 1,
+            },
+            by_domain: {
+              medautoscience: 1,
+            },
+            by_stage: {
+              analysis: 1,
+            },
+            attention_counters: {},
+            memory_ref_counters: {
+              attempts_with_consumed_memory_refs: 0,
+              attempts_with_writeback_receipt_refs: 0,
+            },
+          },
+          attempts: [
+            {
+              stage_attempt_id: 'sat_endpoint',
+              attempt_id: 'attempt_endpoint',
+              domain_id: 'medautoscience',
+              local_status: 'completed',
+              workflow_id: 'workflow_endpoint',
+              task_queue: 'opl-runtime-test',
+              source_fingerprint: 'sha256:endpoint',
+              usage_projection: {
+                retry_budget: {
+                  used_attempts: 0,
+                },
+                duration: {
+                  duration_ms_observed: 123,
+                },
+              },
+            },
+          ],
+          memory_locator_index: {
+            summary: {
+              consumed_memory_ref_count: 0,
+              writeback_receipt_ref_count: 0,
+              rejected_write_count: 0,
+            },
+          },
+        },
+        app_operator_drilldown: {
+          current_owner_delta: {
+            stage_attempt_id: 'sat_endpoint',
+            stage_run_id: 'stage-run:endpoint',
+            current_owner: 'OPL Runway',
+            domain_id: 'medautoscience',
+            route_ref: 'route:endpoint',
+            receipt_ref: 'receipt:endpoint',
+            generation: 1,
+            source_fingerprint: 'sha256:endpoint',
+          },
+          attention_first_payload: {
+            current_owner_delta: {},
+          },
+        },
+        source_refs: [],
+      },
+    }),
+  });
+
+  try {
+    assert.equal(handle.readback.surface_kind, 'opl_observability_metrics_endpoint');
+    assert.equal(handle.readback.endpoint.metrics_path, '/metrics');
+    assert.equal(handle.readback.authority_boundary.can_write_domain_truth, false);
+    assert.equal(handle.readback.authority_boundary.can_claim_runtime_ready, false);
+    assert.equal(handle.readback.authority_boundary.external_collector_connected, false);
+    assert.equal(handle.readback.server_runtime, 'node_http_standard_library');
+
+    const response = await fetch(handle.readback.endpoint.url);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type') ?? '', /openmetrics/);
+    assert.equal(response.headers.get('x-opl-authority-boundary'), 'read_only_non_authoritative');
+    const body = await response.text();
+
+    assert.match(body, /# TYPE opl_provider_ready gauge/);
+    assert.match(body, /opl_provider_ready\{provider_kind="local_sqlite"\} 1/);
+    assert.match(body, /# TYPE opl_queue_length gauge/);
+    assert.match(body, /opl_queue_length(?:\{[^}]*\})? 1/);
+    assert.match(body, /opl_observability_collector_consumption_config\{[^}]*metrics_path="\/metrics"[^}]*\} 1/);
+    assert.match(body, /opl_authority_boundary\{can_execute_repair="false",can_write_domain_truth="false",can_authorize_quality_verdict="false",can_authorize_ready_verdict="false"\} 1/);
+    assert.equal(body.includes('must-not-leak'), false);
+
+    await handle.closed;
+  } finally {
+    handle.close();
   }
 });

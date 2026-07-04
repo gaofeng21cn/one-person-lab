@@ -133,10 +133,6 @@ type SystemStartupMaintenanceCliInput = {
   scope?: 'all' | 'runtime_substrate';
 };
 
-type ObservabilityExportCliInput = {
-  format: 'json' | 'openmetrics' | 'collector-config-json';
-};
-
 type SessionLedgerCliInput = {
   limit?: number;
 };
@@ -312,7 +308,6 @@ export type {
   OplEngineCliInput,
   OplModuleExecCliInput,
   OplModuleCliInput,
-  ObservabilityExportCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,
   ParsedCliInput,

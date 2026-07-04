@@ -128,6 +128,10 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
     (semanticContract.export_readback_seed.collector_consumption_config as any).scrape_endpoint.metrics_path,
     '/metrics',
   );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_config as any).scrape_endpoint.source_endpoint_command,
+    'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
+  );
   assert.equal(semanticContract.export_readback_seed.readiness_claim, 'not_claimed');
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);
   assert.equal(semanticContract.authority_boundary.can_create_private_ledger_ui, false);
@@ -251,6 +255,10 @@ test('observability export seed groups trace metric and log signals without payl
   assert.equal(seed.collector_consumption_config.receiver_input_format, 'openmetrics');
   assert.equal(seed.collector_consumption_config.scrape_endpoint.default_target, '127.0.0.1:9464');
   assert.equal(seed.collector_consumption_config.scrape_endpoint.endpoint_required, true);
+  assert.equal(
+    seed.collector_consumption_config.scrape_endpoint.source_endpoint_command,
+    'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
+  );
   assert.deepEqual(seed.collector_consumption_config.config.service.pipelines.metrics.receivers, ['prometheus']);
   assert.deepEqual(seed.collector_consumption_config.config.service.pipelines.metrics.processors, ['batch']);
   assert.deepEqual(seed.collector_consumption_config.config.service.pipelines.metrics.exporters, ['debug']);
