@@ -1,4 +1,4 @@
-import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture, parseJsonText } from '../helpers.ts';
 import { familyRuntimeEnv, jsString } from './family-runtime-binding-intake-helpers.ts';
 
 test('family-runtime profile hydrate resolves MAS export through OPL module checkout', () => {
@@ -472,7 +472,7 @@ exit 44
       '003-dpcc-primary-care-phenotype-treatment-gap',
     ], env);
     const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.selected_count, 1);

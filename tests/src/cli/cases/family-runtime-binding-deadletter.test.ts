@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, fs, os, path, runCli, shellSingleQuote, test, parseJsonText } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -111,7 +111,7 @@ process.stdout.write(JSON.stringify({
     const refreshed = runCli(['family-runtime', 'queue', 'inspect', deadLetterTask.task_id], env);
     const task = refreshed.family_runtime_task.task;
     const events = refreshed.family_runtime_task.events;
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
 
     assert.equal(updatedFingerprint.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(updatedFingerprint.family_runtime_tick.hydration.requeued_count, 1);

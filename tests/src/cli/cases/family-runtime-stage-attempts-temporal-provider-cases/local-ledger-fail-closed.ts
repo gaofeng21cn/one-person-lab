@@ -16,6 +16,7 @@ import {
   repoRoot,
   runCli,
   test,
+  parseJsonText,
 } from '../../helpers.ts';
 import type { TemporalStageAttemptCreateOutput } from '../family-runtime-stage-attempts-temporal-provider-fixtures.ts';
 
@@ -62,7 +63,7 @@ test('family-runtime temporal attempt start blocks live Codex without stage pack
         TEMPORAL_ADDRESS: '',
       },
     });
-    const output = JSON.parse(failure.stdout || failure.stderr);
+    const output = parseJsonText(failure.stdout || failure.stderr);
 
     assert.notEqual(failure.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');

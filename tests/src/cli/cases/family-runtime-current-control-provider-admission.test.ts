@@ -20,11 +20,12 @@ import {
   runCli,
   test,
   writeJsonEmitterScript,
+  parseJsonText,
 } from './family-runtime-current-control-provider-admission-cases/shared.ts';
 
 test('DomainProgressTransitionRuntime first slice stays inside existing brand-module partition', () => {
   const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '..');
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'stage-route-scheduler-contract.json'),
     'utf8',
   ));

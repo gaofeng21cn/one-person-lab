@@ -1,4 +1,4 @@
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, test, parseJsonText } from '../helpers.ts';
 import {
   MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS,
   MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS,
@@ -610,7 +610,7 @@ test('connect sync-skills installs MAS Scholar Skills to a workspace-local Codex
     assert.equal(fs.existsSync(path.join(skillRoot, '.git')), false);
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills', 'SKILL.md')), false);
 
-    const receipt = JSON.parse(fs.readFileSync(path.join(skillRoot, '.opl-install-receipt.json'), 'utf8')) as {
+    const receipt = parseJsonText(fs.readFileSync(path.join(skillRoot, '.opl-install-receipt.json'), 'utf8')) as {
       receipt_kind: string;
       target_scope: string;
       target_root: string;

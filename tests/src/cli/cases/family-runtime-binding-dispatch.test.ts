@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture } from '../helpers.ts';
+import { assert, fs, os, path, runCli, shellSingleQuote, test, writeMasCleanRunnerFixture, parseJsonText } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -198,7 +198,7 @@ process.exit(64);
     );
     const runnerArgv = fs.readFileSync(runnerArgvPath, 'utf8').trim().split('\n');
     assert.deepEqual(runnerArgv, tick.family_runtime_tick.dispatches[0].command_preview.slice(1));
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
     assert.equal(dispatchedTask.payload.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(
       dispatchedTask.payload.opl_domain_export_context.command_source,

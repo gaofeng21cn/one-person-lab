@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, fs, os, path, runCli, shellSingleQuote, test, parseJsonText } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -110,7 +110,7 @@ process.stdout.write(JSON.stringify({
       enqueue.family_runtime_enqueue.task.task_id,
     ], familyRuntimeEnv(stateRoot, {
     }));
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');

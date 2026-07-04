@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, cliPath, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, cliPath, fs, os, path, repoRoot, runCli, test, parseJsonText } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -111,7 +111,7 @@ test('family-runtime attempt fixture-run rejects missing typed closeout refs wit
         ...familyRuntimeEnv(stateRoot),
       },
     });
-    const output = JSON.parse(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr);
     const inspected = runCli(['family-runtime', 'attempt', 'inspect', attemptId], familyRuntimeEnv(stateRoot));
 
     assert.notEqual(result.status, 0);

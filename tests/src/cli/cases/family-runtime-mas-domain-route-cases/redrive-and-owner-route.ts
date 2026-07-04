@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { assert, fs, os, path, runCli, runCliFailure, shellSingleQuote, test } from '../../helpers.ts';
+import { assert, fs, os, path, runCli, runCliFailure, shellSingleQuote, test, parseJsonText } from '../../helpers.ts';
 import { createDispatchFixture, familyRuntimeEnv } from '../family-runtime-mas-domain-route-helpers.ts';
 
 test('family-runtime operator redrive recovers failed MAS domain route provider transport without MAS truth writes', () => {
@@ -201,7 +201,7 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-handoff', '--hydrate'], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
     const task = queue.family_runtime_queue.tasks[0];
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.hydration.blocked_count, 0);
