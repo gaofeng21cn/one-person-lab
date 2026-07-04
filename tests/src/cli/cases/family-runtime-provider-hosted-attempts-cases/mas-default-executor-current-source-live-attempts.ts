@@ -13,6 +13,7 @@ import {
   withIsolatedFamilyRuntimeEnv,
 } from './mas-default-executor-current-source-helpers.ts';
 
+import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 import { runFamilyRuntimeQueueTick } from '../../../../../src/modules/runway/family-runtime-tick.ts';
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { familyRuntimePaths, type FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
@@ -40,7 +41,7 @@ test('family-runtime tick does not select newer MAS default executor row while s
       const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-live-running-expired-lease',
       ) as FamilyRuntimeTaskRow;
-      const runningPayload = JSON.parse(runningRow.payload_json) as Record<string, unknown>;
+      const runningPayload = parseJsonText(runningRow.payload_json) as Record<string, unknown>;
       const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
       assert.ok(runningAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
@@ -176,7 +177,12 @@ test('family-runtime tick does not select write owner row while same-study revie
       assert.equal(writerTask.status, 'queued');
       assert.equal(writerTask.attempts, 0);
       assert.ok(skipEvent);
-      const skipPayload = JSON.parse(skipEvent.payload_json);
+      const skipPayload = parseJsonText(skipEvent.payload_json) as {
+        reason?: string;
+        stage_attempt_id?: string;
+        live_action_type?: string;
+        action_type?: string;
+      };
       assert.equal(skipPayload.reason, 'same_study_live_stage_attempt_exists');
       assert.equal(skipPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
       assert.equal(skipPayload.live_action_type, 'return_to_ai_reviewer_workflow');
@@ -207,7 +213,7 @@ test('family-runtime tick ignores terminal MAS default executor attempts when se
       const oldRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-terminal-old',
       ) as FamilyRuntimeTaskRow;
-      const oldPayload = JSON.parse(oldRow.payload_json) as Record<string, unknown>;
+      const oldPayload = parseJsonText(oldRow.payload_json) as Record<string, unknown>;
       const oldAttempt = ensureProviderHostedStageAttempt(db, oldRow, oldPayload);
       assert.ok(oldAttempt);
       db.prepare(`
@@ -271,7 +277,7 @@ test('family-runtime tick ignores stale live MAS default executor attempts once 
       const oldRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-terminal-with-stale-live-attempt',
       ) as FamilyRuntimeTaskRow;
-      const oldPayload = JSON.parse(oldRow.payload_json) as Record<string, unknown>;
+      const oldPayload = parseJsonText(oldRow.payload_json) as Record<string, unknown>;
       const oldAttempt = ensureProviderHostedStageAttempt(db, oldRow, oldPayload);
       assert.ok(oldAttempt);
       db.prepare(`
@@ -336,7 +342,7 @@ test('family-runtime tick syncs terminal cross-task MAS default executor attempt
       const oldRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-cross-task-temporal-failed',
       ) as FamilyRuntimeTaskRow;
-      const oldPayload = JSON.parse(oldRow.payload_json) as Record<string, unknown>;
+      const oldPayload = parseJsonText(oldRow.payload_json) as Record<string, unknown>;
       const oldAttempt = ensureProviderHostedStageAttempt(db, oldRow, oldPayload);
       assert.ok(oldAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
@@ -427,7 +433,7 @@ test('family-runtime tick syncs a completed running MAS default executor attempt
       const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-running-temporal-completed-no-queued-row',
       ) as FamilyRuntimeTaskRow;
-      const runningPayload = JSON.parse(runningRow.payload_json) as Record<string, unknown>;
+      const runningPayload = parseJsonText(runningRow.payload_json) as Record<string, unknown>;
       const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
       assert.ok(runningAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
@@ -524,7 +530,7 @@ test('family-runtime tick syncs a completed running MAS default executor attempt
       assert.equal(completedTask.lease_expires_at, null);
       assert.equal(completedAttempt.status, 'completed');
       assert.equal(completedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
-      assert.deepEqual(JSON.parse(completedAttempt.closeout_refs_json), ['receipt:dm002/repaired-package']);
+      assert.deepEqual(parseJsonText(completedAttempt.closeout_refs_json) as string[], ['receipt:dm002/repaired-package']);
     });
   } finally {
     db.close();
@@ -548,7 +554,7 @@ test('family-runtime tick reports missing Temporal query handler for running MAS
       const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-running-temporal-without-query-handler',
       ) as FamilyRuntimeTaskRow;
-      const runningPayload = JSON.parse(runningRow.payload_json) as Record<string, unknown>;
+      const runningPayload = parseJsonText(runningRow.payload_json) as Record<string, unknown>;
       const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
       assert.ok(runningAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
@@ -589,13 +595,22 @@ test('family-runtime tick reports missing Temporal query handler for running MAS
       assert.equal(tick.mas_default_executor_terminal_synced_count, 0);
       assert.equal(tick.mas_default_executor_temporal_query_handler_missing_count, 1);
       assert.ok(diagnosticEvent);
-      const payload = JSON.parse(diagnosticEvent.payload_json);
+      const payload = parseJsonText(diagnosticEvent.payload_json) as {
+        reason?: string;
+        stage_attempt_id?: string;
+        workflow_id?: string;
+        sync_status?: string;
+        authority_boundary?: {
+          domain_truth_mutation?: boolean;
+          production_readiness_claim?: boolean;
+        };
+      };
       assert.equal(payload.reason, 'temporal_query_handler_missing');
       assert.equal(payload.stage_attempt_id, runningAttempt.stage_attempt_id);
       assert.equal(payload.workflow_id, runningAttempt.workflow_id);
       assert.equal(payload.sync_status, 'terminal_observation_not_attempted');
-      assert.equal(payload.authority_boundary.domain_truth_mutation, false);
-      assert.equal(payload.authority_boundary.production_readiness_claim, false);
+      assert.equal(payload.authority_boundary?.domain_truth_mutation, false);
+      assert.equal(payload.authority_boundary?.production_readiness_claim, false);
     });
   } finally {
     db.close();
