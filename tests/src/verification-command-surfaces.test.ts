@@ -5,11 +5,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 import './verification-command-surfaces-cases/surface-budget-policy.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const packageJson = JSON.parse(
+const packageJson = parseJsonText(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
 ) as { scripts?: Record<string, string>; exports?: Record<string, string> };
 
@@ -18,7 +19,7 @@ function read(relativePath: string) {
 }
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(read(relativePath)) as T;
+  return parseJsonText(read(relativePath)) as T;
 }
 
 function listJsonFiles(relativeDir: string): string[] {
@@ -125,7 +126,7 @@ test('repo temp env wrapper routes tool caches outside the checkout', () => {
   });
 
   assert.equal(result.status, 0, result.stderr);
-  const env = JSON.parse(result.stdout) as Record<string, string>;
+  const env = parseJsonText(result.stdout) as Record<string, string>;
   const tempRoot = env.OPL_REPO_TEMP_ROOT;
 
   assert.equal(env.OPL_REPO_TEMP_ENV_ACTIVE, '1');

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { cliPath, repoRoot, runCli, runCliInCwd, runCliRaw, runCliRawInCwd } from './cli/helpers.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 function makeQualityFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-'));
@@ -492,7 +493,7 @@ test('bin/opl routes quality commands into the OPL CLI instead of Codex passthro
     );
 
     assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout) as { quality_details: { surface_kind: string } };
     assert.equal(output.quality_details.surface_kind, 'opl_code_quality_details.v1');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

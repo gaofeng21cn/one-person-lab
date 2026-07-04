@@ -11,6 +11,7 @@ import {
   readBundledManagedRuntimeThreeLayerContract,
   validateManagedRuntimeContract,
 } from '../../src/modules/runway/managed-runtime-contract.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 type Json = Record<string, unknown>;
 
@@ -19,11 +20,11 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const familyManifestFixtureDir = path.join(repoRoot, 'tests', 'fixtures', 'family-manifests');
 
 function readJson(relativePath: string): Json {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Json;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Json;
 }
 
 function readJsonFixture(name: string): Json {
-  return JSON.parse(
+  return parseJsonText(
     fs.readFileSync(path.join(familyManifestFixtureDir, name), 'utf8'),
   ) as Json;
 }
