@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 import './stage-run-kernel-contract-cases/read-model-identity-binding.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -13,7 +14,7 @@ const modulePath = 'src/modules/stagecraft/stage-run-kernel.ts';
 const cockpitModulePath = 'src/modules/console/app-state-stage-run-cockpit.ts';
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
 }
 
 test('StageRun Kernel contract freezes OPL refs-only substrate and MAS authority boundary', () => {

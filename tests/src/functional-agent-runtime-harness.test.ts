@@ -8,12 +8,13 @@ import {
   buildConstructedFunctionalAgentRuntimeHarnessInput,
   runFunctionalAgentRuntimeHarness,
 } from '../../src/modules/runway/functional-agent-runtime-harness.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function readJson(relativePath: string) {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
 test('functional agent runtime harness proves constructed state machine, memory refs, retry, dead-letter, repair, and human gate chain', () => {
