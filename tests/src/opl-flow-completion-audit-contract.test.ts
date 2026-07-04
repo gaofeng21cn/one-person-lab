@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/opl-flow-completion-audit-contract.json';
@@ -13,7 +15,7 @@ function read(relativePath: string) {
 }
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(read(relativePath)) as T;
+  return parseJsonText(read(relativePath)) as T;
 }
 
 test('OPL Flow completion audit contract gates thorough landing closeout claims', () => {

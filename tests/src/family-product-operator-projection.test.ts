@@ -5,6 +5,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -13,7 +15,7 @@ function read(relativePath: string) {
 }
 
 function readJson(relativePath: string) {
-  return JSON.parse(read(relativePath)) as Record<string, unknown>;
+  return parseJsonText(read(relativePath)) as Record<string, unknown>;
 }
 
 test('family product operator projection consumes runtime, quality, and incident contracts', () => {

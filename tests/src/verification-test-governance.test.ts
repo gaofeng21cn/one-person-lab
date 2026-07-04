@@ -5,9 +5,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const packageJson = JSON.parse(
+const packageJson = parseJsonText(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
 ) as { scripts?: Record<string, string> };
 
@@ -197,7 +199,7 @@ test('lint remains a JavaScript lint entrypoint while line-budget has explicit a
 
 test('line-budget advisory is backed by a reviewed strict-ratchet contract', () => {
   const contractPath = path.join(repoRoot, 'contracts/opl-framework/source-structure-budget.json');
-  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+  const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as {
     contract_kind?: string;
     default_limit?: number;
     baseline_policy?: { mode?: string };

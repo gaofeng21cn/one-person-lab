@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/standard-agent-landing-acceptance-contract.json';
@@ -12,7 +14,7 @@ const negativeSamplesPath = 'contracts/opl-framework/standard-agent-negative-con
 const absoluteLocalPathPattern = /(?<!workspace:)\/Users\/[^ "]+/;
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
 }
 
 test('standard agent landing acceptance declares non-completion boundary', () => {

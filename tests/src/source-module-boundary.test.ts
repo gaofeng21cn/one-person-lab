@@ -6,6 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'source-module-boundary.mjs');
@@ -215,7 +217,7 @@ function runDefaultBoundary(extraArgs: string[] = []): BoundaryRunResult {
 }
 
 function parseSummary(result: BoundaryRunResult): BoundarySummary {
-  return JSON.parse(result.stdout) as BoundarySummary;
+  return parseJsonText(result.stdout) as BoundarySummary;
 }
 
 test('source module boundary reports current repo cross-module import summary', () => {

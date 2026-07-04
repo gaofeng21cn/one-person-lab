@@ -12,6 +12,7 @@ import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
 } from '../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -19,7 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function readJson(relativePath: string): JsonRecord {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
 }
 
 function record(value: unknown): JsonRecord {
