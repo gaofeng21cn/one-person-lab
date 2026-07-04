@@ -9,6 +9,8 @@ import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
 const ATTENTION_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);
+const RECENT_STAGE_ATTEMPT_STATUSES = new Set(['completed']);
+const MAX_STAGE_ATTEMPT_REFS_PER_STUDY = 8;
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -99,12 +101,15 @@ function stageAttemptSourceRef(queueDb: string, attemptId: string) {
   };
 }
 
-function stageAttemptLane(status: string): 'running' | 'attention' | null {
+function stageAttemptLane(status: string): 'running' | 'attention' | 'recent' | null {
   if (RUNNING_STAGE_ATTEMPT_STATUSES.has(status)) {
     return 'running';
   }
   if (ATTENTION_STAGE_ATTEMPT_STATUSES.has(status)) {
     return 'attention';
+  }
+  if (RECENT_STAGE_ATTEMPT_STATUSES.has(status)) {
+    return 'recent';
   }
   return null;
 }
@@ -129,8 +134,9 @@ function overlayStageAttemptsByStudyId(input: {
     ) {
       continue;
     }
-    if (!byStudyId.has(studyId)) {
-      byStudyId.set(studyId, [attempt]);
+    const attempts = byStudyId.get(studyId) ?? [];
+    if (attempts.length < MAX_STAGE_ATTEMPT_REFS_PER_STUDY) {
+      byStudyId.set(studyId, [...attempts, attempt]);
     }
   }
   return byStudyId;
@@ -158,6 +164,11 @@ function overlayStageAttempts(input: {
   const workflowId = firstString(latest.workflow_id);
   const attemptId = firstString(latest.stage_attempt_id);
   const updatedAt = firstString(latest.updated_at, input.item.updated_at);
+  const actionSummary = lane === 'running'
+    ? 'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.'
+    : lane === 'attention'
+      ? 'OPL runtime stage attempt needs operator attention; MAS terminalization is still required before any paper-progress claim.'
+      : 'OPL runtime stage attempt completed; read MAS paper-mission/study-progress for the next legal owner action before any paper-progress claim.';
 
   return {
     ...input.item,
@@ -172,12 +183,12 @@ function overlayStageAttempts(input: {
         : `OPL runtime attempt is ${latestStatus || 'not advancing'}.`),
     updated_at: updatedAt,
     source_refs: sourceRefs,
-    action_owner: lane === 'running' ? 'runtime' : 'opl',
-    action_kind: lane === 'running' ? null : 'quality_gate',
-    action_summary: lane === 'running'
-      ? 'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.'
-      : 'OPL runtime stage attempt needs operator attention; MAS terminalization is still required before any paper-progress claim.',
-    next_action_summary: firstString(input.item.next_action_summary, input.item.action_summary),
+    action_owner: lane === 'running' ? 'runtime' : lane === 'attention' ? 'opl' : 'none',
+    action_kind: lane === 'attention' ? 'quality_gate' : null,
+    action_summary: actionSummary,
+    next_action_summary: lane === 'recent'
+      ? actionSummary
+      : firstString(input.item.next_action_summary, input.item.action_summary),
     active_run_id: workflowId ?? attemptId ?? firstString(input.item.active_run_id),
     active_stage_id: stageId ?? firstString(input.item.active_stage_id, input.item.status),
     active_stage_label: stageId ?? firstString(input.item.active_stage_label, input.item.status_label),

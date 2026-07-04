@@ -591,6 +591,113 @@ test('app state fast presents failed MAS stage attempts as attention with attemp
   }
 });
 
+test('app state fast surfaces newer completed MAS stage attempts instead of stale failed attention', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-completed-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-completed-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-completed-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const failedAttemptId = 'sat_app_state_dm003_failed_stale';
+  const completedAttemptId = 'sat_app_state_dm003_completed_latest';
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    writeRunningStageAttemptFixture({
+      stateDir,
+      workspaceRoot,
+      studyId,
+      taskId: 'frt_app_state_dm003_failed_stale',
+      stageAttemptId: failedAttemptId,
+      workflowId: 'wf_app_state_dm003_failed_stale',
+      stageId: 'submission_milestone_candidate::followthrough::followthrough-02',
+      status: 'failed',
+      providerStatus: 'failed',
+      updatedAt: '2026-07-04T00:00:00.000Z',
+    });
+    writeRunningStageAttemptFixture({
+      stateDir,
+      workspaceRoot,
+      studyId,
+      taskId: 'frt_app_state_dm003_completed_latest',
+      stageAttemptId: completedAttemptId,
+      workflowId: 'wf_app_state_dm003_completed_latest',
+      stageId: 'submission_milestone_candidate',
+      status: 'completed',
+      providerStatus: 'completed',
+      updatedAt: '2026-07-04T01:00:00.000Z',
+    });
+    for (let index = 0; index < 10; index += 1) {
+      writeRunningStageAttemptFixture({
+        stateDir,
+        workspaceRoot,
+        studyId,
+        taskId: `frt_app_state_dm003_completed_old_${index}`,
+        stageAttemptId: `sat_app_state_dm003_completed_old_${index}`,
+        workflowId: `wf_app_state_dm003_completed_old_${index}`,
+        stageId: 'submission_milestone_candidate',
+        status: 'completed',
+        providerStatus: 'completed',
+        updatedAt: `2026-07-03T${String(index).padStart(2, '0')}:00:00.000Z`,
+      });
+    }
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as any;
+
+    const workbench = output.app_state.operator.workbench;
+    assert.deepEqual(
+      workbench.activity_center.active_projects.map((entry: { study_id?: string }) => entry.study_id),
+      ['002-dm-china-us-mortality-attribution'],
+    );
+    assert.deepEqual(
+      workbench.activity_center.needs_attention.map((entry: { study_id?: string }) => entry.study_id),
+      [],
+    );
+    assert.equal(
+      workbench.activity_center.recent_projects.some((entry: { study_id?: string }) => entry.study_id === studyId),
+      true,
+    );
+
+    const dm003Task = workbench.task_drilldowns.find((entry: { study_id?: string }) => entry.study_id === studyId);
+    assert.ok(dm003Task);
+    assert.equal(dm003Task.state, 'completed');
+    assert.equal(dm003Task.priority_bucket, 'recent');
+    assert.equal(dm003Task.status, 'completed');
+    assert.equal(dm003Task.status_label, 'OPL runtime completed');
+    assert.equal(dm003Task.active_stage_id, 'submission_milestone_candidate');
+    assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003_completed_latest');
+    assert.deepEqual(dm003Task.stage_attempt_ids.slice(0, 2), [completedAttemptId, failedAttemptId]);
+    assert.equal(dm003Task.stage_attempt_ids.length, 8);
+    assert.equal(dm003Task.next_visible_step.includes('MAS paper-mission/study-progress'), true);
+
+    const taskRunProjection = workbench.task_run_projection_v2;
+    assert.deepEqual(taskRunProjection.summary, {
+      task_count: 3,
+      running_task_count: 1,
+      attention_task_count: 0,
+      recent_task_count: 2,
+    });
+    const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
+    assert.ok(dm003Projection);
+    assert.equal(dm003Projection.status.state, 'completed');
+    assert.equal(dm003Projection.status.priority_bucket, 'recent');
+    assert.deepEqual(dm003Projection.stage_attempt_ids.slice(0, 2), [completedAttemptId, failedAttemptId]);
+    assert.equal(dm003Projection.stage_attempt_ids.length, 8);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('app state fast promotes MAS study activity from OPL family-runtime running stage attempts', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-stage-attempt-home-'));
   const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-stage-attempt-repo-'));
