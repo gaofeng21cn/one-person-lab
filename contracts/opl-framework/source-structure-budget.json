@@ -60,34 +60,5 @@
     "retired_baseline": "advisory_by_default_strict_blocks_until_removed",
     "line_count_ledger_owner": "this_contract_and_scripts_line_budget"
   },
-  "reviewed_baselines": [
-    {
-      "path": "tests/src/cli/cases/family-runtime.test.ts",
-      "limit": 1048,
-      "owner": "OPL Runway tests",
-      "reason": "Family runtime CLI tests share queue, lifecycle, provider, dispatch, approval, and admission fixtures; current line count is reviewed as a strict-ratchet test baseline.",
-      "intended_boundary": "Split by status/lifecycle, provider/repair, enqueue/approval/hold, attempt ledger, and admission/tick command groups."
-    },
-    {
-      "path": "tests/src/cli/cases/managed-update-kernel-projection.test.ts",
-      "limit": 1086,
-      "owner": "OPL Connect tests",
-      "reason": "Managed update kernel projection tests share update status, plan, apply, projection-only component, and selector fixtures; current line count is reviewed as a strict-ratchet baseline.",
-      "intended_boundary": "Split by contract/status, plan, projection-only apply guards, companion tools, workflow profile, and selector alias scenarios."
-    },
-    {
-      "path": "tests/src/cli/cases/system-startup-maintenance-maintenance.test.ts",
-      "limit": 1099,
-      "owner": "OPL Connect tests",
-      "reason": "Startup-maintenance tests cover framework archive apply, package-channel artifact apply, rollback, Codex refresh, module sync, OMA install, timeout, and developer checkout scenarios with shared setup.",
-      "intended_boundary": "Split by framework artifact apply, rollback, Codex refresh, module sync, OMA managed root, health timeout, and developer checkout maintenance scenarios."
-    },
-    {
-      "path": "tests/src/family-runtime-temporal-provider.test.ts",
-      "limit": 1070,
-      "owner": "OPL Runway tests",
-      "reason": "Temporal provider tests cover workflow updates, retry, activity state, replay, readiness, closeout, provider blockers, and refs-only history with shared Temporal fixtures.",
-      "intended_boundary": "Split by contract/readiness, operator updates, retry/state/replay, blocker handling, refs-only history, typed closeout, and rejection scenarios."
-    }
-  ]
+  "reviewed_baselines": []
 }
