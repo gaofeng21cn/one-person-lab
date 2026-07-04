@@ -1,4 +1,6 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+
+const readJsonArtifact = (filePath: string): any => parseJsonText(fs.readFileSync(filePath, 'utf8'));
 
 test('agent-lab workflow-template run materializes deterministic executable workflow artifacts', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-workflow-run-'));
@@ -96,16 +98,16 @@ test('agent-lab workflow-template run materializes deterministic executable work
         assert.equal(fs.existsSync(file), true);
       }
 
-      const workflowSpec = JSON.parse(fs.readFileSync(files.workflow_spec, 'utf8'));
-      const suiteTopology = JSON.parse(fs.readFileSync(files.suite_topology, 'utf8'));
-      const laneRefs = JSON.parse(fs.readFileSync(files.lane_refs, 'utf8'));
-      const verifierRefs = JSON.parse(fs.readFileSync(files.verifier_refs, 'utf8'));
-      const workOrderDraftRefs = JSON.parse(fs.readFileSync(files.work_order_draft_refs, 'utf8'));
-      const workOrderSequence = JSON.parse(fs.readFileSync(files.work_order_sequence, 'utf8'));
-      const progressEvents = JSON.parse(fs.readFileSync(files.progress_events, 'utf8'));
-      const finalProof = JSON.parse(fs.readFileSync(files.final_proof, 'utf8'));
-      const typedBlockerOrAcceptance = JSON.parse(fs.readFileSync(files.typed_blocker_or_acceptance, 'utf8'));
-      const runnerExecutionReceipt = JSON.parse(fs.readFileSync(files.runner_execution_receipt, 'utf8'));
+      const workflowSpec = readJsonArtifact(files.workflow_spec);
+      const suiteTopology = readJsonArtifact(files.suite_topology);
+      const laneRefs = readJsonArtifact(files.lane_refs);
+      const verifierRefs = readJsonArtifact(files.verifier_refs);
+      const workOrderDraftRefs = readJsonArtifact(files.work_order_draft_refs);
+      const workOrderSequence = readJsonArtifact(files.work_order_sequence);
+      const progressEvents = readJsonArtifact(files.progress_events);
+      const finalProof = readJsonArtifact(files.final_proof);
+      const typedBlockerOrAcceptance = readJsonArtifact(files.typed_blocker_or_acceptance);
+      const runnerExecutionReceipt = readJsonArtifact(files.runner_execution_receipt);
       const resumeToken = fs.readFileSync(files.resume_token, 'utf8').trim();
 
       assert.equal(workflowSpec.template_id, templateId);
@@ -236,9 +238,9 @@ test('agent-lab rho run materializes no-apply RHO artifacts and work-order draft
       assert.equal(fs.existsSync(file), true);
     }
 
-    const workOrder = JSON.parse(fs.readFileSync(files.work_order_draft, 'utf8'));
-    const digests = JSON.parse(fs.readFileSync(files.trajectory_digests, 'utf8'));
-    const noForbiddenWrite = JSON.parse(fs.readFileSync(files.no_forbidden_write, 'utf8'));
+    const workOrder = readJsonArtifact(files.work_order_draft);
+    const digests = readJsonArtifact(files.trajectory_digests);
+    const noForbiddenWrite = readJsonArtifact(files.no_forbidden_write);
     assert.equal(workOrder.status, 'ready_for_target_agent_source_patch');
     assert.match(workOrder.executor_lease_ref, /^executor-lease:codex-cli\/rho\//);
     assert.equal(workOrder.authority_boundary.can_write_target_domain_truth, false);
