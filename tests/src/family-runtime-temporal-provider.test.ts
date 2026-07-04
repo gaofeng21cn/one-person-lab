@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import './family-runtime-temporal-provider-cases/closeout-payload-compaction.ts';
+import './family-runtime-temporal-provider-cases/operator-updates.ts';
 import './family-runtime-temporal-provider-cases/scheduler-and-readiness.ts';
 import {
   defaultPayloadConverter,
@@ -28,7 +29,6 @@ import {
   humanGateSignal,
   stageAttemptQuery,
   StageAttemptWorkflow,
-  stageAttemptOperatorUpdate,
   userInstructionSignal,
 } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import {
@@ -180,108 +180,6 @@ test('Temporal workflow start Search Attributes are array-valued even when optio
   assert.deepEqual(attributes.OplSourceFingerprint, []);
   for (const [name, value] of Object.entries(attributes)) {
     assert.equal(Array.isArray(value), true, `${name} must be an array for Temporal start`);
-  }
-});
-
-test('Temporal StageAttemptWorkflow acks operator actions through Updates', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-update-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
-    });
-
-    const result = await worker.runUntil(async () => {
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [workflowInput()],
-        taskQueue,
-        workflowId: `wf-temporal-update-test-${Date.now()}`,
-      });
-      const humanGateAck = await handle.executeUpdate(stageAttemptOperatorUpdate, {
-        args: [{
-          signal_kind: 'human_gate',
-          payload: {
-            human_gate_ref: 'gate:update-review',
-            reason: 'needs_review',
-          },
-          source: 'test-update',
-        }],
-      });
-      const instructionAck = await handle.executeUpdate(stageAttemptOperatorUpdate, {
-        args: [{
-          signal_kind: 'user_instruction',
-          payload: {
-            instruction_ref: 'user:update-instruction',
-          },
-          source: 'test-update',
-        }],
-      });
-      const finalState = await handle.result();
-      return { humanGateAck, instructionAck, finalState };
-    });
-
-    assert.equal(result.humanGateAck.update_status, 'accepted');
-    assert.equal(result.humanGateAck.signal_kind, 'human_gate');
-    assert.equal(result.humanGateAck.stage_attempt_id, 'sat_temporal_test');
-    assert.equal(result.instructionAck.update_status, 'accepted');
-    assert.equal(result.finalState.signals.length, 2);
-    assert.deepEqual(result.finalState.human_gate_refs, ['gate:update-review']);
-    assert.equal(
-      result.finalState.signals.map((signal) => signal.source).includes('test-update'),
-      true,
-    );
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal StageAttemptWorkflow rejects invalid operator Updates before mutation', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-update-reject-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
-    });
-
-    const result = await worker.runUntil(async () => {
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [workflowInput()],
-        taskQueue,
-        workflowId: `wf-temporal-update-reject-test-${Date.now()}`,
-      });
-      await assert.rejects(
-        handle.executeUpdate(stageAttemptOperatorUpdate, {
-          args: [{
-            signal_kind: 'human_gate',
-            payload: {
-              reason: 'missing_ref',
-            },
-            source: 'test-update',
-          }],
-        }),
-        (error) => error instanceof Error
-          && error.name === 'WorkflowUpdateFailedError'
-          && error.cause instanceof Error
-          && /human_gate update requires payload\.human_gate_ref/.test(error.cause.message),
-      );
-      const queriedState = await handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
-      const finalState = await handle.result();
-      return { queriedState, finalState };
-    });
-
-    assert.equal(result.queriedState.signals.length, 0);
-    assert.equal(result.finalState.signals.length, 0);
-    assert.deepEqual(result.finalState.human_gate_refs, []);
-  } finally {
-    await testEnv.teardown();
   }
 });
 
