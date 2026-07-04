@@ -2,6 +2,7 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   test,
@@ -73,7 +74,7 @@ test('runtime App release evidence long-operator finish materializes a record pa
       OPL_STATE_DIR: stateRoot,
     }).app_release_long_operator_observation_start;
 
-    const workorder = JSON.parse(fs.readFileSync(startOutput.workorder_file, 'utf8'));
+    const workorder = parseJsonText(fs.readFileSync(startOutput.workorder_file, 'utf8')) as any;
     fs.writeFileSync(
       startOutput.workorder_file,
       `${JSON.stringify({
@@ -125,7 +126,7 @@ test('runtime App release evidence long-operator finish materializes a record pa
     assert.equal(finishOutput.authority_boundary.can_claim_release_ready, false);
     assert.equal(finishOutput.authority_boundary.can_claim_production_ready, false);
 
-    const payload = JSON.parse(fs.readFileSync(finishOutput.record_payload_file, 'utf8'));
+    const payload = parseJsonText(fs.readFileSync(finishOutput.record_payload_file, 'utf8')) as any;
     assert.deepEqual(payload.long_operator_evidence_refs, finishOutput.long_operator_evidence_refs);
 
     const recordOutput = runCli([
@@ -167,7 +168,7 @@ test('runtime App release evidence long-operator event command records constrain
       OPL_STATE_DIR: stateRoot,
     }).app_release_long_operator_observation_start;
 
-    const workorder = JSON.parse(fs.readFileSync(startOutput.workorder_file, 'utf8'));
+    const workorder = parseJsonText(fs.readFileSync(startOutput.workorder_file, 'utf8')) as any;
     fs.writeFileSync(
       startOutput.workorder_file,
       `${JSON.stringify({
@@ -209,7 +210,7 @@ test('runtime App release evidence long-operator event command records constrain
     const operatorLog = fs.readFileSync(startOutput.operator_log_file, 'utf8')
       .split('\n')
       .filter((line) => line.trim().length > 0)
-      .map((line) => JSON.parse(line));
+      .map((line) => parseJsonText(line) as any);
     assert.deepEqual(operatorLog.map((event) => event.event_kind), eventKinds);
     assert.deepEqual(operatorLog.map((event) => event.evidence_ref), eventKinds.map(
       (eventKind) => `operator-evidence:app-release/${eventKind}`,

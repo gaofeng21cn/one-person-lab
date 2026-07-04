@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -7,7 +7,7 @@ import {
 test('agents conformance blocks multiple ordinary default routes for a Foundry Agent', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   const secondaryDefaultStage = {
     ...stageControlPlane.stages[0],
     stage_id: 'secondary_default_stage',
@@ -46,7 +46,7 @@ test('agents conformance blocks multiple ordinary default routes for a Foundry A
 test('agents conformance treats explicit Codex follow-on lanes as non-default route variants', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   const followOnStage = {
     ...stageControlPlane.stages[0],
     stage_id: 'book_materialization_follow_on',
@@ -87,7 +87,7 @@ test('agents conformance treats explicit Codex follow-on lanes as non-default ro
 test('agents conformance blocks explicit lanes that declare ordinary default route role', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   const proofStage = {
     ...stageControlPlane.stages[0],
     stage_id: 'provider_proof_lane',
@@ -147,7 +147,7 @@ test('agents conformance reports the single ordinary route budget for ready Foun
 test('agents conformance requires proof diagnostic cleanup and long-soak route variants to be explicit', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   stageControlPlane.stages.push(
     {
       ...stageControlPlane.stages[0],

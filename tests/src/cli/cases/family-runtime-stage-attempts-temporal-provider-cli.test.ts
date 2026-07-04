@@ -7,6 +7,7 @@ import {
   createGitModuleRemoteFixture,
   fs,
   os,
+  parseJsonText,
   path,
   repoRoot,
   runCli,
@@ -63,7 +64,7 @@ test('family-runtime temporal attempt signal fails closed when Temporal address 
         TEMPORAL_ADDRESS: '',
       },
     });
-    const output = JSON.parse(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr) as any;
 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');
@@ -162,7 +163,7 @@ test('family-runtime temporal attempt cancel fails closed when Temporal address 
         TEMPORAL_ADDRESS: '',
       },
     });
-    const output = JSON.parse(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr) as any;
 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');
@@ -206,7 +207,7 @@ test('family-runtime temporal attempt cancel refuses non-temporal attempts', () 
         ...familyRuntimeEnv(stateRoot),
       },
     });
-    const output = JSON.parse(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr) as any;
 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'cli_usage_error');
@@ -385,7 +386,7 @@ test('family-runtime temporal attempt start refuses non-temporal attempts', () =
         ...familyRuntimeEnv(stateRoot),
       },
     });
-    const output = JSON.parse(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr) as any;
 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'cli_usage_error');
