@@ -803,11 +803,11 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 
 ## Runtime App Operator Drilldown Test Projection Cleanup 2026-07-04
 
-本轮只清理低风险 kernel helper 和 tests/fixture/projection 词汇：kernel shared JSON helper 复用现有 owner boundary，App/operator drilldown 测试内部变量统一称为 `projection`，避免把 refs-only App read model 误读成私有 observability ledger。命令名、文件名和公开 surface 仍保留 `app-operator-drilldown`，因为它们是现有 CLI/API 入口和回归夹具，不在本轮改名。
+本轮只清理低风险 tests/fixture/projection 词汇：App/operator drilldown 测试内部变量统一称为 `projection`，避免把 refs-only App read model 误读成私有 observability ledger。命令名、文件名和公开 surface 仍保留 `app-operator-drilldown`，因为它们是现有 CLI/API 入口和回归夹具，不在本轮改名。
 
-- Source：`managed-runtime-contract.ts` 与 `default-caller-surface-gates.ts` 复用 `contract-validation.ts` / `json-file.ts` 的 `isRecord`、`optionalString`，不再维护局部 JSON boundary helper。
+- Scope：本 lane 不改 `src/modules` active runtime/update/schema behavior，不改 `src/kernel/**`、domain truth、owner receipt、typed blocker、runtime DB/provider queue、release artifact 或 App/Aion repo；当前 full scan 中的 kernel helper finding 属于 existing allowed projection boundary，不是本 lane 写集。
 - Test fixture：runtime App/operator drilldown 相关测试只做内部命名收敛，断言内容、CLI 命令、fixture 数据、authority boundary 与 owner receipt / typed blocker 语义不变。
-- Fresh evidence：focused runtime App/operator drilldown / reuse-first scan tests 154/154 pass，`npm run typecheck` pass，`npm run source:modules -- --strict-imports --strict-cycles` status=ok，`npm run reuse-first:scan:diff -- --diff-ref main --strict` exit 0 且 hard finding 为 0；full scan 当前为 `finding_count=1276`、`hard_gate_finding_count=740`、`advisory_finding_count=536`、`handwritten_json_boundary=472`、`phase1-kernel-shared-json-boundary-helper=13`、`phase10-test-and-fixture-projections=1115`。该证据只证明 helper 复用和测试投影命名收敛，不证明 runtime ready、domain ready、production ready 或 owner acceptance。
+- Fresh evidence：focused runtime App/operator drilldown / reuse-first scan tests 139/139 pass，`npm run typecheck` pass，`npm run source:modules -- --strict-imports --strict-cycles` status=ok，`npm run reuse-first:scan:diff -- --strict` exit 0 且 hard finding 为 0；full scan 当前为 `finding_count=1276`、`hard_gate_finding_count=740`、`advisory_finding_count=536`、`handwritten_json_boundary=472`、`phase1-kernel-shared-json-boundary-helper=13`、`phase10-test-and-fixture-projections=1115`。该证据只证明测试投影命名收敛，不证明 runtime ready、domain ready、production ready 或 owner acceptance。
 
 ## Phase 5 Managed Update Execution Helper Foldback 2026-07-04
 
