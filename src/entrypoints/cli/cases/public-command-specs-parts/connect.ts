@@ -6,6 +6,14 @@ import {
   runOplConnectExternalSkillsSourceAdd,
   runOplConnectExternalSkillsSync,
 } from '../../../../modules/connect/opl-connect-external-skills.ts';
+import {
+  listOplAgentPackages,
+  runOplAgentPackageInstall,
+  runOplAgentPackageManifestValidate,
+  runOplAgentPackageRegistryRefresh,
+  type AgentPackageInstallInput,
+  type AgentPackageManifestValidateInput,
+} from '../../../../modules/connect/index.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
 import {
   runOplConnectReferenceVerification,
@@ -63,6 +71,10 @@ type ExternalSkillsSyncArgs = ExternalSkillsInspectArgs & {
   targetQuest?: string;
   targetRoot?: string;
 };
+
+type AgentPackageSelectionArgs = AgentPackageManifestValidateInput;
+
+type AgentPackageInstallArgs = AgentPackageInstallInput;
 
 const MODULE_ACTION_COMMANDS = [
   'connect install',
@@ -260,6 +272,44 @@ function parseModuleActionArgs(command: string, args: string[], spec: CommandSpe
   return moduleId;
 }
 
+function parseAgentPackageRegistryRefreshArgs(args: string[], spec: CommandSpec) {
+  const parsed = parseRegisteredCommandOptions('connect agent-packages registry refresh', args, spec);
+  const registryUrl = String(parsed['registry-url'] ?? '').trim();
+  if (!registryUrl) {
+    throw buildUsageError('connect agent-packages registry refresh requires --registry-url.', spec, {
+      required: ['--registry-url'],
+    });
+  }
+  return { registryUrl };
+}
+
+function parseAgentPackageSelectionArgs(
+  command: string,
+  args: string[],
+  spec: CommandSpec,
+): AgentPackageSelectionArgs {
+  const parsed = parseRegisteredCommandOptions(command, args, spec);
+  return {
+    manifestUrl: readOptionalString(parsed['manifest-url']),
+    registryUrl: readOptionalString(parsed['registry-url']),
+    packageId: readOptionalString(parsed['package-id']),
+    trustTier: readOptionalString(parsed['trust-tier']),
+    sourceKind: readOptionalString(parsed['source-kind']) as AgentPackageSelectionArgs['sourceKind'],
+  };
+}
+
+function parseAgentPackageInstallArgs(args: string[], spec: CommandSpec): AgentPackageInstallArgs {
+  const parsed = parseRegisteredCommandOptions('connect agent-packages install', args, spec);
+  return {
+    manifestUrl: readOptionalString(parsed['manifest-url']),
+    registryUrl: readOptionalString(parsed['registry-url']),
+    packageId: readOptionalString(parsed['package-id']),
+    trustTier: readOptionalString(parsed['trust-tier']),
+    sourceKind: readOptionalString(parsed['source-kind']) as AgentPackageInstallArgs['sourceKind'],
+    dryRun: parsed['dry-run'] === true,
+  };
+}
+
 function buildModuleActionSpec(
   action: ModuleAction,
   usage: string,
@@ -351,6 +401,53 @@ export function buildConnectCommandSpecs(
     can_claim_domain_ready: false,
     can_claim_production_ready: false,
   } as const;
+
+  const agentPackageAuthorityBoundary = {
+    owner: 'OPL Connect',
+    surface: 'agent_package_registry_and_manifest_lifecycle',
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+  } as const;
+
+  const agentPackageSelectionOptions = [
+    {
+      name: 'manifest-url',
+      flag: '--manifest-url',
+      value_kind: 'string' as const,
+      summary: 'Direct OPL Agent Package manifest URL or local file path.',
+      required: false,
+    },
+    {
+      name: 'registry-url',
+      flag: '--registry-url',
+      value_kind: 'string' as const,
+      summary: 'Registry URL used to select a package manifest.',
+      required: false,
+    },
+    {
+      name: 'package-id',
+      flag: '--package-id',
+      value_kind: 'string' as const,
+      summary: 'Package id to select from --registry-url.',
+      required: false,
+    },
+    {
+      name: 'trust-tier',
+      flag: '--trust-tier',
+      value_kind: 'string' as const,
+      summary: 'Explicit user/organization trust tier assigned before install.',
+      required: false,
+    },
+    {
+      name: 'source-kind',
+      flag: '--source-kind',
+      value_kind: 'string' as const,
+      summary: 'Package source kind for the package lock receipt.',
+      required: false,
+    },
+  ];
 
   const connectCommandSpecs: Record<string, CommandSpec> = {
     'connect modules': buildNoArgSpec(
@@ -711,6 +808,107 @@ export function buildConnectCommandSpecs(
           parseExternalSkillsSyncArgs(args, connectCommandSpecs['connect external-skills sync']),
         ),
     },
+    'connect agent-packages registry refresh': {
+      usage: 'opl connect agent-packages registry refresh --registry-url <url>',
+      summary: 'Fetch and validate an OPL Agent Package registry, then write the Framework-owned registry refresh receipt.',
+      examples: [
+        'opl connect agent-packages registry refresh --registry-url https://raw.githubusercontent.com/gaofeng21cn/opl-agent-registry/main/registry.json --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages registry refresh',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'registry-url',
+            flag: '--registry-url',
+            value_kind: 'string',
+            summary: 'HTTP(S), file://, or absolute path to an OPL Agent Package registry JSON document.',
+            required: true,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_registry_refresh/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageRegistryRefresh(
+          parseAgentPackageRegistryRefreshArgs(args, connectCommandSpecs['connect agent-packages registry refresh']),
+        ),
+    },
+    'connect agent-packages validate-manifest': {
+      usage: 'opl connect agent-packages validate-manifest (--manifest-url <url>|--registry-url <url> --package-id <id>) [--trust-tier <tier>] [--source-kind <kind>]',
+      summary: 'Fetch and validate one OPL Agent Package manifest, then record a validation receipt without installing or claiming domain authority.',
+      examples: [
+        'opl connect agent-packages validate-manifest --manifest-url https://example.com/agent/manifest.json --trust-tier third_party_verified --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages validate-manifest',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackageSelectionOptions,
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_validate_manifest/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageManifestValidate(
+          parseAgentPackageSelectionArgs(
+            'connect agent-packages validate-manifest',
+            args,
+            connectCommandSpecs['connect agent-packages validate-manifest'],
+          ),
+        ),
+    },
+    'connect agent-packages install': {
+      usage: 'opl connect agent-packages install (--manifest-url <url>|--registry-url <url> --package-id <id>) --trust-tier <tier> [--source-kind <kind>] [--dry-run]',
+      summary: 'Validate an OPL Agent Package manifest and write the Framework-owned package lock plus lifecycle receipt.',
+      examples: [
+        'opl connect agent-packages install --manifest-url https://example.com/agent/manifest.json --trust-tier third_party_verified --json',
+        'opl connect agent-packages install --registry-url https://example.com/registry.json --package-id mas --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages install',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          ...agentPackageSelectionOptions,
+          {
+            name: 'dry-run',
+            flag: '--dry-run',
+            value_kind: 'boolean',
+            summary: 'Validate and preview lock/receipt output without writing state.',
+            required: false,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_install/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageInstall(
+          parseAgentPackageInstallArgs(args, connectCommandSpecs['connect agent-packages install']),
+        ),
+    },
+    'connect agent-packages list': {
+      usage: 'opl connect agent-packages list',
+      summary: 'Read the Framework-owned Agent Package registry cache, package locks, and lifecycle receipts.',
+      examples: ['opl connect agent-packages list --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages list',
+        parser_adapter: 'node_util_parse_args',
+        options: [],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_list/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: () => listOplAgentPackages(),
+    },
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',
       summary: 'Inspect family domain plugin packs through the canonical Connect command surface.',
@@ -746,7 +944,7 @@ export function buildConnectCommandSpecs(
   };
 
   validateCommandRegistryCoverage(connectCommandSpecs, {
-    protectedCommandPrefixes: ['connect pubmed', 'connect references', 'connect external-skills'],
+    protectedCommandPrefixes: ['connect pubmed', 'connect references', 'connect external-skills', 'connect agent-packages'],
     requiredCommandIds: ['connect pubmed search', 'connect references verify', ...MODULE_ACTION_COMMANDS],
   });
 

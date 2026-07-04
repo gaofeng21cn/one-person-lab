@@ -65,6 +65,8 @@ exit 1
       'settings_verify_workspace',
       'settings_sync_capabilities',
       'settings_apply_opl_packages',
+      'refresh_registry',
+      'install_from_manifest_url',
       'settings_reload_codex_surface',
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
@@ -395,7 +397,8 @@ exit 1
     );
     assert.equal(
       output.app_state.settings_control_center.task_entries.every((entry: AppStateListEntry) =>
-        entry.route.startsWith('opl app action execute --action settings_')
+        entry.route === `opl app action execute --action ${entry.action_id}`
+        && output.app_state.settings_control_center.allowed_action_ids.includes(entry.action_id)
       ),
       true,
     );

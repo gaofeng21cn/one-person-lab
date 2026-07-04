@@ -9,6 +9,7 @@
     "connect pubmed",
     "connect references",
     "connect external-skills",
+    "connect agent-packages",
     "update",
     "status",
     "runtime observability"
@@ -20,6 +21,10 @@
     "connect update",
     "connect reinstall",
     "connect remove",
+    "connect agent-packages registry refresh",
+    "connect agent-packages validate-manifest",
+    "connect agent-packages install",
+    "connect agent-packages list",
     "update status",
     "update check",
     "update plan",
@@ -940,6 +945,238 @@
               "target_root",
               "target_skill_root",
               "trigger_policy",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_registry_refresh": {
+      "command_id": "connect agent-packages registry refresh",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_registry"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_registry": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "registry_url",
+              "entry_count",
+              "entries",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_validate_manifest": {
+      "command_id": "connect agent-packages validate-manifest",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_manifest"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_manifest": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "package_id",
+              "manifest_url",
+              "manifest_sha256",
+              "codex_visible_entry",
+              "bundled_required_skill_ids",
+              "rollback_ref",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_install": {
+      "command_id": "connect agent-packages install",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_install"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_install": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "package_lock",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_list": {
+      "command_id": "connect agent-packages list",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_packages"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_packages": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "installed_package_count",
+              "installed_packages",
+              "lifecycle_receipts",
               "authority_boundary"
             ],
             "additionalProperties": true

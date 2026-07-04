@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-04
+
+### 决策：Agent Package Registry 和第三方 manifest lifecycle 归 OPL Connect / Framework receipt 面
+
+原因：OPL App 的专业智能体管理需要“入口可配置、package 可管理、receipt 可读”，但不能把 MAS/MAG/RCA/OMA/BookForge 写成 App 固定模块，也不能把第三方 registry 变成 domain authority。Framework 因此只承接 registry URL 拉取、manifest shape 校验、显式 trust tier、package lock 和 lifecycle receipt；专业 workflow、prompt、artifact schema、quality verdict、readiness 和 owner receipt 继续归各 agent / domain owner。
+
+影响：
+
+- `opl connect agent-packages registry refresh --registry-url <url> --json` 是 registry URL 的真实拉取与缓存入口；registry 只做 discovery，不能成为安装 authority。
+- `opl connect agent-packages validate-manifest (--manifest-url <url>|--registry-url <url> --package-id <id>) --json` 校验单个 OPL Agent Package manifest 并写 validation receipt，显式拒绝 `session_contract_ref`、domain workflow schema、prompt body、artifact schema、readiness/quality verdict rule 和 owner receipt authority。
+- `opl connect agent-packages install ... --json` 在 Framework `OPL_STATE_DIR` 写 `agent-package-locks.json` 和 `agent-package-lifecycle-ledger.json`；lock/receipt 只记录 package id、version/source digest、Codex visible entry、required skill ids、optional skill refs、source kind、trust tier、rollback ref 和 no-authority boundary。
+- `opl app action execute --action install_from_manifest_url --payload <json>` 只路由到上述 Framework package lock writer；App shell 仍只展示 package / shortcut / receipt refs，不拥有 agent 语义。
+- 该能力不接管 Pack OS generic capability-pack descriptor，也不替代 first-party GHCR package channel；第三方 agent package lifecycle 是 Connect 的 external descriptor / distribution surface，Pack OS 继续持有通用 capability pack descriptor / content-addressed cache / refs-only distribution lock。
+- 该 landing 不声明 domain ready、publication ready、visual/export ready、App release ready、Brand L5 或 production ready；真实安装后的 Codex plugin/materialized package health、uninstall/rollback physical mutation 和 live user path 仍需要后续 owner evidence。
+
 ## 2026-07-03
 
 ### 决策：Standard Agent AI-first Principle Pack 由 OPL 持有通用原则，domain 持有领域映射

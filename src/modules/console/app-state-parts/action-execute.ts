@@ -2,6 +2,7 @@ import { FrameworkContractError, isRecord } from '../../../kernel/contract-valid
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
 import { runOplModuleAction } from '../../connect/index.ts';
+import { runOplAgentPackageInstall, runOplAgentPackageRegistryRefresh } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
 import { runFamilyRuntime } from '../../runway/index.ts';
@@ -346,6 +347,45 @@ function buildSettingsPruneRuntimeRootsPlan() {
   };
 }
 
+function agentPackageRegistryUrlPayload(payload: JsonRecord) {
+  const registryUrl = stringPayloadField(payload, 'registry_url')
+    ?? stringPayloadField(payload, 'registryUrl')
+    ?? stringPayloadField(payload, 'url');
+  if (!registryUrl) {
+    throw new FrameworkContractError('cli_usage_error', 'refresh_registry action requires payload.registry_url.', {
+      action_id: 'refresh_registry',
+      required: ['registry_url'],
+    });
+  }
+  return registryUrl;
+}
+
+function agentPackageInstallPayload(payload: JsonRecord) {
+  const manifestUrl = stringPayloadField(payload, 'manifest_url')
+    ?? stringPayloadField(payload, 'manifestUrl');
+  const registryUrl = stringPayloadField(payload, 'registry_url')
+    ?? stringPayloadField(payload, 'registryUrl');
+  const packageId = stringPayloadField(payload, 'package_id')
+    ?? stringPayloadField(payload, 'packageId');
+  const trustTier = stringPayloadField(payload, 'trust_tier')
+    ?? stringPayloadField(payload, 'trustTier');
+  const sourceKind = stringPayloadField(payload, 'source_kind')
+    ?? stringPayloadField(payload, 'sourceKind');
+  if (!manifestUrl && !(registryUrl && packageId)) {
+    throw new FrameworkContractError('cli_usage_error', 'install_from_manifest_url action requires payload.manifest_url or payload.registry_url + payload.package_id.', {
+      action_id: 'install_from_manifest_url',
+      required: ['manifest_url or registry_url + package_id'],
+    });
+  }
+  return {
+    manifestUrl,
+    registryUrl,
+    packageId,
+    trustTier,
+    sourceKind: sourceKind as Parameters<typeof runOplAgentPackageInstall>[0]['sourceKind'],
+  };
+}
+
 function buildDockerWebuiSettingsManualAction(actionId: string, commandPreview: string[], payload: JsonRecord) {
   const action = settingsControlCenterActionById(actionId);
   return {
@@ -633,6 +673,30 @@ async function executeDirectAppAction(
           runOplModuleAction('update', 'oplmetaagent'),
           runOplModuleAction('update', 'oplbookforge'),
         ]),
+    };
+  }
+
+  if (options.actionId === 'refresh_registry' || options.actionId === 'agent_registry_refresh') {
+    const registryUrl = agentPackageRegistryUrlPayload(options.payload);
+    return {
+      delegatedSurface: 'opl connect agent-packages registry refresh --registry-url <registry_url>',
+      result: options.dryRun
+        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
+        : await runOplAgentPackageRegistryRefresh({ registryUrl }),
+    };
+  }
+
+  if (
+    options.actionId === 'install_from_manifest_url'
+    || options.actionId === 'agent_package_install_from_manifest_url'
+  ) {
+    const installPayload = agentPackageInstallPayload(options.payload);
+    return {
+      delegatedSurface: 'opl connect agent-packages install --manifest-url <manifest_url>',
+      result: await runOplAgentPackageInstall({
+        ...installPayload,
+        dryRun: options.dryRun,
+      }),
     };
   }
 
