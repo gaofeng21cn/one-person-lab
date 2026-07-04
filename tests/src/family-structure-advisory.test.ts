@@ -6,6 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'family-structure-advisory.mjs');
@@ -33,7 +35,7 @@ test('family structure advisory classifies tracked structural risks without fail
     );
 
     assert.equal(result.status, 0, result.stderr);
-    const report = JSON.parse(result.stdout);
+    const report = parseJsonText(result.stdout) as any;
     assert.equal(report.advisory_only, true);
 
     const fixture = report.repositories[0];
@@ -67,7 +69,7 @@ test('family structure advisory classifies tracked structural risks without fail
 });
 
 test('package exposes the family structure advisory command and tracked report', () => {
-  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const packageJson = parseJsonText(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as any;
   const trackedReportPath = path.join(repoRoot, 'docs/references/operating-governance/family-structure-advisory-report.md');
   assert.equal(packageJson.scripts?.['family:structure-advisory'], 'node ./scripts/family-structure-advisory.mjs');
   assert.equal(fs.existsSync(scriptPath), true);
@@ -80,7 +82,7 @@ test('default family structure advisory scope follows the current OPL series', (
     encoding: 'utf8',
   });
   assert.equal(generated.status, 0, generated.stderr);
-  const generatedReport = JSON.parse(generated.stdout);
+  const generatedReport = parseJsonText(generated.stdout) as any;
   assert.deepEqual(
     generatedReport.repositories.map((repo: { repo: string }) => repo.repo),
     [

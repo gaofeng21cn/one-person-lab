@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const smokeScript = path.join(repoRoot, 'scripts', 'fresh-install-smoke.mjs');
 const matrixContractPath = path.join(repoRoot, 'contracts', 'opl-framework', 'fresh-install-test-matrix.json');
@@ -494,7 +496,7 @@ test('fresh-install smoke runner validates local clean-room scenarios', () => {
   });
 
   assert.equal(result.status, 0, result.stderr);
-  const payload = JSON.parse(result.stdout) as {
+  const payload = parseJsonText(result.stdout) as {
     surface_id: string;
     status: string;
     summary: {
@@ -520,7 +522,7 @@ test('fresh-install smoke runner validates local clean-room scenarios', () => {
 });
 
 test('fresh-install matrix freezes GUI labels and first-run log contract', () => {
-  const matrix = JSON.parse(fs.readFileSync(matrixContractPath, 'utf8')) as {
+  const matrix = parseJsonText(fs.readFileSync(matrixContractPath, 'utf8')) as {
     surface_id: string;
     local_smoke_command: string;
     first_run_log: {
@@ -590,7 +592,7 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
 });
 
 test('bundled Codex profile separates the product endpoint default from the maintainer initial model profile', () => {
-  const profile = JSON.parse(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
+  const profile = parseJsonText(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
     surface_id: string;
     model_provider: string;
     model: string;

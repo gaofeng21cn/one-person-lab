@@ -6,6 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -20,7 +22,7 @@ test('native family smoke indexes MAS and MAG workspaces without touching RCA', 
   try {
     const result = runFamilySmoke(familyRoot, helperBinDir);
     assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout) as any;
     assert.equal(output.surface_kind, 'opl_native_helper_family_index_smoke');
     assert.deepEqual(Object.keys(output.domains), ['medautoscience', 'medautogrant']);
     assert.equal(output.domains.medautoscience.status, 'indexed');
@@ -62,7 +64,7 @@ test('native family smoke fixture mode validates declared registration and proof
       },
     });
     assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout) as any;
     assert.equal(output.fixture_mode, true);
     assert.deepEqual(Object.keys(output.domains), ['medautoscience', 'medautogrant']);
     assert.equal(output.domains.medautoscience.status, 'indexed');
@@ -94,7 +96,7 @@ test('native family smoke fails closed when a declared proof projection is missi
   try {
     const result = runFamilySmoke(familyRoot, helperBinDir);
     assert.equal(result.status, 1);
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout) as any;
     assert.equal(output.domains.medautoscience.status, 'indexed');
     assert.equal(output.domains.medautogrant.status, 'verification_failed');
     assert.equal(output.registration_proof_summary.medautogrant.proof_status, 'failed');
