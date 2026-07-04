@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import './brand-modules-cases/agent-and-foundry-surfaces.ts';
 import './brand-modules-cases/l5-evidence-gate.ts';
 import './brand-modules-cases/module-command-surfaces.ts';
@@ -271,7 +271,7 @@ test('Agent Execution OS ordinary path consumes Pack execution views without raw
 
 test('Capability Invocation OS lifecycle folds back into existing Pack Console Connect and Runway surfaces', () => {
   const contracts = loadFrameworkContracts(repoRoot);
-  const rawSurfaces = JSON.parse(
+  const rawSurfaces = parseJsonText(
     fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/brand-module-surfaces.json'), 'utf8'),
   );
   const surfaces = Object.fromEntries(
@@ -702,7 +702,7 @@ test('bin/opl routes module-owned brand commands into the OPL CLI instead of Cod
     );
 
     assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout);
     assert.equal(output.brand_module_surface.surface_kind, surfaceKind);
     assert.equal(output[`opl_${moduleId.replaceAll('-', '_')}_status`].status, 'valid');
   }
@@ -724,7 +724,7 @@ test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of C
   );
 
   assert.equal(result.status, 0, result.stderr);
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout);
   assert.equal(output.foundry_agent.surface_kind, 'opl_foundry_agent_series_agent_inspect');
   assert.equal(output.foundry_agent.agent_id, 'mas');
   assert.equal(output.foundry_agent.foundry_command_surface, 'opl foundry agents inspect mas');

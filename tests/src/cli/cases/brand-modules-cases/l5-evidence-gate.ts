@@ -1,4 +1,4 @@
-import { assert, createContractsFixtureRoot, fs, loadFrameworkContracts, os, path, repoRoot, runCli, runCliFailure, test } from '../../helpers.ts';
+import { assert, createContractsFixtureRoot, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../../helpers.ts';
 import { expectedModuleIds, type L5Module, type L5Route } from './shared.ts';
 
 test('brand module L5 evidence gate is executable but does not claim production maturity', () => {
@@ -452,7 +452,7 @@ test('brand module L5 evidence gate is executable but does not claim production 
 test('brand module L5 can be claimed only with satisfied owner acceptance success refs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
-    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as {
       modules: Array<{
         module_id: string;
         l5_completion_status: string;
@@ -542,7 +542,7 @@ test('brand module L5 can be claimed only with satisfied owner acceptance succes
 test('brand module L5 requirement rejects success refs mixed with blocker refs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
-    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as {
       modules: Array<{
         module_id: string;
         evidence_requirements: Array<{
@@ -583,7 +583,7 @@ test('brand module L5 requirement rejects success refs mixed with blocker refs',
 test('brand module L5 requirement keeps supporting domain owner chain refs scoped to scaleout', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
-    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as {
       modules: Array<{
         module_id: string;
         evidence_requirements: Array<{
@@ -622,7 +622,7 @@ test('brand module L5 requirement keeps supporting domain owner chain refs scope
 test('brand module L5 supporting owner-chain coverage uses canonical repo refs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
-    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as {
       modules: Array<{
         module_id: string;
         evidence_requirements: Array<{
