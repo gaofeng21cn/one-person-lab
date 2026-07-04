@@ -14,6 +14,11 @@ import {
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
   OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
 } from '../family-runtime-opl-attempt-admission-receipt.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  taskFailureProjectionSql,
+} from '../family-runtime-queue-projection-boundary.ts';
 import { payloadFromTask } from './default-executor-currentness.ts';
 
 function latestTaskDispatchSucceededOutput(db: DatabaseSync, taskId: string) {
@@ -54,8 +59,7 @@ function blockMasDomainRouteOwnerAnswerObserved(
   const blockedAt = new Date().toISOString();
   db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = 'blocked', ${taskFailureProjectionSql()}
     WHERE task_id = ?
   `).run(input.observation.reason, input.observation.reason, blockedAt, row.task_id);
   const attempts = listStageAttemptsForTask(db, row.task_id).filter((attempt) => (
@@ -196,8 +200,8 @@ export function repairSucceededMasDomainRouteAdmissionRequested(
     }
     db.prepare(`
       UPDATE tasks
-      SET status = 'running', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = NULL, updated_at = ?
+      SET status = 'running', ${clearTaskLeaseProjectionSql()},
+        last_error = ?, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
       WHERE task_id = ? AND status = 'succeeded'
     `).run(OPL_ATTEMPT_ADMISSION_REQUESTED_REASON, repairedAt, row.task_id);
     const repairedAttempts = updateStageAttemptsForTask(db, {

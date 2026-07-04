@@ -13,6 +13,10 @@ import { normalizeTaskScopeForStorage, taskRowMatchesScope } from './family-runt
 import { upsertFamilyRuntimeQueueHold } from './family-runtime-queue-holds.ts';
 import { markStageAttemptOperatorHoldRequested } from './family-runtime-stage-attempt-control.ts';
 import { listStageAttemptsForTask } from './family-runtime-stage-attempts.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+} from './family-runtime-queue-projection-boundary.ts';
 
 const HOLDABLE_STATUSES = new Set(['queued', 'retry_waiting', 'running']);
 const ATTEMPT_HOLD_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
@@ -62,8 +66,8 @@ export function holdFamilyRuntimeQueueTasks(
       const result = db.prepare(`
         UPDATE tasks
         SET status = 'waiting_approval', requires_approval = 1, approved_at = NULL,
-          lease_owner = NULL, lease_expires_at = NULL, last_error = ?, dead_letter_reason = NULL,
-          updated_at = ?
+          ${clearTaskLeaseProjectionSql()}, last_error = ?,
+          ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
         WHERE task_id = ? AND status IN ('queued', 'retry_waiting', 'running')
       `).run(reason, heldAt, row.task_id);
       if (result.changes > 0) {

@@ -47,6 +47,7 @@ import {
   FAMILY_RUNTIME_TASK_STATUS,
   resetTaskForRedriveProjectionSql,
   taskFailureProjectionSql,
+  taskRetryBudgetProjection,
 } from './family-runtime-queue-projection-boundary.ts';
 
 type StageAttemptPayload = ReturnType<typeof listStageAttemptsForTask>[number];
@@ -661,7 +662,7 @@ export function redriveBlockedDefaultExecutorProviderTransportTask(
             }
           : {
               used_attempts: input.usedAttempts ?? null,
-              max_attempts: input.maxAttempts ?? currentRow.max_attempts,
+              ...taskRetryBudgetProjection(input.maxAttempts ?? currentRow[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]),
               action: 'provider_transport_auto_redrive',
             }),
         reason: input.trigger === 'auto'
@@ -876,7 +877,7 @@ export function redriveFamilyRuntimeTask(
     });
   } else if (
     isDefaultExecutorDispatchTask(row, payload)
-    && row.status === 'dead_letter'
+    && row.status === FAMILY_RUNTIME_TASK_STATUS.deadLetter
     && row.dead_letter_reason === 'retry_budget_exhausted'
   ) {
     assertDefaultExecutorTask(row, payload);

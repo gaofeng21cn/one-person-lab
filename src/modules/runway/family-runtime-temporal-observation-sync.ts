@@ -9,6 +9,11 @@ import {
   type StageAttemptRow,
 } from './family-runtime-stage-attempt-ledger.ts';
 import { nowIso } from './family-runtime-store.ts';
+import {
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  taskLeaseProjectionSelectSql,
+  type TaskLeaseProjectionRow,
+} from './family-runtime-queue-projection-boundary.ts';
 
 type TemporalStageAttemptUnavailableObservation = {
   surface_kind: 'temporal_stage_attempt_query_unavailable';
@@ -56,14 +61,10 @@ function linkedRunningTaskLeaseState(db: DatabaseSync, row: StageAttemptRow) {
     return null;
   }
   return db.prepare(`
-    SELECT status, lease_owner, lease_expires_at
+    SELECT ${taskLeaseProjectionSelectSql()}
     FROM tasks
     WHERE task_id = ?
-  `).get(row.task_id) as {
-    status: string;
-    lease_owner: string | null;
-    lease_expires_at: string | null;
-  } | undefined ?? null;
+  `).get(row.task_id) as TaskLeaseProjectionRow | undefined ?? null;
 }
 
 function isExpiredOrUnleasedDefaultExecutorAdmission(db: DatabaseSync, row: StageAttemptRow) {
@@ -78,10 +79,12 @@ function isExpiredOrUnleasedDefaultExecutorAdmission(db: DatabaseSync, row: Stag
   if (task?.status !== 'running') {
     return false;
   }
-  if (!task.lease_owner || !task.lease_expires_at) {
+  const leaseOwner = task[FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner];
+  const leaseExpiresAtText = task[FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt];
+  if (!leaseOwner || !leaseExpiresAtText) {
     return true;
   }
-  const leaseExpiresAt = Date.parse(task.lease_expires_at);
+  const leaseExpiresAt = Date.parse(leaseExpiresAtText);
   return Number.isFinite(leaseExpiresAt) && leaseExpiresAt <= Date.now();
 }
 

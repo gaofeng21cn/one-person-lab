@@ -30,6 +30,11 @@ import {
   providerAdmissionCurrentnessIdentity,
   sameProviderAdmissionCurrentnessIdentity,
 } from '../family-runtime-mas-current-control-admission-currentness.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+  taskFailureProjectionSql,
+} from '../family-runtime-queue-projection-boundary.ts';
 
 export const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 
@@ -173,8 +178,7 @@ function markSupersededDefaultExecutorRow(
   const supersededAt = new Date().toISOString();
   db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = 'blocked', ${taskFailureProjectionSql()}
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
   `).run(
     DEFAULT_EXECUTOR_SUPERSEDED_REASON,
@@ -360,8 +364,8 @@ function reconcileCompletedCloseoutDefaultExecutorRow(
   const reconciledAt = new Date().toISOString();
   const result = db.prepare(`
     UPDATE tasks
-    SET status = 'succeeded', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = NULL, dead_letter_reason = NULL, updated_at = ?
+    SET status = 'succeeded', ${clearTaskLeaseProjectionSql()},
+      last_error = NULL, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
   `).run(reconciledAt, row.task_id);
   if (result.changes === 0) {

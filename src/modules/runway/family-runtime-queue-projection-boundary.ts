@@ -74,10 +74,25 @@ export function taskLeaseProjectionPayload(
   };
 }
 
-export function taskRetryBudgetProjection(maxAttempts: number) {
+export type TaskLeaseProjectionRow = {
+  status: string;
+  [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: string | null;
+  [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: string | null;
+};
+
+export function taskLeaseProjectionSelectSql() {
+  const columns = FAMILY_RUNTIME_TASK_COLUMNS;
+  return `status, ${columns.leaseOwner}, ${columns.leaseExpiresAt}`;
+}
+
+export function taskRetryBudgetProjection<T extends number | null>(maxAttempts: T) {
   return {
     [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: maxAttempts,
-  };
+  } as { [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: T };
+}
+
+export function taskRetryBudgetMaxAttemptsValue(retryBudget: Record<string, unknown>) {
+  return retryBudget[FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts];
 }
 
 export function taskFailureProjectionSql() {

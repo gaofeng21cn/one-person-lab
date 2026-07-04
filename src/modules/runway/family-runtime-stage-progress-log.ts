@@ -23,6 +23,10 @@ import {
   stringValue,
   uniqueStringList,
 } from '../../kernel/json-record.ts';
+import {
+  taskRetryBudgetMaxAttemptsValue,
+  taskRetryBudgetProjection,
+} from './family-runtime-queue-projection-boundary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -822,7 +826,7 @@ export function buildStageProgressLog(input: StageProgressLogInput) {
       retry_budget: {
         ...input.retryBudget,
         attempt_count: input.attemptCount,
-        max_attempts: numberValue(input.retryBudget.max_attempts),
+        ...taskRetryBudgetProjection(numberValue(taskRetryBudgetMaxAttemptsValue(input.retryBudget))),
       },
     },
     actual_work: {

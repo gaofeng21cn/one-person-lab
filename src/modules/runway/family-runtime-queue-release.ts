@@ -15,6 +15,10 @@ import {
   taskToPayload,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
+import {
+  clearTaskLeaseProjectionSql,
+  FAMILY_RUNTIME_TASK_COLUMNS,
+} from './family-runtime-queue-projection-boundary.ts';
 
 function scopeHasSelector(taskScope: FamilyRuntimeTaskScope) {
   return Boolean(taskScope.domainId || taskScope.taskKind || (taskScope.payloadMatches?.length ?? 0) > 0);
@@ -77,9 +81,9 @@ export function releaseFamilyRuntimeQueueHold(
     for (const row of releaseTaskAdmission ? heldCandidates : []) {
       const result = db.prepare(`
         UPDATE tasks
-        SET status = 'queued', requires_approval = 0, approved_at = ?, lease_owner = NULL,
-          lease_expires_at = NULL, last_error = NULL, dead_letter_reason = NULL,
-          updated_at = ?
+        SET status = 'queued', requires_approval = 0, approved_at = ?,
+          ${clearTaskLeaseProjectionSql()}, last_error = NULL,
+          ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason} = NULL, updated_at = ?
         WHERE task_id = ? AND status = 'waiting_approval' AND last_error = ?
       `).run(releasedAt, releasedAt, row.task_id, reason);
       if (result.changes <= 0) {

@@ -20,6 +20,7 @@ import {
 import {
   masDomainProgressRefsFromRecord,
 } from './family-runtime-mas-domain-progress-refs.ts';
+import { taskFailureProjectionSql } from './family-runtime-queue-projection-boundary.ts';
 
 export const PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON = 'progress_first_owner_delta_required';
 const DEFAULT_ANTI_SPIN_REPEAT_THRESHOLD = 2;
@@ -837,8 +838,7 @@ function blockTaskForProgressFirstAntiSpin(
   const blockedAt = nowIso();
   const result = db.prepare(`
     UPDATE tasks
-    SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-      last_error = ?, dead_letter_reason = ?, updated_at = ?
+    SET status = 'blocked', ${taskFailureProjectionSql()}
     WHERE task_id = ? AND status IN ('queued', 'retry_waiting')
   `).run(
     PROGRESS_FIRST_OWNER_DELTA_REQUIRED_REASON,

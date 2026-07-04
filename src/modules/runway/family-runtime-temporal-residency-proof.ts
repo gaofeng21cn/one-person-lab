@@ -15,6 +15,7 @@ import {
   StageAttemptWorkflow,
   userInstructionSignal,
 } from './family-runtime-temporal-workflows.ts';
+import { taskRetryBudgetProjection } from './family-runtime-queue-projection-boundary.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const moduleExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
@@ -36,9 +37,7 @@ function baseInput(
     },
     source_fingerprint: `sha256:temporal-residency-${suffix}`,
     executor_kind: 'codex_cli',
-    retry_budget: {
-      max_attempts: 3,
-    },
+    retry_budget: taskRetryBudgetProjection(3),
     task_id: `task-temporal-residency-${suffix}`,
     stage_packet_ref: `packet:temporal-residency:${suffix}`,
     checkpoint_refs: [`checkpoint:temporal-residency:${suffix}`],

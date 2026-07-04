@@ -3,6 +3,10 @@ import {
   stringValue,
   uniqueStringList,
 } from '../../kernel/json-record.ts';
+import {
+  taskRetryBudgetMaxAttemptsValue,
+  taskRetryBudgetProjection,
+} from './family-runtime-queue-projection-boundary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -385,7 +389,7 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
     }
   }
 
-  const maxAttempts = numberValue(input.retryBudget.max_attempts);
+  const maxAttempts = numberValue(taskRetryBudgetMaxAttemptsValue(input.retryBudget));
   const remainingAttempts = maxAttempts === null ? null : Math.max(0, maxAttempts - input.attemptCount);
   const pressureStatus = retryPressureStatus(input, maxAttempts);
   const hasObservedResourceUsage =
@@ -432,7 +436,7 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
     },
     retry_budget: {
       observed_count: Object.keys(input.retryBudget).length > 0 ? 1 : 0,
-      max_attempts: maxAttempts,
+      ...taskRetryBudgetProjection(maxAttempts),
       used_attempts: input.attemptCount,
       remaining_attempts: remainingAttempts,
       cadence_ref: stringValue(input.retryBudget.cadence_ref),

@@ -9,6 +9,7 @@ import {
 } from '../family-runtime-store.ts';
 import { taskRowMatchesScope } from '../family-runtime-task-scope.ts';
 import { isPaperMissionStageRouteTask } from '../family-runtime-paper-mission-stage-route-runner.ts';
+import { taskFailureProjectionSql } from '../family-runtime-queue-projection-boundary.ts';
 import { payloadFromTask } from './default-executor-currentness.ts';
 
 export function blockPaperMissionStageRouteTasksForProviderPreflight(
@@ -35,8 +36,7 @@ export function blockPaperMissionStageRouteTasksForProviderPreflight(
     }
     db.prepare(`
       UPDATE tasks
-      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = 'blocked', ${taskFailureProjectionSql()}
       WHERE task_id = ? AND status = 'queued'
     `).run(
       'paper_mission_stage_route_provider_preflight_blocked',

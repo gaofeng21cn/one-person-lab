@@ -18,6 +18,7 @@ import {
   stageAttemptOperatorUpdate,
   stageAttemptQuery,
 } from '../family-runtime-temporal-workflows.ts';
+import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
 
 const TEMPORAL_PRODUCTION_PROOF_RESULT_RPC_TIMEOUT_MS = 60_000;
 
@@ -60,9 +61,7 @@ export function temporalProductionProbeInput(
     },
     source_fingerprint: `sha256:temporal-production-residency-${suffix}`,
     executor_kind: 'codex_cli',
-    retry_budget: {
-      max_attempts: 3,
-    },
+    retry_budget: taskRetryBudgetProjection(3),
     task_id: `task-temporal-production-residency-${suffix}`,
     stage_packet_ref: `packet:temporal-production-residency:${suffix}`,
     checkpoint_refs: [`checkpoint:temporal-production-residency:${suffix}`],

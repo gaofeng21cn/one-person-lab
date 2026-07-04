@@ -25,6 +25,7 @@ import {
   nowIso,
 } from './shared.ts';
 import { recordStageRunExecutionAuthorizationReceipts } from '../../stagecraft/index.ts';
+import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-boundary.ts';
 
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
@@ -85,7 +86,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const sourceFingerprint = input.sourceFingerprint?.trim() || null;
   const executorKind = input.executorKind?.trim() || 'codex_cli';
   const stageAttemptExecutorPolicy = input.stageAttemptExecutorPolicy ?? null;
-  const retryBudget = input.retryBudget ?? { max_attempts: 3 };
+  const retryBudget = input.retryBudget ?? taskRetryBudgetProjection(3);
   const taskId = input.taskId?.trim() || null;
   const baseIdempotencyKey = stableId('idem', [
     input.domainId,

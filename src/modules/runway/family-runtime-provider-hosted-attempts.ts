@@ -6,6 +6,8 @@ import {
   FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
   FAMILY_RUNTIME_TASK_COLUMNS,
   FAMILY_RUNTIME_TASK_STATUS,
+  taskLeaseProjectionSelectSql,
+  type TaskLeaseProjectionRow,
 } from './family-runtime-queue-projection-boundary.ts';
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
@@ -124,10 +126,10 @@ function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | nu
     return false;
   }
   const row = db.prepare(`
-    SELECT status, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner}, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt}
+    SELECT ${taskLeaseProjectionSelectSql()}
     FROM tasks
     WHERE task_id = ?
-  `).get(taskId) as Pick<FamilyRuntimeTaskRow, 'status' | 'lease_owner' | 'lease_expires_at'> | undefined;
+  `).get(taskId) as TaskLeaseProjectionRow | undefined;
   const leaseExpiresAtText = row?.[FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt] ?? null;
   if (
     row?.status !== FAMILY_RUNTIME_TASK_STATUS.running

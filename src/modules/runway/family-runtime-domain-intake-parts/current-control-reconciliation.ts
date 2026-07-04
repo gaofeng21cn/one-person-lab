@@ -8,6 +8,7 @@ import {
   insertEvent,
   type FamilyRuntimeTaskRow,
 } from '../family-runtime-store.ts';
+import { taskFailureProjectionSql } from '../family-runtime-queue-projection-boundary.ts';
 import { updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
 import { DEFAULT_EXECUTOR_SUPERSEDED_REASON } from '../family-runtime-tick-parts/default-executor-currentness.ts';
 
@@ -212,8 +213,7 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
     const operatorHoldPreserved = previousStatus === 'waiting_approval' && previousLastError !== null;
     const result = db.prepare(`
       UPDATE tasks
-      SET status = 'blocked', lease_owner = NULL, lease_expires_at = NULL,
-        last_error = ?, dead_letter_reason = ?, updated_at = ?
+      SET status = 'blocked', ${taskFailureProjectionSql()}
       WHERE task_id = ? AND status IN ('queued', 'retry_waiting', 'waiting_approval')
     `).run(
       DEFAULT_EXECUTOR_SUPERSEDED_REASON,
