@@ -119,7 +119,9 @@ function activeStageAttemptsByStudyId(input: {
     ) {
       continue;
     }
-    byStudyId.set(studyId, [...(byStudyId.get(studyId) ?? []), attempt]);
+    if (!byStudyId.has(studyId)) {
+      byStudyId.set(studyId, [attempt]);
+    }
   }
   return byStudyId;
 }
