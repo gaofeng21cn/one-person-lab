@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 
 function stateEnv(label: string) {
   return {
@@ -328,12 +328,12 @@ test('runtime env prepare writes a dependency failure receipt without installing
   assert.equal(prepared.prepare.run_context_ref, null);
   assert.equal(prepared.prepare.binary_paths.Rscript, rscriptPath);
 
-  const lock = JSON.parse(
+  const lock = parseJsonText(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json'), 'utf8'),
-  );
-  const receipt = JSON.parse(
+  ) as Record<string, any>;
+  const receipt = parseJsonText(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json'), 'utf8'),
-  );
+  ) as Record<string, any>;
   assert.equal(lock.status, 'missing_language_package');
   assert.equal(lock.lock_ref, 'paper/build/dependency_environment_lock.json');
   assert.match(lock.lock_sha256, /^sha256:[a-f0-9]{64}$/);
@@ -437,9 +437,9 @@ test('runtime env prepare aggregates multi-profile dependency requirements inste
   ]);
   assert.deepEqual(result.prepare.missing_r_packages, ['jsonlite', 'ggplot2', 'ggconsort']);
   assert.deepEqual(result.prepare.base_or_recommended_r_packages, ['grid']);
-  const lock = JSON.parse(
+  const lock = parseJsonText(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json'), 'utf8'),
-  );
+  ) as Record<string, any>;
   assert.deepEqual(lock.required_r_packages, ['jsonlite', 'ggplot2', 'ggconsort', 'grid']);
   assert.deepEqual(lock.managed_required_r_packages, ['jsonlite', 'ggplot2', 'ggconsort']);
   assert.deepEqual(lock.base_or_recommended_r_packages, ['grid']);
@@ -542,9 +542,9 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
     'installed.packages(lib.loc = managed_library_path)',
   );
 
-  const runContext = JSON.parse(
+  const runContext = parseJsonText(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_run_context.json'), 'utf8'),
-  );
+  ) as Record<string, any>;
   assert.equal(runContext.status, 'prepared');
   assert.equal(runContext.env_vars.R_LIBS_USER, prepared.prepare.managed_r_library_path);
   assert.deepEqual(runContext.selected_requirement_profile_ids, [
@@ -564,7 +564,7 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
     runContext.env_vars.R_LIBS_USER,
     '.fake-installed-packages.json',
   );
-  assert.deepEqual(JSON.parse(fs.readFileSync(managedMarker, 'utf8')), ['ggconsort']);
+  assert.deepEqual(parseJsonText(fs.readFileSync(managedMarker, 'utf8')), ['ggconsort']);
 
   const readback = runCli([
     'runtime',
@@ -659,12 +659,12 @@ test('runtime env prepare returns a dependency failure without installing missin
   assert.equal(result.prepare.missing_r_packages[0], 'oplDefinitelyMissingPackageForRuntimeEnvTest');
   assert.equal(result.prepare.route_hint, 'opl_runtime_env_doctor');
 
-  const lock = JSON.parse(
+  const lock = parseJsonText(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json'), 'utf8'),
-  );
-  const receipt = JSON.parse(
+  ) as Record<string, any>;
+  const receipt = parseJsonText(
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json'), 'utf8'),
-  );
+  ) as Record<string, any>;
   assert.equal(lock.status, 'missing_language_package');
   assert.equal(lock.required_r_packages[0], 'oplDefinitelyMissingPackageForRuntimeEnvTest');
   assert.equal(receipt.status, 'missing_language_package');

@@ -6,6 +6,7 @@ import {
   cliPath,
   fs,
   os,
+  parseJsonText,
   path,
   repoRoot,
   runCli,
@@ -262,7 +263,7 @@ test('family-runtime worker start fails closed when Temporal is not configured o
         }),
       },
     });
-    const missingPayload = JSON.parse(missing.stderr);
+    const missingPayload = parseJsonText(missing.stderr) as Record<string, any>;
 
     const unreachable = spawnSync(process.execPath, [
       '--experimental-strip-types',
@@ -283,7 +284,7 @@ test('family-runtime worker start fails closed when Temporal is not configured o
         }),
       },
     });
-    const unreachablePayload = JSON.parse(unreachable.stderr);
+    const unreachablePayload = parseJsonText(unreachable.stderr) as Record<string, any>;
 
     assert.equal(missing.status, 3);
     assert.equal(missingPayload.error.code, 'contract_shape_invalid');
@@ -391,7 +392,7 @@ test('family-runtime residency proof --production requires external Temporal rea
     assert.equal(proof.proof_mode, 'external_temporal_service_worker');
     assert.equal(proof.persisted_proof_ref, persistedProofRef);
     assert.equal(fs.existsSync(persistedProofRef), true);
-    const persisted = JSON.parse(fs.readFileSync(persistedProofRef, 'utf8'));
+    const persisted = parseJsonText(fs.readFileSync(persistedProofRef, 'utf8')) as Record<string, any>;
     assert.equal(persisted.family_runtime_residency_proof.closeout_status, 'production_residency_needs_live_evidence');
     assert.equal(persisted.family_runtime_residency_proof.proof_mode, 'external_temporal_service_worker');
     assert.equal(proof.closeout_status, 'production_residency_needs_live_evidence');
@@ -465,7 +466,7 @@ test('standalone Temporal residency proof script defaults to user state root out
     });
 
     assert.equal(result.status, 0, result.stderr);
-    const proof = JSON.parse(result.stdout);
+    const proof = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(proof.surface_kind, 'opl_temporal_external_production_residency_proof');
     assert.equal(proof.closeout_status, 'production_residency_blocked');
     assert.equal(
@@ -687,7 +688,7 @@ test('family-runtime residency proof rejects conflicting live and production mod
         ...familyRuntimeEnv(stateRoot),
       },
     });
-    const payload = JSON.parse(result.stderr);
+    const payload = parseJsonText(result.stderr) as Record<string, any>;
 
     assert.equal(result.status, 2);
     assert.equal(payload.error.code, 'cli_usage_error');
