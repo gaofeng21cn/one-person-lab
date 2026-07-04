@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const cliEntrypoint = path.join(repoRoot, 'dist', 'cli.js');
@@ -26,7 +28,7 @@ function runBuiltCli(args, envOverrides = {}) {
 }
 
 function parseJsonOutput(result) {
-  return JSON.parse(result.stdout.trim());
+  return parseJsonText(result.stdout.trim());
 }
 
 function createFakeCodexFixture(handlerBody) {
@@ -52,7 +54,7 @@ test('built CLI entrypoint loads the emitted main module', () => {
 
   const result = runBuiltCli(['contract', 'validate']);
   const output = parseJsonOutput(result);
-  const taskTopology = JSON.parse(
+  const taskTopology = parseJsonText(
     fs.readFileSync(path.join(repoRoot, 'contracts', 'opl-framework', 'task-topology.json'), 'utf8'),
   );
 
