@@ -7,7 +7,8 @@ import { recordList, stringValue as optionalString, type JsonRecord } from '../.
 import { listStageAttempts, openFamilyRuntimeSqlite, resolveOplStatePaths } from '../runway/index.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
-const ACTIVE_STAGE_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
+const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
+const ATTENTION_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -98,7 +99,17 @@ function stageAttemptSourceRef(queueDb: string, attemptId: string) {
   };
 }
 
-function activeStageAttemptsByStudyId(input: {
+function stageAttemptLane(status: string): 'running' | 'attention' | null {
+  if (RUNNING_STAGE_ATTEMPT_STATUSES.has(status)) {
+    return 'running';
+  }
+  if (ATTENTION_STAGE_ATTEMPT_STATUSES.has(status)) {
+    return 'attention';
+  }
+  return null;
+}
+
+function overlayStageAttemptsByStudyId(input: {
   attempts: JsonRecord[];
   candidateRoots: string[];
   knownStudyIds: ReadonlySet<string>;
@@ -108,11 +119,12 @@ function activeStageAttemptsByStudyId(input: {
   for (const attempt of input.attempts) {
     const studyId = stageAttemptStudyId(attempt);
     const status = normalizeStatus(attempt.status);
+    const lane = stageAttemptLane(status);
     const workspaceMatches = stageAttemptWorkspaceMatches(attempt, roots);
     if (
       optionalString(attempt.domain_id) !== 'medautoscience'
       || !studyId
-      || !ACTIVE_STAGE_ATTEMPT_STATUSES.has(status)
+      || !lane
       || (!workspaceMatches && (stageAttemptHasWorkspaceRoot(attempt) || !input.knownStudyIds.has(studyId)))
     ) {
       continue;
@@ -130,6 +142,8 @@ function overlayStageAttempts(input: {
   queueDb: string;
 }) {
   const [latest] = input.attempts;
+  const latestStatus = normalizeStatus(latest.status);
+  const lane = stageAttemptLane(latestStatus) ?? 'attention';
   const stageAttemptIds = input.attempts
     .map((attempt) => firstString(attempt.stage_attempt_id))
     .filter((entry): entry is string => Boolean(entry));
@@ -147,17 +161,22 @@ function overlayStageAttempts(input: {
 
   return {
     ...input.item,
-    lane: 'running',
+    lane,
     status: firstString(latest.status, input.item.status),
-    status_label: firstString(input.item.status_label) ?? 'OPL runtime running',
+    status_label: lane === 'running'
+      ? (firstString(input.item.status_label) ?? 'OPL runtime running')
+      : `OPL runtime ${latestStatus || 'needs attention'}`,
     summary: firstString(input.item.summary)
-      ?? (attemptId ? `OPL runtime attempt ${attemptId} is running.` : 'OPL runtime attempt is running.'),
+      ?? (attemptId
+        ? `OPL runtime attempt ${attemptId} is ${latestStatus || 'not advancing'}.`
+        : `OPL runtime attempt is ${latestStatus || 'not advancing'}.`),
     updated_at: updatedAt,
     source_refs: sourceRefs,
-    action_owner: 'runtime',
-    action_kind: null,
-    action_summary:
-      'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.',
+    action_owner: lane === 'running' ? 'runtime' : 'opl',
+    action_kind: lane === 'running' ? null : 'quality_gate',
+    action_summary: lane === 'running'
+      ? 'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.'
+      : 'OPL runtime stage attempt needs operator attention; MAS terminalization is still required before any paper-progress claim.',
     next_action_summary: firstString(input.item.next_action_summary, input.item.action_summary),
     active_run_id: workflowId ?? attemptId ?? firstString(input.item.active_run_id),
     active_stage_id: stageId ?? firstString(input.item.active_stage_id, input.item.status),
@@ -194,17 +213,17 @@ function mergeFamilyRuntimeStageAttempts(input: {
   const knownStudyIds = new Set(
     input.items.map((item) => firstString(item.study_id)).filter((entry): entry is string => Boolean(entry)),
   );
-  const activeByStudyId = activeStageAttemptsByStudyId({
+  const overlayByStudyId = overlayStageAttemptsByStudyId({
     attempts,
     candidateRoots: input.candidateRoots,
     knownStudyIds,
   });
-  if (activeByStudyId.size === 0) {
+  if (overlayByStudyId.size === 0) {
     return input.items;
   }
   return input.items.map((item) => {
     const studyId = firstString(item.study_id);
-    const studyAttempts = studyId ? activeByStudyId.get(studyId) : null;
+    const studyAttempts = studyId ? overlayByStudyId.get(studyId) : null;
     return studyAttempts && studyAttempts.length > 0
       ? overlayStageAttempts({ item, attempts: studyAttempts, queueDb })
       : item;
