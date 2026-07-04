@@ -4,7 +4,12 @@ import path from 'node:path';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { recordList, stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
+import { openFamilyRuntimeSqlite } from '../runway/family-runtime-sqlite.ts';
+import { listStageAttempts } from '../runway/family-runtime-stage-attempt-ledger.ts';
+import { resolveOplStatePaths } from '../runway/runtime-state-paths.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
+
+const ACTIVE_STAGE_ATTEMPT_STATUSES = new Set(['running', 'checkpointed', 'human_gate']);
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -20,6 +25,12 @@ function normalizeStatus(value: unknown) {
   return optionalString(value)?.trim().toLowerCase().replace(/\s+/g, '_') ?? '';
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
 function sourceRef(filePath: string, role: string, label: string) {
   return {
     ref_kind: 'file',
@@ -27,6 +38,177 @@ function sourceRef(filePath: string, role: string, label: string) {
     role,
     label,
   };
+}
+
+function queueDbPath() {
+  return path.join(resolveOplStatePaths().state_dir, 'family-runtime', 'queue.sqlite');
+}
+
+function readFamilyRuntimeStageAttempts() {
+  const dbPath = queueDbPath();
+  if (!fs.existsSync(dbPath)) {
+    return { queueDb: dbPath, attempts: [] };
+  }
+  const db = openFamilyRuntimeSqlite(dbPath, { readOnly: true });
+  try {
+    return {
+      queueDb: dbPath,
+      attempts: listStageAttempts(db).filter(isRecord),
+    };
+  } catch {
+    return { queueDb: dbPath, attempts: [] };
+  } finally {
+    db.close();
+  }
+}
+
+function rootMatches(candidate: string | null, roots: ReadonlySet<string>) {
+  if (!candidate) {
+    return false;
+  }
+  const resolvedCandidate = path.resolve(candidate);
+  for (const root of roots) {
+    const resolvedRoot = path.resolve(root);
+    if (resolvedCandidate === resolvedRoot || resolvedCandidate.startsWith(`${resolvedRoot}${path.sep}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function stageAttemptWorkspaceMatches(attempt: JsonRecord, roots: ReadonlySet<string>) {
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return rootMatches(firstString(workspaceLocator.workspace_root, workspaceLocator.command_cwd), roots);
+}
+
+function stageAttemptHasWorkspaceRoot(attempt: JsonRecord) {
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return Boolean(firstString(workspaceLocator.workspace_root, workspaceLocator.command_cwd));
+}
+
+function stageAttemptStudyId(attempt: JsonRecord) {
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return firstString(workspaceLocator.study_id, workspaceLocator.quest_id);
+}
+
+function stageAttemptSourceRef(queueDb: string, attemptId: string) {
+  return {
+    ref_kind: 'sqlite',
+    ref: `${queueDb}#stage_attempts/${attemptId}`,
+    role: 'opl_family_runtime_stage_attempt',
+    label: 'OPL family-runtime stage attempt',
+  };
+}
+
+function activeStageAttemptsByStudyId(input: {
+  attempts: JsonRecord[];
+  candidateRoots: string[];
+  knownStudyIds: ReadonlySet<string>;
+}) {
+  const roots = new Set(input.candidateRoots);
+  const byStudyId = new Map<string, JsonRecord[]>();
+  for (const attempt of input.attempts) {
+    const studyId = stageAttemptStudyId(attempt);
+    const status = normalizeStatus(attempt.status);
+    const workspaceMatches = stageAttemptWorkspaceMatches(attempt, roots);
+    if (
+      optionalString(attempt.domain_id) !== 'medautoscience'
+      || !studyId
+      || !ACTIVE_STAGE_ATTEMPT_STATUSES.has(status)
+      || (!workspaceMatches && (stageAttemptHasWorkspaceRoot(attempt) || !input.knownStudyIds.has(studyId)))
+    ) {
+      continue;
+    }
+    byStudyId.set(studyId, [...(byStudyId.get(studyId) ?? []), attempt]);
+  }
+  return byStudyId;
+}
+
+function overlayStageAttempts(input: {
+  item: JsonRecord;
+  attempts: JsonRecord[];
+  queueDb: string;
+}) {
+  const [latest] = input.attempts;
+  const stageAttemptIds = input.attempts
+    .map((attempt) => firstString(attempt.stage_attempt_id))
+    .filter((entry): entry is string => Boolean(entry));
+  const sourceRefs = [
+    ...recordList(input.item.source_refs),
+    ...input.attempts.flatMap((attempt) => {
+      const attemptId = firstString(attempt.stage_attempt_id);
+      return attemptId ? [stageAttemptSourceRef(input.queueDb, attemptId)] : [];
+    }),
+  ];
+  const stageId = firstString(latest.stage_id);
+  const workflowId = firstString(latest.workflow_id);
+  const attemptId = firstString(latest.stage_attempt_id);
+  const updatedAt = firstString(latest.updated_at, input.item.updated_at);
+
+  return {
+    ...input.item,
+    lane: 'running',
+    status: firstString(latest.status, input.item.status),
+    status_label: firstString(input.item.status_label) ?? 'OPL runtime running',
+    summary: firstString(input.item.summary)
+      ?? (attemptId ? `OPL runtime attempt ${attemptId} is running.` : 'OPL runtime attempt is running.'),
+    updated_at: updatedAt,
+    source_refs: sourceRefs,
+    action_owner: 'runtime',
+    action_kind: null,
+    action_summary:
+      'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.',
+    next_action_summary: firstString(input.item.next_action_summary, input.item.action_summary),
+    active_run_id: workflowId ?? attemptId ?? firstString(input.item.active_run_id),
+    active_stage_id: stageId ?? firstString(input.item.active_stage_id, input.item.status),
+    active_stage_label: stageId ?? firstString(input.item.active_stage_label, input.item.status_label),
+    stage_attempt_ids: [
+      ...new Set([
+        ...stringList(input.item.stage_attempt_ids),
+        ...stageAttemptIds,
+      ]),
+    ],
+    runtime_readback_source: 'opl_family_runtime_queue_stage_attempts',
+    runtime_attempt_status: firstString(latest.status),
+    provider_kind: firstString(latest.provider_kind),
+    workflow_id: workflowId,
+    authority_boundary: {
+      projection_only: true,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_quality_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
+function mergeFamilyRuntimeStageAttempts(input: {
+  items: JsonRecord[];
+  candidateRoots: string[];
+}) {
+  const { queueDb, attempts } = readFamilyRuntimeStageAttempts();
+  if (attempts.length === 0) {
+    return input.items;
+  }
+  const knownStudyIds = new Set(
+    input.items.map((item) => firstString(item.study_id)).filter((entry): entry is string => Boolean(entry)),
+  );
+  const activeByStudyId = activeStageAttemptsByStudyId({
+    attempts,
+    candidateRoots: input.candidateRoots,
+    knownStudyIds,
+  });
+  if (activeByStudyId.size === 0) {
+    return input.items;
+  }
+  return input.items.map((item) => {
+    const studyId = firstString(item.study_id);
+    const studyAttempts = studyId ? activeByStudyId.get(studyId) : null;
+    return studyAttempts && studyAttempts.length > 0
+      ? overlayStageAttempts({ item, attempts: studyAttempts, queueDb })
+      : item;
+  });
 }
 
 function commandForMasStudy(profileRef: string | null, studyId: string) {
@@ -254,18 +436,22 @@ export function buildAppStateRuntimeActivityItems() {
   }
 
   const profileRef = locator?.profile_ref ?? null;
-  for (const candidateRoot of workspaceRootCandidates(workspaceRoot, profileRef)) {
+  const candidateRoots = workspaceRootCandidates(workspaceRoot, profileRef);
+  for (const candidateRoot of candidateRoots) {
     const portalPath = portalPayloadPath(candidateRoot);
     const portalPayload = readJsonFileOrNull(portalPath);
     if (isRecord(portalPayload)) {
-      return buildFromPortalPayload(candidateRoot, profileRef, portalPath, portalPayload);
+      return mergeFamilyRuntimeStageAttempts({
+        items: buildFromPortalPayload(candidateRoot, profileRef, portalPath, portalPayload),
+        candidateRoots,
+      });
     }
   }
 
-  for (const candidateRoot of workspaceRootCandidates(workspaceRoot, profileRef)) {
+  for (const candidateRoot of candidateRoots) {
     const items = buildFromStudyRuntimeFiles(candidateRoot, profileRef);
     if (items.length > 0) {
-      return items;
+      return mergeFamilyRuntimeStageAttempts({ items, candidateRoots });
     }
   }
   return [];

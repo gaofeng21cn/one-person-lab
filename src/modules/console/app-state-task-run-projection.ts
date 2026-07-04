@@ -12,6 +12,12 @@ function asBoolean(value: unknown): boolean {
   return value === true;
 }
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map(asString).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
 function baseRef(taskId: string) {
   return `app_state.operator.workbench.task_drilldowns.${encodeURIComponent(taskId)}`;
 }
@@ -143,6 +149,11 @@ function taskRunProjectionTask(task: JsonRecord) {
   const exportBundleActionRef = asString(artifactOrBlocker.export_bundle_action_ref)
     ?? 'app_state.actions#task_export_bundle_preview';
   return {
+    task_id: taskId,
+    title: asString(task.title) ?? taskId,
+    domain_id: domainId,
+    domain_label: asString(task.domain_label) ?? 'OPL',
+    study_id: asString(task.study_id),
     task_identity: {
       task_id: taskId,
       domain_id: domainId,
@@ -151,6 +162,14 @@ function taskRunProjectionTask(task: JsonRecord) {
       study_id: asString(task.study_id),
       task_ref: ref,
     },
+    state: asString(task.state) ?? 'unknown',
+    status_label: asString(task.status_label),
+    active_stage_id: asString(task.active_stage_id),
+    active_stage_label: asString(task.active_stage_label),
+    active_run_id: asString(task.active_run_id),
+    stage_attempt_ids: asStringArray(task.stage_attempt_ids),
+    next_visible_step: asString(task.next_visible_step),
+    last_progress_at: asString(task.last_progress_at),
     status: {
       state: asString(task.state) ?? 'unknown',
       status: asString(task.status),

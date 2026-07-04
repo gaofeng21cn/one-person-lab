@@ -61,6 +61,12 @@ function asRecordArray(value: unknown): JsonRecord[] {
   return Array.isArray(value) ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry)) : [];
 }
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map(asString).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
@@ -374,7 +380,11 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     ?? asString(item.summary);
   const route = commandRoute(item);
   const state = activityState(item);
-  const stageId = asString(item.status) ?? asString(item.health_status) ?? asString(item.lane) ?? 'runtime_activity';
+  const stageId = asString(item.active_stage_id)
+    ?? asString(item.status)
+    ?? asString(item.health_status)
+    ?? asString(item.lane)
+    ?? 'runtime_activity';
   const blockerRefCount = asRecordArray(item.blockers).length;
   const refs = taskUserProjectionRefs({
     taskId,
@@ -395,8 +405,9 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     status_label: asString(item.status_label),
     priority_bucket: activityPriorityBucket(item),
     active_stage_id: stageId,
-    active_stage_label: asString(item.status_label),
+    active_stage_label: asString(item.active_stage_label) ?? asString(item.status_label),
     active_run_id: activeRunId,
+    stage_attempt_ids: asStringArray(item.stage_attempt_ids),
     next_visible_step: nextVisibleStep,
     last_progress_at: asString(item.updated_at),
     workspace_path: asString(item.workspace_path),

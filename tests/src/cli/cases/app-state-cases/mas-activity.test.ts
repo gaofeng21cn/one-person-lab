@@ -1,3 +1,6 @@
+import { DatabaseSync } from 'node:sqlite';
+
+import { createStageAttemptTable } from '../../../../../src/modules/runway/family-runtime-stage-attempt-ledger.ts';
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import {
   assertCurrentOwnerDeltaReadModel,
@@ -8,6 +11,121 @@ import {
   writeCurrentOwnerDeltaProjectionCacheFixture,
   writeMasProgressPortalFixture,
 } from './fixtures.ts';
+
+function writeRunningStageAttemptFixture(input: {
+  stateDir: string;
+  workspaceRoot: string;
+  studyId: string;
+  taskId: string;
+  stageAttemptId: string;
+  workflowId: string;
+  stageId: string;
+}) {
+  const queueDb = path.join(input.stateDir, 'family-runtime', 'queue.sqlite');
+  fs.mkdirSync(path.dirname(queueDb), { recursive: true });
+  const db = new DatabaseSync(queueDb);
+  const now = '2026-07-04T00:00:00.000Z';
+  try {
+    createStageAttemptTable(db);
+    db.prepare(`
+      INSERT INTO stage_attempts(
+        stage_attempt_id,
+        idempotency_key,
+        provider_kind,
+        workflow_id,
+        domain_id,
+        stage_id,
+        workspace_locator_json,
+        source_fingerprint,
+        executor_kind,
+        stage_attempt_executor_policy_json,
+        status,
+        checkpoint_refs_json,
+        closeout_refs_json,
+        human_gate_refs_json,
+        retry_budget_json,
+        attempt_count,
+        task_id,
+        blocked_reason,
+        provider_receipt_json,
+        provider_run_json,
+        activity_events_json,
+        route_impact_json,
+        closeout_receipt_status,
+        created_at,
+        updated_at
+      ) VALUES (
+        @stage_attempt_id,
+        @idempotency_key,
+        @provider_kind,
+        @workflow_id,
+        @domain_id,
+        @stage_id,
+        @workspace_locator_json,
+        @source_fingerprint,
+        @executor_kind,
+        @stage_attempt_executor_policy_json,
+        @status,
+        @checkpoint_refs_json,
+        @closeout_refs_json,
+        @human_gate_refs_json,
+        @retry_budget_json,
+        @attempt_count,
+        @task_id,
+        @blocked_reason,
+        @provider_receipt_json,
+        @provider_run_json,
+        @activity_events_json,
+        @route_impact_json,
+        @closeout_receipt_status,
+        @created_at,
+        @updated_at
+      )
+    `).run({
+      stage_attempt_id: input.stageAttemptId,
+      idempotency_key: `${input.studyId}:app-state-running-attempt`,
+      provider_kind: 'temporal',
+      workflow_id: input.workflowId,
+      domain_id: 'medautoscience',
+      stage_id: input.stageId,
+      workspace_locator_json: JSON.stringify({
+        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+        domain_id: 'medautoscience',
+        study_id: input.studyId,
+        workspace_root: input.workspaceRoot,
+        command_cwd: input.workspaceRoot,
+        command_kind: 'resume_stage',
+        route_target: input.stageId,
+      }),
+      source_fingerprint: 'sha256:app-state-running-attempt',
+      executor_kind: 'codex_cli',
+      stage_attempt_executor_policy_json: null,
+      status: 'running',
+      checkpoint_refs_json: '[]',
+      closeout_refs_json: '[]',
+      human_gate_refs_json: '[]',
+      retry_budget_json: '{}',
+      attempt_count: 1,
+      task_id: input.taskId,
+      blocked_reason: null,
+      provider_receipt_json: '{}',
+      provider_run_json: JSON.stringify({
+        provider_status: 'running',
+        last_heartbeat_at: now,
+      }),
+      activity_events_json: '[]',
+      route_impact_json: JSON.stringify({
+        decision: 'start_next_stage',
+        can_claim_paper_progress: false,
+      }),
+      closeout_receipt_status: null,
+      created_at: now,
+      updated_at: now,
+    });
+  } finally {
+    db.close();
+  }
+}
 
 test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));
@@ -336,6 +454,91 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     });
     assert.equal(projectionWithoutDiagnostics.includes('provider'), false);
     assert.equal(projectionWithoutDiagnostics.includes('Temporal'), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast promotes MAS study activity from OPL family-runtime running stage attempts', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-stage-attempt-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-stage-attempt-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-stage-attempt-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const stageAttemptId = 'sat_app_state_dm003_running';
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    writeRunningStageAttemptFixture({
+      stateDir,
+      workspaceRoot,
+      studyId,
+      taskId: 'frt_app_state_dm003',
+      stageAttemptId,
+      workflowId: 'wf_app_state_dm003',
+      stageId: 'submission_milestone_candidate',
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as any;
+
+    const workbench = output.app_state.operator.workbench;
+    assert.deepEqual(
+      workbench.activity_center.active_projects.map((entry: { study_id?: string }) => entry.study_id),
+      [
+        '002-dm-china-us-mortality-attribution',
+        studyId,
+      ],
+    );
+    assert.deepEqual(
+      workbench.activity_center.needs_attention.map((entry: { study_id?: string }) => entry.study_id),
+      [],
+    );
+    assert.equal(
+      workbench.summary_cards.find((entry: { card_id: string }) => entry.card_id === 'active_projects')?.value,
+      2,
+    );
+    assert.equal(
+      workbench.domain_lane_map.lanes.find((entry: { domain_id: string }) => entry.domain_id === 'medautoscience')?.active_task_count,
+      2,
+    );
+
+    const dm003Task = workbench.task_drilldowns.find((entry: { study_id?: string }) => entry.study_id === studyId);
+    assert.ok(dm003Task);
+    assert.equal(dm003Task.state, 'running');
+    assert.equal(dm003Task.status, 'running');
+    assert.equal(dm003Task.active_stage_id, 'submission_milestone_candidate');
+    assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003');
+    assert.deepEqual(dm003Task.stage_attempt_ids, [stageAttemptId]);
+    assert.equal(dm003Task.source_ref_count > 1, true);
+
+    const taskRunProjection = workbench.task_run_projection_v2;
+    assert.deepEqual(taskRunProjection.summary, {
+      task_count: 3,
+      running_task_count: 2,
+      attention_task_count: 0,
+      recent_task_count: 1,
+    });
+    const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
+    assert.ok(dm003Projection);
+    assert.equal(dm003Projection.task_id, `medautoscience:study:${studyId}`);
+    assert.equal(dm003Projection.status.state, 'running');
+    assert.equal(dm003Projection.status.active_stage_id, 'submission_milestone_candidate');
+    assert.equal(dm003Projection.status.active_run_ref.endsWith('.active_run_id'), true);
+    assert.deepEqual(dm003Projection.stage_attempt_ids, [stageAttemptId]);
+    assert.equal(taskRunProjection.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(taskRunProjection.authority_boundary.can_create_typed_blocker, false);
+    assert.equal('provider_completion_is_domain_ready' in taskRunProjection.authority_boundary, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });
