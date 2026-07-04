@@ -21,6 +21,93 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const moduleExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts' ? '.ts' : '.js';
 const workflowsPath = path.join(__dirname, `family-runtime-temporal-workflows${moduleExtension}`);
 
+const TEMPORAL_RESIDENCY_CLOSEOUT_PACKET = {
+  surface_kind: 'stage_attempt_closeout_packet',
+  closeout_refs: ['receipt:temporal-residency-domain-closeout'],
+  consumed_refs: ['evidence:temporal-residency-table1'],
+  consumed_memory_refs: ['memory:publication-route-stoploss'],
+  writeback_receipt_refs: ['memory-writeback:temporal-residency-receipt'],
+  rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
+  next_owner: 'med-autoscience',
+  domain_ready_verdict: 'domain_gate_pending',
+  route_impact: {
+    decision: 'bounded_repair',
+    next_owner: 'med-autoscience',
+  },
+} satisfies Record<string, unknown>;
+
+function temporalResidencyCodexFixtureScript() {
+  const closeoutJson = JSON.stringify(TEMPORAL_RESIDENCY_CLOSEOUT_PACKET);
+  const messageJson = JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'agent_message',
+      id: 'msg-closeout',
+      text: closeoutJson,
+    },
+  });
+  return `#!/usr/bin/env node
+const args = process.argv.slice(2);
+if (args[0] !== 'exec') {
+  console.error('unexpected fake codex args: ' + args.join(' '));
+  process.exit(64);
+}
+console.log(JSON.stringify({ type: 'thread.started', thread_id: 'thread-temporal-residency' }));
+console.log(JSON.stringify({ type: 'turn.started' }));
+if (args.join(' ').includes('sat_temporal_residency_complete')) {
+  console.log(${JSON.stringify(messageJson)});
+}
+console.log(JSON.stringify({ type: 'turn.completed' }));
+`;
+}
+
+function createTemporalResidencyCodexFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-residency-codex-'));
+  const codexPath = path.join(fixtureRoot, 'codex');
+  fs.writeFileSync(codexPath, temporalResidencyCodexFixtureScript(), 'utf8');
+  fs.chmodSync(codexPath, 0o755);
+  return { fixtureRoot, codexPath };
+}
+
+function withTemporalResidencyCodexFixture() {
+  const existingCodexBin = process.env.OPL_CODEX_BIN;
+  if (existingCodexBin?.trim()) {
+    return {
+      fixtureRoot: null,
+      previousCodexBin: existingCodexBin,
+      codex_fixture: {
+        mode: 'external_env',
+        source: 'OPL_CODEX_BIN',
+        path: existingCodexBin,
+      },
+    };
+  }
+  const fixture = createTemporalResidencyCodexFixture();
+  process.env.OPL_CODEX_BIN = fixture.codexPath;
+  return {
+    fixtureRoot: fixture.fixtureRoot,
+    previousCodexBin: existingCodexBin,
+    codex_fixture: {
+      mode: 'ephemeral_temporal_residency_fixture',
+      source: 'runTemporalResidencyProof',
+      path: fixture.codexPath,
+      proves_real_codex_cli: false,
+      proves_temporal_worker_history_signal_and_closeout_path: true,
+    },
+  };
+}
+
+function restoreTemporalResidencyCodexFixture(input: ReturnType<typeof withTemporalResidencyCodexFixture>) {
+  if (input.previousCodexBin === undefined) {
+    delete process.env.OPL_CODEX_BIN;
+  } else {
+    process.env.OPL_CODEX_BIN = input.previousCodexBin;
+  }
+  if (input.fixtureRoot) {
+    fs.rmSync(input.fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 function baseInput(
   suffix: string,
   closeoutPacket: Record<string, unknown> | null,
@@ -46,20 +133,7 @@ function baseInput(
 }
 
 function typedCloseoutPacket() {
-  return {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: ['receipt:temporal-residency-domain-closeout'],
-    consumed_refs: ['evidence:temporal-residency-table1'],
-    consumed_memory_refs: ['memory:publication-route-stoploss'],
-    writeback_receipt_refs: ['memory-writeback:temporal-residency-receipt'],
-    rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-    route_impact: {
-      decision: 'bounded_repair',
-      next_owner: 'med-autoscience',
-    },
-  };
+  return TEMPORAL_RESIDENCY_CLOSEOUT_PACKET;
 }
 
 async function createWorker(testEnv: TestWorkflowEnvironment, taskQueue: string) {
@@ -173,6 +247,7 @@ export async function runTemporalResidencyProof() {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-temporal-residency-proof-${Date.now()}`;
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-residency-workspace-'));
+  const codexFixture = withTemporalResidencyCodexFixture();
   fs.mkdirSync(path.join(workspaceRoot, 'artifacts'), { recursive: true });
   try {
     const completed = await runCompletedAttempt(testEnv, taskQueue, workspaceRoot);
@@ -209,6 +284,7 @@ export async function runTemporalResidencyProof() {
       proof_environment: 'temporal_test_server_and_real_worker',
       closeout_status: proven ? 'production_residency_code_path_proven' : 'production_residency_code_path_failed',
       task_queue: taskQueue,
+      codex_fixture: codexFixture.codex_fixture,
       checks,
       completed_attempt: {
         workflow_id: completed.workflow_id,
@@ -252,5 +328,6 @@ export async function runTemporalResidencyProof() {
   } finally {
     await testEnv.teardown();
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    restoreTemporalResidencyCodexFixture(codexFixture);
   }
 }

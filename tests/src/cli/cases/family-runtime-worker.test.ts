@@ -4,7 +4,6 @@ import net from 'node:net';
 import {
   assert,
   cliPath,
-  createFakeCodexFixture,
   fs,
   os,
   path,
@@ -23,36 +22,6 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
     OPL_STATE_DIR: stateRoot,
     ...extra,
   };
-}
-
-function createTemporalResidencyCodexFixture() {
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: ['receipt:temporal-residency-domain-closeout'],
-    consumed_refs: ['evidence:temporal-residency-table1'],
-    consumed_memory_refs: ['memory:publication-route-stoploss'],
-    writeback_receipt_refs: ['memory-writeback:temporal-residency-receipt'],
-    rejected_writes: [{ reason: 'domain_truth_write_forbidden' }],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-    route_impact: {
-      decision: 'bounded_repair',
-      next_owner: 'med-autoscience',
-    },
-  };
-  return createFakeCodexFixture(`
-if [ "$1" = "exec" ]; then
-  printf '{"type":"thread.started","thread_id":"thread-temporal-residency"}\\n'
-  printf '{"type":"turn.started"}\\n'
-  if printf '%s' "$*" | grep -q 'sat_temporal_residency_complete'; then
-  printf '%s\\n' '${JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', id: 'msg-closeout', text: JSON.stringify(closeout) } })}'
-  fi
-  printf '{"type":"turn.completed"}\\n'
-  exit 0
-fi
-echo "unexpected fake codex args: $*" >&2
-exit 64
-`);
 }
 
 test('family-runtime worker parser exposes temporal lifecycle status command', () => {
@@ -730,14 +699,12 @@ test('family-runtime residency proof rejects conflicting live and production mod
 
 test('family-runtime residency proof --live runs Temporal test server and real workers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-live-residency-proof-'));
-  const { fixtureRoot: codexFixtureRoot, codexPath } = createTemporalResidencyCodexFixture();
   try {
     const output = runCli(
       ['family-runtime', 'residency', 'proof', '--provider', 'temporal', '--live'],
       familyRuntimeEnv(stateRoot, {
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
-        OPL_CODEX_BIN: codexPath,
       }),
     );
     const proof = output.family_runtime_residency_proof;
@@ -747,6 +714,9 @@ test('family-runtime residency proof --live runs Temporal test server and real w
     assert.equal(proof.closeout_status, 'production_residency_code_path_proven');
     assert.equal(live.surface_kind, 'opl_temporal_residency_live_proof');
     assert.equal(live.proof_environment, 'temporal_test_server_and_real_worker');
+    assert.equal(live.codex_fixture.mode, 'ephemeral_temporal_residency_fixture');
+    assert.equal(live.codex_fixture.proves_real_codex_cli, false);
+    assert.equal(live.codex_fixture.proves_temporal_worker_history_signal_and_closeout_path, true);
     assert.equal(live.closeout_status, 'production_residency_code_path_proven');
     assert.deepEqual(live.checks, {
       temporal_test_server_started: true,
@@ -767,6 +737,5 @@ test('family-runtime residency proof --live runs Temporal test server and real w
     assert.equal(live.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
   }
 });
