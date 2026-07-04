@@ -368,7 +368,7 @@ function agentPackageRegistryUrlPayload(payload: JsonRecord) {
   return registryUrl;
 }
 
-function agentPackageInstallPayload(payload: JsonRecord) {
+function agentPackageInstallPayload(payload: JsonRecord, options: { allowPackageOnly?: boolean } = {}) {
   const manifestUrl = stringPayloadField(payload, 'manifest_url')
     ?? stringPayloadField(payload, 'manifestUrl');
   const registryUrl = stringPayloadField(payload, 'registry_url')
@@ -379,7 +379,7 @@ function agentPackageInstallPayload(payload: JsonRecord) {
     ?? stringPayloadField(payload, 'trustTier');
   const sourceKind = stringPayloadField(payload, 'source_kind')
     ?? stringPayloadField(payload, 'sourceKind');
-  if (!manifestUrl && !(registryUrl && packageId)) {
+  if (!manifestUrl && !(registryUrl && packageId) && !(options.allowPackageOnly && packageId)) {
     throw new FrameworkContractError('cli_usage_error', 'install_from_manifest_url action requires payload.manifest_url or payload.registry_url + payload.package_id.', {
       action_id: 'install_from_manifest_url',
       required: ['manifest_url or registry_url + package_id'],
@@ -721,7 +721,7 @@ async function executeDirectAppAction(
   }
 
   if (options.actionId === 'agent_package_update') {
-    const installPayload = agentPackageInstallPayload(options.payload);
+    const installPayload = agentPackageInstallPayload(options.payload, { allowPackageOnly: true });
     return {
       delegatedSurface: 'opl connect agent-packages update --manifest-url <manifest_url>',
       result: await runOplAgentPackageUpdate({
@@ -732,7 +732,7 @@ async function executeDirectAppAction(
   }
 
   if (options.actionId === 'agent_package_rollback') {
-    const installPayload = agentPackageInstallPayload(options.payload);
+    const installPayload = agentPackageInstallPayload(options.payload, { allowPackageOnly: true });
     return {
       delegatedSurface: 'opl connect agent-packages rollback --manifest-url <manifest_url>',
       result: await runOplAgentPackageRollback({

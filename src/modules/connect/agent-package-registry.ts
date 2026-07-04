@@ -769,7 +769,23 @@ async function applyManifestPackageLock(
   input: AgentPackageInstallInput,
   action: 'install' | 'update' | 'rollback',
 ) {
-  const selection = await resolveManifestSelection(input);
+  const packageId = stringValue(input.packageId);
+  const index = readLockIndex();
+  const existingLock = packageId
+    ? index.packages.find((entry) => entry.package_id === packageId)
+    : null;
+  const selection = action !== 'install'
+    && !stringValue(input.manifestUrl)
+    && !stringValue(input.registryUrl)
+    && existingLock
+    ? {
+        registryUrl: null,
+        packageId,
+        manifestUrl: existingLock.manifest_url,
+        trustTier: existingLock.trust_tier,
+        registryEntry: null,
+      }
+    : await resolveManifestSelection(input);
   const fetched = await fetchJsonSource(selection.manifestUrl);
   const manifest = normalizeManifest(fetched.payload, selection.manifestUrl);
   assertManifestMatchesRegistrySelection(manifest, selection);
@@ -777,7 +793,6 @@ async function applyManifestPackageLock(
   assertTrustTierAssigned(trustTier, selection.manifestUrl);
   const sourceKind = normalizeSourceKind(input.sourceKind, selection.manifestUrl);
   const lockRef = packageLockRef(manifest.package_id, manifest.version, fetched.source_sha256);
-  const index = readLockIndex();
   const existingIndex = index.packages.findIndex((entry) => entry.package_id === manifest.package_id);
   if (action !== 'install' && existingIndex < 0) {
     throw new FrameworkContractError('contract_shape_invalid', `Agent package ${action} requires an installed package lock.`, {
