@@ -22,22 +22,35 @@ type ReferenceRecord = {
 
 type ProviderId = 'crossref' | 'pubmed' | 'openalex' | 'semantic-scholar' | 'crossmark' | 'publisher';
 type RetryAttempt = { attempt: number; status: string; http_status: number | null };
+type ProviderMatchStatus = 'identifier_matched' | 'metadata_conflict' | 'provider_found' | 'deferred' | 'error';
+type MismatchDetail = {
+  field: 'doi' | 'pmid' | 'title';
+  expected: string;
+  actual: string;
+  normalized_expected: string;
+  normalized_actual: string;
+};
 type ProviderEvidence = {
   reference_id: string;
   provider: 'crossref' | 'pubmed' | 'openalex' | 'semantic_scholar' | 'crossmark' | 'publisher';
   provider_id: ProviderId;
   lookup_status: 'found' | 'not_found' | 'deferred' | 'error';
   status: 'matched' | 'deferred';
+  match_schema_version: 'strict_provider_match_v1';
+  match_status: ProviderMatchStatus;
   deferred_reason?: string;
   match_basis: 'doi' | 'pmid' | 'title' | 'none';
   receipt_ref: string;
   matched_identifiers: Record<string, string>;
+  provider_identifiers: Record<string, string>;
+  mismatch_details: MismatchDetail[];
   metadata: {
     title?: string;
     year?: string;
     journal?: string;
   };
   retraction_or_update_flags: Record<string, unknown>;
+  verification_scope: Record<string, unknown>;
   error?: {
     code: string;
     message: string;
@@ -64,6 +77,7 @@ const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
 const DEFAULT_SEMANTIC_SCHOLAR_API_BASE = 'https://api.semanticscholar.org/graph/v1';
 const DEFAULT_PUBLISHER_DOI_BASE = 'https://doi.org';
 const DEFAULT_TIMEOUT_MS = 30_000;
+const STRICT_MATCH_SCHEMA_VERSION = 'strict_provider_match_v1';
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -240,11 +254,16 @@ function deferredEvidence(reference: ReferenceRecord, providerId: ProviderId, re
     provider_id: providerId,
     lookup_status: 'deferred',
     status: 'deferred',
+    match_schema_version: STRICT_MATCH_SCHEMA_VERSION,
+    match_status: 'deferred',
     deferred_reason: reason,
     match_basis: 'none',
     matched_identifiers: identifiersFromReference(reference),
+    provider_identifiers: {},
+    mismatch_details: [],
     metadata: metadataFromReference(reference),
     retraction_or_update_flags: {},
+    verification_scope: verificationScope(providerId),
     error: {
       code: 'provider_receipt_requirement_deferred',
       message: reason,
@@ -271,11 +290,16 @@ function providerErrorEvidence(reference: ReferenceRecord, providerId: ProviderI
     provider_id: providerId,
     lookup_status: 'error',
     status: 'deferred',
+    match_schema_version: STRICT_MATCH_SCHEMA_VERSION,
+    match_status: 'error',
     deferred_reason: payload.message,
     match_basis: 'none',
     matched_identifiers: identifiersFromReference(reference),
+    provider_identifiers: {},
+    mismatch_details: [],
     metadata: metadataFromReference(reference),
     retraction_or_update_flags: {},
+    verification_scope: verificationScope(providerId),
     error: payload,
     normalized: {
       doi: reference.doi,
@@ -311,6 +335,126 @@ function retryAttemptsFromError(error: unknown): RetryAttempt[] {
   return Array.isArray(attempts) ? attempts as RetryAttempt[] : [];
 }
 
+function foundEvidence(
+  reference: ReferenceRecord,
+  input: {
+    provider: ProviderEvidence['provider'];
+    provider_id: ProviderId;
+    match_basis: ProviderEvidence['match_basis'];
+    provider_identifiers: Record<string, string | null | undefined>;
+    metadata: ProviderEvidence['metadata'];
+    retraction_or_update_flags: Record<string, unknown>;
+    normalized: Pick<ReferenceRecord, 'doi' | 'pmid' | 'title'>;
+    retry_attempts: RetryAttempt[];
+    verification_scope?: Record<string, unknown>;
+  },
+): ProviderEvidenceDraft {
+  const providerIdentifiers = compactIdentifiers(input.provider_identifiers);
+  const mismatchDetails = mismatchDetailsForReference(reference, input.normalized);
+  const matchedIdentifiers = matchedIdentifiersForReference(reference, input.normalized);
+  const hasIdentifierMatch = Object.keys(matchedIdentifiers).length > 0;
+  const matchStatus: ProviderMatchStatus = mismatchDetails.length > 0
+    ? 'metadata_conflict'
+    : hasIdentifierMatch
+      ? 'identifier_matched'
+      : 'provider_found';
+  const status = matchStatus === 'identifier_matched' ? 'matched' : 'deferred';
+  const providerSpecificIdentifiers = Object.fromEntries(
+    Object.entries(providerIdentifiers).filter(([key]) => key !== 'doi' && key !== 'pmid'),
+  );
+  const deferredReason = matchStatus === 'metadata_conflict'
+    ? `${input.provider_id} provider metadata conflicts with input reference`
+    : `${input.provider_id} provider returned an item but no DOI/PMID identifier matched the input reference`;
+  return {
+    reference_id: reference.id,
+    provider: input.provider,
+    provider_id: input.provider_id,
+    lookup_status: 'found',
+    status,
+    match_schema_version: STRICT_MATCH_SCHEMA_VERSION,
+    match_status: matchStatus,
+    ...(status === 'deferred' ? { deferred_reason: deferredReason } : {}),
+    match_basis: input.match_basis,
+    matched_identifiers: status === 'matched'
+      ? compactIdentifiers({ ...matchedIdentifiers, ...providerSpecificIdentifiers })
+      : matchedIdentifiers,
+    provider_identifiers: providerIdentifiers,
+    mismatch_details: mismatchDetails,
+    metadata: input.metadata,
+    retraction_or_update_flags: input.retraction_or_update_flags,
+    verification_scope: {
+      ...verificationScope(input.provider_id),
+      ...(input.verification_scope ?? {}),
+    },
+    ...(status === 'deferred' ? {
+      error: {
+        code: matchStatus === 'metadata_conflict' ? 'provider_metadata_conflict' : 'provider_found_without_identifier_match',
+        message: deferredReason,
+        details: {
+          match_status: matchStatus,
+          mismatch_details: mismatchDetails,
+          provider_identifiers: providerIdentifiers,
+        },
+      },
+    } : {}),
+    normalized: input.normalized,
+    cache: {
+      status: 'disabled',
+      write_status: 'skipped',
+      cache_ref: null,
+    },
+    retry_attempts: input.retry_attempts,
+  };
+}
+
+function mismatchDetailsForReference(
+  reference: ReferenceRecord,
+  actual: Pick<ReferenceRecord, 'doi' | 'pmid' | 'title'>,
+): MismatchDetail[] {
+  const details: MismatchDetail[] = [];
+  addMismatch(details, 'doi', reference.doi, actual.doi, normalizeDoi);
+  addMismatch(details, 'pmid', reference.pmid, actual.pmid, normalizePmid);
+  addMismatch(details, 'title', reference.title, actual.title, normalizeTitleForCompare);
+  return details;
+}
+
+function addMismatch(
+  details: MismatchDetail[],
+  field: MismatchDetail['field'],
+  expected: string | null,
+  actual: string | null,
+  normalize: (value: string | null) => string | null,
+) {
+  const normalizedExpected = normalize(expected);
+  const normalizedActual = normalize(actual);
+  if (!expected || !actual || !normalizedExpected || !normalizedActual || normalizedExpected === normalizedActual) return;
+  details.push({
+    field,
+    expected,
+    actual,
+    normalized_expected: normalizedExpected,
+    normalized_actual: normalizedActual,
+  });
+}
+
+function matchedIdentifiersForReference(
+  reference: ReferenceRecord,
+  actual: Pick<ReferenceRecord, 'doi' | 'pmid'>,
+) {
+  return compactIdentifiers({
+    doi: reference.doi && actual.doi && normalizeDoi(reference.doi) === normalizeDoi(actual.doi) ? normalizeDoi(actual.doi) : null,
+    pmid: reference.pmid && actual.pmid && normalizePmid(reference.pmid) === normalizePmid(actual.pmid) ? normalizePmid(actual.pmid) : null,
+  });
+}
+
+function normalizePmid(value: string | null) {
+  return value?.trim() || null;
+}
+
+function normalizeTitleForCompare(value: string | null) {
+  return value?.replace(/\s+/g, ' ').trim().toLowerCase() || null;
+}
+
 async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (!reference.doi && !reference.title) {
     return deferredEvidence(reference, 'crossref', 'crossref provider receipt requirement needs a DOI or title');
@@ -332,16 +476,13 @@ async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, ti
     return deferredEvidence(reference, 'crossref', 'crossref provider did not return a matching DOI/title item');
   }
   const titleList = Array.isArray(item.title) ? item.title.map(asString).filter(Boolean) : [];
-  const doi = normalizeDoi(asString(item.DOI)) ?? reference.doi;
-  const title = titleList[0] ?? reference.title;
-  return {
-    reference_id: reference.id,
+  const doi = normalizeDoi(asString(item.DOI));
+  const title = titleList[0] ?? null;
+  return foundEvidence(reference, {
     provider: 'crossref',
     provider_id: 'crossref',
-    lookup_status: 'found',
-    status: 'matched',
     match_basis: reference.doi ? 'doi' : 'title',
-    matched_identifiers: compactIdentifiers({ doi, pmid: reference.pmid }),
+    provider_identifiers: { doi },
     metadata: compactMetadata({
       title,
       year: crossrefYear(item),
@@ -350,16 +491,11 @@ async function verifyCrossref(reference: ReferenceRecord, maxRetries: number, ti
     retraction_or_update_flags: crossrefFlags(item),
     normalized: {
       doi,
-      pmid: reference.pmid,
+      pmid: null,
       title,
     },
-    cache: {
-      status: 'disabled',
-      write_status: 'skipped',
-      cache_ref: null,
-    },
     retry_attempts: retryAttempts,
-  };
+  });
 }
 
 async function verifyCrossmark(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
@@ -375,6 +511,7 @@ async function verifyCrossmark(reference: ReferenceRecord, maxRetries: number, t
       ...evidence.retraction_or_update_flags,
       crossmark_metadata_source: 'crossref_rest_api',
     },
+    verification_scope: verificationScope('crossmark'),
   };
 }
 
@@ -419,17 +556,15 @@ async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, time
   const articleIds = Array.isArray(item.articleids) ? item.articleids.map(asRecord) : [];
   const doi = normalizeDoi(articleIds
     .map((entry) => ({ idtype: asString(entry.idtype)?.toLowerCase(), value: asString(entry.value) }))
-    .find((entry) => entry.idtype === 'doi')?.value ?? null) ?? reference.doi;
-  return {
-    reference_id: reference.id,
+    .find((entry) => entry.idtype === 'doi')?.value ?? null);
+  const title = asString(item.title);
+  return foundEvidence(reference, {
     provider: 'pubmed',
     provider_id: 'pubmed',
-    lookup_status: 'found',
-    status: 'matched',
     match_basis: matchBasis === 'none' ? 'pmid' : matchBasis,
-    matched_identifiers: compactIdentifiers({ doi, pmid }),
+    provider_identifiers: { doi, pmid },
     metadata: compactMetadata({
-      title: asString(item.title) ?? reference.title,
+      title,
       year: yearFromText(asString(item.pubdate) ?? asString(item.sortpubdate)),
       journal: asString(item.fulljournalname) ?? asString(item.source),
     }),
@@ -437,15 +572,10 @@ async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, time
     normalized: {
       doi,
       pmid,
-      title: asString(item.title) ?? reference.title,
-    },
-    cache: {
-      status: 'disabled',
-      write_status: 'skipped',
-      cache_ref: null,
+      title,
     },
     retry_attempts: retryAttempts,
-  };
+  });
 }
 
 async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
@@ -469,17 +599,14 @@ async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, ti
   const ids = asRecord(item.ids);
   const primaryLocation = asRecord(item.primary_location);
   const source = asRecord(primaryLocation.source);
-  const doi = normalizeDoi(asString(item.doi) ?? asString(ids.doi)) ?? reference.doi;
-  const pmid = pubmedIdFromUrl(asString(ids.pmid)) ?? reference.pmid;
-  const title = asString(item.title) ?? asString(item.display_name) ?? reference.title;
-  return {
-    reference_id: reference.id,
+  const doi = normalizeDoi(asString(item.doi) ?? asString(ids.doi));
+  const pmid = pubmedIdFromUrl(asString(ids.pmid));
+  const title = asString(item.title) ?? asString(item.display_name);
+  return foundEvidence(reference, {
     provider: 'openalex',
     provider_id: 'openalex',
-    lookup_status: 'found',
-    status: 'matched',
     match_basis: reference.doi ? 'doi' : 'title',
-    matched_identifiers: compactIdentifiers({ doi, pmid, openalex: asString(item.id) }),
+    provider_identifiers: { doi, pmid, openalex: asString(item.id) },
     metadata: compactMetadata({
       title,
       year: asString(item.publication_year),
@@ -491,13 +618,8 @@ async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, ti
       pmid,
       title,
     },
-    cache: {
-      status: 'disabled',
-      write_status: 'skipped',
-      cache_ref: null,
-    },
     retry_attempts: retryAttempts,
-  };
+  });
 }
 
 async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
@@ -522,17 +644,14 @@ async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: num
   }
   const externalIds = asRecord(item.externalIds);
   const venue = asRecord(item.publicationVenue);
-  const doi = normalizeDoi(asString(externalIds.DOI) ?? asString(externalIds.doi)) ?? reference.doi;
-  const pmid = asString(externalIds.PubMed) ?? asString(externalIds.PMID) ?? reference.pmid;
-  const title = asString(item.title) ?? reference.title;
-  return {
-    reference_id: reference.id,
+  const doi = normalizeDoi(asString(externalIds.DOI) ?? asString(externalIds.doi));
+  const pmid = asString(externalIds.PubMed) ?? asString(externalIds.PMID);
+  const title = asString(item.title);
+  return foundEvidence(reference, {
     provider: 'semantic_scholar',
     provider_id: 'semantic-scholar',
-    lookup_status: 'found',
-    status: 'matched',
     match_basis: reference.doi ? 'doi' : 'title',
-    matched_identifiers: compactIdentifiers({ doi, pmid, semantic_scholar: asString(item.paperId) }),
+    provider_identifiers: { doi, pmid, semantic_scholar: asString(item.paperId) },
     metadata: compactMetadata({
       title,
       year: asString(item.year),
@@ -544,13 +663,8 @@ async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: num
       pmid,
       title,
     },
-    cache: {
-      status: 'disabled',
-      write_status: 'skipped',
-      cache_ref: null,
-    },
     retry_attempts: retryAttempts,
-  };
+  });
 }
 
 async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
@@ -565,18 +679,14 @@ async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, t
     },
   });
   const title = htmlMeta(text, 'citation_title', 'dc.title', 'og:title') ?? htmlTitle(text) ?? reference.title;
-  return {
-    reference_id: reference.id,
+  return foundEvidence(reference, {
     provider: 'publisher',
     provider_id: 'publisher',
-    lookup_status: 'found',
-    status: 'matched',
     match_basis: 'doi',
-    matched_identifiers: compactIdentifiers({
+    provider_identifiers: {
       doi: reference.doi,
-      pmid: reference.pmid,
       publisher_landing_url: responseUrl,
-    }),
+    },
     metadata: compactMetadata({
       title,
       year: yearFromText(htmlMeta(text, 'citation_publication_date', 'dc.date') ?? ''),
@@ -588,18 +698,18 @@ async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, t
       full_text_body_verified: false,
       ...(contentType ? { content_type: contentType } : {}),
     },
+    verification_scope: {
+      evidence_source: 'doi_resolver_landing_metadata',
+      landing_metadata_only: true,
+      full_text_body_verified: false,
+    },
     normalized: {
       doi: reference.doi,
-      pmid: reference.pmid,
+      pmid: null,
       title,
     },
-    cache: {
-      status: 'disabled',
-      write_status: 'skipped',
-      cache_ref: null,
-    },
     retry_attempts: retryAttempts,
-  };
+  });
 }
 
 async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
@@ -625,7 +735,7 @@ async function verifyProviderWithCache(
 ): Promise<ProviderEvidence> {
   const cachePath = cacheRef(input.cacheRoot, providerId, reference);
   const cached = readCache(cachePath);
-  if (cached) {
+  if (cached && cached.match_schema_version === STRICT_MATCH_SCHEMA_VERSION) {
     const cachedEvidence = cached as Omit<ProviderEvidence, 'cache' | 'retry_attempts'>;
     return {
       ...cachedEvidence,
@@ -669,6 +779,23 @@ function receiptRef(evidence: { reference_id: string; provider_id: string; norma
 
 function providerName(providerId: ProviderId): ProviderEvidence['provider'] {
   return providerId === 'semantic-scholar' ? 'semantic_scholar' : providerId;
+}
+
+function verificationScope(providerId: ProviderId): Record<string, unknown> {
+  if (providerId === 'crossmark') {
+    return {
+      evidence_source: 'crossref_metadata_signal',
+      independent_crossmark_api_verified: false,
+    };
+  }
+  if (providerId === 'publisher') {
+    return {
+      evidence_source: 'doi_resolver_landing_metadata',
+      landing_metadata_only: true,
+      full_text_body_verified: false,
+    };
+  }
+  return { evidence_source: providerName(providerId) };
 }
 
 function identifiersFromReference(reference: ReferenceRecord): Record<string, string> {
@@ -797,13 +924,16 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
     }))
   );
   const providerReceipts = providerEvidence
-    .filter((entry) => entry.status === 'matched')
+    .filter((entry) => entry.status === 'matched' && entry.match_status === 'identifier_matched' && entry.mismatch_details.length === 0)
     .map((entry) => ({
       reference_id: entry.reference_id,
       provider_id: entry.provider_id,
       status: entry.status,
+      match_status: entry.match_status,
+      match_basis: entry.match_basis,
       receipt_ref: entry.receipt_ref,
       authority: 'provider_receipt_candidate_only',
+      verification_scope: entry.verification_scope,
     }));
   const deferredProviderReceiptRequirements = providerEvidence
     .filter((entry) => entry.status === 'deferred')
@@ -811,7 +941,9 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
       reference_id: entry.reference_id,
       provider_id: entry.provider_id,
       status: 'deferred',
+      match_status: entry.match_status,
       reason: entry.deferred_reason,
+      mismatch_details: entry.mismatch_details,
     }));
 
   return {
