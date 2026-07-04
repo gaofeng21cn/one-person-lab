@@ -1,4 +1,4 @@
-import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
 import { OPL_GATEWAY_BASE_URL } from '../../../../src/modules/connect/local-codex-defaults.ts';
@@ -174,7 +174,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     const firstRunEvents = fs.readFileSync(output.install.first_run_log.log_path, 'utf8')
       .trim()
       .split('\n')
-      .map((line) => JSON.parse(line) as { event_type: string; payload: Record<string, unknown> });
+      .map((line) => parseJsonText(line) as { event_type: string; payload: Record<string, unknown> });
     assert.deepEqual(firstRunEvents.map((entry) => entry.event_type), [
       'install_started',
       'runtime_manager_repair_started',

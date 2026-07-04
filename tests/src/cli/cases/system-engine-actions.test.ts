@@ -5,6 +5,7 @@ import {
   createFakeCodexFixture,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   runCliFailure,
@@ -19,7 +20,7 @@ function parseRuntimeCodexUpdateReceipt(stdout: string) {
     .map((line) => line.trim())
     .find((line) => line.startsWith('{"opl_runtime_codex_update"'));
   assert.ok(receiptLine, stdout);
-  return JSON.parse(receiptLine).opl_runtime_codex_update;
+  return (parseJsonText(receiptLine) as { opl_runtime_codex_update: unknown }).opl_runtime_codex_update;
 }
 
 function writeFakeNpmRuntimeInstaller(fakeNpm: string, logPath: string) {

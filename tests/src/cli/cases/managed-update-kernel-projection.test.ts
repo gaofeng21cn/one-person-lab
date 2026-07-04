@@ -1,4 +1,4 @@
-import { assert, createFakeCodexFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createFakeCodexFixture, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 
 import './managed-update-kernel-projection-cases/plan.ts';
 import './managed-update-kernel-projection-cases/projection-only-apply-guards.ts';
@@ -7,7 +7,7 @@ import './managed-update-kernel-projection-cases/workflow-profile.ts';
 import './managed-update-kernel-projection-cases/selector-alias-scenarios.ts';
 
 function readManagedUpdateKernelContract() {
-  return JSON.parse(
+  return parseJsonText(
     fs.readFileSync(
       path.join(repoRoot, 'contracts/opl-framework/managed-update-kernel-contract.json'),
       'utf8',

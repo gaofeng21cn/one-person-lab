@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 
-import { assert, fs, os, path, repoRoot, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, test } from '../helpers.ts';
 
 function writeManifest(filePath: string, input: {
   version: string;
@@ -38,7 +38,7 @@ function writeManifest(filePath: string, input: {
 }
 
 function runDailyCheck(args: string[]) {
-  return JSON.parse(execFileSync(process.execPath, [
+  return parseJsonText(execFileSync(process.execPath, [
     'scripts/package-channel-daily-check.mjs',
     ...args,
   ], {

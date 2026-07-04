@@ -6,6 +6,7 @@ export {
   createFakeCodexFixture,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   runCliAsync,

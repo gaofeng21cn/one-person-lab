@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -317,7 +317,7 @@ test('system developer-supervisor reports and persists the family developer mode
       true,
     );
 
-    const persisted = JSON.parse(
+    const persisted = parseJsonText(
       fs.readFileSync(path.join(stateDir, 'developer-supervisor.json'), 'utf8'),
     ) as { enabled: string; mode: string; auto_enable_github_login: string };
     assert.equal(persisted.enabled, 'on');

@@ -1,4 +1,4 @@
-import { assert, assertBlockedDeveloperModeSurface, assertDeveloperModeAction, createCodexConfigFixture, createFakeCodexFixture, createManagedDomainModuleFixtures, fs, os, path, runCli, runCliRaw, test } from './shared.ts';
+import { assert, assertBlockedDeveloperModeSurface, assertDeveloperModeAction, createCodexConfigFixture, createFakeCodexFixture, createManagedDomainModuleFixtures, fs, os, parseJsonText, path, runCli, runCliRaw, test } from './shared.ts';
 
 test('system initialize aggregates environment modules settings workspace and system surfaces', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
@@ -298,7 +298,7 @@ exit 1
       },
     );
     const lines = result.stdout.trim().split('\n');
-    const entries = lines.map((line) => JSON.parse(line) as {
+    const entries = lines.map((line) => parseJsonText(line) as {
       version: string;
       event: {
         surface_id: string;

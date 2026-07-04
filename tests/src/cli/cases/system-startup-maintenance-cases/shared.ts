@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 
-import { createGitModuleRemoteFixture, fs, path } from '../../helpers.ts';
+import { createGitModuleRemoteFixture, fs, parseJsonText, path } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
   writeFakeBookForgeGeneratedSurfacePack,
@@ -16,7 +16,7 @@ function sha256(filePath: string) {
 }
 
 export function readPackageChannelMarker(checkoutPath: string) {
-  return JSON.parse(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
+  return parseJsonText(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
     package_channel_lifecycle: {
       staged: { root: string; status: string };
       current: { root: string; source_git_head_sha: string | null };
