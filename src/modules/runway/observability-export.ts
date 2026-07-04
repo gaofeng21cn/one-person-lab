@@ -816,38 +816,68 @@ async function waitForCollectorMetric(input: {
     process_started: boolean;
   }>((resolve) => {
     let settled = false;
+    let childClosed = false;
     let outputBytes = 0;
     let stdoutBuffer = '';
     let stderrBuffer = '';
     let timeout: ReturnType<typeof setTimeout>;
+    let killTimeout: ReturnType<typeof setTimeout> | null = null;
+    let closeFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
     const child = spawn(input.resolvedCommand, ['--config', input.configFile], {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+
+    function clearChildTimers() {
+      if (killTimeout) {
+        clearTimeout(killTimeout);
+        killTimeout = null;
+      }
+      if (closeFallbackTimeout) {
+        clearTimeout(closeFallbackTimeout);
+        closeFallbackTimeout = null;
+      }
+    }
+
+    function childStillRunning() {
+      return child.exitCode === null && child.signalCode === null;
+    }
+
+    function signalChild(signal: NodeJS.Signals) {
+      try {
+        child.kill(signal);
+      } catch {
+        // The process may already be gone; close handling below settles the parent.
+      }
+    }
+
+    function stopCollectorProcess() {
+      if (!childStillRunning()) return;
+      signalChild('SIGTERM');
+      killTimeout = setTimeout(() => {
+        if (childStillRunning()) signalChild('SIGKILL');
+      }, 500);
+      killTimeout.unref();
+    }
 
     function finish(result: Parameters<typeof resolve>[0]) {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      child.stdout?.destroy();
-      child.stderr?.destroy();
-      if (child.exitCode !== null || child.killed) {
+      stopCollectorProcess();
+      if (childClosed || !childStillRunning()) {
+        clearChildTimers();
         resolve(result);
         return;
       }
-      const killTimer = setTimeout(() => {
-        if (child.exitCode === null && !child.killed) child.kill('SIGKILL');
+      closeFallbackTimeout = setTimeout(() => {
+        clearChildTimers();
         resolve(result);
-      }, 800);
-      child.once('exit', () => {
-        clearTimeout(killTimer);
+      }, 2_000);
+      closeFallbackTimeout.unref();
+      child.once('close', () => {
+        clearChildTimers();
         resolve(result);
       });
-      try {
-        child.kill('SIGTERM');
-      } catch {
-        clearTimeout(killTimer);
-        resolve(result);
-      }
     }
 
     function onData(stream: 'stdout' | 'stderr', chunk: Buffer) {
@@ -894,6 +924,9 @@ async function waitForCollectorMetric(input: {
         output_bytes: outputBytes,
         process_started: false,
       });
+    });
+    child.once('close', () => {
+      childClosed = true;
     });
     child.once('exit', (code, signal) => {
       if (settled) return;

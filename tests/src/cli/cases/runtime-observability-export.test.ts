@@ -1,7 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
-import { startObservabilityMetricsEndpoint } from '../../../../src/modules/runway/observability-export.ts';
+import {
+  runObservabilityCollectorSmoke,
+  startObservabilityMetricsEndpoint,
+} from '../../../../src/modules/runway/observability-export.ts';
 import { assert, createFamilyContractsFixtureRoot, fs, loadFrameworkContracts, os, path, repoRoot, runCli, runCliRaw, test } from '../helpers.ts';
 
 test('runtime observability export aggregates provider, stage, gate, memory, and SLO receipt counters read-only', () => {
@@ -483,6 +487,72 @@ test('runtime observability collector smoke observes fake Collector debug output
     assert.equal(smoke.authority_boundary.can_claim_domain_ready, false);
     assert.equal(smoke.authority_boundary.can_claim_production_ready, false);
     fs.rmSync(path.dirname(smoke.collector_config.config_file), { recursive: true, force: true });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime observability collector smoke local endpoint is deterministic and closes Collector process', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-fetching-otelcol-'));
+  const fakeCollector = path.join(tempRoot, 'otelcol-fetching-fake');
+  const fakeCollectorModule = `${fakeCollector}.mjs`;
+  const jsonFileModule = pathToFileURL(path.join(repoRoot, 'src/kernel/json-file.ts')).href;
+  fs.writeFileSync(
+    fakeCollectorModule,
+    [
+      "import { readFileSync } from 'node:fs';",
+      `import { parseJsonText } from ${JSON.stringify(jsonFileModule)};`,
+      "if (process.argv[2] !== '--config') process.exit(2);",
+      "const config = parseJsonText(readFileSync(process.argv[3], 'utf8'));",
+      'const scrape = config.receivers.prometheus.config.scrape_configs[0];',
+      "const target = scrape.static_configs[0].targets[0];",
+      "const scheme = scrape.scheme || 'http';",
+      "const metricsPath = scrape.metrics_path || '/metrics';",
+      "fetch(`${scheme}://${target}${metricsPath}`)",
+      "  .then(async (response) => ({ status: response.status, body: await response.text() }))",
+      "  .then(({ status, body }) => {",
+      "    if (status !== 200 || !body.includes('opl_provider_ready') || !body.includes('provider_kind=\"collector_smoke\"') || !body.includes('opl_queue_length')) {",
+      "      console.error(body);",
+      '      process.exit(5);',
+      '    }',
+      '    console.error(body);',
+      "    setInterval(() => {}, 1000);",
+      '  })',
+      "  .catch((error) => { console.error(error && error.stack ? error.stack : String(error)); process.exit(6); });",
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    fakeCollector,
+    [
+      '#!/bin/sh',
+      `exec ${JSON.stringify(process.execPath)} --experimental-strip-types ${JSON.stringify(fakeCollectorModule)} "$@"`,
+    ].join('\n'),
+  );
+  fs.chmodSync(fakeCollector, 0o755);
+
+  try {
+    const smoke = await runObservabilityCollectorSmoke({
+      contracts: loadFrameworkContracts(repoRoot),
+      collectorCommand: fakeCollector,
+      timeoutMs: 5000,
+      runtimeSnapshotProvider: async () => {
+        throw new Error('collector smoke local endpoint must not depend on live runtime snapshot provider');
+      },
+    });
+
+    assert.equal(smoke.status, 'observed');
+    assert.equal(smoke.evidence.collector_process_started, true);
+    assert.equal(smoke.evidence.collector_consumption_observed, true);
+    assert.match(
+      smoke.evidence.observed_metric_name ?? '',
+      /^(opl_provider_ready|opl_queue_length|opl_observability_collector_consumption_config)$/,
+    );
+    assert.equal(smoke.evidence.observed_stream, 'stderr');
+    assert.equal(smoke.authority_boundary.external_collector_connected, true);
+    assert.equal(smoke.authority_boundary.can_claim_runtime_ready, false);
+    const configFile = smoke.collector_config.config_file;
+    if (!configFile) throw new Error('collector smoke should expose the generated Collector config file');
+    fs.rmSync(path.dirname(configFile), { recursive: true, force: true });
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
