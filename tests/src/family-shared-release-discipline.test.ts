@@ -19,6 +19,7 @@ import {
   SHARED_OWNER_RELEASE_CONTRACT_PATH,
   syncConsumerRepo,
 } from '../../scripts/family-shared-release.mjs';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const STALE_OWNER_COMMIT = '6a6823dba7f95de5ae3aafc477167bccb07de74c';
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
@@ -77,9 +78,9 @@ function createPublishedOwnerRemoteFixture() {
 }
 
 function loadFamilyManifestFixture(fileName: string) {
-  const payload = JSON.parse(
+  const payload = parseJsonText(
     fs.readFileSync(path.join(repoRoot, 'tests/fixtures/family-manifests', fileName), 'utf8'),
-  );
+  ) as Record<string, any>;
   return payload.product_entry_manifest ?? payload;
 }
 

@@ -14,6 +14,7 @@ import {
   buildPackOsRegistry,
   buildPackOsValidation,
 } from '../../src/modules/pack/pack-os.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) {
   fs.mkdirSync(path.join(root, 'templates'), { recursive: true });
@@ -329,7 +330,7 @@ test('Pack OS cache and distribution materialize refs-only manifests for pack as
     assert.equal(distribution.bundle.cache_manifest.summary.cached_resource_count, 2);
     assert.equal(distribution.bundle.not_claims.includes('publication_ready'), true);
 
-    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    const written = parseJsonText(fs.readFileSync(outputPath, 'utf8')) as Record<string, any>;
     assert.equal(written.surface_kind, 'opl_pack_os_distribution_bundle');
     assert.equal(written.pack_lock.lock_id, 'opl-pack-lock:mas.display.example@1.2.3');
     assert.equal(written.cache_manifest.summary.cached_resource_count, 2);

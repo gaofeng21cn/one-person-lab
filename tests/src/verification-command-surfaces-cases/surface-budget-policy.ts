@@ -7,6 +7,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { loadFrameworkContracts } from '../../../src/modules/charter/contracts.ts';
 import { buildBrandCommandSpecs } from '../../../src/entrypoints/cli/cases/public-command-specs-parts/brand.ts';
+import { parseJsonText } from '../../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
@@ -16,7 +17,7 @@ function read(relativePath: string) {
 }
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(read(relativePath)) as T;
+  return parseJsonText(read(relativePath)) as T;
 }
 
 const GRIP_BIG_RELEASE_SMALL_COMPILER_MIRROR_FIELDS = [

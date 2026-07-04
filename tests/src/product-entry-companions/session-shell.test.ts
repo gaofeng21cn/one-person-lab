@@ -32,6 +32,7 @@ import {
   validateFamilyProductEntrySurface,
   validateFamilyProductEntryManifest,
 } from '../../../src/modules/console/product-entry-companions.ts';
+import { parseJsonText } from '../../../src/kernel/json-file.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
@@ -43,7 +44,7 @@ function record(value: unknown) {
 }
 
 function readFamilyManifestFixture(fileName: string) {
-  const payload = JSON.parse(
+  const payload = parseJsonText(
     fs.readFileSync(path.join(repoRoot, 'tests/fixtures/family-manifests', fileName), 'utf8'),
   ) as Record<string, unknown>;
   return (payload.product_entry_manifest as Record<string, unknown> | undefined) ?? payload;

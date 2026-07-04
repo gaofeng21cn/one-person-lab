@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -211,7 +213,7 @@ test('human docs do not retire the canonical hermes_agent executor adapter', () 
 });
 
 test('core executor surfaces keep hermes_agent in the canonical explicit non-default backend set', () => {
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts/opl-framework/family-executor-adapter-defaults.json'),
     'utf8',
   )) as {
