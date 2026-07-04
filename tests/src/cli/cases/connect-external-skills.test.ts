@@ -1,7 +1,11 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 
-function createExternalSkillsFixture() {
+function createExternalSkillsFixture(extraSkills: Array<{
+  skillId: string;
+  description: string;
+  extraFrontmatter?: string;
+}> = []) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-source-'));
   const skillsRoot = path.join(root, 'skills');
   fs.mkdirSync(skillsRoot, { recursive: true });
@@ -24,6 +28,9 @@ function createExternalSkillsFixture() {
 
   writeSkill('scanpy', 'Standard single-cell RNA-seq analysis pipeline.', 'keywords: ["single-cell","omics","scanpy"]\nallowed-tools: ["python"]\n');
   writeSkill('scientific-writing', 'Scientific manuscript writing with IMRAD and verified citations.');
+  for (const extra of extraSkills) {
+    writeSkill(extra.skillId, extra.description, extra.extraFrontmatter ?? '');
+  }
   return root;
 }
 
@@ -278,6 +285,63 @@ test('connect external-skills search and inspect return selected skill metadata'
     assert.deepEqual(inspect.opl_connect_external_skills.skill.required_environment_variables, ['TEST_API_KEY']);
     assert.match(inspect.opl_connect_external_skills.sync_command_ref, /connect external-skills sync/);
     assertExternalSkillTriggerPolicy(inspect.opl_connect_external_skills.trigger_policy);
+  } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+  }
+});
+
+test('connect external-skills classifies biomedical specialist families for on-demand MAS routing', () => {
+  const sourceRoot = createExternalSkillsFixture([
+    {
+      skillId: 'pydicom',
+      description: 'DICOM medical imaging workflow for CT and MRI patient study metadata.',
+    },
+    {
+      skillId: 'scikit-survival',
+      description: 'Clinical survival model validation with censored time-to-event outcomes.',
+    },
+    {
+      skillId: 'nextflow',
+      description: 'Nextflow workflow pipeline for reproducible bioinformatics compute.',
+    },
+    {
+      skillId: 'rdkit',
+      description: 'Cheminformatics molecule and compound analysis.',
+    },
+    {
+      skillId: 'pyzotero',
+      description: 'Zotero citation library and literature metadata management.',
+    },
+  ]);
+  try {
+    const output = runCli([
+      'connect',
+      'external-skills',
+      'list',
+      '--source-root',
+      sourceRoot,
+    ]) as {
+      opl_connect_external_skills: {
+        skills: Array<{
+          skill_id: string;
+          category: string;
+          risk_flags: string[];
+        }>;
+      };
+    };
+    const byId = new Map(output.opl_connect_external_skills.skills.map((entry) => [entry.skill_id, entry]));
+
+    assert.equal(byId.get('pydicom')?.category, 'medical_imaging');
+    assert.equal(byId.get('pydicom')?.risk_flags.includes('sensitive_or_clinical_data_policy_review'), true);
+    assert.equal(byId.get('pydicom')?.risk_flags.includes('specialist_runtime_environment_review'), true);
+    assert.equal(byId.get('scikit-survival')?.category, 'clinical_ai');
+    assert.equal(byId.get('scikit-survival')?.risk_flags.includes('specialist_runtime_environment_review'), true);
+    assert.equal(byId.get('nextflow')?.category, 'workflow_compute');
+    assert.equal(byId.get('nextflow')?.risk_flags.includes('cloud_or_remote_compute_review'), true);
+    assert.equal(byId.get('rdkit')?.category, 'chemistry');
+    assert.equal(byId.get('rdkit')?.risk_flags.includes('specialist_runtime_environment_review'), true);
+    assert.equal(byId.get('pyzotero')?.category, 'literature');
+    assert.equal(byId.get('pyzotero')?.risk_flags.includes('external_database_or_api_review'), true);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
   }

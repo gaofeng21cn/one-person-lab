@@ -10,7 +10,7 @@ Machine boundary: 本文是人读导航。机器真相以 `src/scholar-skills.ts
 本能力属于 OPL-owned MAS Scholar Skills 外置增强包，不新增第十一个 OPL 品牌模块，也不替代 MAS 专业 Skill 或 MAS owner gate。
 
 - 主模块：`Pack` 承载 candidate package、manifest、body paths 和 sha256。
-- 协同模块：`Atlas` 发现 module descriptor，`Runway` 承载 invocation / execution receipt candidate 形状，`Vault` 承载 refs、lineage 和 evidence refs，`Console` 读取 CLI JSON readback。
+- 协同模块：`Atlas` 发现 module descriptor，`Runway` 承载 invocation / execution receipt candidate 形状，`Ledger` 承载 refs、lineage 和 evidence refs，`Console` 读取 CLI JSON readback。
 - 不触碰范围：`Connect` / system install surfaces、MAS/Yang/domain authority、runtime DB、runtime queues、owner receipts、typed blockers、publication readiness、domain truth 和 paper truth。
 
 ## CLI 入口

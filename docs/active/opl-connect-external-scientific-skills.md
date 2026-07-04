@@ -49,6 +49,10 @@ no-authority boundary。Skill card 同时暴露 `source_license`、`category`、
 `keywords` 和 `risk_flags`：这些字段用于发现、审阅和策略判断，不把外部
 Skill 变成 MAS 默认能力或 domain authority。该 fingerprint 绑定实际同步的
 Skill 目录内容；本地 checkout 路径只作为定位信息，不作为可复现证据。
+`list/search/inspect` 同时给出 category、keywords 和 risk flags，用于把
+K-Dense 这类大库压缩成可审阅的单 Skill 候选；当前分类覆盖 omics、clinical
+AI、medical imaging、workflow/compute、chemistry、literature、statistics、
+scientific documents、visualization、writing 和 database/API。
 
 ## MAS 使用方式
 
@@ -64,7 +68,8 @@ MAS 优先使用默认医学论文专业 Skill 包：
 - `medical-data-governance`
 
 外部科学 Skill 用于默认包覆盖不到的专科任务，例如 `scanpy`、`pydeseq2`、
-`pathway-enrichment`、`nextflow`、`rdkit` 或 `pyhealth`。
+`pathway-enrichment`、`nextflow`、`rdkit`、`pyhealth`、`pydicom`、
+`scikit-survival` 或 `pyzotero`。
 
 粗入口 Skill 或聚合入口看到罕见专科能力时，先问 OPL Connect：
 `list/search/inspect` 读取 source index、skill card 和 `trigger_policy`，

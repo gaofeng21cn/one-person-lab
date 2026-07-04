@@ -15,7 +15,7 @@ Machine boundary: 本文是人读导航。机器真相以 `contracts/opl-framewo
 - `Pack` 承载 descriptor、schema、artifact/ref lifecycle 与 packaging。
 - `Stagecraft` 把能力模块挂到 stage / current-owner-delta 所需的 ref family。
 - `Runway` 承载 runtime invocation / attempt / queue 的通用执行骨架。
-- `Vault` 记录 evidence、receipt、lineage 与 refs。
+- `Ledger` 记录 evidence、receipt、lineage 与 refs。
 - `Console` 投影 operator readback 和安全动作。
 - `Connect` 分发、安装、skill/plugin 同步。
 - `Charter`、`Workspace`、`Foundry Lab` 分别承载治理、workspace 和 agent factory 边界。

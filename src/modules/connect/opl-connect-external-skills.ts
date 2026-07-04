@@ -346,13 +346,38 @@ function uniqueSorted(values: string[]) {
 function inferSkillCategory(skillId: string, name: string, description: string) {
   const haystack = `${skillId} ${name} ${description}`.toLowerCase();
   const categories: Array<[string, string[]]> = [
-    ['omics', ['single-cell', 'scrna', 'rna-seq', 'rnaseq', 'scanpy', 'deseq', 'pathway', 'omics']],
-    ['clinical_ai', ['pyhealth', 'clinical decision', 'treatment', 'ehr', 'mimic']],
+    ['omics', [
+      'single-cell',
+      'scrna',
+      'scrna-seq',
+      'rna-seq',
+      'rnaseq',
+      'bulk-rnaseq',
+      'scanpy',
+      'deseq',
+      'pydeseq',
+      'anndata',
+      'cellxgene',
+      'scvi',
+      'scvelo',
+      'pathway',
+      'enrichment',
+      'biopython',
+      'pysam',
+      'genomics',
+      'transcriptomics',
+      'vcf',
+      'zarr',
+      'omics',
+    ]],
+    ['clinical_ai', ['pyhealth', 'clinical decision', 'clinical report', 'clinical-report', 'treatment', 'ehr', 'mimic', 'survival', 'risk model']],
+    ['medical_imaging', ['dicom', 'pydicom', 'medical imaging', 'radiology', 'pathology', 'pathml', 'histolab', 'omero', 'imaging data commons']],
     ['workflow_compute', ['nextflow', 'modal', 'hpc', 'cloud', 'pipeline']],
-    ['chemistry', ['rdkit', 'molecule', 'compound', 'cheminformatics']],
-    ['literature', ['literature', 'paper', 'citation', 'pubmed', 'doi', 'review']],
+    ['chemistry', ['rdkit', 'molecule', 'compound', 'cheminformatics', 'datamol', 'deepchem', 'molfeat', 'medchem', 'diffdock', 'torchdrug']],
+    ['literature', ['literature', 'paper', 'citation', 'pubmed', 'doi', 'review', 'zotero', 'pyzotero', 'research lookup', 'paper lookup']],
     ['visualization', ['visualization', 'plot', 'matplotlib', 'seaborn', 'schematic', 'infographic', 'figure']],
-    ['statistics', ['statistical', 'statistics', 'power', 'experimental design', 'statsmodels', 'eda']],
+    ['statistics', ['statistical', 'statistics', 'power', 'experimental design', 'statsmodels', 'eda', 'scikit-learn', 'scikit survival', 'shap', 'pymc']],
+    ['scientific_document', ['docx', 'pptx', 'xlsx', 'pdf', 'slides', 'poster', 'latex', 'markitdown']],
     ['writing', ['writing', 'manuscript', 'venue', 'template']],
     ['database', ['database', 'lookup', 'api', 'clinicaltrials']],
   ];
@@ -378,10 +403,18 @@ function inferRiskFlags(card: Pick<SkillCard, 'skill_id' | 'name' | 'description
   if (card.required_environment_variables.length > 0) flags.push('external_credentials_or_api_key_declared');
   if (card.has_scripts) flags.push('executable_script_present');
   if (card.allowed_tools.length > 0) flags.push('tool_allowlist_declared');
-  if (/(modal|cloud|hpc|gpu|remote|cluster)/.test(haystack)) flags.push('cloud_or_remote_compute_review');
-  if (/(nextflow|scanpy|deseq|pydeseq|rdkit|pyhealth|statsmodels)/.test(haystack)) flags.push('specialist_runtime_environment_review');
-  if (/(database|api|pubmed|clinicaltrials|semantic scholar|openalex|crossref)/.test(haystack)) flags.push('external_database_or_api_review');
-  if (/(clinical|patient|ehr|mimic|health)/.test(haystack)) flags.push('sensitive_or_clinical_data_policy_review');
+  if (/(modal|cloud|hpc|gpu|remote|cluster|nextflow|dask|dnanexus|latchbio|opentrons|pylabrobot)/.test(haystack)) {
+    flags.push('cloud_or_remote_compute_review');
+  }
+  if (/(nextflow|scanpy|deseq|pydeseq|rdkit|pyhealth|statsmodels|scikit|survival|pydicom|dicom|anndata|scvi|scvelo|zarr|biopython|pysam|deepchem|datamol|molfeat|diffdock|torchdrug|pymc|shap|networkx|qiskit|pennylane|pytorch|torch)/.test(haystack)) {
+    flags.push('specialist_runtime_environment_review');
+  }
+  if (/(database|api|pubmed|clinicaltrials|semantic scholar|openalex|crossref|zotero|pyzotero|benchling|protocols|labarchive)/.test(haystack)) {
+    flags.push('external_database_or_api_review');
+  }
+  if (/(clinical|patient|ehr|mimic|health|dicom|pydicom|medical imaging|radiology|pathology|treatment|diagnosis)/.test(haystack)) {
+    flags.push('sensitive_or_clinical_data_policy_review');
+  }
   return flags.length > 0 ? uniqueSorted(flags) : ['no_declared_runtime_risk'];
 }
 
