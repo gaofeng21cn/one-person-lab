@@ -108,6 +108,26 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
     (semanticContract.export_readback_seed.collector_export_boundary as any).runtime_ready_claim,
     'not_claimed',
   );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_config as any).collector_kind,
+    'opentelemetry_collector',
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_config as any).receiver,
+    'prometheus',
+  );
+  assert.deepEqual(
+    (semanticContract.export_readback_seed.collector_consumption_config as any).config.service.pipelines.metrics,
+    {
+      receivers: ['prometheus'],
+      processors: ['batch'],
+      exporters: ['debug'],
+    },
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_config as any).scrape_endpoint.metrics_path,
+    '/metrics',
+  );
   assert.equal(semanticContract.export_readback_seed.readiness_claim, 'not_claimed');
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);
   assert.equal(semanticContract.authority_boundary.can_create_private_ledger_ui, false);
@@ -219,11 +239,25 @@ test('observability export seed groups trace metric and log signals without payl
   assert.equal(seed.surface_kind, 'opl_observability_export_readback_seed');
   assert.equal(seed.summary.readiness_claim, 'not_claimed');
   assert.equal(seed.summary.collector_export_boundary, 'seed_only_no_external_collector');
+  assert.equal(seed.summary.collector_consumption_status, 'collector_config_consumable_no_external_collector');
+  assert.equal(seed.summary.collector_config_consumable, true);
   assert.equal(seed.summary.observed_metric_count, 2);
   assert.equal(seed.collector_export_boundary.collector_kind, 'not_configured');
   assert.equal(seed.collector_export_boundary.external_collector_connected, false);
   assert.equal(seed.collector_export_boundary.exporter_seed_only, true);
   assert.equal(seed.collector_export_boundary.payload_body_exported, false);
+  assert.equal(seed.collector_consumption_config.collector_kind, 'opentelemetry_collector');
+  assert.equal(seed.collector_consumption_config.receiver, 'prometheus');
+  assert.equal(seed.collector_consumption_config.receiver_input_format, 'openmetrics');
+  assert.equal(seed.collector_consumption_config.scrape_endpoint.default_target, '127.0.0.1:9464');
+  assert.equal(seed.collector_consumption_config.scrape_endpoint.endpoint_required, true);
+  assert.deepEqual(seed.collector_consumption_config.config.service.pipelines.metrics.receivers, ['prometheus']);
+  assert.deepEqual(seed.collector_consumption_config.config.service.pipelines.metrics.processors, ['batch']);
+  assert.deepEqual(seed.collector_consumption_config.config.service.pipelines.metrics.exporters, ['debug']);
+  assert.equal(
+    seed.collector_consumption_config.config.receivers.prometheus.config.scrape_configs[0].job_name,
+    'opl_runtime_observability_export',
+  );
   assert.equal(seed.exporter_signal_mapping.metrics.exporter_signal, 'openmetrics_gauge_seed');
   assert.equal(seed.authority_boundary.can_store_payload_body, false);
   assert.equal(seed.authority_boundary.can_claim_runtime_ready, false);
@@ -245,6 +279,10 @@ test('observability export seed groups trace metric and log signals without payl
   assert.match(openmetrics, /opl_observability_collector_export_boundary\{[^}]*external_collector_connected="false"[^}]*\} 1/);
   assert.match(openmetrics, /opl_observability_collector_export_boundary\{[^}]*payload_body_exported="false"[^}]*\} 1/);
   assert.match(openmetrics, /opl_observability_collector_export_boundary\{[^}]*runtime_ready_claim="not_claimed"[^}]*\} 1/);
+  assert.match(openmetrics, /# TYPE opl_observability_collector_consumption_config gauge/);
+  assert.match(openmetrics, /opl_observability_collector_consumption_config\{[^}]*collector_kind="opentelemetry_collector"[^}]*\} 1/);
+  assert.match(openmetrics, /opl_observability_collector_consumption_config\{[^}]*receiver="prometheus"[^}]*\} 1/);
+  assert.match(openmetrics, /opl_observability_collector_consumption_config\{[^}]*config_consumable="true"[^}]*\} 1/);
   assert.match(openmetrics, /can_claim_runtime_ready="false"/);
   assert.equal(openmetrics.includes('must-not-leak'), false);
 });

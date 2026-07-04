@@ -183,6 +183,11 @@ db.close();`,
       'seed_only_no_external_collector',
     );
     assert.equal(
+      observability.semantic_conventions.summary.collector_consumption_status,
+      'collector_config_consumable_no_external_collector',
+    );
+    assert.equal(observability.semantic_conventions.summary.collector_config_consumable, true);
+    assert.equal(
       observability.semantic_conventions.runtime_export_binding.binding_policy,
       'runtime_export_refs_only_no_payload_body_no_ready_claim',
     );
@@ -201,6 +206,26 @@ db.close();`,
     assert.equal(observability.semantic_conventions.collector_export_boundary.external_collector_connected, false);
     assert.equal(observability.semantic_conventions.collector_export_boundary.exporter_seed_only, true);
     assert.equal(observability.semantic_conventions.collector_export_boundary.payload_body_exported, false);
+    assert.equal(
+      observability.semantic_conventions.collector_consumption_config.collector_kind,
+      'opentelemetry_collector',
+    );
+    assert.equal(
+      observability.semantic_conventions.collector_consumption_config.receiver,
+      'prometheus',
+    );
+    assert.equal(
+      observability.semantic_conventions.collector_consumption_config.receiver_input_format,
+      'openmetrics',
+    );
+    assert.deepEqual(
+      observability.semantic_conventions.collector_consumption_config.config.service.pipelines.metrics,
+      {
+        receivers: ['prometheus'],
+        processors: ['batch'],
+        exporters: ['debug'],
+      },
+    );
     assert.equal(
       observability.semantic_conventions.forbidden_body_fields.includes('payload_body'),
       true,
@@ -235,6 +260,10 @@ db.close();`,
     assert.match(openMetrics.stdout, /opl_observability_collector_export_boundary\{[^}]*external_collector_connected="false"[^}]*\} 1/);
     assert.match(openMetrics.stdout, /opl_observability_collector_export_boundary\{[^}]*payload_body_exported="false"[^}]*\} 1/);
     assert.match(openMetrics.stdout, /opl_observability_collector_export_boundary\{[^}]*runtime_ready_claim="not_claimed"[^}]*\} 1/);
+    assert.match(openMetrics.stdout, /# TYPE opl_observability_collector_consumption_config gauge/);
+    assert.match(openMetrics.stdout, /opl_observability_collector_consumption_config\{[^}]*collector_kind="opentelemetry_collector"[^}]*\} 1/);
+    assert.match(openMetrics.stdout, /opl_observability_collector_consumption_config\{[^}]*receiver="prometheus"[^}]*\} 1/);
+    assert.match(openMetrics.stdout, /opl_observability_collector_consumption_config\{[^}]*config_consumable="true"[^}]*\} 1/);
     assert.match(openMetrics.stdout, /opl_authority_boundary\{can_execute_repair="false",can_write_domain_truth="false",can_authorize_quality_verdict="false",can_authorize_ready_verdict="false"\} 1/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

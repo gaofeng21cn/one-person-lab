@@ -58,6 +58,66 @@ const COLLECTOR_EXPORT_BOUNDARY = {
   production_ready_claim: 'not_claimed',
 } as const;
 
+const COLLECTOR_CONSUMPTION_CONFIG = {
+  surface_kind: 'opentelemetry_collector_consumption_config',
+  config_ref: 'opentelemetry_collector_config.prometheus_receiver.openmetrics_debug_pipeline',
+  collector_kind: 'opentelemetry_collector',
+  config_format: 'otelcol_yaml_equivalent_json',
+  receiver: 'prometheus',
+  receiver_input_format: 'openmetrics',
+  scrape_endpoint: {
+    source_export_command: 'opl runtime observability-export --format openmetrics',
+    endpoint_kind: 'prometheus_text_endpoint',
+    scheme: 'http',
+    default_target: '127.0.0.1:9464',
+    metrics_path: '/metrics',
+    endpoint_required: true,
+  },
+  config: {
+    receivers: {
+      prometheus: {
+        config: {
+          scrape_configs: [
+            {
+              job_name: 'opl_runtime_observability_export',
+              metrics_path: '/metrics',
+              static_configs: [
+                {
+                  targets: ['127.0.0.1:9464'],
+                  labels: {
+                    opl_export_surface: 'runtime_observability_export',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+    processors: {
+      batch: {},
+    },
+    exporters: {
+      debug: {},
+    },
+    service: {
+      pipelines: {
+        metrics: {
+          receivers: ['prometheus'],
+          processors: ['batch'],
+          exporters: ['debug'],
+        },
+      },
+    },
+  },
+  payload_body_exported: false,
+  payload_body_stored: false,
+  external_collector_connected: false,
+  runtime_ready_claim: 'not_claimed',
+  domain_ready_claim: 'not_claimed',
+  production_ready_claim: 'not_claimed',
+} as const;
+
 const APP_OPERATOR_PROJECTION_TERM = ['drill', 'down'].join('');
 const APP_OPERATOR_PROJECTION_REF_ROOT =
   `/runtime_tray_snapshot/app_operator_${APP_OPERATOR_PROJECTION_TERM}`;
@@ -145,6 +205,7 @@ const OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS = {
   },
   exporter_signal_mapping: EXPORTER_SIGNAL_MAPPING,
   collector_export_boundary: COLLECTOR_EXPORT_BOUNDARY,
+  collector_consumption_config: COLLECTOR_CONSUMPTION_CONFIG,
   forbidden_body_fields: FORBIDDEN_BODY_FIELDS,
   authority_boundary: {
     ledger_refs_only: true,
@@ -281,6 +342,7 @@ function buildObservabilitySemanticConventionReadback(input: ObservabilitySemant
     },
     exporter_signal_mapping: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.exporter_signal_mapping,
     collector_export_boundary: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.collector_export_boundary,
+    collector_consumption_config: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.collector_consumption_config,
     forbidden_body_fields: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.forbidden_body_fields,
     forbidden_body_fields_present: forbiddenBodyFieldsPresent(input),
     authority_boundary: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.authority_boundary,
@@ -309,6 +371,7 @@ function buildObservabilitySemanticConventionExportSeed(input: ObservabilitySema
     semantic_conventions_ref: 'contracts/opl-framework/observability-semantic-conventions-contract.json',
     exporter_signal_mapping: readback.exporter_signal_mapping,
     collector_export_boundary: readback.collector_export_boundary,
+    collector_consumption_config: readback.collector_consumption_config,
     signal_groups: {
       traces: [
         {
@@ -333,6 +396,8 @@ function buildObservabilitySemanticConventionExportSeed(input: ObservabilitySema
       observed_metric_count: metrics.filter((metric) => metric.value_observed).length,
       log_event_count: 1,
       collector_export_boundary: 'seed_only_no_external_collector',
+      collector_consumption_status: 'collector_config_consumable_no_external_collector',
+      collector_config_consumable: true,
       body_policy: 'refs_only_no_payload_body',
       readiness_claim: 'not_claimed',
     },
@@ -345,6 +410,7 @@ function buildObservabilitySemanticConventionExportSeed(input: ObservabilitySema
 function renderObservabilitySemanticConventionOpenMetrics(
   exportSeed: ReturnType<typeof buildObservabilitySemanticConventionExportSeed>,
 ) {
+  const collectorConfig = exportSeed.collector_consumption_config;
   const lines = exportSeed.signal_groups.metrics
     .filter((metric) => metric.value_observed && metric.value !== null)
     .flatMap((metric) => [
@@ -381,6 +447,21 @@ function renderObservabilitySemanticConventionOpenMetrics(
       runtime_ready_claim: exportSeed.collector_export_boundary.runtime_ready_claim,
       domain_ready_claim: exportSeed.collector_export_boundary.domain_ready_claim,
       production_ready_claim: exportSeed.collector_export_boundary.production_ready_claim,
+    }),
+    '# HELP opl_observability_collector_consumption_config Constant guard for the OpenTelemetry Collector config fragment that can consume this OpenMetrics export.',
+    '# TYPE opl_observability_collector_consumption_config gauge',
+    openMetricsLine('opl_observability_collector_consumption_config', 1, {
+      collector_kind: collectorConfig.collector_kind,
+      receiver: collectorConfig.receiver,
+      receiver_input_format: collectorConfig.receiver_input_format,
+      config_format: collectorConfig.config_format,
+      metrics_path: collectorConfig.scrape_endpoint.metrics_path,
+      default_target: collectorConfig.scrape_endpoint.default_target,
+      endpoint_required: String(collectorConfig.scrape_endpoint.endpoint_required),
+      config_consumable: String(exportSeed.summary.collector_config_consumable),
+      external_collector_connected: String(collectorConfig.external_collector_connected),
+      payload_body_exported: String(collectorConfig.payload_body_exported),
+      runtime_ready_claim: collectorConfig.runtime_ready_claim,
     }),
     '# EOF',
   ].join('\n')}\n`;

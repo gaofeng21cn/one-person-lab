@@ -775,6 +775,15 @@ Phase 1、Phase 7、Phase 9 的本轮收薄已吸收进 `main`，属于 schema b
 - Source/readback：`observability-semantic-conventions.ts` 生成同源 semantic convention readback 和 export seed；`runtime observability-export` 复用该 seed，并在 OpenMetrics 输出 `opl_observability_exporter_signal_mapping`、`opl_observability_collector_export_boundary` 与 no-ready-claim boundary。
 - Fresh evidence：`node --test --experimental-strip-types tests/src/observability-semantic-conventions.test.ts tests/src/cli/cases/runtime-observability-export.test.ts` 6/6 pass；`npm run reuse-first:scan:diff -- --diff-ref origin/main --strict` gate_status=ok。该证据只证明 exporter boundary contract / readback / OpenMetrics seed，不证明真实 Collector/exporter、runtime ready、domain ready、artifact ready、production ready 或 owner acceptance。
 
+## Phase 9 Collector Consumption Config Readback 2026-07-04
+
+本轮把 refs-only OpenMetrics seed 向 OpenTelemetry Collector 可消费结构推进一刀：不新增私有 ledger/exporter UI，不引入 JS 依赖，不启动外部 Collector，不导出 payload body，也不声明 runtime/domain/artifact/production readiness。
+
+- Contract/source：`observability-semantic-conventions-contract.json` 与 `observability-semantic-conventions.ts` 增加 `collector_consumption_config`，按 OpenTelemetry Collector 的 `receivers -> processors -> exporters -> service.pipelines.metrics` 结构提供 Prometheus receiver / OpenMetrics input / batch processor / debug exporter 的 YAML 等价 JSON fragment，并显式标出 `endpoint_required=true`、默认 scrape target、`external_collector_connected=false` 与 no-ready-claim。
+- Runtime readback：`runtime observability-export` 的 JSON payload 现在携带同一 `collector_consumption_config`；OpenMetrics 输出新增 `opl_observability_collector_consumption_config` guard metric，让 Collector 消费面、Prometheus receiver 入口和 no-body/no-ready 边界可被下游观测系统读取。
+- 依赖边界：本切片复用现有 OpenMetrics 输出与 Collector 标准配置结构即可形成可消费 config/readback；真正暴露 HTTP `/metrics` endpoint、运行外部 Collector 或接入 OTLP SDK exporter 需要 runtime endpoint / deployment owner lane，不在本次允许写集内，因此未修改 `package.json` / `package-lock.json`。
+- Fresh evidence：`node --test --experimental-strip-types tests/src/observability-semantic-conventions.test.ts tests/src/cli/cases/runtime-observability-export.test.ts` 7/7 pass；`npm run typecheck` pass；`npm run reuse-first:scan:diff -- --strict` gate_status=ok；`git diff --check` pass。该证据只证明 Collector-config-consumable readback 切片，不证明外部 Collector 已运行、runtime ready、domain ready、artifact ready、production ready 或 owner acceptance。
+
 ## Phase 9 Diagnostic Drilldown Projection Scan Boundary 2026-07-04
 
 本轮只修正 No-resurrection scan 对 source-module diagnostic drilldown 的分类：`drilldown` 作为显式 diagnostic command/readback projection 不是私有 observability ledger；但同一行如果仍包含 `evidence_ledger`、`receipt_ledger`、`attempt ledger` 或 `runtime ledger`，仍保留为 Phase 10 observability migration finding。
