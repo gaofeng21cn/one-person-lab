@@ -6,6 +6,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const script = path.join(repoRoot, 'scripts', 'reuse-first-scan.mjs');
@@ -28,7 +30,7 @@ test('reuse-first scan reports hand-written boundary candidates without failing 
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.status, 'attention');
@@ -53,7 +55,7 @@ test('reuse-first scan allows explicit local exceptions', () => {
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.status, 'ok');
@@ -82,7 +84,7 @@ test('reuse-first diff scan includes untracked files', () => {
     '--diff-ref',
     'HEAD',
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.finding_count, 1);
@@ -107,7 +109,7 @@ test('reuse-first strict diff fails only hard gate categories with decision meta
     'HEAD',
     '--strict',
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
   const finding = output.findings[0];
 
   assert.equal(result.status, 1);
@@ -140,7 +142,7 @@ test('reuse-first strict diff keeps advisory categories non-blocking', () => {
     'HEAD',
     '--strict',
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.gate_status, 'advisory_attention');
@@ -192,7 +194,7 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-historical-worklist.json'),
     '--max-findings=0',
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
   const summary = output.historical_decision_summary;
 
   assert.equal(result.status, 0, result.stderr);
@@ -245,7 +247,7 @@ test('reuse-first diff gate ignores broad historical worklist decisions', () => 
     'HEAD',
     '--strict',
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 1);
   assert.equal(output.gate_status, 'hard_fail');
@@ -257,7 +259,7 @@ test('reuse-first diff gate ignores broad historical worklist decisions', () => 
 test('reuse-first scan allows update rollback only as command registry metadata', () => {
   const fixture = makeFixture();
   const contractPath = path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json');
-  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+  const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
   contract.scan.roots = ['contracts'];
   fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
   writeFixtureFile(
@@ -274,7 +276,7 @@ test('reuse-first scan allows update rollback only as command registry metadata'
     '--contract',
     contractPath,
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.finding_count, 1);
@@ -305,7 +307,7 @@ test('reuse-first scan allows managed update owner boundary metadata only in the
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.finding_count, 1);
@@ -340,7 +342,7 @@ test('reuse-first scan allows queue projection vocabulary only in the kernel voc
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.finding_count, 3);
@@ -377,7 +379,7 @@ test('reuse-first scan allows source-module diagnostic projection wording withou
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.finding_count, 2);
@@ -419,7 +421,7 @@ test('reuse-first scan allows observability projection vocabulary only in the ke
     '--contract',
     path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
   ], { encoding: 'utf8' });
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(output.finding_count, 2);
@@ -433,10 +435,10 @@ function makeFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reuse-first-scan-'));
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');
   fs.mkdirSync(contractDir, { recursive: true });
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
     'utf8',
-  ));
+  )) as any;
   contract.scan.roots = ['src'];
   fs.writeFileSync(
     path.join(contractDir, 'reuse-first-governance.json'),
