@@ -15,6 +15,7 @@ import type {
   BrandModuleL5OperatingEvidenceContract,
   FrameworkContracts,
 } from '../../kernel/types.ts';
+import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../kernel/observability-projection-vocabulary.ts';
 
 type BrandModuleL5StatusArgs = string[];
 
@@ -683,7 +684,7 @@ function compactModule(
     blocked_requirement_count: entry.evidence_requirements
       .filter((requirement) => requirement.current_state === 'blocked')
       .length,
-    evidence_ledger: {
+    [OBSERVABILITY_EVIDENCE_LEDGER_FIELD]: {
       receipt_count: moduleLedgerReceipts.length,
       verified_receipt_count: verifiedModuleLedgerReceipts.length,
       observed_evidence_class_ids: unique(
@@ -735,7 +736,7 @@ function statusEnvelope(
     l5_complete_module_ids: allCompleteModuleIds,
     evidence_required_module_count: allEvidenceRequiredModuleIds.length,
     evidence_required_module_ids: allEvidenceRequiredModuleIds,
-    evidence_ledger: {
+    [OBSERVABILITY_EVIDENCE_LEDGER_FIELD]: {
       surface_kind: evidenceLedger.surface_kind,
       receipt_count: evidenceLedger.receipt_count,
       verified_receipt_count: evidenceLedger.verified_receipt_count,

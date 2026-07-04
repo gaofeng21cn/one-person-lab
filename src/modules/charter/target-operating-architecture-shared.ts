@@ -1,4 +1,5 @@
 import type { BrandModuleId } from '../../kernel/types.ts';
+import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../kernel/observability-projection-vocabulary.ts';
 import {
   FrameworkContractError,
   isRecord,
@@ -177,7 +178,7 @@ export const TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS = [
   'one_person_lab_app',
   'agent_lab',
   'read_model',
-  'evidence_ledger',
+  OBSERVABILITY_EVIDENCE_LEDGER_FIELD,
   'worklist',
   'runway_control_loop',
   'progress_reconciler',

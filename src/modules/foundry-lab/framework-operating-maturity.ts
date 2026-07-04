@@ -1,6 +1,7 @@
 import { buildAgentDefaultCallerReadinessReport } from './agent-platform-surface-ownership.ts';
 import { buildBrandModuleL5Status } from '../charter/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../kernel/observability-projection-vocabulary.ts';
 import { buildFoundryAgentOsOwnerEvidenceIntake } from './foundry-agent-os-owner-evidence-intake.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from './framework-readiness-source-commands.ts';
 import {
@@ -471,7 +472,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         domain_owner_chain_open_domain_count: domainOpenCount,
         brand_module_l5_evidence_required_module_count: l5RequiredModuleCount,
         brand_module_l5_verified_receipt_count:
-          numberValue(record(brandModuleL5.evidence_ledger).verified_receipt_count),
+          numberValue(record(brandModuleL5[OBSERVABILITY_EVIDENCE_LEDGER_FIELD]).verified_receipt_count),
         app_release_user_path_open_count: appReleaseOpenCount,
         provider_long_soak_open_count: providerOpenCount,
         cleanup_retirement_open_decision_count: cleanupOpenDecisionCount,
@@ -504,7 +505,7 @@ export async function buildFrameworkOperatingMaturityReadout(
         evidence_required_module_ids: stringListValue(brandModuleL5.evidence_required_module_ids),
         l5_complete_module_count: numberValue(brandModuleL5.l5_complete_module_count),
         l5_complete_module_ids: stringListValue(brandModuleL5.l5_complete_module_ids),
-        evidence_ledger: record(brandModuleL5.evidence_ledger),
+        [OBSERVABILITY_EVIDENCE_LEDGER_FIELD]: record(brandModuleL5[OBSERVABILITY_EVIDENCE_LEDGER_FIELD]),
         l5_claim_policy: record(brandModuleL5.l5_claim_policy),
         owner_route_work_order_policy: record(brandModuleL5.owner_route_work_order_policy),
         authority_boundary: record(brandModuleL5.authority_boundary),
@@ -889,7 +890,7 @@ export function buildFrameworkOperatingMaturityCompactReadback(
         'owner_evidence_intake',
         'domain_owner_chain_scaleout.domains',
         'domain_owner_chain_scaleout.domain_owner_evidence_routes',
-        'brand_module_l5.evidence_ledger',
+        ['brand_module_l5.', OBSERVABILITY_EVIDENCE_LEDGER_FIELD].join(''),
         'app_release_user_path.execution_runbook',
         'provider_long_soak.capability_checklist',
         'memory_artifact_lifecycle.owner_action_checklist',

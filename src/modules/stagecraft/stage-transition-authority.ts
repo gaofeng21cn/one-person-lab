@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
+import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../kernel/observability-projection-vocabulary.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
@@ -26,7 +27,7 @@ const STAGE_TRANSITION_PRODUCER_KINDS = [
   'one_person_lab_app',
   'runtime_provider',
   'agent_lab',
-  'evidence_ledger',
+  OBSERVABILITY_EVIDENCE_LEDGER_FIELD,
   'read_model',
   'worklist',
   'stage_transition_authority',

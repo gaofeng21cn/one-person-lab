@@ -615,8 +615,15 @@ export function ownerBoundaryRef(prefix: string, ...segments: string[]) {
   return `${prefix}/${segments.map((segment) => encodeURIComponent(segment)).join('/')}`;
 }
 
-export function managedUpdateCommand(operation: ManagedUpdateOperation, componentId: string) {
-  return `opl update ${operation} --component ${componentId} --json`;
+export function managedUpdateCommand(
+  operation: ManagedUpdateOperation,
+  componentId: string,
+  options: { json?: boolean } = {},
+) {
+  return [
+    `opl update ${operation} --component ${componentId}`,
+    options.json === false ? null : '--json',
+  ].filter(Boolean).join(' ');
 }
 
 export function managedUpdateComponentReceiptInput(input: {

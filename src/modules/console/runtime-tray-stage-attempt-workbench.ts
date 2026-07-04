@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
 import {
   buildEffectiveCurrentContextPacket,
@@ -160,7 +161,7 @@ function attemptHasHumanGate(row: StageAttemptWorkbenchRow, humanGateRefs: strin
 
 function sourceRefs(queueDb: string): RuntimeTraySourceRef[] {
   return [
-    fileSourceRef(`${queueDb}#stage_attempts`, 'stage_attempt_ledger', 'OPL stage attempt ledger'),
+    fileSourceRef(`${queueDb}#stage_attempts`, 'stage_attempt_ledger', `OPL stage ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}`),
     fileSourceRef(`${queueDb}#stage_attempt_closeouts`, 'stage_attempt_closeout_ledger', 'OPL stage closeout ledger'),
   ];
 }

@@ -5,6 +5,7 @@ import {
   buildRepoGeneratedInterfaceBundle,
 } from '../../pack/index.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
+import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../../kernel/observability-projection-vocabulary.ts';
 import {
   resolveCodexHome,
   resolveGeneratedPluginRootForName,
@@ -102,7 +103,7 @@ function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedC
             '- Chapter openings and major section transitions should start from a concrete scene, reader tension, practical question, or consequence before introducing concepts, unless the reader-style contract explicitly calls for a technical structure.',
             '- Do not rely on a routine late reader-facing rewrite to make chapters natural; if a first draft reads like a memo or instruction manual, treat it as a drafting-gate failure and update the chapter-production pattern before continuing.',
             '- For book-length nonfiction, maintain owner-inspectable book memory: working memory for the active chapter context, episodic memory for prior chapter reviews and owner decisions, and semantic memory for durable thesis, source canon, glossary, style assets, and evidence rules.',
-            '- Use chapter task cards as the chapter-runtime surface: reader promise, chapter job, thesis movement, source refs, target extent, figure/table obligations, active memory refs, style constraints, QC state, and blockers. Do not add a Book Forge-private scheduler, queue, session store, or attempt ledger.',
+            `- Use chapter task cards as the chapter-runtime surface: reader promise, chapter job, thesis movement, source refs, target extent, figure/table obligations, active memory refs, style constraints, QC state, and blockers. Do not add a Book Forge-private scheduler, queue, session store, or ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}.`,
             '- Back-propagate accepted chapter QC repairs into the chapter task card, style engine, glossary, evidence map, or semantic memory when the finding is reusable; do not only patch local prose when the defect is systemic.',
             '- When the owner supplies a stronger reference draft, prior version, edited chapter, comparable sample, or asks which version is better, run Book Forge reference-draft absorption before further chapter drafting or major rewriting. Extract transferable strengths into reader-entry plans, chapter task cards, style-engine rules, QC gates, evidence maps, or publication-design refs; do not copy reference prose or turn secondary-reader patterns into a new primary-reader voice.',
             '- Keep transparent prompt bundle refs for storyline shaping, chapter drafting, review, repair, style checks, publication proofing, and export handoff so owner review can inspect the instructions and source slices behind major passes.',

@@ -529,7 +529,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     section_id: 'updates',
     task_kind: MANAGED_UPDATE_OWNER_ACTIONS.revert,
     taxonomy: 'settings.updates.rollback_runtime_substrate',
-    delegated_surface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate'),
+    delegated_surface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate', { json: false }),
     payload_fields: ['receipt_ref'],
     mutates: 'none_read_only',
     dry_run_supported: true,

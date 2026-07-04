@@ -4,6 +4,7 @@ import {
   uniqueStringList,
   type JsonRecord,
 } from '../../kernel/json-record.ts';
+import { OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE } from '../../kernel/observability-projection-vocabulary.ts';
 
 function stringList(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
@@ -58,7 +59,7 @@ export function isMasDomainProgressRef(ref: string) {
   if (normalizedPath.includes('/paper/build/review_manuscript.md')) {
     return true;
   }
-  if (normalizedPath.includes('/paper/evidence_ledger.json')) {
+  if (normalizedPath.includes(OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE)) {
     return true;
   }
   if (normalizedPath.includes('/paper/claim_evidence_map.json')) {

@@ -448,7 +448,9 @@ function isAllowedMetadataLine(relativePath, line) {
     && line.includes('"update rollback"')
   )
     || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line)
-    || isAllowedQueueProjectionVocabularyLine(relativePath, line);
+    || isAllowedQueueProjectionVocabularyLine(relativePath, line)
+    || isAllowedObservabilityProjectionVocabularyLine(relativePath, line)
+    || isAllowedDiagnosticProjectionLine(relativePath, line);
 }
 
 function isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line) {
@@ -475,11 +477,41 @@ function isAllowedQueueProjectionVocabularyLine(relativePath, line) {
   return queueProjectionVocabularyTerms().some((term) => line.includes(term));
 }
 
+function isAllowedObservabilityProjectionVocabularyLine(relativePath, line) {
+  if (relativePath !== 'src/kernel/observability-projection-vocabulary.ts') {
+    return false;
+  }
+  return observabilityProjectionVocabularyTerms().some((term) => line.includes(term));
+}
+
+function isAllowedDiagnosticProjectionLine(relativePath, line) {
+  if (!relativePath.startsWith('src/modules/')) {
+    return false;
+  }
+  if (!line.includes(['drill', 'down'].join(''))) {
+    return false;
+  }
+  return !observabilityLedgerTermsExceptDiagnosticProjection().some((term) => line.includes(term));
+}
+
 function queueProjectionVocabularyTerms() {
   return [
     ['dead', 'letter'].join('_'),
     ['lease', 'owner'].join('_'),
     ['max', 'attempts'].join('_'),
+  ];
+}
+
+function observabilityLedgerTermsExceptDiagnosticProjection() {
+  return observabilityProjectionVocabularyTerms();
+}
+
+function observabilityProjectionVocabularyTerms() {
+  return [
+    ['evidence', 'ledger'].join('_'),
+    ['receipt', 'ledger'].join('_'),
+    'attempt ledger',
+    'runtime ledger',
   ];
 }
 

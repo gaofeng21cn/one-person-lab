@@ -1,0 +1,5 @@
+export const OBSERVABILITY_EVIDENCE_LEDGER_FIELD = 'evidence_ledger';
+export const OBSERVABILITY_RECEIPT_LEDGER_FIELD = 'receipt_ledger';
+export const OBSERVABILITY_ATTEMPT_LEDGER_LABEL = 'attempt ledger';
+export const OBSERVABILITY_RUNTIME_LEDGER_LABEL = 'runtime ledger';
+export const OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE = `/paper/${OBSERVABILITY_EVIDENCE_LEDGER_FIELD}.json`;

@@ -2,6 +2,7 @@ import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './public/runtime-manager-support.ts';
+import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import {
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
   MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
@@ -140,7 +141,7 @@ function buildFamilySchedulerReplacement() {
         legacy_scheduler_owner: null,
         legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
         replacement_role:
-          'OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.',
+          `OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.`,
         required_domain_refs: [
           MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
           OPL_RUNTIME_OWNER_ROUTE,
@@ -478,7 +479,7 @@ export async function buildRuntimeManager(
       },
       notes: [
         'Family runtime is Temporal-backed in production; local_sqlite is the dev/CI/offline local ledger provider, and temporal is the required production durable workflow provider.',
-        'OPL Runtime Manager is the product control plane, typed queue, stage attempt ledger, domain dispatch, and projection layer.',
+        `OPL Runtime Manager is the product control plane, typed queue, stage ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, domain dispatch, and projection layer.`,
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
     },

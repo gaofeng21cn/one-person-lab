@@ -351,6 +351,84 @@ test('reuse-first scan allows queue projection vocabulary only in the kernel voc
   ]);
 });
 
+test('reuse-first scan allows source-module diagnostic projection wording without private ledger classification', () => {
+  const fixture = makeFixture();
+  const diagnosticProjection = ['drill', 'down'].join('');
+  const evidenceLedger = ['evidence', 'ledger'].join('_');
+  writeFixtureFile(
+    fixture,
+    'src/modules/console/operator-projection.ts',
+    `export const sourceCommand = 'opl runtime app-operator-${diagnosticProjection} --json';\n`,
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/console/private-observability.ts',
+    [
+      `export const ledgerName = "${evidenceLedger}";`,
+      `export const mixedPrivateLedger = "${evidenceLedger} ${diagnosticProjection}";`,
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 2);
+  assert.deepEqual(output.findings.map((finding: { path: string }) => finding.path), [
+    'src/modules/console/private-observability.ts',
+    'src/modules/console/private-observability.ts',
+  ]);
+});
+
+test('reuse-first scan allows observability projection vocabulary only in the kernel vocabulary file', () => {
+  const fixture = makeFixture();
+  const evidenceLedger = ['evidence', 'ledger'].join('_');
+  const receiptLedger = ['receipt', 'ledger'].join('_');
+  writeFixtureFile(
+    fixture,
+    'src/kernel/observability-projection-vocabulary.ts',
+    [
+      `export const evidenceLedger = '${evidenceLedger}';`,
+      `export const receiptLedger = '${receiptLedger}';`,
+      `export const attemptLedger = 'attempt ledger';`,
+      `export const runtimeLedger = 'runtime ledger';`,
+      '',
+    ].join('\n'),
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/ledger/private-observability.ts',
+    [
+      `export const evidenceLedger = '${evidenceLedger}';`,
+      `export const attemptLedger = 'attempt ledger';`,
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+  ], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 2);
+  assert.deepEqual(output.findings.map((finding: { path: string }) => finding.path), [
+    'src/modules/ledger/private-observability.ts',
+    'src/modules/ledger/private-observability.ts',
+  ]);
+});
+
 function makeFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-reuse-first-scan-'));
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');

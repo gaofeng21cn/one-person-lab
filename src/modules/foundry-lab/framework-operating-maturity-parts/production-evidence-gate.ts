@@ -1,3 +1,4 @@
+import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../../kernel/observability-projection-vocabulary.ts';
 import { FRAMEWORK_READINESS_SOURCE_COMMANDS as SOURCE_COMMANDS } from '../framework-readiness-source-commands.ts';
 import {
   numberValue,
@@ -216,7 +217,7 @@ function brandModuleL5OwnerActionChecklist(
       ...typedBlockerWorkOrders,
     ];
     const nextAction = record(module.next_action_summary);
-    const evidenceLedger = record(module.evidence_ledger);
+    const evidenceLedger = record(module[OBSERVABILITY_EVIDENCE_LEDGER_FIELD]);
     const ownerFollowthrough = record(module.owner_followthrough_summary);
     return {
       module_id: moduleId,

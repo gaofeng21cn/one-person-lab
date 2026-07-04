@@ -1,5 +1,6 @@
 import type { listEvents } from './family-runtime-store.ts';
 import { isRecord, optionalString } from '../atlas/index.ts';
+import { OBSERVABILITY_RUNTIME_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import {
   buildProviderLongSoakEvidenceProjection,
 } from '../ledger/index.ts';
@@ -329,7 +330,7 @@ function providerCadenceWindow(input: {
   const requiredNextAction = windowStatus === 'window_cadence_satisfied'
     ? 'Keep supervised Temporal provider SLO ticks running for the full operator evidence window.'
     : windowStatus === 'window_repair_receipt_observed'
-      ? 'Repair Temporal provider blockers, rerun provider SLO tick, and keep the repair receipt in the runtime ledger.'
+      ? `Repair Temporal provider blockers, rerun provider SLO tick, and keep the repair receipt in the ${OBSERVABILITY_RUNTIME_LEDGER_LABEL}.`
       : `Run opl family-runtime scheduler tick --provider temporal on cadence until the ${windowSeconds}s window has enough execution receipts.`;
   return {
     surface_kind: 'opl_temporal_provider_cadence_window_projection',
@@ -418,7 +419,7 @@ function requiredNextAction(input: {
   continuousProofStatus: string;
 }) {
   if (input.proofEventCount === 0) {
-    return `Run ${PRODUCTION_PROOF_COMMAND} and keep the receipt in the runtime ledger.`;
+    return `Run ${PRODUCTION_PROOF_COMMAND} and keep the receipt in the ${OBSERVABILITY_RUNTIME_LEDGER_LABEL}.`;
   }
   if (input.freshnessStatus === 'stale') {
     return 'Rerun production proof; the latest proven Temporal provider receipt is older than the configured operator cadence.';

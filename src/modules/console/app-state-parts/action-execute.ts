@@ -832,7 +832,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_rollback_runtime_substrate') {
     return {
-      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate'),
+      delegatedSurface: managedUpdateCommand(MANAGED_UPDATE_OWNER_ACTIONS.revert, 'runtime_substrate', { json: false }),
       result: buildSettingsControlCenterDryRun(options.actionId, options.payload),
     };
   }

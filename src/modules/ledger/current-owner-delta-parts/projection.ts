@@ -1,4 +1,5 @@
 import { cognitiveKernelBoundary } from '../../stagecraft/index.ts';
+import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../../kernel/observability-projection-vocabulary.ts';
 import {
   type JsonRecord,
   firstString,
@@ -189,7 +190,7 @@ function ordinaryProgressSpinePolicy() {
     default_next_action_must_not_derive_from: [
       'raw_worklist',
       'raw_evidence',
-      'evidence_ledger',
+      OBSERVABILITY_EVIDENCE_LEDGER_FIELD,
       'provider_trace',
       'replay_packet',
       'typed_blocker_group',
@@ -299,7 +300,7 @@ function auditSidecarPolicy(input: {
   return {
     surface_kind: 'opl_audit_sidecar_policy',
     sidecar_id: 'audit_sidecar_policy',
-    role: 'passive_evidence_ledger_and_drilldown',
+    role: ['passive_', OBSERVABILITY_EVIDENCE_LEDGER_FIELD, '_and_drilldown'].join(''),
     default_planning_role: 'never_default_planning_root_until_folded_into_current_owner_delta',
     raw_worklist_can_generate_default_next_action: false,
     raw_evidence_can_generate_default_next_action: false,

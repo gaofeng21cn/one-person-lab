@@ -27,6 +27,7 @@ import {
   buildStandardAgentPrinciplesAdoption,
 } from './standard-agent-principles.ts';
 import { STAGE_OPERATING_PRINCIPLES_POLICY } from './standard-domain-agent-stage-operating-principles.ts';
+import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 
 export interface ScaffoldFile {
   path: string;
@@ -1166,7 +1167,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'docs/architecture.md',
-      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. OPL owns generic runtime, queue, attempt ledger, transition runner, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
+      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. OPL owns generic runtime, queue, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, transition runner, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
     },
     {
       path: 'docs/invariants.md',

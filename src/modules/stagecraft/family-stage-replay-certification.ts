@@ -7,6 +7,7 @@ import type {
   FamilyStageControlPlane,
   FamilyStageSurfaceRef,
 } from './family-stage-control-plane-contract.ts';
+import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -509,7 +510,7 @@ export function buildFamilyStageReplayCertification(
     blockers.push(blocker(
       'attempt_ledger_ref_missing',
       'record_attempt_ledger_ref',
-      'replay certification requires at least one attempt ledger ref',
+      `replay certification requires at least one ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL} ref`,
     ));
   }
   if (stageManifestRefs.length === 0) {
