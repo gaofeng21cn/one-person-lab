@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   assert,
   test,
+  parseJsonText,
 } from './helpers.ts';
 import {
   createQueueTables,
@@ -39,7 +40,7 @@ test('family-runtime tick selects newer MAS default executor row when same dispa
       const runningRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-live-terminal-after-query',
       ) as FamilyRuntimeTaskRow;
-      const runningPayload = JSON.parse(runningRow.payload_json) as Record<string, unknown>;
+      const runningPayload = parseJsonText(runningRow.payload_json) as Record<string, unknown>;
       const runningAttempt = ensureProviderHostedStageAttempt(db, runningRow, runningPayload);
       assert.ok(runningAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(
@@ -140,7 +141,7 @@ test('family-runtime tick dispatches current owner row before unrelated maintena
       const maintenanceRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-running-maintenance-same-study',
       ) as FamilyRuntimeTaskRow;
-      const maintenancePayload = JSON.parse(maintenanceRow.payload_json) as Record<string, unknown>;
+      const maintenancePayload = parseJsonText(maintenanceRow.payload_json) as Record<string, unknown>;
       const maintenanceAttempt = ensureProviderHostedStageAttempt(db, maintenanceRow, maintenancePayload);
       assert.ok(maintenanceAttempt);
       db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?").run(

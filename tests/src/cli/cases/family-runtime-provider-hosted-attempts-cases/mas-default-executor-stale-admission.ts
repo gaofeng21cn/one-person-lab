@@ -6,6 +6,7 @@ import {
   fs,
   os,
   path,
+  parseJsonText,
   test,
 } from './helpers.ts';
 
@@ -159,7 +160,7 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-expired-admission-missing-workflow',
       ) as FamilyRuntimeTaskRow;
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
       const staleAttempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(staleAttempt);
 
@@ -236,7 +237,7 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
       assert.equal(attempts[0].blocked_reason, 'temporal_workflow_not_started_or_not_found');
-      assert.equal(JSON.parse(attempts[0].provider_run_json).provider_status, 'failed');
+      assert.equal(parseJsonText(attempts[0].provider_run_json).provider_status, 'failed');
       assert.equal(attempts[1].status, 'queued');
       assert.equal(attempts[1].blocked_reason, null);
     });
@@ -254,7 +255,7 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-expired-admission-missing-workflow',
       ) as FamilyRuntimeTaskRow;
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
       const staleAttempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(staleAttempt);
 
@@ -360,10 +361,10 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
       assert.equal(attempts[0].blocked_reason, 'temporal_workflow_not_started_or_not_found');
-      assert.equal(JSON.parse(attempts[0].provider_run_json).provider_status, 'failed');
+      assert.equal(parseJsonText(attempts[0].provider_run_json).provider_status, 'failed');
       assert.equal(attempts[1].status, 'running');
       assert.equal(attempts[1].blocked_reason, null);
-      assert.equal(JSON.parse(attempts[1].provider_run_json).provider_status, 'running');
+      assert.equal(parseJsonText(attempts[1].provider_run_json).provider_status, 'running');
     });
   } finally {
     db.close();
@@ -379,7 +380,7 @@ test('family-runtime tick does not re-admit a MAS default executor task after ac
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-expired-admission-missing-workflow',
       ) as FamilyRuntimeTaskRow;
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
       const completedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(completedAttempt);
       ingestStageAttemptCloseout(db, {

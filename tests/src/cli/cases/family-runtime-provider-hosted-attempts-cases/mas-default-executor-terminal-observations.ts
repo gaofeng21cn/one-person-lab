@@ -1,6 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, test } from './helpers.ts';
+import {
+  assert,
+  test,
+  parseJsonText,
+} from './helpers.ts';
 
 import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
 import {
@@ -138,7 +142,7 @@ test('family-runtime blocks a requeued MAS default executor task when its linked
       assert.equal(syncedAttempt.status, 'failed');
       assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_failed');
       assert.ok(event);
-      assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_failed');
+      assert.equal(parseJsonText(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_failed');
     });
   } finally {
     db.close();
@@ -225,7 +229,7 @@ test('family-runtime succeeds a requeued MAS default executor task when its link
       assert.equal(syncedAttempt.status, 'completed');
       assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
       assert.ok(event);
-      assert.equal(JSON.parse(event.payload_json).reason, 'temporal_stage_attempt_completed');
+      assert.equal(parseJsonText(event.payload_json).reason, 'temporal_stage_attempt_completed');
     });
   } finally {
     db.close();
@@ -286,7 +290,7 @@ test('family-runtime blocks completed MAS readiness attempt that lacks Stage Nat
       assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
       assert.ok(event);
       assert.equal(
-        JSON.parse(event.payload_json).reason,
+        parseJsonText(event.payload_json).reason,
         'stage_native_owner_answer_missing_after_default_executor_completion',
       );
     });
@@ -418,7 +422,7 @@ test('family-runtime succeeds completed MAS readiness attempt with Stage Native 
       assert.equal(syncedAttempt.status, 'completed');
       assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
       assert.ok(event);
-      assert.equal(JSON.parse(event.payload_json).reason, 'temporal_stage_attempt_completed');
+      assert.equal(parseJsonText(event.payload_json).reason, 'temporal_stage_attempt_completed');
     });
   } finally {
     db.close();

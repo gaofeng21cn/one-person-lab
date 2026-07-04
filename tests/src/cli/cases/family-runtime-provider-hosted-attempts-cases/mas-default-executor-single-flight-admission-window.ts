@@ -6,6 +6,7 @@ import {
   fs,
   os,
   path,
+  parseJsonText,
   test,
 } from './helpers.ts';
 import {
@@ -235,7 +236,7 @@ test('family-runtime treats claimed same-study reviewer admission window as live
       assert.equal(writerTask.attempts, 0);
       assert.equal(writerAttempts.length, 0);
       assert.ok(skipEvent);
-      const skipPayload = JSON.parse(skipEvent.payload_json);
+      const skipPayload = parseJsonText(skipEvent.payload_json);
       assert.equal(skipPayload.reason, 'live_stage_attempt_exists_for_study');
       assert.equal(skipPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
       assert.equal(skipPayload.live_action_type, 'return_to_ai_reviewer_workflow');
@@ -323,13 +324,13 @@ test('family-runtime enqueue preserves MAS default executor same-study owner tas
       assert.equal(tasks[0].status, 'running');
       assert.equal(tasks[1].status, 'queued');
       assert.ok(noopEvent);
-      const noopPayload = JSON.parse(noopEvent.payload_json);
+      const noopPayload = parseJsonText(noopEvent.payload_json);
       assert.equal(noopPayload.reason, 'same_study_live_stage_attempt_exists_at_enqueue');
       assert.equal(noopPayload.live_action_type, 'return_to_ai_reviewer_workflow');
       assert.equal(noopPayload.action_type, 'run_quality_repair_batch');
       assert.equal(noopPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
       assert.ok(deferredEvent);
-      const deferredPayload = JSON.parse(deferredEvent.payload_json);
+      const deferredPayload = parseJsonText(deferredEvent.payload_json);
       assert.equal(deferredPayload.reason, 'same_study_live_stage_attempt_exists_at_enqueue');
       assert.equal(deferredPayload.live_action_type, 'return_to_ai_reviewer_workflow');
       assert.equal(deferredPayload.action_type, 'run_quality_repair_batch');

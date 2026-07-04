@@ -5,6 +5,7 @@ import {
   fs,
   os,
   path,
+  parseJsonText,
   test,
 } from './helpers.ts';
 import {
@@ -470,8 +471,8 @@ test('family-runtime tick syncs materialized MAS closeout before treating defaul
         provider_run_json: string;
         closeout_refs_json: string;
       };
-      const providerRun = JSON.parse(syncedAttempt.provider_run_json) as Record<string, unknown>;
-      const closeoutRefs = JSON.parse(syncedAttempt.closeout_refs_json) as string[];
+      const providerRun = parseJsonText(syncedAttempt.provider_run_json) as Record<string, unknown>;
+      const closeoutRefs = parseJsonText(syncedAttempt.closeout_refs_json) as string[];
 
       assert.equal(tick.mas_default_executor_terminal_synced_count, 1);
       assert.equal(tick.selected_count, 0);

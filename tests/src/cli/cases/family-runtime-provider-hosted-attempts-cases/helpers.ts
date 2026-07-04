@@ -4,10 +4,13 @@ import {
   fs,
   os,
   path,
+  parseJsonText as parseJsonTextRaw,
   runCli,
   runCliFailure,
   test,
 } from '../../helpers.ts';
+
+export const parseJsonText = parseJsonTextRaw as (raw: string) => any;
 
 function shellSingleQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;

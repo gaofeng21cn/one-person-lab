@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   assert,
   test,
+  parseJsonText,
 } from './helpers.ts';
 import {
   createQueueTables,
@@ -39,7 +40,7 @@ test('family-runtime tick auto-redrives retryable MAS default executor provider 
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-auto-redrive-provider-blocker',
       ) as FamilyRuntimeTaskRow;
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
       const failedAttempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(failedAttempt);
       db.prepare(`
@@ -135,7 +136,7 @@ test('family-runtime tick does not auto-redrive MAS default executor cancellatio
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-auto-redrive-cancelled-blocker',
       ) as FamilyRuntimeTaskRow;
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
       const canceledAttempt = ensureProviderHostedStageAttempt(db, row, payload);
       assert.ok(canceledAttempt);
       db.prepare(`
@@ -230,7 +231,7 @@ test('family-runtime tick does not auto-redrive superseded MAS default executor 
       const blockedRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-superseded-provider-blocker',
       ) as FamilyRuntimeTaskRow;
-      const blockedPayload = JSON.parse(blockedRow.payload_json) as Record<string, unknown>;
+      const blockedPayload = parseJsonText(blockedRow.payload_json) as Record<string, unknown>;
       const failedAttempt = ensureProviderHostedStageAttempt(db, blockedRow, blockedPayload);
       assert.ok(failedAttempt);
       db.prepare(`
@@ -324,7 +325,7 @@ test('family-runtime tick dead-letters MAS default executor provider blocker whe
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-auto-redrive-budget-exhausted',
       ) as FamilyRuntimeTaskRow;
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = parseJsonText(row.payload_json) as Record<string, unknown>;
       for (let index = 0; index < 3; index += 1) {
         const attempt = ensureProviderHostedStageAttempt(db, row, payload, { newAttempt: true });
         assert.ok(attempt);
@@ -410,7 +411,7 @@ test('family-runtime tick counts default executor retry budget against the curre
       const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(
         'task-mas-default-auto-redrive-current-source-budget',
       ) as FamilyRuntimeTaskRow;
-      const currentPayload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const currentPayload = parseJsonText(row.payload_json) as Record<string, unknown>;
       for (let index = 0; index < 9; index += 1) {
         const oldPayload = {
           ...currentPayload,

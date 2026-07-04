@@ -1,6 +1,13 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, fs, os, path, test } from './helpers.ts';
+import {
+  assert,
+  fs,
+  os,
+  path,
+  parseJsonText,
+  test,
+} from './helpers.ts';
 
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { hydrateDomainTasks } from '../../../../../src/modules/runway/family-runtime-domain-intake.ts';
@@ -75,7 +82,7 @@ test('family-runtime blocks stale MAS default executor attempts when a newer sou
         WHERE task_id = ? AND event_type = 'task_default_executor_superseded_by_current_source'
         LIMIT 1
       `).get(staleTaskId) as { payload_json: string } | undefined;
-      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+      const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
       assert.equal(tick.mas_default_executor_superseded_count, 1);
       assert.equal(tick.default_executor_superseded_count, 1);
@@ -154,7 +161,7 @@ test('family-runtime reconciles historical superseded MAS default executor attem
         WHERE task_id = ? AND event_type = 'task_default_executor_superseded_attempts_reconciled'
         LIMIT 1
       `).get(staleTaskId) as { payload_json: string } | undefined;
-      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+      const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
       assert.equal(tick.mas_default_executor_superseded_attempt_reconciled_count, 1);
       assert.deepEqual(tick.dispatches, []);
@@ -385,7 +392,7 @@ test('family-runtime blocks existing stale MAS default executor rows when curren
         ORDER BY task_id
       `).all() as Array<{ task_id: string; payload_json: string }>;
       const rowsById = new Map(rows.map((row) => [row.task_id, row]));
-      const eventsById = new Map(events.map((event) => [event.task_id, JSON.parse(event.payload_json)]));
+      const eventsById = new Map(events.map((event) => [event.task_id, parseJsonText(event.payload_json)]));
       const [hydrationExport] = hydration.exports as Array<{
         blocked: Array<{ reason: string }>;
       }>;

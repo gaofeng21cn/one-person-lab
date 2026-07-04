@@ -1,6 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, test } from './helpers.ts';
+import {
+  assert,
+  test,
+  parseJsonText,
+} from './helpers.ts';
 
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { startDefaultExecutorStageAttempt } from '../../../../../src/modules/runway/family-runtime-default-executor-start.ts';
@@ -128,7 +132,7 @@ test('family-runtime keeps MAS default executor dispatch single-flight even when
       assert.equal(secondTask.attempts, 0);
       assert.equal(secondAttempts.length, 0);
       assert.ok(skipEvent);
-      assert.equal(JSON.parse(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
+      assert.equal(parseJsonText(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
     });
   } finally {
     db.close();
@@ -246,7 +250,7 @@ test('family-runtime repairs MAS default executor task read model when a same-ta
         ORDER BY created_at DESC
         LIMIT 1
       `).get(taskId) as { payload_json: string } | undefined;
-      const leasePayload = leaseEvent ? JSON.parse(leaseEvent.payload_json) : null;
+      const leasePayload = leaseEvent ? parseJsonText(leaseEvent.payload_json) : null;
 
       assert.equal(result.status, 'skipped');
       assert.equal(result.reason, 'live_stage_attempt_exists');

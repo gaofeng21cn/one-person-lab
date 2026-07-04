@@ -1,6 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, test } from './helpers.ts';
+import {
+  assert,
+  test,
+  parseJsonText,
+} from './helpers.ts';
 
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { insertEvent } from '../../../../../src/modules/runway/family-runtime-store.ts';
@@ -47,7 +51,7 @@ test('family-runtime does not auto-requeue succeeded MAS default executor dispat
     assert.ok(result.task);
     assert.equal(result.task.status, 'succeeded');
     assert.equal(task.status, 'succeeded');
-    assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'source-before');
+    assert.equal(parseJsonText(task.payload_json).source_fingerprint, 'source-before');
     assert.equal(requeueEvents.count, 0);
   } finally {
     db.close();
@@ -124,7 +128,7 @@ test('family-runtime requeues transport-only succeeded MAS publication gate admi
     assert.equal(task.last_error, null);
     assert.equal(task.dead_letter_reason, null);
     assert.ok(requeueEvent);
-    assert.equal(JSON.parse(requeueEvent.payload_json).reason, 'transport_only_admission_without_provider_stage_attempt');
+    assert.equal(parseJsonText(requeueEvent.payload_json).reason, 'transport_only_admission_without_provider_stage_attempt');
   } finally {
     db.close();
   }
@@ -166,7 +170,7 @@ test('family-runtime refreshes succeeded MAS default executor dispatch metadata 
     const task = db.prepare('SELECT status, payload_json FROM tasks WHERE task_id = ?').get(
       'task-mas-default-succeeded-owner-fingerprint-redrive',
     ) as { status: string; payload_json: string };
-    const payload = JSON.parse(task.payload_json);
+    const payload = parseJsonText(task.payload_json);
     const refreshEvent = db.prepare(`
       SELECT payload_json
       FROM events
@@ -183,7 +187,7 @@ test('family-runtime refreshes succeeded MAS default executor dispatch metadata 
     );
     assert.ok(refreshEvent);
     assert.equal(
-      JSON.parse(refreshEvent.payload_json).reason,
+      parseJsonText(refreshEvent.payload_json).reason,
       'domain_export_owner_fingerprint_changed_after_succeeded',
     );
   } finally {
@@ -229,7 +233,7 @@ test('family-runtime refreshes refs-only evidence payloads on succeeded MAS defa
     const task = db.prepare('SELECT status, payload_json FROM tasks WHERE task_id = ?').get(
       'task-mas-default-succeeded-provider-admission-evidence-payload',
     ) as { status: string; payload_json: string };
-    const payload = JSON.parse(task.payload_json);
+    const payload = parseJsonText(task.payload_json);
     const requeueEvents = db.prepare(
       "SELECT COUNT(*) AS count FROM events WHERE task_id = ? AND event_type = 'task_requeued_from_domain_export_update'",
     ).get('task-mas-default-succeeded-provider-admission-evidence-payload') as { count: number };
@@ -277,7 +281,7 @@ test('family-runtime still requeues generic succeeded tasks when domain export c
     assert.equal(result.accepted, true);
     assert.equal(result.requeued_from_terminal, true);
     assert.equal(task.status, 'queued');
-    assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'source-after');
+    assert.equal(parseJsonText(task.payload_json).source_fingerprint, 'source-after');
   } finally {
     db.close();
   }

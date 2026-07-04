@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   assert,
   test,
+  parseJsonText,
 } from './helpers.ts';
 import {
   createQueueTables,
@@ -215,7 +216,7 @@ test('family-runtime tick blocks repeated same-source MAS default executor dispa
         WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
         LIMIT 1
       `).get('task-mas-default-anti-spin-candidate') as { payload_json: string } | undefined;
-      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+      const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
       assert.equal(tick.progress_first_anti_spin_blocked_count, 1);
       assert.equal(tick.selected_count, 0);
@@ -420,7 +421,7 @@ test('family-runtime anti-spin stop-loss classifies receipt, read-model, stale-r
         WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
         LIMIT 1
       `).get('task-mas-default-anti-spin-classified-candidate') as { payload_json: string } | undefined;
-      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+      const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
       assert.equal(tick.progress_first_anti_spin_blocked_count, 1);
       assert.ok(eventPayload);
@@ -525,7 +526,7 @@ test('family-runtime anti-spin uses action-scoped stop-loss repeat budgets', asy
         WHERE task_id = ? AND event_type = 'task_progress_first_anti_spin_blocked'
         LIMIT 1
       `).get('task-mas-default-anti-spin-gate-clearing-candidate') as { payload_json: string } | undefined;
-      const eventPayload = event ? JSON.parse(event.payload_json) : null;
+      const eventPayload = event ? parseJsonText(event.payload_json) : null;
 
       assert.equal(tick.progress_first_anti_spin_blocked_count, 1);
       assert.ok(eventPayload);

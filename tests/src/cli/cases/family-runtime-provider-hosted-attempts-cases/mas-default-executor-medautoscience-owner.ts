@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   assert,
   test,
+  parseJsonText,
 } from './helpers.ts';
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON } from '../../../../../src/modules/runway/family-runtime-mas-stage-native-owner-answer.ts';
@@ -140,7 +141,7 @@ test('family-runtime requeues transport-only succeeded MAS-owned readiness admis
     assert.equal(task.last_error, null);
     assert.equal(task.dead_letter_reason, null);
     assert.ok(requeueEvent);
-    assert.equal(JSON.parse(requeueEvent.payload_json).reason, 'transport_only_admission_without_provider_stage_attempt');
+    assert.equal(parseJsonText(requeueEvent.payload_json).reason, 'transport_only_admission_without_provider_stage_attempt');
   } finally {
     db.close();
   }
@@ -244,7 +245,7 @@ test('family-runtime requeues transport-only succeeded MAS admission with checkp
       'transport_only_admission_checkpoint_superseded_by_provider_admission_requeue',
     );
     assert.ok(requeueEvent);
-    const requeuePayload = JSON.parse(requeueEvent.payload_json);
+    const requeuePayload = parseJsonText(requeueEvent.payload_json);
     assert.equal(requeuePayload.reason, 'transport_only_admission_without_provider_stage_attempt');
     assert.deepEqual(requeuePayload.superseded_stage_attempt_ids, [transportAttempt.stage_attempt_id]);
 
@@ -299,7 +300,7 @@ test('family-runtime requeues succeeded MAS readiness owner action missing Stage
     assert.equal(task.dead_letter_reason, null);
     assert.ok(requeueEvent);
     assert.equal(
-      JSON.parse(requeueEvent.payload_json).reason,
+      parseJsonText(requeueEvent.payload_json).reason,
       'stage_native_owner_answer_missing_after_default_executor_completion',
     );
   } finally {
@@ -372,7 +373,7 @@ test('family-runtime clears previous missing Stage Native owner blocker when cur
     assert.equal(task.dead_letter_reason, null);
     assert.ok(resolvedEvent);
     assert.equal(
-      JSON.parse(resolvedEvent.payload_json).reason,
+      parseJsonText(resolvedEvent.payload_json).reason,
       'stage_native_owner_answer_observed_after_previous_missing_blocker',
     );
   } finally {
@@ -458,10 +459,10 @@ test('family-runtime requeues succeeded MAS readiness owner action when Stage Na
     assert.equal(result.requeued_from_terminal, true);
     assert.equal(result.idempotent_noop, false);
     assert.equal(task.status, 'queued');
-    assert.equal(JSON.parse(task.payload_json).source_fingerprint, 'readiness-stage-native-new');
+    assert.equal(parseJsonText(task.payload_json).source_fingerprint, 'readiness-stage-native-new');
     assert.ok(requeueEvent);
     assert.equal(
-      JSON.parse(requeueEvent.payload_json).reason,
+      parseJsonText(requeueEvent.payload_json).reason,
       'stage_native_owner_answer_missing_after_default_executor_completion',
     );
   } finally {

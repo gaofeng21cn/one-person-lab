@@ -7,6 +7,7 @@ import {
   fs,
   os,
   path,
+  parseJsonText,
   runCli,
   runCliFailure,
   test,
@@ -621,7 +622,7 @@ test('family-runtime stale auto redrive does not duplicate an operator-owned pro
     } finally {
       staleDb.close();
     }
-    const stalePayload = JSON.parse(staleRow.payload_json) as Record<string, unknown>;
+    const stalePayload = parseJsonText(staleRow.payload_json) as Record<string, unknown>;
 
     const operatorRedrive = runCli([
       'family-runtime',

@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   assert,
   test,
+  parseJsonText,
 } from './helpers.ts';
 import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
@@ -261,7 +262,7 @@ test('family-runtime enqueue preserves MAS gate-clearing default executor handof
 
       assert.equal(enqueue.accepted, true);
       assert.equal(queuedTask?.status, 'queued');
-      assert.equal(JSON.parse(queuedTask?.payload_json ?? '{}').next_executable_owner, 'gate_clearing_batch');
+      assert.equal(parseJsonText(queuedTask?.payload_json ?? '{}').next_executable_owner, 'gate_clearing_batch');
     });
   } finally {
     db.close();

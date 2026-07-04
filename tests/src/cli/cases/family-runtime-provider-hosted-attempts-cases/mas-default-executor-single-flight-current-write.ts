@@ -6,6 +6,7 @@ import {
   fs,
   os,
   path,
+  parseJsonText,
   test,
 } from './helpers.ts';
 import {
@@ -217,7 +218,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       assert.equal(secondTask.attempts, 0);
       assert.equal(secondAttempts.length, 0);
       assert.ok(skipEvent);
-      assert.equal(JSON.parse(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
+      assert.equal(parseJsonText(skipEvent.payload_json).stage_attempt_id, firstAttempt.stage_attempt_id);
     });
   } finally {
     db.close();
@@ -295,9 +296,9 @@ test('family-runtime enqueue preserves a newer MAS default executor dispatch whi
       assert.notEqual(result.task?.task_id, 'task-mas-default-live-running-before-enqueue');
       assert.equal(tasks.length, 2);
       assert.equal(tasks[0].status, 'running');
-      assert.equal(JSON.parse(tasks[0].payload_json).source_fingerprint, 'source-before');
+      assert.equal(parseJsonText(tasks[0].payload_json).source_fingerprint, 'source-before');
       assert.equal(tasks[1].status, 'queued');
-      assert.equal(JSON.parse(tasks[1].payload_json).source_fingerprint, 'source-after');
+      assert.equal(parseJsonText(tasks[1].payload_json).source_fingerprint, 'source-after');
       assert.ok(tasks[0].lease_expires_at);
       assert.ok(Date.parse(tasks[0].lease_expires_at) > Date.now());
       assert.equal(noopEvent, undefined);
@@ -564,7 +565,7 @@ test('family-runtime keeps MAS default executor admission single-flight across s
       assert.equal(writerTask.attempts, 0);
       assert.equal(writerAttempts.length, 0);
       assert.ok(skipEvent);
-      const skipPayload = JSON.parse(skipEvent.payload_json);
+      const skipPayload = parseJsonText(skipEvent.payload_json);
       assert.equal(skipPayload.reason, 'live_stage_attempt_exists_for_study');
       assert.equal(skipPayload.stage_attempt_id, reviewerAttempt.stage_attempt_id);
       assert.equal(skipPayload.live_action_type, 'return_to_ai_reviewer_workflow');
