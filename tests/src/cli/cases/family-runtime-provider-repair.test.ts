@@ -7,6 +7,7 @@ import {
   cliPath,
   fs,
   os,
+  parseJsonText,
   path,
   repoRoot,
   test,
@@ -54,7 +55,7 @@ test('family-runtime provider repair uses managed Temporal service state without
       },
     });
     assert.equal(result.status, 0, result.stderr);
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout) as any;
     const provider = output.family_runtime_provider.provider;
     const repair = output.family_runtime_provider.temporal_visibility_repair;
     const workerRepair = output.family_runtime_provider.temporal_worker_repair;

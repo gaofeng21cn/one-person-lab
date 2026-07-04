@@ -2,6 +2,7 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   test,
@@ -11,7 +12,7 @@ import './workspace-domain-initializer-cases/bookforge-artifact-lifecycle.ts';
 import './workspace-domain-initializer-cases/validation-and-doctor.ts';
 
 function readJsonFile(filePath: string) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }
 
 test('workspace init appends RCA series deliverables inside one workspace', () => {

@@ -1,5 +1,5 @@
 import './domain-pack-compiler-generated-interfaces-cases/active-caller-cutover-cases.ts';
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 import {
   attachManifestSurface,
@@ -235,14 +235,14 @@ test('generated default entry release gate prevents wrapper surface resurrection
   bindFamilyManifests(env);
 
   const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'domain-pack-compiler-contract.json'),
     'utf8',
-  ));
-  const admissionGates = JSON.parse(fs.readFileSync(
+  )) as Record<string, any>;
+  const admissionGates = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'standard-agent-admission-gates.json'),
     'utf8',
-  ));
+  )) as Record<string, any>;
 
   const expectedSurfaceIds = [
     'cli',
@@ -347,14 +347,14 @@ test('generated default entry release gate prevents wrapper surface resurrection
 });
 
 test('domain pack compiler contract and action catalog schema declare generated default surfaces', () => {
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'domain-pack-compiler-contract.json'),
     'utf8',
-  ));
-  const schema = JSON.parse(fs.readFileSync(
+  )) as Record<string, any>;
+  const schema = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'family-orchestration', 'family-action-catalog.schema.json'),
     'utf8',
-  ));
+  )) as Record<string, any>;
 
   assert.equal(
     contract.generated_interface_bundle.default_entry_policy.surface_kind,
@@ -451,7 +451,7 @@ test('domain pack compiler contract and action catalog schema declare generated 
 test('generated interfaces reject action catalogs missing generated default surface slots', () => {
   const repoDir = buildReadyAgentRepo();
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
   delete actionCatalog.actions[0].supported_surfaces.openai;
   writeJson(actionCatalogPath, actionCatalog);
 

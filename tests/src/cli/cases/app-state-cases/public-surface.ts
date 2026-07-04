@@ -1,12 +1,12 @@
-import { assert, fs, path, test } from '../../helpers.ts';
+import { assert, fs, parseJsonText, path, test } from '../../helpers.ts';
 
 test('public surface index declares app state as the GUI runtime boundary', () => {
-  const contracts = JSON.parse(
+  const contracts = parseJsonText(
     fs.readFileSync(
       path.join(process.cwd(), 'contracts', 'opl-framework', 'public-surface-index.json'),
       'utf8',
     ),
-  );
+  ) as any;
   const appWorkbench = contracts.surfaces.find(
     (entry: { surface_id: string }) => entry.surface_id === 'one_person_lab_app_workbench',
   );

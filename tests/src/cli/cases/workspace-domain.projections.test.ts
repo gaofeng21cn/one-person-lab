@@ -2,13 +2,14 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   test,
 } from '../helpers.ts';
 
 function readJsonFile(filePath: string) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }
 
 test('workspace ensure refreshes generated refs when reusing an active binding', () => {
