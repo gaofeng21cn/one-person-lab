@@ -60,5 +60,76 @@
     "retired_baseline": "advisory_by_default_strict_blocks_until_removed",
     "line_count_ledger_owner": "this_contract_and_scripts_line_budget"
   },
-  "reviewed_baselines": []
+  "reviewed_baselines": [
+    {
+      "path": "src/entrypoints/cli/cases/private-command-specs.ts",
+      "limit": 1293,
+      "owner": "OPL Console / CLI entrypoints",
+      "reason": "Private command registry is a stable CLI specification surface; current module refactor keeps source modules under budget while leaving this entrypoint spec as a reviewed strict-ratchet baseline.",
+      "intended_boundary": "Split by private command family when the CLI entrypoint registry becomes the active refactor target; no new private command family should grow this file without moving to a case part."
+    },
+    {
+      "path": "tests/src/agent-lab-complete.test.ts",
+      "limit": 1005,
+      "owner": "OPL Foundry Lab tests",
+      "reason": "Agent Lab complete test keeps several control-plane read models in one scenario file; it is slightly above budget and reviewed as a strict-ratchet test baseline.",
+      "intended_boundary": "Split by eval, workbench, developer-mode, mechanism, export, optimize, and variant comparison scenarios during the next test-cohesion pass."
+    },
+    {
+      "path": "tests/src/cli/cases/app-action.test.ts",
+      "limit": 1297,
+      "owner": "OPL Console tests",
+      "reason": "App action CLI tests cover one operator mutation boundary with shared fixtures; current source-module closure keeps it as a reviewed strict-ratchet test baseline.",
+      "intended_boundary": "Split by runtime dry-run, catalog, ScholarSkills sync, settings/release/workspace/provider, and module/scheduler/worker action groups."
+    },
+    {
+      "path": "tests/src/cli/cases/app-state.test.ts",
+      "limit": 1686,
+      "owner": "OPL Console tests",
+      "reason": "App state GUI read-model test is intentionally broad and protects the default cockpit projection; it is reviewed as a strict-ratchet test baseline while source modules are kept under budget.",
+      "intended_boundary": "Split fixtures and assertions by default GUI read model, MAS activity refs, owner-delta cache guard, network lookup guard, bounded rendering, and parser validation."
+    },
+    {
+      "path": "tests/src/cli/cases/contracts-entry.test.ts",
+      "limit": 1048,
+      "owner": "OPL Charter tests",
+      "reason": "Contract entry CLI tests cover loader, validator, doctor, status, session, and native helper entrypoints with shared process helpers; current line count is reviewed as a strict-ratchet baseline.",
+      "intended_boundary": "Split by contract loading, validation, doctor/status/session, and native helper lifecycle once this test lane is actively refactored."
+    },
+    {
+      "path": "tests/src/cli/cases/family-runtime.test.ts",
+      "limit": 1048,
+      "owner": "OPL Runway tests",
+      "reason": "Family runtime CLI tests share queue, lifecycle, provider, dispatch, approval, and admission fixtures; current line count is reviewed as a strict-ratchet test baseline.",
+      "intended_boundary": "Split by status/lifecycle, provider/repair, enqueue/approval/hold, attempt ledger, and admission/tick command groups."
+    },
+    {
+      "path": "tests/src/cli/cases/managed-update-kernel-projection.test.ts",
+      "limit": 1086,
+      "owner": "OPL Connect tests",
+      "reason": "Managed update kernel projection tests share update status, plan, apply, projection-only component, and selector fixtures; current line count is reviewed as a strict-ratchet baseline.",
+      "intended_boundary": "Split by contract/status, plan, projection-only apply guards, companion tools, workflow profile, and selector alias scenarios."
+    },
+    {
+      "path": "tests/src/cli/cases/system-seed-manifest.test.ts",
+      "limit": 1388,
+      "owner": "OPL Connect tests",
+      "reason": "System seed manifest tests cover image seed, Docker WebUI readback, materialization, preheated payloads, canonical strategy validation, and startup-maintenance seed boundary with shared fixtures.",
+      "intended_boundary": "Split by seed apply, Docker WebUI doctor, materialization, preheated payload, strategy validation, and startup-maintenance seed boundary scenarios."
+    },
+    {
+      "path": "tests/src/cli/cases/system-startup-maintenance-maintenance.test.ts",
+      "limit": 1099,
+      "owner": "OPL Connect tests",
+      "reason": "Startup-maintenance tests cover framework archive apply, package-channel artifact apply, rollback, Codex refresh, module sync, OMA install, timeout, and developer checkout scenarios with shared setup.",
+      "intended_boundary": "Split by framework artifact apply, rollback, Codex refresh, module sync, OMA managed root, health timeout, and developer checkout maintenance scenarios."
+    },
+    {
+      "path": "tests/src/family-runtime-temporal-provider.test.ts",
+      "limit": 1070,
+      "owner": "OPL Runway tests",
+      "reason": "Temporal provider tests cover workflow updates, retry, activity state, replay, readiness, closeout, provider blockers, and refs-only history with shared Temporal fixtures.",
+      "intended_boundary": "Split by contract/readiness, operator updates, retry/state/replay, blocker handling, refs-only history, typed closeout, and rejection scenarios."
+    }
+  ]
 }
