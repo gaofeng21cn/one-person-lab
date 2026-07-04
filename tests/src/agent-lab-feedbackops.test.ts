@@ -12,6 +12,7 @@ import {
   readFeedbackOpsEvents,
   submitDeliveryFeedbackEvent,
 } from '../../src/modules/foundry-lab/agent-lab-feedbackops.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { resolveOplStatePaths } from '../../src/modules/runway/runtime-state-paths.ts';
 import { contractsDir } from './cli/helpers.ts';
 
@@ -231,10 +232,10 @@ test('Self-evolution non-live fixtures route MAS and RCA feedback tokens to capa
 });
 
 test('FeedbackOps contract declares universal trigger and no-authority boundary', () => {
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(contractsDir, 'agent-lab-contract.json'),
     'utf8',
-  ));
+  )) as any;
   const surface = contract.feedbackops_delivery_feedback_surface;
 
   assert.equal(surface.surface_kind, 'opl_feedbackops_read_model');

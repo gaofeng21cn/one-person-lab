@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const gatesPath = path.join(repoRoot, 'contracts', 'opl-framework', 'standard-agent-admission-gates.json');
@@ -39,7 +41,7 @@ type AdmissionGateContract = {
 };
 
 function readAdmissionGateContract() {
-  return JSON.parse(fs.readFileSync(gatesPath, 'utf8')) as AdmissionGateContract;
+  return parseJsonText(fs.readFileSync(gatesPath, 'utf8')) as AdmissionGateContract;
 }
 
 test('standard domain-agent admission gates freeze required package sections as machine truth', () => {
