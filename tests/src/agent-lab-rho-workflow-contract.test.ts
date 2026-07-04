@@ -4,11 +4,13 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function readAgentLabContract() {
-  return JSON.parse(
+  return parseJsonText(
     fs.readFileSync(
       path.join(repoRoot, 'contracts/opl-framework/agent-lab-contract.json'),
       'utf8',

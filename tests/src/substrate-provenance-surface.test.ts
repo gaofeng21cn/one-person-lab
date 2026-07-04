@@ -3,17 +3,22 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 import { buildSubstrateProvenanceSurface } from '../../src/modules/ledger/substrate-provenance-surface.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const HASH_ZERO = '0'.repeat(64);
 const HASH_ONE_UPPER = 'A'.repeat(64);
 
 test('substrate provenance surface keeps OpenScience-inspired refs local and non-authoritative', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser for focused Ledger test.
+  const contract = parseJsonText(
     fs.readFileSync(
       new URL('../../contracts/opl-framework/substrate-provenance-surface-contract.json', import.meta.url),
       'utf8',
     ),
-  );
+  ) as {
+    adopted_patterns: string[];
+    authority_boundary: Record<string, boolean>;
+    forbidden_imports_or_surfaces: string[];
+  };
   assert.deepEqual(contract.adopted_patterns, [
     'project_local_artifact_graph_refs',
     'project_local_ledger_pointer_hash',

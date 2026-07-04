@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -31,7 +33,7 @@ type TailRow = {
 };
 
 function readContract() {
-  return JSON.parse( // reuse-first: allow contract fixture parser
+  return parseJsonText(
     fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'domain-private-platform-tail-matrix.json'),
     'utf8',

@@ -12,6 +12,7 @@ import {
   renderObservabilitySemanticConventionOpenMetrics,
 } from '../../src/modules/ledger/observability-semantic-conventions.ts';
 import { buildEvidenceEnvelopeProjection } from '../../src/modules/ledger/evidence-envelope.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const expectedFields = [
   'stage_run_id',
@@ -28,7 +29,7 @@ const expectedFields = [
 ];
 
 function contract() {
-  return JSON.parse( // reuse-first: allow contract fixture parser
+  return parseJsonText(
     fs.readFileSync(
       new URL('../../contracts/opl-framework/observability-semantic-conventions-contract.json', import.meta.url),
       'utf8',
