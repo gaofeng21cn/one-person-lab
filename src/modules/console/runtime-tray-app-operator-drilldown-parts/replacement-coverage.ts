@@ -3,7 +3,7 @@ import {
   appOperatorProjectionCommand,
   appOperatorProjectionRef,
   appOperatorProjectionTestRef,
-} from '../../ledger/observability-semantic-conventions.ts';
+} from '../../ledger/index.ts';
 
 type ReplacementCoverage = {
   coverage_status: 'opl_replacement_surface_available';

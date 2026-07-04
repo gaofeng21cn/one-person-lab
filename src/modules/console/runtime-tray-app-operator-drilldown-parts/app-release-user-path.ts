@@ -1,16 +1,12 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { sourceRef } from '../runtime-tray-snapshot-utils.ts';
 import {
-  listAppReleaseUserPathEvidenceReceipts,
-} from '../../ledger/index.ts';
-import {
   appOperatorProjectionCommand,
   appOperatorProjectionRef,
-} from '../../ledger/observability-semantic-conventions.ts';
-import {
   appReleaseUserPathPayloadRefHints,
   appReleaseUserPathPayloadTemplate,
   appReleaseUserPathPayloadWorkorder,
+  listAppReleaseUserPathEvidenceReceipts,
 } from '../../ledger/index.ts';
 import {
   buildAppReleaseUserPathCohortGuard,

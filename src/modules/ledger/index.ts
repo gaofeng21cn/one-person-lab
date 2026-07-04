@@ -25,7 +25,7 @@ export { classifyExternalEvidenceReceiptRefs } from './external-evidence-receipt
 export { assertMagManifestSustainedConsumptionReceiptInputReady, listMagManifestSustainedConsumptionReceipts, magManifestSustainedConsumptionTargetKey, preflightMagManifestSustainedConsumptionReceiptInput, recordMagManifestSustainedConsumptionReceipts, verifyMagManifestSustainedConsumptionReceipt } from './mag-manifest-sustained-consumption-ledger.ts';
 export type { MagManifestSustainedConsumptionReceipt, MagManifestSustainedConsumptionReceiptInput } from './mag-manifest-sustained-consumption-ledger.ts';
 export { buildMemoryArtifactLifecycleEvidenceProjection, memoryArtifactLifecycleEvidenceAuthorityBoundary } from './memory-artifact-lifecycle-evidence-ledger.ts';
-export { OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS, buildObservabilitySemanticConventionExportSeed, buildObservabilitySemanticConventionReadback, renderObservabilitySemanticConventionOpenMetrics } from './observability-semantic-conventions.ts';
+export { OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS, appOperatorProjectionCommand, appOperatorProjectionRef, appOperatorProjectionTestRef, buildObservabilitySemanticConventionExportSeed, buildObservabilitySemanticConventionReadback, renderObservabilitySemanticConventionOpenMetrics } from './observability-semantic-conventions.ts';
 export type { ObservabilityMetricInstrument, ObservabilitySemanticConventionInput } from './observability-semantic-conventions.ts';
 export { buildAppDrilldownProductionEvidenceTailLedger, buildConformanceProductionEvidenceTailLedger, buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
 export { buildProgressDeltaReceipt, progressDeltaReceiptDeltaClassFromStageClassification } from './progress-delta-receipt.ts';

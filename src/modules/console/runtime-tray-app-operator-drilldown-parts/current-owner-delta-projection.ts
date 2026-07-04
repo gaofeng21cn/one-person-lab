@@ -1,10 +1,8 @@
 import {
-  buildCurrentOwnerDeltaReadModel,
-} from '../../ledger/index.ts';
-import {
   appOperatorProjectionCommand,
   appOperatorProjectionRef,
-} from '../../ledger/observability-semantic-conventions.ts';
+  buildCurrentOwnerDeltaReadModel,
+} from '../../ledger/index.ts';
 import {
   countValue as numberValue,
   record,
