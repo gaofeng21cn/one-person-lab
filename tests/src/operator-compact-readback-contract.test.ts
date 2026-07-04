@@ -4,12 +4,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/operator-compact-readback-contract.json';
 
 function readJson<T>(relativePath: string): T {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as T;
 }
 
 test('operator compact readback contract pins derived readbacks and false-ready boundaries', () => {

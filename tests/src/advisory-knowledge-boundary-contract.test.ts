@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 import {
   buildAdvisoryKnowledgeOperatorProjection,
 } from '../../src/modules/charter/advisory-knowledge-boundary.ts';
@@ -15,7 +16,7 @@ const contractPath = 'contracts/opl-framework/advisory-knowledge-boundary-contra
 
 function readJson(relativePath: string): JsonRecord {
   assert.equal(fs.existsSync(path.join(repoRoot, relativePath)), true, `${relativePath} should exist`);
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
 }
 
 function record(value: unknown): JsonRecord {

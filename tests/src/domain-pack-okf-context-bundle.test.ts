@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { assert, test } from './cli/helpers.ts';
 import {
   buildOkfContextBundleFromDomainPack,
@@ -18,7 +19,7 @@ const testDir = path.dirname(fileURLToPath(import.meta.url));
 const okfFixtureDir = path.resolve(testDir, '..', 'fixtures', 'okf');
 
 function readJson(relativePath: string) {
-  return JSON.parse(fs.readFileSync(path.join(okfFixtureDir, relativePath), 'utf8')) as JsonRecord;
+  return parseJsonText(fs.readFileSync(path.join(okfFixtureDir, relativePath), 'utf8')) as JsonRecord;
 }
 
 test('BookForge domain pack projects to a valid body-free OKF context bundle', () => {

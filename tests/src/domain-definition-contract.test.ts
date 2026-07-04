@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const domainsPath = path.join(repoRoot, 'contracts', 'opl-framework', 'domains.json');
@@ -45,14 +47,14 @@ type DomainDefinition = {
 };
 
 function readDomainsContract() {
-  return JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
+  return parseJsonText(fs.readFileSync(domainsPath, 'utf8')) as {
     version: string;
     domains: DomainDefinition[];
   };
 }
 
 function readPublicSurfaceIndex() {
-  return JSON.parse(fs.readFileSync(publicSurfaceIndexPath, 'utf8')) as {
+  return parseJsonText(fs.readFileSync(publicSurfaceIndexPath, 'utf8')) as {
     version: string;
     surfaces: Array<{
       surface_id: string;
@@ -69,7 +71,7 @@ function readPublicSurfaceIndex() {
 }
 
 function readStandardAgentAdmissionGates() {
-  return JSON.parse(fs.readFileSync(standardAgentAdmissionGatesPath, 'utf8')) as {
+  return parseJsonText(fs.readFileSync(standardAgentAdmissionGatesPath, 'utf8')) as {
     surface_kind: string;
     version: string;
     admission_policy: {
