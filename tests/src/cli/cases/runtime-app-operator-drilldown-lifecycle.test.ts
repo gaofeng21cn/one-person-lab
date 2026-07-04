@@ -14,7 +14,7 @@ import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fix
 
 import './runtime-app-operator-drilldown-lifecycle-cases/current-control-liveness.ts';
 
-test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
+test('runtime App projection reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-mas-lifecycle-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
@@ -330,7 +330,7 @@ test('runtime app-operator-drilldown reconciles MAS refs-only payload with OPL l
   }
 });
 
-test('runtime app-operator-drilldown projects OPL NonAdvancingApply current-control readback without progress authority', () => {
+test('runtime App projection projects OPL NonAdvancingApply current-control readback without progress authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-non-advancing-current-control-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-current-control-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -489,7 +489,7 @@ test('runtime app-operator-drilldown projects OPL NonAdvancingApply current-cont
   }
 });
 
-test('runtime app-operator-drilldown projects lifecycle handoff apply attempts for default callers', () => {
+test('runtime App projection projects lifecycle handoff apply attempts for default callers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-lifecycle-handoff-'));
   try {
     const result = runCli([

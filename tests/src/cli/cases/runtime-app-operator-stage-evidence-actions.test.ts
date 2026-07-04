@@ -167,6 +167,13 @@ function bindReviewStageEvidenceManifest(stateRoot: string, fixtureContractsRoot
   });
 }
 
+function readFullAppOperatorProjection(stateRoot: string, fixtureContractsRoot: string) {
+  return runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], { // reuse-first: allow existing public CLI projection command in tests.
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  }).app_operator_drilldown;
+}
+
 function seedStageAttempt(input: Parameters<typeof createStageAttempt>[1]) {
   const { db } = openQueueDb();
   try {
@@ -312,15 +319,12 @@ test('stage production evidence consumes older ledger attempts beyond default wo
       });
     }
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
+    const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
     const snapshot = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     }).runtime_tray_snapshot;
-    const stageProductionEvidence = drilldown.stage_production_evidence.stages.find(
+    const stageProductionEvidence = projection.stage_production_evidence.stages.find(
       (stage: { target_domain_id: string; stage_id: string }) =>
         stage.target_domain_id === 'med-autogrant'
         && stage.stage_id === 'fundability_strategy',
@@ -357,24 +361,21 @@ test('runtime action execute records and verifies stage production evidence rece
   try {
     bindReviewStageEvidenceManifest(stateRoot, fixtureContractsRoot);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
-    assert.equal(drilldown.summary.stage_production_evidence_receipt_action_route_count, 1);
+    const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
+    assert.equal(projection.summary.stage_production_evidence_receipt_action_route_count, 1);
     assert.equal(
-      drilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
+      projection.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
       1,
     );
     assert.equal(
-      drilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
+      projection.summary.stage_production_evidence_receipt_record_payload_template_count,
       1,
     );
     assert.equal(
-      drilldown.summary.stage_production_evidence_payload_workorder_count,
+      projection.summary.stage_production_evidence_payload_workorder_count,
       1,
     );
-    const route = drilldown.operator_action_routing_refs.refs.find(
+    const route = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
     );
@@ -545,11 +546,8 @@ test('runtime action execute records and verifies stage production evidence rece
     assert.equal(recordExecution.execution.result.external_evidence_apply.authority_boundary.opl_records_refs_only, true);
     assert.equal(recordExecution.authority_boundary.can_write_domain_truth, false);
 
-    const recordedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
-    const verifyRoute = recordedDrilldown.operator_action_routing_refs.refs.find(
+    const recordedProjection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
+    const verifyRoute = recordedProjection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:verify',
     );
@@ -574,15 +572,15 @@ test('runtime action execute records and verifies stage production evidence rece
       'verify_route_uses_previously_recorded_opl_refs_only_receipt_no_payload_required',
     );
     assert.equal(
-      recordedDrilldown.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
+      recordedProjection.summary.stage_production_evidence_receipt_record_requires_domain_or_app_payload_count,
       0,
     );
     assert.equal(
-      recordedDrilldown.summary.stage_production_evidence_receipt_record_payload_template_count,
+      recordedProjection.summary.stage_production_evidence_receipt_record_payload_template_count,
       0,
     );
     assert.equal(
-      recordedDrilldown.summary.stage_production_evidence_payload_workorder_count,
+      recordedProjection.summary.stage_production_evidence_payload_workorder_count,
       0,
     );
 
@@ -604,11 +602,8 @@ test('runtime action execute records and verifies stage production evidence rece
       true,
     );
 
-    const verifiedDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
-    const stage = verifiedDrilldown.stage_production_evidence.stages.find(
+    const verifiedProjection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
+    const stage = verifiedProjection.stage_production_evidence.stages.find(
       (entry: { stage_id: string }) => entry.stage_id === 'review',
     );
     assert.equal(stage.stage_evidence_receipt_status, 'verified');
@@ -638,7 +633,7 @@ test('runtime action execute records and verifies stage production evidence rece
       false,
     );
     assert.equal(stage.authority_boundary.can_authorize_domain_ready, false);
-    assert.equal(verifiedDrilldown.summary.stage_production_evidence_receipt_action_route_count, 0);
+    assert.equal(verifiedProjection.summary.stage_production_evidence_receipt_action_route_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -663,11 +658,8 @@ test('stage evidence record route projects domain stage payload candidates witho
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
-    const route = drilldown.operator_action_routing_refs.refs.find(
+    const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
+    const route = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
     );
@@ -781,11 +773,8 @@ test('verified stage evidence receipt can reopen record route when source scope 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
-    const route = drilldown.operator_action_routing_refs.refs.find(
+    const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
+    const route = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
     );
@@ -798,7 +787,7 @@ test('verified stage evidence receipt can reopen record route when source scope 
     assert.deepEqual(route.payload_ref_hints.runtime_event_refs_should_cover, [
       'runtime_event:review.receipt_recorded',
     ]);
-    const stage = drilldown.stage_production_evidence.stages.find(
+    const stage = projection.stage_production_evidence.stages.find(
       (entry: { stage_id: string }) => entry.stage_id === 'review',
     );
     assert.deepEqual(stage.observed_expected_receipt_refs, [
@@ -859,11 +848,8 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).app_operator_drilldown;
-    const stage = drilldown.stage_production_evidence.stages.find(
+    const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
+    const stage = projection.stage_production_evidence.stages.find(
       (entry: { stage_id: string }) => entry.stage_id === 'review',
     );
     assert.equal(stage.stage_evidence_receipt_status, 'verified');
@@ -880,7 +866,7 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
       true,
     );
 
-    const route = drilldown.operator_action_routing_refs.refs.find(
+    const route = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
         ref.action_id === 'stage-production-evidence:medautoscience:review:record',
     );
@@ -897,11 +883,11 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
       'metric:review/currentness',
     ]);
     assert.equal(
-      drilldown.summary.stage_production_evidence_payload_workorder_count,
+      projection.summary.stage_production_evidence_payload_workorder_count,
       0,
     );
     assert.notEqual(
-      drilldown.attention_first_payload.next_safe_action?.action_id,
+      projection.attention_first_payload.next_safe_action?.action_id,
       'stage-production-evidence:medautoscience:review:record',
     );
 
@@ -933,7 +919,7 @@ test('verified typed-blocker stage evidence receipt keeps record route open for 
   }
 });
 
-test('App drilldown does not select typed-blocker-closed stage evidence record route as default next action', () => {
+test('App projection does not select typed-blocker-closed stage evidence record route as default next action', () => {
   const actionId = 'stage-production-evidence:medautogrant:package_and_submit_ready:record';
   const route = {
     ref: 'opl agents evidence apply --domain medautogrant --request-id stage_production_evidence:medautogrant:package_and_submit_ready',
@@ -967,7 +953,7 @@ test('App drilldown does not select typed-blocker-closed stage evidence record r
       'monitor_freshness_ref_not_observed',
     ],
   };
-  const drilldown = applyAppOperatorDrilldownDetail({
+  const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [route],
     },
@@ -986,5 +972,5 @@ test('App drilldown does not select typed-blocker-closed stage evidence record r
     },
   }, 'summary');
 
-  assert.equal(drilldown.attention_first_payload.next_safe_action, null);
+  assert.equal(projection.attention_first_payload.next_safe_action, null);
 });

@@ -3,7 +3,7 @@ import { recordManagedInstallUpdateReceipts } from '../../../../src/modules/conn
 import { recordOmaAppLivePathReceipts } from '../../../../src/modules/foundry-lab/oma-app-live-path-ledger.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
-test('runtime app-operator-drilldown consumes OPL-managed OMA install update receipts', () => {
+test('runtime App projection consumes OPL-managed OMA install update receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-oma-managed-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
@@ -32,17 +32,17 @@ test('runtime app-operator-drilldown consumes OPL-managed OMA install update rec
     const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
     });
-    const summaryDrilldown = summaryOutput.app_operator_drilldown;
-    const metaAgentBound = summaryDrilldown.summary.opl_meta_agent_registry_status === 'resolved';
+    const summaryProjection = summaryOutput.app_operator_drilldown;
+    const metaAgentBound = summaryProjection.summary.opl_meta_agent_registry_status === 'resolved';
     if (!metaAgentBound) {
       return;
     }
     assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,
+      summaryProjection.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,
       2,
     );
     const omaAttention =
-      summaryDrilldown.attention_first_payload.evidence_after_contract
+      summaryProjection.attention_first_payload.evidence_after_contract
         .oma_production_consumption_followthrough;
     assert.equal(omaAttention.open_gate_count, 2);
     assert.deepEqual(omaAttention.open_gate_ids, [
@@ -91,7 +91,7 @@ test('runtime app-operator-drilldown consumes OPL-managed OMA install update rec
   }
 });
 
-test('runtime app-operator-drilldown consumes OMA App live path receipts', () => {
+test('runtime App projection consumes OMA App live path receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-oma-live-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
@@ -125,17 +125,17 @@ test('runtime app-operator-drilldown consumes OMA App live path receipts', () =>
     const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
       OPL_STATE_DIR: stateRoot,
     });
-    const summaryDrilldown = summaryOutput.app_operator_drilldown;
-    const metaAgentBound = summaryDrilldown.summary.opl_meta_agent_registry_status === 'resolved';
+    const summaryProjection = summaryOutput.app_operator_drilldown;
+    const metaAgentBound = summaryProjection.summary.opl_meta_agent_registry_status === 'resolved';
     if (!metaAgentBound) {
       return;
     }
     assert.equal(
-      summaryDrilldown.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,
+      summaryProjection.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,
       1,
     );
     const omaAttention =
-      summaryDrilldown.attention_first_payload.evidence_after_contract
+      summaryProjection.attention_first_payload.evidence_after_contract
         .oma_production_consumption_followthrough;
     assert.equal(omaAttention.open_gate_count, 1);
     assert.deepEqual(omaAttention.open_gate_ids, ['long_soak_refs']);

@@ -21,7 +21,7 @@ function recordAppReleaseUserPathEvidence(stateRoot: string, payload: Record<str
   }).app_release_user_path_evidence_ledger_record;
 }
 
-test('runtime App drilldown consumes App release user-path evidence receipts', () => {
+test('runtime App projection consumes App release user-path evidence receipts', () => {
   withTempState('opl-app-release-user-path-ledger-state-', (stateRoot) => {
     const record = recordAppReleaseUserPathEvidence(stateRoot, {
       release_package_refs: ['release://opl-app/full/2026-05-22/dmg'],
@@ -114,7 +114,7 @@ test('runtime App drilldown consumes App release user-path evidence receipts', (
   });
 });
 
-test('runtime App drilldown keeps typed blocker refs as operator attention', () => {
+test('runtime App projection keeps typed blocker refs as operator attention', () => {
   withTempState('opl-app-release-user-path-blocker-state-', (stateRoot) => {
     recordAppReleaseUserPathEvidence(stateRoot, {
       typed_blocker_refs: ['typed-blocker://opl-app/release-user-path/screenshot-missing'],
@@ -151,7 +151,7 @@ test('runtime App drilldown keeps typed blocker refs as operator attention', () 
   });
 });
 
-test('runtime App drilldown retires gate-scoped typed blocker after same-cohort refs verify', () => {
+test('runtime App projection retires gate-scoped typed blocker after same-cohort refs verify', () => {
   withTempState('opl-app-release-user-path-blocker-retired-state-', (stateRoot) => {
     const blockerRecord = recordAppReleaseUserPathEvidence(stateRoot, {
       typed_blocker_refs: [
@@ -214,7 +214,7 @@ test('runtime App drilldown retires gate-scoped typed blocker after same-cohort 
   });
 });
 
-test('runtime App drilldown retires release-owner typed blocker after same-cohort owner verdict refs verify', () => {
+test('runtime App projection retires release-owner typed blocker after same-cohort owner verdict refs verify', () => {
   withTempState('opl-app-release-owner-blocker-retired-state-', (stateRoot) => {
     const blockerRef =
       'typed_blocker_ref://one-person-lab-app/release-owner/26.6.12-owner-verdict/verdict-pending';
@@ -311,7 +311,7 @@ test('runtime App drilldown retires release-owner typed blocker after same-cohor
   });
 });
 
-test('runtime App drilldown ignores typed blocker refs from a different release cohort', () => {
+test('runtime App projection ignores typed blocker refs from a different release cohort', () => {
   withTempState('opl-app-release-user-path-cross-cohort-blocker-state-', (stateRoot) => {
     const blockerRecord = recordAppReleaseUserPathEvidence(stateRoot, {
       typed_blocker_refs: [
@@ -362,7 +362,7 @@ test('runtime App drilldown ignores typed blocker refs from a different release 
   });
 });
 
-test('runtime App drilldown does not combine App release user-path refs across release cohorts', () => {
+test('runtime App projection does not combine App release user-path refs across release cohorts', () => {
   withTempState('opl-app-release-user-path-cohort-state-', (stateRoot) => {
     const packageRecord = recordAppReleaseUserPathEvidence(stateRoot, {
       release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
@@ -457,7 +457,7 @@ test('runtime App drilldown does not combine App release user-path refs across r
   });
 });
 
-test('runtime App drilldown selects the latest complete App release user-path cohort', () => {
+test('runtime App projection selects the latest complete App release user-path cohort', () => {
   withTempState('opl-app-release-user-path-latest-complete-cohort-state-', (stateRoot) => {
     const oldCohortRecord = recordAppReleaseUserPathEvidence(stateRoot, {
       release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
@@ -531,7 +531,7 @@ test('runtime App drilldown selects the latest complete App release user-path co
   });
 });
 
-test('runtime App drilldown does not let an older complete cohort hide newer incomplete App release evidence', () => {
+test('runtime App projection does not let an older complete cohort hide newer incomplete App release evidence', () => {
   withTempState('opl-app-release-user-path-newer-incomplete-cohort-state-', (stateRoot) => {
     const oldCohortRecord = recordAppReleaseUserPathEvidence(stateRoot, {
       release_package_refs: ['release://opl-app/full/26.5.19/dmg'],
@@ -581,7 +581,7 @@ test('runtime App drilldown does not let an older complete cohort hide newer inc
   });
 });
 
-test('runtime App drilldown tolerates malformed percent escapes in App release refs', () => {
+test('runtime App projection tolerates malformed percent escapes in App release refs', () => {
   withTempState('opl-app-release-user-path-malformed-percent-state-', (stateRoot) => {
     const record = recordAppReleaseUserPathEvidence(stateRoot, {
       release_package_refs: [
