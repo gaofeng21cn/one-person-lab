@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 import './cli-codex-default-shell-cases/raw-codex-passthrough.ts';
 import {
   binPath,
@@ -100,7 +101,7 @@ test('installed opl launcher supports explicit non-default executor selection', 
       OPL_SKIP_SKILL_SYNC: '1',
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.agent_execution_receipt.executor_kind, 'claude_code');
     assert.equal(payload.agent_execution_receipt.closeout_packet.closeout_refs[0], 'receipt:launcher-claude');
     assert.equal(payload.agent_execution_receipt.proof.fallback_allowed, false);
@@ -127,7 +128,7 @@ exit 0
       OPL_SKIP_SKILL_SYNC: '1',
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.executor_doctor.executor_kind, 'claude_code');
     assert.equal(payload.executor_doctor.ready, true);
     assert.equal(result.stderr, '');
@@ -235,7 +236,7 @@ exit 0
       OPL_SKIP_SKILL_SYNC: '1',
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.help.command, 'install');
     assert.match(payload.help.usage, /--skip-gui-open/);
     assert.equal(result.stderr, '');
@@ -260,7 +261,7 @@ exit 0
       OPL_SKIP_SKILL_SYNC: '1',
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.help.command, 'workspace');
     assert.match(payload.help.usage, /workspace .*ensure/);
     assert.equal(
@@ -291,7 +292,7 @@ exit 0
       OPL_STATE_DIR: stateDir,
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.family_actions.surface_kind, 'opl_family_action_catalog_index');
     assert.equal(result.stderr, '');
     assert.equal(fs.existsSync(capturePath), false);
@@ -324,7 +325,7 @@ exit 0
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(stateDir, 'missing-gh'),
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.app_state.schema_version, 'opl_app_state.v1');
     assert.equal(payload.app_state.core.executor.default_executor_id, 'codex_cli');
     assert.equal(result.stderr, '');
@@ -358,7 +359,7 @@ exit 65
       OPL_SKIP_SKILL_SYNC: '1',
     });
 
-    const payload = JSON.parse(result.stdout);
+    const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.managed_update.surface_id, 'opl_managed_updater_kernel');
     assert.deepEqual(
       payload.managed_update.components.map((component: { component_id: string }) => component.component_id),
@@ -437,7 +438,7 @@ exit 0
         OPL_STATE_DIR: stateDir,
       });
 
-      command.assertPayload(JSON.parse(result.stdout));
+      command.assertPayload(parseJsonText(result.stdout) as Record<string, unknown>);
       assert.equal(result.stderr, '');
       assert.equal(fs.existsSync(capturePath), false);
     }

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/modules/connect/opl-skills.ts';
 import {
   binPath,
@@ -366,10 +367,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       true,
     );
     const generatedPluginRoot = metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root;
-    const generatedPluginManifest = JSON.parse(fs.readFileSync(
+    const generatedPluginManifest = parseJsonText(fs.readFileSync(
       metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
       'utf8',
-    ));
+    )) as Record<string, any>;
     assert.equal(generatedPluginManifest.interface.composerIcon, './assets/icon.svg');
     assert.equal(generatedPluginManifest.interface.logo, './assets/icon.svg');
     const generatedPluginIcon = fs.readFileSync(path.join(generatedPluginRoot, 'assets', 'icon.svg'), 'utf8');
@@ -384,10 +385,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
       /generated-codex-plugins\/opl-bookforge-local\/plugins\/opl-bookforge$/,
     );
-    const generatedBookForgeManifest = JSON.parse(fs.readFileSync(
+    const generatedBookForgeManifest = parseJsonText(fs.readFileSync(
       bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
       'utf8',
-    ));
+    )) as Record<string, any>;
     assert.equal(generatedBookForgeManifest.name, 'opl-bookforge');
     assert.equal(generatedBookForgeManifest.interface.displayName, 'OPL Book Forge');
     assert.equal(generatedBookForgeManifest.repository, 'https://github.com/gaofeng21cn/opl-bookforge');
@@ -465,7 +466,7 @@ test('opl connect sync-skills refuses standard agent manifests that expose stand
   const homeDir = path.join(captureDir, 'home');
   const codexHome = path.join(homeDir, '.codex');
   const masManifestPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', '.codex-plugin', 'plugin.json');
-  const masManifest = JSON.parse(fs.readFileSync(masManifestPath, 'utf8'));
+  const masManifest = parseJsonText(fs.readFileSync(masManifestPath, 'utf8')) as Record<string, any>;
   masManifest.mcpServers = './.mcp.json';
   fs.writeFileSync(masManifestPath, `${JSON.stringify(masManifest, null, 2)}\n`, 'utf8');
   fs.mkdirSync(codexHome, { recursive: true });

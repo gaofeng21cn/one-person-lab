@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repoRoot, 'src', 'entrypoints', 'cli.ts');
@@ -26,7 +28,7 @@ export function runCli(args: string[], envOverrides: Record<string, string> = {}
   );
 
   assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout);
+  return parseJsonText(result.stdout) as any;
 }
 
 export function runCliRaw(args: string[], envOverrides: Record<string, string> = {}) {
@@ -51,7 +53,7 @@ export function runCliFailure(args: string[], envOverrides: Record<string, strin
   assert.notEqual(result.status, 0);
   return {
     status: result.status ?? 1,
-    payload: JSON.parse(result.stderr),
+    payload: parseJsonText(result.stderr) as any,
   };
 }
 
@@ -110,7 +112,7 @@ export function runEntryPathFailure(
   assert.notEqual(result.status, 0);
   return {
     status: result.status ?? 1,
-    payload: JSON.parse(result.stderr),
+    payload: parseJsonText(result.stderr) as any,
   };
 }
 
