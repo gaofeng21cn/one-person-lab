@@ -300,9 +300,14 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '{"receipt_ref":"opl://managed-update/runtime_substrate/apply/example"}',
     ], env).app_action_execution;
 
-    const rollbackTaskKind = 'roll' + 'back';
-    assert.equal(rollbackPlan.delegated_surface, `opl update ${rollbackTaskKind} --component runtime_substrate`);
-    assert.equal(rollbackPlan.result.settings_control_center_action.task_kind, rollbackTaskKind);
+    assert.equal(
+      rollbackPlan.delegated_surface,
+      'opl update rollback --component runtime_substrate', // reuse-first: allow owner-routed update command registry metadata.
+    );
+    assert.equal(
+      rollbackPlan.result.settings_control_center_action.task_kind,
+      'rollback', // reuse-first: allow owner-routed update command registry metadata.
+    );
     assert.equal(rollbackPlan.result.settings_control_center_action.danger_level, 'high');
     assert.equal(
       rollbackPlan.result.settings_control_center_action.authority_boundary.can_write_runtime_queue,

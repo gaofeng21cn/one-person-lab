@@ -62,27 +62,6 @@
   },
   "reviewed_baselines": [
     {
-      "path": "tests/src/cli/cases/app-action.test.ts",
-      "limit": 1297,
-      "owner": "OPL Console tests",
-      "reason": "App action CLI tests cover one operator mutation boundary with shared fixtures; current source-module closure keeps it as a reviewed strict-ratchet test baseline.",
-      "intended_boundary": "Split by runtime dry-run, catalog, ScholarSkills sync, settings/release/workspace/provider, and module/scheduler/worker action groups."
-    },
-    {
-      "path": "tests/src/cli/cases/app-state.test.ts",
-      "limit": 1686,
-      "owner": "OPL Console tests",
-      "reason": "App state GUI read-model test is intentionally broad and protects the default cockpit projection; it is reviewed as a strict-ratchet test baseline while source modules are kept under budget.",
-      "intended_boundary": "Split fixtures and assertions by default GUI read model, MAS activity refs, owner-delta cache guard, network lookup guard, bounded rendering, and parser validation."
-    },
-    {
-      "path": "tests/src/cli/cases/contracts-entry.test.ts",
-      "limit": 1048,
-      "owner": "OPL Charter tests",
-      "reason": "Contract entry CLI tests cover loader, validator, doctor, status, session, and native helper entrypoints with shared process helpers; current line count is reviewed as a strict-ratchet baseline.",
-      "intended_boundary": "Split by contract loading, validation, doctor/status/session, and native helper lifecycle once this test lane is actively refactored."
-    },
-    {
       "path": "tests/src/cli/cases/family-runtime.test.ts",
       "limit": 1048,
       "owner": "OPL Runway tests",
@@ -95,13 +74,6 @@
       "owner": "OPL Connect tests",
       "reason": "Managed update kernel projection tests share update status, plan, apply, projection-only component, and selector fixtures; current line count is reviewed as a strict-ratchet baseline.",
       "intended_boundary": "Split by contract/status, plan, projection-only apply guards, companion tools, workflow profile, and selector alias scenarios."
-    },
-    {
-      "path": "tests/src/cli/cases/system-seed-manifest.test.ts",
-      "limit": 1388,
-      "owner": "OPL Connect tests",
-      "reason": "System seed manifest tests cover image seed, Docker WebUI readback, materialization, preheated payloads, canonical strategy validation, and startup-maintenance seed boundary with shared fixtures.",
-      "intended_boundary": "Split by seed apply, Docker WebUI doctor, materialization, preheated payload, strategy validation, and startup-maintenance seed boundary scenarios."
     },
     {
       "path": "tests/src/cli/cases/system-startup-maintenance-maintenance.test.ts",

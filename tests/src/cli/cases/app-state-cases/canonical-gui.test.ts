@@ -67,7 +67,7 @@ exit 1
     assert.equal(output.app_state.runtime_source.action_boundary_surface, 'opl app action execute --json');
     assert.equal(
       output.app_state.runtime_source.full_drilldown_exception_surface,
-      'opl runtime app-operator-drilldown --detail full --json',
+      'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
     );
     assert.equal(output.app_state.runtime_source.shell_must_not_use_full_drilldown_as_normal_state, true);
     assert.equal('runtime_tray_snapshot' in output.app_state, false);
@@ -114,7 +114,7 @@ exit 1
     );
     assert.equal(
       output.app_state.operator.default_read_surface_policy.full_runtime_drilldown_surface,
-      'opl runtime app-operator-drilldown --detail full --json',
+      'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
     );
     assert.equal(
       output.app_state.operator.default_read_surface_policy.raw_runtime_projection_policy,
@@ -604,7 +604,7 @@ exit 1
     assert.equal(
       output.app_state.operator.workbench.current_owner_delta_read_model.owner_delta_audit_tail.full_detail_refs
         .app_operator_drilldown_ref,
-      'opl runtime app-operator-drilldown --detail full --json',
+      'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
     );
     assert.deepEqual(
       output.app_state.operator.workbench.summary_cards.map((entry: AppStateListEntry) => entry.card_id),
@@ -721,7 +721,7 @@ exit 1
     assert.equal(
       output.app_state.operator.workbench.lazy_refs.some(
         (entry: AppStateListEntry) => entry.ref_id === 'full_runtime_drilldown'
-          && entry.surface === 'opl runtime app-operator-drilldown --detail full --json',
+          && entry.surface === 'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
       ),
       true,
     );
