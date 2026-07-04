@@ -36,8 +36,9 @@ opl connect external-skills sync --skill kdense/scanpy --scope workspace --targe
 该 registry 记录 source id、repo、pin 和可选本地 checkout 路径。它不 clone
 repo，也不批量安装 skill；checkout 仍由操作者或上层环境管理。
 
-`list`、`search` 和 `inspect` 是只读发现面。`sync` 只把一个明确选中的
-external skill 写入：
+`list`、`search` 和 `inspect` 是只读发现面。普通 MAS 任务优先使用
+`search -> inspect`，因为 `list` 是 source/index 审阅面，可能返回整个外部库的
+metadata。`sync` 只把一个明确选中的 external skill 写入：
 
 ```text
 <workspace-or-quest>/.codex/skills/<skill-id>/
@@ -72,8 +73,9 @@ MAS 优先使用默认医学论文专业 Skill 包：
 `scikit-survival` 或 `pyzotero`。
 
 粗入口 Skill 或聚合入口看到罕见专科能力时，先问 OPL Connect：
-`list/search/inspect` 读取 source index、skill card 和 `trigger_policy`，
-确认确实超出默认 MAS medical-paper pack 后，再选择单个 skill 做 `sync`。
+`search/inspect` 读取 skill card 和 `trigger_policy`，确认确实超出默认
+MAS medical-paper pack 后，再选择单个 skill 做 `sync`。`list` 用于维护者审阅
+source index，不作为普通执行上下文的默认入口。
 不要把 K-Dense 全库塞进上下文，也不要把外部库当作 MAS 默认能力包的一部分。
 
 有效触发方式：
