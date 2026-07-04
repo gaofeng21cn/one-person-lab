@@ -129,6 +129,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/runtime-research-evidence-pack-read-model.test.ts',
   'tests/src/cli/cases/runtime-research-hypothesis-portfolio-read-model.test.ts',
   'tests/src/cli/cases/artifact-provenance-bundle-ledger.test.ts',
+  'tests/src/substrate-provenance-surface.test.ts',
   'tests/src/family-stage-pack-registry.test.ts',
   'tests/src/family-stage-integrity-metadata-contract.test.ts',
   'tests/src/family-stage-admission.test.ts',
