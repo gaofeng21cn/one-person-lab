@@ -95,6 +95,7 @@ const fastTestFiles = [
   'tests/src/agent-lab-rho-workflow-contract.test.ts',
   'tests/src/cli/cases/agent-lab-rho-workflow-run.test.ts',
   'tests/src/agent-lab-complete.test.ts',
+  'tests/src/agent-lab-complete-cases/developer-mode.test.ts',
   'tests/src/agent-lab-ahe-evidence.test.ts',
   'tests/src/agent-lab-maturity-controls.test.ts',
   'tests/src/agent-lab-feedbackops.test.ts',

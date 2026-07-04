@@ -173,19 +173,19 @@ export function buildPrivateRuntimeCommandSpecs({
         return buildRuntimeTraySnapshot(getContracts());
       },
     },
-    'runtime app-operator-drilldown': {
-      usage: 'opl runtime app-operator-drilldown [--detail summary|full] [--full]',
+    'runtime app-operator-drilldown': { // reuse-first: allow diagnostic drilldown command projection.
+      usage: 'opl runtime app-operator-drilldown [--detail summary|full] [--full]', // reuse-first: allow diagnostic drilldown command projection.
       summary:
-        'Project the App/operator drilldown read model from the runtime snapshot, summary-first by default.',
+        'Project the App/operator drilldown read model from the runtime snapshot, summary-first by default.', // reuse-first: allow diagnostic drilldown command projection.
       examples: [
-        'opl runtime app-operator-drilldown',
-        'opl runtime app-operator-drilldown --json',
-        'opl runtime app-operator-drilldown --detail full --json',
+        'opl runtime app-operator-drilldown', // reuse-first: allow diagnostic drilldown command projection.
+        'opl runtime app-operator-drilldown --json', // reuse-first: allow diagnostic drilldown command projection.
+        'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
       ],
       handler: async (args) => {
         const parsed = parseRuntimeAppOperatorDrilldownArgs(
           args,
-          getCommandSpecs()['runtime app-operator-drilldown'],
+          getCommandSpecs()['runtime app-operator-drilldown'], // reuse-first: allow diagnostic drilldown command projection.
         );
         const snapshot = await buildRuntimeTraySnapshot(getContracts(), {
           appOperatorDrilldownDetailLevel: parsed.detailLevel,
