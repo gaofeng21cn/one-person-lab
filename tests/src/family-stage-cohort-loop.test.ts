@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { buildFamilyStageCohortLoopProjection } from '../../src/modules/stagecraft/family-stage-cohort-loop.ts';
 import { normalizeFamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
 import type { FamilyStageControlPlane } from '../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -14,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function readJson(relativePath: string): JsonRecord {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
+  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonRecord;
 }
 
 function record(value: unknown): JsonRecord {
