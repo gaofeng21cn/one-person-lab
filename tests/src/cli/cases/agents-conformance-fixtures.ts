@@ -1,4 +1,4 @@
-import { fs, os, path, runCli } from '../helpers.ts';
+import { fs, os, parseJsonText, path, runCli } from '../helpers.ts';
 
 const FORBIDDEN_GENERIC_OWNER_ROLES = [
   'generic_scheduler_owner',
@@ -233,7 +233,7 @@ export function buildReadyAgentRepo() {
   });
 
   const privateSurfacePolicyPath = path.join(targetDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
   privateSurfacePolicy.physical_source_morphology_policy = {
     policy_id: 'sample_brief_agent.physical_source_morphology.v1',
     state: 'classified_no_generic_runtime_reflow',
@@ -490,33 +490,33 @@ export function buildReadyAgentRepo() {
 
 export function retargetReadyRepoToMag(repoDir: string) {
   const domainDescriptorPath = path.join(repoDir, 'contracts', 'domain_descriptor.json');
-  const domainDescriptor = JSON.parse(fs.readFileSync(domainDescriptorPath, 'utf8'));
+  const domainDescriptor = parseJsonText(fs.readFileSync(domainDescriptorPath, 'utf8')) as any;
   domainDescriptor.domain_id = 'med-autogrant';
   domainDescriptor.domain_label = 'Med Auto Grant';
   writeJson(domainDescriptorPath, domainDescriptor);
 
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
   actionCatalog.target_domain_id = 'med-autogrant';
   writeJson(actionCatalogPath, actionCatalog);
 }
 
 export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel: string) {
   const domainDescriptorPath = path.join(repoDir, 'contracts', 'domain_descriptor.json');
-  const domainDescriptor = JSON.parse(fs.readFileSync(domainDescriptorPath, 'utf8'));
+  const domainDescriptor = parseJsonText(fs.readFileSync(domainDescriptorPath, 'utf8')) as any;
   domainDescriptor.domain_id = domainId;
   domainDescriptor.domain_label = domainLabel;
   writeJson(domainDescriptorPath, domainDescriptor);
 
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
   actionCatalog.target_domain_id = domainId;
   writeJson(actionCatalogPath, actionCatalog);
 }
 
 function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   stageControlPlane.target_domain_id = domainId;
   stageControlPlane.owner = owner;
   stageControlPlane.domain_id = domainId;
@@ -586,7 +586,7 @@ function stageFromBase(baseStage: Record<string, any>, input: {
 
 export function configureReadyMagMorphology(repoDir: string) {
   const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
   privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
     'domain_runtime',
     'product_entry',
@@ -776,7 +776,7 @@ export function configureReadyMetaMorphology(repoDir: string) {
 
   fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
   const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
   privateSurfacePolicy.forbidden_script_roles = [
     'generic_runtime_owner',
     'generic_registry_owner',

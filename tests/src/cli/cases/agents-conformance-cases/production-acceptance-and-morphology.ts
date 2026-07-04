@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../../helpers.ts';
 import {
   buildReadyAgentRepo,
   configureReadyMagMorphology,
@@ -530,7 +530,7 @@ test('agents conformance still blocks unclassified opl-meta-agent active forbidd
 test('agents conformance blocks missing physical morphology policy', () => {
   const repoDir = buildReadyAgentRepo();
   const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
   delete privateSurfacePolicy.physical_source_morphology_policy;
   writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
 
@@ -586,13 +586,13 @@ test('agents conformance blocks missing stage artifact kernel adoption policy', 
 test('agents conformance blocks legacy roots, README pack paths, and unavailable active-path scans', () => {
   const repoDir = buildReadyAgentRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts', 'pack_compiler_input.json');
-  const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerInputPath, 'utf8'));
+  const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
   packCompilerInput.canonical_repo_source_semantic_pack_root = 'src/';
   packCompilerInput.required_domain_pack_paths.push('agent/README.md');
   writeJson(packCompilerInputPath, packCompilerInput);
 
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   functionalAudit.scan = { active_path_scan_state: 'not_available' };
   writeJson(functionalAuditPath, functionalAudit);
 
@@ -614,12 +614,12 @@ test('agents conformance treats OPL replacement ledger refs as non-residue', () 
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepoToMag(repoDir);
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
   actionCatalog.notes.push('OPL replacement consumes stage_attempt_ledger refs only.');
   writeJson(actionCatalogPath, actionCatalog);
 
   const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = JSON.parse(fs.readFileSync(privateSurfacePolicyPath, 'utf8'));
+  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
   privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
     'domain_runtime',
     'product_entry',
@@ -672,7 +672,7 @@ test('agents conformance blocks legacy sidecar aliases as active physical morpho
   retargetReadyRepoToMag(magRepoDir);
   configureReadyMagMorphology(magRepoDir);
   const magPrivateSurfacePolicyPath = path.join(magRepoDir, 'contracts', 'private_functional_surface_policy.json');
-  const magPrivateSurfacePolicy = JSON.parse(fs.readFileSync(magPrivateSurfacePolicyPath, 'utf8'));
+  const magPrivateSurfacePolicy = parseJsonText(fs.readFileSync(magPrivateSurfacePolicyPath, 'utf8')) as any;
   magPrivateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = (
     magPrivateSurfacePolicy.physical_source_morphology_policy.required_surface_ids.map((surfaceId: string) => (
       surfaceId === 'domain_handler' ? 'sidecar' : surfaceId
@@ -692,7 +692,7 @@ test('agents conformance blocks legacy sidecar aliases as active physical morpho
   retargetReadyRepo(rcaRepoDir, 'redcube_ai', 'RedCube AI');
   configureReadyRcaMorphology(rcaRepoDir);
   const rcaPolicyPath = path.join(rcaRepoDir, 'contracts', 'physical_source_morphology_policy.json');
-  const rcaPolicy = JSON.parse(fs.readFileSync(rcaPolicyPath, 'utf8'));
+  const rcaPolicy = parseJsonText(fs.readFileSync(rcaPolicyPath, 'utf8')) as any;
   rcaPolicy.active_surface_classifications = rcaPolicy.active_surface_classifications.map((
     entry: { surface_id: string },
   ) => ({
