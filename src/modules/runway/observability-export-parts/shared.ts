@@ -1,4 +1,4 @@
-import type { Server } from 'node:http';
+import type { Server, ServerResponse } from 'node:http';
 
 import { stringValue } from '../../../kernel/json-record.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -136,6 +136,50 @@ export const COLLECTOR_SMOKE_METRIC_NAMES = [
   'opl_queue_length',
   'opl_observability_collector_consumption_config',
 ];
+
+export function buildEndpointReadback(input: {
+  host: string;
+  port: number;
+  metricsPath: string;
+  once: boolean;
+}): ObservabilityMetricsEndpointReadback {
+  return {
+    surface_kind: 'opl_observability_metrics_endpoint',
+    schema_version: 'observability_metrics_endpoint.v1',
+    endpoint: {
+      host: input.host,
+      port: input.port,
+      metrics_path: input.metricsPath,
+      url: `http://${input.host}:${input.port}${input.metricsPath}`,
+    },
+    source_export_command: 'opl runtime observability-export --format openmetrics',
+    collector_consumption_config_ref:
+      'contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/collector_consumption_config',
+    runtime_export_ref: 'opl runtime observability-export --format openmetrics',
+    server_runtime: 'node_http_standard_library',
+    once: input.once,
+    authority_boundary: {
+      can_execute_repair: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_ready_verdict: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      external_collector_connected: false,
+      payload_body_exported: false,
+    },
+  };
+}
+
+export function writeJsonResponse(response: ServerResponse, statusCode: number, payload: Record<string, unknown>) {
+  response.writeHead(statusCode, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+  response.end(`${JSON.stringify(payload, null, 2)}\n`);
+}
 
 export function firstString(...values: unknown[]) {
   return values.map(stringValue).find((value) => value !== null) ?? null;
