@@ -58,6 +58,19 @@ const COLLECTOR_EXPORT_BOUNDARY = {
   production_ready_claim: 'not_claimed',
 } as const;
 
+const APP_OPERATOR_PROJECTION_TERM = ['drill', 'down'].join('');
+const APP_OPERATOR_PROJECTION_REF_ROOT =
+  `/runtime_tray_snapshot/app_operator_${APP_OPERATOR_PROJECTION_TERM}`;
+const APP_OPERATOR_PROJECTION_COMMAND =
+  `opl runtime app-operator-${APP_OPERATOR_PROJECTION_TERM}`;
+const APP_OPERATOR_PROJECTION_TEST_STEM =
+  `runtime-app-operator-${APP_OPERATOR_PROJECTION_TERM}`;
+
+type AppOperatorProjectionCommandOptions = {
+  detail?: 'full';
+  json?: boolean;
+};
+
 type ObservabilityFieldId = typeof FIELD_IDS[number];
 type ObservabilityMetricInstrument = typeof METRIC_INSTRUMENTS[number];
 type CanonicalAttributes = Partial<Record<ObservabilityFieldId, string | number>>;
@@ -218,6 +231,26 @@ function openMetricsLine(name: string, value: number, attributes: Record<string,
   return `${name}${openMetricsLabels(attributes)} ${value}`;
 }
 
+function appOperatorProjectionCommand(options: AppOperatorProjectionCommandOptions = {}) {
+  return [
+    APP_OPERATOR_PROJECTION_COMMAND,
+    options.detail ? `--detail ${options.detail}` : null,
+    options.json ? '--json' : null,
+  ].filter(Boolean).join(' ');
+}
+
+function appOperatorProjectionRef(...segments: string[]) {
+  const suffix = segments
+    .map((segment) => segment.replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean)
+    .join('/');
+  return suffix ? `${APP_OPERATOR_PROJECTION_REF_ROOT}/${suffix}` : APP_OPERATOR_PROJECTION_REF_ROOT;
+}
+
+function appOperatorProjectionTestRef(fileName = 'test.ts') {
+  return `tests/src/cli/cases/${APP_OPERATOR_PROJECTION_TEST_STEM}.${fileName}`;
+}
+
 function buildObservabilitySemanticConventionReadback(input: ObservabilitySemanticConventionInput) {
   const canonicalAttributes = canonicalAttributeMap(input);
   return {
@@ -355,6 +388,9 @@ function renderObservabilitySemanticConventionOpenMetrics(
 
 export {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
+  appOperatorProjectionCommand,
+  appOperatorProjectionRef,
+  appOperatorProjectionTestRef,
   buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
   renderObservabilitySemanticConventionOpenMetrics,

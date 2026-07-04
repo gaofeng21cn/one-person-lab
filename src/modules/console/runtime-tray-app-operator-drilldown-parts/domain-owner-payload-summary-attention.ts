@@ -65,8 +65,8 @@ function compactDomain(domain: JsonRecord) {
   };
 }
 
-export function buildDomainOwnerPayloadSummaryAttention(drilldown: JsonRecord) {
-  const projection = record(drilldown.domain_owner_payload_summary_refs);
+export function buildDomainOwnerPayloadSummaryAttention(operatorProjection: JsonRecord) {
+  const projection = record(operatorProjection.domain_owner_payload_summary_refs);
   const summary = record(projection.summary);
   const domains = recordList(projection.domains)
     .map(compactDomain)

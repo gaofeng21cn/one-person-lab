@@ -264,8 +264,8 @@ export function developerModeLiveCloseoutEvidenceSummary(evidence: JsonRecord) {
   };
 }
 
-export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonRecord) {
-  const evidence = record(drilldown.developer_mode_live_closeout_evidence);
+export function buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjection: JsonRecord) {
+  const evidence = record(operatorProjection.developer_mode_live_closeout_evidence);
   if (Object.keys(evidence).length === 0) {
     return {
       surface_kind: 'opl_app_drilldown_developer_mode_live_closeout_evidence_attention',
@@ -314,7 +314,7 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
       drill_sample_count: 0,
       full_detail_section: 'developer_mode_live_closeout_evidence',
       authority_boundary: {
-        ...record(drilldown.authority_boundary),
+        ...record(operatorProjection.authority_boundary),
         refs_only: true,
         can_write_domain_truth: false,
         can_write_memory_body: false,
@@ -415,7 +415,7 @@ export function buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown: JsonR
     drill_sample_count: Math.min(recordList(evidence.drills).length, 3),
     full_detail_section: 'developer_mode_live_closeout_evidence',
     authority_boundary: {
-      ...record(drilldown.authority_boundary),
+      ...record(operatorProjection.authority_boundary),
       refs_only: true,
       can_write_domain_truth: false,
       can_write_memory_body: false,

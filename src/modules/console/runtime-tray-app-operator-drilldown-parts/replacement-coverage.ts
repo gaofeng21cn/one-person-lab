@@ -1,4 +1,9 @@
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
+import {
+  appOperatorProjectionCommand,
+  appOperatorProjectionRef,
+  appOperatorProjectionTestRef,
+} from '../../ledger/observability-semantic-conventions.ts';
 
 type ReplacementCoverage = {
   coverage_status: 'opl_replacement_surface_available';
@@ -16,17 +21,19 @@ const UNKNOWN_REPLACEMENT_COVERAGE = {
   live_evidence_still_required: true,
 };
 
+const APP_OPERATOR_PROJECTION_TEST_REF = appOperatorProjectionTestRef();
+
 const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
   workspace_source_intake_shell: {
     coverage_status: 'opl_replacement_surface_available',
     replacement_owner: 'one-person-lab',
     replacement_surface_refs: [
       'opl substrate projections',
-      '/runtime_tray_snapshot/app_operator_drilldown/ref_family_refs/source_refs',
+      appOperatorProjectionRef('ref_family_refs', 'source_refs'),
       'contracts/opl-framework/generic-substrate-projection-contract.json',
     ],
     focused_verification_refs: [
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
       'tests/src/cli/cases/workspace-domain.descriptor.test.ts',
     ],
     live_evidence_still_required: true,
@@ -37,12 +44,12 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     replacement_surface_refs: [
       'opl domain-memory list',
       'opl domain-memory inspect',
-      '/runtime_tray_snapshot/app_operator_drilldown/memory_writeback_refs',
+      appOperatorProjectionRef('memory_writeback_refs'),
       'contracts/family-orchestration/family-domain-memory-ref.schema.json',
       'contracts/family-orchestration/family-domain-memory-writeback.schema.json',
     ],
     focused_verification_refs: [
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
       'tests/src/functional-agent-runtime-harness.test.ts',
     ],
     live_evidence_still_required: true,
@@ -54,12 +61,12 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       'opl family-runtime lifecycle apply',
       'opl runtime lifecycle apply',
       '/family-runtime/lifecycle-index',
-      '/runtime_tray_snapshot/app_operator_drilldown/package_export_lifecycle_refs',
-      '/runtime_tray_snapshot/app_operator_drilldown/artifact_gallery_refs',
+      appOperatorProjectionRef('package_export_lifecycle_refs'),
+      appOperatorProjectionRef('artifact_gallery_refs'),
     ],
     focused_verification_refs: [
       'tests/src/family-runtime-lifecycle-index.test.ts',
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
     ],
     live_evidence_still_required: true,
   },
@@ -69,8 +76,8 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     replacement_surface_refs: [
       'opl framework transition run',
       'family_transition_matrix',
-      '/runtime_tray_snapshot/app_operator_drilldown/route_graph_refs',
-      '/runtime_tray_snapshot/app_operator_drilldown/decision_map_refs',
+      appOperatorProjectionRef('route_graph_refs'),
+      appOperatorProjectionRef('decision_map_refs'),
     ],
     focused_verification_refs: [
       'tests/src/functional-agent-runtime-harness.test.ts',
@@ -90,7 +97,7 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     ],
     focused_verification_refs: [
       'tests/src/functional-agent-runtime-harness.test.ts',
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
     ],
     live_evidence_still_required: true,
   },
@@ -101,12 +108,12 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       'opl family-runtime attempt signal',
       'opl family-runtime approve',
       'opl family-runtime scheduler tick --provider temporal',
-      '/runtime_tray_snapshot/app_operator_drilldown/review_repair_queue_refs',
-      '/runtime_tray_snapshot/app_operator_drilldown/typed_blocker_refs',
+      appOperatorProjectionRef('review_repair_queue_refs'),
+      appOperatorProjectionRef('typed_blocker_refs'),
     ],
     focused_verification_refs: [
       'tests/src/functional-agent-runtime-harness.test.ts',
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
     ],
     live_evidence_still_required: true,
   },
@@ -114,12 +121,12 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     coverage_status: 'opl_replacement_surface_available',
     replacement_owner: 'one-person-lab',
     replacement_surface_refs: [
-      'opl runtime app-operator-drilldown',
-      '/runtime_tray_snapshot/app_operator_drilldown',
-      '/runtime_tray_snapshot/app_operator_drilldown/app_execution_bridge',
+      appOperatorProjectionCommand(),
+      appOperatorProjectionRef(),
+      appOperatorProjectionRef('app_execution_bridge'),
     ],
     focused_verification_refs: [
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
     ],
     live_evidence_still_required: true,
   },
@@ -131,10 +138,10 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       'opl family-runtime provider-slo tick --provider temporal',
       'opl family-runtime scheduler status --provider temporal',
       '/runtime_tray_snapshot/provider_continuous_proof',
-      '/runtime_tray_snapshot/app_operator_drilldown/provider_slo_operator_action_refs',
+      appOperatorProjectionRef('provider_slo_operator_action_refs'),
     ],
     focused_verification_refs: [
-      'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
+      APP_OPERATOR_PROJECTION_TEST_REF,
       'tests/src/product-entry-runtime.test.ts',
     ],
     live_evidence_still_required: true,

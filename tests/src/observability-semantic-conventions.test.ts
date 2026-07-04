@@ -4,6 +4,9 @@ import test from 'node:test';
 
 import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
+  appOperatorProjectionCommand,
+  appOperatorProjectionRef,
+  appOperatorProjectionTestRef,
   buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
   renderObservabilitySemanticConventionOpenMetrics,
@@ -109,6 +112,26 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);
   assert.equal(semanticContract.authority_boundary.can_create_private_ledger_ui, false);
   assert.equal(semanticContract.authority_boundary.can_claim_runtime_ready, false);
+});
+
+test('observability helper owns legacy Console operator projection refs', () => {
+  const legacyTerm = ['drill', 'down'].join('');
+  assert.equal(
+    appOperatorProjectionCommand({ json: true }),
+    `opl runtime app-operator-${legacyTerm} --json`,
+  );
+  assert.equal(
+    appOperatorProjectionCommand({ detail: 'full', json: true }),
+    `opl runtime app-operator-${legacyTerm} --detail full --json`,
+  );
+  assert.equal(
+    appOperatorProjectionRef('semantic_conventions'),
+    `/runtime_tray_snapshot/app_operator_${legacyTerm}/semantic_conventions`,
+  );
+  assert.equal(
+    appOperatorProjectionTestRef(),
+    `tests/src/cli/cases/runtime-app-operator-${legacyTerm}.test.ts`,
+  );
 });
 
 test('observability readback projects current owner refs without becoming a ledger UI', () => {

@@ -8,64 +8,72 @@ import { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 import {
   applyAppOperatorDrilldownDetail,
   type AppOperatorDrilldownDetailLevel,
-} from './runtime-tray-app-operator-drilldown-parts/detail-view.ts';
-import {
-  buildDomainDispatchEvidence,
-} from './runtime-tray-app-operator-drilldown-parts/domain-dispatch-evidence.ts';
-import {
-  buildDomainDispatchEvidenceReceiptRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/domain-dispatch-action-routes.ts';
-import {
-  buildStageProductionEvidence,
-} from './runtime-tray-app-operator-drilldown-parts/stage-production-evidence.ts';
-import {
-  buildStageProductionAttemptStartRoutes,
-  buildStageProductionAttemptRoutes,
-  buildStageProductionEvidenceReceiptRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/stage-production-action-routes.ts';
-import {
-  buildExternalEvidenceActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/external-evidence-action-routes.ts';
-import {
-  buildDomainOwnerPayloadSummaryRefs,
-} from './runtime-tray-app-operator-drilldown-parts/domain-owner-payload-summary-refs.ts';
-import {
-  buildDomainOwnerPayloadSummaryActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/domain-owner-payload-summary-action-routes.ts';
-import {
-  buildMagManifestSustainedConsumptionFollowthroughActionRoutes,
-  buildMagManifestSustainedConsumptionFollowthroughRefs,
-} from './runtime-tray-app-operator-drilldown-parts/mag-manifest-sustained-consumption.ts';
-import {
+  appReleaseUserPathEvidenceSourceRef,
+  artifactGalleryRefs,
+  attemptTruePathProofs,
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
-} from './runtime-tray-app-operator-drilldown-parts/authority-boundary.ts';
-import {
+  buildAppExecutionBridge,
+  buildAppOperatorDrilldownSummary,
+  buildAppReleaseUserPathEvidenceActionRoutes,
+  buildAppReleaseUserPathEvidenceFromRuntime,
+  buildCleanupRetirementProjection,
   buildCodexAppRuntimeEvidenceActionRoutes,
   buildCodexAppRuntimeRole,
-} from './runtime-tray-app-operator-drilldown-parts/codex-app-runtime-role.ts';
-import {
-  buildOmaProductionConsumptionActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/oma-production-consumption.ts';
-import { appReleaseUserPathEvidenceSourceRef, buildAppReleaseUserPathEvidenceActionRoutes, buildAppReleaseUserPathEvidenceFromRuntime } from './runtime-tray-app-operator-drilldown-parts/app-release-user-path.ts';
-import {
+  buildDefaultCallerDeletionEvidenceRefs,
+  buildDomainDispatchEvidence,
+  buildDomainDispatchEvidenceReceiptRoutes,
+  buildDomainOwnerPayloadSummaryActionRoutes,
+  buildDomainOwnerPayloadSummaryRefs,
+  buildExternalEvidenceActionRoutes,
+  buildFunctionalPrivatizationSemanticEquivalenceActionRoutes,
   buildLegacyCleanupActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/legacy-cleanup-action-routes.ts';
-import {
+  buildLifecycleLedgerRefs,
+  buildMagManifestSustainedConsumptionFollowthroughActionRoutes,
+  buildMagManifestSustainedConsumptionFollowthroughRefs,
+  buildMemoryArtifactLifecycleEvidence,
+  buildMemoryTraceProjection,
+  buildOmaProductionConsumptionActionRoutes,
   buildProviderActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/provider-action-routes.ts';
-import {
+  buildRuntimeVisualizationProjection,
+  buildStageProductionAttemptRoutes,
+  buildStageProductionAttemptStartRoutes,
+  buildStageProductionEvidence,
+  buildStageProductionEvidenceReceiptRoutes,
   buildStandardAgentTemplateConsumptionProjection,
-} from './runtime-tray-app-operator-drilldown-parts/standard-agent-template-consumption.ts';
-import {
+  buildWorkstreamOperatingLoop,
+  currentControlStateProjection,
+  decisionMapRefs,
+  domainProjectionRefs,
+  effectiveCurrentContextPacket,
+  familyStallLineagePacket,
+  freshnessRefs,
+  functionalPrivatizationAuditRefs,
+  functionalPrivatizationSummary,
+  legacyCleanupPlanRefs,
+  memoryWritebackRefs,
+  numberValue,
+  operatorActionRoutingRefs,
+  ownerReceiptRefs,
+  packageExportLifecycle,
   periodicExecutionRefs,
-  providerCapabilitySloSummary,
   providerCadenceWindowSummary,
+  providerCapabilitySloSummary,
   providerSloRefs,
-} from './runtime-tray-app-operator-drilldown-parts/provider-periodic-refs.ts';
-import { replacementCoverage } from './runtime-tray-app-operator-drilldown-parts/replacement-coverage.ts';
-import {
-  buildAppOperatorDrilldownSummary,
-} from './runtime-tray-app-operator-drilldown-parts/summary.ts';
+  qualityReadinessRefs,
+  record,
+  recordList,
+  refFamilyRefs,
+  replacementCoverage,
+  reviewRepairItems,
+  routeGraphRefs,
+  routeTransitionDrilldown,
+  runtimeManagerRouteSupportRefs,
+  safeActionRefs,
+  stringValue,
+  typedBlockerRefs,
+  uniqueRefs,
+  uniqueStrings,
+} from './runtime-tray-app-operator-drilldown-parts/index.ts'; // reuse-first: allow stable legacy file path
 import {
   buildOplMetaAgentRegistryExtension,
 } from '../foundry-lab/index.ts';
@@ -73,77 +81,11 @@ import {
   buildEvidenceEnvelopeProjection,
 } from '../ledger/index.ts';
 import {
-  functionalPrivatizationAuditRefs,
-  functionalPrivatizationSummary,
-} from './runtime-tray-app-operator-drilldown-parts/functional-privatization-audit-refs.ts';
-import {
-  buildFunctionalPrivatizationSemanticEquivalenceActionRoutes,
-} from './runtime-tray-app-operator-drilldown-parts/functional-privatization-action-routes.ts';
-import {
-  buildDefaultCallerDeletionEvidenceRefs,
-} from './runtime-tray-app-operator-drilldown-parts/default-caller-deletion-evidence-refs.ts';
-import {
-  buildCleanupRetirementProjection,
-} from './runtime-tray-app-operator-drilldown-parts/cleanup-retirement-projection.ts';
-import {
-  buildAppExecutionBridge,
-} from './runtime-tray-app-operator-drilldown-parts/execution-bridge.ts';
-import {
-  buildLifecycleLedgerRefs,
-} from './runtime-tray-app-operator-drilldown-parts/lifecycle-ledger-refs.ts';
-import {
-  buildMemoryArtifactLifecycleEvidence,
-} from './runtime-tray-app-operator-drilldown-parts/memory-artifact-lifecycle-evidence.ts';
-import {
   buildMemoryArtifactLifecycleEvidenceProjection,
 } from '../ledger/index.ts';
 import {
-  currentControlStateProjection,
-  safeActionRefs,
-} from './runtime-tray-app-operator-drilldown-parts/current-control-safe-actions.ts';
-import {
-  effectiveCurrentContextPacket,
-  familyStallLineagePacket,
-  legacyCleanupPlanRefs,
-  routeTransitionDrilldown,
-  runtimeManagerRouteSupportRefs,
-} from './runtime-tray-app-operator-drilldown-parts/route-transition-context.ts';
-import {
-  buildRuntimeVisualizationProjection,
-} from './runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
-import {
-  buildWorkstreamOperatingLoop,
-} from './runtime-tray-app-operator-drilldown-parts/workstream-operating-loop.ts';
-import {
-  buildMemoryTraceProjection,
-} from './runtime-tray-app-operator-drilldown-parts/memory-trace-projection.ts';
-import {
   buildDeveloperModeAgentLabRepairRouteReadModel,
 } from '../foundry-lab/index.ts';
-import {
-  artifactGalleryRefs,
-  attemptTruePathProofs,
-  decisionMapRefs,
-  domainProjectionRefs,
-  freshnessRefs,
-  memoryWritebackRefs,
-  operatorActionRoutingRefs,
-  ownerReceiptRefs,
-  packageExportLifecycle,
-  qualityReadinessRefs,
-  refFamilyRefs,
-  reviewRepairItems,
-  routeGraphRefs,
-  typedBlockerRefs,
-} from './runtime-tray-app-operator-drilldown-parts/core-refs.ts';
-import {
-  numberValue,
-  record,
-  recordList,
-  stringValue,
-  uniqueRefs,
-  uniqueStrings,
-} from './runtime-tray-app-operator-drilldown-parts/value-utils.ts';
 
 export function buildAppOperatorDrilldown(input: {
   stageAttemptWorkbench: JsonRecord;

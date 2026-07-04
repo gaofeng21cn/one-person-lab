@@ -126,25 +126,25 @@ function attentionCount(item: JsonRecord) {
   return numberValue(item.open_envelope_count) + numberValue(item.blocked_envelope_count);
 }
 
-function authorityBoundary(drilldown: JsonRecord) {
-  return record(drilldown.authority_boundary);
+function authorityBoundary(operatorProjection: JsonRecord) {
+  return record(operatorProjection.authority_boundary);
 }
 
-function appReleaseUserPathEvidenceSurface(drilldown: JsonRecord) {
-  return record(drilldown.app_release_user_path_evidence);
+function appReleaseUserPathEvidenceSurface(operatorProjection: JsonRecord) {
+  return record(operatorProjection.app_release_user_path_evidence);
 }
 
-function evidenceAfterContractAttention(drilldown: JsonRecord) {
-  const summary = record(drilldown.summary);
-  const ownerPayloadGroups = ownerPayloadAttentionGroups(drilldown);
+function evidenceAfterContractAttention(operatorProjection: JsonRecord) {
+  const summary = record(operatorProjection.summary);
+  const ownerPayloadGroups = ownerPayloadAttentionGroups(operatorProjection);
   const domainOwnerPayloadSummary =
-    buildDomainOwnerPayloadSummaryAttention(drilldown);
-  const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(drilldown);
+    buildDomainOwnerPayloadSummaryAttention(operatorProjection);
+  const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(operatorProjection);
   const omaProductionConsumption =
-    buildOmaProductionConsumptionFollowthroughAttention(drilldown);
-  const appReleaseUserPathEvidence = appReleaseUserPathEvidenceSurface(drilldown);
+    buildOmaProductionConsumptionFollowthroughAttention(operatorProjection);
+  const appReleaseUserPathEvidence = appReleaseUserPathEvidenceSurface(operatorProjection);
   const developerModeLiveCloseoutEvidence =
-    buildDeveloperModeLiveCloseoutEvidenceAttention(drilldown);
+    buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjection);
   const evidenceEnvelopeAttentionCount = (
     numberValue(summary.evidence_envelope_open_count)
     + numberValue(summary.evidence_envelope_blocked_count)
@@ -211,7 +211,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
     owner_payload_groups: ownerPayloadGroups.items,
     domain_owner_payload_summary_attention: domainOwnerPayloadSummary,
     owner_handoff_packet: ownerHandoffPacket,
-    memory_artifact_lifecycle_evidence: buildMemoryArtifactLifecycleEvidence(drilldown),
+    memory_artifact_lifecycle_evidence: buildMemoryArtifactLifecycleEvidence(operatorProjection),
     app_release_user_path_evidence: appReleaseUserPathEvidence,
     app_release_user_path_evidence_open_gate_count: appReleaseUserPathOpenGateCount,
     app_release_user_path_evidence_pending_verify_receipt_ref_count:
@@ -257,7 +257,7 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
       'developer_mode_live_closeout_evidence',
     ],
     authority_boundary: {
-      ...authorityBoundary(drilldown),
+      ...authorityBoundary(operatorProjection),
       route_support_closes_owner_chain: false,
       route_support_closes_domain_ready: false,
       route_support_closes_production_ready: false,
@@ -266,8 +266,8 @@ function evidenceAfterContractAttention(drilldown: JsonRecord) {
   };
 }
 
-function domainDispatchEvidenceWorkorders(drilldown: JsonRecord) {
-  const operatorRoutes = recordList(record(drilldown.operator_action_routing_refs).refs);
+function domainDispatchEvidenceWorkorders(operatorProjection: JsonRecord) {
+  const operatorRoutes = recordList(record(operatorProjection.operator_action_routing_refs).refs);
   const packet = buildDomainDispatchEvidenceWorkorderPacket(operatorRoutes);
   return {
     summary: packet.summary,
@@ -321,8 +321,8 @@ function ownerPayloadRequiredRefs(payloadKind: string | null) {
   ];
 }
 
-function ownerPayloadAttentionGroups(drilldown: JsonRecord) {
-  const envelopeSummary = record(record(drilldown.evidence_envelope).summary);
+function ownerPayloadAttentionGroups(operatorProjection: JsonRecord) {
+  const envelopeSummary = record(record(operatorProjection.evidence_envelope).summary);
   const groups = recordList(envelopeSummary.owner_payload_breakdown)
     .map((group) => {
       const payloadKind = stringValue(group.payload_kind);
@@ -401,23 +401,23 @@ function topCanonicalEvidenceOwner(
     ?? 'domain_repository_or_app_live_operator';
 }
 
-function evidenceNextSteps(drilldown: JsonRecord) {
-  const attention = evidenceAfterContractAttention(drilldown);
+function evidenceNextSteps(operatorProjection: JsonRecord) {
+  const attention = evidenceAfterContractAttention(operatorProjection);
   const domainDispatchGroups = recordList(
     attention.domain_dispatch_evidence_workorder_group_attention_items,
   );
   const domainDispatchWorkorders = recordList(attention.domain_dispatch_evidence_workorder_attention_items);
   const ownerPayloadGroups = recordList(attention.owner_payload_groups);
-  const missingEvidence = missingEvidenceItems(drilldown);
-  const advisory = advisoryItems(drilldown);
+  const missingEvidence = missingEvidenceItems(operatorProjection);
+  const advisory = advisoryItems(operatorProjection);
   const appReleaseUserPathEvidence = record(attention.app_release_user_path_evidence);
   const developerModeLiveCloseoutEvidence =
     record(attention.developer_mode_live_closeout_evidence);
   const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
-  const codexAppRuntimeRole = record(drilldown.codex_app_runtime_role);
+  const codexAppRuntimeRole = record(operatorProjection.codex_app_runtime_role);
   const codexAppRuntimeFollowthrough =
     record(codexAppRuntimeRole.production_evidence_followthrough);
-  const functionalPrivatizationSteps = functionalPrivatizationNextSteps(drilldown);
+  const functionalPrivatizationSteps = functionalPrivatizationNextSteps(operatorProjection);
   const dispatchOwner = topDispatchEvidenceOwner(domainDispatchGroups, domainDispatchWorkorders)
     ?? 'domain_repository_or_app_live_operator';
   const nextOwner = topCanonicalEvidenceOwner(
@@ -633,17 +633,17 @@ function evidenceNextSteps(drilldown: JsonRecord) {
     can_execute_domain_action: false,
     can_create_owner_receipt: false,
     can_close_domain_ready: false,
-    authority_boundary: authorityBoundary(drilldown),
+    authority_boundary: authorityBoundary(operatorProjection),
   };
 }
 
-function buildAttentionFirstPayload(drilldown: JsonRecord) {
-  const evidenceAfterContract = evidenceAfterContractAttention(drilldown);
-  const evidenceNextStepsProjection = evidenceNextSteps(drilldown);
-  const workstreamOperatingLoop = record(drilldown.workstream_operating_loop);
+function buildAttentionFirstPayload(operatorProjection: JsonRecord) {
+  const evidenceAfterContract = evidenceAfterContractAttention(operatorProjection);
+  const evidenceNextStepsProjection = evidenceNextSteps(operatorProjection);
+  const workstreamOperatingLoop = record(operatorProjection.workstream_operating_loop);
   const actions = defaultSelectedSafeActionCandidates(
-    safeActionRoutes(drilldown),
-    drilldown,
+    safeActionRoutes(operatorProjection),
+    operatorProjection,
     {
       ownerDeltaAvailable: ownerDeltaAvailable({
         evidenceNextStepsProjection,
@@ -659,7 +659,7 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
     evidenceNextSteps: evidenceNextStepsProjection,
     workstreamOperatingLoop,
     domainCurrentWorkUnitProjection:
-      record(drilldown.domain_current_work_unit_projection),
+      record(operatorProjection.domain_current_work_unit_projection),
   });
   const currentOwnerDeltaReadModel = buildAppDrilldownCurrentOwnerDeltaReadModel({
     ownerDeltaFirst,
@@ -678,27 +678,27 @@ function buildAttentionFirstPayload(drilldown: JsonRecord) {
       domain_truth_owner: 'domain repositories',
       active_action_owner: firstString(nextAction?.owner, nextAction?.action_owner),
     },
-    blocking: blockingItems(drilldown),
-    advisory: advisoryItems(drilldown),
-    missing_evidence: missingEvidenceItems(drilldown),
+    blocking: blockingItems(operatorProjection),
+    advisory: advisoryItems(operatorProjection),
+    missing_evidence: missingEvidenceItems(operatorProjection),
     current_owner_delta: currentOwnerDeltaReadModel.current_owner_delta,
     current_owner_delta_read_model: currentOwnerDeltaReadModel,
     owner_delta_first: ownerDeltaFirst,
     evidence_after_contract: evidenceAfterContract,
     evidence_next_steps: evidenceNextStepsProjection,
     workstream_operating_loop: workstreamOperatingLoop,
-    codex_app_runtime_role: record(drilldown.codex_app_runtime_role),
+    codex_app_runtime_role: record(operatorProjection.codex_app_runtime_role),
     next_safe_action: selectedSafeAction,
     additional_safe_action_count: Math.max(actions.length - (nextAction ? 1 : 0), 0),
-    provider_health: providerHealth(drilldown),
-    authority_boundary: authorityBoundary(drilldown),
+    provider_health: providerHealth(operatorProjection),
+    authority_boundary: authorityBoundary(operatorProjection),
     full_detail_args: ['--detail', 'full'],
     lazy_load_targets: LAZY_LOAD_TARGETS,
   };
 }
 
-function omitSummaryDrilldownKeys<T extends JsonRecord>(drilldown: T) {
-  const compact: JsonRecord = { ...drilldown };
+function omitSummaryDrilldownKeys<T extends JsonRecord>(operatorProjection: T) {
+  const compact: JsonRecord = { ...operatorProjection };
   for (const key of SUMMARY_DRILLDOWN_KEYS) {
     delete compact[key];
   }
@@ -713,17 +713,17 @@ type AppOperatorDrilldownDetailResult<T extends JsonRecord> = T & {
 };
 
 export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
-  drilldown: T,
+  operatorProjection: T,
   detailLevel: AppOperatorDrilldownDetailLevel,
 ): AppOperatorDrilldownDetailResult<T> {
   if (detailLevel === 'full') {
     const attentionFirstPayload = {
-      ...buildAttentionFirstPayload(drilldown),
+      ...buildAttentionFirstPayload(operatorProjection),
       payload_policy: 'full_detail_attention_overlay_with_complete_refs_no_domain_ready_claim',
       full_detail_args: [],
     };
     const fullDrilldown = {
-      ...drilldown,
+      ...operatorProjection,
       detail_level: 'full',
       projection_detail_policy: 'full_refs_explicit_request',
     };
@@ -744,9 +744,9 @@ export function applyAppOperatorDrilldownDetail<T extends JsonRecord>(
     } as AppOperatorDrilldownDetailResult<T>;
   }
 
-  const attentionFirstPayload = buildAttentionFirstPayload(drilldown);
+  const attentionFirstPayload = buildAttentionFirstPayload(operatorProjection);
   return {
-    ...omitSummaryDrilldownKeys(drilldown),
+    ...omitSummaryDrilldownKeys(operatorProjection),
     detail_level: 'summary',
     projection_detail_policy: 'attention_first_default_full_refs_via_explicit_drilldown',
     full_detail_args: ['--detail', 'full'],

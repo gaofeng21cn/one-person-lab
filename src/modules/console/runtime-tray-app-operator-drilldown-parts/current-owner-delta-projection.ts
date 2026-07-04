@@ -1,4 +1,10 @@
-import { buildCurrentOwnerDeltaReadModel } from '../../ledger/index.ts';
+import {
+  buildCurrentOwnerDeltaReadModel,
+} from '../../ledger/index.ts';
+import {
+  appOperatorProjectionCommand,
+  appOperatorProjectionRef,
+} from '../../ledger/observability-semantic-conventions.ts';
 import {
   countValue as numberValue,
   record,
@@ -27,9 +33,9 @@ export function buildAppDrilldownCurrentOwnerDeltaReadModel(input: {
     },
     fullDetailRefs: {
       owner_delta_first_ref:
-        '/runtime_tray_snapshot/app_operator_drilldown/attention_first_payload/owner_delta_first',
+        appOperatorProjectionRef('attention_first_payload', 'owner_delta_first'),
       app_operator_drilldown_ref:
-        'opl runtime app-operator-drilldown --detail full --json',
+        appOperatorProjectionCommand({ detail: 'full', json: true }),
     },
   });
   return readModel;

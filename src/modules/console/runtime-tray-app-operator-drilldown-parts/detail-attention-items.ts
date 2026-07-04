@@ -45,10 +45,10 @@ function limitedItems<T>(items: T[]) {
   };
 }
 
-export function safeActionRoutes(drilldown: JsonRecord) {
+export function safeActionRoutes(operatorProjection: JsonRecord) {
   const routes = [
-    ...recordList(record(drilldown.operator_action_routing_refs).refs),
-    ...recordList(record(drilldown.app_execution_bridge).safe_action_routes),
+    ...recordList(record(operatorProjection.operator_action_routing_refs).refs),
+    ...recordList(record(operatorProjection.app_execution_bridge).safe_action_routes),
   ];
   const selected = new Map<string, JsonRecord>();
   const unkeyedRoutes: JsonRecord[] = [];
@@ -120,8 +120,8 @@ function findSafeActionForEvidence(actions: JsonRecord[], evidence: JsonRecord) 
   ) ?? null;
 }
 
-export function blockingItems(drilldown: JsonRecord) {
-  const typedBlockers = record(drilldown.typed_blocker_refs);
+export function blockingItems(operatorProjection: JsonRecord) {
+  const typedBlockers = record(operatorProjection.typed_blocker_refs);
   const blockerRefs = recordList(typedBlockers.refs).map((ref) => ({
     owner: firstString(ref.domain_id, ref.owner) ?? 'domain',
     blocking_kind: 'typed_blocker_ref',
@@ -142,8 +142,8 @@ export function blockingItems(drilldown: JsonRecord) {
   return limitedItems([...blockerRefs, ...blockers]);
 }
 
-export function advisoryItems(drilldown: JsonRecord) {
-  const tailItems = recordList(record(drilldown.production_evidence_tail_ledger).tail_items)
+export function advisoryItems(operatorProjection: JsonRecord) {
+  const tailItems = recordList(record(operatorProjection.production_evidence_tail_ledger).tail_items)
     .filter((item) => stringValue(item.status) !== 'closed')
     .map((item) => ({
       owner: firstString(item.owner_group, item.domain_owner) ?? 'one-person-lab',
@@ -152,7 +152,7 @@ export function advisoryItems(drilldown: JsonRecord) {
       detail_ref: firstString(item.evidence_ref, item.doc_ref),
       blocking_policy: stringValue(item.blocking_policy),
     }));
-  const legacyPlans = recordList(record(drilldown.domain_legacy_cleanup_plan_refs).refs)
+  const legacyPlans = recordList(record(operatorProjection.domain_legacy_cleanup_plan_refs).refs)
     .filter((plan) => stringValue(plan.plan_status) !== 'ready')
     .map((plan) => ({
       owner: stringValue(plan.command_domain_id) ?? stringValue(plan.domain_id) ?? 'domain',
@@ -164,9 +164,9 @@ export function advisoryItems(drilldown: JsonRecord) {
   return limitedItems([...tailItems, ...legacyPlans]);
 }
 
-export function missingEvidenceItems(drilldown: JsonRecord) {
-  const actions = safeActionRoutes(drilldown);
-  const stageMissing = recordList(record(drilldown.stage_production_evidence).stages)
+export function missingEvidenceItems(operatorProjection: JsonRecord) {
+  const actions = safeActionRoutes(operatorProjection);
+  const stageMissing = recordList(record(operatorProjection.stage_production_evidence).stages)
     .filter((stage) => stringList(stage.missing_production_evidence).length > 0)
     .map((stage) => {
       const action = findSafeActionForStage(actions, stage);
@@ -197,7 +197,7 @@ export function missingEvidenceItems(drilldown: JsonRecord) {
         route_requires_domain_or_app_payload: action?.route_requires_domain_or_app_payload === true,
       };
     });
-  const domainEvidence = record(drilldown.domain_evidence_request_refs);
+  const domainEvidence = record(operatorProjection.domain_evidence_request_refs);
   const externalMissing = recordList(domainEvidence.external_requests)
     .filter((request) => stringValue(request.external_receipt_status) !== 'verified')
     .map((request) => {
@@ -231,8 +231,8 @@ export function missingEvidenceItems(drilldown: JsonRecord) {
   return limitedItems([...stageMissing, ...externalMissing, ...gateMissing]);
 }
 
-export function providerHealth(drilldown: JsonRecord) {
-  const summary = record(drilldown.summary);
+export function providerHealth(operatorProjection: JsonRecord) {
+  const summary = record(operatorProjection.summary);
   const cadenceStatus = stringValue(summary.provider_cadence_window_status);
   const capabilityStatus = stringValue(summary.provider_capability_slo_status);
   const missingReceipts = numberValue(summary.provider_cadence_window_missing_receipt_count);
@@ -257,6 +257,6 @@ export function providerHealth(drilldown: JsonRecord) {
     missing_receipt_count: missingReceipts,
     blocked_repair_receipt_count: blockedRepairReceipts,
     domain_truth_boundary_preserved: domainTruthBoundaryPreserved,
-    authority_boundary: record(drilldown.authority_boundary),
+    authority_boundary: record(operatorProjection.authority_boundary),
   };
 }

@@ -176,9 +176,9 @@ export function buildOmaProductionConsumptionActionRoutes(followthrough: JsonRec
   }];
 }
 
-export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: JsonRecord) {
+export function buildOmaProductionConsumptionFollowthroughAttention(operatorProjection: JsonRecord) {
   const followthrough = record(
-    record(drilldown.opl_meta_agent_workbench_refs).production_consumption_followthrough,
+    record(operatorProjection.opl_meta_agent_workbench_refs).production_consumption_followthrough,
   );
   const summary = record(followthrough.summary);
   const gateItems = recordList(followthrough.gate_items);
@@ -234,7 +234,7 @@ export function buildOmaProductionConsumptionFollowthroughAttention(drilldown: J
     ],
     full_detail_section: 'opl_meta_agent_workbench_refs',
     authority_boundary: {
-      ...record(drilldown.authority_boundary),
+      ...record(operatorProjection.authority_boundary),
       can_write_domain_truth: false,
       can_create_owner_receipt: false,
       can_close_domain_ready: false,

@@ -65,8 +65,8 @@ function requiredRefs() {
   ];
 }
 
-export function functionalPrivatizationNextSteps(drilldown: JsonRecord) {
-  const auditRefs = record(drilldown.functional_privatization_audit_refs);
+export function functionalPrivatizationNextSteps(operatorProjection: JsonRecord) {
+  const auditRefs = record(operatorProjection.functional_privatization_audit_refs);
   const summary = record(auditRefs.summary);
   const reviewCount = numberValue(summary.semantic_equivalence_review_count);
   const activeResidueCount = numberValue(summary.active_private_generic_residue_count);

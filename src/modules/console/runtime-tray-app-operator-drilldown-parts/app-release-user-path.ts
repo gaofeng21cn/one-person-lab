@@ -4,6 +4,10 @@ import {
   listAppReleaseUserPathEvidenceReceipts,
 } from '../../ledger/index.ts';
 import {
+  appOperatorProjectionCommand,
+  appOperatorProjectionRef,
+} from '../../ledger/observability-semantic-conventions.ts';
+import {
   appReleaseUserPathPayloadRefHints,
   appReleaseUserPathPayloadTemplate,
   appReleaseUserPathPayloadWorkorder,
@@ -60,7 +64,7 @@ function runtimeActionExecuteCommand(actionId: string) {
   ];
 }
 
-export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
+export function buildAppReleaseUserPathEvidence(operatorProjection: JsonRecord) {
   const ledgerReceipts = listAppReleaseUserPathEvidenceReceipts();
   const recordedLedgerReceipts = ledgerReceipts.filter((receipt) =>
     receipt.receipt_status === 'recorded'
@@ -77,11 +81,11 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     'owner_acceptance_refs',
   ]);
   const candidateEvidenceRecords = [
-    record(drilldown.package_export_lifecycle_refs),
-    record(drilldown.production_evidence_tail_ledger),
-    record(drilldown.codex_app_runtime_role),
-    record(drilldown.provider_slo_operator_action_refs),
-    record(drilldown.periodic_execution_refs),
+    record(operatorProjection.package_export_lifecycle_refs),
+    record(operatorProjection.production_evidence_tail_ledger),
+    record(operatorProjection.codex_app_runtime_role),
+    record(operatorProjection.provider_slo_operator_action_refs),
+    record(operatorProjection.periodic_execution_refs),
     ...verifiedLedgerReceipts,
   ];
   const cohortGuard = buildAppReleaseUserPathCohortGuard(candidateEvidenceRecords);
@@ -166,7 +170,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
       verify_command: 'opl runtime app-release-evidence verify --receipt-ref <receipt_ref>',
       readback_commands: [
         'opl runtime app-release-evidence list --json',
-        'opl runtime app-operator-drilldown --json',
+        appOperatorProjectionCommand({ json: true }),
         'opl framework operating-maturity --family-defaults --json',
       ],
       stop_loss: [
@@ -202,7 +206,7 @@ export function buildAppReleaseUserPathEvidence(drilldown: JsonRecord) {
     payload_owner: 'app_live_operator_or_release_owner',
     full_detail_section: 'app_release_user_path_evidence',
     authority_boundary: {
-      ...record(drilldown.authority_boundary),
+      ...record(operatorProjection.authority_boundary),
       refs_only: true,
       can_write_domain_truth: false,
       can_create_owner_receipt: false,
@@ -237,7 +241,7 @@ export function buildAppReleaseUserPathEvidenceFromRuntime(input: {
 
 export function appReleaseUserPathEvidenceSourceRef() {
   return sourceRef(
-    '/runtime_tray_snapshot/app_operator_drilldown/app_release_user_path_evidence',
+    appOperatorProjectionRef('app_release_user_path_evidence'),
     'app_release_user_path_evidence',
   );
 }

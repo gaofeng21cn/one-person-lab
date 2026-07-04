@@ -18,7 +18,7 @@ function firstString(...values: unknown[]) {
   return null;
 }
 
-function providerRouteClosedByCurrentSlo(action: JsonRecord, drilldown: JsonRecord) {
+function providerRouteClosedByCurrentSlo(action: JsonRecord, operatorProjection: JsonRecord) {
   const actionKind = stringValue(action.action_kind) ?? '';
   if (
     actionKind === 'provider_slo_cadence_execution'
@@ -29,7 +29,7 @@ function providerRouteClosedByCurrentSlo(action: JsonRecord, drilldown: JsonReco
   if (!actionKind.startsWith('provider_scheduler_')) {
     return false;
   }
-  const summary = record(drilldown.summary);
+  const summary = record(operatorProjection.summary);
   return stringValue(summary.provider_slo_cadence_window_status) === 'window_cadence_satisfied'
     && stringValue(summary.provider_slo_capability_status) === 'capability_slo_satisfied'
     && numberValue(summary.provider_slo_cadence_window_missing_receipt_count) === 0
@@ -41,7 +41,7 @@ function legacyCleanupSourceDomain(value: string | null) {
   return match ? canonicalOwnerId(match[1] ?? '') : null;
 }
 
-function legacyCleanupRouteClosedByCurrentLedger(action: JsonRecord, drilldown: JsonRecord) {
+function legacyCleanupRouteClosedByCurrentLedger(action: JsonRecord, operatorProjection: JsonRecord) {
   const actionKind = stringValue(action.action_kind) ?? '';
   if (actionKind !== 'legacy_cleanup_apply' && actionKind !== 'legacy_cleanup_verify') {
     return false;
@@ -56,7 +56,7 @@ function legacyCleanupRouteClosedByCurrentLedger(action: JsonRecord, drilldown: 
   const routeDomainId = firstString(action.domain_id, action.target_domain_id);
   const routeCanonicalDomainId = routeDomainId ? canonicalOwnerId(routeDomainId) : null;
   const routeSourceDomainId = legacyCleanupSourceDomain(sourceRef);
-  return recordList(record(drilldown.lifecycle_ledger_refs).refs).some((entry) => (
+  return recordList(record(operatorProjection.lifecycle_ledger_refs).refs).some((entry) => (
     (
       stringValue(entry.source_ref) === sourceRef
       || (
@@ -112,7 +112,7 @@ function productionEvidenceLaneRoute(action: JsonRecord) {
     || actionKind === 'legacy_production_evidence_receipt_verify';
 }
 
-function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord) {
+function routeIsClosedForDefaultCaller(action: JsonRecord, operatorProjection: JsonRecord) {
   const routeStatus = stringValue(action.route_status);
   const actionabilityStatus = stringValue(action.default_actionability_status);
   if (
@@ -127,9 +127,9 @@ function routeIsClosedForDefaultCaller(action: JsonRecord, drilldown: JsonRecord
   ) {
     return true;
   }
-  return providerRouteClosedByCurrentSlo(action, drilldown)
+  return providerRouteClosedByCurrentSlo(action, operatorProjection)
     || stageEvidenceRouteClosedByDomainTypedBlocker(action)
-    || legacyCleanupRouteClosedByCurrentLedger(action, drilldown);
+    || legacyCleanupRouteClosedByCurrentLedger(action, operatorProjection);
 }
 
 function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
@@ -157,12 +157,12 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
 
 export function defaultSelectedSafeActionCandidates(
   actions: JsonRecord[],
-  drilldown: JsonRecord,
+  operatorProjection: JsonRecord,
   input: { ownerDeltaAvailable?: boolean } = {},
 ) {
   return actions.filter((action) =>
     routeEligibleForDefaultSelectedAction(action)
-    && !routeIsClosedForDefaultCaller(action, drilldown)
+    && !routeIsClosedForDefaultCaller(action, operatorProjection)
     && !(input.ownerDeltaAvailable === true && providerMaintenanceRoute(action))
   );
 }

@@ -119,10 +119,10 @@ function lifecycleOwnerWorkOrder(input: {
   };
 }
 
-export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
-  const summary = record(drilldown.summary);
-  const lifecycleSummary = record(record(drilldown.lifecycle_ledger_refs).summary);
-  const ledgerProjection = record(drilldown.memory_artifact_lifecycle_evidence_projection);
+export function buildMemoryArtifactLifecycleEvidence(operatorProjection: JsonRecord) {
+  const summary = record(operatorProjection.summary);
+  const lifecycleSummary = record(record(operatorProjection.lifecycle_ledger_refs).summary);
+  const ledgerProjection = record(operatorProjection.memory_artifact_lifecycle_evidence_projection);
   const ledgerObservedCounts = record(ledgerProjection.observed_ref_counts);
   const memoryRefCount = numberValue(summary.memory_ref_count);
   const memoryWritebackRefCount = numberValue(summary.memory_writeback_ref_count);
@@ -193,7 +193,7 @@ export function buildMemoryArtifactLifecycleEvidence(drilldown: JsonRecord) {
     + reconcileExtraRefCount
     + reconcileStaleRefCount;
   const latestLifecycleApplyHandoff =
-    record(drilldown.lifecycle_ledger_refs).latest_lifecycle_apply_handoff ?? null;
+    record(operatorProjection.lifecycle_ledger_refs).latest_lifecycle_apply_handoff ?? null;
   const lifecycleReadinessStatus = readinessStatus({
     observedRefCount,
     reconcileIssueCount,
