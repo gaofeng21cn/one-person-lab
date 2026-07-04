@@ -21,6 +21,7 @@ import {
   createFamilyContractsFixtureRoot,
   fs,
   os,
+  parseJsonText,
   path,
   repoRoot,
   runCli,
@@ -130,7 +131,7 @@ test('family-runtime temporal attempt start fails closed when Temporal address i
         TEMPORAL_ADDRESS: '',
       },
     });
-    const output = JSON.parse(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr) as any;
     const attempts = runCli(
       ['family-runtime', 'attempt', 'list'],
       familyRuntimeEnv(stateRoot, { OPL_CONTRACTS_DIR: fixtureContractsRoot }),
@@ -691,7 +692,7 @@ test('family-runtime Temporal start fails closed when visibility cannot be inspe
         NODE_NO_WARNINGS: '1',
       },
     });
-    const output = JSON.parse(start.stdout || start.stderr);
+    const output = parseJsonText(start.stdout || start.stderr) as any;
 
     assert.notEqual(start.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');

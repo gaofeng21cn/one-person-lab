@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 function createNativeHelperRepairScript(root: string, helperBinDir: string) {
   const repairScript = path.join(root, 'repair-native.sh');
@@ -87,7 +87,7 @@ esac
     assert.equal(staleFreshness.last_success_expired, false);
     assert.equal(staleFreshness.failure_count, 1);
     const failureLines = fs.readFileSync(successPersistence.failure_file, 'utf8').trim().split('\n');
-    const failure = JSON.parse(failureLines[failureLines.length - 1]);
+    const failure = parseJsonText(failureLines[failureLines.length - 1]) as any;
     assert.equal(failure.category, 'helper_unavailable');
     assert.equal(failure.details.helpers.length, 3);
     assert.deepEqual(
@@ -105,7 +105,7 @@ esac
       ['repair_native_helpers', 'refresh_native_indexes'],
     );
 
-    const lastSuccess = JSON.parse(fs.readFileSync(successPersistence.last_success_file, 'utf8'));
+    const lastSuccess = parseJsonText(fs.readFileSync(successPersistence.last_success_file, 'utf8')) as any;
     lastSuccess.lifecycle.expires_at = '2000-01-01T00:00:00.000Z';
     fs.writeFileSync(successPersistence.last_success_file, `${JSON.stringify(lastSuccess, null, 2)}\n`);
 
@@ -218,7 +218,7 @@ test('runtime manager records structured native index diff and history GC report
 
     const historyLines = fs.readFileSync(historyFile, 'utf8').trim().split('\n');
     assert.equal(historyLines.length, 50);
-    const latestHistoryEntry = JSON.parse(historyLines[historyLines.length - 1]);
+    const latestHistoryEntry = parseJsonText(historyLines[historyLines.length - 1]) as any;
     assert.deepEqual(latestHistoryEntry.gc, persistence.gc);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

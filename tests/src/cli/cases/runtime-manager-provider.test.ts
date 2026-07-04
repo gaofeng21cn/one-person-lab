@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
@@ -164,16 +164,16 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       output.runtime_manager.state_index_target.index_catalog.artifact_projection_index.backing_helper_id,
       'opl-artifact-indexer',
     );
-    const nativeHelperContract = JSON.parse(
+    const nativeHelperContract = parseJsonText(
       fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/native-helper-contract.json'), 'utf8'),
-    );
+    ) as any;
     assert.deepEqual(
       nativeHelperContract.helpers.map((helper: { helper_id: string }) => helper.helper_id),
       output.runtime_manager.native_helper_target.helpers.map((helper: { helper_id: string }) => helper.helper_id),
     );
-    const runtimeManagerContract = JSON.parse(
+    const runtimeManagerContract = parseJsonText(
       fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/runtime-manager-contract.json'), 'utf8'),
-    );
+    ) as any;
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
     assert.deepEqual(

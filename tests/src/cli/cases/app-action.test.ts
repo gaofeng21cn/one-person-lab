@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 import './app-action-cases/dry-run-actions.test.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
@@ -548,7 +548,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(magEnsure.result.workspace_initialization.workspace_norm.registry_policy.writes_opl_workspace_registry, true);
 
     const magHealthPath = path.join(workspaceRoot, 'nsfc-p2c', 'workspace_health.json');
-    const magHealth = JSON.parse(fs.readFileSync(magHealthPath, 'utf8'));
+    const magHealth = parseJsonText(fs.readFileSync(magHealthPath, 'utf8')) as any;
     magHealth.status = 'blocked';
     fs.writeFileSync(magHealthPath, `${JSON.stringify(magHealth, null, 2)}\n`);
 
@@ -830,7 +830,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(workspaceReportAction.result.workspace_report.surface_kind, 'opl_workspace_report');
     assert.equal(workspaceReportAction.result.workspace_report.current_project.project_id, 'deck-001');
 
-    const refreshedMagHealth = JSON.parse(fs.readFileSync(magHealthPath, 'utf8'));
+    const refreshedMagHealth = parseJsonText(fs.readFileSync(magHealthPath, 'utf8')) as any;
     refreshedMagHealth.status = 'blocked';
     fs.writeFileSync(magHealthPath, `${JSON.stringify(refreshedMagHealth, null, 2)}\n`);
 

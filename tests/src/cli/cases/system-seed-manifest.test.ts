@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { withCliTimeout } from './system-startup-maintenance-cases/shared.ts';
 import './system-seed-manifest-cases/docker-webui-doctor.test.ts';
@@ -130,7 +130,7 @@ test('system seed-apply records env-driven image manifest and is idempotent', ()
     assert.equal(components.get('data_dir')?.state, 'current');
     assert.equal(components.get('projects_dir')?.state, 'current');
 
-    const persisted = JSON.parse(fs.readFileSync(path.join(stateDir, 'install-manifest.json'), 'utf8'));
+    const persisted = parseJsonText(fs.readFileSync(path.join(stateDir, 'install-manifest.json'), 'utf8')) as any;
     assert.equal(persisted.image.version, '26.6.30-webui');
     assert.equal(persisted.install.data_dir, dataDir);
     assert.equal(persisted.install.projects_dir, projectsDir);
@@ -399,7 +399,9 @@ test('system seed-apply materializes image seed contract into data volume receip
       true,
     );
 
-    const persisted = JSON.parse(fs.readFileSync(path.join(dataDir, 'opl', 'state', 'install-manifest.json'), 'utf8'));
+    const persisted = parseJsonText(
+      fs.readFileSync(path.join(dataDir, 'opl', 'state', 'install-manifest.json'), 'utf8'),
+    ) as any;
     assert.equal(persisted.components.some((component: { source: string }) => component.source === 'image:/opt/opl/framework'), true);
     assert.equal(
       persisted.components.some((component: { component_id: string }) =>

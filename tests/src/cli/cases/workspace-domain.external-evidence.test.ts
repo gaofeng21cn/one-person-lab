@@ -2,6 +2,7 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
   runCliAsync,
   runCli,
@@ -186,7 +187,7 @@ test('agents evidence apply writes external evidence ledger atomically', () => {
       'verify',
     ], env);
 
-    const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+    const ledger = parseJsonText(fs.readFileSync(ledgerPath, 'utf8')) as any;
     assert.equal(ledger.receipts.length, 1);
     assert.equal(ledger.receipts[0].receipt_status, 'verified');
     assert.deepEqual(fs.readdirSync(stateRoot).filter((entry) =>
@@ -239,7 +240,7 @@ test('agents evidence apply serializes concurrent ledger records without losing 
       ], env),
     ]);
 
-    const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+    const ledger = parseJsonText(fs.readFileSync(ledgerPath, 'utf8')) as any;
     assert.deepEqual(
       ledger.receipts.map((receipt: Record<string, unknown>) => receipt.request_id).sort(),
       [
