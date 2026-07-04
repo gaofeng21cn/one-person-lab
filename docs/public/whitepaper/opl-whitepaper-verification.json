@@ -1,13 +1,13 @@
 {
   "status": "opl_whitepaper_ready",
-  "generated_at": "2026-06-29T00:00:00.000Z",
+  "generated_at": "2026-07-04T00:00:00.000Z",
   "source_markdown": "docs/public/whitepaper/opl-whitepaper.md",
   "generated_pdf": "docs/public/whitepaper/opl-whitepaper.pdf",
   "pdf_write_status": "preserved_existing_equivalent_pdf",
   "temp_markdown": "tmp/pdfs/opl-whitepaper/opl-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-whitepaper/rendered",
-  "rendered_pages": 10,
-  "pdf_pages": 10,
+  "rendered_pages": 11,
+  "pdf_pages": 11,
   "pdf_page_size_pts": {
     "width": 612,
     "height": 792
@@ -15,6 +15,7 @@
   "required_terms": [
     "One Person Lab 白皮书",
     "OPL Framework",
+    "OPL Cloud",
     "OPL Charter",
     "OPL Pack",
     "OPL Stagecraft",
@@ -26,7 +27,8 @@
     "Med Auto Science",
     "Med Auto Grant",
     "Foundry Agents",
-    "Markdown 是正文源"
+    "为什么用户可以相信 OPL 专业",
+    "结语"
   ],
   "required_terms_status": "present",
   "tools": {
@@ -36,26 +38,5 @@
     "pdfinfo": "/Users/gaofeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/pdfinfo",
     "pdftotext": "/opt/homebrew/bin/pdftotext"
   },
-  "references": [
-    {
-      "label": "Ethereum Whitepaper",
-      "url": "https://ethereum.org/whitepaper/",
-      "note": "参考其白皮书页面对愿景、系统模型和当前性说明的组织方式。"
-    },
-    {
-      "label": "Bitcoin whitepaper PDF",
-      "url": "https://bitcoin.org/bitcoin.pdf",
-      "note": "参考其短而正式的技术宣言式结构。"
-    },
-    {
-      "label": "Pandoc User Guide",
-      "url": "https://pandoc.org/MANUAL.html",
-      "note": "本仓采用 Pandoc + XeLaTeX 生成 PDF。"
-    },
-    {
-      "label": "Typst PDF documentation",
-      "url": "https://typst.app/docs/reference/pdf/",
-      "note": "作为后续可能迁移到更现代 PDF 工具链的参考。"
-    }
-  ]
+  "references": []
 }

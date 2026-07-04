@@ -33,6 +33,7 @@ const forbiddenPatterns = [
 const requiredTerms = [
   'One Person Lab 白皮书',
   'OPL Framework',
+  'OPL Cloud',
   'OPL Charter',
   'OPL Pack',
   'OPL Stagecraft',
@@ -44,7 +45,8 @@ const requiredTerms = [
   'Med Auto Science',
   'Med Auto Grant',
   'Foundry Agents',
-  'Markdown 是正文源',
+  '为什么用户可以相信 OPL 专业',
+  '结语',
 ];
 
 function run(command: string, args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
@@ -99,8 +101,11 @@ function parseMarkdownMetadata(markdown: string): WhitepaperMetadata {
   if (!markdown.includes('## 定位摘要')) {
     throw new Error('Whitepaper Markdown must include 定位摘要.');
   }
-  if (!markdown.includes('## 参考与编制来源')) {
-    throw new Error('Whitepaper Markdown must include 参考与编制来源.');
+  if (!markdown.includes('## 为什么用户可以相信 OPL 专业')) {
+    throw new Error('Whitepaper Markdown must include 为什么用户可以相信 OPL 专业.');
+  }
+  if (!markdown.includes('## 结语')) {
+    throw new Error('Whitepaper Markdown must include 结语.');
   }
   const sectionCount = (markdown.match(/^##\s+/gm) ?? []).length;
   if (sectionCount < 6) {
@@ -142,7 +147,7 @@ function buildPdfMarkdown(metadata: WhitepaperMetadata, markdown: string) {
     '\\vspace{18mm}',
     `{\\large ${escapeLatexText(metadata.thesis)}\\par}`,
     '\\vspace{10mm}',
-    '{\\large OPL Framework / One Person Lab App / Foundry Agents\\par}',
+    '{\\large OPL Framework / One Person Lab App / OPL Cloud / Foundry Agents\\par}',
     '\\vfill',
     `{\\large ${metadata.publicationDate}\\par}`,
     '\\vspace{4mm}',
