@@ -283,6 +283,33 @@ test('reuse-first scan allows update rollback only as command registry metadata'
   assert.equal(output.findings[0].path, 'contracts/other/update-contract.json');
 });
 
+test('reuse-first scan allows rollback wording only in owner-routed command projections', () => {
+  const fixture = makeFixture();
+  writeFixtureFile(
+    fixture,
+    'src/entrypoints/cli/cases/runtime-environment-command-spec.ts',
+    'const usage = "opl runtime env materialize [--target current|rollback|staged]";\n',
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/private-update.ts',
+    'const action = "rollback";\n',
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+  ], { encoding: 'utf8' });
+  const output = parseJsonText(result.stdout) as any;
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 1);
+  assert.equal(output.findings[0].path, 'src/modules/connect/private-update.ts');
+});
+
 test('reuse-first scan allows managed update owner boundary metadata only in the owner boundary file', () => {
   const fixture = makeFixture();
   writeFixtureFile(

@@ -448,6 +448,7 @@ function isAllowedMetadataLine(relativePath, line) {
     && line.includes('"update rollback"')
   )
     || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line)
+    || isAllowedOwnerRoutedCommandProjectionLine(relativePath, line)
     || isAllowedQueueProjectionVocabularyLine(relativePath, line)
     || isAllowedObservabilityProjectionVocabularyLine(relativePath, line)
     || isAllowedDiagnosticProjectionLine(relativePath, line);
@@ -468,6 +469,18 @@ function isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line) {
     'post_apply_hooks',
     'rollback_ref',
   ].some((term) => line.includes(term));
+}
+
+function isAllowedOwnerRoutedCommandProjectionLine(relativePath, line) {
+  if (!line.includes('rollback')) {
+    return false;
+  }
+  return [
+    'src/entrypoints/cli/cases/public-command-specs-parts/update.ts',
+    'src/entrypoints/cli/cases/runtime-environment-command-spec.ts',
+    'src/entrypoints/cli/cases/runtime-public-command-specs.ts',
+    'src/entrypoints/cli/cases/agent-lab-public-command-specs.ts',
+  ].includes(relativePath);
 }
 
 function isAllowedQueueProjectionVocabularyLine(relativePath, line) {
