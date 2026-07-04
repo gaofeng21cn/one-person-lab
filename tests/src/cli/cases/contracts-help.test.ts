@@ -1,4 +1,4 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, parseJsonText, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('contract validate exposes env contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
@@ -131,7 +131,9 @@ test('contract validate surfaces stable invalid-json errors', () => {
 test('contract validate surfaces stable shape-invalid errors with cli-flag provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
-    const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+    const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as {
+      workstreams: Array<{ label?: string }>;
+    };
     delete workstreams.workstreams[0].label;
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });

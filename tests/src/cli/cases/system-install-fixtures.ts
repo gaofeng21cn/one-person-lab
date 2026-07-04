@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, cliPath, fs, path, repoRoot } from '../helpers.ts';
+import { assert, cliPath, fs, parseJsonText, path, repoRoot } from '../helpers.ts';
 
 export function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<string, string>) {
   const result = spawnSync(
@@ -19,7 +19,7 @@ export function runCliWithStdin(args: string[], stdin: string, envOverrides: Rec
   );
 
   assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout);
+  return parseJsonText(result.stdout);
 }
 
 function createFakeOfficeCliSource(root: string) {

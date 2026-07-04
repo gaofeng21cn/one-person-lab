@@ -1,4 +1,4 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, parseJsonText, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import './contracts-entry-cases/native-helper-doctor.test.ts';
 
 test('loadFrameworkContracts returns the active framework registries', () => {
@@ -92,7 +92,7 @@ test('loadFrameworkContracts honors OPL_CONTRACTS_DIR when provided', () => {
   });
 
   const workstreamsPath = path.join(tempContracts, 'workstreams.json');
-  const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+  const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
   workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops Override';
   fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
 
@@ -107,7 +107,7 @@ test('loadFrameworkContracts honors OPL_CONTRACTS_DIR when provided', () => {
 test('global --contracts-dir override uses the explicit contract root', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
-    const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+    const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
     workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Flag';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
@@ -131,13 +131,13 @@ test('global --contracts-dir override uses the explicit contract root', () => {
 test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', () => {
   const envFixture = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
-    const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+    const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
     workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Env';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
   const flagFixture = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
-    const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+    const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
     workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Flag';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
@@ -416,7 +416,7 @@ test('contract validate returns a stable machine-readable contract summary', () 
 test('agent workspace norm contract is fail-closed during load and validation', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const normPath = path.join(contractsRoot, 'agent-workspace-norm-contract.json');
-    const normContract = JSON.parse(fs.readFileSync(normPath, 'utf8'));
+    const normContract = parseJsonText(fs.readFileSync(normPath, 'utf8')) as any;
     normContract.default_workspace_precondition.command = 'opl workspace bootstrap';
     fs.writeFileSync(normPath, `${JSON.stringify(normContract, null, 2)}\n`);
   });
@@ -458,7 +458,7 @@ test('agent workspace norm contract is fail-closed during load and validation', 
 test('brand module L5 evidence requirements require explicit owner route refs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
-    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
     delete contract.modules[0].evidence_requirements[0].owner_route_ref;
     fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
   });
@@ -485,7 +485,7 @@ test('brand module L5 evidence requirements require explicit owner route refs', 
 test('target operating architecture contract requires the multi-plane operating model', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const contractPath = path.join(contractsRoot, 'target-operating-architecture-contract.json');
-    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
     delete contract.multi_plane_operating_system;
     fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
   });
@@ -723,7 +723,7 @@ exit 1
       OPL_CODEX_BIN: codexPath,
     });
 
-    const output = JSON.parse(result.stdout);
+    const output = parseJsonText(result.stdout) as any;
     assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
     assert.equal(output.product_entry.mode, 'resume');
     assert.equal(output.product_entry.executor_backend, 'codex');
@@ -817,9 +817,9 @@ esac
       path.join(stateRoot, 'runtime-manager', 'native-state-index.json'),
     );
 
-    const persisted = JSON.parse(
+    const persisted = parseJsonText(
       fs.readFileSync(output.runtime_manager.state_index_target.persistence.index_file, 'utf8'),
-    );
+    ) as any;
     assert.equal(persisted.surface_kind, 'opl_runtime_manager_native_state_projection');
     assert.equal(persisted.native_indexes.state_index.result.surface_kind, 'native_state_index');
     assert.equal(persisted.native_indexes.artifact_manifest.result.surface_kind, 'native_artifact_manifest');
@@ -905,7 +905,7 @@ esac
     assert.equal(persistence.diff.changed, true);
     assert.equal(persistence.gc.retained_history_count, 1);
 
-    const persisted = JSON.parse(fs.readFileSync(persistence.index_file, 'utf8'));
+    const persisted = parseJsonText(fs.readFileSync(persistence.index_file, 'utf8')) as any;
     assert.equal(persisted.lifecycle.expired, false);
     assert.equal(persisted.lifecycle.ttl_ms, 86_400_000);
     assert.equal(persisted.diff.changed, true);
@@ -929,7 +929,7 @@ test('runtime manager records native index failure lifecycle when helpers are un
     assert.equal(persistence.status, 'skipped_helper_unavailable');
     assert.match(persistence.failure_file, /native-state-index-failures\.jsonl$/);
     assert.equal(fs.existsSync(persistence.failure_file), true);
-    const failure = JSON.parse(fs.readFileSync(persistence.failure_file, 'utf8').trim());
+    const failure = parseJsonText(fs.readFileSync(persistence.failure_file, 'utf8').trim()) as any;
     assert.equal(failure.status, 'skipped_helper_unavailable');
     assert.equal(failure.errors[0].code, 'native_index_helper_unavailable');
   } finally {
@@ -980,7 +980,7 @@ test('runtime manager reports the native helper package and repair lifecycle', (
       true,
     );
 
-    const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+    const packageJson = parseJsonText(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as any;
     assert.equal(packageJson.scripts['native:cache'], 'node ./scripts/native-helper-cache.mjs');
     assert.equal(packageJson.scripts['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
     assert.equal(packageJson.scripts['native:prebuild'], 'node ./scripts/native-helper-prebuild.mjs install');

@@ -1,4 +1,4 @@
-import { assert, fs, loadFrameworkContracts, path, repoRoot, test } from '../helpers.ts';
+import { assert, fs, loadFrameworkContracts, parseJsonText, path, repoRoot, test } from '../helpers.ts';
 
 const pluginRoot = path.join(repoRoot, 'plugins', 'mas-scholar-skills');
 const manifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json');
@@ -7,7 +7,7 @@ const skillPath = path.join(skillRoot, 'SKILL.md');
 const displayGalleryDocPath = path.join(repoRoot, 'docs', 'active', 'opl-scholar-skills-display-gallery.md');
 
 function readJson(pathname: string) {
-  return JSON.parse(fs.readFileSync(pathname, 'utf8'));
+  return parseJsonText(fs.readFileSync(pathname, 'utf8')) as any;
 }
 
 function readSkill() {
