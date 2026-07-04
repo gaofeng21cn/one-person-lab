@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+
 import { assert, fs, path } from '../helpers.ts';
 
 export function writeJson(filePath: string, payload: unknown): void {
@@ -8,7 +10,7 @@ export function writeJson(filePath: string, payload: unknown): void {
 }
 
 export function readJson(filePath: string): Record<string, any> {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as Record<string, any>;
 }
 
 function stageCompletionPolicy(policyRef: string): Record<string, any> {

@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+
 import { repoRoot } from './constants.ts';
 import { createContractsFixtureRoot, readJsonFixture, shellSingleQuote } from './fixtures.ts';
 
@@ -128,7 +130,7 @@ export function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
 export function createFamilyContractsFixtureRoot() {
   return createContractsFixtureRoot((fixtureContractsRoot) => {
     const domainsPath = path.join(fixtureContractsRoot, 'domains.json');
-    const payload = JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
+    const payload = parseJsonText(fs.readFileSync(domainsPath, 'utf8')) as {
       version: string;
       domains: Array<Record<string, unknown>>;
     };

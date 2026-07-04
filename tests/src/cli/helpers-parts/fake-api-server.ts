@@ -1,5 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+
 import { repoRoot } from './constants.ts';
 
 async function readServerJsonBody(request: IncomingMessage) {
@@ -16,7 +18,7 @@ async function readServerJsonBody(request: IncomingMessage) {
       }
 
       try {
-        resolve(JSON.parse(body) as Record<string, unknown>);
+        resolve(parseJsonText(body) as Record<string, unknown>);
       } catch (error) {
         reject(error);
       }

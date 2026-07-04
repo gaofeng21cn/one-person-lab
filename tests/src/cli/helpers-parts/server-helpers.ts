@@ -3,6 +3,8 @@ import { spawn, type ChildProcessByStdio } from 'node:child_process';
 import { type Server } from 'node:http';
 import { type Readable, type Writable } from 'node:stream';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+
 import { cliPath, contractsDir, repoRoot } from './constants.ts';
 
 const jsonLineReadState = new WeakMap<Readable, { bufferedText: string }>();
@@ -36,7 +38,7 @@ function takeBufferedJsonLine(stream: Readable) {
 export async function readJsonLine(stream: Readable) {
   const bufferedLine = takeBufferedJsonLine(stream);
   if (bufferedLine) {
-    return JSON.parse(bufferedLine) as Record<string, unknown>;
+    return parseJsonText(bufferedLine) as Record<string, unknown>;
   }
 
   return await new Promise<Record<string, unknown>>((resolve, reject) => {
@@ -64,7 +66,7 @@ export async function readJsonLine(stream: Readable) {
 
       cleanup();
       try {
-        resolve(JSON.parse(line) as Record<string, unknown>);
+        resolve(parseJsonText(line) as Record<string, unknown>);
       } catch (error) {
         reject(error);
       }
@@ -166,7 +168,7 @@ export async function startCliServer(
       stdout += chunk.toString();
 
       try {
-        const payload = JSON.parse(stdout.trim()) as Record<string, unknown>;
+        const payload = parseJsonText(stdout.trim()) as Record<string, unknown>;
         clearTimeout(timeout);
         child.off('exit', onExit);
         resolve({

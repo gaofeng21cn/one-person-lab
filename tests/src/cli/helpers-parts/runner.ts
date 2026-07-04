@@ -6,6 +6,8 @@ import {
   type SpawnSyncReturns,
 } from 'node:child_process';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+
 import { cliPath, repoRoot } from './constants.ts';
 
 const CLI_TEST_MAX_BUFFER = 16 * 1024 * 1024;
@@ -98,7 +100,7 @@ export function runCliInCwd(
   const result = runCliProcess(args, cwd, envOverrides);
 
   assert.equal(result.status, 0, cliFailureMessage(args, result));
-  return JSON.parse(result.stdout);
+  return parseJsonText(result.stdout) as any;
 }
 
 export function runCliRawInCwd(
@@ -135,7 +137,7 @@ export function runCliViaEntryPathInCwd(
   cleanupTimedOutCli(result);
 
   assert.equal(result.status, 0, cliFailureMessage(args, result));
-  return JSON.parse(result.stdout);
+  return parseJsonText(result.stdout) as any;
 }
 
 export function runCliFailure(args: string[], envOverrides: Record<string, string> = {}) {
@@ -152,7 +154,7 @@ export function runCliFailureInCwd(
   assert.notEqual(result.status, 0);
   return {
     status: result.status ?? 1,
-    payload: JSON.parse(result.stderr),
+    payload: parseJsonText(result.stderr) as any,
   };
 }
 
@@ -194,7 +196,7 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
       }
 
       try {
-        resolve(JSON.parse(stdout));
+        resolve(parseJsonText(stdout) as Record<string, unknown>);
       } catch (error) {
         reject(error);
       }

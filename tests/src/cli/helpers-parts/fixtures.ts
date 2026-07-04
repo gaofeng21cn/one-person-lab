@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+
 import { contractsDir, familyManifestFixtureDir, repoRoot } from './constants.ts';
 
 export function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
@@ -113,7 +115,7 @@ export function buildManifestCommand(payload: Record<string, unknown>) {
 }
 
 export function readJsonFixture<T>(name: string) {
-  return JSON.parse(
+  return parseJsonText(
     fs.readFileSync(path.join(familyManifestFixtureDir, name), 'utf8'),
   ) as T;
 }
