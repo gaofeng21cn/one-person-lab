@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -7,7 +7,7 @@ import {
 test('agents platform-surfaces blocks explicit generic platform owner claims', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner = true;
   writeJson(functionalAuditPath, functionalAudit);
 

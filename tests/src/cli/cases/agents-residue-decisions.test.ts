@@ -1,10 +1,10 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
 test('agents residue-decisions projects private platform owner-decision ledger', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   const baseBridgeExitGate = {
     no_active_caller_refs: ['no-active-caller:sample/private-platform-residue'],
     no_forbidden_write_refs: ['no-forbidden-write:sample/private-platform-residue'],

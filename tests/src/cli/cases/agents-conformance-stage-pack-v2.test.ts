@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -76,8 +76,8 @@ test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', (
 test('agents conformance accepts Codex CLI variant stages with explicit non-default binding', () => {
   const repoDir = buildScaffoldRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
-  const variantStage = JSON.parse(JSON.stringify(stageControlPlane.stages[0]));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
+  const variantStage = structuredClone(stageControlPlane.stages[0]);
   variantStage.stage_id = 'domain_review_variant';
   variantStage.selected_executor.default_executor = false;
   variantStage.selected_executor.lane_kind = 'variant';
@@ -101,7 +101,7 @@ test('agents conformance accepts Codex CLI variant stages with explicit non-defa
 test('agents conformance blocks generated scaffold repos missing stage pack v2 obligations', () => {
   const repoDir = buildScaffoldRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   delete stageControlPlane.stages[0].selected_executor.executor_binding_ref;
   delete stageControlPlane.stages[0].tool_refs;
   delete stageControlPlane.stages[0].tool_affordance_boundary;
@@ -134,7 +134,7 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
 test('agents conformance blocks generated scaffold repos missing Standard Agent Pack ABI gates', () => {
   const repoDir = buildScaffoldRepo();
   const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
-  const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerInputPath, 'utf8'));
+  const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
   packCompilerInput.standard_agent_pack_abi ??= {
     required_repo_layout: [
       { path: 'agent/' },
@@ -151,7 +151,7 @@ test('agents conformance blocks generated scaffold repos missing Standard Agent 
   writeJson(packCompilerInputPath, packCompilerInput);
 
   const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
-  const stageControlPlane = JSON.parse(fs.readFileSync(stageControlPlanePath, 'utf8'));
+  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
   delete stageControlPlane.stages[0].stage_contract.receipt_schema_refs;
   delete stageControlPlane.stages[0].stage_contract.authority_function_refs;
   delete stageControlPlane.stages[0].stage_contract.l4_entry_gate;

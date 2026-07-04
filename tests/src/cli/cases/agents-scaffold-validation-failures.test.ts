@@ -1,5 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
-import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 
 test('agents scaffold validation blocks missing stage operating principles policy', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-scaffold-stage-policy-missing-'));
@@ -117,7 +116,7 @@ test('agents scaffold validation blocks legacy pack roots and README-only requir
       'legacy-pack-root',
     ]);
     const packCompilerPath = path.join(targetDir, 'contracts/pack_compiler_input.json');
-    const packCompilerInput = JSON.parse(fs.readFileSync(packCompilerPath, 'utf8'));
+    const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerPath, 'utf8')) as any;
     delete packCompilerInput.canonical_semantic_pack_root;
     packCompilerInput.domain_pack_root = 'agent';
     packCompilerInput.required_domain_pack_paths = [

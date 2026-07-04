@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('bin/opl routes agent-lab commands into the OPL CLI instead of Codex passthrough', () => {
   const result = spawnSync(
@@ -18,7 +18,7 @@ test('bin/opl routes agent-lab commands into the OPL CLI instead of Codex passth
   );
 
   assert.equal(result.status, 0, result.stderr);
-  const output = JSON.parse(result.stdout);
+  const output = parseJsonText(result.stdout) as any;
   assert.equal(output.agent_lab_complete.surface_kind, 'opl_agent_lab_complete_control_plane');
 });
 

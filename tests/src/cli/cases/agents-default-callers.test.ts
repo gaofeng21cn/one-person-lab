@@ -1,10 +1,10 @@
-import { assert, fs, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
 test('agents default-callers blocks private generic owner claims without authorizing deletion', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   functionalAudit.authority_boundary.domain_can_claim_generic_runtime_owner = true;
   writeJson(functionalAuditPath, functionalAudit);
 
@@ -183,7 +183,7 @@ test('agents default-callers waits for structural prerequisites before delete or
 test('agents default-callers treats fully observed deletion evidence as refs-only input', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   const bridgeExitGate = {
     owner_receipt_refs: ['owner-receipt:sample/default-caller-delete-reviewed'],
     no_active_caller_refs: ['no-active-caller:sample/default-caller-delete'],
@@ -231,10 +231,10 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   const defaultCallers = defaultCallersPayload.agent_default_caller_readiness;
 
   const report = defaultCallers.reports[0];
-  const contract = JSON.parse(fs.readFileSync(
+  const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'agent-platform-surface-ownership-contract.json'),
     'utf8',
-  ));
+  )) as any;
   assert.equal(defaultCallers.status, 'ready_domain_evidence_required');
   assert.equal(defaultCallers.blocked_count, 0);
   assert.equal(defaultCallers.generated_default_caller_surface_count, 8);
@@ -663,7 +663,7 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
 test('agents default-callers asks domain owner to choose delete keep or blocker after structural delete evidence', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   const bridgeExitGate = {
     no_active_caller_refs: ['no-active-caller:sample/default-caller-delete'],
     no_forbidden_write_refs: ['no-forbidden-write:sample/default-caller-delete'],
@@ -846,7 +846,7 @@ test('agents default-callers asks domain owner to choose delete keep or blocker 
 test('agents default-callers separates ordinary default lane from private residue cleanup gate', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   const bridgeExitGate = {
     no_active_caller_refs: ['no-active-caller:sample/private-platform-residue'],
     no_forbidden_write_refs: ['no-forbidden-write:sample/private-platform-residue'],
