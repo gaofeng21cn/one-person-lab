@@ -11,6 +11,7 @@ import {
   createFakeCodexFixture,
   fs,
   os,
+  parseJsonText,
   path,
   test,
 } from '../helpers.ts';
@@ -155,7 +156,7 @@ test('Temporal resident worker restarts when worker.run returns without shutdown
       },
     });
 
-    const state = JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8'));
+    const state = parseJsonText(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8')) as any;
     assert.equal(runCount, 2);
     assert.equal(state.status, 'exited');
     assert.equal(state.last_exit.exit_status, 'worker_shutdown_requested');
@@ -703,10 +704,10 @@ test('Temporal detached worker keeps source version after foreground state rewri
     const start = await startTemporalWorkerLifecycle({ root: workerRoot });
     const statePath = path.join(workerRoot, 'temporal-worker.json');
     const deadline = Date.now() + 5_000;
-    let workerState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    let workerState = parseJsonText(fs.readFileSync(statePath, 'utf8')) as any;
     while (Date.now() < deadline && workerState.source_version !== 'git:detached-worker-current') {
       await new Promise((resolve) => setTimeout(resolve, 50));
-      workerState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      workerState = parseJsonText(fs.readFileSync(statePath, 'utf8')) as any;
     }
     const requery = await inspectTemporalWorkerLifecycle({ root: workerRoot });
     const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
@@ -881,7 +882,7 @@ test('Temporal worker detached start passes resolved Codex binary to foreground 
     process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = `worker-runtime:${path.dirname(sourceModulePath)}:${'a'.repeat(64)}`;
 
     const start = await startTemporalWorkerLifecycle({ root: workerRoot });
-    const workerState = JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8'));
+    const workerState = parseJsonText(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8')) as any;
     const expectedTaskQueue = resolveTemporalWorkerTaskQueue({ root: workerRoot });
 
     assert.equal(start.start_status, 'started');
@@ -923,7 +924,7 @@ test('Temporal worker detached start passes resolved Codex binary to foreground 
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
     try {
-      process.kill(JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8')).pid, 'SIGKILL');
+      process.kill((parseJsonText(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8')) as any).pid, 'SIGKILL');
     } catch {
       // The lifecycle under test may have exited before cleanup.
     }

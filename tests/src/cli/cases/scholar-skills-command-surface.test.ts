@@ -1,4 +1,4 @@
-import { assert, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 
 const expectedModuleIds = [
   'mas-scholar-skills.display',
@@ -612,10 +612,10 @@ test('opl scholar-skills materialize writes a deterministic refs-only candidate 
     assert.equal(output.writes.paper_body_written, false);
     assert.equal(output.writes.artifact_body_written, false);
 
-    const manifest = JSON.parse(fs.readFileSync(output.artifact_manifest_path, 'utf8'));
-    const receipt = JSON.parse(fs.readFileSync(output.execution_receipt_candidate_path, 'utf8'));
-    const moduleCandidate = JSON.parse(fs.readFileSync(output.module_candidate_path, 'utf8'));
-    const refs = JSON.parse(fs.readFileSync(output.refs_manifest_path, 'utf8'));
+    const manifest = parseJsonText(fs.readFileSync(output.artifact_manifest_path, 'utf8')) as any;
+    const receipt = parseJsonText(fs.readFileSync(output.execution_receipt_candidate_path, 'utf8')) as any;
+    const moduleCandidate = parseJsonText(fs.readFileSync(output.module_candidate_path, 'utf8')) as any;
+    const refs = parseJsonText(fs.readFileSync(output.refs_manifest_path, 'utf8')) as any;
     assert.equal(manifest.surface_kind, 'opl_scholarskills_materialized_candidate_package_manifest');
     assert.equal(manifest.authority_flags.can_sign_owner_receipt, false);
     assert.equal(manifest.module_candidate_path, path.join(outputRoot, 'module_candidate.json'));
@@ -661,7 +661,7 @@ test('opl scholar-skills materialize writes module-specific candidate payloads f
         outputRoot,
         '--json',
       ]).scholar_skills_materialize;
-      const moduleCandidate = JSON.parse(fs.readFileSync(output.module_candidate_path, 'utf8'));
+      const moduleCandidate = parseJsonText(fs.readFileSync(output.module_candidate_path, 'utf8')) as any;
 
       assert.equal(moduleCandidate.module_id, moduleId);
       assert.equal(moduleCandidate.profile_id, moduleId.replace('mas-scholar-skills.', ''));

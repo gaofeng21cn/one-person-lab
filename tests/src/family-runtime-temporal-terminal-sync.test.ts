@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parseJsonText } from './cli/helpers.ts';
 import './family-runtime-temporal-terminal-sync-cases/attempt-precedence.ts';
 import {
   createStageAttempt,
@@ -288,7 +289,7 @@ test('Temporal blocked terminal observation blocks MAS default executor task wit
     assert.equal(task.last_error, 'typed_closeout_packet_required');
     assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
     assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
-    assert.equal(JSON.parse(event.payload_json).authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal((parseJsonText(event.payload_json) as any).authority_boundary.provider_completion_is_domain_ready, false);
   });
 });
 
@@ -395,7 +396,7 @@ test('Temporal blocked terminal observation classifies Codex activity cancellati
     assert.equal(task.last_error, 'codex_cli_activity_cancelled');
     assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
     assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
-    assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_canceled');
+    assert.equal((parseJsonText(event.payload_json) as any).task_dead_letter_reason, 'temporal_stage_attempt_canceled');
   });
 });
 
@@ -434,7 +435,7 @@ test('Temporal blocked terminal observation refreshes stale MAS default executor
     assert.equal(task.last_error, 'typed_closeout_packet_required');
     assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_not_completed');
     assert.equal(event.event_type, 'stage_attempt_terminal_blocked_task');
-    assert.equal(JSON.parse(event.payload_json).task_dead_letter_reason, 'temporal_stage_attempt_not_completed');
+    assert.equal((parseJsonText(event.payload_json) as any).task_dead_letter_reason, 'temporal_stage_attempt_not_completed');
   });
 });
 
@@ -508,7 +509,7 @@ test('Temporal completed terminal observation clears provider-only MAS default e
     assert.equal(task.last_error, null);
     assert.equal(task.dead_letter_reason, null);
     assert.equal(event.event_type, 'stage_attempt_terminal_completed_task');
-    assert.equal(JSON.parse(event.payload_json).cleared_dead_letter_reason, 'temporal_stage_attempt_failed');
+    assert.equal((parseJsonText(event.payload_json) as any).cleared_dead_letter_reason, 'temporal_stage_attempt_failed');
   });
 });
 
@@ -547,7 +548,7 @@ test('Temporal canceled terminal observation releases MAS default executor task 
     assert.equal(task.last_error, 'temporal_workflow_canceled');
     assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_canceled');
     assert.equal(event.event_type, 'stage_attempt_terminal_canceled_task');
-    assert.equal(JSON.parse(event.payload_json).authority_boundary.provider_completion_is_domain_ready, false);
+    assert.equal((parseJsonText(event.payload_json) as any).authority_boundary.provider_completion_is_domain_ready, false);
   });
 });
 
