@@ -1,8 +1,16 @@
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { runRuntimeOperatorActionExecute } from '../../runway/index.ts';
-import { runOplModuleAction } from '../../connect/index.ts';
-import { runOplAgentPackageInstall, runOplAgentPackageRegistryRefresh } from '../../connect/index.ts';
+import {
+  runOplAgentPackageExposureAction,
+  runOplAgentPackageInstall,
+  runOplAgentPackageRegistryRefresh,
+  runOplAgentPackageRepair,
+  runOplAgentPackageRollback,
+  runOplAgentPackageUninstall,
+  runOplAgentPackageUpdate,
+  runOplModuleAction,
+} from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
 import { runFamilyRuntime } from '../../runway/index.ts';
@@ -386,6 +394,18 @@ function agentPackageInstallPayload(payload: JsonRecord) {
   };
 }
 
+function agentPackageIdPayload(actionId: string, payload: JsonRecord) {
+  const packageId = stringPayloadField(payload, 'package_id')
+    ?? stringPayloadField(payload, 'packageId');
+  if (!packageId) {
+    throw new FrameworkContractError('cli_usage_error', `${actionId} action requires payload.package_id.`, {
+      action_id: actionId,
+      required: ['package_id'],
+    });
+  }
+  return { packageId };
+}
+
 function buildDockerWebuiSettingsManualAction(actionId: string, commandPreview: string[], payload: JsonRecord) {
   const action = settingsControlCenterActionById(actionId);
   return {
@@ -695,6 +715,65 @@ async function executeDirectAppAction(
       delegatedSurface: 'opl connect agent-packages install --manifest-url <manifest_url>',
       result: await runOplAgentPackageInstall({
         ...installPayload,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'agent_package_update') {
+    const installPayload = agentPackageInstallPayload(options.payload);
+    return {
+      delegatedSurface: 'opl connect agent-packages update --manifest-url <manifest_url>',
+      result: await runOplAgentPackageUpdate({
+        ...installPayload,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'agent_package_rollback') {
+    const installPayload = agentPackageInstallPayload(options.payload);
+    return {
+      delegatedSurface: 'opl connect agent-packages rollback --manifest-url <manifest_url>',
+      result: await runOplAgentPackageRollback({
+        ...installPayload,
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'agent_package_repair') {
+    return {
+      delegatedSurface: 'opl connect agent-packages repair --package-id <package_id>',
+      result: runOplAgentPackageRepair({
+        ...agentPackageIdPayload(options.actionId, options.payload),
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  if (options.actionId === 'agent_package_uninstall') {
+    return {
+      delegatedSurface: 'opl connect agent-packages uninstall --package-id <package_id>',
+      result: runOplAgentPackageUninstall({
+        ...agentPackageIdPayload(options.actionId, options.payload),
+        dryRun: options.dryRun,
+      }),
+    };
+  }
+
+  const exposureActions = {
+    agent_package_hide: 'hide',
+    agent_package_unhide: 'unhide',
+    agent_package_enable: 'enable',
+    agent_package_disable: 'disable',
+  } as const;
+  if (options.actionId in exposureActions) {
+    const action = exposureActions[options.actionId as keyof typeof exposureActions];
+    return {
+      delegatedSurface: `opl connect agent-packages ${action} --package-id <package_id>`,
+      result: runOplAgentPackageExposureAction(action, {
+        ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
       }),
     };

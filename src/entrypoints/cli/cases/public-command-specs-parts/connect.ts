@@ -8,11 +8,19 @@ import {
 } from '../../../../modules/connect/opl-connect-external-skills.ts';
 import {
   listOplAgentPackages,
+  runOplAgentPackageExposureAction,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
   runOplAgentPackageRegistryRefresh,
+  runOplAgentPackageRepair,
+  runOplAgentPackageRollback,
+  runOplAgentPackageStatus,
+  runOplAgentPackageUninstall,
+  runOplAgentPackageUpdate,
   type AgentPackageInstallInput,
   type AgentPackageManifestValidateInput,
+  type AgentPackagePackageActionInput,
+  type AgentPackageRollbackInput,
 } from '../../../../modules/connect/index.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
 import {
@@ -75,6 +83,10 @@ type ExternalSkillsSyncArgs = ExternalSkillsInspectArgs & {
 type AgentPackageSelectionArgs = AgentPackageManifestValidateInput;
 
 type AgentPackageInstallArgs = AgentPackageInstallInput;
+
+type AgentPackageRollbackArgs = AgentPackageRollbackInput;
+
+type AgentPackagePackageActionArgs = AgentPackagePackageActionInput;
 
 const MODULE_ACTION_COMMANDS = [
   'connect install',
@@ -298,8 +310,8 @@ function parseAgentPackageSelectionArgs(
   };
 }
 
-function parseAgentPackageInstallArgs(args: string[], spec: CommandSpec): AgentPackageInstallArgs {
-  const parsed = parseRegisteredCommandOptions('connect agent-packages install', args, spec);
+function parseAgentPackageInstallArgs(command: string, args: string[], spec: CommandSpec): AgentPackageInstallArgs {
+  const parsed = parseRegisteredCommandOptions(command, args, spec);
   return {
     manifestUrl: readOptionalString(parsed['manifest-url']),
     registryUrl: readOptionalString(parsed['registry-url']),
@@ -308,6 +320,43 @@ function parseAgentPackageInstallArgs(args: string[], spec: CommandSpec): AgentP
     sourceKind: readOptionalString(parsed['source-kind']) as AgentPackageInstallArgs['sourceKind'],
     dryRun: parsed['dry-run'] === true,
   };
+}
+
+function parseAgentPackageRollbackArgs(command: string, args: string[], spec: CommandSpec): AgentPackageRollbackArgs {
+  return parseAgentPackageInstallArgs(command, args, spec);
+}
+
+function parseAgentPackagePackageActionArgs(command: string, args: string[], spec: CommandSpec): AgentPackagePackageActionArgs {
+  const parsed = parseRegisteredCommandOptions(command, args, spec);
+  const packageId = String(parsed['package-id'] ?? '').trim();
+  if (!packageId) {
+    throw buildUsageError(`${command} requires --package-id.`, spec, {
+      required: ['--package-id'],
+    });
+  }
+  return {
+    packageId,
+    dryRun: parsed['dry-run'] === true,
+  };
+}
+
+function agentPackagePackageActionOptions(summary: string) {
+  return [
+    {
+      name: 'package-id',
+      flag: '--package-id',
+      value_kind: 'string' as const,
+      summary,
+      required: true,
+    },
+    {
+      name: 'dry-run',
+      flag: '--dry-run',
+      value_kind: 'boolean' as const,
+      summary: 'Validate and preview receipt output without writing state.',
+      required: false,
+    },
+  ];
 }
 
 function buildModuleActionSpec(
@@ -890,8 +939,253 @@ export function buildConnectCommandSpecs(
       },
       handler: (args) =>
         runOplAgentPackageInstall(
-          parseAgentPackageInstallArgs(args, connectCommandSpecs['connect agent-packages install']),
+          parseAgentPackageInstallArgs(
+            'connect agent-packages install',
+            args,
+            connectCommandSpecs['connect agent-packages install'],
+          ),
         ),
+    },
+    'connect agent-packages update': {
+      usage: 'opl connect agent-packages update (--manifest-url <url>|--registry-url <url> --package-id <id>) [--trust-tier <tier>] [--source-kind <kind>] [--dry-run]',
+      summary: 'Validate an installed OPL Agent Package manifest and replace its Framework-owned package lock plus lifecycle receipt.',
+      examples: [
+        'opl connect agent-packages update --registry-url https://example.com/registry.json --package-id mas --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages update',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          ...agentPackageSelectionOptions,
+          {
+            name: 'dry-run',
+            flag: '--dry-run',
+            value_kind: 'boolean',
+            summary: 'Validate and preview lock/receipt output without writing state.',
+            required: false,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_update/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageUpdate(
+          parseAgentPackageInstallArgs(
+            'connect agent-packages update',
+            args,
+            connectCommandSpecs['connect agent-packages update'],
+          ),
+        ),
+    },
+    'connect agent-packages repair': {
+      usage: 'opl connect agent-packages repair --package-id <id> [--dry-run]',
+      summary: 'Re-record the Framework-owned lock and lifecycle receipt for an installed OPL Agent Package.',
+      examples: ['opl connect agent-packages repair --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages repair',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to repair.'),
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_repair/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageRepair(
+          parseAgentPackagePackageActionArgs(
+            'connect agent-packages repair',
+            args,
+            connectCommandSpecs['connect agent-packages repair'],
+          ),
+        ),
+    },
+    'connect agent-packages rollback': {
+      usage: 'opl connect agent-packages rollback (--manifest-url <url>|--registry-url <url> --package-id <id>) [--trust-tier <tier>] [--source-kind <kind>] [--dry-run]',
+      summary: 'Validate a rollback OPL Agent Package manifest and replace the Framework-owned package lock plus lifecycle receipt.',
+      examples: [
+        'opl connect agent-packages rollback --manifest-url file:///tmp/agent/rollback-manifest.json --trust-tier third_party_verified --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages rollback',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          ...agentPackageSelectionOptions,
+          {
+            name: 'dry-run',
+            flag: '--dry-run',
+            value_kind: 'boolean',
+            summary: 'Validate and preview rollback lock/receipt output without writing state.',
+            required: false,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_rollback/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageRollback(
+          parseAgentPackageRollbackArgs(
+            'connect agent-packages rollback',
+            args,
+            connectCommandSpecs['connect agent-packages rollback'],
+          ),
+        ),
+    },
+    'connect agent-packages uninstall': {
+      usage: 'opl connect agent-packages uninstall --package-id <id> [--dry-run]',
+      summary: 'Remove an installed OPL Agent Package lock and write a lifecycle receipt without deleting domain truth.',
+      examples: ['opl connect agent-packages uninstall --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages uninstall',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to uninstall.'),
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_uninstall/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageUninstall(
+          parseAgentPackagePackageActionArgs(
+            'connect agent-packages uninstall',
+            args,
+            connectCommandSpecs['connect agent-packages uninstall'],
+          ),
+        ),
+    },
+    'connect agent-packages hide': {
+      usage: 'opl connect agent-packages hide --package-id <id> [--dry-run]',
+      summary: 'Hide an installed OPL Agent Package from ordinary shortcut exposure while keeping its lock.',
+      examples: ['opl connect agent-packages hide --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages hide',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to hide.'),
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_hide/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageExposureAction(
+          'hide',
+          parseAgentPackagePackageActionArgs(
+            'connect agent-packages hide',
+            args,
+            connectCommandSpecs['connect agent-packages hide'],
+          ),
+        ),
+    },
+    'connect agent-packages unhide': {
+      usage: 'opl connect agent-packages unhide --package-id <id> [--dry-run]',
+      summary: 'Restore an installed OPL Agent Package to ordinary shortcut exposure.',
+      examples: ['opl connect agent-packages unhide --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages unhide',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to unhide.'),
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_unhide/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageExposureAction(
+          'unhide',
+          parseAgentPackagePackageActionArgs(
+            'connect agent-packages unhide',
+            args,
+            connectCommandSpecs['connect agent-packages unhide'],
+          ),
+        ),
+    },
+    'connect agent-packages enable': {
+      usage: 'opl connect agent-packages enable --package-id <id> [--dry-run]',
+      summary: 'Enable an installed OPL Agent Package exposure state without claiming domain readiness.',
+      examples: ['opl connect agent-packages enable --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages enable',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to enable.'),
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_enable/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageExposureAction(
+          'enable',
+          parseAgentPackagePackageActionArgs(
+            'connect agent-packages enable',
+            args,
+            connectCommandSpecs['connect agent-packages enable'],
+          ),
+        ),
+    },
+    'connect agent-packages disable': {
+      usage: 'opl connect agent-packages disable --package-id <id> [--dry-run]',
+      summary: 'Disable an installed OPL Agent Package exposure state without uninstalling it.',
+      examples: ['opl connect agent-packages disable --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages disable',
+        parser_adapter: 'node_util_parse_args',
+        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to disable.'),
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_disable/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageExposureAction(
+          'disable',
+          parseAgentPackagePackageActionArgs(
+            'connect agent-packages disable',
+            args,
+            connectCommandSpecs['connect agent-packages disable'],
+          ),
+        ),
+    },
+    'connect agent-packages status': {
+      usage: 'opl connect agent-packages status [--package-id <id>]',
+      summary: 'Read installed OPL Agent Package lock and lifecycle receipt status.',
+      examples: ['opl connect agent-packages status --package-id mas --json'],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages status',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'package-id',
+            flag: '--package-id',
+            value_kind: 'string',
+            summary: 'Optional installed OPL Agent Package id to inspect.',
+            required: false,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_status/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) => {
+        const parsed = parseRegisteredCommandOptions(
+          'connect agent-packages status',
+          args,
+          connectCommandSpecs['connect agent-packages status'],
+        );
+        return runOplAgentPackageStatus({ packageId: readOptionalString(parsed['package-id']) });
+      },
     },
     'connect agent-packages list': {
       usage: 'opl connect agent-packages list',

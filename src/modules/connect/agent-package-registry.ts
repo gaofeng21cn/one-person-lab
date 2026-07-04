@@ -27,7 +27,18 @@ type AgentPackageSourceKind =
   | 'manifest_import'
   | 'developer_checkout_override';
 
-type AgentPackageLifecycleAction = 'registry_refresh' | 'manifest_validate' | 'install';
+type AgentPackageLifecycleAction =
+  | 'registry_refresh'
+  | 'manifest_validate'
+  | 'install'
+  | 'update'
+  | 'repair'
+  | 'rollback'
+  | 'uninstall'
+  | 'hide'
+  | 'unhide'
+  | 'enable'
+  | 'disable';
 
 export type AgentPackageRegistryRefreshInput = {
   registryUrl: string;
@@ -42,6 +53,15 @@ export type AgentPackageManifestValidateInput = {
 };
 
 export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
+  dryRun?: boolean;
+};
+
+export type AgentPackagePackageActionInput = {
+  packageId: string;
+  dryRun?: boolean;
+};
+
+export type AgentPackageRollbackInput = AgentPackageManifestValidateInput & {
   dryRun?: boolean;
 };
 
@@ -107,6 +127,8 @@ type AgentPackageLock = {
   manifest_url: string;
   manifest_sha256: string;
   lock_ref: string;
+  exposure_state?: 'visible' | 'hidden' | 'enabled' | 'disabled';
+  exposure_updated_at?: string;
 };
 
 type AgentPackageLifecycleReceipt = {
@@ -531,6 +553,56 @@ function packageLockRef(packageId: string, version: string, sourceSha256: string
   return `opl://agent-package-lock/${encodeURIComponent(packageId)}/${encodeURIComponent(version)}/${sourceSha256.slice(0, 16)}`;
 }
 
+function packageActionSourceSha256(action: AgentPackageLifecycleAction, lock: AgentPackageLock) {
+  return sha256Text([
+    action,
+    lock.package_id,
+    lock.package_version,
+    lock.manifest_sha256,
+    lock.lock_ref,
+  ].join('\n'));
+}
+
+function packageActionStatus(action: AgentPackageLifecycleAction) {
+  return {
+    install: 'installed',
+    update: 'updated',
+    repair: 'repaired',
+    rollback: 'rolled_back',
+    uninstall: 'uninstalled',
+    hide: 'hidden',
+    unhide: 'visible',
+    enable: 'enabled',
+    disable: 'disabled',
+    registry_refresh: 'refreshed',
+    manifest_validate: 'valid',
+  }[action];
+}
+
+function requirePackageId(packageId: string | null | undefined, action: AgentPackageLifecycleAction) {
+  const normalized = stringValue(packageId);
+  if (!normalized) {
+    throw new FrameworkContractError('cli_usage_error', `Agent package ${action} requires --package-id.`, {
+      required: ['--package-id'],
+      action,
+    });
+  }
+  return normalized;
+}
+
+function requireInstalledPackage(index: AgentPackageLockIndex, packageId: string, action: AgentPackageLifecycleAction) {
+  const lockIndex = index.packages.findIndex((entry) => entry.package_id === packageId);
+  if (lockIndex < 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `Agent package ${action} requires an installed package lock.`, {
+      package_id: packageId,
+      action,
+      failure_code: 'agent_package_lock_missing',
+      installed_package_ids: index.packages.map((entry) => entry.package_id),
+    });
+  }
+  return { lockIndex, lock: index.packages[lockIndex] };
+}
+
 function lifecycleReceipt(input: {
   action: AgentPackageLifecycleAction;
   actionStatus: 'completed' | 'validated';
@@ -665,6 +737,7 @@ function buildLock(input: {
   sourceKind: AgentPackageSourceKind;
   trustTier: string;
   receiptRef: string;
+  previousLock?: AgentPackageLock | null;
 }): AgentPackageLock {
   const timestamp = nowIso();
   return {
@@ -675,7 +748,7 @@ function buildLock(input: {
     publisher: input.manifest.publisher,
     version_or_source_digest: `${input.manifest.version}+sha256:${input.manifestSha256}`,
     package_version: input.manifest.version,
-    installed_at: timestamp,
+    installed_at: input.previousLock?.installed_at ?? timestamp,
     updated_at: timestamp,
     codex_visible_entry: input.manifest.codex_visible_entry,
     bundled_required_skill_ids: input.manifest.required_skill_ids,
@@ -687,6 +760,72 @@ function buildLock(input: {
     manifest_url: input.manifestUrl,
     manifest_sha256: input.manifestSha256,
     lock_ref: packageLockRef(input.manifest.package_id, input.manifest.version, input.manifestSha256),
+    exposure_state: input.previousLock?.exposure_state ?? 'visible',
+    exposure_updated_at: input.previousLock?.exposure_updated_at ?? timestamp,
+  };
+}
+
+async function applyManifestPackageLock(
+  input: AgentPackageInstallInput,
+  action: 'install' | 'update' | 'rollback',
+) {
+  const selection = await resolveManifestSelection(input);
+  const fetched = await fetchJsonSource(selection.manifestUrl);
+  const manifest = normalizeManifest(fetched.payload, selection.manifestUrl);
+  assertManifestMatchesRegistrySelection(manifest, selection);
+  const trustTier = stringValue(input.trustTier) ?? selection.trustTier;
+  assertTrustTierAssigned(trustTier, selection.manifestUrl);
+  const sourceKind = normalizeSourceKind(input.sourceKind, selection.manifestUrl);
+  const lockRef = packageLockRef(manifest.package_id, manifest.version, fetched.source_sha256);
+  const index = readLockIndex();
+  const existingIndex = index.packages.findIndex((entry) => entry.package_id === manifest.package_id);
+  if (action !== 'install' && existingIndex < 0) {
+    throw new FrameworkContractError('contract_shape_invalid', `Agent package ${action} requires an installed package lock.`, {
+      package_id: manifest.package_id,
+      action,
+      failure_code: 'agent_package_lock_missing',
+    });
+  }
+  const previousLock = existingIndex >= 0 ? index.packages[existingIndex] : null;
+  const receipt = lifecycleReceipt({
+    action,
+    actionStatus: input.dryRun ? 'validated' : 'completed',
+    packageId: manifest.package_id,
+    registryUrl: selection.registryUrl,
+    manifestUrl: selection.manifestUrl,
+    manifestSha256: fetched.source_sha256,
+    packageLockRef: lockRef,
+    rollbackRef: manifest.rollback_ref,
+    sourceKind,
+    trustTier,
+    sourceSha256: fetched.source_sha256,
+    writesPerformed: !input.dryRun,
+  });
+  const lock = buildLock({
+    manifest,
+    manifestUrl: selection.manifestUrl,
+    manifestSha256: fetched.source_sha256,
+    sourceKind,
+    trustTier,
+    receiptRef: receipt.receipt_ref,
+    previousLock,
+  });
+
+  if (!input.dryRun) {
+    if (existingIndex >= 0) {
+      index.packages[existingIndex] = lock;
+    } else {
+      index.packages.unshift(lock);
+    }
+    writeLockIndex(index);
+    appendReceipt(receipt);
+  }
+
+  return {
+    status: input.dryRun ? 'validated_no_write' : packageActionStatus(action),
+    lock,
+    receipt,
+    registryEntry: selection.registryEntry,
   };
 }
 
@@ -780,60 +919,203 @@ export async function runOplAgentPackageManifestValidate(input: AgentPackageMani
 }
 
 export async function runOplAgentPackageInstall(input: AgentPackageInstallInput) {
-  const selection = await resolveManifestSelection(input);
-  const fetched = await fetchJsonSource(selection.manifestUrl);
-  const manifest = normalizeManifest(fetched.payload, selection.manifestUrl);
-  assertManifestMatchesRegistrySelection(manifest, selection);
-  const trustTier = stringValue(input.trustTier) ?? selection.trustTier;
-  assertTrustTierAssigned(trustTier, selection.manifestUrl);
-  const sourceKind = normalizeSourceKind(input.sourceKind, selection.manifestUrl);
-  const lockRef = packageLockRef(manifest.package_id, manifest.version, fetched.source_sha256);
-  const receipt = lifecycleReceipt({
-    action: 'install',
-    actionStatus: input.dryRun ? 'validated' : 'completed',
-    packageId: manifest.package_id,
-    registryUrl: selection.registryUrl,
-    manifestUrl: selection.manifestUrl,
-    manifestSha256: fetched.source_sha256,
-    packageLockRef: lockRef,
-    rollbackRef: manifest.rollback_ref,
-    sourceKind,
-    trustTier,
-    sourceSha256: fetched.source_sha256,
-    writesPerformed: !input.dryRun,
-  });
-  const lock = buildLock({
-    manifest,
-    manifestUrl: selection.manifestUrl,
-    manifestSha256: fetched.source_sha256,
-    sourceKind,
-    trustTier,
-    receiptRef: receipt.receipt_ref,
-  });
-
-  if (!input.dryRun) {
-    const index = readLockIndex();
-    const existingIndex = index.packages.findIndex((entry) => entry.package_id === lock.package_id);
-    if (existingIndex >= 0) {
-      index.packages[existingIndex] = lock;
-    } else {
-      index.packages.unshift(lock);
-    }
-    writeLockIndex(index);
-    appendReceipt(receipt);
-  }
+  const result = await applyManifestPackageLock(input, 'install');
 
   return {
     version: 'g2',
     opl_agent_package_install: {
       surface_kind: 'opl_agent_package_install',
-      status: input.dryRun ? 'validated_no_write' : 'installed',
+      status: result.status,
       dry_run: input.dryRun === true,
-      package_lock: lock,
-      lifecycle_receipt: receipt,
+      package_lock: result.lock,
+      lifecycle_receipt: result.receipt,
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
-      registry_entry: selection.registryEntry,
+      registry_entry: result.registryEntry,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) {
+  const result = await applyManifestPackageLock(input, 'update');
+  return {
+    version: 'g2',
+    opl_agent_package_update: {
+      surface_kind: 'opl_agent_package_update',
+      status: result.status,
+      dry_run: input.dryRun === true,
+      package_lock: result.lock,
+      lifecycle_receipt: result.receipt,
+      lock_file: resolveOplStatePaths().agent_package_lock_file,
+      lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
+      registry_entry: result.registryEntry,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export async function runOplAgentPackageRollback(input: AgentPackageRollbackInput) {
+  const result = await applyManifestPackageLock(input, 'rollback');
+  return {
+    version: 'g2',
+    opl_agent_package_rollback: {
+      surface_kind: 'opl_agent_package_rollback',
+      status: result.status,
+      dry_run: input.dryRun === true,
+      package_lock: result.lock,
+      lifecycle_receipt: result.receipt,
+      lock_file: resolveOplStatePaths().agent_package_lock_file,
+      lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
+      registry_entry: result.registryEntry,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) {
+  const packageId = requirePackageId(input.packageId, 'repair');
+  const index = readLockIndex();
+  const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'repair');
+  const receipt = lifecycleReceipt({
+    action: 'repair',
+    actionStatus: input.dryRun ? 'validated' : 'completed',
+    packageId,
+    manifestUrl: lock.manifest_url,
+    manifestSha256: lock.manifest_sha256,
+    packageLockRef: lock.lock_ref,
+    rollbackRef: lock.rollback_ref,
+    sourceKind: lock.source_kind,
+    trustTier: lock.trust_tier,
+    sourceSha256: packageActionSourceSha256('repair', lock),
+    writesPerformed: !input.dryRun,
+  });
+  const repairedLock = {
+    ...lock,
+    updated_at: input.dryRun ? lock.updated_at : nowIso(),
+    action_receipt_id: receipt.receipt_ref,
+  };
+  if (!input.dryRun) {
+    index.packages[lockIndex] = repairedLock;
+    writeLockIndex(index);
+    appendReceipt(receipt);
+  }
+  return {
+    version: 'g2',
+    opl_agent_package_repair: {
+      surface_kind: 'opl_agent_package_repair',
+      status: input.dryRun ? 'validated_no_write' : 'repaired',
+      dry_run: input.dryRun === true,
+      package_lock: repairedLock,
+      lifecycle_receipt: receipt,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInput) {
+  const packageId = requirePackageId(input.packageId, 'uninstall');
+  const index = readLockIndex();
+  const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'uninstall');
+  const receipt = lifecycleReceipt({
+    action: 'uninstall',
+    actionStatus: input.dryRun ? 'validated' : 'completed',
+    packageId,
+    manifestUrl: lock.manifest_url,
+    manifestSha256: lock.manifest_sha256,
+    packageLockRef: lock.lock_ref,
+    rollbackRef: lock.rollback_ref,
+    sourceKind: lock.source_kind,
+    trustTier: lock.trust_tier,
+    sourceSha256: packageActionSourceSha256('uninstall', lock),
+    writesPerformed: !input.dryRun,
+  });
+  if (!input.dryRun) {
+    index.packages.splice(lockIndex, 1);
+    writeLockIndex(index);
+    appendReceipt(receipt);
+  }
+  return {
+    version: 'g2',
+    opl_agent_package_uninstall: {
+      surface_kind: 'opl_agent_package_uninstall',
+      status: input.dryRun ? 'validated_no_write' : 'uninstalled',
+      dry_run: input.dryRun === true,
+      removed_package_lock: lock,
+      lifecycle_receipt: receipt,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export function runOplAgentPackageExposureAction(
+  action: 'hide' | 'unhide' | 'enable' | 'disable',
+  input: AgentPackagePackageActionInput,
+) {
+  const packageId = requirePackageId(input.packageId, action);
+  const index = readLockIndex();
+  const { lockIndex, lock } = requireInstalledPackage(index, packageId, action);
+  const nextState = action === 'hide'
+    ? 'hidden'
+    : action === 'disable'
+      ? 'disabled'
+      : action === 'enable'
+        ? 'enabled'
+        : 'visible';
+  const receipt = lifecycleReceipt({
+    action,
+    actionStatus: input.dryRun ? 'validated' : 'completed',
+    packageId,
+    manifestUrl: lock.manifest_url,
+    manifestSha256: lock.manifest_sha256,
+    packageLockRef: lock.lock_ref,
+    rollbackRef: lock.rollback_ref,
+    sourceKind: lock.source_kind,
+    trustTier: lock.trust_tier,
+    sourceSha256: packageActionSourceSha256(action, lock),
+    writesPerformed: !input.dryRun,
+  });
+  const updatedLock: AgentPackageLock = {
+    ...lock,
+    exposure_state: nextState,
+    exposure_updated_at: input.dryRun ? lock.exposure_updated_at : nowIso(),
+    action_receipt_id: receipt.receipt_ref,
+  };
+  if (!input.dryRun) {
+    index.packages[lockIndex] = updatedLock;
+    writeLockIndex(index);
+    appendReceipt(receipt);
+  }
+  return {
+    version: 'g2',
+    opl_agent_package_exposure: {
+      surface_kind: 'opl_agent_package_exposure',
+      status: input.dryRun ? 'validated_no_write' : packageActionStatus(action),
+      action,
+      dry_run: input.dryRun === true,
+      package_lock: updatedLock,
+      lifecycle_receipt: receipt,
+      authority_boundary: refsOnlyAuthorityBoundary(),
+    },
+  };
+}
+
+export function runOplAgentPackageStatus(input: { packageId?: string | null } = {}) {
+  const packageId = stringValue(input.packageId);
+  const lockIndex = readLockIndex();
+  const lifecycleLedger = readLifecycleLedger();
+  const installedPackages = packageId
+    ? lockIndex.packages.filter((entry) => entry.package_id === packageId)
+    : lockIndex.packages;
+  return {
+    version: 'g2',
+    opl_agent_package_status: {
+      surface_kind: 'opl_agent_package_status',
+      status: packageId && installedPackages.length === 0 ? 'not_installed' : 'available',
+      package_id: packageId ?? null,
+      installed_package_count: installedPackages.length,
+      installed_packages: installedPackages,
+      lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };

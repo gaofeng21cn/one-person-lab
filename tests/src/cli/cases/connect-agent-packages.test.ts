@@ -226,6 +226,178 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(list.opl_agent_packages.installed_packages[0].package_id, 'third.party.research');
       assert.equal(list.opl_agent_packages.lifecycle_receipt_count, 3);
       assert.equal(list.opl_agent_packages.registry_cache.entry_count, 1);
+
+      const update = await runCliAsync([
+        'connect',
+        'agent-packages',
+        'update',
+        '--registry-url',
+        registryUrl,
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_update: {
+          status: string;
+          package_lock: { package_id: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean };
+        };
+      };
+
+      assert.equal(update.opl_agent_package_update.status, 'updated');
+      assert.equal(update.opl_agent_package_update.package_lock.package_id, 'third.party.research');
+      assert.equal(update.opl_agent_package_update.lifecycle_receipt.action, 'update');
+      assert.equal(update.opl_agent_package_update.lifecycle_receipt.writes_performed, true);
+
+      const repair = runCli([
+        'connect',
+        'agent-packages',
+        'repair',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_repair: {
+          status: string;
+          package_lock: { package_id: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean };
+        };
+      };
+      assert.equal(repair.opl_agent_package_repair.status, 'repaired');
+      assert.equal(repair.opl_agent_package_repair.lifecycle_receipt.action, 'repair');
+
+      const hide = runCli([
+        'connect',
+        'agent-packages',
+        'hide',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_exposure: {
+          status: string;
+          action: string;
+          package_lock: { exposure_state: string };
+          lifecycle_receipt: { action: string };
+        };
+      };
+      assert.equal(hide.opl_agent_package_exposure.status, 'hidden');
+      assert.equal(hide.opl_agent_package_exposure.action, 'hide');
+      assert.equal(hide.opl_agent_package_exposure.package_lock.exposure_state, 'hidden');
+      assert.equal(hide.opl_agent_package_exposure.lifecycle_receipt.action, 'hide');
+
+      const unhide = runCli([
+        'connect',
+        'agent-packages',
+        'unhide',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_exposure: {
+          status: string;
+          action: string;
+          package_lock: { exposure_state: string };
+        };
+      };
+      assert.equal(unhide.opl_agent_package_exposure.status, 'visible');
+      assert.equal(unhide.opl_agent_package_exposure.action, 'unhide');
+      assert.equal(unhide.opl_agent_package_exposure.package_lock.exposure_state, 'visible');
+
+      const disable = runCli([
+        'connect',
+        'agent-packages',
+        'disable',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_exposure: { status: string; package_lock: { exposure_state: string } };
+      };
+      assert.equal(disable.opl_agent_package_exposure.status, 'disabled');
+      assert.equal(disable.opl_agent_package_exposure.package_lock.exposure_state, 'disabled');
+
+      const enable = runCli([
+        'connect',
+        'agent-packages',
+        'enable',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_exposure: { status: string; package_lock: { exposure_state: string } };
+      };
+      assert.equal(enable.opl_agent_package_exposure.status, 'enabled');
+      assert.equal(enable.opl_agent_package_exposure.package_lock.exposure_state, 'enabled');
+
+      const rollback = await runCliAsync([
+        'connect',
+        'agent-packages',
+        'rollback',
+        '--registry-url',
+        registryUrl,
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_rollback: {
+          status: string;
+          package_lock: { package_id: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean };
+        };
+      };
+      assert.equal(rollback.opl_agent_package_rollback.status, 'rolled_back');
+      assert.equal(rollback.opl_agent_package_rollback.package_lock.package_id, 'third.party.research');
+      assert.equal(rollback.opl_agent_package_rollback.lifecycle_receipt.action, 'rollback');
+      assert.equal(rollback.opl_agent_package_rollback.lifecycle_receipt.writes_performed, true);
+
+      const status = runCli([
+        'connect',
+        'agent-packages',
+        'status',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_status: {
+          status: string;
+          installed_package_count: number;
+          lifecycle_receipts: Array<{ action: string }>;
+        };
+      };
+      assert.equal(status.opl_agent_package_status.status, 'available');
+      assert.equal(status.opl_agent_package_status.installed_package_count, 1);
+      assert.deepEqual(
+        status.opl_agent_package_status.lifecycle_receipts.map((receipt) => receipt.action),
+        ['rollback', 'enable', 'disable', 'unhide', 'hide', 'repair', 'update', 'install', 'manifest_validate'],
+      );
+
+      const uninstall = runCli([
+        'connect',
+        'agent-packages',
+        'uninstall',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_uninstall: {
+          status: string;
+          removed_package_lock: { package_id: string };
+          lifecycle_receipt: { action: string; writes_performed: boolean };
+        };
+      };
+      assert.equal(uninstall.opl_agent_package_uninstall.status, 'uninstalled');
+      assert.equal(uninstall.opl_agent_package_uninstall.removed_package_lock.package_id, 'third.party.research');
+      assert.equal(uninstall.opl_agent_package_uninstall.lifecycle_receipt.action, 'uninstall');
+      assert.equal(uninstall.opl_agent_package_uninstall.lifecycle_receipt.writes_performed, true);
+
+      const afterUninstall = runCli([
+        'connect',
+        'agent-packages',
+        'status',
+        '--package-id',
+        'third.party.research',
+      ], { OPL_STATE_DIR: stateDir }) as {
+        opl_agent_package_status: {
+          status: string;
+          installed_package_count: number;
+          lifecycle_receipts: Array<{ action: string }>;
+        };
+      };
+      assert.equal(afterUninstall.opl_agent_package_status.status, 'not_installed');
+      assert.equal(afterUninstall.opl_agent_package_status.installed_package_count, 0);
+      assert.equal(afterUninstall.opl_agent_package_status.lifecycle_receipts[0].action, 'uninstall');
     });
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });

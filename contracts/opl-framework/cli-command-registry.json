@@ -24,6 +24,15 @@
     "connect agent-packages registry refresh",
     "connect agent-packages validate-manifest",
     "connect agent-packages install",
+    "connect agent-packages update",
+    "connect agent-packages repair",
+    "connect agent-packages rollback",
+    "connect agent-packages uninstall",
+    "connect agent-packages hide",
+    "connect agent-packages unhide",
+    "connect agent-packages enable",
+    "connect agent-packages disable",
+    "connect agent-packages status",
     "connect agent-packages list",
     "update status",
     "update check",
@@ -1831,6 +1840,499 @@
                 }
               }
             }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_update": {
+      "command_id": "connect agent-packages update",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_update"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_update": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_repair": {
+      "command_id": "connect agent-packages repair",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_repair"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_repair": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_rollback": {
+      "command_id": "connect agent-packages rollback",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "manifest-url",
+          "flag": "--manifest-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "registry-url",
+          "flag": "--registry-url",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "trust-tier",
+          "flag": "--trust-tier",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "source-kind",
+          "flag": "--source-kind",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_rollback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_rollback": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_uninstall": {
+      "command_id": "connect agent-packages uninstall",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_uninstall"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_uninstall": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_hide": {
+      "command_id": "connect agent-packages hide",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_exposure"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_exposure": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_unhide": {
+      "command_id": "connect agent-packages unhide",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_exposure"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_exposure": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_enable": {
+      "command_id": "connect agent-packages enable",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_exposure"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_exposure": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_disable": {
+      "command_id": "connect agent-packages disable",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_exposure"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_exposure": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_agent_packages_status": {
+      "command_id": "connect agent-packages status",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_status"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_status": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "installed_package_count",
+              "installed_packages",
+              "lifecycle_receipts",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
           }
         }
       },

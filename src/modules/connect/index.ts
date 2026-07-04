@@ -6,8 +6,24 @@ export const OPL_CONNECT_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
-export { listOplAgentPackages, runOplAgentPackageInstall, runOplAgentPackageManifestValidate, runOplAgentPackageRegistryRefresh } from './agent-package-registry.ts';
-export type { AgentPackageInstallInput, AgentPackageManifestValidateInput } from './agent-package-registry.ts';
+export {
+  listOplAgentPackages,
+  runOplAgentPackageExposureAction,
+  runOplAgentPackageInstall,
+  runOplAgentPackageManifestValidate,
+  runOplAgentPackageRegistryRefresh,
+  runOplAgentPackageRepair,
+  runOplAgentPackageRollback,
+  runOplAgentPackageStatus,
+  runOplAgentPackageUninstall,
+  runOplAgentPackageUpdate,
+} from './agent-package-registry.ts';
+export type {
+  AgentPackageInstallInput,
+  AgentPackageManifestValidateInput,
+  AgentPackagePackageActionInput,
+  AgentPackageRollbackInput,
+} from './agent-package-registry.ts';
 export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 export type { LocalCodexDefaults } from './local-codex-defaults.ts';
 export { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
