@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { constants as fsConstants } from 'node:fs';
 import { access, mkdtemp, writeFile } from 'node:fs/promises';
-import { createServer, type Server, type ServerResponse } from 'node:http';
+import { createServer, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
@@ -26,156 +26,35 @@ import {
   requireRuntimeTraySnapshotProvider,
   type RuntimeTraySnapshotProvider,
 } from './runtime-tray-snapshot-provider.ts';
+import {
+  AUTHORITY_BOUNDARY,
+  COLLECTOR_SMOKE_METRIC_NAMES,
+  DEFAULT_COLLECTOR_SMOKE_TIMEOUT_MS,
+  DEFAULT_METRICS_ENDPOINT_HOST,
+  DEFAULT_METRICS_ENDPOINT_PATH,
+  DEFAULT_METRICS_ENDPOINT_PORT,
+  booleanValue,
+  errorMessage,
+  firstString,
+  metricValueOrUndefined,
+  normalizeMetricsPath,
+  targetForEndpoint,
+  type ObservabilityCollectorSmokeOptions,
+  type ObservabilityCollectorSmokeReadback,
+  type ObservabilityExportFormat,
+  type ObservabilityMetricsEndpointHandle,
+  type ObservabilityMetricsEndpointOptions,
+  type ObservabilityMetricsEndpointReadback,
+} from './observability-export-parts/shared.ts';
 
-export type ObservabilityExportFormat = 'json' | 'openmetrics' | 'collector-config-json';
-
-export type ObservabilityMetricsEndpointOptions = {
-  contracts: FrameworkContracts;
-  host?: string;
-  port?: number;
-  metricsPath?: string;
-  once?: boolean;
-  readyFile?: string;
-  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
-};
-
-export type ObservabilityMetricsEndpointReadback = {
-  surface_kind: 'opl_observability_metrics_endpoint';
-  schema_version: 'observability_metrics_endpoint.v1';
-  endpoint: {
-    host: string;
-    port: number;
-    metrics_path: string;
-    url: string;
-  };
-  source_export_command: string;
-  collector_consumption_config_ref: string;
-  runtime_export_ref: string;
-  server_runtime: 'node_http_standard_library';
-  once: boolean;
-  authority_boundary: {
-    can_execute_repair: false;
-    can_write_domain_truth: false;
-    can_create_owner_receipt: false;
-    can_create_typed_blocker: false;
-    can_authorize_ready_verdict: false;
-    can_claim_runtime_ready: false;
-    can_claim_domain_ready: false;
-    can_claim_production_ready: false;
-    external_collector_connected: false;
-    payload_body_exported: false;
-  };
-};
-
-export type ObservabilityMetricsEndpointHandle = {
-  server: Server;
-  readback: ObservabilityMetricsEndpointReadback;
-  closed: Promise<void>;
-  close: () => void;
-};
-
-export type ObservabilityCollectorSmokeOptions = {
-  contracts: FrameworkContracts;
-  collectorCommand?: string;
-  endpoint?: string;
-  host?: string;
-  port?: number;
-  metricsPath?: string;
-  timeoutMs?: number;
-  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
-  env?: Record<string, string | undefined>;
-};
-
-export type ObservabilityCollectorSmokeReadback = {
-  surface_kind: 'opl_observability_collector_smoke';
-  schema_version: 'observability_collector_smoke.v1';
-  status: 'observed' | 'blocked';
-  collector: {
-    command_source: '--collector-command' | 'OPL_OTELCOL_COMMAND' | 'PATH' | 'missing';
-    command: string | null;
-    resolved_command: string | null;
-    attempted_commands: string[];
-  };
-  endpoint: {
-    mode: 'started_local_endpoint' | 'external_endpoint';
-    url: string | null;
-    target: string | null;
-    metrics_path: string;
-  };
-  collector_config: {
-    config_ref: string;
-    config_format: 'otelcol_yaml_equivalent_json';
-    config_file: string | null;
-    receiver: 'prometheus';
-    exporter: 'debug';
-  };
-  evidence: {
-    collector_process_started: boolean;
-    collector_consumption_observed: boolean;
-    observed_metric_name: string | null;
-    observed_stream: 'stdout' | 'stderr' | null;
-    output_bytes: number;
-    timeout_ms: number;
-  };
-  typed_blocker: null | {
-    blocker_type:
-      | 'collector_binary_missing'
-      | 'collector_spawn_failed'
-      | 'collector_timeout_no_metric'
-      | 'collector_exited_without_metric';
-    message: string;
-    next_owner: 'operator';
-    attempted_commands: string[];
-  };
-  authority_boundary: {
-    payload_body_exported: false;
-    payload_body_stored: false;
-    external_collector_connected: boolean;
-    can_write_domain_truth: false;
-    can_create_owner_receipt: false;
-    can_create_typed_blocker: false;
-    can_claim_runtime_ready: false;
-    can_claim_domain_ready: false;
-    can_claim_production_ready: false;
-  };
-};
-
-const AUTHORITY_BOUNDARY = {
-  opl: 'read_only_observability_export_projection',
-  source_authority: 'opl_runtime_ledger_provider_receipts_snapshot_and_domain_projection_refs',
-  can_execute_repair: false,
-  can_write_domain_truth: false,
-  can_authorize_quality_verdict: false,
-  can_authorize_ready_verdict: false,
-  can_authorize_artifact_export: false,
-};
-
-const DEFAULT_METRICS_ENDPOINT_HOST = '127.0.0.1';
-const DEFAULT_METRICS_ENDPOINT_PORT = 9464;
-const DEFAULT_METRICS_ENDPOINT_PATH = '/metrics';
-const DEFAULT_COLLECTOR_SMOKE_TIMEOUT_MS = 8_000;
-const COLLECTOR_SMOKE_METRIC_NAMES = [
-  'opl_provider_ready',
-  'opl_queue_length',
-  'opl_observability_collector_consumption_config',
-];
-
-function firstString(...values: unknown[]) {
-  return values.map(stringValue).find((value) => value !== null) ?? null;
-}
-
-function booleanValue(value: unknown) {
-  return typeof value === 'boolean' ? value : null;
-}
-
-function normalizeMetricsPath(value: string | undefined) {
-  const metricsPath = stringValue(value) ?? DEFAULT_METRICS_ENDPOINT_PATH;
-  return metricsPath.startsWith('/') ? metricsPath : `/${metricsPath}`;
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
+export type {
+  ObservabilityCollectorSmokeOptions,
+  ObservabilityCollectorSmokeReadback,
+  ObservabilityExportFormat,
+  ObservabilityMetricsEndpointHandle,
+  ObservabilityMetricsEndpointOptions,
+  ObservabilityMetricsEndpointReadback,
+} from './observability-export-parts/shared.ts';
 
 function counterRecord(value: unknown) {
   const input = record(value);
@@ -356,10 +235,6 @@ function firstTypedBlockerRef(currentOwnerDelta: JsonRecord, attempt: JsonRecord
     stringList(attempt.typed_blocker_refs)[0],
     stringList(record(attempt.conflict_or_blocker_envelopes).typed_blocker_refs)[0],
   );
-}
-
-function metricValueOrUndefined(value: number) {
-  return Number.isFinite(value) ? value : undefined;
 }
 
 function semanticMetricValues(input: {
@@ -660,15 +535,6 @@ function buildEndpointReadback(input: {
 
 function normalizeCollectorSmokeTimeoutMs(value: number | undefined) {
   return Number.isSafeInteger(value) && (value ?? 0) > 0 ? value as number : DEFAULT_COLLECTOR_SMOKE_TIMEOUT_MS;
-}
-
-function defaultPortForProtocol(protocol: string) {
-  return protocol === 'https:' ? '443' : '80';
-}
-
-function targetForEndpoint(url: URL) {
-  const port = url.port || defaultPortForProtocol(url.protocol);
-  return `${url.hostname}:${port}`;
 }
 
 function collectorEndpointFromUrl(rawEndpoint: string) {
