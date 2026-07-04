@@ -1,0 +1,61 @@
+{
+  "contract_kind": "opl_substrate_provenance_surface_contract.v1",
+  "surface_kind": "opl_substrate_provenance_surface_contract",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "brand_module": "OPL Ledger",
+  "scope": "Framework-owned refs-only substrate provenance surface for project-local artifact graph refs, project-local ledger pointer/hash, claim warnings, annotation-to-source regeneration receipts, and native viewer watch-only descriptors.",
+  "machine_boundary": "This contract records local refs, hashes, warning descriptors, regeneration receipt refs, and watch-only viewer descriptors. It must not import OpenScience runtime/Electron/MCP/AGPL code, read or store artifact bodies, mutate artifacts, write domain truth, create owner receipts, or authorize quality/readiness claims.",
+  "contract_version": "opl-substrate-provenance-surface.v1",
+  "adopted_patterns": [
+    "project_local_artifact_graph_refs",
+    "project_local_ledger_pointer_hash",
+    "claim_warning_descriptor",
+    "annotation_to_source_regeneration_receipt_descriptor",
+    "native_viewer_watch_only_descriptor"
+  ],
+  "forbidden_imports_or_surfaces": [
+    "OpenScience runtime",
+    "OpenScience Electron app",
+    "OpenScience MCP server",
+    "AGPL source code",
+    "new dependency",
+    "generic platform"
+  ],
+  "required_sections": [
+    "project_local_artifact_graph_refs",
+    "project_local_ledger_pointer",
+    "claim_warning_descriptor",
+    "annotation_to_source_regeneration_receipt_descriptor",
+    "native_viewer_watch_only_descriptor",
+    "authority_boundary"
+  ],
+  "authority_boundary": {
+    "opl_owns": [
+      "project_local_ref_projection",
+      "ledger_pointer_hash_transport",
+      "claim_warning_projection",
+      "annotation_regeneration_receipt_ref_projection",
+      "native_viewer_watch_only_projection"
+    ],
+    "domain_agent_owns": [
+      "artifact_body",
+      "artifact_authority",
+      "source_truth_body",
+      "annotation_semantics",
+      "domain_truth",
+      "owner_receipt",
+      "quality_verdict",
+      "readiness_claim"
+    ],
+    "can_read_artifact_body": false,
+    "can_store_artifact_body": false,
+    "can_mutate_artifact_body": false,
+    "can_write_domain_truth": false,
+    "can_create_owner_receipt": false,
+    "can_authorize_quality_verdict": false,
+    "can_claim_domain_ready": false,
+    "can_claim_artifact_ready": false,
+    "can_claim_production_ready": false
+  }
+}
