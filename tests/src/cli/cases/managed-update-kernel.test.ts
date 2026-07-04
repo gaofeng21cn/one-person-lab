@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 
-import { assert, createFakeCodexFixture, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, createFakeCodexFixture, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { computePackageChannelTreeSha256 } from '../../../../src/modules/connect/system-installation/module-package-channel.ts';
 import { writeFakeBookForgeGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 
@@ -13,6 +13,14 @@ const CHANNEL_MANIFEST_LAYER_MEDIA_TYPE = 'application/vnd.onepersonlab.release.
 
 function sha256(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function readJsonFile(filePath: string) {
+  return parseJsonText(fs.readFileSync(filePath, 'utf8'));
+}
+
+function readModuleHeadSha(filePath: string) {
+  return (readJsonFile(filePath) as { source_git: { head_sha: string } }).source_git.head_sha;
 }
 
 function writePackagedModuleFixture(input: {
@@ -137,9 +145,7 @@ function writePackagedModuleFixture(input: {
     fs.cpSync(input.root, previousRoot, { recursive: true });
     fs.writeFileSync(path.join(previousRoot, 'README.md'), `${input.repoName} previous fixture\n`, 'utf8');
     const previousTreeSha = computePackageChannelTreeSha256(previousRoot);
-    const previousMarker = JSON.parse(
-      fs.readFileSync(path.join(input.root, 'opl-runtime-module.json'), 'utf8'),
-    ) as Record<string, unknown>;
+    const previousMarker = readJsonFile(path.join(input.root, 'opl-runtime-module.json')) as Record<string, unknown>;
     const lifecycle = previousMarker.package_channel_lifecycle as {
       previous: { tree_sha256: string };
     };
@@ -696,9 +702,7 @@ exit 2
     assert.equal(output.managed_update.execution.receipt_record.recorded_receipt_count, 1);
     assert.equal(output.managed_update.execution.receipt_record.receipt_refs[0].startsWith('opl://managed-update/capability_packages/apply/'), true);
     assert.equal(fs.existsSync(path.join(stateRoot, 'managed-update-kernel.lock')), false);
-    const receiptLedger = JSON.parse(
-      fs.readFileSync(path.join(stateRoot, 'managed-update-component-receipts.json'), 'utf8'),
-    ) as {
+    const receiptLedger = readJsonFile(path.join(stateRoot, 'managed-update-component-receipts.json')) as {
       receipts: Array<{
         receipt_ref: string;
         component_id: string;
@@ -776,18 +780,15 @@ exit 2
     assert.equal(output.managed_update.authority_boundary.can_silently_update_clean_managed_modules, true);
     assert.equal(output.managed_update.authority_boundary.can_write_domain_truth, false);
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json')),
       'mas-updated-head-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json')),
       'scholarskills-updated-head-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json')),
       'mas-head-sha',
     );
 
@@ -906,8 +907,7 @@ exit 2
   try {
     withCliTimeout('120000', () => runCli(['update', 'apply', '--component', 'capability_packages'], env));
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json')),
       'mas-rollback-current-sha',
     );
 
@@ -932,23 +932,19 @@ exit 2
     assert.equal(rollback.managed_update.components[0].receipt.verify_result, 'passed');
     assert.match(rollback.managed_update.components[0].receipt.rollback_ref ?? '', /^opl:\/\/managed-update\/capability_packages\/rollback\//);
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'med-autoscience', 'opl-runtime-module.json')),
       'mas-head-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(`${moduleEnv.OPL_MODULES_ROOT}/med-autoscience.previous`, 'opl-runtime-module.json')),
       'mas-rollback-current-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(moduleEnv.OPL_MODULES_ROOT, 'mas-scholar-skills', 'opl-runtime-module.json')),
       'scholarskills-head-sha',
     );
     assert.equal(
-      JSON.parse(fs.readFileSync(path.join(`${moduleEnv.OPL_MODULES_ROOT}/mas-scholar-skills.previous`, 'opl-runtime-module.json'), 'utf8'))
-        .source_git.head_sha,
+      readModuleHeadSha(path.join(`${moduleEnv.OPL_MODULES_ROOT}/mas-scholar-skills.previous`, 'opl-runtime-module.json')),
       'scholarskills-rollback-current-sha',
     );
   } finally {
