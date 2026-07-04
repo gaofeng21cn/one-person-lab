@@ -18,6 +18,11 @@ import {
   stringValue,
 } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import {
+  materializeLocalCodexPluginMarketplace,
+  registerLocalCodexPlugin,
+  unregisterLocalCodexPlugin,
+} from './system-installation/codex-plugin-registry.ts';
 
 type AgentPackageSourceKind =
   | 'first_party_managed_cohort'
@@ -274,38 +279,6 @@ function resolveCodexConfigPath(codexHome = resolveCodexHome()) {
 
 function safePathSegment(value: string) {
   return value.replace(/[^A-Za-z0-9._-]/g, '-');
-}
-
-function escapeTomlString(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-function removeTomlTable(text: string, tableHeader: string) {
-  const lines = text.split('\n');
-  const kept: string[] = [];
-  let skipping = false;
-
-  for (const line of lines) {
-    if (/^\[[^\]]+\]/.test(line.trim())) {
-      skipping = line.trim() === tableHeader;
-    }
-    if (!skipping) {
-      kept.push(line);
-    }
-  }
-
-  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
-}
-
-function upsertTomlTable(text: string, tableHeader: string, bodyLines: string[]) {
-  const withoutTable = removeTomlTable(text, tableHeader);
-  const table = [tableHeader, ...bodyLines].join('\n');
-  return `${withoutTable.trimEnd()}\n\n${table}\n`;
-}
-
-function writeJsonFile(filePath: string, value: unknown) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
 function normalizeSourceKind(value: string | null | undefined, manifestUrl: string): AgentPackageSourceKind {
@@ -650,63 +623,6 @@ function copyDirectory(source: string, target: string) {
   fs.cpSync(source, target, { recursive: true });
 }
 
-function refreshSourceSymlink(linkPath: string, targetPath: string) {
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-  fs.rmSync(linkPath, { recursive: true, force: true });
-  fs.symlinkSync(targetPath, linkPath, 'dir');
-}
-
-function registerPhysicalCodexSurface(configPath: string, marketplaceId: string, marketplaceRoot: string, pluginId: string) {
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  let text = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
-  text = upsertTomlTable(text, `[marketplaces.${marketplaceId}]`, [
-    'source_type = "local"',
-    `source = "${escapeTomlString(marketplaceRoot)}"`,
-  ]);
-  text = upsertTomlTable(text, `[plugins."${escapeTomlString(`${pluginId}@${marketplaceId}`)}"]`, [
-    'enabled = true',
-  ]);
-  fs.writeFileSync(configPath, text, 'utf8');
-}
-
-function unregisterPhysicalCodexSurface(configPath: string, marketplaceId: string | null, pluginId: string | null) {
-  if (!marketplaceId || !pluginId || !fs.existsSync(configPath)) {
-    return;
-  }
-  let text = fs.readFileSync(configPath, 'utf8');
-  text = removeTomlTable(text, `[plugins."${escapeTomlString(`${pluginId}@${marketplaceId}`)}"]`);
-  text = removeTomlTable(text, `[marketplaces.${marketplaceId}]`);
-  fs.writeFileSync(configPath, `${text.trimEnd()}\n`, 'utf8');
-}
-
-function writeMarketplaceWrapper(input: {
-  marketplacePath: string;
-  marketplaceId: string;
-  pluginId: string;
-  displayName: string;
-}) {
-  writeJsonFile(input.marketplacePath, {
-    name: input.marketplaceId,
-    interface: {
-      displayName: input.displayName,
-    },
-    plugins: [
-      {
-        name: input.pluginId,
-        source: {
-          source: 'local',
-          path: `./plugins/${input.pluginId}`,
-        },
-        policy: {
-          installation: 'AVAILABLE',
-          authentication: 'ON_INSTALL',
-        },
-        category: 'Productivity',
-      },
-    ],
-  });
-}
-
 function materializePhysicalCodexSurface(
   manifest: AgentPackageManifest,
   dryRun: boolean,
@@ -750,14 +666,16 @@ function materializePhysicalCodexSurface(
 
   if (!dryRun) {
     copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
-    refreshSourceSymlink(paths.marketplacePluginPath!, paths.codexPluginCachePath!);
-    writeMarketplaceWrapper({
-      marketplacePath: paths.marketplacePath,
-      marketplaceId: paths.marketplaceId,
-      pluginId: manifest.plugin_id,
-      displayName: manifest.display_name,
-    });
-    registerPhysicalCodexSurface(paths.codexConfigPath, paths.marketplaceId, paths.marketplaceRoot, manifest.plugin_id);
+    materializeLocalCodexPluginMarketplace({
+      marketplace_id: paths.marketplaceId,
+      plugin_id: manifest.plugin_id,
+      display_name: manifest.display_name,
+      category: 'Productivity',
+    }, paths.codexPluginCachePath!, paths.marketplaceRoot);
+    registerLocalCodexPlugin(paths.codexConfigPath, {
+      marketplace_id: paths.marketplaceId,
+      plugin_id: manifest.plugin_id,
+    }, paths.marketplaceRoot);
   }
 
   return {
@@ -795,7 +713,7 @@ function removePhysicalCodexSurface(
   ].flatMap((value) => value ? [value] : []);
 
   if (!dryRun) {
-    unregisterPhysicalCodexSurface(codexConfigPath, surface?.marketplace_id ?? null, surface?.plugin_id ?? null);
+    unregisterLocalCodexPlugin(codexConfigPath, surface?.marketplace_id ?? null, surface?.plugin_id ?? null);
     for (const pathToRemove of removedPaths) {
       fs.rmSync(pathToRemove, { recursive: true, force: true });
     }
@@ -1117,7 +1035,7 @@ function cleanupPreviousPhysicalSurface(
     && previous.marketplace_id
     && (previous.plugin_id !== current.plugin_id || previous.marketplace_id !== current.marketplace_id)
   ) {
-    unregisterPhysicalCodexSurface(previous.codex_config_path, previous.marketplace_id, previous.plugin_id);
+    unregisterLocalCodexPlugin(previous.codex_config_path, previous.marketplace_id, previous.plugin_id);
   }
 
   for (const oldPath of [previous.codex_plugin_cache_path, previous.marketplace_plugin_path]) {

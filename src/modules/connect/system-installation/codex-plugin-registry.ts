@@ -29,6 +29,20 @@ type CodexFamilyPluginSpec = {
   legacy_standalone_mcp_server_ids: string[];
 };
 
+export type LocalCodexPluginMarketplaceSpec = {
+  marketplace_id: string;
+  plugin_id: string;
+  display_name: string;
+  category: string;
+};
+
+export type LocalCodexPluginMarketplace = {
+  marketplace_root: string;
+  marketplace_path: string;
+  plugin_manifest_path: string;
+  marketplace_plugin_path: string;
+};
+
 export type CodexPluginRegistryItem = {
   module_id: OplModuleId | null;
   pack_id: string;
@@ -295,13 +309,12 @@ function refreshSourceSymlink(linkPath: string, targetPath: string) {
   fs.symlinkSync(targetPath, linkPath, 'dir');
 }
 
-function materializeOplOwnedMarketplace(
-  spec: CodexFamilyPluginSpec,
+export function materializeLocalCodexPluginMarketplace(
+  spec: LocalCodexPluginMarketplaceSpec,
   pluginSourcePath: string,
-  home: string,
-) {
+  marketplaceRoot: string,
+): LocalCodexPluginMarketplace {
   const pluginManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
-  const marketplaceRoot = path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id);
   const marketplacePath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
   const linkPath = path.join(marketplaceRoot, 'plugins', spec.plugin_id);
 
@@ -328,17 +341,23 @@ function materializeOplOwnedMarketplace(
   });
 
   return {
-    marketplaceRoot,
-    marketplacePath,
-    pluginManifestPath,
+    marketplace_root: marketplaceRoot,
+    marketplace_path: marketplacePath,
+    plugin_manifest_path: pluginManifestPath,
+    marketplace_plugin_path: linkPath,
   };
 }
 
-function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, marketplaceRoot: string) {
+export function registerLocalCodexPlugin(
+  configPath: string,
+  spec: Pick<LocalCodexPluginMarketplaceSpec, 'marketplace_id' | 'plugin_id'>,
+  marketplaceRoot: string,
+  removeTables: ((text: string) => { text: string; removed: number }) | null = null,
+) {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   let text = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
-  const standaloneMcpRemoval = removeStandaloneMcpServerTables(text, spec);
-  text = standaloneMcpRemoval.text;
+  const removal = removeTables?.(text) ?? { text, removed: 0 };
+  text = removal.text;
   text = upsertTomlTable(text, `[marketplaces.${spec.marketplace_id}]`, [
     'source_type = "local"',
     `source = "${escapeTomlString(marketplaceRoot)}"`,
@@ -347,7 +366,21 @@ function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, ma
     'enabled = true',
   ]);
   fs.writeFileSync(configPath, text, 'utf8');
-  return standaloneMcpRemoval.removed;
+  return removal.removed;
+}
+
+export function unregisterLocalCodexPlugin(
+  configPath: string,
+  marketplaceId: string | null,
+  pluginId: string | null,
+) {
+  if (!marketplaceId || !pluginId || !fs.existsSync(configPath)) {
+    return;
+  }
+  let text = fs.readFileSync(configPath, 'utf8');
+  text = removeTomlTable(text, `[plugins."${escapeTomlString(`${pluginId}@${marketplaceId}`)}"]`);
+  text = removeTomlTable(text, `[marketplaces.${marketplaceId}]`);
+  fs.writeFileSync(configPath, `${text.trimEnd()}\n`, 'utf8');
 }
 
 export function registerOplFamilyCodexPlugins(
@@ -392,8 +425,14 @@ export function registerOplFamilyCodexPlugins(
     }
 
     const pluginSourcePath = path.dirname(path.dirname(pluginManifestPath));
-    const marketplace = materializeOplOwnedMarketplace(spec, pluginSourcePath, home);
-    removedStandaloneMcpServers += registerCodexPlugin(codexConfigPath, spec, marketplace.marketplaceRoot);
+    const marketplaceRoot = path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id);
+    const marketplace = materializeLocalCodexPluginMarketplace(spec, pluginSourcePath, marketplaceRoot);
+    removedStandaloneMcpServers += registerLocalCodexPlugin(
+      codexConfigPath,
+      spec,
+      marketplace.marketplace_root,
+      (text) => removeStandaloneMcpServerTables(text, spec),
+    );
     items.push({
       module_id: spec.module_id,
       pack_id: spec.pack_id,
@@ -401,9 +440,9 @@ export function registerOplFamilyCodexPlugins(
       plugin_id: spec.plugin_id,
       repo_path: repoPath,
       plugin_source_path: pluginSourcePath,
-      plugin_manifest_path: marketplace.pluginManifestPath,
-      marketplace_root: marketplace.marketplaceRoot,
-      marketplace_path: marketplace.marketplacePath,
+      plugin_manifest_path: marketplace.plugin_manifest_path,
+      marketplace_root: marketplace.marketplace_root,
+      marketplace_path: marketplace.marketplace_path,
       status: 'registered',
       ownership_kind: spec.ownership_kind,
       distribution_role: spec.distribution_role,
