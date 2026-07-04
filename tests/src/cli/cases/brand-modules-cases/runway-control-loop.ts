@@ -769,7 +769,7 @@ test('bin/opl routes Runway control-loop sibling commands into OPL CLI', () => {
     );
 
     assert.equal(result.status, 0, result.stderr);
-    const output = parseJsonText(result.stdout);
+    const output = parseJsonText(result.stdout) as Record<string, unknown>;
     assert.equal(typeof output[key], 'object');
   }
 });

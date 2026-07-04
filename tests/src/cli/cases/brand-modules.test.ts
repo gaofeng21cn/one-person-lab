@@ -273,13 +273,26 @@ test('Capability Invocation OS lifecycle folds back into existing Pack Console C
   const contracts = loadFrameworkContracts(repoRoot);
   const rawSurfaces = parseJsonText(
     fs.readFileSync(path.join(repoRoot, 'contracts/opl-framework/brand-module-surfaces.json'), 'utf8'),
-  );
+  ) as {
+    modules: Array<{
+      capability_invocation_lifecycle: {
+        layers: Array<{
+          fail_closed_on: string[];
+          forbidden_claims: string[];
+          layer_id: string;
+          owner_modules: string[];
+        }>;
+        status: string;
+      };
+      module_id: string;
+    }>;
+  };
   const surfaces = Object.fromEntries(
     contracts.brandModuleSurfaces.modules.map((entry) => [entry.module_id, entry]),
   );
   const rawSurfaceByModule = Object.fromEntries(
-    rawSurfaces.modules.map((entry: { module_id: string }) => [entry.module_id, entry]),
-  );
+    rawSurfaces.modules.map((entry) => [entry.module_id, entry]),
+  ) as Record<string, (typeof rawSurfaces.modules)[number]>;
   const packInspect = runCli(['pack', 'inspect']).opl_pack_inspect;
   const runwayInspect = runCli(['runway', 'inspect']).opl_runway_inspect;
 
@@ -702,9 +715,12 @@ test('bin/opl routes module-owned brand commands into the OPL CLI instead of Cod
     );
 
     assert.equal(result.status, 0, result.stderr);
-    const output = parseJsonText(result.stdout);
+    const output = parseJsonText(result.stdout) as Record<string, { status: string }> & {
+      brand_module_surface: { surface_kind: string };
+    };
+    const moduleStatus = output[`opl_${moduleId.replaceAll('-', '_')}_status`];
     assert.equal(output.brand_module_surface.surface_kind, surfaceKind);
-    assert.equal(output[`opl_${moduleId.replaceAll('-', '_')}_status`].status, 'valid');
+    assert.equal(moduleStatus.status, 'valid');
   }
 });
 
@@ -724,7 +740,13 @@ test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of C
   );
 
   assert.equal(result.status, 0, result.stderr);
-  const output = parseJsonText(result.stdout);
+  const output = parseJsonText(result.stdout) as {
+    foundry_agent: {
+      agent_id: string;
+      foundry_command_surface: string;
+      surface_kind: string;
+    };
+  };
   assert.equal(output.foundry_agent.surface_kind, 'opl_foundry_agent_series_agent_inspect');
   assert.equal(output.foundry_agent.agent_id, 'mas');
   assert.equal(output.foundry_agent.foundry_command_surface, 'opl foundry agents inspect mas');
