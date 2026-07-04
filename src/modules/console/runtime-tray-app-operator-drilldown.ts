@@ -87,6 +87,39 @@ import {
   buildDeveloperModeAgentLabRepairRouteReadModel,
 } from '../foundry-lab/index.ts';
 
+const APP_OPERATOR_EVIDENCE_ATTEMPT_LIMIT = 25;
+const APP_OPERATOR_EVIDENCE_ATTEMPT_DISTINCT_KEY_LIMIT = 50;
+
+function operatorEvidenceAttemptKey(attempt: JsonRecord) {
+  const workspaceLocator = record(attempt.workspace_locator);
+  return [
+    stringValue(attempt.domain_id),
+    stringValue(attempt.stage_id),
+    stringValue(workspaceLocator.study_id),
+    stringValue(workspaceLocator.quest_id),
+  ].filter(Boolean).join(':') || stringValue(attempt.stage_attempt_id) || 'unknown-attempt';
+}
+
+function selectOperatorEvidenceAttempts(rawAttempts: JsonRecord[]) {
+  if (rawAttempts.length <= APP_OPERATOR_EVIDENCE_ATTEMPT_LIMIT) {
+    return rawAttempts;
+  }
+  const selected: JsonRecord[] = [];
+  const selectedKeys = new Set<string>();
+  for (const attempt of rawAttempts) {
+    const key = operatorEvidenceAttemptKey(attempt);
+    if (selectedKeys.has(key)) {
+      continue;
+    }
+    selected.push(attempt);
+    selectedKeys.add(key);
+    if (selected.length >= APP_OPERATOR_EVIDENCE_ATTEMPT_DISTINCT_KEY_LIMIT) {
+      break;
+    }
+  }
+  return selected;
+}
+
 export function buildAppOperatorDrilldown(input: {
   stageAttemptWorkbench: JsonRecord;
   providerInspection?: JsonRecord;
@@ -99,7 +132,8 @@ export function buildAppOperatorDrilldown(input: {
 }) {
   const attempts = recordList(input.stageAttemptWorkbench.attempts);
   const evidenceAttempts = recordList(input.stageAttemptWorkbench.evidence_attempts);
-  const operatorEvidenceAttempts = evidenceAttempts.length > 0 ? evidenceAttempts : attempts;
+  const rawOperatorEvidenceAttempts = evidenceAttempts.length > 0 ? evidenceAttempts : attempts;
+  const operatorEvidenceAttempts = selectOperatorEvidenceAttempts(rawOperatorEvidenceAttempts);
   const truePathProofs = attemptTruePathProofs(operatorEvidenceAttempts);
   const routeRefs = routeGraphRefs(attempts);
   const decisionRefs = decisionMapRefs(attempts);

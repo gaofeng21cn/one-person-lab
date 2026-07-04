@@ -65,6 +65,8 @@ type StageAttemptProjection = ReturnType<typeof attemptProjection>;
 
 const EMPTY_EFFECTIVE_CURRENT_CONTEXT = buildEffectiveCurrentContextPacket([]);
 const EMPTY_FAMILY_STALL_LINEAGE = buildFamilyStallLineage([]);
+const WORKBENCH_EVIDENCE_ATTEMPT_LIMIT = 25;
+const WORKBENCH_DISTINCT_EVIDENCE_ATTEMPT_LIMIT = 50;
 
 function parseRecord(value: string): JsonRecord {
   try {
@@ -110,6 +112,36 @@ function hasEntries(value: unknown) {
 
 function stringListFrom(value: unknown) {
   return Array.isArray(value) ? stringList(value) : [];
+}
+
+function evidenceAttemptKey(attempt: StageAttemptProjection) {
+  const workspaceLocator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
+  return [
+    optionalString(attempt.domain_id),
+    optionalString(attempt.stage_id),
+    optionalString(workspaceLocator.study_id),
+    optionalString(workspaceLocator.quest_id),
+  ].filter(Boolean).join(':') || optionalString(attempt.stage_attempt_id) || 'unknown-attempt';
+}
+
+function selectEvidenceAttempts(attempts: StageAttemptProjection[]) {
+  if (attempts.length <= WORKBENCH_EVIDENCE_ATTEMPT_LIMIT) {
+    return attempts;
+  }
+  const selected: StageAttemptProjection[] = [];
+  const selectedKeys = new Set<string>();
+  for (const attempt of attempts) {
+    const key = evidenceAttemptKey(attempt);
+    if (selectedKeys.has(key)) {
+      continue;
+    }
+    selected.push(attempt);
+    selectedKeys.add(key);
+    if (selected.length >= WORKBENCH_DISTINCT_EVIDENCE_ATTEMPT_LIMIT) {
+      break;
+    }
+  }
+  return selected;
 }
 
 function stringRefsFromUnknown(value: unknown) {
@@ -800,9 +832,10 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
         : deriveCurrentControlStateForAttempt(db, attempt.stage_attempt_id),
     }));
     const attempts = evidenceAttemptsWithControlState.slice(0, 25);
+    const projectedEvidenceAttempts = selectEvidenceAttempts(evidenceAttemptsWithControlState);
     const metadata = buildWorkbenchMetadata(attempts);
-    const effectiveCurrentContext = buildEffectiveCurrentContextPacket(evidenceAttemptsWithControlState);
-    const familyStallLineage = buildFamilyStallLineage(evidenceAttemptsWithControlState);
+    const effectiveCurrentContext = buildEffectiveCurrentContextPacket(projectedEvidenceAttempts);
+    const familyStallLineage = buildFamilyStallLineage(projectedEvidenceAttempts);
     return {
       surface_kind: 'opl_stage_attempt_workbench',
       availability: 'available',
@@ -828,7 +861,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       effective_current_context: effectiveCurrentContext,
       family_stall_lineage: familyStallLineage,
       attempts,
-      evidence_attempts: evidenceAttemptsWithControlState,
+      evidence_attempts: projectedEvidenceAttempts,
       evidence_attempt_count: evidenceAttemptsWithControlState.length,
       attempt_list_limit: 25,
       source_refs: sourceRefs(queueDb),
