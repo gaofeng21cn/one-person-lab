@@ -5,19 +5,24 @@ function createExternalSkillsFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-source-'));
   const skillsRoot = path.join(root, 'skills');
   fs.mkdirSync(skillsRoot, { recursive: true });
+  fs.writeFileSync(path.join(root, 'LICENSE'), 'MIT License\n', 'utf8');
 
-  const writeSkill = (skillId: string, description: string, extra = '') => {
+  const writeSkill = (skillId: string, description: string, extraFrontmatter = '', extraBody = '') => {
     const skillRoot = path.join(skillsRoot, skillId);
     fs.mkdirSync(path.join(skillRoot, 'references'), { recursive: true });
+    if (skillId === 'scanpy') {
+      fs.mkdirSync(path.join(skillRoot, 'scripts'), { recursive: true });
+      fs.writeFileSync(path.join(skillRoot, 'scripts', 'run.py'), 'print("scanpy")\n', 'utf8');
+    }
     fs.writeFileSync(
       path.join(skillRoot, 'SKILL.md'),
-      `---\nname: ${skillId}\ndescription: ${description}\nrequired_environment_variables: [{\"name\":\"TEST_API_KEY\"}]\n---\n\n# ${skillId}\n${extra}\n`,
+      `---\nname: ${skillId}\ndescription: ${description}\nrequired_environment_variables: [{\"name\":\"TEST_API_KEY\"}]\n${extraFrontmatter}---\n\n# ${skillId}\n${extraBody}\n`,
       'utf8',
     );
     fs.writeFileSync(path.join(skillRoot, 'references', 'guide.md'), `# ${skillId} guide\n`, 'utf8');
   };
 
-  writeSkill('scanpy', 'Standard single-cell RNA-seq analysis pipeline.');
+  writeSkill('scanpy', 'Standard single-cell RNA-seq analysis pipeline.', 'keywords: ["single-cell","omics","scanpy"]\nallowed-tools: ["python"]\n');
   writeSkill('scientific-writing', 'Scientific manuscript writing with IMRAD and verified citations.');
   return root;
 }
@@ -71,7 +76,16 @@ test('connect external-skills list exposes approved source and skill cards', () 
           trigger_policy: ExternalSkillTriggerPolicy;
           skill_count: number;
         }>;
-        skills: Array<{ skill_id: string; description: string; content_sha256: string }>;
+        skills: Array<{
+          skill_id: string;
+          description: string;
+          content_sha256: string;
+          source_license: string;
+          category: string;
+          keywords: string[];
+          risk_flags: string[];
+          has_scripts: boolean;
+        }>;
         trigger_policy: ExternalSkillTriggerPolicy;
         authority_boundary: {
           selective_sync_only: boolean;
@@ -100,6 +114,12 @@ test('connect external-skills list exposes approved source and skill cards', () 
       ['scanpy', 'scientific-writing'],
     );
     assert.match(output.opl_connect_external_skills.skills[0].content_sha256, /^[a-f0-9]{64}$/);
+    assert.equal(output.opl_connect_external_skills.skills[0].source_license, 'MIT');
+    assert.equal(output.opl_connect_external_skills.skills[0].category, 'omics');
+    assert.equal(output.opl_connect_external_skills.skills[0].keywords.includes('single-cell'), true);
+    assert.equal(output.opl_connect_external_skills.skills[0].risk_flags.includes('executable_script_present'), true);
+    assert.equal(output.opl_connect_external_skills.skills[0].risk_flags.includes('specialist_runtime_environment_review'), true);
+    assert.equal(output.opl_connect_external_skills.skills[0].has_scripts, true);
     assert.deepEqual(output.opl_connect_external_skills.authority_boundary, {
       read_only: true,
       selective_sync_only: true,
@@ -236,6 +256,10 @@ test('connect external-skills search and inspect return selected skill metadata'
           skill_id: string;
           content_sha256: string;
           has_references: boolean;
+          source_license: string;
+          category: string;
+          keywords: string[];
+          risk_flags: string[];
           required_environment_variables: string[];
         };
         sync_command_ref: string;
@@ -247,11 +271,67 @@ test('connect external-skills search and inspect return selected skill metadata'
     assert.equal(inspect.opl_connect_external_skills.skill.skill_id, 'scanpy');
     assert.match(inspect.opl_connect_external_skills.skill.content_sha256, /^[a-f0-9]{64}$/);
     assert.equal(inspect.opl_connect_external_skills.skill.has_references, true);
+    assert.equal(inspect.opl_connect_external_skills.skill.source_license, 'MIT');
+    assert.equal(inspect.opl_connect_external_skills.skill.category, 'omics');
+    assert.equal(inspect.opl_connect_external_skills.skill.keywords.includes('scanpy'), true);
+    assert.equal(inspect.opl_connect_external_skills.skill.risk_flags.includes('external_credentials_or_api_key_declared'), true);
     assert.deepEqual(inspect.opl_connect_external_skills.skill.required_environment_variables, ['TEST_API_KEY']);
     assert.match(inspect.opl_connect_external_skills.sync_command_ref, /connect external-skills sync/);
     assertExternalSkillTriggerPolicy(inspect.opl_connect_external_skills.trigger_policy);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
+  }
+});
+
+test('connect external-skills accepts source slash skill selector for inspect and sync', () => {
+  const sourceRoot = createExternalSkillsFixture();
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-selector-workspace-'));
+  try {
+    const inspect = runCli([
+      'connect',
+      'external-skills',
+      'inspect',
+      '--source-root',
+      sourceRoot,
+      '--source',
+      'kdense-scientific-agent-skills',
+      '--skill',
+      'kdense/scanpy',
+    ]) as {
+      opl_connect_external_skills: {
+        source_id: string;
+        skill: { skill_id: string };
+      };
+    };
+    assert.equal(inspect.opl_connect_external_skills.source_id, 'kdense-scientific-agent-skills');
+    assert.equal(inspect.opl_connect_external_skills.skill.skill_id, 'scanpy');
+
+    const sync = runCli([
+      'connect',
+      'external-skills',
+      'sync',
+      '--source-root',
+      sourceRoot,
+      '--skill',
+      'kdense/scanpy',
+      '--scope',
+      'workspace',
+      '--target-workspace',
+      workspaceRoot,
+    ]) as {
+      opl_connect_external_skills: {
+        source_id: string;
+        skill: { skill_id: string; risk_flags: string[] };
+        target_skill_root: string;
+      };
+    };
+    assert.equal(sync.opl_connect_external_skills.source_id, 'kdense-scientific-agent-skills');
+    assert.equal(sync.opl_connect_external_skills.skill.skill_id, 'scanpy');
+    assert.equal(sync.opl_connect_external_skills.skill.risk_flags.includes('specialist_runtime_environment_review'), true);
+    assert.equal(sync.opl_connect_external_skills.target_skill_root, path.join(workspaceRoot, '.codex', 'skills', 'scanpy'));
+  } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 
@@ -306,12 +386,20 @@ test('connect external-skills sync copies only the selected skill into workspace
       receipt_kind: string;
       sync_policy: string;
       skill_content_sha256: string;
+      skill_keywords: string[];
+      skill_category: string;
+      skill_risk_flags: string[];
+      source_license: string;
       trigger_policy: ExternalSkillTriggerPolicy;
       authority_boundary: { can_install_all_skills_by_default: boolean };
     };
     assert.equal(receipt.receipt_kind, 'opl_connect_external_skill_sync_receipt');
     assert.equal(receipt.sync_policy, 'single_skill_selected_by_user_or_mas_route');
     assert.equal(receipt.skill_content_sha256, synced.skill.content_sha256);
+    assert.equal(receipt.skill_keywords.includes('scanpy'), true);
+    assert.equal(receipt.skill_category, 'omics');
+    assert.equal(receipt.skill_risk_flags.includes('executable_script_present'), true);
+    assert.equal(receipt.source_license, 'MIT');
     assertExternalSkillTriggerPolicy(receipt.trigger_policy);
     assert.equal(receipt.authority_boundary.can_install_all_skills_by_default, false);
   } finally {

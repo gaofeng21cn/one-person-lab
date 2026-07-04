@@ -166,6 +166,37 @@ function normalizeExternalSkillSelectionArgs(args: string[]) {
   return args.map((arg) => (arg === '--skill-id' ? '--skill' : arg));
 }
 
+function canonicalExternalSkillSourceSelector(value: string) {
+  return ['kdense', 'k-dense', 'K-Dense-AI/scientific-agent-skills', 'kdense-scientific-agent-skills'].includes(value)
+    ? 'kdense-scientific-agent-skills'
+    : value;
+}
+
+function normalizeExternalSkillSelector(rawSkill: string, rawSource: unknown, spec: CommandSpec) {
+  const skill = rawSkill.trim();
+  const source = readOptionalString(rawSource) ?? undefined;
+  if (!skill.includes('/')) {
+    return { source, skill };
+  }
+  const [selectorSource, selectorSkill, ...rest] = skill.split('/');
+  if (!selectorSource || !selectorSkill || rest.length > 0) {
+    return { source, skill };
+  }
+  if (
+    source
+    && canonicalExternalSkillSourceSelector(source) !== canonicalExternalSkillSourceSelector(selectorSource)
+  ) {
+    throw buildUsageError('connect external-skills selector source conflicts with --source.', spec, {
+      selector_source: selectorSource,
+      source,
+    });
+  }
+  return {
+    source: source ?? selectorSource,
+    skill: selectorSkill,
+  };
+}
+
 function parseExternalSkillsInspectArgs(args: string[], spec: CommandSpec): ExternalSkillsInspectArgs {
   const parsed = parseRegisteredCommandOptions(
     'connect external-skills inspect',
@@ -178,11 +209,12 @@ function parseExternalSkillsInspectArgs(args: string[], spec: CommandSpec): Exte
       required: ['--skill'],
     });
   }
+  const selector = normalizeExternalSkillSelector(skill, parsed.source, spec);
   return {
-    source: readOptionalString(parsed.source) ?? undefined,
+    source: selector.source,
     sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
     registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
-    skill,
+    skill: selector.skill,
   };
 }
 
@@ -204,11 +236,12 @@ function parseExternalSkillsSyncArgs(args: string[], spec: CommandSpec): Externa
       required: ['--scope workspace|quest'],
     });
   }
+  const selector = normalizeExternalSkillSelector(skill, parsed.source, spec);
   return {
-    source: readOptionalString(parsed.source) ?? undefined,
+    source: selector.source,
     sourceRoot: readOptionalString(parsed['source-root']) ?? undefined,
     registryRoot: readOptionalString(parsed['registry-root']) ?? undefined,
-    skill,
+    skill: selector.skill,
     scope,
     targetWorkspace: readOptionalString(parsed['target-workspace']) ?? undefined,
     targetQuest: readOptionalString(parsed['target-quest']) ?? undefined,
@@ -589,10 +622,11 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect external-skills inspect': {
-      usage: 'opl connect external-skills inspect --skill <skill_id> [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
+      usage: 'opl connect external-skills inspect --skill <skill_id|source_id/skill_id> [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
       summary: 'Inspect one external scientific skill card before syncing it into a workspace or quest.',
       examples: [
         'opl connect external-skills inspect --skill scanpy --source kdense --json',
+        'opl connect external-skills inspect --skill kdense/scanpy --json',
       ],
       group: 'connect',
       help_surface: 'default',
@@ -605,7 +639,7 @@ export function buildConnectCommandSpecs(
             name: 'skill',
             flag: '--skill',
             value_kind: 'string',
-            summary: 'External skill directory id.',
+            summary: 'External skill directory id, or source_id/skill_id selector.',
             required: true,
           },
         ],
@@ -619,10 +653,11 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect external-skills sync': {
-      usage: 'opl connect external-skills sync --skill <skill_id> --scope <workspace|quest> [--target-workspace <path>|--target-quest <path>|--target-root <path>] [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
+      usage: 'opl connect external-skills sync --skill <skill_id|source_id/skill_id> --scope <workspace|quest> [--target-workspace <path>|--target-quest <path>|--target-root <path>] [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
       summary: 'Selectively sync one approved external scientific skill into a workspace or quest Codex discovery directory.',
       examples: [
         'opl connect external-skills sync --skill scanpy --source kdense --scope workspace --target-workspace /path/to/workspace --json',
+        'opl connect external-skills sync --skill kdense/scanpy --scope quest --target-quest /path/to/quest --json',
       ],
       group: 'connect',
       help_surface: 'default',
@@ -635,7 +670,7 @@ export function buildConnectCommandSpecs(
             name: 'skill',
             flag: '--skill',
             value_kind: 'string',
-            summary: 'External skill directory id.',
+            summary: 'External skill directory id, or source_id/skill_id selector.',
             required: true,
           },
           {

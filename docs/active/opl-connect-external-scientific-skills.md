@@ -23,8 +23,8 @@ opl connect external-skills sources add --source kdense --repo https://github.co
 opl connect external-skills list --source-root <scientific-agent-skills-checkout> --json
 opl connect external-skills list --registry-root <workspace-root> --json
 opl connect external-skills search --query "single cell RNA-seq" --source kdense --source-root <path> --json
-opl connect external-skills inspect --skill scanpy --source kdense --source-root <path> --json
-opl connect external-skills sync --skill scanpy --scope workspace --target-workspace <workspace-root> --source-root <path> --json
+opl connect external-skills inspect --skill kdense/scanpy --source-root <path> --json
+opl connect external-skills sync --skill kdense/scanpy --scope workspace --target-workspace <workspace-root> --source-root <path> --json
 ```
 
 `sources add` 写入 OPL Connect source registry，默认位置是：
@@ -45,8 +45,10 @@ external skill 写入：
 
 同步时会在目标 skill 目录写入 `.opl-install-receipt.json`，记录 source、
 pin、选中 Skill 的 `content_sha256`、target scope、trigger policy 和
-no-authority boundary。该 fingerprint 绑定实际同步的 Skill 目录内容；本地
-checkout 路径只作为定位信息，不作为可复现证据。
+no-authority boundary。Skill card 同时暴露 `source_license`、`category`、
+`keywords` 和 `risk_flags`：这些字段用于发现、审阅和策略判断，不把外部
+Skill 变成 MAS 默认能力或 domain authority。该 fingerprint 绑定实际同步的
+Skill 目录内容；本地 checkout 路径只作为定位信息，不作为可复现证据。
 
 ## MAS 使用方式
 

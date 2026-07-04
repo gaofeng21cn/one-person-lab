@@ -41,9 +41,13 @@ type SkillCard = {
   name: string;
   description: string;
   source_path: string;
+  source_license: string | null;
   content_sha256: string;
   has_references: boolean;
   has_scripts: boolean;
+  keywords: string[];
+  risk_flags: string[];
+  category: string;
   required_environment_variables: string[];
   allowed_tools: string[];
 };
@@ -263,6 +267,20 @@ function digestDirectory(root: string) {
   return hash.digest('hex');
 }
 
+function detectSourceLicense(sourceRoot: string) {
+  const licenseFile = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'COPYING']
+    .map((fileName) => path.join(sourceRoot, fileName))
+    .find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+  if (!licenseFile) return null;
+  const licenseText = readTextIfPresent(licenseFile).slice(0, 2000).toLowerCase();
+  if (licenseText.includes('mit license')) return 'MIT';
+  if (licenseText.includes('apache license')) return 'Apache';
+  if (licenseText.includes('bsd license')) return 'BSD';
+  if (licenseText.includes('gnu general public license')) return 'GPL';
+  if (licenseText.includes('creative commons')) return 'Creative Commons';
+  return path.basename(licenseFile);
+}
+
 function firstYamlString(frontmatter: string, key: string) {
   const match = frontmatter.match(new RegExp(`^${key}:\\s*(.*)$`, 'm'));
   if (!match) return '';
@@ -290,6 +308,14 @@ function extractStringList(frontmatter: string, key: string) {
   return [lineValue];
 }
 
+function parseYamlListBlock(frontmatter: string, key: string) {
+  const match = frontmatter.match(new RegExp(`^${key}:\\s*\\n((?:\\s+-\\s+.*\\n?)+)`, 'm'));
+  if (!match) return [];
+  return match[1].split('\n')
+    .map((line) => line.trim().replace(/^-\s+/, '').trim().replace(/^["']|["']$/g, ''))
+    .filter(Boolean);
+}
+
 function extractRequiredEnvironmentVariables(frontmatter: string) {
   const lineValue = firstYamlString(frontmatter, 'required_environment_variables');
   if (!lineValue.startsWith('[')) return [];
@@ -313,6 +339,52 @@ function assertSafeSkillId(skill: string) {
   return skillId;
 }
 
+function uniqueSorted(values: string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+function inferSkillCategory(skillId: string, name: string, description: string) {
+  const haystack = `${skillId} ${name} ${description}`.toLowerCase();
+  const categories: Array<[string, string[]]> = [
+    ['omics', ['single-cell', 'scrna', 'rna-seq', 'rnaseq', 'scanpy', 'deseq', 'pathway', 'omics']],
+    ['clinical_ai', ['pyhealth', 'clinical decision', 'treatment', 'ehr', 'mimic']],
+    ['workflow_compute', ['nextflow', 'modal', 'hpc', 'cloud', 'pipeline']],
+    ['chemistry', ['rdkit', 'molecule', 'compound', 'cheminformatics']],
+    ['literature', ['literature', 'paper', 'citation', 'pubmed', 'doi', 'review']],
+    ['visualization', ['visualization', 'plot', 'matplotlib', 'seaborn', 'schematic', 'infographic', 'figure']],
+    ['statistics', ['statistical', 'statistics', 'power', 'experimental design', 'statsmodels', 'eda']],
+    ['writing', ['writing', 'manuscript', 'venue', 'template']],
+    ['database', ['database', 'lookup', 'api', 'clinicaltrials']],
+  ];
+  return categories.find(([, needles]) => needles.some((needle) => haystack.includes(needle)))?.[0] ?? 'general_scientific_skill';
+}
+
+function inferSkillKeywords(skillId: string, name: string, description: string, frontmatter: string) {
+  const frontmatterKeywords = [
+    ...extractStringList(frontmatter, 'keywords'),
+    ...parseYamlListBlock(frontmatter, 'keywords'),
+    ...extractStringList(frontmatter, 'tags'),
+    ...parseYamlListBlock(frontmatter, 'tags'),
+  ];
+  const lexical = tokenize(`${skillId} ${name} ${description}`)
+    .filter((token) => token.length >= 3)
+    .filter((token) => !['and', 'the', 'with', 'for', 'from', 'using', 'into', 'standard'].includes(token));
+  return uniqueSorted([...frontmatterKeywords, ...lexical]).slice(0, 30);
+}
+
+function inferRiskFlags(card: Pick<SkillCard, 'skill_id' | 'name' | 'description' | 'has_scripts' | 'required_environment_variables' | 'allowed_tools'>) {
+  const haystack = `${card.skill_id} ${card.name} ${card.description}`.toLowerCase();
+  const flags: string[] = [];
+  if (card.required_environment_variables.length > 0) flags.push('external_credentials_or_api_key_declared');
+  if (card.has_scripts) flags.push('executable_script_present');
+  if (card.allowed_tools.length > 0) flags.push('tool_allowlist_declared');
+  if (/(modal|cloud|hpc|gpu|remote|cluster)/.test(haystack)) flags.push('cloud_or_remote_compute_review');
+  if (/(nextflow|scanpy|deseq|pydeseq|rdkit|pyhealth|statsmodels)/.test(haystack)) flags.push('specialist_runtime_environment_review');
+  if (/(database|api|pubmed|clinicaltrials|semantic scholar|openalex|crossref)/.test(haystack)) flags.push('external_database_or_api_review');
+  if (/(clinical|patient|ehr|mimic|health)/.test(haystack)) flags.push('sensitive_or_clinical_data_policy_review');
+  return flags.length > 0 ? uniqueSorted(flags) : ['no_declared_runtime_risk'];
+}
+
 function readSkillCard(sourceRoot: string, skillId: string): SkillCard | null {
   const safeSkillId = assertSafeSkillId(skillId);
   const skillRoot = path.join(sourceRoot, 'skills', safeSkillId);
@@ -321,16 +393,23 @@ function readSkillCard(sourceRoot: string, skillId: string): SkillCard | null {
   const markdown = readTextIfPresent(skillPath);
   const frontmatter = extractFrontmatter(markdown);
   const name = firstYamlString(frontmatter, 'name') || safeSkillId;
-  return {
+  const baseCard = {
     skill_id: safeSkillId,
     name,
     description: firstYamlString(frontmatter, 'description'),
     source_path: skillRoot,
+    source_license: detectSourceLicense(sourceRoot),
     content_sha256: digestDirectory(skillRoot),
     has_references: fs.existsSync(path.join(skillRoot, 'references')),
     has_scripts: fs.existsSync(path.join(skillRoot, 'scripts')),
     required_environment_variables: extractRequiredEnvironmentVariables(frontmatter),
     allowed_tools: extractStringList(frontmatter, 'allowed-tools'),
+  };
+  return {
+    ...baseCard,
+    keywords: inferSkillKeywords(safeSkillId, name, baseCard.description, frontmatter),
+    risk_flags: inferRiskFlags(baseCard),
+    category: inferSkillCategory(safeSkillId, name, baseCard.description),
   };
 }
 
@@ -348,7 +427,7 @@ function tokenize(value: string) {
 }
 
 function scoreSkill(card: SkillCard, query: string) {
-  const haystack = `${card.skill_id} ${card.name} ${card.description}`.toLowerCase();
+  const haystack = `${card.skill_id} ${card.name} ${card.description} ${card.category} ${card.keywords.join(' ')} ${card.risk_flags.join(' ')}`.toLowerCase();
   return tokenize(query).reduce((score, token) => {
     if (card.skill_id.toLowerCase() === token || card.name.toLowerCase() === token) return score + 10;
     if (card.skill_id.toLowerCase().includes(token)) return score + 6;
@@ -522,6 +601,10 @@ export function runOplConnectExternalSkillsSync(input: ExternalSkillSyncInput) {
     source_root: source.source_root,
     skill_content_sha256: card.content_sha256,
     skill_id: skillId,
+    skill_keywords: card.keywords,
+    skill_category: card.category,
+    skill_risk_flags: card.risk_flags,
+    source_license: card.source_license,
     target_scope: input.scope,
     target_root: targetRoot,
     skill_root: targetSkillRoot,
