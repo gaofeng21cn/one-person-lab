@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
 import { familyRuntimeEnv } from '../family-runtime-mas-domain-route-helpers.ts';
 
 test('family-runtime hydrates MAS publication aftercare owner route refs without MAS runtime ownership', () => {
@@ -75,7 +75,7 @@ JSON
     const task = queue.family_runtime_queue.tasks[0];
     const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot));
     const attempt = inspected.family_runtime_task.stage_attempts[0];
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
@@ -189,7 +189,7 @@ JSON
     const task = queue.family_runtime_queue.tasks[0];
     const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot));
     const attempt = inspected.family_runtime_task.stage_attempts[0];
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
@@ -288,7 +288,7 @@ JSON
     const task = queue.family_runtime_queue.tasks[0];
     const inspected = runCli(['family-runtime', 'queue', 'inspect', task.task_id], familyRuntimeEnv(stateRoot));
     const attempt = inspected.family_runtime_task.stage_attempts[0];
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'blocked');

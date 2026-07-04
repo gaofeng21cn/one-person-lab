@@ -1,4 +1,4 @@
-import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, parseJsonText, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 import { familyRuntimeEnv, jsString, writeJsonEmitterScript, writeNodeScript } from './family-runtime-binding-intake-helpers.ts';
 
 test('family-runtime hydrate consumes MAS scaleout guarded apply tasks as domain-owned exports', () => {
@@ -211,7 +211,7 @@ process.stdout.write(JSON.stringify({
       first.family_runtime_tick.dispatches[0].task_id,
     ], env);
     const attempts = task.family_runtime_task.stage_attempts;
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
 
     assert.equal(updated.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(updated.family_runtime_tick.hydration.requeued_count, 1);
@@ -361,7 +361,7 @@ process.stdout.write(JSON.stringify({
     const refreshed = runCli(['family-runtime', 'queue', 'inspect', deadLetterTask.task_id], env);
     const task = refreshed.family_runtime_task.task;
     const events = refreshed.family_runtime_task.events;
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
 
     assert.equal(updatedOwner.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(updatedOwner.family_runtime_tick.hydration.requeued_count, 1);

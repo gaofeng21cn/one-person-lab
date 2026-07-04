@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, shellSingleQuote, test } from '../helpers.ts';
 import {
   appendPaperAutonomyRecoveryObligation,
   appendPaperAutonomyRecoveryObligationStoreJsonl,
@@ -369,8 +369,8 @@ process.stdout.write(JSON.stringify({
     const consumed = first.exports[0].paper_autonomy_supervisor_decision_request_consumed[0];
     const obligationLedger = consumed.ledger_paths.obligation_ledger_path;
     const decisionLedger = consumed.ledger_paths.decision_ledger_path;
-    const obligationEntries = fs.readFileSync(obligationLedger, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-    const decisionEntries = fs.readFileSync(decisionLedger, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    const obligationEntries = fs.readFileSync(obligationLedger, 'utf8').trim().split('\n').map((line) => parseJsonText(line) as any);
+    const decisionEntries = fs.readFileSync(decisionLedger, 'utf8').trim().split('\n').map((line) => parseJsonText(line) as any);
 
     assert.equal(first.enqueued_count, 1);
     assert.equal(first.blocked_count, 0);
@@ -681,7 +681,7 @@ process.stdout.write(JSON.stringify({
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const task = queue.family_runtime_queue.tasks[0];
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');

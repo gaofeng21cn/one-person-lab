@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
 import { createDispatchFixture, familyRuntimeEnv } from '../family-runtime-mas-domain-route-helpers.ts';
 
 test('family-runtime tick hydrates MAS domain route pending tasks before dispatch', () => {
@@ -51,7 +51,7 @@ JSON
     }));
     const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
     const notifications = runCli(['family-runtime', 'notify', 'list'], familyRuntimeEnv(stateRoot));
-    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.selected_count, 1);
@@ -97,7 +97,7 @@ JSON
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
     const tick = runCli(['family-runtime', 'tick', '--source', 'test'], env);
     const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
-    const dispatchedTask = JSON.parse(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(enqueue.family_runtime_enqueue.task.task_kind, 'domain_route/reconcile-apply');
