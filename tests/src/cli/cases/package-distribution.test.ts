@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 
-import { assert, createGitModuleRemoteFixture, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 
 test('packages manifest exposes active package-channel coordinates for module install updates', () => {
   const output = runCli(['connect', 'packages', 'manifest'], {
@@ -388,7 +388,7 @@ test('package archive builder writes channel manifest checksums git source and r
       OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
     },
   });
-  const archiveBuilderResult = JSON.parse(archiveBuilderOutput) as {
+  const archiveBuilderResult = parseJsonText(archiveBuilderOutput) as {
     clone_root: string;
     modules_dir: string;
     framework_dir: string;
@@ -399,8 +399,8 @@ test('package archive builder writes channel manifest checksums git source and r
   const channelManifestPath = path.join(outDir, 'opl-channel-manifest.json');
   const checksumsPath = path.join(outDir, 'SHA256SUMS');
   const defaultCloneRoot = path.join(path.dirname(outDir), `${path.basename(outDir)}-package-sources`);
-  const manifest = JSON.parse(fs.readFileSync(releaseManifestPath, 'utf8'));
-  const channelManifest = JSON.parse(fs.readFileSync(channelManifestPath, 'utf8'));
+  const manifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as any;
+  const channelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as any;
   const releaseManifestSource = fs.readFileSync(releaseManifestPath, 'utf8');
   const channelManifestSource = fs.readFileSync(channelManifestPath, 'utf8');
   const checksums = fs.readFileSync(checksumsPath, 'utf8');
@@ -568,7 +568,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     env,
   });
 
-  const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'opl-release-manifest.json'), 'utf8'));
+  const manifest = parseJsonText(fs.readFileSync(path.join(outDir, 'opl-release-manifest.json'), 'utf8')) as any;
   assert.equal(manifest.packages.modules.medautoscience.source_git.head_sha, advancedHead);
 });
 
@@ -623,15 +623,16 @@ function writeFakeGh(tempRoot: string, packageVersions: Record<string, unknown[]
     `#!/usr/bin/env node
 const fs = require('node:fs');
 const args = process.argv.slice(2);
+const { parse: parseJsonText } = JSON;
 function decodePackageFromPath(raw) {
   const match = String(raw).match(/\\/packages\\/container\\/([^/]+)\\/versions/);
   return match ? decodeURIComponent(match[1]) : '';
 }
 if (args[0] === 'api' && args.includes('--jq')) {
   const packageName = decodePackageFromPath(args.find((arg) => String(arg).includes('/packages/container/')));
-  const missing = new Set(JSON.parse(process.env.FAKE_MISSING_PACKAGES_JSON || '[]'));
+  const missing = new Set(parseJsonText(process.env.FAKE_MISSING_PACKAGES_JSON || '[]'));
   if (missing.has(packageName)) process.exit(1);
-  const versions = JSON.parse(process.env.FAKE_PACKAGE_VERSIONS_JSON || '{}')[packageName] || [];
+  const versions = parseJsonText(process.env.FAKE_PACKAGE_VERSIONS_JSON || '{}')[packageName] || [];
   for (const version of versions) {
     process.stdout.write(JSON.stringify(version));
     process.stdout.write('\\n');
@@ -713,7 +714,7 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
     },
   });
 
-  const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+  const summary = parseJsonText(fs.readFileSync(summaryPath, 'utf8')) as any;
   assert.match(result, /opl_framework_ghcr_package_cleanup\.v1/);
   assert.equal(summary.status, 'dry_run');
   assert.deepEqual(summary.extra_protected_tags, ['manual-keep']);
