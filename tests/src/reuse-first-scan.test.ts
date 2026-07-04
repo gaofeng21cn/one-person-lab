@@ -283,6 +283,100 @@ test('reuse-first scan allows update rollback only as command registry metadata'
   assert.equal(output.findings[0].path, 'contracts/other/update-contract.json');
 });
 
+test('reuse-first scan allows connect agent-package rollback only on lifecycle projection surfaces', () => {
+  const fixture = makeFixture();
+  const contractPath = path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json');
+  const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
+  contract.scan.roots = ['src', 'tests'];
+  fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  writeFixtureFile(
+    fixture,
+    'contracts/opl-framework/cli-command-registry.json',
+    '{ "required_command_ids": ["connect agent-packages rollback"] }\n',
+  );
+  writeFixtureFile(
+    fixture,
+    'src/entrypoints/cli/cases/public-command-specs-parts/connect.ts',
+    'const command = "connect agent-packages rollback";\n',
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/agent-package-registry.ts',
+    "type AgentPackageLifecycleAction = 'install' | 'update' | 'rollback';\n",
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/console/app-state-parts/action-execute.ts',
+    "const actionId = 'agent_package_rollback';\n",
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/private-update.ts',
+    'const action = "rollback";\n',
+  );
+  writeFixtureFile(
+    fixture,
+    'src/tests/connect-agent-packages.test.ts',
+    'assert.equal(receipt.action, "rollback");\n',
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/private-update-2.ts',
+    'const action = "rollback";\n',
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    contractPath,
+  ], { encoding: 'utf8' });
+  const output = parseJsonText(result.stdout) as any;
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 3);
+  assert.deepEqual(
+    output.findings.map((finding: any) => finding.path).sort(),
+    [
+      'src/modules/connect/private-update-2.ts',
+      'src/modules/connect/private-update.ts',
+      'src/tests/connect-agent-packages.test.ts',
+    ],
+  );
+});
+
+test('reuse-first scan allows connect agent-package rollback fixture assertions only in its focused CLI test', () => {
+  const fixture = makeFixture();
+  const contractPath = path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json');
+  const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
+  contract.scan.roots = ['tests'];
+  fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  writeFixtureFile(
+    fixture,
+    'tests/src/cli/cases/connect-agent-packages.test.ts',
+    'assert.equal(receipt.action, "rollback");\n',
+  );
+  writeFixtureFile(
+    fixture,
+    'tests/src/cli/cases/other-agent-packages.test.ts',
+    'assert.equal(receipt.action, "rollback");\n',
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    contractPath,
+  ], { encoding: 'utf8' });
+  const output = parseJsonText(result.stdout) as any;
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 1);
+  assert.equal(output.findings[0].path, 'tests/src/cli/cases/other-agent-packages.test.ts');
+});
+
 test('reuse-first scan allows rollback wording only in owner-routed command projections', () => {
   const fixture = makeFixture();
   writeFixtureFile(

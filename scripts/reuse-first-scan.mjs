@@ -445,10 +445,15 @@ function findLineMatches(relativePath, lineNumber, line) {
 function isAllowedMetadataLine(relativePath, line) {
   return (
     relativePath === 'contracts/opl-framework/cli-command-registry.json'
-    && line.includes('"update rollback"')
+    && (
+      line.includes('"update rollback"')
+      || line.includes('"connect agent-packages rollback"')
+    )
   )
     || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line)
     || isAllowedOwnerRoutedCommandProjectionLine(relativePath, line)
+    || isAllowedAgentPackageLifecycleProjectionLine(relativePath, line)
+    || isAllowedAgentPackageLifecycleTestLine(relativePath, line)
     || isAllowedQueueProjectionVocabularyLine(relativePath, line)
     || isAllowedObservabilityProjectionVocabularyLine(relativePath, line)
     || isAllowedDiagnosticProjectionLine(relativePath, line);
@@ -481,6 +486,49 @@ function isAllowedOwnerRoutedCommandProjectionLine(relativePath, line) {
     'src/entrypoints/cli/cases/runtime-public-command-specs.ts',
     'src/entrypoints/cli/cases/agent-lab-public-command-specs.ts',
   ].includes(relativePath);
+}
+
+function isAllowedAgentPackageLifecycleProjectionLine(relativePath, line) {
+  if (!line.includes('rollback')) {
+    return false;
+  }
+  if (relativePath === 'src/entrypoints/cli/cases/public-command-specs-parts/connect.ts') {
+    return line.includes('connect agent-packages rollback')
+      || line.includes('rollback lock/receipt')
+      || line.includes('rollback OPL Agent Package manifest')
+      || line.includes('preview rollback lock/receipt')
+      || line.includes('opl_agent_package_rollback');
+  }
+  if (relativePath === 'src/modules/console/app-state-parts/action-execute.ts') {
+    return line.includes('agent_package_rollback')
+      || line.includes('connect agent-packages rollback');
+  }
+  if (relativePath === 'src/modules/connect/agent-package-registry.ts') {
+    return [
+      'AgentPackageLifecycleAction',
+      " | 'rollback'",
+      "    rollback: 'rolled_back'",
+      "  action: 'install' | 'update' | 'rollback'",
+      'applyManifestPackageLock(input, \'rollback\')',
+      'opl_agent_package_rollback',
+      'surface_kind: \'opl_agent_package_rollback\'',
+      'rollbackRef: lock.rollback_ref',
+      'rollback_ref',
+    ].some((term) => line.includes(term));
+  }
+  return false;
+}
+
+function isAllowedAgentPackageLifecycleTestLine(relativePath, line) {
+  if (relativePath !== 'tests/src/cli/cases/connect-agent-packages.test.ts' || !line.includes('rollback')) {
+    return false;
+  }
+  return line.includes('const rollback = ')
+    || line.includes("'rollback'")
+    || line.includes('"rollback"')
+    || line.includes('opl_agent_package_rollback')
+    || line.includes('connect agent-packages rollback')
+    || line.includes('lifecycle_receipts.map((receipt) => receipt.action)');
 }
 
 function isAllowedQueueProjectionVocabularyLine(relativePath, line) {
