@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+import { isRecord } from '../contract-validation.ts';
+import { readJsonFileOrNull } from '../json-file.ts';
 import type {
   LocalCodexAccessState,
   LocalCodexDefaults,
@@ -26,10 +28,6 @@ function normalizeOptionalString(value: string | null | undefined) {
   return trimmed ? trimmed : null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 export function readCodexAuthState(authPath: string): LocalCodexAuthState {
   if (!fs.existsSync(authPath) || !fs.statSync(authPath).isFile()) {
     return {
@@ -40,7 +38,7 @@ export function readCodexAuthState(authPath: string): LocalCodexAuthState {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(authPath, 'utf8')) as unknown;
+    const parsed = readJsonFileOrNull(authPath);
     const record = isRecord(parsed) ? parsed : {};
     const authMode = normalizeOptionalString(typeof record.auth_mode === 'string' ? record.auth_mode : undefined);
     const tokensPresent = record.tokens !== undefined && record.tokens !== null;

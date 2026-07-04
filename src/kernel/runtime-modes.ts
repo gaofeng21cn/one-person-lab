@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+import { isRecord } from './contract-validation.ts';
+import { readJsonFileOrNull } from './json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type OplAgentMode = 'codex';
@@ -31,8 +33,11 @@ export function readOplRuntimeModes(): OplRuntimeModes {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.runtime_modes_file, 'utf8')) as Partial<OplRuntimeModes>;
+    const parsed = readJsonFileOrNull(paths.runtime_modes_file);
     const defaults = buildDefaultOplRuntimeModes();
+    if (!isRecord(parsed)) {
+      return defaults;
+    }
     return {
       version: 'g1',
       interaction_mode: isOplAgentMode(parsed.interaction_mode)

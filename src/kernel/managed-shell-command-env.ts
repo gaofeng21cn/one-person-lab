@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
+import { isRecord } from './contract-validation.ts';
+import { readJsonFileOrNull } from './json-file.ts';
+
 const UV_CACHE_RECOVERY_MARKER = 'uv-cache-archive-missing.recovery.json';
 type ManagedShellRecoveryTrigger = 'uv_cache_archive_missing' | 'managed_python_env_missing_dependency';
 const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
@@ -136,11 +139,10 @@ function managedShellUvCacheRecoveryMarkerPath(cwd: string, env: NodeJS.ProcessE
 
 function parseManagedShellUvCacheRecoveryMarker(cwd: string, markerPath: string) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    const record = readJsonFileOrNull(markerPath);
+    if (!isRecord(record)) {
       return null;
     }
-    const record = parsed as Record<string, unknown>;
     if (
       record.surface_kind !== 'opl_managed_shell_uv_cache_recovery_marker'
       || typeof record.trigger_kind !== 'string'

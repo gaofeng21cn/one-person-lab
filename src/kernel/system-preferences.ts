@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError } from './contract-validation.ts';
+import { readJsonPayloadFile } from './json-file.ts';
 import {
   ensureOplStateDir,
   resolveOplStatePaths,
@@ -95,7 +96,7 @@ function readWorkspaceRootFile(): OplWorkspaceRootFile | null {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.workspace_root_file, 'utf8')) as Partial<OplWorkspaceRootFile>;
+    const parsed = readJsonPayloadFile(paths.workspace_root_file) as Partial<OplWorkspaceRootFile>;
     return {
       version: 'g1',
       selected_path: normalizeOptionalString(parsed.selected_path),
@@ -179,7 +180,7 @@ function readUpdateChannelFile(): OplUpdateChannelFile | null {
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.update_channel_file, 'utf8')) as Partial<OplUpdateChannelFile>;
+    const parsed = readJsonPayloadFile(paths.update_channel_file) as Partial<OplUpdateChannelFile>;
     return {
       version: 'g1',
       channel: parsed.channel === 'preview' ? 'preview' : 'stable',
@@ -239,8 +240,8 @@ function readDeveloperSupervisorConfigFile(): OplDeveloperSupervisorConfigFile |
   }
 
   try {
-    const parsed = JSON.parse(
-      fs.readFileSync(paths.developer_supervisor_config_file, 'utf8'),
+    const parsed = readJsonPayloadFile(
+      paths.developer_supervisor_config_file,
     ) as Partial<OplDeveloperSupervisorConfigFile>;
     return {
       version: 'g1',

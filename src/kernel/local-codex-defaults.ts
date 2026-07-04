@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from './contract-validation.ts';
+import { parseJsonText, readJsonPayloadFile } from './json-file.ts';
 import {
   readCodexAuthState,
   resolveLocalCodexAccessState,
@@ -108,7 +109,7 @@ function parseTomlValue(rawValue: string) {
 
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     try {
-      return JSON.parse(trimmed) as string;
+      return parseJsonText(trimmed) as string;
     } catch (error) {
       throw new FrameworkContractError(
         'contract_shape_invalid',
@@ -185,8 +186,7 @@ function readRequiredProfileString(
 
 export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
   const profilePath = resolveBundledCodexDefaultProfilePath();
-  const raw = fs.readFileSync(profilePath, 'utf8');
-  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const parsed = readJsonPayloadFile(profilePath) as Record<string, unknown>;
   const serialized = JSON.stringify(parsed);
   if (serialized.includes('experimental_bearer_token')) {
     throw new FrameworkContractError(

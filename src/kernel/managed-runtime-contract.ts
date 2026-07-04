@@ -1,8 +1,8 @@
-import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { isRecord } from './contract-validation.ts';
-import { optionalString } from './json-file.ts';
+import { optionalString, readJsonPayloadFile } from './json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -80,8 +80,10 @@ function arraysEqual(left: string[], right: string[]) {
 }
 
 export function readBundledManagedRuntimeThreeLayerContract(): ManagedRuntimeThreeLayerContract {
-  const filePath = new URL('../../contracts/opl-framework/managed-runtime-three-layer-contract.json', import.meta.url);
-  const payload = JSON.parse(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
+  const filePath = fileURLToPath(
+    new URL('../../contracts/opl-framework/managed-runtime-three-layer-contract.json', import.meta.url),
+  );
+  const payload = readJsonPayloadFile(filePath) as JsonRecord;
   return {
     contract_ref: requireString(payload.contract_ref, 'contract_ref'),
     contract_id: requireString(payload.contract_id, 'contract_id'),
@@ -99,7 +101,7 @@ export function readBundledManagedRuntimeThreeLayerContract(): ManagedRuntimeThr
 
 export function readManagedRuntimeThreeLayerContract(repoRoot: string): ManagedRuntimeThreeLayerContract {
   const filePath = path.join(repoRoot, 'contracts', 'opl-framework', 'managed-runtime-three-layer-contract.json');
-  const payload = JSON.parse(fs.readFileSync(filePath, 'utf8')) as JsonRecord;
+  const payload = readJsonPayloadFile(filePath) as JsonRecord;
   return {
     contract_ref: requireString(payload.contract_ref, 'contract_ref'),
     contract_id: requireString(payload.contract_id, 'contract_id'),
