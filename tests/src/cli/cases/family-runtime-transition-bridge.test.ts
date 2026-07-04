@@ -110,7 +110,7 @@ process.stdout.write(JSON.stringify({
       enqueue.family_runtime_enqueue.task.task_id,
     ], familyRuntimeEnv(stateRoot, {
     }));
-    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
     const attempt = task.family_runtime_task.stage_attempts[0];
 
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');

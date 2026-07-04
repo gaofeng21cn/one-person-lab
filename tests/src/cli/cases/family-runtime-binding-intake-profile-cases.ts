@@ -472,7 +472,7 @@ exit 44
       '003-dpcc-primary-care-phenotype-treatment-gap',
     ], env);
     const uvArgv = fs.readFileSync(uvArgvPath, 'utf8').trim().split('\n');
-    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.selected_count, 1);

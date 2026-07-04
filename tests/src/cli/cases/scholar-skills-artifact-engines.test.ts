@@ -209,7 +209,7 @@ const expectedEngineSpecByModule = {
 }>;
 
 function readJson(filePath: string) {
-  return parseJsonText(fs.readFileSync(filePath, 'utf8'));
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }
 
 test('scholar-skills materialize emits non-authoritative candidate artifact bodies only with explicit payload opt-in', () => {

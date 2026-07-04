@@ -9,7 +9,7 @@ import {
 } from '../helpers.ts';
 
 function readJsonFile(filePath: string) {
-  return parseJsonText(fs.readFileSync(filePath, 'utf8'));
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }
 
 test('workspace init materializes project unit metadata and stage output required shape', () => {

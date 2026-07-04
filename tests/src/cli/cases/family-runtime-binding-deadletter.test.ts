@@ -111,7 +111,7 @@ process.stdout.write(JSON.stringify({
     const refreshed = runCli(['family-runtime', 'queue', 'inspect', deadLetterTask.task_id], env);
     const task = refreshed.family_runtime_task.task;
     const events = refreshed.family_runtime_task.events;
-    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
 
     assert.equal(updatedFingerprint.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(updatedFingerprint.family_runtime_tick.hydration.requeued_count, 1);

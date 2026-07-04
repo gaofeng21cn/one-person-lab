@@ -44,7 +44,7 @@ function runDailyCheck(args: string[]) {
   ], {
     cwd: repoRoot,
     encoding: 'utf8',
-  }));
+  })) as any;
 }
 
 test('daily package channel check skips when package source fingerprints are unchanged', () => {

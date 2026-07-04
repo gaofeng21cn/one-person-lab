@@ -111,7 +111,7 @@ test('family-runtime attempt fixture-run rejects missing typed closeout refs wit
         ...familyRuntimeEnv(stateRoot),
       },
     });
-    const output = parseJsonText(result.stdout || result.stderr);
+    const output = parseJsonText(result.stdout || result.stderr) as any;
     const inspected = runCli(['family-runtime', 'attempt', 'inspect', attemptId], familyRuntimeEnv(stateRoot));
 
     assert.notEqual(result.status, 0);

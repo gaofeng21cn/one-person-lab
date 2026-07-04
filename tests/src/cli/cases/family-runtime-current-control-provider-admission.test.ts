@@ -28,7 +28,7 @@ test('DomainProgressTransitionRuntime first slice stays inside existing brand-mo
   const contract = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts', 'opl-framework', 'stage-route-scheduler-contract.json'),
     'utf8',
-  ));
+  )) as any;
   const slice = contract.stage_route_arbiter_substrate_contract.domain_progress_transition_runtime_first_slice;
 
   assert.equal(slice.surface_kind, 'opl_domain_progress_transition_runtime_first_slice');

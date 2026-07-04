@@ -49,7 +49,7 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-domain-route-admission-requested'], env);
     const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const queue = runCli(['family-runtime', 'queue', 'list', '--status', 'running'], env);
-    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(dispatchedTaskPath, 'utf8')) as any;
     const inspectedTask = task.family_runtime_task.task;
     const control = inspectedTask.current_control_state;
     const attempt = task.family_runtime_task.stage_attempts[0];

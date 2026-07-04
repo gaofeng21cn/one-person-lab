@@ -201,7 +201,7 @@ JSON
     const tick = runCli(['family-runtime', 'tick', '--source', 'test-handoff', '--hydrate'], env);
     const queue = runCli(['family-runtime', 'queue', 'list'], env);
     const task = queue.family_runtime_queue.tasks[0];
-    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+    const dispatchedTask = parseJsonText(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8')) as any;
 
     assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
     assert.equal(tick.family_runtime_tick.hydration.blocked_count, 0);

@@ -300,7 +300,7 @@ test('workspace fleet report audits bound workspaces without executing direct-en
     });
     const workspacePath = path.join(workspaceRoot, 'visual-theme-a');
     const healthPath = path.join(workspacePath, 'workspace_health.json');
-    const health = parseJsonText(fs.readFileSync(healthPath, 'utf8'));
+    const health = parseJsonText(fs.readFileSync(healthPath, 'utf8')) as any;
     health.status = 'blocked';
     fs.writeFileSync(healthPath, `${JSON.stringify(health, null, 2)}\n`);
     runCli([

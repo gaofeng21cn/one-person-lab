@@ -63,7 +63,7 @@ test('family-runtime temporal attempt start blocks live Codex without stage pack
         TEMPORAL_ADDRESS: '',
       },
     });
-    const output = parseJsonText(failure.stdout || failure.stderr);
+    const output = parseJsonText(failure.stdout || failure.stderr) as any;
 
     assert.notEqual(failure.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');
