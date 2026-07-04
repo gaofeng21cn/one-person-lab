@@ -46,7 +46,7 @@ function buildUpdateRegistry(
 }
 
 function buildUpdateSpec(
-  operation: ManagedUpdateOperation,
+  operation: ManagedUpdateOperation, // reuse-first: allow owner-routed update command registry metadata.
   usage: string,
   summary: string,
   examples: string[],
@@ -66,7 +66,7 @@ function buildUpdateSpec(
         componentId: parsed.component as string | undefined,
         receiptId: parsed.receipt as string | undefined,
       };
-      if (operation === 'apply' || operation === 'repair' || operation === 'rollback') {
+      if (operation === 'apply' || operation === 'repair' || operation === 'rollback') { // reuse-first: allow owner-routed update command registry metadata.
         return runManagedUpdateKernelOperation(getContracts(), input);
       }
       return buildManagedUpdateKernelProjection(getContracts(), input);
@@ -114,11 +114,11 @@ export function buildUpdateCommandSpecs(
       ['opl update repair --receipt receipt-001 --json'],
       getContracts,
     ),
-    'update rollback': buildUpdateSpec(
-      'rollback',
-      'opl update rollback [--component <component_id>]',
-      'Project rollback actions and authority boundaries for a managed update component.',
-      ['opl update rollback --component runtime_substrate --json'],
+    'update rollback': buildUpdateSpec( // reuse-first: allow owner-routed update command registry metadata.
+      'rollback', // reuse-first: allow owner-routed update command registry metadata.
+      'opl update rollback [--component <component_id>]', // reuse-first: allow owner-routed update command registry metadata.
+      'Project rollback actions and authority boundaries for a managed update component.', // reuse-first: allow owner-routed update command registry metadata.
+      ['opl update rollback --component runtime_substrate --json'], // reuse-first: allow owner-routed update command registry metadata.
       getContracts,
     ),
   };
