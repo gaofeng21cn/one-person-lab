@@ -1,4 +1,5 @@
 import http from 'node:http';
+import crypto from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { pathToFileURL } from 'node:url';
 
@@ -29,7 +30,36 @@ function createPluginSourceFixture(input: { includeRequiredSkill?: boolean } = {
   return pluginSourcePath;
 }
 
-function agentPackageManifest(input: { pluginSourcePath?: string } = {}) {
+function sha256Fixture(value: string) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+function remotePayloadManifest() {
+  const pluginJson = formatJsonPayload({
+    name: 'third-party-research',
+    version: '1.2.3',
+    displayName: 'Third Party Research',
+    description: 'Fixture third-party OPL agent package plugin.',
+  });
+  const skillMarkdown = '# Third Party Research\n\nUse for fixture package materialization tests.\n';
+  return {
+    surface_kind: 'opl_agent_package_payload_manifest',
+    files: [
+      {
+        path: '.codex-plugin/plugin.json',
+        content_utf8: pluginJson,
+        sha256: sha256Fixture(pluginJson),
+      },
+      {
+        path: 'skills/third-party-research/SKILL.md',
+        content_utf8: skillMarkdown,
+        sha256: sha256Fixture(skillMarkdown),
+      },
+    ],
+  };
+}
+
+function agentPackageManifest(input: { pluginSourcePath?: string; pluginPayloadManifestUrl?: string } = {}) {
   return {
     package_id: 'third.party.research',
     agent_id: 'third-party-research',
@@ -42,6 +72,7 @@ function agentPackageManifest(input: { pluginSourcePath?: string } = {}) {
       required_skill_ids: ['third-party-research'],
       optional_skill_ids: ['officecli-docx'],
       ...(input.pluginSourcePath ? { plugin_source_path: input.pluginSourcePath } : {}),
+      ...(input.pluginPayloadManifestUrl ? { plugin_payload_manifest_url: input.pluginPayloadManifestUrl } : {}),
     },
     skill_packs: [
       {
@@ -111,6 +142,50 @@ async function withAgentPackageServer(
       const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(formatJsonPayload(registryPayload(baseUrl)));
+      return;
+    }
+    if (url.pathname === '/payload.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(formatJsonPayload(remotePayloadManifest()));
+      return;
+    }
+    response.writeHead(404, { 'content-type': 'application/json' });
+    response.end(formatJsonPayload({ error: 'not_found' }));
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  assert.equal(typeof address, 'object');
+  const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
+  try {
+    await run(baseUrl);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  }
+}
+
+async function withRemotePayloadAgentPackageServer(run: (baseUrl: string) => Promise<void>) {
+  const server = http.createServer((request, response) => {
+    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+    const address = server.address();
+    assert.equal(typeof address, 'object');
+    const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
+    if (url.pathname === '/manifest.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(formatJsonPayload(agentPackageManifest({
+        pluginPayloadManifestUrl: `${baseUrl}/payload.json`,
+      })));
+      return;
+    }
+    if (url.pathname === '/registry.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(formatJsonPayload(registryPayload(baseUrl)));
+      return;
+    }
+    if (url.pathname === '/payload.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(formatJsonPayload(remotePayloadManifest()));
       return;
     }
     response.writeHead(404, { 'content-type': 'application/json' });
@@ -531,6 +606,105 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+  }
+});
+
+test('connect agent-packages materializes manifest-declared remote plugin payloads', async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-remote-payload-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-remote-payload-home-'));
+  const env = {
+    OPL_STATE_DIR: stateDir,
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+  };
+  try {
+    await withRemotePayloadAgentPackageServer(async (baseUrl) => {
+      const install = await runCliAsync([
+        'connect',
+        'agent-packages',
+        'install',
+        '--registry-url',
+        `${baseUrl}/registry.json`,
+        '--package-id',
+        'third.party.research',
+      ], env) as {
+        opl_agent_package_install: {
+          status: string;
+          package_lock: {
+            physical_surface: {
+              plugin_payload_manifest_url: string;
+              plugin_payload_manifest_sha256: string;
+              plugin_payload_cache_path: string;
+              materialized_required_skill_ids: string[];
+            };
+          };
+          physical_surface: {
+            status: string;
+            plugin_payload_manifest_url: string;
+            plugin_payload_manifest_sha256: string;
+            plugin_payload_cache_path: string;
+            codex_plugin_cache_path: string;
+            materialized_required_skill_paths: string[];
+          };
+          lifecycle_receipt: {
+            physical_surface: {
+              plugin_payload_manifest_url: string;
+              plugin_payload_cache_path: string;
+            };
+          };
+        };
+      };
+
+      const physicalSurface = install.opl_agent_package_install.physical_surface;
+      assert.equal(install.opl_agent_package_install.status, 'installed');
+      assert.equal(physicalSurface.status, 'materialized');
+      assert.equal(physicalSurface.plugin_payload_manifest_url, `${baseUrl}/payload.json`);
+      assert.match(physicalSurface.plugin_payload_manifest_sha256, /^[a-f0-9]{64}$/);
+      assert.equal(fs.existsSync(path.join(
+        physicalSurface.plugin_payload_cache_path,
+        '.codex-plugin',
+        'plugin.json',
+      )), true);
+      assert.equal(fs.existsSync(path.join(
+        physicalSurface.codex_plugin_cache_path,
+        'skills',
+        'third-party-research',
+        'SKILL.md',
+      )), true);
+      assert.deepEqual(
+        install.opl_agent_package_install.package_lock.physical_surface.materialized_required_skill_ids,
+        ['third-party-research'],
+      );
+      assert.equal(
+        install.opl_agent_package_install.lifecycle_receipt.physical_surface.plugin_payload_cache_path,
+        physicalSurface.plugin_payload_cache_path,
+      );
+
+      const uninstall = runCli([
+        'connect',
+        'agent-packages',
+        'uninstall',
+        '--package-id',
+        'third.party.research',
+      ], env) as {
+        opl_agent_package_uninstall: {
+          physical_surface: {
+            status: string;
+            removed_paths: string[];
+          };
+        };
+      };
+
+      assert.equal(uninstall.opl_agent_package_uninstall.physical_surface.status, 'removed');
+      assert.equal(
+        uninstall.opl_agent_package_uninstall.physical_surface.removed_paths.includes(physicalSurface.plugin_payload_cache_path),
+        true,
+      );
+      assert.equal(fs.existsSync(physicalSurface.plugin_payload_cache_path), false);
+    });
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
   }
 });
 

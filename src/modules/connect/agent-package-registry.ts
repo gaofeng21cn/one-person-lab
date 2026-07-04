@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,6 +87,12 @@ type FetchJsonResult = {
   payload: unknown;
 };
 
+type AgentPackagePayloadFile = {
+  relativePath: string;
+  content: Buffer;
+  sha256: string | null;
+};
+
 type AgentPackageRegistryEntry = {
   package_id: string;
   display_name: string;
@@ -121,6 +128,9 @@ type AgentPackageManifest = {
   optional_skill_refs: string[];
   plugin_id: string | null;
   plugin_source_path: string | null;
+  plugin_payload_manifest_url: string | null;
+  plugin_payload_manifest_sha256: string | null;
+  plugin_payload_cache_path: string | null;
 };
 
 type AgentPackagePhysicalSurface = {
@@ -137,6 +147,9 @@ type AgentPackagePhysicalSurface = {
   marketplace_root: string | null;
   marketplace_path: string | null;
   marketplace_plugin_path: string | null;
+  plugin_payload_manifest_url: string | null;
+  plugin_payload_manifest_sha256: string | null;
+  plugin_payload_cache_path: string | null;
   materialized_required_skill_ids: string[];
   materialized_required_skill_paths: string[];
   removed_paths: string[];
@@ -521,6 +534,11 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
   const pluginSourcePath = stringValue(payload.codex_surface.plugin_source_path)
     ?? stringValue(payload.codex_surface.local_plugin_source_path)
     ?? stringValue(payload.codex_surface.plugin_root);
+  const pluginPayloadManifestUrl = stringValue(payload.codex_surface.plugin_payload_manifest_url)
+    ?? stringValue(payload.codex_surface.remote_payload_manifest_url);
+  if (pluginPayloadManifestUrl) {
+    validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
+  }
   const codexVisibleEntry = pluginId
     ?? stringValue(payload.codex_surface.codex_visible_entry)
     ?? stringValue(payload.agent_id)!;
@@ -546,6 +564,9 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
     ]),
     plugin_id: pluginId,
     plugin_source_path: pluginSourcePath,
+    plugin_payload_manifest_url: pluginPayloadManifestUrl,
+    plugin_payload_manifest_sha256: null,
+    plugin_payload_cache_path: null,
   };
 }
 
@@ -622,6 +643,133 @@ function appendReceipt(receipt: AgentPackageLifecycleReceipt) {
 
 function resolveLocalPath(value: string) {
   return value.startsWith('file:') ? fileURLToPath(value) : path.resolve(value);
+}
+
+function safeRelativePayloadPath(value: string) {
+  const normalized = path.normalize(value);
+  if (
+    !value.trim()
+    || path.isAbsolute(value)
+    || normalized === '.'
+    || normalized.startsWith(`..${path.sep}`)
+    || normalized === '..'
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload file paths must be relative package paths.', {
+      payload_path: value,
+      failure_code: 'agent_package_payload_path_invalid',
+    });
+  }
+  return normalized;
+}
+
+function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): AgentPackagePayloadFile[] {
+  if (!isRecord(payload) || !Array.isArray(payload.files)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must contain a files array.', {
+      payload_manifest_url: payloadManifestUrl,
+      required: ['files'],
+      failure_code: 'agent_package_payload_manifest_invalid',
+    });
+  }
+  const fileRecords = recordList(payload.files);
+  if (fileRecords.length !== payload.files.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest files must be JSON objects.', {
+      payload_manifest_url: payloadManifestUrl,
+      failure_code: 'agent_package_payload_manifest_invalid',
+    });
+  }
+  return fileRecords.map((entry, index) => {
+    const relativePath = stringValue(entry.path);
+    const contentUtf8 = typeof entry.content_utf8 === 'string' ? entry.content_utf8 : null;
+    const contentBase64 = typeof entry.content_base64 === 'string' && entry.content_base64.trim()
+      ? entry.content_base64.trim()
+      : null;
+    if (!relativePath || (contentUtf8 === null && contentBase64 === null)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload files require path and content.', {
+        payload_manifest_url: payloadManifestUrl,
+        file_index: index,
+        required: ['path', 'content_utf8 or content_base64'],
+        failure_code: 'agent_package_payload_manifest_invalid',
+      });
+    }
+    const content = contentBase64 !== null ? Buffer.from(contentBase64, 'base64') : Buffer.from(contentUtf8!, 'utf8');
+    const sha256 = stringValue(entry.sha256);
+    if (sha256) {
+      const expected = sha256.startsWith('sha256:') ? sha256.slice('sha256:'.length) : sha256;
+      const actual = crypto.createHash('sha256').update(content).digest('hex');
+      if (actual !== expected) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload file sha256 mismatch.', {
+          payload_manifest_url: payloadManifestUrl,
+          payload_path: relativePath,
+          expected_sha256: sha256,
+          actual_sha256: `sha256:${actual}`,
+          failure_code: 'agent_package_payload_file_sha256_mismatch',
+        });
+      }
+    }
+    return {
+      relativePath: safeRelativePayloadPath(relativePath),
+      content,
+      sha256,
+    };
+  });
+}
+
+async function materializePayloadManifestSource(input: {
+  manifest: AgentPackageManifest;
+  payloadManifestUrl: string;
+  dryRun: boolean;
+}) {
+  const fetched = await fetchJsonSource(input.payloadManifestUrl);
+  const files = normalizePayloadFiles(fetched.payload, input.payloadManifestUrl);
+  const payloadRoot = input.dryRun
+    ? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-payload-'))
+    : path.join(
+        resolveOplStatePaths().state_dir,
+        'agent-package-payloads',
+        safePathSegment(input.manifest.package_id),
+        `${safePathSegment(input.manifest.version)}-${fetched.source_sha256.slice(0, 16)}`,
+      );
+  if (!input.dryRun) {
+    fs.rmSync(payloadRoot, { recursive: true, force: true });
+  }
+  fs.mkdirSync(payloadRoot, { recursive: true });
+  for (const file of files) {
+    const targetPath = path.join(payloadRoot, file.relativePath);
+    if (!targetPath.startsWith(`${payloadRoot}${path.sep}`)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload file path escapes the payload root.', {
+        payload_manifest_url: input.payloadManifestUrl,
+        payload_path: file.relativePath,
+        failure_code: 'agent_package_payload_path_invalid',
+      });
+    }
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, file.content);
+  }
+  return {
+    payloadRoot,
+    payloadManifestSha256: fetched.source_sha256,
+    persistentCachePath: input.dryRun ? null : payloadRoot,
+  };
+}
+
+async function resolveManifestPhysicalSource(
+  manifest: AgentPackageManifest,
+  dryRun: boolean,
+): Promise<AgentPackageManifest> {
+  if (manifest.plugin_source_path || !manifest.plugin_payload_manifest_url) {
+    return manifest;
+  }
+  const payload = await materializePayloadManifestSource({
+    manifest,
+    payloadManifestUrl: manifest.plugin_payload_manifest_url,
+    dryRun,
+  });
+  return {
+    ...manifest,
+    plugin_source_path: payload.payloadRoot,
+    plugin_payload_manifest_sha256: payload.payloadManifestSha256,
+    plugin_payload_cache_path: payload.persistentCachePath,
+  };
 }
 
 function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
@@ -702,6 +850,9 @@ function materializePhysicalCodexSurface(
       marketplace_root: null,
       marketplace_path: null,
       marketplace_plugin_path: null,
+      plugin_payload_manifest_url: manifest.plugin_payload_manifest_url,
+      plugin_payload_manifest_sha256: manifest.plugin_payload_manifest_sha256,
+      plugin_payload_cache_path: manifest.plugin_payload_cache_path,
       materialized_required_skill_ids: [],
       materialized_required_skill_paths: [],
       removed_paths: [],
@@ -753,6 +904,9 @@ function materializePhysicalCodexSurface(
     marketplace_root: paths.marketplaceRoot,
     marketplace_path: paths.marketplacePath,
     marketplace_plugin_path: paths.marketplacePluginPath,
+    plugin_payload_manifest_url: manifest.plugin_payload_manifest_url,
+    plugin_payload_manifest_sha256: manifest.plugin_payload_manifest_sha256,
+    plugin_payload_cache_path: manifest.plugin_payload_cache_path,
     materialized_required_skill_ids: materializedRequiredSkills.map((entry) => entry.skillId),
     materialized_required_skill_paths: materializedRequiredSkills.map((entry) =>
       dryRun ? entry.skillPath : path.join(paths.codexPluginCachePath!, 'skills', entry.skillId, 'SKILL.md')
@@ -775,6 +929,7 @@ function removePhysicalCodexSurface(
   const removedPaths = [
     surface?.marketplace_root,
     surface?.codex_plugin_cache_path,
+    surface?.plugin_payload_cache_path,
   ].flatMap((value) => value ? [value] : []);
 
   if (!dryRun) {
@@ -798,6 +953,9 @@ function removePhysicalCodexSurface(
     marketplace_root: surface?.marketplace_root ?? null,
     marketplace_path: surface?.marketplace_path ?? null,
     marketplace_plugin_path: surface?.marketplace_plugin_path ?? null,
+    plugin_payload_manifest_url: surface?.plugin_payload_manifest_url ?? null,
+    plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
+    plugin_payload_cache_path: surface?.plugin_payload_cache_path ?? null,
     materialized_required_skill_ids: surface?.materialized_required_skill_ids ?? [],
     materialized_required_skill_paths: surface?.materialized_required_skill_paths ?? [],
     removed_paths: removedPaths,
@@ -827,6 +985,9 @@ function rematerializePhysicalCodexSurfaceFromLock(
       marketplace_root: lock.physical_surface?.marketplace_root ?? null,
       marketplace_path: lock.physical_surface?.marketplace_path ?? null,
       marketplace_plugin_path: lock.physical_surface?.marketplace_plugin_path ?? null,
+      plugin_payload_manifest_url: lock.physical_surface?.plugin_payload_manifest_url ?? null,
+      plugin_payload_manifest_sha256: lock.physical_surface?.plugin_payload_manifest_sha256 ?? null,
+      plugin_payload_cache_path: lock.physical_surface?.plugin_payload_cache_path ?? null,
       materialized_required_skill_ids: lock.physical_surface?.materialized_required_skill_ids ?? [],
       materialized_required_skill_paths: lock.physical_surface?.materialized_required_skill_paths ?? [],
       removed_paths: [],
@@ -856,6 +1017,9 @@ function rematerializePhysicalCodexSurfaceFromLock(
     optional_skill_refs: lock.optional_skill_refs,
     plugin_id: lock.physical_surface.plugin_id,
     plugin_source_path: lock.physical_surface.plugin_source_path,
+    plugin_payload_manifest_url: lock.physical_surface.plugin_payload_manifest_url,
+    plugin_payload_manifest_sha256: lock.physical_surface.plugin_payload_manifest_sha256,
+    plugin_payload_cache_path: lock.physical_surface.plugin_payload_cache_path,
   }, dryRun);
 }
 
@@ -1203,8 +1367,13 @@ function cleanupPreviousPhysicalSurface(
     unregisterLocalCodexPlugin(previous.codex_config_path, previous.marketplace_id, previous.plugin_id);
   }
 
-  for (const oldPath of [previous.codex_plugin_cache_path, previous.marketplace_plugin_path]) {
-    if (oldPath && oldPath !== current.codex_plugin_cache_path && oldPath !== current.marketplace_plugin_path) {
+  for (const oldPath of [previous.codex_plugin_cache_path, previous.marketplace_plugin_path, previous.plugin_payload_cache_path]) {
+    if (
+      oldPath
+      && oldPath !== current.codex_plugin_cache_path
+      && oldPath !== current.marketplace_plugin_path
+      && oldPath !== current.plugin_payload_cache_path
+    ) {
       fs.rmSync(oldPath, { recursive: true, force: true });
     }
   }
@@ -1232,7 +1401,10 @@ async function applyManifestPackageLock(
       }
     : await resolveManifestSelection(input);
   const fetched = await fetchJsonSource(selection.manifestUrl);
-  const manifest = normalizeManifest(fetched.payload, selection.manifestUrl);
+  const manifest = await resolveManifestPhysicalSource(
+    normalizeManifest(fetched.payload, selection.manifestUrl),
+    input.dryRun === true,
+  );
   assertManifestMatchesRegistrySelection(manifest, selection);
   const trustTier = stringValue(input.trustTier) ?? selection.trustTier;
   assertTrustTierAssigned(trustTier, selection.manifestUrl);
