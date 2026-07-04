@@ -30,7 +30,8 @@
     "status runtime",
     "status dashboard",
     "runtime observability-export",
-    "runtime observability-endpoint"
+    "runtime observability-endpoint",
+    "runtime observability-collector-smoke"
   ],
   "commands": {
     "connect_install": {
@@ -1476,6 +1477,121 @@
               },
               "payload_body_exported": {
                 "const": false
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "runtime_observability_collector_smoke": {
+      "command_id": "runtime observability-collector-smoke",
+      "owner": "OPL Runway",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "collector-command",
+          "flag": "--collector-command",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "endpoint",
+          "flag": "--endpoint",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "host",
+          "flag": "--host",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "port",
+          "flag": "--port",
+          "value_kind": "integer",
+          "required": false,
+          "allowed_range": {
+            "min": 0,
+            "max": 65535
+          }
+        },
+        {
+          "name": "metrics-path",
+          "flag": "--metrics-path",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "timeout-ms",
+          "flag": "--timeout-ms",
+          "value_kind": "integer",
+          "required": false,
+          "allowed_range": {
+            "min": 1,
+            "max": 120000
+          }
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "observability_collector_smoke"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "observability_collector_smoke": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "schema_version",
+              "status",
+              "collector",
+              "endpoint",
+              "evidence",
+              "authority_boundary"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_kind": {
+                "const": "opl_observability_collector_smoke"
+              },
+              "schema_version": {
+                "const": "observability_collector_smoke.v1"
+              },
+              "authority_boundary": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "can_write_domain_truth": {
+                    "const": false
+                  },
+                  "can_create_owner_receipt": {
+                    "const": false
+                  },
+                  "can_create_typed_blocker": {
+                    "const": false
+                  },
+                  "payload_body_exported": {
+                    "const": false
+                  },
+                  "can_claim_runtime_ready": {
+                    "const": false
+                  },
+                  "can_claim_domain_ready": {
+                    "const": false
+                  },
+                  "can_claim_production_ready": {
+                    "const": false
+                  }
+                }
               }
             }
           }

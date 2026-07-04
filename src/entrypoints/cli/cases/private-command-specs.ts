@@ -9,6 +9,7 @@ import { runRuntimeOperatorActionExecute } from '../../../modules/runway/runtime
 import {
   buildObservabilityExport,
   renderObservabilityOpenMetrics,
+  runObservabilityCollectorSmoke,
   serveObservabilityMetricsEndpoint,
 } from '../../../modules/runway/observability-export.ts';
 import { buildNativeIndexSummary } from '../../../modules/runway/native-index-summary.ts';
@@ -617,6 +618,96 @@ export function buildInternalCommandSpecs(
           runtimeSnapshotProvider: buildRuntimeTraySnapshot,
         });
         return { __handled: true as const };
+      },
+    },
+    'runtime observability-collector-smoke': {
+      usage:
+        'opl runtime observability-collector-smoke [--collector-command <path>] [--endpoint <url>] [--host <host>] [--port <port>] [--metrics-path <path>] [--timeout-ms <n>]',
+      summary:
+        'Run an OpenTelemetry Collector against the read-only OPL OpenMetrics endpoint and report observed metrics or a typed blocker.',
+      examples: [
+        'opl runtime observability-collector-smoke',
+        'opl runtime observability-collector-smoke --collector-command /usr/local/bin/otelcol-contrib',
+        'opl runtime observability-collector-smoke --endpoint http://127.0.0.1:9464/metrics',
+      ],
+      registry: {
+        command_id: 'runtime observability-collector-smoke',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'collector-command',
+            flag: '--collector-command',
+            value_kind: 'string',
+            summary: 'OpenTelemetry Collector binary path or command name.',
+          },
+          {
+            name: 'endpoint',
+            flag: '--endpoint',
+            value_kind: 'string',
+            summary: 'Existing OpenMetrics endpoint URL to scrape instead of starting a temporary local endpoint.',
+          },
+          {
+            name: 'host',
+            flag: '--host',
+            value_kind: 'string',
+            summary: 'Temporary endpoint host when --endpoint is omitted.',
+          },
+          {
+            name: 'port',
+            flag: '--port',
+            value_kind: 'integer',
+            summary: 'Temporary endpoint port when --endpoint is omitted; default 0 lets the OS choose.',
+            allowed_range: {
+              min: 0,
+              max: 65535,
+            },
+          },
+          {
+            name: 'metrics-path',
+            flag: '--metrics-path',
+            value_kind: 'string',
+            summary: 'Temporary endpoint metrics path when --endpoint is omitted.',
+          },
+          {
+            name: 'timeout-ms',
+            flag: '--timeout-ms',
+            value_kind: 'integer',
+            summary: 'Maximum time to wait for Collector debug output containing an OPL metric.',
+            allowed_range: {
+              min: 1,
+              max: 120000,
+            },
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_observability_collector_smoke/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_observability_collector_smoke',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: async (args) => {
+        const parsed = parseRegisteredCommandOptions(
+          'runtime observability-collector-smoke',
+          args,
+          commandSpecs['runtime observability-collector-smoke'],
+        );
+        return {
+          observability_collector_smoke: await runObservabilityCollectorSmoke({
+            contracts: getContracts(),
+            collectorCommand: parsed['collector-command'] as string | undefined,
+            endpoint: parsed.endpoint as string | undefined,
+            host: parsed.host as string | undefined,
+            port: parsed.port as number | undefined,
+            metricsPath: parsed['metrics-path'] as string | undefined,
+            timeoutMs: parsed['timeout-ms'] as number | undefined,
+            runtimeSnapshotProvider: buildRuntimeTraySnapshot,
+          }),
+        };
       },
     },
     'runtime index': {

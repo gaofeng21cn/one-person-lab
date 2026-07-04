@@ -82,6 +82,8 @@ const COLLECTOR_CONSUMPTION_CONFIG = {
             {
               job_name: 'opl_runtime_observability_export',
               metrics_path: '/metrics',
+              scrape_interval: '1s',
+              scrape_timeout: '1s',
               static_configs: [
                 {
                   targets: ['127.0.0.1:9464'],
@@ -99,7 +101,9 @@ const COLLECTOR_CONSUMPTION_CONFIG = {
       batch: {},
     },
     exporters: {
-      debug: {},
+      debug: {
+        verbosity: 'detailed',
+      },
     },
     service: {
       pipelines: {
@@ -114,6 +118,35 @@ const COLLECTOR_CONSUMPTION_CONFIG = {
   payload_body_exported: false,
   payload_body_stored: false,
   external_collector_connected: false,
+  runtime_ready_claim: 'not_claimed',
+  domain_ready_claim: 'not_claimed',
+  production_ready_claim: 'not_claimed',
+} as const;
+
+const COLLECTOR_CONSUMPTION_SMOKE = {
+  surface_kind: 'opentelemetry_collector_consumption_smoke',
+  command_id: 'runtime observability-collector-smoke',
+  source_endpoint_command: 'opl runtime observability-endpoint --port 0 --metrics-path /metrics',
+  source_config_ref:
+    'contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/collector_consumption_config',
+  collector_command_resolution_order: [
+    '--collector-command',
+    'OPL_OTELCOL_COMMAND',
+    'otelcol-contrib',
+    'otelcol',
+  ],
+  observed_metric_names: [
+    'opl_provider_ready',
+    'opl_queue_length',
+    'opl_observability_collector_consumption_config',
+  ],
+  binary_missing_status: 'typed_blocker_no_external_collector_connected',
+  timeout_status: 'typed_blocker_no_metric_observed',
+  payload_body_exported: false,
+  payload_body_stored: false,
+  can_write_domain_truth: false,
+  can_create_owner_receipt: false,
+  can_create_typed_blocker: false,
   runtime_ready_claim: 'not_claimed',
   domain_ready_claim: 'not_claimed',
   production_ready_claim: 'not_claimed',
@@ -207,6 +240,7 @@ const OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS = {
   exporter_signal_mapping: EXPORTER_SIGNAL_MAPPING,
   collector_export_boundary: COLLECTOR_EXPORT_BOUNDARY,
   collector_consumption_config: COLLECTOR_CONSUMPTION_CONFIG,
+  collector_consumption_smoke: COLLECTOR_CONSUMPTION_SMOKE,
   forbidden_body_fields: FORBIDDEN_BODY_FIELDS,
   authority_boundary: {
     ledger_refs_only: true,

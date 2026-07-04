@@ -1,6 +1,10 @@
-import { writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { constants as fsConstants } from 'node:fs';
+import { access, mkdtemp, writeFile } from 'node:fs/promises';
 import { createServer, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { delimiter, join } from 'node:path';
 
 import type { FrameworkContracts, JsonRecord } from '../../kernel/types.ts';
 import {
@@ -70,6 +74,72 @@ export type ObservabilityMetricsEndpointHandle = {
   close: () => void;
 };
 
+export type ObservabilityCollectorSmokeOptions = {
+  contracts: FrameworkContracts;
+  collectorCommand?: string;
+  endpoint?: string;
+  host?: string;
+  port?: number;
+  metricsPath?: string;
+  timeoutMs?: number;
+  runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
+  env?: Record<string, string | undefined>;
+};
+
+export type ObservabilityCollectorSmokeReadback = {
+  surface_kind: 'opl_observability_collector_smoke';
+  schema_version: 'observability_collector_smoke.v1';
+  status: 'observed' | 'blocked';
+  collector: {
+    command_source: '--collector-command' | 'OPL_OTELCOL_COMMAND' | 'PATH' | 'missing';
+    command: string | null;
+    resolved_command: string | null;
+    attempted_commands: string[];
+  };
+  endpoint: {
+    mode: 'started_local_endpoint' | 'external_endpoint';
+    url: string | null;
+    target: string | null;
+    metrics_path: string;
+  };
+  collector_config: {
+    config_ref: string;
+    config_format: 'otelcol_yaml_equivalent_json';
+    config_file: string | null;
+    receiver: 'prometheus';
+    exporter: 'debug';
+  };
+  evidence: {
+    collector_process_started: boolean;
+    collector_consumption_observed: boolean;
+    observed_metric_name: string | null;
+    observed_stream: 'stdout' | 'stderr' | null;
+    output_bytes: number;
+    timeout_ms: number;
+  };
+  typed_blocker: null | {
+    blocker_type:
+      | 'collector_binary_missing'
+      | 'collector_spawn_failed'
+      | 'collector_timeout_no_metric'
+      | 'collector_exited_without_metric';
+    message: string;
+    next_owner: 'operator';
+    attempted_commands: string[];
+  };
+  authority_boundary: {
+    payload_body_exported: false;
+    payload_body_stored: false;
+    external_collector_connected: boolean;
+    can_write_domain_truth: false;
+    can_create_owner_receipt: false;
+    can_create_typed_blocker: false;
+    can_claim_runtime_ready: false;
+    can_claim_domain_ready: false;
+    can_claim_production_ready: false;
+  };
+};
+
 const AUTHORITY_BOUNDARY = {
   opl: 'read_only_observability_export_projection',
   source_authority: 'opl_runtime_ledger_provider_receipts_snapshot_and_domain_projection_refs',
@@ -83,6 +153,12 @@ const AUTHORITY_BOUNDARY = {
 const DEFAULT_METRICS_ENDPOINT_HOST = '127.0.0.1';
 const DEFAULT_METRICS_ENDPOINT_PORT = 9464;
 const DEFAULT_METRICS_ENDPOINT_PATH = '/metrics';
+const DEFAULT_COLLECTOR_SMOKE_TIMEOUT_MS = 8_000;
+const COLLECTOR_SMOKE_METRIC_NAMES = [
+  'opl_provider_ready',
+  'opl_queue_length',
+  'opl_observability_collector_consumption_config',
+];
 
 function firstString(...values: unknown[]) {
   return values.map(stringValue).find((value) => value !== null) ?? null;
@@ -580,6 +656,386 @@ function buildEndpointReadback(input: {
       payload_body_exported: false,
     },
   };
+}
+
+function normalizeCollectorSmokeTimeoutMs(value: number | undefined) {
+  return Number.isSafeInteger(value) && (value ?? 0) > 0 ? value as number : DEFAULT_COLLECTOR_SMOKE_TIMEOUT_MS;
+}
+
+function defaultPortForProtocol(protocol: string) {
+  return protocol === 'https:' ? '443' : '80';
+}
+
+function targetForEndpoint(url: URL) {
+  const port = url.port || defaultPortForProtocol(url.protocol);
+  return `${url.hostname}:${port}`;
+}
+
+function collectorEndpointFromUrl(rawEndpoint: string) {
+  const parsed = new URL(rawEndpoint);
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('runtime observability-collector-smoke --endpoint must be http or https.');
+  }
+  return {
+    url: parsed.toString(),
+    target: targetForEndpoint(parsed),
+    metricsPath: normalizeMetricsPath(parsed.pathname === '/' ? '/metrics' : parsed.pathname),
+    scheme: parsed.protocol.replace(':', ''),
+  };
+}
+
+async function executablePath(command: string, env: Record<string, string | undefined>) {
+  if (command.includes('/')) {
+    await access(command, fsConstants.X_OK);
+    return command;
+  }
+  const pathEntries = (env.PATH ?? process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  for (const entry of pathEntries) {
+    const candidate = join(entry, command);
+    try {
+      await access(candidate, fsConstants.X_OK);
+      return candidate;
+    } catch {
+      // Keep searching PATH.
+    }
+  }
+  return null;
+}
+
+async function resolveCollectorCommand(options: ObservabilityCollectorSmokeOptions) {
+  const env = options.env ?? process.env;
+  const explicitCommand = stringValue(options.collectorCommand);
+  const envCommand = explicitCommand ? null : stringValue(env.OPL_OTELCOL_COMMAND);
+  const candidates = explicitCommand
+    ? [{ command: explicitCommand, source: '--collector-command' as const }]
+    : envCommand
+    ? [{ command: envCommand, source: 'OPL_OTELCOL_COMMAND' as const }]
+    : [
+      { command: 'otelcol-contrib', source: 'PATH' as const },
+      { command: 'otelcol', source: 'PATH' as const },
+    ];
+  const attemptedCommands = candidates.map((candidate) => candidate.command);
+
+  for (const candidate of candidates) {
+    try {
+      const resolved = await executablePath(candidate.command, env);
+      if (resolved) {
+        return {
+          command_source: candidate.source,
+          command: candidate.command,
+          resolved_command: resolved,
+          attempted_commands: attemptedCommands,
+        };
+      }
+    } catch {
+      // The caller reports the full attempted command set as a typed blocker.
+    }
+  }
+
+  return {
+    command_source: 'missing' as const,
+    command: null,
+    resolved_command: null,
+    attempted_commands: attemptedCommands,
+  };
+}
+
+function buildCollectorSmokeConfig(input: {
+  target: string;
+  metricsPath: string;
+  scheme: string;
+}) {
+  const config = structuredClone(
+    OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.collector_consumption_config.config,
+  ) as JsonRecord;
+  const receivers = record(config.receivers);
+  const prometheus = record(receivers.prometheus);
+  const prometheusConfig = record(prometheus.config);
+  const scrapeConfig = record(recordList(prometheusConfig.scrape_configs)[0]);
+  const staticConfig = record(recordList(scrapeConfig.static_configs)[0]);
+  staticConfig.targets = [input.target];
+  scrapeConfig.static_configs = [staticConfig];
+  scrapeConfig.metrics_path = input.metricsPath;
+  scrapeConfig.scheme = input.scheme;
+  scrapeConfig.scrape_interval = '1s';
+  scrapeConfig.scrape_timeout = '1s';
+  prometheusConfig.scrape_configs = [scrapeConfig];
+  prometheus.config = prometheusConfig;
+  receivers.prometheus = prometheus;
+  config.receivers = receivers;
+
+  const exporters = record(config.exporters);
+  exporters.debug = {
+    ...record(exporters.debug),
+    verbosity: 'detailed',
+  };
+  config.exporters = exporters;
+  return config;
+}
+
+function emptyCollectorConfigReadback(configFile: string | null) {
+  return {
+    config_ref:
+      'contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/collector_consumption_config',
+    config_format: 'otelcol_yaml_equivalent_json' as const,
+    config_file: configFile,
+    receiver: 'prometheus' as const,
+    exporter: 'debug' as const,
+  };
+}
+
+function collectorSmokeBoundary(
+  externalCollectorConnected: boolean,
+): ObservabilityCollectorSmokeReadback['authority_boundary'] {
+  return {
+    payload_body_exported: false as const,
+    payload_body_stored: false as const,
+    external_collector_connected: externalCollectorConnected,
+    can_write_domain_truth: false as const,
+    can_create_owner_receipt: false as const,
+    can_create_typed_blocker: false as const,
+    can_claim_runtime_ready: false as const,
+    can_claim_domain_ready: false as const,
+    can_claim_production_ready: false as const,
+  };
+}
+
+function blockedCollectorSmoke(input: {
+  blockerType: NonNullable<ObservabilityCollectorSmokeReadback['typed_blocker']>['blocker_type'];
+  message: string;
+  collector: ObservabilityCollectorSmokeReadback['collector'];
+  endpoint?: ObservabilityCollectorSmokeReadback['endpoint'];
+  configFile?: string | null;
+  processStarted?: boolean;
+  outputBytes?: number;
+  timeoutMs: number;
+}): ObservabilityCollectorSmokeReadback {
+  return {
+    surface_kind: 'opl_observability_collector_smoke',
+    schema_version: 'observability_collector_smoke.v1',
+    status: 'blocked',
+    collector: input.collector,
+    endpoint: input.endpoint ?? {
+      mode: 'started_local_endpoint',
+      url: null,
+      target: null,
+      metrics_path: DEFAULT_METRICS_ENDPOINT_PATH,
+    },
+    collector_config: emptyCollectorConfigReadback(input.configFile ?? null),
+    evidence: {
+      collector_process_started: input.processStarted === true,
+      collector_consumption_observed: false,
+      observed_metric_name: null,
+      observed_stream: null,
+      output_bytes: input.outputBytes ?? 0,
+      timeout_ms: input.timeoutMs,
+    },
+    typed_blocker: {
+      blocker_type: input.blockerType,
+      message: input.message,
+      next_owner: 'operator',
+      attempted_commands: input.collector.attempted_commands,
+    },
+    authority_boundary: collectorSmokeBoundary(false),
+  };
+}
+
+function observedMetric(buffer: string) {
+  return COLLECTOR_SMOKE_METRIC_NAMES.find((metricName) => buffer.includes(metricName)) ?? null;
+}
+
+async function waitForCollectorMetric(input: {
+  resolvedCommand: string;
+  configFile: string;
+  timeoutMs: number;
+}) {
+  return await new Promise<{
+    status: 'observed' | 'blocked';
+    blocker_type?: NonNullable<ObservabilityCollectorSmokeReadback['typed_blocker']>['blocker_type'];
+    message?: string;
+    observed_metric_name: string | null;
+    observed_stream: 'stdout' | 'stderr' | null;
+    output_bytes: number;
+    process_started: boolean;
+  }>((resolve) => {
+    let settled = false;
+    let outputBytes = 0;
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
+    let timeout: ReturnType<typeof setTimeout>;
+    const child = spawn(input.resolvedCommand, ['--config', input.configFile], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    function finish(result: Parameters<typeof resolve>[0]) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (child.exitCode === null && !child.killed) {
+        child.kill('SIGTERM');
+        setTimeout(() => {
+          if (child.exitCode === null && !child.killed) child.kill('SIGKILL');
+        }, 500).unref();
+      }
+      resolve(result);
+    }
+
+    function onData(stream: 'stdout' | 'stderr', chunk: Buffer) {
+      outputBytes += chunk.byteLength;
+      const next = chunk.toString('utf8');
+      if (stream === 'stdout') {
+        stdoutBuffer = `${stdoutBuffer}${next}`.slice(-4096);
+      } else {
+        stderrBuffer = `${stderrBuffer}${next}`.slice(-4096);
+      }
+      const metricName = observedMetric(stream === 'stdout' ? stdoutBuffer : stderrBuffer);
+      if (metricName) {
+        finish({
+          status: 'observed',
+          observed_metric_name: metricName,
+          observed_stream: stream,
+          output_bytes: outputBytes,
+          process_started: true,
+        });
+      }
+    }
+
+    timeout = setTimeout(() => {
+      finish({
+        status: 'blocked',
+        blocker_type: 'collector_timeout_no_metric',
+        message: `Collector did not emit an OPL metric within ${input.timeoutMs}ms.`,
+        observed_metric_name: null,
+        observed_stream: null,
+        output_bytes: outputBytes,
+        process_started: true,
+      });
+    }, input.timeoutMs);
+
+    child.stdout?.on('data', (chunk: Buffer) => onData('stdout', chunk));
+    child.stderr?.on('data', (chunk: Buffer) => onData('stderr', chunk));
+    child.once('error', (error) => {
+      finish({
+        status: 'blocked',
+        blocker_type: 'collector_spawn_failed',
+        message: errorMessage(error),
+        observed_metric_name: null,
+        observed_stream: null,
+        output_bytes: outputBytes,
+        process_started: false,
+      });
+    });
+    child.once('exit', (code, signal) => {
+      if (settled) return;
+      finish({
+        status: 'blocked',
+        blocker_type: 'collector_exited_without_metric',
+        message: `Collector exited before an OPL metric was observed: code=${code ?? 'null'} signal=${signal ?? 'null'}.`,
+        observed_metric_name: null,
+        observed_stream: null,
+        output_bytes: outputBytes,
+        process_started: true,
+      });
+    });
+  });
+}
+
+export async function runObservabilityCollectorSmoke(
+  options: ObservabilityCollectorSmokeOptions,
+): Promise<ObservabilityCollectorSmokeReadback> {
+  const timeoutMs = normalizeCollectorSmokeTimeoutMs(options.timeoutMs);
+  const collector = await resolveCollectorCommand(options);
+  if (!collector.resolved_command) {
+    return blockedCollectorSmoke({
+      blockerType: 'collector_binary_missing',
+      message: 'No OpenTelemetry Collector binary was found.',
+      collector,
+      timeoutMs,
+    });
+  }
+
+  const endpointHandleRef: { current: ObservabilityMetricsEndpointHandle | null } = { current: null };
+  try {
+    const endpoint = stringValue(options.endpoint)
+      ? {
+        mode: 'external_endpoint' as const,
+        ...collectorEndpointFromUrl(options.endpoint as string),
+      }
+      : await (async () => {
+        endpointHandleRef.current = await startObservabilityMetricsEndpoint({
+          contracts: options.contracts,
+          host: options.host,
+          port: options.port ?? 0,
+          metricsPath: options.metricsPath,
+          once: false,
+          runtimeSnapshotProvider: options.runtimeSnapshotProvider,
+        });
+        const endpointUrl = new URL(endpointHandleRef.current.readback.endpoint.url);
+        return {
+          mode: 'started_local_endpoint' as const,
+          url: endpointHandleRef.current.readback.endpoint.url,
+          target: targetForEndpoint(endpointUrl),
+          metricsPath: endpointHandleRef.current.readback.endpoint.metrics_path,
+          scheme: endpointUrl.protocol.replace(':', ''),
+        };
+      })();
+    const config = buildCollectorSmokeConfig({
+      target: endpoint.target,
+      metricsPath: endpoint.metricsPath,
+      scheme: endpoint.scheme,
+    });
+    const tempRoot = await mkdtemp(join(tmpdir(), 'opl-observability-collector-smoke-'));
+    const configFile = join(tempRoot, 'otelcol-config.json');
+    await writeFile(configFile, `${JSON.stringify(config, null, 2)}\n`);
+    const endpointReadback = {
+      mode: endpoint.mode,
+      url: endpoint.url,
+      target: endpoint.target,
+      metrics_path: endpoint.metricsPath,
+    };
+    const result = await waitForCollectorMetric({
+      resolvedCommand: collector.resolved_command,
+      configFile,
+      timeoutMs,
+    });
+
+    if (result.status !== 'observed') {
+      return blockedCollectorSmoke({
+        blockerType: result.blocker_type ?? 'collector_timeout_no_metric',
+        message: result.message ?? 'Collector did not emit an OPL metric.',
+        collector,
+        endpoint: endpointReadback,
+        configFile,
+        processStarted: result.process_started,
+        outputBytes: result.output_bytes,
+        timeoutMs,
+      });
+    }
+
+    return {
+      surface_kind: 'opl_observability_collector_smoke',
+      schema_version: 'observability_collector_smoke.v1',
+      status: 'observed',
+      collector,
+      endpoint: endpointReadback,
+      collector_config: emptyCollectorConfigReadback(configFile),
+      evidence: {
+        collector_process_started: result.process_started,
+        collector_consumption_observed: true,
+        observed_metric_name: result.observed_metric_name,
+        observed_stream: result.observed_stream,
+        output_bytes: result.output_bytes,
+        timeout_ms: timeoutMs,
+      },
+      typed_blocker: null,
+      authority_boundary: collectorSmokeBoundary(true),
+    };
+  } finally {
+    endpointHandleRef.current?.close();
+    if (endpointHandleRef.current) {
+      await endpointHandleRef.current.closed;
+    }
+  }
 }
 
 export async function startObservabilityMetricsEndpoint(

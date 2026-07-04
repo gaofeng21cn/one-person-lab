@@ -607,6 +607,19 @@ export function buildPublicRuntimeCommandSpecs(
       ],
       group: 'runtime',
     }),
+    'runtime observability-collector-smoke': cloneCommandSpec(
+      commandSpecs['runtime observability-collector-smoke'],
+      {
+        usage:
+          'opl runtime observability-collector-smoke [--collector-command <path>] [--endpoint <url>] [--host <host>] [--port <port>] [--metrics-path <path>] [--timeout-ms <n>]',
+        examples: [
+          'opl runtime observability-collector-smoke',
+          'opl runtime observability-collector-smoke --collector-command /usr/local/bin/otelcol-contrib',
+          'opl runtime observability-collector-smoke --endpoint http://127.0.0.1:9464/metrics',
+        ],
+        group: 'runtime',
+      },
+    ),
     'runtime index': cloneCommandSpec(commandSpecs['runtime index'], {
       usage: 'opl runtime index',
       examples: ['opl runtime index'],

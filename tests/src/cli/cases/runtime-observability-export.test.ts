@@ -421,3 +421,98 @@ test('runtime observability metrics endpoint serves the OpenMetrics export over 
     handle.close();
   }
 });
+
+test('runtime observability collector smoke observes fake Collector debug output', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-fake-otelcol-'));
+  const fakeCollector = path.join(tempRoot, 'otelcol-fake');
+  fs.writeFileSync(
+    fakeCollector,
+    [
+      '#!/bin/sh',
+      'test "$1" = "--config" || exit 2',
+      'test -f "$2" || exit 3',
+      'grep -q \'"receivers"\' "$2" || exit 4',
+      'printf "%s\\n" "debug exporter metric opl_provider_ready 1" >&2',
+      'sleep 2',
+    ].join('\n'),
+  );
+  fs.chmodSync(fakeCollector, 0o755);
+
+  try {
+    const output = runCli(['runtime', 'observability-collector-smoke', '--timeout-ms', '2000'], {
+      OPL_OTELCOL_COMMAND: fakeCollector,
+    });
+    const smoke = output.observability_collector_smoke;
+
+    assert.equal(smoke.surface_kind, 'opl_observability_collector_smoke');
+    assert.equal(smoke.schema_version, 'observability_collector_smoke.v1');
+    assert.equal(smoke.status, 'observed');
+    assert.equal(smoke.collector.command_source, 'OPL_OTELCOL_COMMAND');
+    assert.equal(smoke.collector.resolved_command, fakeCollector);
+    assert.equal(smoke.endpoint.mode, 'started_local_endpoint');
+    assert.equal(smoke.endpoint.metrics_path, '/metrics');
+    assert.match(smoke.endpoint.target, /^127\.0\.0\.1:\d+$/);
+    assert.equal(smoke.collector_config.receiver, 'prometheus');
+    assert.equal(smoke.collector_config.exporter, 'debug');
+    assert.equal(fs.existsSync(smoke.collector_config.config_file), true);
+    const config = parseJsonText(fs.readFileSync(smoke.collector_config.config_file, 'utf8')) as any;
+    assert.equal(config.receivers.prometheus.config.scrape_configs[0].metrics_path, '/metrics');
+    assert.deepEqual(
+      config.service.pipelines.metrics,
+      {
+        receivers: ['prometheus'],
+        processors: ['batch'],
+        exporters: ['debug'],
+      },
+    );
+    assert.equal(smoke.evidence.collector_process_started, true);
+    assert.equal(smoke.evidence.collector_consumption_observed, true);
+    assert.equal(smoke.evidence.observed_metric_name, 'opl_provider_ready');
+    assert.equal(smoke.evidence.observed_stream, 'stderr');
+    assert.equal(smoke.typed_blocker, null);
+    assert.equal(smoke.authority_boundary.external_collector_connected, true);
+    assert.equal(smoke.authority_boundary.payload_body_exported, false);
+    assert.equal(smoke.authority_boundary.can_write_domain_truth, false);
+    assert.equal(smoke.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(smoke.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(smoke.authority_boundary.can_claim_runtime_ready, false);
+    assert.equal(smoke.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(smoke.authority_boundary.can_claim_production_ready, false);
+    fs.rmSync(path.dirname(smoke.collector_config.config_file), { recursive: true, force: true });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime observability collector smoke returns typed blocker when Collector binary is missing', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-missing-otelcol-'));
+  const missingCollector = path.join(tempRoot, 'missing-otelcol');
+
+  try {
+    const output = runCli([
+      'runtime',
+      'observability-collector-smoke',
+      '--collector-command',
+      missingCollector,
+      '--timeout-ms',
+      '50',
+    ]);
+    const smoke = output.observability_collector_smoke;
+
+    assert.equal(smoke.status, 'blocked');
+    assert.equal(smoke.collector.command_source, 'missing');
+    assert.equal(smoke.collector.command, null);
+    assert.deepEqual(smoke.collector.attempted_commands, [missingCollector]);
+    assert.equal(smoke.evidence.collector_process_started, false);
+    assert.equal(smoke.evidence.collector_consumption_observed, false);
+    assert.equal(smoke.typed_blocker.blocker_type, 'collector_binary_missing');
+    assert.equal(smoke.typed_blocker.next_owner, 'operator');
+    assert.equal(smoke.authority_boundary.external_collector_connected, false);
+    assert.equal(smoke.authority_boundary.payload_body_exported, false);
+    assert.equal(smoke.authority_boundary.can_claim_runtime_ready, false);
+    assert.equal(smoke.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(smoke.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

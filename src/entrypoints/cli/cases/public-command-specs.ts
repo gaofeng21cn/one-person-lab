@@ -894,6 +894,7 @@ export function buildPublicCommandSpecs(
       'update rollback', // reuse-first: allow owner-routed update command registry metadata.
       'runtime observability-export',
       'runtime observability-endpoint',
+      'runtime observability-collector-smoke',
     ],
   });
 

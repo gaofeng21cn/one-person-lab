@@ -125,12 +125,37 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
     },
   );
   assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_config as any)
+      .config.receivers.prometheus.config.scrape_configs[0].scrape_interval,
+    '1s',
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_config as any).config.exporters.debug.verbosity,
+    'detailed',
+  );
+  assert.equal(
     (semanticContract.export_readback_seed.collector_consumption_config as any).scrape_endpoint.metrics_path,
     '/metrics',
   );
   assert.equal(
     (semanticContract.export_readback_seed.collector_consumption_config as any).scrape_endpoint.source_endpoint_command,
     'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_smoke as any).command_id,
+    'runtime observability-collector-smoke',
+  );
+  assert.deepEqual(
+    (semanticContract.export_readback_seed.collector_consumption_smoke as any).collector_command_resolution_order,
+    ['--collector-command', 'OPL_OTELCOL_COMMAND', 'otelcol-contrib', 'otelcol'],
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_smoke as any).payload_body_exported,
+    false,
+  );
+  assert.equal(
+    (semanticContract.export_readback_seed.collector_consumption_smoke as any).runtime_ready_claim,
+    'not_claimed',
   );
   assert.equal(semanticContract.export_readback_seed.readiness_claim, 'not_claimed');
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);

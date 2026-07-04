@@ -213,6 +213,11 @@ test('runtime observability commands expose registry metadata in command help', 
       contractKey: 'runtime_observability_endpoint',
       options: ['host', 'port', 'metrics-path', 'once', 'ready-file'],
     },
+    {
+      command: 'runtime observability-collector-smoke',
+      contractKey: 'runtime_observability_collector_smoke',
+      options: ['collector-command', 'endpoint', 'host', 'port', 'metrics-path', 'timeout-ms'],
+    },
   ];
 
   assert.equal(contract.protected_command_prefixes.includes('runtime observability'), true);
