@@ -464,8 +464,8 @@ function parseObservabilityExportArgs(
         option: token,
       });
     }
-    if (value !== 'json' && value !== 'openmetrics') {
-      throw buildUsageError('runtime observability-export --format must be json or openmetrics.', spec, {
+    if (value !== 'json' && value !== 'openmetrics' && value !== 'collector-config-json') {
+      throw buildUsageError('runtime observability-export --format must be json, openmetrics, or collector-config-json.', spec, {
         option: token,
         value,
       });

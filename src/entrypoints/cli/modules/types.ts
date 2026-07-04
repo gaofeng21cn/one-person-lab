@@ -134,7 +134,7 @@ type SystemStartupMaintenanceCliInput = {
 };
 
 type ObservabilityExportCliInput = {
-  format: 'json' | 'openmetrics';
+  format: 'json' | 'openmetrics' | 'collector-config-json';
 };
 
 type SessionLedgerCliInput = {

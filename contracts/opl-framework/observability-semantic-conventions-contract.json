@@ -62,7 +62,7 @@
   },
   "export_readback_seed": {
     "surface_kind": "opl_observability_export_readback_seed",
-    "formats": ["json", "openmetrics"],
+    "formats": ["json", "openmetrics", "collector-config-json"],
     "source_readback": "opl_observability_semantic_conventions_readback",
     "semantic_conventions_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json",
     "exporter_signal_mapping": {

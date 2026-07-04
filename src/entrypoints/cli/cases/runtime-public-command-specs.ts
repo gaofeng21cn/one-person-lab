@@ -589,10 +589,11 @@ export function buildPublicRuntimeCommandSpecs(
       group: 'runtime',
     }),
     'runtime observability-export': cloneCommandSpec(commandSpecs['runtime observability-export'], {
-      usage: 'opl runtime observability-export [--format json|openmetrics]',
+      usage: 'opl runtime observability-export [--format json|openmetrics|collector-config-json]',
       examples: [
         'opl runtime observability-export',
         'opl runtime observability-export --format openmetrics',
+        'opl runtime observability-export --format collector-config-json',
       ],
       group: 'runtime',
     }),

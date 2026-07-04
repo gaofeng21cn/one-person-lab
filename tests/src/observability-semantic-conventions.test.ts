@@ -84,7 +84,7 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
     ],
   );
   assert.equal(semanticContract.export_readback_seed.surface_kind, 'opl_observability_export_readback_seed');
-  assert.deepEqual(semanticContract.export_readback_seed.formats, ['json', 'openmetrics']);
+  assert.deepEqual(semanticContract.export_readback_seed.formats, ['json', 'openmetrics', 'collector-config-json']);
   assert.deepEqual(semanticContract.export_readback_seed.forbidden_body_fields, [
     'body',
     'artifact_body',

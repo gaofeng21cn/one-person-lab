@@ -466,12 +466,13 @@ export function buildInternalCommandSpecs(
       },
     },
     'runtime observability-export': {
-      usage: 'opl runtime observability-export [--format json|openmetrics]',
+      usage: 'opl runtime observability-export [--format json|openmetrics|collector-config-json]',
       summary:
         'Export read-only runtime observability counters from provider proofs, stage attempts, memory receipts, and SLO receipts.',
       examples: [
         'opl runtime observability-export',
         'opl runtime observability-export --format openmetrics',
+        'opl runtime observability-export --format collector-config-json',
       ],
       handler: async (args) => {
         const parsed = parseObservabilityExportArgs(args, commandSpecs['runtime observability-export']);
@@ -481,6 +482,12 @@ export function buildInternalCommandSpecs(
         });
         if (parsed.format === 'openmetrics') {
           process.stdout.write(renderObservabilityOpenMetrics(exportPayload));
+          return { __handled: true as const };
+        }
+        if (parsed.format === 'collector-config-json') {
+          process.stdout.write(
+            `${JSON.stringify(exportPayload.semantic_conventions.collector_consumption_config.config, null, 2)}\n`,
+          );
           return { __handled: true as const };
         }
         return { observability_export: exportPayload };

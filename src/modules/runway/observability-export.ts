@@ -19,7 +19,7 @@ import {
   type RuntimeTraySnapshotProvider,
 } from './runtime-tray-snapshot-provider.ts';
 
-export type ObservabilityExportFormat = 'json' | 'openmetrics';
+export type ObservabilityExportFormat = 'json' | 'openmetrics' | 'collector-config-json';
 
 const AUTHORITY_BOUNDARY = {
   opl: 'read_only_observability_export_projection',

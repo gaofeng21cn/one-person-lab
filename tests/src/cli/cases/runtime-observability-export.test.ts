@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
+import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, runCliRaw, test } from '../helpers.ts';
 
 test('runtime observability export aggregates provider, stage, gate, memory, and SLO receipt counters read-only', () => {
@@ -265,6 +266,27 @@ db.close();`,
     assert.match(openMetrics.stdout, /opl_observability_collector_consumption_config\{[^}]*receiver="prometheus"[^}]*\} 1/);
     assert.match(openMetrics.stdout, /opl_observability_collector_consumption_config\{[^}]*config_consumable="true"[^}]*\} 1/);
     assert.match(openMetrics.stdout, /opl_authority_boundary\{can_execute_repair="false",can_write_domain_truth="false",can_authorize_quality_verdict="false",can_authorize_ready_verdict="false"\} 1/);
+
+    const collectorConfigResult = runCliRaw(['runtime', 'observability-export', '--format', 'collector-config-json'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const collectorConfig = parseJsonText(collectorConfigResult.stdout) as any;
+    assert.deepEqual(collectorConfig.service.pipelines.metrics, {
+      receivers: ['prometheus'],
+      processors: ['batch'],
+      exporters: ['debug'],
+    });
+    assert.equal(
+      collectorConfig.receivers.prometheus.config.scrape_configs[0].job_name,
+      'opl_runtime_observability_export',
+    );
+    assert.equal(
+      collectorConfig.receivers.prometheus.config.scrape_configs[0].static_configs[0].targets[0],
+      '127.0.0.1:9464',
+    );
+    assert.equal(JSON.stringify(collectorConfig).includes('must-not-leak'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
