@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -46,7 +46,7 @@ test('agents conformance requires State Index Kernel adoption as refs-only SQLit
 test('agents conformance blocks domain repos that turn SQLite sidecar into truth or artifact body storage', () => {
   const repoDir = buildReadyAgentRepo();
   const adoptionPath = path.join(repoDir, 'contracts', 'state_index_kernel_adoption.json');
-  const adoption = JSON.parse(fs.readFileSync(adoptionPath, 'utf8'));
+  const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
   adoption.authority_boundary.sqlite_sidecar_source_of_truth = true;
   adoption.authority_boundary.opl_can_write_artifact_body = true;
   adoption.authority_boundary.domain_repo_can_own_generic_sqlite_persistence_engine = true;

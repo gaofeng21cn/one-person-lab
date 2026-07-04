@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -45,7 +45,7 @@ test('agents conformance blocks missing standard agent principles adoption', () 
 test('agents conformance blocks domain intake as standalone skill in standard principles adoption', () => {
   const repoDir = buildReadyAgentRepo();
   const adoptionPath = path.join(repoDir, 'contracts', 'standard-agent-principles-adoption.json');
-  const adoption = JSON.parse(fs.readFileSync(adoptionPath, 'utf8'));
+  const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
   adoption.domain_mapping.domain_intake.is_standalone_skill = true;
   writeJson(adoptionPath, adoption);
 
@@ -68,7 +68,7 @@ test('agents conformance blocks domain intake as standalone skill in standard pr
 test('agents conformance blocks stage policies that slow ordinary owner-delta progress', () => {
   const repoDir = buildReadyAgentRepo();
   const policyPath = path.join(repoDir, 'contracts', 'stage_operating_principles.json');
-  const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+  const policy = parseJsonText(fs.readFileSync(policyPath, 'utf8')) as Record<string, any>;
   policy.management_boundary.required_boundary_controls = [
     'stage_goal',
     'input_refs',

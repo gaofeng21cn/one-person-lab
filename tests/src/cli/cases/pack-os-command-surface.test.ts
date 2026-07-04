@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) {
   fs.mkdirSync(path.join(root, 'templates'), { recursive: true });
@@ -211,7 +211,7 @@ test('pack os CLI inspects validates and writes refs-only locks', () => {
     assert.equal(lockPayload.pack_lock.content_addressed_lock_policy.stores_artifact_body, false);
     assert.equal(lockPayload.pack_lock_output.status, 'written');
     assert.match(lockPayload.pack_lock_output.sha256, /^[0-9a-f]{64}$/);
-    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    const written = parseJsonText(fs.readFileSync(outputPath, 'utf8')) as Record<string, any>;
     assert.equal(written.lock_id, 'opl-pack-lock:mas.display.cli@2.0.0');
     assert.equal(written.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
@@ -284,7 +284,7 @@ test('pack os CLI installs lists caches and distributes generic packs', () => {
     assert.equal(distribution.bundle.cache_manifest.summary.cached_resource_count, 2);
     assert.equal(distribution.bundle.not_claims.includes('quality_verdict'), true);
 
-    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    const written = parseJsonText(fs.readFileSync(outputPath, 'utf8')) as Record<string, any>;
     assert.equal(written.surface_kind, 'opl_pack_os_distribution_bundle');
     assert.equal(written.authority_boundary.can_authorize_publication_readiness, false);
   } finally {
@@ -315,7 +315,7 @@ test('pack os CLI consumes MAS Display Pack v2 contract as refs-only smoke', () 
       false,
     );
     assert.equal(smoke.pack_lock_output.status, 'written');
-    const written = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    const written = parseJsonText(fs.readFileSync(outputPath, 'utf8')) as Record<string, any>;
     assert.equal(written.lock_id, 'opl-pack-lock:mas.display-pack.v2@2.0.0');
     assert.equal(written.review_transport.quality_verdict_owner, 'MedAutoScience');
     assert.equal(written.not_claims.includes('quality_verdict'), true);

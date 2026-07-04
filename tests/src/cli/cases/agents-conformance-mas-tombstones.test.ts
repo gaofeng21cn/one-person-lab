@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   retargetReadyRepo,
@@ -132,7 +132,7 @@ test('agents conformance blocks exact MAG legacy residue tokens', () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepoToMag(repoDir);
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = JSON.parse(fs.readFileSync(actionCatalogPath, 'utf8'));
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
   actionCatalog.notes.push('old attempt_ledger exact token must stay out of active paths');
   writeJson(actionCatalogPath, actionCatalog);
 

@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -45,7 +45,7 @@ test('agents conformance blocks missing controlled StageRun canary evidence', ()
 test('agents conformance keeps StageRun strategy refs advisory and current owner delta as default surface', () => {
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
-  const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
   profile.launch_admission_policy = {
     hard_blockers: [
       'identity',
@@ -104,7 +104,7 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
 test('agents conformance blocks StageRun profile that turns strategy refs or raw worklist into launch authority', () => {
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
-  const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
   profile.launch_admission_policy = {
     hard_blockers: [
       'identity',
@@ -176,7 +176,7 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
 test('agents conformance blocks controlled StageRun canary evidence missing strategy layers', () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
-  const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+  const evidence = parseJsonText(fs.readFileSync(evidencePath, 'utf8')) as Record<string, any>;
   evidence.strategy_trace = {
     candidate_generation: evidence.strategy_trace.candidate_generation,
   };
@@ -205,7 +205,7 @@ test('agents conformance blocks controlled StageRun canary evidence missing stra
 test('agents conformance blocks controlled StageRun canary evidence that claims authority', () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
-  const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+  const evidence = parseJsonText(fs.readFileSync(evidencePath, 'utf8')) as Record<string, any>;
   evidence.authority_boundary.controlled_canary_claims_live_domain_progress = true;
   evidence.authority_boundary.provider_completion_counts_as_closeout = true;
   evidence.closeout.same_attempt_self_review = true;
@@ -263,7 +263,7 @@ test('agents conformance projects controlled StageRun canary evidence for operat
 test('agents conformance blocks controlled StageRun canary evidence overclaim fields', () => {
   const repoDir = buildReadyAgentRepo();
   const evidencePath = path.join(repoDir, 'contracts', 'stage_run_canary_evidence.json');
-  const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+  const evidence = parseJsonText(fs.readFileSync(evidencePath, 'utf8')) as Record<string, any>;
   evidence.operator_projection = {
     domain_ready: true,
     quality_verdict: 'approved',

@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -7,7 +7,7 @@ import {
 test('agents conformance blocks active private generic residue before standard-agent thinning passes', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
   functionalAudit.modules.push({
     module_id: 'sample_brief_legacy_scheduler',
     classification: 'generic_scheduler_or_daemon',
@@ -44,7 +44,7 @@ test('agents conformance blocks active private generic residue before standard-a
 test('agents conformance blocks retired route aliases from re-entering active caller inventory', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
   functionalAudit.modules.push({
     module_id: 'retired_product_api_alias',
     classification: 'diagnostic_cleanup_path',
@@ -77,7 +77,7 @@ test('agents conformance blocks retired route aliases from re-entering active ca
 test('agents conformance classifies private platform residue deletion gate dispositions', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const functionalAudit = JSON.parse(fs.readFileSync(functionalAuditPath, 'utf8'));
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
   functionalAudit.modules.push(
     {
       module_id: 'mas_scheduler_residue',

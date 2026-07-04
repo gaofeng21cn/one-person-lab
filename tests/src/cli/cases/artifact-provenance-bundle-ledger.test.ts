@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
 
 const HASH_ZERO = '0'.repeat(64);
 const HASH_ONE = '1'.repeat(64);
@@ -99,7 +99,7 @@ test('ledger artifact provenance bundle validates, inspects, records, exports, a
   assert.equal(record.ledger_event.artifact_body_read, false);
   assert.equal(record.ledger_file, path.join(stateDir, 'artifact-provenance-bundles.json'));
 
-  const ledger = JSON.parse(fs.readFileSync(record.ledger_file, 'utf8'));
+  const ledger = parseJsonText(fs.readFileSync(record.ledger_file, 'utf8')) as Record<string, any>;
   assert.equal(ledger.records[0].bundle_id, 'bundle:demo');
   assert.equal(ledger.records[0].bundle_manifest_hash.algorithm, 'sha256');
   assert.equal(

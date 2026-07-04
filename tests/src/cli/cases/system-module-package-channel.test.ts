@@ -6,6 +6,7 @@ import {
   createGitModuleRemoteFixture,
   fs,
   os,
+  parseJsonText,
   path,
   runCli,
   runCliFailure,
@@ -31,7 +32,7 @@ function sha256(filePath: string) {
 }
 
 function readPackageChannelMarker(checkoutPath: string) {
-  return JSON.parse(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
+  return parseJsonText(fs.readFileSync(path.join(checkoutPath, 'opl-runtime-module.json'), 'utf8')) as {
     package_channel_lifecycle: {
       staged: { root: string; status: string };
       current: { root: string; source_git_head_sha: string | null };

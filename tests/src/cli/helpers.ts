@@ -8,6 +8,7 @@ export { default as path } from 'node:path';
 export { PassThrough } from 'node:stream';
 
 export { FrameworkContractError, loadFrameworkContracts, validateFrameworkContracts } from '../../../src/modules/charter/contracts.ts';
+export { parseJsonText } from '../../../src/kernel/json-file.ts';
 export { buildProjectProgressBrief } from '../../../src/modules/console/management/progress.ts';
 export { explainDomainBoundary, selectDomainAgentEntry, resolveRequestSurface } from '../../../src/modules/atlas/resolver.ts';
 
