@@ -6,6 +6,7 @@ import {
   assert,
   fs,
   os,
+  parseJsonText,
   path,
   test,
 } from '../../helpers.ts';
@@ -40,7 +41,9 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
 
     const start = await startTemporalWorkerLifecycle({ root: workerRoot });
     const statePath = path.join(workerRoot, 'temporal-worker.json');
-    const workerState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    const workerState = parseJsonText(
+      fs.readFileSync(statePath, 'utf8'),
+    ) as { pid: number };
     fs.rmSync(statePath, { force: true });
 
     const stop = await stopTemporalWorkerLifecycle({ root: workerRoot });
@@ -86,7 +89,10 @@ test('Temporal worker stop cleans orphan foreground worker after state file is m
       process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION = previousSourceVersion;
     }
     try {
-      process.kill(JSON.parse(fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8')).pid, 'SIGKILL');
+      const state = parseJsonText(
+        fs.readFileSync(path.join(workerRoot, 'temporal-worker.json'), 'utf8'),
+      ) as { pid: number };
+      process.kill(state.pid, 'SIGKILL');
     } catch {
       // The lifecycle under test should have removed the fixture process or state file.
     }
