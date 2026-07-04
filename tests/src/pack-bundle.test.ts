@@ -9,6 +9,7 @@ import {
   buildPackBundleValidation,
   writePackBundleAggregate,
 } from '../../src/modules/pack/pack-bundle.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 function writeSource(root: string) {
   const sourceRoot = path.join(root, 'contract.source');
@@ -86,7 +87,16 @@ test('Pack Bundle writes generated aggregates from source parts with manifest di
       false,
     );
 
-    const aggregate = JSON.parse(fs.readFileSync(aggregatePath, 'utf8'));
+    const aggregate = parseJsonText(fs.readFileSync(aggregatePath, 'utf8')) as {
+      surface_kind?: string;
+      items: Array<{ item_id: string; value: number }>;
+      generated_by: {
+        surface_kind?: string;
+        assembly_ref?: string;
+        source_digest?: string;
+        do_not_edit?: boolean;
+      };
+    };
     assert.equal(aggregate.surface_kind, 'example_bundle');
     assert.deepEqual(aggregate.items.map((item: { item_id: string }) => item.item_id), ['alpha', 'beta']);
     assert.equal(aggregate.generated_by.surface_kind, 'opl_pack_bundle_generated_metadata');
@@ -106,7 +116,9 @@ test('Pack Bundle check fails closed when generated aggregate drifts from source
     const firstValidation = buildPackBundleValidation(assemblyPath).pack_bundle_validation;
     assert.equal(firstValidation.status, 'valid');
 
-    const stale = JSON.parse(fs.readFileSync(aggregatePath, 'utf8'));
+    const stale = parseJsonText(fs.readFileSync(aggregatePath, 'utf8')) as {
+      items: Array<{ value: number }>;
+    };
     stale.items[0].value = 99;
     fs.writeFileSync(aggregatePath, `${JSON.stringify(stale, null, 2)}\n`);
 

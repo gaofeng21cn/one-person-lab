@@ -6,6 +6,7 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 
 import { runCli } from './cli/helpers-parts/runner.ts';
+import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 function withTempState<T>(fn: (root: string) => T) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-index-'));
@@ -160,12 +161,18 @@ test('opl index rebuild projects Stage Folder refs into artifact and read-model 
       receipt_ref: 'rca-owner-receipt:deck-a',
     });
     const artifactRow = tableValue<{ locator_json: string }>(artifactDb, 'SELECT locator_json FROM artifact_refs');
-    assert.equal(JSON.parse(artifactRow.locator_json).output_ref_kind, 'physical_file_ref');
+    assert.equal(
+      (parseJsonText(artifactRow.locator_json) as { output_ref_kind?: string }).output_ref_kind,
+      'physical_file_ref',
+    );
     const drilldownRow = tableValue<{ drilldown_json_ref: string }>(
       readModelDb,
       'SELECT drilldown_json_ref FROM artifact_drilldown',
     );
-    assert.equal(JSON.parse(drilldownRow.drilldown_json_ref).artifact_body_access, false);
+    assert.equal(
+      (parseJsonText(drilldownRow.drilldown_json_ref) as { artifact_body_access?: boolean }).artifact_body_access,
+      false,
+    );
   });
 });
 
@@ -247,7 +254,12 @@ test('opl index rebuild projects medautoscience Stage Folder refs with normalize
       artifactDb,
       'SELECT payload_ref_json FROM stage_current_pointers',
     );
-    const currentPointerPayload = JSON.parse(currentPointerRow.payload_ref_json);
+    const currentPointerPayload = parseJsonText(currentPointerRow.payload_ref_json) as {
+      pointer_role?: string;
+      stage_run_current_pointer?: boolean;
+      stage_run_terminal_state?: boolean;
+      current_owner_delta?: boolean;
+    };
     assert.equal(
       currentPointerPayload.pointer_role,
       'artifact_attempt_pointer_not_stage_run_current_pointer',
@@ -259,7 +271,12 @@ test('opl index rebuild projects medautoscience Stage Folder refs with normalize
       readModelDb,
       'SELECT route_json_ref FROM owner_route_index',
     );
-    const ownerRoutePayload = JSON.parse(ownerRouteRow.route_json_ref);
+    const ownerRoutePayload = parseJsonText(ownerRouteRow.route_json_ref) as {
+      pointer_role?: string;
+      stage_run_current_pointer?: boolean;
+      stage_run_terminal_state?: boolean;
+      current_owner_delta?: boolean;
+    };
     assert.equal(
       ownerRoutePayload.pointer_role,
       'artifact_attempt_pointer_not_stage_run_current_pointer',
