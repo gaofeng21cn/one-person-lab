@@ -14,6 +14,18 @@ export const MANAGED_UPDATE_OWNER_FIELDS = {
   revertRef: 'rollback_ref',
   revertPlan: MANAGED_UPDATE_OWNER_ACTIONS.revert,
 } as const;
+export const CAPABILITY_PACKAGE_OWNER = 'one-person-lab-managed-modules';
+export const CAPABILITY_PACKAGE_APPLY_OWNER = 'opl_connect_managed_module_reconciler';
+export const CAPABILITY_PACKAGE_READBACK_REF = 'opl connect agent-packages list --json';
+export const CAPABILITY_PACKAGE_STATUS_READBACK_REF = 'opl connect agent-packages status --package-id <package_id> --json';
+export const CAPABILITY_PACKAGE_APPLY_COMMAND = 'opl update apply --component capability_packages --json';
+export const CAPABILITY_PACKAGE_REPAIR_COMMAND = 'opl connect agent-packages repair --package-id <package_id> --json';
+export const CAPABILITY_PACKAGE_ROLLBACK_COMMAND = 'opl connect agent-packages rollback --package-id <package_id> --json';
+export const CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS = [
+  'capability_package_channel_signs_owner_receipt',
+  'capability_package_channel_writes_domain_truth',
+  'managed_update_kernel_is_package_manager',
+] as const;
 export type ManagedUpdateProviderId =
   | 'installation_carrier'
   | 'runtime_substrate'
@@ -384,7 +396,41 @@ export function manualCommand(actionId: string, command: string, reason: string)
   };
 }
 
+function uniqueClaims(values: string[]) {
+  return [...new Set(values)];
+}
+
+function isCapabilityPackageOwnerRoute(
+  input: Omit<ManagedUpdateOwnerRoute, 'package_manager_claim'>,
+) {
+  return input.owner === CAPABILITY_PACKAGE_OWNER
+    || input.apply_owner === CAPABILITY_PACKAGE_APPLY_OWNER
+    || input.route_kind === 'clean_managed_package_executor'
+    || input.readback_ref === CAPABILITY_PACKAGE_READBACK_REF
+    || input.readback_ref === CAPABILITY_PACKAGE_STATUS_READBACK_REF;
+}
+
+export function capabilityPackageOwnerRoute(
+  input: Partial<Omit<ManagedUpdateOwnerRoute, 'package_manager_claim'>> = {},
+): ManagedUpdateOwnerRoute {
+  return {
+    owner: input.owner ?? CAPABILITY_PACKAGE_OWNER,
+    authority_surface: 'descriptor/digest/lock/materializer readback over clean managed capability package roots',
+    route_kind: 'clean_managed_package_executor',
+    readback_ref: CAPABILITY_PACKAGE_READBACK_REF,
+    apply_owner: input.apply_owner ?? CAPABILITY_PACKAGE_APPLY_OWNER,
+    package_manager_claim: false,
+    forbidden_claims: uniqueClaims([
+      ...CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS,
+      ...(input.forbidden_claims ?? []),
+    ]),
+  };
+}
+
 export function ownerRoute(input: Omit<ManagedUpdateOwnerRoute, 'package_manager_claim'>): ManagedUpdateOwnerRoute {
+  if (isCapabilityPackageOwnerRoute(input)) {
+    return capabilityPackageOwnerRoute(input);
+  }
   return {
     ...input,
     package_manager_claim: false,

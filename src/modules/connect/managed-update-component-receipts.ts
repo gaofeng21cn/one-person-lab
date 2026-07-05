@@ -8,6 +8,7 @@ import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-st
 import type {
   ManagedUpdateComponentReceipt,
   ManagedUpdateComponentReceiptInput,
+  ManagedUpdateOwnerRoute,
   ManagedUpdateOwnerReceiptProjection,
   ManagedUpdatePostApplyActionReceipt,
   ManagedUpdateProviderAdapterId,
@@ -16,6 +17,7 @@ import type {
   ManagedUpdateReloadGuidance,
 } from './managed-update-owner-boundary.ts';
 import {
+  capabilityPackageOwnerRoute,
   MANAGED_UPDATE_OWNER_ACTIONS,
   MANAGED_UPDATE_OWNER_FIELDS,
   ownerBoundaryRef,
@@ -74,10 +76,22 @@ function normalizeApplyMode(value: unknown): ManagedUpdateReceiptApplyMode {
     : 'projection_only';
 }
 
+function normalizeOwnerRouteKind(value: unknown): ManagedUpdateOwnerRoute['route_kind'] {
+  return value === 'projection_only'
+    || value === 'manual_owner_route'
+    || value === 'controlled_framework_executor'
+    || value === 'clean_managed_package_executor'
+    ? value
+    : 'projection_only';
+}
+
 function defaultOwnerProjection(
   componentId: string,
   providerId: string,
 ): ManagedUpdateOwnerReceiptProjection {
+  if (componentId === 'capability_packages' || providerId === 'capability_packages') {
+    return capabilityPackageOwnerRoute();
+  }
   return {
     owner: providerId,
     authority_surface: 'legacy_managed_update_component_receipt_without_owner_projection',
@@ -98,11 +112,11 @@ function normalizeOwnerProjection(
     return defaultOwnerProjection(componentId, providerId);
   }
   const forbiddenClaims = stringArrayValue(value.forbidden_claims);
-  return {
+  const projection: ManagedUpdateOwnerReceiptProjection = {
     owner: optionalString(value.owner) ?? providerId,
     authority_surface: optionalString(value.authority_surface)
       ?? 'legacy_managed_update_component_receipt_without_owner_projection',
-    route_kind: optionalString(value.route_kind) ?? 'projection_only',
+    route_kind: normalizeOwnerRouteKind(value.route_kind),
     readback_ref: optionalString(value.readback_ref) ?? `legacy://managed-update/${componentId}`,
     apply_owner: optionalString(value.apply_owner) ?? 'none',
     package_manager_claim: false,
@@ -110,6 +124,17 @@ function normalizeOwnerProjection(
       ? forbiddenClaims
       : ['managed_update_kernel_is_package_manager'],
   };
+  if (componentId === 'capability_packages' || providerId === 'capability_packages') {
+    return capabilityPackageOwnerRoute({
+      owner: projection.owner,
+      authority_surface: projection.authority_surface,
+      route_kind: normalizeOwnerRouteKind(projection.route_kind),
+      readback_ref: projection.readback_ref,
+      apply_owner: projection.apply_owner,
+      forbidden_claims: projection.forbidden_claims,
+    });
+  }
+  return projection;
 }
 
 function defaultStatusDetail(): ManagedUpdateReceiptStatusDetail {

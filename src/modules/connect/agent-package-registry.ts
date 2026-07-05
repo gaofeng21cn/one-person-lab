@@ -24,6 +24,16 @@ import {
   registerLocalCodexPlugin,
   unregisterLocalCodexPlugin,
 } from './system-installation/codex-plugin-registry.ts';
+import {
+  CAPABILITY_PACKAGE_APPLY_COMMAND,
+  CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS,
+  CAPABILITY_PACKAGE_READBACK_REF,
+  CAPABILITY_PACKAGE_REPAIR_COMMAND,
+  CAPABILITY_PACKAGE_ROLLBACK_COMMAND,
+  CAPABILITY_PACKAGE_STATUS_READBACK_REF,
+  capabilityPackageOwnerRoute,
+  type ManagedUpdateOwnerRoute,
+} from './managed-update-owner-boundary.ts';
 
 type AgentPackageSourceKind =
   | 'first_party_managed_cohort'
@@ -242,6 +252,67 @@ type AgentPackageLifecycleLedger = {
   surface_kind: 'opl_agent_package_lifecycle_ledger';
   version: 'opl-agent-package-lifecycle-ledger.v1';
   receipts: AgentPackageLifecycleReceipt[];
+};
+
+type AgentPackageOwnerRouteReadbackItem = {
+  package_id: string;
+  descriptor: {
+    manifest_url: string | null;
+    manifest_sha256: string | null;
+    registry_url: string | null;
+    package_version: string | null;
+    rollback_ref: string | null;
+    source_kind: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
+    trust_tier: string | null;
+  };
+  digest: {
+    manifest_sha256: string | null;
+    version_or_source_digest: string | null;
+    plugin_payload_manifest_sha256: string | null;
+    content_identity_fields: string[];
+  };
+  lock: {
+    package_lock_ref: string | null;
+    lifecycle_receipt_ref: string | null;
+    lock_file: string;
+    lifecycle_ledger_file: string;
+  };
+  materializer: {
+    status: AgentPackagePhysicalSurface['status'];
+    plugin_id: string | null;
+    plugin_source_path: string | null;
+    plugin_manifest_path: string | null;
+    codex_plugin_cache_path: string | null;
+    plugin_payload_manifest_url: string | null;
+    plugin_payload_manifest_sha256: string | null;
+    plugin_payload_cache_path: string | null;
+    materialized_required_skill_ids: string[];
+    materialized_required_skill_paths: string[];
+    writes_performed: boolean;
+    reload_required: boolean;
+  };
+  authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
+};
+
+type AgentPackageOwnerRouteReadback = {
+  surface_kind: 'opl_agent_package_owner_route_readback';
+  owner_route: ManagedUpdateOwnerRoute;
+  command_refs: {
+    list: string;
+    status: string;
+    apply: string;
+    repair: string;
+    rollback: string;
+  };
+  selected_package_id: string | null;
+  package_count: number;
+  packages: AgentPackageOwnerRouteReadbackItem[];
+  no_package_manager_boundary: {
+    package_manager_claim: false;
+    clean_managed_scope: 'clean_opl_managed_module_roots_only';
+    forbidden_claims: string[];
+  };
+  authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
 };
 
 const REGISTRY_REQUIRED_FIELDS = [
@@ -583,6 +654,104 @@ function emptyLifecycleLedger(): AgentPackageLifecycleLedger {
     surface_kind: 'opl_agent_package_lifecycle_ledger',
     version: 'opl-agent-package-lifecycle-ledger.v1',
     receipts: [],
+  };
+}
+
+function ownerRouteReadbackCommands() {
+  return {
+    list: CAPABILITY_PACKAGE_READBACK_REF,
+    status: CAPABILITY_PACKAGE_STATUS_READBACK_REF,
+    apply: CAPABILITY_PACKAGE_APPLY_COMMAND,
+    repair: CAPABILITY_PACKAGE_REPAIR_COMMAND,
+    rollback: CAPABILITY_PACKAGE_ROLLBACK_COMMAND,
+  };
+}
+
+function ownerRouteReadbackItem(input: {
+  packageId: string;
+  lock?: AgentPackageLock | null;
+  receipt?: AgentPackageLifecycleReceipt | null;
+  manifestUrl?: string | null;
+  manifestSha256?: string | null;
+  registryUrl?: string | null;
+  rollbackRef?: string | null;
+  sourceKind?: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
+  trustTier?: string | null;
+}): AgentPackageOwnerRouteReadbackItem {
+  const paths = resolveOplStatePaths();
+  const surface = input.lock?.physical_surface ?? input.receipt?.physical_surface;
+  return {
+    package_id: input.packageId,
+    descriptor: {
+      manifest_url: input.lock?.manifest_url ?? input.receipt?.manifest_url ?? input.manifestUrl ?? null,
+      manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
+      registry_url: input.receipt?.registry_url ?? input.registryUrl ?? null,
+      package_version: input.lock?.package_version ?? null,
+      rollback_ref: input.lock?.rollback_ref ?? input.receipt?.rollback_ref ?? input.rollbackRef ?? null,
+      source_kind: input.lock?.source_kind ?? input.receipt?.source_kind ?? input.sourceKind ?? null,
+      trust_tier: input.lock?.trust_tier ?? input.receipt?.trust_tier ?? input.trustTier ?? null,
+    },
+    digest: {
+      manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
+      version_or_source_digest: input.lock?.version_or_source_digest ?? null,
+      plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
+      content_identity_fields: [
+        'manifest_sha256',
+        'version_or_source_digest',
+        'plugin_payload_manifest_sha256',
+      ],
+    },
+    lock: {
+      package_lock_ref: input.lock?.lock_ref ?? input.receipt?.package_lock_ref ?? null,
+      lifecycle_receipt_ref: input.receipt?.receipt_ref ?? input.lock?.action_receipt_id ?? null,
+      lock_file: paths.agent_package_lock_file,
+      lifecycle_ledger_file: paths.agent_package_lifecycle_ledger_file,
+    },
+    materializer: {
+      status: surface?.status ?? 'not_requested',
+      plugin_id: surface?.plugin_id ?? null,
+      plugin_source_path: surface?.plugin_source_path ?? null,
+      plugin_manifest_path: surface?.plugin_manifest_path ?? null,
+      codex_plugin_cache_path: surface?.codex_plugin_cache_path ?? null,
+      plugin_payload_manifest_url: surface?.plugin_payload_manifest_url ?? null,
+      plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
+      plugin_payload_cache_path: surface?.plugin_payload_cache_path ?? null,
+      materialized_required_skill_ids: surface?.materialized_required_skill_ids ?? [],
+      materialized_required_skill_paths: surface?.materialized_required_skill_paths ?? [],
+      writes_performed: surface?.writes_performed ?? false,
+      reload_required: surface?.reload_required ?? false,
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
+function ownerRouteReadback(input: {
+  selectedPackageId?: string | null;
+  packages: Array<{
+    packageId: string;
+    lock?: AgentPackageLock | null;
+    receipt?: AgentPackageLifecycleReceipt | null;
+    manifestUrl?: string | null;
+    manifestSha256?: string | null;
+    registryUrl?: string | null;
+    rollbackRef?: string | null;
+    sourceKind?: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
+    trustTier?: string | null;
+  }>;
+}): AgentPackageOwnerRouteReadback {
+  return {
+    surface_kind: 'opl_agent_package_owner_route_readback',
+    owner_route: capabilityPackageOwnerRoute(),
+    command_refs: ownerRouteReadbackCommands(),
+    selected_package_id: input.selectedPackageId ?? null,
+    package_count: input.packages.length,
+    packages: input.packages.map((entry) => ownerRouteReadbackItem(entry)),
+    no_package_manager_boundary: {
+      package_manager_claim: false,
+      clean_managed_scope: 'clean_opl_managed_module_roots_only',
+      forbidden_claims: uniqueStrings([...CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS]),
+    },
+    authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
 
@@ -1544,6 +1713,19 @@ export async function runOplAgentPackageManifestValidate(input: AgentPackageMani
       registry_entry: selection.registryEntry,
       lifecycle_receipt: receipt,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: manifest.package_id,
+        packages: [{
+          packageId: manifest.package_id,
+          receipt,
+          manifestUrl: selection.manifestUrl,
+          manifestSha256: fetched.source_sha256,
+          registryUrl: selection.registryUrl,
+          rollbackRef: manifest.rollback_ref,
+          sourceKind,
+          trustTier: effectiveTrustTier,
+        }],
+      }),
       validation_policy: {
         manifest_required_fields: [...MANIFEST_REQUIRED_FIELDS],
         forbidden_fields: [...FORBIDDEN_AGENT_PACKAGE_FIELDS],
@@ -1567,6 +1749,10 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
       package_lock: result.lock,
       physical_surface: result.physicalSurface,
       lifecycle_receipt: result.receipt,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: result.lock.package_id,
+        packages: [{ packageId: result.lock.package_id, lock: result.lock, receipt: result.receipt }],
+      }),
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
       registry_entry: result.registryEntry,
@@ -1586,6 +1772,10 @@ export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) 
       package_lock: result.lock,
       physical_surface: result.physicalSurface,
       lifecycle_receipt: result.receipt,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: result.lock.package_id,
+        packages: [{ packageId: result.lock.package_id, lock: result.lock, receipt: result.receipt }],
+      }),
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
       registry_entry: result.registryEntry,
@@ -1605,6 +1795,10 @@ export async function runOplAgentPackageRollback(input: AgentPackageRollbackInpu
       package_lock: result.lock,
       physical_surface: result.physicalSurface,
       lifecycle_receipt: result.receipt,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: result.lock.package_id,
+        packages: [{ packageId: result.lock.package_id, lock: result.lock, receipt: result.receipt }],
+      }),
       lock_file: resolveOplStatePaths().agent_package_lock_file,
       lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
       registry_entry: result.registryEntry,
@@ -1652,6 +1846,10 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
       package_lock: repairedLock,
       physical_surface: physicalSurface,
       lifecycle_receipt: receipt,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: repairedLock.package_id,
+        packages: [{ packageId: repairedLock.package_id, lock: repairedLock, receipt }],
+      }),
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };
@@ -1690,6 +1888,10 @@ export function runOplAgentPackageUninstall(input: AgentPackagePackageActionInpu
       removed_package_lock: lock,
       physical_surface: physicalSurface,
       lifecycle_receipt: receipt,
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: lock.package_id,
+        packages: [{ packageId: lock.package_id, lock, receipt }],
+      }),
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
   };
@@ -1817,6 +2019,12 @@ export function runOplAgentPackageStatus(input: { packageId?: string | null } = 
     : lockIndex.packages;
   const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex)
     .filter((entry) => !packageId || entry.package_id === packageId);
+  const latestReceipts = new Map<string, AgentPackageLifecycleReceipt>();
+  for (const receipt of lifecycleLedger.receipts) {
+    if (receipt.package_id && !latestReceipts.has(receipt.package_id)) {
+      latestReceipts.set(receipt.package_id, receipt);
+    }
+  }
   return {
     version: 'g2',
     opl_agent_package_status: {
@@ -1827,6 +2035,14 @@ export function runOplAgentPackageStatus(input: { packageId?: string | null } = 
       installed_packages: installedPackages,
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
+      owner_route_readback: ownerRouteReadback({
+        selectedPackageId: packageId ?? null,
+        packages: installedPackages.map((lock) => ({
+          packageId: lock.package_id,
+          lock,
+          receipt: latestReceipts.get(lock.package_id) ?? null,
+        })),
+      }),
       files: {
         home_shortcut_preferences_file: paths.agent_package_home_shortcut_preferences_file,
       },
@@ -1841,6 +2057,12 @@ export function listOplAgentPackages() {
   const lockIndex = readLockIndex();
   const lifecycleLedger = readLifecycleLedger();
   const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex);
+  const latestReceipts = new Map<string, AgentPackageLifecycleReceipt>();
+  for (const receipt of lifecycleLedger.receipts) {
+    if (receipt.package_id && !latestReceipts.has(receipt.package_id)) {
+      latestReceipts.set(receipt.package_id, receipt);
+    }
+  }
   return {
     version: 'g2',
     opl_agent_packages: {
@@ -1852,6 +2074,13 @@ export function listOplAgentPackages() {
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipt_count: lifecycleLedger.receipts.length,
       lifecycle_receipts: lifecycleLedger.receipts,
+      owner_route_readback: ownerRouteReadback({
+        packages: lockIndex.packages.map((lock) => ({
+          packageId: lock.package_id,
+          lock,
+          receipt: latestReceipts.get(lock.package_id) ?? null,
+        })),
+      }),
       files: {
         registry_cache_file: paths.agent_package_registry_cache_file,
         package_lock_file: paths.agent_package_lock_file,

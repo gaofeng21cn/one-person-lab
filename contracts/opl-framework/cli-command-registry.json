@@ -1073,6 +1073,7 @@
               "bundled_required_skill_ids",
               "rollback_ref",
               "lifecycle_receipt",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -1149,6 +1150,7 @@
               "package_lock",
               "physical_surface",
               "lifecycle_receipt",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -1187,6 +1189,7 @@
               "installed_package_count",
               "installed_packages",
               "lifecycle_receipts",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -1914,6 +1917,7 @@
               "package_lock",
               "physical_surface",
               "lifecycle_receipt",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -1966,6 +1970,7 @@
               "package_lock",
               "physical_surface",
               "lifecycle_receipt",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -2042,6 +2047,7 @@
               "package_lock",
               "physical_surface",
               "lifecycle_receipt",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -2094,6 +2100,7 @@
               "removed_package_lock",
               "physical_surface",
               "lifecycle_receipt",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
@@ -2339,6 +2346,7 @@
               "installed_package_count",
               "installed_packages",
               "lifecycle_receipts",
+              "owner_route_readback",
               "authority_boundary"
             ],
             "additionalProperties": true
