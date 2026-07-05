@@ -35,7 +35,7 @@ import { DatabaseSync } from 'node:sqlite';
 const db = new DatabaseSync(${JSON.stringify(queueDb)});
 const row = db.prepare('SELECT provider_run_json, activity_events_json FROM stage_attempts WHERE stage_attempt_id = ?').get(${JSON.stringify(attemptId)});
 const providerRun = {
-  ...JSON.parse(row.provider_run_json),
+  ...JSON.parse(row.provider_run_json), // reuse-first: allow embedded sqlite fixture JSON boundary.
   provider_status: 'running',
   started_at: '2026-05-16T00:00:00.000Z',
   completed_at: '2026-05-16T00:07:30.000Z',
@@ -54,7 +54,7 @@ const providerRun = {
     cadence_ref: 'cadence:provider-heartbeat'
   }
 };
-const events = JSON.parse(row.activity_events_json);
+const events = JSON.parse(row.activity_events_json); // reuse-first: allow embedded sqlite fixture JSON boundary.
 events.push({
   event_time: '2026-05-16T00:05:00.000Z',
   activity_kind: 'codex_stage_activity',

@@ -139,7 +139,7 @@ const libPath = libMatch ? libMatch[1] : '';
 const markerPath = libPath ? path.join(libPath, '.fake-installed-packages.json') : '';
 const readPackages = () => {
   if (!markerPath || !fs.existsSync(markerPath)) return [];
-  return JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+  return JSON.parse(fs.readFileSync(markerPath, 'utf8')); // reuse-first: allow embedded Rscript fixture JSON boundary.
 };
 if (expression.includes('priority = c("base", "recommended")')) {
   process.stdout.write('grid\\n');

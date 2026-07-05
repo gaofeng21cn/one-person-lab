@@ -156,7 +156,7 @@ if (fs.existsSync(${jsString(dispatchCountPath)})) {
 }
 count += 1;
 fs.writeFileSync(${jsString(dispatchCountPath)}, String(count) + '\\n');
-const task = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+const task = JSON.parse(fs.readFileSync(taskPath, 'utf8')); // reuse-first: allow embedded dispatch fixture JSON boundary.
 process.stdout.write(JSON.stringify({
   accepted: true,
   surface_kind: 'mas_family_domain_handler_dispatch_receipt',

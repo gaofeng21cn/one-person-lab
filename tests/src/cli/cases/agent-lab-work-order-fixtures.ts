@@ -151,7 +151,7 @@ export function createFakeOwnerCloseoutAction(targetRepo: string): string {
 const chunks = [];
 process.stdin.on('data', (chunk) => chunks.push(chunk));
 process.stdin.on('end', () => {
-  const receipt = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  const receipt = JSON.parse(Buffer.concat(chunks).toString('utf8')); // reuse-first: allow embedded owner-closeout fixture JSON boundary.
   const response = {
     surface_kind: 'target_domain_owner_work_order_closeout',
     version: 'fake-agent.owner-closeout.v1',

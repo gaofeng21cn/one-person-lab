@@ -132,7 +132,7 @@ function writeHelperBinaries(helperBinDir: string) {
       `#!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
-const input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
+const input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); // reuse-first: allow embedded native-helper fixture JSON boundary.
 const helper = path.basename(process.argv[1]);
 const result = helper === 'opl-artifact-indexer'
   ? { surface_kind: 'native_artifact_manifest', workspace_root: input.workspace_root, summary: { total_files_count: 2 }, files: [] }

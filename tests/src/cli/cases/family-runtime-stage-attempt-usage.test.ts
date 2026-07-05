@@ -505,13 +505,13 @@ import { DatabaseSync } from 'node:sqlite';
 const db = new DatabaseSync(${JSON.stringify(queueDb)});
 const row = db.prepare('SELECT provider_run_json, activity_events_json FROM stage_attempts WHERE stage_attempt_id = ?').get(${JSON.stringify(attemptId)});
 const providerRun = {
-  ...JSON.parse(row.provider_run_json),
+  ...JSON.parse(row.provider_run_json), // reuse-first: allow embedded sqlite fixture JSON boundary.
   provider_status: 'completed',
   started_at: '2026-05-27T00:00:00.000Z',
   completed_at: '2026-05-27T00:18:00.000Z',
   last_heartbeat_at: '2026-05-27T00:17:00.000Z'
 };
-const events = JSON.parse(row.activity_events_json);
+const events = JSON.parse(row.activity_events_json); // reuse-first: allow embedded sqlite fixture JSON boundary.
 events.push({
   event_time: '2026-05-27T00:10:00.000Z',
   event_kind: 'codex_stage_progress',

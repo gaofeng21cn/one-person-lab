@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 import { buildFunctionalPrivatizationAudit } from '../../../../src/modules/foundry-lab/functional-privatization-audit.ts';
 
@@ -11,7 +11,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
 
   assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
   assert.equal(report.owner, 'one-person-lab');
-  assert.equal(report.status, 'blocked');
+  assert.equal(report.status, 'ready');
   assert.equal(report.summary.total_domain_count, report.reports.length);
   for (const agentId of [
     'med-autoscience',
@@ -19,7 +19,6 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     'redcube_ai',
     'opl-meta-agent',
     'opl-bookforge',
-    'mas-scholar-skills',
   ]) {
     assert.equal(
       report.reports.some((entry: { agent_id: string }) => entry.agent_id === agentId),
@@ -27,7 +26,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     );
   }
   assert.equal(report.summary.ready_domain_count, 5);
-  assert.equal(report.summary.blocked_domain_count, 1);
+  assert.equal(report.summary.blocked_domain_count, 0);
   assert.equal(
     report.reports.some((entry: { agent_id: string; repo_dir: string }) => (
       entry.agent_id === 'opl-meta-agent'
@@ -35,17 +34,9 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     )),
     true,
   );
-  const scholarSkills = report.reports.find((entry: { agent_id: string }) =>
-    entry.agent_id === 'mas-scholar-skills'
-  );
-  if (!scholarSkills) {
-    throw new Error('mas-scholar-skills generated interface report missing');
-  }
-  assert.equal(scholarSkills.generated_agent_interfaces.status, 'blocked');
   assert.equal(
-    scholarSkills.generated_agent_interfaces.generated_surface_consumption_bundle
-      .consumption_status_counts.blocked,
-    8,
+    report.reports.some((entry: { agent_id: string }) => entry.agent_id === 'mas-scholar-skills'),
+    false,
   );
   assert.equal(report.authority_boundary.report_can_claim_domain_ready, false);
   assert.equal(report.authority_boundary.report_can_claim_production_ready, false);
@@ -60,7 +51,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
 test('generated interfaces and default callers accept domain action adapter export dispatch as domain handler target', () => {
   const repoDir = buildReadyAgentRepo();
   const handoffPath = path.join(repoDir, 'contracts', 'generated_surface_handoff.json');
-  const handoff = JSON.parse(fs.readFileSync(handoffPath, 'utf8'));
+  const handoff = parseJsonText(fs.readFileSync(handoffPath, 'utf8')) as any;
   handoff.generated_surfaces = handoff.generated_surfaces.map((surface: { surface_id?: string }) => (
     surface.surface_id === 'domain_handler'
       ? {
@@ -82,7 +73,7 @@ test('generated interfaces and default callers accept domain action adapter expo
   writeJson(handoffPath, handoff);
 
   const auditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const audit = JSON.parse(fs.readFileSync(auditPath, 'utf8'));
+  const audit = parseJsonText(fs.readFileSync(auditPath, 'utf8')) as any;
   audit.modules = audit.modules.map((module: { module_id?: string }) => (
     module.module_id === 'sample_brief_domain_handler'
       ? {
@@ -136,7 +127,7 @@ test('generated interfaces and default callers accept domain action adapter expo
 test('generated interfaces accept OPL storage substrate with MAS refs projection as standard inventory', () => {
   const repoDir = buildReadyAgentRepo();
   const auditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
-  const audit = JSON.parse(fs.readFileSync(auditPath, 'utf8'));
+  const audit = parseJsonText(fs.readFileSync(auditPath, 'utf8')) as any;
   audit.modules.push({
     module_id: 'runtime_storage_maintenance',
     classification: 'domain_authority_refs',
