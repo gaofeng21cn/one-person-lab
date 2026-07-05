@@ -12,6 +12,10 @@ function asBoolean(value: unknown): boolean {
   return value === true;
 }
 
+function asNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.map(asString).filter((entry): entry is string => Boolean(entry))
@@ -137,6 +141,10 @@ function taskRunProjectionTask(task: JsonRecord) {
   const reviewReceipt = asRecord(task.review_receipt);
   const actionReceipt = asRecord(task.action_receipt);
   const workflowRefs = asRecord(task.workflow_refs);
+  const stageRunCockpit = asRecord(task.stage_run_cockpit);
+  const stageRunCockpitSummary = asRecord(task.stage_run_cockpit_summary);
+  const currentStageUsage = asRecord(task.current_stage_usage);
+  const taskTotalUsage = asRecord(task.task_total_usage);
   const sourceRefCount = Number(task.source_ref_count ?? 0);
   const domainId = asString(task.domain_id) ?? 'opl';
   const updatedAt = asString(task.last_progress_at);
@@ -161,6 +169,10 @@ function taskRunProjectionTask(task: JsonRecord) {
       title: asString(task.title) ?? taskId,
       study_id: asString(task.study_id),
       task_ref: ref,
+      agent_display_name: asString(task.agent_display_name),
+      project_display_name: asString(task.project_display_name),
+      work_item_display_name: asString(task.work_item_display_name),
+      execution_run_label: asString(task.execution_run_label),
     },
     state: asString(task.state) ?? 'unknown',
     status_label: asString(task.status_label),
@@ -177,6 +189,31 @@ function taskRunProjectionTask(task: JsonRecord) {
     mas_owner_consumed_stage_attempt_id: asString(task.mas_owner_consumed_stage_attempt_id),
     mas_owner_consumed_closeout_ref: asString(task.mas_owner_consumed_closeout_ref),
     mas_owner_consumption_matches_runtime_closeout: task.mas_owner_consumption_matches_runtime_closeout === true,
+    agent_display_name: asString(task.agent_display_name),
+    project_display_name: asString(task.project_display_name),
+    work_item_display_name: asString(task.work_item_display_name),
+    execution_run_label: asString(task.execution_run_label),
+    stage_started_at: asString(task.stage_started_at),
+    elapsed_seconds: asNumber(task.elapsed_seconds),
+    last_heartbeat_at: asString(task.last_heartbeat_at),
+    running_proof_status: asString(task.running_proof_status),
+    running_proof_summary: asString(task.running_proof_summary),
+    current_stage_usage: currentStageUsage,
+    task_total_usage: taskTotalUsage,
+    usage_telemetry_status: asString(task.usage_telemetry_status),
+    typed_blocker_summary: asString(task.typed_blocker_summary),
+    typed_blocker_owner: asString(task.typed_blocker_owner),
+    resolution_route: asString(task.resolution_route),
+    gateway_status_ref: asString(task.gateway_status_ref),
+    connector_readiness_refs: asStringArray(task.connector_readiness_refs).length > 0
+      ? asStringArray(task.connector_readiness_refs)
+      : task.connector_readiness_refs,
+    diagnostic_substrate_refs: asStringArray(task.diagnostic_substrate_refs).length > 0
+      ? asStringArray(task.diagnostic_substrate_refs)
+      : task.diagnostic_substrate_refs,
+    stage_run_cockpit: stageRunCockpit,
+    stage_run_cockpit_summary: stageRunCockpitSummary,
+    stage_run_current_owner_delta: asRecord(task.stage_run_current_owner_delta),
     next_visible_step: asString(task.next_visible_step),
     last_progress_at: asString(task.last_progress_at),
     status: {
@@ -187,6 +224,9 @@ function taskRunProjectionTask(task: JsonRecord) {
       active_stage_id: asString(task.active_stage_id),
       active_stage_label: asString(task.active_stage_label),
       active_run_ref: asString(task.active_run_id) ? `${ref}.active_run_id` : null,
+      running_proof_status: asString(task.running_proof_status),
+      last_heartbeat_at: asString(task.last_heartbeat_at),
+      elapsed_seconds: asNumber(task.elapsed_seconds),
     },
     progress: {
       progress_label: asString(asRecord(task.progress).label),
@@ -194,6 +234,9 @@ function taskRunProjectionTask(task: JsonRecord) {
       last_progress_at: asString(task.last_progress_at),
       progress_ref: `${ref}.progress`,
       stage_ref: `${ref}.stage`,
+      resolution_route: asString(task.resolution_route),
+      stage_usage: currentStageUsage,
+      task_total_usage: taskTotalUsage,
     },
     conditions: taskRunProjectionConditions(task),
     evidence_cards: [

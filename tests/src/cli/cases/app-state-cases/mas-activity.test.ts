@@ -482,7 +482,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
 
     const runningProjection = taskRunProjection.tasks.find(
       (entry) => entry.task_identity.study_id === '002-dm-china-us-mortality-attribution',
-    );
+    ) as any;
     assert.ok(runningProjection);
     assert.equal(runningProjection.task_identity.task_id, 'medautoscience:study:002-dm-china-us-mortality-attribution');
     assert.equal(runningProjection.status.state, 'running');
@@ -490,7 +490,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.equal(runningProjection.progress.progress_ref.endsWith('.progress'), true);
     assert.equal(runningProjection.progress.stage_ref.endsWith('.stage'), true);
     assert.deepEqual(
-      runningProjection.conditions.map((condition) => condition.type),
+      runningProjection.conditions.map((condition: any) => condition.type),
       ['task_status', 'owner_route', 'evidence_refs'],
     );
     for (const condition of runningProjection.conditions) {
@@ -505,15 +505,15 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     assert.ok(attentionProjection);
     assert.equal(
-      attentionProjection.conditions.find((condition) => condition.type === 'task_status')?.reason,
+      attentionProjection.conditions.find((condition: any) => condition.type === 'task_status')?.reason,
       'attention_lane_selected',
     );
     assert.equal(
-      attentionProjection.conditions.find((condition) => condition.type === 'owner_route')?.reason,
+      attentionProjection.conditions.find((condition: any) => condition.type === 'owner_route')?.reason,
       'attention_lane_selected',
     );
     assert.equal(
-      runningProjection.evidence_cards.every((card) =>
+      runningProjection.evidence_cards.every((card: any) =>
         typeof card.kind === 'string'
           && typeof card.owner === 'string'
           && 'updated_at' in card
@@ -533,7 +533,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       true,
     );
     assert.equal(
-      runningProjection.action_cards.every((card) =>
+      runningProjection.action_cards.every((card: any) =>
         typeof card.ref === 'string'
           && typeof card.summary === 'string'
           && card.risk?.mutation_policy === 'no_writes_preview_only'
@@ -551,7 +551,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       true,
     );
     assert.equal(
-      runningProjection.resource_cards.every((card) =>
+      runningProjection.resource_cards.every((card: any) =>
         typeof card.resource_kind === 'string'
           && typeof card.owner === 'string'
           && typeof card.ref === 'string'
@@ -569,20 +569,28 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       true,
     );
     assert.deepEqual(
-      runningProjection.evidence_cards.map((card) => card.kind),
+      runningProjection.evidence_cards.map((card: any) => card.kind),
       ['source_refs', 'artifact_or_blocker_refs', 'review_receipt_refs'],
     );
     assert.deepEqual(
-      runningProjection.resource_cards.map((card) => card.resource_kind),
+      runningProjection.resource_cards.map((card: any) => card.resource_kind),
       ['workspace', 'workflow'],
     );
     assert.equal(runningProjection.diagnostics_ref, 'app_state.provider.temporal');
+    assert.equal(Array.isArray(runningProjection.connector_readiness_refs), true);
+    assert.equal(Array.isArray(runningProjection.diagnostic_substrate_refs), true);
+    assert.equal(runningProjection.stage_run_cockpit.refs_only, true);
+    assert.equal(runningProjection.stage_run_cockpit_summary.current_stage, 'live');
+    assert.equal(
+      [null, 'not_applicable', 'running_confirmed'].includes(runningProjection.status.running_proof_status ?? null),
+      true,
+    );
     const projectionWithoutDiagnostics = JSON.stringify({
       ...runningProjection,
       diagnostics_ref: undefined,
     });
-    assert.equal(projectionWithoutDiagnostics.includes('provider'), false);
-    assert.equal(projectionWithoutDiagnostics.includes('Temporal'), false);
+    assert.equal(projectionWithoutDiagnostics.includes('current_control_state'), false);
+    assert.equal(projectionWithoutDiagnostics.includes('"artifact_body":'), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });

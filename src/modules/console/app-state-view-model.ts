@@ -374,6 +374,8 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
   const taskId = asString(item.item_id)
     ?? (studyId ? `medautoscience:study:${studyId}` : `runtime-activity-${index + 1}`);
   const title = asString(item.title) ?? studyId ?? taskId;
+  const encodedTaskId = encodeURIComponent(taskId);
+  const sourceRef = `app_state.operator.workbench.task_drilldowns.${encodedTaskId}`;
   const activeRunId = asString(item.active_run_id);
   const nextVisibleStep = asString(item.next_action_summary)
     ?? asString(item.action_summary)
@@ -394,6 +396,70 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     stageLabel: asString(item.status_label),
     blockerRefCount,
   });
+  const currentStageUsage = asRecord(item.current_stage_usage);
+  const taskTotalUsage = asRecord(item.task_total_usage);
+  const typedBlockerSummary = asString(item.typed_blocker_summary);
+  const typedBlockerOwner = asString(item.typed_blocker_owner) ?? asString(item.project_id) ?? 'opl_framework';
+  const resolutionRoute = asString(item.resolution_route) ?? nextVisibleStep;
+  const stageRunCockpit = {
+    surface_kind: 'opl_stage_run_cockpit_refs',
+    source_ref: `${sourceRef}.stage_run_cockpit`,
+    derived_from: 'current_owner_delta',
+    task_id: taskId,
+    stage_id: stageId,
+    owner: asString(item.project_id) ?? 'opl_framework',
+    next_visible_step: nextVisibleStep,
+    accepted_return_shapes: ['owner_receipt_ref', 'typed_blocker_ref'],
+    readiness_false_flag_refs: [],
+    artifact_or_blocker_refs: [refs.artifact_or_blocker.current_ref],
+    refs_only: true,
+    elapsed_seconds: item.elapsed_seconds,
+    last_heartbeat_at: asString(item.last_heartbeat_at),
+    running_proof_ref: `${sourceRef}.running_proof_summary`,
+    stage_usage: currentStageUsage,
+    task_total_usage: taskTotalUsage,
+    typed_blocker_summary: typedBlockerSummary,
+    typed_blocker_owner: typedBlockerOwner,
+    typed_blocker_resolution_ref: `${sourceRef}.resolution_route`,
+  };
+  const stageRunCockpitSummary = {
+    current_owner: asString(item.project_id) ?? 'opl_framework',
+    required_delta: typedBlockerSummary
+      ? 'owner_attention_or_typed_blocker_resolution_required'
+      : 'next_visible_step_available',
+    next_safe_action_ref: route ? 'app_state.actions#task_action_receipt_preview' : null,
+    artifact_or_blocker_refs: [refs.artifact_or_blocker.current_ref],
+    current_stage: stageId,
+    elapsed_seconds: item.elapsed_seconds,
+    last_heartbeat_at: asString(item.last_heartbeat_at),
+    running_proof_status: asString(item.running_proof_status),
+    running_proof_summary: asString(item.running_proof_summary),
+    stage_usage: currentStageUsage,
+    task_total_usage: taskTotalUsage,
+    typed_blocker_summary: typedBlockerSummary,
+    typed_blocker_owner: typedBlockerOwner,
+    resolution_route: resolutionRoute,
+  };
+  const connectorReadinessRefs = [
+    {
+      id: 'temporal_provider',
+      title: 'Temporal provider',
+      status: asString(item.running_proof_status) ?? 'unknown',
+      ref: 'app_state.provider.temporal',
+      owner: 'one-person-lab',
+      next_action: 'opl_runtime_app_operator_drilldown',
+    },
+  ];
+  const diagnosticSubstrateRefs = [
+    {
+      id: 'runtime_activity_projection',
+      title: 'Runtime activity projection',
+      status: asString(item.runtime_attempt_status) ?? state,
+      ref: sourceRef,
+      owner: 'opl_framework',
+      next_action: 'inspect_refs_only_projection',
+    },
+  ];
 
   return {
     task_id: taskId,
@@ -425,6 +491,27 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     mas_owner_consumed_stage_attempt_id: asString(item.mas_owner_consumed_stage_attempt_id),
     mas_owner_consumed_closeout_ref: asString(item.mas_owner_consumed_closeout_ref),
     mas_owner_consumption_matches_runtime_closeout: item.mas_owner_consumption_matches_runtime_closeout === true,
+    agent_display_name: asString(item.agent_display_name),
+    project_display_name: asString(item.project_display_name),
+    work_item_display_name: asString(item.work_item_display_name),
+    execution_run_label: asString(item.execution_run_label),
+    stage_started_at: asString(item.stage_started_at),
+    elapsed_seconds: item.elapsed_seconds,
+    last_heartbeat_at: asString(item.last_heartbeat_at),
+    running_proof_status: asString(item.running_proof_status),
+    running_proof_summary: asString(item.running_proof_summary),
+    current_stage_usage: currentStageUsage,
+    task_total_usage: taskTotalUsage,
+    usage_telemetry_status: asString(item.usage_telemetry_status),
+    typed_blocker_summary: typedBlockerSummary,
+    typed_blocker_owner: typedBlockerOwner,
+    resolution_route: resolutionRoute,
+    gateway_status_ref: 'app_state.provider.temporal',
+    connector_readiness_refs: connectorReadinessRefs,
+    diagnostic_substrate_refs: diagnosticSubstrateRefs,
+    stage_run_cockpit: stageRunCockpit,
+    stage_run_cockpit_summary: stageRunCockpitSummary,
+    stage_run_current_owner_delta: stageRunCockpit,
     ...refs,
     active_path: [
       {

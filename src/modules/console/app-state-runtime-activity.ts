@@ -4,7 +4,14 @@ import path from 'node:path';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { recordList, stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
-import { listStageAttempts, openFamilyRuntimeSqlite, resolveOplStatePaths } from '../runway/index.ts';
+import {
+  buildStageAttemptUsageProjection,
+  listStageAttempts,
+  openFamilyRuntimeSqlite,
+  resolveOplStatePaths,
+  summarizeStageAttemptUsageProjections,
+} from '../runway/index.ts';
+import { buildStageAttemptRuntimeCurrentness } from '../runway/family-runtime-stage-attempt-runtime-currentness.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
@@ -39,6 +46,26 @@ function sourceRef(filePath: string, role: string, label: string) {
     role,
     label,
   };
+}
+
+function numberValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function recordValue(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
+function durationSecondsBetween(startedAt: string | null, endedAt: string | null) {
+  if (!startedAt || !endedAt) {
+    return null;
+  }
+  const startedMs = Date.parse(startedAt);
+  const endedMs = Date.parse(endedAt);
+  if (!Number.isFinite(startedMs) || !Number.isFinite(endedMs) || endedMs < startedMs) {
+    return null;
+  }
+  return Math.floor((endedMs - startedMs) / 1000);
 }
 
 function queueDbPath() {
@@ -312,6 +339,14 @@ function overlayStageAttempts(input: {
   candidateRoots: string[];
 }) {
   const [latest] = input.attempts;
+  const latestProviderRun = recordValue(latest.provider_run_json ?? latest.provider_run);
+  const latestRetryBudget = recordValue(latest.retry_budget_json ?? latest.retry_budget);
+  const latestRouteImpact = recordValue(latest.route_impact_json ?? latest.route_impact);
+  const latestActivityEvents = Array.isArray(latest.activity_events_json)
+    ? latest.activity_events_json
+    : Array.isArray(latest.activity_events)
+      ? latest.activity_events
+      : [];
   const closeout = readWorkspaceCloseoutForAttempt(latest, input.candidateRoots);
   const latestStatus = closeout && normalizeStatus(latest.status) === 'running'
     ? 'completed'
@@ -330,6 +365,49 @@ function overlayStageAttempts(input: {
   });
   const ownerConsumptionDrift = Boolean(ownerConsumption && closeout && !ownerConsumption.matchesRuntimeCloseout);
   const lane = ownerConsumptionDrift ? 'attention' : stageAttemptLane(latestStatus) ?? 'attention';
+  const stageStartedAt = firstString(latestProviderRun.started_at, latest.created_at);
+  const lastHeartbeatAt = firstString(latestProviderRun.last_heartbeat_at, latest.updated_at);
+  const stageElapsedSeconds = durationSecondsBetween(stageStartedAt, firstString(
+    closeout?.observedAt,
+    latestProviderRun.completed_at,
+    lastHeartbeatAt,
+    latest.updated_at,
+  ));
+  const latestUsageProjection = buildStageAttemptUsageProjection({
+    stageAttemptId: attemptId ?? 'unknown-stage-attempt',
+    projectionScope: 'app_state_runtime_activity',
+    status: latestStatus || 'unknown',
+    blockedReason: firstString(latest.blocked_reason),
+    executorKind: firstString(latest.executor_kind),
+    retryBudget: latestRetryBudget,
+    attemptCount: typeof latest.attempt_count === 'number' ? latest.attempt_count : 1,
+    providerRun: latestProviderRun,
+    activityEvents: latestActivityEvents,
+    routeImpact: latestRouteImpact,
+  });
+  const totalUsageProjection = summarizeStageAttemptUsageProjections(input.attempts.map((attempt) =>
+    buildStageAttemptUsageProjection({
+      stageAttemptId: firstString(attempt.stage_attempt_id) ?? 'unknown-stage-attempt',
+      projectionScope: 'app_state_runtime_activity_total',
+      status: normalizeStatus(attempt.status) || 'unknown',
+      blockedReason: firstString(attempt.blocked_reason),
+      executorKind: firstString(attempt.executor_kind),
+      retryBudget: recordValue(attempt.retry_budget_json ?? attempt.retry_budget),
+      attemptCount: typeof attempt.attempt_count === 'number' ? attempt.attempt_count : 1,
+      providerRun: recordValue(attempt.provider_run_json ?? attempt.provider_run),
+      activityEvents: Array.isArray(attempt.activity_events_json)
+        ? attempt.activity_events_json
+        : Array.isArray(attempt.activity_events)
+          ? attempt.activity_events
+          : [],
+      routeImpact: recordValue(attempt.route_impact_json ?? attempt.route_impact),
+    })
+  ), 'app_state_runtime_activity_total');
+  const runtimeCurrentness = buildStageAttemptRuntimeCurrentness({
+    ledgerStatus: latestStatus || 'unknown',
+    providerKind: firstString(latest.provider_kind) ?? 'unknown',
+    providerRun: latestProviderRun,
+  });
   const masNextActionSummary = firstString(
     input.item.next_action_summary,
     input.item.action_summary,
@@ -390,6 +468,42 @@ function overlayStageAttempts(input: {
     active_run_id: workflowId ?? attemptId ?? firstString(input.item.active_run_id),
     active_stage_id: stageId ?? firstString(input.item.active_stage_id, input.item.status),
     active_stage_label: stageId ?? firstString(input.item.active_stage_label, input.item.status_label),
+    agent_display_name: firstString(input.item.agent_display_name, input.item.project_label, input.item.domain_owner) ?? 'MAS',
+    project_display_name: firstString(input.item.project_display_name, input.item.title, input.item.study_id) ?? 'MAS study',
+    work_item_display_name: firstString(input.item.work_item_display_name, input.item.title, input.item.study_id) ?? 'MAS task',
+    execution_run_label: firstString(input.item.execution_run_label, stageId, input.item.status_label),
+    stage_started_at: stageStartedAt,
+    elapsed_seconds: stageElapsedSeconds,
+    last_heartbeat_at: lastHeartbeatAt,
+    running_proof_status: firstString(runtimeCurrentness.running_proof_status) ?? 'not_applicable',
+    running_proof_summary: ownerConsumptionDrift
+      ? 'latest_runtime_closeout_differs_from_owner_consumed_receipt'
+      : firstString(runtimeCurrentness.reason)
+        ?? (lane === 'running' ? 'running_confirmed' : 'not_running'),
+    current_stage_usage: {
+      telemetry_status: firstString(latestUsageProjection.telemetry_status) ?? 'missing',
+      total_tokens_observed: numberValue(latestUsageProjection.token.total_tokens_observed),
+      estimated_cost_usd_observed: numberValue(latestUsageProjection.cost.estimated_cost_usd_observed),
+      duration_ms_observed: numberValue(latestUsageProjection.duration.duration_ms_observed),
+      api_call_count_observed: numberValue(latestUsageProjection.api_calls.count_observed),
+      source_ref_count: latestUsageProjection.source_refs.length,
+    },
+    task_total_usage: {
+      telemetry_status: totalUsageProjection.resource_usage_observed_attempt_count > 0 ? 'observed' : 'missing',
+      total_tokens_observed: numberValue(totalUsageProjection.token.total_tokens_observed),
+      estimated_cost_usd_observed: numberValue(totalUsageProjection.cost.estimated_cost_usd_observed),
+      duration_ms_observed: numberValue(totalUsageProjection.duration.duration_ms_observed),
+      api_call_count_observed: numberValue(totalUsageProjection.api_calls.count_observed),
+      observed_attempt_count: numberValue(totalUsageProjection.resource_usage_observed_attempt_count),
+    },
+    usage_telemetry_status: totalUsageProjection.resource_usage_observed_attempt_count > 0 ? 'observed' : 'missing',
+    typed_blocker_summary: firstString(
+      input.item.typed_blocker_summary,
+      latest.blocked_reason,
+      ownerConsumptionDrift ? 'owner_consumption_drift_after_latest_runtime_closeout' : null,
+    ),
+    typed_blocker_owner: ownerConsumptionDrift ? 'medautoscience' : firstString(input.item.typed_blocker_owner, input.item.domain_owner),
+    resolution_route: actionSummary,
     stage_attempt_ids: [
       ...new Set([
         ...stringList(input.item.stage_attempt_ids),
