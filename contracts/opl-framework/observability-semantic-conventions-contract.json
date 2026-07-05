@@ -191,6 +191,85 @@
       "domain_ready_claim": "not_claimed",
       "production_ready_claim": "not_claimed"
     },
+    "exporter_seed": {
+      "surface_kind": "opl_observability_exporter_seed",
+      "seed_transport": "openmetrics_stdout_and_http_seed_only",
+      "source_export_command": "opl runtime observability-export --format openmetrics",
+      "source_endpoint_command": "opl runtime observability-endpoint --port 9464 --metrics-path /metrics",
+      "collector_smoke_command": "opl runtime observability-collector-smoke",
+      "exporter_signal_mapping_ref": "semantic_conventions.exporter_signal_mapping",
+      "collector_export_boundary_ref": "semantic_conventions.collector_export_boundary",
+      "collector_consumption_config_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/collector_consumption_config",
+      "owner_route_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/owner_route",
+      "otlp_sdk_exporter_configured": false,
+      "live_endpoint_configured": false,
+      "external_collector_connected": false,
+      "payload_body_exported": false,
+      "runtime_ready_claim": "not_claimed",
+      "domain_ready_claim": "not_claimed",
+      "production_ready_claim": "not_claimed"
+    },
+    "owner_route": {
+      "surface_kind": "opl_observability_owner_route",
+      "owner": "OPL Observability",
+      "owner_route_status": "owner_live_evidence_required",
+      "worklist_item": "otlp_exporter_live_endpoint",
+      "required_evidence": [
+        "OTLP or OpenTelemetry SDK exporter owner lane",
+        "live endpoint readback outside bounded smoke-only path",
+        "external collector consumption readback",
+        "semantic convention mapping for trace, metric, log, and event refs"
+      ],
+      "forbidden_completion_evidence": [
+        "OpenMetrics smoke endpoint alone",
+        "CLI diagnostic drilldown projection",
+        "phase10-src-modules-observability finding_count=0",
+        "strict diff gate"
+      ],
+      "legal_next_owner_action": "Open an OPL Observability owner lane for OTLP/OpenTelemetry SDK exporter and external collector consumption; bounded OpenMetrics seed remains diagnostic only.",
+      "stop_condition": "Operator drilldown can read the same current owner delta through trace, metric, log, and event vocabulary from a live exporter/collector path, or Observability emits a typed blocker."
+    },
+    "endpoint_readback_boundary": {
+      "surface_kind": "opl_observability_endpoint_readback_boundary",
+      "boundary_status": "bounded_endpoint_readback_only",
+      "endpoint_kind": "diagnostic_openmetrics_http_endpoint",
+      "source_export_seed_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/exporter_seed",
+      "owner_route_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/owner_route",
+      "proves": [
+        "openmetrics_http_scrape_shape",
+        "refs_only_authority_boundary",
+        "collector_config_target_shape"
+      ],
+      "does_not_prove": [
+        "otlp_exporter_live_endpoint",
+        "external_collector_connected",
+        "runtime_ready",
+        "domain_ready",
+        "production_ready",
+        "owner_acceptance"
+      ],
+      "external_collector_connected": false,
+      "payload_body_exported": false
+    },
+    "collector_consumption_readback_boundary": {
+      "surface_kind": "opl_observability_collector_consumption_readback_boundary",
+      "boundary_status": "diagnostic_collector_probe_only",
+      "source_export_seed_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/exporter_seed",
+      "source_endpoint_boundary_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/endpoint_readback_boundary",
+      "owner_route_ref": "contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/owner_route",
+      "proves": [
+        "collector_can_consume_bounded_openmetrics_surface",
+        "collector_debug_output_observed_metric"
+      ],
+      "does_not_prove": [
+        "otlp_exporter_live_endpoint",
+        "runtime_ready",
+        "domain_ready",
+        "production_ready",
+        "owner_acceptance"
+      ],
+      "payload_body_exported": false
+    },
     "forbidden_body_fields": [
       "body",
       "artifact_body",

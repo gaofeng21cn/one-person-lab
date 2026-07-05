@@ -206,6 +206,39 @@ db.close();`,
       'semantic_conventions.collector_export_boundary',
     );
     assert.equal(
+      observability.semantic_conventions.runtime_export_binding.exporter_seed_ref,
+      'semantic_conventions.exporter_seed',
+    );
+    assert.equal(
+      observability.semantic_conventions.runtime_export_binding.owner_route_ref,
+      'semantic_conventions.owner_route',
+    );
+    assert.equal(
+      observability.semantic_conventions.exporter_seed.surface_kind,
+      'opl_observability_exporter_seed',
+    );
+    assert.equal(
+      observability.semantic_conventions.exporter_seed.seed_transport,
+      'openmetrics_stdout_and_http_seed_only',
+    );
+    assert.equal(
+      observability.semantic_conventions.exporter_seed.owner_route_ref,
+      'contracts/opl-framework/observability-semantic-conventions-contract.json#/export_readback_seed/owner_route',
+    );
+    assert.equal(observability.semantic_conventions.owner_route.owner, 'OPL Observability');
+    assert.equal(
+      observability.semantic_conventions.owner_route.worklist_item,
+      'otlp_exporter_live_endpoint',
+    );
+    assert.equal(
+      observability.semantic_conventions.owner_route.owner_route_status,
+      'owner_live_evidence_required',
+    );
+    assert.equal(
+      observability.semantic_conventions.summary.owner_route_status,
+      'owner_live_evidence_required',
+    );
+    assert.equal(
       observability.semantic_conventions.exporter_signal_mapping.metrics.exporter_signal,
       'openmetrics_gauge_seed',
     );
@@ -405,6 +438,19 @@ test('runtime observability metrics endpoint serves the OpenMetrics export over 
     assert.equal(handle.readback.authority_boundary.can_claim_runtime_ready, false);
     assert.equal(handle.readback.authority_boundary.external_collector_connected, false);
     assert.equal(handle.readback.server_runtime, 'node_http_standard_library');
+    assert.equal(handle.readback.exporter_seed.live_endpoint_configured, false);
+    assert.equal(
+      handle.readback.owner_route.worklist_item,
+      'otlp_exporter_live_endpoint',
+    );
+    assert.equal(
+      handle.readback.readback_boundary.boundary_status,
+      'bounded_endpoint_readback_only',
+    );
+    assert.equal(
+      handle.readback.readback_boundary.does_not_prove.includes('otlp_exporter_live_endpoint'),
+      true,
+    );
 
     const response = await fetch(handle.readback.endpoint.url);
     assert.equal(response.status, 200);
@@ -486,6 +532,11 @@ test('runtime observability collector smoke observes fake Collector debug output
     assert.equal(smoke.authority_boundary.can_claim_runtime_ready, false);
     assert.equal(smoke.authority_boundary.can_claim_domain_ready, false);
     assert.equal(smoke.authority_boundary.can_claim_production_ready, false);
+    assert.equal(smoke.owner_route.owner, 'OPL Observability');
+    assert.equal(smoke.owner_route.worklist_item, 'otlp_exporter_live_endpoint');
+    assert.equal(smoke.readback_boundary.endpoint_mode, 'started_local_endpoint');
+    assert.equal(smoke.readback_boundary.collector_consumption_observed, true);
+    assert.equal(smoke.readback_boundary.external_collector_connected, true);
     fs.rmSync(path.dirname(smoke.collector_config.config_file), { recursive: true, force: true });
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -586,6 +637,13 @@ test('runtime observability collector smoke returns typed blocker when Collector
     assert.equal(smoke.authority_boundary.can_claim_runtime_ready, false);
     assert.equal(smoke.authority_boundary.can_claim_domain_ready, false);
     assert.equal(smoke.authority_boundary.can_claim_production_ready, false);
+    assert.equal(smoke.owner_route.owner_route_status, 'owner_live_evidence_required');
+    assert.equal(smoke.readback_boundary.endpoint_mode, 'started_local_endpoint');
+    assert.equal(smoke.readback_boundary.collector_consumption_observed, false);
+    assert.equal(
+      smoke.readback_boundary.does_not_prove.includes('otlp_exporter_live_endpoint'),
+      true,
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

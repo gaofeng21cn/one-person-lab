@@ -15,7 +15,9 @@ import {
   DEFAULT_COLLECTOR_SMOKE_TIMEOUT_MS,
   DEFAULT_METRICS_ENDPOINT_HOST,
   DEFAULT_METRICS_ENDPOINT_PATH,
+  buildCollectorReadbackBoundary,
   buildEndpointReadback,
+  buildObservabilityOwnerRouteReadback,
   errorMessage,
   normalizeMetricsPath,
   targetForEndpoint,
@@ -197,6 +199,12 @@ function blockedCollectorSmoke(input: {
       output_bytes: input.outputBytes ?? 0,
       timeout_ms: input.timeoutMs,
     },
+    owner_route: buildObservabilityOwnerRouteReadback(),
+    readback_boundary: buildCollectorReadbackBoundary({
+      endpointMode: (input.endpoint?.mode ?? 'started_local_endpoint'),
+      collectorConsumptionObserved: false,
+      externalCollectorConnected: false,
+    }),
     typed_blocker: {
       blocker_type: input.blockerType,
       message: input.message,
@@ -520,6 +528,12 @@ export async function runObservabilityCollectorSmoke(
         output_bytes: result.output_bytes,
         timeout_ms: timeoutMs,
       },
+      owner_route: buildObservabilityOwnerRouteReadback(),
+      readback_boundary: buildCollectorReadbackBoundary({
+        endpointMode: endpoint.mode,
+        collectorConsumptionObserved: true,
+        externalCollectorConnected: true,
+      }),
       typed_blocker: null,
       authority_boundary: collectorSmokeBoundary(true),
     };

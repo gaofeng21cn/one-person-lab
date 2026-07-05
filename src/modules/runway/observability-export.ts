@@ -30,6 +30,8 @@ import {
   DEFAULT_METRICS_ENDPOINT_PORT,
   booleanValue,
   buildEndpointReadback,
+  buildObservabilityExporterSeedReadback,
+  buildObservabilityOwnerRouteReadback,
   errorMessage,
   firstString,
   metricValueOrUndefined,
@@ -296,6 +298,8 @@ function buildRuntimeSemanticConventionProjection(input: {
   };
   const readback = buildObservabilitySemanticConventionReadback(semanticInput);
   const seed = buildObservabilitySemanticConventionExportSeed(semanticInput);
+  const exporterSeed = buildObservabilityExporterSeedReadback();
+  const ownerRoute = buildObservabilityOwnerRouteReadback();
   return {
     ...seed,
     runtime_export_binding: {
@@ -309,11 +313,15 @@ function buildRuntimeSemanticConventionProjection(input: {
       app_operator_drilldown_ref: 'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow existing operator drilldown as a source ref, not a private observability UI.
       exporter_signal_mapping_ref: 'semantic_conventions.exporter_signal_mapping',
       collector_export_boundary_ref: 'semantic_conventions.collector_export_boundary',
+      exporter_seed_ref: 'semantic_conventions.exporter_seed',
+      owner_route_ref: 'semantic_conventions.owner_route',
       selected_stage_attempt_id: stringValue(attempt.stage_attempt_id),
       selected_domain_id: stringValue(attempt.domain_id),
       selected_status: attemptStatus(attempt),
       binding_policy: 'runtime_export_refs_only_no_payload_body_no_ready_claim',
     },
+    exporter_seed: exporterSeed,
+    owner_route: ownerRoute,
     canonical_fields: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.fields,
     canonical_attributes: readback.canonical_attributes,
     signal_mappings: OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.signal_mappings,
@@ -326,6 +334,7 @@ function buildRuntimeSemanticConventionProjection(input: {
       ...seed.summary,
       semantic_convention_status: 'runtime_export_bound',
       body_included: false,
+      owner_route_status: ownerRoute.owner_route_status,
       domain_authority_claim: 'not_claimed',
       runtime_ready_claim: 'not_claimed',
       production_ready_claim: 'not_claimed',
