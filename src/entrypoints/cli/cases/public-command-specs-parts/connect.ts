@@ -9,6 +9,7 @@ import {
 import {
   listOplAgentPackages,
   runOplAgentPackageExposureAction,
+  runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
   runOplAgentPackageRegistryRefresh,
@@ -17,6 +18,7 @@ import {
   runOplAgentPackageStatus,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
+  type AgentPackageHomeShortcutPreferencesSetInput,
   type AgentPackageInstallInput,
   type AgentPackageManifestValidateInput,
   type AgentPackagePackageActionInput,
@@ -87,6 +89,8 @@ type AgentPackageInstallArgs = AgentPackageInstallInput;
 type AgentPackageRollbackArgs = AgentPackageRollbackInput;
 
 type AgentPackagePackageActionArgs = AgentPackagePackageActionInput;
+
+type AgentPackageHomeShortcutPreferencesSetArgs = AgentPackageHomeShortcutPreferencesSetInput;
 
 const MODULE_ACTION_COMMANDS = [
   'connect install',
@@ -336,6 +340,28 @@ function parseAgentPackagePackageActionArgs(command: string, args: string[], spe
   }
   return {
     packageId,
+    dryRun: parsed['dry-run'] === true,
+  };
+}
+
+function parseAgentPackageHomeShortcutPreferencesSetArgs(
+  args: string[],
+  spec: CommandSpec,
+): AgentPackageHomeShortcutPreferencesSetArgs {
+  const command = 'connect agent-packages home-shortcut-preferences set';
+  const parsed = parseRegisteredCommandOptions(command, args, spec);
+  const packageId = String(parsed['package-id'] ?? '').trim();
+  const shortcutId = String(parsed['shortcut-id'] ?? '').trim();
+  if (!packageId || !shortcutId) {
+    throw buildUsageError(`${command} requires --package-id and --shortcut-id.`, spec, {
+      required: ['--package-id', '--shortcut-id'],
+    });
+  }
+  return {
+    packageId,
+    shortcutId,
+    visible: parsed.visible === true ? true : null,
+    sortOrder: typeof parsed['sort-order'] === 'number' ? parsed['sort-order'] : null,
     dryRun: parsed['dry-run'] === true,
   };
 }
@@ -1153,6 +1179,66 @@ export function buildConnectCommandSpecs(
             'connect agent-packages disable',
             args,
             connectCommandSpecs['connect agent-packages disable'],
+          ),
+        ),
+    },
+    'connect agent-packages home-shortcut-preferences set': {
+      usage: 'opl connect agent-packages home-shortcut-preferences set --package-id <id> --shortcut-id <id> [--visible] [--sort-order <n>] [--dry-run]',
+      summary: 'Persist the user Home shortcut preference for an installed OPL Agent Package.',
+      examples: [
+        'opl connect agent-packages home-shortcut-preferences set --package-id mas --shortcut-id research --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect agent-packages home-shortcut-preferences set',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'package-id',
+            flag: '--package-id',
+            value_kind: 'string',
+            summary: 'Installed OPL Agent Package id.',
+            required: true,
+          },
+          {
+            name: 'shortcut-id',
+            flag: '--shortcut-id',
+            value_kind: 'string',
+            summary: 'Home shortcut id to prefer for this package.',
+            required: true,
+          },
+          {
+            name: 'visible',
+            flag: '--visible',
+            value_kind: 'boolean',
+            summary: 'Mark the shortcut preference visible.',
+            required: false,
+          },
+          {
+            name: 'sort-order',
+            flag: '--sort-order',
+            value_kind: 'integer',
+            summary: 'Optional user-visible ordering value.',
+            required: false,
+          },
+          {
+            name: 'dry-run',
+            flag: '--dry-run',
+            value_kind: 'boolean',
+            summary: 'Validate and preview preference output without writing state.',
+            required: false,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_home_shortcut_preferences_set/output_schema',
+        authority_boundary: agentPackageAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplAgentPackageHomeShortcutPreferencesSet(
+          parseAgentPackageHomeShortcutPreferencesSetArgs(
+            args,
+            connectCommandSpecs['connect agent-packages home-shortcut-preferences set'],
           ),
         ),
     },

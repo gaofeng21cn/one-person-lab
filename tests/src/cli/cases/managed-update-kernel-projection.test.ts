@@ -616,7 +616,7 @@ exit 2
     assert.equal(agents.policy_id, 'ordinary_user_non_development_silent_background');
     assert.equal(agents.owner_route.owner, 'one-person-lab-managed-modules');
     assert.equal(agents.owner_route.route_kind, 'clean_managed_package_executor');
-    assert.match(agents.owner_route.authority_surface, /OCI\/content-addressed/);
+    assert.match(agents.owner_route.authority_surface, /descriptor\/digest\/lock\/materializer/);
     assert.equal(agents.owner_route.package_manager_claim, false);
     assert.equal(agents.owner_execution_boundary.owner_executor_id, 'opl_connect_managed_module_reconciler');
     assert.equal(agents.owner_execution_boundary.runner_can_execute, true);

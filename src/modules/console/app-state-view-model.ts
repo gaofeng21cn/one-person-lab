@@ -914,7 +914,6 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
         label: asString(item.status),
         action_route_ref: asString(item.action_route_ref),
       })),
-      lazy_refs: lazyRefs,
     },
     owner_boundary: {
       app_repo: 'gui_product_truth_and_release_gate_owner',

@@ -3,6 +3,7 @@ import type { OplAppOperatorViewModelInput } from '../app-state-view-model.ts';
 type JsonRecord = Record<string, unknown>;
 
 type RuntimeSummary = {
+  active_project_count: number;
   in_progress_count: number;
   delivered_auto_paused_count: number;
   paused_count: number;
@@ -63,6 +64,13 @@ export function buildSummaryCards(input: OplAppOperatorViewModelInput, runtimeSu
     : `${healthyModuleCount}/${defaultModuleCount}`;
 
   return [
+    {
+      card_id: 'active_projects',
+      label: '活跃项目',
+      value: runtimeSummary.active_project_count,
+      tone: runtimeSummary.active_project_count > 0 ? 'running' : 'idle',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
+    },
     {
       card_id: 'in_progress_count',
       label: '进行中',

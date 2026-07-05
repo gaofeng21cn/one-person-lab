@@ -146,7 +146,7 @@ async function withAgentPackageServer(
       assert.equal(typeof address, 'object');
       const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
       response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(formatJsonPayload(registryPayload(baseUrl)));
+      response.end(formatJsonPayload(registryPayload(baseUrl, { packageId: manifest.package_id })));
       return;
     }
     if (url.pathname === '/payload.json') {
@@ -1256,7 +1256,7 @@ test('connect agent-packages canonicalizes legacy registry lock lifecycle and ho
         registry_cache: { entries: Array<{ package_id: string }> } | null;
         installed_packages: Array<{ package_id: string; agent_id: string }>;
         lifecycle_receipts: Array<{ package_id: string | null; physical_surface?: { package_id: string } }>;
-        home_shortcut_preferences: Array<{ package_id: string }>;
+        home_shortcut_preferences: Array<{ package_id: string; shortcut_id: string }>;
       };
     };
 
@@ -1268,7 +1268,10 @@ test('connect agent-packages canonicalizes legacy registry lock lifecycle and ho
     assert.equal(list.opl_agent_packages.installed_packages[0].agent_id, 'redcube-ai');
     assert.equal(list.opl_agent_packages.lifecycle_receipts[0].package_id, 'opl-meta-agent');
     assert.equal(list.opl_agent_packages.lifecycle_receipts[0].physical_surface?.package_id, 'opl-meta-agent');
-    assert.equal(list.opl_agent_packages.home_shortcut_preferences[0].package_id, 'opl-bookforge');
+    assert.equal(
+      list.opl_agent_packages.home_shortcut_preferences.find((entry) => entry.shortcut_id === 'book')?.package_id,
+      'opl-bookforge',
+    );
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

@@ -2986,6 +2986,76 @@
         "can_claim_production_ready": false
       }
     },
+    "connect_agent_packages_home_shortcut_preferences_set": {
+      "command_id": "connect agent-packages home-shortcut-preferences set",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "shortcut-id",
+          "flag": "--shortcut-id",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "visible",
+          "flag": "--visible",
+          "value_kind": "boolean",
+          "required": false
+        },
+        {
+          "name": "sort-order",
+          "flag": "--sort-order",
+          "value_kind": "integer",
+          "required": false
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_home_shortcut_preferences"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_home_shortcut_preferences": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "preference",
+              "preferences_file",
+              "lifecycle_receipt",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
     "connect_agent_packages_status": {
       "command_id": "connect agent-packages status",
       "owner": "OPL Connect",

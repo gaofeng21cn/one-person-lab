@@ -224,9 +224,7 @@ function buildTaskEntries(input: BuildSettingsControlCenterInput) {
     dry_run_supported: action.dry_run_supported,
     confirmation_required: action.confirmation_required,
     danger_level: action.danger_level,
-    impact: action.impact,
     rollback_action_id: action.rollback_action_id ?? null,
-    follow_up_action_ids: action.follow_up_action_ids,
     mutates: action.mutates,
     authority_flags: settingsAuthorityFlags(),
   }));

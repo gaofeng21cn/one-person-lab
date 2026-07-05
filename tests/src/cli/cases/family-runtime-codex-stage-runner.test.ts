@@ -41,7 +41,7 @@ test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance'
   });
 
   assert.match(prompt, /paper_mission\/stage-route/);
-  assert.match(prompt, /ops\/medautoscience\/\.venv\/bin\/python3/);
+  assert.match(prompt, /DM-CVD-Mortality-Risk\/\.venv\/bin\/python3/);
   assert.match(prompt, /dm-cvd-mortality-risk\.local\.toml/);
   assert.match(prompt, /paper-mission inspect/);
   assert.match(prompt, /runtime --help/);

@@ -635,6 +635,7 @@ exit 1
     assert.deepEqual(
       output.app_state.operator.workbench.summary_cards.map((entry: AppStateListEntry) => entry.card_id),
       [
+        'active_projects',
         'in_progress_count',
         'delivered_auto_paused_count',
         'paused_count',
