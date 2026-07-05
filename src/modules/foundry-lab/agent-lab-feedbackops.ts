@@ -77,6 +77,12 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function asRecord(value: unknown): JsonRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as JsonRecord
+    : null;
+}
+
 function stringList(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -301,24 +307,79 @@ export function submitDeliveryFeedbackEvent(
   };
 }
 
-function developerModeExecutionAllowed(developerMode: JsonRecord | null | undefined) {
-  if (!developerMode) {
+function targetAuthorityForAgent(developerMode: JsonRecord, targetAgentId: string) {
+  const targetAuthority = asRecord(developerMode.target_authority);
+  const standardTargets = targetAuthority?.standard_targets;
+  if (!Array.isArray(standardTargets)) {
+    return null;
+  }
+  return standardTargets
+    .map((entry) => asRecord(entry))
+    .find((entry) => entry && asString(entry.target_agent_id) === targetAgentId) ?? null;
+}
+
+function targetAuthorityAllowsExecution(targetAuthority: JsonRecord | null) {
+  if (!targetAuthority) {
     return false;
   }
+  const status = asString(targetAuthority.status);
+  const allowedRoute = asString(targetAuthority.allowed_route);
   return (
-    asString(developerMode.effective_state) === 'active_direct'
-    || asString(developerMode.allowed_route) === 'direct_repo_fix'
+    status !== 'blocked'
+    && status !== 'disabled'
+    && allowedRoute === 'direct_repo_fix'
   );
+}
+
+function developerModeExecutionGate(targetAgentId: string, developerMode: JsonRecord | null | undefined) {
+  if (!developerMode) {
+    return {
+      executable: false,
+      route_scope: 'none',
+      target_authority: null,
+    };
+  }
+
+  const targetAuthority = targetAuthorityForAgent(developerMode, targetAgentId);
+  if (targetAuthority) {
+    return {
+      executable: targetAuthorityAllowsExecution(targetAuthority),
+      route_scope: 'target_scoped',
+      target_authority: targetAuthority,
+    };
+  }
+
+  return {
+    executable:
+      asString(developerMode.effective_state) === 'active_direct'
+      || asString(developerMode.allowed_route) === 'direct_repo_fix',
+    route_scope: 'global_fallback',
+    target_authority: null,
+  };
 }
 
 function statusForEvent(event: JsonRecord, developerMode: JsonRecord | null | undefined) {
   if (asString(event.completion_ref) || asString(event.blocker_ref)) {
-    return 'completed_or_blocker';
+    return {
+      status: 'completed_or_blocker',
+      route_scope: 'none',
+      target_authority: null,
+    };
   }
   if (asString(event.developer_work_order_candidate_ref)) {
-    return developerModeExecutionAllowed(developerMode) ? 'executable' : 'queued_requires_developer_mode';
+    const targetAgentId = asString(event.target_agent_id) ?? 'unknown-agent';
+    const gate = developerModeExecutionGate(targetAgentId, developerMode);
+    return {
+      status: gate.executable ? 'executable' : 'queued_requires_developer_mode',
+      route_scope: gate.route_scope,
+      target_authority: gate.target_authority,
+    };
   }
-  return 'suite_ready';
+  return {
+    status: 'suite_ready',
+    route_scope: 'none',
+    target_authority: null,
+  };
 }
 
 export function buildFeedbackOpsReadModel(input: {
@@ -327,7 +388,8 @@ export function buildFeedbackOpsReadModel(input: {
 } = {}) {
   const events = input.events ?? readFeedbackOpsEvents();
   const statusItems = events.map((event) => {
-    const status = statusForEvent(event, input.developerMode);
+    const statusDecision = statusForEvent(event, input.developerMode);
+    const status = statusDecision.status;
     const targetAgentId = asString(event.target_agent_id) ?? 'unknown-agent';
     const eventId = asString(event.event_id) ?? stableId('feedback_event', [event]);
     const workOrderRef = `feedback-work-order:${targetAgentId}/${eventId}`;
@@ -355,6 +417,8 @@ export function buildFeedbackOpsReadModel(input: {
       required_verification_refs: stringList(event.required_verification_refs),
       forbidden_surfaces: stringList(event.forbidden_surfaces),
       owner_closeout_boundary_ref: asString(event.owner_closeout_boundary_ref),
+      developer_mode_route_scope: statusDecision.route_scope,
+      developer_mode_target_authority: statusDecision.target_authority,
       runnable: status === 'executable',
       terminal: status === 'completed_or_blocker',
       action_route_ref: status === 'executable'
@@ -362,7 +426,9 @@ export function buildFeedbackOpsReadModel(input: {
         : null,
       execution_surface: status === 'executable' ? 'opl work-order execute' : null,
       execution_precondition: status === 'queued_requires_developer_mode'
-        ? 'developer_mode_active_direct_required'
+        ? statusDecision.route_scope === 'target_scoped'
+          ? 'target_scoped_developer_mode_direct_route_required'
+          : 'developer_mode_active_direct_required'
         : status === 'executable'
           ? 'materialized_developer_work_order_file_required'
           : 'external_suite_or_owner_closeout_required',

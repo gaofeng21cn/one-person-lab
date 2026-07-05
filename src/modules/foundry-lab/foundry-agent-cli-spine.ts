@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import type { JsonRecord } from '../../kernel/json-record.ts';
+import { parseGithubRepoFromUrl } from '../connect/developer-mode-source-policy.ts';
+import { listDefaultOplDomainModuleSpecs } from '../connect/system-installation/modules.ts';
+import { SCHOLARSKILLS_PACKAGE_SPEC } from '../connect/system-installation/scholarskills-package-channel.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
@@ -29,6 +32,30 @@ const FOUNDRY_AGENT_SERIES_CONTRACT_URL = new URL(
 const FOUNDRY_AGENT_PEERS = STANDARD_AGENT_REGISTRY;
 
 type FoundryAgentPeer = typeof STANDARD_AGENT_REGISTRY[number];
+
+export type FoundryAgentDeveloperModeTargetHint = {
+  surface_kind: 'opl_foundry_agent_developer_mode_target_hint';
+  target_agent_id: string;
+  target_domain_id: string;
+  target_series_membership: FoundryAgentPeer['series_membership'];
+  target_kind: 'domain_module' | 'framework_capability_package';
+  repo_permission_selector: {
+    target_id: string;
+    repo: string;
+    repo_url: string;
+    match_policy: 'target_id_then_repo_then_repo_url';
+  };
+  route_hints: {
+    direct_write_identity_levels: ['opl_maintainer', 'target_agent_developer'];
+    fork_pull_request_identity_level: 'contributor';
+    manual_enable_without_target_repo_write_routes_to: 'fork_pull_request';
+  };
+  execution_surfaces: {
+    direct_repo_fix: 'opl work-order execute';
+    fork_pull_request: 'owner_or_fork_pull_request_route';
+  };
+  route_builder_surface: 'opl_agent_lab_developer_mode_dynamic_repair_route';
+};
 
 function buildPeerSeriesSummary(peer: FoundryAgentPeer) {
   return {
@@ -228,6 +255,67 @@ function buildFeedbackSelfEvolutionTrigger(peer: FoundryAgentPeer, contract: Jso
       can_create_typed_blocker: false,
       can_execute_repo_patch_without_developer_mode: false,
     },
+  };
+}
+
+function resolveDeveloperModeRepoTarget(peer: FoundryAgentPeer) {
+  const moduleSpec = listDefaultOplDomainModuleSpecs().find((entry) => entry.module_id === peer.domain_id)
+    ?? (peer.domain_id === SCHOLARSKILLS_PACKAGE_SPEC.module_id ? SCHOLARSKILLS_PACKAGE_SPEC : null);
+  if (!moduleSpec) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Foundry Agent is missing developer-mode repo target mapping: ${peer.agent_id}.`,
+      {
+        agent_id: peer.agent_id,
+        domain_id: peer.domain_id,
+      },
+    );
+  }
+  const repo = parseGithubRepoFromUrl(moduleSpec.repo_url);
+  if (!repo) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Foundry Agent developer-mode repo target has invalid GitHub repo URL: ${peer.agent_id}.`,
+      {
+        agent_id: peer.agent_id,
+        repo_url: moduleSpec.repo_url,
+      },
+    );
+  }
+  return {
+    target_id: moduleSpec.module_id,
+    repo,
+    repo_url: moduleSpec.repo_url,
+    target_kind: moduleSpec.scope === 'framework_capability_package'
+      ? 'framework_capability_package' as const
+      : 'domain_module' as const,
+  };
+}
+
+export function buildFoundryAgentDeveloperModeTargetHint(peer: FoundryAgentPeer): FoundryAgentDeveloperModeTargetHint {
+  const repoTarget = resolveDeveloperModeRepoTarget(peer);
+  return {
+    surface_kind: 'opl_foundry_agent_developer_mode_target_hint',
+    target_agent_id: peer.agent_id,
+    target_domain_id: peer.domain_id,
+    target_series_membership: peer.series_membership,
+    target_kind: repoTarget.target_kind,
+    repo_permission_selector: {
+      target_id: repoTarget.target_id,
+      repo: repoTarget.repo,
+      repo_url: repoTarget.repo_url,
+      match_policy: 'target_id_then_repo_then_repo_url',
+    },
+    route_hints: {
+      direct_write_identity_levels: ['opl_maintainer', 'target_agent_developer'],
+      fork_pull_request_identity_level: 'contributor',
+      manual_enable_without_target_repo_write_routes_to: 'fork_pull_request',
+    },
+    execution_surfaces: {
+      direct_repo_fix: 'opl work-order execute',
+      fork_pull_request: 'owner_or_fork_pull_request_route',
+    },
+    route_builder_surface: 'opl_agent_lab_developer_mode_dynamic_repair_route',
   };
 }
 
@@ -506,6 +594,7 @@ export function buildFoundryAgentInspect(args: string[]) {
         old_implementation_buckets_are_diagnostic_only: true,
       },
       feedback_self_evolution_trigger: buildFeedbackSelfEvolutionTrigger(peer, contract),
+      developer_mode_target_hint: buildFoundryAgentDeveloperModeTargetHint(peer),
       authority_boundary: buildAuthorityBoundary(contract),
     },
   };

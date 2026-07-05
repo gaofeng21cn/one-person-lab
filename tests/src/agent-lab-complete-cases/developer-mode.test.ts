@@ -206,6 +206,16 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
       allowed_route: 'direct_repo_fix',
       status: 'ready',
     },
+    target_authority: {
+      target_agent_id: 'mas',
+      target_repo_id: 'gaofeng21cn/med-autoscience',
+      target_repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
+      developer_identity_class: 'target_agent_developer',
+      permission: 'write',
+      direct_write_allowed: true,
+      allowed_route: 'direct_repo_fix',
+      status: 'ready',
+    },
     patrol_observation_refs: {
       patrol_observation_ref: 'patrol-observation-ref:mas/live-blocker',
       issue_ref: 'issue-ref:mas/live-blocker',
@@ -224,6 +234,8 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
   assert.equal(direct.closeout_claim_status, 'external_owner_closeout_refs_ready');
   assert.equal(direct.closeout_refs.developer_mode_projection_ref, direct.developer_mode_projection_ref);
   assert.equal(direct.closeout_refs.route_eligibility, 'eligible_direct_fix');
+  assert.equal(direct.target_authority?.target_agent_id, 'mas');
+  assert.equal(direct.repo_permission.target_repo_id, 'gaofeng21cn/med-autoscience');
   assert.equal(direct.closeout_refs.patrol_observation_ref, 'patrol-observation-ref:mas/live-blocker');
   assert.equal(direct.closeout_refs.diff_ref, 'diff-ref:mas/live-blocker');
   assert.deepEqual(direct.closeout_refs.verification_refs, ['test-result-ref:mas/live-blocker']);
@@ -248,6 +260,16 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
       allowed_route: 'fork_pull_request',
       status: 'limited',
     },
+    target_authority: {
+      target_agent_id: 'rca',
+      target_repo_id: 'redcube-ai/redcube-ai',
+      target_repo_url: 'https://github.com/redcube-ai/redcube-ai.git',
+      developer_identity_class: 'contributor',
+      permission: 'read',
+      direct_write_allowed: false,
+      allowed_route: 'fork_pull_request',
+      status: 'limited',
+    },
     patrol_observation_refs: {
       patrol_observation_ref: 'patrol-observation-ref:rca/live-blocker',
       diff_ref: 'diff-ref:rca/live-blocker',
@@ -263,6 +285,7 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
   assert.equal(fork.route_status, 'closeout_refs_ready');
   assert.equal(fork.closeout_claim_status, 'external_owner_closeout_refs_ready');
   assert.equal(fork.closeout_refs.route_eligibility, 'eligible_fork_pr');
+  assert.equal(fork.target_authority?.target_agent_id, 'rca');
   assert.equal(fork.closeout_refs.commit_ref, null);
   assert.equal(fork.closeout_refs.fork_repo_ref, 'github-fork-ref:https://github.com/developer/redcube-ai');
   assert.equal(fork.closeout_refs.pr_review_ref, 'github-pr-review-ref:https://github.com/redcube-ai/redcube-ai/pull/42');
@@ -327,6 +350,78 @@ test('Agent Lab Developer Mode repair route builder classifies live closeout rou
   assert.equal(mixed.route_status, 'closeout_refs_ready');
   assert.equal(mixed.closeout_claim_status, 'route_eligibility_only_not_route_closeout');
   assert.equal(mixed.closeout_refs.route_eligibility, 'eligible_mixed_routes');
+
+  const targetScopedDirect = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: projection,
+    repo_permission: {
+      target_id: 'rca',
+      repo: 'redcube-ai/redcube-ai',
+      permission: 'read',
+      direct_write_allowed: false,
+      allowed_route: 'fork_pull_request',
+      status: 'limited',
+    },
+    target_authority: {
+      target_agent_id: 'mas',
+      target_repo_id: 'gaofeng21cn/med-autoscience',
+      target_repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
+      permission: 'write',
+      direct_write_allowed: true,
+      allowed_route: 'direct_repo_fix',
+      status: 'ready',
+      developer_identity_class: 'target_agent_developer',
+    },
+    patrol_observation_refs: {
+      patrol_observation_ref: 'patrol-observation-ref:mas/target-scoped',
+      diff_ref: 'diff-ref:mas/target-scoped',
+      verification_refs: ['test-result-ref:mas/target-scoped'],
+      no_forbidden_write_ref: 'no-forbidden-write-ref:mas/target-scoped',
+      commit_ref: 'git-commit-ref:mas/target-scoped',
+      owner_acceptance_ref: 'external-owner-ref:mas/target-scoped-accepted',
+    },
+  });
+
+  assert.equal(targetScopedDirect.route_decision, 'direct-fix');
+  assert.equal(targetScopedDirect.closeout_refs.route_eligibility, 'eligible_direct_fix');
+  assert.equal(targetScopedDirect.repo_permission.target_repo_id, 'gaofeng21cn/med-autoscience');
+
+  const targetScopedDirectDespiteFamilyBlocked = buildDeveloperModeAgentLabRepairRoute({
+    developer_mode_projection: {
+      ...projection,
+      status: 'blocked',
+      effective_state: 'blocked',
+      allowed_route: 'blocked',
+    },
+    repo_permission: {
+      target_id: 'family-summary',
+      repo: 'gaofeng21cn/one-person-lab',
+      permission: null,
+      direct_write_allowed: false,
+      allowed_route: 'blocked',
+      status: 'blocked',
+    },
+    target_authority: {
+      target_agent_id: 'mas',
+      target_repo_id: 'gaofeng21cn/med-autoscience',
+      target_repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
+      permission: 'write',
+      direct_write_allowed: true,
+      allowed_route: 'direct_repo_fix',
+      status: 'ready',
+      developer_identity_class: 'target_agent_developer',
+    },
+    patrol_observation_refs: {
+      patrol_observation_ref: 'patrol-observation-ref:mas/target-scoped-family-blocked',
+      diff_ref: 'diff-ref:mas/target-scoped-family-blocked',
+      verification_refs: ['test-result-ref:mas/target-scoped-family-blocked'],
+      no_forbidden_write_ref: 'no-forbidden-write-ref:mas/target-scoped-family-blocked',
+      commit_ref: 'git-commit-ref:mas/target-scoped-family-blocked',
+      owner_acceptance_ref: 'external-owner-ref:mas/target-scoped-family-blocked-accepted',
+    },
+  });
+
+  assert.equal(targetScopedDirectDespiteFamilyBlocked.route_decision, 'direct-fix');
+  assert.equal(targetScopedDirectDespiteFamilyBlocked.closeout_refs.route_eligibility, 'eligible_direct_fix');
 
   const invalidOwnerAcceptance = buildDeveloperModeAgentLabRepairRoute({
     developer_mode_projection: projection,

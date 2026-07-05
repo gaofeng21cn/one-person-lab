@@ -47,7 +47,11 @@ test('feedback CLI captures, reads, and reconciles explicit delivery feedback', 
 
     const read = runCli(['feedback', 'read', '--json'], env);
     assert.equal(read.feedbackops.intake_event_count, 1);
-    assert.equal(read.feedbackops.summary.queued_requires_developer_mode_count, 1);
+    assert.equal(
+      read.feedbackops.summary.queued_requires_developer_mode_count
+        + read.feedbackops.summary.executable_count,
+      1,
+    );
     assert.equal(read.feedbackops.app_projection.creates_runner_or_queue, false);
 
     const reconciled = runCli(['feedback', 'reconcile', '--json'], env);

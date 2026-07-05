@@ -25,14 +25,19 @@ type DeveloperModeProjectionLike = {
   allowed_route?: unknown;
   mode?: unknown;
   repo_authority?: unknown;
+  target_authority?: unknown;
 };
 
 type RepoPermissionLike = {
+  target_agent_id?: unknown;
   target_id?: unknown;
+  target_repo_id?: unknown;
+  target_repo_url?: unknown;
   repo?: unknown;
   repo_url?: unknown;
   status?: unknown;
   permission?: unknown;
+  developer_identity_class?: unknown;
   direct_write_allowed?: unknown;
   allowed_route?: unknown;
   direct_write_repo_count?: unknown;
@@ -63,6 +68,7 @@ type DeveloperModeLiveCloseoutRoute = ReturnType<typeof buildDeveloperModeAgentL
 export type DeveloperModeAgentLabRepairRouteInput = {
   developer_mode_projection: DeveloperModeProjectionLike;
   repo_permission: RepoPermissionLike;
+  target_authority?: RepoPermissionLike | null;
   patrol_observation_refs: PatrolObservationRefsInput;
 };
 
@@ -186,6 +192,7 @@ function buildDeveloperModeProjectionRef(projection: DeveloperModeProjectionLike
 function routeEligibility(
   projection: DeveloperModeProjectionLike,
   repoPermission: RepoPermissionLike,
+  targetAuthority?: RepoPermissionLike | null,
 ): {
   decision: DeveloperModeRouteDecision;
   eligibility: DeveloperModeRouteEligibility;
@@ -193,24 +200,44 @@ function routeEligibility(
   const projectionStatus = text(projection.status);
   const projectionRoute = text(projection.allowed_route);
   const projectionState = text(projection.effective_state);
+  const hasTargetAuthority = isRecord(targetAuthority);
+  const routeAuthority = hasTargetAuthority
+    ? targetAuthority
+    : repoPermission;
 
-  if (projectionStatus === 'blocked' || projectionStatus === 'disabled' || projectionRoute === 'blocked'
-    || projectionRoute === 'disabled') {
+  if (projectionStatus === 'disabled' || projectionRoute === 'disabled') {
     return {
       decision: 'blocked',
       eligibility: 'blocked_developer_mode_projection',
     };
   }
 
-  if (projectionRoute === 'observe_only' || projectionState === 'observe_only') {
+  if (
+    !hasTargetAuthority
+    && (
+      projectionStatus === 'blocked'
+      || projectionRoute === 'blocked'
+    )
+  ) {
+    return {
+      decision: 'blocked',
+      eligibility: 'blocked_developer_mode_projection',
+    };
+  }
+
+  if (
+    projectionRoute === 'observe_only'
+    || projectionState === 'observe_only'
+    || text(routeAuthority.allowed_route) === 'observe_only'
+  ) {
     return {
       decision: 'observe-only',
       eligibility: 'eligible_observe_only',
     };
   }
 
-  const repoStatus = text(repoPermission.status);
-  const repoRoute = text(repoPermission.allowed_route);
+  const repoStatus = text(routeAuthority.status);
+  const repoRoute = text(routeAuthority.allowed_route);
   if (repoStatus === 'blocked' || repoRoute === 'blocked') {
     return {
       decision: 'blocked',
@@ -218,23 +245,23 @@ function routeEligibility(
     };
   }
 
-  const directWriteCount = typeof repoPermission.direct_write_repo_count === 'number'
-    ? repoPermission.direct_write_repo_count
+  const directWriteCount = typeof routeAuthority.direct_write_repo_count === 'number'
+    ? routeAuthority.direct_write_repo_count
     : 0;
-  const prRouteCount = typeof repoPermission.pr_route_repo_count === 'number'
-    ? repoPermission.pr_route_repo_count
+  const prRouteCount = typeof routeAuthority.pr_route_repo_count === 'number'
+    ? routeAuthority.pr_route_repo_count
     : 0;
   if (projectionRoute === 'mixed_direct_and_pr'
     && directWriteCount > 0
     && prRouteCount > 0
-    && !('direct_write_allowed' in repoPermission)) {
+    && !('direct_write_allowed' in routeAuthority)) {
     return {
       decision: 'mixed',
       eligibility: 'eligible_mixed_routes',
     };
   }
 
-  if (repoPermission.direct_write_allowed === true || repoRoute === 'direct_repo_fix') {
+  if (routeAuthority.direct_write_allowed === true || repoRoute === 'direct_repo_fix') {
     return {
       decision: 'direct-fix',
       eligibility: 'eligible_direct_fix',
@@ -592,7 +619,14 @@ function developerModeScaleoutFollowthrough(verifiedReceipts: DeveloperModeClose
 
 export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentLabRepairRouteInput) {
   const refs = observationRefs(input.patrol_observation_refs);
-  const initial = routeEligibility(input.developer_mode_projection, input.repo_permission);
+  const routeAuthority = isRecord(input.target_authority)
+    ? input.target_authority
+    : input.repo_permission;
+  const initial = routeEligibility(
+    input.developer_mode_projection,
+    input.repo_permission,
+    input.target_authority,
+  );
   const sanitizedOwnerAcceptanceRef = ownerAcceptanceRef(refs.owner_acceptance_ref, initial.decision);
   const ownerAcceptanceBlocked = Boolean(refs.owner_acceptance_ref) && !sanitizedOwnerAcceptanceRef.ref;
   const decision = ownerAcceptanceBlocked ? 'blocked' : initial.decision;
@@ -617,7 +651,7 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
     version: 'opl-agent-lab.v1.developer-mode-dynamic-repair-route',
     route_ref: stableId('oaldmr', [
       developerModeProjectionRef,
-      input.repo_permission,
+      routeAuthority,
       refs.patrol_observation_ref,
       initial.eligibility,
     ]),
@@ -635,10 +669,11 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
       refs.issue_ref ?? '',
       refs.blocker_ref ?? '',
     ]),
-    repo_permission: isRecord(input.repo_permission) ? input.repo_permission : {},
+    repo_permission: isRecord(routeAuthority) ? routeAuthority : {},
+    target_authority: isRecord(input.target_authority) ? input.target_authority : null,
     fixture_repo_currentness:
       sanitizedOwnerAcceptanceRef.kind === 'repo_contract_fixture_not_owner_receipt'
-        ? fixtureRepoCurrentness(input.repo_permission)
+        ? fixtureRepoCurrentness(routeAuthority)
         : {
             status: 'not_applicable_or_live_repo_ref',
             reason: null,

@@ -112,6 +112,64 @@ test('FeedbackOps read model gates execution on explicit developer-mode direct r
   assert.equal(receipt.execution_owner, 'opl_work_order_execute_when_developer_mode_allows');
 });
 
+test('FeedbackOps executable gating prefers target-scoped developer authority over family-wide route summaries', () => {
+  const masQueued = buildDeliveryFeedbackEvent({
+    targetAgentId: 'mas',
+    deliveryRef: 'paper:obesity/current-package',
+    feedbackRef: 'user-feedback:mas/figure-gap',
+    developerWorkOrderCandidateRef: 'developer-work-order-candidate-ref:mas/figure-gap',
+    idempotencyKey: 'mas-target-authority',
+  });
+  const rcaQueued = buildDeliveryFeedbackEvent({
+    targetAgentId: 'rca',
+    deliveryRef: 'deck:case-review/current',
+    feedbackRef: 'user-feedback:rca/render-gap',
+    developerWorkOrderCandidateRef: 'developer-work-order-candidate-ref:rca/render-gap',
+    idempotencyKey: 'rca-target-authority',
+  });
+
+  const readModel = buildFeedbackOpsReadModel({
+    events: [masQueued, rcaQueued],
+    developerMode: {
+      status: 'limited',
+      effective_state: 'active_mixed_routes',
+      allowed_route: 'mixed_direct_and_pr',
+      target_authority: {
+        standard_targets: [
+          {
+            target_agent_id: 'mas',
+            target_repo_id: 'gaofeng21cn/med-autoscience',
+            status: 'ready',
+            direct_write_allowed: true,
+            allowed_route: 'direct_repo_fix',
+            developer_identity_class: 'target_agent_developer',
+          },
+          {
+            target_agent_id: 'rca',
+            target_repo_id: 'gaofeng21cn/redcube-ai',
+            status: 'limited',
+            direct_write_allowed: false,
+            allowed_route: 'fork_pull_request',
+            developer_identity_class: 'contributor',
+          },
+        ],
+      },
+    },
+  });
+
+  assert.equal(readModel.summary.executable_count, 1);
+  assert.equal(readModel.summary.queued_requires_developer_mode_count, 1);
+  const masItem = readModel.work_order_status_items.find((item) => item.domain_id === 'mas');
+  const rcaItem = readModel.work_order_status_items.find((item) => item.domain_id === 'rca');
+  assert.equal(masItem?.status, 'executable');
+  assert.equal(masItem?.developer_mode_route_scope, 'target_scoped');
+  assert.equal(masItem?.developer_mode_target_authority?.allowed_route, 'direct_repo_fix');
+  assert.equal(rcaItem?.status, 'queued_requires_developer_mode');
+  assert.equal(rcaItem?.developer_mode_route_scope, 'target_scoped');
+  assert.equal(rcaItem?.developer_mode_target_authority?.allowed_route, 'fork_pull_request');
+  assert.equal(rcaItem?.execution_precondition, 'target_scoped_developer_mode_direct_route_required');
+});
+
 test('FeedbackOps carries capability-map evidence for self-evolution work orders', () => {
   const event = buildDeliveryFeedbackEvent({
     targetAgentId: 'rca',

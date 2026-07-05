@@ -82,14 +82,15 @@ export function buildFeedbackSubmitPayload(args: string[], spec: CommandSpec) {
 }
 
 export function buildFeedbackReadPayload() {
+  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: 'full' });
   return {
     version: 'g2',
-    feedbackops: buildFeedbackOpsReadModel(),
+    feedbackops: buildFeedbackOpsReadModel({ developerMode }),
   };
 }
 
 export function buildFeedbackReconcilePayload() {
-  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: 'fast' });
+  const developerMode = buildOplDeveloperModeSurface(buildOplEndpoints(), { detail: 'full' });
   return {
     version: 'g2',
     feedbackops_reconcile: buildFeedbackOpsReconcileReceipt({ developerMode }),
