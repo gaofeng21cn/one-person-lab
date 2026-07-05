@@ -881,7 +881,7 @@ export function buildPublicCommandSpecs(
 
   validateStageDerivedLensCommandSpecs(publicCommandSpecs);
   validateCommandRegistryCoverage(publicCommandSpecs, {
-    protectedCommandPrefixes: ['status', 'update', 'runtime observability'],
+    protectedCommandPrefixes: ['status', 'update', 'runtime manager', 'runtime observability'],
     requiredCommandIds: [
       'status workspace',
       'status runtime',
@@ -892,6 +892,8 @@ export function buildPublicCommandSpecs(
       'update apply',
       'update repair',
       'update rollback', // reuse-first: allow owner-routed update command registry metadata.
+      'runtime manager',
+      'runtime manager action',
       'runtime observability-export',
       'runtime observability-endpoint',
       'runtime observability-collector-smoke',

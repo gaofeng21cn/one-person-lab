@@ -12,6 +12,7 @@
     "connect agent-packages",
     "update",
     "status",
+    "runtime manager",
     "runtime observability"
   ],
   "required_command_ids": [
@@ -43,6 +44,8 @@
     "status workspace",
     "status runtime",
     "status dashboard",
+    "runtime manager",
+    "runtime manager action",
     "runtime observability-export",
     "runtime observability-endpoint",
     "runtime observability-collector-smoke"
@@ -1576,6 +1579,96 @@
               "runtime_status"
             ],
             "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "runtime_manager": {
+      "command_id": "runtime manager",
+      "owner": "OPL Runway",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "runtime_manager"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "runtime_manager": {
+            "type": "object",
+            "required": [
+              "surface_id",
+              "owner_split",
+              "provider_runtime"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "runtime_manager_action": {
+      "command_id": "runtime manager action",
+      "owner": "OPL Runway",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false
+        },
+        {
+          "name": "apply",
+          "flag": "--apply",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "runtime_manager_action"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "runtime_manager_action": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "mode",
+              "dry_run"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_kind": {
+                "const": "opl_runtime_manager_action"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "dry_run": {
+                "type": "boolean"
+              }
+            }
           }
         }
       },

@@ -60,7 +60,6 @@ import {
   buildUsageError,
   parseRegisteredCommandOptions,
   parseRuntimeAppOperatorDrilldownArgs,
-  parseRuntimeManagerActionArgs,
 } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
@@ -148,8 +147,23 @@ export function buildPrivateRuntimeCommandSpecs({
       summary:
         'Show the OPL Runtime Manager boundary for the configured provider-backed family runtime.',
       examples: ['opl runtime manager'],
+      registry: {
+        command_id: 'runtime manager',
+        parser_adapter: 'node_util_parse_args',
+        options: [],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_manager/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_manager_readback',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
       handler: async (args) => {
-        assertNoArgs(args, getCommandSpecs()['runtime manager']);
+        parseRegisteredCommandOptions('runtime manager', args, getCommandSpecs()['runtime manager']);
         return await buildRuntimeManager({}, { buildStandardDomainAgentScaffold });
       },
     },
@@ -158,10 +172,49 @@ export function buildPrivateRuntimeCommandSpecs({
       summary:
         'Plan or apply Runtime Manager adapter actions without making OPL a scheduler or domain truth owner.',
       examples: ['opl runtime manager action --dry-run', 'opl runtime manager action --apply'],
-      handler: (args) => runRuntimeManagerAction(
-        parseRuntimeManagerActionArgs(args, getCommandSpecs()['runtime manager action']),
-        { buildStandardDomainAgentScaffold },
-      ),
+      registry: {
+        command_id: 'runtime manager action',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'dry-run',
+            flag: '--dry-run',
+            value_kind: 'boolean',
+            summary: 'Plan Runtime Manager adapter actions without mutating native helper state.',
+          },
+          {
+            name: 'apply',
+            flag: '--apply',
+            value_kind: 'boolean',
+            summary: 'Apply Runtime Manager adapter repair actions.',
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_manager_action/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_manager_action_projection',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: (args) => {
+        const spec = getCommandSpecs()['runtime manager action'];
+        const parsed = parseRegisteredCommandOptions('runtime manager action', args, spec);
+        const dryRun = parsed['dry-run'] === true;
+        const apply = parsed.apply === true;
+        if (dryRun === apply) {
+          throw buildUsageError('runtime manager action accepts exactly one of --dry-run or --apply.', spec, {
+            required: ['--dry-run or --apply'],
+          });
+        }
+        return runRuntimeManagerAction(
+          { mode: dryRun ? 'dry_run' : 'apply' },
+          { buildStandardDomainAgentScaffold },
+        );
+      },
     },
     'runtime snapshot': {
       usage: 'opl runtime snapshot',
