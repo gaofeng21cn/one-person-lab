@@ -407,12 +407,39 @@ test('family runtime lifecycle reconcile detects missing and stale refs without 
       'apply_lifecycle_cleanup_receipt_projection',
     );
     assert.equal(reconciled.reconcile_decision.mutation_allowed, true);
+    assert.equal(
+      reconciled.action_source_convergence.canonical_safe_action_source,
+      'opl runway reconcile --json',
+    );
+    assert.equal(
+      reconciled.action_source_convergence.all_direct_actor_mutations_converged_to_safe_action_source,
+      true,
+    );
+    assert.equal(
+      reconciled.action_source_convergence.actor_mutation_sources.worker.direct_mutation_allowed,
+      false,
+    );
+    assert.equal(
+      reconciled.action_source_convergence.actor_mutation_sources.app.convergence_status,
+      'consumer_only_current_owner_delta',
+    );
+    assert.equal(
+      reconciled.action_source_convergence.actor_mutation_sources.domain_helper.convergence_status,
+      'receipt_ref_projection_only_after_reconciler_action',
+    );
+    assert.equal(
+      reconciled.action_source_convergence.actor_mutation_sources.domain_helper.allowed_when_selected_action,
+      'opl family-runtime lifecycle apply --mode apply',
+    );
     assert.deepEqual(reconciled.reconcile_decision.forbidden_mutations, [
       'write_domain_truth',
       'write_domain_artifact_body',
       'delete_domain_repo_files',
       'sign_owner_receipt',
       'create_typed_blocker',
+      'scheduler_tick_without_reconciler_safe_action',
+      'worker_restart_without_reconciler_safe_action',
+      'app_truth_write_or_local_action_source',
     ]);
     assert.equal(reconciled.delete_ready_proof.can_execute_delete, false);
     assert.equal(reconciled.delete_ready_proof.can_execute_domain_physical_delete, false);
@@ -447,6 +474,14 @@ test('family runtime lifecycle reconcile detects missing and stale refs without 
     assert.equal(drift.delete_ready_proof.proof_status, 'blocked_lifecycle_drift_detected');
     assert.equal(drift.reconcile_decision.next_safe_action, 'wait_owner_or_repair_refs');
     assert.equal(drift.reconcile_decision.mutation_allowed, false);
+    assert.equal(
+      drift.action_source_convergence.actor_mutation_sources.domain_helper.convergence_status,
+      'wait_owner_or_repair_refs',
+    );
+    assert.equal(
+      drift.action_source_convergence.actor_mutation_sources.domain_helper.allowed_when_selected_action,
+      null,
+    );
     assert.equal(drift.summary.can_execute_delete, false);
     assert.equal(drift.summary.opl_cleanup_apply_can_execute, false);
   });

@@ -384,6 +384,60 @@ function lifecycleReconcileNextSafeAction(input: {
   };
 }
 
+function lifecycleSafeActionSourceConvergence(input: {
+  nextSafeAction: ReturnType<typeof lifecycleReconcileNextSafeAction>;
+}) {
+  const lifecycleApplySurface = input.nextSafeAction.mutation_allowed
+    ? 'opl family-runtime lifecycle apply --mode apply'
+    : null;
+  return {
+    surface_kind: 'opl_reconciler_safe_action_source_convergence',
+    canonical_safe_action_source: 'opl runway reconcile --json',
+    lifecycle_readback_source: 'opl family-runtime lifecycle reconcile --json',
+    lifecycle_selected_next_safe_action: input.nextSafeAction.action,
+    lifecycle_apply_surface: lifecycleApplySurface,
+    all_direct_actor_mutations_converged_to_safe_action_source: true,
+    actor_mutation_sources: {
+      scheduler: {
+        mutation_source_role: 'scheduler_cadence_or_tick',
+        convergence_status: 'reconciler_selected_action_required',
+        direct_mutation_allowed: false,
+        required_safe_action_source: 'opl runway reconcile --json',
+        allowed_when_selected_action: 'admit',
+      },
+      worker: {
+        mutation_source_role: 'provider_worker_liveness_or_repair',
+        convergence_status: 'reconciler_selected_action_required',
+        direct_mutation_allowed: false,
+        required_safe_action_source: 'opl runway reconcile --json',
+        allowed_when_selected_action: 'repair_provider_liveness',
+      },
+      app: {
+        mutation_source_role: 'app_read_model_or_operator_action',
+        convergence_status: 'consumer_only_current_owner_delta',
+        direct_mutation_allowed: false,
+        required_safe_action_source: 'opl runway reconcile --json',
+        allowed_when_selected_action: 'consume_current_owner_delta',
+      },
+      domain_helper: {
+        mutation_source_role: 'domain_owner_helper_artifact_truth_or_receipt',
+        convergence_status: lifecycleApplySurface
+          ? 'receipt_ref_projection_only_after_reconciler_action'
+          : 'wait_owner_or_repair_refs',
+        direct_mutation_allowed: false,
+        required_safe_action_source: 'opl runway reconcile --json',
+        allowed_when_selected_action: lifecycleApplySurface,
+      },
+    },
+    forbidden_direct_mutations: [
+      'scheduler_tick_without_reconciler_safe_action',
+      'worker_restart_without_reconciler_safe_action',
+      'app_truth_write_or_local_action_source',
+      'domain_helper_artifact_truth_or_owner_receipt_write',
+    ],
+  };
+}
+
 export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInput = {}) {
   const index = readFamilyRuntimeLifecycleRefs({ domain_id: input.target_domain_id });
   const refs = Array.isArray(index.refs) ? index.refs : [];
@@ -492,6 +546,7 @@ export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInp
     expectedCount,
     domainDeleteReady,
   });
+  const actionSourceConvergence = lifecycleSafeActionSourceConvergence({ nextSafeAction });
 
   return {
     surface_kind: 'family_runtime_lifecycle_reconcile_projection',
@@ -562,8 +617,12 @@ export function reconcileFamilyRuntimeLifecycleRefs(input: LifecycleReconcileInp
         'delete_domain_repo_files',
         'sign_owner_receipt',
         'create_typed_blocker',
+        'scheduler_tick_without_reconciler_safe_action',
+        'worker_restart_without_reconciler_safe_action',
+        'app_truth_write_or_local_action_source',
       ],
     },
+    action_source_convergence: actionSourceConvergence,
     missing_refs: missing,
     extra_refs: extra,
     stale_refs: staleRefs,
