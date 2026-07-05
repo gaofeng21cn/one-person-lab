@@ -41,9 +41,9 @@ runtime / descriptor / domain-owned proof refs
 
 ## Developer Mode 关系
 
-Developer Mode 是 OPL App / system settings 的产品开关，不是 Agent Lab 的新底层 contract。当前 `opl system` 与 `opl system initialize` 已暴露 `developer_mode` surface，复用既有 `developer_supervisor` system action，让 App 设置页能读取当前配置、GitHub identity 状态、repo authority 汇总、repair route、settings endpoint、system action endpoint、request fields 和 payload template。
+Developer Mode 是 OPL App / system settings 的产品开关，不是 Agent Lab 的新底层 contract，也不是 direct write grant。当前 `opl system` 与 `opl system initialize` 已暴露 `developer_mode` surface，复用既有 `developer_supervisor` system action，让 App 设置页能读取当前配置、GitHub identity 状态、repo authority 汇总、repair route、settings endpoint、system action endpoint、request fields 和 payload template。
 
-这个 surface 说明“用户是否允许 OPL 暴露受监督的开发者检查与修复路由”，并以 fail-closed 方式投影当前 GitHub 身份、repo 权限和 direct-fix / fork-PR / mixed / observe-only 路由。它不代表真实 owner repo 直接修复提交、non-owner fork PR 或 Agent Lab 外围 AI 巡检 closeout 已经完成；这些仍必须由对应 repo worktree、branch、PR、verification 和 evidence refs 证明后再写入 Agent Lab / App read model。
+这个 surface 只说明“用户是否允许 OPL 暴露受监督的开发者检查与修复路由”，并以 fail-closed 方式投影当前 GitHub 身份、repo 权限和 direct-fix / fork-PR / mixed / observe-only 路由。它不代表真实 owner repo 直接修复提交、non-owner fork PR 或 Agent Lab 外围 AI 巡检 closeout 已经完成，更不会把无权 repo 升级成 upstream direct write；这些仍必须由目标 repo 的真实 GitHub authority、对应 repo worktree、branch、PR、verification 和 evidence refs 证明后再写入 Agent Lab / App read model。
 
 2026-06-03 起，`developer_mode` 机器投影还必须暴露 `developer_profile` 与 `capabilities`。旧字段 `enabled`、`mode`、`effective_state`、`allowed_route` 继续作为兼容摘要；结构化消费方读取 `developer_profile.profile_id` 判断 Contributor / Maintainer / Runtime Maintainer 层级，并读取 `capabilities.source_channel`、`workspace_trust`、`github_authority`、`agent_automation`、`runtime_mutation_scope` 的 `status`、`level`、`source`、`impact`。其中 `source_channel` 只说明 App/CLI read model 是否可使用 local developer checkout；`github_authority` 只说明 direct write / fork PR repo route；`runtime_mutation_scope` 只说明 shared runtime provider maintenance 是否允许。三者是独立能力，不得由单一 Developer Mode 开关互相替代。
 
@@ -86,15 +86,16 @@ Agent Lab 可以持有：
 explicit user feedback
   -> opl feedback submit
   -> target_agent_feedback_external_suite
-  -> OMA developer work-order candidate
+  -> Agent Lab / FeedbackOps status projection
+  -> opl-meta-agent:oma-agent-evolution
   -> existing opl work-order execute when Developer Mode route allows
   -> target owner receipt / typed blocker / human gate / completion ref
   -> opl feedback reconcile + App action queue projection
 ```
 
-标准 domain feedback self-evolution 链路应读成 `domain/package thin adapter -> OPL FeedbackOps / Agent Lab -> OMA work-order -> Developer Mode direct-fix or fork-PR route -> target owner readback`。`contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 只声明这条链路的 refs-only read-model shape，contract 本身不会提交反馈、创建 suite、执行 work order 或写 target owner result。`contracts/opl-framework/foundry-agent-series-contract.json#standard_feedback_self_evolution_trigger_policy` 是所有标准 Foundry Agent 的触发合同，`opl foundry agents inspect <agent_id> --json` 会对 MAS、MAG、RCA、OMA、BookForge 和 ScholarSkills 投影同形 `feedback_self_evolution_trigger`，让 App、CLI 和 skill prompt 都能读取同一触发字段。Agent Lab 的 App/action-queue 投影必须能把缺 suite、suite stale、已排队、可交给 `opl work-order execute`、以及已完成或已有 domain-owned blocker ref 分开显示。
+标准 domain feedback self-evolution 链路应读成 `domain/package thin adapter -> OPL FeedbackOps / Agent Lab status projection -> opl-meta-agent:oma-agent-evolution -> Developer Mode direct-fix / fork-PR / owner-handoff route -> target owner readback`。职责拆分固定为：target agent 只提供 thin adapter / trigger 和目标域 refs，`opl-meta-agent:oma-agent-evolution` 负责 work-order / proposal 生成，FeedbackOps / Agent Lab 负责事件账本、状态投影、执行 gate 和 owner route。`contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 只声明这条链路的 refs-only read-model shape，contract 本身不会提交反馈、创建 suite、执行 work order 或写 target owner result。`contracts/opl-framework/foundry-agent-series-contract.json#standard_feedback_self_evolution_trigger_policy` 是所有标准 Foundry Agent 的触发合同，`opl foundry agents inspect <agent_id> --json` 会对 MAS、MAG、RCA、OMA、BookForge 和 ScholarSkills 投影同形 `feedback_self_evolution_trigger`，让 App、CLI 和 skill prompt 都能读取同一触发字段，并把 OMA skill 固定到 `opl-meta-agent:oma-agent-evolution`。Agent Lab 的 App/action-queue 投影必须能把缺 suite、suite stale、已排队、可交给 `opl work-order execute`、以及已完成或已有 domain-owned blocker ref 分开显示。MAS 侧在这里是 thin adapter / trigger，不是承担优化策略的 skill。
 
-反馈捕获不要求 Developer Mode，因为记录用户明确反馈本身不改变目标仓、论文、图表或质量结论。Developer Mode 只约束 repo 修复、work-order 执行、promotion 和 closeout 路径；没有 `active_direct` 或 `direct_repo_fix` route 时，FeedbackOps 只能投影为 `queued_requires_developer_mode` 或 fork/PR owner route。即使 work-order 可执行，OPL 也只调用既有 `opl work-order execute` 原语，不创建第二套 runner、runtime queue 或 provider queue。
+反馈捕获不要求 Developer Mode，因为记录用户明确反馈本身不改变目标仓、论文、图表或质量结论。Developer Mode 只约束 repo mutation、work-order 执行、promotion 和 closeout 路径；repo mutation 只有在目标仓 authority 允许时才能进入 `direct_repo_fix`，否则只能走 `fork_pull_request`，再不满足时进入 `owner_handoff`。没有 `active_direct` 或 `direct_repo_fix` route 时，FeedbackOps 只能投影为 `queued_requires_developer_mode`、`fork_pull_request` 或 `owner_handoff`。即使 work-order 可执行，OPL 也只调用既有 `opl work-order execute` 原语，不创建第二套 runner、runtime queue 或 provider queue。
 
 FeedbackOps 明确不持有：
 
@@ -169,7 +170,7 @@ Agent Lab / Foundry Lab 的 dynamic workflow template 继续从 `contracts/opl-f
 
 Agent Lab 是 OPL Framework 的通用 eval / improvement control plane。它负责把 target agent 或 OMA 提交的 suite、stage attempt、provider receipt、domain-owned eval/proof refs 和 operator blocker 规整成 lab run、AHE evidence read model、variant comparison、mechanism candidate、risk review、promotion gate、rollback/canary 和 App/workbench read model。它判断“一个机制候选是否有足够 refs 进入下一轮证伪或 risk-tiered promotion gate”。
 
-`opl-meta-agent` 是独立 OPL-compatible Foundry Agent。它消费 Agent Lab 的 suite result / evidence read model / blocker / promotion route，把目标 agent 的 blocked evidence、owner route、allowed editable surfaces、verification refs 和 no-forbidden-write refs 转成 developer patch work order、target capability candidate、mechanism patch proposal 或 typed blocker。它判断“目标 agent 应该如何生成可执行修复任务、由谁改、改哪些文件、跑哪些验证、如何回填 owner receipt”。
+`opl-meta-agent` 是独立 OPL-compatible Foundry Agent；其标准自进化技能名固定为 `opl-meta-agent:oma-agent-evolution`。它消费 Agent Lab 的 suite result / evidence read model / blocker / promotion route，把目标 agent 的 blocked evidence、owner route、allowed editable surfaces、verification refs 和 no-forbidden-write refs 转成 developer patch work order、target capability candidate、mechanism patch proposal 或 typed blocker。它判断“目标 agent 应该如何生成可执行修复任务、由谁改、改哪些文件、跑哪些验证、如何回填 owner receipt”。这个优化策略和 patch planning 统一归 OMA，不下沉给 MAS/MAG/RCA 等 target agent 自己的 skill。
 
 目标 domain agent 继续持有 domain truth、quality verdict、artifact authority、memory body 与 owner receipt。自进化闭环只能按 `target handoff -> Agent Lab evidence/gate -> OMA work order/proposal -> allowed patch -> target verification -> owner receipt -> Agent Lab re-evaluation` 流转；任何 suite pass、variant winner、work order、proposal、generated surface proof 或 App projection 都不能直接写成 domain ready、artifact readiness、quality verdict 或 default agent promotion。
 

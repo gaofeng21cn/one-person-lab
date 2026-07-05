@@ -914,13 +914,15 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - 产品名是 `OPL Developer Mode`；当前机器面可以沿用 `developer_supervisor` 配置与 `opl system developer-supervisor` action。配置属于 OPL state，不属于某个开发 checkout。
+- `OPL Developer Mode` 只是开发者路径开关：它允许 App / CLI 暴露 developer checkout source channel、repair route 和外围巡检入口，但本身不授予 upstream direct write，也不把 local checkout source 变成 repo authority。
 - One Person Lab App 设置页必须有 Developer Mode 开关，并显示当前状态、配置来源、GitHub login、模式、当前 source channel 和可用 repo authority。安装流程检测到配置的 developer login（默认 `gaofeng21cn`）时可以默认开启 local checkout source channel；其他用户可以手动开启。
 - Developer Mode 至少区分只观察的外围巡检模式和 `developer_apply_safe` 模式。前者只产生 evidence / issue / PR proposal；后者在权限满足时允许进入 repo 层修复、提交和 owner-visible 审计路径。
-- repo developer / collaborator 身份必须按目标 repo 判断。具备直接写权限时，可以在对应 repo 的受控 worktree / branch 中修复并提交；不具备直接写权限时，只能创建 fork / branch / pull request，不得静默推送到 upstream。
+- repo developer / collaborator 身份必须按目标 repo 判断。direct write 只来自 target repo / target agent 的真实 GitHub authority；具备直接写权限时，可以在对应 repo 的受控 worktree / branch 中修复并提交；不具备直接写权限时，只能创建 fork / branch / pull request 或进入 owner handoff，不得静默推送到 upstream。
 - Developer Mode 的 developer 身份不是单一全局身份：OPL maintainer 只在 GitHub repo permission 覆盖的 OPL/agent repo 上获得 direct-fix；target-agent developer 只在自己 agent repo 上获得 direct-fix；普通 contributor 即使手动开启 Developer Mode，也只能捕获反馈、生成 work-order candidate 和 fork/PR evidence。手动开启不能把无写权限 repo 升级成 direct mutation。
 - Developer Mode 开启后，任务可以默认启动外围 AI 巡检。巡检由 Agent Lab 或同等 refs-only control plane 组织，输出 blocker、owner route、candidate fix、evidence refs 和 PR refs；它不拥有 domain truth、quality verdict、artifact authority、memory body 或 owner receipt authority。
 - Developer Mode 不改变 managed environment 优先原则。普通用户运行仍以 OPL-managed modules / skills / plugin metadata / provider state 为真相；开发修复和开发 checkout source 只通过显式配置、显式身份和可审计 repo route 生效。`auto` 命中只允许 source channel 选用本机开发 checkout；shared runtime mutation 仍必须满足 `enabled=on`、`mode=developer_apply_safe`、`source=user_config`。
 - 2026-07-05 追加：Developer Mode public CLI/read-model 输出必须保留 `enabled`、`mode`、`effective_state`、`allowed_route` 兼容字段，但新消费方应优先读取 `developer_profile`、`capabilities` 与 `agent_authority`。`developer_profile` 至少区分 Contributor、Maintainer、Runtime Maintainer；`capabilities` 必须分别表达 `source_channel`、`workspace_trust`、`github_authority`、`agent_automation`、`runtime_mutation_scope` 的 `status`、`level`、`source` 和 `impact`；`agent_authority` 固定 feedback capture、authorized direct-fix、manual-on-without-write、official/third-party-without-authority 的 route matrix。local checkout source、repo direct/fork route、shared runtime mutation许可不得继续压缩成单一 Developer Mode 开关；shared runtime mutation 只有在 `enabled=on`、`mode=developer_apply_safe`、`source=user_config` 时投影为 ready。
+- 2026-07-05 追加：标准 OPL Agent 的 feedback self-evolution 采用固定分工。target agent / package 只发布 domain-thin feedback adapter 与 trigger refs；优化策略、patch planning 和 work-order materialization 统一由 `opl-meta-agent:oma-agent-evolution` 承担；FeedbackOps / Agent Lab 只负责事件账本、状态投影、Developer Mode 执行 gate 和 target-scoped owner route。反馈捕获不需要 Developer Mode；repo mutation 必须满足 Developer Mode gate，并按目标仓 authority 路由到 `direct_repo_fix`、`fork_pull_request` 或 `owner_handoff`。MAS 侧在这条链路中是 thin adapter / trigger，不是承担优化策略的 skill。
 
 ## 2026-05-17
 
