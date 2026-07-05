@@ -10,8 +10,8 @@ import {
   openFamilyRuntimeSqlite,
   resolveOplStatePaths,
   summarizeStageAttemptUsageProjections,
+  buildStageAttemptRuntimeCurrentness,
 } from '../runway/index.ts';
-import { buildStageAttemptRuntimeCurrentness } from '../runway/family-runtime-stage-attempt-runtime-currentness.ts';
 import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);

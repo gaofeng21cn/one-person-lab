@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
   materializeFindings,
-} from '../../src/modules/workspace/workspace-diagnostics-parts/policy.ts';
+} from '../../src/modules/workspace/index.ts';
 
 test('workspace diagnostics keep hard blockers fail-closed when policy lists overlap', () => {
   const findings = materializeFindings(

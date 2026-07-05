@@ -11,6 +11,7 @@ export { stableId } from './family-runtime-ids.ts';
 export { buildModelRouteCostProjection, buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 export { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
+export { buildStageAttemptRuntimeCurrentness } from './family-runtime-stage-attempt-runtime-currentness.ts';
 export { buildEffectiveCurrentContextPacket, buildFamilyStallLineage } from './family-runtime-effective-current-context.ts';
 export type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-temporal-visibility.ts';
 export { inspectFamilyRuntimeProviderWithLifecycle, isFamilyRuntimeProviderKind, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
