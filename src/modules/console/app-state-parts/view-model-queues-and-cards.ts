@@ -67,8 +67,8 @@ export function buildSummaryCards(input: OplAppOperatorViewModelInput, runtimeSu
     {
       card_id: 'active_projects',
       label: '活跃项目',
-      value: runtimeSummary.active_project_count,
-      tone: runtimeSummary.active_project_count > 0 ? 'running' : 'idle',
+      value: runtimeSummary.in_progress_count,
+      tone: runtimeSummary.in_progress_count > 0 ? 'running' : 'idle',
       source_ref: 'app_state.operator.workbench.user_task_status_summary',
     },
     {
