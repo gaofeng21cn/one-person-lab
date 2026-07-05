@@ -24,12 +24,12 @@
   "residual_readback_2026_07_05": {
     "source_command": "node ./scripts/reuse-first-scan.mjs --max-findings 1000",
     "scan_counts": {
-      "finding_count": 711,
+      "finding_count": 709,
       "hard_gate_finding_count": 242,
-      "advisory_finding_count": 469,
+      "advisory_finding_count": 467,
       "custom_runtime_queue": 147,
       "custom_update_or_package_manager": 93,
-      "custom_observability_ledger": 469,
+      "custom_observability_ledger": 467,
       "handwritten_json_boundary": 2
     },
     "active_src_already_zero": [
@@ -84,7 +84,7 @@
       },
       {
         "category": "custom_observability_ledger",
-        "residual_finding_count": 469,
+        "residual_finding_count": 467,
         "residual_finding_decision": "allowed_projection_boundary",
         "must_migrate_from_residual_findings": 0,
         "allowed_projection_scope": [
@@ -95,7 +95,7 @@
         "owner_live_evidence_required": [
           "otlp_exporter_live_endpoint"
         ],
-        "false_completion_guard": "The 469 residual observability findings are allowed projection vocabulary only; production observability remains incomplete until OTLP/exporter/live endpoint owner evidence and external collector consumption are observed."
+        "false_completion_guard": "The 467 residual observability findings are allowed projection vocabulary only; production observability remains incomplete until OTLP/exporter/live endpoint owner evidence and external collector consumption are observed."
       }
     ],
     "owner_route_worklist": [
@@ -487,8 +487,7 @@
         "src/entrypoints/cli/cases/runtime-public-command-specs.ts",
         "src/entrypoints/cli/cases/public-command-specs-parts/stages.ts",
         "src/entrypoints/cli/cases/public-command-specs.ts",
-        "src/entrypoints/cli/modules/help-output.ts",
-        "src/entrypoints/cli/modules/request-parsers.ts"
+        "src/entrypoints/cli/modules/help-output.ts"
       ],
       "owner": "OPL CLI",
       "phase": "Phase 2/9",
