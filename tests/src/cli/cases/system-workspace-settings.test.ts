@@ -1,4 +1,5 @@
 import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { resolveOplDeveloperModeTargetAuthority } from '../../../../src/modules/connect/developer-mode.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -25,6 +26,10 @@ function assertCapability(
   expected: DeveloperModeCapabilityAssertion,
 ) {
   assert.deepEqual(capabilities[capabilityId], expected);
+}
+
+function findTargetAuthority(targets: Array<Record<string, any>>, targetAgentId: string) {
+  return targets.find((entry) => entry.target_agent_id === targetAgentId) ?? null;
 }
 
 test('workspace root set persists the selected root and workspace root reads it back', () => {
@@ -152,6 +157,11 @@ test('system developer-supervisor reports and persists the family developer mode
           };
           capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           agent_authority: Record<string, any>;
+          target_authority: {
+            surface_kind: string;
+            accepted_inputs: string[];
+            standard_targets: Array<Record<string, any>>;
+          };
           github_identity: {
             status: string;
             login: string | null;
@@ -235,6 +245,11 @@ test('system developer-supervisor reports and persists the family developer mode
           };
           capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           agent_authority: Record<string, any>;
+          target_authority: {
+            surface_kind: string;
+            accepted_inputs: string[];
+            standard_targets: Array<Record<string, any>>;
+          };
           github_identity: {
             status: string;
             login: string | null;
@@ -313,6 +328,20 @@ test('system developer-supervisor reports and persists the family developer mode
       )?.route,
       'direct_repo_fix',
     );
+    const masTargetAuthority = findTargetAuthority(
+      updated.system_action.developer_mode.target_authority.standard_targets,
+      'mas',
+    );
+    assert.equal(updated.system_action.developer_mode.target_authority.surface_kind, 'opl_developer_mode_target_authority_resolver');
+    assert.deepEqual(updated.system_action.developer_mode.target_authority.accepted_inputs, [
+      'target_agent_id',
+      'target_repo_id',
+      'target_repo_url',
+    ]);
+    assert.equal(masTargetAuthority?.target_repo_id, 'gaofeng21cn/med-autoscience');
+    assert.equal(masTargetAuthority?.developer_identity_class, 'opl_maintainer');
+    assert.equal(masTargetAuthority?.allowed_route, 'direct_repo_fix');
+    assert.equal(masTargetAuthority?.direct_write_allowed, true);
     assert.deepEqual(
       updated.system_action.developer_mode.repo_authority.repos.map((entry) => entry.repo).sort(),
       [
@@ -389,6 +418,9 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
           };
           capabilities: Record<string, DeveloperModeCapabilityAssertion>;
           agent_authority: Record<string, any>;
+          target_authority: {
+            standard_targets: Array<Record<string, any>>;
+          };
           github_identity: {
             status: string;
             login: string | null;
@@ -444,8 +476,97 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
       output.system_action.developer_mode.repo_authority.repos.every((entry) => entry.allowed_route === 'fork_pull_request'),
       true,
     );
+    const rcaTargetAuthority = findTargetAuthority(
+      output.system_action.developer_mode.target_authority.standard_targets,
+      'rca',
+    );
+    assert.equal(rcaTargetAuthority?.developer_identity_class, 'contributor');
+    assert.equal(rcaTargetAuthority?.allowed_route, 'fork_pull_request');
+    assert.equal(rcaTargetAuthority?.direct_write_allowed, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('target-scoped resolver returns target agent authority for standard agents', () => {
+  const fixture = JSON.stringify({
+    user: { login: 'agent-owner' },
+    permissions: {
+      'gaofeng21cn/one-person-lab': 'read',
+      'gaofeng21cn/med-autoscience': 'write',
+      'gaofeng21cn/med-autogrant': 'read',
+      'gaofeng21cn/opl-bookforge': 'read',
+      'gaofeng21cn/opl-meta-agent': 'read',
+      'gaofeng21cn/redcube-ai': 'read',
+    },
+  });
+  const previousFixture = process.env.OPL_DEVELOPER_MODE_GH_FIXTURE;
+
+  try {
+    process.env.OPL_DEVELOPER_MODE_GH_FIXTURE = fixture;
+    const output = resolveOplDeveloperModeTargetAuthority(
+      { target_agent_id: 'mas' },
+      {
+        enabled: 'on',
+        mode: 'developer_apply_safe',
+        source: 'user_config',
+        auto_enable_github_login: 'agent-owner',
+        version: 'g1',
+        updated_at: '2026-07-05T00:00:00.000Z',
+      },
+    );
+
+    assert.equal(output.target_kind, 'standard_agent');
+    assert.equal(output.target_agent_id, 'mas');
+    assert.equal(output.target_repo_id, 'gaofeng21cn/med-autoscience');
+    assert.equal(output.developer_identity_class, 'target_agent_developer');
+    assert.equal(output.allowed_route, 'direct_repo_fix');
+    assert.equal(output.direct_write_allowed, true);
+  } finally {
+    if (previousFixture === undefined) {
+      delete process.env.OPL_DEVELOPER_MODE_GH_FIXTURE;
+    } else {
+      process.env.OPL_DEVELOPER_MODE_GH_FIXTURE = previousFixture;
+    }
+  }
+});
+
+test('target-scoped resolver routes explicit third-party repo through PR when direct write is missing', () => {
+  const fixture = JSON.stringify({
+    user: { login: 'outside-contributor' },
+    permissions: {
+      'gaofeng21cn/one-person-lab': 'read',
+      'other-org/custom-agent': 'read',
+    },
+  });
+  const previousFixture = process.env.OPL_DEVELOPER_MODE_GH_FIXTURE;
+
+  try {
+    process.env.OPL_DEVELOPER_MODE_GH_FIXTURE = fixture;
+    const output = resolveOplDeveloperModeTargetAuthority(
+      { target_repo_id: 'other-org/custom-agent' },
+      {
+        enabled: 'on',
+        mode: 'developer_apply_safe',
+        source: 'user_config',
+        auto_enable_github_login: 'outside-contributor',
+        version: 'g1',
+        updated_at: '2026-07-05T00:00:00.000Z',
+      },
+    );
+
+    assert.equal(output.target_kind, 'explicit_repo');
+    assert.equal(output.target_repo_id, 'other-org/custom-agent');
+    assert.equal(output.developer_identity_class, 'contributor');
+    assert.equal(output.allowed_route, 'fork_pull_request');
+    assert.equal(output.direct_write_allowed, false);
+    assert.equal(output.manual_enable_cannot_grant_direct_write, true);
+  } finally {
+    if (previousFixture === undefined) {
+      delete process.env.OPL_DEVELOPER_MODE_GH_FIXTURE;
+    } else {
+      process.env.OPL_DEVELOPER_MODE_GH_FIXTURE = previousFixture;
+    }
   }
 });
 
