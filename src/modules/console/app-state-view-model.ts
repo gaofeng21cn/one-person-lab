@@ -416,6 +416,15 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     blocker_ref_count: blockerRefCount,
     safe_action_ref_count: route ? 1 : 0,
     paper_route_lens_ref_count: 0,
+    runtime_readback_source: asString(item.runtime_readback_source),
+    runtime_attempt_status: asString(item.runtime_attempt_status),
+    runtime_closeout_observed: item.runtime_closeout_observed === true,
+    runtime_closeout_ref: asString(item.runtime_closeout_ref),
+    mas_owner_consumption_status: asString(item.mas_owner_consumption_status),
+    mas_owner_consumption_ref: asString(item.mas_owner_consumption_ref),
+    mas_owner_consumed_stage_attempt_id: asString(item.mas_owner_consumed_stage_attempt_id),
+    mas_owner_consumed_closeout_ref: asString(item.mas_owner_consumed_closeout_ref),
+    mas_owner_consumption_matches_runtime_closeout: item.mas_owner_consumption_matches_runtime_closeout === true,
     ...refs,
     active_path: [
       {

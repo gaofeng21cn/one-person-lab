@@ -101,6 +101,169 @@ function stageAttemptSourceRef(queueDb: string, attemptId: string) {
   };
 }
 
+function stageAttemptWorkspaceCloseoutPath(root: string, attemptId: string) {
+  return path.join(
+    root,
+    'ops',
+    'medautoscience',
+    'paper_mission_stage_attempts',
+    attemptId,
+    'stage_attempt_closeout_packet.json',
+  );
+}
+
+function readWorkspaceCloseoutForAttempt(attempt: JsonRecord, roots: readonly string[]) {
+  const attemptId = firstString(attempt.stage_attempt_id);
+  if (!attemptId) {
+    return null;
+  }
+  for (const root of roots) {
+    const closeoutPath = stageAttemptWorkspaceCloseoutPath(root, attemptId);
+    const payloadRaw = readJsonFileOrNull(closeoutPath);
+    if (!isRecord(payloadRaw)) {
+      continue;
+    }
+    const payload = payloadRaw;
+    if (
+      payload.surface_kind !== 'stage_attempt_closeout_packet'
+      || firstString(payload.stage_attempt_id) !== attemptId
+    ) {
+      continue;
+    }
+    let statMtime: string | null = null;
+    try {
+      statMtime = fs.statSync(closeoutPath).mtime.toISOString();
+    } catch {
+      statMtime = null;
+    }
+    return {
+      path: closeoutPath,
+      payload,
+      observedAt: firstString(payload.generated_at, payload.recorded_at, payload.updated_at) ?? statMtime,
+    };
+  }
+  return null;
+}
+
+function receiptOwnerConsumptionRoot(root: string) {
+  return path.join(root, 'ops', 'medautoscience', 'paper_mission_receipt_owner_consumption');
+}
+
+function receiptOwnerConsumptionFiles(root: string, studyId: string) {
+  const ledgerRoot = receiptOwnerConsumptionRoot(root);
+  const files: string[] = [];
+  const visit = (dir: string) => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const child = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === studyId) {
+          files.push(path.join(child, 'receipt_owner_consumption.json'));
+        }
+        visit(child);
+      }
+    }
+  };
+  visit(ledgerRoot);
+  return files;
+}
+
+function stageAttemptIdFromRef(...values: unknown[]) {
+  for (const value of values) {
+    const text = firstString(value);
+    if (!text) {
+      continue;
+    }
+    if (text.startsWith('sat_') || text.startsWith('sat-')) {
+      return text;
+    }
+    const oplMarker = 'opl://stage-attempts/';
+    if (text.includes(oplMarker)) {
+      return text.split(oplMarker, 2)[1]?.split(/[\/#]/, 1)[0] ?? null;
+    }
+    const pathMarker = 'paper_mission_stage_attempts/';
+    if (text.includes(pathMarker)) {
+      return text.split(pathMarker, 2)[1]?.split('/', 1)[0] ?? null;
+    }
+  }
+  return null;
+}
+
+function ownerConsumptionSummaryFromFile(filePath: string, latestAttemptId: string | null) {
+  const payloadRaw = readJsonFileOrNull(filePath);
+  if (!isRecord(payloadRaw)) {
+    return null;
+  }
+  const payload = payloadRaw;
+  if (
+    payload.surface_kind !== 'paper_mission_receipt_owner_consumption'
+    || payload.status !== 'owner_consumption_applied'
+  ) {
+    return null;
+  }
+  const receiptEvidence = isRecord(payload.receipt_evidence) ? payload.receipt_evidence : {};
+  const consumption = isRecord(payload.mas_receipt_consumption) ? payload.mas_receipt_consumption : {};
+  const stageClosure = isRecord(payload.stage_closure_decision)
+    ? payload.stage_closure_decision
+    : isRecord(payload.stage_closure)
+      ? payload.stage_closure
+      : {};
+  const oplCloseout = isRecord(stageClosure.opl_closeout) ? stageClosure.opl_closeout : {};
+  const consumedAttemptId = stageAttemptIdFromRef(
+    oplCloseout.stage_attempt_id,
+    receiptEvidence.stage_attempt_ref,
+    receiptEvidence.receipt_ref,
+    receiptEvidence.runtime_closeout_ref,
+    consumption.route_checkpoint_evidence_ref,
+    consumption.typed_runtime_blocker_ref,
+  );
+  let statMtime: string | null = null;
+  try {
+    statMtime = fs.statSync(filePath).mtime.toISOString();
+  } catch {
+    statMtime = null;
+  }
+  return {
+    path: filePath,
+    payload,
+    status: firstString(consumption.status) ?? firstString(payload.status),
+    ownerResultKind: firstString(consumption.owner_result_kind),
+    consumedAttemptId,
+    consumedCloseoutRef: firstString(
+      consumption.route_checkpoint_evidence_ref,
+      consumption.typed_runtime_blocker_ref,
+      receiptEvidence.runtime_closeout_ref,
+    ),
+    recordedAt: firstString(stageClosure.recorded_at, payload.recorded_at, payload.generated_at) ?? statMtime,
+    matchesRuntimeCloseout: Boolean(latestAttemptId && consumedAttemptId && latestAttemptId === consumedAttemptId),
+  };
+}
+
+function readLatestMasOwnerConsumptionForStudy(input: {
+  roots: readonly string[];
+  studyId: string | null;
+  latestAttemptId: string | null;
+}) {
+  if (!input.studyId) {
+    return null;
+  }
+  const candidates = input.roots
+    .flatMap((root) => receiptOwnerConsumptionFiles(root, input.studyId ?? ''))
+    .map((filePath) => ownerConsumptionSummaryFromFile(filePath, input.latestAttemptId))
+    .filter((entry): entry is NonNullable<ReturnType<typeof ownerConsumptionSummaryFromFile>> => Boolean(entry));
+  if (candidates.length === 0) {
+    return null;
+  }
+  return candidates.sort((left, right) =>
+    `${right.recordedAt ?? ''}${right.path}`.localeCompare(`${left.recordedAt ?? ''}${left.path}`)
+  )[0];
+}
+
 function stageAttemptLane(status: string): 'running' | 'attention' | 'recent' | null {
   if (RUNNING_STAGE_ATTEMPT_STATUSES.has(status)) {
     return 'running';
@@ -146,25 +309,42 @@ function overlayStageAttempts(input: {
   item: JsonRecord;
   attempts: JsonRecord[];
   queueDb: string;
+  candidateRoots: string[];
 }) {
   const [latest] = input.attempts;
-  const latestStatus = normalizeStatus(latest.status);
-  const lane = stageAttemptLane(latestStatus) ?? 'attention';
+  const closeout = readWorkspaceCloseoutForAttempt(latest, input.candidateRoots);
+  const latestStatus = closeout && normalizeStatus(latest.status) === 'running'
+    ? 'completed'
+    : normalizeStatus(latest.status);
   const stageAttemptIds = input.attempts
     .map((attempt) => firstString(attempt.stage_attempt_id))
     .filter((entry): entry is string => Boolean(entry));
+  const stageId = firstString(latest.stage_id);
+  const workflowId = firstString(latest.workflow_id);
+  const attemptId = firstString(latest.stage_attempt_id);
+  const studyId = firstString(input.item.study_id);
+  const ownerConsumption = readLatestMasOwnerConsumptionForStudy({
+    roots: input.candidateRoots,
+    studyId,
+    latestAttemptId: attemptId,
+  });
+  const ownerConsumptionDrift = Boolean(ownerConsumption && closeout && !ownerConsumption.matchesRuntimeCloseout);
+  const lane = ownerConsumptionDrift ? 'attention' : stageAttemptLane(latestStatus) ?? 'attention';
   const sourceRefs = [
     ...recordList(input.item.source_refs),
     ...input.attempts.flatMap((attempt) => {
       const attemptId = firstString(attempt.stage_attempt_id);
       return attemptId ? [stageAttemptSourceRef(input.queueDb, attemptId)] : [];
     }),
+    ...(closeout ? [sourceRef(closeout.path, 'stage_attempt_closeout_packet', 'OPL stage attempt closeout packet')] : []),
+    ...(ownerConsumption ? [sourceRef(ownerConsumption.path, 'mas_receipt_owner_consumption', 'MAS owner consumption readback')] : []),
   ];
-  const stageId = firstString(latest.stage_id);
-  const workflowId = firstString(latest.workflow_id);
-  const attemptId = firstString(latest.stage_attempt_id);
-  const updatedAt = firstString(latest.updated_at, input.item.updated_at);
-  const actionSummary = lane === 'running'
+  const updatedAt = firstString(closeout?.observedAt, latest.updated_at, input.item.updated_at);
+  const actionSummary = ownerConsumptionDrift
+    ? 'Latest OPL runtime closeout differs from the MAS owner-consumed receipt; read MAS paper-mission/study-progress before any paper-progress claim.'
+    : ownerConsumption?.matchesRuntimeCloseout
+      ? 'OPL runtime stage attempt completed and MAS consumed that runtime receipt; read MAS paper-mission/study-progress for the next legal owner action before any paper-progress claim.'
+      : lane === 'running'
     ? 'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.'
     : lane === 'attention'
       ? 'OPL runtime stage attempt needs operator attention; MAS terminalization is still required before any paper-progress claim.'
@@ -173,22 +353,31 @@ function overlayStageAttempts(input: {
   return {
     ...input.item,
     lane,
-    status: firstString(latest.status, input.item.status),
+    status: firstString(latestStatus, latest.status, input.item.status),
     status_label: lane === 'running'
       ? (firstString(input.item.status_label) ?? 'OPL runtime running')
-      : `OPL runtime ${latestStatus || 'needs attention'}`,
+      : ownerConsumptionDrift
+        ? 'OPL/MAS readback attention'
+        : `OPL runtime ${latestStatus || 'needs attention'}`,
     summary: firstString(input.item.summary)
-      ?? (attemptId
+      ?? (closeout && attemptId
+        ? `OPL runtime attempt ${attemptId} has terminal closeout evidence.`
+        : attemptId
         ? `OPL runtime attempt ${attemptId} is ${latestStatus || 'not advancing'}.`
         : `OPL runtime attempt is ${latestStatus || 'not advancing'}.`),
     updated_at: updatedAt,
     source_refs: sourceRefs,
+    ...(ownerConsumption ? {
+      mas_owner_consumption_status: ownerConsumption.status,
+      mas_owner_consumption_ref: ownerConsumption.path,
+      mas_owner_consumed_stage_attempt_id: ownerConsumption.consumedAttemptId,
+      mas_owner_consumed_closeout_ref: ownerConsumption.consumedCloseoutRef,
+      mas_owner_consumption_matches_runtime_closeout: ownerConsumption.matchesRuntimeCloseout,
+    } : {}),
     action_owner: lane === 'running' ? 'runtime' : lane === 'attention' ? 'opl' : 'none',
-    action_kind: lane === 'attention' ? 'quality_gate' : null,
+    action_kind: ownerConsumptionDrift ? 'currentness_check' : lane === 'attention' ? 'quality_gate' : null,
     action_summary: actionSummary,
-    next_action_summary: lane === 'recent'
-      ? actionSummary
-      : firstString(input.item.next_action_summary, input.item.action_summary),
+    next_action_summary: actionSummary,
     active_run_id: workflowId ?? attemptId ?? firstString(input.item.active_run_id),
     active_stage_id: stageId ?? firstString(input.item.active_stage_id, input.item.status),
     active_stage_label: stageId ?? firstString(input.item.active_stage_label, input.item.status_label),
@@ -199,7 +388,9 @@ function overlayStageAttempts(input: {
       ]),
     ],
     runtime_readback_source: 'opl_family_runtime_queue_stage_attempts',
-    runtime_attempt_status: firstString(latest.status),
+    runtime_attempt_status: latestStatus,
+    runtime_closeout_observed: Boolean(closeout),
+    runtime_closeout_ref: closeout?.path ?? null,
     provider_kind: firstString(latest.provider_kind),
     workflow_id: workflowId,
     authority_boundary: {
@@ -236,7 +427,7 @@ function mergeFamilyRuntimeStageAttempts(input: {
     const studyId = firstString(item.study_id);
     const studyAttempts = studyId ? overlayByStudyId.get(studyId) : null;
     return studyAttempts && studyAttempts.length > 0
-      ? overlayStageAttempts({ item, attempts: studyAttempts, queueDb })
+      ? overlayStageAttempts({ item, attempts: studyAttempts, queueDb, candidateRoots: input.candidateRoots })
       : item;
   });
 }

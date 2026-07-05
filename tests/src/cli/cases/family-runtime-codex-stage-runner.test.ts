@@ -59,6 +59,13 @@ test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance'
   assert.match(prompt, /diagnostic variable ascertainment table/);
   assert.match(prompt, /burden\/prevalence wording/);
   assert.match(prompt, /missingness atlas/);
+  assert.match(prompt, /phenotype-treatment gap discovery contract/);
+  assert.match(prompt, /high-risk low-intensity definitions/);
+  assert.match(prompt, /medication-source sensitivity/);
+  assert.match(prompt, /transition trajectory categories/);
+  assert.match(prompt, /site-level gap variability/);
+  assert.match(prompt, /cardiometabolic-renal protection gaps/);
+  assert.match(prompt, /rate\/count separation/);
   assert.match(prompt, /publication_eval\/latest\.json/);
   assert.match(prompt, /controller_decisions\/latest\.json/);
   assert.match(prompt, /owner receipts/);

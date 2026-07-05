@@ -131,6 +131,100 @@ function writeRunningStageAttemptFixture(input: {
   }
 }
 
+function writeWorkspaceStageAttemptCloseoutFixture(input: {
+  workspaceRoot: string;
+  studyId: string;
+  stageAttemptId: string;
+  stageId: string;
+  generatedAt?: string;
+}) {
+  const closeoutPath = path.join(
+    input.workspaceRoot,
+    'ops',
+    'medautoscience',
+    'paper_mission_stage_attempts',
+    input.stageAttemptId,
+    'stage_attempt_closeout_packet.json',
+  );
+  fs.mkdirSync(path.dirname(closeoutPath), { recursive: true });
+  fs.writeFileSync(
+    closeoutPath,
+    JSON.stringify(
+      {
+        surface_kind: 'stage_attempt_closeout_packet',
+        schema_version: 1,
+        status: 'route_back_evidence_candidate',
+        stage_attempt_id: input.stageAttemptId,
+        study_id: input.studyId,
+        stage_id: input.stageId,
+        generated_at: input.generatedAt ?? '2026-07-04T00:05:00.000Z',
+        closeout_refs: [
+          `ops/medautoscience/paper_mission_stage_attempts/${input.stageAttemptId}/stage_attempt_closeout_packet.json`,
+        ],
+        route_impact: {
+          can_claim_paper_progress: false,
+          can_claim_submission_ready: false,
+          can_claim_publication_ready: false,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+function writeMasReceiptOwnerConsumptionFixture(input: {
+  workspaceRoot: string;
+  studyId: string;
+  stageAttemptId: string;
+  status?: string;
+  recordedAt?: string;
+}) {
+  const receiptPath = path.join(
+    input.workspaceRoot,
+    'ops',
+    'medautoscience',
+    'paper_mission_receipt_owner_consumption',
+    input.studyId,
+    'receipt_owner_consumption.json',
+  );
+  const closeoutRef = `ops/medautoscience/paper_mission_stage_attempts/${input.stageAttemptId}/stage_attempt_closeout_packet.json`;
+  fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+  fs.writeFileSync(
+    receiptPath,
+    JSON.stringify(
+      {
+        surface_kind: 'paper_mission_receipt_owner_consumption',
+        schema_version: 1,
+        status: 'owner_consumption_applied',
+        study_id: input.studyId,
+        receipt_evidence: {
+          surface_kind: 'mas_receipt_evidence',
+          receipt_ref: `opl://stage-attempts/${input.stageAttemptId}`,
+          stage_attempt_ref: `opl://stage-attempts/${input.stageAttemptId}`,
+          runtime_closeout_ref: closeoutRef,
+        },
+        mas_receipt_consumption: {
+          surface_kind: 'mas_receipt_consumption_projection',
+          status: input.status ?? 'owner_consumed_route_checkpoint',
+          owner_result_kind: 'route_checkpoint',
+          route_checkpoint_evidence_ref: closeoutRef,
+        },
+        stage_closure_decision: {
+          surface_kind: 'mas_stage_closure_decision',
+          recorded_at: input.recordedAt ?? '2026-07-04T00:06:00.000Z',
+          opl_closeout: {
+            status: 'opl_runtime_terminal_readback_observed',
+            stage_attempt_id: input.stageAttemptId,
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));
   const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-repo-'));
@@ -757,6 +851,7 @@ test('app state fast promotes MAS study activity from OPL family-runtime running
     assert.equal(dm003Task.active_stage_id, 'submission_milestone_candidate');
     assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003');
     assert.deepEqual(dm003Task.stage_attempt_ids, [stageAttemptId]);
+    assert.equal(dm003Task.next_visible_step.includes('OPL runtime stage attempt is running'), true);
     assert.equal(dm003Task.source_ref_count > 1, true);
 
     const taskRunProjection = workbench.task_run_projection_v2;
@@ -776,6 +871,186 @@ test('app state fast promotes MAS study activity from OPL family-runtime running
     assert.equal(taskRunProjection.authority_boundary.can_create_owner_receipt, false);
     assert.equal(taskRunProjection.authority_boundary.can_create_typed_blocker, false);
     assert.equal('provider_completion_is_domain_ready' in taskRunProjection.authority_boundary, false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast treats workspace terminal closeout evidence as completed runtime activity', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-terminal-closeout-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-terminal-closeout-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-terminal-closeout-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const stageAttemptId = 'sat_app_state_dm003_closeout';
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    writeRunningStageAttemptFixture({
+      stateDir,
+      workspaceRoot,
+      studyId,
+      taskId: 'frt_app_state_dm003_closeout',
+      stageAttemptId,
+      workflowId: 'wf_app_state_dm003_closeout',
+      stageId: 'review',
+      status: 'running',
+      providerStatus: 'running',
+      updatedAt: '2026-07-04T00:00:00.000Z',
+    });
+    writeWorkspaceStageAttemptCloseoutFixture({
+      workspaceRoot,
+      studyId,
+      stageAttemptId,
+      stageId: 'review',
+      generatedAt: '2026-07-04T00:05:00.000Z',
+    });
+    writeMasReceiptOwnerConsumptionFixture({
+      workspaceRoot,
+      studyId,
+      stageAttemptId,
+      recordedAt: '2026-07-04T00:06:00.000Z',
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as any;
+
+    const workbench = output.app_state.operator.workbench;
+    assert.deepEqual(
+      workbench.activity_center.active_projects.map((entry: { study_id?: string }) => entry.study_id),
+      ['002-dm-china-us-mortality-attribution'],
+    );
+    assert.equal(
+      workbench.activity_center.recent_projects.some((entry: { study_id?: string }) => entry.study_id === studyId),
+      true,
+    );
+
+    const dm003Task = workbench.task_drilldowns.find((entry: { study_id?: string }) => entry.study_id === studyId);
+    assert.ok(dm003Task);
+    assert.equal(dm003Task.state, 'completed');
+    assert.equal(dm003Task.status, 'completed');
+    assert.equal(dm003Task.status_label, 'OPL runtime completed');
+    assert.equal(dm003Task.runtime_attempt_status, 'completed');
+    assert.equal(dm003Task.active_stage_id, 'review');
+    assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003_closeout');
+    assert.deepEqual(dm003Task.stage_attempt_ids, [stageAttemptId]);
+    assert.equal(dm003Task.runtime_closeout_observed, true);
+    assert.equal(dm003Task.mas_owner_consumption_status, 'owner_consumed_route_checkpoint');
+    assert.equal(dm003Task.mas_owner_consumed_stage_attempt_id, stageAttemptId);
+    assert.equal(dm003Task.mas_owner_consumption_matches_runtime_closeout, true);
+    assert.equal(dm003Task.next_visible_step.includes('MAS paper-mission/study-progress'), true);
+
+    const taskRunProjection = workbench.task_run_projection_v2;
+    assert.deepEqual(taskRunProjection.summary, {
+      task_count: 3,
+      running_task_count: 1,
+      attention_task_count: 0,
+      recent_task_count: 2,
+    });
+    const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
+    assert.ok(dm003Projection);
+    assert.equal(dm003Projection.status.state, 'completed');
+    assert.equal(dm003Projection.status.status, 'completed');
+    assert.equal(dm003Projection.runtime_attempt_status, 'completed');
+    assert.deepEqual(dm003Projection.stage_attempt_ids, [stageAttemptId]);
+    assert.equal(dm003Projection.runtime_closeout_observed, true);
+    assert.equal(dm003Projection.runtime_closeout_ref.endsWith('stage_attempt_closeout_packet.json'), true);
+    assert.equal(dm003Projection.mas_owner_consumption_status, 'owner_consumed_route_checkpoint');
+    assert.equal(dm003Projection.mas_owner_consumed_stage_attempt_id, stageAttemptId);
+    assert.equal(dm003Projection.mas_owner_consumption_matches_runtime_closeout, true);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast separates latest OPL closeout from MAS owner-consumed receipt identity', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-closeout-identity-home-'));
+  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-closeout-identity-repo-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-closeout-identity-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const latestAttemptId = 'sat_app_state_dm003_latest_closeout';
+  const consumedAttemptId = 'sat_app_state_dm003_consumed_closeout';
+
+  try {
+    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
+    writeMasProgressPortalFixture(workspaceRoot, profilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+    writeRunningStageAttemptFixture({
+      stateDir,
+      workspaceRoot,
+      studyId,
+      taskId: 'frt_app_state_dm003_latest_closeout',
+      stageAttemptId: latestAttemptId,
+      workflowId: 'wf_app_state_dm003_latest_closeout',
+      stageId: 'write',
+      status: 'running',
+      providerStatus: 'running',
+      updatedAt: '2026-07-04T00:10:00.000Z',
+    });
+    writeWorkspaceStageAttemptCloseoutFixture({
+      workspaceRoot,
+      studyId,
+      stageAttemptId: latestAttemptId,
+      stageId: 'write',
+      generatedAt: '2026-07-04T00:12:00.000Z',
+    });
+    writeMasReceiptOwnerConsumptionFixture({
+      workspaceRoot,
+      studyId,
+      stageAttemptId: consumedAttemptId,
+      recordedAt: '2026-07-04T00:11:00.000Z',
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as any;
+
+    const dm003Task = output.app_state.operator.workbench.task_drilldowns.find(
+      (entry: { study_id?: string }) => entry.study_id === studyId,
+    );
+    assert.ok(dm003Task);
+    assert.equal(dm003Task.state, 'attention_needed');
+    assert.equal(dm003Task.status, 'completed');
+    assert.equal(dm003Task.status_label, 'OPL/MAS readback attention');
+    assert.equal(dm003Task.runtime_closeout_observed, true);
+    assert.equal(dm003Task.runtime_closeout_ref.includes(latestAttemptId), true);
+    assert.equal(dm003Task.mas_owner_consumed_stage_attempt_id, consumedAttemptId);
+    assert.equal(dm003Task.mas_owner_consumption_matches_runtime_closeout, false);
+    assert.equal(dm003Task.next_visible_step.includes('differs from the MAS owner-consumed receipt'), true);
+    assert.deepEqual(
+      output.app_state.operator.workbench.activity_center.needs_attention.map(
+        (entry: { study_id?: string }) => entry.study_id,
+      ),
+      [studyId],
+    );
+
+    const dm003Projection = output.app_state.operator.workbench.task_run_projection_v2.tasks.find(
+      (entry: any) => entry.task_identity.study_id === studyId,
+    );
+    assert.ok(dm003Projection);
+    assert.equal(dm003Projection.status.state, 'attention_needed');
+    assert.equal(dm003Projection.status.priority_bucket, 'needs_attention');
+    assert.equal(dm003Projection.runtime_closeout_ref.includes(latestAttemptId), true);
+    assert.equal(dm003Projection.mas_owner_consumed_stage_attempt_id, consumedAttemptId);
+    assert.equal(dm003Projection.mas_owner_consumption_matches_runtime_closeout, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });
