@@ -129,7 +129,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 固定机器边界：输入只接受 domain feedback external suite refs、developer work-order candidate refs、completion refs 和 domain-owned blocker refs；输出只投影 work-order status shape。
+- `contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 固定机器边界：contract 本身不会触发执行；输入只接受 domain feedback external suite refs、developer work-order candidate refs、completion refs 和 domain-owned blocker refs；输出只投影 `suite_missing / suite_stale / queued / runnable / completed_or_blocker` work-order status shape。
+- 标准组织链路是 `domain thin adapter -> OPL FeedbackOps / Agent Lab -> OMA developer work-order -> target agent patch -> domain readback`；任何一步缺 refs 时只形成 read-model/work-order 状态或 owner route，不写 domain truth。
 - `src/agent-lab-control-read-models.ts` 的 `buildAgentLabDomainFeedbackSelfEvolutionReadModel` 是 canonical builder；`agent-lab complete`、`agent-lab workbench` 和 `opl app state` 只消费同一 read-model。
 - `runnable` 只表示已有 developer work-order candidate 可交给现有 `opl work-order execute` 原语；Agent Lab 不新增 runner/queue，不写 runtime DB/provider queue，不执行 MAS truth mutation。
 - `opl work-order execute --dry-run` 只做 no-write 计划与形状检查，输出 execution plan / dry-run receipt，不打开 target worktree、不启动 Codex、不吸收 patch；它用于 operator/OMA 在真实执行前确认 target repo、verification command、forbidden surface 和 closeout boundary。

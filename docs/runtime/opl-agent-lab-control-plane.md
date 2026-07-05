@@ -92,6 +92,8 @@ explicit user feedback
   -> opl feedback reconcile + App action queue projection
 ```
 
+标准 domain feedback self-evolution 链路应读成 `domain thin adapter -> OPL FeedbackOps / Agent Lab -> OMA work-order -> target agent patch -> domain readback`。`contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface` 只声明这条链路的 refs-only read-model shape，contract 本身不会提交反馈、创建 suite、执行 work order 或写 target owner result。Agent Lab 的 App/action-queue 投影必须能把缺 suite、suite stale、已排队、可交给 `opl work-order execute`、以及已完成或已有 domain-owned blocker ref 分开显示。
+
 反馈捕获不要求 Developer Mode，因为记录用户明确反馈本身不改变目标仓、论文、图表或质量结论。Developer Mode 只约束 repo 修复、work-order 执行、promotion 和 closeout 路径；没有 `active_direct` 或 `direct_repo_fix` route 时，FeedbackOps 只能投影为 `queued_requires_developer_mode`。即使 work-order 可执行，OPL 也只调用既有 `opl work-order execute` 原语，不创建第二套 runner、runtime queue 或 provider queue。
 
 FeedbackOps 明确不持有：

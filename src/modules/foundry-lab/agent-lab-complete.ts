@@ -83,7 +83,13 @@ export function buildCompleteAgentLabControlPlane() {
     longlineResult.result_id,
   ]);
   const domainFeedbackSelfEvolution = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    targetAgentId: 'sample-domain-agent',
     sourceRefs: [sampleResult.result_id, longlineResult.result_id],
+    workOrderRefs: ['feedback-work-order:sample-domain-agent/developer-work-order-candidate'],
+    externalSuiteRefs: ['domain-feedback-external-suite-ref:sample-domain-agent/sample-suite'],
+    developerWorkOrderCandidateRefs: [
+      'developer-work-order-candidate-ref:sample-domain-agent/sample-feedback-patch',
+    ],
   });
   const aheEvidence = sampleResult.ahe_evidence;
   const executorCapabilityAperture = sampleResult.executor_capability_aperture;

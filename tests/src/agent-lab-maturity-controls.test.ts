@@ -63,30 +63,63 @@ test('Agent Lab absorbs ARIS maturity controls as refs-only policies without ARI
   assert.equal(result.authority_boundary.can_modify_managed_runtime, false);
 });
 
-test('Agent Lab projects domain feedback work orders without creating a runner or domain authority', () => {
-  const result = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+test('Agent Lab projects domain feedback work-order refs without default domain authority', () => {
+  const missing = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    sourceRefs: ['suite-result:domain-feedback/missing-suite'],
+  });
+  const stale = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    targetAgentId: 'mas',
+    workOrderRefs: ['feedback-work-order:mas/stale-feedback'],
+    externalSuiteRefs: ['external-suite-ref:mas/reviewer-feedback'],
+    suiteFreshness: 'stale',
+  });
+  const queued = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    targetAgentId: 'mas',
+    workOrderRefs: ['feedback-work-order:mas/external-suite-feedback-intake'],
+    externalSuiteRefs: ['external-suite-ref:mas/reviewer-feedback'],
+  });
+  const runnableResult = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    targetAgentId: 'mas',
+    workOrderRefs: ['feedback-work-order:mas/developer-work-order-candidate'],
     sourceRefs: ['suite-result:mas/domain-feedback'],
+    externalSuiteRefs: ['external-suite-ref:mas/reviewer-feedback'],
+    developerWorkOrderCandidateRefs: ['developer-work-order-candidate-ref:mas/reviewer-feedback-patch'],
+  });
+  const terminalResult = buildAgentLabDomainFeedbackSelfEvolutionReadModel({
+    targetAgentId: 'mas',
+    workOrderRefs: ['feedback-work-order:mas/completed-or-blocker-readback'],
     externalSuiteRefs: ['external-suite-ref:mas/reviewer-feedback'],
     developerWorkOrderCandidateRefs: ['developer-work-order-candidate-ref:mas/reviewer-feedback-patch'],
     completionRefs: ['work-order-completion-ref:mas/reviewer-feedback-patch'],
     blockerRefs: ['typed-blocker-ref:mas/reviewer-feedback-owner-required'],
   });
 
-  assert.equal(result.surface_kind, 'opl_agent_lab_domain_feedback_self_evolution_read_model');
-  assert.equal(result.status, 'work_order_status_projection_ready');
-  assert.equal(result.refs_only, true);
-  assert.deepEqual(result.status_shape, ['queued', 'runnable', 'completed_or_blocker']);
-  assert.equal(result.summary.work_order_count, 3);
-  assert.equal(result.summary.queued_count, 1);
-  assert.equal(result.summary.runnable_count, 1);
-  assert.equal(result.summary.completed_or_blocker_count, 1);
-  assert.deepEqual(result.status_buckets.queued, ['feedback-work-order:mas/external-suite-feedback-intake']);
-  assert.deepEqual(result.status_buckets.runnable, ['feedback-work-order:mas/developer-work-order-candidate']);
-  assert.deepEqual(result.status_buckets.completed_or_blocker, [
-    'feedback-work-order:agent-lab/completed-or-blocker-readback',
+  assert.equal(runnableResult.surface_kind, 'opl_agent_lab_domain_feedback_self_evolution_read_model');
+  assert.equal(runnableResult.status, 'work_order_status_projection_ready');
+  assert.equal(runnableResult.refs_only, true);
+  assert.deepEqual(runnableResult.status_shape, [
+    'suite_missing',
+    'suite_stale',
+    'queued',
+    'runnable',
+    'completed_or_blocker',
   ]);
+  assert.equal(missing.summary.suite_missing_count, 1);
+  assert.equal(stale.summary.suite_stale_count, 1);
+  assert.equal(queued.summary.queued_count, 1);
+  assert.equal(runnableResult.summary.runnable_count, 1);
+  assert.equal(terminalResult.summary.completed_or_blocker_count, 1);
+  assert.deepEqual(queued.status_buckets.queued, ['feedback-work-order:mas/external-suite-feedback-intake']);
+  assert.deepEqual(runnableResult.status_buckets.runnable, ['feedback-work-order:mas/developer-work-order-candidate']);
+  assert.deepEqual(terminalResult.status_buckets.completed_or_blocker, [
+    'feedback-work-order:mas/completed-or-blocker-readback',
+  ]);
+  assert.equal(missing.trigger_policy.contract_can_trigger, false);
+  assert.equal(missing.external_suite_refs.length, 0);
+  assert.equal(missing.work_order_status_items[0].domain_id, 'target-agent');
+  assert.notEqual(missing.work_order_status_items[0].domain_id, 'med-autoscience');
 
-  const runnable = result.work_order_status_items.find((item) => item.status === 'runnable');
+  const runnable = runnableResult.work_order_status_items.find((item) => item.status === 'runnable');
   assert.ok(runnable);
   assert.equal(runnable.runnable, true);
   assert.equal(runnable.execution_surface, 'opl work-order execute');
@@ -94,21 +127,21 @@ test('Agent Lab projects domain feedback work orders without creating a runner o
   assert.equal(runnable.developer_work_order_candidate_ref,
     'developer-work-order-candidate-ref:mas/reviewer-feedback-patch');
 
-  const terminal = result.work_order_status_items.find((item) => item.status === 'completed_or_blocker');
+  const terminal = terminalResult.work_order_status_items.find((item) => item.status === 'completed_or_blocker');
   assert.ok(terminal);
   assert.equal(terminal.terminal, true);
   assert.equal(terminal.terminal_outcome, 'blocked_with_domain_owned_typed_blocker_ref');
   assert.equal(terminal.completion_ref, 'work-order-completion-ref:mas/reviewer-feedback-patch');
   assert.equal(terminal.blocker_ref, 'typed-blocker-ref:mas/reviewer-feedback-owner-required');
 
-  assert.equal(result.app_projection.action_surface_is_existing_primitive, true);
-  assert.equal(result.app_projection.creates_runner_or_queue, false);
-  assert.equal(result.app_projection.writes_runtime_db, false);
-  assert.equal(result.app_projection.writes_provider_queue, false);
-  assert.equal(result.authority_boundary.can_write_domain_truth, false);
-  assert.equal(result.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(result.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(result.authority_boundary.can_create_human_gate, false);
-  assert.equal(result.authority_boundary.can_write_runtime_db, false);
-  assert.equal(result.non_goals.includes('second_runner_or_queue'), true);
+  assert.equal(runnableResult.app_projection.action_surface_is_existing_primitive, true);
+  assert.equal(runnableResult.app_projection.creates_runner_or_queue, false);
+  assert.equal(runnableResult.app_projection.writes_runtime_db, false);
+  assert.equal(runnableResult.app_projection.writes_provider_queue, false);
+  assert.equal(runnableResult.authority_boundary.can_write_domain_truth, false);
+  assert.equal(runnableResult.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(runnableResult.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(runnableResult.authority_boundary.can_create_human_gate, false);
+  assert.equal(runnableResult.authority_boundary.can_write_runtime_db, false);
+  assert.equal(runnableResult.non_goals.includes('second_runner_or_queue'), true);
 });

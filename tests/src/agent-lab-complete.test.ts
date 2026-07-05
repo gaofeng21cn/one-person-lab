@@ -135,9 +135,9 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
   assert.equal(result.domain_feedback_self_evolution.surface_kind,
     'opl_agent_lab_domain_feedback_self_evolution_read_model');
   assert.equal(result.domain_feedback_self_evolution.status, 'work_order_status_projection_ready');
-  assert.equal(result.domain_feedback_self_evolution.summary.queued_count, 1);
+  assert.equal(result.domain_feedback_self_evolution.summary.queued_count, 0);
   assert.equal(result.domain_feedback_self_evolution.summary.runnable_count, 1);
-  assert.equal(result.domain_feedback_self_evolution.summary.completed_or_blocker_count, 1);
+  assert.equal(result.domain_feedback_self_evolution.summary.completed_or_blocker_count, 0);
   assert.equal(result.domain_feedback_self_evolution.app_projection.creates_runner_or_queue, false);
   assert.equal(result.domain_feedback_self_evolution.authority_boundary.can_write_runtime_db, false);
   assert.equal(result.domain_feedback_self_evolution.authority_boundary.can_create_owner_receipt, false);
@@ -258,7 +258,7 @@ test('Agent Lab workbench read model is ready for App consumption without taking
     result.token_cost_estimates.map((estimate: any) => estimate.estimate_id));
   assert.equal(result.aris_maturity_controls.summary.effort_level_count, 4);
   assert.equal(result.aris_maturity_controls.summary.assurance_level_count, 4);
-  assert.equal(result.domain_feedback_self_evolution.summary.work_order_count, 3);
+  assert.equal(result.domain_feedback_self_evolution.summary.work_order_count, 1);
   assert.equal(result.domain_feedback_self_evolution.status_buckets.runnable.length, 1);
   assert.equal(result.domain_feedback_self_evolution.app_projection.action_surface, 'opl work-order execute');
   assert.equal(result.domain_feedback_self_evolution.authority_boundary.can_write_provider_queue, false);

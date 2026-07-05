@@ -236,6 +236,13 @@ test('FeedbackOps contract declares universal trigger and no-authority boundary'
     path.join(contractsDir, 'agent-lab-contract.json'),
     'utf8',
   )) as any;
+  const domainFeedbackSurface = contract.domain_feedback_self_evolution_surface;
+  assert.equal(domainFeedbackSurface.trigger_policy.contract_can_trigger, false);
+  assert.equal(domainFeedbackSurface.trigger_policy.developer_work_order_execution_surface, 'opl work-order execute');
+  assert.equal(domainFeedbackSurface.statuses.includes('suite_missing'), true);
+  assert.equal(domainFeedbackSurface.statuses.includes('suite_stale'), true);
+  assert.equal(domainFeedbackSurface.authority_boundary.can_write_domain_truth, false);
+
   const surface = contract.feedbackops_delivery_feedback_surface;
 
   assert.equal(surface.surface_kind, 'opl_feedbackops_read_model');

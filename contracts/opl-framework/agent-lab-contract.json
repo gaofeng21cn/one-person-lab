@@ -223,7 +223,7 @@
     "surface_kind": "opl_agent_lab_domain_feedback_self_evolution_read_model",
     "version": "opl-agent-lab.v1.domain-feedback-self-evolution",
     "refs_only": true,
-    "purpose": "Project domain feedback external suite refs and developer work-order candidate refs into queued, runnable, and completed-or-blocker work-order status shapes for App/status consumption.",
+    "purpose": "Project domain feedback external suite refs and developer work-order candidate refs into suite-missing, suite-stale, queued, runnable, and completed-or-blocker work-order status shapes for App/status consumption; this contract does not trigger execution by itself.",
     "input_ref_groups": [
       "domain_feedback_external_suite_refs",
       "developer_work_order_candidate_refs",
@@ -231,10 +231,18 @@
       "feedback_work_order_blocker_refs"
     ],
     "statuses": [
+      "suite_missing",
+      "suite_stale",
       "queued",
       "runnable",
       "completed_or_blocker"
     ],
+    "trigger_policy": {
+      "contract_can_trigger": false,
+      "trigger_owner": "FeedbackOps_or_domain_thin_adapter",
+      "developer_work_order_execution_surface": "opl work-order execute",
+      "target_owner_readback_required": true
+    },
     "consumer_outputs": [
       "agent_lab_complete.domain_feedback_self_evolution",
       "agent_lab_workbench.domain_feedback_self_evolution",
