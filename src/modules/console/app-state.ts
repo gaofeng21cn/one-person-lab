@@ -4,8 +4,10 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
   readBundledCodexDefaultProfile,
+  listOplAgentPackages,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
+  runOplAgentPackageStatus,
 } from '../connect/index.ts';
 import {
   buildOplEndpoints,
@@ -350,6 +352,32 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const workspaceRoot = readOplWorkspaceRoot();
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
+  const agentPackagesReadback = listOplAgentPackages().opl_agent_packages;
+  const agentPackageStatuses = Object.fromEntries(
+    agentPackagesReadback.installed_packages.map((lock) => [
+      lock.package_id,
+      runOplAgentPackageStatus({ packageId: lock.package_id }).opl_agent_package_status,
+    ]),
+  );
+  const agentPackagesProjection = {
+    surface_kind: 'opl_app_agent_packages_projection',
+    source: {
+      list_surface: 'opl connect agent-packages list --json',
+      status_surface: 'opl connect agent-packages status --package-id <package_id> --json',
+    },
+    directory: agentPackagesReadback,
+    status_index: {
+      surface_kind: 'opl_agent_package_status_index',
+      status: 'available',
+      installed_package_count: agentPackagesReadback.installed_package_count,
+      packages: agentPackageStatuses,
+      home_shortcut_preferences: agentPackagesReadback.home_shortcut_preferences,
+      files: {
+        home_shortcut_preferences_file: agentPackagesReadback.files.home_shortcut_preferences_file,
+      },
+      authority_boundary: agentPackagesReadback.authority_boundary,
+    },
+  };
   const uiDefaults = buildUiDefaults();
   const runtimeActivityItems = buildAppStateRuntimeActivityItems();
   const fullRuntimeDrilldown = profile === 'full'
@@ -451,6 +479,9 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
       developer_profile: developerProfile,
       developer_mode: developerMode,
       modules: modulesState,
+      agent_packages: agentPackagesProjection,
+      opl_agent_packages: agentPackagesReadback,
+      opl_agent_package_status: agentPackagesProjection.status_index,
       provider,
       assistants: {
         default_launch: 'direct_click',

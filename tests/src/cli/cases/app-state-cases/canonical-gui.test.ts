@@ -74,6 +74,32 @@ exit 1
     assert.equal(output.app_state.core.executor.default_executor_id, 'codex_cli');
     assert.equal(output.app_state.core.executor.visible_executors.length, 1);
     assert.equal(output.app_state.core.codex.parsed_version, '0.125.0');
+    assert.equal(output.app_state.agent_packages.surface_kind, 'opl_app_agent_packages_projection');
+    assert.equal(output.app_state.agent_packages.source.list_surface, 'opl connect agent-packages list --json');
+    assert.equal(
+      output.app_state.agent_packages.source.status_surface,
+      'opl connect agent-packages status --package-id <package_id> --json',
+    );
+    assert.equal(output.app_state.agent_packages.directory.surface_kind, 'opl_agent_package_readback');
+    assert.equal(output.app_state.agent_packages.directory.status, 'available');
+    assert.equal(output.app_state.agent_packages.directory.installed_package_count, 0);
+    assert.deepEqual(output.app_state.agent_packages.directory.installed_packages, []);
+    assert.deepEqual(output.app_state.agent_packages.directory.home_shortcut_preferences, []);
+    assert.equal(output.app_state.agent_packages.status_index.surface_kind, 'opl_agent_package_status_index');
+    assert.equal(output.app_state.agent_packages.status_index.status, 'available');
+    assert.equal(output.app_state.agent_packages.status_index.installed_package_count, 0);
+    assert.deepEqual(output.app_state.agent_packages.status_index.packages, {});
+    assert.deepEqual(output.app_state.agent_packages.status_index.home_shortcut_preferences, []);
+    assert.equal(output.app_state.opl_agent_packages.surface_kind, 'opl_agent_package_readback');
+    assert.equal(output.app_state.opl_agent_packages.status, 'available');
+    assert.equal(output.app_state.opl_agent_packages.installed_package_count, 0);
+    assert.deepEqual(output.app_state.opl_agent_packages.installed_packages, []);
+    assert.deepEqual(output.app_state.opl_agent_packages.home_shortcut_preferences, []);
+    assert.equal(output.app_state.opl_agent_package_status.surface_kind, 'opl_agent_package_status_index');
+    assert.equal(output.app_state.opl_agent_package_status.status, 'available');
+    assert.equal(output.app_state.opl_agent_package_status.installed_package_count, 0);
+    assert.deepEqual(output.app_state.opl_agent_package_status.packages, {});
+    assert.deepEqual(output.app_state.opl_agent_package_status.home_shortcut_preferences, []);
     assert.equal(output.app_state.provider.temporal.required_for, 'full_opl_family_runtime_readiness');
     assert.equal(output.app_state.release.channel, 'stable');
     assert.equal(output.app_state.release.version, '26.6.27');
@@ -645,11 +671,11 @@ exit 1
     );
     assert.deepEqual(
       output.app_state.operator.workbench.agent_lab_feedback_self_evolution.status_shape,
-      ['queued', 'runnable', 'completed_or_blocker'],
+      ['suite_missing', 'suite_stale', 'queued', 'runnable', 'completed_or_blocker'],
     );
     assert.equal(
       output.app_state.operator.workbench.agent_lab_feedback_self_evolution.summary.runnable_count,
-      1,
+      0,
     );
     assert.equal(output.app_state.feedbackops.surface_kind, 'opl_feedbackops_read_model');
     assert.equal(
@@ -672,12 +698,7 @@ exit 1
       .filter((entry: AppStateListEntry) => entry.item_id.startsWith('agent_lab_feedback:'));
     assert.deepEqual(
       agentLabFeedbackQueueItems.map((entry: AppStateListEntry) => entry.state),
-      ['queued', 'runnable', 'completed_or_blocker'],
-    );
-    assert.equal(
-      agentLabFeedbackQueueItems.find((entry: AppStateListEntry) => entry.state === 'runnable')
-        ?.execution_surface,
-      'opl work-order execute',
+      ['suite_missing'],
     );
     const feedbackOpsQueueItems = output.app_state.operator.workbench.action_queue.items
       .filter((entry: AppStateListEntry) => entry.item_id.startsWith('feedbackops:'));
