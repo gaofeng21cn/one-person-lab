@@ -29,6 +29,7 @@ const allowedFoundryAgentInspectFields = [
   ...allowedFoundryAgentListFields,
   'authority_boundary',
   'command_surface_policy',
+  'feedback_self_evolution_trigger',
   'series_contract_ref',
   'standard_agent_registry_ref',
   'status',
@@ -214,6 +215,71 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
     assertOnlyAllowedFoundryProjectionFields(agent, allowedFoundryAgentListFields);
   }
 
+  const expectedTriggerFields = [
+    'accepted_feedback_profile',
+    'adapter_kind',
+    'authority_boundary',
+    'contract_can_trigger_execution',
+    'default_oma_skill_ref',
+    'developer_mode_execution_gate_refs',
+    'feedback_capture_requires_developer_mode',
+    'feedbackops_event_kind',
+    'external_suite_ref',
+    'idempotency_key',
+    'oma_evolution_skill_ref',
+    'owner_closeout_readback_refs',
+    'policy_id',
+    'policy_ref',
+    'repo_fix_execution_requires_opl_developer_mode',
+    'required_trigger_fields',
+    'status_projection_ref',
+    'surface_kind',
+    'target_agent_id',
+    'target_domain_id',
+    'trigger_chain',
+  ];
+  function assertSelfEvolutionTrigger(agent: Record<string, any>, expectedAdapterKind: string) {
+    const trigger = agent.feedback_self_evolution_trigger;
+    assert.deepEqual(Object.keys(trigger).sort(), expectedTriggerFields.sort());
+    assert.equal(trigger.surface_kind, 'opl_foundry_agent_feedback_self_evolution_trigger');
+    assert.equal(trigger.policy_id, 'standard_agent_feedback_self_evolution_trigger.v1');
+    assert.equal(trigger.target_agent_id, agent.agent_id);
+    assert.equal(trigger.target_domain_id, agent.domain_id);
+    assert.equal(trigger.adapter_kind, expectedAdapterKind);
+    assert.equal(trigger.feedbackops_event_kind, 'target_agent_feedback_external_suite');
+    assert.equal(trigger.accepted_feedback_profile, 'target_agent_feedback_external_suite');
+    assert.equal(trigger.feedback_capture_requires_developer_mode, false);
+    assert.equal(trigger.repo_fix_execution_requires_opl_developer_mode, true);
+    assert.equal(trigger.contract_can_trigger_execution, false);
+    assert.equal(trigger.default_oma_skill_ref, 'opl-meta-agent:oma-agent-evolution');
+    assert.equal(trigger.oma_evolution_skill_ref, 'opl-meta-agent:oma-agent-evolution');
+    assert.equal(trigger.status_projection_ref, 'contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface');
+    assert.deepEqual(trigger.idempotency_key, {
+      owner: expectedAdapterKind,
+      derivation: 'target_agent_id + external_suite_ref + feedback_fingerprint',
+      required: true,
+    });
+    assert.deepEqual(trigger.external_suite_ref, {
+      owner: expectedAdapterKind,
+      profile: 'target_agent_feedback_external_suite',
+      required: true,
+    });
+    assert.deepEqual(trigger.owner_closeout_readback_refs, [
+      'developer_mode_projection_ref',
+      'route_eligibility_ref',
+      'diff_ref',
+      'verification_refs',
+      'no_forbidden_write_ref',
+      'target_owner_acceptance_or_typed_blocker_ref',
+    ]);
+    assert.deepEqual(trigger.developer_mode_execution_gate_refs, [
+      'opl-developer-mode:repo-fix-execution',
+      'opl-developer-mode:direct-fix-or-fork-pr-route',
+    ]);
+    assert.equal(trigger.authority_boundary.can_execute_repo_patch_without_developer_mode, false);
+    assert.equal(trigger.authority_boundary.can_write_domain_truth, false);
+  }
+
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'standard_domain_agent');
   assert.equal(mas.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
@@ -230,6 +296,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(mas.mcp_projection.mcp_descriptor_must_delegate_to_series_spine, true);
   assert.equal(mas.mcp_projection.standard_agent_standalone_mcp_default_enabled, false);
   assert.equal(mas.mcp_projection.all_cli_commands_are_mcp_tools, false);
+  assertSelfEvolutionTrigger(mas, 'domain_thin_feedback_adapter');
 
   const masAlias = runCli(['foundry', 'agents', 'inspect', 'med-autoscience']).foundry_agent;
   assert.equal(masAlias.agent_id, 'mas');
@@ -246,6 +313,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
     mag.cli_smoke.status_json_command,
     'opl foundry agents inspect mag --json',
   );
+  assertSelfEvolutionTrigger(mag, 'domain_thin_feedback_adapter');
 
   const rca = runCli(['foundry', 'agents', 'inspect', 'rca']).foundry_agent;
   assert.equal(rca.status, 'standard_domain_agent');
@@ -258,6 +326,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
     rca.cli_smoke.status_json_command,
     'opl foundry agents inspect rca --json',
   );
+  assertSelfEvolutionTrigger(rca, 'domain_thin_feedback_adapter');
 
   const oma = runCli(['foundry', 'agents', 'inspect', 'oma']).foundry_agent;
   assert.equal(oma.status, 'standard_domain_agent');
@@ -266,6 +335,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assertOnlyAllowedFoundryProjectionFields(oma, allowedFoundryAgentInspectFields);
   assert.equal(oma.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(oma.command_surface_policy.first_screen_must_identify_series, true);
+  assertSelfEvolutionTrigger(oma, 'domain_thin_feedback_adapter');
 
   const bookforge = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
   assert.equal(bookforge.status, 'standard_domain_agent');
@@ -278,6 +348,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect opl-bookforge --json');
   assert.equal(bookforge.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(bookforge.command_surface_policy.first_screen_must_identify_series, true);
+  assertSelfEvolutionTrigger(bookforge, 'domain_thin_feedback_adapter');
 
   const bookforgeAlias = runCli(['foundry', 'agents', 'inspect', 'bookforge']).foundry_agent;
   assert.equal(bookforgeAlias.agent_id, 'opl-bookforge');
@@ -289,4 +360,5 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(scholarSkills.work_object.natural_alias, 'capability');
   assert.equal(scholarSkills.foundry_command_surface, 'opl foundry agents inspect mas-scholar-skills');
   assertOnlyAllowedFoundryProjectionFields(scholarSkills, allowedFoundryAgentInspectFields);
+  assertSelfEvolutionTrigger(scholarSkills, 'framework_capability_feedback_adapter');
 });

@@ -166,6 +166,30 @@ test('agents scaffold emits pure OPL-hosted public Foundry surface policy', () =
       'history',
       'tombstone',
     ]);
+
+    const selfEvolutionPolicy = foundryContract.standard_feedback_self_evolution_trigger_policy;
+    assert.equal(
+      selfEvolutionPolicy.surface_kind,
+      'opl_foundry_agent_standard_feedback_self_evolution_trigger_policy',
+    );
+    assert.equal(selfEvolutionPolicy.policy_id, 'standard_agent_feedback_self_evolution_trigger.v1');
+    assert.deepEqual(selfEvolutionPolicy.applies_to_series_memberships, [
+      'standard_domain_agent',
+      'framework_capability_package',
+    ]);
+    assert.equal(selfEvolutionPolicy.feedbackops_event_kind, 'target_agent_feedback_external_suite');
+    assert.equal(selfEvolutionPolicy.accepted_feedback_profile, 'target_agent_feedback_external_suite');
+    assert.equal(selfEvolutionPolicy.feedback_capture_requires_developer_mode, false);
+    assert.equal(selfEvolutionPolicy.repo_fix_execution_requires_opl_developer_mode, true);
+    assert.equal(selfEvolutionPolicy.contract_can_trigger_execution, false);
+    assert.equal(
+      selfEvolutionPolicy.developer_route_policy.manual_enable_without_direct_write_route,
+      'fork_pull_request',
+    );
+    assert.equal(
+      selfEvolutionPolicy.developer_route_policy.manual_developer_mode_cannot_grant_direct_repo_write,
+      true,
+    );
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }

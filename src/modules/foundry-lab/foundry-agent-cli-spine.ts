@@ -163,6 +163,74 @@ function buildAuthorityBoundary(contract: JsonRecord) {
   };
 }
 
+function buildFeedbackSelfEvolutionTrigger(peer: FoundryAgentPeer, contract: JsonRecord) {
+  const policy = readRecord(
+    contract.standard_feedback_self_evolution_trigger_policy,
+    'standard_feedback_self_evolution_trigger_policy',
+  );
+  const adapterKind = peer.series_membership === 'standard_domain_agent'
+    ? 'domain_thin_feedback_adapter'
+    : 'framework_capability_feedback_adapter';
+  return {
+    surface_kind: 'opl_foundry_agent_feedback_self_evolution_trigger',
+    policy_ref: `${FOUNDRY_AGENT_SERIES_CONTRACT_REF}#/standard_feedback_self_evolution_trigger_policy`,
+    policy_id: readString(policy.policy_id, 'standard_feedback_self_evolution_trigger_policy.policy_id'),
+    target_agent_id: peer.agent_id,
+    target_domain_id: peer.domain_id,
+    adapter_kind: adapterKind,
+    feedbackops_event_kind: 'target_agent_feedback_external_suite',
+    accepted_feedback_profile: 'target_agent_feedback_external_suite',
+    idempotency_key: {
+      owner: adapterKind,
+      derivation: 'target_agent_id + external_suite_ref + feedback_fingerprint',
+      required: true,
+    },
+    external_suite_ref: {
+      owner: adapterKind,
+      profile: 'target_agent_feedback_external_suite',
+      required: true,
+    },
+    required_trigger_fields: [
+      'feedbackops_event_kind',
+      'accepted_feedback_profile',
+      'target_agent_id',
+      'idempotency_key',
+      'external_suite_ref',
+      'developer_mode_execution_gate_refs',
+      'oma_evolution_skill_ref',
+      'owner_closeout_readback_refs',
+    ],
+    trigger_chain: readStringList(policy.trigger_chain, 'standard_feedback_self_evolution_trigger_policy.trigger_chain'),
+    feedback_capture_requires_developer_mode: false,
+    repo_fix_execution_requires_opl_developer_mode: true,
+    developer_mode_execution_gate_refs: [
+      'opl-developer-mode:repo-fix-execution',
+      'opl-developer-mode:direct-fix-or-fork-pr-route',
+    ],
+    oma_evolution_skill_ref: 'opl-meta-agent:oma-agent-evolution',
+    default_oma_skill_ref: 'opl-meta-agent:oma-agent-evolution',
+    status_projection_ref: 'contracts/opl-framework/agent-lab-contract.json#domain_feedback_self_evolution_surface',
+    owner_closeout_readback_refs: [
+      'developer_mode_projection_ref',
+      'route_eligibility_ref',
+      'diff_ref',
+      'verification_refs',
+      'no_forbidden_write_ref',
+      'target_owner_acceptance_or_typed_blocker_ref',
+    ],
+    contract_can_trigger_execution: false,
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_mutate_artifact_body: false,
+      can_authorize_quality_or_export: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_execute_repo_patch_without_developer_mode: false,
+    },
+  };
+}
+
 function buildPeerProjection(peer: FoundryAgentPeer) {
   const agentInspectCommandSurface = `opl foundry agents inspect ${peer.agent_id}`;
   const brandCliPathSafe = false;
@@ -437,6 +505,7 @@ export function buildFoundryAgentInspect(args: string[]) {
         first_screen_must_identify_series: true,
         old_implementation_buckets_are_diagnostic_only: true,
       },
+      feedback_self_evolution_trigger: buildFeedbackSelfEvolutionTrigger(peer, contract),
       authority_boundary: buildAuthorityBoundary(contract),
     },
   };

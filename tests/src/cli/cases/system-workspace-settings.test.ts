@@ -151,6 +151,7 @@ test('system developer-supervisor reports and persists the family developer mode
             impact: string;
           };
           capabilities: Record<string, DeveloperModeCapabilityAssertion>;
+          agent_authority: Record<string, any>;
           github_identity: {
             status: string;
             login: string | null;
@@ -233,6 +234,7 @@ test('system developer-supervisor reports and persists the family developer mode
             impact: string;
           };
           capabilities: Record<string, DeveloperModeCapabilityAssertion>;
+          agent_authority: Record<string, any>;
           github_identity: {
             status: string;
             login: string | null;
@@ -297,6 +299,20 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.equal(updated.system_action.developer_mode.github_identity.status, 'ready');
     assert.equal(updated.system_action.developer_mode.github_identity.login, 'gaofeng21cn');
     assert.equal(updated.system_action.developer_mode.repo_authority.status, 'ready');
+    assert.equal(
+      updated.system_action.developer_mode.agent_authority.self_evolution_repo_mutation_requires_developer_mode,
+      true,
+    );
+    assert.equal(
+      updated.system_action.developer_mode.agent_authority.manual_enable_without_repo_write_cannot_grant_direct_write,
+      true,
+    );
+    assert.equal(
+      updated.system_action.developer_mode.agent_authority.route_matrix.find(
+        (entry: { case_id: string }) => entry.case_id === 'authorized_agent_repo',
+      )?.route,
+      'direct_repo_fix',
+    );
     assert.deepEqual(
       updated.system_action.developer_mode.repo_authority.repos.map((entry) => entry.repo).sort(),
       [
@@ -372,6 +388,7 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
             impact: string;
           };
           capabilities: Record<string, DeveloperModeCapabilityAssertion>;
+          agent_authority: Record<string, any>;
           github_identity: {
             status: string;
             login: string | null;
@@ -407,6 +424,18 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
     assert.equal(output.system_action.developer_mode.github_identity.status, 'ready');
     assert.equal(output.system_action.developer_mode.github_identity.login, 'outside-contributor');
     assert.equal(output.system_action.developer_mode.repo_authority.status, 'limited');
+    assert.equal(
+      output.system_action.developer_mode.agent_authority.feedback_capture_requires_developer_mode,
+      false,
+    );
+    assert.equal(
+      output.system_action.developer_mode.agent_authority.manual_enable_without_repo_write_cannot_grant_direct_write,
+      true,
+    );
+    assert.equal(
+      output.system_action.developer_mode.agent_authority.activation_sources.manual_user_config.no_direct_permission_route,
+      'fork_pull_request',
+    );
     assert.equal(
       output.system_action.developer_mode.repo_authority.repos.every((entry) => !entry.direct_write_allowed),
       true,

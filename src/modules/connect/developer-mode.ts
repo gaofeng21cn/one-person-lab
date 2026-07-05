@@ -89,6 +89,35 @@ type DeveloperCapabilityProjection = {
 
 type DeveloperCapabilitiesProjection = Record<DeveloperCapabilityId, DeveloperCapabilityProjection>;
 
+type DeveloperModeAgentAuthorityProjection = {
+  surface_kind: 'opl_developer_mode_agent_authority_policy';
+  policy_id: 'developer_mode_agent_authority_matrix.v1';
+  feedback_capture_requires_developer_mode: false;
+  self_evolution_repo_mutation_requires_developer_mode: true;
+  manual_enable_without_repo_write_cannot_grant_direct_write: true;
+  activation_sources: {
+    auto_github_identity: {
+      can_select_local_checkout_source: true;
+      can_grant_direct_repo_write: false;
+    };
+    manual_user_config: {
+      can_request_developer_routes: true;
+      no_direct_permission_route: 'fork_pull_request';
+      can_grant_direct_repo_write: false;
+    };
+  };
+  authority_levels: {
+    opl_maintainer: string;
+    target_agent_developer: string;
+    contributor: string;
+  };
+  route_matrix: Array<{
+    case_id: string;
+    route: DeveloperModeAllowedRoute;
+    direct_write_required: boolean;
+  }>;
+};
+
 export type OplDeveloperModeProjection = {
   surface_id: 'opl_developer_mode';
   status: DeveloperModeStatus;
@@ -100,6 +129,7 @@ export type OplDeveloperModeProjection = {
   allowed_route: DeveloperModeAllowedRoute;
   developer_profile: DeveloperProfileProjection;
   capabilities: DeveloperCapabilitiesProjection;
+  agent_authority: DeveloperModeAgentAuthorityProjection;
   github_identity: GithubIdentityProjection;
   repo_authority: RepoAuthoritySummary;
   inspection_detail?: 'fast' | 'full';
@@ -504,6 +534,54 @@ function resolveDeveloperCapabilities(input: {
   };
 }
 
+function buildAgentAuthorityProjection(): DeveloperModeAgentAuthorityProjection {
+  return {
+    surface_kind: 'opl_developer_mode_agent_authority_policy',
+    policy_id: 'developer_mode_agent_authority_matrix.v1',
+    feedback_capture_requires_developer_mode: false,
+    self_evolution_repo_mutation_requires_developer_mode: true,
+    manual_enable_without_repo_write_cannot_grant_direct_write: true,
+    activation_sources: {
+      auto_github_identity: {
+        can_select_local_checkout_source: true,
+        can_grant_direct_repo_write: false,
+      },
+      manual_user_config: {
+        can_request_developer_routes: true,
+        no_direct_permission_route: 'fork_pull_request',
+        can_grant_direct_repo_write: false,
+      },
+    },
+    authority_levels: {
+      opl_maintainer: 'may direct-fix OPL Framework and agent repos where GitHub permission allows writes',
+      target_agent_developer: 'may direct-fix only the target agent repo where GitHub permission allows writes',
+      contributor: 'may capture feedback and prepare fork or pull request evidence without direct mutation',
+    },
+    route_matrix: [
+      {
+        case_id: 'feedback_capture',
+        route: 'observe_only',
+        direct_write_required: false,
+      },
+      {
+        case_id: 'authorized_agent_repo',
+        route: 'direct_repo_fix',
+        direct_write_required: true,
+      },
+      {
+        case_id: 'manual_on_without_direct_write',
+        route: 'fork_pull_request',
+        direct_write_required: false,
+      },
+      {
+        case_id: 'official_or_third_party_agent_without_authority',
+        route: 'fork_pull_request',
+        direct_write_required: false,
+      },
+    ],
+  };
+}
+
 function buildDeveloperModeProjection(input: {
   status: DeveloperModeStatus;
   enabled: OplDeveloperSupervisorConfigFile['enabled'];
@@ -536,6 +614,7 @@ function buildDeveloperModeProjection(input: {
     allowed_route: input.allowedRoute,
     developer_profile: resolveDeveloperProfile(common),
     capabilities: resolveDeveloperCapabilities(common),
+    agent_authority: buildAgentAuthorityProjection(),
     github_identity: input.githubIdentity,
     repo_authority: input.repoAuthority,
     inspection_detail: input.inspectionDetail,
