@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import type { JsonRecord } from '../../kernel/json-record.ts';
-import { parseGithubRepoFromUrl } from '../connect/developer-mode-source-policy.ts';
-import { listDefaultOplDomainModuleSpecs } from '../connect/system-installation/modules.ts';
-import { SCHOLARSKILLS_PACKAGE_SPEC } from '../connect/system-installation/scholarskills-package-channel.ts';
+import {
+  listDefaultOplDomainModuleSpecs,
+  parseGithubRepoFromUrl,
+  SCHOLARSKILLS_PACKAGE_SPEC,
+} from '../connect/index.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,

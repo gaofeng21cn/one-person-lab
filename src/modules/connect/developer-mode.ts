@@ -3,7 +3,7 @@ import { readOplDeveloperSupervisorConfig } from '../../kernel/system-preference
 import {
   STANDARD_AGENT_REGISTRY,
   resolveStandardAgent,
-} from '../charter/standard-agent-registry.ts';
+} from '../atlas/index.ts';
 import { listDefaultOplDomainModuleSpecs } from './system-installation/modules.ts';
 import {
   type DeveloperModeGhFixture,

@@ -34,12 +34,19 @@ export { buildManagedShellCommandEnv, buildManagedShellEnvWithUvCacheRecovery, b
 export { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 export { resolveDefaultFamilyWorkspaceRoot, syncFamilySkillPacks } from './opl-skills.ts';
 export { canonicalOwnerId } from './owner-id.ts';
+export { parseGithubRepoFromUrl } from './developer-mode-source-policy.ts';
 export { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
 export { runOplEngineAction } from './system-installation/engine-actions.ts';
 export { resolveCodexVersion } from './system-installation/engine-helpers.ts';
-export { buildOplModules, resolveOplModuleExecCommand, runOplModuleAction } from './system-installation/modules.ts';
+export {
+  buildOplModules,
+  listDefaultOplDomainModuleSpecs,
+  resolveOplModuleExecCommand,
+  runOplModuleAction,
+} from './system-installation/modules.ts';
 export type { ModuleInspection, OplEngineAction, OplModuleAction, OplModuleId } from './system-installation/shared.ts';
+export { SCHOLARSKILLS_PACKAGE_SPEC } from './system-installation/scholarskills-package-channel.ts';
 export { runOplSystemAction } from './system-installation/system-actions.ts';
 export { runOplTurnkeyInstall } from './system-installation/turnkey.ts';
 export { writeOplWorkspaceRootSurface } from './system-installation/workspace-root.ts';
