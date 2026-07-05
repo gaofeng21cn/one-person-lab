@@ -283,6 +283,118 @@ test('family-runtime reopens operator-retired MAS PaperMission stage-route resid
   }
 });
 
+test('family-runtime dispatch creates a fresh attempt after operator-retired same-contract redrive', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-retire-redrive-dispatch-'));
+  const restoreEnv = installDirectDispatchEnv(stateRoot, {
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
+  });
+  try {
+    const { db, paths } = openQueueDb();
+    const dedupeKey = 'paper-mission-route:user-stage-log-v2:dm003:operator-retire-redrive';
+    const payload = paperMissionRoutePayloadWithWorkspace({
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      mission_id: 'paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::domain-transition::write::medical-prose-write-repair',
+      paper_mission_transaction_ref:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::domain-transition::write::medical-prose-write-repair',
+      opl_route_command_ref:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::domain-transition::write::medical-prose-write-repair#opl_route_command',
+      command_kind: 'resume_stage',
+      route_target: 'write',
+      route_identity_key:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::domain-transition::write::medical-prose-write-repair::route',
+      attempt_idempotency_key:
+        '003-dpcc-primary-care-phenotype-treatment-gap::write::domain-transition-direct-stage-attempt::write::medical-prose-write-repair::a8a0824c6782::opl-attempt',
+      request_idempotency_key:
+        '003-dpcc-primary-care-phenotype-treatment-gap::write::domain-transition-direct-stage-attempt::write::medical-prose-write-repair::a8a0824c6782::opl-request',
+      task_intake_kind: 'reviewer_revision',
+      task_intake_summary: {
+        task_intake_kind: 'reviewer_revision',
+        task_intent: 'DM003 reviewer revision handoff',
+      },
+    });
+    const enqueued = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload,
+      dedupeKey,
+      source: 'test-operator-retire-redrive',
+    });
+    const row = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as FamilyRuntimeTaskRow;
+    const firstDispatch = await dispatchFamilyRuntimeTask(db, paths, row, {
+      temporalProviderModule: async () => ({
+        startTemporalStageAttemptWorkflow: async (attempt) => ({
+          surface_kind: 'temporal_stage_attempt_start_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          first_execution_run_id: 'run-paper-mission-route-operator-retire-original',
+        }),
+      }),
+    }) as unknown as StageRouteDispatchReadback;
+    const firstTask = inspectTask(db, enqueued.task.task_id);
+    const firstAttempt = firstTask.stage_attempts[0];
+
+    assert.equal(firstDispatch.status, 'running');
+    assert.equal(firstAttempt.status, 'running');
+
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'blocked',
+        last_error = 'operator_retired_stale_runtime_residue:superseded_by_mainline_prompt_fix',
+        dead_letter_reason = 'operator_retired_stale_runtime_residue:superseded_by_mainline_prompt_fix'
+      WHERE task_id = ?
+    `).run(enqueued.task.task_id);
+    db.prepare(`
+      UPDATE stage_attempts
+      SET status = 'failed',
+        blocked_reason = 'temporal_workflow_canceled',
+        provider_run_json = json_set(provider_run_json, '$.provider_status', 'canceled'),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE stage_attempt_id = ?
+    `).run(firstAttempt.stage_attempt_id);
+    const reopened = enqueueTask(db, {
+      domainId: 'medautoscience',
+      taskKind: 'paper_mission/stage-route',
+      payload,
+      dedupeKey,
+      source: 'test-operator-retire-redrive-reopen',
+    });
+    const reopenedRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(enqueued.task.task_id) as FamilyRuntimeTaskRow;
+    const secondDispatch = await dispatchFamilyRuntimeTask(db, paths, reopenedRow, {
+      temporalProviderModule: async () => ({
+        startTemporalStageAttemptWorkflow: async (attempt) => ({
+          surface_kind: 'temporal_stage_attempt_start_receipt',
+          provider_kind: 'temporal',
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          first_execution_run_id: 'run-paper-mission-route-operator-retire-redrive',
+        }),
+      }),
+    }) as unknown as StageRouteDispatchReadback;
+    const secondTask = inspectTask(db, enqueued.task.task_id);
+    const latestAttempt = secondTask.stage_attempts[0];
+
+    assert.equal(reopened.accepted, true);
+    assert.equal(reopened.requeued_from_terminal, true);
+    assert.equal(secondDispatch.status, 'running');
+    assert.equal(secondTask.task.status, 'running');
+    assert.equal(latestAttempt.status, 'running');
+    assert.notEqual(latestAttempt.stage_attempt_id, firstAttempt.stage_attempt_id);
+    assert.equal(
+      secondTask.events.some((event: { event_type: string; payload: Record<string, unknown> }) =>
+        event.event_type === 'task_requeued_from_paper_mission_stage_route_operator_retire_redrive'
+        && event.payload.reason === 'paper_mission_stage_route_same_contract_redrive_after_operator_retire'
+      ),
+      true,
+    );
+    db.close();
+  } finally {
+    restoreEnv();
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime requeues fresh MAS PaperMission handoff after legacy route identity blocker', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-fresh-identity-'));
   const originalStateDir = process.env.OPL_STATE_DIR;

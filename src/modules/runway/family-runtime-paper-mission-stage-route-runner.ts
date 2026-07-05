@@ -194,6 +194,8 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
   const exportContext = isRecord(payload.opl_domain_export_context)
     ? payload.opl_domain_export_context
     : {};
+  const taskIntakeRef = isRecord(payload.task_intake_ref) ? payload.task_intake_ref : null;
+  const taskIntakeSummary = isRecord(payload.task_intake_summary) ? payload.task_intake_summary : null;
   const workspaceRoot = optionalString(payload.workspace_root)
     ?? optionalString(payload.domain_workspace_root)
     ?? optionalString(payload.repo_root);
@@ -222,6 +224,10 @@ function workspaceLocatorFor(row: FamilyRuntimeTaskRow, payload: Record<string, 
     route_identity_key: paperMissionStageRouteIdentityValue(payload, 'route_identity_key'),
     attempt_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key'),
     request_idempotency_key: paperMissionStageRouteIdentityValue(payload, 'request_idempotency_key'),
+    task_intake_kind: optionalString(payload.task_intake_kind)
+      ?? optionalString(taskIntakeSummary?.task_intake_kind),
+    ...(taskIntakeRef ? { task_intake_ref: taskIntakeRef } : {}),
+    ...(taskIntakeSummary ? { task_intake_summary: taskIntakeSummary } : {}),
     ...(workspaceRoot ? { workspace_root: workspaceRoot } : {}),
     ...(commandCwd ? { command_cwd: commandCwd } : {}),
     ...(commandSource ? { command_source: commandSource } : {}),
@@ -317,6 +323,12 @@ const PROVIDER_RUNTIME_BLOCKER_REDRIVE_REASONS = new Set([
   'codex_cli_typed_closeout_not_materialized',
   'codex_cli_provider_unavailable',
 ]);
+const TERMINAL_STAGE_ATTEMPT_REDRIVE_STATUSES = new Set([
+  'blocked',
+  'completed',
+  'dead_lettered',
+  'failed',
+]);
 const PROVIDER_RUNTIME_BLOCKER_REF_PATTERN = /^opl:\/\/stage-attempts\/[^/]+\/runtime-blockers\/[^/]+$/;
 
 function closeoutRefsAllowFreshAttemptAfterProviderRuntimeBlocker(closeoutRefs: string[]) {
@@ -367,6 +379,35 @@ function needsFreshAttemptAfterProviderRuntimeBlocker(
       && closeoutRefsAllowFreshAttemptAfterProviderRuntimeBlocker(closeoutRefs)
       && attempt.closeout_receipt_status === null;
   });
+}
+
+function needsFreshAttemptAfterOperatorRetireRedrive(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    providerKind: string;
+    stageId: string;
+    sourceFingerprint: string;
+  },
+) {
+  const requeueEvent = db.prepare(`
+    SELECT 1
+    FROM events
+    WHERE task_id = ?
+      AND event_type = 'task_requeued_from_paper_mission_stage_route_operator_retire_redrive'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(input.taskId) as { 1: number } | undefined;
+  if (!requeueEvent) {
+    return false;
+  }
+  return listStageAttemptsForTask(db, input.taskId).some((attempt) => (
+    attempt.provider_kind === input.providerKind
+    && attempt.stage_id === input.stageId
+    && attempt.executor_kind === 'codex_cli'
+    && attempt.source_fingerprint === input.sourceFingerprint
+    && TERMINAL_STAGE_ATTEMPT_REDRIVE_STATUSES.has(attempt.status)
+  ));
 }
 
 function createPaperMissionStageRouteAttempt(
@@ -554,8 +595,14 @@ export async function dispatchPaperMissionStageRouteTask(
     stageId,
     sourceFingerprint,
   });
+  const newAttemptAfterOperatorRetireRedrive = needsFreshAttemptAfterOperatorRetireRedrive(db, {
+    taskId: row.task_id,
+    providerKind,
+    stageId,
+    sourceFingerprint,
+  });
   const stageAttempt = createPaperMissionStageRouteAttempt(db, row, payload, {
-    newAttempt: newAttemptAfterProviderRuntimeBlocker,
+    newAttempt: newAttemptAfterProviderRuntimeBlocker || newAttemptAfterOperatorRetireRedrive,
     reusePendingRedriveAttempt: true,
   });
   const admittedAttempt = stageAttempt.attempt;

@@ -234,6 +234,133 @@ test('family-runtime queue retire allows MAS PaperMission stage-route contract r
   }
 });
 
+test('family-runtime queue retire allows MAS PaperMission stage-route redrive without payload delta', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-route-same-redrive-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot);
+    const dedupeKey = [
+      'paper-mission-route',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      'paper-mission-transaction::dm003::write::medical-prose-write-repair',
+      'resume_stage',
+    ].join(':');
+    const payload = {
+      surface_kind: 'opl_mas_paper_mission_route_runtime_request',
+      runtime_request_kind: 'mas_paper_mission_stage_route',
+      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      paper_mission_transaction_ref:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::domain-transition::write::medical-prose-write-repair',
+      opl_route_command_ref:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::paper-mission::003-dpcc-primary-care-phenotype-treatment-gap::domain-transition::write::medical-prose-write-repair#opl_route_command',
+      command_kind: 'resume_stage',
+      route_target: 'continue paper-facing submission milestone work',
+      route_identity_key:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::medical-prose-write-repair::route',
+      attempt_idempotency_key:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::medical-prose-write-repair::opl-attempt',
+      request_idempotency_key:
+        'paper-mission-transaction::003-dpcc-primary-care-phenotype-treatment-gap::write::medical-prose-write-repair::opl-request',
+      workspace_root: '/tmp/mas-dm-cvd',
+      command_cwd: '/tmp/mas-dm-cvd',
+      task_intake_kind: 'reviewer_revision',
+      task_intake_summary: 'DM003 reviewer revision handoff',
+    };
+    const enqueued = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(payload),
+      '--dedupe-key',
+      dedupeKey,
+    ], env);
+    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+    runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'medical_prose_write_repair',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      JSON.stringify({
+        workspace_root: '/tmp/mas-dm-cvd',
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        route_identity_key: payload.route_identity_key,
+        attempt_idempotency_key: payload.attempt_idempotency_key,
+      }),
+      '--source-fingerprint',
+      'dm003-reviewer-revision-source',
+      '--executor-kind',
+      'codex_cli',
+      '--task',
+      taskId,
+    ], env);
+    const retire = runCli([
+      'family-runtime',
+      'queue',
+      'retire',
+      '--domain',
+      'medautoscience',
+      '--study',
+      '003-dpcc-primary-care-phenotype-treatment-gap',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload-match',
+      `paper_mission_transaction_ref=${payload.paper_mission_transaction_ref}`,
+      '--reason',
+      'superseded_by_mainline_prompt_fix',
+      '--source',
+      'test-paper-route-retire',
+    ], env);
+    const reopened = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(payload),
+      '--dedupe-key',
+      dedupeKey,
+      '--source',
+      'test-paper-route-redrive-same-payload',
+    ], env);
+    const task = runCli([
+      'family-runtime',
+      'queue',
+      'inspect',
+      taskId,
+    ], env);
+
+    assert.equal(retire.family_runtime_queue_retire.retired_count, 1);
+    assert.equal(reopened.family_runtime_enqueue.accepted, true);
+    assert.equal(reopened.family_runtime_enqueue.requeued_from_terminal, true);
+    assert.equal(reopened.family_runtime_enqueue.idempotent_noop, false);
+    assert.equal(reopened.family_runtime_enqueue.task.task_id, taskId);
+    assert.equal(reopened.family_runtime_enqueue.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.status, 'queued');
+    assert.equal(task.family_runtime_task.task.dead_letter_reason, null);
+    assert.equal(task.family_runtime_task.task.last_error, null);
+    assert.equal(
+      task.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) =>
+        event.event_type === 'task_requeued_from_paper_mission_stage_route_operator_retire_redrive'
+        && event.payload.reason === 'paper_mission_stage_route_same_contract_redrive_after_operator_retire'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime requeues MAS PaperMission stage-route when stale OPL workspace owns the dedupe key', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-paper-route-stale-workspace-'));
   try {

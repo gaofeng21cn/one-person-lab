@@ -47,6 +47,7 @@ import {
 import { listStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
 import {
   isPaperMissionStageRouteReplacementAllowed,
+  paperMissionStageRouteReopenAfterOperatorRetire,
   markPaperMissionStageRouteAttemptsSuperseded,
   paperMissionStageRouteDomainGateFreshHandoffReplacement,
   paperMissionStageRouteLegacyIdentityFreshHandoffReplacement,
@@ -639,7 +640,18 @@ export function reconcileExistingDedupeTask(
   const paperAutonomyDeadLetterBlock = deadLetterRedrive
     ? masPaperAutonomyDeadLetterCurrentnessBlock(existing)
     : null;
+  const existingTaskStageAttempts = listStageAttemptsForTask(db, existing.task_id);
   const retiredResidueBlock = operatorRetiredStaleResidueBlock(existing);
+  const reopenAfterOperatorRetire = paperMissionStageRouteReopenAfterOperatorRetire({
+    existing,
+    nextDomainId: input.domainId,
+    nextTaskKind: taskKind,
+    existingPayload,
+    nextPayload: payload,
+    retiredResidueBlock,
+    stageAttempts: existingTaskStageAttempts,
+    exportedTaskChanged,
+  });
   const domainGateFreshHandoffReplacement = retiredResidueBlock
     ? null
     : paperMissionStageRouteDomainGateFreshHandoffReplacement({
@@ -679,8 +691,40 @@ export function reconcileExistingDedupeTask(
         existingPayload,
         nextPayload: payload,
         exportedTaskChanged,
-        stageAttempts: listStageAttemptsForTask(db, existing.task_id),
+        stageAttempts: existingTaskStageAttempts,
       });
+  if (reopenAfterOperatorRetire) {
+    const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
+    return applyExistingDedupeRequeue(db, {
+      input,
+      taskKind,
+      exportedPayloadJson,
+      existing,
+      nextStatus,
+      nextRequiresApproval: requiresApproval,
+      nextLastError: initialLastError,
+      createdAt,
+      dedupeKey,
+      activeHoldId: activeHold?.hold_id ?? null,
+      eventType: 'task_requeued_from_paper_mission_stage_route_operator_retire_redrive',
+      eventPayload: {
+        ...reopenAfterOperatorRetire,
+        authority_boundary: {
+          opl: 'queue_runtime_redrive_after_operator_stale_residue_retire_only',
+          domain: 'truth_quality_artifact_gate_owner',
+          domain_truth_mutation: false,
+          publication_quality_mutation: false,
+          artifact_gate_mutation: false,
+          current_package_mutation: false,
+          provider_stage_attempt_started: false,
+          provider_completion_is_domain_ready: false,
+          can_claim_paper_progress: false,
+        },
+      },
+      notificationTitle: 'MAS PaperMission stage route requeued after operator stale-residue retire',
+      requeuedFromTerminal: true,
+    });
+  }
   if (domainGateFreshHandoffReplacement) {
     const nextStatus: FamilyRuntimeTaskStatus = initialStatus;
     return applyExistingDedupeRequeue(db, {

@@ -107,6 +107,34 @@ function paperMissionProfileRef(locator: JsonRecord, workspaceRoot: string) {
   return '$OPL_PROFILE_REF';
 }
 
+function paperMissionPythonEntrypoint(workspaceRoot: string) {
+  return `${workspaceRoot}/.venv/bin/python3`;
+}
+
+function paperMissionTaskIntakeSummary(locator: JsonRecord) {
+  return isRecord(locator.task_intake_summary) ? locator.task_intake_summary : null;
+}
+
+function paperMissionTaskIntakePromptLines(locator: JsonRecord) {
+  const taskIntakeKind = optionalString(locator.task_intake_kind);
+  const taskIntakeRef = isRecord(locator.task_intake_ref) ? locator.task_intake_ref : null;
+  const taskIntakeSummary = paperMissionTaskIntakeSummary(locator);
+  if (!taskIntakeKind && !taskIntakeRef && !taskIntakeSummary) {
+    return [];
+  }
+  return [
+    'Latest MAS task-intake scope for this attempt:',
+    taskIntakeKind ? `Task intake kind: ${taskIntakeKind}` : null,
+    taskIntakeRef ? `Task intake ref: ${JSON.stringify(taskIntakeRef)}` : null,
+    taskIntakeSummary
+      ? `Task intake summary: ${JSON.stringify(taskIntakeSummary)}`
+      : null,
+    taskIntakeKind === 'reviewer_revision'
+      ? 'For reviewer_revision attempts, a transport-only audit packet is not sufficient. Produce a paper-facing repair delta that addresses the scoped manuscript/table/figure/supplementary agenda, or a typed blocker naming the missing evidence.'
+      : null,
+  ].filter((line): line is string => typeof line === 'string');
+}
+
 function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
   if (!isMasPaperMissionStageRouteAttempt(input.attempt)) {
     return [];
@@ -115,7 +143,7 @@ function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
   const workspaceRoot = workspaceRootFromAttempt(input.attempt) ?? '$OPL_WORKSPACE_ROOT';
   const profileRef = paperMissionProfileRef(locator, workspaceRoot);
   const studyId = optionalString(locator.study_id) ?? '$OPL_STUDY_ID';
-  const pythonEntrypoint = `${workspaceRoot}/ops/medautoscience/.venv/bin/python3`;
+  const pythonEntrypoint = paperMissionPythonEntrypoint(workspaceRoot);
   const runtimeRoot = `${workspaceRoot}/runtime/quests`;
   const routeTarget = optionalString(locator.route_target);
   const commandKind = optionalString(locator.command_kind);
@@ -129,6 +157,7 @@ function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
     'Use the workspace-local MAS Python entrypoint only; do not invoke bare medautosci or global medautosci wrappers for this attempt.',
     `First read: "${pythonEntrypoint}" -m med_autoscience.cli paper-mission inspect --profile "${profileRef}" --study-id "${studyId}" --format json`,
     `Diagnostic readback when needed: first inspect "${pythonEntrypoint}" -m med_autoscience.cli runtime --help. Only run runtime subcommands that exist in that workspace-local CLI; do not invent domain-health-diagnostic when the command is absent. Runtime root: ${runtimeRoot}.`,
+    ...paperMissionTaskIntakePromptLines(locator),
     'Paper progress can be claimed only from MAS-owned mission artifact deltas, owner-consumption packets, route-back decisions, human gates, stable typed blockers, reviewer/gate deltas, or accepted owner receipts.',
     'This attempt is already running inside OPL provider-backed runtime for the route command. Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task from inside this attempt.',
     'Do not run paper-mission drive --submit-opl-runtime, paper-mission consume-candidate flows that submit OPL runtime, OPL queue redrive/enqueue/tick/start commands, or create a fresh OPL route handoff as a substitute for a MAS-acceptable owner answer.',

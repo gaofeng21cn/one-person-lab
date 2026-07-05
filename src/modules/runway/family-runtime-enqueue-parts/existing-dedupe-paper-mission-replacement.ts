@@ -209,6 +209,66 @@ export function isPaperMissionStageRouteReplacementAllowed(input: {
   };
 }
 
+export function paperMissionStageRouteReopenAfterOperatorRetire(input: {
+  existing: FamilyRuntimeTaskRow;
+  nextDomainId: string;
+  nextTaskKind: string;
+  existingPayload: Record<string, unknown>;
+  nextPayload: Record<string, unknown>;
+  retiredResidueBlock: Record<string, unknown> | null;
+  stageAttempts: Array<Record<string, unknown>>;
+  exportedTaskChanged: boolean;
+}) {
+  if (
+    !input.retiredResidueBlock
+    || input.exportedTaskChanged
+    || input.existing.domain_id !== 'medautoscience'
+    || input.nextDomainId !== 'medautoscience'
+    || input.existing.task_kind !== 'paper_mission/stage-route'
+    || input.nextTaskKind !== 'paper_mission/stage-route'
+    || input.existing.status !== 'blocked'
+    || !isPaperMissionStageRoutePayload(input.existingPayload)
+    || !isPaperMissionStageRoutePayload(input.nextPayload)
+  ) {
+    return null;
+  }
+  const nextWorkspaceRoot = paperMissionWorkspaceRoot(input.nextPayload)
+    ?? optionalString(input.nextPayload.command_cwd);
+  if (!nextWorkspaceRoot || isOplRepoWorkspace(nextWorkspaceRoot)) {
+    return null;
+  }
+  const liveStageAttemptIds = input.stageAttempts
+    .filter((attempt) => {
+      const status = optionalString(attempt.status);
+      return status === 'queued'
+        || status === 'running'
+        || status === 'checkpointed'
+        || status === 'human_gate';
+    })
+    .map((attempt) => optionalString(attempt.stage_attempt_id))
+    .filter((attemptId): attemptId is string => Boolean(attemptId));
+  if (liveStageAttemptIds.length > 0) {
+    return null;
+  }
+  return {
+    reason: 'paper_mission_stage_route_same_contract_redrive_after_operator_retire',
+    operator_retirement_reason: optionalString(input.retiredResidueBlock.operator_retirement_reason),
+    previous_workspace_root: paperMissionWorkspaceRoot(input.existingPayload)
+      ?? optionalString(input.existingPayload.command_cwd),
+    next_workspace_root: nextWorkspaceRoot,
+    previous_candidate_ref: optionalString(input.existingPayload.candidate_ref),
+    next_candidate_ref: optionalString(input.nextPayload.candidate_ref),
+    previous_paper_mission_transaction_ref: optionalString(input.existingPayload.paper_mission_transaction_ref),
+    next_paper_mission_transaction_ref: optionalString(input.nextPayload.paper_mission_transaction_ref),
+    previous_opl_route_command_ref: optionalString(input.existingPayload.opl_route_command_ref),
+    next_opl_route_command_ref: optionalString(input.nextPayload.opl_route_command_ref),
+    previous_opl_route_handoff_ref: paperMissionRouteHandoffRef(input.existingPayload),
+    next_opl_route_handoff_ref: paperMissionRouteHandoffRef(input.nextPayload),
+    previous_source_fingerprint: sourceFingerprint(input.existingPayload),
+    next_source_fingerprint: sourceFingerprint(input.nextPayload),
+  };
+}
+
 export function paperMissionStageRouteDomainGateFreshHandoffReplacement(input: {
   existing: FamilyRuntimeTaskRow;
   nextDomainId: string;

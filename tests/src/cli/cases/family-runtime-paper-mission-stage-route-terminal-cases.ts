@@ -265,6 +265,62 @@ test('family-runtime typed closeout reconciles terminal MAS PaperMission stage-r
   }
 });
 
+test('family-runtime stage-route attempt carries MAS task-intake scope into workspace locator', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-task-intake-'));
+  try {
+    const env = familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+    });
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'paper_mission/stage-route',
+      '--payload',
+      JSON.stringify(paperMissionRoutePayload({
+        workspace_root: '/tmp/mas-dm003',
+        task_intake_kind: 'reviewer_revision',
+        task_intake_ref: {
+          task_id: 'study-task::dm003::20260705T064542Z',
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          artifact_path: '/tmp/mas-dm003/studies/003/artifacts/controller/task_intake/latest.json',
+        },
+        task_intake_summary: {
+          task_intake_kind: 'reviewer_revision',
+          task_intent: 'Repair Figure 4, promote medication sensitivity Table 3, expand discussion, and preserve supplementary outputs.',
+          first_cycle_outputs: ['new canonical manuscript', 'coverage audit'],
+          revision_checklist: ['text_revisions', 'tables_figures', 'follow_up_evidence'],
+        },
+      })),
+      '--dedupe-key',
+      'paper-mission-route:dm002:task-intake-scope',
+    ], env);
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    runCli(['family-runtime', 'tick', '--source', 'test-paper-route-task-intake'], env);
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
+    const locator = task.family_runtime_task.stage_attempts[0].workspace_locator;
+
+    assert.equal(locator.task_intake_kind, 'reviewer_revision');
+    assert.equal(
+      locator.task_intake_ref.artifact_path,
+      '/tmp/mas-dm003/studies/003/artifacts/controller/task_intake/latest.json',
+    );
+    assert.equal(
+      locator.task_intake_summary.task_intent,
+      'Repair Figure 4, promote medication sensitivity Table 3, expand discussion, and preserve supplementary outputs.',
+    );
+    assert.deepEqual(locator.task_intake_summary.revision_checklist, [
+      'text_revisions',
+      'tables_figures',
+      'follow_up_evidence',
+    ]);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime does not backfill successor admission for historical blocked terminal PaperMission stage-route tasks', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-mission-stage-route-terminal-backfill-'));
   try {

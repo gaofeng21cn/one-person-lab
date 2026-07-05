@@ -194,12 +194,30 @@ test('Codex stage activity prompt forbids recursive MAS PaperMission stage-route
         study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
         command_kind: 'resume_stage',
         route_target: 'continue paper-facing submission milestone work',
+        task_intake_kind: 'reviewer_revision',
+        task_intake_ref: {
+          task_id: 'study-task::dm003::20260705T064542Z',
+          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          artifact_path: '/tmp/mas/studies/003/artifacts/controller/task_intake/latest.json',
+        },
+        task_intake_summary: {
+          task_intake_kind: 'reviewer_revision',
+          task_intent: 'Repair Figure 4, promote medication sensitivity Table 3, expand discussion, and preserve supplementary outputs.',
+          first_cycle_outputs: ['new canonical manuscript', 'coverage audit'],
+          revision_checklist: ['text_revisions', 'tables_figures', 'follow_up_evidence'],
+        },
       },
       checkpoint_refs: ['paper-mission-stage-packet:dm003'],
     },
   });
 
   const commandPreview = activity.runner_status.command_preview.join('\n');
+  assert.match(commandPreview, /"\/tmp\/mas\/\.venv\/bin\/python3" -m med_autoscience\.cli paper-mission inspect/);
+  assert.doesNotMatch(commandPreview, /ops\/medautoscience\/\.venv\/bin\/python3/);
+  assert.match(commandPreview, /Latest MAS task-intake scope for this attempt/);
+  assert.match(commandPreview, /Task intake kind: reviewer_revision/);
+  assert.match(commandPreview, /Figure 4, promote medication sensitivity Table 3/);
+  assert.match(commandPreview, /transport-only audit packet is not sufficient/);
   assert.match(commandPreview, /already running inside OPL provider-backed runtime/);
   assert.match(commandPreview, /Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task/);
   assert.match(commandPreview, /paper-mission drive --submit-opl-runtime/);
