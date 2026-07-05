@@ -213,6 +213,58 @@
       "can_claim_domain_ready": false,
       "can_claim_owner_acceptance": false
     },
+    "fresh_evidence_audit_2026_07_05": {
+      "surface_kind": "opl_reuse_first_owner_live_evidence_refresh",
+      "audit_result": "no_owner_live_evidence_found",
+      "checked_scope": [
+        "one-person-lab Framework contracts, docs, source, tests, and scan output",
+        "one-person-lab-app release and product docs/contracts/tests",
+        "local workspace domain repositories where present"
+      ],
+      "checked_commands": [
+        "node ./scripts/reuse-first-scan.mjs --max-findings 0",
+        "jq '.owner_live_evidence_preflight_2026_07_05.items[] | {id, status, owner, current_evidence_available}' contracts/opl-framework/reuse-first-historical-worklist.json",
+        "rg -n 'managed update|release owner|owner receipt|typed blocker|release authority|currentness|release-ready|release ready' docs contracts src tests package.json in one-person-lab-app",
+        "rg -n 'descriptor|digest|lock|materializer|package owner|owner receipt|typed blocker|no-domain-authority|no package manager|capability package' contracts docs src tests in one-person-lab",
+        "rg -n 'OTLP|OpenTelemetry SDK|otel|collector|exporter|live endpoint|owner receipt|typed blocker|can_claim_runtime_ready' contracts docs src tests in one-person-lab",
+        "rg -n 'domain tail|no-active-caller|physical_delete_authorized|replacement OPL primitive|owner acceptance|typed blocker|private platform' contracts docs src tests in one-person-lab"
+      ],
+      "items": [
+        {
+          "id": "external_temporal_durable_lifecycle",
+          "evidence_found": false,
+          "audit_note": "Current Framework evidence remains Temporal test-server/code-path proof with explicit no real Codex CLI proof; no external Temporal server history plus owner/domain refs were found."
+        },
+        {
+          "id": "app_release_owner_route",
+          "evidence_found": false,
+          "audit_note": "App repo surfaces preserve release-owner-gated currentness and release readiness; no same-cohort App release owner receipt for this boundary was found."
+        },
+        {
+          "id": "capability_package_channel_owner_route",
+          "evidence_found": false,
+          "audit_note": "Framework has package descriptor, lock and lifecycle receipt projections, but no package-owner receipt or typed blocker closing the capability package channel."
+        },
+        {
+          "id": "otlp_exporter_live_endpoint",
+          "evidence_found": false,
+          "audit_note": "Framework has bounded OpenMetrics collector smoke and semantic convention projection; no OTLP SDK exporter owner lane or live runtime endpoint evidence was found."
+        },
+        {
+          "id": "domain_tail_owner_acceptance",
+          "evidence_found": false,
+          "audit_note": "Framework domain-tail surfaces remain refs-only and physical_delete_authorized=false; no per-domain owner acceptance or typed blocker closing the tail was found."
+        }
+      ],
+      "claim_boundary": {
+        "can_mark_preflight_closed": false,
+        "can_claim_runtime_ready": false,
+        "can_claim_release_ready": false,
+        "can_claim_production_ready": false,
+        "can_claim_domain_ready": false,
+        "can_claim_owner_acceptance": false
+      }
+    },
     "items": [
       {
         "id": "external_temporal_durable_lifecycle",
