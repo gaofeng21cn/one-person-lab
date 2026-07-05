@@ -1,7 +1,7 @@
 {
   "surface_kind": "opl_agent_package_manifest.v1",
-  "agent_id": "medautoscience",
-  "package_id": "medautoscience",
+  "agent_id": "med-autoscience",
+  "package_id": "med-autoscience",
   "display_name": "Med Auto Science",
   "publisher": "one-person-lab",
   "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",

@@ -19,6 +19,7 @@ import {
   stringValue,
 } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import {
   materializeLocalCodexPluginMarketplace,
   registerLocalCodexPlugin,
@@ -493,7 +494,7 @@ function normalizeRegistryEntry(entry: Record<string, unknown>, index: number): 
   const manifestUrl = stringValue(entry.manifest_url)!;
   validateUrlLike(manifestUrl, `entries.${index}.manifest_url`);
   return {
-    package_id: stringValue(entry.package_id)!,
+    package_id: canonicalAgentPackageId(entry.package_id)!,
     display_name: stringValue(entry.display_name)!,
     publisher: stringValue(entry.publisher)!,
     source: stringValue(entry.source)!,
@@ -614,8 +615,8 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
     ?? stringValue(payload.codex_surface.codex_visible_entry)
     ?? stringValue(payload.agent_id)!;
   return {
-    package_id: stringValue(payload.package_id)!,
-    agent_id: stringValue(payload.agent_id)!,
+    package_id: canonicalAgentPackageId(payload.package_id)!,
+    agent_id: canonicalAgentPackageId(payload.agent_id)!,
     display_name: stringValue(payload.display_name)!,
     publisher: stringValue(payload.publisher)!,
     version: stringValue(payload.version)!,
@@ -763,9 +764,12 @@ function readLockIndex(): AgentPackageLockIndex {
   return {
     ...emptyLockIndex(),
     packages: recordList(parsed.packages).flatMap((entry) => {
-      const packageId = stringValue(entry.package_id);
+      const packageId = canonicalAgentPackageId(entry.package_id);
       const lockRef = stringValue(entry.lock_ref);
-      return packageId && lockRef ? [entry as AgentPackageLock] : [];
+      const agentId = canonicalAgentPackageId(entry.agent_id);
+      return packageId && lockRef
+        ? [{ ...entry, package_id: packageId, ...(agentId ? { agent_id: agentId } : {}) } as AgentPackageLock]
+        : [];
     }),
   };
 }
@@ -779,8 +783,40 @@ function readLifecycleLedger(): AgentPackageLifecycleLedger {
     ...emptyLifecycleLedger(),
     receipts: recordList(parsed.receipts).flatMap((entry) => {
       const receiptRef = stringValue(entry.receipt_ref);
-      return receiptRef ? [entry as AgentPackageLifecycleReceipt] : [];
+      const packageId = canonicalAgentPackageId(entry.package_id);
+      const physicalSurface = isRecord(entry.physical_surface)
+        ? {
+            ...entry.physical_surface,
+            ...(canonicalAgentPackageId(entry.physical_surface.package_id)
+              ? { package_id: canonicalAgentPackageId(entry.physical_surface.package_id)! }
+              : {}),
+          }
+        : entry.physical_surface;
+      return receiptRef
+        ? [{
+            ...entry,
+            package_id: packageId,
+            ...(physicalSurface ? { physical_surface: physicalSurface } : {}),
+          } as AgentPackageLifecycleReceipt]
+        : [];
     }),
+  };
+}
+
+function readRegistryCache() {
+  const parsed = readJsonFileOrNull(resolveOplStatePaths().agent_package_registry_cache_file);
+  if (!isRecord(parsed) || !Array.isArray(parsed.entries)) {
+    return null;
+  }
+  const entries = recordList(parsed.entries).map(normalizeRegistryEntry);
+  return {
+    surface_kind: 'opl_agent_package_registry_cache' as const,
+    version: stringValue(parsed.version) ?? 'opl-agent-package-registry-cache.v1',
+    refreshed_at: stringValue(parsed.refreshed_at) ?? nowIso(),
+    registry_url: stringValue(parsed.registry_url) ?? '',
+    registry_sha256: stringValue(parsed.registry_sha256) ?? '',
+    entry_count: entries.length,
+    entries,
   };
 }
 
@@ -1197,12 +1233,13 @@ function packageReceiptRef(input: {
   packageId?: string | null;
   sourceSha256: string;
 }) {
-  const subject = input.packageId ?? 'registry';
+  const subject = canonicalAgentPackageId(input.packageId) ?? 'registry';
   return `opl://agent-package/${input.action}/${encodeURIComponent(subject)}/${input.sourceSha256.slice(0, 16)}`;
 }
 
 function packageLockRef(packageId: string, version: string, sourceSha256: string) {
-  return `opl://agent-package-lock/${encodeURIComponent(packageId)}/${encodeURIComponent(version)}/${sourceSha256.slice(0, 16)}`;
+  const canonicalPackageId = canonicalAgentPackageId(packageId) ?? packageId;
+  return `opl://agent-package-lock/${encodeURIComponent(canonicalPackageId)}/${encodeURIComponent(version)}/${sourceSha256.slice(0, 16)}`;
 }
 
 function packageActionSourceSha256(action: AgentPackageLifecycleAction, lock: AgentPackageLock) {
@@ -1250,7 +1287,7 @@ function readHomeShortcutPreferenceFile(): AgentPackageHomeShortcutPreferenceFil
     updated_at: stringValue(parsed.updated_at) ?? nowIso(),
     preferences: recordList(parsed.preferences).flatMap((entry) => {
       const shortcutId = stringValue(entry.shortcut_id);
-      const packageId = stringValue(entry.package_id);
+      const packageId = canonicalAgentPackageId(entry.package_id);
       if (!shortcutId || !packageId) return [];
       const sortOrder = typeof entry.sort_order === 'number' && Number.isFinite(entry.sort_order)
         ? entry.sort_order
@@ -1328,7 +1365,7 @@ function homeShortcutPreferenceSourceSha256(input: AgentPackageHomeShortcutPrefe
 }
 
 function requirePackageId(packageId: string | null | undefined, action: AgentPackageLifecycleAction) {
-  const normalized = stringValue(packageId);
+  const normalized = canonicalAgentPackageId(packageId);
   if (!normalized) {
     throw new FrameworkContractError('cli_usage_error', `Agent package ${action} requires --package-id.`, {
       required: ['--package-id'],
@@ -1397,7 +1434,7 @@ function lifecycleReceipt(input: {
 
 async function resolveManifestSelection(input: AgentPackageManifestValidateInput) {
   const explicitManifestUrl = stringValue(input.manifestUrl);
-  const packageId = stringValue(input.packageId);
+  const packageId = canonicalAgentPackageId(input.packageId);
   const registryUrl = stringValue(input.registryUrl);
   if (explicitManifestUrl) {
     return {
@@ -2009,11 +2046,11 @@ export function runOplAgentPackageHomeShortcutPreferencesSet(input: AgentPackage
 }
 
 export function runOplAgentPackageStatus(input: { packageId?: string | null } = {}) {
-  const packageId = stringValue(input.packageId);
+  const packageId = canonicalAgentPackageId(input.packageId);
   const lockIndex = readLockIndex();
   const lifecycleLedger = readLifecycleLedger();
   const paths = resolveOplStatePaths();
-  const registryCache = readJsonFileOrNull(paths.agent_package_registry_cache_file);
+  const registryCache = readRegistryCache();
   const installedPackages = packageId
     ? lockIndex.packages.filter((entry) => entry.package_id === packageId)
     : lockIndex.packages;
@@ -2053,7 +2090,7 @@ export function runOplAgentPackageStatus(input: { packageId?: string | null } = 
 
 export function listOplAgentPackages() {
   const paths = resolveOplStatePaths();
-  const registryCache = readJsonFileOrNull(paths.agent_package_registry_cache_file);
+  const registryCache = readRegistryCache();
   const lockIndex = readLockIndex();
   const lifecycleLedger = readLifecycleLedger();
   const homeShortcutPreferences = mergedHomeShortcutPreferences(registryCache, lockIndex);
@@ -2068,7 +2105,7 @@ export function listOplAgentPackages() {
     opl_agent_packages: {
       surface_kind: 'opl_agent_package_readback',
       status: 'available',
-      registry_cache: isRecord(registryCache) ? registryCache : null,
+      registry_cache: registryCache,
       installed_package_count: lockIndex.packages.length,
       installed_packages: lockIndex.packages,
       home_shortcut_preferences: homeShortcutPreferences,

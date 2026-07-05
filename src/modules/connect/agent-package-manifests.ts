@@ -1,5 +1,6 @@
 import masAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mas.json' with { type: 'json' };
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 
 type FirstPartyAgentPackageManifest = {
@@ -120,8 +121,8 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
   }
   const codexSurface = payload.codex_surface;
   return {
-    agent_id: requiredString(payload.agent_id, 'agent_id'),
-    package_id: requiredString(payload.package_id, 'package_id'),
+    agent_id: canonicalAgentPackageId(requiredString(payload.agent_id, 'agent_id'))!,
+    package_id: canonicalAgentPackageId(requiredString(payload.package_id, 'package_id'))!,
     codex_surface: {
       plugin_id: requiredString(codexSurface.plugin_id, 'codex_surface.plugin_id'),
       standalone_distribution: requireLiteral(

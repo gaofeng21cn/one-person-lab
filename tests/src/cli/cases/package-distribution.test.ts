@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 import { assert, createGitModuleRemoteFixture, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
+import { canonicalAgentPackageId } from '../../../../src/modules/connect/agent-package-identity.ts';
 import { normalizeFirstPartyAgentPackageManifest } from '../../../../src/modules/connect/agent-package-manifests.ts';
 
 test('packages manifest exposes active package-channel coordinates for module install updates', () => {
@@ -571,6 +572,8 @@ test('MAS first-party agent package manifest declares standalone bundle and OPL 
   )) as Record<string, any>;
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
+  assert.equal(manifest.package_id, 'med-autoscience');
+  assert.equal(manifest.agent_id, 'med-autoscience');
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
@@ -594,6 +597,44 @@ test('MAS first-party agent package manifest declares standalone bundle and OPL 
       },
     ],
   );
+});
+
+test('first-party agent package manifest canonicalizes legacy package and assistant ids without changing plugin or skill ids', () => {
+  const normalized = normalizeFirstPartyAgentPackageManifest({
+    agent_id: 'mas',
+    package_id: 'medautoscience',
+    codex_surface: {
+      plugin_id: 'mas',
+      standalone_distribution: 'self_contained_fat_plugin',
+      required_skill_ids: ['mas', 'mas-scholar-skills'],
+      bundled_capability_package_ids: ['mas-scholar-skills'],
+    },
+    capability_dependencies: [
+      {
+        module_id: 'scholarskills',
+        package_id: 'mas-scholar-skills',
+        kind: 'framework_capability_package',
+        required_for: ['workspace_or_quest_codex_discovery'],
+        codex_distribution: 'bundled',
+        opl_distribution: 'managed_dependency',
+        developer_distribution: 'source_checkout',
+        sync_scopes: ['workspace', 'quest'],
+        sync_command_refs: ['opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json'],
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_sign_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_write_runtime_queue: false,
+        },
+      },
+    ],
+  });
+
+  assert.equal(normalized.package_id, 'med-autoscience');
+  assert.equal(normalized.agent_id, 'med-autoscience');
+  assert.equal(normalized.codex_surface.plugin_id, 'mas');
+  assert.deepEqual(normalized.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
+  assert.equal(canonicalAgentPackageId('obf'), 'opl-bookforge');
 });
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
