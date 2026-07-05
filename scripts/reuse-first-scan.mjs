@@ -42,6 +42,9 @@ const historicalDecisionCounts = historicalWorklist
 const residualReadback = historicalWorklist
   ? summarizeResidualReadback(historicalWorklist)
   : null;
+const ownerLivePreflight = historicalWorklist
+  ? summarizeOwnerLivePreflight(historicalWorklist)
+  : null;
 const strictBlockingFindingCount = historicalDecisionCounts
   ? historicalDecisionCounts.blocking_worklist_finding_count
   : hardGateFindingCount;
@@ -67,6 +70,7 @@ const summary = {
         owner_route_open_count: residualReadback.owner_route_open_count,
       }
     : {}),
+  ...(ownerLivePreflight ?? {}),
   returned_finding_count: visibleFindings.length,
   omitted_finding_count: findings.length - visibleFindings.length,
   findings: visibleFindings,
@@ -254,6 +258,7 @@ function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
   const decisionedCount = findings.filter((finding) => finding.historical_decision_status !== 'undecisioned').length;
   const worklistCounts = summarizeWorklistFindingCounts(findings);
   const residualReadback = summarizeResidualReadback(worklist);
+  const ownerLivePreflight = summarizeOwnerLivePreflight(worklist);
   return {
     surface_kind: 'opl_reuse_first_historical_worklist_readback',
     applied: true,
@@ -269,6 +274,7 @@ function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
           owner_route_open_count: residualReadback.owner_route_open_count,
         }
       : {}),
+    ...(ownerLivePreflight ?? {}),
     decisioned_finding_count: decisionedCount,
     false_ready_guard: worklist.false_ready_guard,
     by_decision_status: groupFindings(findings, (finding) => finding.historical_decision.status),
@@ -279,6 +285,27 @@ function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
     by_action: groupFindings(findings, (finding) => finding.historical_decision.action),
     by_expiry: groupFindings(findings, (finding) => finding.historical_decision.expiry ?? 'none'),
     worklist_items: worklist.items.map((item) => summarizeWorklistItem(findings, item)),
+  };
+}
+
+function summarizeOwnerLivePreflight(worklist) {
+  const source = worklist.owner_live_evidence_preflight_2026_07_05;
+  if (!source) {
+    return null;
+  }
+  const items = Array.isArray(source.items) ? source.items : [];
+  const openItemCount = Number.isInteger(source.open_item_count)
+    ? source.open_item_count
+    : items.filter((item) => !['owner_accepted', 'closed'].includes(item.status)).length;
+  const claimBoundary = source.claim_boundary ?? {};
+  return {
+    owner_live_preflight_open_item_count: openItemCount,
+    owner_live_preflight_current_evidence_available: source.current_evidence_available === true,
+    owner_live_preflight_can_claim_runtime_ready: claimBoundary.can_claim_runtime_ready === true,
+    owner_live_preflight_can_claim_release_ready: claimBoundary.can_claim_release_ready === true,
+    owner_live_preflight_can_claim_production_ready: claimBoundary.can_claim_production_ready === true,
+    owner_live_preflight_can_claim_domain_ready: claimBoundary.can_claim_domain_ready === true,
+    owner_live_preflight_can_claim_owner_acceptance: claimBoundary.can_claim_owner_acceptance === true,
   };
 }
 

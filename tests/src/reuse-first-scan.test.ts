@@ -218,6 +218,17 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
         'owner-live evidence remains open until owner receipt, typed blocker, or route-back evidence exists',
       ],
     },
+    ownerLivePreflight: {
+      current_evidence_available: false,
+      open_item_count: 2,
+      claim_boundary: {
+        can_claim_runtime_ready: false,
+        can_claim_release_ready: false,
+        can_claim_production_ready: false,
+        can_claim_domain_ready: false,
+        can_claim_owner_acceptance: false,
+      },
+    },
   });
   writeFixtureFile(fixture, 'src/known/example.ts', 'const parsed = JSON.parse("{}");\n');
   writeFixtureFile(fixture, 'src/runtime/queue.ts', 'const ddl = "CREATE TABLE IF NOT EXISTS tasks";\n');
@@ -252,6 +263,13 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   assert.equal(output.owner_route_worklist_count, 2);
   assert.equal(output.owner_live_evidence_required_count, 1);
   assert.equal(output.owner_route_open_count, 1);
+  assert.equal(output.owner_live_preflight_open_item_count, 2);
+  assert.equal(output.owner_live_preflight_current_evidence_available, false);
+  assert.equal(output.owner_live_preflight_can_claim_runtime_ready, false);
+  assert.equal(output.owner_live_preflight_can_claim_release_ready, false);
+  assert.equal(output.owner_live_preflight_can_claim_production_ready, false);
+  assert.equal(output.owner_live_preflight_can_claim_domain_ready, false);
+  assert.equal(output.owner_live_preflight_can_claim_owner_acceptance, false);
   assert.equal(output.residual_readback.owner_route_worklist_count, 2);
   assert.equal(output.residual_readback.owner_live_evidence_required_count, 1);
   assert.equal(output.residual_readback.owner_route_open_count, 1);
@@ -268,6 +286,13 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   assert.equal(summary.owner_route_worklist_count, 2);
   assert.equal(summary.owner_live_evidence_required_count, 1);
   assert.equal(summary.owner_route_open_count, 1);
+  assert.equal(summary.owner_live_preflight_open_item_count, 2);
+  assert.equal(summary.owner_live_preflight_current_evidence_available, false);
+  assert.equal(summary.owner_live_preflight_can_claim_runtime_ready, false);
+  assert.equal(summary.owner_live_preflight_can_claim_release_ready, false);
+  assert.equal(summary.owner_live_preflight_can_claim_production_ready, false);
+  assert.equal(summary.owner_live_preflight_can_claim_domain_ready, false);
+  assert.equal(summary.owner_live_preflight_can_claim_owner_acceptance, false);
   assert.equal(summary.residual_readback.owner_route_worklist_count, 2);
   assert.equal(summary.decisioned_finding_count, 4);
   assert.equal(summary.undecisioned_finding_count, 1);
@@ -366,6 +391,8 @@ test('reuse-first diff gate ignores broad historical worklist decisions', () => 
   assert.match(output.historical_decision_summary.reason, /diff gate ignores historical worklist/);
   assert.equal(output.residual_readback, undefined);
   assert.equal(output.owner_route_worklist_count, undefined);
+  assert.equal(output.owner_live_preflight_open_item_count, undefined);
+  assert.equal(output.historical_decision_summary.owner_live_preflight_open_item_count, undefined);
   assert.equal(output.findings[0].historical_decision, undefined);
 });
 
@@ -686,6 +713,7 @@ function writeHistoricalWorklist(
   overrides: {
     items: Array<Record<string, unknown>>;
     residualReadback?: Record<string, unknown>;
+    ownerLivePreflight?: Record<string, unknown>;
   },
 ) {
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');
@@ -713,6 +741,9 @@ function writeHistoricalWorklist(
       ],
       ...(overrides.residualReadback
         ? { residual_readback_2026_07_05: overrides.residualReadback }
+        : {}),
+      ...(overrides.ownerLivePreflight
+        ? { owner_live_evidence_preflight_2026_07_05: overrides.ownerLivePreflight }
         : {}),
       items: overrides.items,
     }, null, 2)}\n`,
