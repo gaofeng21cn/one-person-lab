@@ -24,13 +24,13 @@
   "residual_readback_2026_07_05": {
     "source_command": "node ./scripts/reuse-first-scan.mjs --max-findings 1000",
     "scan_counts": {
-      "finding_count": 710,
-      "hard_gate_finding_count": 255,
+      "finding_count": 697,
+      "hard_gate_finding_count": 242,
       "advisory_finding_count": 455,
       "custom_runtime_queue": 147,
       "custom_update_or_package_manager": 93,
       "custom_observability_ledger": 455,
-      "handwritten_json_boundary": 15
+      "handwritten_json_boundary": 2
     },
     "active_src_already_zero": [
       {
