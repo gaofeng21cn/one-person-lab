@@ -298,6 +298,8 @@ function summarizeOwnerLivePreflight(worklist) {
     ? source.open_item_count
     : items.filter((item) => !['owner_accepted', 'closed'].includes(item.status)).length;
   const claimBoundary = source.claim_boundary ?? {};
+  const audit = source.fresh_evidence_audit_2026_07_05 ?? null;
+  const auditItems = Array.isArray(audit?.items) ? audit.items : [];
   return {
     owner_live_preflight_open_item_count: openItemCount,
     owner_live_preflight_current_evidence_available: source.current_evidence_available === true,
@@ -306,6 +308,15 @@ function summarizeOwnerLivePreflight(worklist) {
     owner_live_preflight_can_claim_production_ready: claimBoundary.can_claim_production_ready === true,
     owner_live_preflight_can_claim_domain_ready: claimBoundary.can_claim_domain_ready === true,
     owner_live_preflight_can_claim_owner_acceptance: claimBoundary.can_claim_owner_acceptance === true,
+    ...(audit
+      ? {
+          owner_live_evidence_audit_result: audit.audit_result ?? 'unknown',
+          owner_live_evidence_audit_item_count: auditItems.length,
+          owner_live_evidence_found_count: auditItems.filter((item) => item.evidence_found === true).length,
+          owner_live_evidence_audit_can_mark_preflight_closed:
+            audit.claim_boundary?.can_mark_preflight_closed === true,
+        }
+      : {}),
   };
 }
 

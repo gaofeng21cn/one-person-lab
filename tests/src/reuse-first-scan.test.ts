@@ -228,6 +228,22 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
         can_claim_domain_ready: false,
         can_claim_owner_acceptance: false,
       },
+      fresh_evidence_audit_2026_07_05: {
+        audit_result: 'no_owner_live_evidence_found',
+        items: [
+          {
+            id: 'external_temporal_durable_lifecycle',
+            evidence_found: false,
+          },
+          {
+            id: 'app_release_owner_route',
+            evidence_found: false,
+          },
+        ],
+        claim_boundary: {
+          can_mark_preflight_closed: false,
+        },
+      },
     },
   });
   writeFixtureFile(fixture, 'src/known/example.ts', 'const parsed = JSON.parse("{}");\n');
@@ -270,6 +286,10 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   assert.equal(output.owner_live_preflight_can_claim_production_ready, false);
   assert.equal(output.owner_live_preflight_can_claim_domain_ready, false);
   assert.equal(output.owner_live_preflight_can_claim_owner_acceptance, false);
+  assert.equal(output.owner_live_evidence_audit_result, 'no_owner_live_evidence_found');
+  assert.equal(output.owner_live_evidence_audit_item_count, 2);
+  assert.equal(output.owner_live_evidence_found_count, 0);
+  assert.equal(output.owner_live_evidence_audit_can_mark_preflight_closed, false);
   assert.equal(output.residual_readback.owner_route_worklist_count, 2);
   assert.equal(output.residual_readback.owner_live_evidence_required_count, 1);
   assert.equal(output.residual_readback.owner_route_open_count, 1);
@@ -293,6 +313,10 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   assert.equal(summary.owner_live_preflight_can_claim_production_ready, false);
   assert.equal(summary.owner_live_preflight_can_claim_domain_ready, false);
   assert.equal(summary.owner_live_preflight_can_claim_owner_acceptance, false);
+  assert.equal(summary.owner_live_evidence_audit_result, 'no_owner_live_evidence_found');
+  assert.equal(summary.owner_live_evidence_audit_item_count, 2);
+  assert.equal(summary.owner_live_evidence_found_count, 0);
+  assert.equal(summary.owner_live_evidence_audit_can_mark_preflight_closed, false);
   assert.equal(summary.residual_readback.owner_route_worklist_count, 2);
   assert.equal(summary.decisioned_finding_count, 4);
   assert.equal(summary.undecisioned_finding_count, 1);
@@ -392,7 +416,9 @@ test('reuse-first diff gate ignores broad historical worklist decisions', () => 
   assert.equal(output.residual_readback, undefined);
   assert.equal(output.owner_route_worklist_count, undefined);
   assert.equal(output.owner_live_preflight_open_item_count, undefined);
+  assert.equal(output.owner_live_evidence_audit_result, undefined);
   assert.equal(output.historical_decision_summary.owner_live_preflight_open_item_count, undefined);
+  assert.equal(output.historical_decision_summary.owner_live_evidence_audit_result, undefined);
   assert.equal(output.findings[0].historical_decision, undefined);
 });
 
