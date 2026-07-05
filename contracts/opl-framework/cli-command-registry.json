@@ -13,6 +13,7 @@
     "update",
     "status",
     "runtime manager",
+    "runtime app-operator-drilldown",
     "runtime observability"
   ],
   "required_command_ids": [
@@ -46,6 +47,7 @@
     "status dashboard",
     "runtime manager",
     "runtime manager action",
+    "runtime app-operator-drilldown",
     "runtime observability-export",
     "runtime observability-endpoint",
     "runtime observability-collector-smoke"
@@ -1667,6 +1669,72 @@
               },
               "dry_run": {
                 "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "runtime_app_operator_drilldown": {
+      "command_id": "runtime app-operator-drilldown",
+      "owner": "OPL Runway",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "detail",
+          "flag": "--detail",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "full",
+          "flag": "--full",
+          "value_kind": "boolean",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "app_operator_drilldown"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "app_operator_drilldown": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "authority_boundary"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "surface_kind": {
+                "const": "opl_app_operator_drilldown_read_model"
+              },
+              "authority_boundary": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "can_write_domain_truth": {
+                    "const": false
+                  },
+                  "can_create_owner_receipt": {
+                    "const": false
+                  },
+                  "can_claim_domain_ready": {
+                    "const": false
+                  },
+                  "can_claim_production_ready": {
+                    "const": false
+                  }
+                }
               }
             }
           }

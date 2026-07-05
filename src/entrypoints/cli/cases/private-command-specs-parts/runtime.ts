@@ -59,7 +59,6 @@ import {
   assertNoArgs,
   buildUsageError,
   parseRegisteredCommandOptions,
-  parseRuntimeAppOperatorDrilldownArgs,
 } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
@@ -235,13 +234,58 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl runtime app-operator-drilldown --json', // reuse-first: allow diagnostic drilldown command projection.
         'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
       ],
+      registry: {
+        command_id: 'runtime app-operator-drilldown',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'detail',
+            flag: '--detail',
+            value_kind: 'string',
+            summary: 'Detail level: summary or full.',
+          },
+          {
+            name: 'full',
+            flag: '--full',
+            value_kind: 'boolean',
+            summary: 'Alias for --detail full.',
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_app_operator_drilldown/output_schema',
+        authority_boundary: {
+          owner: 'OPL Runway',
+          surface: 'runtime_app_operator_drilldown_readback',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
       handler: async (args) => {
-        const parsed = parseRuntimeAppOperatorDrilldownArgs(
+        const spec = getCommandSpecs()['runtime app-operator-drilldown']; // reuse-first: allow diagnostic drilldown command projection.
+        const parsed = parseRegisteredCommandOptions(
+          'runtime app-operator-drilldown',
           args,
-          getCommandSpecs()['runtime app-operator-drilldown'], // reuse-first: allow diagnostic drilldown command projection.
+          spec,
         );
+        if (
+          parsed.detail !== undefined
+          && parsed.detail !== 'summary'
+          && parsed.detail !== 'full'
+        ) {
+          throw buildUsageError(
+            'runtime app-operator-drilldown --detail must be summary or full.',
+            spec,
+            {
+              option: '--detail',
+              value: parsed.detail,
+            },
+          );
+        }
         const snapshot = await buildRuntimeTraySnapshot(getContracts(), {
-          appOperatorDrilldownDetailLevel: parsed.detailLevel,
+          appOperatorDrilldownDetailLevel:
+            parsed.full === true ? 'full' : (parsed.detail as 'summary' | 'full' | undefined) ?? 'summary',
         });
         return {
           app_operator_drilldown: snapshot.runtime_tray_snapshot.app_operator_drilldown,
