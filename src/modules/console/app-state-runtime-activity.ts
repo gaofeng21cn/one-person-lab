@@ -12,7 +12,7 @@ import {
   summarizeStageAttemptUsageProjections,
   buildStageAttemptRuntimeCurrentness,
 } from '../runway/index.ts';
-import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/workspace-registry.ts';
+import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/index.ts';
 
 const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
 const ATTENTION_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);
