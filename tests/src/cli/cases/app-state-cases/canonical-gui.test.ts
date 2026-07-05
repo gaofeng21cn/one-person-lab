@@ -634,10 +634,22 @@ exit 1
     );
     assert.deepEqual(
       output.app_state.operator.workbench.summary_cards.map((entry: AppStateListEntry) => entry.card_id),
-      ['active_projects', 'runtime_status', 'codex_cli', 'temporal_provider', 'runtime_modules', 'release_channel'],
+      [
+        'in_progress_count',
+        'delivered_auto_paused_count',
+        'paused_count',
+        'owner_decision_count',
+        'system_attention_count',
+        'automation_running_count',
+        'runtime_status',
+        'codex_cli',
+        'temporal_provider',
+        'runtime_modules',
+        'release_channel',
+      ],
     );
     assert.equal(
-      output.app_state.operator.workbench.summary_cards.find((entry: AppStateListEntry) => entry.card_id === 'active_projects')?.value,
+      output.app_state.operator.workbench.summary_cards.find((entry: AppStateListEntry) => entry.card_id === 'in_progress_count')?.value,
       0,
     );
     assert.equal(
