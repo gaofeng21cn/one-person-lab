@@ -201,6 +201,125 @@
       "A future closeout must report both reuse-first scan historical_decision_summary and this owner_route_worklist; either open owner_live_evidence_required item keeps the plan partial."
     ]
   },
+  "owner_live_evidence_preflight_2026_07_05": {
+    "surface_kind": "opl_reuse_first_owner_live_evidence_preflight",
+    "source_readback": "residual_readback_2026_07_05.owner_route_worklist",
+    "current_evidence_available": false,
+    "open_item_count": 5,
+    "claim_boundary": {
+      "can_claim_runtime_ready": false,
+      "can_claim_release_ready": false,
+      "can_claim_production_ready": false,
+      "can_claim_domain_ready": false,
+      "can_claim_owner_acceptance": false
+    },
+    "items": [
+      {
+        "id": "external_temporal_durable_lifecycle",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Runway Runtime",
+        "current_evidence_available": false,
+        "missing_evidence": [
+          "external Temporal server workflow history/query readback",
+          "managed worker liveness readback",
+          "real Codex executor closeout without ephemeral fixture substitution",
+          "owner/domain refs tying Temporal history to the domain/stage attempt"
+        ],
+        "legal_next_command_or_owner": "Run `OPL_TEMPORAL_ADDRESS=<external-temporal> ./bin/opl family-runtime residency proof --provider temporal --live --json` from an owner-provided external Temporal environment, then route the readback to OPL Runway Runtime owner for receipt, typed blocker, or route-back.",
+        "forbidden_completion_evidence": [
+          "Temporal test server fixture",
+          "local SQLite projection",
+          "custom_runtime_queue residual scan count",
+          "strict diff gate"
+        ],
+        "stop_condition": "Temporal lifecycle can be reconstructed from external Temporal history plus OPL authority events, or OPL Runway Runtime emits a typed blocker naming the missing external substrate."
+      },
+      {
+        "id": "app_release_owner_route",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Managed Update / One Person Lab App release owner",
+        "current_evidence_available": false,
+        "missing_evidence": [
+          "App release owner receipt or typed blocker",
+          "release/currentness source ref",
+          "managed update receipt projection consumed by the App read model"
+        ],
+        "legal_next_command_or_owner": "Route the managed-update receipt projection to the One Person Lab App release owner; release/currentness proof must come from the App release authority, not from Framework scan output.",
+        "forbidden_completion_evidence": [
+          "owner-routed command registry projection",
+          "phase6-src-modules-update-package finding_count=0",
+          "contract provenance wording",
+          "strict diff gate"
+        ],
+        "stop_condition": "App/release owner accepts, blocks, or routes the update package boundary through its release authority surface."
+      },
+      {
+        "id": "capability_package_channel_owner_route",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Pack / Connect package owners",
+        "current_evidence_available": false,
+        "missing_evidence": [
+          "content-addressed descriptor or OCI-style digest readback",
+          "lock or manifest receipt",
+          "owner-specific materializer or typed blocker",
+          "no-domain-authority and no-package-manager boundary readback"
+        ],
+        "legal_next_command_or_owner": "Route package lifecycle through Pack/Connect owner surfaces with descriptor, digest, lock and materializer readback; do not promote Framework registry projection into package authority.",
+        "forbidden_completion_evidence": [
+          "contract provenance terms",
+          "test fixture package vocabulary",
+          "Connect registry projection without owner receipt",
+          "strict diff gate"
+        ],
+        "stop_condition": "Capability package lifecycle is routed through descriptor, digest, lock, and owner receipt surfaces, or the package owner emits a typed blocker."
+      },
+      {
+        "id": "otlp_exporter_live_endpoint",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Observability",
+        "current_evidence_available": false,
+        "missing_evidence": [
+          "OTLP or OpenTelemetry SDK exporter owner lane",
+          "live endpoint readback outside bounded smoke-only path",
+          "external collector consumption readback",
+          "semantic convention mapping for trace, metric, log, and event refs"
+        ],
+        "legal_next_command_or_owner": "Open an OPL Observability owner lane for OTLP/OpenTelemetry SDK exporter and external collector consumption; bounded OpenMetrics smoke remains diagnostic only.",
+        "forbidden_completion_evidence": [
+          "OpenMetrics smoke endpoint alone",
+          "CLI diagnostic drilldown projection",
+          "phase10-src-modules-observability finding_count=0",
+          "strict diff gate"
+        ],
+        "stop_condition": "Operator drilldown can read the same current owner delta through trace, metric, log, and event vocabulary from a live exporter/collector path, or Observability emits a typed blocker."
+      },
+      {
+        "id": "domain_tail_owner_acceptance",
+        "status": "owner_live_evidence_required",
+        "owner": "MAS/MAG/RCA/OMA/BookForge/ScholarSkills domain owners",
+        "current_evidence_available": false,
+        "missing_evidence": [
+          "domain no-active-caller readback",
+          "replacement OPL primitive ref",
+          "tombstone or provenance ref when deleting a private tail",
+          "owner acceptance, owner decision, or typed blocker"
+        ],
+        "legal_next_command_or_owner": "Route each private tail through its domain owner with no-active-caller readback and replacement OPL primitive refs before physical delete or acceptance claims.",
+        "forbidden_completion_evidence": [
+          "domain tail matrix projection",
+          "reuse-first full scan counts",
+          "OPL contract-only readback",
+          "strict diff gate"
+        ],
+        "stop_condition": "Each domain owner either accepts the hosted/generated replacement boundary, emits a typed blocker, or explicitly preserves the tail with owner rationale."
+      }
+    ],
+    "completion_readback_rules": [
+      "This preflight records missing live/owner evidence; it is not an owner receipt.",
+      "Every item remains open until owner receipt, live evidence, typed blocker, human gate, or route-back evidence is observed.",
+      "Framework scan, contract, docs, tests, and strict diff evidence cannot close these owner-live-evidence items by themselves."
+    ]
+  },
   "items": [
     {
       "id": "phase1-src-modules-schema-cli-boundaries",
