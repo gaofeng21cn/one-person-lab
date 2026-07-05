@@ -173,6 +173,9 @@ function classifyDiagnostic(
   policy: typeof DEFAULT_WORKSPACE_DIAGNOSTIC_POLICY,
   code: string,
 ): WorkspaceDiagnosticSeverity {
+  if (policy.hard_blocker_codes.includes(code)) {
+    return 'hard_blocker';
+  }
   if (policy.repairable_finding_codes.includes(code)) {
     return 'repairable';
   }
