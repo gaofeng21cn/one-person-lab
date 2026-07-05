@@ -1,5 +1,8 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
-import { resolveOplDeveloperModeTargetAuthority } from '../../../../src/modules/connect/developer-mode.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
+import {
+  resolveOplDeveloperModeFrameworkCheckout,
+  resolveOplDeveloperModeTargetAuthority,
+} from '../../../../src/modules/connect/developer-mode.ts';
 
 const defaultDeveloperModePermissionsFixture = JSON.stringify({
   user: { login: 'gaofeng21cn' },
@@ -148,6 +151,15 @@ test('system developer-supervisor reports and persists the family developer mode
           config_source: string;
           auto_enable_github_login: string;
           allowed_route: string;
+          framework_checkout: {
+            status: string;
+            selected_source_kind: string;
+            should_use_local_checkout: boolean;
+            resolution_source: string;
+            checkout_root: string | null;
+            checkout_bin: string | null;
+            checkout_cli_entry: string | null;
+          };
           developer_profile: {
             profile_id: string;
             status: string;
@@ -192,6 +204,19 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.equal(initial.system_action.developer_mode.auto_enable_github_login, 'gaofeng21cn');
     assert.equal(initial.system_action.developer_mode.status, 'ready');
     assert.equal(initial.system_action.developer_mode.effective_state, 'active_direct');
+    assert.equal(initial.system_action.developer_mode.framework_checkout.status, 'resolved');
+    assert.equal(initial.system_action.developer_mode.framework_checkout.selected_source_kind, 'local_checkout');
+    assert.equal(initial.system_action.developer_mode.framework_checkout.should_use_local_checkout, true);
+    assert.equal(initial.system_action.developer_mode.framework_checkout.resolution_source, 'current_cli_entry');
+    assert.equal(initial.system_action.developer_mode.framework_checkout.checkout_root, fs.realpathSync.native(repoRoot));
+    assert.equal(
+      initial.system_action.developer_mode.framework_checkout.checkout_bin,
+      path.join(fs.realpathSync.native(repoRoot), 'bin', 'opl'),
+    );
+    assert.equal(
+      initial.system_action.developer_mode.framework_checkout.checkout_cli_entry,
+      path.join(fs.realpathSync.native(repoRoot), 'src', 'entrypoints', 'cli.ts'),
+    );
     assert.deepEqual(initial.system_action.developer_mode.developer_profile, {
       profile_id: 'maintainer',
       status: 'ready',
@@ -236,6 +261,15 @@ test('system developer-supervisor reports and persists the family developer mode
           status: string;
           effective_state: string;
           allowed_route: string;
+          framework_checkout: {
+            status: string;
+            selected_source_kind: string;
+            should_use_local_checkout: boolean;
+            resolution_source: string;
+            checkout_root: string | null;
+            checkout_bin: string | null;
+            checkout_cli_entry: string | null;
+          };
           developer_profile: {
             profile_id: string;
             status: string;
@@ -274,6 +308,19 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.equal(updated.system_action.developer_mode.status, 'ready');
     assert.equal(updated.system_action.developer_mode.effective_state, 'active_direct');
     assert.equal(updated.system_action.developer_mode.allowed_route, 'direct_repo_fix');
+    assert.equal(updated.system_action.developer_mode.framework_checkout.status, 'resolved');
+    assert.equal(updated.system_action.developer_mode.framework_checkout.selected_source_kind, 'local_checkout');
+    assert.equal(updated.system_action.developer_mode.framework_checkout.should_use_local_checkout, true);
+    assert.equal(updated.system_action.developer_mode.framework_checkout.resolution_source, 'current_cli_entry');
+    assert.equal(updated.system_action.developer_mode.framework_checkout.checkout_root, fs.realpathSync.native(repoRoot));
+    assert.equal(
+      updated.system_action.developer_mode.framework_checkout.checkout_bin,
+      path.join(fs.realpathSync.native(repoRoot), 'bin', 'opl'),
+    );
+    assert.equal(
+      updated.system_action.developer_mode.framework_checkout.checkout_cli_entry,
+      path.join(fs.realpathSync.native(repoRoot), 'src', 'entrypoints', 'cli.ts'),
+    );
     assert.deepEqual(updated.system_action.developer_mode.developer_profile, {
       profile_id: 'runtime_maintainer',
       status: 'ready',
@@ -370,6 +417,115 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.equal(persisted.auto_enable_github_login, 'gaofeng21cn');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('developer mode framework checkout resolver exposes explicit framework coordinates', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-checkout-home-'));
+  const previousHome = process.env.HOME;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousWorkspaceRoot = process.env.OPL_WORKSPACE_ROOT;
+  const previousFrameworkRoot = process.env.OPL_FRAMEWORK_ROOT;
+  const previousCliBin = process.env.OPL_CLI_BIN;
+  const previousBin = process.env.OPL_BIN;
+
+  try {
+    process.env.HOME = homeRoot;
+    process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
+    delete process.env.OPL_WORKSPACE_ROOT;
+    delete process.env.OPL_FRAMEWORK_ROOT;
+    delete process.env.OPL_CLI_BIN;
+    delete process.env.OPL_BIN;
+
+    const output = resolveOplDeveloperModeFrameworkCheckout({
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      source: 'user_config',
+      auto_enable_github_login: 'gaofeng21cn',
+      version: 'g1',
+      updated_at: '2026-07-05T00:00:00.000Z',
+    });
+
+    assert.equal(output.status, 'resolved');
+    assert.equal(output.selected_source_kind, 'local_checkout');
+    assert.equal(output.should_use_local_checkout, true);
+    assert.equal(output.resolution_source, 'current_cli_entry');
+    assert.equal(output.checkout_root, fs.realpathSync.native(repoRoot));
+    assert.equal(output.checkout_bin, path.join(fs.realpathSync.native(repoRoot), 'bin', 'opl'));
+    assert.equal(output.checkout_cli_entry, path.join(fs.realpathSync.native(repoRoot), 'src', 'entrypoints', 'cli.ts'));
+  } finally {
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousWorkspaceRoot === undefined) {
+      delete process.env.OPL_WORKSPACE_ROOT;
+    } else {
+      process.env.OPL_WORKSPACE_ROOT = previousWorkspaceRoot;
+    }
+    if (previousFrameworkRoot === undefined) {
+      delete process.env.OPL_FRAMEWORK_ROOT;
+    } else {
+      process.env.OPL_FRAMEWORK_ROOT = previousFrameworkRoot;
+    }
+    if (previousCliBin === undefined) {
+      delete process.env.OPL_CLI_BIN;
+    } else {
+      process.env.OPL_CLI_BIN = previousCliBin;
+    }
+    if (previousBin === undefined) {
+      delete process.env.OPL_BIN;
+    } else {
+      process.env.OPL_BIN = previousBin;
+    }
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('developer mode framework checkout resolver prefers the sibling one-person-lab checkout under the selected workspace root', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-workspace-root-'));
+  const checkoutRoot = path.join(workspaceRoot, 'one-person-lab');
+  const previousWorkspaceRoot = process.env.OPL_WORKSPACE_ROOT;
+
+  try {
+    fs.mkdirSync(path.join(checkoutRoot, '.git'), { recursive: true });
+    fs.mkdirSync(path.join(checkoutRoot, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(checkoutRoot, 'contracts', 'opl-framework'), { recursive: true });
+    fs.mkdirSync(path.join(checkoutRoot, 'src', 'entrypoints'), { recursive: true });
+    fs.writeFileSync(path.join(checkoutRoot, 'bin', 'opl'), '#!/usr/bin/env bash\n', 'utf8');
+    fs.writeFileSync(path.join(checkoutRoot, 'contracts', 'opl-framework', 'public-surface-index.json'), '{}\n', 'utf8');
+    fs.writeFileSync(path.join(checkoutRoot, 'src', 'entrypoints', 'cli.ts'), 'export {};\n', 'utf8');
+    process.env.OPL_WORKSPACE_ROOT = workspaceRoot;
+
+    const output = resolveOplDeveloperModeFrameworkCheckout({
+      enabled: 'on',
+      mode: 'developer_apply_safe',
+      source: 'user_config',
+      auto_enable_github_login: 'gaofeng21cn',
+      version: 'g1',
+      updated_at: '2026-07-05T00:00:00.000Z',
+    });
+
+    assert.equal(output.status, 'resolved');
+    assert.equal(output.selected_source_kind, 'local_checkout');
+    assert.equal(output.should_use_local_checkout, true);
+    assert.equal(output.resolution_source, 'developer_workspace_sibling_checkout');
+    assert.equal(output.checkout_root, fs.realpathSync.native(checkoutRoot));
+    assert.equal(output.checkout_bin, path.join(fs.realpathSync.native(checkoutRoot), 'bin', 'opl'));
+    assert.equal(output.checkout_cli_entry, path.join(fs.realpathSync.native(checkoutRoot), 'src', 'entrypoints', 'cli.ts'));
+  } finally {
+    if (previousWorkspaceRoot === undefined) {
+      delete process.env.OPL_WORKSPACE_ROOT;
+    } else {
+      process.env.OPL_WORKSPACE_ROOT = previousWorkspaceRoot;
+    }
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 
