@@ -12,7 +12,7 @@ import {
   summarizeStageAttemptUsageProjections,
   buildStageAttemptRuntimeCurrentness,
 } from '../runway/index.ts';
-import { getActiveWorkspaceBinding } from '../workspace/index.ts';
+import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/workspace-registry.ts';
 
 const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
 const ATTENTION_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);
@@ -727,6 +727,80 @@ function workspaceRootCandidates(workspaceRoot: string, profileRef: string | nul
   ].filter((entry): entry is string => Boolean(entry)))];
 }
 
+function runtimeBindingsForOverview() {
+  return listWorkspaceBindings()
+    .filter((binding) =>
+      binding.status !== 'archived'
+      && binding.project_id === 'medautoscience',
+    )
+    .sort((left, right) =>
+      Number(right.status === 'active') - Number(left.status === 'active')
+      || `${right.updated_at}:${right.binding_id}`.localeCompare(`${left.updated_at}:${left.binding_id}`)
+    );
+}
+
+function decorateRuntimeItemForBinding(
+  item: JsonRecord,
+  binding: WorkspaceBinding,
+  workspaceRoot: string,
+) {
+  const studyId = firstString(item.study_id);
+  const workspaceLabel = firstString(
+    item.workspace_label,
+    binding.label,
+    path.basename(workspaceRoot),
+    binding.project,
+    binding.project_id,
+  ) ?? binding.project_id;
+  const itemId = studyId
+    ? `${binding.project_id}:binding:${binding.binding_id}:study:${studyId}`
+    : firstString(
+      item.item_id,
+      `${binding.project_id}:binding:${binding.binding_id}:runtime:${path.basename(workspaceRoot)}`,
+    ) ?? `${binding.project_id}:binding:${binding.binding_id}:runtime`;
+  const projectDisplayName = firstString(
+    item.project_display_name,
+    workspaceLabel,
+    binding.label,
+    binding.project,
+    binding.project_id,
+  ) ?? binding.project_id;
+  return {
+    ...item,
+    item_id: itemId,
+    project_id: firstString(item.project_id, binding.project_id) ?? binding.project_id,
+    project_label: firstString(item.project_label, binding.project, binding.project_id) ?? binding.project_id,
+    workspace_path: firstString(item.workspace_path, workspaceRoot) ?? workspaceRoot,
+    workspace_label: workspaceLabel,
+    workspace_binding_id: binding.binding_id,
+    workspace_binding_status: binding.status,
+    workspace_binding_active: binding.status === 'active',
+    workspace_scope_id: `workspace:${binding.binding_id}`,
+    project_scope_id: `project:${binding.project_id}:${binding.binding_id}`,
+    agent_scope_id: `agent:${binding.project_id}`,
+    task_scope_id: `task:${itemId}`,
+    agent_display_name: firstString(item.agent_display_name, item.project_label, binding.project, binding.project_id)
+      ?? binding.project_id,
+    project_display_name: projectDisplayName,
+    work_item_display_name: firstString(item.work_item_display_name, item.title, studyId, itemId) ?? itemId,
+    execution_run_label: firstString(
+      item.execution_run_label,
+      item.active_run_id,
+      item.active_stage_id,
+      item.status_label,
+      item.status,
+    ),
+  };
+}
+
+function decorateRuntimeItemsForBinding(
+  items: readonly JsonRecord[],
+  binding: WorkspaceBinding,
+  workspaceRoot: string,
+) {
+  return items.map((item) => decorateRuntimeItemForBinding(item, binding, workspaceRoot));
+}
+
 function buildFromPortalPayload(workspaceRoot: string, profileRef: string | null, payloadPath: string, payload: JsonRecord) {
   const workbenchProjection = isRecord(payload.mas_opl_runtime_workbench_projection)
     ? payload.mas_opl_runtime_workbench_projection
@@ -816,31 +890,40 @@ function buildFromStudyRuntimeFiles(workspaceRoot: string, profileRef: string | 
 }
 
 export function buildAppStateRuntimeActivityItems() {
-  const binding = getActiveWorkspaceBinding('medautoscience');
-  const locator = binding?.direct_entry.workspace_locator;
-  const workspaceRoot = locator?.workspace_root ?? binding?.workspace_path ?? null;
-  if (!workspaceRoot) {
+  return runtimeBindingsForOverview().flatMap((binding) => {
+    const locator = binding.direct_entry.workspace_locator;
+    const workspaceRoot = firstString(locator?.workspace_root, binding.workspace_path);
+    if (!workspaceRoot) {
+      return [];
+    }
+
+    const profileRef = firstString(locator?.profile_ref);
+    const candidateRoots = workspaceRootCandidates(workspaceRoot, profileRef);
+    for (const candidateRoot of candidateRoots) {
+      const portalPath = portalPayloadPath(candidateRoot);
+      const portalPayload = readJsonFileOrNull(portalPath);
+      if (isRecord(portalPayload)) {
+        return decorateRuntimeItemsForBinding(
+          mergeFamilyRuntimeStageAttempts({
+            items: buildFromPortalPayload(candidateRoot, profileRef, portalPath, portalPayload),
+            candidateRoots,
+          }),
+          binding,
+          workspaceRoot,
+        );
+      }
+    }
+
+    for (const candidateRoot of candidateRoots) {
+      const items = buildFromStudyRuntimeFiles(candidateRoot, profileRef);
+      if (items.length > 0) {
+        return decorateRuntimeItemsForBinding(
+          mergeFamilyRuntimeStageAttempts({ items, candidateRoots }),
+          binding,
+          workspaceRoot,
+        );
+      }
+    }
     return [];
-  }
-
-  const profileRef = locator?.profile_ref ?? null;
-  const candidateRoots = workspaceRootCandidates(workspaceRoot, profileRef);
-  for (const candidateRoot of candidateRoots) {
-    const portalPath = portalPayloadPath(candidateRoot);
-    const portalPayload = readJsonFileOrNull(portalPath);
-    if (isRecord(portalPayload)) {
-      return mergeFamilyRuntimeStageAttempts({
-        items: buildFromPortalPayload(candidateRoot, profileRef, portalPath, portalPayload),
-        candidateRoots,
-      });
-    }
-  }
-
-  for (const candidateRoot of candidateRoots) {
-    const items = buildFromStudyRuntimeFiles(candidateRoot, profileRef);
-    if (items.length > 0) {
-      return mergeFamilyRuntimeStageAttempts({ items, candidateRoots });
-    }
-  }
-  return [];
+  });
 }

@@ -850,6 +850,10 @@ export function getActiveWorkspaceBinding(projectId: string) {
   ) ?? null;
 }
 
+export function listWorkspaceBindings() {
+  return readWorkspaceRegistryFile().bindings;
+}
+
 export function resolveWorkspaceBinding(projectId: string, explicitWorkspacePath?: string) {
   const registry = readWorkspaceRegistryFile();
 

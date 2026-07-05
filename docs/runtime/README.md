@@ -63,6 +63,28 @@ Foundry Agent product pack
 | Stage graph / transition / App drilldown | Stage graph、route transition、runtime visualization、App/operator drilldown 和 evidence worklist 只是 refs-only operator lens；可见、通过、blocked 或 closed counter 不能升级为 domain ready、artifact authority、quality/export verdict 或 production ready。Stage-native artifact progress 必须从 stage folder、manifest、receipt 和 current pointer 重建。 | `docs/runtime/stage-graph-route-transition-runtime.md`、`contracts/opl-framework/family-transition-runner-contract.json`、`src/runtime-tray-snapshot.ts`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`。 |
 | State Index / SQLite sidecar | SQLite sidecar 是可重建索引，不是 truth。`doctor` 只读健康度；`rebuild` 从 Stage Folder manifest、receipt refs、content hash、lineage 和 retention proof 回填 artifact/read-model rows。SQLite row 不能让 stage complete。 | `contracts/opl-framework/state-index-kernel-contract.json`、`src/family-runtime-state-index.ts`、`tests/src/family-runtime-state-index.test.ts`、`opl index doctor|rebuild|checkpoint|integrity-check|backup --json`。 |
 
+## Runtime 总览职责补充
+
+围绕 App Runtime 页，Framework 的职责固定为三层：
+
+1. **Aggregation**
+   - 从 admitted workspace bindings、domain runtime payload 和 provider read model 聚合候选任务线。
+   - 不把 active workspace 当成唯一范围。
+
+2. **Projection**
+   - 输出 scope options、current scope、scope source 和 inferred scope hint。
+   - 输出用户主状态、自动运行副状态、阶段、时长、token、liveness、next owner 与 blocker route。
+   - 保留 provider/control-plane 术语到 diagnostic refs。
+
+3. **Boundary**
+   - 不在 Framework projection 里发明第二套 domain truth。
+   - 不把 stale blocked attempt、queue residue 或 provider counter 直接当用户项目结论。
+   - 不把 shell 分组需求写回 runtime truth。
+
+因此，`runtime_activity_items`、`task_drilldowns`、`task_run_projection_v2` 和相关
+scope/status projection 是 Framework owner surface；“显示成什么词、分成哪几组、哪些
+细节默认折叠”是 App 与 shell owner surface。
+
 ## 内容
 
 | 文件 | 生命周期状态 | 当前 owner | 阅读规则 |

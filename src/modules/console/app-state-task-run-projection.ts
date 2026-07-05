@@ -137,6 +137,7 @@ function taskOpenAction(taskId: string, actionId: string, actionRef: string | nu
 function taskRunProjectionTask(task: JsonRecord) {
   const taskId = asString(task.task_id) ?? 'unknown-task';
   const ref = baseRef(taskId);
+  const taskIdentityBase = asRecord(task.task_identity);
   const artifactOrBlocker = asRecord(task.artifact_or_blocker);
   const reviewReceipt = asRecord(task.review_receipt);
   const actionReceipt = asRecord(task.action_receipt);
@@ -147,6 +148,7 @@ function taskRunProjectionTask(task: JsonRecord) {
   const taskTotalUsage = asRecord(task.task_total_usage);
   const sourceRefCount = Number(task.source_ref_count ?? 0);
   const domainId = asString(task.domain_id) ?? 'opl';
+  const domainLabel = asString(task.domain_label) ?? 'OPL';
   const updatedAt = asString(task.last_progress_at);
   const actionId = asString(actionReceipt.action_id) ?? 'task_action_receipt_preview';
   const actionRoute = asString(actionReceipt.route) ?? 'opl app action execute --action task_action_receipt_preview --dry-run';
@@ -156,24 +158,29 @@ function taskRunProjectionTask(task: JsonRecord) {
     ?? 'opl app action execute --action task_export_bundle_preview --dry-run';
   const exportBundleActionRef = asString(artifactOrBlocker.export_bundle_action_ref)
     ?? 'app_state.actions#task_export_bundle_preview';
+  const taskIdentity = {
+    task_id: taskId,
+    domain_id: domainId,
+    domain_label: domainLabel,
+    title: asString(task.title) ?? taskId,
+    study_id: asString(task.study_id),
+    task_ref: asString(taskIdentityBase.task_ref) ?? ref,
+    agent_display_name: asString(task.agent_display_name),
+    project_display_name: asString(task.project_display_name),
+    work_item_display_name: asString(task.work_item_display_name),
+    execution_run_label: asString(task.execution_run_label),
+    agent: asRecord(taskIdentityBase.agent),
+    project: asRecord(taskIdentityBase.project),
+    work_item: asRecord(taskIdentityBase.work_item),
+    execution_run: asRecord(taskIdentityBase.execution_run),
+  };
   return {
     task_id: taskId,
     title: asString(task.title) ?? taskId,
     domain_id: domainId,
-    domain_label: asString(task.domain_label) ?? 'OPL',
+    domain_label: domainLabel,
     study_id: asString(task.study_id),
-    task_identity: {
-      task_id: taskId,
-      domain_id: domainId,
-      domain_label: asString(task.domain_label) ?? 'OPL',
-      title: asString(task.title) ?? taskId,
-      study_id: asString(task.study_id),
-      task_ref: ref,
-      agent_display_name: asString(task.agent_display_name),
-      project_display_name: asString(task.project_display_name),
-      work_item_display_name: asString(task.work_item_display_name),
-      execution_run_label: asString(task.execution_run_label),
-    },
+    task_identity: taskIdentity,
     state: asString(task.state) ?? 'unknown',
     status_label: asString(task.status_label),
     active_stage_id: asString(task.active_stage_id),
@@ -189,6 +196,12 @@ function taskRunProjectionTask(task: JsonRecord) {
     mas_owner_consumed_stage_attempt_id: asString(task.mas_owner_consumed_stage_attempt_id),
     mas_owner_consumed_closeout_ref: asString(task.mas_owner_consumed_closeout_ref),
     mas_owner_consumption_matches_runtime_closeout: task.mas_owner_consumption_matches_runtime_closeout === true,
+    primary_state: asString(task.primary_state),
+    primary_state_label: asString(task.primary_state_label),
+    primary_state_reason: asString(task.primary_state_reason),
+    automation_state: asString(task.automation_state),
+    automation_state_label: asString(task.automation_state_label),
+    automation_state_reason: asString(task.automation_state_reason),
     agent_display_name: asString(task.agent_display_name),
     project_display_name: asString(task.project_display_name),
     work_item_display_name: asString(task.work_item_display_name),
@@ -221,6 +234,12 @@ function taskRunProjectionTask(task: JsonRecord) {
       status: asString(task.status),
       status_label: asString(task.status_label),
       priority_bucket: asString(task.priority_bucket) ?? 'unknown',
+      primary_state: asString(task.primary_state),
+      primary_state_label: asString(task.primary_state_label),
+      primary_state_reason: asString(task.primary_state_reason),
+      automation_state: asString(task.automation_state),
+      automation_state_label: asString(task.automation_state_label),
+      automation_state_reason: asString(task.automation_state_reason),
       active_stage_id: asString(task.active_stage_id),
       active_stage_label: asString(task.active_stage_label),
       active_run_ref: asString(task.active_run_id) ? `${ref}.active_run_id` : null,
@@ -348,9 +367,22 @@ export function buildTaskRunProjectionV2(rawTasks: ReadonlyArray<JsonRecord>) {
     refs_only: true,
     summary: {
       task_count: tasks.length,
-      running_task_count: tasks.filter((task) => task.status.priority_bucket === 'running').length,
+      running_task_count: tasks.filter((task) => task.primary_state === 'in_progress').length,
+      active_project_count: tasks.length,
+      queued_project_count: tasks.filter((task) =>
+        ['paused_waiting_for_direction', 'owner_decision_required'].includes(task.primary_state ?? '')
+      ).length,
+      attention_count: tasks.filter((task) =>
+        ['owner_decision_required', 'system_attention_required'].includes(task.primary_state ?? '')
+      ).length,
       attention_task_count: tasks.filter((task) => task.status.priority_bucket === 'needs_attention').length,
       recent_task_count: tasks.filter((task) => task.status.priority_bucket === 'recent').length,
+      in_progress_count: tasks.filter((task) => task.primary_state === 'in_progress').length,
+      delivered_auto_paused_count: tasks.filter((task) => task.primary_state === 'delivered_auto_paused').length,
+      paused_count: tasks.filter((task) => task.primary_state === 'paused_waiting_for_direction').length,
+      owner_decision_count: tasks.filter((task) => task.primary_state === 'owner_decision_required').length,
+      system_attention_count: tasks.filter((task) => task.primary_state === 'system_attention_required').length,
+      automation_running_count: tasks.filter((task) => task.automation_state === 'automation_running').length,
     },
     tasks,
     authority_boundary: {

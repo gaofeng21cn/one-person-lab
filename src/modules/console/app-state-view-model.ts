@@ -75,6 +75,21 @@ function asNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+function asBoolean(value: unknown): boolean {
+  return value === true;
+}
+
+function lowerText(...values: unknown[]) {
+  return values
+    .map((value) => asString(value)?.toLowerCase() ?? '')
+    .filter(Boolean)
+    .join(' ');
+}
+
+function includesAny(text: string, candidates: readonly string[]) {
+  return candidates.some((candidate) => text.includes(candidate));
+}
+
 function statusTone(status: string | null) {
   if (!status) return 'neutral';
   return ['ready', 'healthy', 'ok', 'installed', 'enabled', 'stable'].includes(status)
@@ -92,10 +107,211 @@ function actionIsPayloadFree(action: JsonRecord) {
   return actionPayloadFields(action).length === 0;
 }
 
+function projectLineKey(task: JsonRecord) {
+  return asString(task.task_id)
+    ?? asString(task.project_scope_id)
+    ?? asString(task.workspace_scope_id)
+    ?? asString(task.study_id)
+    ?? 'runtime-project-line';
+}
+
+function deriveUserFacingTaskState(task: JsonRecord) {
+  const lane = asString(task.lane);
+  const status = asString(task.status);
+  const text = lowerText(
+    task.status,
+    task.status_label,
+    task.summary,
+    task.next_action_summary,
+    task.action_summary,
+  );
+  const runtimeCloseoutObserved = asBoolean(task.runtime_closeout_observed);
+  const ownerConsumedLatest = asBoolean(task.mas_owner_consumption_matches_runtime_closeout);
+  const automationFailed = ['failed', 'dead_lettered'].includes(status ?? '');
+  const ownerDecisionRequired = includesAny(text, [
+    '需要你决定',
+    '等待后续决定',
+    'waiting for owner',
+    'waiting_for_owner',
+    'human_gate',
+  ]);
+  const pausedWaiting = includesAny(text, [
+    '用户暂停',
+    '手动停驻',
+    '已暂停',
+    'parked',
+    'paused',
+    '显式恢复',
+    '等待用户显式恢复',
+    '给出新方案',
+  ]);
+  const resultPendingTerminalization = runtimeCloseoutObserved && !ownerConsumedLatest;
+
+  const automationState = lane === 'running'
+    ? 'automation_running'
+    : automationFailed
+      ? 'automation_failed'
+      : resultPendingTerminalization
+        ? 'result_pending_terminalization'
+        : 'automation_idle';
+  const automationStateLabel = automationState === 'automation_running'
+    ? '自动运行中'
+    : automationState === 'automation_failed'
+      ? '自动流程异常'
+      : automationState === 'result_pending_terminalization'
+        ? '最近一次自动结果待收口'
+        : '当前无自动任务';
+  const automationStateReason = automationState === 'automation_running'
+    ? 'active_runtime_run_observed'
+    : automationState === 'automation_failed'
+      ? 'runtime_failure_observed'
+      : automationState === 'result_pending_terminalization'
+        ? 'latest_runtime_result_not_yet_owner_consumed'
+        : 'no_active_runtime_automation';
+
+  const primaryState = lane === 'running'
+    ? 'in_progress'
+    : pausedWaiting
+      ? 'paused_waiting_for_direction'
+      : ownerDecisionRequired
+        ? 'owner_decision_required'
+        : automationFailed || lane === 'attention'
+          ? 'system_attention_required'
+          : runtimeCloseoutObserved || status === 'completed' || ownerConsumedLatest
+            ? 'delivered_auto_paused'
+            : 'paused_waiting_for_direction';
+  const primaryStateLabel = primaryState === 'in_progress'
+    ? '进行中'
+    : primaryState === 'delivered_auto_paused'
+      ? '已交付，自动暂停'
+      : primaryState === 'owner_decision_required'
+        ? '需要你决定'
+        : primaryState === 'system_attention_required'
+          ? '需要系统处理'
+          : '已暂停，等待后续决定';
+  const primaryStateReason = primaryState === 'in_progress'
+    ? 'user_visible_progress_advancing'
+    : primaryState === 'delivered_auto_paused'
+      ? 'latest_runtime_result_delivered'
+      : primaryState === 'owner_decision_required'
+        ? 'owner_or_user_input_required'
+        : primaryState === 'system_attention_required'
+          ? 'system_or_runtime_attention_required'
+          : 'paused_until_new_direction';
+
+  return {
+    primaryState,
+    primaryStateLabel,
+    primaryStateReason,
+    automationState,
+    automationStateLabel,
+    automationStateReason,
+  };
+}
+
+function summarizeUserTaskStates(tasks: ReadonlyArray<JsonRecord>) {
+  const uniqueProjectLines = new Set(tasks.map(projectLineKey));
+  return {
+    running_task_count: tasks.filter((task) => asString(task.primary_state) === 'in_progress').length,
+    active_project_count: uniqueProjectLines.size,
+    queued_project_count: tasks.filter((task) =>
+      ['paused_waiting_for_direction', 'owner_decision_required'].includes(asString(task.primary_state) ?? '')
+    ).length,
+    attention_count: tasks.filter((task) =>
+      ['owner_decision_required', 'system_attention_required'].includes(asString(task.primary_state) ?? '')
+    ).length,
+    in_progress_count: tasks.filter((task) => asString(task.primary_state) === 'in_progress').length,
+    delivered_auto_paused_count: tasks.filter((task) => asString(task.primary_state) === 'delivered_auto_paused').length,
+    paused_count: tasks.filter((task) => asString(task.primary_state) === 'paused_waiting_for_direction').length,
+    owner_decision_count: tasks.filter((task) => asString(task.primary_state) === 'owner_decision_required').length,
+    system_attention_count: tasks.filter((task) => asString(task.primary_state) === 'system_attention_required').length,
+    automation_running_count: tasks.filter((task) => asString(task.automation_state) === 'automation_running').length,
+  };
+}
+
+function scopeOption(scopeKind: string, scopeId: string, label: string, extra: JsonRecord = {}) {
+  return {
+    scope_kind: scopeKind,
+    scope_id: scopeId,
+    label,
+    ...extra,
+  };
+}
+
+function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
+  const options = new Map<string, JsonRecord>();
+  const addOption = (option: JsonRecord) => {
+    const key = `${asString(option.scope_kind) ?? 'scope'}:${asString(option.scope_id) ?? 'default'}`;
+    if (!options.has(key)) {
+      options.set(key, option);
+    }
+  };
+
+  const allProjects = scopeOption('all_projects', 'all_projects', '全部项目');
+  addOption(allProjects);
+  for (const task of tasks) {
+    const domainId = asString(task.domain_id) ?? 'opl';
+    const domainLabel = asString(task.agent_display_name) ?? asString(task.domain_label) ?? domainId;
+    addOption(scopeOption('agent', asString(task.agent_scope_id) ?? `agent:${domainId}`, domainLabel, {
+      domain_id: domainId,
+    }));
+
+    const workspaceScopeId = asString(task.workspace_scope_id);
+    const workspaceLabel = asString(task.workspace_label);
+    if (workspaceScopeId && workspaceLabel) {
+      addOption(scopeOption('workspace', workspaceScopeId, workspaceLabel, {
+        workspace_binding_id: asString(task.workspace_binding_id),
+        workspace_path: asString(task.workspace_path),
+        project_id: domainId,
+      }));
+    }
+
+    const projectScopeId = asString(task.project_scope_id);
+    const projectLabel = asString(task.project_display_name) ?? workspaceLabel ?? domainLabel;
+    if (projectScopeId) {
+      addOption(scopeOption('project', projectScopeId, projectLabel, {
+        project_id: domainId,
+        workspace_binding_id: asString(task.workspace_binding_id),
+      }));
+    }
+
+    const taskId = asString(task.task_id);
+    if (taskId) {
+      addOption(scopeOption('task', asString(task.task_scope_id) ?? `task:${taskId}`, asString(task.title) ?? taskId, {
+        task_id: taskId,
+        project_id: domainId,
+        study_id: asString(task.study_id),
+      }));
+    }
+  }
+
+  const inferredWorkspace = tasks.find((task) => asBoolean(task.workspace_binding_active) && Boolean(asString(task.workspace_scope_id)));
+  return {
+    scope_options: [...options.values()],
+    current_scope: allProjects,
+    scope_source: 'default_global',
+    inferred_scope_hint: inferredWorkspace
+      ? scopeOption(
+          'workspace',
+          asString(inferredWorkspace.workspace_scope_id) ?? 'workspace:inferred',
+          asString(inferredWorkspace.workspace_label) ?? '当前工作区',
+          {
+            workspace_binding_id: asString(inferredWorkspace.workspace_binding_id),
+            workspace_path: asString(inferredWorkspace.workspace_path),
+            project_id: asString(inferredWorkspace.domain_id),
+            hint_source: 'workspace_registry_active_binding',
+          },
+        )
+      : null,
+  };
+}
+
 function buildSummaryCards(input: OplAppOperatorViewModelInput) {
   const codex = asRecord(asRecord(input.core.core).codex ?? asRecord(input.core).codex);
   const temporal = asRecord(asRecord(input.provider).temporal);
   const moduleSummary = asRecord(asRecord(input.modules).summary);
+  const runtimeTasks = runtimeActivityDrilldowns(input);
+  const runtimeSummary = summarizeUserTaskStates(runtimeTasks);
   const releaseChannel = asString(input.release.channel) ?? 'unknown';
   const codexVersion = asString(codex.parsed_version) ?? asString(codex.version) ?? 'missing';
   const codexModel = [asString(codex.default_model), asString(codex.default_reasoning_effort)]
@@ -110,11 +326,46 @@ function buildSummaryCards(input: OplAppOperatorViewModelInput) {
 
   return [
     {
-      card_id: 'active_projects',
-      label: 'Active projects',
-      value: input.runtimeActivityItems.filter((item) => asString(item.lane) === 'running').length,
-      tone: input.runtimeActivityItems.some((item) => asString(item.lane) === 'running') ? 'running' : 'idle',
-      source_ref: 'app_state.operator.workbench.activity_center.active_projects',
+      card_id: 'in_progress_count',
+      label: '进行中',
+      value: runtimeSummary.in_progress_count,
+      tone: runtimeSummary.in_progress_count > 0 ? 'running' : 'idle',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
+    },
+    {
+      card_id: 'delivered_auto_paused_count',
+      label: '已交付，自动暂停',
+      value: runtimeSummary.delivered_auto_paused_count,
+      tone: runtimeSummary.delivered_auto_paused_count > 0 ? 'ready' : 'neutral',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
+    },
+    {
+      card_id: 'paused_count',
+      label: '已暂停',
+      value: runtimeSummary.paused_count,
+      tone: runtimeSummary.paused_count > 0 ? 'idle' : 'neutral',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
+    },
+    {
+      card_id: 'owner_decision_count',
+      label: '需要你决定',
+      value: runtimeSummary.owner_decision_count,
+      tone: runtimeSummary.owner_decision_count > 0 ? 'attention' : 'neutral',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
+    },
+    {
+      card_id: 'system_attention_count',
+      label: '需要系统处理',
+      value: runtimeSummary.system_attention_count,
+      tone: runtimeSummary.system_attention_count > 0 ? 'attention' : 'neutral',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
+    },
+    {
+      card_id: 'automation_running_count',
+      label: '自动运行中',
+      value: runtimeSummary.automation_running_count,
+      tone: runtimeSummary.automation_running_count > 0 ? 'running' : 'neutral',
+      source_ref: 'app_state.operator.workbench.user_task_status_summary',
     },
     {
       card_id: 'runtime_status',
@@ -382,6 +633,8 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     ?? asString(item.summary);
   const route = commandRoute(item);
   const state = activityState(item);
+  const domainId = asString(item.project_id) ?? 'opl';
+  const domainLabel = asString(item.project_label) ?? asString(item.domain_owner) ?? 'OPL';
   const stageId = asString(item.active_stage_id)
     ?? asString(item.status)
     ?? asString(item.health_status)
@@ -390,7 +643,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
   const blockerRefCount = asRecordArray(item.blockers).length;
   const refs = taskUserProjectionRefs({
     taskId,
-    domainId: asString(item.project_id) ?? 'opl',
+    domainId,
     state,
     stageId,
     stageLabel: asString(item.status_label),
@@ -399,15 +652,62 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
   const currentStageUsage = asRecord(item.current_stage_usage);
   const taskTotalUsage = asRecord(item.task_total_usage);
   const typedBlockerSummary = asString(item.typed_blocker_summary);
-  const typedBlockerOwner = asString(item.typed_blocker_owner) ?? asString(item.project_id) ?? 'opl_framework';
+  const typedBlockerOwner = asString(item.typed_blocker_owner) ?? domainId ?? 'opl_framework';
   const resolutionRoute = asString(item.resolution_route) ?? nextVisibleStep;
+  const userState = deriveUserFacingTaskState(item);
+  const agentDisplayName = asString(item.agent_display_name) ?? domainLabel;
+  const projectDisplayName = asString(item.project_display_name)
+    ?? asString(item.workspace_label)
+    ?? domainLabel;
+  const workItemDisplayName = asString(item.work_item_display_name) ?? title;
+  const executionRunLabel = asString(item.execution_run_label)
+    ?? activeRunId
+    ?? asString(item.active_stage_id)
+    ?? asString(item.status_label);
+  const taskIdentity = {
+    task_id: taskId,
+    domain_id: domainId,
+    domain_label: domainLabel,
+    title,
+    study_id: studyId,
+    task_ref: sourceRef,
+    agent_display_name: agentDisplayName,
+    project_display_name: projectDisplayName,
+    work_item_display_name: workItemDisplayName,
+    execution_run_label: executionRunLabel,
+    agent: {
+      agent_id: domainId,
+      label: agentDisplayName,
+      scope_id: asString(item.agent_scope_id) ?? `agent:${domainId}`,
+    },
+    project: {
+      project_id: domainId,
+      label: projectDisplayName,
+      scope_id: asString(item.project_scope_id) ?? `project:${domainId}`,
+      workspace_binding_id: asString(item.workspace_binding_id),
+      workspace_path: asString(item.workspace_path),
+      workspace_label: asString(item.workspace_label),
+    },
+    work_item: {
+      work_item_id: studyId ?? taskId,
+      label: workItemDisplayName,
+      kind: studyId ? 'study' : 'runtime_activity',
+      scope_id: asString(item.task_scope_id) ?? `task:${taskId}`,
+    },
+    execution_run: {
+      run_id: activeRunId,
+      label: executionRunLabel,
+      stage_id: stageId,
+      stage_label: asString(item.active_stage_label) ?? asString(item.status_label),
+    },
+  };
   const stageRunCockpit = {
     surface_kind: 'opl_stage_run_cockpit_refs',
     source_ref: `${sourceRef}.stage_run_cockpit`,
     derived_from: 'current_owner_delta',
     task_id: taskId,
     stage_id: stageId,
-    owner: asString(item.project_id) ?? 'opl_framework',
+    owner: domainId,
     next_visible_step: nextVisibleStep,
     accepted_return_shapes: ['owner_receipt_ref', 'typed_blocker_ref'],
     readiness_false_flag_refs: [],
@@ -423,7 +723,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     typed_blocker_resolution_ref: `${sourceRef}.resolution_route`,
   };
   const stageRunCockpitSummary = {
-    current_owner: asString(item.project_id) ?? 'opl_framework',
+    current_owner: domainId,
     required_delta: typedBlockerSummary
       ? 'owner_attention_or_typed_blocker_resolution_required'
       : 'next_visible_step_available',
@@ -463,9 +763,10 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
 
   return {
     task_id: taskId,
-    domain_id: asString(item.project_id) ?? 'opl',
-    domain_label: asString(item.project_label) ?? asString(item.domain_owner) ?? 'OPL',
+    domain_id: domainId,
+    domain_label: domainLabel,
     title,
+    task_identity: taskIdentity,
     state,
     status: asString(item.status),
     status_label: asString(item.status_label),
@@ -491,10 +792,24 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     mas_owner_consumed_stage_attempt_id: asString(item.mas_owner_consumed_stage_attempt_id),
     mas_owner_consumed_closeout_ref: asString(item.mas_owner_consumed_closeout_ref),
     mas_owner_consumption_matches_runtime_closeout: item.mas_owner_consumption_matches_runtime_closeout === true,
-    agent_display_name: asString(item.agent_display_name),
-    project_display_name: asString(item.project_display_name),
-    work_item_display_name: asString(item.work_item_display_name),
-    execution_run_label: asString(item.execution_run_label),
+    primary_state: userState.primaryState,
+    primary_state_label: userState.primaryStateLabel,
+    primary_state_reason: userState.primaryStateReason,
+    automation_state: userState.automationState,
+    automation_state_label: userState.automationStateLabel,
+    automation_state_reason: userState.automationStateReason,
+    agent_display_name: agentDisplayName,
+    project_display_name: projectDisplayName,
+    work_item_display_name: workItemDisplayName,
+    execution_run_label: executionRunLabel,
+    workspace_binding_id: asString(item.workspace_binding_id),
+    workspace_binding_status: asString(item.workspace_binding_status),
+    workspace_binding_active: asBoolean(item.workspace_binding_active),
+    workspace_scope_id: asString(item.workspace_scope_id),
+    project_scope_id: asString(item.project_scope_id),
+    agent_scope_id: asString(item.agent_scope_id),
+    task_scope_id: asString(item.task_scope_id),
+    workspace_label: asString(item.workspace_label),
     stage_started_at: asString(item.stage_started_at),
     elapsed_seconds: item.elapsed_seconds,
     last_heartbeat_at: asString(item.last_heartbeat_at),
@@ -536,6 +851,9 @@ function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
     const label = asString(module.label) ?? moduleId;
     const healthStatus = asString(module.health_status) ?? asString(module.status) ?? 'unknown';
     const blockerRefCount = statusTone(healthStatus) === 'ready' ? 0 : 1;
+    const primaryState = blockerRefCount > 0 ? 'system_attention_required' : 'delivered_auto_paused';
+    const primaryStateLabel = blockerRefCount > 0 ? '需要系统处理' : '已交付，自动暂停';
+    const primaryStateReason = blockerRefCount > 0 ? 'module_attention_required' : 'module_ready_idle';
     const refs = taskUserProjectionRefs({
       taskId: moduleId,
       domainId: moduleId,
@@ -549,11 +867,51 @@ function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
       domain_id: moduleId,
       title: label,
       state: healthStatus,
+      task_identity: {
+        task_id: moduleId,
+        domain_id: moduleId,
+        domain_label: label,
+        title: label,
+        study_id: null,
+        task_ref: `app_state.operator.workbench.task_drilldowns.${encodeURIComponent(moduleId)}`,
+        agent_display_name: label,
+        project_display_name: label,
+        work_item_display_name: label,
+        execution_run_label: 'module_runtime',
+        agent: {
+          agent_id: moduleId,
+          label,
+          scope_id: `agent:${moduleId}`,
+        },
+        project: {
+          project_id: moduleId,
+          label,
+          scope_id: `project:${moduleId}`,
+        },
+        work_item: {
+          work_item_id: moduleId,
+          label,
+          kind: 'module_runtime',
+          scope_id: `task:${moduleId}`,
+        },
+        execution_run: {
+          run_id: null,
+          label: 'module_runtime',
+          stage_id: 'module_runtime',
+          stage_label: null,
+        },
+      },
       active_stage_id: 'module_runtime',
       stage_attempt_ids: [],
       safe_action_ref_count: 0,
       blocker_ref_count: blockerRefCount,
       paper_route_lens_ref_count: 0,
+      primary_state: primaryState,
+      primary_state_label: primaryStateLabel,
+      primary_state_reason: primaryStateReason,
+      automation_state: 'automation_idle',
+      automation_state_label: '当前无自动任务',
+      automation_state_reason: 'module_projection_has_no_runtime_automation',
       ...refs,
       active_path: [
         {
@@ -966,6 +1324,12 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const temporal = asRecord(asRecord(input.provider).temporal);
   const status = temporal.ready === true ? 'ready' : 'attention_needed';
   const safeActionRoutes = buildSafeActionRoutes(input);
+  const runtimeTasks = runtimeActivityDrilldowns(input);
+  const runtimeScope = buildRuntimeScope(runtimeTasks);
+  const userTaskStatusSummary = summarizeUserTaskStates(runtimeTasks);
+  const activityCenter = buildActivityCenter(input);
+  const domainLaneMap = buildDomainLaneMap(input);
+  const taskDrilldowns = buildTaskDrilldowns(input);
   const currentOwnerDeltaReadModel = asRecord(input.currentOwnerDeltaReadModel);
   const currentOwnerDeltaTopline = buildCurrentOwnerDeltaTopline({
     currentOwnerDeltaReadModel,
@@ -1012,14 +1376,16 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       feedbackops: input.feedbackOps ?? {},
       settings_control_center: input.settingsControlCenter,
       ...currentOwnerDeltaTopline,
+      runtime_scope: runtimeScope,
+      user_task_status_summary: userTaskStatusSummary,
       summary_cards: buildSummaryCards(input),
       sections: buildSections(input),
       navigation: buildNavigation(),
       action_queue: buildActionQueue(input),
-      activity_center: buildActivityCenter(input),
-      domain_lane_map: buildDomainLaneMap(input),
-      task_drilldowns: buildTaskDrilldowns(input),
-      task_run_projection_v2: buildTaskRunProjectionV2(runtimeActivityDrilldowns(input)),
+      activity_center: activityCenter,
+      domain_lane_map: domainLaneMap,
+      task_drilldowns: taskDrilldowns,
+      task_run_projection_v2: buildTaskRunProjectionV2(runtimeTasks),
       safe_action_routes: safeActionRoutes,
       refresh_policy: {
         summary_poll_interval_seconds: 10,
@@ -1040,9 +1406,9 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
     },
     dynamic_vertical_map: buildDynamicVerticalMap(input),
     visual_ref_groups: {
-      needs_attention_refs: buildActivityCenter(input).needs_attention,
-      active_project_refs: buildActivityCenter(input).active_projects,
-      recent_project_refs: buildActivityCenter(input).recent_projects,
+      needs_attention_refs: activityCenter.needs_attention,
+      active_project_refs: activityCenter.active_projects,
+      recent_project_refs: activityCenter.recent_projects,
       safe_action_refs: safeActionRoutes.map((action) => ({
         ref: action.route,
         label: action.label,

@@ -256,6 +256,49 @@ function writeStudyRuntimeStatusSummaryFixture(input: {
   );
 }
 
+function writeMasWorkspaceRegistryBindings(input: {
+  stateDir: string;
+  bindings: Array<{
+    bindingId: string;
+    workspacePath: string;
+    profilePath: string;
+    status: 'active' | 'inactive';
+    label?: string | null;
+  }>;
+}) {
+  const now = new Date().toISOString();
+  fs.mkdirSync(input.stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(input.stateDir, 'workspace-registry.json'),
+    `${JSON.stringify({
+      version: 'g2',
+      bindings: input.bindings.map((binding) => ({
+        binding_id: binding.bindingId,
+        project_id: 'medautoscience',
+        project: 'med-autoscience',
+        workspace_path: binding.workspacePath,
+        label: binding.label ?? null,
+        status: binding.status,
+        direct_entry: {
+          command: null,
+          manifest_command: null,
+          url: null,
+          workspace_locator: {
+            surface_kind: 'med_autoscience_workspace_profile',
+            workspace_root: binding.workspacePath,
+            profile_ref: binding.profilePath,
+            input_path: null,
+          },
+        },
+        created_at: now,
+        updated_at: now,
+        archived_at: null,
+      })),
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
 test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));
   const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-repo-'));
@@ -289,6 +332,13 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
             };
             current_owner_delta: Record<string, any>;
             current_owner_delta_read_model: Record<string, any>;
+            runtime_scope: {
+              scope_options: Array<Record<string, any>>;
+              current_scope: Record<string, any>;
+              scope_source: string;
+              inferred_scope_hint: Record<string, any> | null;
+            };
+            user_task_status_summary: Record<string, number>;
             summary_cards: Array<{ card_id: string; value: number | string }>;
             activity_center: {
               active_projects: Array<{ study_id?: string; state: string; active_run_id?: string | null }>;
@@ -368,7 +418,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     assert.equal(
       output.app_state.operator.ordinary_cockpit.display_payload.task.task_ref,
-      'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap',
+      'medautoscience:binding:mas-app-state-activity:study:003-dpcc-primary-care-phenotype-treatment-gap',
     );
     assert.equal(
       output.app_state.operator.ordinary_cockpit.display_payload.current_owner,
@@ -412,8 +462,47 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       'domain_owner/default-executor-dispatch',
     );
     assert.equal(
-      output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
+      output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'in_progress_count')?.value,
       1,
+    );
+    assert.deepEqual(
+      output.app_state.operator.workbench.runtime_scope.current_scope,
+      {
+        scope_kind: 'all_projects',
+        scope_id: 'all_projects',
+        label: '全部项目',
+      },
+    );
+    assert.deepEqual(
+      output.app_state.operator.workbench.runtime_scope.inferred_scope_hint,
+      {
+        scope_kind: 'workspace',
+        scope_id: 'workspace:mas-app-state-activity',
+        label: path.basename(masRepoRoot),
+        workspace_binding_id: 'mas-app-state-activity',
+        workspace_path: workspaceRoot,
+        project_id: 'medautoscience',
+        hint_source: 'workspace_registry_active_binding',
+      },
+    );
+    assert.deepEqual(
+      new Set(output.app_state.operator.workbench.runtime_scope.scope_options.map((entry: Record<string, any>) => entry.scope_kind)),
+      new Set(['all_projects', 'agent', 'workspace', 'project', 'task']),
+    );
+    assert.deepEqual(
+      output.app_state.operator.workbench.user_task_status_summary,
+      {
+        running_task_count: 1,
+        active_project_count: 3,
+        queued_project_count: 1,
+        attention_count: 1,
+        in_progress_count: 1,
+        delivered_auto_paused_count: 0,
+        paused_count: 1,
+        owner_decision_count: 0,
+        system_attention_count: 1,
+        automation_running_count: 1,
+      },
     );
     assert.deepEqual(
       output.app_state.operator.visual_ref_groups.active_project_refs.map((entry) => entry.study_id),
@@ -437,12 +526,20 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     const runningTask = output.app_state.operator.workbench.task_drilldowns.find(
       (entry) => entry.study_id === '002-dm-china-us-mortality-attribution',
-    );
+    ) as any;
     assert.ok(runningTask);
     assert.equal(runningTask.stage.stage_id, 'live');
     assert.equal(runningTask.stage.current_ref.includes('task_drilldowns'), true);
     assert.equal(runningTask.progress.status, 'running');
     assert.equal(runningTask.next_owner.owner, 'medautoscience');
+    assert.equal(runningTask.primary_state, 'in_progress');
+    assert.equal(runningTask.primary_state_label, '进行中');
+    assert.equal(runningTask.automation_state, 'automation_running');
+    assert.equal(runningTask.automation_state_label, '自动运行中');
+    assert.equal(runningTask.task_identity.agent.label, 'MAS');
+    assert.equal(runningTask.task_identity.project.workspace_binding_id, 'mas-app-state-activity');
+    assert.equal(runningTask.task_identity.work_item.kind, 'study');
+    assert.equal(runningTask.task_identity.execution_run.stage_id, 'live');
     assert.equal(runningTask.artifact_or_blocker.content_policy, 'refs_only_no_artifact_body');
     assert.equal(runningTask.artifact_or_blocker.canonical_ref.includes('/tasks/'), true);
     assert.equal(Array.isArray(runningTask.artifact_or_blocker.export_bundle_refs), true);
@@ -469,8 +566,17 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.deepEqual(taskRunProjection.summary, {
       task_count: 3,
       running_task_count: 1,
+      active_project_count: 3,
+      queued_project_count: 1,
+      attention_count: 1,
       attention_task_count: 1,
       recent_task_count: 1,
+      in_progress_count: 1,
+      delivered_auto_paused_count: 0,
+      paused_count: 1,
+      owner_decision_count: 0,
+      system_attention_count: 1,
+      automation_running_count: 1,
     });
     assert.equal(taskRunProjection.authority_boundary.can_write_domain_truth, false);
     assert.equal(taskRunProjection.authority_boundary.can_read_artifact_body, false);
@@ -484,8 +590,11 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       (entry) => entry.task_identity.study_id === '002-dm-china-us-mortality-attribution',
     ) as any;
     assert.ok(runningProjection);
-    assert.equal(runningProjection.task_identity.task_id, 'medautoscience:study:002-dm-china-us-mortality-attribution');
+    assert.equal(runningProjection.task_identity.task_id, 'medautoscience:binding:mas-app-state-activity:study:002-dm-china-us-mortality-attribution');
     assert.equal(runningProjection.status.state, 'running');
+    assert.equal(runningProjection.status.primary_state, 'in_progress');
+    assert.equal(runningProjection.status.automation_state, 'automation_running');
+    assert.equal(runningProjection.task_identity.project.workspace_binding_id, 'mas-app-state-activity');
     assert.equal(runningProjection.status.active_run_ref?.endsWith('.active_run_id'), true);
     assert.equal(runningProjection.progress.progress_ref.endsWith('.progress'), true);
     assert.equal(runningProjection.progress.stage_ref.endsWith('.stage'), true);
@@ -502,8 +611,10 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     }
     const attentionProjection = taskRunProjection.tasks.find(
       (entry) => entry.task_identity.study_id === '003-dpcc-primary-care-phenotype-treatment-gap',
-    );
+    ) as any;
     assert.ok(attentionProjection);
+    assert.equal(attentionProjection.primary_state, 'system_attention_required');
+    assert.equal(attentionProjection.automation_state, 'automation_idle');
     assert.equal(
       attentionProjection.conditions.find((condition: any) => condition.type === 'task_status')?.reason,
       'attention_lane_selected',
@@ -701,6 +812,8 @@ test('app state fast presents failed MAS stage attempts as attention with attemp
     assert.equal(dm003Task.state, 'attention_needed');
     assert.equal(dm003Task.status, 'failed');
     assert.equal(dm003Task.status_label, 'OPL runtime failed');
+    assert.equal(dm003Task.primary_state, 'system_attention_required');
+    assert.equal(dm003Task.automation_state, 'automation_failed');
     assert.equal(dm003Task.active_stage_id, 'submission_milestone_candidate::followthrough::followthrough-02');
     assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003_failed');
     assert.deepEqual(dm003Task.stage_attempt_ids, [stageAttemptId]);
@@ -709,13 +822,24 @@ test('app state fast presents failed MAS stage attempts as attention with attemp
     assert.deepEqual(taskRunProjection.summary, {
       task_count: 3,
       running_task_count: 1,
+      active_project_count: 3,
+      queued_project_count: 1,
+      attention_count: 1,
       attention_task_count: 1,
       recent_task_count: 1,
+      in_progress_count: 1,
+      delivered_auto_paused_count: 0,
+      paused_count: 1,
+      owner_decision_count: 0,
+      system_attention_count: 1,
+      automation_running_count: 1,
     });
     const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
     assert.ok(dm003Projection);
     assert.equal(dm003Projection.status.state, 'attention_needed');
     assert.equal(dm003Projection.status.status, 'failed');
+    assert.equal(dm003Projection.primary_state, 'system_attention_required');
+    assert.equal(dm003Projection.automation_state, 'automation_failed');
     assert.deepEqual(dm003Projection.stage_attempt_ids, [stageAttemptId]);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -805,6 +929,8 @@ test('app state fast surfaces newer completed MAS stage attempts instead of stal
     assert.equal(dm003Task.priority_bucket, 'recent');
     assert.equal(dm003Task.status, 'completed');
     assert.equal(dm003Task.status_label, 'OPL runtime completed');
+    assert.equal(dm003Task.primary_state, 'delivered_auto_paused');
+    assert.equal(dm003Task.automation_state, 'automation_idle');
     assert.equal(dm003Task.active_stage_id, 'submission_milestone_candidate');
     assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003_completed_latest');
     assert.deepEqual(dm003Task.stage_attempt_ids.slice(0, 2), [completedAttemptId, failedAttemptId]);
@@ -815,13 +941,24 @@ test('app state fast surfaces newer completed MAS stage attempts instead of stal
     assert.deepEqual(taskRunProjection.summary, {
       task_count: 3,
       running_task_count: 1,
+      active_project_count: 3,
+      queued_project_count: 1,
+      attention_count: 0,
       attention_task_count: 0,
       recent_task_count: 2,
+      in_progress_count: 1,
+      delivered_auto_paused_count: 1,
+      paused_count: 1,
+      owner_decision_count: 0,
+      system_attention_count: 0,
+      automation_running_count: 1,
     });
     const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
     assert.ok(dm003Projection);
     assert.equal(dm003Projection.status.state, 'completed');
     assert.equal(dm003Projection.status.priority_bucket, 'recent');
+    assert.equal(dm003Projection.primary_state, 'delivered_auto_paused');
+    assert.equal(dm003Projection.automation_state, 'automation_idle');
     assert.deepEqual(dm003Projection.stage_attempt_ids.slice(0, 2), [completedAttemptId, failedAttemptId]);
     assert.equal(dm003Projection.stage_attempt_ids.length, 8);
   } finally {
@@ -875,7 +1012,7 @@ test('app state fast promotes MAS study activity from OPL family-runtime running
       [],
     );
     assert.equal(
-      workbench.summary_cards.find((entry: { card_id: string }) => entry.card_id === 'active_projects')?.value,
+      workbench.summary_cards.find((entry: { card_id: string }) => entry.card_id === 'in_progress_count')?.value,
       2,
     );
     assert.equal(
@@ -887,6 +1024,8 @@ test('app state fast promotes MAS study activity from OPL family-runtime running
     assert.ok(dm003Task);
     assert.equal(dm003Task.state, 'running');
     assert.equal(dm003Task.status, 'running');
+    assert.equal(dm003Task.primary_state, 'in_progress');
+    assert.equal(dm003Task.automation_state, 'automation_running');
     assert.equal(dm003Task.active_stage_id, 'submission_milestone_candidate');
     assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003');
     assert.deepEqual(dm003Task.stage_attempt_ids, [stageAttemptId]);
@@ -897,13 +1036,24 @@ test('app state fast promotes MAS study activity from OPL family-runtime running
     assert.deepEqual(taskRunProjection.summary, {
       task_count: 3,
       running_task_count: 2,
+      active_project_count: 3,
+      queued_project_count: 1,
+      attention_count: 0,
       attention_task_count: 0,
       recent_task_count: 1,
+      in_progress_count: 2,
+      delivered_auto_paused_count: 0,
+      paused_count: 1,
+      owner_decision_count: 0,
+      system_attention_count: 0,
+      automation_running_count: 2,
     });
     const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
     assert.ok(dm003Projection);
-    assert.equal(dm003Projection.task_id, `medautoscience:study:${studyId}`);
+    assert.equal(dm003Projection.task_id, `medautoscience:binding:mas-app-state-activity:study:${studyId}`);
     assert.equal(dm003Projection.status.state, 'running');
+    assert.equal(dm003Projection.primary_state, 'in_progress');
+    assert.equal(dm003Projection.automation_state, 'automation_running');
     assert.equal(dm003Projection.status.active_stage_id, 'submission_milestone_candidate');
     assert.equal(dm003Projection.status.active_run_ref.endsWith('.active_run_id'), true);
     assert.deepEqual(dm003Projection.stage_attempt_ids, [stageAttemptId]);
@@ -985,6 +1135,8 @@ test('app state fast treats workspace terminal closeout evidence as completed ru
     assert.equal(dm003Task.state, 'completed');
     assert.equal(dm003Task.status, 'completed');
     assert.equal(dm003Task.status_label, 'OPL runtime completed');
+    assert.equal(dm003Task.primary_state, 'delivered_auto_paused');
+    assert.equal(dm003Task.automation_state, 'automation_idle');
     assert.equal(dm003Task.runtime_attempt_status, 'completed');
     assert.equal(dm003Task.active_stage_id, 'review');
     assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003_closeout');
@@ -1003,13 +1155,24 @@ test('app state fast treats workspace terminal closeout evidence as completed ru
     assert.deepEqual(taskRunProjection.summary, {
       task_count: 3,
       running_task_count: 1,
+      active_project_count: 3,
+      queued_project_count: 1,
+      attention_count: 0,
       attention_task_count: 0,
       recent_task_count: 2,
+      in_progress_count: 1,
+      delivered_auto_paused_count: 1,
+      paused_count: 1,
+      owner_decision_count: 0,
+      system_attention_count: 0,
+      automation_running_count: 1,
     });
     const dm003Projection = taskRunProjection.tasks.find((entry: any) => entry.task_identity.study_id === studyId);
     assert.ok(dm003Projection);
     assert.equal(dm003Projection.status.state, 'completed');
     assert.equal(dm003Projection.status.status, 'completed');
+    assert.equal(dm003Projection.primary_state, 'delivered_auto_paused');
+    assert.equal(dm003Projection.automation_state, 'automation_idle');
     assert.equal(dm003Projection.runtime_attempt_status, 'completed');
     assert.deepEqual(dm003Projection.stage_attempt_ids, [stageAttemptId]);
     assert.equal(dm003Projection.runtime_closeout_observed, true);
@@ -1025,6 +1188,129 @@ test('app state fast treats workspace terminal closeout evidence as completed ru
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast aggregates runtime overview across MAS bindings and keeps task identity stable', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-multi-binding-home-'));
+  const activeRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-active-repo-'));
+  const activeWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-active-workspace-'));
+  const inactiveRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-inactive-repo-'));
+  const inactiveWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-inactive-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const activeProfilePath = path.join(activeWorkspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+  const inactiveProfilePath = path.join(inactiveWorkspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
+
+  try {
+    writeMasWorkspaceRegistryBindings({
+      stateDir,
+      bindings: [
+        {
+          bindingId: 'mas-active-binding',
+          workspacePath: activeRepoRoot,
+          profilePath: activeProfilePath,
+          status: 'active',
+        },
+        {
+          bindingId: 'mas-inactive-binding',
+          workspacePath: inactiveRepoRoot,
+          profilePath: inactiveProfilePath,
+          status: 'inactive',
+        },
+      ],
+    });
+    writeMasProgressPortalFixture(activeWorkspaceRoot, activeProfilePath);
+    writeMasProgressPortalFixture(inactiveWorkspaceRoot, inactiveProfilePath);
+    writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as any;
+
+    const workbench = output.app_state.operator.workbench;
+    const runtimeTasks = workbench.task_drilldowns.filter((entry: { study_id?: string }) => Boolean(entry.study_id));
+    assert.equal(runtimeTasks.length, 6);
+    assert.equal(new Set(runtimeTasks.map((entry: { task_id: string }) => entry.task_id)).size, 6);
+    assert.equal(
+      workbench.runtime_scope.scope_options.filter((entry: { scope_kind: string }) => entry.scope_kind === 'workspace').length,
+      2,
+    );
+    assert.deepEqual(
+      workbench.runtime_scope.inferred_scope_hint,
+      {
+        scope_kind: 'workspace',
+        scope_id: 'workspace:mas-active-binding',
+        label: path.basename(activeRepoRoot),
+        workspace_binding_id: 'mas-active-binding',
+        workspace_path: activeWorkspaceRoot,
+        project_id: 'medautoscience',
+        hint_source: 'workspace_registry_active_binding',
+      },
+    );
+    assert.deepEqual(
+      workbench.user_task_status_summary,
+      {
+        running_task_count: 2,
+        active_project_count: 6,
+        queued_project_count: 2,
+        attention_count: 2,
+        in_progress_count: 2,
+        delivered_auto_paused_count: 0,
+        paused_count: 2,
+        owner_decision_count: 0,
+        system_attention_count: 2,
+        automation_running_count: 2,
+      },
+    );
+    assert.deepEqual(
+      workbench.activity_center.active_projects.map((entry: { study_id?: string; workspace_binding_id?: string }) => ({
+        study_id: entry.study_id,
+        workspace_binding_id: entry.workspace_binding_id,
+      })),
+      [
+        {
+          study_id: '002-dm-china-us-mortality-attribution',
+          workspace_binding_id: 'mas-active-binding',
+        },
+        {
+          study_id: '002-dm-china-us-mortality-attribution',
+          workspace_binding_id: 'mas-inactive-binding',
+        },
+      ],
+    );
+
+    const duplicatedStudyTasks = runtimeTasks.filter(
+      (entry: { study_id?: string }) => entry.study_id === '002-dm-china-us-mortality-attribution',
+    );
+    assert.deepEqual(
+      duplicatedStudyTasks.map((entry: { workspace_binding_id: string; primary_state: string; automation_state: string }) => ({
+        workspace_binding_id: entry.workspace_binding_id,
+        primary_state: entry.primary_state,
+        automation_state: entry.automation_state,
+      })),
+      [
+        {
+          workspace_binding_id: 'mas-active-binding',
+          primary_state: 'in_progress',
+          automation_state: 'automation_running',
+        },
+        {
+          workspace_binding_id: 'mas-inactive-binding',
+          primary_state: 'in_progress',
+          automation_state: 'automation_running',
+        },
+      ],
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(activeRepoRoot, { recursive: true, force: true });
+    fs.rmSync(activeWorkspaceRoot, { recursive: true, force: true });
+    fs.rmSync(inactiveRepoRoot, { recursive: true, force: true });
+    fs.rmSync(inactiveWorkspaceRoot, { recursive: true, force: true });
   }
 });
 
@@ -1083,6 +1369,8 @@ test('app state fast separates latest OPL closeout from MAS owner-consumed recei
     assert.equal(dm003Task.state, 'attention_needed');
     assert.equal(dm003Task.status, 'completed');
     assert.equal(dm003Task.status_label, 'OPL/MAS readback attention');
+    assert.equal(dm003Task.primary_state, 'system_attention_required');
+    assert.equal(dm003Task.automation_state, 'result_pending_terminalization');
     assert.equal(dm003Task.runtime_closeout_observed, true);
     assert.equal(dm003Task.runtime_closeout_ref.includes(latestAttemptId), true);
     assert.equal(dm003Task.mas_owner_consumed_stage_attempt_id, consumedAttemptId);
@@ -1101,6 +1389,8 @@ test('app state fast separates latest OPL closeout from MAS owner-consumed recei
     assert.ok(dm003Projection);
     assert.equal(dm003Projection.status.state, 'attention_needed');
     assert.equal(dm003Projection.status.priority_bucket, 'needs_attention');
+    assert.equal(dm003Projection.primary_state, 'system_attention_required');
+    assert.equal(dm003Projection.automation_state, 'result_pending_terminalization');
     assert.equal(dm003Projection.runtime_closeout_ref.includes(latestAttemptId), true);
     assert.equal(dm003Projection.mas_owner_consumed_stage_attempt_id, consumedAttemptId);
     assert.equal(dm003Projection.mas_owner_consumption_matches_runtime_closeout, false);
