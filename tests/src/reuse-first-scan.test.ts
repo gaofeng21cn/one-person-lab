@@ -468,7 +468,17 @@ test('reuse-first scan allows connect agent-package rollback only on lifecycle p
   writeFixtureFile(
     fixture,
     'src/modules/connect/agent-package-registry.ts',
-    "type AgentPackageLifecycleAction = 'install' | 'update' | 'rollback';\n",
+    [
+      "type AgentPackageLifecycleAction = 'install' | 'update' | 'rollback';",
+      'type AgentPackageOwnerRouteReadback = { command_refs: { rollback: string; } };',
+      'const commands = { rollback: CAPABILITY_PACKAGE_ROLLBACK_COMMAND };',
+      '',
+    ].join('\n'),
+  );
+  writeFixtureFile(
+    fixture,
+    'src/modules/connect/managed-update-owner-boundary.ts',
+    "export const CAPABILITY_PACKAGE_ROLLBACK_COMMAND = 'opl connect agent-packages rollback --json';\n",
   );
   writeFixtureFile(
     fixture,
@@ -577,6 +587,7 @@ test('reuse-first scan allows managed update owner boundary metadata only in the
     'src/modules/connect/managed-update-owner-boundary.ts',
     [
       "export type ManagedUpdateOperation = 'status' | 'rollback';",
+      "export const CAPABILITY_PACKAGE_ROLLBACK_COMMAND = 'opl connect agent-packages rollback --json';",
       'const requiredFields = ["source_manifest_ref", "from_digest", "to_digest", "post_apply_hooks", "rollback_ref"];',
       '',
     ].join('\n'),

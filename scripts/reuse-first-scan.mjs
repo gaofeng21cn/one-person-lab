@@ -593,6 +593,7 @@ function isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line) {
     'to_digest',
     'post_apply_hooks',
     'rollback_ref',
+    'CAPABILITY_PACKAGE_ROLLBACK_COMMAND',
   ].some((term) => line.includes(term));
 }
 
@@ -632,6 +633,8 @@ function isAllowedAgentPackageLifecycleProjectionLine(relativePath, line) {
       'applyManifestPackageLock(input, \'rollback\')',
       'opl_agent_package_rollback',
       'surface_kind: \'opl_agent_package_rollback\'',
+      'rollback: string;',
+      'rollback: CAPABILITY_PACKAGE_ROLLBACK_COMMAND',
       'rollbackRef: lock.rollback_ref',
       'rollback_ref',
     ].some((term) => line.includes(term));
