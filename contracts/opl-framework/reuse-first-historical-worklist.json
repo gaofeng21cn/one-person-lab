@@ -11,7 +11,8 @@
     "accepted_migration_worklist",
     "allowed_projection_boundary",
     "must_migrate",
-    "owner_decision_required"
+    "owner_decision_required",
+    "owner_live_evidence_required"
   ],
   "false_ready_guard": [
     "worklist decision is not risk eliminated",
@@ -20,6 +21,186 @@
     "worklist decision is not domain ready",
     "worklist decision is not owner acceptance"
   ],
+  "residual_readback_2026_07_05": {
+    "source_command": "node ./scripts/reuse-first-scan.mjs --max-findings 1000",
+    "scan_counts": {
+      "finding_count": 710,
+      "hard_gate_finding_count": 255,
+      "advisory_finding_count": 455,
+      "custom_runtime_queue": 147,
+      "custom_update_or_package_manager": 93,
+      "custom_observability_ledger": 455,
+      "handwritten_json_boundary": 15
+    },
+    "active_src_already_zero": [
+      {
+        "worklist_item_id": "phase4-src-modules-runtime-queue",
+        "category": "custom_runtime_queue",
+        "finding_count": 0,
+        "meaning": "No current full-scan hit is assigned to active src/modules runtime queue migration; remaining queue hits are projection, contract, or fixture vocabulary."
+      },
+      {
+        "worklist_item_id": "phase6-src-modules-update-package",
+        "category": "custom_update_or_package_manager",
+        "finding_count": 0,
+        "meaning": "No current full-scan hit is assigned to active src/modules update/package migration; remaining update/package hits are projection, contract, or fixture vocabulary."
+      },
+      {
+        "worklist_item_id": "phase10-src-modules-observability",
+        "category": "custom_observability_ledger",
+        "finding_count": 0,
+        "meaning": "No current full-scan hit is assigned to active src/modules observability migration; remaining observability hits are projection, command, contract, test, or catalog vocabulary."
+      }
+    ],
+    "residual_scan_classification": [
+      {
+        "category": "custom_runtime_queue",
+        "residual_finding_count": 147,
+        "residual_finding_decision": "allowed_projection_boundary",
+        "must_migrate_from_residual_findings": 0,
+        "allowed_projection_scope": [
+          "tests and fixtures that assert queue lifecycle projection or historical vocabulary",
+          "contracts that preserve provenance, schema, or no-active-runtime-claim language"
+        ],
+        "owner_live_evidence_required": [
+          "external_temporal_durable_lifecycle"
+        ],
+        "false_completion_guard": "The 147 residual queue findings are allowed projection vocabulary only; Temporal durable lifecycle is still incomplete until external Temporal workflow/history, managed worker, real executor closeout, and owner/domain refs are observed."
+      },
+      {
+        "category": "custom_update_or_package_manager",
+        "residual_finding_count": 93,
+        "residual_finding_decision": "allowed_projection_boundary",
+        "must_migrate_from_residual_findings": 0,
+        "allowed_projection_scope": [
+          "contracts that preserve update, rollback, manifest, digest, or package provenance vocabulary",
+          "tests and fixtures that assert owner-routed update/package boundaries"
+        ],
+        "owner_live_evidence_required": [
+          "app_release_owner_route",
+          "capability_package_channel_owner_route"
+        ],
+        "false_completion_guard": "The 93 residual update/package findings are allowed projection vocabulary only; App release owner, runtime substrate materializer, and capability package channel still need owner receipt or typed blocker evidence before any release/currentness claim."
+      },
+      {
+        "category": "custom_observability_ledger",
+        "residual_finding_count": 455,
+        "residual_finding_decision": "allowed_projection_boundary",
+        "must_migrate_from_residual_findings": 0,
+        "allowed_projection_scope": [
+          "CLI diagnostic drilldown command projection",
+          "contracts and tests that preserve refs-only evidence, receipt, attempt, runtime, or drilldown vocabulary",
+          "scripts/test-lanes.mjs file-name catalog vocabulary"
+        ],
+        "owner_live_evidence_required": [
+          "otlp_exporter_live_endpoint"
+        ],
+        "false_completion_guard": "The 455 residual observability findings are allowed projection vocabulary only; production observability remains incomplete until OTLP/exporter/live endpoint owner evidence and external collector consumption are observed."
+      }
+    ],
+    "owner_route_worklist": [
+      {
+        "id": "external_temporal_durable_lifecycle",
+        "category": "custom_runtime_queue",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Runway Runtime",
+        "required_evidence": [
+          "external Temporal server workflow history/query readback",
+          "managed worker liveness readback",
+          "real executor closeout without ephemeral fixture substitution",
+          "owner receipt, typed blocker, human gate, or route-back refs tied to a domain/stage attempt"
+        ],
+        "not_proved_by": [
+          "custom_runtime_queue residual finding count",
+          "phase4-src-modules-runtime-queue finding_count=0",
+          "local SQLite projection",
+          "Temporal test server fixture",
+          "strict diff gate"
+        ],
+        "stop_condition": "Temporal lifecycle can be reconstructed from Temporal history plus OPL authority events, or the owner emits a typed blocker naming the missing external substrate."
+      },
+      {
+        "id": "app_release_owner_route",
+        "category": "custom_update_or_package_manager",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Managed Update / One Person Lab App release owner",
+        "required_evidence": [
+          "App release owner receipt or typed blocker",
+          "release/currentness source ref",
+          "managed update receipt projection consumed by the App read model"
+        ],
+        "not_proved_by": [
+          "custom_update_or_package_manager residual finding count",
+          "phase6-src-modules-update-package finding_count=0",
+          "owner-routed command registry projection",
+          "strict diff gate"
+        ],
+        "stop_condition": "App/release owner accepts, blocks, or routes the update package boundary through its release authority surface."
+      },
+      {
+        "id": "capability_package_channel_owner_route",
+        "category": "custom_update_or_package_manager",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Pack / Connect package owners",
+        "required_evidence": [
+          "content-addressed descriptor or OCI-style digest readback",
+          "lock or manifest receipt",
+          "owner-specific materializer or typed blocker",
+          "no-domain-authority and no-package-manager boundary readback"
+        ],
+        "not_proved_by": [
+          "contract provenance terms",
+          "test fixture package vocabulary",
+          "strict diff gate"
+        ],
+        "stop_condition": "Capability package lifecycle is routed through descriptor, digest, lock, and owner receipt surfaces, or the package owner emits a typed blocker."
+      },
+      {
+        "id": "otlp_exporter_live_endpoint",
+        "category": "custom_observability_ledger",
+        "status": "owner_live_evidence_required",
+        "owner": "OPL Observability",
+        "required_evidence": [
+          "OTLP or OpenTelemetry SDK exporter owner lane",
+          "live endpoint readback outside bounded smoke-only path",
+          "external collector consumption readback",
+          "semantic convention mapping for trace, metric, log, and event refs"
+        ],
+        "not_proved_by": [
+          "custom_observability_ledger residual finding count",
+          "phase10-src-modules-observability finding_count=0",
+          "OpenMetrics smoke endpoint alone",
+          "CLI diagnostic drilldown projection"
+        ],
+        "stop_condition": "Operator drilldown can read the same current owner delta through trace, metric, log, and event vocabulary from a live exporter/collector path, or Observability emits a typed blocker."
+      },
+      {
+        "id": "domain_tail_owner_acceptance",
+        "category": "domain_private_platform_tail",
+        "status": "owner_live_evidence_required",
+        "owner": "MAS/MAG/RCA/OMA/BookForge/ScholarSkills domain owners",
+        "required_evidence": [
+          "domain no-active-caller readback",
+          "replacement OPL primitive ref",
+          "tombstone or provenance ref when deleting a private tail",
+          "owner acceptance, owner decision, or typed blocker"
+        ],
+        "not_proved_by": [
+          "reuse-first full scan counts",
+          "domain tail matrix projection",
+          "OPL contract-only readback",
+          "strict diff gate"
+        ],
+        "stop_condition": "Each domain owner either accepts the hosted/generated replacement boundary, emits a typed blocker, or explicitly preserves the tail with owner rationale."
+      }
+    ],
+    "completion_readback_rules": [
+      "Full scan historical findings may be decisioned while owner-route work remains open.",
+      "allowed_projection_boundary means the matched line may remain as projection, fixture, contract, command, or catalog vocabulary; it does not mean the target runtime/update/observability capability is complete.",
+      "phase finding_count=0 means no current scanner hit is assigned to that active src migration item; it does not prove external live evidence, owner acceptance, release readiness, production readiness, or domain readiness.",
+      "A future closeout must report both reuse-first scan historical_decision_summary and this owner_route_worklist; either open owner_live_evidence_required item keeps the plan partial."
+    ]
+  },
   "items": [
     {
       "id": "phase1-src-modules-schema-cli-boundaries",
