@@ -201,6 +201,23 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
         decision_ref: 'test#projection-boundary',
       },
     ],
+    residualReadback: {
+      owner_route_worklist: [
+        {
+          id: 'external_temporal_durable_lifecycle',
+          status: 'owner_live_evidence_required',
+          owner: 'OPL Runway Runtime',
+        },
+        {
+          id: 'already-routed-tail',
+          status: 'owner_accepted',
+          owner: 'OPL Domain Owner',
+        },
+      ],
+      completion_readback_rules: [
+        'owner-live evidence remains open until owner receipt, typed blocker, or route-back evidence exists',
+      ],
+    },
   });
   writeFixtureFile(fixture, 'src/known/example.ts', 'const parsed = JSON.parse("{}");\n');
   writeFixtureFile(fixture, 'src/runtime/queue.ts', 'const ddl = "CREATE TABLE IF NOT EXISTS tasks";\n');
@@ -232,6 +249,12 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   assert.equal(output.must_migrate_finding_count, 1);
   assert.equal(output.owner_decision_required_finding_count, 1);
   assert.equal(output.undecisioned_finding_count, 1);
+  assert.equal(output.owner_route_worklist_count, 2);
+  assert.equal(output.owner_live_evidence_required_count, 1);
+  assert.equal(output.owner_route_open_count, 1);
+  assert.equal(output.residual_readback.owner_route_worklist_count, 2);
+  assert.equal(output.residual_readback.owner_live_evidence_required_count, 1);
+  assert.equal(output.residual_readback.owner_route_open_count, 1);
   assert.equal(output.returned_finding_count, 0);
   assert.equal(summary.applied, true);
   assert.equal(summary.finding_count, 5);
@@ -242,6 +265,10 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   assert.equal(summary.accepted_migration_worklist_finding_count, 1);
   assert.equal(summary.must_migrate_finding_count, 1);
   assert.equal(summary.owner_decision_required_finding_count, 1);
+  assert.equal(summary.owner_route_worklist_count, 2);
+  assert.equal(summary.owner_live_evidence_required_count, 1);
+  assert.equal(summary.owner_route_open_count, 1);
+  assert.equal(summary.residual_readback.owner_route_worklist_count, 2);
   assert.equal(summary.decisioned_finding_count, 4);
   assert.equal(summary.undecisioned_finding_count, 1);
   assertSummaryCount(summary.by_decision_status, 'accepted_migration_worklist', 1);
@@ -337,6 +364,8 @@ test('reuse-first diff gate ignores broad historical worklist decisions', () => 
   assert.equal(output.gate_status, 'hard_fail');
   assert.equal(output.historical_decision_summary.applied, false);
   assert.match(output.historical_decision_summary.reason, /diff gate ignores historical worklist/);
+  assert.equal(output.residual_readback, undefined);
+  assert.equal(output.owner_route_worklist_count, undefined);
   assert.equal(output.findings[0].historical_decision, undefined);
 });
 
@@ -656,6 +685,7 @@ function writeHistoricalWorklist(
   fixture: string,
   overrides: {
     items: Array<Record<string, unknown>>;
+    residualReadback?: Record<string, unknown>;
   },
 ) {
   const contractDir = path.join(fixture, 'contracts', 'opl-framework');
@@ -681,6 +711,9 @@ function writeHistoricalWorklist(
         'worklist decision is not risk eliminated',
         'worklist decision is not release ready',
       ],
+      ...(overrides.residualReadback
+        ? { residual_readback_2026_07_05: overrides.residualReadback }
+        : {}),
       items: overrides.items,
     }, null, 2)}\n`,
   );

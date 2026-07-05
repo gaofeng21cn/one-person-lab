@@ -39,6 +39,9 @@ const advisoryFindingCount = findings.length - hardGateFindingCount;
 const historicalDecisionCounts = historicalWorklist
   ? summarizeWorklistFindingCounts(findings)
   : null;
+const residualReadback = historicalWorklist
+  ? summarizeResidualReadback(historicalWorklist)
+  : null;
 const strictBlockingFindingCount = historicalDecisionCounts
   ? historicalDecisionCounts.blocking_worklist_finding_count
   : hardGateFindingCount;
@@ -56,6 +59,14 @@ const summary = {
   hard_gate_finding_count: hardGateFindingCount,
   advisory_finding_count: advisoryFindingCount,
   ...(historicalDecisionCounts ?? {}),
+  ...(residualReadback
+    ? {
+        residual_readback: residualReadback,
+        owner_route_worklist_count: residualReadback.owner_route_worklist_count,
+        owner_live_evidence_required_count: residualReadback.owner_live_evidence_required_count,
+        owner_route_open_count: residualReadback.owner_route_open_count,
+      }
+    : {}),
   returned_finding_count: visibleFindings.length,
   omitted_finding_count: findings.length - visibleFindings.length,
   findings: visibleFindings,
@@ -72,6 +83,9 @@ const summary = {
     'reuse-first scan findings are implementation candidates, not proof of readiness failure',
     'clean scan does not prove release-ready, production-ready, domain-ready, or owner acceptance',
     'historical worklist decisions classify risk; they do not mean risk eliminated',
+    ...(residualReadback
+      ? ['owner-route worklist entries remain open until owner receipt, live evidence, typed blocker, or route-back evidence is observed']
+      : []),
   ],
 };
 
@@ -239,6 +253,7 @@ function defaultPathPrefix(relativePath) {
 function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
   const decisionedCount = findings.filter((finding) => finding.historical_decision_status !== 'undecisioned').length;
   const worklistCounts = summarizeWorklistFindingCounts(findings);
+  const residualReadback = summarizeResidualReadback(worklist);
   return {
     surface_kind: 'opl_reuse_first_historical_worklist_readback',
     applied: true,
@@ -246,6 +261,14 @@ function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
     mode: 'full_scan_only',
     finding_count: findings.length,
     ...worklistCounts,
+    ...(residualReadback
+      ? {
+          residual_readback: residualReadback,
+          owner_route_worklist_count: residualReadback.owner_route_worklist_count,
+          owner_live_evidence_required_count: residualReadback.owner_live_evidence_required_count,
+          owner_route_open_count: residualReadback.owner_route_open_count,
+        }
+      : {}),
     decisioned_finding_count: decisionedCount,
     false_ready_guard: worklist.false_ready_guard,
     by_decision_status: groupFindings(findings, (finding) => finding.historical_decision.status),
@@ -256,6 +279,32 @@ function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
     by_action: groupFindings(findings, (finding) => finding.historical_decision.action),
     by_expiry: groupFindings(findings, (finding) => finding.historical_decision.expiry ?? 'none'),
     worklist_items: worklist.items.map((item) => summarizeWorklistItem(findings, item)),
+  };
+}
+
+function summarizeResidualReadback(worklist) {
+  const source = worklist.residual_readback_2026_07_05;
+  if (!source) {
+    return null;
+  }
+  const ownerRouteWorklist = Array.isArray(source.owner_route_worklist)
+    ? source.owner_route_worklist
+    : [];
+  const ownerRouteOpenCount = ownerRouteWorklist.filter((item) => (
+    !['owner_accepted', 'closed'].includes(item.status)
+  )).length;
+  return {
+    ...source,
+    owner_route_worklist_count: ownerRouteWorklist.length,
+    owner_live_evidence_required_count: ownerRouteWorklist.filter((item) => (
+      item.status === 'owner_live_evidence_required'
+    )).length,
+    owner_route_open_count: ownerRouteOpenCount,
+    false_ready_guard: [
+      ...(source.false_ready_guard ?? []),
+      'owner-route worklist is not release ready',
+      'owner-live evidence required means owner receipt, live evidence, typed blocker, or route-back evidence is still open',
+    ],
   };
 }
 
