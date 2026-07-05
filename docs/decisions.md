@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-05
+
+### 决策：标准 Agent package 可声明 OPL-managed capability dependency
+
+原因：MAS 是标准 OPL Agent package，但医学论文执行还依赖外部 `mas-scholar-skills` 能力包。该能力包不能被物理塞进 MAS 仓、也不能由 MAS 私自安装更新；同时 OPL 在管理 MAS package、Developer Mode 和 workspace / quest skill sync 时必须明确知道这层依赖关系。
+
+影响：
+
+- `contracts/opl-framework/agent-packages/mas.json` 是 MAS first-party agent package 的依赖单源；`medautoscience` package manifest 和 module readback 只从该 manifest 投影 `capability_dependencies`。其中 `mas-scholar-skills` 的 `kind` 固定为 `framework_capability_package`，安装 / 更新 owner 是 `one-person-lab`，普通用户来源是 GHCR capability packages channel。
+- Codex App 独立安装形态使用 self-contained MAS plugin：MAS plugin 的 required skill ids 必须包含 `mas` 和 `mas-scholar-skills`，用户侧仍是一次安装动作，不能要求用户手动补装外挂专业 skill 库。
+- OPL App 托管形态使用 thin agent package：MAS 和 `mas-scholar-skills` 是两个可独立安装、更新和 Developer Mode 修复的 package target，依赖关系由 MAS manifest 声明，不由 OPL App / package manager hard-code。
+- `scholarskills` package manifest 通过 `dependency_of: ["medautoscience"]` 暴露反向关系；这只表达 package 管理关系，不把 ScholarSkills 变成 MAS domain module。
+- Developer Mode target authority resolver 把 `mas-scholar-skills` 解析为 `framework_capability_package` target；有 repo 写权限时可直修，无权限时走 fork / PR。手动打开 Developer Mode 不能授予直接写权限。
+- 论文执行仍必须通过 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ... --json` 把能力包投影到目标 `.codex/skills/`；该投影不写 domain truth、owner receipt、typed blocker 或 runtime queue。
+
 ## 2026-07-04
 
 ### 决策：Agent Package Registry 和第三方 manifest lifecycle 归 OPL Connect / Framework receipt 面

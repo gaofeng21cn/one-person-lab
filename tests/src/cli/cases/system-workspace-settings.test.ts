@@ -9,6 +9,7 @@ const defaultDeveloperModePermissionsFixture = JSON.stringify({
     'gaofeng21cn/med-autogrant': 'maintain',
     'gaofeng21cn/opl-bookforge': 'write',
     'gaofeng21cn/opl-meta-agent': 'write',
+    'gaofeng21cn/mas-scholar-skills': 'write',
     'gaofeng21cn/redcube-ai': 'admin',
   },
 });
@@ -345,6 +346,7 @@ test('system developer-supervisor reports and persists the family developer mode
     assert.deepEqual(
       updated.system_action.developer_mode.repo_authority.repos.map((entry) => entry.repo).sort(),
       [
+        'gaofeng21cn/mas-scholar-skills',
         'gaofeng21cn/med-autogrant',
         'gaofeng21cn/med-autoscience',
         'gaofeng21cn/one-person-lab',
@@ -382,6 +384,7 @@ test('system developer-supervisor reports PR route when Developer Mode lacks dir
       'gaofeng21cn/one-person-lab': 'read',
       'gaofeng21cn/med-autoscience': 'read',
       'gaofeng21cn/med-autogrant': 'none',
+      'gaofeng21cn/mas-scholar-skills': 'read',
       'gaofeng21cn/opl-bookforge': 'read',
       'gaofeng21cn/opl-meta-agent': 'read',
       'gaofeng21cn/redcube-ai': 'read',
@@ -495,6 +498,7 @@ test('target-scoped resolver returns target agent authority for standard agents'
       'gaofeng21cn/one-person-lab': 'read',
       'gaofeng21cn/med-autoscience': 'write',
       'gaofeng21cn/med-autogrant': 'read',
+      'gaofeng21cn/mas-scholar-skills': 'read',
       'gaofeng21cn/opl-bookforge': 'read',
       'gaofeng21cn/opl-meta-agent': 'read',
       'gaofeng21cn/redcube-ai': 'read',
@@ -522,6 +526,25 @@ test('target-scoped resolver returns target agent authority for standard agents'
     assert.equal(output.developer_identity_class, 'target_agent_developer');
     assert.equal(output.allowed_route, 'direct_repo_fix');
     assert.equal(output.direct_write_allowed, true);
+
+    const scholarSkillsOutput = resolveOplDeveloperModeTargetAuthority(
+      { target_agent_id: 'mas-scholar-skills' },
+      {
+        enabled: 'on',
+        mode: 'developer_apply_safe',
+        source: 'user_config',
+        auto_enable_github_login: 'agent-owner',
+        version: 'g1',
+        updated_at: '2026-07-05T00:00:00.000Z',
+      },
+    );
+
+    assert.equal(scholarSkillsOutput.target_kind, 'framework_capability_package');
+    assert.equal(scholarSkillsOutput.resolution_source, 'framework_capability_package_spec');
+    assert.equal(scholarSkillsOutput.target_agent_id, 'mas-scholar-skills');
+    assert.equal(scholarSkillsOutput.target_repo_id, 'gaofeng21cn/mas-scholar-skills');
+    assert.equal(scholarSkillsOutput.allowed_route, 'fork_pull_request');
+    assert.equal(scholarSkillsOutput.direct_write_allowed, false);
   } finally {
     if (previousFixture === undefined) {
       delete process.env.OPL_DEVELOPER_MODE_GH_FIXTURE;
@@ -712,7 +735,7 @@ esac
     assert.equal(output.system_action.developer_mode.effective_state, 'active_direct');
     assert.equal(output.system_action.developer_mode.allowed_route, 'direct_repo_fix');
     assert.equal(output.system_action.developer_mode.repo_authority.status, 'ready');
-    assert.equal(output.system_action.developer_mode.repo_authority.direct_write_repo_count, 6);
+    assert.equal(output.system_action.developer_mode.repo_authority.direct_write_repo_count, 7);
     assert.equal(output.system_action.developer_mode.repo_authority.blocked_repo_count, 0);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

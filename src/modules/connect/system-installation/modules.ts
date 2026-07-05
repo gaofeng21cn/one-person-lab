@@ -68,6 +68,7 @@ export function listDefaultOplDomainModuleSpecs(): DomainModuleSpec[] {
       scope: entry.scope,
       default_install: entry.default_install,
       description: entry.description,
+      capability_dependencies: entry.capability_dependencies,
     }));
 }
 
@@ -365,6 +366,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         scope: spec.scope,
         default_install: spec.default_install,
         description: spec.description,
+        capability_dependencies: spec.capability_dependencies ?? [],
         repo_url: resolveModuleRepoUrl(spec),
         installed: true,
         install_origin: candidate.origin,
@@ -388,6 +390,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         scope: spec.scope,
         default_install: spec.default_install,
         description: spec.description,
+        capability_dependencies: spec.capability_dependencies ?? [],
         repo_url: resolveModuleRepoUrl(spec),
         installed: false,
         install_origin: 'invalid_checkout',
@@ -420,6 +423,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
       scope: spec.scope,
       default_install: spec.default_install,
       description: spec.description,
+      capability_dependencies: spec.capability_dependencies ?? [],
       repo_url: resolveModuleRepoUrl(spec),
       installed: true,
       install_origin: candidate.origin,
@@ -440,6 +444,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
     scope: spec.scope,
     default_install: spec.default_install,
     description: spec.description,
+    capability_dependencies: spec.capability_dependencies ?? [],
     repo_url: resolveModuleRepoUrl(spec),
     installed: false,
     install_origin: 'missing',

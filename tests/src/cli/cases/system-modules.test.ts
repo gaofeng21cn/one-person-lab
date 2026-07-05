@@ -74,10 +74,28 @@ EOF
           installed: boolean;
           install_origin: string;
           available_actions: string[];
+          capability_dependencies: Array<Record<string, unknown>>;
         }>;
       };
     };
     assert.equal(initial.modules.summary.total_modules_count, 6);
+    const initialMasDependencyReadback = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
+    assert.deepEqual(
+      initialMasDependencyReadback?.capability_dependencies.map((dependency) => ({
+        package_id: dependency.package_id,
+        codex_distribution: dependency.codex_distribution,
+        opl_distribution: dependency.opl_distribution,
+        developer_distribution: dependency.developer_distribution,
+      })),
+      [
+        {
+          package_id: 'mas-scholar-skills',
+          codex_distribution: 'bundled',
+          opl_distribution: 'managed_dependency',
+          developer_distribution: 'source_checkout',
+        },
+      ],
+    );
     const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);

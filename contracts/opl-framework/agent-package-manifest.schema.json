@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/agent-package-manifest.schema.json",
+  "title": "OPL Agent Package Manifest",
+  "type": "object",
+  "required": [
+    "surface_kind",
+    "agent_id",
+    "package_id",
+    "codex_surface",
+    "capability_dependencies"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_agent_package_manifest.v1"
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "codex_surface": {
+      "type": "object",
+      "required": [
+        "plugin_id",
+        "standalone_distribution",
+        "required_skill_ids"
+      ],
+      "properties": {
+        "plugin_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "standalone_distribution": {
+          "const": "self_contained_fat_plugin"
+        },
+        "required_skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "capability_dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "module_id",
+          "package_id",
+          "kind",
+          "codex_distribution",
+          "opl_distribution",
+          "developer_distribution",
+          "required_for",
+          "install_owner",
+          "install_update_source",
+          "sync_scopes",
+          "sync_command_refs",
+          "authority_boundary"
+        ],
+        "properties": {
+          "module_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "package_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "const": "framework_capability_package"
+          },
+          "codex_distribution": {
+            "const": "bundled"
+          },
+          "opl_distribution": {
+            "const": "managed_dependency"
+          },
+          "developer_distribution": {
+            "const": "source_checkout"
+          },
+          "required_for": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "install_owner": {
+            "const": "one-person-lab"
+          },
+          "install_update_source": {
+            "const": "ghcr_capability_packages_channel"
+          },
+          "sync_scopes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "workspace",
+                "quest"
+              ]
+            },
+            "minItems": 2,
+            "uniqueItems": true
+          },
+          "sync_command_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "authority_boundary": {
+            "type": "object",
+            "required": [
+              "can_write_domain_truth",
+              "can_sign_owner_receipt",
+              "can_create_typed_blocker",
+              "can_write_runtime_queue"
+            ],
+            "properties": {
+              "can_write_domain_truth": {
+                "const": false
+              },
+              "can_sign_owner_receipt": {
+                "const": false
+              },
+              "can_create_typed_blocker": {
+                "const": false
+              },
+              "can_write_runtime_queue": {
+                "const": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

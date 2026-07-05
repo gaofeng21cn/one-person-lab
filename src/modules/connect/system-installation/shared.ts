@@ -57,6 +57,27 @@ export type DomainModuleSpec = {
   scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   default_install: boolean;
   description: string;
+  capability_dependencies?: readonly ModuleCapabilityDependency[];
+};
+
+export type ModuleCapabilityDependency = {
+  module_id: OplModuleId;
+  package_id: string;
+  kind: 'framework_capability_package';
+  required_for: readonly string[];
+  install_owner: 'one-person-lab';
+  install_update_source: 'ghcr_capability_packages_channel';
+  codex_distribution?: 'bundled';
+  opl_distribution?: 'managed_dependency';
+  developer_distribution?: 'source_checkout';
+  sync_scopes: readonly ['workspace', 'quest'];
+  sync_command_refs: readonly string[];
+  authority_boundary: {
+    can_write_domain_truth: false;
+    can_sign_owner_receipt: false;
+    can_create_typed_blocker: false;
+    can_write_runtime_queue: false;
+  };
 };
 
 export type CommandResult = {
@@ -246,6 +267,7 @@ export type ModuleInspection = {
   scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   default_install: boolean;
   description: string;
+  capability_dependencies: readonly ModuleCapabilityDependency[];
   repo_url: string;
   installed: boolean;
   install_origin: OplModuleInstallOrigin;

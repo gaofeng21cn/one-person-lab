@@ -5,6 +5,7 @@ import {
   resolveStandardAgent,
 } from '../atlas/index.ts';
 import { listDefaultOplDomainModuleSpecs } from './system-installation/modules.ts';
+import { SCHOLARSKILLS_PACKAGE_SPEC } from './system-installation/scholarskills-package-channel.ts';
 import {
   type DeveloperModeGhFixture,
   type DeveloperModeGithubIdentityProjection,
@@ -34,7 +35,7 @@ type DeveloperModeAllowedRoute =
 type GithubIdentityStatus = DeveloperModeGithubIdentityProjection['status'];
 type GithubIdentitySource = DeveloperModeGithubIdentityProjection['source'];
 type RepoAuthorityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
-type RepoTargetSource = 'opl_framework_constant' | 'domain_module_spec';
+type RepoTargetSource = 'opl_framework_constant' | 'domain_module_spec' | 'framework_capability_package_spec';
 type DeveloperProfileId = 'contributor' | 'maintainer' | 'runtime_maintainer';
 type DeveloperIdentityClass = 'opl_maintainer' | 'target_agent_developer' | 'contributor';
 type DeveloperCapabilityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
@@ -132,8 +133,13 @@ export type OplDeveloperModeTargetAuthorityInput = {
 };
 
 export type OplDeveloperModeTargetAuthorityProjection = {
-  target_kind: 'standard_agent' | 'explicit_repo' | 'unresolved';
-  resolution_source: 'standard_agent_registry' | 'explicit_target_repo_id' | 'explicit_target_repo_url' | 'unresolved';
+  target_kind: 'standard_agent' | 'framework_capability_package' | 'explicit_repo' | 'unresolved';
+  resolution_source:
+    | 'standard_agent_registry'
+    | 'framework_capability_package_spec'
+    | 'explicit_target_repo_id'
+    | 'explicit_target_repo_url'
+    | 'unresolved';
   target_agent_id: string | null;
   target_repo_id: string | null;
   target_repo_url: string | null;
@@ -229,6 +235,7 @@ function defaultRepoUrlForRepoId(repoId: string) {
 }
 
 function buildRepoTargets(): RepoAuthorityTarget[] {
+  const scholarSkillsRepo = parseGithubRepoFromUrl(SCHOLARSKILLS_PACKAGE_SPEC.repo_url);
   return [
     OPL_FRAMEWORK_REPO_TARGET,
     ...listDefaultOplDomainModuleSpecs().map((entry) => {
@@ -241,6 +248,13 @@ function buildRepoTargets(): RepoAuthorityTarget[] {
         source: 'domain_module_spec' as const,
       };
     }),
+    {
+      target_id: SCHOLARSKILLS_PACKAGE_SPEC.module_id,
+      label: SCHOLARSKILLS_PACKAGE_SPEC.label,
+      repo: scholarSkillsRepo ?? `unknown/${SCHOLARSKILLS_PACKAGE_SPEC.repo_name}`,
+      repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
+      source: 'framework_capability_package_spec' as const,
+    },
   ];
 }
 
@@ -753,8 +767,12 @@ function buildUnresolvedTargetAuthority(
 
 function buildResolvedTargetAuthority(input: {
   context: DeveloperModeContext;
-  target_kind: 'standard_agent' | 'explicit_repo';
-  resolution_source: 'standard_agent_registry' | 'explicit_target_repo_id' | 'explicit_target_repo_url';
+  target_kind: 'standard_agent' | 'framework_capability_package' | 'explicit_repo';
+  resolution_source:
+    | 'standard_agent_registry'
+    | 'framework_capability_package_spec'
+    | 'explicit_target_repo_id'
+    | 'explicit_target_repo_url';
   target_agent_id: string | null;
   target_repo_id: string;
   target_repo_url: string;
@@ -913,8 +931,12 @@ function buildTargetAuthorityProjection(
     }
     return buildResolvedTargetAuthority({
       context,
-      target_kind: 'standard_agent',
-      resolution_source: 'standard_agent_registry',
+      target_kind: resolved.repoTarget.source === 'framework_capability_package_spec'
+        ? 'framework_capability_package'
+        : 'standard_agent',
+      resolution_source: resolved.repoTarget.source === 'framework_capability_package_spec'
+        ? 'framework_capability_package_spec'
+        : 'standard_agent_registry',
       target_agent_id: resolved.standardAgent.agent_id,
       target_repo_id: resolved.repoTarget.repo,
       target_repo_url: resolved.repoTarget.repo_url,

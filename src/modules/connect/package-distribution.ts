@@ -2,9 +2,14 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  getMasCapabilityDependencies,
+  getMasCodexStandaloneRequiredSkillIds,
+} from './agent-package-manifests.ts';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
 import { MANAGED_UPDATE_OWNER_FIELDS } from './managed-update-owner-boundary.ts';
+import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 
 type PackageModuleId =
   | 'medautoscience'
@@ -21,6 +26,7 @@ type PackageModuleSpec = {
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   package_name: string;
+  capability_dependencies?: readonly ModuleCapabilityDependency[];
 };
 
 type BuildPackageManifestInput = Partial<{
@@ -44,6 +50,7 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
     package_name: 'med-autoscience',
+    capability_dependencies: getMasCapabilityDependencies(),
   },
   {
     module_id: 'medautogrant',
@@ -211,6 +218,25 @@ function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: 
   };
 }
 
+function dependencyOf(moduleId: PackageModuleId) {
+  return MODULE_SPECS
+    .filter((spec) => spec.capability_dependencies?.some((dependency) => dependency.module_id === moduleId))
+    .map((spec) => spec.module_id);
+}
+
+function buildCodexStandaloneDistribution(spec: PackageModuleSpec) {
+  if (spec.module_id !== 'medautoscience') {
+    return null;
+  }
+  return {
+    distribution_shape: 'self_contained_fat_plugin',
+    plugin_id: 'mas',
+    required_skill_ids: getMasCodexStandaloneRequiredSkillIds(),
+    bundled_capability_package_ids: spec.capability_dependencies?.map((dependency) => dependency.package_id) ?? [],
+    user_install_action_count: 1,
+  };
+}
+
 export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
   const version = input.version?.trim() || getOplReleaseVersion();
   const owner = resolveOwner(input.owner);
@@ -333,7 +359,9 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             },
             release_discipline: buildModuleReleaseDiscipline(spec, rollbackVersion),
             install_strategy: 'extract_to_managed_modules_root',
-            dependency_of: [],
+            codex_standalone_distribution: buildCodexStandaloneDistribution(spec),
+            capability_dependencies: spec.capability_dependencies ?? [],
+            dependency_of: dependencyOf(spec.module_id),
           },
         ]),
       ),

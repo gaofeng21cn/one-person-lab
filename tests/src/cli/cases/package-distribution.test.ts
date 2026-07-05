@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 import { assert, createGitModuleRemoteFixture, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
+import { normalizeFirstPartyAgentPackageManifest } from '../../../../src/modules/connect/agent-package-manifests.ts';
 
 test('packages manifest exposes active package-channel coordinates for module install updates', () => {
   const output = runCli(['connect', 'packages', 'manifest'], {
@@ -87,6 +88,14 @@ test('packages manifest exposes active package-channel coordinates for module in
         modules: Record<string, {
           artifact: string;
           scope: string;
+          codex_standalone_distribution: null | {
+            distribution_shape: string;
+            plugin_id: string;
+            required_skill_ids: string[];
+            bundled_capability_package_ids: string[];
+            user_install_action_count: number;
+          };
+          capability_dependencies: Array<Record<string, any>>;
           package_channel_status: string;
           package_lifecycle_status: string;
           package_lifecycle_reason: string;
@@ -315,6 +324,49 @@ test('packages manifest exposes active package-channel coordinates for module in
     output.packages_manifest.packages.modules.medautoscience.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/med-autoscience.git',
   );
+  assert.deepEqual(
+    output.packages_manifest.packages.modules.medautoscience.capability_dependencies.map((dependency) => ({
+      module_id: dependency.module_id,
+      package_id: dependency.package_id,
+      kind: dependency.kind,
+      codex_distribution: dependency.codex_distribution,
+      opl_distribution: dependency.opl_distribution,
+      developer_distribution: dependency.developer_distribution,
+      install_owner: dependency.install_owner,
+      install_update_source: dependency.install_update_source,
+      sync_scopes: dependency.sync_scopes,
+      authority_boundary: dependency.authority_boundary,
+    })),
+    [
+      {
+        module_id: 'scholarskills',
+        package_id: 'mas-scholar-skills',
+        kind: 'framework_capability_package',
+        codex_distribution: 'bundled',
+        opl_distribution: 'managed_dependency',
+        developer_distribution: 'source_checkout',
+        install_owner: 'one-person-lab',
+        install_update_source: 'ghcr_capability_packages_channel',
+        sync_scopes: ['workspace', 'quest'],
+        authority_boundary: {
+          can_write_domain_truth: false,
+          can_sign_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_write_runtime_queue: false,
+        },
+      },
+    ],
+  );
+  assert.deepEqual(
+    output.packages_manifest.packages.modules.medautoscience.codex_standalone_distribution,
+    {
+      distribution_shape: 'self_contained_fat_plugin',
+      plugin_id: 'mas',
+      required_skill_ids: ['mas', 'mas-scholar-skills'],
+      bundled_capability_package_ids: ['mas-scholar-skills'],
+      user_install_action_count: 1,
+    },
+  );
   assert.equal(Object.hasOwn(output.packages_manifest.packages.modules, 'meddeepscientist'), false);
   assert.equal(
     output.packages_manifest.packages.modules.redcube.install_strategy,
@@ -348,6 +400,7 @@ test('packages manifest exposes active package-channel coordinates for module in
     output.packages_manifest.packages.modules.scholarskills.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/mas-scholar-skills.git',
   );
+  assert.deepEqual(output.packages_manifest.packages.modules.scholarskills.dependency_of, ['medautoscience']);
 });
 
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
@@ -471,6 +524,10 @@ test('package archive builder writes channel manifest checksums git source and r
     manifest.packages.modules.medautoscience.source_git.head_sha,
     fixtures.medautoscience.getHeadSha(),
   );
+  assert.equal(
+    manifest.packages.modules.medautoscience.capability_dependencies[0].package_id,
+    'mas-scholar-skills',
+  );
   assert.match(manifest.packages.modules.medautoscience.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
     manifest.packages.modules.oplmetaagent.source_git.head_sha,
@@ -486,6 +543,7 @@ test('package archive builder writes channel manifest checksums git source and r
     fixtures.scholarskills.getHeadSha(),
   );
   assert.equal(manifest.packages.modules.scholarskills.scope, 'framework_capability_package');
+  assert.deepEqual(manifest.packages.modules.scholarskills.dependency_of, ['medautoscience']);
   assert.match(manifest.packages.modules.scholarskills.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
   assert.match(checksums, /opl-meta-agent-26\.4\.31\.tar\.gz/);
@@ -500,6 +558,83 @@ test('package archive builder writes channel manifest checksums git source and r
     cwd: os.tmpdir(),
     encoding: 'utf8',
   });
+});
+
+test('MAS first-party agent package manifest declares standalone bundle and OPL managed dependency from one source', () => {
+  const manifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/agent-packages/mas.json'),
+    'utf8',
+  )) as Record<string, any>;
+  const schema = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/agent-package-manifest.schema.json'),
+    'utf8',
+  )) as Record<string, any>;
+
+  assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
+  assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
+  assert.deepEqual(manifest.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
+  assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
+  assert.equal(manifest.opl_managed_surface.package_shape, 'thin_agent_package');
+  assert.equal(manifest.opl_managed_surface.dependency_resolution, 'managed_dependency_graph');
+  assert.deepEqual(
+    manifest.capability_dependencies.map((dependency: Record<string, any>) => ({
+      module_id: dependency.module_id,
+      package_id: dependency.package_id,
+      codex_distribution: dependency.codex_distribution,
+      opl_distribution: dependency.opl_distribution,
+      developer_distribution: dependency.developer_distribution,
+    })),
+    [
+      {
+        module_id: 'scholarskills',
+        package_id: 'mas-scholar-skills',
+        codex_distribution: 'bundled',
+        opl_distribution: 'managed_dependency',
+        developer_distribution: 'source_checkout',
+      },
+    ],
+  );
+});
+
+test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
+  const manifest = parseJsonText(fs.readFileSync(
+    path.join(repoRoot, 'contracts/opl-framework/agent-packages/mas.json'),
+    'utf8',
+  )) as Record<string, any>;
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      capability_dependencies: [],
+    }),
+    /must declare capability_dependencies/,
+  );
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      capability_dependencies: [
+        {
+          ...manifest.capability_dependencies[0],
+          authority_boundary: {
+            ...manifest.capability_dependencies[0].authority_boundary,
+            can_write_domain_truth: true,
+          },
+        },
+      ],
+    }),
+    /authority boundary must be false-only/,
+  );
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      capability_dependencies: [
+        {
+          ...manifest.capability_dependencies[0],
+          sync_scopes: ['workspace'],
+        },
+      ],
+    }),
+    /workspace and quest scopes/,
+  );
 });
 
 test('package archive builder refreshes reused managed clones before archiving source', () => {

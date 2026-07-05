@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { getMasCapabilityDependencies } from '../agent-package-manifests.ts';
 import { getShellBinary } from './shared.ts';
 import type { DomainModuleRuntimeSpec } from './module-action-workflow.ts';
+
+const MAS_CAPABILITY_DEPENDENCIES = getMasCapabilityDependencies();
 
 function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: string) {
   const scriptPath = path.join(checkoutPath, relativePath);
@@ -89,6 +92,7 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     exec_command: buildMasCleanRunnerExecCommand,
     skill_sync_domain: 'medautoscience',
+    capability_dependencies: MAS_CAPABILITY_DEPENDENCIES,
   },
   {
     module_id: 'meddeepscientist',
