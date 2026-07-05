@@ -36,11 +36,13 @@ const findings = historicalWorklist
 const visibleFindings = findings.slice(0, args.maxFindings);
 const hardGateFindingCount = findings.filter((finding) => finding.gate_mode === 'hard').length;
 const advisoryFindingCount = findings.length - hardGateFindingCount;
-const gateStatus = findings.length === 0
-  ? 'ok'
-  : hardGateFindingCount > 0
-    ? 'hard_fail'
-    : 'advisory_attention';
+const historicalDecisionCounts = historicalWorklist
+  ? summarizeWorklistFindingCounts(findings)
+  : null;
+const strictBlockingFindingCount = historicalDecisionCounts
+  ? historicalDecisionCounts.blocking_worklist_finding_count
+  : hardGateFindingCount;
+const gateStatus = determineGateStatus(findings.length, hardGateFindingCount, historicalDecisionCounts);
 
 const summary = {
   surface_kind: 'opl_reuse_first_scan',
@@ -53,6 +55,7 @@ const summary = {
   finding_count: findings.length,
   hard_gate_finding_count: hardGateFindingCount,
   advisory_finding_count: advisoryFindingCount,
+  ...(historicalDecisionCounts ?? {}),
   returned_finding_count: visibleFindings.length,
   omitted_finding_count: findings.length - visibleFindings.length,
   findings: visibleFindings,
@@ -74,7 +77,7 @@ const summary = {
 
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 
-if (args.strict && hardGateFindingCount > 0) {
+if (args.strict && strictBlockingFindingCount > 0) {
   process.exit(1);
 }
 
@@ -235,14 +238,15 @@ function defaultPathPrefix(relativePath) {
 
 function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
   const decisionedCount = findings.filter((finding) => finding.historical_decision_status !== 'undecisioned').length;
+  const worklistCounts = summarizeWorklistFindingCounts(findings);
   return {
     surface_kind: 'opl_reuse_first_historical_worklist_readback',
     applied: true,
     source: path.relative(root, worklistPath),
     mode: 'full_scan_only',
     finding_count: findings.length,
+    ...worklistCounts,
     decisioned_finding_count: decisionedCount,
-    undecisioned_finding_count: findings.length - decisionedCount,
     false_ready_guard: worklist.false_ready_guard,
     by_decision_status: groupFindings(findings, (finding) => finding.historical_decision.status),
     by_category: groupFindings(findings, (finding) => finding.category),
@@ -252,6 +256,35 @@ function summarizeHistoricalDecisions(findings, worklist, worklistPath) {
     by_action: groupFindings(findings, (finding) => finding.historical_decision.action),
     by_expiry: groupFindings(findings, (finding) => finding.historical_decision.expiry ?? 'none'),
     worklist_items: worklist.items.map((item) => summarizeWorklistItem(findings, item)),
+  };
+}
+
+function determineGateStatus(findingCount, hardGateFindingCount, worklistCounts) {
+  if (findingCount === 0) {
+    return 'ok';
+  }
+  const blockingCount = worklistCounts?.blocking_worklist_finding_count ?? hardGateFindingCount;
+  return blockingCount > 0 ? 'hard_fail' : 'advisory_attention';
+}
+
+function summarizeWorklistFindingCounts(findings) {
+  const countStatus = (status) => findings.filter((finding) => (
+    finding.historical_decision_status === status
+  )).length;
+  const undecisioned = countStatus('undecisioned');
+  const accepted = countStatus('accepted_migration_worklist');
+  const mustMigrate = countStatus('must_migrate');
+  const ownerRequired = countStatus('owner_decision_required');
+  const allowedProjection = countStatus('allowed_projection_boundary');
+  return {
+    total_finding_count: findings.length,
+    undecisioned_finding_count: undecisioned,
+    accepted_migration_worklist_finding_count: accepted,
+    must_migrate_finding_count: mustMigrate,
+    owner_decision_required_finding_count: ownerRequired,
+    allowed_projection_finding_count: allowedProjection,
+    open_worklist_finding_count: undecisioned + accepted + mustMigrate + ownerRequired,
+    blocking_worklist_finding_count: undecisioned + mustMigrate + ownerRequired,
   };
 }
 

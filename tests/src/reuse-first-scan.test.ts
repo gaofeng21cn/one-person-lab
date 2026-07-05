@@ -178,10 +178,34 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
         expiry: '2026-09-30',
         decision_ref: 'test#runtime-queue-boundary',
       },
+      {
+        id: 'owner-decision-boundary',
+        status: 'owner_decision_required',
+        categories: ['handwritten_json_boundary'],
+        path_prefixes: ['src/owner'],
+        owner: 'OPL Owner',
+        phase: 'Phase 2',
+        action: 'decide_boundary_owner',
+        expiry: '2026-10-31',
+        decision_ref: 'test#owner-decision-boundary',
+      },
+      {
+        id: 'projection-boundary',
+        status: 'allowed_projection_boundary',
+        categories: ['handwritten_json_boundary'],
+        path_prefixes: ['src/projection'],
+        owner: 'OPL Projection',
+        phase: 'Phase 10',
+        action: 'keep_projection_boundary',
+        expiry: '2026-12-31',
+        decision_ref: 'test#projection-boundary',
+      },
     ],
   });
   writeFixtureFile(fixture, 'src/known/example.ts', 'const parsed = JSON.parse("{}");\n');
   writeFixtureFile(fixture, 'src/runtime/queue.ts', 'const ddl = "CREATE TABLE IF NOT EXISTS tasks";\n');
+  writeFixtureFile(fixture, 'src/owner/boundary.ts', 'const parsed = JSON.parse("{}");\n');
+  writeFixtureFile(fixture, 'src/projection/boundary.ts', 'const parsed = JSON.parse("{}");\n');
   writeFixtureFile(fixture, 'src/unknown.ts', 'const parsed = JSON.parse("{}");\n');
 
   const result = spawnSync(process.execPath, [
@@ -198,20 +222,80 @@ test('reuse-first full scan reports historical decision worklist summary', () =>
   const summary = output.historical_decision_summary;
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(output.finding_count, 3);
+  assert.equal(output.gate_status, 'hard_fail');
+  assert.equal(output.finding_count, 5);
+  assert.equal(output.total_finding_count, 5);
+  assert.equal(output.open_worklist_finding_count, 4);
+  assert.equal(output.blocking_worklist_finding_count, 3);
+  assert.equal(output.allowed_projection_finding_count, 1);
+  assert.equal(output.accepted_migration_worklist_finding_count, 1);
+  assert.equal(output.must_migrate_finding_count, 1);
+  assert.equal(output.owner_decision_required_finding_count, 1);
+  assert.equal(output.undecisioned_finding_count, 1);
   assert.equal(output.returned_finding_count, 0);
   assert.equal(summary.applied, true);
-  assert.equal(summary.finding_count, 3);
-  assert.equal(summary.decisioned_finding_count, 2);
+  assert.equal(summary.finding_count, 5);
+  assert.equal(summary.total_finding_count, 5);
+  assert.equal(summary.open_worklist_finding_count, 4);
+  assert.equal(summary.blocking_worklist_finding_count, 3);
+  assert.equal(summary.allowed_projection_finding_count, 1);
+  assert.equal(summary.accepted_migration_worklist_finding_count, 1);
+  assert.equal(summary.must_migrate_finding_count, 1);
+  assert.equal(summary.owner_decision_required_finding_count, 1);
+  assert.equal(summary.decisioned_finding_count, 4);
   assert.equal(summary.undecisioned_finding_count, 1);
   assertSummaryCount(summary.by_decision_status, 'accepted_migration_worklist', 1);
   assertSummaryCount(summary.by_decision_status, 'must_migrate', 1);
+  assertSummaryCount(summary.by_decision_status, 'owner_decision_required', 1);
+  assertSummaryCount(summary.by_decision_status, 'allowed_projection_boundary', 1);
   assertSummaryCount(summary.by_decision_status, 'undecisioned', 1);
-  assertSummaryCount(summary.by_category, 'handwritten_json_boundary', 2);
+  assertSummaryCount(summary.by_category, 'handwritten_json_boundary', 4);
   assertSummaryCount(summary.by_path_prefix, 'src/known', 1);
   assertSummaryCount(summary.by_path_prefix, 'src/runtime', 1);
+  assertSummaryCount(summary.by_path_prefix, 'src/owner', 1);
+  assertSummaryCount(summary.by_path_prefix, 'src/projection', 1);
   assertSummaryCount(summary.by_path_prefix, 'src/unknown.ts', 1);
   assert.ok(summary.false_ready_guard.includes('worklist decision is not risk eliminated'));
+});
+
+test('reuse-first strict full scan does not block on allowed historical projections', () => {
+  const fixture = makeFixture();
+  writeHistoricalWorklist(fixture, {
+    items: [
+      {
+        id: 'shared-json-boundary',
+        status: 'allowed_projection_boundary',
+        categories: ['handwritten_json_boundary'],
+        path_prefixes: ['src/kernel'],
+        owner: 'OPL Schema',
+        phase: 'Phase 1',
+        action: 'keep_shared_boundary',
+        expiry: '2026-12-31',
+        decision_ref: 'test#shared-json-boundary',
+      },
+    ],
+  });
+  writeFixtureFile(fixture, 'src/kernel/json.ts', 'const parsed = JSON.parse("{}");\n');
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+    '--historical-worklist',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-historical-worklist.json'),
+    '--strict',
+  ], { encoding: 'utf8' });
+  const output = parseJsonText(result.stdout) as any;
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.gate_status, 'advisory_attention');
+  assert.equal(output.finding_count, 1);
+  assert.equal(output.hard_gate_finding_count, 1);
+  assert.equal(output.allowed_projection_finding_count, 1);
+  assert.equal(output.open_worklist_finding_count, 0);
+  assert.equal(output.blocking_worklist_finding_count, 0);
 });
 
 test('reuse-first diff gate ignores broad historical worklist decisions', () => {
