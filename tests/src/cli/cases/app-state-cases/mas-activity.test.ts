@@ -225,6 +225,37 @@ function writeMasReceiptOwnerConsumptionFixture(input: {
   );
 }
 
+function writeStudyRuntimeStatusSummaryFixture(input: {
+  workspaceRoot: string;
+  studyId: string;
+  nextActionSummary: string;
+  statusSummary?: string;
+  generatedAt?: string;
+}) {
+  const summaryPath = path.join(
+    input.workspaceRoot,
+    'studies',
+    input.studyId,
+    'artifacts',
+    'runtime',
+    'runtime_status_summary.json',
+  );
+  fs.mkdirSync(path.dirname(summaryPath), { recursive: true });
+  fs.writeFileSync(
+    summaryPath,
+    JSON.stringify(
+      {
+        study_id: input.studyId,
+        status_summary: input.statusSummary ?? 'runtime status summary fixture',
+        next_action_summary: input.nextActionSummary,
+        generated_at: input.generatedAt ?? '2026-07-04T00:07:00.000Z',
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));
   const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-repo-'));
@@ -770,7 +801,7 @@ test('app state fast surfaces newer completed MAS stage attempts instead of stal
     assert.equal(dm003Task.active_run_id, 'wf_app_state_dm003_completed_latest');
     assert.deepEqual(dm003Task.stage_attempt_ids.slice(0, 2), [completedAttemptId, failedAttemptId]);
     assert.equal(dm003Task.stage_attempt_ids.length, 8);
-    assert.equal(dm003Task.next_visible_step.includes('MAS paper-mission/study-progress'), true);
+    assert.equal(dm003Task.next_visible_step.includes('MAS next legal step'), true);
 
     const taskRunProjection = workbench.task_run_projection_v2;
     assert.deepEqual(taskRunProjection.summary, {
@@ -916,6 +947,12 @@ test('app state fast treats workspace terminal closeout evidence as completed ru
       stageAttemptId,
       recordedAt: '2026-07-04T00:06:00.000Z',
     });
+    writeStudyRuntimeStatusSummaryFixture({
+      workspaceRoot,
+      studyId,
+      nextActionSummary: '回到“论文写作与结果收紧”，回答“dm003_bounded_prose_repair_after_post_sync_reviewer_record”。',
+      statusSummary: '最新 task intake 已明确要求回到待修订状态。',
+    });
 
     const output = runCli(['app', 'state', '--profile', 'fast'], {
       HOME: homeRoot,
@@ -948,7 +985,11 @@ test('app state fast treats workspace terminal closeout evidence as completed ru
     assert.equal(dm003Task.mas_owner_consumption_status, 'owner_consumed_route_checkpoint');
     assert.equal(dm003Task.mas_owner_consumed_stage_attempt_id, stageAttemptId);
     assert.equal(dm003Task.mas_owner_consumption_matches_runtime_closeout, true);
-    assert.equal(dm003Task.next_visible_step.includes('MAS paper-mission/study-progress'), true);
+    assert.equal(dm003Task.next_visible_step.includes('MAS next legal step'), true);
+    assert.equal(
+      dm003Task.next_visible_step.includes('回到“论文写作与结果收紧”，回答“dm003_bounded_prose_repair_after_post_sync_reviewer_record”。'),
+      true,
+    );
 
     const taskRunProjection = workbench.task_run_projection_v2;
     assert.deepEqual(taskRunProjection.summary, {
@@ -968,6 +1009,10 @@ test('app state fast treats workspace terminal closeout evidence as completed ru
     assert.equal(dm003Projection.mas_owner_consumption_status, 'owner_consumed_route_checkpoint');
     assert.equal(dm003Projection.mas_owner_consumed_stage_attempt_id, stageAttemptId);
     assert.equal(dm003Projection.mas_owner_consumption_matches_runtime_closeout, true);
+    assert.equal(
+      dm003Projection.next_visible_step.includes('回到“论文写作与结果收紧”，回答“dm003_bounded_prose_repair_after_post_sync_reviewer_record”。'),
+      true,
+    );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRepoRoot, { recursive: true, force: true });

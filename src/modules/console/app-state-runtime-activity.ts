@@ -330,6 +330,11 @@ function overlayStageAttempts(input: {
   });
   const ownerConsumptionDrift = Boolean(ownerConsumption && closeout && !ownerConsumption.matchesRuntimeCloseout);
   const lane = ownerConsumptionDrift ? 'attention' : stageAttemptLane(latestStatus) ?? 'attention';
+  const masNextActionSummary = firstString(
+    input.item.next_action_summary,
+    input.item.action_summary,
+    input.item.summary,
+  );
   const sourceRefs = [
     ...recordList(input.item.source_refs),
     ...input.attempts.flatMap((attempt) => {
@@ -343,12 +348,16 @@ function overlayStageAttempts(input: {
   const actionSummary = ownerConsumptionDrift
     ? 'Latest OPL runtime closeout differs from the MAS owner-consumed receipt; read MAS paper-mission/study-progress before any paper-progress claim.'
     : ownerConsumption?.matchesRuntimeCloseout
-      ? 'OPL runtime stage attempt completed and MAS consumed that runtime receipt; read MAS paper-mission/study-progress for the next legal owner action before any paper-progress claim.'
+      ? masNextActionSummary
+        ? `OPL runtime stage attempt completed and MAS consumed that runtime receipt. MAS next legal step: ${masNextActionSummary}`
+        : 'OPL runtime stage attempt completed and MAS consumed that runtime receipt; read MAS paper-mission/study-progress for the next legal owner action before any paper-progress claim.'
       : lane === 'running'
     ? 'OPL runtime stage attempt is running; MAS terminalization is still required before any paper-progress claim.'
     : lane === 'attention'
       ? 'OPL runtime stage attempt needs operator attention; MAS terminalization is still required before any paper-progress claim.'
-      : 'OPL runtime stage attempt completed; read MAS paper-mission/study-progress for the next legal owner action before any paper-progress claim.';
+      : masNextActionSummary
+        ? `OPL runtime stage attempt completed. MAS next legal step: ${masNextActionSummary}`
+        : 'OPL runtime stage attempt completed; read MAS paper-mission/study-progress for the next legal owner action before any paper-progress claim.';
 
   return {
     ...input.item,
@@ -504,6 +513,7 @@ function normalizeStudyItem(input: {
   sourceRole: string;
   sourceLabel: string;
   study: JsonRecord;
+  runtimeStatusSummary?: JsonRecord | null;
 }): JsonRecord | null {
   const studyId = firstString(input.study.study_id);
   if (!studyId || studyId === 'workspace-overview') {
@@ -511,8 +521,23 @@ function normalizeStudyItem(input: {
   }
   const lane = laneForStudy(input.study);
   const freshness = isRecord(input.study.freshness) ? input.study.freshness : {};
+  const runtimeStatusSummary = isRecord(input.runtimeStatusSummary)
+    ? input.runtimeStatusSummary
+    : {};
   const commands = recommendedCommands(input.profileRef, studyId);
-  const summary = firstString(input.study.state_summary, input.study.summary, freshness.summary, input.study.user_next);
+  const summary = firstString(
+    input.study.state_summary,
+    input.study.summary,
+    freshness.summary,
+    runtimeStatusSummary.status_summary,
+    input.study.user_next,
+  );
+  const nextActionSummary = firstString(
+    runtimeStatusSummary.next_action_summary,
+    input.study.next_action_summary,
+    input.study.next_system_action,
+    input.study.operator_focus,
+  );
 
   return {
     item_id: `medautoscience:study:${studyId}`,
@@ -534,17 +559,33 @@ function normalizeStudyItem(input: {
     action_owner: lane === 'attention' ? 'opl' : lane === 'running' ? 'runtime' : 'none',
     requires_user_action: false,
     action_kind: lane === 'attention' ? 'quality_gate' : null,
-    action_summary: firstString(input.study.next_action_summary, input.study.next_system_action, input.study.operator_focus, summary)
+    action_summary: firstString(nextActionSummary, summary)
       ?? (lane === 'running' ? 'MAS 论文线正在运行。' : 'MAS 论文线当前没有活跃运行任务。'),
     study_id: studyId,
     workspace_label: firstString(input.study.profile_name),
     detail_summary: summary,
-    next_action_summary: firstString(input.study.next_action_summary, input.study.next_system_action, input.study.operator_focus),
-    active_run_id: firstString(input.study.active_run_id),
+    next_action_summary: nextActionSummary,
+    active_run_id: firstString(input.study.active_run_id, runtimeStatusSummary.active_run_id),
     health_status: firstString(input.study.worker_state, input.study.macro_state, input.study.runtime_health_status),
     blockers: [],
     recommended_commands: commands,
   };
+}
+
+function studyRuntimeStatusSummaryPath(workspaceRoot: string, studyId: string) {
+  return path.join(
+    workspaceRoot,
+    'studies',
+    studyId,
+    'artifacts',
+    'runtime',
+    'runtime_status_summary.json',
+  );
+}
+
+function readStudyRuntimeStatusSummary(workspaceRoot: string, studyId: string) {
+  const payload = readJsonFileOrNull(studyRuntimeStatusSummaryPath(workspaceRoot, studyId));
+  return isRecord(payload) ? payload : null;
 }
 
 function portalPayloadPath(workspaceRoot: string) {
@@ -578,27 +619,39 @@ function buildFromPortalPayload(workspaceRoot: string, profileRef: string | null
     : null;
   if (workbenchProjection && workbenchProjection.surface_kind === 'mas_opl_runtime_workbench_projection') {
     return recordList(workbenchProjection.studies)
-      .map((study) => normalizeStudyItem({
-        workspaceRoot,
-        profileRef,
-        sourcePath: payloadPath,
-        sourceRole: 'mas_opl_runtime_workbench_projection',
-        sourceLabel: 'MAS OPL Runtime Workbench projection',
-        study,
-      }))
+      .map((study) => {
+        const studyId = firstString(study.study_id);
+        return normalizeStudyItem({
+          workspaceRoot,
+          profileRef,
+          sourcePath: payloadPath,
+          sourceRole: 'mas_opl_runtime_workbench_projection',
+          sourceLabel: 'MAS OPL Runtime Workbench projection',
+          study,
+          runtimeStatusSummary: studyId
+            ? readStudyRuntimeStatusSummary(workspaceRoot, studyId)
+            : null,
+        });
+      })
       .filter((entry): entry is JsonRecord => Boolean(entry));
   }
 
   const workspace = isRecord(payload.workspace) ? payload.workspace : {};
   return recordList(workspace.studies)
-    .map((study) => normalizeStudyItem({
-      workspaceRoot,
-      profileRef,
-      sourcePath: payloadPath,
-      sourceRole: 'mas_progress_portal_payload',
-      sourceLabel: 'MAS Progress Portal payload',
-      study,
-    }))
+    .map((study) => {
+      const studyId = firstString(study.study_id);
+      return normalizeStudyItem({
+        workspaceRoot,
+        profileRef,
+        sourcePath: payloadPath,
+        sourceRole: 'mas_progress_portal_payload',
+        sourceLabel: 'MAS Progress Portal payload',
+        study,
+        runtimeStatusSummary: studyId
+          ? readStudyRuntimeStatusSummary(workspaceRoot, studyId)
+          : null,
+      });
+    })
     .filter((entry): entry is JsonRecord => Boolean(entry));
 }
 
