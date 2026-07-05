@@ -12,6 +12,7 @@
     "connect agent-packages",
     "update",
     "status",
+    "stages",
     "runtime manager",
     "runtime app-operator-drilldown",
     "runtime observability"
@@ -45,6 +46,17 @@
     "status workspace",
     "status runtime",
     "status dashboard",
+    "stages list",
+    "stages inspect",
+    "stages readiness",
+    "stages proof-bundle",
+    "stages graph",
+    "stages assumptions",
+    "stages cohort-loop",
+    "stages runtime-budget",
+    "stages registry",
+    "stages source-spec",
+    "stages replay-certification",
     "runtime manager",
     "runtime manager action",
     "runtime app-operator-drilldown",
@@ -53,6 +65,504 @@
     "runtime observability-collector-smoke"
   ],
   "commands": {
+    "stages_list": {
+      "command_id": "stages list",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stages"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_inspect": {
+      "command_id": "stages inspect",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "stage",
+          "flag": "--stage",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_readiness": {
+      "command_id": "stages readiness",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "family-defaults",
+          "flag": "--family-defaults",
+          "value_kind": "boolean",
+          "required": false
+        },
+        {
+          "name": "detail",
+          "flag": "--detail",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_readiness"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_proof_bundle": {
+      "command_id": "stages proof-bundle",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_proof_bundle"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_graph": {
+      "command_id": "stages graph",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_graph"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_assumptions": {
+      "command_id": "stages assumptions",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_assumption_lifecycle"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_cohort_loop": {
+      "command_id": "stages cohort-loop",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_cohort_loop"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_runtime_budget": {
+      "command_id": "stages runtime-budget",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_runtime_budget"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_registry": {
+      "command_id": "stages registry",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "library-status",
+          "flag": "--library-status",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "promotion-ref",
+          "flag": "--promotion-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "deprecation-ref",
+          "flag": "--deprecation-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "supersession-ref",
+          "flag": "--supersession-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "superseded-by-stage-pack-ref",
+          "flag": "--superseded-by-stage-pack-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "previous-stage-pack-hash",
+          "flag": "--previous-stage-pack-hash",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "migration-policy",
+          "flag": "--migration-policy",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "migration-policy-ref",
+          "flag": "--migration-policy-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "reused-by-ref",
+          "flag": "--reused-by-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "attempt-id",
+          "flag": "--attempt-id",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "attempt-stage-pack-hash",
+          "flag": "--attempt-stage-pack-hash",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "attempt-stage",
+          "flag": "--attempt-stage",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "attempt-created-at-ref",
+          "flag": "--attempt-created-at-ref",
+          "value_kind": "string",
+          "required": false
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_pack_registry"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_source_spec": {
+      "command_id": "stages source-spec",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "library-status",
+          "flag": "--library-status",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "promotion-ref",
+          "flag": "--promotion-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "deprecation-ref",
+          "flag": "--deprecation-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "supersession-ref",
+          "flag": "--supersession-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "superseded-by-stage-pack-ref",
+          "flag": "--superseded-by-stage-pack-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "previous-stage-pack-hash",
+          "flag": "--previous-stage-pack-hash",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "migration-policy",
+          "flag": "--migration-policy",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "migration-policy-ref",
+          "flag": "--migration-policy-ref",
+          "value_kind": "string",
+          "required": false
+        },
+        {
+          "name": "reused-by-ref",
+          "flag": "--reused-by-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "append-only-event-log-ref",
+          "flag": "--append-only-event-log-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "attempt-ledger-ref",
+          "flag": "--attempt-ledger-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "recorded-runtime-event-ref",
+          "flag": "--recorded-runtime-event-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "closeout-receipt-ref",
+          "flag": "--closeout-receipt-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_pack_source_spec"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "stages_replay_certification": {
+      "command_id": "stages replay-certification",
+      "owner": "OPL Stagecraft",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "domain",
+          "flag": "--domain",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "append-only-event-log-ref",
+          "flag": "--append-only-event-log-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "attempt-ledger-ref",
+          "flag": "--attempt-ledger-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "recorded-runtime-event-ref",
+          "flag": "--recorded-runtime-event-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        },
+        {
+          "name": "closeout-receipt-ref",
+          "flag": "--closeout-receipt-ref",
+          "value_kind": "string",
+          "required": false,
+          "multiple": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "family_stage_replay_certification"
+        ],
+        "additionalProperties": true
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
     "connect_install": {
       "command_id": "connect install",
       "owner": "OPL Connect",

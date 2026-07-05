@@ -1,16 +1,26 @@
-import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/modules/charter/contracts.ts';
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
 import { validateCommandRegistryCoverage } from '../../../../src/entrypoints/cli/modules/command-registry.ts';
 
+type CliCommandRegistryContract = {
+  protected_command_prefixes: string[];
+  required_command_ids: string[];
+  commands: Record<string, any>;
+};
+
+function loadCliCommandRegistryContract() {
+  return parseJsonText(
+    fs.readFileSync(
+      path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
+      'utf8',
+    ),
+  ) as CliCommandRegistryContract;
+}
+
 test('connect pubmed search exposes registry metadata in command help', () => {
   const help = runCli(['help', 'connect', 'pubmed', 'search']).help;
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
 
   assert.equal(help.registry.command_id, 'connect pubmed search');
   assert.equal(contract.commands.connect_pubmed_search.command_id, help.registry.command_id);
@@ -30,12 +40,7 @@ test('connect pubmed search exposes registry metadata in command help', () => {
 
 test('connect references verify exposes registry metadata in command help', () => {
   const help = runCli(['help', 'connect', 'references', 'verify']).help;
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
 
   assert.equal(help.registry.command_id, 'connect references verify');
   assert.equal(contract.commands.connect_references_verify.command_id, help.registry.command_id);
@@ -59,12 +64,7 @@ test('connect references verify exposes registry metadata in command help', () =
 });
 
 test('connect module actions expose registry metadata in command help', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
 
   for (const action of ['install', 'update', 'reinstall', 'remove']) {
     const help = runCli(['help', 'connect', action]).help;
@@ -88,12 +88,7 @@ test('connect module actions expose registry metadata in command help', () => {
 });
 
 test('status commands expose registry metadata in command help', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
 
   const expected = [
     {
@@ -196,12 +191,7 @@ test('status command options are parsed through the registry adapter', () => {
 });
 
 test('runtime manager commands expose registry metadata and parse action mode through the registry adapter', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
   const expected = [
     {
       command: 'runtime manager',
@@ -258,12 +248,7 @@ test('runtime manager commands expose registry metadata and parse action mode th
 });
 
 test('runtime app-operator drilldown exposes registry metadata and validates options through the registry adapter', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
   const help = runCli(['help', 'runtime', 'app-operator-drilldown']).help;
   const contractCommand = contract.commands.runtime_app_operator_drilldown;
 
@@ -291,13 +276,104 @@ test('runtime app-operator drilldown exposes registry metadata and validates opt
   assert.match(invalid.payload.error.message, /summary or full/);
 });
 
+test('stage commands expose registry metadata and reject unknown options through the registry adapter', () => {
+  const contract = loadCliCommandRegistryContract();
+  const expected = [
+    { command: 'stages list', contractKey: 'stages_list', options: [] },
+    { command: 'stages inspect', contractKey: 'stages_inspect', options: ['domain', 'stage'] },
+    {
+      command: 'stages readiness',
+      contractKey: 'stages_readiness',
+      options: ['domain', 'family-defaults', 'detail'],
+    },
+    { command: 'stages proof-bundle', contractKey: 'stages_proof_bundle', options: ['domain'] },
+    { command: 'stages graph', contractKey: 'stages_graph', options: ['domain'] },
+    { command: 'stages assumptions', contractKey: 'stages_assumptions', options: ['domain'] },
+    { command: 'stages cohort-loop', contractKey: 'stages_cohort_loop', options: ['domain'] },
+    { command: 'stages runtime-budget', contractKey: 'stages_runtime_budget', options: ['domain'] },
+    {
+      command: 'stages registry',
+      contractKey: 'stages_registry',
+      options: [
+        'domain',
+        'library-status',
+        'promotion-ref',
+        'deprecation-ref',
+        'supersession-ref',
+        'superseded-by-stage-pack-ref',
+        'previous-stage-pack-hash',
+        'migration-policy',
+        'migration-policy-ref',
+        'reused-by-ref',
+        'attempt-id',
+        'attempt-stage-pack-hash',
+        'attempt-stage',
+        'attempt-created-at-ref',
+      ],
+    },
+    {
+      command: 'stages source-spec',
+      contractKey: 'stages_source_spec',
+      options: [
+        'domain',
+        'library-status',
+        'promotion-ref',
+        'deprecation-ref',
+        'supersession-ref',
+        'superseded-by-stage-pack-ref',
+        'previous-stage-pack-hash',
+        'migration-policy',
+        'migration-policy-ref',
+        'reused-by-ref',
+        'append-only-event-log-ref',
+        'attempt-ledger-ref',
+        'recorded-runtime-event-ref',
+        'closeout-receipt-ref',
+      ],
+    },
+    {
+      command: 'stages replay-certification',
+      contractKey: 'stages_replay_certification',
+      options: [
+        'domain',
+        'append-only-event-log-ref',
+        'attempt-ledger-ref',
+        'recorded-runtime-event-ref',
+        'closeout-receipt-ref',
+      ],
+    },
+  ];
+
+  assert.equal(contract.protected_command_prefixes.includes('stages'), true);
+  for (const entry of expected) {
+    assert.equal(contract.required_command_ids.includes(entry.command), true);
+    const help = runCli(['help', ...entry.command.split(' ')]).help;
+    const contractCommand = contract.commands[entry.contractKey];
+
+    assert.equal(help.registry.command_id, entry.command);
+    assert.equal(contractCommand.command_id, help.registry.command_id);
+    assert.equal(help.registry.parser_adapter, 'node_util_parse_args');
+    assert.deepEqual(
+      help.registry.options.map((option: { name: string }) => option.name),
+      entry.options,
+    );
+    assert.equal(
+      help.registry.json_output_schema_ref,
+      `contracts/opl-framework/cli-command-registry.json#/commands/${entry.contractKey}/output_schema`,
+    );
+    assert.equal(help.registry.authority_boundary.can_write_domain_truth, false);
+    assert.equal(help.registry.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(help.registry.authority_boundary.can_claim_domain_ready, false);
+    assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
+  }
+
+  const invalid = runCliFailure(['stages', 'proof-bundle', '--domain', 'mas', '--unknown', 'value']);
+  assert.equal(invalid.payload.error.code, 'cli_usage_error');
+  assert.match(invalid.payload.error.message, /Unknown option/);
+});
+
 test('runtime observability commands expose registry metadata in command help', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
   const expected = [
     {
       command: 'runtime observability-export',
@@ -341,12 +417,7 @@ test('runtime observability commands expose registry metadata in command help', 
 });
 
 test('update commands expose registry metadata and parse options through the registry adapter', () => {
-  const contract = JSON.parse( // reuse-first: allow contract fixture parser
-    fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'cli-command-registry.json'),
-    'utf8',
-    ),
-  );
+  const contract = loadCliCommandRegistryContract();
   const commands = [
     ['status', ['component']],
     ['check', ['component']],
