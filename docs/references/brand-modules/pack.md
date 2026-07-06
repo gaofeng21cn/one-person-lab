@@ -84,6 +84,17 @@ opl pack validate --json
 opl pack doctor --json
 ```
 
+通用 pack 资源入口：
+
+```text
+opl pack inspect --pack <path> --json
+opl pack check --pack <path> --json
+opl pack run --pack <path> --action <id> --template <id> --mode final|candidate --json
+opl pack gallery --pack <path> --json
+```
+
+这些入口只读取 `opl_pack.json` / Pack OS descriptor、生成 refs-only inspection / validation / action plan，不执行 domain renderer，也不声明质量 verdict、artifact authority 或 publication readiness。`medical-display-core` 是 MAS Scholar Skills 提供的外部 capability pack resource；OPL 不提供 `opl display` 顶层命令，也不把科研画图纳入 OPL 基座 domain 语义。
+
 Pack 对象视图入口：
 
 ```text

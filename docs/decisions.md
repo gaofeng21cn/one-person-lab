@@ -69,6 +69,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 该能力不接管 Pack OS generic capability-pack descriptor，也不替代 first-party GHCR package channel；第三方 agent package lifecycle 是 Connect 的 external descriptor / distribution surface，Pack OS 继续持有通用 capability pack descriptor / content-addressed cache / refs-only distribution lock。
 - 该 landing 不声明 domain ready、publication ready、visual/export ready、App release ready、Brand L5 或 production ready；真实安装后的 Codex plugin/materialized package health、uninstall/rollback physical mutation 和 live user path 仍需要后续 owner evidence。
 
+### 决策：Display pack 作为通用 OPL Pack resource 消费，不新增 `opl display`
+
+原因：`medical-display-core` 是 MAS Scholar Skills 的医学科研画图资源包。它需要被 OPL 基座以通用 pack 资源 inspect/check/run/gallery，而不是把 Display 提升成 OPL Framework 顶层 domain 命令。若新增 `opl display`，会把一个医学论文专业资源误写成 OPL core 能力，也会绕开 Pack OS 已有 refs-only / false-authority 边界。
+
+影响：
+
+- OPL 提供 `opl pack inspect --pack <path>`、`opl pack check --pack <path>`、`opl pack run --pack <path> ...` 和 `opl pack gallery --pack <path>` 这组 generic UX，底层复用 Pack OS descriptor / validation / lock 语义。
+- `opl pack run/gallery` 在 Framework 侧只生成 refs-only action/gallery plan，不执行医学 renderer，不写 artifact body，不签 owner receipt，也不声明 publication / visual export readiness。
+- MAS Scholar Skills 在自己的 pack 中声明 `opl_pack.json`、templates、render modes、gallery refs 和 no-authority boundary；OPL 只消费这个 descriptor。
+- 不新增 `opl display`、Display 专属 Pack OS 分支、独立 display-pack repo 或第二套 registry。
+
 ## 2026-07-03
 
 ### 决策：Standard Agent AI-first Principle Pack 由 OPL 持有通用原则，domain 持有领域映射

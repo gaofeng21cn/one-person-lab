@@ -50,6 +50,71 @@ function parseDescriptorArgs(args: string[], usageText: string) {
   return { descriptor, output };
 }
 
+function resolvePackDescriptor(packRef: string) {
+  const resolved = path.resolve(packRef);
+  if (!fs.existsSync(resolved)) {
+    return resolved;
+  }
+  const stats = fs.statSync(resolved);
+  if (!stats.isDirectory()) {
+    return resolved;
+  }
+  for (const candidate of ['opl_pack.json', 'pack.json', 'display-pack.json']) {
+    const candidatePath = path.join(resolved, candidate);
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+  throw usage('Pack directory must contain opl_pack.json, pack.json, or display-pack.json.', {
+    pack: resolved,
+    expected: ['opl_pack.json', 'pack.json', 'display-pack.json'],
+  });
+}
+
+function parseGenericPackArgs(args: string[], usageText: string) {
+  let pack: string | null = null;
+  let action: string | null = null;
+  let template: string | null = null;
+  let mode: string | null = null;
+  let output: string | null = null;
+  const remaining = [...args];
+  while (remaining.length > 0) {
+    const token = remaining.shift()!;
+    if (token === '--pack') {
+      pack = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--action') {
+      action = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--template') {
+      template = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--mode') {
+      mode = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    if (token === '--output') {
+      output = requireCliValue(token, remaining, usageText);
+      continue;
+    }
+    throw usage(`Unknown pack option: ${token}.`, { token, usage: usageText });
+  }
+  if (!pack) {
+    throw usage(`${usageText} requires --pack <path>.`, { required: ['--pack <path>'] });
+  }
+  return {
+    descriptor: resolvePackDescriptor(pack),
+    pack,
+    action,
+    template,
+    mode,
+    output,
+  };
+}
+
 function requireCliValue(option: string, remaining: string[], usageText: string) {
   const value = remaining.shift() ?? null;
   if (!value) {
@@ -275,6 +340,33 @@ export function buildPackOsInspection(descriptorPath: string) {
       ],
     },
     descriptor: loaded.descriptor,
+  };
+}
+
+export function buildGenericPackInspection(packRef: string) {
+  const descriptorPath = resolvePackDescriptor(packRef);
+  const inspection = buildPackOsInspection(descriptorPath);
+  return {
+    version: 'g2',
+    opl_pack: {
+      surface_kind: 'opl_generic_pack_inspection',
+      substrate: 'opl_pack_os',
+      command_surface: 'opl pack inspect',
+      pack_ref: packRef,
+      descriptor_path: descriptorPath,
+      status: inspection.pack_os.status,
+      pack_id: inspection.pack_os.pack_id,
+      pack_kind: inspection.pack_os.pack_kind,
+      pack_version: inspection.pack_os.pack_version,
+      owner: inspection.pack_os.owner,
+      capabilities: inspection.descriptor.capabilities,
+      resources: inspection.descriptor.resources,
+      artifact_lifecycle: inspection.descriptor.artifact_lifecycle,
+      review_transport: inspection.descriptor.review_transport,
+      authority_boundary: inspection.pack_os.authority_boundary,
+      not_claims: inspection.pack_os.forbidden_claims,
+    },
+    pack_os: inspection.pack_os,
   };
 }
 
@@ -658,6 +750,67 @@ export function buildPackOsValidation(descriptorPath: string) {
   };
 }
 
+export function buildGenericPackRunPlan(input: {
+  packRef: string;
+  action: string | null;
+  template: string | null;
+  mode: string | null;
+  output: string | null;
+}) {
+  const descriptorPath = resolvePackDescriptor(input.packRef);
+  const lock = buildPackOsLock(descriptorPath).pack_lock;
+  const action = input.action ?? 'inspect';
+  return {
+    version: 'g2',
+    opl_pack_run_plan: {
+      surface_kind: 'opl_generic_pack_run_plan',
+      status: 'planned_refs_only',
+      substrate: 'opl_pack_os',
+      command_surface: 'opl pack run',
+      pack_ref: input.packRef,
+      descriptor_path: descriptorPath,
+      pack_id: lock.pack_id,
+      pack_kind: lock.pack_kind,
+      action,
+      template: input.template,
+      mode: input.mode,
+      output_ref: input.output,
+      executable_runner_invoked: false,
+      reason: 'OPL Pack resolves pack resources and refs; domain renderers execute only through an explicit consuming-domain runner.',
+      capability_refs: lock.resolved_resources.filter((resource) => resource.role === 'template' || resource.role === 'renderer'),
+      authority_boundary: lock.authority_boundary,
+      not_claims: lock.not_claims,
+    },
+  };
+}
+
+export function buildGenericPackGalleryPlan(input: {
+  packRef: string;
+  output: string | null;
+}) {
+  const descriptorPath = resolvePackDescriptor(input.packRef);
+  const lock = buildPackOsLock(descriptorPath).pack_lock;
+  return {
+    version: 'g2',
+    opl_pack_gallery_plan: {
+      surface_kind: 'opl_generic_pack_gallery_plan',
+      status: 'planned_refs_only',
+      substrate: 'opl_pack_os',
+      command_surface: 'opl pack gallery',
+      pack_ref: input.packRef,
+      descriptor_path: descriptorPath,
+      pack_id: lock.pack_id,
+      pack_kind: lock.pack_kind,
+      output_ref: input.output,
+      executable_runner_invoked: false,
+      reason: 'OPL Pack can carry gallery refs, but gallery rendering remains owned by the pack or consuming domain.',
+      gallery_refs: lock.resolved_resources.filter((resource) => resource.role === 'artifact_ref' || resource.role === 'exemplar_ref'),
+      authority_boundary: lock.authority_boundary,
+      not_claims: lock.not_claims,
+    },
+  };
+}
+
 export function runPackOsInspectCommand(args: string[]) {
   const parsed = parseDescriptorArgs(args, 'opl pack os inspect --descriptor <path>');
   if (parsed.output) {
@@ -666,6 +819,73 @@ export function runPackOsInspectCommand(args: string[]) {
     });
   }
   return buildPackOsInspection(parsed.descriptor);
+}
+
+export function runGenericPackInspectCommand(args: string[]) {
+  const parsed = parseGenericPackArgs(args, 'opl pack inspect --pack <path>');
+  if (parsed.action || parsed.template || parsed.mode || parsed.output) {
+    throw usage('opl pack inspect accepts only --pack; use pack run/gallery for action planning.', {
+      action: parsed.action,
+      template: parsed.template,
+      mode: parsed.mode,
+      output: parsed.output,
+    });
+  }
+  return buildGenericPackInspection(parsed.pack);
+}
+
+export function runGenericPackCheckCommand(args: string[]) {
+  const parsed = parseGenericPackArgs(args, 'opl pack check --pack <path>');
+  if (parsed.action || parsed.template || parsed.mode || parsed.output) {
+    throw usage('opl pack check accepts only --pack; use pack run/gallery for action planning.', {
+      action: parsed.action,
+      template: parsed.template,
+      mode: parsed.mode,
+      output: parsed.output,
+    });
+  }
+  const validation = buildPackOsValidation(parsed.descriptor);
+  return {
+    version: 'g2',
+    opl_pack_check: {
+      surface_kind: 'opl_generic_pack_check',
+      substrate: 'opl_pack_os',
+      command_surface: 'opl pack check',
+      pack_ref: parsed.pack,
+      descriptor_path: parsed.descriptor,
+      status: validation.pack_os_validation.status,
+      checks: validation.pack_os_validation.checks,
+      authority_boundary: validation.pack_os_validation.authority_boundary,
+      not_claims: validation.pack_os_validation.not_claims,
+    },
+    pack_os_validation: validation.pack_os_validation,
+  };
+}
+
+export function runGenericPackRunCommand(args: string[]) {
+  const parsed = parseGenericPackArgs(args, 'opl pack run --pack <path> [--action <id>] [--template <id>] [--mode <final|candidate>] [--output <ref>]');
+  return buildGenericPackRunPlan({
+    packRef: parsed.pack,
+    action: parsed.action,
+    template: parsed.template,
+    mode: parsed.mode,
+    output: parsed.output,
+  });
+}
+
+export function runGenericPackGalleryCommand(args: string[]) {
+  const parsed = parseGenericPackArgs(args, 'opl pack gallery --pack <path> [--output <ref>]');
+  if (parsed.action || parsed.template || parsed.mode) {
+    throw usage('opl pack gallery accepts --pack and optional --output only.', {
+      action: parsed.action,
+      template: parsed.template,
+      mode: parsed.mode,
+    });
+  }
+  return buildGenericPackGalleryPlan({
+    packRef: parsed.pack,
+    output: parsed.output,
+  });
 }
 
 export function runPackOsInstallCommand(args: string[]) {

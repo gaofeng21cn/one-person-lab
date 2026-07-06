@@ -219,6 +219,51 @@ test('pack os CLI inspects validates and writes refs-only locks', () => {
   }
 });
 
+test('generic pack aliases inspect check plan run and gallery without domain execution', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-generic-cli-'));
+  try {
+    const descriptorPath = writeDescriptor(root);
+    fs.copyFileSync(descriptorPath, path.join(root, 'opl_pack.json'));
+
+    const inspect = runCli(['pack', 'inspect', '--pack', root]).opl_pack;
+    assert.equal(inspect.surface_kind, 'opl_generic_pack_inspection');
+    assert.equal(inspect.substrate, 'opl_pack_os');
+    assert.equal(inspect.pack_id, 'mas.display.cli');
+    assert.equal(inspect.authority_boundary.can_authorize_publication_readiness, false);
+
+    const check = runCli(['pack', 'check', '--pack', root]).opl_pack_check;
+    assert.equal(check.surface_kind, 'opl_generic_pack_check');
+    assert.equal(check.status, 'valid');
+    assert.equal(check.checks.every((entry: { status: string }) => entry.status === 'pass'), true);
+
+    const run = runCli([
+      'pack',
+      'run',
+      '--pack',
+      root,
+      '--action',
+      'render',
+      '--template',
+      'figure',
+      '--mode',
+      'candidate',
+    ]).opl_pack_run_plan;
+    assert.equal(run.surface_kind, 'opl_generic_pack_run_plan');
+    assert.equal(run.status, 'planned_refs_only');
+    assert.equal(run.executable_runner_invoked, false);
+    assert.equal(run.action, 'render');
+    assert.equal(run.mode, 'candidate');
+    assert.equal(run.not_claims.includes('publication_ready'), true);
+
+    const gallery = runCli(['pack', 'gallery', '--pack', root]).opl_pack_gallery_plan;
+    assert.equal(gallery.surface_kind, 'opl_generic_pack_gallery_plan');
+    assert.equal(gallery.status, 'planned_refs_only');
+    assert.equal(gallery.executable_runner_invoked, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('pack os CLI installs lists caches and distributes generic packs', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-os-cli-install-'));
   try {

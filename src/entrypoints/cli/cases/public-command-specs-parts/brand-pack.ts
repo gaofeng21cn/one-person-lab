@@ -4,6 +4,10 @@ import {
   runPackBundleWriteCommand,
 } from '../../../../modules/pack/pack-bundle.ts';
 import {
+  runGenericPackCheckCommand,
+  runGenericPackGalleryCommand,
+  runGenericPackInspectCommand,
+  runGenericPackRunCommand,
   runPackOsCacheCommand,
   runPackOsDistributeCommand,
   runPackOsInstallCommand,
@@ -16,8 +20,54 @@ import {
 import { assertNoArgs, buildCommandHelp } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
-export function buildBrandPackCommandSpecs(): Record<string, CommandSpec> {
+export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): Record<string, CommandSpec> {
   const specs: Record<string, CommandSpec> = {
+    'pack inspect': {
+      usage: 'opl pack inspect [--pack <path>]',
+      summary: 'Inspect OPL Pack itself, or inspect a generic pack descriptor when --pack is provided.',
+      examples: [
+        'opl pack inspect --json',
+        'opl pack inspect --pack packs/medical-display-core --json',
+      ],
+      group: 'brand-pack',
+      handler: (args) => {
+        if (args.includes('--pack')) {
+          return runGenericPackInspectCommand(args);
+        }
+        if (!packInspectFallback) {
+          assertNoArgs(args, specs['pack inspect']);
+          return buildCommandHelp('pack inspect', specs['pack inspect']);
+        }
+        return packInspectFallback.handler(args);
+      },
+    },
+    'pack check': {
+      usage: 'opl pack check --pack <path>',
+      summary: 'Validate a generic pack descriptor with Pack OS false-authority and refs-only checks.',
+      examples: [
+        'opl pack check --pack packs/medical-display-core --json',
+      ],
+      group: 'brand-pack',
+      handler: runGenericPackCheckCommand,
+    },
+    'pack run': {
+      usage: 'opl pack run --pack <path> [--action <id>] [--template <id>] [--mode <final|candidate>] [--output <ref>]',
+      summary: 'Plan a generic pack action without executing domain-owned renderers or claiming authority.',
+      examples: [
+        'opl pack run --pack packs/medical-display-core --action render --template roc_curve_binary --mode final --json',
+      ],
+      group: 'brand-pack',
+      handler: runGenericPackRunCommand,
+    },
+    'pack gallery': {
+      usage: 'opl pack gallery --pack <path> [--output <ref>]',
+      summary: 'Read gallery-capable refs from a generic pack descriptor without rendering gallery artifacts.',
+      examples: [
+        'opl pack gallery --pack packs/medical-display-core --json',
+      ],
+      group: 'brand-pack',
+      handler: runGenericPackGalleryCommand,
+    },
     'pack bundle': {
       usage: 'opl pack bundle <manifest|write|check> --assembly <path>',
       summary: 'Manage source parts to generated aggregate bundles without making generated JSON the source of truth.',

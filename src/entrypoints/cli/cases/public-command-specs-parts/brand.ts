@@ -56,7 +56,6 @@ export function buildBrandCommandSpecs(
   );
 
   const brandCommandSpecs: Record<string, CommandSpec> = {
-    ...buildBrandPackCommandSpecs(),
     ...buildBrandRunwayCommandSpecs(),
     'brand-modules list': {
       usage: 'opl brand-modules list',
@@ -137,6 +136,7 @@ export function buildBrandCommandSpecs(
     },
     ...buildBrandOperatingModelCommandSpecs(getContracts),
     ...brandModuleSurfaceSpecs,
+    ...buildBrandPackCommandSpecs(brandModuleSurfaceSpecs['pack inspect']),
     ...ledgerBundleCommandSpecs,
     ...vaultAliasSpecs,
     'agents modules list': {
