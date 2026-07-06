@@ -26,6 +26,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.deepEqual(output.runtime_manager.family_runtime_queue.allowed_providers, [
       'local_sqlite',
       'temporal',
+      'external_sandbox',
     ]);
     assert.equal(output.runtime_manager.family_scheduler_replacement.surface_kind, 'opl_family_scheduler_replacement');
     assert.equal(output.runtime_manager.family_scheduler_replacement.scheduler_owner, 'opl_provider_runtime_manager');
@@ -95,6 +96,14 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.provider_runtime.default_resolution.local_sqlite_role, 'dev_ci_offline_diagnostic_baseline');
     assert.equal(output.runtime_manager.provider_runtime.providers.temporal.ready, false);
     assert.equal(output.runtime_manager.provider_runtime.providers.temporal.details.worker_readiness.blockers.includes('temporal_runtime_not_configured'), true);
+    assert.equal(
+      output.runtime_manager.provider_runtime.provider_catalog.external_sandbox.provider_role,
+      'agent_sandbox_execution_substrate',
+    );
+    assert.equal(
+      output.runtime_manager.provider_runtime.provider_catalog.external_sandbox.production_online_readiness_provider,
+      false,
+    );
     assert.equal(output.runtime_manager.reconcile.recommended_actions[0].action_id, 'configure_temporal_provider');
     assert.equal(output.runtime_manager.daemon_policy.local_daemon_added, false);
     assert.equal(output.runtime_manager.daemon_policy.opl_domain_daemon_installation_allowed, false);
@@ -189,6 +198,139 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       output.runtime_manager.standard_domain_agent_scaffold.surface_kind,
     );
     assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager fail-closes external sandbox provider when adapter config is missing', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-external-sandbox-missing-'));
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'external_sandbox',
+      OPL_EXTERNAL_SANDBOX_ENDPOINT: '',
+      OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF: '',
+      OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF: '',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }).runtime_manager;
+
+    const provider = output.provider_runtime.providers.external_sandbox;
+    assert.equal(output.family_runtime_queue.configured_provider, 'external_sandbox');
+    assert.equal(output.status, 'provider_attention_needed');
+    assert.equal(provider.status, 'attention_needed');
+    assert.equal(provider.ready, false);
+    assert.equal(provider.degraded_reason, 'external_sandbox_adapter_unconfigured');
+    assert.equal(provider.capabilities.includes('isolated_filesystem'), true);
+    assert.equal(provider.details.provider_role, 'agent_sandbox_execution_substrate');
+    assert.equal(
+      provider.details.substrate_boundary,
+      'external_agent_sandbox_not_temporal_durable_workflow_substrate',
+    );
+    assert.equal(provider.details.external_api_called, false);
+    assert.equal(provider.details.credential_material_read, false);
+    assert.equal(provider.details.temporal_durable_workflow_substrate_replacement, false);
+    assert.deepEqual(provider.details.missing_required_env, [
+      'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+      'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+      'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+    ]);
+    assert.equal(output.reconcile.overall_status, 'attention_needed');
+    assert.equal(output.reconcile.checked_surfaces.provider_runtime, 'provider_attention_needed');
+    assert.deepEqual(
+      output.reconcile.recommended_actions
+        .filter((action: { action_lane: string }) => action.action_lane === 'external_agent_sandbox')
+        .map((action: { action_id: string; capability: string; blocking: boolean }) => [
+          action.action_id,
+          action.capability,
+          action.blocking,
+        ]),
+      [['configure_external_sandbox_provider', 'agent_sandbox_execution_substrate', true]],
+    );
+    assert.deepEqual(
+      output.reconcile.recommended_actions
+        .filter((action: { action_id: string }) => action.action_id === 'configure_temporal_provider'),
+      [],
+    );
+    assert.equal(
+      output.notes.includes(
+        'external_sandbox is an agent_sandbox_execution_substrate readback for E2B/Daytona/Modal-style adapters; it is not a Temporal durable workflow substrate replacement.',
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager keeps configured external sandbox separate from Temporal runtime readiness', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-external-sandbox-configured-'));
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'external_sandbox',
+      OPL_EXTERNAL_SANDBOX_ENDPOINT: 'https://sandbox.invalid',
+      OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF: 'keychain://opl/external-sandbox/test',
+      OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF: 'opl://provider/external-sandbox/test-receipt',
+      OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'e2b',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }).runtime_manager;
+
+    const provider = output.provider_runtime.providers.external_sandbox;
+    assert.equal(provider.status, 'attention_needed');
+    assert.equal(provider.ready, false);
+    assert.equal(provider.degraded_reason, 'external_sandbox_not_temporal_durable_workflow_substrate');
+    assert.equal(provider.details.endpoint, 'https://sandbox.invalid');
+    assert.equal(provider.details.credential_ref, 'keychain://opl/external-sandbox/test');
+    assert.equal(provider.details.provider_receipt_ref, 'opl://provider/external-sandbox/test-receipt');
+    assert.equal(provider.details.adapter_configured, true);
+    assert.equal(provider.details.selected_external_substrate, 'e2b');
+    assert.equal(provider.details.provider_ready_counts_as_online_runtime_ready, false);
+    assert.equal(output.status, 'external_sandbox_configured_not_temporal_durable_runtime_ready');
+    assert.equal(
+      output.reconcile.checked_surfaces.provider_runtime,
+      'external_sandbox_configured_not_temporal_durable_runtime_ready',
+    );
+    assert.equal(output.reconcile.overall_status, 'attention_needed');
+    assert.deepEqual(
+      output.reconcile.recommended_actions
+        .filter((action: { action_id: string }) => action.action_id === 'configure_external_sandbox_provider'),
+      [],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime status does not treat configured external sandbox as full online runtime ready', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-external-sandbox-configured-'));
+
+  try {
+    const output = runCli(['family-runtime', 'status', '--provider', 'external_sandbox'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'external_sandbox',
+      OPL_EXTERNAL_SANDBOX_ENDPOINT: 'https://sandbox.invalid',
+      OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF: 'keychain://opl/external-sandbox/test',
+      OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF: 'opl://provider/external-sandbox/test-receipt',
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }).family_runtime;
+
+    assert.equal(output.configured_provider, 'external_sandbox');
+    assert.equal(output.readiness.provider_ready, false);
+    assert.equal(output.readiness.full_online_ready, false);
+    assert.equal(output.readiness.durable_online_ready, false);
+    assert.equal(output.provider_runtime.providers.external_sandbox.ready, false);
+    assert.equal(output.provider_runtime.providers.external_sandbox.details.adapter_configured, true);
+    assert.equal(
+      output.provider_runtime.providers.external_sandbox.details.substrate_boundary,
+      'external_agent_sandbox_not_temporal_durable_workflow_substrate',
+    );
+    assert.equal(output.provider_runtime.providers.external_sandbox.details.external_api_called, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -331,7 +331,32 @@ function isNativeHelperAction(actionId: string) {
 }
 
 function isOnlineRuntimeAction(actionId: string) {
-  return actionId === 'configure_temporal_provider';
+  return actionId === 'configure_temporal_provider' || actionId === 'configure_external_sandbox_provider';
+}
+
+function runtimeManagerProviderStatus(
+  provider: Awaited<ReturnType<typeof inspectSelectedFamilyRuntimeProvidersWithLifecycle>>['provider'],
+) {
+  if (provider.provider_kind === 'external_sandbox') {
+    return externalSandboxAdapterConfigured(provider)
+      ? 'external_sandbox_configured_not_temporal_durable_runtime_ready'
+      : 'provider_attention_needed';
+  }
+  if (provider.ready) {
+    return 'ready';
+  }
+  return provider.status === 'provider_code_landed_unconfigured'
+    ? 'provider_code_landed_unconfigured'
+    : 'provider_attention_needed';
+}
+
+function externalSandboxAdapterConfigured(
+  provider: Awaited<ReturnType<typeof inspectSelectedFamilyRuntimeProvidersWithLifecycle>>['provider'],
+) {
+  return provider.provider_kind === 'external_sandbox'
+    && provider.details.adapter_configured === true
+    && Array.isArray(provider.details.missing_required_env)
+    && provider.details.missing_required_env.length === 0;
 }
 
 function filterActionableRuntimeManagerActions(
@@ -371,11 +396,7 @@ export async function buildRuntimeManager(
     runtime_manager: {
       surface_id: 'opl_runtime_manager',
       layer_role: 'product_control_plane_over_provider_backed_family_runtime',
-      status: provider.ready
-        ? 'ready'
-        : provider.status === 'provider_code_landed_unconfigured'
-          ? 'provider_code_landed_unconfigured'
-          : 'provider_attention_needed',
+      status: runtimeManagerProviderStatus(provider),
       owner_split: {
         product_control_plane_owner: 'one-person-lab',
         online_runtime_substrate_owner: 'provider_backed_family_runtime',
@@ -400,6 +421,7 @@ export async function buildRuntimeManager(
         'not_a_domain_truth_owner',
         'not_a_concrete_executor',
         'not_a_private_fork_of_external_executor_runtime',
+        'external_agent_sandbox_is_not_temporal_durable_workflow_substrate',
       ],
       family_runtime_queue: {
         surface_kind: 'opl_family_runtime_queue',
@@ -479,6 +501,7 @@ export async function buildRuntimeManager(
       },
       notes: [
         'Family runtime is Temporal-backed in production; local_sqlite is the dev/CI/offline local ledger provider, and temporal is the required production durable workflow provider.',
+        'external_sandbox is an agent_sandbox_execution_substrate readback for E2B/Daytona/Modal-style adapters; it is not a Temporal durable workflow substrate replacement.',
         `OPL Runtime Manager is the product control plane, typed queue, stage ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, domain dispatch, and projection layer.`,
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
@@ -543,6 +566,28 @@ export async function runRuntimeManagerAction(
         command_preview: ['env', 'OPL_TEMPORAL_ADDRESS=<host:port>', 'opl', 'family-runtime', 'status', '--provider', 'temporal'],
         note:
           'Temporal provider needs an external Temporal server and worker implementing the OPL stage attempt contract.',
+      });
+      continue;
+    }
+
+    if (action.action_id === 'configure_external_sandbox_provider') {
+      executedActions.push({
+        action_id: action.action_id,
+        status: 'blocked_manual_configuration_required',
+        blocking: action.blocking,
+        action_lane: 'external_agent_sandbox',
+        capability: 'agent_sandbox_execution_substrate',
+        command_preview: [
+          'env',
+          'OPL_EXTERNAL_SANDBOX_ENDPOINT=<endpoint>',
+          'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF=<secret-ref>',
+          'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF=<receipt-ref>',
+          'opl',
+          'runtime',
+          'manager',
+        ],
+        note:
+          'External sandbox provider needs an explicit adapter endpoint, credential reference, and provider receipt reference. Runtime Manager does not call E2B, Daytona, Modal, or read credential material.',
       });
       continue;
     }
@@ -670,6 +715,20 @@ function buildRuntimeManagerReconcile(
     });
   }
 
+  if (provider.provider_kind === 'external_sandbox' && !externalSandboxAdapterConfigured(provider)) {
+    recommendedActions.push({
+      action_id: 'configure_external_sandbox_provider',
+      priority: 'p0_external_agent_sandbox',
+      blocking: true,
+      action_lane: 'external_agent_sandbox',
+      capability: 'agent_sandbox_execution_substrate',
+      command:
+        'OPL_EXTERNAL_SANDBOX_ENDPOINT=<endpoint> OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF=<secret-ref> OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF=<receipt-ref> opl runtime manager',
+      reason:
+        'External sandbox provider is selected but its adapter endpoint, credential reference, or provider receipt reference is not configured. This is an agent sandbox execution substrate, not a Temporal durable workflow substrate replacement.',
+    });
+  }
+
   if (nativeRuntimeStatus !== 'available') {
     recommendedActions.push({
       action_id: 'repair_native_helpers',
@@ -693,13 +752,11 @@ function buildRuntimeManagerReconcile(
   return {
     surface_kind: 'opl_runtime_manager_reconcile',
     version: 'v1',
-    overall_status: recommendedActions.length === 0 ? 'ready' : 'attention_needed',
+    overall_status: recommendedActions.length === 0 && runtimeManagerProviderStatus(provider) === 'ready'
+      ? 'ready'
+      : 'attention_needed',
     checked_surfaces: {
-      provider_runtime: provider.ready
-        ? 'ready'
-        : provider.status === 'provider_code_landed_unconfigured'
-          ? 'provider_code_landed_unconfigured'
-          : 'provider_attention_needed',
+      provider_runtime: runtimeManagerProviderStatus(provider),
       native_helper_runtime: nativeRuntimeStatus,
       native_index_freshness: indexFreshnessStatus,
       domain_registration_registry: 'declared_projection_contracts',

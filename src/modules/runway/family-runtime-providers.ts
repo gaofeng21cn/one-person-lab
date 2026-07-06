@@ -63,6 +63,18 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
       fail_closed_when_unready: true,
     };
   }
+  if (kind === 'external_sandbox') {
+    return {
+      provider_kind: kind,
+      provider_role: 'agent_sandbox_execution_substrate',
+      substrate_boundary: 'external_agent_sandbox_not_temporal_durable_workflow_substrate',
+      supported_external_substrates: ['e2b', 'daytona', 'modal'],
+      deep_inspection: 'selected_provider_only',
+      production_online_readiness_provider: false,
+      fail_closed_when_unconfigured: true,
+      credential_material_read: false,
+    };
+  }
   return {
     provider_kind: kind,
     provider_role: 'development_and_offline_provider',
@@ -77,6 +89,26 @@ function temporalAddress() {
 function temporalWorkerConfigured() {
   return process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
+}
+
+function externalSandboxConfig() {
+  const endpoint = process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT?.trim() || null;
+  const credentialRef = process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF?.trim() || null;
+  const providerReceiptRef = process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF?.trim() || null;
+  const substrate = process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE?.trim() || null;
+  const missingRequiredEnv = [
+    ...(endpoint ? [] : ['OPL_EXTERNAL_SANDBOX_ENDPOINT']),
+    ...(credentialRef ? [] : ['OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF']),
+    ...(providerReceiptRef ? [] : ['OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF']),
+  ];
+  return {
+    endpoint,
+    credentialRef,
+    providerReceiptRef,
+    substrate,
+    missingRequiredEnv,
+    configured: missingRequiredEnv.length === 0,
+  };
 }
 
 function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>) {
@@ -204,6 +236,58 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         adapter_mode: workerReady ? 'configured_external_provider' : 'provider_code_landed_unconfigured',
         required_env: ['OPL_TEMPORAL_ADDRESS', 'OPL_TEMPORAL_WORKER_ENABLED=1|OPL_TEMPORAL_WORKER_STATUS=ready'],
         runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
+      },
+    };
+  }
+
+  if (kind === 'external_sandbox') {
+    const config = externalSandboxConfig();
+    return {
+      provider_kind: kind,
+      status: 'attention_needed',
+      ready: false,
+      degraded_reason: config.configured
+        ? 'external_sandbox_not_temporal_durable_workflow_substrate'
+        : 'external_sandbox_adapter_unconfigured',
+      capabilities: [
+        'agent_sandbox_execution_substrate',
+        'isolated_filesystem',
+        'isolated_process',
+        'git_checkout',
+        'template_environment',
+        'snapshot_restore',
+        'sandbox_persistence',
+      ],
+      details: {
+        substrate_boundary: 'external_agent_sandbox_not_temporal_durable_workflow_substrate',
+        provider_role: 'agent_sandbox_execution_substrate',
+        supported_external_substrates: ['e2b', 'daytona', 'modal'],
+        endpoint_configured: Boolean(config.endpoint),
+        credential_ref_configured: Boolean(config.credentialRef),
+        provider_receipt_ref_configured: Boolean(config.providerReceiptRef),
+        adapter_configured: config.configured,
+        selected_external_substrate: config.substrate,
+        endpoint: config.endpoint,
+        credential_ref: config.credentialRef,
+        provider_receipt_ref: config.providerReceiptRef,
+        missing_required_env: config.missingRequiredEnv,
+        adapter_mode: config.configured
+          ? 'configured_external_sandbox_adapter_readback'
+          : 'external_sandbox_adapter_unconfigured',
+        readiness_dependency: 'explicit_endpoint_credential_ref_and_provider_receipt_ref_required',
+        credential_material_read: false,
+        external_api_called: false,
+        temporal_durable_workflow_substrate_replacement: false,
+        provider_ready_counts_as_online_runtime_ready: false,
+        runtime_dependency: 'external_sandbox_adapter_for_agent_execution_environment_only',
+        authority_boundary: {
+          opl: 'external_sandbox_adapter_readback_only',
+          can_call_external_provider_api: false,
+          can_read_secret_material: false,
+          can_replace_temporal_durable_workflow_substrate: false,
+          can_claim_runtime_ready: false,
+          can_claim_domain_ready: false,
+        },
       },
     };
   }
@@ -391,13 +475,14 @@ export function ensureFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind, mod
       ],
     };
   }
+  const inspection = inspectFamilyRuntimeProvider(kind);
   return {
     surface_id: 'opl_family_runtime_provider',
     provider_kind: kind,
     mode,
-    status: 'ready',
+    status: inspection.ready ? 'ready' : 'attention_needed',
     actions: [],
-    provider: inspectFamilyRuntimeProvider(kind),
+    provider: inspection,
   };
 }
 
@@ -451,7 +536,7 @@ export function buildStageAttemptProviderReceipt(input: {
     workflow_id: input.workflowId,
     stage_attempt_id: input.stageAttemptId,
     receipt_status:
-      input.providerKind === 'temporal' && !provider.ready
+      input.providerKind !== 'local_sqlite' && !provider.ready
         ? 'provider_code_landed_unconfigured'
         : 'materialized',
     provider_ready: provider.ready,
