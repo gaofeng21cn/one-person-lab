@@ -319,6 +319,26 @@
       "declares_app_ready": false,
       "declares_provider_ready": false
     },
+    "local_sandbox_provider_readback_policy": {
+      "local_docker_status": "local_docker_preflight_required",
+      "local_devcontainer_status": "local_devcontainer_preflight_required",
+      "template_ref_required": true,
+      "sandbox_binding_ref_requires_live_receipt": true,
+      "required_cli": "docker",
+      "required_image_env": [
+        "OPL_LOCAL_SANDBOX_IMAGE",
+        "OPL_CODEX_STAGE_SANDBOX_IMAGE",
+        "OPL_DEVCONTAINER_IMAGE"
+      ],
+      "workspace_transport_required": "git_clone_or_declared_workspace_mount",
+      "required_receipt_kind": "sandbox_execution_receipt",
+      "live_provider_receipt_required": true,
+      "false_ready_guard": "local_sandbox_preflight_is_not_provider_ready",
+      "local_sandbox_preflight_counts_as_provider_ready": false,
+      "local_sandbox_template_exists_counts_as_provider_ready": false,
+      "local_sandbox_execution_receipt_counts_as_domain_ready": false,
+      "local_sandbox_execution_receipt_counts_as_app_release_ready": false
+    },
     "run_context_exists_counts_as_runtime_ready": false,
     "credential_material_read": false,
     "external_api_called": false,

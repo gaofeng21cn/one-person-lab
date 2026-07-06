@@ -133,6 +133,35 @@ test('runtime env CLI exposes deterministic projections before materializing run
   assert.match(inspect.runtime_lock_ref, /^runtime-lock:mas\/analysis\/macos-arm64:sha256:/);
   assert.match(inspect.bundle_manifest_ref, /^runtime-bundle:mas\/analysis\/macos-arm64:sha256:/);
 
+  const localDocker = runCli([
+    'runtime',
+    'env',
+    'inspect',
+    '--domain',
+    'mas',
+    '--profile',
+    'analysis',
+    '--platform',
+    'macos-arm64',
+    '--sandbox-provider',
+    'local_docker',
+  ], env).runtime_environment;
+  assert.equal(localDocker.sandbox_provider, 'local_docker');
+  assert.equal(localDocker.sandbox_provider_plan.status, 'local_docker_preflight_required');
+  assert.equal(localDocker.sandbox_provider_plan.provider_role, 'local_agent_sandbox_execution_substrate');
+  assert.equal(
+    localDocker.sandbox_provider_plan.template_ref,
+    'local-sandbox-template:local_docker:mas/analysis/macos-arm64',
+  );
+  assert.equal(localDocker.sandbox_provider_plan.required_receipt_kind, 'sandbox_execution_receipt');
+  assert.equal(localDocker.sandbox_provider_plan.live_provider_receipt_required, true);
+  assert.equal(localDocker.sandbox_provider_plan.false_ready_guard, 'local_sandbox_preflight_is_not_provider_ready');
+  assert.equal(localDocker.sandbox_provider_plan.can_claim_provider_ready, false);
+  assert.equal(localDocker.sandbox_provider_plan.can_claim_runtime_ready, false);
+  assert.equal(localDocker.sandbox_provider_plan.local_sandbox_preflight.required_cli, 'docker');
+  assert.equal(localDocker.sandbox_provider_plan.local_sandbox_preflight.external_api_called, false);
+  assert.equal(localDocker.sandbox_provider_plan.local_sandbox_preflight.credential_material_read, false);
+
   const lock = runCli([
     'runtime',
     'env',

@@ -172,6 +172,18 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(sandboxPolicy.provider_role, 'post_default_execution_isolation_substrate');
   assert.equal(sandboxPolicy.e2b_default_dependency, false);
   assert.equal(sandboxPolicy.e2b_connect_configuration_assist_only, true);
+  const localSandboxReadbackPolicy = sandboxPolicy.local_sandbox_provider_readback_policy as Json;
+  assert.equal(localSandboxReadbackPolicy.local_docker_status, 'local_docker_preflight_required');
+  assert.equal(localSandboxReadbackPolicy.local_devcontainer_status, 'local_devcontainer_preflight_required');
+  assert.equal(localSandboxReadbackPolicy.required_cli, 'docker');
+  assert.equal(localSandboxReadbackPolicy.required_receipt_kind, 'sandbox_execution_receipt');
+  assert.equal(localSandboxReadbackPolicy.live_provider_receipt_required, true);
+  assert.equal(
+    localSandboxReadbackPolicy.false_ready_guard,
+    'local_sandbox_preflight_is_not_provider_ready',
+  );
+  assert.equal(localSandboxReadbackPolicy.local_sandbox_preflight_counts_as_provider_ready, false);
+  assert.equal(localSandboxReadbackPolicy.local_sandbox_execution_receipt_counts_as_domain_ready, false);
   const e2bCatalogEntry = (sandboxPolicy.provider_family_catalog as Json[]).find(
     (entry) => entry.substrate === 'e2b',
   ) as Json;
@@ -403,6 +415,47 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal(receipt.can_claim_runtime_ready, false);
   assert.equal(receipt.can_claim_domain_ready, false);
   assert.equal(receipt.can_claim_app_release_ready, false);
+});
+
+test('runtime env build readback exposes local sandbox provider as explicit preflight path', () => {
+  const readback = buildRuntimeEnvironmentBuildReadback({
+    domainId: 'mas',
+    profileId: 'analysis',
+    platformId: 'linux-x64',
+    sandboxProvider: 'local_docker',
+  }) as Json;
+
+  assert.equal(readback.command, 'build');
+  assert.equal(readback.sandbox_provider, 'local_docker');
+  assert.equal(readback.can_claim_runtime_ready, false);
+  const plan = readback.sandbox_provider_plan as Json;
+  assert.equal(plan.status, 'local_docker_preflight_required');
+  assert.equal(plan.provider_role, 'local_agent_sandbox_execution_substrate');
+  assert.equal(plan.template_ref, 'local-sandbox-template:local_docker:mas/analysis/linux-x64');
+  assert.equal(plan.sandbox_binding_ref, null);
+  assert.equal(plan.required_receipt_kind, 'sandbox_execution_receipt');
+  assert.equal(plan.live_provider_receipt_required, true);
+  assert.equal(plan.false_ready_guard, 'local_sandbox_preflight_is_not_provider_ready');
+  assert.equal(plan.can_claim_provider_ready, false);
+  assert.equal(plan.can_claim_runtime_ready, false);
+  assert.equal(plan.can_claim_domain_ready, false);
+  assert.equal(plan.can_claim_app_release_ready, false);
+  assert.equal(plan.local_template_exists_counts_as_provider_ready, false);
+  assert.equal(plan.local_sandbox_receipt_counts_as_domain_ready, false);
+  const preflight = plan.local_sandbox_preflight as Json;
+  assert.equal(preflight.status, 'local_docker_preflight_required');
+  assert.equal(preflight.required_cli, 'docker');
+  assert.deepEqual(preflight.required_image_env, [
+    'OPL_LOCAL_SANDBOX_IMAGE',
+    'OPL_CODEX_STAGE_SANDBOX_IMAGE',
+    'OPL_DEVCONTAINER_IMAGE',
+  ]);
+  assert.equal(preflight.required_receipt_kind, 'sandbox_execution_receipt');
+  assert.equal(preflight.external_api_called, false);
+  assert.equal(preflight.credential_material_read, false);
+  assert.equal(preflight.provider_lifecycle_managed, false);
+  assert.equal(preflight.creates_cloud_resource, false);
+  assert.equal(preflight.can_claim_provider_ready, false);
 });
 
 test('runtime env build readback exposes external sandbox provider plan without provider authority', () => {
