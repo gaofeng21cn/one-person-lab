@@ -24,6 +24,7 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.deepEqual(output.family_runtime.provider_runtime.allowed_providers, [
       'local_sqlite',
       'temporal',
+      'external_sandbox',
     ]);
     assert.equal(output.family_runtime.readiness.provider_ready, false);
     assert.equal(output.family_runtime.readiness.full_online_ready, false);

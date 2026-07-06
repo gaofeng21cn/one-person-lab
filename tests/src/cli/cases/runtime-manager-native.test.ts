@@ -806,7 +806,11 @@ test('runtime manager rejects retired Hermes legacy provider selection', () => {
   assert.equal(failure.status, 2);
   assert.equal(failure.payload.error.code, 'cli_usage_error');
   assert.equal(failure.payload.error.details.provider_kind, 'hermes_legacy');
-  assert.deepEqual(failure.payload.error.details.allowed_provider_kinds, ['local_sqlite', 'temporal']);
+  assert.deepEqual(failure.payload.error.details.allowed_provider_kinds, [
+    'local_sqlite',
+    'temporal',
+    'external_sandbox',
+  ]);
 });
 
 test('runtime manager reports temporal provider code landed when live runtime is not configured', () => {
