@@ -2,6 +2,65 @@ import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts
 import './app-action-cases/dry-run-actions.test.ts';
 import './app-action-cases/settings-and-workspace-actions.test.ts';
 
+function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
+  const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env python3',
+      'import json, os, pathlib, subprocess, sys',
+      'action = sys.argv[1] if len(sys.argv) > 1 else "status"',
+      'home = pathlib.Path(os.environ["HOME"])',
+      'codex_home = pathlib.Path(os.environ.get("CODEX_HOME", home / ".codex"))',
+      'codex_config = codex_home / "config.toml"',
+      'codexcont_home = home / ".codexcont"',
+      'codexcont_home.mkdir(parents=True, exist_ok=True)',
+      'previous_base_url = "https://gflabtoken.cn/v1"',
+      'proxy_base_url = "http://127.0.0.1:8787/v1"',
+      'def run_uvx(*args):',
+      '    subprocess.run(["uvx", "--from", "git+https://github.com/ZhenHuangLab/CodexCont", *args], check=False)',
+      'def write_config(base_url):',
+      '    text = codex_config.read_text() if codex_config.exists() else ""',
+      '    lines = [line if not line.startswith("base_url = ") else f"base_url = \\"{base_url}\\"" for line in text.splitlines()]',
+      '    codex_config.write_text("\\n".join(lines) + "\\n")',
+      'def write_service():',
+      '    mode = os.environ.get("OPL_CODEXCONT_SERVICE_MODE", "manual")',
+      '    if mode == "systemd":',
+      '        service_path = home / ".config" / "systemd" / "user" / "org.onepersonlab.codexcont.service"',
+      '        service_path.parent.mkdir(parents=True, exist_ok=True)',
+      '        service_path.write_text("[Unit]\\nDescription=CodexCont\\n[Service]\\nRestart=always\\n[Install]\\nWantedBy=default.target\\n")',
+      '        return {"mode": "systemd", "definition_path": str(service_path), "persistence_policy": "systemd_user_service", "commands": [{"command": ["systemctl", "--user", "daemon-reload"]}, {"command": ["systemctl", "--user", "enable", "--now", "org.onepersonlab.codexcont.service"]}]}',
+      '    foreground = codexcont_home / "opl-flow-codexcont-foreground.sh"',
+      '    foreground.write_text("#!/bin/sh\\nexec codexcont start\\n")',
+      '    return {"mode": "manual", "foreground_script": str(foreground), "persistence_policy": "manual_start_only"}',
+      'if action == "enable":',
+      '    write_config(proxy_base_url)',
+      '    (codexcont_home / "config.toml").write_text(\'url = "https://gflabtoken.cn/v1/responses"\\n\')',
+      '    (codexcont_home / "opl-flow-intelligence-enhancement.json").write_text(json.dumps({"previous_provider_base_url": previous_base_url}, indent=2))',
+      '    run_uvx("codexcont", "install", "-y")',
+      '    service = write_service()',
+      '    if service["mode"] == "systemd":',
+      '        run_uvx("codexcont", "stop")',
+      '    else:',
+      '        run_uvx("codexcont", "restart")',
+      'elif action == "disable":',
+      '    write_config(previous_base_url)',
+      '    run_uvx("codexcont", "stop")',
+      '    service = write_service()',
+      'elif action == "repair":',
+      '    run_uvx("codexcont", "restart")',
+      '    service = write_service()',
+      'else:',
+      '    service = write_service()',
+      'print(json.dumps({"opl_flow_intelligence_enhancement_action": {"status": "completed", "proxy_base_url": proxy_base_url, "status_readback": {"codex_provider_base_url": proxy_base_url, "service": service}, "service": service}}))',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  return scriptPath;
+}
+
 test('app action execute wraps runtime action dry-run as the App mutating boundary', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-state-'));
   try {
@@ -500,6 +559,7 @@ test('app action execute enables and disables CodexCont intelligence enhancement
       ].join('\n'),
       'utf8',
     );
+    writeOplFlowIntelligenceEnhancementFixture(homeRoot);
 
     const env = {
       HOME: homeRoot,
@@ -605,6 +665,7 @@ test('app action execute installs CodexCont as a Linux systemd user service when
       ].join('\n'),
       'utf8',
     );
+    writeOplFlowIntelligenceEnhancementFixture(homeRoot);
 
     const enable = runCli([
       'app',

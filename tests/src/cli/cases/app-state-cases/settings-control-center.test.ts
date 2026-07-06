@@ -60,24 +60,24 @@ exit 1
       output.app_state.settings_control_center.contract_ref,
       'contracts/opl-framework/settings-control-center-action-read-model-contract.json',
     );
-	    assert.deepEqual(output.app_state.settings_control_center.allowed_action_ids, [
-	      'settings_repair_model_access',
-	      'settings_verify_workspace',
-	      'settings_sync_capabilities',
-	      'settings_apply_opl_packages',
-	      'refresh_registry',
-	      'install_from_manifest_url',
-	      'agent_package_update',
-	      'agent_package_rollback',
-	      'agent_package_repair',
-	      'agent_package_uninstall',
-	      'agent_package_hide',
-	      'agent_package_unhide',
-	      'agent_package_enable',
-	      'agent_package_disable',
-	      'agent_package_home_shortcut_preferences_set',
-	      'settings_reload_codex_surface',
-	      'settings_check_app_update',
+      assert.deepEqual(output.app_state.settings_control_center.allowed_action_ids, [
+        'settings_repair_model_access',
+        'settings_verify_workspace',
+        'settings_sync_capabilities',
+        'settings_apply_opl_packages',
+        'refresh_registry',
+        'install_from_manifest_url',
+        'agent_package_update',
+        'agent_package_rollback',
+        'agent_package_repair',
+        'agent_package_uninstall',
+        'agent_package_hide',
+        'agent_package_unhide',
+        'agent_package_enable',
+        'agent_package_disable',
+        'agent_package_home_shortcut_preferences_set',
+        'settings_reload_codex_surface',
+        'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
       'settings_rollback_runtime_substrate',
       'settings_install_docker_webui',
@@ -468,52 +468,52 @@ exit 1
       )?.mutates,
       'none_read_only',
     );
-	    assert.equal(
-	      output.app_state.settings_control_center.action_catalog.find(
-	        (entry: AppStateListEntry) => entry.action_id === 'settings_rollback_runtime_substrate',
-	      )?.danger_level,
-	      'high',
-	    );
-	    assert.deepEqual(
-	      [
-	        'refresh_registry',
-	        'install_from_manifest_url',
-	        'agent_package_update',
-	        'agent_package_rollback',
-	        'agent_package_repair',
-	        'agent_package_uninstall',
-	        'agent_package_hide',
-	        'agent_package_unhide',
-	        'agent_package_enable',
-	        'agent_package_disable',
-	        'agent_package_home_shortcut_preferences_set',
-	      ].map((actionId) => {
-	        const action = output.app_state.settings_control_center.action_catalog.find(
-	          (entry: AppStateListEntry) => entry.action_id === actionId,
-	        );
-	        return [action?.action_id, action?.delegated_surface, action?.section_id];
-	      }),
-	      [
-	        ['refresh_registry', 'opl connect agent-packages registry refresh --registry-url <registry_url>', 'capabilities'],
-	        ['install_from_manifest_url', 'opl connect agent-packages install --manifest-url <manifest_url>', 'capabilities'],
-	        ['agent_package_update', 'opl connect agent-packages update --manifest-url <manifest_url>', 'capabilities'],
-	        ['agent_package_rollback', 'opl connect agent-packages rollback --manifest-url <manifest_url>', 'capabilities'], // reuse-first: allow owner-routed lifecycle projection assertion.
-	        ['agent_package_repair', 'opl connect agent-packages repair --package-id <package_id>', 'capabilities'],
-	        ['agent_package_uninstall', 'opl connect agent-packages uninstall --package-id <package_id>', 'capabilities'],
-	        ['agent_package_hide', 'opl connect agent-packages hide --package-id <package_id>', 'capabilities'],
-	        ['agent_package_unhide', 'opl connect agent-packages unhide --package-id <package_id>', 'capabilities'],
-	        ['agent_package_enable', 'opl connect agent-packages enable --package-id <package_id>', 'capabilities'],
-	        ['agent_package_disable', 'opl connect agent-packages disable --package-id <package_id>', 'capabilities'],
-	        [
-	          'agent_package_home_shortcut_preferences_set',
-	          'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
-	          'capabilities',
-	        ],
-	      ],
-	    );
-	    assert.equal(
-	      output.app_state.settings_control_center.action_catalog.every(
-	        (entry: AppStateListEntry) => entry.authority_flags.can_write_domain_truth === false,
+      assert.equal(
+        output.app_state.settings_control_center.action_catalog.find(
+          (entry: AppStateListEntry) => entry.action_id === 'settings_rollback_runtime_substrate',
+        )?.danger_level,
+        'high',
+      );
+      assert.deepEqual(
+        [
+          'refresh_registry',
+          'install_from_manifest_url',
+          'agent_package_update',
+          'agent_package_rollback',
+          'agent_package_repair',
+          'agent_package_uninstall',
+          'agent_package_hide',
+          'agent_package_unhide',
+          'agent_package_enable',
+          'agent_package_disable',
+          'agent_package_home_shortcut_preferences_set',
+        ].map((actionId) => {
+          const action = output.app_state.settings_control_center.action_catalog.find(
+            (entry: AppStateListEntry) => entry.action_id === actionId,
+          );
+          return [action?.action_id, action?.delegated_surface, action?.section_id];
+        }),
+        [
+          ['refresh_registry', 'opl connect agent-packages registry refresh --registry-url <registry_url>', 'capabilities'],
+          ['install_from_manifest_url', 'opl connect agent-packages install --manifest-url <manifest_url>', 'capabilities'],
+          ['agent_package_update', 'opl connect agent-packages update --manifest-url <manifest_url>', 'capabilities'],
+          ['agent_package_rollback', 'opl connect agent-packages rollback --manifest-url <manifest_url>', 'capabilities'], // reuse-first: allow owner-routed lifecycle projection assertion.
+          ['agent_package_repair', 'opl connect agent-packages repair --package-id <package_id>', 'capabilities'],
+          ['agent_package_uninstall', 'opl connect agent-packages uninstall --package-id <package_id>', 'capabilities'],
+          ['agent_package_hide', 'opl connect agent-packages hide --package-id <package_id>', 'capabilities'],
+          ['agent_package_unhide', 'opl connect agent-packages unhide --package-id <package_id>', 'capabilities'],
+          ['agent_package_enable', 'opl connect agent-packages enable --package-id <package_id>', 'capabilities'],
+          ['agent_package_disable', 'opl connect agent-packages disable --package-id <package_id>', 'capabilities'],
+          [
+            'agent_package_home_shortcut_preferences_set',
+            'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+            'capabilities',
+          ],
+        ],
+      );
+      assert.equal(
+        output.app_state.settings_control_center.action_catalog.every(
+          (entry: AppStateListEntry) => entry.authority_flags.can_write_domain_truth === false,
       ),
       true,
     );
