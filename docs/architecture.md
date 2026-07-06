@@ -25,7 +25,7 @@ Stage Transition Authority 是这条 owner-delta-first 链路的 OPL-owned gener
 
 `DomainProgressTransitionRuntime` 是 Stage Transition Authority 与 Runway control-loop 的标准 runtime 形态：OPL 持有 append-only event log、fixed-point reconciler、command/outbox/event consumption、StageRun identity、idempotency、projection metadata、replay、NonAdvancingApply 分类和 human gate resume / closeout transport。它不新增品牌模块；主模块是 `OPL Runway`，协同模块是 `Pack`、`Stagecraft`、`Console`、`Ledger`、`Atlas`、`Workspace`、`Foundry Lab` 和 `Connect`。MAS/MAG/RCA/OMA 只提供 Domain Progress Policy Adapter：声明 domain transition policy、owner receipt / typed blocker / quality gate / artifact delta / forbidden-write boundary，并保留各自 domain truth 与 authority verdict。
 
-OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。标准 OPL Agent 的默认长跑路径是 OPL/Temporal 托管自治执行：domain agent 不内置通用 daemon、scheduler 或 attempt loop，任务启动后由 OPL/Temporal 负责持续唤醒、resume/re-query、retry/dead-letter 和 attempt ledger；Codex App 只是启动、观察、介入和展示入口。
+OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。标准 OPL Agent 的默认长跑路径是 OPL/Temporal 托管自治执行：domain agent 不内置通用 daemon、scheduler 或 attempt loop，任务启动后由 OPL/Temporal 负责持续唤醒、resume/re-query、retry/dead-letter 和 attempt ledger；Codex App 只是启动、观察、介入和展示入口。E2B / Daytona / Modal 这类成熟 sandbox 方案不是替换 OPL 基座，而是可承接 stage executor 的 isolated workspace / process substrate；OPL 继续持有 stage、Runway、owner boundary、receipt、readback 和 false-ready guard。
 
 `OPL` 的当前主链路是：
 
@@ -85,6 +85,7 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 App repo 通过 `opl-aion-shell` 提供的 GUI shell 都消费同一套 runtime truth；`one-person-lab-app` 持有 App-level GUI product contract、release gate 和 active-shell validation，`opl-aion-shell` 只是当前 replaceable GUI shell implementation carrier，不能持有 OPL runtime truth 或 App-level bridge contract authority
 - OPL hosted integration 是标准 OPL Agent 的默认长跑 runtime path；它管理受支持的 family runtime provider、typed family queue、stage attempt ledger、domain dispatch 与 online runtime readiness，但不复制 domain runtime kernel，也不让 Codex App 成为持续驱动任务的外围 loop
 - family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Temporal-backed provider 是 production online runtime 的必需 substrate，local provider 只服务 dev/CI/offline diagnostic baseline，`hermes_agent`、`claude_code` 与 `antigravity_cli` 是显式非默认 executor adapter/backend；旧 Hermes provider / Gateway 语料只作为 proof、provenance、diagnostic、fixture 或负向 guard 读取，MAS 显式 Hermes scheduler 只允许 status/remove legacy cleanup，不允许 ensure/create/edit/resume/run tick；`OPL` 持有通用 scheduler / queue / attempt ledger / retry-dead-letter / projection，但不接管 domain truth、memory、quality 或 artifact authority
+- External sandbox provider 与 Temporal 是两层：Temporal 仍是 durable workflow / wakeup / retry / human-gate substrate；E2B / Daytona / Modal 这类 external sandbox provider 只承接 stage executor 的隔离 workspace、filesystem、process、network 和 resource substrate。OPL 不自研底层 agent VM/container sandbox，也不用 E2B 替换 OPL Runway；sandbox provider 的 live credential run、provider long-soak 和 App release cohort 是后置 evidence，不能由 docs、contracts 或 focused tests 替代。
 - `stage_progress_log` 是 OPL family-runtime attempt/progress projection：它从 OPL SQLite attempt ledger、Temporal provider status/history refs、human-gate / dead-letter state、domain-owned receipt / typed blocker refs 和 closeout refs 派生。Agent Lab 只消费该 projection 的 refs 作为 eval/improvement/read-model 输入，不拥有 runtime log，不写 provider history 或 attempt ledger，也不把 refs-only progress 写成 domain truth、quality verdict、artifact authority 或 runtime ownership。
 - OPL Agent Lab 属于 Framework 内部 eval / improvement control plane：它把 descriptor、stage attempt、provider receipt、domain-owned eval/proof refs 和 operator blocker 组织成 lab run、improvement candidate、acceptance evidence 与 follow-up projection；它不接管 MAS/MAG/RCA 的 domain truth、quality verdict、artifact authority、memory body 或 owner receipt authority
 - 在智能体自进化闭环中，OPL Agent Lab 只负责 evidence / root cause / targeted fix / predicted impact / next-run falsification read model、best-of-N variant comparison、risk-tiered promotion gate、canary / rollback / no-forbidden-write refs 和 App/workbench projection；`opl-meta-agent` 负责把这些 refs 与目标 agent handoff 转成 developer patch work order、target capability candidate、mechanism patch proposal 或 typed blocker；目标 domain agent 负责最终 owner receipt、domain truth、quality verdict 和 artifact authority
@@ -161,6 +162,10 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
   触发、检查、报告和 repair action；Temporal provider 是 production online
   runtime 的必需 substrate，Hermes-Agent 不作为 provider / Gateway readiness
   surface。
+- external sandbox provider 的 profile wiring、credential preflight、sandbox run-context
+  binding 和 provider receipt projection。E2B / Daytona / Modal 这类 provider 只作为
+  selected stage executor 的 isolated workspace / process substrate；OPL 不把它们写成
+  workflow owner、Runway 替代品、domain truth owner 或 App release evidence。
 - stage attempt lifecycle：typed queue、attempt ledger、idempotency、lease、
   execution authorization、closeout binding、retry/dead-letter、human gate、
   wakeup、event export、stage progress / true-path projection 和 App/operator
@@ -186,6 +191,7 @@ OPL 的三层产品认知说明“面向谁”，当前十个品牌模块说明 
 - domain truth
 - domain-owned eval/proof 结论或 owner receipt authority
 - concrete executor
+- 底层 agent VM/container sandbox implementation
 - domain stage pack 内部专家判断
 - provider system-service lifecycle implementation beyond invoking supported install/repair/status commands
 - 私有 fork / vendor 一份 `Hermes-Agent` 或把 Temporal/provider runtime history 写成 domain truth owner

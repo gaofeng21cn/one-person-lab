@@ -1056,6 +1056,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Cache hit、descriptor exists、run-context exists、materialization receipt、verification receipt 或 cleanup receipt 都不能替代 domain ready、App release ready、owner receipt、quality/export verdict、provider long-soak 或 production readiness。runtime materialization/verification 只能证明指定 OPL runtime environment root 已物化并可读；prepared run-context 只能证明指定 dependency profile 的 managed library/run bindings 可消费。
 - 下一步应把 App Full runtime cache 降为 OPL runtime bundle manifest consumer，并让 MAS/MAG/RCA/OMA 只声明 dependency intent、消费 OPL run-context；它们不新增私有通用 environment manager。
 
+### 决策：External sandbox provider 承接底层隔离执行环境，OPL 不自研 agent sandbox
+
+原因：E2B / Daytona / Modal 这类成熟 sandbox provider 已经把隔离 workspace、filesystem、process、network 和 resource execution 做成外部 substrate。OPL 的核心价值不是重写底层 VM/container sandbox，而是用 stage、Runway、Temporal、owner boundary、receipt、readback 和 false-ready guard 把 agent work 变成可恢复、可审计、可接力的 family runtime。
+
+影响：
+
+- 不用 E2B 替换 OPL 基座；external sandbox provider 只替换或承接 selected stage executor 的 isolated workspace / process substrate。
+- Temporal 仍是 production online durable workflow / wakeup / retry / human-gate substrate。External sandbox provider 不持有 workflow history、typed queue、human gate、attempt ledger、owner route 或 domain authority。
+- Runtime environment substrate 保留 descriptor / lock / bundle manifest / managed runtime root / run-context / receipt / cache inventory / no-host-fallback 边界，但不继续扩张成自研 VM/container sandbox。
+- OPL-owned adapter 只应持有 provider profile、credential preflight、run-context binding、sandbox receipt projection、repair/preflight work order 和 false-ready flags。provider credential 缺失、sandbox receipt 缺失或 host fallback 被触发时必须 fail closed。
+- live E2B / Daytona / Modal credential run、provider long-soak、App release cohort 和真实用户路径是后置 evidence；docs、contracts、focused tests、materialization receipt、cache hit 或 provider adapter dry-run 都不能声明 provider ready、App release ready、Brand L5 或 production ready。
+
 ## 2026-05-15
 
 ### 决策：One Person Lab App 采用 clean 产品仓，AionUI shell 独立保留为 `opl-aion-shell`
@@ -1103,7 +1115,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `OPL Runtime Manager` 的目标表述从 Hermes-first 改为 Temporal-backed production family runtime；active provider 枚举冻结为 `local_sqlite | temporal`，其中 `temporal` 是 production required provider，`local_sqlite` 是 dev/CI/offline diagnostic baseline。`hermes_legacy` 不再是 provider kind；若环境或旧 fixture 仍选择它，必须 fail-closed。
-- Temporal provider 的语义映射固定为：Workflow = `stage_attempt`，Activity = selected Agent executor stage execution / domain sidecar dispatch，Signal = human gate / user modification intake / resume，Query = App/CLI progress projection，History = durable replay/audit。
+- Temporal provider 的语义映射固定为：Workflow = `stage_attempt`，Activity = selected Agent executor stage execution / domain sidecar dispatch，Signal = human gate / user modification intake / resume，Query = App/CLI progress projection，History = durable replay/audit。Activity 的具体隔离 workspace / process 可由 external sandbox provider 承接，但这不改变 Temporal 的 durable orchestration owner，也不把 sandbox provider 升级为 workflow、Runway、receipt 或 domain authority。
 - `Codex CLI` 是当前第一公民 concrete executor；Temporal 只负责 durable orchestration substrate，不生成 domain idea，不判断 publication/fundability/visual quality。
 - 当前必须分开两层：`hermes_agent`、`claude_code` 与 `antigravity_cli` 是 canonical 显式非默认 executor adapter/backend；旧 Hermes online runtime / provider / Gateway / readiness / compat 面只作为历史 provenance、参考材料、诊断语料或负向 guard。Full readiness 不再要求 Hermes 作为目标 session/wakeup substrate，也不提供 Hermes 安装 / 更新 / provider compatibility action surface；Temporal service / worker / readiness proof 是生产在线依赖。任何非默认 executor receipt gate 都不得恢复旧 Hermes/Gateway 兼容接口或默认路径。`antigravity_cli` 仅用于类似 `RCA` HTML route 选择 `Gemini flash/high` 的 stage-level explicit adapter 示例，不成为默认执行器，也不声明质量、工具语义或 resume 等价。
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth、quality gate、artifact/package/submission/publication/deliverable authority；OPL 只持有 provider abstraction、stage attempt ledger、queue、human gate transport、retry/dead-letter、observability 和 projection。
