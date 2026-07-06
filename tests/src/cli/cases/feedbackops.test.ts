@@ -1,4 +1,6 @@
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { spawnSync } from 'node:child_process';
+
+import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 
 function withStateDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'opl-feedbackops-cli-state-'));
@@ -74,4 +76,33 @@ test('feedback submit rejects unknown options before consuming values', () => {
 
   assert.notEqual(failure.status, 0);
   assert.match(failure.payload.error.message, /Unknown option for feedback submit: --unknown/);
+});
+
+test('bin/opl routes feedback commands into the OPL CLI instead of Codex passthrough', () => {
+  const stateDir = withStateDir();
+  try {
+    const result = spawnSync(
+      path.join(repoRoot, 'bin', 'opl'),
+      ['feedback', 'read', '--json'],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          OPL_SKIP_SKILL_SYNC: '1',
+          OPL_STATE_DIR: stateDir,
+        },
+      },
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    const output = parseJsonText(result.stdout) as {
+      feedbackops: { surface_kind: string; intake_event_count: number };
+    };
+    assert.equal(output.feedbackops.surface_kind, 'opl_feedbackops_read_model');
+    assert.equal(output.feedbackops.intake_event_count, 0);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
 });
