@@ -8,6 +8,12 @@
   "purpose": "Define the OPL-owned runtime environment bundle substrate boundary for descriptor, lock, cache, materialization, verification, cleanup, and run-context readbacks without granting domain, App release, or owner-receipt authority.",
   "ordinary_path": {
     "input": "domain_environment_intent",
+    "ordinary_user_commands": [
+      "opl env doctor",
+      "opl env prepare",
+      "opl env run"
+    ],
+    "advanced_operator_surface": "opl runtime env inspect|lock|build|prepare|materialize|verify|cache|doctor|run-context|contract",
     "steps": [
       "runtime_environment_descriptor",
       "runtime_lock",
@@ -17,6 +23,8 @@
       "receipt_cleanup_rollback"
     ],
     "default_mode": "materialize_only_with_explicit_apply_and_receipt",
+    "default_provider_kind": "fast_local_env",
+    "ordinary_entrypoint_policy": "ordinary_users_use_opl_env_doctor_prepare_run_advanced_operators_may_use_opl_runtime_env",
     "domain_agents_declare_dependency_intent_only": true
   },
   "module_mapping": {
@@ -226,7 +234,9 @@
       {
         "family_id": "e2b_style_adapter",
         "substrate": "e2b",
-        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
+        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs",
+        "default_dependency": false,
+        "connect_role": "external_provider_configuration_assist"
       },
       {
         "family_id": "daytona_style_adapter",
@@ -263,6 +273,8 @@
       "env_id_counts_as_runtime_ready": false
     },
     "provider_role": "post_default_execution_isolation_substrate",
+    "e2b_default_dependency": false,
+    "e2b_connect_configuration_assist_only": true,
     "external_provider_owns": [
       "isolated_filesystem",
       "process_execution",
@@ -298,6 +310,15 @@
     "required_receipt_kind": "external_sandbox_provider_receipt",
     "fast_local_env_counts_as_provider_ready": false,
     "fast_local_env_doctor_counts_as_runtime_ready": false,
+    "fast_local_env_doctor_policy": {
+      "checks_host_binaries": true,
+      "checks_language_packages": true,
+      "emits_system_hints": true,
+      "declares_runtime_ready": false,
+      "declares_domain_ready": false,
+      "declares_app_ready": false,
+      "declares_provider_ready": false
+    },
     "run_context_exists_counts_as_runtime_ready": false,
     "credential_material_read": false,
     "external_api_called": false,
@@ -361,6 +382,21 @@
     "dependency_lock_counts_as_materialized_runtime_lock": false,
     "installs_packages": "only_when_apply_into_opl_managed_r_library_or_python_uv_environment",
     "package_presence_verification": "managed_r_library_or_managed_python_environment_only",
+    "r_standard_handoff": {
+      "tool": "renv",
+      "lock_refs": [
+        "renv.lock"
+      ],
+      "managed_library_environment": "R_LIBS_USER"
+    },
+    "python_standard_handoff": {
+      "tool": "uv",
+      "lock_refs": [
+        "uv.lock",
+        "pyproject.toml"
+      ],
+      "managed_environment": "UV_PROJECT_ENVIRONMENT"
+    },
     "r_package_environment": "R_LIBS_USER",
     "python_package_environment": "UV_PROJECT_ENVIRONMENT",
     "python_installer": "uv",
@@ -440,6 +476,9 @@
     "can_claim_app_release_ready"
   ],
   "readback_commands": [
+    "opl env doctor",
+    "opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]",
+    "opl env run --domain <domain> --profile <profile> [--paper-root <path>]",
     "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]",

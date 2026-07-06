@@ -151,7 +151,7 @@ MAS domain-progress closeout 是 current-control stop-loss 的显式释放证据
 
 | 层 | 当前职责 | 不拥有 |
 | --- | --- | --- |
-| `OPL Framework` | Codex-default activation、Temporal-backed provider、external sandbox provider binding、typed queue、stage attempt、receipt/projection、shared contracts/indexes、Agent Lab、generated/hosted surface、safe action shell 和跨仓治理。 | domain truth、memory/artifact body、quality/export verdict、owner receipt authority、App release verdict、底层 agent VM/container sandbox implementation。 |
+| `OPL Framework` | Codex-default activation、Temporal-backed provider、Fast Local Env 默认环境路径、后置 Local Docker / Devcontainer 与 Remote Sandbox provider binding、typed queue、stage attempt、receipt/projection、shared contracts/indexes、Agent Lab、generated/hosted surface、safe action shell 和跨仓治理。普通环境入口是 `opl env doctor|prepare|run`，advanced/operator 入口是 `opl runtime env ...`。 | domain truth、memory/artifact body、quality/export verdict、owner receipt authority、App release verdict、底层 agent VM/container sandbox implementation、E2B 默认依赖。 |
 | `One Person Lab App` | 面向人的工作台，消费 framework/provider 状态和 domain-owned projection，展示任务、阶段、阻塞、source/artifact/memory refs、SLO、repair、workorder 和 owner-aware action。 | OPL runtime/provider implementation、domain truth、artifact authority、quality/export verdict、长跑任务外围驱动。 |
 | `Foundry Agents` | MAS/MAG/RCA/OMA 及后续 domain agent，持有 domain pack、stage semantics、quality/export verdict、artifact authority、memory body / accept-reject decision、owner receipt、typed blocker 和 direct/generated skill path。 | Framework runtime、generic queue/attempt ledger、App release truth、跨 domain shared primitive。 |
 
@@ -168,6 +168,7 @@ OPL 已具备 framework 主干：
 - domain descriptor / stage / action / memory discovery；
 - Temporal provider code、service / worker lifecycle、typed family queue、stage attempt ledger、typed closeout、retry/dead-letter、human gate 和 execution authorization / closeout binding guard；
 - evidence worklist read model、provider proof / SLO projection、runtime snapshot、safe runtime action shell、App/operator drilldown read model 和 refs-only external evidence ledger；
+- Runtime Environment Substrate 以 Fast Local Env 为默认，R 走 `renv.lock` refs + `R_LIBS_USER` managed library，Python 走 `uv.lock` / project refs + `UV_PROJECT_ENVIRONMENT` managed env；doctor 只读 host binary、language packages 和 system hints，不声明 runtime/domain/App ready；
 - State Index Kernel、Stage Artifact / Workspace topology、workspace ensure/validate/doctor/adopt/upgrade/export-map/health/inspect/inventory surfaces；
 - Agent Lab、Foundry Agent series contract、standard domain-agent scaffold / conformance、generated/hosted interface 和 default-caller / cleanup / no-resurrection guard；
 - OPL-owned refs-only intake / projection for domain-dispatch、stage-production evidence、memory/artifact/lifecycle/no-regression receipt refs。

@@ -88,6 +88,18 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   );
   assert.equal(contract.target_planned, true);
 
+  const ordinaryPath = contract.ordinary_path as Json;
+  assert.deepEqual(ordinaryPath.ordinary_user_commands, ['opl env doctor', 'opl env prepare', 'opl env run']);
+  assert.equal(
+    ordinaryPath.advanced_operator_surface,
+    'opl runtime env inspect|lock|build|prepare|materialize|verify|cache|doctor|run-context|contract',
+  );
+  assert.equal(ordinaryPath.default_provider_kind, 'fast_local_env');
+  assert.equal(
+    ordinaryPath.ordinary_entrypoint_policy,
+    'ordinary_users_use_opl_env_doctor_prepare_run_advanced_operators_may_use_opl_runtime_env',
+  );
+
   const authority = contract.authority_boundary as Json;
   assert.equal(authority.opl_is_canonical_runtime_environment_owner, true);
   assert.equal(authority.app_consumes_runtime_environment_projection, true);
@@ -158,6 +170,13 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(modalCatalog.env_id_counts_as_provider_ready, false);
   assert.equal(modalCatalog.env_id_counts_as_runtime_ready, false);
   assert.equal(sandboxPolicy.provider_role, 'post_default_execution_isolation_substrate');
+  assert.equal(sandboxPolicy.e2b_default_dependency, false);
+  assert.equal(sandboxPolicy.e2b_connect_configuration_assist_only, true);
+  const e2bCatalogEntry = (sandboxPolicy.provider_family_catalog as Json[]).find(
+    (entry) => entry.substrate === 'e2b',
+  ) as Json;
+  assert.equal(e2bCatalogEntry.default_dependency, false);
+  assert.equal(e2bCatalogEntry.connect_role, 'external_provider_configuration_assist');
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('provider_receipt_ref'), true);
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('sandbox_binding_ref'), true);
   assert.equal(sandboxPolicy.temporal_replacement, false);
@@ -173,6 +192,14 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(sandboxPolicy.local_sandbox_receipt_counts_as_production_ready, false);
   assert.equal(sandboxPolicy.snapshot_exists_counts_as_runtime_ready, false);
   assert.equal(sandboxPolicy.provider_receipt_counts_as_domain_ready, false);
+  const fastLocalDoctorPolicy = sandboxPolicy.fast_local_env_doctor_policy as Json;
+  assert.equal(fastLocalDoctorPolicy.checks_host_binaries, true);
+  assert.equal(fastLocalDoctorPolicy.checks_language_packages, true);
+  assert.equal(fastLocalDoctorPolicy.emits_system_hints, true);
+  assert.equal(fastLocalDoctorPolicy.declares_runtime_ready, false);
+  assert.equal(fastLocalDoctorPolicy.declares_domain_ready, false);
+  assert.equal(fastLocalDoctorPolicy.declares_app_ready, false);
+  assert.equal(fastLocalDoctorPolicy.declares_provider_ready, false);
   assert.equal(sandboxPolicy.can_claim_provider_ready_without_receipt, false);
   assert.equal(sandboxPolicy.can_claim_runtime_ready_without_receipt, false);
 
@@ -218,6 +245,10 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(preparePolicy.dependency_lock_counts_as_materialized_runtime_lock, false);
   assert.equal(preparePolicy.installs_packages, 'only_when_apply_into_opl_managed_r_library_or_python_uv_environment');
   assert.equal(preparePolicy.package_presence_verification, 'managed_r_library_or_managed_python_environment_only');
+  assert.deepEqual((preparePolicy.r_standard_handoff as Json).lock_refs, ['renv.lock']);
+  assert.equal((preparePolicy.r_standard_handoff as Json).managed_library_environment, 'R_LIBS_USER');
+  assert.deepEqual((preparePolicy.python_standard_handoff as Json).lock_refs, ['uv.lock', 'pyproject.toml']);
+  assert.equal((preparePolicy.python_standard_handoff as Json).managed_environment, 'UV_PROJECT_ENVIRONMENT');
   assert.equal(preparePolicy.r_package_environment, 'R_LIBS_USER');
   assert.equal(preparePolicy.python_package_environment, 'UV_PROJECT_ENVIRONMENT');
   assert.equal(preparePolicy.python_installer, 'uv');
@@ -290,6 +321,9 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(forbiddenClaims.includes('run_context_target_mismatch_allows_consumer_execution'), true);
 
   const readbackCommands = contract.readback_commands as string[];
+  assert.equal(readbackCommands.includes('opl env doctor'), true);
+  assert.equal(readbackCommands.some((command) => command.startsWith('opl env prepare')), true);
+  assert.equal(readbackCommands.some((command) => command.startsWith('opl env run')), true);
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env build')), true);
   assert.equal(
     readbackCommands.includes(
