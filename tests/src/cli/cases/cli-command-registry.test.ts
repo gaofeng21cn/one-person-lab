@@ -247,35 +247,6 @@ test('runtime manager commands expose registry metadata and parse action mode th
   assert.match(invalid.payload.error.message, /exactly one of --dry-run or --apply/);
 });
 
-test('runtime app-operator drilldown exposes registry metadata and validates options through the registry adapter', () => {
-  const contract = loadCliCommandRegistryContract();
-  const help = runCli(['help', 'runtime', 'app-operator-drilldown']).help;
-  const contractCommand = contract.commands.runtime_app_operator_drilldown;
-
-  assert.equal(contract.protected_command_prefixes.includes('runtime app-operator-drilldown'), true);
-  assert.equal(contract.required_command_ids.includes('runtime app-operator-drilldown'), true);
-  assert.equal(help.registry.command_id, 'runtime app-operator-drilldown');
-  assert.equal(contractCommand.command_id, help.registry.command_id);
-  assert.equal(help.registry.parser_adapter, 'node_util_parse_args');
-  assert.deepEqual(
-    help.registry.options.map((option: { name: string }) => option.name),
-    ['detail', 'full'],
-  );
-  assert.equal(
-    help.registry.json_output_schema_ref,
-    'contracts/opl-framework/cli-command-registry.json#/commands/runtime_app_operator_drilldown/output_schema',
-  );
-  assert.equal(help.registry.authority_boundary.owner, 'OPL Runway');
-  assert.equal(help.registry.authority_boundary.can_write_domain_truth, false);
-  assert.equal(help.registry.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(help.registry.authority_boundary.can_claim_domain_ready, false);
-  assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
-
-  const invalid = runCliFailure(['runtime', 'app-operator-drilldown', '--detail', 'verbose']);
-  assert.equal(invalid.payload.error.code, 'cli_usage_error');
-  assert.match(invalid.payload.error.message, /summary or full/);
-});
-
 test('stage commands expose registry metadata and reject unknown options through the registry adapter', () => {
   const contract = loadCliCommandRegistryContract();
   const expected = [

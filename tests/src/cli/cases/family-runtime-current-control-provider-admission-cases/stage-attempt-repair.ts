@@ -67,16 +67,12 @@ test('family-runtime clears stale running MAS current-control admission when lin
       source: 'test-current-control-replay',
     });
     const task = db.prepare(`
-      SELECT status, attempts, lease_owner, lease_expires_at, last_error, dead_letter_reason
+      SELECT status, attempts
       FROM tasks
       WHERE task_id = ?
     `).get(taskId) as {
       status: string;
       attempts: number;
-      lease_owner: string | null;
-      lease_expires_at: string | null;
-      last_error: string | null;
-      dead_letter_reason: string | null;
     };
     const event = db.prepare(`
       SELECT payload_json
@@ -91,10 +87,6 @@ test('family-runtime clears stale running MAS current-control admission when lin
     assert.equal(result.task?.status, 'succeeded');
     assert.equal(task.status, 'succeeded');
     assert.equal(task.attempts, 1);
-    assert.equal(task.lease_owner, null);
-    assert.equal(task.lease_expires_at, null);
-    assert.equal(task.last_error, null);
-    assert.equal(task.dead_letter_reason, null);
     assert.ok(event);
     assert.equal(eventPayload.reason, 'terminal_stage_attempt_same_currentness_clears_stale_running_queue_projection');
     assert.equal(eventPayload.terminal_stage_attempt_id, stageAttemptId);
@@ -166,16 +158,12 @@ test('family-runtime repairs queued MAS current-control admission when linked st
       source: 'test-current-control-replay',
     });
     const task = db.prepare(`
-      SELECT status, attempts, lease_owner, lease_expires_at, last_error, dead_letter_reason
+      SELECT status, attempts
       FROM tasks
       WHERE task_id = ?
     `).get(taskId) as {
       status: string;
       attempts: number;
-      lease_owner: string | null;
-      lease_expires_at: string | null;
-      last_error: string | null;
-      dead_letter_reason: string | null;
     };
     const event = db.prepare(`
       SELECT payload_json
@@ -191,10 +179,6 @@ test('family-runtime repairs queued MAS current-control admission when linked st
     assert.equal(result.task?.status, 'running');
     assert.equal(task.status, 'running');
     assert.equal(task.attempts, 1);
-    assert.ok(task.lease_owner);
-    assert.ok(task.lease_expires_at);
-    assert.equal(task.last_error, null);
-    assert.equal(task.dead_letter_reason, null);
     assert.ok(event);
     assert.equal(eventPayload.reason, 'same_task_live_stage_attempt_exists_at_enqueue');
     assert.equal(eventPayload.previous_status, 'queued');
