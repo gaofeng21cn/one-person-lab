@@ -238,6 +238,7 @@ function parseStdoutEvents(stdout: string, onRunnerProgress?: (event: RunnerEven
 export function sandboxAttemptForCodex(input: {
   attempt: JsonRecord;
   sandboxWorkspaceRoot: string;
+  workspaceTransport?: string;
 }) {
   const locator = workspaceLocator(input.attempt);
   return {
@@ -247,7 +248,7 @@ export function sandboxAttemptForCodex(input: {
       workspace_root: input.sandboxWorkspaceRoot,
       repo_root: input.sandboxWorkspaceRoot,
       host_workspace_root: optionalString(locator.workspace_root) ?? optionalString(locator.repo_root) ?? null,
-      workspace_transport: 'external_sandbox_git_clone',
+      workspace_transport: input.workspaceTransport ?? 'external_sandbox_git_clone',
     },
   };
 }

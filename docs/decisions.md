@@ -1056,18 +1056,19 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Cache hit、descriptor exists、run-context exists、materialization receipt、verification receipt 或 cleanup receipt 都不能替代 domain ready、App release ready、owner receipt、quality/export verdict、provider long-soak 或 production readiness。runtime materialization/verification 只能证明指定 OPL runtime environment root 已物化并可读；prepared run-context 只能证明指定 dependency profile 的 managed library/run bindings 可消费。
 - 下一步应把 App Full runtime cache 降为 OPL runtime bundle manifest consumer，并让 MAS/MAG/RCA/OMA 只声明 dependency intent、消费 OPL run-context；它们不新增私有通用 environment manager。
 
-### 决策：External sandbox provider 承接底层隔离执行环境，OPL 不自研 agent sandbox
+### 决策：Runway 默认使用本地 Dev Containers / Docker agent sandbox，远程 sandbox provider 可选
 
-原因：E2B / Daytona / Modal 这类成熟 sandbox provider 已经把隔离 workspace、filesystem、process、network 和 resource execution 做成外部 substrate。OPL 的核心价值不是重写底层 VM/container sandbox，而是用 stage、Runway、Temporal、owner boundary、receipt、readback 和 false-ready guard 把 agent work 变成可恢复、可审计、可接力的 family runtime。
+原因：当前 OPL 的直接需求是让 MAS/MAG/RCA 等标准智能体在 stage 执行时快速获得可复现依赖环境，而不是默认引入托管 sandbox 云服务。更低复杂度、可本地运行、符合工程事实的默认路径是复用 Dev Containers / Docker 作为成熟本地 agent sandbox substrate；E2B / Daytona / Modal 保留为 remote sandbox provider option。OPL 的核心价值仍然是用 stage、Runway、Temporal、owner boundary、receipt、readback 和 false-ready guard 把 agent work 变成可恢复、可审计、可接力的 family runtime。
 
 影响：
 
-- 不用 E2B 替换 OPL 基座；external sandbox provider 只替换或承接 selected stage executor 的 isolated workspace / process substrate。
-- Temporal 仍是 production online durable workflow / wakeup / retry / human-gate substrate。External sandbox provider 不持有 workflow history、typed queue、human gate、attempt ledger、owner route 或 domain authority。
+- 默认 agent sandbox 属于 `OPL Runway` 的 stage execution sandbox provider selection / create-or-restore / executor run / timeout-retry-blocker / receipt 投影职责。它不是 `OPL Connect` 的主执行责任。
+- Runtime Environment Substrate 是 Runway primitive：负责 environment profile / lock / materialization / run-context / no-host-fallback 边界；`OPL Pack` 声明 domain dependency intent；`OPL Workspace` 负责 workspace/artifact mount 与路径映射；`OPL Ledger` 保存 image/container/run/artifact/diff refs-only evidence；`OPL Console` 做 operator readback 和 repair/config action；`OPL Connect` 只在需要时做 provider discovery、configuration、package/install 或 connector 分发辅助。
+- Temporal 仍是 production online durable workflow / wakeup / retry / human-gate substrate。Sandbox provider 不持有 workflow history、typed queue、human gate、attempt ledger、owner route 或 domain authority。
 - Runtime environment substrate 保留 descriptor / lock / bundle manifest / managed runtime root / run-context / receipt / cache inventory / no-host-fallback 边界，但不继续扩张成自研 VM/container sandbox。
-- OPL-owned adapter 持有 provider profile、credential preflight、run-context binding、sandbox receipt projection、repair/preflight work order 和 false-ready flags。provider credential 缺失、sandbox receipt 缺失、workspace transport 缺失或 host fallback 被触发时必须 fail closed。
-- 当前 Framework 已落地 `opl.external_sandbox_provider_adapter.v1` 的 provider profile / credential-ref / provider-receipt-ref preflight 与 OPL sandbox binding receipt，并已在 Codex stage runner 内落地 E2B first execution slice：显式选择 `OPL_CODEX_STAGE_SANDBOX_PROVIDER=e2b` 时，Runway 的 Codex/default executor path 会创建或连接 E2B sandbox、通过 git workspace transport 物化 sandbox workspace、在 sandbox 内运行同一组 Codex CLI args，并把 JSONL stdout、stderr tail、sandbox id/domain、git diff refs 和 workspace transport refs 写入 stage runner receipt。该 slice 不覆盖 Daytona / Modal，不读取、打印或转发 host secret material，不在缺 E2B credential 或缺 git workspace transport 时回落到 host Codex，也不声明 provider ready / runtime ready / domain ready。
-- live E2B / Daytona / Modal credential run、provider long-soak、App release cohort 和真实用户路径是后置 evidence；docs、contracts、focused tests、materialization receipt、cache hit 或 provider adapter dry-run 都不能声明 provider ready、App release ready、Brand L5 或 production ready。
+- 当前 Framework 的 Codex stage runner 默认选择 `local_devcontainer`，可显式选择 `local_docker`、`host` 诊断路径或 `e2b` remote provider。local sandbox path 通过 Docker CLI 创建临时容器、通过 git workspace transport 物化 sandbox workspace、在 sandbox 内运行同一组 Codex CLI args，并把 JSONL stdout、stderr tail、image/container refs、git diff refs 和 workspace transport refs 写入通用 `sandbox_execution` receipt。缺本地 image / Docker preflight、缺 git workspace transport 或 host fallback 被触发时必须 fail closed。
+- E2B slice 保留为显式 remote provider：`OPL_CODEX_STAGE_SANDBOX_PROVIDER=e2b` 时，Runway 会创建或连接 E2B sandbox，并保留 credential-ref / provider-receipt-ref / no-secret-log guard。该 slice不覆盖 Daytona / Modal，不读取、打印或转发 host secret material，不在缺 E2B credential 或缺 git workspace transport时回落到 host Codex，也不声明 provider ready / runtime ready / domain ready。
+- live Docker/devcontainer run、live E2B / Daytona / Modal credential run、provider long-soak、App release cohort 和真实用户路径是后置 evidence；docs、contracts、focused tests、materialization receipt、cache hit、mocked local Docker path 或 provider adapter dry-run 都不能声明 provider ready、App release ready、Brand L5 或 production ready。
 
 ## 2026-05-15
 

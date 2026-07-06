@@ -108,28 +108,17 @@ export type CodexStageRunnerProcessOutputSummary = {
   provider_error_count?: number;
   provider_error_status_codes?: number[];
   provider_error_messages?: string[];
-  external_sandbox_execution?: {
-    execution_substrate: 'external_sandbox';
-    provider_kind: 'e2b' | 'local_docker';
-    sandbox_id: string;
-    sandbox_domain: string | null;
-    sandbox_reuse: 'created' | 'connected';
-    template: string | null;
+  sandbox_execution?: {
+    execution_substrate: 'local_sandbox' | 'external_sandbox';
+    provider_kind: 'local_devcontainer' | 'local_docker' | 'e2b';
     sandbox_workspace_root: string;
-    workspace_transport: ({
+    workspace_transport: {
       transport_kind: 'git_clone';
       repo_url: string;
       checkout_ref: string | null;
       clone_exit_code: number;
       checkout_exit_code: number | null;
-    } | {
-      transport_kind: 'bind_mount';
-      repo_url: null;
-      checkout_ref: null;
-      clone_exit_code: null;
-      checkout_exit_code: null;
-      host_workspace_root: string;
-    });
+    };
     command_exit_code: number;
     jsonl_stdout_bytes: number;
     stderr_tail: string[];
@@ -140,12 +129,40 @@ export type CodexStageRunnerProcessOutputSummary = {
     external_api_called: boolean;
     credential_material_logged: false;
     forwarded_env_keys: string[];
-    preflight?: {
-      docker_cli: 'present' | 'missing';
-      docker_daemon: 'reachable' | 'unreachable' | 'not_checked';
-      image: 'configured' | 'missing' | 'unavailable';
-      workspace: 'configured' | 'missing' | 'unavailable';
+    sandbox_id?: string;
+    sandbox_domain?: string | null;
+    sandbox_reuse?: 'created' | 'connected';
+    template?: string | null;
+    image?: string;
+    container_name?: string;
+    docker_cli_called?: true;
+    host_workspace_mutated?: false;
+  };
+  external_sandbox_execution?: {
+    execution_substrate: 'external_sandbox';
+    provider_kind: 'e2b';
+    sandbox_id: string;
+    sandbox_domain: string | null;
+    sandbox_reuse: 'created' | 'connected';
+    template: string | null;
+    sandbox_workspace_root: string;
+    workspace_transport: {
+      transport_kind: 'git_clone';
+      repo_url: string;
+      checkout_ref: string | null;
+      clone_exit_code: number;
+      checkout_exit_code: number | null;
     };
+    command_exit_code: number;
+    jsonl_stdout_bytes: number;
+    stderr_tail: string[];
+    diff_refs: {
+      changed_file_refs: string[];
+      diff_stat: string[];
+    };
+    external_api_called: boolean;
+    credential_material_logged: false;
+    forwarded_env_keys: string[];
   };
   closeout_enforcement?: {
     status: string;

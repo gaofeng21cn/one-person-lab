@@ -162,31 +162,35 @@ export function sandboxProviderPlan(input: RuntimeEnvironmentTargetInput) {
   const target = normalizeTarget(input);
   const policy = externalSandboxProviderPolicy();
   const externalSelected = target.sandbox_provider === 'external_sandbox';
+  const localAgentSandboxSelected = target.sandbox_provider === 'local_devcontainer' || target.sandbox_provider === 'local_docker';
   const adapter = externalSelected ? buildExternalSandboxProviderAdapterPlan(targetRef(target)) : null;
+  const localOrRootRole = localAgentSandboxSelected ? 'local_agent_sandbox_execution_substrate' : 'local_materialized_runtime_root';
   return {
     surface_kind: 'opl_runtime_environment_sandbox_provider_plan' as const,
-    status: externalSelected
-      ? adapter?.adapter_status
-      : 'local_managed_root_selected',
+    status: externalSelected ? adapter?.adapter_status : localAgentSandboxSelected ? `${target.sandbox_provider}_selected` : 'local_managed_root_selected',
     selected_provider: target.sandbox_provider,
-    provider_role: externalSelected
-      ? 'agent_sandbox_execution_substrate'
-      : 'local_materialized_runtime_root',
+    provider_role: externalSelected ? 'agent_sandbox_execution_substrate' : localOrRootRole,
     provider_ref: `sandbox-provider:${target.sandbox_provider}:${targetRef(target)}`,
     supported_provider_kinds: policy.supported_provider_kinds,
     external_provider_examples: policy.external_provider_examples,
+    default_provider_kind: policy.default_provider_kind,
+    local_provider_examples: policy.local_provider_examples,
     adapter,
     template_ref: externalSelected ? adapter?.template_ref : null,
     sandbox_binding_ref: externalSelected ? adapter?.sandbox_binding_ref : null,
     snapshot_ref: null,
     volume_ref: null,
     required_receipt_kind: externalSelected ? policy.required_receipt_kind : null,
+    materialization_root_provider: localAgentSandboxSelected ? 'local_managed_root' : target.sandbox_provider,
     temporal_replacement: false,
     writes_runtime_root: false,
     writes_domain_repo: false,
     can_claim_provider_ready: false,
     can_claim_runtime_ready: false,
     can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+    can_claim_production_ready: false,
+    local_template_exists_counts_as_provider_ready: false, local_sandbox_receipt_counts_as_domain_ready: false,
     live_provider_receipt_required: externalSelected && adapter?.configured !== true,
   };
 }

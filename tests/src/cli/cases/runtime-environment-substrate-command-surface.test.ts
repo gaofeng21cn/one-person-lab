@@ -82,8 +82,9 @@ test('runtime env CLI exposes deterministic projections before materializing run
   assert.equal(inspect.can_claim_runtime_ready, false);
   assert.equal(inspect.can_claim_domain_ready, false);
   assert.equal(inspect.can_claim_app_release_ready, false);
-  assert.equal(inspect.sandbox_provider, 'local_managed_root');
-  assert.equal(inspect.sandbox_provider_plan.selected_provider, 'local_managed_root');
+  assert.equal(inspect.sandbox_provider, 'local_devcontainer');
+  assert.equal(inspect.sandbox_provider_plan.selected_provider, 'local_devcontainer');
+  assert.equal(inspect.sandbox_provider_plan.materialization_root_provider, 'local_managed_root');
   assert.equal(inspect.sandbox_provider_plan.can_claim_provider_ready, false);
   assert.equal(inspect.authority_boundary.can_claim_runtime_materialized_ready, false);
   assert.equal(inspect.materialization_status.status, 'not_materialized');
@@ -153,7 +154,8 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(build.build_plan.writes_runtime_root, false);
   assert.equal(build.build_plan.creates_archive, false);
   assert.equal(build.build_plan.can_claim_runtime_ready, false);
-  assert.equal(build.sandbox_provider_plan.selected_provider, 'local_managed_root');
+  assert.equal(build.sandbox_provider_plan.selected_provider, 'local_devcontainer');
+  assert.equal(build.sandbox_provider_plan.materialization_root_provider, 'local_managed_root');
   assert.equal(build.sandbox_provider_plan.temporal_replacement, false);
   assert.equal(build.bundle_manifest.status, 'dry_run_bundle_manifest_projected');
   assert.match(build.bundle_manifest.bundle_ref, /^runtime-bundle:mas\/analysis\/macos-arm64:sha256:/);

@@ -180,13 +180,19 @@
   },
   "external_sandbox_provider_policy": {
     "surface_kind": "opl_external_sandbox_provider_policy",
-    "status": "adapter_preflight_and_binding_available_without_live_provider_claim",
-    "purpose": "Route agent execution sandbox substrate to mature external providers while keeping OPL-owned stage, authority, receipt, readback, and false-ready boundaries.",
+    "status": "local_devcontainer_default_with_optional_remote_provider_adapter",
+    "purpose": "Route agent execution sandbox substrate to local Dev Containers/Docker by default, with optional remote providers such as E2B, while keeping OPL-owned stage, authority, receipt, readback, and false-ready boundaries.",
     "supported_provider_kinds": [
+      "local_devcontainer",
+      "local_docker",
       "local_managed_root",
       "external_sandbox"
     ],
-    "default_provider_kind": "local_managed_root",
+    "default_provider_kind": "local_devcontainer",
+    "local_provider_examples": [
+      "devcontainer",
+      "docker"
+    ],
     "external_provider_examples": [
       "e2b",
       "daytona",
@@ -223,6 +229,10 @@
     "requires_live_provider_receipt_for_ready": true,
     "required_receipt_kind": "external_sandbox_provider_receipt",
     "template_exists_counts_as_provider_ready": false,
+    "local_template_exists_counts_as_provider_ready": false,
+    "local_sandbox_receipt_counts_as_domain_ready": false,
+    "local_sandbox_receipt_counts_as_app_release_ready": false,
+    "local_sandbox_receipt_counts_as_production_ready": false,
     "snapshot_exists_counts_as_runtime_ready": false,
     "provider_receipt_counts_as_domain_ready": false,
     "writes_domain_truth": false,
@@ -319,10 +329,10 @@
   "readback_commands": [
     "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
-    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_managed_root|external_sandbox]",
+    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]",
     "opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_managed_root|external_sandbox] --dry-run",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_managed_root|external_sandbox] --apply",
+    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox] --dry-run",
+    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox] --apply",
     "opl runtime env verify --runtime-root <path>",
     "opl runtime env cache status",
     "opl runtime env cache inventory",
@@ -336,6 +346,10 @@
     "runtime_environment_receipt_means_domain_ready",
     "runtime_environment_receipt_means_app_release_ready",
     "descriptor_exists_means_runtime_materialized",
+    "local_sandbox_template_exists_means_provider_ready",
+    "local_sandbox_receipt_means_domain_ready",
+    "local_sandbox_receipt_means_app_release_ready",
+    "local_sandbox_receipt_means_production_ready",
     "external_sandbox_template_exists_means_provider_ready",
     "external_sandbox_snapshot_exists_means_runtime_ready",
     "external_sandbox_receipt_means_domain_ready",

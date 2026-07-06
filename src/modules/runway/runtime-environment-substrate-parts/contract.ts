@@ -27,7 +27,7 @@ export interface RuntimeEnvironmentTargetInput {
   domainId?: string;
   profileId?: string;
   platformId?: string;
-  sandboxProvider?: 'local_managed_root' | 'external_sandbox';
+  sandboxProvider?: 'local_devcontainer' | 'local_docker' | 'local_managed_root' | 'external_sandbox';
   paperRoot?: string;
 }
 

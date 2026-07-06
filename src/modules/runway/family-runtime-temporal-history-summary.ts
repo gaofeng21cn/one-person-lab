@@ -28,14 +28,59 @@ function historyRunnerEventSummary(value: unknown) {
   });
 }
 
+function sandboxExecutionHistorySummary(value: unknown) {
+  const sandboxExecution = recordOrNull(value);
+  if (!sandboxExecution) {
+    return null;
+  }
+  const workspaceTransport = record(sandboxExecution.workspace_transport);
+  const diffRefs = record(sandboxExecution.diff_refs);
+  return {
+    execution_substrate: typeof sandboxExecution.execution_substrate === 'string'
+      ? sandboxExecution.execution_substrate
+      : null,
+    provider_kind: typeof sandboxExecution.provider_kind === 'string' ? sandboxExecution.provider_kind : null,
+    sandbox_id: typeof sandboxExecution.sandbox_id === 'string' ? sandboxExecution.sandbox_id : null,
+    sandbox_domain: typeof sandboxExecution.sandbox_domain === 'string' ? sandboxExecution.sandbox_domain : null,
+    sandbox_reuse: typeof sandboxExecution.sandbox_reuse === 'string' ? sandboxExecution.sandbox_reuse : null,
+    template: typeof sandboxExecution.template === 'string' ? sandboxExecution.template : null,
+    image: typeof sandboxExecution.image === 'string' ? sandboxExecution.image : null,
+    container_name: typeof sandboxExecution.container_name === 'string' ? sandboxExecution.container_name : null,
+    sandbox_workspace_root: typeof sandboxExecution.sandbox_workspace_root === 'string'
+      ? sandboxExecution.sandbox_workspace_root
+      : null,
+    workspace_transport: {
+      transport_kind: typeof workspaceTransport.transport_kind === 'string' ? workspaceTransport.transport_kind : null,
+      repo_url: typeof workspaceTransport.repo_url === 'string' ? workspaceTransport.repo_url : null,
+      checkout_ref: typeof workspaceTransport.checkout_ref === 'string' ? workspaceTransport.checkout_ref : null,
+      clone_exit_code: typeof workspaceTransport.clone_exit_code === 'number' ? workspaceTransport.clone_exit_code : null,
+      checkout_exit_code: typeof workspaceTransport.checkout_exit_code === 'number' ? workspaceTransport.checkout_exit_code : null,
+    },
+    command_exit_code: typeof sandboxExecution.command_exit_code === 'number' ? sandboxExecution.command_exit_code : null,
+    jsonl_stdout_bytes: typeof sandboxExecution.jsonl_stdout_bytes === 'number' ? sandboxExecution.jsonl_stdout_bytes : null,
+    diff_refs: {
+      changed_file_refs: asStringList(diffRefs.changed_file_refs).slice(0, 50),
+      diff_stat: asStringList(diffRefs.diff_stat).slice(0, 20),
+    },
+    external_api_called: sandboxExecution.external_api_called === true,
+    docker_cli_called: sandboxExecution.docker_cli_called === true,
+    credential_material_logged: sandboxExecution.credential_material_logged === true,
+    host_workspace_mutated: sandboxExecution.host_workspace_mutated === true,
+    forwarded_env_keys: asStringList(sandboxExecution.forwarded_env_keys),
+  };
+}
+
 function historyProcessOutputSummary(value: unknown) {
   const summary = record(value);
   if (Object.keys(summary).length === 0) {
     return undefined;
   }
-  const externalSandboxExecution = recordOrNull(summary.external_sandbox_execution);
-  const workspaceTransport = record(externalSandboxExecution?.workspace_transport);
-  const diffRefs = record(externalSandboxExecution?.diff_refs);
+  const sandboxExecution = sandboxExecutionHistorySummary(
+    summary.sandbox_execution ?? summary.external_sandbox_execution,
+  );
+  const externalSandboxExecution = sandboxExecution?.execution_substrate === 'external_sandbox'
+    ? sandboxExecution
+    : null;
   return {
     ...(typeof summary.exit_code === 'number' ? { exit_code: summary.exit_code } : {}),
     ...(typeof summary.final_message_chars === 'number'
@@ -71,63 +116,8 @@ function historyProcessOutputSummary(value: unknown) {
     ...(recordOrNull(summary.closeout_enforcement)
       ? { closeout_enforcement: summary.closeout_enforcement }
       : {}),
-    ...(externalSandboxExecution
-      ? {
-          external_sandbox_execution: {
-            execution_substrate: externalSandboxExecution.execution_substrate === 'external_sandbox'
-              ? 'external_sandbox'
-              : null,
-            provider_kind: typeof externalSandboxExecution.provider_kind === 'string'
-              ? externalSandboxExecution.provider_kind
-              : null,
-            sandbox_id: typeof externalSandboxExecution.sandbox_id === 'string'
-              ? externalSandboxExecution.sandbox_id
-              : null,
-            sandbox_domain: typeof externalSandboxExecution.sandbox_domain === 'string'
-              ? externalSandboxExecution.sandbox_domain
-              : null,
-            sandbox_reuse: typeof externalSandboxExecution.sandbox_reuse === 'string'
-              ? externalSandboxExecution.sandbox_reuse
-              : null,
-            template: typeof externalSandboxExecution.template === 'string'
-              ? externalSandboxExecution.template
-              : null,
-            sandbox_workspace_root: typeof externalSandboxExecution.sandbox_workspace_root === 'string'
-              ? externalSandboxExecution.sandbox_workspace_root
-              : null,
-            workspace_transport: {
-              transport_kind: typeof workspaceTransport.transport_kind === 'string'
-                ? workspaceTransport.transport_kind
-                : null,
-              repo_url: typeof workspaceTransport.repo_url === 'string'
-                ? workspaceTransport.repo_url
-                : null,
-              checkout_ref: typeof workspaceTransport.checkout_ref === 'string'
-                ? workspaceTransport.checkout_ref
-                : null,
-              clone_exit_code: typeof workspaceTransport.clone_exit_code === 'number'
-                ? workspaceTransport.clone_exit_code
-                : null,
-              checkout_exit_code: typeof workspaceTransport.checkout_exit_code === 'number'
-                ? workspaceTransport.checkout_exit_code
-                : null,
-            },
-            command_exit_code: typeof externalSandboxExecution.command_exit_code === 'number'
-              ? externalSandboxExecution.command_exit_code
-              : null,
-            jsonl_stdout_bytes: typeof externalSandboxExecution.jsonl_stdout_bytes === 'number'
-              ? externalSandboxExecution.jsonl_stdout_bytes
-              : null,
-            diff_refs: {
-              changed_file_refs: asStringList(diffRefs.changed_file_refs).slice(0, 50),
-              diff_stat: asStringList(diffRefs.diff_stat).slice(0, 20),
-            },
-            external_api_called: externalSandboxExecution.external_api_called === true,
-            credential_material_logged: externalSandboxExecution.credential_material_logged === true,
-            forwarded_env_keys: asStringList(externalSandboxExecution.forwarded_env_keys),
-          },
-        }
-      : {}),
+    ...(sandboxExecution ? { sandbox_execution: sandboxExecution } : {}),
+    ...(externalSandboxExecution ? { external_sandbox_execution: externalSandboxExecution } : {}),
   };
 }
 

@@ -21,8 +21,9 @@ import {
   setE2bSandboxFactoryForTest,
 } from '../../src/modules/runway/e2b-codex-stage-execution.ts';
 import {
-  setLocalDockerCommandRunnerForTest,
-} from '../../src/modules/runway/local-docker-codex-stage-execution.ts';
+  runCodexInLocalSandbox,
+  setLocalSandboxCommandRunnerForTest,
+} from '../../src/modules/runway/local-codex-stage-sandbox.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
   const activity = buildCodexStageActivityInput({
@@ -303,7 +304,7 @@ test('Codex stage runner fails closed when live runner lacks packet or workspace
   );
 });
 
-test('Codex stage runner defaults to local Docker sandbox and fails closed without an image', async () => {
+test('Codex stage runner defaults to local sandbox and fails closed without an image', async () => {
   const previous = {
     provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
     image: process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE,
@@ -332,14 +333,16 @@ test('Codex stage runner defaults to local Docker sandbox and fails closed witho
       timeoutMs: 10_000,
     });
 
-    assert.equal(receipt.process_output_summary?.blocked_reason, 'local_docker_sandbox_image_missing');
-    assert.equal(receipt.closeout_packet?.rejected_writes?.[0]?.blocker_id, 'local_docker_sandbox_image_missing');
-    const summary = receipt.process_output_summary?.external_sandbox_execution;
-    assert.ok(summary, 'receipt must include local Docker sandbox execution summary');
-    assert.equal(summary.provider_kind, 'local_docker');
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'local_sandbox_image_missing');
+    assert.equal(receipt.closeout_packet?.rejected_writes?.[0]?.blocker_id, 'local_sandbox_image_missing');
+    const summary = receipt.process_output_summary?.sandbox_execution;
+    assert.ok(summary, 'receipt must include local sandbox execution summary');
+    assert.equal(summary.execution_substrate, 'local_sandbox');
+    assert.equal(summary.provider_kind, 'local_devcontainer');
     assert.equal(summary.external_api_called, false);
     assert.equal(summary.credential_material_logged, false);
-    assert.equal(summary.preflight?.image, 'missing');
+    assert.equal(summary.host_workspace_mutated, false);
+    assert.equal(receipt.process_output_summary?.external_sandbox_execution, undefined);
   } finally {
     if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
     else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
@@ -353,9 +356,9 @@ test('Codex stage runner defaults to local Docker sandbox and fails closed witho
   }
 });
 
-test('Codex stage runner runs Codex through local Docker sandbox when configured', async () => {
+test('Codex stage runner runs Codex through explicit local Docker sandbox using git clone transport', async () => {
   const remote = createGitModuleRemoteFixture('local-docker-agent-workspace');
-  const commands: Array<{ args: string[]; cwd: string | null; env: Record<string, string | undefined> }> = [];
+  const dockerCalls: string[][] = [];
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     stage_attempt_id: 'sat_local_docker_codex_stage_test',
@@ -363,48 +366,44 @@ test('Codex stage runner runs Codex through local Docker sandbox when configured
     next_owner: 'med-autoscience',
     domain_ready_verdict: 'domain_gate_pending',
   };
-  setLocalDockerCommandRunnerForTest({
-    async run(args, opts) {
-      commands.push({ args, cwd: opts?.cwd ?? null, env: opts?.env ?? {} });
-      if (args[0] === 'version') {
-        return { exitCode: 0, stdout: '29.0.0\n', stderr: '' };
-      }
-      if (args[0] === 'image' && args[1] === 'inspect') {
-        return { exitCode: 0, stdout: '[]\n', stderr: '' };
-      }
-      if (args[0] === 'run') {
-        fs.mkdirSync(path.join(remote.sourceRoot, 'artifacts'), { recursive: true });
-        fs.writeFileSync(path.join(remote.sourceRoot, 'artifacts', 'stage-output.json'), '{}\n');
-        return {
-          exitCode: 0,
-          stdout: [
-            '{"type":"thread.started","thread_id":"thread-local-docker-stage"}',
-            JSON.stringify({
-              type: 'item.completed',
-              item: {
-                type: 'agent_message',
-                id: 'msg-local-docker-stage',
-                text: JSON.stringify(closeout),
-              },
-            }),
-            '',
-          ].join('\n'),
-          stderr: '',
-        };
-      }
-      return { exitCode: 64, stdout: '', stderr: `unexpected docker args: ${args.join(' ')}` };
-    },
+  setLocalSandboxCommandRunnerForTest(async (args) => {
+    dockerCalls.push(args);
+    if (args.includes('diff') && args.includes('--name-only')) {
+      return { exitCode: 0, stdout: 'artifacts/stage-output.json\n', stderr: '' };
+    }
+    if (args.includes('diff') && args.includes('--stat')) {
+      return { exitCode: 0, stdout: ' artifacts/stage-output.json | 1 +\n', stderr: '' };
+    }
+    if (args.includes('sh') && args.includes('-lc') && args.some((arg) => arg.includes("'codex' 'exec'"))) {
+      return {
+        exitCode: 0,
+        stdout: [
+          '{"type":"thread.started","thread_id":"thread-local-docker-stage"}',
+          JSON.stringify({
+            type: 'item.completed',
+            item: {
+              type: 'agent_message',
+              id: 'msg-local-docker-stage',
+              text: JSON.stringify(closeout),
+            },
+          }),
+          '',
+        ].join('\n'),
+        stderr: '',
+      };
+    }
+    return { exitCode: 0, stdout: '', stderr: '' };
   });
   const previous = {
     provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
-    image: process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE,
-    workspaceRoot: process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT,
+    image: process.env.OPL_LOCAL_SANDBOX_IMAGE,
+    workspaceRoot: process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT,
     credentialRef: process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF,
   };
   try {
-    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
-    process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE = 'opl-codex-stage:test';
-    process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT = '/workspace';
+    process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = 'local_docker';
+    process.env.OPL_LOCAL_SANDBOX_IMAGE = 'opl-codex-stage:test';
+    process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT = '/workspace';
     process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = 'env:SHOULD_NOT_FORWARD';
 
     const receipt = await runPublicCodexStageRunner({
@@ -414,6 +413,8 @@ test('Codex stage runner runs Codex through local Docker sandbox when configured
         executor_kind: 'codex_cli',
         workspace_locator: {
           workspace_root: remote.sourceRoot,
+          git_remote_url: remote.remoteRoot,
+          git_ref: remote.getHeadSha(),
         },
         checkpoint_refs: ['packet:local-docker-stage'],
       },
@@ -424,31 +425,31 @@ test('Codex stage runner runs Codex through local Docker sandbox when configured
 
     assert.equal(receipt.progress_summary.thread_id, 'thread-local-docker-stage');
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:local-docker-codex-stage']);
-    const summary = receipt.process_output_summary?.external_sandbox_execution;
-    assert.ok(summary, 'receipt must include local Docker execution summary');
+    const summary = receipt.process_output_summary?.sandbox_execution;
+    assert.ok(summary, 'receipt must include local Docker sandbox execution summary');
+    assert.equal(summary.execution_substrate, 'local_sandbox');
     assert.equal(summary.provider_kind, 'local_docker');
-    assert.equal(summary.workspace_transport.transport_kind, 'bind_mount');
-    assert.equal(summary.workspace_transport.host_workspace_root, remote.sourceRoot);
+    assert.equal(summary.workspace_transport.transport_kind, 'git_clone');
+    assert.equal(summary.workspace_transport.repo_url, remote.remoteRoot);
+    assert.equal(summary.workspace_transport.checkout_ref, remote.getHeadSha());
     assert.deepEqual(summary.diff_refs.changed_file_refs, ['artifacts/stage-output.json']);
     assert.equal(summary.external_api_called, false);
     assert.equal(summary.credential_material_logged, false);
+    assert.equal(summary.host_workspace_mutated, false);
     assert.ok(summary.forwarded_env_keys.includes('OPL_STAGE_PACKET_REF'));
     assert.equal(summary.forwarded_env_keys.includes('OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF'), false);
-    const dockerRun = commands.find((entry) => entry.args[0] === 'run');
-    assert.ok(dockerRun, 'local Docker command log must include docker run');
-    assert.equal(dockerRun.cwd, remote.sourceRoot);
-    assert.equal(dockerRun.args.includes('opl-codex-stage:test'), true);
-    assert.equal(dockerRun.args.includes('codex'), true);
-    assert.equal(dockerRun.args.includes('--cd'), true);
-    assert.equal(dockerRun.args.includes('/workspace'), true);
+    assert.equal(receipt.process_output_summary?.external_sandbox_execution, undefined);
+    assert.equal(dockerCalls.some((args) => args[0] === 'create'), true);
+    assert.equal(dockerCalls.some((args) => args.includes('git') && args.includes('clone')), true);
+    assert.equal(dockerCalls.some((args) => args[0] === 'rm' && args[1] === '-f'), true);
   } finally {
-    setLocalDockerCommandRunnerForTest(null);
+    setLocalSandboxCommandRunnerForTest(null);
     if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
     else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
-    if (previous.image === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE;
-    else process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE = previous.image;
-    if (previous.workspaceRoot === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT;
-    else process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT = previous.workspaceRoot;
+    if (previous.image === undefined) delete process.env.OPL_LOCAL_SANDBOX_IMAGE;
+    else process.env.OPL_LOCAL_SANDBOX_IMAGE = previous.image;
+    if (previous.workspaceRoot === undefined) delete process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT;
+    else process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT = previous.workspaceRoot;
     if (previous.credentialRef === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF;
     else process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = previous.credentialRef;
     fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
@@ -714,6 +715,123 @@ test('Codex stage runner can execute Codex inside an E2B sandbox and collect dif
     }
     fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('Codex stage runner defaults to local devcontainer sandbox and collects diff refs', async () => {
+  const remote = createGitModuleRemoteFixture('local-agent-workspace');
+  const dockerCalls: string[][] = [];
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_local_sandbox_codex_stage_test',
+    closeout_refs: ['receipt:local-sandbox-codex-stage'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  setLocalSandboxCommandRunnerForTest(async (args) => {
+    dockerCalls.push(args);
+    if (args.includes('diff') && args.includes('--name-only')) {
+      return { exitCode: 0, stdout: 'artifacts/local-stage-output.json\n', stderr: '' };
+    }
+    if (args.includes('diff') && args.includes('--stat')) {
+      return { exitCode: 0, stdout: ' artifacts/local-stage-output.json | 1 +\n', stderr: '' };
+    }
+    if (args.includes('sh') && args.includes('-lc') && args.some((arg) => arg.includes("'codex' 'exec'"))) {
+      return {
+        exitCode: 0,
+        stdout: [
+          '{"type":"thread.started","thread_id":"thread-local-stage"}',
+          JSON.stringify({
+            type: 'item.completed',
+            item: {
+              type: 'agent_message',
+              id: 'msg-local-stage',
+              text: JSON.stringify(closeout),
+            },
+          }),
+          '',
+        ].join('\n'),
+        stderr: '',
+      };
+    }
+    return { exitCode: 0, stdout: '', stderr: '' };
+  });
+  const previous = {
+    provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
+    image: process.env.OPL_LOCAL_SANDBOX_IMAGE,
+    workspaceRoot: process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT,
+  };
+  try {
+    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    process.env.OPL_LOCAL_SANDBOX_IMAGE = 'opl/devcontainer-codex:test';
+    process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT = '/workspace/stage';
+
+    const receipt = await runAgentStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_local_sandbox_codex_stage_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: remote.sourceRoot,
+          git_remote_url: remote.remoteRoot,
+          git_ref: remote.getHeadSha(),
+        },
+        checkpoint_refs: ['packet:local-stage'],
+      },
+      stagePacketRef: 'packet:local-stage',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    }) as Awaited<ReturnType<typeof runPublicCodexStageRunner>>;
+
+    assert.equal(receipt.progress_summary.thread_id, 'thread-local-stage');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:local-sandbox-codex-stage']);
+    const summary = receipt.process_output_summary?.sandbox_execution;
+    assert.ok(summary, 'receipt must include generic sandbox execution summary');
+    assert.equal(summary.execution_substrate, 'local_sandbox');
+    assert.equal(summary.provider_kind, 'local_devcontainer');
+    assert.equal(summary.sandbox_workspace_root, '/workspace/stage');
+    assert.equal(summary.workspace_transport.repo_url, remote.remoteRoot);
+    assert.equal(summary.workspace_transport.checkout_ref, remote.getHeadSha());
+    assert.deepEqual(summary.diff_refs.changed_file_refs, ['artifacts/local-stage-output.json']);
+    assert.equal(summary.external_api_called, false);
+    assert.equal(summary.credential_material_logged, false);
+    assert.equal(summary.host_workspace_mutated, false);
+    assert.equal(dockerCalls.some((args) => args[0] === 'create'), true);
+    assert.equal(dockerCalls.some((args) => args.includes('git') && args.includes('clone')), true);
+    assert.equal(dockerCalls.some((args) => args[0] === 'rm' && args[1] === '-f'), true);
+  } finally {
+    setLocalSandboxCommandRunnerForTest(null);
+    if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
+    if (previous.image === undefined) delete process.env.OPL_LOCAL_SANDBOX_IMAGE;
+    else process.env.OPL_LOCAL_SANDBOX_IMAGE = previous.image;
+    if (previous.workspaceRoot === undefined) delete process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT;
+    else process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT = previous.workspaceRoot;
+    fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('local Docker sandbox fails closed without image while preserving selected provider', async () => {
+  const result = await runCodexInLocalSandbox({
+    attempt: {
+      workspace_locator: {
+        git_remote_url: 'https://github.com/example/domain.git',
+        git_ref: 'abc123',
+      },
+    },
+    args: ['exec', '--json', 'echo test'],
+    env: {
+      OPL_LOCAL_SANDBOX_WORKSPACE_ROOT: '/workspace/docker-stage',
+    },
+    providerKind: 'local_docker',
+    timeoutMs: 10_000,
+  });
+
+  assert.equal(result.result.exitCode, 1);
+  assert.equal(result.result.timeoutReason, 'provider_unavailable');
+  assert.equal(result.summary.provider_kind, 'local_docker');
+  assert.equal(result.summary.sandbox_workspace_root, '/workspace/docker-stage');
+  assert.equal(result.summary.external_api_called, false);
+  assert.equal(result.summary.host_workspace_mutated, false);
 });
 
 test('Codex stage runner fails closed when E2B is selected without workspace git transport', async () => {
