@@ -698,6 +698,31 @@ test('family-runtime residency proof rejects conflicting live and production mod
   }
 });
 
+test('family-runtime residency proof --live does not load Temporal test server without dev diagnostic module', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-live-residency-proof-gated-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'residency', 'proof', '--provider', 'temporal', '--live'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_TEMPORAL_ADDRESS: '',
+        TEMPORAL_ADDRESS: '',
+        OPL_TEMPORAL_TEST_SERVER_PROOF_MODULE: '',
+      }),
+    );
+    const proof = output.family_runtime_residency_proof;
+    const live = proof.live_residency_proof;
+
+    assert.equal(proof.proof_mode, 'temporal_live_test_server_worker');
+    assert.equal(proof.closeout_status, 'production_residency_needs_live_evidence');
+    assert.equal(live.proof_environment, 'temporal_test_server_dev_diagnostic');
+    assert.equal(live.diagnostic_status, 'dev_diagnostic_module_not_configured');
+    assert.deepEqual(live.required_env, ['OPL_TEMPORAL_TEST_SERVER_PROOF_MODULE']);
+    assert.equal(live.checks.temporal_test_server_started, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime residency proof --live runs Temporal test server and real workers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-live-residency-proof-'));
   try {
@@ -706,6 +731,11 @@ test('family-runtime residency proof --live runs Temporal test server and real w
       familyRuntimeEnv(stateRoot, {
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
+        OPL_TEMPORAL_TEST_SERVER_PROOF_MODULE: path.join(
+          repoRoot,
+          'tests/src/runway/temporal-residency-proof-dev-diagnostic.ts',
+        ),
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
       }),
     );
     const proof = output.family_runtime_residency_proof;
