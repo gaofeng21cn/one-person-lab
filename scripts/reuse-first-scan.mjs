@@ -9,6 +9,10 @@ import { readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseCliOptions(process.argv.slice(2));
+if (args.help) {
+  printHelp();
+  process.exit(0);
+}
 const root = args.root ? path.resolve(args.root) : repoRoot;
 const contractPath = args.contract
   ? path.resolve(args.contract)
@@ -93,7 +97,11 @@ const summary = {
   ],
 };
 
-process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+const output = args.format === 'summary'
+  ? buildCompactSummary(summary)
+  : summary;
+
+process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 
 if (args.strict && strictBlockingFindingCount > 0) {
   process.exit(1);
@@ -109,6 +117,9 @@ function parseCliOptions(argv) {
       mode: { type: 'string', default: 'full' },
       'diff-ref': { type: 'string', default: 'origin/main' },
       'max-findings': { type: 'string', default: '200' },
+      format: { type: 'string', default: 'json' },
+      summary: { type: 'boolean', default: false },
+      help: { type: 'boolean', default: false },
       strict: { type: 'boolean', default: false },
     },
     strict: true,
@@ -121,12 +132,86 @@ function parseCliOptions(argv) {
     mode: values.mode,
     diffRef: values['diff-ref'],
     strict: values.strict === true,
+    help: values.help === true,
+    format: values.summary === true ? 'summary' : values.format,
     maxFindings: readPositiveInteger(values['max-findings'], '--max-findings'),
   };
   if (!['full', 'diff'].includes(parsed.mode)) {
     fail('reuse-first scan: --mode must be full or diff');
   }
+  if (!['json', 'summary'].includes(parsed.format)) {
+    fail('reuse-first scan: --format must be json or summary');
+  }
   return parsed;
+}
+
+function printHelp() {
+  process.stdout.write([
+    'Usage: node scripts/reuse-first-scan.mjs [options]',
+    '',
+    'Options:',
+    '  --root <path>                  Repo root to scan.',
+    '  --contract <path>              Reuse-first governance contract.',
+    '  --historical-worklist <path>   Historical classification worklist.',
+    '  --mode <full|diff>             Scan full tree or git diff. Default: full.',
+    '  --diff-ref <ref>               Base ref for diff mode. Default: origin/main.',
+    '  --max-findings <n>             Number of findings included in json output. Default: 200.',
+    '  --format <json|summary>        Output full machine JSON or compact machine summary.',
+    '  --summary                      Alias for --format summary.',
+    '  --strict                       Exit non-zero when the applicable hard gate blocks.',
+    '  --help                         Print this help.',
+    '',
+  ].join('\n'));
+}
+
+function buildCompactSummary(full) {
+  const historical = full.historical_decision_summary ?? {};
+  return {
+    surface_kind: 'opl_reuse_first_scan_summary',
+    status: full.status,
+    gate_status: full.gate_status,
+    mode: full.mode,
+    strict: full.strict,
+    diff_ref: full.diff_ref,
+    contract: full.contract,
+    finding_count: full.finding_count,
+    hard_gate_finding_count: full.hard_gate_finding_count,
+    advisory_finding_count: full.advisory_finding_count,
+    total_finding_count: full.total_finding_count ?? full.finding_count,
+    undecisioned_finding_count: full.undecisioned_finding_count ?? null,
+    open_worklist_finding_count: full.open_worklist_finding_count ?? null,
+    blocking_worklist_finding_count: full.blocking_worklist_finding_count ?? null,
+    owner_route_open_count: full.owner_route_open_count ?? null,
+    owner_live_preflight_current_evidence_available:
+      full.owner_live_preflight_current_evidence_available ?? null,
+    owner_live_preflight_can_claim_runtime_ready:
+      full.owner_live_preflight_can_claim_runtime_ready ?? null,
+    owner_live_evidence_audit_result: full.owner_live_evidence_audit_result ?? null,
+    returned_finding_count: 0,
+    omitted_finding_count: full.finding_count,
+    historical_decision_summary: historical.applied === undefined
+      ? historical
+      : {
+          applied: historical.applied,
+          source: historical.source ?? null,
+          decisioned_finding_count: historical.decisioned_finding_count ?? null,
+          undecisioned_finding_count: historical.undecisioned_finding_count ?? null,
+          by_decision_status: historical.by_decision_status ?? [],
+          by_category: historical.by_category ?? [],
+          by_owner: historical.by_owner ?? [],
+          worklist_items: Array.isArray(historical.worklist_items)
+            ? historical.worklist_items.map((item) => ({
+                id: item.id,
+                status: item.status,
+                owner: item.owner,
+                finding_count: item.finding_count,
+                hard_gate_finding_count: item.hard_gate_finding_count,
+                advisory_finding_count: item.advisory_finding_count,
+              }))
+            : [],
+        },
+    false_ready_guard: full.false_ready_guard,
+  };
 }
 
 function readPositiveInteger(value, flag) {

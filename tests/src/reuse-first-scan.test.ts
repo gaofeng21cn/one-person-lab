@@ -12,6 +12,52 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const script = path.join(repoRoot, 'scripts', 'reuse-first-scan.mjs');
 
+test('reuse-first scan prints help without reading repo contracts', () => {
+  const result = spawnSync(process.execPath, [script, '--help'], { encoding: 'utf8' });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Usage: node scripts\/reuse-first-scan\.mjs/);
+  assert.match(result.stdout, /--format <json\|summary>/);
+  assert.equal(result.stderr, '');
+});
+
+test('reuse-first scan supports explicit json and compact summary output', () => {
+  const fixture = makeFixture();
+  const targetFile = path.join(fixture, 'src', 'example.ts');
+  fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+  fs.writeFileSync(targetFile, 'const parsed = JSON.parse("{}");\n');
+
+  const jsonResult = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+    '--format',
+    'json',
+  ], { encoding: 'utf8' });
+  const jsonOutput = parseJsonText(jsonResult.stdout) as any;
+  const summaryResult = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json'),
+    '--summary',
+  ], { encoding: 'utf8' });
+  const summaryOutput = parseJsonText(summaryResult.stdout) as any;
+
+  assert.equal(jsonResult.status, 0, jsonResult.stderr);
+  assert.equal(jsonOutput.surface_kind, 'opl_reuse_first_scan');
+  assert.equal(jsonOutput.findings.length, 1);
+  assert.equal(summaryResult.status, 0, summaryResult.stderr);
+  assert.equal(summaryOutput.surface_kind, 'opl_reuse_first_scan_summary');
+  assert.equal(summaryOutput.finding_count, 1);
+  assert.equal(summaryOutput.returned_finding_count, 0);
+  assert.equal(summaryOutput.omitted_finding_count, 1);
+  assert.equal('findings' in summaryOutput, false);
+});
+
 test('reuse-first scan reports hand-written boundary candidates without failing advisory mode', () => {
   const fixture = makeFixture();
   const targetFile = path.join(fixture, 'src', 'example.ts');
