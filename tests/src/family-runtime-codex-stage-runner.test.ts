@@ -369,7 +369,10 @@ test('Codex stage runner runs Codex through explicit local Docker sandbox using 
   setLocalSandboxCommandRunnerForTest(async (args) => {
     dockerCalls.push(args);
     if (args.includes('diff') && args.includes('--name-only')) {
-      return { exitCode: 0, stdout: 'artifacts/stage-output.json\n', stderr: '' };
+      return { exitCode: 0, stdout: '', stderr: '' };
+    }
+    if (args.includes('status') && args.includes('--short')) {
+      return { exitCode: 0, stdout: '?? artifacts/stage-output.json\n', stderr: '' };
     }
     if (args.includes('diff') && args.includes('--stat')) {
       return { exitCode: 0, stdout: ' artifacts/stage-output.json | 1 +\n', stderr: '' };
@@ -440,6 +443,10 @@ test('Codex stage runner runs Codex through explicit local Docker sandbox using 
     assert.equal(summary.forwarded_env_keys.includes('OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF'), false);
     assert.equal(receipt.process_output_summary?.external_sandbox_execution, undefined);
     assert.equal(dockerCalls.some((args) => args[0] === 'create'), true);
+    const createCall = dockerCalls.find((args) => args[0] === 'create');
+    assert.ok(createCall);
+    assert.equal(createCall.includes('--workdir'), false);
+    assert.deepEqual(createCall.slice(createCall.indexOf('--entrypoint'), createCall.indexOf('--entrypoint') + 2), ['--entrypoint', 'sh']);
     assert.equal(dockerCalls.some((args) => args.includes('git') && args.includes('clone')), true);
     assert.equal(dockerCalls.some((args) => args[0] === 'rm' && args[1] === '-f'), true);
   } finally {
@@ -796,6 +803,10 @@ test('Codex stage runner defaults to local devcontainer sandbox and collects dif
     assert.equal(summary.credential_material_logged, false);
     assert.equal(summary.host_workspace_mutated, false);
     assert.equal(dockerCalls.some((args) => args[0] === 'create'), true);
+    const createCall = dockerCalls.find((args) => args[0] === 'create');
+    assert.ok(createCall);
+    assert.equal(createCall.includes('--workdir'), false);
+    assert.deepEqual(createCall.slice(createCall.indexOf('--entrypoint'), createCall.indexOf('--entrypoint') + 2), ['--entrypoint', 'sh']);
     assert.equal(dockerCalls.some((args) => args.includes('git') && args.includes('clone')), true);
     assert.equal(dockerCalls.some((args) => args[0] === 'rm' && args[1] === '-f'), true);
   } finally {

@@ -274,6 +274,22 @@ function timeoutReasonFromResult(result: LocalSandboxCommandResult): CodexComman
   return result.error === 'activity_cancelled' ? 'activity_cancelled' : 'provider_unavailable';
 }
 
+function changedRefsFromGitStatus(stdout: string) {
+  return stdout.split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
+    .map((line) => {
+      const ref = line.slice(3).trim();
+      const renameSeparator = ' -> ';
+      return ref.includes(renameSeparator) ? ref.slice(ref.indexOf(renameSeparator) + renameSeparator.length) : ref;
+    })
+    .filter(Boolean);
+}
+
+function uniqueRefs(refs: string[]) {
+  return [...new Set(refs)];
+}
+
 function providerUnavailableResult(
   providerKind: LocalSandboxProviderKind,
   reason: string,
@@ -358,7 +374,7 @@ export async function runCodexInLocalSandbox(input: {
   const commandEnv = forwardedEnv(env, input.env ?? {});
   const template = localSandboxTemplate(env);
 
-  const create = await runDocker(['create', '--name', containerName, '--workdir', workspaceRoot, image, 'sleep', 'infinity'], {
+  const create = await runDocker(['create', '--name', containerName, '--entrypoint', 'sh', image, '-lc', 'sleep infinity'], {
     timeoutMs: 30_000,
     signal: input.signal,
   });
@@ -414,6 +430,10 @@ export async function runCodexInLocalSandbox(input: {
       timeoutMs: 30_000,
       signal: input.signal,
     });
+    const changedStatus = await runDocker(['exec', containerName, 'git', '-C', workspaceRoot, 'status', '--short', '--untracked-files=all'], {
+      timeoutMs: 30_000,
+      signal: input.signal,
+    });
     const diffStat = await runDocker(['exec', containerName, 'git', '-C', workspaceRoot, 'diff', '--stat'], {
       timeoutMs: 30_000,
       signal: input.signal,
@@ -446,7 +466,10 @@ export async function runCodexInLocalSandbox(input: {
         jsonl_stdout_bytes: Buffer.byteLength(codexResult.stdout, 'utf8'),
         stderr_tail: codexResult.stderr.split(/\r?\n/).filter(Boolean).slice(-5),
         diff_refs: {
-          changed_file_refs: changedFiles.stdout.split(/\r?\n/).filter(Boolean),
+          changed_file_refs: uniqueRefs([
+            ...changedFiles.stdout.split(/\r?\n/).filter(Boolean),
+            ...changedRefsFromGitStatus(changedStatus.stdout),
+          ]),
           diff_stat: diffStat.stdout.split(/\r?\n/).filter(Boolean),
         },
         docker_cli_called: true,
