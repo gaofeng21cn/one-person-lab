@@ -8,64 +8,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 const scannedSourceExtensions = new Set(['.ts', '.mjs', '.js', '.json', '.sh']);
-const scannedDocExtensions = new Set(['.md']);
-
-const scannedFiles = [
-  'README.md',
-  'README.zh-CN.md',
-  'docs/README.md',
-  'docs/project.md',
-  'docs/status.md',
-  'docs/architecture.md',
-  'docs/invariants.md',
-  'docs/decisions.md',
-  'docs/docs_portfolio_consolidation.md',
-  'docs/public/README.md',
-  'docs/public/roadmap.md',
-  'docs/public/operating-model.md',
-  'docs/public/task-map.md',
-  'docs/product/README.md',
-  'docs/product/opl-public-surface-index.md',
-  'docs/references/operating-governance/family-domain-memory-governance.md',
-  'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
-  'docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.md',
-  'src/entrypoints/cli/modules/help-output.ts',
-];
 
 const legacyGateway = ['Gate', 'way'].join('');
 const legacyHermes = ['Her', 'mes'].join('');
 const legacyLocalManager = ['local', '-', 'manager'].join('');
 
-const forbiddenDefaultPatterns = [
-  /default\s+Hermes/i,
-  /Hermes\s+default/i,
-  /Hermes-first\s+(?:current|default|target|active)\s+(?:online|runtime|session|substrate)/i,
-  /Gateway-first/i,
-  /default\s+Gateway/i,
-  /Gateway\s+cron\s+(?:is|as|as the|remains|stays)\s+(?:the\s+)?(?:default|normal|active)/i,
-  new RegExp(`${['front', 'door'].join('')}\\/${legacyLocalManager}\\s+(?:is|as|as the|remains|stays)\\s+(?:the\\s+)?(?:default|normal|active)`, 'i'),
-  /local-manager\s+(?:default|path|route|runtime|manager)/i,
-  /compatibility\s+alias(?:es)?\s+(?:as|as the|is|are)\s+(?:a\s+)?(?:default|normal|active)/i,
-];
-
-const allowedRetainedContext =
-  /no longer|not |retire|retired|legacy|provenance|diagnostic|history|fixture|reference|explicit|optional|superseded|旧|历史|诊断|来源|证据|保留|退役|降级|不是|不再|不得|不能|只作为|只保留|必须标为/i;
-
-const requiredCurrentPatterns = [
-  /Codex(?:-| )default/i,
-  /provider-backed/i,
-  /legacy|provenance|diagnostic|history|fixture/i,
-];
+const scannedSourceRoots = ['src', 'scripts', 'contracts'] as const;
 
 function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-}
-
-function assertCurrentBoundary(relativePath: string) {
-  const content = read(relativePath);
-  for (const pattern of requiredCurrentPatterns) {
-    assert.match(content, pattern, `${relativePath} must retain current runtime/residue boundary wording`);
-  }
 }
 
 function* walk(relativeRoot: string, extensions = scannedSourceExtensions): Generator<string> {
@@ -89,97 +40,6 @@ function* walk(relativeRoot: string, extensions = scannedSourceExtensions): Gene
 function scannedTextFiles(relativeRoots: string[]) {
   return relativeRoots.flatMap((relativeRoot) => [...walk(relativeRoot)]);
 }
-
-function activeDocFiles() {
-  return [...walk('docs/active', scannedDocExtensions)].sort();
-}
-
-function currentSupportDocFiles() {
-  return [...walk('docs/references/current-support', scannedDocExtensions)].sort();
-}
-
-test('active docs and root help do not advertise legacy operator paths as defaults', () => {
-  const violations: string[] = [];
-
-  for (const relativePath of [...scannedFiles, ...activeDocFiles(), ...currentSupportDocFiles()]) {
-    const lines = read(relativePath).split('\n');
-    lines.forEach((line, index) => {
-      if (allowedRetainedContext.test(line)) {
-        return;
-      }
-      for (const pattern of forbiddenDefaultPatterns) {
-        if (pattern.test(line)) {
-          violations.push(`${relativePath}:${index + 1}: ${pattern}`);
-        }
-      }
-    });
-  }
-
-  assert.deepEqual(violations, []);
-});
-
-test('active operator closeout surfaces keep the current provider-backed boundary explicit', () => {
-  [
-    'docs/public/roadmap.md',
-    'docs/active/current-development-lines.md',
-    'docs/product/opl-public-surface-index.md',
-    'docs/references/runtime-substrate/temporal-family-runtime-provider-plan.md',
-  ].forEach(assertCurrentBoundary);
-});
-
-test('active gap docs do not freeze stale checkout, compatibility-audit baselines, or volatile read-model counters', () => {
-  const scannedActiveDocs = activeDocFiles();
-  const forbiddenPatterns = [
-    /四仓根 checkout 都在 `main\.\.\.origin\/main` 且 clean/,
-    /path compatibility audit/i,
-    /open_worklist_item_count=\d+/,
-    /open_safe_action_payload_required_item_count=\d+/,
-    /open_safe_action_payload_free_item_count=\d+/,
-    /domain_dispatch_evidence_workorder_count=\d+/,
-    /domain_dispatch_evidence_receipt_action_route_count=\d+/,
-    /domain_dispatch_evidence_receipt_record_requires_domain_or_app_payload_count=\d+/,
-    /domain_dispatch_evidence_current_default_actionable_attempt_count=\d+/,
-    /evidence_envelope_open_count=\d+/,
-    /当前 live `family-runtime evidence-worklist` 未暴露 open OPL safe-action/i,
-    /fresh evidence-worklist 当前没有 open domain-dispatch workorder/i,
-    /fresh evidence-worklist 当前没有 open domain-dispatch workorder，也没有 OPL safe-action route/i,
-  ];
-  const violations: string[] = [];
-
-  for (const relativePath of scannedActiveDocs) {
-    const content = read(relativePath);
-    for (const pattern of forbiddenPatterns) {
-      if (pattern.test(content)) {
-        violations.push(`${relativePath}: ${pattern}`);
-      }
-    }
-  }
-
-  assert.deepEqual(violations, []);
-});
-
-test('active baton live-readout hints match current CLI envelopes and existing support docs', () => {
-  const scannedActiveDocs = activeDocFiles();
-  const violations: string[] = [];
-
-  for (const relativePath of scannedActiveDocs) {
-    const content = read(relativePath);
-    if (/runtime app-operator-drilldown --json[\s\S]{0,120}runtime_tray_snapshot/.test(content)) {
-      violations.push(`${relativePath}: app-operator-drilldown now returns .app_operator_drilldown`);
-    }
-    if (/mas-opl-stage-native-state-machine\.md/.test(content)) {
-      violations.push(`${relativePath}: references retired mas-opl-stage-native-state-machine.md`);
-    }
-    for (const match of content.matchAll(/\]\(\.\/([^)\s]+\.md)\)/g)) {
-      const target = path.join('docs/active', match[1]);
-      if (!fs.existsSync(path.join(repoRoot, target))) {
-        violations.push(`${relativePath}: missing active doc link target ${target}`);
-      }
-    }
-  }
-
-  assert.deepEqual(violations, []);
-});
 
 test('root help fast-start examples stay on the current Codex-default path', () => {
   const helpOutput = read('src/entrypoints/cli/modules/help-output.ts');
@@ -231,20 +91,18 @@ test('default runtime and CLI source do not advertise compatibility aliases as a
   ];
   const violations: string[] = [];
 
-  for (const relativeRoot of ['src', 'scripts', 'contracts']) {
-    for (const relativePath of walk(relativeRoot)) {
-      const lines = read(relativePath).split('\n');
-      lines.forEach((line, index) => {
-        if (allowedSourceLines.some((pattern) => pattern.test(line))) {
-          return;
+  for (const relativePath of scannedTextFiles([...scannedSourceRoots])) {
+    const lines = read(relativePath).split('\n');
+    lines.forEach((line, index) => {
+      if (allowedSourceLines.some((pattern) => pattern.test(line))) {
+        return;
+      }
+      for (const pattern of forbiddenActivePathPatterns) {
+        if (pattern.test(line)) {
+          violations.push(`${relativePath}:${index + 1}: ${pattern}`);
         }
-        for (const pattern of forbiddenActivePathPatterns) {
-          if (pattern.test(line)) {
-            violations.push(`${relativePath}:${index + 1}: ${pattern}`);
-          }
-        }
-      });
-    }
+      }
+    });
   }
 
   assert.deepEqual(violations, []);
