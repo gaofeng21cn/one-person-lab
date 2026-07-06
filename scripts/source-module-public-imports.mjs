@@ -8,6 +8,10 @@ import { readJsonFile } from './script-json-boundary.mjs';
 
 const defaultRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseCliOptions(process.argv.slice(2));
+if (args.help) {
+  printHelp();
+  process.exit(0);
+}
 const repoRoot = args.root ? path.resolve(args.root) : defaultRepoRoot;
 const contractPath = path.join(repoRoot, 'contracts', 'opl-framework', 'source-module-map.json');
 const contract = readJson(contractPath);
@@ -51,6 +55,8 @@ function parseCliOptions(argv) {
       'imports-only': { type: 'boolean', default: false },
       'source-module': { type: 'string', multiple: true, default: [] },
       'source-modules': { type: 'string', multiple: true, default: [] },
+      format: { type: 'string', default: 'json' },
+      help: { type: 'boolean', default: false },
     },
     strict: true,
     allowPositionals: false,
@@ -60,6 +66,8 @@ function parseCliOptions(argv) {
     apply: values.apply === true,
     exportsOnly: values['exports-only'] === true,
     importsOnly: values['imports-only'] === true,
+    format: values.format,
+    help: values.help === true,
     sourceModules: [
       ...values['source-module'],
       ...values['source-modules'].flatMap((entry) => entry.split(',')),
@@ -68,8 +76,28 @@ function parseCliOptions(argv) {
   if (parsed.exportsOnly && parsed.importsOnly) {
     fail('source module public imports: --exports-only and --imports-only cannot be used together');
   }
+  if (parsed.format !== 'json') {
+    fail('source module public imports: --format must be json');
+  }
   parsed.sourceModules = [...new Set(parsed.sourceModules.map((entry) => entry.trim()).filter(Boolean))];
   return parsed;
+}
+
+function printHelp() {
+  process.stdout.write([
+    'Usage: node scripts/source-module-public-imports.mjs [options]',
+    '',
+    'Options:',
+    '  --root <path>             Repo root to inspect.',
+    '  --source-module <id>      Limit to one source module. May repeat.',
+    '  --source-modules <ids>    Comma-separated source module ids.',
+    '  --exports-only            Only add missing public exports when --apply is set.',
+    '  --imports-only            Only rewrite imports when --apply is set.',
+    '  --apply                   Apply generated public exports/import rewrites.',
+    '  --format json             Explicit machine JSON output. Default: json.',
+    '  --help                    Print this help.',
+    '',
+  ].join('\n'));
 }
 
 function readJson(file) {

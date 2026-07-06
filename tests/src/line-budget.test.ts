@@ -6,6 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseJsonText } from '../../src/kernel/json-file.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'line-budget.mjs');
@@ -70,6 +72,34 @@ function runLineBudget(root: string, contractPath: string, extraArgs: string[] =
     { cwd: repoRoot, encoding: 'utf8' },
   );
 }
+
+test('line budget supports help and explicit machine json output', () => {
+  const { root, contractPath } = fixture({
+    files: { 'src/new-large-entry.ts': 4 },
+    defaultLimit: 3,
+  });
+
+  try {
+    const help = spawnSync(process.execPath, [scriptPath, '--help'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    const json = runLineBudget(root, contractPath, ['--format', 'json']);
+    const output = parseJsonText(json.stdout) as any;
+
+    assert.equal(help.status, 0, help.stderr);
+    assert.match(help.stdout, /Usage: node scripts\/line-budget\.mjs/);
+    assert.match(help.stdout, /--format <text\|json>/);
+    assert.equal(json.status, 0, json.stderr);
+    assert.equal(output.surface_kind, 'opl_line_budget_check');
+    assert.equal(output.status, 'advisory');
+    assert.equal(output.oversize_count, 1);
+    assert.equal(output.oversize_files[0].path, 'src/new-large-entry.ts');
+    assert.equal(output.failure_count, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('line budget ratchet allows a reviewed oversized baseline without requiring a split', () => {
   const { root, contractPath } = fixture({

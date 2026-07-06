@@ -13,6 +13,10 @@ const IGNORED_SUFFIXES = ['.min.js'];
 const STRICT_FLAG = '--strict';
 
 const args = parseCliOptions(process.argv.slice(2));
+if (args.help) {
+  printHelp();
+  process.exit(0);
+}
 const strictMode = args.strict || strictEnvEnabled(process.env.OPL_LINE_BUDGET_STRICT);
 const targetRoot = args.root ? path.resolve(args.root) : repoRoot;
 const baselinePath = args.baseline
@@ -57,6 +61,10 @@ for (const relativePath of trackedFiles.stdout.split('\n').filter(Boolean)) {
 oversize.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
 
 if (args.mode === 'list') {
+  if (args.format === 'json') {
+    writeJsonSummary({ status: 'ok', failures, oversize, strictMode });
+    process.exit(0);
+  }
   for (const [relativePath, lineCount] of oversize) {
     process.stdout.write(`${String(lineCount).padStart(6, ' ')} ${relativePath}\n`);
   }
@@ -74,6 +82,19 @@ const retiredBaseline = [...baseline.keys()].filter((relativePath) => {
 });
 for (const relativePath of retiredBaseline) {
   failures.push(`${relativePath}: retired line-budget baseline entry; remove it because the file is back under ${defaultLimit} lines`);
+}
+
+if (args.format === 'json') {
+  writeJsonSummary({
+    status: failures.length === 0 ? 'ok' : strictMode ? 'failed' : 'advisory',
+    failures,
+    oversize,
+    strictMode,
+  });
+  if (strictMode && failures.length > 0) {
+    process.exit(1);
+  }
+  process.exit(0);
 }
 
 if (failures.length > 0) {
@@ -106,20 +127,63 @@ function parseCliOptions(argv) {
         [STRICT_FLAG.slice(2)]: { type: 'boolean', default: false },
         root: { type: 'string' },
         baseline: { type: 'string' },
+        format: { type: 'string', default: 'text' },
+        help: { type: 'boolean', default: false },
       },
       strict: true,
       allowPositionals: false,
     });
-    return {
+    const parsed = {
       mode: values.list ? 'list' : 'check',
       root: values.root ?? null,
       baseline: values.baseline ?? null,
+      format: values.format,
+      help: values.help === true,
       strict: values.strict === true,
     };
+    if (!['text', 'json'].includes(parsed.format)) {
+      process.stderr.write('line budget: --format must be text or json\n');
+      process.exit(1);
+    }
+    return parsed;
   } catch (error) {
     process.stderr.write(`line budget: ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   }
+}
+
+function printHelp() {
+  process.stdout.write([
+    'Usage: node scripts/line-budget.mjs [options]',
+    '',
+    'Options:',
+    '  --root <path>       Repo root to inspect.',
+    '  --baseline <path>   Source structure budget contract.',
+    '  --list              Print oversized tracked files.',
+    '  --strict            Exit non-zero on line-budget failures.',
+    '  --format <text|json> Output text or machine JSON. Default: text.',
+    '  --help              Print this help.',
+    '',
+  ].join('\n'));
+}
+
+function writeJsonSummary(input) {
+  process.stdout.write(`${JSON.stringify({
+    surface_kind: 'opl_line_budget_check',
+    status: input.status,
+    mode: args.mode,
+    strict: input.strictMode,
+    root: targetRoot,
+    baseline: path.relative(targetRoot, baselinePath),
+    default_limit: defaultLimit,
+    oversize_count: input.oversize.length,
+    failure_count: input.failures.length,
+    oversize_files: input.oversize.map(([relativePath, lineCount]) => ({
+      path: relativePath,
+      line_count: lineCount,
+    })),
+    failures: input.failures,
+  }, null, 2)}\n`);
 }
 
 function strictEnvEnabled(value) {
