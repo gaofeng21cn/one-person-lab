@@ -171,6 +171,33 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     default_by_profile: true,
     missing_source_status: 'source-missing',
   },
+  {
+    pack_id: 'medical-causal-inference-plan',
+    skill_dir: 'medical-causal-inference-plan',
+    label: 'Medical causal inference planning specialist',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
+  {
+    pack_id: 'medical-survival-analysis-plan',
+    skill_dir: 'medical-survival-analysis-plan',
+    label: 'Medical survival analysis planning specialist',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
+  {
+    pack_id: 'medical-reference-integrity-auditor',
+    skill_dir: 'medical-reference-integrity-auditor',
+    label: 'Medical reference integrity auditor',
+    role: 'specialist_entry',
+    required_by_profile: false,
+    default_by_profile: true,
+    missing_source_status: 'source-missing',
+  },
 ];
 
 export const MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS = Object.freeze(

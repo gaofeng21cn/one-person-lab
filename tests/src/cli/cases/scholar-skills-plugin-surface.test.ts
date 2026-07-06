@@ -12,6 +12,9 @@ const expectedSpecialistSkills = [
   'medical-rebuttal-strategy',
   'medical-display-qc',
   'medical-omics-analysis-plan',
+  'medical-causal-inference-plan',
+  'medical-survival-analysis-plan',
+  'medical-reference-integrity-auditor',
 ] as const;
 
 function readJson(pathname: string) {

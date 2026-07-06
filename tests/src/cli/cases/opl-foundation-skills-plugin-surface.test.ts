@@ -94,6 +94,33 @@ const expectedSkills = [
       'no readiness claims',
     ],
   },
+  {
+    id: 'opl-completion-audit-writer',
+    tokens: [
+      'Plan Completion Audit',
+      'done',
+      'partial',
+      'forbidden_claims',
+    ],
+  },
+  {
+    id: 'opl-incident-root-cause-triager',
+    tokens: [
+      'L0_symptom',
+      'L3_owner_repair_path',
+      'root_cause_class',
+      'blocker_to_owner_map',
+    ],
+  },
+  {
+    id: 'opl-eval-harness-designer',
+    tokens: [
+      'Foundry Lab evaluation harness',
+      'task_cases',
+      'scorecard',
+      'promotion_or_hold_evidence',
+    ],
+  },
 ] as const;
 
 function readJson(pathname: string) {
