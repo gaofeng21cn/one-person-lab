@@ -15,6 +15,8 @@ import {
 import { redriveBlockedDefaultExecutorProviderTransportTask } from '../../../../../src/modules/runway/family-runtime-redrive.ts';
 import type { FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
 
+const PROVIDER_RETRY_BUDGET_JSON = '{"max_attempts":3}';
+
 function defaultExecutorPayload(sourceFingerprint: string) {
   return {
     profile: '/tmp/dm-cvd.profile.toml',
@@ -79,16 +81,14 @@ function forceTaskIntoProviderTransportBlockedState(
   taskId: string,
   reason: string,
   options: {
-    taskStatus?: 'blocked' | 'dead_letter';
-    taskAttempts?: number;
-    stageAttemptStatus?: 'blocked' | 'dead_lettered';
+    retryBudgetExhausted?: boolean;
     sourceFingerprint?: string;
   } = {},
 ) {
   const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
-  const taskStatus = options.taskStatus ?? 'blocked';
-  const taskAttempts = options.taskAttempts ?? 1;
-  const stageAttemptStatus = options.stageAttemptStatus ?? 'blocked';
+  const taskStatus = options.retryBudgetExhausted ? 'dead_letter' : 'blocked';
+  const taskAttempts = options.retryBudgetExhausted ? 3 : 1;
+  const stageAttemptStatus = options.retryBudgetExhausted ? 'dead_lettered' : 'blocked';
   const sourceFingerprint = options.sourceFingerprint ?? 'test-provider-transport-source';
   try {
     queueDb.prepare(`
@@ -109,13 +109,13 @@ function forceTaskIntoProviderTransportBlockedState(
         'sat_' || lower(hex(randomblob(12))), 'idem_' || lower(hex(randomblob(12))),
         'temporal', 'wf_' || lower(hex(randomblob(12))), domain_id, task_kind,
         payload_json, ?, 'codex_cli', ?, '[]',
-        '[]', '[]', '{"max_attempts":3}', 1, task_id,
+        '[]', '[]', ?, 1, task_id,
         ?, '{}', '{"provider_status":"registered"}', '[]',
         '{}', NULL, datetime('now'), datetime('now')
       FROM tasks
       WHERE task_id = ?
         AND NOT EXISTS (SELECT 1 FROM stage_attempts WHERE task_id = ?)
-    `).run(sourceFingerprint, stageAttemptStatus, reason, taskId, taskId);
+    `).run(sourceFingerprint, stageAttemptStatus, PROVIDER_RETRY_BUDGET_JSON, reason, taskId, taskId);
   } finally {
     queueDb.close();
   }
@@ -155,14 +155,14 @@ test('family-runtime operator redrive rejects same-identity transport failure wi
           'sat_live_redrive_block', 'idem_live_redrive_block',
           'temporal', 'wf_live_redrive_block', domain_id, stage_id,
           workspace_locator_json, source_fingerprint, 'codex_cli', 'running', '[]',
-          '[]', '[]', '{"max_attempts":3}', 1, task_id,
+          '[]', '[]', ?, 1, task_id,
           NULL, '{}', '{"provider_status":"running"}', '[]',
           '{}', NULL, datetime('now'), datetime('now')
         FROM stage_attempts
         WHERE task_id = ?
         ORDER BY created_at ASC
         LIMIT 1
-      `).run(taskId);
+      `).run(PROVIDER_RETRY_BUDGET_JSON, taskId);
     } finally {
       queueDb.close();
     }
@@ -211,9 +211,7 @@ test('family-runtime operator redrive rejects retry-budget dead letter when same
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
     forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'retry_budget_exhausted', {
-      taskStatus: 'dead_letter',
-      taskAttempts: 3,
-      stageAttemptStatus: 'dead_lettered',
+      retryBudgetExhausted: true,
     });
     const queueDb = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
     try {
@@ -229,7 +227,7 @@ test('family-runtime operator redrive rejects retry-budget dead letter when same
           'sat_closeout_redrive_block', 'idem_closeout_redrive_block',
           'temporal', 'wf_closeout_redrive_block', domain_id, stage_id,
           workspace_locator_json, source_fingerprint, 'codex_cli', 'completed', '[]',
-          '["mas:owner-receipt:same-identity"]', '[]', '{"max_attempts":3}', 1, task_id,
+          '["mas:owner-receipt:same-identity"]', '[]', ?, 1, task_id,
           NULL, '{}', '{"provider_status":"completed"}', '[]',
           '{"owner_receipt_refs":["mas:owner-receipt:same-identity"]}',
           'accepted_typed_closeout', datetime('now'), datetime('now')
@@ -237,7 +235,7 @@ test('family-runtime operator redrive rejects retry-budget dead letter when same
         WHERE task_id = ?
         ORDER BY created_at ASC
         LIMIT 1
-      `).run(taskId);
+      `).run(PROVIDER_RETRY_BUDGET_JSON, taskId);
     } finally {
       queueDb.close();
     }
@@ -362,8 +360,8 @@ test('family-runtime operator redrive reruns failed MAS default executor provide
   }
 });
 
-test('family-runtime operator redrive can recover MAS default executor retry-budget dead letters after provider repair', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-retry-deadletter-redrive-'));
+test('family-runtime operator redrive can recover MAS default executor retry-budget terminal tasks after provider repair', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-default-executor-retry-budget-redrive-'));
   try {
     const env = familyRuntimeEnv(stateRoot, {
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
@@ -376,15 +374,13 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
       '--task-kind',
       'domain_owner/default-executor-dispatch',
       '--payload',
-      JSON.stringify(defaultExecutorPayload('source-stable-retry-deadletter-redrive')),
+      JSON.stringify(defaultExecutorPayload('source-stable-retry-budget-redrive')),
       '--dedupe-key',
-      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:retry-deadletter-redrive',
+      'mas:dm-cvd:002:default-executor:run_quality_repair_batch:retry-budget-redrive',
     ], env);
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
     forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'retry_budget_exhausted', {
-      taskStatus: 'dead_letter',
-      taskAttempts: 3,
-      stageAttemptStatus: 'dead_lettered',
+      retryBudgetExhausted: true,
     });
 
     const redrive = runCli([
@@ -395,7 +391,7 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
       '--reason',
       'provider_runtime_repaired_after_retry_budget_exhausted',
       '--source',
-      'test-retry-deadletter-redrive',
+      'test-retry-budget-redrive',
     ], env);
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempts = redrivenTask.family_runtime_task.stage_attempts;
