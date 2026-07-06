@@ -1,6 +1,7 @@
 import { assert, fs, os, path, repoRoot, runCli, test, parseJsonText } from '../helpers.ts';
 import {
   MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS,
+  MAS_SCHOLAR_SKILLS_OPTIONAL_MEDICAL_METHOD_PACK_IDS,
   MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS,
   MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS,
 } from '../../../../src/modules/connect/opl-skills-parts/scholarskills-profile.ts';
@@ -215,6 +216,16 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
       pack.mas_scholar_skills_profile.default_skill_pack,
       MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS,
     );
+    assert.deepEqual(MAS_SCHOLAR_SKILLS_OPTIONAL_MEDICAL_METHOD_PACK_IDS, [
+      'medical-protocol-and-sap-planner',
+      'medical-cohort-phenotyping',
+      'medical-evidence-synthesis-and-claim-map',
+      'medical-reference-integrity-auditor',
+      'medical-rebuttal-strategy',
+      'medical-display-qc',
+      'medical-causal-inference-plan',
+      'medical-survival-analysis-plan',
+    ]);
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_scope, 'inspect');
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_root, null);
     assert.equal(pack.mas_scholar_skills_profile.install_target.install_root, null);
@@ -234,7 +245,12 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
     );
     assert.equal(profilePacks.get('mas-scholar-skills')?.installed, false);
     for (const packId of MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS) {
+      if (MAS_SCHOLAR_SKILLS_OPTIONAL_MEDICAL_METHOD_PACK_IDS.includes(packId)) continue;
       assert.equal(profilePacks.get(packId)?.source_status, 'source-missing');
+      assert.equal(profilePacks.get(packId)?.installed, false);
+    }
+    for (const packId of MAS_SCHOLAR_SKILLS_OPTIONAL_MEDICAL_METHOD_PACK_IDS) {
+      assert.equal(profilePacks.get(packId)?.source_status, 'available-but-not-materialized');
       assert.equal(profilePacks.get(packId)?.installed, false);
     }
     assert.deepEqual(pack.mas_scholar_skills_profile.authority_boundary, {

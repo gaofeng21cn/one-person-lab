@@ -197,7 +197,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-cohort-phenotyping',
@@ -206,7 +206,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-evidence-synthesis-and-claim-map',
@@ -215,7 +215,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-reference-integrity-auditor',
@@ -224,7 +224,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-rebuttal-strategy',
@@ -233,7 +233,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-display-qc',
@@ -242,7 +242,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-causal-inference-plan',
@@ -251,7 +251,7 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
   {
     pack_id: 'medical-survival-analysis-plan',
@@ -260,9 +260,15 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     role: 'specialist_entry',
     required_by_profile: false,
     default_by_profile: false,
-    missing_source_status: 'source-missing',
+    missing_source_status: 'available-but-not-materialized',
   },
 ];
+
+export const MAS_SCHOLAR_SKILLS_OPTIONAL_MEDICAL_METHOD_PACK_IDS = Object.freeze(
+  MAS_SCHOLAR_SKILLS_PROFILE_PACKS
+    .filter((pack) => pack.missing_source_status === 'available-but-not-materialized')
+    .map((pack) => pack.pack_id),
+);
 
 export const MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS = Object.freeze(
   MAS_SCHOLAR_SKILLS_PROFILE_PACKS
