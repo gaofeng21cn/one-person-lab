@@ -1,10 +1,10 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
 import {
-  readJsonFileOrNull,
-  writeJsonPayloadFile,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
 } from '../../kernel/json-file.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
@@ -147,25 +147,12 @@ function normalizeReceipt(value: unknown): ManagedInstallUpdateReceipt | null {
 }
 
 export function readManagedInstallUpdateLedger(): ManagedInstallUpdateLedger {
-  const file = ledgerPath();
-  if (!fs.existsSync(file)) {
-    return emptyLedger();
-  }
-  const parsed = readJsonFileOrNull(file);
-  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-    return emptyLedger();
-  }
-  return {
-    ...emptyLedger(),
-    receipts: parsed.receipts
-      .map(normalizeReceipt)
-      .filter((receipt): receipt is ManagedInstallUpdateReceipt => Boolean(receipt)),
-  };
+  return readJsonReceiptLedger(ledgerPath(), emptyLedger, normalizeReceipt);
 }
 
 function writeManagedInstallUpdateLedger(ledger: ManagedInstallUpdateLedger) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.managed_install_update_ledger_file, ledger);
+  writeJsonReceiptLedger(paths.managed_install_update_ledger_file, ledger);
 }
 
 function receiptRef(input: ManagedInstallUpdateReceiptInput) {
@@ -213,17 +200,10 @@ export function recordManagedInstallUpdateReceipts(inputs: ManagedInstallUpdateR
 
   const ledger = readManagedInstallUpdateLedger();
   const receipts = inputs.map(normalizeInput);
-  for (const receipt of receipts) {
-    const existingIndex = ledger.receipts.findIndex((entry) =>
-      entry.receipt_ref === receipt.receipt_ref
-      && entry.module_id === receipt.module_id
-    );
-    if (existingIndex >= 0) {
-      ledger.receipts[existingIndex] = receipt;
-    } else {
-      ledger.receipts.unshift(receipt);
-    }
-  }
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+    && entry.module_id === next.module_id
+  );
   writeManagedInstallUpdateLedger(ledger);
   return {
     surface_kind: 'opl_managed_module_install_update_ledger_record',

@@ -33,6 +33,10 @@ export type JsonFileReadResult =
       error: string;
     };
 
+export type JsonReceiptLedger<Receipt> = {
+  receipts: Receipt[];
+};
+
 export function optionalString(value: unknown) { // reuse-first: allow central JSON scalar boundary helper.
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
@@ -58,6 +62,45 @@ export function readJsonFileOrNull(filePath: string): unknown | null {
     return readJsonPayloadFile(filePath);
   } catch {
     return null;
+  }
+}
+
+export function readJsonReceiptLedger<Receipt, Ledger extends JsonReceiptLedger<Receipt>>(
+  filePath: string,
+  emptyLedger: () => Ledger,
+  normalizeReceipt: (value: unknown) => Receipt | null,
+): Ledger {
+  const parsed = readJsonFileOrNull(filePath);
+  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
+    return emptyLedger();
+  }
+  return {
+    ...emptyLedger(),
+    receipts: parsed.receipts
+      .map(normalizeReceipt)
+      .filter((receipt): receipt is Receipt => Boolean(receipt)),
+  };
+}
+
+export function writeJsonReceiptLedger<Ledger extends JsonReceiptLedger<unknown>>(
+  filePath: string,
+  ledger: Ledger,
+) {
+  writeJsonPayloadFile(filePath, ledger);
+}
+
+export function upsertJsonReceipts<Receipt>(
+  receipts: Receipt[],
+  nextReceipts: Receipt[],
+  matches: (current: Receipt, next: Receipt) => boolean,
+) {
+  for (const next of nextReceipts) {
+    const existingIndex = receipts.findIndex((current) => matches(current, next));
+    if (existingIndex >= 0) {
+      receipts[existingIndex] = next;
+    } else {
+      receipts.unshift(next);
+    }
   }
 }
 

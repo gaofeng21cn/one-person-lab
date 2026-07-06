@@ -1,5 +1,11 @@
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
-import { readJsonFileOrNull, writeJsonPayloadFile } from '../../../kernel/json-file.ts';
+import {
+  readJsonFileOrNull,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonPayloadFile,
+  writeJsonReceiptLedger,
+} from '../../../kernel/json-file.ts';
 import { recordList, stringValue } from '../../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
@@ -48,32 +54,11 @@ export function readLockIndex(): AgentPackageLockIndex {
 }
 
 export function readLifecycleLedger(): AgentPackageLifecycleLedger {
-  const parsed = readJsonFileOrNull(resolveOplStatePaths().agent_package_lifecycle_ledger_file);
-  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-    return emptyLifecycleLedger();
-  }
-  return {
-    ...emptyLifecycleLedger(),
-    receipts: recordList(parsed.receipts).flatMap((entry) => {
-      const receiptRef = stringValue(entry.receipt_ref);
-      const packageId = canonicalAgentPackageId(entry.package_id);
-      const physicalSurface = isRecord(entry.physical_surface)
-        ? {
-            ...entry.physical_surface,
-            ...(canonicalAgentPackageId(entry.physical_surface.package_id)
-              ? { package_id: canonicalAgentPackageId(entry.physical_surface.package_id)! }
-              : {}),
-          }
-        : entry.physical_surface;
-      return receiptRef
-        ? [{
-            ...entry,
-            package_id: packageId,
-            ...(physicalSurface ? { physical_surface: physicalSurface } : {}),
-          } as AgentPackageLifecycleReceipt]
-        : [];
-    }),
-  };
+  return readJsonReceiptLedger(
+    resolveOplStatePaths().agent_package_lifecycle_ledger_file,
+    emptyLifecycleLedger,
+    normalizeLifecycleReceipt,
+  );
 }
 
 export function readRegistryCache() {
@@ -105,16 +90,36 @@ export function writeLockIndex(index: AgentPackageLockIndex) {
 
 export function writeLifecycleLedger(ledger: AgentPackageLifecycleLedger) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.agent_package_lifecycle_ledger_file, ledger);
+  writeJsonReceiptLedger(paths.agent_package_lifecycle_ledger_file, ledger);
 }
 
 export function appendReceipt(receipt: AgentPackageLifecycleReceipt) {
   const ledger = readLifecycleLedger();
-  const existingIndex = ledger.receipts.findIndex((entry) => entry.receipt_ref === receipt.receipt_ref);
-  if (existingIndex >= 0) {
-    ledger.receipts[existingIndex] = receipt;
-  } else {
-    ledger.receipts.unshift(receipt);
-  }
+  upsertJsonReceipts(ledger.receipts, [receipt], (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+  );
   writeLifecycleLedger(ledger);
+}
+
+function normalizeLifecycleReceipt(value: unknown): AgentPackageLifecycleReceipt | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const receiptRef = stringValue(value.receipt_ref);
+  const packageId = canonicalAgentPackageId(value.package_id);
+  const physicalSurface = isRecord(value.physical_surface)
+    ? {
+        ...value.physical_surface,
+        ...(canonicalAgentPackageId(value.physical_surface.package_id)
+          ? { package_id: canonicalAgentPackageId(value.physical_surface.package_id)! }
+          : {}),
+      }
+    : value.physical_surface;
+  return receiptRef
+    ? {
+        ...value,
+        package_id: packageId,
+        ...(physicalSurface ? { physical_surface: physicalSurface } : {}),
+      } as AgentPackageLifecycleReceipt
+    : null;
 }

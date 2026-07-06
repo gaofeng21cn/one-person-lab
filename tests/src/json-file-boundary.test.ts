@@ -6,10 +6,13 @@ import test from 'node:test';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import {
+  readJsonReceiptLedger,
   optionalString,
   readJsonFileOrNull,
   readJsonFileResult,
   readJsonRecordFile,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
 } from '../../src/kernel/json-file.ts';
 
 const testBoundary = {
@@ -62,6 +65,56 @@ test('shared JSON file boundary keeps caller-owned error shape and read status',
     assert.equal(optionalString(record.value), 'ok');
     assert.equal(readJsonFileResult(objectPath).status, 'resolved');
     assert.equal(readJsonFileResult(missingPath).status, 'missing');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('shared JSON receipt ledger reads normalizes writes and upserts receipts', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-json-receipt-ledger-'));
+  const ledgerPath = path.join(root, 'ledger.json');
+  const emptyLedger = () => ({
+    surface_kind: 'test_receipt_ledger' as const,
+    version: 'test.v1' as const,
+    receipts: [] as { receipt_ref: string; status: string }[],
+  });
+  const normalizeReceipt = (value: unknown) => {
+    if (!value || typeof value !== 'object' || !('receipt_ref' in value)) {
+      return null;
+    }
+    const receiptRef = optionalString((value as { receipt_ref?: unknown }).receipt_ref);
+    return receiptRef
+      ? { receipt_ref: receiptRef, status: 'normalized' }
+      : null;
+  };
+
+  try {
+    assert.deepEqual(readJsonReceiptLedger(ledgerPath, emptyLedger, normalizeReceipt), emptyLedger());
+    fs.writeFileSync(ledgerPath, '{');
+    assert.deepEqual(readJsonReceiptLedger(ledgerPath, emptyLedger, normalizeReceipt), emptyLedger());
+
+    fs.writeFileSync(ledgerPath, JSON.stringify({
+      receipts: [
+        { receipt_ref: 'one', status: 'old' },
+        { receipt_ref: ' ' },
+        { not_a_receipt: true },
+      ],
+    }));
+    const ledger = readJsonReceiptLedger(ledgerPath, emptyLedger, normalizeReceipt);
+    assert.deepEqual(ledger.receipts, [{ receipt_ref: 'one', status: 'normalized' }]);
+
+    upsertJsonReceipts(ledger.receipts, [
+      { receipt_ref: 'one', status: 'replaced' },
+      { receipt_ref: 'two', status: 'new' },
+    ], (current, next) => current.receipt_ref === next.receipt_ref);
+    assert.deepEqual(ledger.receipts, [
+      { receipt_ref: 'two', status: 'new' },
+      { receipt_ref: 'one', status: 'replaced' },
+    ]);
+
+    writeJsonReceiptLedger(ledgerPath, ledger);
+    assert.equal(readJsonFileResult(ledgerPath).status, 'resolved');
+    assert.match(fs.readFileSync(ledgerPath, 'utf8'), /\n$/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

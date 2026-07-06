@@ -1,7 +1,10 @@
-import fs from 'node:fs';
-
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { optionalString, readJsonFileOrNull } from '../../kernel/json-file.ts';
+import {
+  optionalString,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
+} from '../../kernel/json-file.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { stringList } from '../../kernel/json-record.ts';
 import {
@@ -233,24 +236,12 @@ function normalizeReceipt(value: unknown): BrandModuleL5EvidenceReceipt | null {
 }
 
 function readBrandModuleL5EvidenceLedger(): BrandModuleL5EvidenceLedger {
-  const parsed = readJsonFileOrNull(ledgerPath());
-  if (!isRecord(parsed) || !Array.isArray(parsed.receipts)) {
-    return emptyLedger();
-  }
-  return {
-    ...emptyLedger(),
-    receipts: parsed.receipts
-      .map(normalizeReceipt)
-      .filter((receipt): receipt is BrandModuleL5EvidenceReceipt => Boolean(receipt)),
-  };
+  return readJsonReceiptLedger(ledgerPath(), emptyLedger, normalizeReceipt);
 }
 
 function writeBrandModuleL5EvidenceLedger(ledger: BrandModuleL5EvidenceLedger) {
   const paths = ensureOplStateDir();
-  fs.writeFileSync(
-    paths.brand_module_l5_evidence_ledger_file,
-    `${JSON.stringify(ledger, null, 2)}\n`,
-  );
+  writeJsonReceiptLedger(paths.brand_module_l5_evidence_ledger_file, ledger);
 }
 
 function normalizeInput(
@@ -279,12 +270,9 @@ export function recordBrandModuleL5EvidenceReceipt(
   validateInputAgainstContract(contracts, input);
   const receipt = normalizeInput(input);
   const ledger = readBrandModuleL5EvidenceLedger();
-  const existingIndex = ledger.receipts.findIndex((entry) => entry.receipt_ref === receipt.receipt_ref);
-  if (existingIndex >= 0) {
-    ledger.receipts[existingIndex] = receipt;
-  } else {
-    ledger.receipts.unshift(receipt);
-  }
+  upsertJsonReceipts(ledger.receipts, [receipt], (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+  );
   writeBrandModuleL5EvidenceLedger(ledger);
 
   return {
