@@ -33,6 +33,11 @@ function createScholarSkillsRepoFixture(options: { specialistSkills?: readonly s
       `---\nname: ${specialistSkill}\ndescription: Fixture ${specialistSkill} skill.\n---\n\n# ${specialistSkill}\n`,
       'utf8',
     );
+    fs.writeFileSync(
+      path.join(specialistDir, 'kernel.py'),
+      `print("fixture kernel for ${specialistSkill}")\n`,
+      'utf8',
+    );
   }
   fs.writeFileSync(
     path.join(root, 'contracts', 'scholar-skills-capability-modules.json'),
@@ -709,6 +714,7 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
                 };
                 packs: Array<{
                   pack_id: string;
+                  default_by_profile: boolean;
                   source_status: string;
                   installed: boolean;
                   install_target_skill_root: string;
@@ -746,10 +752,23 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
     for (const packId of MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS) {
       assert.equal(profilePacks.get(packId)?.source_status, 'materialized');
       assert.equal(profilePacks.get(packId)?.installed, true);
+      assert.equal(profilePacks.get(packId)?.default_by_profile, true);
+    }
+    for (const packId of MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS) {
+      const packProfile = profilePacks.get(packId);
+      if (!MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS.includes(packId)) {
+        assert.equal(packProfile?.default_by_profile, false);
+      }
+      assert.equal(packProfile?.source_status, 'materialized');
+      assert.equal(packProfile?.installed, true);
     }
     for (const packId of MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS) {
       assert.equal(
         fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', packId, 'SKILL.md')),
+        true,
+      );
+      assert.equal(
+        fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', packId, 'kernel.py')),
         true,
       );
       assert.equal(
