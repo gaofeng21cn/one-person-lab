@@ -25,15 +25,24 @@ test('family-runtime local provider status does not inspect a bad Hermes binary 
     );
 
     assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
-    assert.equal(output.family_runtime.readiness.provider_ready, true);
+    assert.equal(output.family_runtime.readiness.provider_ready, false);
+    assert.equal(output.family_runtime.readiness.diagnostic_provider_ready, true);
     assert.equal(output.family_runtime.readiness.full_online_ready, false);
     assert.equal(output.family_runtime.readiness.durable_online_ready, false);
+    assert.equal(output.family_runtime.readiness.degraded, true);
+    assert.equal(output.family_runtime.readiness.degraded_reason, 'local_sqlite_is_dev_ci_offline_only');
     assert.equal(output.family_runtime.readiness.local_sqlite_is_dev_ci_offline_only, true);
+    assert.equal(output.family_runtime.readiness.local_sqlite_counts_as_provider_ready, false);
     assert.equal(output.family_runtime.readiness.selected_provider_can_replace_domain_daemons, false);
     assert.equal(output.family_runtime.periodic_execution.status, 'dev_offline_provider_cannot_replace_domain_daemons');
     assert.equal(output.family_runtime.periodic_execution.local_sqlite_role, 'dev_ci_offline_diagnostic_baseline_only');
     assert.equal(output.family_runtime.periodic_execution.blocker.blocker_id, 'local_sqlite_is_dev_ci_offline_only');
     assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.ready, true);
+    assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.details.diagnostic_ready, true);
+    assert.equal(
+      output.family_runtime.provider_runtime.providers.local_sqlite.details.provider_ready_counts_as_online_ready,
+      false,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -49,7 +58,8 @@ test('family-runtime doctor degrades explicit local sqlite because it cannot rep
 
     assert.equal(output.family_runtime_doctor.doctor_status, 'degraded');
     assert.deepEqual(output.family_runtime_doctor.blockers, ['local_sqlite_is_dev_ci_offline_only']);
-    assert.equal(output.family_runtime_doctor.status.readiness.provider_ready, true);
+    assert.equal(output.family_runtime_doctor.status.readiness.provider_ready, false);
+    assert.equal(output.family_runtime_doctor.status.readiness.diagnostic_provider_ready, true);
     assert.equal(output.family_runtime_doctor.status.readiness.full_online_ready, false);
     assert.equal(
       output.family_runtime_doctor.status.readiness.selected_provider_can_replace_domain_daemons,

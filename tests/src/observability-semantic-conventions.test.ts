@@ -27,6 +27,19 @@ const expectedFields = [
   'generation',
   'source_fingerprint',
 ];
+const expectedOtelAttributes = [
+  'opl.stage_run.id',
+  'opl.stage_attempt.id',
+  'opl.domain.id',
+  'opl.owner.id',
+  'opl.route.ref',
+  'opl.receipt.ref',
+  'opl.typed_blocker.ref',
+  'opl.workflow.id',
+  'opl.task_queue.name',
+  'opl.generation',
+  'opl.source.fingerprint',
+];
 
 function contract() {
   return parseJsonText(
@@ -51,7 +64,7 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
   assert.deepEqual(OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.fields.map((field) => field.id), expectedFields);
   assert.deepEqual(
     semanticContract.fields.map((field) => field.otel_attribute),
-    expectedFields.map((field) => `opl.${field}`),
+    expectedOtelAttributes,
   );
   assert.deepEqual(
     OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS.signal_mappings.trace_span.canonical_fields,
@@ -234,9 +247,9 @@ test('observability readback projects current owner refs without becoming a ledg
     generation: 3,
     source_fingerprint: 'sha256:source',
   });
-  assert.equal(readback.signals.trace_span.attributes['opl.stage_run_id'], 'stage-run:mas:review');
-  assert.equal(readback.signals.metric.attributes['opl.task_queue'], 'opl-family-runtime');
-  assert.equal(readback.signals.log_event.attributes['opl.receipt_ref'], 'receipt:mas:review');
+  assert.equal(readback.signals.trace_span.attributes['opl.stage_run.id'], 'stage-run:mas:review');
+  assert.equal(readback.signals.metric.attributes['opl.task_queue.name'], 'opl-family-runtime');
+  assert.equal(readback.signals.log_event.attributes['opl.receipt.ref'], 'receipt:mas:review');
   assert.deepEqual(readback.signals.log_event.ref_fields, ['route_ref', 'receipt_ref', 'typed_blocker_ref']);
 });
 
@@ -297,7 +310,7 @@ test('observability export seed groups trace metric and log signals without payl
   assert.equal(seed.authority_boundary.can_claim_runtime_ready, false);
   assert.deepEqual(seed.forbidden_body_fields_present, ['payload_body']);
   assert.equal(seed.signal_groups.traces[0].span_name, 'opl.stage_attempt');
-  assert.equal(seed.signal_groups.traces[0].attributes['opl.attempt_id'], 'sat_123');
+  assert.equal(seed.signal_groups.traces[0].attributes['opl.stage_attempt.id'], 'sat_123');
   assert.equal(seed.signal_groups.metrics[0].openmetrics_name, 'opl_queue_length');
   assert.equal(seed.signal_groups.metrics[0].value, 7);
   assert.equal(seed.signal_groups.logs[0].body_included, false);
@@ -306,7 +319,7 @@ test('observability export seed groups trace metric and log signals without payl
   const openmetrics = renderObservabilitySemanticConventionOpenMetrics(seed);
   assert.match(openmetrics, /# TYPE opl_queue_length gauge/);
   assert.match(openmetrics, /opl_queue_length\{[^}]*opl_domain_id="medautoscience"[^}]*\} 7/);
-  assert.match(openmetrics, /opl_latency_ms\{[^}]*opl_task_queue="opl-family-runtime"[^}]*\} 1200/);
+  assert.match(openmetrics, /opl_latency_ms\{[^}]*opl_task_queue_name="opl-family-runtime"[^}]*\} 1200/);
   assert.match(openmetrics, /# TYPE opl_observability_exporter_signal_mapping gauge/);
   assert.match(openmetrics, /opl_observability_exporter_signal_mapping\{[^}]*metrics="openmetrics_gauge_seed"[^}]*\} 1/);
   assert.match(openmetrics, /# TYPE opl_observability_collector_export_boundary gauge/);
@@ -365,11 +378,11 @@ test('evidence envelope projection binds operator readback to semantic conventio
     'evidence_envelope_refs_only_trace_metric_log_event_model',
   );
   assert.equal(
-    semanticConventions.signal_groups.traces[0].attributes['opl.domain_id'],
+    semanticConventions.signal_groups.traces[0].attributes['opl.domain.id'],
     'med-autoscience',
   );
   assert.equal(
-    semanticConventions.signal_groups.logs[0].attributes['opl.typed_blocker_ref'],
+    semanticConventions.signal_groups.logs[0].attributes['opl.typed_blocker.ref'],
     'typed-blocker:stage',
   );
   assert.equal(

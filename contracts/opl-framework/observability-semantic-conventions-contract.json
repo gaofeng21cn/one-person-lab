@@ -6,17 +6,17 @@
   "state": "active_contract",
   "machine_boundary": "This contract defines semantic field names and readback mappings. It does not store artifact or memory bodies, write domain truth, create owner receipts, create typed blockers, or claim runtime, domain, artifact, production or L5 readiness.",
   "fields": [
-    { "id": "stage_run_id", "otel_attribute": "opl.stage_run_id" },
-    { "id": "attempt_id", "otel_attribute": "opl.attempt_id" },
-    { "id": "domain_id", "otel_attribute": "opl.domain_id" },
-    { "id": "owner_id", "otel_attribute": "opl.owner_id" },
-    { "id": "route_ref", "otel_attribute": "opl.route_ref" },
-    { "id": "receipt_ref", "otel_attribute": "opl.receipt_ref" },
-    { "id": "typed_blocker_ref", "otel_attribute": "opl.typed_blocker_ref" },
-    { "id": "workflow_id", "otel_attribute": "opl.workflow_id" },
-    { "id": "task_queue", "otel_attribute": "opl.task_queue" },
+    { "id": "stage_run_id", "otel_attribute": "opl.stage_run.id" },
+    { "id": "attempt_id", "otel_attribute": "opl.stage_attempt.id" },
+    { "id": "domain_id", "otel_attribute": "opl.domain.id" },
+    { "id": "owner_id", "otel_attribute": "opl.owner.id" },
+    { "id": "route_ref", "otel_attribute": "opl.route.ref" },
+    { "id": "receipt_ref", "otel_attribute": "opl.receipt.ref" },
+    { "id": "typed_blocker_ref", "otel_attribute": "opl.typed_blocker.ref" },
+    { "id": "workflow_id", "otel_attribute": "opl.workflow.id" },
+    { "id": "task_queue", "otel_attribute": "opl.task_queue.name" },
     { "id": "generation", "otel_attribute": "opl.generation" },
-    { "id": "source_fingerprint", "otel_attribute": "opl.source_fingerprint" }
+    { "id": "source_fingerprint", "otel_attribute": "opl.source.fingerprint" }
   ],
   "signal_mappings": {
     "trace_span": {

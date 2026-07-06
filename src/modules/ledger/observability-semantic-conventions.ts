@@ -20,6 +20,19 @@ const METRIC_INSTRUMENTS = [
   'latency_ms',
   'error_count',
 ] as const;
+const OTEL_ATTRIBUTE_NAMES = {
+  stage_run_id: 'opl.stage_run.id',
+  attempt_id: 'opl.stage_attempt.id',
+  domain_id: 'opl.domain.id',
+  owner_id: 'opl.owner.id',
+  route_ref: 'opl.route.ref',
+  receipt_ref: 'opl.receipt.ref',
+  typed_blocker_ref: 'opl.typed_blocker.ref',
+  workflow_id: 'opl.workflow.id',
+  task_queue: 'opl.task_queue.name',
+  generation: 'opl.generation',
+  source_fingerprint: 'opl.source.fingerprint',
+} as const;
 
 const EXPORTER_SIGNAL_MAPPING = {
   traces: {
@@ -199,7 +212,7 @@ const OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS = {
   schema_version: 'opl_observability_semantic_conventions.v1',
   fields: FIELD_IDS.map((id) => ({
     id,
-    otel_attribute: `opl.${id}`,
+    otel_attribute: OTEL_ATTRIBUTE_NAMES[id],
   })),
   signal_mappings: {
     trace_span: {
@@ -296,7 +309,7 @@ function selectAttributes(attributes: CanonicalAttributes, fieldIds: readonly st
     fieldIds
       .filter((fieldId): fieldId is ObservabilityFieldId => FIELD_IDS.includes(fieldId as ObservabilityFieldId))
       .filter((fieldId) => attributes[fieldId] !== undefined)
-      .map((fieldId) => [`opl.${fieldId}`, attributes[fieldId] as string | number]),
+      .map((fieldId) => [OTEL_ATTRIBUTE_NAMES[fieldId], attributes[fieldId] as string | number]),
   );
 }
 
