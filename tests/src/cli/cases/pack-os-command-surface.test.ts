@@ -1,8 +1,8 @@
 import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) {
-  fs.mkdirSync(path.join(root, 'templates'), { recursive: true });
-  fs.writeFileSync(path.join(root, 'templates', 'figure.json'), '{"kind":"template"}\n');
+  fs.mkdirSync(path.join(root, 'templates', 'figure'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'templates', 'figure', 'template.toml'), 'kind = "template"\n');
   fs.writeFileSync(path.join(root, 'schema.json'), '{"type":"object"}\n');
 
   const descriptor = {
@@ -11,11 +11,12 @@ function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) 
     version: '2.0.0',
     pack_kind: 'display_pack',
     owner: 'MedAutoScience',
+    modes: ['final', 'candidate'],
     capabilities: [
       {
         capability_id: 'medical_display',
         capability_kind: 'display_template',
-        entrypoint_ref: 'templates/figure.json',
+        entrypoint_ref: 'templates/figure/template.toml',
         input_contract_ref: 'schema.json',
         output_contract_ref: 'paper/build/display_pack_lock.json',
       },
@@ -24,7 +25,7 @@ function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) 
       {
         resource_id: 'template.medical_display',
         role: 'template',
-        ref: 'templates/figure.json',
+        ref: 'templates/figure/template.toml',
       },
       {
         resource_id: 'schema.input',
@@ -254,6 +255,41 @@ test('generic pack aliases inspect check plan run and gallery without domain exe
     assert.equal(run.action, 'render');
     assert.equal(run.mode, 'candidate');
     assert.equal(run.not_claims.includes('publication_ready'), true);
+
+    const unknownTemplate = runCliFailure([
+      'pack',
+      'run',
+      '--pack',
+      root,
+      '--action',
+      'render',
+      '--template',
+      'missing',
+      '--mode',
+      'candidate',
+    ]);
+    assert.equal(unknownTemplate.status, 2);
+    assert.equal(unknownTemplate.payload.error.code, 'cli_usage_error');
+    assert.match(unknownTemplate.payload.error.message, /template is not declared/);
+    assert.equal(unknownTemplate.payload.error.details.supported_templates.includes('figure'), true);
+    assert.equal(unknownTemplate.payload.error.details.supported_templates.includes('template.medical_display'), false);
+
+    const unknownMode = runCliFailure([
+      'pack',
+      'run',
+      '--pack',
+      root,
+      '--action',
+      'render',
+      '--template',
+      'figure',
+      '--mode',
+      'preview',
+    ]);
+    assert.equal(unknownMode.status, 2);
+    assert.equal(unknownMode.payload.error.code, 'cli_usage_error');
+    assert.match(unknownMode.payload.error.message, /mode is not supported/);
+    assert.deepEqual(unknownMode.payload.error.details.supported_modes, ['final', 'candidate']);
 
     const gallery = runCli(['pack', 'gallery', '--pack', root]).opl_pack_gallery_plan;
     assert.equal(gallery.surface_kind, 'opl_generic_pack_gallery_plan');

@@ -447,6 +447,71 @@ function packOsNotClaims() {
   ];
 }
 
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.filter((value) => value.length > 0))];
+}
+
+function resourceRefTemplateId(ref: string) {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(ref)) {
+    return null;
+  }
+  const parts = normalizeRelativeRef(ref).split('/');
+  if (parts.length >= 3 && parts[parts.length - 1] === 'template.toml') {
+    return parts[parts.length - 2] || null;
+  }
+  const parsed = path.parse(parts[parts.length - 1] ?? ref);
+  return parsed.name || null;
+}
+
+function descriptorTemplateIds(resources: ReturnType<typeof buildPackOsLockFromLoaded>['pack_lock']['resolved_resources']) {
+  return uniqueStrings(resources
+    .filter((resource) => resource.role === 'template')
+    .flatMap((resource) => [
+      resource.resource_id.startsWith('template.') ? resource.resource_id.slice('template.'.length) : '',
+      resourceRefTemplateId(resource.ref) ?? '',
+    ]));
+}
+
+function descriptorDeclaredModes(descriptorPath: string, packKind: string) {
+  const descriptor = readJsonFile(descriptorPath);
+  for (const field of ['modes', 'declared_modes']) {
+    const value = descriptor[field];
+    if (value === undefined) {
+      continue;
+    }
+    if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string' && entry.trim().length > 0)) {
+      throw shape(`pack_descriptor.${field} must be a string array.`, { field: `pack_descriptor.${field}` });
+    }
+    return uniqueStrings(value.map((entry) => entry.trim()));
+  }
+  return packKind === 'display_pack' ? ['final', 'candidate'] : [];
+}
+
+function validateGenericPackRunRequest(input: {
+  descriptorPath: string;
+  lock: ReturnType<typeof buildPackOsLockFromLoaded>['pack_lock'];
+  template: string | null;
+  mode: string | null;
+}) {
+  const supportedTemplates = descriptorTemplateIds(input.lock.resolved_resources);
+  if (input.template && !supportedTemplates.includes(input.template)) {
+    throw usage('Pack template is not declared by descriptor resources.', {
+      template: input.template,
+      supported_templates: supportedTemplates,
+      descriptor: input.descriptorPath,
+    });
+  }
+
+  const supportedModes = descriptorDeclaredModes(input.descriptorPath, input.lock.pack_kind);
+  if (input.mode && !supportedModes.includes(input.mode)) {
+    throw usage('Pack mode is not supported by the descriptor.', {
+      mode: input.mode,
+      supported_modes: supportedModes,
+      descriptor: input.descriptorPath,
+    });
+  }
+}
+
 function buildRegistryEntry(lock: ReturnType<typeof buildPackOsLockFromLoaded>['pack_lock']) {
   return {
     registry_key: registryKey(lock.pack_id, lock.version),
@@ -759,6 +824,12 @@ export function buildGenericPackRunPlan(input: {
 }) {
   const descriptorPath = resolvePackDescriptor(input.packRef);
   const lock = buildPackOsLock(descriptorPath).pack_lock;
+  validateGenericPackRunRequest({
+    descriptorPath,
+    lock,
+    template: input.template,
+    mode: input.mode,
+  });
   const action = input.action ?? 'inspect';
   return {
     version: 'g2',
