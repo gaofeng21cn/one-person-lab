@@ -442,10 +442,10 @@
   "readback_commands": [
     "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
-    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_sandbox|remote_sandbox]",
+    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]",
     "opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_sandbox|remote_sandbox] --dry-run",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_sandbox|remote_sandbox] --apply",
+    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] --dry-run",
+    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] --apply",
     "opl runtime env verify --runtime-root <path>",
     "opl runtime env cache status",
     "opl runtime env cache inventory",
