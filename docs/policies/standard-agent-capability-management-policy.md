@@ -83,6 +83,16 @@ Contract module 是 schema、descriptor、validator、readback shape 或 machine
 
 OPL 的 AI-first / contract-light 读法是：模块化留在运维层，弹性留在 Skill 层。Framework 模块只提供 identity、contract、locator、catalog、readback、receipt、handoff、projection、distribution、validation 和 recovery 这类可审计边界；开放式评估、路线选择、调试策略、执行 playbook、审阅标准、修订方法和领域判断应进入专业 Skill、stage prompt、knowledge / rubric refs 或 domain-owned quality gate。
 
+固定术语采用三层读法，而不是按文件后缀或目录名分类：
+
+| 层 | 正式语义 | 典型物理源 | 边界 |
+| --- | --- | --- | --- |
+| `professional_skill` | 专业 Skill，承载 AI-first 专家 playbook、rubric、策略、审阅 lens、route-back 写法和候选产物组织。 | owning domain repo、外置 professional pack，或 OPL base/support Skill source。 | 可产出 candidate refs、review notes、diagnostic brief 或 handoff；不签 owner receipt，不写 domain truth，不声明 readiness。 |
+| `skill_local_deterministic_helper` | 随专业 Skill 分发的确定性小工具，服务可重复、低成本、局部的解析、归一化、lint、skeleton、manifest / receipt shaping 或 self-check。 | `skills/<skill-id>/kernel.py`、同目录 `scripts/`、`templates/` 或轻量 refs。 | 跟随 Skill，不升级为 OPL module、provider worker、authority function、runtime queue 或 publication helper owner。 |
+| `programmatic_substrate` / `authority_surface` | 程序化基座和权威面，承接身份、同步、安装、connector、runtime、queue、receipt、ledger、App projection、owner gate 和 release/currentness evidence。 | OPL `src/modules/**`、`contracts/**`、CLI/readback、runtime artifacts、domain owner surfaces。 | 可以证明结构、同步、receipt、runtime 或 owner evidence；不能替代专业判断，也不能把测试绿或投影存在写成 domain result。 |
+
+同一个功能可以同时使用三层。例如文献能力由 `medical-research-lit` 做检索策略和证据判断，`kernel.py` 做 DOI/PMID 归一化和 citation lint，OPL Connect / MAS owner surface 负责 PubMed connector、receipt、owner acceptance 与 citation ledger。设计时先定位子职责所在层，再决定物理文件；不要因为需要一个小工具就把专业 Skill 脚本化，也不要因为有专业 Skill 就把同步、凭据、provider lifecycle 或 owner gate 下放给 Skill。
+
 | 模块 | OPL-owned 边界 | 不进入模块的开放式工作 |
 | --- | --- | --- |
 | `OPL Charter` | 术语、原则、authority matrix、forbidden claims、ADR/RFC lifecycle。 | 不写执行策略、调试 playbook、领域评价或 owner answer。 |
