@@ -27,7 +27,7 @@ export function normalizeTarget(input: RuntimeEnvironmentTargetInput) {
     domain_id: input.domainId ?? 'family-defaults',
     profile_id: input.profileId ?? 'core',
     platform_id: input.platformId ?? defaultPlatform(),
-    sandbox_provider: input.sandboxProvider ?? 'local_devcontainer',
+    sandbox_provider: input.sandboxProvider ?? 'fast_local_env',
   };
 }
 

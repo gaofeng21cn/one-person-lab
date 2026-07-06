@@ -68,7 +68,7 @@
       "domain_id",
       "profile_id",
       "platform_id",
-      "sandbox_provider",
+      "environment_profile",
       "dependency_sources",
       "toolchain_needs",
       "authority_boundary"
@@ -81,7 +81,7 @@
     ],
     "opl_owned_fields": [
       "platform_id",
-      "sandbox_provider_intent",
+      "environment_strategy_ref",
       "runtime_lock_ref",
       "layer_manifest_refs",
       "materialization_receipt_ref",
@@ -179,19 +179,43 @@
     "can_claim_app_release_ready": false
   },
   "external_sandbox_provider_policy": {
-    "surface_kind": "opl_external_sandbox_provider_policy",
-    "status": "local_devcontainer_default_with_optional_remote_provider_adapter",
-    "purpose": "Route agent execution sandbox substrate to local Dev Containers/Docker by default, with optional remote providers such as E2B, while keeping OPL-owned stage, authority, receipt, readback, and false-ready boundaries.",
+    "surface_kind": "opl_runtime_environment_strategy_policy",
+    "status": "fast_local_env_default_with_local_and_remote_sandbox_providers_deferred",
+    "purpose": "Keep Fast Local Env as the current default for R/Python/MAS display paths through environment profiles, compiler, doctor, and run-context, while treating Local Sandbox/Docker and Remote Sandbox/E2B as explicit post-default providers with receipt and false-ready boundaries.",
     "supported_provider_kinds": [
-      "local_devcontainer",
-      "local_docker",
-      "local_managed_root",
-      "external_sandbox"
+      "fast_local_env",
+      "local_sandbox",
+      "remote_sandbox"
     ],
-    "default_provider_kind": "local_devcontainer",
+    "default_provider_kind": "fast_local_env",
+    "environment_tiers": [
+      {
+        "tier": "fast_local_env",
+        "role": "current_default_for_r_python_mas_display",
+        "requires_docker": false,
+        "authority_surface": "env_profile_compiler_doctor_run_context"
+      },
+      {
+        "tier": "local_sandbox",
+        "role": "post_default_local_isolation_provider",
+        "provider_examples": [
+          "docker",
+          "devcontainer"
+        ]
+      },
+      {
+        "tier": "remote_sandbox",
+        "role": "post_default_remote_execution_provider",
+        "provider_examples": [
+          "e2b",
+          "daytona",
+          "modal"
+        ]
+      }
+    ],
     "local_provider_examples": [
-      "devcontainer",
-      "docker"
+      "docker",
+      "devcontainer"
     ],
     "external_provider_examples": [
       "e2b",
@@ -238,7 +262,7 @@
       "env_id_counts_as_provider_ready": false,
       "env_id_counts_as_runtime_ready": false
     },
-    "provider_role": "agent_sandbox_execution_substrate",
+    "provider_role": "post_default_execution_isolation_substrate",
     "external_provider_owns": [
       "isolated_filesystem",
       "process_execution",
@@ -258,6 +282,10 @@
       "operator_projection"
     ],
     "adapter_owned_fields": [
+      "environment_profile",
+      "compiler_profile",
+      "doctor_ref",
+      "run_context_ref",
       "provider_profile",
       "credential_ref_preflight",
       "provider_receipt_ref",
@@ -268,6 +296,9 @@
     "temporal_replacement": false,
     "requires_live_provider_receipt_for_ready": true,
     "required_receipt_kind": "external_sandbox_provider_receipt",
+    "fast_local_env_counts_as_provider_ready": false,
+    "fast_local_env_doctor_counts_as_runtime_ready": false,
+    "run_context_exists_counts_as_runtime_ready": false,
     "credential_material_read": false,
     "external_api_called": false,
     "provider_lifecycle_managed": false,
@@ -408,10 +439,10 @@
   "readback_commands": [
     "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
-    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]",
+    "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_sandbox|remote_sandbox]",
     "opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox] --dry-run",
-    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox] --apply",
+    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_sandbox|remote_sandbox] --dry-run",
+    "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_sandbox|remote_sandbox] --apply",
     "opl runtime env verify --runtime-root <path>",
     "opl runtime env cache status",
     "opl runtime env cache inventory",
@@ -425,6 +456,9 @@
     "runtime_environment_receipt_means_domain_ready",
     "runtime_environment_receipt_means_app_release_ready",
     "descriptor_exists_means_runtime_materialized",
+    "fast_local_env_means_provider_ready",
+    "fast_local_env_doctor_pass_means_runtime_ready",
+    "run_context_exists_means_runtime_ready",
     "local_sandbox_template_exists_means_provider_ready",
     "local_sandbox_receipt_means_domain_ready",
     "local_sandbox_receipt_means_app_release_ready",

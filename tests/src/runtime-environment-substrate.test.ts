@@ -23,6 +23,19 @@ const modalLikeEnvSpecIds = [
   'singlecell_gpu',
 ];
 
+const fastLocalEnvDefaultFields = (readback: Json) => {
+  const defaultPath = (readback.default_current_path ?? {}) as Json;
+  const handoff = (readback.standard_tool_handoff ?? {}) as Json;
+  return {
+    sandbox_provider: readback.sandbox_provider,
+    default_strategy: defaultPath.strategy_id,
+    default_path: defaultPath.path_id,
+    renv_handoff: ((handoff.renv ?? {}) as Json).tool,
+    uv_handoff: ((handoff.uv ?? {}) as Json).tool,
+    host_environment_fallback_allowed: defaultPath.host_environment_fallback_allowed,
+  };
+};
+
 function readJson(relativePath: string): Json {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Json;
 }
@@ -36,6 +49,7 @@ test('runtime environment substrate keeps shared helpers split behind a thin fac
     'contract.ts',
     'target-state.ts',
     'package-profile.ts',
+    'sandbox-provider-plan.ts',
     'projection-cache.ts',
   ];
 
@@ -113,15 +127,14 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   );
 
   const sandboxPolicy = contract.external_sandbox_provider_policy as Json;
-  assert.equal(sandboxPolicy.status, 'local_devcontainer_default_with_optional_remote_provider_adapter');
+  assert.equal(sandboxPolicy.status, 'fast_local_env_default_with_local_and_remote_sandbox_providers_deferred');
   assert.deepEqual(sandboxPolicy.supported_provider_kinds, [
-    'local_devcontainer',
-    'local_docker',
-    'local_managed_root',
-    'external_sandbox',
+    'fast_local_env',
+    'local_sandbox',
+    'remote_sandbox',
   ]);
-  assert.equal(sandboxPolicy.default_provider_kind, 'local_devcontainer');
-  assert.deepEqual(sandboxPolicy.local_provider_examples, ['devcontainer', 'docker']);
+  assert.equal(sandboxPolicy.default_provider_kind, 'fast_local_env');
+  assert.deepEqual(sandboxPolicy.local_provider_examples, ['docker', 'devcontainer']);
   assert.deepEqual(sandboxPolicy.external_provider_examples, ['e2b', 'daytona', 'modal']);
   assert.deepEqual(sandboxPolicy.required_external_sandbox_refs, [
     'OPL_EXTERNAL_SANDBOX_ENDPOINT',
@@ -138,7 +151,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(modalCatalog.env_id_counts_as_image_built, false);
   assert.equal(modalCatalog.env_id_counts_as_provider_ready, false);
   assert.equal(modalCatalog.env_id_counts_as_runtime_ready, false);
-  assert.equal(sandboxPolicy.provider_role, 'agent_sandbox_execution_substrate');
+  assert.equal(sandboxPolicy.provider_role, 'post_default_execution_isolation_substrate');
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('provider_receipt_ref'), true);
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('sandbox_binding_ref'), true);
   assert.equal(sandboxPolicy.temporal_replacement, false);
@@ -313,10 +326,19 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal(producer.lock_schema_version, 'opl-runtime-bundle-lock.v1');
   assert.equal((producer.target_profile as Json).profile_id, 'full');
   assert.equal(producer.target_platform_id, 'macos-arm64');
-  assert.equal(readback.sandbox_provider, 'local_devcontainer');
+  assert.deepEqual(fastLocalEnvDefaultFields(readback), {
+    sandbox_provider: 'fast_local_env',
+    default_strategy: 'fast_local_env',
+    default_path: 'default_current_path',
+    renv_handoff: 'renv',
+    uv_handoff: 'uv',
+    host_environment_fallback_allowed: false,
+  });
   const sandboxPlan = readback.sandbox_provider_plan as Json;
-  assert.equal(sandboxPlan.selected_provider, 'local_devcontainer');
-  assert.equal(sandboxPlan.provider_role, 'local_agent_sandbox_execution_substrate');
+  assert.equal(sandboxPlan.selected_provider, 'fast_local_env');
+  assert.equal(sandboxPlan.provider_role, 'fast_local_env_default_current_path');
+  assert.deepEqual(sandboxPlan.later_sandbox_provider_kinds, ['local_docker', 'external_sandbox']);
+  assert.deepEqual(sandboxPlan.later_external_sandbox_substrates, ['e2b', 'daytona', 'modal']);
   assert.equal(sandboxPlan.materialization_root_provider, 'local_managed_root');
   assert.equal(sandboxPlan.temporal_replacement, false);
   assert.equal(sandboxPlan.can_claim_provider_ready, false);

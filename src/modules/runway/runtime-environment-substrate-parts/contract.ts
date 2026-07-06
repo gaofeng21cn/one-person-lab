@@ -27,7 +27,7 @@ export interface RuntimeEnvironmentTargetInput {
   domainId?: string;
   profileId?: string;
   platformId?: string;
-  sandboxProvider?: 'local_devcontainer' | 'local_docker' | 'local_managed_root' | 'external_sandbox';
+  sandboxProvider?: 'fast_local_env' | 'local_devcontainer' | 'local_docker' | 'local_managed_root' | 'external_sandbox';
   paperRoot?: string;
 }
 
@@ -76,4 +76,33 @@ export function materializationPolicy() {
 
 export function externalSandboxProviderPolicy() {
   return RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.external_sandbox_provider_policy as JsonRecord;
+}
+
+export function fastLocalEnvCurrentPath() {
+  return {
+    strategy_id: 'fast_local_env',
+    path_id: 'default_current_path',
+    role: 'current_default_for_r_python_dependency_execution',
+    host_binary_allowed: true,
+    host_environment_fallback_allowed: false,
+    docker_required: false,
+    remote_sandbox_required: false,
+  };
+}
+
+export function standardToolHandoff() {
+  return {
+    renv: {
+      tool: 'renv',
+      role: 'r_lock_or_profile_handoff',
+      consumed_as: 'source_ref_or_project_profile',
+      opl_managed_library_env: 'R_LIBS_USER',
+    },
+    uv: {
+      tool: 'uv',
+      role: 'python_lock_or_profile_handoff',
+      consumed_as: 'source_ref_or_project_profile',
+      opl_managed_env: 'UV_PROJECT_ENVIRONMENT',
+    },
+  };
 }

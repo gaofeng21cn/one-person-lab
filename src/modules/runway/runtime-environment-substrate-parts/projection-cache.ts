@@ -2,15 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { JsonRecord, RuntimeEnvironmentCachePruneInput, RuntimeEnvironmentCommand, RuntimeEnvironmentTargetInput } from './contract.ts';
-import { buildExternalSandboxProviderAdapterPlan, buildModelEndpointProviderReadback } from '../external-sandbox-provider-adapter.ts';
 import {
   authorityBoundary,
   cachePolicy,
   CONTRACT_REF,
-  externalSandboxProviderPolicy,
+  fastLocalEnvCurrentPath,
   materializationPolicy,
   RUNTIME_ENVIRONMENT_FALLBACK_POINTER,
   RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
+  standardToolHandoff,
 } from './contract.ts';
 import {
   bundleRoot,
@@ -155,42 +155,6 @@ export function bundleManifestProjection(input: RuntimeEnvironmentTargetInput) {
     writes_runtime_root: materialized,
     writes_domain_repo: false,
     can_claim_runtime_ready: materialized,
-  };
-}
-
-export function sandboxProviderPlan(input: RuntimeEnvironmentTargetInput) {
-  const target = normalizeTarget(input);
-  const policy = externalSandboxProviderPolicy();
-  const modelEndpointPolicy = RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.model_endpoint_provider_policy as JsonRecord;
-  const externalSelected = target.sandbox_provider === 'external_sandbox';
-  const localAgentSandboxSelected = target.sandbox_provider === 'local_devcontainer' || target.sandbox_provider === 'local_docker';
-  const adapter = externalSelected ? buildExternalSandboxProviderAdapterPlan(targetRef(target)) : null;
-  const localOrRootRole = localAgentSandboxSelected ? 'local_agent_sandbox_execution_substrate' : 'local_materialized_runtime_root';
-  return {
-    surface_kind: 'opl_runtime_environment_sandbox_provider_plan' as const,
-    status: externalSelected ? adapter?.adapter_status : localAgentSandboxSelected ? `${target.sandbox_provider}_selected` : 'local_managed_root_selected',
-    selected_provider: target.sandbox_provider,
-    provider_role: externalSelected ? 'agent_sandbox_execution_substrate' : localOrRootRole,
-    provider_ref: `sandbox-provider:${target.sandbox_provider}:${targetRef(target)}`,
-    supported_provider_kinds: policy.supported_provider_kinds, external_provider_examples: policy.external_provider_examples,
-    provider_family_catalog: policy.provider_family_catalog, required_external_sandbox_refs: policy.required_external_sandbox_refs,
-    modal_like_env_spec_catalog: policy.modal_like_env_spec_catalog, default_provider_kind: policy.default_provider_kind,
-    local_provider_examples: policy.local_provider_examples,
-    adapter,
-    model_endpoint_provider_family: buildModelEndpointProviderReadback(modelEndpointPolicy),
-    template_ref: externalSelected ? adapter?.template_ref : null,
-    sandbox_binding_ref: externalSelected ? adapter?.sandbox_binding_ref : null,
-    snapshot_ref: null,
-    volume_ref: null,
-    required_receipt_kind: externalSelected ? policy.required_receipt_kind : null,
-    materialization_root_provider: localAgentSandboxSelected ? 'local_managed_root' : target.sandbox_provider,
-    temporal_replacement: false, writes_runtime_root: false, writes_domain_repo: false,
-    credential_material_read: false, external_api_called: false,
-    provider_lifecycle_managed: false, creates_cloud_resource: false,
-    can_claim_provider_ready: false, can_claim_runtime_ready: false, can_claim_domain_ready: false,
-    can_claim_app_release_ready: false, can_claim_production_ready: false,
-    local_template_exists_counts_as_provider_ready: false, local_sandbox_receipt_counts_as_domain_ready: false,
-    live_provider_receipt_required: externalSelected && adapter?.configured !== true,
   };
 }
 
@@ -408,6 +372,8 @@ export function baseReadback(
     implementation_status: RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.implementation_status,
     target_planned: RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.target_planned,
     sandbox_provider: target.sandbox_provider,
+    default_current_path: fastLocalEnvCurrentPath(),
+    standard_tool_handoff: standardToolHandoff(),
     dry_run: true,
     can_claim_runtime_ready: false,
     can_claim_domain_ready: false,
