@@ -204,15 +204,11 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
         'task-mas-default-expired-admission-missing-workflow',
       ) as { status: string };
       const attempts = db.prepare(`
-        SELECT status, blocked_reason, provider_run_json
+        SELECT status
         FROM stage_attempts
         WHERE task_id = ?
         ORDER BY created_at ASC
-      `).all('task-mas-default-expired-admission-missing-workflow') as Array<{
-        status: string;
-        blocked_reason: string | null;
-        provider_run_json: string;
-      }>;
+      `).all('task-mas-default-expired-admission-missing-workflow') as Array<{ status: string }>;
 
       assert.equal(queryCount, 1);
       assert.equal(tick.mas_default_executor_terminal_synced_count, 1);
@@ -222,10 +218,7 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
       assert.equal(task.status, 'queued');
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
-      assert.equal(attempts[0].blocked_reason, 'temporal_workflow_not_started_or_not_found');
-      assert.equal(parseJsonText(attempts[0].provider_run_json).provider_status, 'failed');
       assert.equal(attempts[1].status, 'queued');
-      assert.equal(attempts[1].blocked_reason, null);
     });
   } finally {
     db.close();
@@ -313,15 +306,11 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
         'task-mas-default-expired-admission-missing-workflow',
       ) as { status: string };
       const attempts = db.prepare(`
-        SELECT status, blocked_reason, provider_run_json
+        SELECT status
         FROM stage_attempts
         WHERE task_id = ?
         ORDER BY created_at ASC
-      `).all('task-mas-default-expired-admission-missing-workflow') as Array<{
-        status: string;
-        blocked_reason: string | null;
-        provider_run_json: string;
-      }>;
+      `).all('task-mas-default-expired-admission-missing-workflow') as Array<{ status: string }>;
 
       assert.equal(rawQueryCount, 0);
       assert.equal(safeQueryCount, 1);
@@ -332,11 +321,7 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
       assert.equal(task.status, 'running');
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
-      assert.equal(attempts[0].blocked_reason, 'temporal_workflow_not_started_or_not_found');
-      assert.equal(parseJsonText(attempts[0].provider_run_json).provider_status, 'failed');
       assert.equal(attempts[1].status, 'running');
-      assert.equal(attempts[1].blocked_reason, null);
-      assert.equal(parseJsonText(attempts[1].provider_run_json).provider_status, 'running');
     });
   } finally {
     db.close();

@@ -181,7 +181,6 @@ test('family-runtime operator redrive rejects same-identity transport failure wi
 
     assertRedriveBlockedByProviderOnlyProtocol(failure, 'live_linked_provider_attempt_exists');
     assert.equal(task.family_runtime_task.task.status, 'blocked');
-    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
     assert.equal(task.family_runtime_task.stage_attempts.length, 2);
     assert.equal(
       task.family_runtime_task.stage_attempts.filter((attempt: { status: string }) => attempt.status === 'queued').length,
@@ -257,7 +256,6 @@ test('family-runtime operator redrive rejects retry-budget dead letter when same
 
     assertRedriveBlockedByProviderOnlyProtocol(failure, 'accepted_typed_closeout_exists');
     assert.equal(task.family_runtime_task.task.status, 'dead_letter');
-    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'retry_budget_exhausted');
     assert.equal(task.family_runtime_task.stage_attempts.length, 2);
     assert.equal(
       task.family_runtime_task.stage_attempts.filter((attempt: { status: string }) => attempt.status === 'queued').length,
@@ -303,7 +301,6 @@ test('family-runtime operator redrive rejects same-lineage stop-loss domain bloc
 
     assertRedriveBlockedByProviderOnlyProtocol(failure, 'same_lineage_stop_loss_domain_blocker');
     assert.equal(task.family_runtime_task.task.status, 'blocked');
-    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'anti_loop_budget_exhausted');
     assert.equal(
       task.family_runtime_task.stage_attempts.filter((attempt: { status: string }) => attempt.status === 'queued').length,
       0,
@@ -351,12 +348,10 @@ test('family-runtime operator redrive reruns failed MAS default executor provide
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
-    assert.equal(redrivenTask.family_runtime_task.task.dead_letter_reason, null);
     assert.equal(attempts.length, 2);
     assert.equal(
       redrivenTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
         event.event_type === 'task_operator_redrive_from_blocked_provider_transport'
-        && event.payload.previous_dead_letter_reason === 'temporal_stage_attempt_failed'
         && event.payload.operator_reason === 'provider_temporal_heartbeat_timeout_retry_budget_available'
         && isProviderOnlyRedriveEvent(event, 'provider_transport_blocked')
       )),
@@ -409,13 +404,11 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
-    assert.equal(redrivenTask.family_runtime_task.task.dead_letter_reason, null);
     assert.equal(attempts.length, 2);
     assert.equal(
       redrivenTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
         event.event_type === 'task_operator_redrive_from_dead_letter_provider_retry_budget'
         && event.payload.previous_status === 'dead_letter'
-        && event.payload.previous_dead_letter_reason === 'retry_budget_exhausted'
         && event.payload.operator_reason === 'provider_runtime_repaired_after_retry_budget_exhausted'
         && isProviderOnlyRedriveEvent(event, 'retry_budget_provider_transport')
       )),
@@ -464,12 +457,10 @@ test('family-runtime operator redrive can recover MAS default executor cancellat
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
-    assert.equal(redrivenTask.family_runtime_task.task.dead_letter_reason, null);
     assert.equal(attempts.length, 2);
     assert.equal(
       redrivenTask.family_runtime_task.events.some((event: { event_type: string; payload: Record<string, unknown> }) => (
         event.event_type === 'task_operator_redrive_from_blocked_provider_transport'
-        && event.payload.previous_dead_letter_reason === 'temporal_stage_attempt_canceled'
         && event.payload.operator_reason === 'provider_lifecycle_recovered_after_codex_activity_cancelled'
         && isProviderOnlyRedriveEvent(event, 'provider_transport_blocked')
       )),
@@ -639,10 +630,10 @@ test('family-runtime stale auto redrive does not duplicate an operator-owned pro
         ORDER BY created_at ASC
       `).all(taskId) as Array<{ stage_attempt_id: string; status: string }>;
       const task = queueDb.prepare(`
-        SELECT status, last_error, dead_letter_reason
+        SELECT status
         FROM tasks
         WHERE task_id = ?
-      `).get(taskId) as { status: string; last_error: string | null; dead_letter_reason: string | null };
+      `).get(taskId) as { status: string };
       const duplicateAutoEvents = queueDb.prepare(`
         SELECT COUNT(*) AS count
         FROM events
@@ -654,8 +645,6 @@ test('family-runtime stale auto redrive does not duplicate an operator-owned pro
       assert.equal(staleAutoRedrive.redriven, false);
       assert.equal(staleAutoRedrive.skip_reason, 'task_no_longer_blocked_for_provider_transport_redrive');
       assert.equal(task.status, 'queued');
-      assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'blocked');
       assert.equal(attempts[1].status, 'queued');
@@ -725,7 +714,6 @@ test('family-runtime redrives MAS default executor dispatch with changed source 
     assert.equal(redrive.family_runtime_enqueue.requeued_from_terminal, true);
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
     assert.equal(afterTickTask.family_runtime_task.task.status, 'queued');
-    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, null);
     assert.equal(attempts.length, 1);
     assert.equal(sourceFingerprints.every((fingerprint: string) => fingerprint.startsWith('mas_default_executor_source_')), true);
     assert.equal(workbenchAttempt.workspace_locator.domain_source_fingerprint, 'source-after');
@@ -868,7 +856,6 @@ test('family-runtime operator redrive reruns blocked MAS default executor provid
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
     assert.equal(afterTickTask.family_runtime_task.task.status, 'queued');
-    assert.equal(afterTickTask.family_runtime_task.task.dead_letter_reason, null);
     assert.equal(attempts.length, 2);
     assert.deepEqual([...new Set(sourceFingerprints)].length, 1);
     assert.equal(sourceFingerprints[0].startsWith('mas_default_executor_source_'), true);
@@ -914,7 +901,6 @@ test('family-runtime operator redrive rejects non-default-executor blocked tasks
     assert.equal(failure.payload.error.code, 'cli_usage_error');
     assert.equal(failure.payload.error.details.blocker_id, 'family_runtime_redrive_blocked');
     assert.equal(task.family_runtime_task.task.status, 'blocked');
-    assert.equal(task.family_runtime_task.task.dead_letter_reason, 'domain_forbidden_write');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

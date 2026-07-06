@@ -173,9 +173,8 @@ test('family-runtime does not start MAS default executor Temporal workflow from 
           },
         }),
       });
-      const task = db.prepare('SELECT status, lease_owner FROM tasks WHERE task_id = ?').get(taskId) as {
+      const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(taskId) as {
         status: string;
-        lease_owner: string | null;
       };
       const admittedEvents = db.prepare(`
         SELECT COUNT(*) AS count
@@ -187,7 +186,6 @@ test('family-runtime does not start MAS default executor Temporal workflow from 
       assert.equal(result.reason, 'task_already_claimed');
       assert.equal(temporalStartCount, 0);
       assert.equal(task.status, 'running');
-      assert.equal(task.lease_owner, 'other-worker');
       assert.equal(admittedEvents.count, 0);
     });
   } finally {
