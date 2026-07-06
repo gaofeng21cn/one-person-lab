@@ -8,6 +8,10 @@ import { isJsonObject, readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = parseCliOptions(process.argv.slice(2));
+if (args.help) {
+  printHelp();
+  process.exit(0);
+}
 const targetRoot = args.root ? path.resolve(args.root) : repoRoot;
 const contractPath = args.contract
   ? path.resolve(args.contract)
@@ -163,22 +167,48 @@ function parseCliOptions(argv) {
         'enforce-target': { type: 'boolean', default: false },
         'strict-imports': { type: 'boolean', default: false },
         'strict-cycles': { type: 'boolean', default: false },
+        format: { type: 'string', default: 'json' },
+        help: { type: 'boolean', default: false },
       },
       strict: true,
       allowPositionals: false,
     });
-    return {
+    const parsed = {
       root: values.root ?? null,
       contract: values.contract ?? null,
       policy: values.policy ?? null,
       enforceTarget: values['enforce-target'] === true,
       strictImports: values['strict-imports'] === true,
       strictCycles: values['strict-cycles'] === true,
+      format: values.format,
+      help: values.help === true,
     };
+    if (parsed.format !== 'json') {
+      process.stderr.write('source module boundary: --format must be json\n');
+      process.exit(1);
+    }
+    return parsed;
   } catch (error) {
     process.stderr.write(`source module boundary: ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   }
+}
+
+function printHelp() {
+  process.stdout.write([
+    'Usage: node scripts/source-module-boundary.mjs [options]',
+    '',
+    'Options:',
+    '  --root <path>          Repo root to inspect.',
+    '  --contract <path>      Source module map contract. Default: contracts/opl-framework/source-module-map.json.',
+    '  --policy <path>        Module dependency policy. Default: contracts/opl-framework/module-dependency-policy.json.',
+    '  --enforce-target       Enforce target module layout even during transition stage.',
+    '  --strict-imports       Fail on deep cross-module imports.',
+    '  --strict-cycles        Fail on module dependency cycles.',
+    '  --format json          Explicit machine JSON output. Default: json.',
+    '  --help                 Print this help.',
+    '',
+  ].join('\n'));
 }
 
 function readJson(file) {

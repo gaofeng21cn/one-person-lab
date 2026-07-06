@@ -241,6 +241,17 @@ test('source module boundary reports current repo cross-module import summary', 
   assert.ok(summary.cross_module_imports.pair_counts.length > 0);
 });
 
+test('source module boundary supports help and explicit json format', () => {
+  const help = runDefaultBoundary(['--help']);
+  const json = runDefaultBoundary(['--format', 'json']);
+
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /Usage: node scripts\/source-module-boundary\.mjs/);
+  assert.match(help.stdout, /--format json/);
+  assert.equal(json.status, 0, json.stderr);
+  assert.equal(parseSummary(json).module_dependency_policy, 'contracts/opl-framework/module-dependency-policy.json');
+});
+
 test('source module boundary accepts current transition roots before target CLI lands', () => {
   const fixture = writeFixture([
     'src/modules/charter/index.ts',
