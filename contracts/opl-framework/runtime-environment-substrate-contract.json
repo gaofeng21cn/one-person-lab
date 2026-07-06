@@ -127,6 +127,55 @@
     "writes_runtime_root": false,
     "can_claim_runtime_ready": false
   },
+  "runtime_bundle_producer_policy": {
+    "surface_kind": "opl_runtime_bundle_producer_policy",
+    "status": "build_command_exposes_manifest_lock_and_readback_refs",
+    "producer_kind": "opl-runtime-bundle",
+    "producer_command_ref": "opl-runtime-env-command:build",
+    "producer_command": "opl runtime env build --domain <domain> --profile <profile> --platform <platform>",
+    "manifest_schema_version": "opl-runtime-bundle-manifest.v1",
+    "lock_schema_version": "opl-runtime-bundle-lock.v1",
+    "readback_schema_version": "opl-runtime-bundle-producer-readback.v1",
+    "stable_ref_fields": [
+      "runtime_bundle_producer.producer_readback_ref",
+      "producer_receipt.readback_ref",
+      "bundle_manifest.bundle_ref",
+      "bundle_manifest.bundle_digest",
+      "bundle_manifest.bundle_manifest_state_ref",
+      "bundle_lock.lock_ref",
+      "bundle_lock.lock_digest",
+      "bundle_lock.lock_state_ref"
+    ],
+    "required_consumer_fields": [
+      "target_profile",
+      "target_platform_id",
+      "bundle_manifest_ref",
+      "bundle_lock_ref",
+      "layer_taxonomy",
+      "false_ready_flags",
+      "producer_receipt_ref"
+    ],
+    "layer_taxonomy_source": "layer_types",
+    "app_full_consumer_boundary": {
+      "app_consumes_bundle_manifest_lock_and_readback_refs": true,
+      "app_does_not_own_runtime_dependency_truth": true,
+      "framework_does_not_claim_app_release_ready": true
+    },
+    "consumer_false_ready_flags": [
+      "dry_run_projection_counts_as_runtime_ready",
+      "dry_run_projection_counts_as_domain_ready",
+      "dry_run_projection_counts_as_app_release_ready",
+      "bundle_manifest_exists_counts_as_materialized_runtime",
+      "bundle_lock_exists_counts_as_app_full_release_ready"
+    ],
+    "dry_run_bundle_manifest_counts_as_runtime_ready": false,
+    "dry_run_bundle_manifest_counts_as_app_release_ready": false,
+    "writes_runtime_root": false,
+    "writes_domain_repo": false,
+    "can_claim_runtime_ready": false,
+    "can_claim_domain_ready": false,
+    "can_claim_app_release_ready": false
+  },
   "dependency_prepare_policy": {
     "status": "local_dependency_check_and_opl_managed_package_prepare_available",
     "writes_dependency_lock": true,

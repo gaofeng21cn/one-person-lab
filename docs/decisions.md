@@ -5,6 +5,19 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-06
+
+### 决策：Full runtime bundle producer 由 Framework `runtime env build` 暴露，App 只消费 refs
+
+原因：App Full release 需要可读的 runtime dependency bundle 入口，但 runtime dependency truth 不能迁入 App 仓。Framework 已有 `opl runtime env inspect|lock|build|materialize|contract` 结构，因此最小边界是在 `runtime env build` 输出中稳定暴露 bundle manifest、bundle lock、producer readback/receipt refs、layer taxonomy、target profile/platform 和 false-ready flags，而不是新增第二套平台或 App-owned dependency manifest。
+
+影响：
+
+- `contracts/opl-framework/runtime-environment-substrate-contract.json` 增加 `runtime_bundle_producer_policy`，固定 `opl-runtime-bundle` producer、schema/version、stable ref fields、App Full consumer boundary 与 false-ready flags。
+- `opl runtime env build --domain <domain> --profile <profile> --platform <platform> --json` 继续是 dry-run projection；它可作为 App Full 的 manifest/lock/readback refs 来源，但不能声明 runtime ready、domain ready 或 App release ready。
+- App Full release 只消费 Framework 输出的 `bundle_manifest`、`bundle_lock`、`producer_receipt` 和 `runtime_bundle_producer` refs；App 仍持有 release verdict，不持有 runtime dependency truth。
+- 真正 materialized runtime root 仍由 `opl runtime env materialize --apply` 和 materialization receipt 证明；dry-run manifest、lock 或 cache hit 不能替代 runnable runtime artifact。
+
 ## 2026-07-05
 
 ### 决策：标准 Agent package 可声明 OPL-managed capability dependency

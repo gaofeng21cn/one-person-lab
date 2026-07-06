@@ -112,12 +112,94 @@ export function buildRuntimeEnvironmentCacheStatusReadback() {
 }
 
 export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTargetInput) {
+  const target = normalizeTarget(input);
   const lock = runtimeLockProjection(input);
   const bundleManifest = bundleManifestProjection(input);
+  const producerReadbackRef = `runtime-bundle-producer-readback:${target.domain_id}/${target.profile_id}/${target.platform_id}:sha256:${shortDigest({
+    lock_ref: lock.lock_ref,
+    bundle_ref: bundleManifest.bundle_ref,
+  })}`;
+  const producerReceipt = {
+    surface_kind: 'opl_runtime_bundle_producer_receipt',
+    version: 'opl-runtime-bundle-producer-receipt.v1',
+    status: 'dry_run_bundle_manifest_projected',
+    producer_kind: 'opl-runtime-bundle',
+    producer_command_ref: 'opl-runtime-env-command:build',
+    readback_ref: producerReadbackRef,
+    bundle_manifest_ref: bundleManifest.bundle_ref,
+    bundle_manifest_digest: bundleManifest.bundle_digest,
+    bundle_manifest_state_ref: bundleManifest.bundle_manifest_state_ref,
+    bundle_lock_ref: lock.lock_ref,
+    bundle_lock_digest: lock.lock_digest,
+    bundle_lock_state_ref: lock.lock_state_ref,
+    dry_run: true,
+    writes_runtime_root: false,
+    writes_domain_repo: false,
+    creates_archive: false,
+    creates_materialization_receipt: false,
+    can_claim_runtime_ready: false,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+  };
   return {
     ...baseReadback('build', input),
     lock,
+    bundle_lock: lock,
     bundle_manifest: bundleManifest,
+    runtime_bundle_producer: {
+      surface_kind: 'opl_runtime_bundle_producer_readback',
+      version: 'opl-runtime-bundle-producer-readback.v1',
+      status: 'dry_run_bundle_manifest_projected',
+      producer_kind: 'opl-runtime-bundle',
+      producer_command_ref: 'opl-runtime-env-command:build',
+      producer_command: `opl runtime env build --domain ${target.domain_id} --profile ${target.profile_id} --platform ${target.platform_id}`,
+      producer_readback_ref: producerReadbackRef,
+      producer_receipt_ref: producerReadbackRef,
+      target_profile: target,
+      target_domain_id: target.domain_id,
+      target_profile_id: target.profile_id,
+      target_platform_id: target.platform_id,
+      manifest_schema_version: 'opl-runtime-bundle-manifest.v1',
+      lock_schema_version: 'opl-runtime-bundle-lock.v1',
+      bundle_manifest_ref: bundleManifest.bundle_ref,
+      bundle_manifest_digest: bundleManifest.bundle_digest,
+      bundle_manifest_state_ref: bundleManifest.bundle_manifest_state_ref,
+      bundle_lock_ref: lock.lock_ref,
+      bundle_lock_digest: lock.lock_digest,
+      bundle_lock_state_ref: lock.lock_state_ref,
+      stable_ref_fields: [
+        'bundle_manifest.bundle_ref',
+        'bundle_manifest.bundle_digest',
+        'bundle_manifest.bundle_manifest_state_ref',
+        'bundle_lock.lock_ref',
+        'bundle_lock.lock_digest',
+        'bundle_lock.lock_state_ref',
+        'producer_receipt.readback_ref',
+      ],
+      layer_taxonomy: objects(lock.layer_graph).map((layer) => ({
+        layer_type: layer.layer_type,
+        layer_id: layer.layer_id,
+        cache_key: layer.cache_key,
+        digest: layer.digest,
+        archive_present: layer.archive_present === true,
+        materialized: layer.materialized === true,
+      })),
+      false_ready_flags: {
+        dry_run_projection_counts_as_runtime_ready: false,
+        dry_run_projection_counts_as_domain_ready: false,
+        dry_run_projection_counts_as_app_release_ready: false,
+        bundle_manifest_exists_counts_as_materialized_runtime: false,
+        bundle_lock_exists_counts_as_app_full_release_ready: false,
+      },
+      app_full_consumer_boundary: {
+        consumes_bundle_manifest_ref: bundleManifest.bundle_ref,
+        consumes_bundle_lock_ref: lock.lock_ref,
+        consumes_producer_readback_ref: producerReadbackRef,
+        app_owns_release_verdict: true,
+        framework_can_claim_app_release_ready: false,
+      },
+    },
+    producer_receipt: producerReceipt,
     build_plan: {
       surface_kind: 'opl_runtime_environment_build_plan',
       status: 'bundle_manifest_projected',
@@ -125,9 +207,10 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
       writes_domain_repo: false,
       creates_archive: false,
       creates_materialization_receipt: false,
-      can_claim_runtime_ready: bundleManifest.can_claim_runtime_ready === true,
+      can_claim_runtime_ready: false,
       lock_state_ref: lock.lock_state_ref,
       bundle_manifest_state_ref: bundleManifest.bundle_manifest_state_ref,
+      producer_receipt_ref: producerReadbackRef,
     },
   };
 }

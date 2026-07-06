@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { buildRuntimeEnvironmentBuildReadback } from '../../src/modules/runway/runtime-environment-substrate.ts';
 
 type Json = Record<string, unknown>;
 
@@ -78,6 +79,27 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(bundlePolicy.layer_graph_required, true);
   assert.equal(bundlePolicy.dry_run_bundle_manifest_counts_as_runtime_ready, false);
   assert.equal(bundlePolicy.can_claim_runtime_ready, false);
+
+  const producerPolicy = contract.runtime_bundle_producer_policy as Json;
+  assert.equal(producerPolicy.status, 'build_command_exposes_manifest_lock_and_readback_refs');
+  assert.equal(producerPolicy.producer_kind, 'opl-runtime-bundle');
+  assert.equal(producerPolicy.producer_command_ref, 'opl-runtime-env-command:build');
+  assert.equal(producerPolicy.manifest_schema_version, 'opl-runtime-bundle-manifest.v1');
+  assert.equal(producerPolicy.lock_schema_version, 'opl-runtime-bundle-lock.v1');
+  assert.equal(producerPolicy.readback_schema_version, 'opl-runtime-bundle-producer-readback.v1');
+  assert.equal(producerPolicy.dry_run_bundle_manifest_counts_as_runtime_ready, false);
+  assert.equal(producerPolicy.dry_run_bundle_manifest_counts_as_app_release_ready, false);
+  assert.equal(producerPolicy.can_claim_runtime_ready, false);
+  assert.equal(producerPolicy.can_claim_domain_ready, false);
+  assert.equal(producerPolicy.can_claim_app_release_ready, false);
+  assert.equal((producerPolicy.stable_ref_fields as string[]).includes('bundle_manifest.bundle_ref'), true);
+  assert.equal((producerPolicy.stable_ref_fields as string[]).includes('bundle_lock.lock_ref'), true);
+  assert.equal(
+    (producerPolicy.consumer_false_ready_flags as string[]).includes(
+      'bundle_lock_exists_counts_as_app_full_release_ready',
+    ),
+    true,
+  );
 
   const inventoryPolicy = contract.cache_inventory_policy as Json;
   assert.equal(inventoryPolicy.status, 'filesystem_inventory_and_prune_receipt_available');
@@ -174,4 +196,43 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env verify')), true);
   assert.equal(readbackCommands.includes('opl runtime env cache inventory'), true);
   assert.equal(readbackCommands.includes('opl runtime env cache prune --dry-run'), true);
+});
+
+test('runtime env build readback exposes Full bundle producer manifest lock refs without App release authority', () => {
+  const readback = buildRuntimeEnvironmentBuildReadback({
+    domainId: 'mas',
+    profileId: 'full',
+    platformId: 'macos-arm64',
+  }) as Json;
+
+  assert.equal(readback.command, 'build');
+  assert.equal(readback.dry_run, true);
+  assert.equal(readback.can_claim_runtime_ready, false);
+  assert.equal(readback.can_claim_domain_ready, false);
+  assert.equal(readback.can_claim_app_release_ready, false);
+
+  const bundleLock = readback.bundle_lock as Json;
+  const bundleManifest = readback.bundle_manifest as Json;
+  const producer = readback.runtime_bundle_producer as Json;
+  const receipt = readback.producer_receipt as Json;
+
+  assert.match(bundleLock.lock_ref as string, /^runtime-lock:mas\/full\/macos-arm64:sha256:/);
+  assert.match(bundleManifest.bundle_ref as string, /^runtime-bundle:mas\/full\/macos-arm64:sha256:/);
+  assert.equal(producer.producer_kind, 'opl-runtime-bundle');
+  assert.equal(producer.producer_command_ref, 'opl-runtime-env-command:build');
+  assert.equal(producer.manifest_schema_version, 'opl-runtime-bundle-manifest.v1');
+  assert.equal(producer.lock_schema_version, 'opl-runtime-bundle-lock.v1');
+  assert.equal((producer.target_profile as Json).profile_id, 'full');
+  assert.equal(producer.target_platform_id, 'macos-arm64');
+  assert.equal((producer.layer_taxonomy as unknown[]).length, 6);
+  assert.equal((producer.false_ready_flags as Json).dry_run_projection_counts_as_app_release_ready, false);
+  assert.equal((producer.false_ready_flags as Json).bundle_lock_exists_counts_as_app_full_release_ready, false);
+  assert.equal((producer.app_full_consumer_boundary as Json).app_owns_release_verdict, true);
+  assert.equal((producer.app_full_consumer_boundary as Json).framework_can_claim_app_release_ready, false);
+  assert.equal(receipt.bundle_manifest_ref, bundleManifest.bundle_ref);
+  assert.equal(receipt.bundle_lock_ref, bundleLock.lock_ref);
+  assert.equal(receipt.readback_ref, producer.producer_readback_ref);
+  assert.equal(receipt.can_claim_runtime_ready, false);
+  assert.equal(receipt.can_claim_domain_ready, false);
+  assert.equal(receipt.can_claim_app_release_ready, false);
 });
