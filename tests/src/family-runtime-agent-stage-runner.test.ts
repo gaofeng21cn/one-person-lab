@@ -93,6 +93,9 @@ exit 64
       },
       stagePacketRef: 'packet:default-codex',
       observedAt: '2026-05-22T00:00:00.000Z',
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
     });
 
     assert.equal(receipt.runner_status.runner_kind, 'codex_cli_stage_runner');

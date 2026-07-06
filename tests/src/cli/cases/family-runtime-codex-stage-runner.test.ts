@@ -41,12 +41,11 @@ test('Codex stage runner prompt exposes MAS PaperMission stage-route affordance'
   });
 
   assert.match(prompt, /paper_mission\/stage-route/);
-  assert.match(prompt, /DM-CVD-Mortality-Risk\/\.venv\/bin\/python3/);
+  assert.match(prompt, /DM-CVD-Mortality-Risk\/ops\/medautoscience\/bin\/paper-mission/);
   assert.match(prompt, /dm-cvd-mortality-risk\.local\.toml/);
   assert.match(prompt, /paper-mission inspect/);
-  assert.match(prompt, /runtime --help/);
-  assert.match(prompt, /Only run runtime subcommands that exist/);
-  assert.match(prompt, /do not invent domain-health-diagnostic when the command is absent/);
+  assert.match(prompt, /workspace-local MAS ops shims only/);
+  assert.match(prompt, /Do not invent domain-health-diagnostic when the command is absent/);
   assert.match(prompt, /do not invoke bare medautosci/i);
   assert.match(prompt, /executable owner-work attempt/);
   assert.match(prompt, /Do not block only because an owner receipt/);
@@ -103,7 +102,7 @@ test('Codex stage runner derives MAS PaperMission profile from the target worksp
 
   assert.match(prompt, /Profile ref: \/Users\/gaofeng\/workspace\/Yang\/Obesity\/ops\/medautoscience\/profiles\/obesity\.local\.toml/);
   assert.doesNotMatch(prompt, /dm-cvd-mortality-risk\.local\.toml/);
-  assert.match(prompt, /paper-mission inspect --profile "\/Users\/gaofeng\/workspace\/Yang\/Obesity\/ops\/medautoscience\/profiles\/obesity\.local\.toml"/);
+  assert.match(prompt, /"\/Users\/gaofeng\/workspace\/Yang\/Obesity\/ops\/medautoscience\/bin\/paper-mission" inspect --profile "\/Users\/gaofeng\/workspace\/Yang\/Obesity\/ops\/medautoscience\/profiles\/obesity\.local\.toml"/);
 });
 
 test('Codex stage runner resumes the same session to enforce missing typed closeout', async () => {
@@ -202,6 +201,9 @@ exit 64
       },
       stagePacketRef: 'packet:dm003-submission',
       runnerMode: 'codex_cli',
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
       timeoutMs: 10_000,
       noOutputTimeoutMs: 5_000,
     });
@@ -358,6 +360,9 @@ exit 64
       },
       stagePacketRef: 'packet:dm003-submission',
       runnerMode: 'codex_cli',
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
       timeoutMs: 10_000,
       noOutputTimeoutMs: 5_000,
     });
