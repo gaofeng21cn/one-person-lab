@@ -1,4 +1,4 @@
-import { assert, fs, os, path, repoRoot, runCli, test, parseJsonText } from '../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, runCliFailure, test, parseJsonText } from '../helpers.ts';
 import {
   MAS_SCHOLAR_SKILLS_DEFAULT_PACK_IDS,
   MAS_SCHOLAR_SKILLS_OPTIONAL_MEDICAL_METHOD_PACK_IDS,
@@ -280,6 +280,11 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
   }
+});
+
+test('connect skills rejects retired opl-scholarskills domain alias', () => {
+  const failure = runCliFailure(['connect', 'skills', '--domain', 'opl-scholarskills']);
+  assert.match(JSON.stringify(failure.payload), /Unknown skill pack domain: opl-scholarskills/);
 });
 
 test('connect sync-skills finds canonical sibling MAS Scholar Skills checkout without env override', () => {

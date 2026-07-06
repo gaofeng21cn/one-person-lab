@@ -141,11 +141,10 @@ function packageChannelGitSnapshot(sourcePath: string) {
 export function inspectScholarSkillsSource(): ScholarSkillsSourceInspection {
   const managedCheckoutPath = resolveManagedScholarSkillsSourcePath();
   const envRepoRoot = normalizeOptionalString(process.env.OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT)
-    ?? normalizeOptionalString(process.env.OPL_SCHOLARSKILLS_REPO_ROOT);
+    ?? null;
   const modulePath = normalizeOptionalString(process.env.OPL_MODULE_PATH_SCHOLARSKILLS)
     ?? normalizeOptionalString(process.env.OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS);
   const siblingCheckoutPath = path.join(resolveDefaultFamilyWorkspaceRoot(), SCHOLARSKILLS_REPO_NAME);
-  const legacySiblingCheckoutPath = path.join(resolveDefaultFamilyWorkspaceRoot(), 'opl-scholarskills');
   const developerModeLocal = developerModePrefersLocalCheckouts();
   const candidates: Array<{
     checkout_path: string;
@@ -173,12 +172,6 @@ export function inspectScholarSkillsSource(): ScholarSkillsSourceInspection {
   if (developerModeLocal) {
     candidates.push({
       checkout_path: siblingCheckoutPath,
-      install_origin_before: 'sibling_workspace',
-      source_policy: buildSourcePolicy('developer_mode'),
-      source_kind: 'developer',
-    });
-    candidates.push({
-      checkout_path: legacySiblingCheckoutPath,
       install_origin_before: 'sibling_workspace',
       source_policy: buildSourcePolicy('developer_mode'),
       source_kind: 'developer',

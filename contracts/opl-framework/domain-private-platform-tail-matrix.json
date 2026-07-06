@@ -344,7 +344,7 @@
     },
     {
       "domain_id": "mas-scholar-skills",
-      "repo_id": "opl-scholarskills",
+      "repo_id": "mas-scholar-skills",
       "surface_id": "scholarskills_refs_only_capability_package_tail",
       "display_name": "ScholarSkills refs-only capability package tail",
       "private_tail_class": [

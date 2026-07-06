@@ -9,7 +9,6 @@ const FAMILY_REPO_DIRECTORIES = [
   'opl-meta-agent',
   'opl-bookforge',
   'mas-scholar-skills',
-  'opl-scholarskills',
 ] as const;
 
 export type ResolveFamilyWorkspaceRootOptions = {

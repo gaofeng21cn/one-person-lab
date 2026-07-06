@@ -206,8 +206,6 @@ export const STANDARD_AGENT_REGISTRY = [
       'scholar_skills',
       'mas-scholar-skills',
       'mas_scholar_skills',
-      'opl-scholarskills',
-      'opl_scholarskills',
       'capability',
       'capabilities',
     ],

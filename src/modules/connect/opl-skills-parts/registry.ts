@@ -149,8 +149,6 @@ function domainAliasMap() {
     ['scholar_skills', 'scholarskills'],
     ['mas-scholar-skills', 'scholarskills'],
     ['mas_scholar_skills', 'scholarskills'],
-    ['opl-scholarskills', 'scholarskills'],
-    ['opl_scholarskills', 'scholarskills'],
   ]);
   return cachedDomainAliasMap;
 }
