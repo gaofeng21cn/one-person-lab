@@ -7,7 +7,7 @@ import {
   test,
   writeMasCleanRunnerFixture,
 } from '../helpers.ts';
-import { buildAppStageRunCockpit } from '../../../../src/modules/console/app-state-stage-run-cockpit.ts';
+import { buildAppStageRunCockpit } from '../../../../src/modules/stagecraft/stage-run-cockpit.ts';
 
 function authorizationPayload(overrides: Record<string, unknown> = {}) {
   return {

@@ -1,7 +1,6 @@
 import { FrameworkContractError } from '../../../../modules/charter/contracts.ts';
 import { buildRuntimeTraySnapshot } from '../../../../modules/console/runtime-tray-snapshot.ts';
-import { buildRuntimeStatus } from '../../../../modules/console/management/runtime.ts';
-import { buildWorkspaceStatus } from '../../../../modules/console/management/workspace.ts';
+import { buildRuntimeStatus, buildWorkspaceStatus } from '../../../../modules/console/management/workspace-runtime.ts';
 import { buildMemoryArtifactLifecycleReadback } from '../../../../modules/ledger/memory-artifact-lifecycle-readback.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../../../modules/runway/index.ts';
 import { runRuntimeOperatorActionExecute } from '../../../../modules/runway/runtime-operator-action-execution.ts';

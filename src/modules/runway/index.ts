@@ -7,7 +7,7 @@ export const OPL_RUNWAY_SOURCE_MODULE = {
 
 export { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 export { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
-export { stableId } from './family-runtime-ids.ts';
+export { stableId } from '../../kernel/stable-id.ts';
 export { buildModelRouteCostProjection, buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 export { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';

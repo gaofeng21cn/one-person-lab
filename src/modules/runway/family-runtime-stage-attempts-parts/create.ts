@@ -14,7 +14,7 @@ import {
   stageAttemptToPayload,
   type StageAttemptRow,
 } from '../family-runtime-stage-attempt-ledger.ts';
-import { stableId } from '../family-runtime-ids.ts';
+import { stableId } from '../../../kernel/stable-id.ts';
 import {
   buildDuplicateTaskEnvelope,
   buildFamilyConflictSubject,
