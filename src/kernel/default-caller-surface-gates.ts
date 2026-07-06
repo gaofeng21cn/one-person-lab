@@ -93,6 +93,43 @@ function ownerDecisionResultShape(input: {
   return null;
 }
 
+function ownerDecisionCloseoutReadout(ownerDecisionShape: string | null) {
+  if (ownerDecisionShape === 'keep_as_authority_adapter_ref') {
+    return {
+      owner_decision_closeout_status: 'keep_as_authority_adapter_observed_no_further_opl_delete_work',
+      no_further_opl_default_caller_delete_work: true,
+      keep_as_authority_adapter_observed: true,
+      typed_blocker_observed: false,
+      physical_delete_authorization_request_observed: false,
+    };
+  }
+  if (ownerDecisionShape === 'typed_blocker_ref') {
+    return {
+      owner_decision_closeout_status: 'typed_blocker_observed_no_further_opl_delete_work',
+      no_further_opl_default_caller_delete_work: true,
+      keep_as_authority_adapter_observed: false,
+      typed_blocker_observed: true,
+      physical_delete_authorization_request_observed: false,
+    };
+  }
+  if (ownerDecisionShape === 'physical_delete_authorization_ref') {
+    return {
+      owner_decision_closeout_status: 'physical_delete_authorization_ref_observed_domain_owner_route_only',
+      no_further_opl_default_caller_delete_work: true,
+      keep_as_authority_adapter_observed: false,
+      typed_blocker_observed: false,
+      physical_delete_authorization_request_observed: true,
+    };
+  }
+  return {
+    owner_decision_closeout_status: 'domain_owner_decision_ref_not_observed',
+    no_further_opl_default_caller_delete_work: false,
+    keep_as_authority_adapter_observed: false,
+    typed_blocker_observed: false,
+    physical_delete_authorization_request_observed: false,
+  };
+}
+
 function defaultCallerTargetAllowed(targetKind: string) {
   return (DEFAULT_CALLER_TARGET_KINDS as readonly string[]).includes(targetKind);
 }
@@ -304,6 +341,7 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       semantic_equivalence_status: optionalString(target?.semantic_equivalence_status),
       semantic_equivalence_reason: optionalString(target?.semantic_equivalence_reason),
       owner_decision_result_shape: ownerDecisionShape,
+      ...ownerDecisionCloseoutReadout(ownerDecisionShape),
       physical_delete_authorization_refs: observedPhysicalDeleteAuthorizationRefs,
       keep_as_authority_adapter_refs: observedKeepAsAuthorityAdapterRefs,
       owner_receipt_refs: observedOwnerReceiptRefs,

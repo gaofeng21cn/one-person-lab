@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { defaultCallerSurfaceGates } from '../../src/kernel/default-caller-surface-gates.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -133,4 +134,48 @@ test('ScholarSkills remains a refs-only capability package outside domain-agent 
   assert.ok(scholarSkills.forbidden_claims.includes('standard_domain_agent'));
   assert.ok(scholarSkills.forbidden_claims.includes('mas_truth'));
   assert.ok(scholarSkills.forbidden_claims.includes('typed_blocker_authority'));
+});
+
+test('default caller gate treats keep-as-authority adapter as OPL closeout, not delete readiness', () => {
+  const gates = defaultCallerSurfaceGates({
+    generated_wrapper_bundle: {
+      descriptor_scope: [
+        {
+          surface_id: 'product_entry',
+          status: 'ready',
+          active_caller_proof_status: 'observed',
+          active_caller_target_kind: 'refs_only_domain_adapter_target',
+        },
+      ],
+    },
+    active_caller_target_proof: {
+      surface_targets: [
+        {
+          surface_id: 'product_entry',
+          proof_status: 'observed',
+          target_kind: 'refs_only_domain_adapter_target',
+          bridge_exit_gate: {
+            no_active_caller_refs: ['no-active-caller:mag/product-entry'],
+            no_forbidden_write_refs: ['no-forbidden-write:mag/product-entry'],
+            tombstone_refs: ['tombstone:mag/product-entry'],
+            keep_as_authority_adapter_refs: ['keep-as-authority-adapter:mag/product-entry'],
+          },
+        },
+      ],
+    },
+  });
+
+  assert.equal(gates.length, 1);
+  const worklist = gates[0].deletion_evidence_worklist as Record<string, unknown>;
+  assert.equal(worklist.owner_decision_result_shape, 'keep_as_authority_adapter_ref');
+  assert.equal(worklist.keep_as_authority_adapter_observed, true);
+  assert.equal(
+    worklist.owner_decision_closeout_status,
+    'keep_as_authority_adapter_observed_no_further_opl_delete_work',
+  );
+  assert.equal(worklist.no_further_opl_default_caller_delete_work, true);
+  assert.equal(worklist.active_deletion_worklist_item, false);
+  assert.equal(worklist.physical_delete_authorization_request_observed, false);
+  assert.equal(worklist.physical_delete_authorized, false);
+  assert.equal(worklist.default_caller_delete_ready, false);
 });
