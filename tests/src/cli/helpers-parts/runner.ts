@@ -191,7 +191,7 @@ export async function runCliAsync(args: string[], envOverrides: Record<string, s
     child.once('exit', (code) => {
       clearTimeout(timeout);
       if (code !== 0) {
-        reject(new Error(`CLI exited with code ${code}\nstdout=${stdout}\nstderr=${stderr}`));
+        reject(new Error(`CLI exited with code ${code}: opl ${args.join(' ')}\nstdout=${stdout}\nstderr=${stderr}`));
         return;
       }
 

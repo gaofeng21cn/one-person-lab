@@ -18,9 +18,9 @@ import {
   runOplAgentPackageStatus,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
-  type AgentPackageHomeShortcutPreferencesSetInput,
   type AgentPackageInstallInput,
   type AgentPackageManifestValidateInput,
+  type AgentPackageHomeShortcutPreferencesSetInput,
   type AgentPackagePackageActionInput,
   type AgentPackageRollbackInput,
 } from '../../../../modules/connect/index.ts';
