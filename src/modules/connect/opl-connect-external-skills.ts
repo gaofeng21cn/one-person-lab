@@ -1,10 +1,13 @@
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../workspace/index.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type ExternalSkillSourceId = 'kdense-scientific-agent-skills';
 type ExternalSkillScope = 'workspace' | 'quest';
@@ -138,23 +141,26 @@ function readSourceRegistry(input: ExternalSkillInput = {}) {
   };
 }
 
-function registeredSource(input: ExternalSkillInput) {
-  const sourceId = normalizeSourceId(input.source);
-  return readSourceRegistry(input).sources.find((entry) => entry.source_id === sourceId) ?? null;
-}
-
-function candidateSourceRoots(input: ExternalSkillInput) {
+function candidateSourceRoots(input: ExternalSkillInput, registered: ExternalSkillSourceRegistration | null) {
   const explicit = normalizeOptionalString(input.sourceRoot);
   const envRoot = normalizeOptionalString(process.env[KDENSE_SOURCE.env_root]);
-  const registeredRoot = normalizeOptionalString(registeredSource(input)?.source_root);
-  return [
+  const registeredRoot = normalizeOptionalString(registered?.source_root);
+  const priorityRoots = [
     explicit ? path.resolve(explicit) : null,
     envRoot ? path.resolve(envRoot) : null,
     registeredRoot ? path.resolve(registeredRoot) : null,
+  ].filter((entry): entry is string => Boolean(entry));
+
+  if (registered && !registeredRoot) {
+    return priorityRoots;
+  }
+
+  return [
+    ...priorityRoots,
     path.join(resolveDefaultFamilyWorkspaceRoot(), 'scientific-agent-skills'),
     path.join(resolveDefaultFamilyWorkspaceRoot(), 'k-dense-scientific-agent-skills'),
     '/tmp/kdense-scientific-agent-skills',
-  ].filter((entry): entry is string => Boolean(entry));
+  ];
 }
 
 function hasSkillRoot(sourceRoot: string) {
@@ -162,12 +168,124 @@ function hasSkillRoot(sourceRoot: string) {
     && fs.statSync(path.join(sourceRoot, 'skills')).isDirectory();
 }
 
+function safeCacheSegment(value: string) {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'source';
+}
+
+function sourceCacheRoot(sourceId: string, repoUrl: string, pinnedRef: string | null) {
+  const digest = crypto.createHash('sha256').update(JSON.stringify({
+    source_id: sourceId,
+    repo_url: repoUrl,
+    pinned_ref: pinnedRef ?? KDENSE_SOURCE.default_branch,
+  })).digest('hex').slice(0, 16);
+  return path.join(
+    resolveOplStatePaths().state_dir,
+    'connect',
+    'external-skills',
+    'sources',
+    `${safeCacheSegment(sourceId)}-${digest}`,
+  );
+}
+
+function copySourceTreeToCache(sourcePath: string, cacheRoot: string) {
+  const tempRoot = `${cacheRoot}.tmp-${process.pid}`;
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(cacheRoot), { recursive: true });
+  fs.cpSync(sourcePath, tempRoot, { recursive: true });
+  fs.rmSync(path.join(tempRoot, '.git'), { recursive: true, force: true });
+  if (!hasSkillRoot(tempRoot)) {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+    throw new FrameworkContractError('codex_command_failed', 'External skill source archive does not contain a skills directory.', {
+      source_path: sourcePath,
+    });
+  }
+  fs.rmSync(cacheRoot, { recursive: true, force: true });
+  fs.renameSync(tempRoot, cacheRoot);
+}
+
+function runChecked(command: string, args: string[], details: Record<string, unknown>) {
+  const result = spawnSync(command, args, { encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new FrameworkContractError('codex_command_failed', `Failed to materialize external skill source with ${command}.`, {
+      ...details,
+      command,
+      args,
+      status: result.status,
+      stderr: result.stderr,
+    });
+  }
+}
+
+function githubTarballUrl(repoUrl: string, ref: string) {
+  const parsed = new URL(repoUrl);
+  if (parsed.hostname !== 'github.com') {
+    return null;
+  }
+  const [owner, rawRepo] = parsed.pathname.replace(/^\/+/, '').split('/');
+  const repo = rawRepo?.replace(/\.git$/, '');
+  if (!owner || !repo) return null;
+  return `https://codeload.github.com/${owner}/${repo}/tar.gz/${encodeURIComponent(ref)}`;
+}
+
+function materializeTarballToCache(tarballUrl: string, cacheRoot: string, details: Record<string, unknown>) {
+  const tempRoot = `${cacheRoot}.tmp-${process.pid}`;
+  const archivePath = `${cacheRoot}.tar.gz`;
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+  fs.rmSync(archivePath, { force: true });
+  fs.mkdirSync(tempRoot, { recursive: true });
+  fs.mkdirSync(path.dirname(cacheRoot), { recursive: true });
+  runChecked('curl', ['-fsSL', tarballUrl, '-o', archivePath], details);
+  runChecked('tar', ['-xzf', archivePath, '-C', tempRoot, '--strip-components', '1'], details);
+  fs.rmSync(archivePath, { force: true });
+  if (!hasSkillRoot(tempRoot)) {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+    throw new FrameworkContractError('codex_command_failed', 'Downloaded external skill source does not contain a skills directory.', {
+      ...details,
+      tarball_url: tarballUrl,
+    });
+  }
+  fs.rmSync(cacheRoot, { recursive: true, force: true });
+  fs.renameSync(tempRoot, cacheRoot);
+}
+
+function materializeSourceCache(source: ReturnType<typeof resolveSource>) {
+  const ref = source.pinned_ref ?? KDENSE_SOURCE.default_branch;
+  const cacheRoot = sourceCacheRoot(source.source_id, source.repo_url, ref);
+  if (hasSkillRoot(cacheRoot)) {
+    return cacheRoot;
+  }
+  const details = {
+    source_id: source.source_id,
+    repo_url: source.repo_url,
+    pinned_ref: ref,
+    cache_root: cacheRoot,
+  };
+
+  if (source.repo_url.startsWith('file://')) {
+    const filePath = fileURLToPath(source.repo_url);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+      copySourceTreeToCache(filePath, cacheRoot);
+      return cacheRoot;
+    }
+    materializeTarballToCache(source.repo_url, cacheRoot, details);
+    return cacheRoot;
+  }
+
+  const tarballUrl = githubTarballUrl(source.repo_url, ref);
+  if (!tarballUrl) {
+    throw new FrameworkContractError('codex_command_failed', 'External skill source cannot be auto-downloaded from this repo URL.', details);
+  }
+  materializeTarballToCache(tarballUrl, cacheRoot, details);
+  return cacheRoot;
+}
+
 function resolveSource(input: ExternalSkillInput = {}) {
   const sourceId = normalizeSourceId(input.source);
   const registry = readSourceRegistry(input);
   const registered = registry.sources.find((entry) => entry.source_id === sourceId) ?? null;
-  const sourceRoot = candidateSourceRoots(input).find((candidate) => fs.existsSync(candidate) && hasSkillRoot(candidate))
-    ?? candidateSourceRoots(input)[0]
+  const sourceRootCandidates = candidateSourceRoots(input, registered);
+  const sourceRoot = sourceRootCandidates.find((candidate) => fs.existsSync(candidate) && hasSkillRoot(candidate))
+    ?? sourceRootCandidates[0]
     ?? null;
   const available = Boolean(sourceRoot && fs.existsSync(sourceRoot) && hasSkillRoot(sourceRoot));
   return {
@@ -187,7 +305,9 @@ function resolveSource(input: ExternalSkillInput = {}) {
     discovery_policy: 'manifest_index_then_explicit_skill_sync',
     next_action: available
       ? null
-      : `set ${KDENSE_SOURCE.env_root}=<local scientific-agent-skills checkout> or pass --source-root <path>`,
+      : registered
+        ? 'run search, inspect, or sync to auto-materialize the registered external skill source cache; --source-root remains an optional local override'
+        : 'run search, inspect, or sync to auto-materialize the approved source cache, or pass --source-root <path> for a local checkout override',
   };
 }
 
@@ -228,10 +348,10 @@ export function runOplConnectExternalSkillsSourceAdd(input: ExternalSkillSourceA
       status: 'registered',
       source,
       registry_path: registry.registry_path,
-      clone_policy: 'operator_managed_checkout',
+      clone_policy: 'opl_connect_auto_materialized_cache',
       next_action: sourceRoot
         ? 'run list/search/inspect against the registered source'
-        : `clone ${repoUrl} at ${pinnedRef}, then rerun sources add with --source-root <checkout>`,
+        : 'run search, inspect, or sync; OPL Connect will materialize the registered source into its external-skills cache',
       authority_boundary: authorityBoundary(),
     },
   };
@@ -471,7 +591,16 @@ function scoreSkill(card: SkillCard, query: string) {
 }
 
 function requireAvailableSource(input: ExternalSkillInput) {
-  const source = resolveSource(input);
+  let source = resolveSource(input);
+  if (source.status !== 'available') {
+    const cacheRoot = materializeSourceCache(source);
+    source = {
+      ...source,
+      source_root: cacheRoot,
+      status: 'available',
+      next_action: null,
+    };
+  }
   if (source.status !== 'available' || !source.source_root) {
     throw new FrameworkContractError('codex_command_failed', 'External skill source is not available for OPL Connect.', {
       source_id: source.source_id,

@@ -1,4 +1,5 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { pathToFileURL } from 'node:url';
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
 
 function createExternalSkillsFixture(extraSkills: Array<{
@@ -214,6 +215,63 @@ test('connect external-skills sources add registers a pinned source for later di
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(registryRoot, { recursive: true, force: true });
+  }
+});
+
+test('connect external-skills auto-materializes a registered source before search', () => {
+  const sourceRoot = createExternalSkillsFixture();
+  const registryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-auto-registry-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-auto-state-'));
+  try {
+    const registration = runCli([
+      'connect',
+      'external-skills',
+      'sources',
+      'add',
+      '--source',
+      'kdense',
+      '--repo',
+      pathToFileURL(sourceRoot).href,
+      '--pin',
+      'fixture-pin',
+      '--registry-root',
+      registryRoot,
+    ], { OPL_STATE_DIR: stateRoot }) as {
+      opl_connect_external_skills: {
+        clone_policy: string;
+        next_action: string;
+      };
+    };
+    assert.equal(registration.opl_connect_external_skills.clone_policy, 'opl_connect_auto_materialized_cache');
+    assert.match(registration.opl_connect_external_skills.next_action, /materialize the registered source/);
+
+    const output = runCli([
+      'connect',
+      'external-skills',
+      'search',
+      '--query',
+      'single cell',
+      '--registry-root',
+      registryRoot,
+    ], { OPL_STATE_DIR: stateRoot }) as {
+      opl_connect_external_skills: {
+        status: string;
+        source_root: string;
+        result_skill_ids: string[];
+      };
+    };
+
+    assert.equal(output.opl_connect_external_skills.status, 'completed');
+    assert.notEqual(output.opl_connect_external_skills.source_root, sourceRoot);
+    assert.deepEqual(output.opl_connect_external_skills.result_skill_ids, ['scanpy']);
+    assert.equal(
+      fs.existsSync(path.join(output.opl_connect_external_skills.source_root, 'skills', 'scanpy', 'SKILL.md')),
+      true,
+    );
+  } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+    fs.rmSync(registryRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
