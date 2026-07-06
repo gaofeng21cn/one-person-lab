@@ -100,7 +100,6 @@ jobs:
             "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \
             "dist/opl-packages/opl-channel-manifest.json:application/vnd.onepersonlab.release.channel-manifest.v1+json" \
             "dist/opl-packages/SHA256SUMS:text/plain"
-          oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" stable
           oras tag "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" latest
 
       - name: Upload prepared package artifacts

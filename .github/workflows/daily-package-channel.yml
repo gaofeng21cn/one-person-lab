@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       opl_version:
-        description: Optional nightly package version override. Empty uses current UTC YY.M.D-nightly; bare versions get -nightly appended.
+        description: Optional immutable package version override. Empty uses current UTC YY.M.D.
         required: false
         type: string
       force_publish:
@@ -40,7 +40,7 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Resolve nightly package version
+      - name: Resolve rolling latest package version
         id: version
         shell: bash
         run: |
@@ -49,13 +49,12 @@ jobs:
           if [ -z "$base" ]; then
             base="$(date -u +'%y.%-m.%-d')"
           fi
-          base="${base#v}"
-          if [[ "$base" == *-nightly ]]; then
-            version="$base"
-          else
-            version="${base}-nightly"
+          version="${base#v}"
+          if [[ "$version" == *nightly* ]]; then
+            echo "::error::Daily package versions must not use nightly channel labels: $version"
+            exit 1
           fi
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-nightly$ ]]; then
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z][0-9A-Za-z._-]*)?$ ]]; then
             echo "::error::Invalid daily package version: $version"
             exit 1
           fi
@@ -72,14 +71,14 @@ jobs:
       - name: Setup ORAS
         uses: oras-project/setup-oras@v1
 
-      - name: Fetch current stable package channel manifest
+      - name: Fetch current latest package channel manifest
         id: current
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/opl-current-channel
           echo "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:stable" \
+          oras pull "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:latest" \
             --output dist/opl-current-channel
           current="$(find dist/opl-current-channel -name opl-channel-manifest.json -print -quit)"
           test -n "$current"

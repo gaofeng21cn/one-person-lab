@@ -8,7 +8,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   const output = runCli(['connect', 'packages', 'manifest'], {
     OPL_RELEASE_VERSION: '26.4.27',
     OPL_PACKAGES_OWNER: 'gaofeng21cn',
-    OPL_RELEASE_CHANNEL: 'stable',
+    OPL_RELEASE_CHANNEL: 'latest',
   }) as {
     packages_manifest: {
       opl_version: string;
@@ -119,7 +119,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   };
 
   assert.equal(output.packages_manifest.opl_version, '26.4.27');
-  assert.equal(output.packages_manifest.release_channel, 'stable');
+  assert.equal(output.packages_manifest.release_channel, 'latest');
   assert.equal(output.packages_manifest.module_install_update_source, 'package_channel');
   assert.equal(
     output.packages_manifest.package_consumption_status,
@@ -171,7 +171,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.version_template,
-    '<utc_yy.m.d>-nightly',
+    '<utc_yy.m.d>',
   );
   assert.equal(
     output.packages_manifest.release_automation.daily_package_channel.change_detector,
@@ -492,7 +492,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');
   assert.equal(manifest.release_automation.daily_package_channel.no_change_behavior, 'skip_without_publish');
-  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>-nightly');
+  assert.equal(manifest.release_automation.daily_package_channel.version_template, '<utc_yy.m.d>');
   assert.equal(manifest.release_automation.daily_package_channel.force_publish_input, 'force_publish');
   assert.equal(Object.hasOwn(manifest.packages, 'webui_docker_image'), false);
   assert.equal(manifest.packages.framework_core.artifact, 'ghcr.io/gaofeng21cn/one-person-lab-framework:26.4.31');
@@ -766,20 +766,21 @@ test('framework packages workflow is release-gated and manually repairable witho
   assert.match(workflow, /one-person-lab-modules/);
   assert.match(workflow, /one-person-lab-framework/);
   assert.match(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}/);
-  assert.match(workflow, /oras tag "ghcr\.io\/\$\{OPL_PACKAGES_OWNER\}\/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}" stable/);
+  assert.doesNotMatch(workflow, /one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}" stable/);
+  assert.match(workflow, /oras tag "ghcr\.io\/\$\{OPL_PACKAGES_OWNER\}\/one-person-lab-manifest:\$\{OPL_RELEASE_VERSION\}" latest/);
   assert.doesNotMatch(workflow, /docker\/build-push-action/);
   assert.doesNotMatch(workflow, /one-person-lab-webui/);
   assert.match(workflow, /Upload prepared package artifacts/);
   assert.match(dailyPackageWorkflow, /schedule:/);
   assert.match(dailyPackageWorkflow, /cron:/);
   assert.match(dailyPackageWorkflow, /base="\$\(date -u \+'%y\.%-m\.%-d'\)"/);
-  assert.match(dailyPackageWorkflow, /\[\[ "\$base" == \*-nightly \]\]/);
-  assert.match(dailyPackageWorkflow, /version="\$\{base\}-nightly"/);
+  assert.match(dailyPackageWorkflow, /version="\$\{base#v\}"/);
+  assert.doesNotMatch(dailyPackageWorkflow, /-nightly/);
   assert.match(dailyPackageWorkflow, /workflow_dispatch:/);
   assert.match(dailyPackageWorkflow, /force_publish:/);
   assert.match(dailyPackageWorkflow, /npm run packages:manifest/);
   assert.match(dailyPackageWorkflow, /npm run packages:daily-check/);
-  assert.match(dailyPackageWorkflow, /one-person-lab-manifest:stable/);
+  assert.match(dailyPackageWorkflow, /one-person-lab-manifest:latest/);
   assert.match(dailyPackageWorkflow, /test -n "\$current"/);
   assert.match(dailyPackageWorkflow, /args\+=\(--current-manifest "\$\{\{ steps\.current\.outputs\.current_manifest \}\}"\)/);
   assert.match(dailyPackageWorkflow, /uses:\s+\.\/\.github\/workflows\/packages\.yml/);
@@ -849,7 +850,7 @@ test('GHCR package cleanup dry-runs active native helper and active package-chan
       { id: 12, updated_at: '2026-05-02T00:00:00Z', metadata: { container: { tags: ['26.5.2-a'] } } },
       { id: 13, updated_at: '2026-05-01T00:00:00Z', metadata: { container: { tags: ['26.5.1'] } } },
       { id: 14, updated_at: '2026-04-30T00:00:00Z', metadata: { container: { tags: ['26.4.30', 'manual-keep'] } } },
-      { id: 15, updated_at: '2026-04-29T00:00:00Z', metadata: { container: { tags: ['stable'] } } },
+      { id: 15, updated_at: '2026-04-29T00:00:00Z', metadata: { container: { tags: ['latest'] } } },
     ],
     'one-person-lab-modules/med-autogrant': [],
     'one-person-lab-modules/redcube-ai': [],

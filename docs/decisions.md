@@ -18,6 +18,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - App Full release 只消费 Framework 输出的 `bundle_manifest`、`bundle_lock`、`producer_receipt` 和 `runtime_bundle_producer` refs；App 仍持有 release verdict，不持有 runtime dependency truth。
 - 真正 materialized runtime root 仍由 `opl runtime env materialize --apply` 和 materialization receipt 证明；dry-run manifest、lock 或 cache hit 不能替代 runnable runtime artifact。
 
+### 决策：Agent Package 用户通道收敛为 rolling latest
+
+原因：App 侧安装与更新合同已经把 capability packages 固定为 `rolling_latest_only`，普通用户只看 `latest`；`stable` 与 `nightly` 会制造第二套用户可见通道语义，和 digest / immutable version tag / receipt 才是安装真相的规则冲突。
+
+影响：
+
+- `.github/workflows/daily-package-channel.yml` 只生成不可变版本标签，不再生成或描述 `*-nightly`。
+- daily change detector 只和 GHCR `one-person-lab-manifest:latest` 比较；发布通过后只移动 `latest`。
+- `stable` / `nightly` 只可作为历史制品标签读取，不能作为普通用户 Agent Package 当前通道、release discipline moving tag 或文档推荐入口。
+
 ## 2026-07-05
 
 ### 决策：标准 Agent package 可声明 OPL-managed capability dependency

@@ -53,13 +53,13 @@ test('daily package channel check skips when package source fingerprints are unc
   const current = path.join(tempRoot, 'current.json');
 
   writeManifest(candidate, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
   });
   writeManifest(current, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-02T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -71,13 +71,13 @@ test('daily package channel check skips when package source fingerprints are unc
     '--current-manifest',
     current,
     '--version',
-    '26.6.3-nightly',
+    '26.6.3',
   ]);
 
   assert.equal(summary.status, 'skipped');
   assert.equal(summary.reason, 'package_channel_unchanged');
   assert.equal(summary.publish_required, false);
-  assert.equal(summary.version, '26.6.3-nightly');
+  assert.equal(summary.version, '26.6.3');
   assert.deepEqual(summary.changed_packages, []);
 });
 
@@ -87,13 +87,13 @@ test('daily package channel check publishes when a package source fingerprint ch
   const current = path.join(tempRoot, 'current.json');
 
   writeManifest(candidate, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'c'.repeat(40),
     moduleSha: 'd'.repeat(64),
   });
   writeManifest(current, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-02T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -105,7 +105,7 @@ test('daily package channel check publishes when a package source fingerprint ch
     '--current-manifest',
     current,
     '--version',
-    '26.6.3-nightly',
+    '26.6.3',
   ]);
 
   assert.equal(summary.status, 'publish_required');
@@ -120,7 +120,7 @@ test('daily package channel check publishes when framework core fingerprint chan
   const current = path.join(tempRoot, 'current.json');
 
   writeManifest(candidate, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -128,7 +128,7 @@ test('daily package channel check publishes when framework core fingerprint chan
     frameworkSha: 'd'.repeat(64),
   });
   writeManifest(current, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-02T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -142,7 +142,7 @@ test('daily package channel check publishes when framework core fingerprint chan
     '--current-manifest',
     current,
     '--version',
-    '26.6.3-nightly',
+    '26.6.3',
   ]);
 
   assert.equal(summary.status, 'publish_required');
@@ -155,7 +155,7 @@ test('daily package channel check fails closed when no current channel manifest 
   const missingCurrent = path.join(tempRoot, 'missing-current.json');
 
   writeManifest(candidate, {
-    version: '26.6.3-nightly',
+    version: '26.6.3',
     generatedAt: '2026-06-03T00:00:00.000Z',
     moduleHead: 'a'.repeat(40),
     moduleSha: 'b'.repeat(64),
@@ -171,7 +171,7 @@ test('daily package channel check fails closed when no current channel manifest 
         '--current-manifest',
         missingCurrent,
         '--version',
-        '26.6.3-nightly',
+        '26.6.3',
       ], {
         cwd: repoRoot,
         encoding: 'utf8',
