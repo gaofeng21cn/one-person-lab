@@ -38,6 +38,11 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.deepEqual(completionAudit.allowed_sync_scopes, ['project']);
   assert.equal(typeof completionAudit.activation_gate, 'string');
   assert.equal(completionAudit.activation_gate.length > 0, true);
+  const externalScientificRouter = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-external-scientific-skill-router');
+  assert.ok(externalScientificRouter);
+  assert.equal(externalScientificRouter.exposure_scope, 'workspace_local');
+  assert.deepEqual(externalScientificRouter.allowed_sync_scopes, ['workspace', 'quest']);
+  assert.equal(externalScientificRouter.default_global_user, false);
   assert.match(output.opl_connect_foundation_skills.skills[0].content_sha256, /^[a-f0-9]{64}$/);
   assert.deepEqual(output.opl_connect_foundation_skills.authority_boundary, {
     read_only_inspect: true,

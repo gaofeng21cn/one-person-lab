@@ -19,12 +19,11 @@ owner route；外部库只提供可选专业能力。
 ## 命令面
 
 ```bash
-opl connect external-skills sources add --source kdense --repo https://github.com/K-Dense-AI/scientific-agent-skills --pin <commit-or-tag> --source-root <scientific-agent-skills-checkout> --json
-opl connect external-skills list --source-root <scientific-agent-skills-checkout> --json
+opl connect external-skills sources add --source kdense --repo https://github.com/K-Dense-AI/scientific-agent-skills --pin <commit-or-tag> --json
 opl connect external-skills list --registry-root <workspace-root> --json
-opl connect external-skills search --query "single cell RNA-seq" --source kdense --source-root <path> --json
-opl connect external-skills inspect --skill kdense/scanpy --source-root <path> --json
-opl connect external-skills sync --skill kdense/scanpy --scope workspace --target-workspace <workspace-root> --source-root <path> --json
+opl connect external-skills search --query "single cell RNA-seq" --source kdense --json
+opl connect external-skills inspect --skill kdense/scanpy --json
+opl connect external-skills sync --skill kdense/scanpy --scope workspace --target-workspace <workspace-root> --json
 ```
 
 `sources add` 写入 OPL Connect source registry，默认位置是：
@@ -33,8 +32,10 @@ opl connect external-skills sync --skill kdense/scanpy --scope workspace --targe
 <workspace-root>/.opl/connect/external-skill-sources.json
 ```
 
-该 registry 记录 source id、repo、pin 和可选本地 checkout 路径。它不 clone
-repo，也不批量安装 skill；checkout 仍由操作者或上层环境管理。
+该 registry 记录 source id、repo、pin 和可选本地 checkout 路径。普通用户不需要
+知道、clone 或安装 K-Dense repo；`search`、`inspect` 和 `sync` 在 source 缺失时
+会按登记的 repo/pin materialize 到 OPL state cache。`--source-root` 只作为维护者
+调试、离线复核或私有 checkout 覆盖入口，不是普通使用路径。
 
 `list`、`search` 和 `inspect` 是只读发现面。普通 MAS 任务优先使用
 `search -> inspect`，因为 `list` 是 source/index 审阅面，可能返回整个外部库的
@@ -79,6 +80,13 @@ MAS 优先使用默认医学论文专业 Skill 包：
 MAS medical-paper pack 后，再选择单个 skill 做 `sync`。`list` 用于维护者审阅
 source index，不作为普通执行上下文的默认入口。
 不要把 K-Dense 全库塞进上下文，也不要把外部库当作 MAS 默认能力包的一部分。
+
+`plugins/opl-foundation-skills/skills/opl-external-scientific-skill-router/SKILL.md`
+是这个路径的极薄 source-only router。它只在默认 MAS / professional skills
+覆盖不了罕见专业工具、数据库、工作流或方法时触发 Codex 走
+`opl connect external-skills search -> inspect -> sync`，并且只选择一个外部
+Skill 候选。它不读取 K-Dense 全量正文，不批量同步 source，不签 owner receipt、
+typed blocker 或 domain verdict。
 
 有效触发方式：
 
