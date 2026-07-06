@@ -25,6 +25,8 @@ This skill may design:
 
 This skill must not sign domain owner receipts, create typed blockers, issue quality verdicts, mutate artifact authority, write runtime queues, or claim domain/runtime/readiness status.
 
+Optional helper: `kernel.py` provides stdlib-only deterministic stage-ref normalization, skeleton/checklist builders, and authority-phrase linting. It is local support only: no file/network/subprocess use and no owner receipt, typed blocker, readiness, runtime, or domain-truth authority.
+
 ## Workflow
 
 1. Identify the owning stage, domain owner, intended executor, source refs, writable surfaces, and forbidden authority surfaces.

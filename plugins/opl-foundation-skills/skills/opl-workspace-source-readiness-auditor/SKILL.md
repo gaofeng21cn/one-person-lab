@@ -14,6 +14,8 @@ Use this skill to audit whether OPL Workspace source material is ready for an ow
 - Do not sign `owner receipts`, create `typed blockers`, mutate source or artifact truth, write runtime queues, or declare `readiness`.
 - A clean audit brief is not owner acceptance, source readiness, runtime readiness, or domain truth.
 
+Optional helper: `kernel.py` provides stdlib-only deterministic workspace/source-ref normalization, audit skeleton/checklist builders, and authority-phrase linting. It is local support only: no file/network/subprocess use and no owner receipt, typed blocker, source mutation, runtime queue, or readiness authority.
+
 ## Workflow
 
 1. Identify the workspace, program, expected consumer, source refs, artifact refs, and owner route being audited.

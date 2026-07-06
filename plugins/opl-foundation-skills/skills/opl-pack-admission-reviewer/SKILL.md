@@ -14,6 +14,8 @@ Use this skill to review an OPL pack admission candidate before an owning regist
 - Do not sign `owner receipts`, create `typed blockers`, mutate registry or contract truth, execute pack admission, or declare `readiness`.
 - A review recommendation is not pack admission, owner acceptance, promotion, runtime readiness, or domain readiness.
 
+Optional helper: `kernel.py` provides stdlib-only deterministic pack-ref normalization, admission skeleton/checklist builders, and authority-phrase linting. It is local support only: no file/network/subprocess use and no owner receipt, typed blocker, registry mutation, admission, or readiness authority.
+
 ## Workflow
 
 1. Identify the pack candidate, owning program, target registry, declared capabilities, authority refs, source refs, and validation evidence.

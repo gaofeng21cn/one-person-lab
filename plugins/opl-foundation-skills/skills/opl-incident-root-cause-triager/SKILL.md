@@ -14,6 +14,8 @@ Use this skill to move an incident report from surface status to an owner-routab
 - Do not write owner receipts, typed blockers, domain truth, artifact authority, runtime queues, provider state, readiness claims, release claims, or production claims.
 - Do not close an incident by restating labels such as `blocked`, `idle`, `queue_empty`, `no_live_session`, or `stale` without the boundary and owner route.
 
+Optional helper: `kernel.py` provides stdlib-only deterministic incident-ref normalization, L0-L4 triage skeleton/checklist builders, and authority-phrase linting. It is local support only: no file/network/subprocess use and no owner receipt, typed blocker, runtime queue, release, readiness, or production authority.
+
 ## Depth Ladder
 
 - `L0_symptom`: visible state, alert, failure message, stalled lane, stale projection, or missing heartbeat.
