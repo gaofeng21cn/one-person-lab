@@ -214,8 +214,10 @@ test('Codex stage activity prompt forbids recursive MAS PaperMission stage-route
   });
 
   const commandPreview = activity.runner_status.command_preview.join('\n');
-  assert.match(commandPreview, /"\/tmp\/mas\/\.venv\/bin\/python3" -m med_autoscience\.cli paper-mission inspect/);
-  assert.doesNotMatch(commandPreview, /ops\/medautoscience\/\.venv\/bin\/python3/);
+  assert.match(commandPreview, /"\/tmp\/mas\/ops\/medautoscience\/bin\/paper-mission" inspect/);
+  assert.match(commandPreview, /"\/tmp\/mas\/ops\/medautoscience\/bin\/study-progress"/);
+  assert.doesNotMatch(commandPreview, /\.venv\/bin\/python3/);
+  assert.match(commandPreview, /do not invoke bare medautosci, global medautosci wrappers, or guessed Python virtualenv paths/);
   assert.match(commandPreview, /Latest MAS task-intake scope for this attempt/);
   assert.match(commandPreview, /Task intake kind: reviewer_revision/);
   assert.match(commandPreview, /Figure 4, promote medication sensitivity Table 3/);
