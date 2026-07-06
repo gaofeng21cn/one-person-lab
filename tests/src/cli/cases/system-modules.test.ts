@@ -741,6 +741,8 @@ test('module exec runs domain CLIs from the current module checkout instead of P
   const fakeBinRoot = path.join(homeRoot, 'fake-bin');
   const masRunnerArgvPath = path.join(homeRoot, 'mas-runner.argv');
   const masRunnerCwdPath = path.join(homeRoot, 'mas-runner.cwd');
+  const magRunnerArgvPath = path.join(homeRoot, 'mag-runner.argv');
+  const magRunnerCwdPath = path.join(homeRoot, 'mag-runner.cwd');
   const uvArgvPath = path.join(homeRoot, 'uv.argv');
   const uvCwdPath = path.join(homeRoot, 'uv.cwd');
   const npmArgvPath = path.join(homeRoot, 'npm.argv');
@@ -795,7 +797,20 @@ printf '{"ok":true,"runner":"npm"}\\n'
     },
     executableFiles: ['scripts/run-python-clean.sh'],
   });
-  const magFixture = createGitModuleRemoteFixture('med-autogrant');
+  const magFixture = createGitModuleRemoteFixture('med-autogrant', {
+    extraFiles: {
+      'scripts/run-python-clean.sh': [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        `printf '%s\\n' "$PWD" > ${JSON.stringify(magRunnerCwdPath)}`,
+        `: > ${JSON.stringify(magRunnerArgvPath)}`,
+        `for arg in "$@"; do printf '%s\\n' "$arg" >> ${JSON.stringify(magRunnerArgvPath)}; done`,
+        `printf '{"ok":true,"runner":"mag-clean-runner"}\\n'`,
+        '',
+      ].join('\n'),
+    },
+    executableFiles: ['scripts/run-python-clean.sh'],
+  });
   const rcaFixture = createGitModuleRemoteFixture('redcube-ai');
   const metaFixture = createGitModuleRemoteFixture('opl-meta-agent');
   const mdsFixture = createGitModuleRemoteFixture('med-deepscientist');
@@ -855,14 +870,17 @@ printf '{"ok":true,"runner":"npm"}\\n'
     };
     assert.equal(magExec.module_exec.module_id, 'medautogrant');
     assert.equal(magExec.module_exec.working_directory, magFixture.sourceRoot);
-    assert.deepEqual(magExec.module_exec.result, { ok: true, runner: 'uv' });
-    assert.deepEqual(readLines(uvArgvPath), [
-      'run',
-      '--directory',
-      magFixture.sourceRoot,
-      'medautogrant',
+    assert.deepEqual(magExec.module_exec.result, { ok: true, runner: 'mag-clean-runner' });
+    assert.deepEqual(magExec.module_exec.command_preview, [
+      path.join(magFixture.sourceRoot, 'scripts', 'run-python-clean.sh'),
+      '-m',
+      'med_autogrant.cli',
       '--help',
     ]);
+    assert.equal(realpath(fs.readFileSync(magRunnerCwdPath, 'utf8').trim()), realpath(magFixture.sourceRoot));
+    assert.deepEqual(readLines(magRunnerArgvPath), magExec.module_exec.command_preview.slice(1));
+    assert.equal(fs.existsSync(uvCwdPath), false);
+    assert.equal(fs.existsSync(uvArgvPath), false);
 
     const rcaExec = runCli(
       ['connect', 'exec', '--module', 'redcube', '--', 'product', 'manifest', '--workspace-root', '/tmp/demo'],

@@ -65,14 +65,14 @@ function buildHealthCheckCommand(checkoutPath: string, verifyLane = 'fast') {
     };
 }
 
-function buildMasCleanRunnerExecCommand(checkoutPath: string, args: string[]) {
+function buildPythonCleanRunnerExecCommand(checkoutPath: string, moduleName: string, args: string[]) {
   const runnerPath = path.join(checkoutPath, 'scripts', 'run-python-clean.sh');
   if (!fs.existsSync(runnerPath) || !fs.statSync(runnerPath).isFile()) {
     return null;
   }
   return {
     command: runnerPath,
-    args: ['-m', 'med_autoscience.cli', ...args],
+    args: ['-m', moduleName, ...args],
   };
 }
 
@@ -90,7 +90,11 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    exec_command: buildMasCleanRunnerExecCommand,
+    exec_command: (checkoutPath, args) => buildPythonCleanRunnerExecCommand(
+      checkoutPath,
+      'med_autoscience.cli',
+      args,
+    ),
     skill_sync_domain: 'medautoscience',
     capability_dependencies: MAS_CAPABILITY_DEPENDENCIES,
   },
@@ -121,10 +125,11 @@ export const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
-    exec_command: (checkoutPath, args) => ({
-      command: 'uv',
-      args: ['run', '--directory', checkoutPath, 'medautogrant', ...args],
-    }),
+    exec_command: (checkoutPath, args) => buildPythonCleanRunnerExecCommand(
+      checkoutPath,
+      'med_autogrant.cli',
+      args,
+    ),
     skill_sync_domain: 'medautogrant',
   },
   {
