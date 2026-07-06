@@ -82,6 +82,9 @@ test('runtime env CLI exposes deterministic projections before materializing run
   assert.equal(inspect.can_claim_runtime_ready, false);
   assert.equal(inspect.can_claim_domain_ready, false);
   assert.equal(inspect.can_claim_app_release_ready, false);
+  assert.equal(inspect.sandbox_provider, 'local_managed_root');
+  assert.equal(inspect.sandbox_provider_plan.selected_provider, 'local_managed_root');
+  assert.equal(inspect.sandbox_provider_plan.can_claim_provider_ready, false);
   assert.equal(inspect.authority_boundary.can_claim_runtime_materialized_ready, false);
   assert.equal(inspect.materialization_status.status, 'not_materialized');
   assert.match(inspect.runtime_lock_ref, /^runtime-lock:mas\/analysis\/macos-arm64:sha256:/);
@@ -150,6 +153,8 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(build.build_plan.writes_runtime_root, false);
   assert.equal(build.build_plan.creates_archive, false);
   assert.equal(build.build_plan.can_claim_runtime_ready, false);
+  assert.equal(build.sandbox_provider_plan.selected_provider, 'local_managed_root');
+  assert.equal(build.sandbox_provider_plan.temporal_replacement, false);
   assert.equal(build.bundle_manifest.status, 'dry_run_bundle_manifest_projected');
   assert.match(build.bundle_manifest.bundle_ref, /^runtime-bundle:mas\/analysis\/macos-arm64:sha256:/);
   assert.equal(build.bundle_manifest.layer_count, 6);
@@ -175,6 +180,34 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(dryRun.materialization_plan.can_apply, true);
   assert.equal(dryRun.materialization_plan.writes_runtime_root, false);
   assert.equal(dryRun.materialization_plan.apply_blocker_ref, null);
+
+  const externalSandbox = runCli([
+    'runtime',
+    'env',
+    'materialize',
+    '--domain',
+    'mas',
+    '--profile',
+    'analysis',
+    '--platform',
+    'macos-arm64',
+    '--sandbox-provider',
+    'external_sandbox',
+    '--apply',
+  ], env).runtime_environment;
+  assert.equal(externalSandbox.sandbox_provider, 'external_sandbox');
+  assert.equal(externalSandbox.sandbox_provider_plan.status, 'external_sandbox_provider_adapter_required');
+  assert.equal(externalSandbox.sandbox_provider_plan.provider_role, 'agent_sandbox_execution_substrate');
+  assert.equal(externalSandbox.sandbox_provider_plan.can_claim_provider_ready, false);
+  assert.equal(externalSandbox.materialization_plan.status, 'external_sandbox_provider_apply_blocked');
+  assert.equal(externalSandbox.materialization_plan.can_apply, false);
+  assert.equal(externalSandbox.materialization_plan.applied, false);
+  assert.equal(externalSandbox.materialization_plan.writes_runtime_root, false);
+  assert.equal(
+    externalSandbox.materialization_plan.apply_blocker_ref,
+    'external_sandbox_provider_live_receipt_required',
+  );
+  assert.equal(externalSandbox.materialization_plan.can_claim_runtime_ready, false);
 
   const apply = runCli([
     'runtime',

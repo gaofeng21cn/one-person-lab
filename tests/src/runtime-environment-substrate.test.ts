@@ -101,6 +101,19 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
     true,
   );
 
+  const sandboxPolicy = contract.external_sandbox_provider_policy as Json;
+  assert.equal(sandboxPolicy.status, 'adapter_boundary_available_without_live_provider_claim');
+  assert.deepEqual(sandboxPolicy.supported_provider_kinds, ['local_managed_root', 'external_sandbox']);
+  assert.deepEqual(sandboxPolicy.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.equal(sandboxPolicy.provider_role, 'agent_sandbox_execution_substrate');
+  assert.equal(sandboxPolicy.temporal_replacement, false);
+  assert.equal(sandboxPolicy.requires_live_provider_receipt_for_ready, true);
+  assert.equal(sandboxPolicy.template_exists_counts_as_provider_ready, false);
+  assert.equal(sandboxPolicy.snapshot_exists_counts_as_runtime_ready, false);
+  assert.equal(sandboxPolicy.provider_receipt_counts_as_domain_ready, false);
+  assert.equal(sandboxPolicy.can_claim_provider_ready_without_receipt, false);
+  assert.equal(sandboxPolicy.can_claim_runtime_ready_without_receipt, false);
+
   const inventoryPolicy = contract.cache_inventory_policy as Json;
   assert.equal(inventoryPolicy.status, 'filesystem_inventory_and_prune_receipt_available');
   assert.equal(inventoryPolicy.cache_hit_counts_as_ready, false);
@@ -175,6 +188,9 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(forbiddenClaims.includes('runtime_cache_hit_means_ready'), true);
   assert.equal(forbiddenClaims.includes('materialization_skeleton_means_runtime_ready'), true);
   assert.equal(forbiddenClaims.includes('runtime_environment_receipt_means_domain_ready'), true);
+  assert.equal(forbiddenClaims.includes('external_sandbox_template_exists_means_provider_ready'), true);
+  assert.equal(forbiddenClaims.includes('external_sandbox_snapshot_exists_means_runtime_ready'), true);
+  assert.equal(forbiddenClaims.includes('external_sandbox_receipt_means_domain_ready'), true);
   assert.equal(forbiddenClaims.includes('missing_run_context_allows_host_environment_fallback'), true);
   assert.equal(forbiddenClaims.includes('run_context_target_mismatch_allows_consumer_execution'), true);
 
@@ -224,6 +240,12 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal(producer.lock_schema_version, 'opl-runtime-bundle-lock.v1');
   assert.equal((producer.target_profile as Json).profile_id, 'full');
   assert.equal(producer.target_platform_id, 'macos-arm64');
+  assert.equal(readback.sandbox_provider, 'local_managed_root');
+  const sandboxPlan = readback.sandbox_provider_plan as Json;
+  assert.equal(sandboxPlan.selected_provider, 'local_managed_root');
+  assert.equal(sandboxPlan.provider_role, 'local_materialized_runtime_root');
+  assert.equal(sandboxPlan.temporal_replacement, false);
+  assert.equal(sandboxPlan.can_claim_provider_ready, false);
   assert.equal((producer.layer_taxonomy as unknown[]).length, 6);
   assert.equal((producer.false_ready_flags as Json).dry_run_projection_counts_as_app_release_ready, false);
   assert.equal((producer.false_ready_flags as Json).bundle_lock_exists_counts_as_app_full_release_ready, false);
@@ -235,4 +257,34 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal(receipt.can_claim_runtime_ready, false);
   assert.equal(receipt.can_claim_domain_ready, false);
   assert.equal(receipt.can_claim_app_release_ready, false);
+});
+
+test('runtime env build readback exposes external sandbox provider plan without provider authority', () => {
+  const readback = buildRuntimeEnvironmentBuildReadback({
+    domainId: 'mas',
+    profileId: 'analysis',
+    platformId: 'linux-x64',
+    sandboxProvider: 'external_sandbox',
+  }) as Json;
+
+  assert.equal(readback.command, 'build');
+  assert.equal(readback.sandbox_provider, 'external_sandbox');
+  assert.equal(readback.can_claim_runtime_ready, false);
+  const plan = readback.sandbox_provider_plan as Json;
+  assert.equal(plan.status, 'external_sandbox_provider_adapter_required');
+  assert.equal(plan.provider_role, 'agent_sandbox_execution_substrate');
+  assert.deepEqual(plan.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.equal(plan.template_ref, 'sandbox-template:mas/analysis/linux-x64');
+  assert.equal(plan.required_receipt_kind, 'external_sandbox_provider_receipt');
+  assert.equal(plan.temporal_replacement, false);
+  assert.equal(plan.live_provider_receipt_required, true);
+  assert.equal(plan.can_claim_provider_ready, false);
+  assert.equal(plan.can_claim_runtime_ready, false);
+  assert.equal(plan.can_claim_domain_ready, false);
+
+  const producer = readback.runtime_bundle_producer as Json;
+  const flags = producer.false_ready_flags as Json;
+  assert.equal(producer.sandbox_provider, 'external_sandbox');
+  assert.equal(flags.external_sandbox_template_exists_counts_as_provider_ready, false);
+  assert.equal(flags.external_sandbox_receipt_counts_as_domain_ready, false);
 });

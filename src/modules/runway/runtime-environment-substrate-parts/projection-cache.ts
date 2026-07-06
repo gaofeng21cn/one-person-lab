@@ -6,6 +6,7 @@ import {
   authorityBoundary,
   cachePolicy,
   CONTRACT_REF,
+  externalSandboxProviderPolicy,
   materializationPolicy,
   RUNTIME_ENVIRONMENT_FALLBACK_POINTER,
   RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT,
@@ -153,6 +154,36 @@ export function bundleManifestProjection(input: RuntimeEnvironmentTargetInput) {
     writes_runtime_root: materialized,
     writes_domain_repo: false,
     can_claim_runtime_ready: materialized,
+  };
+}
+
+export function sandboxProviderPlan(input: RuntimeEnvironmentTargetInput) {
+  const target = normalizeTarget(input);
+  const policy = externalSandboxProviderPolicy();
+  const externalSelected = target.sandbox_provider === 'external_sandbox';
+  return {
+    surface_kind: 'opl_runtime_environment_sandbox_provider_plan' as const,
+    status: externalSelected
+      ? 'external_sandbox_provider_adapter_required'
+      : 'local_managed_root_selected',
+    selected_provider: target.sandbox_provider,
+    provider_role: externalSelected
+      ? 'agent_sandbox_execution_substrate'
+      : 'local_materialized_runtime_root',
+    provider_ref: `sandbox-provider:${target.sandbox_provider}:${targetRef(target)}`,
+    supported_provider_kinds: policy.supported_provider_kinds,
+    external_provider_examples: policy.external_provider_examples,
+    template_ref: externalSelected ? `sandbox-template:${targetRef(target)}` : null,
+    snapshot_ref: null,
+    volume_ref: null,
+    required_receipt_kind: externalSelected ? policy.required_receipt_kind : null,
+    temporal_replacement: false,
+    writes_runtime_root: false,
+    writes_domain_repo: false,
+    can_claim_provider_ready: false,
+    can_claim_runtime_ready: false,
+    can_claim_domain_ready: false,
+    live_provider_receipt_required: externalSelected,
   };
 }
 
@@ -369,6 +400,7 @@ export function baseReadback(
     platform_id: target.platform_id,
     implementation_status: RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.implementation_status,
     target_planned: RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.target_planned,
+    sandbox_provider: target.sandbox_provider,
     dry_run: true,
     can_claim_runtime_ready: false,
     can_claim_domain_ready: false,

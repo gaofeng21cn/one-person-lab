@@ -30,6 +30,7 @@ import {
   runtimeLockProjection,
   runtimeRootForBundle,
   safeSegment,
+  sandboxProviderPlan,
   shortDigest,
   statePathFromRef,
   stateRef,
@@ -65,6 +66,7 @@ export function buildRuntimeEnvironmentInspectReadback(input: RuntimeEnvironment
   return {
     ...baseReadback('inspect', input),
     descriptor: descriptorProjection(target),
+    sandbox_provider_plan: sandboxProviderPlan(input),
     runtime_lock_ref: lock.lock_ref,
     bundle_manifest_ref: bundleManifest.bundle_ref,
     materialization_status: {
@@ -115,9 +117,11 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
   const target = normalizeTarget(input);
   const lock = runtimeLockProjection(input);
   const bundleManifest = bundleManifestProjection(input);
+  const sandboxPlan = sandboxProviderPlan(input);
   const producerReadbackRef = `runtime-bundle-producer-readback:${target.domain_id}/${target.profile_id}/${target.platform_id}:sha256:${shortDigest({
     lock_ref: lock.lock_ref,
     bundle_ref: bundleManifest.bundle_ref,
+    sandbox_provider: target.sandbox_provider,
   })}`;
   const producerReceipt = {
     surface_kind: 'opl_runtime_bundle_producer_receipt',
@@ -146,6 +150,7 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
     lock,
     bundle_lock: lock,
     bundle_manifest: bundleManifest,
+    sandbox_provider_plan: sandboxPlan,
     runtime_bundle_producer: {
       surface_kind: 'opl_runtime_bundle_producer_readback',
       version: 'opl-runtime-bundle-producer-readback.v1',
@@ -159,6 +164,8 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
       target_domain_id: target.domain_id,
       target_profile_id: target.profile_id,
       target_platform_id: target.platform_id,
+      sandbox_provider: target.sandbox_provider,
+      sandbox_provider_ref: sandboxPlan.provider_ref,
       manifest_schema_version: 'opl-runtime-bundle-manifest.v1',
       lock_schema_version: 'opl-runtime-bundle-lock.v1',
       bundle_manifest_ref: bundleManifest.bundle_ref,
@@ -190,6 +197,8 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
         dry_run_projection_counts_as_app_release_ready: false,
         bundle_manifest_exists_counts_as_materialized_runtime: false,
         bundle_lock_exists_counts_as_app_full_release_ready: false,
+        external_sandbox_template_exists_counts_as_provider_ready: false,
+        external_sandbox_receipt_counts_as_domain_ready: false,
       },
       app_full_consumer_boundary: {
         consumes_bundle_manifest_ref: bundleManifest.bundle_ref,
@@ -477,11 +486,13 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
   const target = normalizeTarget(input);
   const lock = runtimeLockProjection(input);
   const bundleManifest = bundleManifestProjection(input);
+  const sandboxPlan = sandboxProviderPlan(input);
   const targetPointer = input.targetPointer ?? 'current';
   if (!input.apply) {
     return {
       ...baseReadback('materialize', input),
       bundle_manifest: bundleManifest,
+      sandbox_provider_plan: sandboxPlan,
       materialization_plan: {
         surface_kind: 'opl_runtime_environment_materialization_plan',
         status: 'dry_run_materialization_plan_projected',
@@ -506,6 +517,41 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
           'write_materialization_receipt',
           'update_selected_pointer',
         ],
+      },
+    };
+  }
+  if (target.sandbox_provider === 'external_sandbox') {
+    return {
+      ...baseReadback('materialize', input),
+      bundle_manifest: bundleManifest,
+      sandbox_provider_plan: sandboxPlan,
+      materialization_plan: {
+        surface_kind: 'opl_runtime_environment_materialization_plan',
+        status: 'external_sandbox_provider_apply_blocked',
+        target_pointer: targetPointer,
+        requested_apply: true,
+        dry_run: false,
+        applied: false,
+        can_apply: false,
+        runtime_root: null,
+        receipt_ref: null,
+        writes_runtime_root: false,
+        updates_current_pointer: false,
+        updates_rollback_pointer: false,
+        protects_current_pointer: true,
+        protects_rollback_pointer: true,
+        apply_blocker_ref: 'external_sandbox_provider_live_receipt_required',
+        route_hint: 'configure_external_sandbox_provider_adapter',
+        steps: [
+          'select_external_sandbox_provider',
+          'resolve_template_or_snapshot_ref',
+          'create_or_resume_provider_sandbox',
+          'collect_provider_receipt',
+          'bind_opl_run_context_to_provider_receipt',
+        ],
+        can_claim_provider_ready: false,
+        can_claim_runtime_ready: false,
+        can_claim_domain_ready: false,
       },
     };
   }
@@ -614,6 +660,7 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
       can_claim_runtime_ready: true,
     }),
     bundle_manifest: refreshedBundleManifest,
+    sandbox_provider_plan: sandboxPlan,
     materialization_plan: {
       surface_kind: 'opl_runtime_environment_materialization_plan',
       status: 'materialized_receipt_written',
@@ -733,6 +780,17 @@ export function buildRuntimeEnvironmentDoctorReadback() {
           can_claim_provider_ready: false,
           can_claim_domain_ready: false,
           can_claim_app_release_ready: false,
+        },
+        {
+          severity: 'info',
+          code: 'external_agent_sandbox_provider_adapter_available_as_target',
+          message:
+            'External sandbox providers can carry isolated filesystem, process, git, template, snapshot, and persistence substrate; OPL requires a live provider receipt before provider-ready or runtime-ready claims.',
+          can_block_domain_progress: false,
+          temporal_replacement: false,
+          can_claim_provider_ready: false,
+          can_claim_runtime_ready: false,
+          can_claim_domain_ready: false,
         },
       ],
     },

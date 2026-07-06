@@ -27,6 +27,7 @@ export interface RuntimeEnvironmentTargetInput {
   domainId?: string;
   profileId?: string;
   platformId?: string;
+  sandboxProvider?: 'local_managed_root' | 'external_sandbox';
   paperRoot?: string;
 }
 
@@ -71,4 +72,8 @@ export function cachePolicy() {
 
 export function materializationPolicy() {
   return RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.materialization_policy as JsonRecord;
+}
+
+export function externalSandboxProviderPolicy() {
+  return RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.external_sandbox_provider_policy as JsonRecord;
 }
