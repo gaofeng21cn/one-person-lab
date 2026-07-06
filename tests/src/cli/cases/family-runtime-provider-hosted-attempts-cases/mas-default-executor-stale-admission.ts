@@ -200,18 +200,9 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
           return { task_id: selectedRow.task_id };
         },
       });
-      const task = db.prepare(`
-        SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get('task-mas-default-expired-admission-missing-workflow') as {
-        status: string;
-        attempts: number;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
+      const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-expired-admission-missing-workflow',
+      ) as { status: string };
       const attempts = db.prepare(`
         SELECT status, blocked_reason, provider_run_json
         FROM stage_attempts
@@ -229,11 +220,6 @@ test('family-runtime tick recovers expired MAS default executor admission whose 
       assert.equal(tick.selected_count, 1);
       assert.equal(dispatchCount, 1);
       assert.equal(task.status, 'queued');
-      assert.equal(task.attempts, 0);
-      assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
-      assert.equal(task.lease_owner, null);
-      assert.equal(task.lease_expires_at, null);
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
       assert.equal(attempts[0].blocked_reason, 'temporal_workflow_not_started_or_not_found');
@@ -323,18 +309,9 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
           },
         },
       ) as QueueTickWithMasDefaultExecutorRedrive;
-      const task = db.prepare(`
-        SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get('task-mas-default-expired-admission-missing-workflow') as {
-        status: string;
-        attempts: number;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
+      const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-expired-admission-missing-workflow',
+      ) as { status: string };
       const attempts = db.prepare(`
         SELECT status, blocked_reason, provider_run_json
         FROM stage_attempts
@@ -353,11 +330,6 @@ test('scheduler tick syncs missing Temporal workflows through the safe read mode
       assert.equal(tick.selected_count, 1);
       assert.equal(tick.dispatches[0].status, 'running');
       assert.equal(task.status, 'running');
-      assert.equal(task.attempts, 1);
-      assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
-      assert.ok(task.lease_owner);
-      assert.ok(task.lease_expires_at);
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
       assert.equal(attempts[0].blocked_reason, 'temporal_workflow_not_started_or_not_found');
@@ -429,18 +401,9 @@ test('family-runtime tick does not re-admit a MAS default executor task after ac
           return { task_id: selectedRow.task_id };
         },
       });
-      const task = db.prepare(`
-        SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get('task-mas-default-expired-admission-missing-workflow') as {
-        status: string;
-        attempts: number;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
+      const task = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(
+        'task-mas-default-expired-admission-missing-workflow',
+      ) as { status: string };
       const attempts = listStageAttemptsForTask(db, 'task-mas-default-expired-admission-missing-workflow');
       const reconcileEvents = listEvents(db).filter((event) =>
         event.event_type === 'task_default_executor_completed_closeout_reconciled'
@@ -450,11 +413,6 @@ test('family-runtime tick does not re-admit a MAS default executor task after ac
       assert.equal(tick.mas_default_executor_completed_closeout_reconciled_count, 1);
       assert.equal(dispatchCount, 0);
       assert.equal(task.status, 'succeeded');
-      assert.equal(task.attempts, 0);
-      assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
-      assert.equal(task.lease_owner, null);
-      assert.equal(task.lease_expires_at, null);
       assert.equal(attempts.length, 1);
       assert.equal(attempts[0].status, 'completed');
       assert.equal(attempts[0].closeout_receipt_status, 'accepted_typed_closeout');

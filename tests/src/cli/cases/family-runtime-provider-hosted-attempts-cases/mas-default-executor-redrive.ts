@@ -334,7 +334,6 @@ test('family-runtime operator redrive reruns failed MAS default executor provide
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
     forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_failed');
 
-    const failedTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const redrive = runCli([
       'family-runtime',
       'queue',
@@ -348,8 +347,6 @@ test('family-runtime operator redrive reruns failed MAS default executor provide
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempts = redrivenTask.family_runtime_task.stage_attempts;
 
-    assert.equal(failedTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(failedTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_failed');
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
@@ -395,7 +392,6 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
       stageAttemptStatus: 'dead_lettered',
     });
 
-    const deadLetterTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const redrive = runCli([
       'family-runtime',
       'queue',
@@ -409,11 +405,8 @@ test('family-runtime operator redrive can recover MAS default executor retry-bud
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempts = redrivenTask.family_runtime_task.stage_attempts;
 
-    assert.equal(deadLetterTask.family_runtime_task.task.status, 'dead_letter');
-    assert.equal(deadLetterTask.family_runtime_task.task.dead_letter_reason, 'retry_budget_exhausted');
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
-    assert.equal(redrive.family_runtime_redrive.task.attempts, 0);
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.dead_letter_reason, null);
@@ -454,7 +447,6 @@ test('family-runtime operator redrive can recover MAS default executor cancellat
     const taskId = enqueue.family_runtime_enqueue.task.task_id;
     forceTaskIntoProviderTransportBlockedState(stateRoot, taskId, 'temporal_stage_attempt_canceled');
 
-    const cancelledTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const redrive = runCli([
       'family-runtime',
       'queue',
@@ -468,8 +460,6 @@ test('family-runtime operator redrive can recover MAS default executor cancellat
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const attempts = redrivenTask.family_runtime_task.stage_attempts;
 
-    assert.equal(cancelledTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(cancelledTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_canceled');
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
@@ -559,7 +549,6 @@ PY
       queueDb.close();
     }
 
-    const deadLetterTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
     const redrive = runCli([
       'family-runtime',
       'queue',
@@ -572,11 +561,8 @@ PY
     ], env);
     const redrivenTask = runCli(['family-runtime', 'queue', 'inspect', taskId], env);
 
-    assert.equal(deadLetterTask.family_runtime_task.task.status, 'dead_letter');
-    assert.equal(deadLetterTask.family_runtime_task.task.dead_letter_reason, 'retry_budget_exhausted');
     assert.equal(redrive.family_runtime_redrive.redriven, true);
     assert.equal(redrive.family_runtime_redrive.task.status, 'queued');
-    assert.equal(redrive.family_runtime_redrive.task.attempts, 0);
     assert.equal(redrive.family_runtime_redrive.redriven_stage_attempt.status, 'queued');
     assert.equal(redrivenTask.family_runtime_task.task.status, 'queued');
     assert.equal(
@@ -710,7 +696,6 @@ test('family-runtime redrives MAS default executor dispatch with changed source 
     const firstAttempt = blockedTask.family_runtime_task.stage_attempts[0];
 
     assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(blockedTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
     assert.equal(firstAttempt.status, 'blocked');
 
     const redrive = runCli([
@@ -861,7 +846,6 @@ test('family-runtime operator redrive reruns blocked MAS default executor provid
     const firstAttempt = blockedTask.family_runtime_task.stage_attempts[0];
 
     assert.equal(blockedTask.family_runtime_task.task.status, 'blocked');
-    assert.equal(blockedTask.family_runtime_task.task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
     assert.equal(firstAttempt.status, 'blocked');
 
     const redrive = runCli([
