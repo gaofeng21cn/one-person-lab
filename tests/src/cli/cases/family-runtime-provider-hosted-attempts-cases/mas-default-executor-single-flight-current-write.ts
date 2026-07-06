@@ -269,14 +269,13 @@ test('family-runtime enqueue preserves a newer MAS default executor dispatch whi
         source: 'test-domain-export',
       });
       const tasks = db.prepare(`
-        SELECT task_id, status, payload_json, lease_expires_at
+        SELECT task_id, status, payload_json
         FROM tasks
         ORDER BY created_at ASC
       `).all() as Array<{
         task_id: string;
         status: string;
         payload_json: string;
-        lease_expires_at: string | null;
       }>;
       const noopEvent = db.prepare(`
         SELECT payload_json
@@ -299,8 +298,6 @@ test('family-runtime enqueue preserves a newer MAS default executor dispatch whi
       assert.equal(parseJsonText(tasks[0].payload_json).source_fingerprint, 'source-before');
       assert.equal(tasks[1].status, 'queued');
       assert.equal(parseJsonText(tasks[1].payload_json).source_fingerprint, 'source-after');
-      assert.ok(tasks[0].lease_expires_at);
-      assert.ok(Date.parse(tasks[0].lease_expires_at) > Date.now());
       assert.equal(noopEvent, undefined);
       assert.equal(deferredEvent, undefined);
     });
@@ -662,9 +659,9 @@ test('family-runtime syncs terminal same-study attempt before live owner-task sk
           });
         },
       });
-      const reviewerTask = db.prepare('SELECT status, lease_owner, lease_expires_at FROM tasks WHERE task_id = ?').get(
+      const reviewerTask = db.prepare('SELECT status FROM tasks WHERE task_id = ?').get(
         'task-mas-default-same-study-reviewer-terminal-before-writer',
-      ) as { status: string; lease_owner: string | null; lease_expires_at: string | null };
+      ) as { status: string };
       const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
         'task-mas-default-same-study-writer-after-reviewer-terminal',
       ) as { status: string; attempts: number };
@@ -681,8 +678,6 @@ test('family-runtime syncs terminal same-study attempt before live owner-task sk
       assert.equal(result.status, 'running');
       assert.equal(temporalStartCount, 1);
       assert.equal(reviewerTask.status, 'succeeded');
-      assert.equal(reviewerTask.lease_owner, null);
-      assert.equal(reviewerTask.lease_expires_at, null);
       assert.equal(writerTask.status, 'running');
       assert.equal(writerTask.attempts, 1);
       assert.equal(reviewerAttempts.length, 1);

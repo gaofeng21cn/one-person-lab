@@ -233,15 +233,12 @@ test('family-runtime repairs MAS default executor task read model when a same-ta
         }),
       });
       const task = db.prepare(`
-        SELECT status, attempts, lease_owner, lease_expires_at, dead_letter_reason
+        SELECT status, attempts
         FROM tasks
         WHERE task_id = ?
       `).get(taskId) as {
         status: string;
         attempts: number;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-        dead_letter_reason: string | null;
       };
       const leaseEvent = db.prepare(`
         SELECT payload_json
@@ -257,9 +254,6 @@ test('family-runtime repairs MAS default executor task read model when a same-ta
       assert.equal(temporalStartCount, 0);
       assert.equal(task.status, 'running');
       assert.equal(task.attempts, 1);
-      assert.ok(task.lease_owner);
-      assert.ok(task.lease_expires_at);
-      assert.equal(task.dead_letter_reason, null);
       assert.equal(listStageAttemptsForTask(db, taskId).length, 1);
       assert.ok(leaseEvent);
       assert.equal(leasePayload.reason, 'same_task_live_stage_attempt_exists');

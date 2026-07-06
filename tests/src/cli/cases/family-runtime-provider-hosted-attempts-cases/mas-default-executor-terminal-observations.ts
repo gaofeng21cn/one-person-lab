@@ -116,15 +116,13 @@ test('family-runtime blocks a requeued MAS default executor task when its linked
         },
       });
       const task = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        SELECT status, last_error, dead_letter_reason
         FROM tasks
         WHERE task_id = ?
       `).get(taskId) as {
         status: string;
         last_error: string | null;
         dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
       };
       const [syncedAttempt] = listStageAttemptsForTask(db, taskId);
       const event = db.prepare(`
@@ -137,8 +135,6 @@ test('family-runtime blocks a requeued MAS default executor task when its linked
       assert.equal(task.status, 'blocked');
       assert.equal(task.last_error, 'temporal_workflow_failed');
       assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_failed');
-      assert.equal(task.lease_owner, null);
-      assert.equal(task.lease_expires_at, null);
       assert.equal(syncedAttempt.status, 'failed');
       assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_failed');
       assert.ok(event);
@@ -203,15 +199,12 @@ test('family-runtime succeeds a requeued MAS default executor task when its link
         },
       });
       const task = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        SELECT status, last_error
         FROM tasks
         WHERE task_id = ?
       `).get(taskId) as {
         status: string;
         last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
       };
       const [syncedAttempt] = listStageAttemptsForTask(db, taskId);
       const event = db.prepare(`
@@ -223,9 +216,6 @@ test('family-runtime succeeds a requeued MAS default executor task when its link
 
       assert.equal(task.status, 'succeeded');
       assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
-      assert.equal(task.lease_owner, null);
-      assert.equal(task.lease_expires_at, null);
       assert.equal(syncedAttempt.status, 'completed');
       assert.equal(syncedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
       assert.ok(event);

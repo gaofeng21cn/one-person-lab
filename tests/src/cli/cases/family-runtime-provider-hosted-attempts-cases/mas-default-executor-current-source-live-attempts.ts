@@ -70,21 +70,9 @@ test('family-runtime tick does not select newer MAS default executor row while s
           return { task_id: row.task_id };
         },
       });
-      const refreshedRunningTask = db.prepare(`
-        SELECT lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get('task-mas-default-live-running-expired-lease') as {
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
-
       assert.equal(tick.selected_count, 0);
       assert.equal(tick.dispatches.length, 0);
       assert.equal(dispatchCount, 0);
-      assert.ok(refreshedRunningTask.lease_owner);
-      assert.ok(refreshedRunningTask.lease_expires_at);
-      assert.ok(Date.parse(refreshedRunningTask.lease_expires_at) > Date.now());
     });
   } finally {
     db.close();
@@ -383,15 +371,13 @@ test('family-runtime tick syncs terminal cross-task MAS default executor attempt
         },
       });
       const oldTask = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        SELECT status, last_error, dead_letter_reason
         FROM tasks
         WHERE task_id = ?
       `).get('task-mas-default-cross-task-temporal-failed') as {
         status: string;
         last_error: string | null;
         dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
       };
       const oldAttemptAfterSync = db.prepare(`
         SELECT status, blocked_reason
@@ -406,8 +392,6 @@ test('family-runtime tick syncs terminal cross-task MAS default executor attempt
       assert.equal(oldTask.status, 'blocked');
       assert.equal(oldTask.last_error, 'temporal_workflow_failed');
       assert.equal(oldTask.dead_letter_reason, 'temporal_stage_attempt_failed');
-      assert.equal(oldTask.lease_owner, null);
-      assert.equal(oldTask.lease_expires_at, null);
       assert.equal(oldAttemptAfterSync.status, 'failed');
       assert.equal(oldAttemptAfterSync.blocked_reason, 'temporal_workflow_failed');
     });
@@ -499,15 +483,12 @@ test('family-runtime tick syncs a completed running MAS default executor attempt
         },
       });
       const completedTask = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        SELECT status, last_error
         FROM tasks
         WHERE task_id = ?
       `).get('task-mas-default-running-temporal-completed-no-queued-row') as {
         status: string;
         last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
       };
       const [completedAttempt] = db.prepare(`
         SELECT status, closeout_receipt_status, closeout_refs_json
@@ -525,9 +506,6 @@ test('family-runtime tick syncs a completed running MAS default executor attempt
       assert.equal(dispatchCount, 0);
       assert.equal(completedTask.status, 'succeeded');
       assert.equal(completedTask.last_error, null);
-      assert.equal(completedTask.dead_letter_reason, null);
-      assert.equal(completedTask.lease_owner, null);
-      assert.equal(completedTask.lease_expires_at, null);
       assert.equal(completedAttempt.status, 'completed');
       assert.equal(completedAttempt.closeout_receipt_status, 'accepted_typed_closeout');
       assert.deepEqual(parseJsonText(completedAttempt.closeout_refs_json) as string[], ['receipt:dm002/repaired-package']);

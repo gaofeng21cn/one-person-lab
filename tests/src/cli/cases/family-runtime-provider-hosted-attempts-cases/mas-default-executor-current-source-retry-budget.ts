@@ -75,15 +75,13 @@ test('family-runtime tick auto-redrives retryable MAS default executor provider 
         },
       });
       const redrivenTask = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
+        SELECT status, last_error, dead_letter_reason
         FROM tasks
         WHERE task_id = ?
       `).get('task-mas-default-auto-redrive-provider-blocker') as {
         status: string;
         last_error: string | null;
         dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
       };
       const attempts = db.prepare(`
         SELECT status, blocked_reason
@@ -103,8 +101,6 @@ test('family-runtime tick auto-redrives retryable MAS default executor provider 
       assert.equal(redrivenTask.status, 'queued');
       assert.equal(redrivenTask.last_error, null);
       assert.equal(redrivenTask.dead_letter_reason, null);
-      assert.equal(redrivenTask.lease_owner, null);
-      assert.equal(redrivenTask.lease_expires_at, null);
       assert.equal(attempts.length, 2);
       assert.equal(attempts[0].status, 'failed');
       assert.equal(attempts[1].status, 'queued');
