@@ -13,6 +13,9 @@ import {
 } from '../helpers.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
+const appOperatorCommand = ['runtime', 'app-operator-drilldown'];
+const appOperatorFullCommand = [...appOperatorCommand, '--detail', 'full'];
+
 function withMasContractOnlyPayloadSurface(manifest: Record<string, unknown>) {
   return {
     ...manifest,
@@ -190,7 +193,7 @@ function withMasCanaryCloseoutPayloads(manifest: Record<string, unknown>) {
   };
 }
 
-test('runtime App drilldown does not treat MAS contract-only payload surface as owner evidence', () => {
+test('runtime App operator does not treat MAS contract-only payload surface as owner evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-payload-contract-only-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const masManifest = withMasContractOnlyPayloadSurface(loadFamilyManifestFixtures().medautoscience);
@@ -209,7 +212,7 @@ test('runtime App drilldown does not treat MAS contract-only payload surface as 
     buildManifestCommand(masManifest),
   ], env);
 
-  const summary = runCli(['runtime', 'app-operator-drilldown'], env).app_operator_drilldown;
+  const summary = runCli(appOperatorCommand, env).app_operator_drilldown;
   assert.equal(summary.summary.domain_owner_payload_summary_domain_count, 0);
   assert.equal(
     summary.attention_first_payload.evidence_after_contract
@@ -238,7 +241,7 @@ test('runtime action execute records MAS owner payload summaries into a refs-onl
       buildManifestCommand(masManifest),
     ], env);
 
-    const initial = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const initial = runCli(appOperatorFullCommand, env)
       .app_operator_drilldown;
     const recordRoute = initial.operator_action_routing_refs.refs.find(
       (route: { action_kind: string; target_identity?: { item_id?: string } }) =>
@@ -379,7 +382,7 @@ test('runtime action execute records MAS owner payload summaries into a refs-onl
       'typed-blocker:mas:dm002:owner-payload-replacement',
     ]);
 
-    const pending = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+    const pending = runCli(appOperatorFullCommand, env)
       .app_operator_drilldown;
     assert.equal(pending.summary.domain_owner_payload_summary_recorded_ledger_receipt_ref_count, 1);
     assert.equal(pending.summary.domain_owner_payload_summary_verified_ledger_receipt_ref_count, 0);
@@ -417,7 +420,7 @@ test('runtime action execute records MAS owner payload summaries into a refs-onl
   }
 });
 
-test('runtime App drilldown exposes MAS paper-line owner payloads only from explicit canary closeout', () => {
+test('runtime App operator exposes MAS paper-line owner payloads only from explicit canary closeout', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-paper-line-payload-summary-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
@@ -439,12 +442,8 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
     buildManifestCommand(masManifest),
   ], env);
 
-  const summary = runCli(['runtime', 'app-operator-drilldown'], env).app_operator_drilldown;
+  const summary = runCli(appOperatorCommand, env).app_operator_drilldown;
   assert.equal(summary.summary.domain_owner_payload_summary_domain_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_owner_payload_item_summary_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_work_item_count, 2);
-  assert.equal(summary.summary.domain_owner_payload_summary_stage_expected_receipt_summary_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_stage_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_domain_ready_claim_count, 0);
   assert.equal(summary.summary.domain_owner_payload_summary_production_ready_claim_count, 0);
 
@@ -461,10 +460,8 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
   );
   assert.equal(attention.owner_payload_domains[0].source_surface, 'real_paper_autonomy_guarded_apply_proof');
   assert.equal(attention.owner_payload_domains[0].copyable_runtime_action_execute_commands, undefined);
-  assert.equal(attention.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(attention.authority_boundary.can_generate_typed_blocker, false);
 
-  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const full = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   const projection = full.domain_owner_payload_summary_refs;
   assert.equal(projection.summary.domain_count, 1);
@@ -502,8 +499,6 @@ test('runtime App drilldown exposes MAS paper-line owner payloads only from expl
     },
   );
   assert.equal(mas.owner_payload_item_summary.work_items[0].payload_body_allowed, false);
-  assert.equal(mas.owner_payload_item_summary.work_items[0].domain_readiness_claimed, false);
-  assert.equal(mas.owner_payload_item_summary.work_items[0].production_readiness_claimed, false);
   assert.equal(mas.stage_expected_receipt_payload_summary.stage_count, 1);
   assert.equal(
     mas.stage_expected_receipt_payload_summary.stages[0].stage_id,

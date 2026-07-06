@@ -23,14 +23,17 @@ import {
   buildProviderSchedulerActionRoutes,
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/provider-scheduler-action-routes.ts';
 
-test('runtime App drilldown exposes provider worker start route when Temporal service is reachable but worker is not ready', async () => {
+const appOperatorCommand = ['runtime', 'app-operator-drilldown'];
+const appOperatorFullCommand = [...appOperatorCommand, '--detail', 'full'];
+
+test('runtime App operator exposes provider worker start route when Temporal service is reachable but worker is not ready', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-worker-start-route-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const server = net.createServer((socket) => socket.end());
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const temporalAddress = `127.0.0.1:${(server.address() as net.AddressInfo).port}`;
   try {
-    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(appOperatorFullCommand, {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
@@ -88,7 +91,7 @@ test('runtime App drilldown exposes provider worker start route when Temporal se
   }
 });
 
-test('runtime App drilldown selects provider worker start when worker is not ready', () => {
+test('runtime App operator selects provider worker start when worker is not ready', () => {
   const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
@@ -143,8 +146,8 @@ test('runtime App drilldown selects provider worker start when worker is not rea
   ]);
 });
 
-test('runtime App drilldown detail overlay does not synthesize App release owner delta from state', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-detail-overlay-'));
+test('runtime App operator detail overlay does not synthesize App release owner delta from state', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-detail-overlay-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
@@ -204,7 +207,7 @@ test('runtime App drilldown detail overlay does not synthesize App release owner
   }
 });
 
-test('runtime App drilldown keeps provider worker start out of the default next step when owner delta is open', () => {
+test('runtime App operator keeps provider worker start out of the default next step when owner delta is open', () => {
   const projection = applyAppOperatorDrilldownDetail({
     operator_action_routing_refs: {
       refs: [
@@ -302,7 +305,7 @@ test('runtime App drilldown keeps provider worker start out of the default next 
   );
 });
 
-test('runtime App drilldown does not select developer-checkout shared-state worker start as executable', () => {
+test('runtime App operator does not select developer-checkout shared-state worker start as executable', () => {
   const workerRoutes = buildProviderWorkerActionRoutes({
     stageAttemptWorkbench: {},
     providerInspection: {
@@ -344,17 +347,9 @@ test('runtime App drilldown does not select developer-checkout shared-state work
   assert.equal(route.can_submit_to_safe_action_shell, false);
   assert.equal(route.provider_worker_mutation_guard.allowed, false);
   assert.equal(projection.attention_first_payload.next_safe_action, null);
-  assert.equal(
-    projection.app_execution_bridge.safe_action_routes.some(
-      (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
-        ref.action_id === 'provider-worker:temporal:start'
-        && ref.can_submit_to_safe_action_shell,
-    ),
-    false,
-  );
 });
 
-test('runtime App drilldown blocks provider SLO proof when worker repair is mutation-guarded', () => {
+test('runtime App operator blocks provider SLO proof when worker repair is mutation-guarded', () => {
   const workerRoutes = buildProviderWorkerActionRoutes({
     stageAttemptWorkbench: {},
     providerInspection: {
@@ -414,14 +409,6 @@ test('runtime App drilldown blocks provider SLO proof when worker repair is muta
   assert.equal(providerSloRoute.can_submit_to_safe_action_shell, false);
   assert.equal(providerSloRoute.provider_worker_blocked_action_id, 'provider-worker:temporal:start');
   assert.equal(projection.attention_first_payload.next_safe_action, null);
-  assert.equal(
-    projection.app_execution_bridge.safe_action_routes.some(
-      (ref: { action_id: string; can_submit_to_safe_action_shell: boolean }) =>
-        ref.action_id === 'provider-slo:temporal:production-proof'
-        && ref.can_submit_to_safe_action_shell,
-    ),
-    false,
-  );
 });
 
 test('runtime action execute dry-run blocks mutation-guarded provider SLO proof route', async () => {

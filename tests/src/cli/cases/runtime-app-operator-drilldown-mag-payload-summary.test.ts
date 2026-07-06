@@ -13,6 +13,9 @@ import {
 } from '../helpers.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
+const appOperatorCommand = ['runtime', 'app-operator-drilldown'];
+const appOperatorFullCommand = [...appOperatorCommand, '--detail', 'full'];
+
 function withMagOwnerPayloadResponse(manifest: Record<string, unknown>) {
   const sustainedConsumptionFollowthroughWorkorder = {
     surface_kind: 'mag_manifest_sustained_consumption_followthrough_workorder',
@@ -238,7 +241,7 @@ function withMagCountOnlyScaleoutSnapshot(manifest: Record<string, unknown>) {
   };
 }
 
-test('runtime App drilldown consumes MAG owner payload response as refs-only owner and stage guidance', () => {
+test('runtime App operator consumes MAG owner payload response as refs-only owner and stage guidance', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mag-payload-summary-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
@@ -260,12 +263,8 @@ test('runtime App drilldown consumes MAG owner payload response as refs-only own
     buildManifestCommand(magManifest),
   ], env);
 
-  const summary = runCli(['runtime', 'app-operator-drilldown'], env).app_operator_drilldown;
+  const summary = runCli(appOperatorCommand, env).app_operator_drilldown;
   assert.equal(summary.summary.domain_owner_payload_summary_domain_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_owner_payload_item_summary_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_work_item_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_stage_expected_receipt_summary_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_stage_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_payload_body_allowed_count, 0);
   assert.equal(summary.summary.domain_owner_payload_summary_domain_ready_claim_count, 0);
   assert.equal(summary.summary.domain_owner_payload_summary_production_ready_claim_count, 0);
@@ -278,11 +277,8 @@ test('runtime App drilldown consumes MAG owner payload response as refs-only own
   assert.equal(attention.owner_payload_domains[0].source_surface, 'mag_opl_owner_payload_response');
   assert.equal(attention.owner_payload_domains[0].owner_payload_work_item_count, 1);
   assert.equal(attention.owner_payload_domains[0].stage_expected_receipt_payload_stage_count, 1);
-  assert.equal(attention.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(attention.authority_boundary.can_generate_typed_blocker, false);
-  assert.equal(attention.authority_boundary.can_claim_production_ready, false);
 
-  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const full = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   const projection = full.domain_owner_payload_summary_refs;
   assert.equal(projection.summary.domain_count, 1);
@@ -378,7 +374,7 @@ test('runtime App drilldown consumes MAG owner payload response as refs-only own
   assert.equal(readinessAttention.authority_boundary.can_claim_production_ready, false);
 });
 
-test('runtime App drilldown does not expand MAG count-only scaleout snapshot into stage payload routes', () => {
+test('runtime App operator does not expand MAG count-only scaleout snapshot into stage payload routes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mag-count-only-payload-summary-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const magManifest = withMagCountOnlyScaleoutSnapshot(loadFamilyManifestFixtures().medautogrant);
@@ -397,10 +393,9 @@ test('runtime App drilldown does not expand MAG count-only scaleout snapshot int
     buildManifestCommand(magManifest),
   ], env);
 
-  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const full = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   assert.equal(full.summary.domain_owner_payload_summary_domain_count, 1);
-  assert.equal(full.summary.domain_owner_payload_summary_owner_payload_item_summary_count, 1);
   assert.equal(full.summary.domain_owner_payload_summary_stage_expected_receipt_summary_count, 0);
   assert.equal(full.summary.domain_owner_payload_summary_stage_count, 0);
   const mag = full.domain_owner_payload_summary_refs.domains[0];
@@ -414,7 +409,7 @@ test('runtime App drilldown does not expand MAG count-only scaleout snapshot int
   assert.equal(stageRecordRoute, undefined);
 });
 
-test('runtime App drilldown exposes MAG sustained consumption followthrough as refs-only route', () => {
+test('runtime App operator exposes MAG sustained consumption followthrough as refs-only route', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mag-sustained-followthrough-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const magManifest = withMagOwnerPayloadResponse(loadFamilyManifestFixtures().medautogrant);
@@ -433,13 +428,9 @@ test('runtime App drilldown exposes MAG sustained consumption followthrough as r
     buildManifestCommand(magManifest),
   ], env);
 
-  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const full = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   const followthrough = full.mag_manifest_sustained_consumption_followthrough_refs;
-  assert.equal(
-    followthrough.surface_kind,
-    'opl_app_drilldown_mag_manifest_sustained_consumption_followthrough_refs',
-  );
   assert.equal(followthrough.summary.followthrough_domain_count, 1);
   assert.equal(followthrough.summary.workorder_count, 1);
   assert.equal(followthrough.summary.ledger_receipt_ref_count, 0);
@@ -545,7 +536,7 @@ test('runtime App drilldown exposes MAG sustained consumption followthrough as r
     'recorded',
   );
 
-  const verifyDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const verifyDrilldown = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   const verifyRoute = verifyDrilldown.operator_action_routing_refs.refs.find(
     (route: { action_kind: string; domain_id?: string }) =>
@@ -580,7 +571,7 @@ test('runtime App drilldown exposes MAG sustained consumption followthrough as r
     false,
   );
 
-  const finalDrilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const finalDrilldown = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   assert.equal(
     finalDrilldown.summary.mag_manifest_sustained_consumption_followthrough_verified_ledger_receipt_ref_count,

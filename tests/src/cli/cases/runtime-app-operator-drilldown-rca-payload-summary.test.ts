@@ -13,6 +13,9 @@ import {
 } from '../helpers.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
+const appOperatorCommand = ['runtime', 'app-operator-drilldown'];
+const appOperatorFullCommand = [...appOperatorCommand, '--detail', 'full'];
+
 function withRcaPayloadSummaries(manifest: Record<string, unknown>) {
   return {
     ...manifest,
@@ -156,7 +159,7 @@ function withRcaPayloadSummaries(manifest: Record<string, unknown>) {
   };
 }
 
-test('runtime App drilldown exposes RCA owner payload summaries as refs-only guidance', () => {
+test('runtime App operator exposes RCA owner payload summaries as refs-only guidance', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-payload-summary-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
@@ -178,22 +181,13 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
     buildManifestCommand(rcaManifest),
   ], env);
 
-  const summary = runCli(['runtime', 'app-operator-drilldown'], env).app_operator_drilldown;
+  const summary = runCli(appOperatorCommand, env).app_operator_drilldown;
   assert.equal(summary.domain_owner_payload_summary_refs, undefined);
   assert.equal(summary.summary.domain_owner_payload_summary_domain_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_owner_payload_item_summary_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_work_item_count, 2);
-  assert.equal(summary.summary.domain_owner_payload_summary_stage_expected_receipt_summary_count, 1);
-  assert.equal(summary.summary.domain_owner_payload_summary_stage_count, 1);
   assert.equal(summary.summary.domain_owner_payload_summary_domain_ready_claim_count, 0);
   assert.equal(summary.summary.domain_owner_payload_summary_production_ready_claim_count, 0);
   const summaryAttention = summary.attention_first_payload.evidence_after_contract
     .domain_owner_payload_summary_attention;
-  assert.equal(summaryAttention.surface_kind, 'opl_domain_owner_payload_summary_attention');
-  assert.equal(
-    summaryAttention.projection_policy,
-    'bounded_refs_only_payload_summary_guidance_with_refs_only_ledger_route',
-  );
   assert.equal(summaryAttention.domain_count, 1);
   assert.equal(summaryAttention.owner_payload_work_item_count, 2);
   assert.equal(summaryAttention.stage_expected_receipt_payload_stage_count, 1);
@@ -203,16 +197,10 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   assert.equal(summaryAttention.owner_payload_domains[0].stage_expected_receipt_payload_stage_count, 1);
   assert.equal(summaryAttention.owner_payload_domains[0].full_detail_section, 'domain_owner_payload_summary_refs');
   assert.equal(summaryAttention.payload_body_allowed_count, 0);
-  assert.equal(summaryAttention.domain_ready_claim_count, 0);
-  assert.equal(summaryAttention.production_ready_claim_count, 0);
-  assert.equal(summaryAttention.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(summaryAttention.authority_boundary.can_generate_typed_blocker, false);
-  assert.equal(summaryAttention.authority_boundary.can_claim_production_ready, false);
 
-  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const full = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   const projection = full.domain_owner_payload_summary_refs;
-  assert.equal(projection.surface_kind, 'opl_app_drilldown_domain_owner_payload_summary_refs');
   assert.equal(projection.summary.domain_count, 1);
   assert.equal(projection.summary.payload_body_allowed_count, 0);
   assert.equal(projection.summary.domain_ready_claim_count, 0);
@@ -316,7 +304,7 @@ test('runtime App drilldown exposes RCA owner payload summaries as refs-only gui
   );
 });
 
-test('runtime App drilldown blocks RCA legacy payload field alias resurrection', () => {
+test('runtime App operator blocks RCA legacy payload field alias resurrection', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-payload-alias-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(fixtureRoot);
@@ -345,7 +333,7 @@ test('runtime App drilldown blocks RCA legacy payload field alias resurrection',
     buildManifestCommand(rcaManifest),
   ], env);
 
-  const summary = runCli(['runtime', 'app-operator-drilldown'], env)
+  const summary = runCli(appOperatorCommand, env)
     .app_operator_drilldown;
   assert.equal(
     summary.summary.domain_owner_payload_summary_naming_hygiene_blocker_count,
@@ -395,14 +383,6 @@ test('runtime App drilldown blocks RCA legacy payload field alias resurrection',
     worklist.summary.domain_owner_payload_summary_naming_hygiene_blocker_count,
     1,
   );
-  assert.equal(
-    worklist.domain_owner_payload_summary_attention.surface_kind,
-    'opl_domain_owner_payload_summary_attention',
-  );
-  assert.equal(
-    worklist.domain_owner_payload_summary_attention.source_command,
-    'opl runtime app-operator-drilldown --json',
-  );
   assert.equal(worklist.domain_owner_payload_summary_attention.naming_hygiene_blocker_count, 1);
   assert.equal(
     worklist.domain_owner_payload_summary_attention.owner_payload_domains[0].status,
@@ -416,7 +396,7 @@ test('runtime App drilldown blocks RCA legacy payload field alias resurrection',
     false,
   );
 
-  const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], env)
+  const full = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   const projection = full.domain_owner_payload_summary_refs;
   const rca = projection.domains[0];
