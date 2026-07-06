@@ -7,6 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-06
 
+### 决策：Agent Package Manager 保留为 OPL package core，不扩成私有通用 package manager
+
+原因：OPL App 需要管理智能体 package，且 OPL Agent Package 不等于 Codex Plugin。Codex Plugin 只是其中一种 carrier；同一个 Agent Package 还可能被 OPL App、workspace / quest Skill sync、Capability Pack、未来 MCP/Web/native surface 消费。正确边界不是删除 `connect agent-packages`，而是把它收薄为 Framework package core 与 carrier adapters，避免重做通用 package manager 或 domain runtime。
+
+影响：
+
+- `OPL Connect` 保留 Agent Package registry / manifest / lock / lifecycle receipt；package core 只管理 package id、version、digest、dependency、trust tier、lock、lifecycle receipt、exposure 和 shortcut refs。
+- Carrier adapters 负责 Codex Plugin、OPL App、Capability Pack、MCP/Web/native 等物理投影；adapter 不能写入 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
+- `OPL App` 是 package cockpit 和操作入口，只消费 Framework 输出的 package refs、install/update/rollback action refs 和 receipt refs；App 不 hard-code MAS/MAG/RCA 语义，也不成为 package truth owner。
+- Package manager 的优化路线写入 [OPL 过度设计退役与收薄计划](./active/overengineering-retirement-plan.md)：先迁移/删除无语义 wrapper，再收薄 local scheduler/observability/test tail。该计划只授权功能/结构清理，不声明 App release-ready、domain-ready、Brand L5 或 production-ready。
+
 ### 决策：Full runtime bundle producer 由 Framework `runtime env build` 暴露，App 只消费 refs
 
 原因：App Full release 需要可读的 runtime dependency bundle 入口，但 runtime dependency truth 不能迁入 App 仓。Framework 已有 `opl runtime env inspect|lock|build|materialize|contract` 结构，因此最小边界是在 `runtime env build` 输出中稳定暴露 bundle manifest、bundle lock、producer readback/receipt refs、layer taxonomy、target profile/platform 和 false-ready flags，而不是新增第二套平台或 App-owned dependency manifest。
