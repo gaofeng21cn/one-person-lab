@@ -40,6 +40,8 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 
 - `reuse-first-scan` 已支持 `--help`、显式 `--format json` 和紧凑 `--summary`，默认 JSON 输出保持兼容。
 - `source-module-boundary` 已支持 `--help` 和显式 `--format json`，不再让 maintainer script 参数面靠试错发现。
+- `line-budget` 已支持 `--help` 和显式 `--format json`，默认 text/advisory 行为保持兼容。
+- `source-module-public-imports` 已支持 `--help` 和显式 `--format json`，默认 JSON readback 保持兼容。
 - Observability export 的默认 source wording 已从 private ledger / app drilldown 词汇收薄为 `opl_runtime_authority_refs`、`opentelemetry_current_owner_delta_ref` 和 refs-only source projection boundary。
 - `framework-operating-maturity` 的 provider evidence 测试删除重复 projection 断言，只保留 ready-claim guard、receipt count 和 owner-route 行为断言。
 - 当前 full scan summary 为 `finding_count=718`、`hard_gate_finding_count=270`、`advisory_finding_count=448`、`open_worklist_finding_count=13`、`blocking_worklist_finding_count=5`、`owner_route_open_count=5`；这些剩余项仍是历史 / owner-route / live-evidence backlog，不得写成 release/currentness/production/domain ready。
@@ -175,7 +177,7 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 | active reuse-first 文档去流水账化 | `done` | 100% | 本文入口压缩为 current status / exclusions / landable items / audit；历史流水移到 history archive。 | 后续不得在本文继续追加 dated closeout ledger。 |
 | Reuse-first governance gate | `partial` | 98% | contract/support doc、scan/diff gate、policy、history archive 指针；`reuse-first-scan --help/--format json/--summary` 已落。 | 继续按 fresh scan/worklist 消化新增 hard finding；不能声明历史风险清零。 |
 | Schema boundary consolidation | `partial` | 80% | shared schema/JSON helper、focused tests、typecheck、diff gate。 | 继续禁止新增分散 validator。 |
-| CLI parser/command registry | `partial` | 81% | command registry、parser adapter、protected/required command set；`source-module-boundary --help/--format json` 已落。 | 继续迁 remaining public/runtime diagnostic commands；避免新增 parser dependency。 |
+| CLI parser/command registry | `partial` | 83% | command registry、parser adapter、protected/required command set；`source-module-boundary`、`source-module-public-imports`、`line-budget` 的 help/json maintainer surface 已落。 | 继续迁 remaining public/runtime diagnostic commands；避免新增 parser dependency。 |
 | Runway Temporal-first runtime | `blocked` | 88% | local/test-server proof、readback contract、queue projection boundary。 | 需要 external Temporal history/query、managed worker、真实 executor closeout、owner/domain refs。 |
 | Kubernetes-style reconciler | `partial` | 68% | safe-action source / desired-observed readback。 | 继续把 worker/App/domain helper mutation 收到 canonical safe-action source。 |
 | Managed update split | `partial` | 80% | owner-route projection、receipt boundary、component owner split。 | 排除：Managed Update owner-route 另会话处理；不声明 release/currentness ready。 |
@@ -185,7 +187,7 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 | OpenTelemetry-style observability | `partial` | 94% | semantic convention、bounded endpoint/readback、collector smoke；export source wording 已从 private ledger/drilldown 收薄到 OpenTelemetry/ref projection。 | 需要 OTLP/exporter live endpoint、external collector owner receipt、production chain evidence。 |
 | Test / contract projection pruning | `partial` | 72% | provider evidence projection test 已删除重复断言；full scan 从 735 降到 718。 | 继续删除只锁历史词汇的重复测试，但保留关键 ready-claim guard 和 scanner/contract guard。 |
 | No-resurrection governance | `partial` | 91% | scan/diff gate、tombstone/archive policy、compact scan summary。 | 继续用 fresh diff gate 防新增 hard finding。 |
-| Source/test size watch-only | `partial` | 95% | line-budget advisory 只剩 E2B sandbox test file 1055 行，默认入口不失败。 | touched 时按语义拆；不要为指标单独硬拆。 |
+| Source/test size watch-only | `partial` | 95% | line-budget advisory 只剩 E2B sandbox test file 1055 行，默认入口不失败，且可用 `line-budget --format json` 机器读回。 | touched 时按语义拆；不要为指标单独硬拆。 |
 
 ## Forbidden Claims
 
