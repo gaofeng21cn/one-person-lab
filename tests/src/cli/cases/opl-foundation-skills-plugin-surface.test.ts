@@ -175,6 +175,60 @@ const expectedSkills = [
       'promotion_or_hold_evidence',
     ],
   },
+  {
+    id: 'opl-domain-progress-transition-reviewer',
+    tokens: [
+      'DomainProgressTransitionRuntime',
+      'transition_recommendation',
+      'route-back',
+      'no domain progress claim',
+    ],
+  },
+  {
+    id: 'opl-owner-evidence-intake-reviewer',
+    tokens: [
+      'owner_evidence_intake',
+      'observed refs',
+      'evidence_intake_gap',
+      'no owner acceptance claim',
+    ],
+  },
+  {
+    id: 'opl-source-module-boundary-reviewer',
+    tokens: [
+      'source-module boundary',
+      'public entrypoint',
+      'forbidden_dependency',
+      'no source-module mutation',
+    ],
+  },
+  {
+    id: 'opl-memory-artifact-lifecycle-curator',
+    tokens: [
+      'memory/artifact lifecycle',
+      'refs-only lifecycle brief',
+      'artifact body',
+      'no memory or artifact authority',
+    ],
+  },
+  {
+    id: 'opl-agent-package-trust-reviewer',
+    tokens: [
+      'agent package trust',
+      'manifest digest',
+      'trust_risk',
+      'no install-ready claim',
+    ],
+  },
+  {
+    id: 'opl-external-runtime-provider-fit-reviewer',
+    tokens: [
+      'external runtime provider fit',
+      'sandbox substrate',
+      'provider_fit',
+      'no provider readiness claim',
+    ],
+  },
 ] as const;
 
 function readJson(pathname: string) {
