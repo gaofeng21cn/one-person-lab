@@ -11,6 +11,17 @@ type Json = Record<string, unknown>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
+const modalLikeEnvSpecIds = [
+  'chemistry_gpu',
+  'esmfold2_gpu',
+  'genomics_evo2_gpu',
+  'proteomics_boltz_gpu',
+  'proteomics_gpu',
+  'proteomics_jax_gpu',
+  'proteomics_openfold_gpu',
+  'proteomics_rfd_diffdock_gpu',
+  'singlecell_gpu',
+];
 
 function readJson(relativePath: string): Json {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Json;
@@ -112,11 +123,30 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(sandboxPolicy.default_provider_kind, 'local_devcontainer');
   assert.deepEqual(sandboxPolicy.local_provider_examples, ['devcontainer', 'docker']);
   assert.deepEqual(sandboxPolicy.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.deepEqual(sandboxPolicy.required_external_sandbox_refs, [
+    'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+    'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+    'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+  ]);
+  assert.deepEqual(
+    (sandboxPolicy.provider_family_catalog as Json[]).map((entry) => entry.substrate),
+    ['e2b', 'daytona', 'modal'],
+  );
+  const modalCatalog = sandboxPolicy.modal_like_env_spec_catalog as Json;
+  assert.equal(modalCatalog.source_ref, 'AcademicForge:skills/claude-science/remote-compute-modal/envs');
+  assert.deepEqual(modalCatalog.env_ids, modalLikeEnvSpecIds);
+  assert.equal(modalCatalog.env_id_counts_as_image_built, false);
+  assert.equal(modalCatalog.env_id_counts_as_provider_ready, false);
+  assert.equal(modalCatalog.env_id_counts_as_runtime_ready, false);
   assert.equal(sandboxPolicy.provider_role, 'agent_sandbox_execution_substrate');
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('provider_receipt_ref'), true);
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('sandbox_binding_ref'), true);
   assert.equal(sandboxPolicy.temporal_replacement, false);
   assert.equal(sandboxPolicy.requires_live_provider_receipt_for_ready, true);
+  assert.equal(sandboxPolicy.credential_material_read, false);
+  assert.equal(sandboxPolicy.external_api_called, false);
+  assert.equal(sandboxPolicy.provider_lifecycle_managed, false);
+  assert.equal(sandboxPolicy.creates_cloud_resource, false);
   assert.equal(sandboxPolicy.template_exists_counts_as_provider_ready, false);
   assert.equal(sandboxPolicy.local_template_exists_counts_as_provider_ready, false);
   assert.equal(sandboxPolicy.local_sandbox_receipt_counts_as_domain_ready, false);
@@ -126,6 +156,27 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(sandboxPolicy.provider_receipt_counts_as_domain_ready, false);
   assert.equal(sandboxPolicy.can_claim_provider_ready_without_receipt, false);
   assert.equal(sandboxPolicy.can_claim_runtime_ready_without_receipt, false);
+
+  const endpointPolicy = contract.model_endpoint_provider_policy as Json;
+  assert.equal(endpointPolicy.status, 'invoke_readback_contract_only');
+  assert.equal(endpointPolicy.source_ref, 'AcademicForge:skills/claude-science/using-model-endpoint/provider.py');
+  assert.deepEqual(endpointPolicy.required_endpoint_refs, [
+    'OPL_MODEL_ENDPOINT_URL_REF',
+    'OPL_MODEL_ENDPOINT_CREDENTIAL_REF',
+    'OPL_MODEL_ENDPOINT_PROVIDER_RECEIPT_REF',
+  ]);
+  assert.equal((endpointPolicy.invoke_contract as Json).credential_material_read, false);
+  assert.equal((endpointPolicy.invoke_contract as Json).endpoint_api_called_by_readback, false);
+  assert.equal(endpointPolicy.endpoint_lifecycle_managed, false);
+  assert.equal(endpointPolicy.creates_endpoint, false);
+  assert.equal(endpointPolicy.updates_endpoint, false);
+  assert.equal(endpointPolicy.deletes_endpoint, false);
+  assert.equal(endpointPolicy.submit_job_supported, false);
+  assert.equal(endpointPolicy.harvest_job_supported, false);
+  assert.equal(endpointPolicy.can_claim_endpoint_ready, false);
+  assert.equal(endpointPolicy.can_claim_provider_ready, false);
+  assert.equal(endpointPolicy.can_claim_runtime_ready, false);
+  assert.equal(endpointPolicy.can_claim_domain_ready, false);
 
   const inventoryPolicy = contract.cache_inventory_policy as Json;
   assert.equal(inventoryPolicy.status, 'filesystem_inventory_and_prune_receipt_available');
@@ -208,6 +259,11 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(forbiddenClaims.includes('external_sandbox_template_exists_means_provider_ready'), true);
   assert.equal(forbiddenClaims.includes('external_sandbox_snapshot_exists_means_runtime_ready'), true);
   assert.equal(forbiddenClaims.includes('external_sandbox_receipt_means_domain_ready'), true);
+  assert.equal(forbiddenClaims.includes('modal_env_spec_id_means_image_built'), true);
+  assert.equal(forbiddenClaims.includes('modal_env_spec_id_means_provider_ready'), true);
+  assert.equal(forbiddenClaims.includes('model_endpoint_ref_means_endpoint_ready'), true);
+  assert.equal(forbiddenClaims.includes('model_endpoint_provider_receipt_means_domain_ready'), true);
+  assert.equal(forbiddenClaims.includes('model_endpoint_readback_means_runtime_ready'), true);
   assert.equal(forbiddenClaims.includes('missing_run_context_allows_host_environment_fallback'), true);
   assert.equal(forbiddenClaims.includes('run_context_target_mismatch_allows_consumer_execution'), true);
 
@@ -271,6 +327,9 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal((producer.false_ready_flags as Json).bundle_lock_exists_counts_as_app_full_release_ready, false);
   assert.equal((producer.false_ready_flags as Json).local_sandbox_template_exists_counts_as_provider_ready, false);
   assert.equal((producer.false_ready_flags as Json).local_sandbox_receipt_counts_as_domain_ready, false);
+  assert.equal((producer.false_ready_flags as Json).modal_env_spec_id_counts_as_provider_ready, false);
+  assert.equal((producer.false_ready_flags as Json).model_endpoint_ref_counts_as_endpoint_ready, false);
+  assert.equal((producer.false_ready_flags as Json).model_endpoint_readback_counts_as_runtime_ready, false);
   assert.equal((producer.app_full_consumer_boundary as Json).app_owns_release_verdict, true);
   assert.equal((producer.app_full_consumer_boundary as Json).framework_can_claim_app_release_ready, false);
   assert.equal(receipt.bundle_manifest_ref, bundleManifest.bundle_ref);
@@ -296,9 +355,29 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(plan.status, 'external_sandbox_provider_adapter_unconfigured');
   assert.equal(plan.provider_role, 'agent_sandbox_execution_substrate');
   assert.deepEqual(plan.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.deepEqual((plan.modal_like_env_spec_catalog as Json).env_ids, modalLikeEnvSpecIds);
+  assert.equal((plan.modal_like_env_spec_catalog as Json).env_id_counts_as_provider_ready, false);
+  assert.deepEqual((plan.model_endpoint_provider_family as Json).required_endpoint_refs, [
+    'OPL_MODEL_ENDPOINT_URL_REF',
+    'OPL_MODEL_ENDPOINT_CREDENTIAL_REF',
+    'OPL_MODEL_ENDPOINT_PROVIDER_RECEIPT_REF',
+  ]);
+  assert.equal((plan.model_endpoint_provider_family as Json).endpoint_lifecycle_managed, false);
+  assert.equal((plan.model_endpoint_provider_family as Json).creates_endpoint, false);
+  assert.equal((plan.model_endpoint_provider_family as Json).credential_material_read, false);
+  assert.equal((plan.model_endpoint_provider_family as Json).endpoint_api_called_by_readback, false);
+  assert.equal((plan.model_endpoint_provider_family as Json).can_claim_endpoint_ready, false);
   assert.equal(plan.template_ref, 'sandbox-template:mas/analysis/linux-x64');
   assert.equal((plan.adapter as Json).adapter_id, 'opl.external_sandbox_provider_adapter.v1');
+  assert.deepEqual((plan.adapter as Json).required_external_sandbox_refs, [
+    'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+    'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+    'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+  ]);
   assert.equal((plan.adapter as Json).external_api_called, false);
+  assert.equal((plan.adapter as Json).credential_material_read, false);
+  assert.equal((plan.adapter as Json).provider_lifecycle_managed, false);
+  assert.equal((plan.adapter as Json).creates_cloud_resource, false);
   assert.equal(plan.required_receipt_kind, 'external_sandbox_provider_receipt');
   assert.equal(plan.temporal_replacement, false);
   assert.equal(plan.live_provider_receipt_required, true);
@@ -311,4 +390,7 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(producer.sandbox_provider, 'external_sandbox');
   assert.equal(flags.external_sandbox_template_exists_counts_as_provider_ready, false);
   assert.equal(flags.external_sandbox_receipt_counts_as_domain_ready, false);
+  assert.equal(flags.modal_env_spec_id_counts_as_image_built, false);
+  assert.equal(flags.modal_env_spec_id_counts_as_provider_ready, false);
+  assert.equal(flags.model_endpoint_provider_receipt_counts_as_domain_ready, false);
 });

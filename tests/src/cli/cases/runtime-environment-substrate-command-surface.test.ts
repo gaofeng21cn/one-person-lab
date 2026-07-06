@@ -57,6 +57,18 @@ process.exit(0);
   return rscriptPath;
 }
 
+const modalLikeEnvSpecIds = [
+  'chemistry_gpu',
+  'esmfold2_gpu',
+  'genomics_evo2_gpu',
+  'proteomics_boltz_gpu',
+  'proteomics_gpu',
+  'proteomics_jax_gpu',
+  'proteomics_openfold_gpu',
+  'proteomics_rfd_diffdock_gpu',
+  'singlecell_gpu',
+];
+
 test('runtime env CLI exposes deterministic projections before materializing runtime roots', () => {
   const env = stateEnv('dry-run-');
   const inspect = runCli([
@@ -200,14 +212,50 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(externalSandbox.sandbox_provider, 'external_sandbox');
   assert.equal(externalSandbox.sandbox_provider_plan.status, 'external_sandbox_provider_adapter_unconfigured');
   assert.equal(externalSandbox.sandbox_provider_plan.provider_role, 'agent_sandbox_execution_substrate');
+  assert.deepEqual(externalSandbox.sandbox_provider_plan.required_external_sandbox_refs, [
+    'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+    'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+    'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+  ]);
+  assert.deepEqual(
+    externalSandbox.sandbox_provider_plan.provider_family_catalog.map(
+      (entry: { substrate: string }) => entry.substrate,
+    ),
+    ['e2b', 'daytona', 'modal'],
+  );
+  assert.deepEqual(externalSandbox.sandbox_provider_plan.modal_like_env_spec_catalog.env_ids, modalLikeEnvSpecIds);
+  assert.equal(externalSandbox.sandbox_provider_plan.modal_like_env_spec_catalog.env_id_counts_as_provider_ready, false);
   assert.equal(externalSandbox.sandbox_provider_plan.adapter.adapter_id, 'opl.external_sandbox_provider_adapter.v1');
   assert.equal(externalSandbox.sandbox_provider_plan.adapter.external_api_called, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.adapter.credential_material_read, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.adapter.provider_lifecycle_managed, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.adapter.creates_cloud_resource, false);
   assert.deepEqual(externalSandbox.sandbox_provider_plan.adapter.missing_required_env, [
     'OPL_EXTERNAL_SANDBOX_ENDPOINT',
     'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
     'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
   ]);
+  assert.deepEqual(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.required_endpoint_refs, [
+    'OPL_MODEL_ENDPOINT_URL_REF',
+    'OPL_MODEL_ENDPOINT_CREDENTIAL_REF',
+    'OPL_MODEL_ENDPOINT_PROVIDER_RECEIPT_REF',
+  ]);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.endpoint_lifecycle_managed, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.creates_endpoint, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.updates_endpoint, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.deletes_endpoint, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.submit_job_supported, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.harvest_job_supported, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.credential_material_read, false);
+  assert.equal(
+    externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.endpoint_api_called_by_readback,
+    false,
+  );
   assert.equal(externalSandbox.sandbox_provider_plan.can_claim_provider_ready, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.credential_material_read, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.external_api_called, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.provider_lifecycle_managed, false);
+  assert.equal(externalSandbox.sandbox_provider_plan.creates_cloud_resource, false);
   assert.equal(externalSandbox.materialization_plan.status, 'external_sandbox_provider_apply_blocked');
   assert.equal(externalSandbox.materialization_plan.can_apply, false);
   assert.equal(externalSandbox.materialization_plan.applied, false);
@@ -243,6 +291,10 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     'external_sandbox_provider_adapter_configured',
   );
   assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.selected_external_substrate, 'e2b');
+  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.external_api_called, false);
+  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.credential_material_read, false);
+  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.provider_lifecycle_managed, false);
+  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.creates_cloud_resource, false);
   assert.equal(configuredExternalSandbox.materialization_plan.status, 'external_sandbox_provider_binding_receipt_written');
   assert.equal(configuredExternalSandbox.materialization_plan.applied, true);
   assert.equal(configuredExternalSandbox.materialization_plan.can_apply, true);
@@ -250,6 +302,9 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(configuredExternalSandbox.materialization_plan.apply_blocker_ref, null);
   assert.equal(configuredExternalSandbox.materialization_plan.receipt.provider_receipt_ref, 'opl://provider/e2b/test-receipt');
   assert.equal(configuredExternalSandbox.materialization_plan.receipt.external_api_called, false);
+  assert.equal(configuredExternalSandbox.materialization_plan.receipt.credential_material_read, false);
+  assert.equal(configuredExternalSandbox.materialization_plan.receipt.provider_lifecycle_managed, false);
+  assert.equal(configuredExternalSandbox.materialization_plan.receipt.creates_cloud_resource, false);
   assert.equal(configuredExternalSandbox.materialization_plan.can_claim_runtime_ready, false);
 
   const apply = runCli([

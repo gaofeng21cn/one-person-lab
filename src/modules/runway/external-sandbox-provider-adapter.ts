@@ -1,4 +1,9 @@
 export const EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES = ['e2b', 'daytona', 'modal'] as const;
+export const EXTERNAL_SANDBOX_REQUIRED_REFS = [
+  'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+  'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+  'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+] as const;
 
 export type ExternalSandboxSupportedSubstrate = typeof EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES[number];
 
@@ -11,6 +16,8 @@ export type ExternalSandboxProviderAdapterConfig = {
   configured: boolean;
 };
 
+type JsonRecord = Record<string, unknown>;
+
 export function inspectExternalSandboxProviderAdapterEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): ExternalSandboxProviderAdapterConfig {
@@ -22,9 +29,9 @@ export function inspectExternalSandboxProviderAdapterEnv(
     ? rawSubstrate as ExternalSandboxSupportedSubstrate
     : 'generic_external_sandbox';
   const missingRequiredEnv = [
-    ...(endpoint ? [] : ['OPL_EXTERNAL_SANDBOX_ENDPOINT']),
-    ...(credentialRef ? [] : ['OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF']),
-    ...(providerReceiptRef ? [] : ['OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF']),
+    ...(endpoint ? [] : [EXTERNAL_SANDBOX_REQUIRED_REFS[0]]),
+    ...(credentialRef ? [] : [EXTERNAL_SANDBOX_REQUIRED_REFS[1]]),
+    ...(providerReceiptRef ? [] : [EXTERNAL_SANDBOX_REQUIRED_REFS[2]]),
   ];
   return {
     endpoint,
@@ -48,6 +55,7 @@ export function buildExternalSandboxProviderAdapterPlan(targetRef: string) {
     provider_role: 'agent_sandbox_execution_substrate',
     substrate_boundary: 'external_agent_sandbox_not_temporal_durable_workflow_substrate',
     supported_external_substrates: [...EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES],
+    required_external_sandbox_refs: [...EXTERNAL_SANDBOX_REQUIRED_REFS],
     selected_external_substrate: config.substrate,
     endpoint: config.endpoint,
     credential_ref: config.credentialRef,
@@ -62,9 +70,39 @@ export function buildExternalSandboxProviderAdapterPlan(targetRef: string) {
     can_bind_provider_receipt: config.configured,
     credential_material_read: false,
     external_api_called: false,
+    provider_lifecycle_managed: false,
+    creates_cloud_resource: false,
     temporal_durable_workflow_substrate_replacement: false,
     can_claim_provider_ready: false,
     can_claim_runtime_ready: false,
     can_claim_domain_ready: false,
+  };
+}
+
+export function buildModelEndpointProviderReadback(policy: JsonRecord) {
+  return {
+    surface_kind: 'opl_model_endpoint_provider_readback',
+    status: policy.status,
+    source_ref: policy.source_ref,
+    provider_role: policy.provider_role,
+    required_endpoint_refs: policy.required_endpoint_refs,
+    invoke_contract: policy.invoke_contract,
+    readback_contract: policy.readback_contract,
+    endpoint_url_ref: null,
+    credential_ref: null,
+    provider_receipt_ref: null,
+    credential_material_read: false,
+    endpoint_api_called_by_readback: false,
+    endpoint_lifecycle_managed: false,
+    creates_endpoint: false,
+    updates_endpoint: false,
+    deletes_endpoint: false,
+    submit_job_supported: false,
+    harvest_job_supported: false,
+    can_claim_endpoint_ready: false,
+    can_claim_provider_ready: false,
+    can_claim_runtime_ready: false,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
   };
 }

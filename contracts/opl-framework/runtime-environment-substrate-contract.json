@@ -198,6 +198,46 @@
       "daytona",
       "modal"
     ],
+    "provider_family_catalog": [
+      {
+        "family_id": "e2b_style_adapter",
+        "substrate": "e2b",
+        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
+      },
+      {
+        "family_id": "daytona_style_adapter",
+        "substrate": "daytona",
+        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
+      },
+      {
+        "family_id": "modal_style_adapter",
+        "substrate": "modal",
+        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
+      }
+    ],
+    "required_external_sandbox_refs": [
+      "OPL_EXTERNAL_SANDBOX_ENDPOINT",
+      "OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF",
+      "OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF"
+    ],
+    "modal_like_env_spec_catalog": {
+      "source_ref": "AcademicForge:skills/claude-science/remote-compute-modal/envs",
+      "catalog_kind": "modal_like_env_spec_ids_no_authority",
+      "env_ids": [
+        "chemistry_gpu",
+        "esmfold2_gpu",
+        "genomics_evo2_gpu",
+        "proteomics_boltz_gpu",
+        "proteomics_gpu",
+        "proteomics_jax_gpu",
+        "proteomics_openfold_gpu",
+        "proteomics_rfd_diffdock_gpu",
+        "singlecell_gpu"
+      ],
+      "env_id_counts_as_image_built": false,
+      "env_id_counts_as_provider_ready": false,
+      "env_id_counts_as_runtime_ready": false
+    },
     "provider_role": "agent_sandbox_execution_substrate",
     "external_provider_owns": [
       "isolated_filesystem",
@@ -228,6 +268,10 @@
     "temporal_replacement": false,
     "requires_live_provider_receipt_for_ready": true,
     "required_receipt_kind": "external_sandbox_provider_receipt",
+    "credential_material_read": false,
+    "external_api_called": false,
+    "provider_lifecycle_managed": false,
+    "creates_cloud_resource": false,
     "template_exists_counts_as_provider_ready": false,
     "local_template_exists_counts_as_provider_ready": false,
     "local_sandbox_receipt_counts_as_domain_ready": false,
@@ -238,6 +282,41 @@
     "writes_domain_truth": false,
     "can_claim_provider_ready_without_receipt": false,
     "can_claim_runtime_ready_without_receipt": false,
+    "can_claim_domain_ready": false,
+    "can_claim_app_release_ready": false
+  },
+  "model_endpoint_provider_policy": {
+    "surface_kind": "opl_model_endpoint_provider_policy",
+    "status": "invoke_readback_contract_only",
+    "source_ref": "AcademicForge:skills/claude-science/using-model-endpoint/provider.py",
+    "provider_role": "model_endpoint_invoke_substrate",
+    "required_endpoint_refs": [
+      "OPL_MODEL_ENDPOINT_URL_REF",
+      "OPL_MODEL_ENDPOINT_CREDENTIAL_REF",
+      "OPL_MODEL_ENDPOINT_PROVIDER_RECEIPT_REF"
+    ],
+    "invoke_contract": {
+      "endpoint_url_or_ref_required": true,
+      "credential_ref_required": true,
+      "provider_receipt_ref_required": true,
+      "credential_material_read": false,
+      "endpoint_api_called_by_readback": false
+    },
+    "readback_contract": {
+      "exposes_endpoint_ref": true,
+      "exposes_credential_ref": true,
+      "exposes_provider_receipt_ref": true,
+      "exposes_no_lifecycle_authority_flags": true
+    },
+    "endpoint_lifecycle_managed": false,
+    "creates_endpoint": false,
+    "updates_endpoint": false,
+    "deletes_endpoint": false,
+    "submit_job_supported": false,
+    "harvest_job_supported": false,
+    "can_claim_endpoint_ready": false,
+    "can_claim_provider_ready": false,
+    "can_claim_runtime_ready": false,
     "can_claim_domain_ready": false,
     "can_claim_app_release_ready": false
   },
@@ -353,6 +432,11 @@
     "external_sandbox_template_exists_means_provider_ready",
     "external_sandbox_snapshot_exists_means_runtime_ready",
     "external_sandbox_receipt_means_domain_ready",
+    "modal_env_spec_id_means_image_built",
+    "modal_env_spec_id_means_provider_ready",
+    "model_endpoint_ref_means_endpoint_ready",
+    "model_endpoint_provider_receipt_means_domain_ready",
+    "model_endpoint_readback_means_runtime_ready",
     "run_context_exists_means_provider_ready",
     "missing_run_context_allows_host_environment_fallback",
     "run_context_target_mismatch_allows_consumer_execution"
