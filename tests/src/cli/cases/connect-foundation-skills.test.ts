@@ -29,8 +29,8 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.equal(output.opl_connect_foundation_skills.status, 'completed');
   assert.equal(output.opl_connect_foundation_skills.manifest_status, 'exposure_manifest');
   assert.equal(output.opl_connect_foundation_skills.manifest_ref, 'plugins/opl-foundation-skills/exposure.json');
-  assert.equal(output.opl_connect_foundation_skills.skill_count, 38);
-  assert.equal(output.opl_connect_foundation_skills.skills.length, 38);
+  assert.equal(output.opl_connect_foundation_skills.skill_count, 40);
+  assert.equal(output.opl_connect_foundation_skills.skills.length, 40);
   const completionAudit = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-completion-audit-writer');
   assert.ok(completionAudit);
   assert.equal(completionAudit.exposure_scope, 'project_local');
