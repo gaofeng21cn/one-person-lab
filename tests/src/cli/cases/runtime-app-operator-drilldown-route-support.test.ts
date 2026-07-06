@@ -26,8 +26,8 @@ function useTempState(t: { after: (fn: () => void) => void }, prefix: string) {
   });
 }
 
-test('runtime App drilldown exposes MAS route support as refs-only runtime-manager projection', (t) => {
-  useTempState(t, 'opl-app-drilldown-route-support-');
+test('runtime App exposes MAS route support as refs-only runtime-manager projection', (t) => {
+  useTempState(t, 'opl-app-route-support-');
   const supportProjection = buildMasDomainRouteSupportProjection();
   assert.deepEqual(supportProjection.supported_task_kinds, [
     'domain_route/reconcile-apply',
@@ -69,7 +69,7 @@ test('runtime App drilldown exposes MAS route support as refs-only runtime-manag
   assert.equal(projection.runtime_manager_route_support.authority_boundary.can_authorize_publication_aftercare, false);
 });
 
-test('runtime App drilldown exposes route-as-transition refs in one operator projection', () => {
+test('runtime App exposes route-as-transition refs in one operator projection', () => {
   const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: {
       attempts: [
@@ -114,60 +114,61 @@ test('runtime App drilldown exposes route-as-transition refs in one operator pro
     domainManifestProjects: [],
     detailLevel: 'full',
   });
+  const routeTransition = projection.route_transition_drilldown;
 
   assert.equal(
-    projection.route_transition_drilldown.surface_kind,
+    routeTransition.surface_kind,
     'opl_app_drilldown_route_transition_drilldown',
   );
   assert.equal(
-    projection.route_transition_drilldown.projection_policy,
+    routeTransition.projection_policy,
     'refs_only_no_domain_truth_or_owner_receipt_generation',
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.mas_route_support.supported_task_kinds,
+    routeTransition.mas_route_support.supported_task_kinds,
     buildMasDomainRouteSupportProjection().supported_task_kinds,
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.transition_spec_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.transition_spec_refs.map((ref: { ref: string }) => ref.ref),
     ['contracts/medautoscience.transition.json'],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.materialization_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.materialization_refs.map((ref: { ref: string }) => ref.ref),
     ['contract-materialization:mas/transition', 'matrix:mas/transition'],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.stage_attempt_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.stage_attempt_refs.map((ref: { ref: string }) => ref.ref),
     ['/stage_attempt_workbench/attempts/sat_mas_route_transition/route_impact'],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.owner_route_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.owner_route_refs.map((ref: { ref: string }) => ref.ref),
     ['owner-route:mas/DM002/ai-reviewer-refresh'],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.human_gate_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.human_gate_refs.map((ref: { ref: string }) => ref.ref),
     [
       'human-gate:mas/DM002/release-gate',
       'human-gate:mas/DM002/physician-decision',
     ],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.dead_letter_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.dead_letter_refs.map((ref: { ref: string }) => ref.ref),
     [
       'dead-letter:mas/DM002/retry-budget-exhausted',
       '/stage_attempt_workbench/attempts/sat_mas_route_transition/dead_letter',
     ],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.typed_blocker_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.typed_blocker_refs.map((ref: { ref: string }) => ref.ref),
     ['typed-blocker:mas/DM002/reviewer-refresh-required'],
   );
   assert.deepEqual(
-    projection.route_transition_drilldown.owner_receipt_refs.map((ref: { ref: string }) => ref.ref),
+    routeTransition.owner_receipt_refs.map((ref: { ref: string }) => ref.ref),
     ['owner-receipt:mas/DM002/reviewer-feedback-intake'],
   );
-  assert.equal(projection.route_transition_drilldown.authority_boundary.can_write_domain_truth, false);
-  assert.equal(projection.route_transition_drilldown.authority_boundary.can_record_owner_receipt, false);
-  assert.equal(projection.route_transition_drilldown.authority_boundary.can_close_owner_chain, false);
+  assert.equal(routeTransition.authority_boundary.can_write_domain_truth, false);
+  assert.equal(routeTransition.authority_boundary.can_record_owner_receipt, false);
+  assert.equal(routeTransition.authority_boundary.can_close_owner_chain, false);
   assert.equal(projection.summary.route_transition_drilldown_stage_attempt_count, 1);
   assert.equal(projection.summary.route_transition_drilldown_owner_route_ref_count, 1);
   assert.equal(projection.summary.route_transition_drilldown_human_gate_ref_count, 2);
