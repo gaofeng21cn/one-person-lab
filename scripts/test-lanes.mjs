@@ -355,6 +355,7 @@ const lanes = {
       'tests/src/verification-test-governance.test.ts',
       'tests/src/reuse-first-scan.test.ts',
       'tests/src/source-module-boundary.test.ts',
+      'tests/src/source-module-public-imports.test.ts',
       'tests/src/cli-modularization.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/runtime-environment-substrate.test.ts',
