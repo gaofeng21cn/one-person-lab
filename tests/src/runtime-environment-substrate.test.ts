@@ -102,10 +102,12 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   );
 
   const sandboxPolicy = contract.external_sandbox_provider_policy as Json;
-  assert.equal(sandboxPolicy.status, 'adapter_boundary_available_without_live_provider_claim');
+  assert.equal(sandboxPolicy.status, 'adapter_preflight_and_binding_available_without_live_provider_claim');
   assert.deepEqual(sandboxPolicy.supported_provider_kinds, ['local_managed_root', 'external_sandbox']);
   assert.deepEqual(sandboxPolicy.external_provider_examples, ['e2b', 'daytona', 'modal']);
   assert.equal(sandboxPolicy.provider_role, 'agent_sandbox_execution_substrate');
+  assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('provider_receipt_ref'), true);
+  assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('sandbox_binding_ref'), true);
   assert.equal(sandboxPolicy.temporal_replacement, false);
   assert.equal(sandboxPolicy.requires_live_provider_receipt_for_ready, true);
   assert.equal(sandboxPolicy.template_exists_counts_as_provider_ready, false);
@@ -271,10 +273,12 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(readback.sandbox_provider, 'external_sandbox');
   assert.equal(readback.can_claim_runtime_ready, false);
   const plan = readback.sandbox_provider_plan as Json;
-  assert.equal(plan.status, 'external_sandbox_provider_adapter_required');
+  assert.equal(plan.status, 'external_sandbox_provider_adapter_unconfigured');
   assert.equal(plan.provider_role, 'agent_sandbox_execution_substrate');
   assert.deepEqual(plan.external_provider_examples, ['e2b', 'daytona', 'modal']);
   assert.equal(plan.template_ref, 'sandbox-template:mas/analysis/linux-x64');
+  assert.equal((plan.adapter as Json).adapter_id, 'opl.external_sandbox_provider_adapter.v1');
+  assert.equal((plan.adapter as Json).external_api_called, false);
   assert.equal(plan.required_receipt_kind, 'external_sandbox_provider_receipt');
   assert.equal(plan.temporal_replacement, false);
   assert.equal(plan.live_provider_receipt_required, true);
