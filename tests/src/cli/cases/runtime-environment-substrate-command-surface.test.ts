@@ -196,8 +196,15 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     '--apply',
   ], env).runtime_environment;
   assert.equal(externalSandbox.sandbox_provider, 'external_sandbox');
-  assert.equal(externalSandbox.sandbox_provider_plan.status, 'external_sandbox_provider_adapter_required');
+  assert.equal(externalSandbox.sandbox_provider_plan.status, 'external_sandbox_provider_adapter_unconfigured');
   assert.equal(externalSandbox.sandbox_provider_plan.provider_role, 'agent_sandbox_execution_substrate');
+  assert.equal(externalSandbox.sandbox_provider_plan.adapter.adapter_id, 'opl.external_sandbox_provider_adapter.v1');
+  assert.equal(externalSandbox.sandbox_provider_plan.adapter.external_api_called, false);
+  assert.deepEqual(externalSandbox.sandbox_provider_plan.adapter.missing_required_env, [
+    'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+    'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+    'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+  ]);
   assert.equal(externalSandbox.sandbox_provider_plan.can_claim_provider_ready, false);
   assert.equal(externalSandbox.materialization_plan.status, 'external_sandbox_provider_apply_blocked');
   assert.equal(externalSandbox.materialization_plan.can_apply, false);
@@ -205,9 +212,43 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(externalSandbox.materialization_plan.writes_runtime_root, false);
   assert.equal(
     externalSandbox.materialization_plan.apply_blocker_ref,
-    'external_sandbox_provider_live_receipt_required',
+    'external_sandbox_provider_adapter_unconfigured',
   );
   assert.equal(externalSandbox.materialization_plan.can_claim_runtime_ready, false);
+
+  const configuredExternalSandbox = runCli([
+    'runtime',
+    'env',
+    'materialize',
+    '--domain',
+    'mas',
+    '--profile',
+    'analysis',
+    '--platform',
+    'macos-arm64',
+    '--sandbox-provider',
+    'external_sandbox',
+    '--apply',
+  ], {
+    ...env,
+    OPL_EXTERNAL_SANDBOX_ENDPOINT: 'https://sandbox.invalid',
+    OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF: 'keychain://opl/external-sandbox/test',
+    OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF: 'opl://provider/e2b/test-receipt',
+    OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'e2b',
+  }).runtime_environment;
+  assert.equal(
+    configuredExternalSandbox.sandbox_provider_plan.status,
+    'external_sandbox_provider_adapter_configured',
+  );
+  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.selected_external_substrate, 'e2b');
+  assert.equal(configuredExternalSandbox.materialization_plan.status, 'external_sandbox_provider_binding_receipt_written');
+  assert.equal(configuredExternalSandbox.materialization_plan.applied, true);
+  assert.equal(configuredExternalSandbox.materialization_plan.can_apply, true);
+  assert.equal(configuredExternalSandbox.materialization_plan.writes_runtime_root, false);
+  assert.equal(configuredExternalSandbox.materialization_plan.apply_blocker_ref, null);
+  assert.equal(configuredExternalSandbox.materialization_plan.receipt.provider_receipt_ref, 'opl://provider/e2b/test-receipt');
+  assert.equal(configuredExternalSandbox.materialization_plan.receipt.external_api_called, false);
+  assert.equal(configuredExternalSandbox.materialization_plan.can_claim_runtime_ready, false);
 
   const apply = runCli([
     'runtime',

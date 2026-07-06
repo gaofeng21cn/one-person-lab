@@ -24,6 +24,7 @@ import {
   readPrepareProfile,
   relativePaperBuildRef,
   requirementProfileIdentity,
+  receiptsRoot,
   resolveBinary,
   runtimeEnvironmentConsumerBoundary,
   RUNTIME_ENVIRONMENT_FALLBACK_POINTER,
@@ -521,6 +522,77 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
     };
   }
   if (target.sandbox_provider === 'external_sandbox') {
+    const adapter = sandboxPlan.adapter as JsonRecord | null;
+    if (adapter?.configured === true) {
+      const receiptPath = path.join(receiptsRoot(target), `${shortDigest({
+        sandbox_binding_ref: adapter.sandbox_binding_ref,
+        provider_receipt_ref: adapter.provider_receipt_ref,
+      })}.json`);
+      const receipt = {
+        surface_kind: 'opl_external_sandbox_provider_binding_receipt',
+        version: 'opl-external-sandbox-provider-binding-receipt.v1',
+        status: 'provider_receipt_bound',
+        domain_id: target.domain_id,
+        profile_id: target.profile_id,
+        platform_id: target.platform_id,
+        target_pointer: targetPointer,
+        sandbox_provider: target.sandbox_provider,
+        adapter_id: adapter.adapter_id,
+        adapter_status: adapter.adapter_status,
+        provider_role: adapter.provider_role,
+        selected_external_substrate: adapter.selected_external_substrate,
+        endpoint: adapter.endpoint,
+        credential_ref: adapter.credential_ref,
+        provider_receipt_ref: adapter.provider_receipt_ref,
+        sandbox_binding_ref: adapter.sandbox_binding_ref,
+        template_ref: adapter.template_ref,
+        receipt_ref: stateRef(receiptPath),
+        writes_runtime_root: false,
+        writes_development_checkout: false,
+        writes_domain_repo: false,
+        credential_material_read: false,
+        external_api_called: false,
+        temporal_durable_workflow_substrate_replacement: false,
+        can_claim_provider_ready: false,
+        can_claim_runtime_ready: false,
+        can_claim_domain_ready: false,
+        can_claim_app_release_ready: false,
+        authority_boundary: authorityBoundary(),
+      };
+      writeJsonFile(receiptPath, receipt);
+      return {
+        ...baseReadback('materialize', input),
+        bundle_manifest: bundleManifest,
+        sandbox_provider_plan: sandboxPlan,
+        materialization_plan: {
+          surface_kind: 'opl_runtime_environment_materialization_plan',
+          status: 'external_sandbox_provider_binding_receipt_written',
+          target_pointer: targetPointer,
+          requested_apply: true,
+          dry_run: false,
+          applied: true,
+          can_apply: true,
+          runtime_root: null,
+          receipt_ref: stateRef(receiptPath),
+          writes_runtime_root: false,
+          updates_current_pointer: false,
+          updates_rollback_pointer: false,
+          protects_current_pointer: true,
+          protects_rollback_pointer: true,
+          apply_blocker_ref: null,
+          steps: [
+            'select_external_sandbox_provider',
+            'read_provider_profile_refs',
+            'bind_opl_run_context_to_provider_receipt',
+            'write_external_sandbox_provider_binding_receipt',
+          ],
+          receipt,
+          can_claim_provider_ready: false,
+          can_claim_runtime_ready: false,
+          can_claim_domain_ready: false,
+        },
+      };
+    }
     return {
       ...baseReadback('materialize', input),
       bundle_manifest: bundleManifest,
@@ -540,7 +612,7 @@ export function buildRuntimeEnvironmentMaterializeReadback(input: RuntimeEnviron
         updates_rollback_pointer: false,
         protects_current_pointer: true,
         protects_rollback_pointer: true,
-        apply_blocker_ref: 'external_sandbox_provider_live_receipt_required',
+        apply_blocker_ref: 'external_sandbox_provider_adapter_unconfigured',
         route_hint: 'configure_external_sandbox_provider_adapter',
         steps: [
           'select_external_sandbox_provider',

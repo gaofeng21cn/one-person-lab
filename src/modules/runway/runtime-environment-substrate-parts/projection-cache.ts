@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { JsonRecord, RuntimeEnvironmentCachePruneInput, RuntimeEnvironmentCommand, RuntimeEnvironmentTargetInput } from './contract.ts';
+import { buildExternalSandboxProviderAdapterPlan } from '../external-sandbox-provider-adapter.ts';
 import {
   authorityBoundary,
   cachePolicy,
@@ -161,10 +162,11 @@ export function sandboxProviderPlan(input: RuntimeEnvironmentTargetInput) {
   const target = normalizeTarget(input);
   const policy = externalSandboxProviderPolicy();
   const externalSelected = target.sandbox_provider === 'external_sandbox';
+  const adapter = externalSelected ? buildExternalSandboxProviderAdapterPlan(targetRef(target)) : null;
   return {
     surface_kind: 'opl_runtime_environment_sandbox_provider_plan' as const,
     status: externalSelected
-      ? 'external_sandbox_provider_adapter_required'
+      ? adapter?.adapter_status
       : 'local_managed_root_selected',
     selected_provider: target.sandbox_provider,
     provider_role: externalSelected
@@ -173,7 +175,9 @@ export function sandboxProviderPlan(input: RuntimeEnvironmentTargetInput) {
     provider_ref: `sandbox-provider:${target.sandbox_provider}:${targetRef(target)}`,
     supported_provider_kinds: policy.supported_provider_kinds,
     external_provider_examples: policy.external_provider_examples,
-    template_ref: externalSelected ? `sandbox-template:${targetRef(target)}` : null,
+    adapter,
+    template_ref: externalSelected ? adapter?.template_ref : null,
+    sandbox_binding_ref: externalSelected ? adapter?.sandbox_binding_ref : null,
     snapshot_ref: null,
     volume_ref: null,
     required_receipt_kind: externalSelected ? policy.required_receipt_kind : null,
@@ -183,7 +187,7 @@ export function sandboxProviderPlan(input: RuntimeEnvironmentTargetInput) {
     can_claim_provider_ready: false,
     can_claim_runtime_ready: false,
     can_claim_domain_ready: false,
-    live_provider_receipt_required: externalSelected,
+    live_provider_receipt_required: externalSelected && adapter?.configured !== true,
   };
 }
 

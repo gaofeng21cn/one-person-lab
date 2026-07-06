@@ -19,6 +19,10 @@ import {
 import {
   repairTemporalWorkerForProviderRepair,
 } from './family-runtime-provider-worker-repair.ts';
+import {
+  buildExternalSandboxProviderAdapterPlan,
+  inspectExternalSandboxProviderAdapterEnv,
+} from './external-sandbox-provider-adapter.ts';
 
 export type FamilyRuntimeProviderInspection = {
   provider_kind: FamilyRuntimeProviderKind;
@@ -89,26 +93,6 @@ function temporalAddress() {
 function temporalWorkerConfigured() {
   return process.env.OPL_TEMPORAL_WORKER_ENABLED?.trim() === '1'
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
-}
-
-function externalSandboxConfig() {
-  const endpoint = process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT?.trim() || null;
-  const credentialRef = process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF?.trim() || null;
-  const providerReceiptRef = process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF?.trim() || null;
-  const substrate = process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE?.trim() || null;
-  const missingRequiredEnv = [
-    ...(endpoint ? [] : ['OPL_EXTERNAL_SANDBOX_ENDPOINT']),
-    ...(credentialRef ? [] : ['OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF']),
-    ...(providerReceiptRef ? [] : ['OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF']),
-  ];
-  return {
-    endpoint,
-    credentialRef,
-    providerReceiptRef,
-    substrate,
-    missingRequiredEnv,
-    configured: missingRequiredEnv.length === 0,
-  };
 }
 
 function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>) {
@@ -241,7 +225,8 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
   }
 
   if (kind === 'external_sandbox') {
-    const config = externalSandboxConfig();
+    const config = inspectExternalSandboxProviderAdapterEnv();
+    const adapter = buildExternalSandboxProviderAdapterPlan('family-runtime-provider');
     return {
       provider_kind: kind,
       status: 'attention_needed',
@@ -271,9 +256,9 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         credential_ref: config.credentialRef,
         provider_receipt_ref: config.providerReceiptRef,
         missing_required_env: config.missingRequiredEnv,
-        adapter_mode: config.configured
-          ? 'configured_external_sandbox_adapter_readback'
-          : 'external_sandbox_adapter_unconfigured',
+        adapter_id: adapter.adapter_id,
+        adapter_mode: adapter.adapter_status,
+        adapter,
         readiness_dependency: 'explicit_endpoint_credential_ref_and_provider_receipt_ref_required',
         credential_material_read: false,
         external_api_called: false,

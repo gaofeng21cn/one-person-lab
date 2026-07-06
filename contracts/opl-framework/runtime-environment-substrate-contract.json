@@ -180,7 +180,7 @@
   },
   "external_sandbox_provider_policy": {
     "surface_kind": "opl_external_sandbox_provider_policy",
-    "status": "adapter_boundary_available_without_live_provider_claim",
+    "status": "adapter_preflight_and_binding_available_without_live_provider_claim",
     "purpose": "Route agent execution sandbox substrate to mature external providers while keeping OPL-owned stage, authority, receipt, readback, and false-ready boundaries.",
     "supported_provider_kinds": [
       "local_managed_root",
@@ -210,6 +210,14 @@
       "run_context_binding",
       "false_ready_guard",
       "operator_projection"
+    ],
+    "adapter_owned_fields": [
+      "provider_profile",
+      "credential_ref_preflight",
+      "provider_receipt_ref",
+      "sandbox_binding_ref",
+      "run_context_binding_ref",
+      "false_ready_flags"
     ],
     "temporal_replacement": false,
     "requires_live_provider_receipt_for_ready": true,

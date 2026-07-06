@@ -1066,6 +1066,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Temporal 仍是 production online durable workflow / wakeup / retry / human-gate substrate。External sandbox provider 不持有 workflow history、typed queue、human gate、attempt ledger、owner route 或 domain authority。
 - Runtime environment substrate 保留 descriptor / lock / bundle manifest / managed runtime root / run-context / receipt / cache inventory / no-host-fallback 边界，但不继续扩张成自研 VM/container sandbox。
 - OPL-owned adapter 只应持有 provider profile、credential preflight、run-context binding、sandbox receipt projection、repair/preflight work order 和 false-ready flags。provider credential 缺失、sandbox receipt 缺失或 host fallback 被触发时必须 fail closed。
+- 当前 Framework 已落地 `opl.external_sandbox_provider_adapter.v1` 的 provider profile / credential-ref / provider-receipt-ref preflight 与 OPL sandbox binding receipt；它不读取 secret material、不调用 provider API、不写本地 runtime root，也不声明 provider ready / runtime ready / domain ready。
 - live E2B / Daytona / Modal credential run、provider long-soak、App release cohort 和真实用户路径是后置 evidence；docs、contracts、focused tests、materialization receipt、cache hit 或 provider adapter dry-run 都不能声明 provider ready、App release ready、Brand L5 或 production ready。
 
 ## 2026-05-15

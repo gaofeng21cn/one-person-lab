@@ -232,6 +232,8 @@ test('runtime manager fail-closes external sandbox provider when adapter config 
     assert.equal(provider.details.external_api_called, false);
     assert.equal(provider.details.credential_material_read, false);
     assert.equal(provider.details.temporal_durable_workflow_substrate_replacement, false);
+    assert.equal(provider.details.adapter_id, 'opl.external_sandbox_provider_adapter.v1');
+    assert.equal(provider.details.adapter.adapter_status, 'external_sandbox_provider_adapter_unconfigured');
     assert.deepEqual(provider.details.missing_required_env, [
       'OPL_EXTERNAL_SANDBOX_ENDPOINT',
       'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
@@ -288,6 +290,9 @@ test('runtime manager keeps configured external sandbox separate from Temporal r
     assert.equal(provider.details.credential_ref, 'keychain://opl/external-sandbox/test');
     assert.equal(provider.details.provider_receipt_ref, 'opl://provider/external-sandbox/test-receipt');
     assert.equal(provider.details.adapter_configured, true);
+    assert.equal(provider.details.adapter_id, 'opl.external_sandbox_provider_adapter.v1');
+    assert.equal(provider.details.adapter_mode, 'external_sandbox_provider_adapter_configured');
+    assert.equal(provider.details.adapter.can_bind_provider_receipt, true);
     assert.equal(provider.details.selected_external_substrate, 'e2b');
     assert.equal(provider.details.provider_ready_counts_as_online_runtime_ready, false);
     assert.equal(output.status, 'external_sandbox_configured_not_temporal_durable_runtime_ready');
