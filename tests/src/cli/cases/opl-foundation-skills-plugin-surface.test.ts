@@ -5,7 +5,7 @@ const pluginManifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json')
 const exposureManifestPath = path.join(pluginRoot, 'exposure.json');
 const skillsRoot = path.join(pluginRoot, 'skills');
 
-const expectedSkillCount = 41;
+const expectedSkillCount = 42;
 const legalExposureScopes = new Set([
   'source_only',
   'project_local',
