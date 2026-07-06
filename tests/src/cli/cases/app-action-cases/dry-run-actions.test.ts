@@ -1,9 +1,26 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
 
+function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
+  const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env python3',
+      'import json',
+      'print(json.dumps({"opl_flow_intelligence_enhancement_action": {"status": "dry_run", "proxy_base_url": "http://127.0.0.1:8787/v1", "authority_boundary": {"owner": "opl_flow", "can_write_domain_truth": False, "can_authorize_release_ready": False, "shell_must_not_edit_configs_directly": True}}}))',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+}
+
 test('app action execute dry-runs Codex, module, scheduler, and worker actions from one boundary', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-dry-run-home-'));
 
   try {
+    writeOplFlowIntelligenceEnhancementFixture(homeRoot);
+
     const env = {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
