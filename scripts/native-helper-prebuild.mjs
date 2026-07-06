@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs as parseNodeArgs } from 'node:util';
 import { parseJsonText, readJsonFile } from './script-json-boundary.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -18,24 +19,33 @@ const helperBinaries = [
 ];
 const defaultOciImage = 'ghcr.io/gaofeng21cn/one-person-lab-native-helper';
 const nativeHelperLayerMediaType = 'application/vnd.onepersonlab.native-helper.v1+gzip';
-
-const args = process.argv.slice(2);
-const command = args[0] && !args[0].startsWith('--') ? args[0] : 'install';
-const options = parseOptions(args.slice(command === args[0] ? 1 : 0));
-const targetTriple = options.target ?? `${process.platform}-${process.arch}`;
-const crateVersion = nativeHelperCrateVersion();
-const prebuildRoot = path.resolve(
-  options['prebuild-root']
-    ?? process.env.OPL_NATIVE_HELPER_PREBUILD_ROOT
-    ?? path.join(rootDir, 'native-helper-prebuilds'),
-);
-const stateDir = path.resolve(
-  options['state-dir']
-    ?? process.env.OPL_STATE_DIR
-    ?? path.join(process.env.HOME ?? rootDir, 'Library/Application Support/OPL/state'),
-);
+let targetTriple;
+let crateVersion;
+let prebuildRoot;
+let stateDir;
+let options;
 
 try {
+  const parsed = parseCli(process.argv.slice(2));
+  const { command, help } = parsed;
+  options = parsed.options;
+  if (help) {
+    printHelp();
+    process.exit(0);
+  }
+  targetTriple = options.target ?? `${process.platform}-${process.arch}`;
+  crateVersion = nativeHelperCrateVersion();
+  prebuildRoot = path.resolve(
+    options['prebuild-root']
+      ?? process.env.OPL_NATIVE_HELPER_PREBUILD_ROOT
+      ?? path.join(rootDir, 'native-helper-prebuilds'),
+  );
+  stateDir = path.resolve(
+    options['state-dir']
+      ?? process.env.OPL_STATE_DIR
+      ?? path.join(process.env.HOME ?? rootDir, 'Library/Application Support/OPL/state'),
+  );
+
   if (command === 'pack') {
     writeJson(packPrebuild());
   } else if (command === 'archive') {
@@ -587,23 +597,59 @@ function binaryFileName(binary) {
   return targetTriple.startsWith('win32-') ? `${binary}.exe` : binary;
 }
 
-function parseOptions(rawArgs) {
-  const parsed = {};
-  for (let index = 0; index < rawArgs.length; index += 1) {
-    const arg = rawArgs[index];
-    if (!arg.startsWith('--')) {
-      continue;
-    }
-    const key = arg.slice(2);
-    const value = rawArgs[index + 1];
-    if (!value || value.startsWith('--')) {
-      parsed[key] = 'true';
-      continue;
-    }
-    parsed[key] = value;
-    index += 1;
+function parseCli(argv) {
+  const { values, positionals } = parseNodeArgs({
+    args: argv,
+    allowPositionals: true,
+    strict: true,
+    options: {
+      target: { type: 'string' },
+      'prebuild-root': { type: 'string' },
+      'state-dir': { type: 'string' },
+      'source-dir': { type: 'string' },
+      'release-archive-url': { type: 'string' },
+      'release-base-url': { type: 'string' },
+      'oci-image': { type: 'string' },
+      'oci-tag': { type: 'string' },
+      help: { type: 'boolean', short: 'h', default: false },
+    },
+  });
+  if (positionals.length > 1) {
+    throw new Error(`native helper prebuild accepts at most one command; got ${positionals.join(' ')}`);
   }
-  return parsed;
+  const commandName = positionals[0] ?? 'install';
+  if (!['pack', 'archive', 'install', 'check'].includes(commandName)) {
+    throw new Error(`Unknown native helper prebuild command: ${commandName}`);
+  }
+  return {
+    command: commandName,
+    options: values,
+    help: values.help === true,
+  };
+}
+
+function printHelp() {
+  process.stdout.write([
+    'Usage: node scripts/native-helper-prebuild.mjs [command] [options]',
+    '',
+    'Commands:',
+    '  install    Install or restore a native helper prebuild into the OPL state cache. Default.',
+    '  pack       Pack built native helper binaries into a prebuild directory.',
+    '  archive    Archive a packed prebuild as a tar.gz artifact.',
+    '  check      Validate the current prebuild manifest and binaries.',
+    '',
+    'Options:',
+    '  --target <triple>               Target triple. Default: current platform-arch.',
+    '  --prebuild-root <path>          Prebuild root directory.',
+    '  --state-dir <path>              OPL state directory for install cache.',
+    '  --source-dir <path>             Built binary source dir for pack.',
+    '  --release-archive-url <url>     Release archive URL or file:// URL for restore.',
+    '  --release-base-url <url>        Base URL used to derive release archive URL.',
+    '  --oci-image <image>             OCI image containing native helper archive layer.',
+    '  --oci-tag <tag>                 OCI tag. Default: <target>-<crateVersion>.',
+    '  --help, -h                      Print this help without touching prebuild/cache state.',
+    '',
+  ].join('\n'));
 }
 
 function writeJson(payload) {

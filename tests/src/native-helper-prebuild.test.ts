@@ -21,6 +21,34 @@ const helperBinaries = [
   'opl-state-indexer',
 ];
 
+test('native helper prebuild help uses stdlib parser without touching prebuild or cache state', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-help-'));
+  const prebuildRoot = path.join(fixtureRoot, 'prebuilds');
+  const stateDir = path.join(fixtureRoot, 'state');
+
+  try {
+    const help = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      '--help',
+      '--prebuild-root',
+      prebuildRoot,
+      '--state-dir',
+      stateDir,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+
+    assert.equal(help.status, 0, help.stderr);
+    assert.match(help.stdout, /Usage: node scripts\/native-helper-prebuild\.mjs/);
+    assert.match(help.stdout, /--prebuild-root <path>/);
+    assert.equal(fs.existsSync(prebuildRoot), false);
+    assert.equal(fs.existsSync(stateDir), false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('native helper prebuild script packs and installs platform binaries into the state cache', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-'));
   const sourceDir = path.join(fixtureRoot, 'source');
