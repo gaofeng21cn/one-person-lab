@@ -312,10 +312,11 @@ function buildRuntimeSemanticConventionProjection(input: {
       source_surfaces: [
         'runtime_tray_snapshot',
         'stage_attempt_workbench',
-        'app_operator_drilldown_current_owner_delta',
+        'opentelemetry_current_owner_delta_ref',
         'provider_continuous_proof',
       ],
-      app_operator_drilldown_ref: 'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow existing operator drilldown as a source ref, not a private observability UI.
+      source_projection_command_ref: 'opl runtime app-operator-drilldown --detail full --json',
+      source_projection_boundary: 'refs_only_operator_projection_no_private_observability_ui',
       exporter_signal_mapping_ref: 'semantic_conventions.exporter_signal_mapping',
       collector_export_boundary_ref: 'semantic_conventions.collector_export_boundary',
       exporter_seed_ref: 'semantic_conventions.exporter_seed',
@@ -380,11 +381,11 @@ export async function buildObservabilityExport(
     format: options.format ?? 'json',
     generated_at: stringValue(snapshot.last_updated) ?? new Date().toISOString(),
     source_surfaces: [
-      'opl_runtime_ledger',
+      'opl_runtime_authority_refs',
       'temporal_provider_proof_receipts',
       'runtime_tray_snapshot',
       'stage_attempt_workbench',
-      'app_operator_drilldown_current_owner_delta',
+      'opentelemetry_current_owner_delta_ref',
       'observability_semantic_conventions_contract',
       'domain_owned_projection_refs',
     ],
