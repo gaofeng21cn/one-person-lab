@@ -17,16 +17,22 @@ MAS professional skill dependency 只从 MAS agent package manifest 的 package 
 
 OPL 自身的 base / support Skill 只用于 Framework 运维、agent authoring、contract-light 调试、work-order 写法和 capability 审查。它们不是 MAS/MAG/RCA/BookForge 的专业领域 Skill，也不是 `src/modules/**` 的实现替身。推荐 source-only 位置是 `plugins/opl-foundation-skills/skills/<skill-id>/SKILL.md`；只有经过 Connect / Pack / managed profile 投影后，才进入 Codex-visible plugin surface、package payload、workspace / quest `.codex/skills/` 或用户级 discovery path。生成物、缓存和安装目标都不是 canonical source。
 
-当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的十三个 Skill 是：
+当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的十九个 Skill 是：
 
 - `opl-runway-compute-operator`：Runway compute / provider route 诊断和 handoff briefing。
+- `opl-runway-recovery-playbook-writer`：Runway / Connect / provider failure 的 recovery playbook、owner route 和 expected proof 编排。
 - `opl-stagecraft-stage-designer`：Stagecraft stage prompt、rubric、capability use 和 handoff lower-bound 设计。
+- `opl-stage-quality-gate-critic`：Stagecraft quality gate、evidence lower bound、rubric gap 和 no-authority gate delta 审查。
 - `opl-connect-source-and-skill-router`：Connect external source / Skill search-inspect-sync、single-skill sync 和 connector receipt debug。
+- `opl-connect-connector-receipt-auditor`：Connect connector receipt candidate、normalized refs、failed provider 和 no-authority handoff 审查。
 - `opl-foundry-agent-improver`：Foundry Lab work-order、conformance/eval、Skill rewrite 和 promotion/rollback briefing。
+- `opl-foundry-promotion-reviewer`：Foundry Lab promotion candidate、scorecard、rollback refs 和 operational confidence 审查。
 - `opl-workspace-handoff-writer`：Workspace source/artifact refs、handoff packet、missing-input route-back 和 owner-route packet 写法。
+- `opl-workspace-source-readiness-auditor`：Workspace source readiness、locator ambiguity、artifact-unit gap、freshness 和 owner-route audit。
 - `opl-ledger-evidence-curator`：Ledger refs-only evidence、claim support、closeout proof、provenance chain 和 evidence gap 分类。
 - `opl-console-operator-copilot`：Console current_owner_delta、action catalog、operator next action 和 forbidden claim 解读。
 - `opl-pack-capability-reviewer`：Pack capability/authority ABI、tool affordance、generated/hosted surface 输入和专业方法放置审查。
+- `opl-pack-admission-reviewer`：Pack admission candidate、registry fit、contract evidence、allowed/forbidden writes 和 owner route 审查。
 - `opl-atlas-capability-router`：Atlas owner/source/skill/connector/tool-card/capability refs 路由和 catalog ambiguity diagnosis。
 - `opl-charter-authority-reviewer`：Charter authority boundary、owner split、no-second-truth、forbidden claim 和 readiness/closeout claim 审查。
 - `opl-completion-audit-writer`：Plan Completion Audit、证据等级匹配、完成度、gap、next owner 和 forbidden claim 编排。

@@ -14,12 +14,30 @@ const expectedSkills = [
     ],
   },
   {
+    id: 'opl-runway-recovery-playbook-writer',
+    tokens: [
+      'failed Runway path',
+      'recovery_playbook',
+      'Runway/Connect/provider readback',
+      'no provider/runtime/readiness claim',
+    ],
+  },
+  {
     id: 'opl-stagecraft-stage-designer',
     tokens: [
       'Stagecraft contract',
       'AI strategy',
       'handoff_lower_bound',
       'authority_boundary',
+    ],
+  },
+  {
+    id: 'opl-stage-quality-gate-critic',
+    tokens: [
+      'stage quality gate',
+      'evidence lower bound',
+      'recommended_gate_delta',
+      'no quality verdict',
     ],
   },
   {
@@ -32,6 +50,15 @@ const expectedSkills = [
     ],
   },
   {
+    id: 'opl-connect-connector-receipt-auditor',
+    tokens: [
+      'connector receipt candidate',
+      'failed-provider records',
+      'receipt_evidence_gap',
+      'no connector/domain/readiness claim',
+    ],
+  },
+  {
     id: 'opl-foundry-agent-improver',
     tokens: [
       'Foundry Lab as the owner',
@@ -41,12 +68,30 @@ const expectedSkills = [
     ],
   },
   {
+    id: 'opl-foundry-promotion-reviewer',
+    tokens: [
+      'promotion candidate',
+      'operational confidence',
+      'promotion_recommendation',
+      'no promotion mutation',
+    ],
+  },
+  {
     id: 'opl-workspace-handoff-writer',
     tokens: [
       'OPL Workspace and the owning program surface',
       'missing_input_route_back',
       'handoff packet',
       'Do not invent, mutate, normalize, or relocate source/artifact truth',
+    ],
+  },
+  {
+    id: 'opl-workspace-source-readiness-auditor',
+    tokens: [
+      'source material is ready',
+      'ambiguous_locator',
+      'artifact_unit_gap',
+      'no source readiness claim',
     ],
   },
   {
@@ -74,6 +119,15 @@ const expectedSkills = [
       'capability ABI',
       'professional method',
       'generated or hosted surface',
+    ],
+  },
+  {
+    id: 'opl-pack-admission-reviewer',
+    tokens: [
+      'pack admission candidate',
+      'authority ABI',
+      'admission_recommendation',
+      'no registry mutation',
     ],
   },
   {
