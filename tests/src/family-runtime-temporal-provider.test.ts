@@ -703,6 +703,31 @@ test('Temporal StageAttemptWorkflow stores refs-only Codex activity summaries in
             timeout_reason: 'activity_cancelled',
             blocked_reason: 'codex_cli_activity_cancelled',
             recovered_session_path: '/tmp/codex/session.jsonl',
+            external_sandbox_execution: {
+              execution_substrate: 'external_sandbox',
+              provider_kind: 'e2b',
+              sandbox_id: 'sandbox_temporal_summary_test',
+              sandbox_domain: 'sandbox.e2b.test',
+              sandbox_reuse: 'created',
+              template: 'codex-template',
+              sandbox_workspace_root: '/home/user/workspace',
+              workspace_transport: {
+                transport_kind: 'git_clone',
+                repo_url: 'https://github.com/example/domain.git',
+                checkout_ref: 'abc123',
+                clone_exit_code: 0,
+                checkout_exit_code: 0,
+              },
+              command_exit_code: 130,
+              jsonl_stdout_bytes: 1024,
+              diff_refs: {
+                changed_file_refs: ['artifacts/stage-output.json'],
+                diff_stat: [' artifacts/stage-output.json | 1 +'],
+              },
+              external_api_called: true,
+              credential_material_logged: false,
+              forwarded_env_keys: ['OPL_STAGE_PACKET_REF'],
+            },
           },
           progress_summary: {
             runner_events: [{
@@ -741,6 +766,31 @@ test('Temporal StageAttemptWorkflow stores refs-only Codex activity summaries in
     assert.equal(codexEvent.process_output_summary.final_message_chars, 180_000);
     assert.deepEqual(codexEvent.process_output_summary.stderr_tail, []);
     assert.equal(codexEvent.process_output_summary.recovered_session_path, '/tmp/codex/session.jsonl');
+    assert.deepEqual(codexEvent.process_output_summary.external_sandbox_execution, {
+      execution_substrate: 'external_sandbox',
+      provider_kind: 'e2b',
+      sandbox_id: 'sandbox_temporal_summary_test',
+      sandbox_domain: 'sandbox.e2b.test',
+      sandbox_reuse: 'created',
+      template: 'codex-template',
+      sandbox_workspace_root: '/home/user/workspace',
+      workspace_transport: {
+        transport_kind: 'git_clone',
+        repo_url: 'https://github.com/example/domain.git',
+        checkout_ref: 'abc123',
+        clone_exit_code: 0,
+        checkout_exit_code: 0,
+      },
+      command_exit_code: 130,
+      jsonl_stdout_bytes: 1024,
+      diff_refs: {
+        changed_file_refs: ['artifacts/stage-output.json'],
+        diff_stat: [' artifacts/stage-output.json | 1 +'],
+      },
+      external_api_called: true,
+      credential_material_logged: false,
+      forwarded_env_keys: ['OPL_STAGE_PACKET_REF'],
+    });
     assert.deepEqual(codexEvent.progress_summary.runner_events, [{
       event_kind: 'agent_message',
       value: '[omitted:4000 chars]',
