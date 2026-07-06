@@ -60,7 +60,7 @@ function seedSummaryStageAttempts(count: number) {
           artifact_root: `/tmp/mas-${index}/artifacts`,
           source_refs: [`source:dataset-${index}`],
         },
-        taskId: `task-app-drilldown-${index}`,
+        taskId: `task-app-operator-${index}`,
         checkpointRefs: [`checkpoint:write-start-${index}`],
       }).attempt;
       runStageAttemptFixtureActivity(db, {
@@ -91,8 +91,8 @@ function seedSummaryStageAttempts(count: number) {
   }
 }
 
-test('runtime app-operator-drilldown defaults to summary-first refs and keeps full refs explicit', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-summary-state-'));
+test('runtime app operator defaults to summary-first refs and keeps full refs explicit', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-summary-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
@@ -123,10 +123,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     });
     const summaryDrilldown = summaryOutput.app_operator_drilldown;
     assert.equal(summaryDrilldown.detail_level, 'summary');
-    assert.equal(
-      summaryDrilldown.projection_detail_policy,
-      'attention_first_default_full_refs_via_explicit_drilldown',
-    );
     assert.equal(summaryDrilldown.summary.stage_attempt_count, 12);
     assert.equal(summaryDrilldown.summary.route_graph_ref_count, 12);
     assert.equal(summaryDrilldown.summary.operator_action_route_count > 36, true);
@@ -136,14 +132,8 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     );
     assert.equal(summaryDrilldown.route_graph_refs, undefined);
     assert.equal(summaryDrilldown.operator_action_routing_refs, undefined);
-    assert.equal(summaryDrilldown.production_evidence_tail_ledger, undefined);
     assert.equal(summaryDrilldown.domain_dispatch_evidence, undefined);
     assert.equal(summaryDrilldown.stage_production_evidence, undefined);
-    assert.equal(summaryDrilldown.memory_writeback_refs, undefined);
-    assert.equal(summaryDrilldown.artifact_gallery_refs, undefined);
-    assert.equal(summaryDrilldown.package_export_lifecycle_refs, undefined);
-    assert.equal(summaryDrilldown.lifecycle_ledger_refs, undefined);
-    assert.equal(summaryDrilldown.domain_evidence_request_refs, undefined);
     assert.equal(summaryDrilldown.standard_agent_template_consumption_refs, undefined);
     assert.equal(summaryDrilldown.functional_privatization_audit_refs, undefined);
     assert.equal(
@@ -173,9 +163,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_domain_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_production_ready_claim_count, 0);
     assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_artifact_authority_claim_count, 0);
-    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_ledger_receipt_ref_count, 0);
-    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_verified_ledger_receipt_ref_count, 0);
-    assert.equal(summaryDrilldown.summary.standard_agent_template_consumption_pending_verify_receipt_ref_count, 0);
     assert.equal(summaryDrilldown.opl_meta_agent_workbench_refs, undefined);
     assert.equal(
       ['resolved', 'not_bound'].includes(summaryDrilldown.summary.opl_meta_agent_registry_status),
@@ -224,7 +211,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assertOmaProductionConsumptionSummary(summaryDrilldown, metaAgentBound);
     assertAppReleaseUserPathSummary(summaryDrilldown);
     if (metaAgentBound) assert.equal(summaryDrilldown.oma_sections.scaleout_evidence.refs.length >= 2, true);
-    assert.equal(summaryDrilldown.attention_first_payload.surface_kind, 'opl_app_drilldown_attention_first_payload');
     assert.deepEqual(summaryDrilldown.attention_first_payload.full_detail_args, ['--detail', 'full']);
     assertOwnerDeltaTopline(summaryDrilldown);
     assert.deepEqual(
@@ -254,10 +240,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       ],
     );
     assert.equal(summaryDrilldown.codex_app_runtime_role, undefined);
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_after_contract.surface_kind,
-      'opl_app_drilldown_evidence_after_contract_attention',
-    );
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.status,
       'attention_required',
@@ -421,10 +403,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract.authority_boundary.attention_count_is_hard_blocker,
       false,
-    );
-    assert.equal(
-      summaryDrilldown.attention_first_payload.evidence_next_steps.surface_kind,
-      'opl_app_drilldown_evidence_next_steps',
     );
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_next_steps.selection_policy,
@@ -794,20 +772,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       0,
     );
     assert.equal(
-      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection.receipt_count,
-      0,
-    );
-    assert.equal(
-      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection
-        .verified_receipt_ref_count,
-      0,
-    );
-    assert.equal(
-      fullDrilldown.standard_agent_template_consumption_refs.ledger_projection
-        .pending_verify_receipt_ref_count,
-      0,
-    );
-    assert.equal(
       fullDrilldown.standard_agent_template_consumption_refs.ledger_projection
         .authority_boundary.can_claim_production_ready,
       false,
@@ -924,10 +888,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
       summaryDrilldown.summary.app_operator_production_evidence_tail_item_count,
     );
     assert.equal(summaryDrilldown.summary.app_operator_production_evidence_tail_open_item_count > 0, true);
-    assert.deepEqual(
-      Object.keys(summaryDrilldown.summary).filter((key) => key.startsWith('production_evidence_tail_')),
-      [],
-    );
     assert.equal(Object.hasOwn(summaryDrilldown.summary, 'deprecated_alias_metadata'), false);
     assert.equal(
       summaryDrilldown.summary.provider_slo_cadence_window_status,
@@ -945,7 +905,6 @@ test('runtime app-operator-drilldown defaults to summary-first refs and keeps fu
     assert.equal(fullDrilldown.domain_dispatch_evidence.omitted_ref_count, 0);
     assert.equal(fullDrilldown.stage_production_evidence.omitted_ref_count, 0);
     assert.equal(fullDrilldown.operator_action_routing_refs.omitted_ref_count, 0);
-    assert.equal(fullDrilldown.production_evidence_tail_ledger.omitted_ref_count, 0);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;

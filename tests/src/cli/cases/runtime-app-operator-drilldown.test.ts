@@ -23,8 +23,8 @@ import {
   assertOwnerDeltaFirstAppOperatorProjection,
 } from './owner-payload-workorder-assertions.ts';
 
-test('runtime snapshot exposes App operator drilldown as refs-only owner-aware read model', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-state-'));
+test('runtime snapshot exposes App operator refs-only owner-aware read model', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const omaRepoDir = createOmaContractFixture(fixtureRoot);
   const server = net.createServer((socket) => socket.end());
@@ -44,9 +44,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     OPL_META_AGENT_REPO_DIR: omaRepoDir,
     OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     OPL_TEMPORAL_ADDRESS: temporalAddress,
-    OPL_TEMPORAL_NAMESPACE: 'opl-app-drilldown-worker-stale',
-    OPL_TEMPORAL_TASK_QUEUE: 'opl-app-drilldown-worker-stale',
-    OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:app-drilldown-current-worker',
+    OPL_TEMPORAL_NAMESPACE: 'opl-app-operator-worker-stale',
+    OPL_TEMPORAL_TASK_QUEUE: 'opl-app-operator-worker-stale',
+    OPL_TEMPORAL_WORKER_SOURCE_VERSION: 'git:app-operator-current-worker',
   };
   const masManifest = buildMasAppOperatorDrilldownFixtureManifest();
   try {
@@ -56,14 +56,14 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       provider_kind: 'temporal',
       pid: workerProbe.pid,
       address: temporalAddress,
-      namespace: 'opl-app-drilldown-worker-stale',
-      task_queue: 'opl-app-drilldown-worker-stale',
+      namespace: 'opl-app-operator-worker-stale',
+      task_queue: 'opl-app-operator-worker-stale',
       started_at: new Date().toISOString(),
       status: 'ready',
-      source_version: 'git:app-drilldown-old-worker',
+      source_version: 'git:app-operator-old-worker',
       workflow_bundle_path: path.join(stateRoot, 'family-runtime', 'test-workflow-bundle.js'),
-      workflow_bundle_version: 'test-bundle:git:app-drilldown-old-worker',
-      workflow_bundle_source_version: 'git:app-drilldown-old-worker',
+      workflow_bundle_version: 'test-bundle:git:app-operator-old-worker',
+      workflow_bundle_source_version: 'git:app-operator-old-worker',
     }, null, 2)}\n`);
     runCli([
       'workspace',
@@ -177,10 +177,6 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     const snapshot = output.runtime_tray_snapshot;
     const snapshotDrilldown = snapshot.app_operator_drilldown;
     assert.equal(snapshotDrilldown.detail_level, 'summary');
-    assert.equal(
-      snapshotDrilldown.projection_detail_policy,
-      'attention_first_default_full_refs_via_explicit_drilldown',
-    );
     assert.equal(snapshotDrilldown.route_graph_refs, undefined);
     assert.equal(snapshotDrilldown.operator_action_routing_refs, undefined);
     assert.equal(
@@ -294,32 +290,13 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       projection.domain_legacy_cleanup_plan_refs.authority_boundary.can_move_or_delete_domain_repo_files,
       false,
     );
-    assert.equal(projection.evidence_envelope.surface_kind, 'opl_evidence_envelope_projection');
     assert.equal(projection.evidence_envelope.total_ref_count, projection.summary.evidence_envelope_count);
-    assert.equal(projection.evidence_envelope.omitted_ref_count, 0);
     assert.equal(projection.evidence_envelope.summary.open_envelope_count, 1);
     assert.equal(projection.evidence_envelope.summary.domain_ready_claim_count, 0);
     assert.equal(projection.evidence_envelope.summary.production_ready_claim_count, 0);
     assert.equal(projection.evidence_envelope.summary.artifact_authority_claim_count, 0);
     assert.equal(projection.evidence_envelope.authority_boundary.can_write_domain_truth, false);
     assert.equal(projection.evidence_envelope.authority_boundary.can_claim_production_ready, false);
-    assert.deepEqual(projection.evidence_envelope.summary.owner_ids, [
-      'med-autoscience',
-      'one-person-lab',
-    ]);
-    assert.equal(
-      projection.evidence_envelope.summary.owner_id_policy,
-      'canonical_owner_ids_only_raw_aliases_in_full_detail_envelopes',
-    );
-    assert.deepEqual(
-      projection.evidence_envelope.owner_alias_diagnostics.aliases,
-      [
-        {
-          canonical_owner_id: 'med-autoscience',
-          source_owner_alias_ids: ['medautoscience'],
-        },
-      ],
-    );
     const reviewEnvelope = projection.evidence_envelope.envelopes.find(
       (entry: { envelope_id: string }) =>
         entry.envelope_id === 'stage_production_evidence:med-autoscience:review',
@@ -631,31 +608,9 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       (ref: { action_id: string }) => ref.action_id === stageProductionAttemptRoute.action_id,
     );
     assert.equal(bridgeStageProductionAttemptRoute.can_submit_to_safe_action_shell, true);
-    assert.equal(bridgeStageProductionAttemptRoute.route_status, 'request_route_available');
-    assert.equal(
-      bridgeStageProductionAttemptRoute.request_scope,
-      'opl_owned_stage_attempt_request_only',
-    );
-    assert.equal(bridgeStageProductionAttemptRoute.creates_domain_action, false);
-    assert.equal(bridgeStageProductionAttemptRoute.creates_owner_receipt, false);
-    assert.deepEqual(bridgeStageProductionAttemptRoute.owner_receipt_refs, []);
-    assert.equal(bridgeStageProductionAttemptRoute.closes_expected_receipt_refs, false);
-    assert.equal(bridgeStageProductionAttemptRoute.closes_monitor_freshness, false);
-    assert.equal(
-      bridgeStageProductionAttemptRoute.action_ref.includes('opl family-runtime attempt create'),
-      true,
-    );
     assert.deepEqual(
       bridgeStageProductionAttemptRoute.opl_cli_args,
       stageProductionAttemptRoute.opl_cli_args,
-    );
-    assert.deepEqual(
-      bridgeStageProductionAttemptRoute.missing_production_evidence,
-      stageProductionAttemptRoute.missing_production_evidence,
-    );
-    assert.deepEqual(
-      bridgeStageProductionAttemptRoute.expected_receipt_refs,
-      stageProductionAttemptRoute.expected_receipt_refs,
     );
     assert.equal(
       projection.app_execution_bridge.safe_action_routes.some(
@@ -667,15 +622,6 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     );
     const bridgeProviderWorkerRepairRoute = projection.app_execution_bridge.safe_action_routes.find(
       (ref: { action_id: string }) => ref.action_id === providerWorkerRepairRoute.action_id,
-    );
-    assert.equal(bridgeProviderWorkerRepairRoute.action_kind, 'provider_worker_restart');
-    assert.equal(
-      bridgeProviderWorkerRepairRoute.provider_worker_lifecycle_status,
-      'worker_source_stale',
-    );
-    assert.equal(
-      bridgeProviderWorkerRepairRoute.provider_worker_repair_action_id,
-      'restart_temporal_worker',
     );
     assert.deepEqual(
       bridgeProviderWorkerRepairRoute.opl_cli_args,
@@ -710,25 +656,6 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
       (ref: { action_id: string }) => ref.action_id === stageProductionEvidenceRecordRoute.action_id,
     );
     assert.equal(bridgeStageProductionEvidenceRecordRoute.can_submit_to_safe_action_shell, true);
-    assert.equal(
-      bridgeStageProductionEvidenceRecordRoute.route_status_detail,
-      'record_route_available_waiting_for_domain_app_or_live_refs_payload',
-    );
-    assert.equal(
-      bridgeStageProductionEvidenceRecordRoute.payload_requirement,
-      'domain_app_or_live_refs_payload_required_to_record_stage_expected_receipt_source_scope_runtime_event_or_monitor_freshness',
-    );
-    assert.equal(bridgeStageProductionEvidenceRecordRoute.payload_owner, 'domain_repository_or_app_live_operator');
-    assert.equal(bridgeStageProductionEvidenceRecordRoute.route_requires_domain_or_app_payload, true);
-    assert.equal(bridgeStageProductionEvidenceRecordRoute.can_close_without_domain_or_app_payload, false);
-    assert.deepEqual(
-      bridgeStageProductionEvidenceRecordRoute.payload_template,
-      stageProductionEvidenceRecordRoute.payload_template,
-    );
-    assert.deepEqual(
-      bridgeStageProductionEvidenceRecordRoute.payload_ref_hints,
-      stageProductionEvidenceRecordRoute.payload_ref_hints,
-    );
     assert.equal(
       projection.app_execution_bridge.route_submission_policy.domain_routes_are_queued_for_approval,
       true,

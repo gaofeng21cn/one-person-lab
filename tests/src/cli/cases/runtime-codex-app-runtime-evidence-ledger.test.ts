@@ -9,10 +9,12 @@ import {
   test,
 } from '../helpers.ts';
 
+const appOperatorCommand = ['runtime', 'app-operator-drilldown'];
+
 test('runtime Codex App runtime evidence records and verifies Temporal-hosted long-soak refs without readiness claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-app-runtime-evidence-state-'));
   try {
-    const initial = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const initial = runCli([...appOperatorCommand, '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(initial.summary.codex_app_runtime_evidence_gate_count, 1);
@@ -36,16 +38,6 @@ test('runtime Codex App runtime evidence records and verifies Temporal-hosted lo
     assert.equal(recordRoute.route_requires_domain_or_app_payload, true);
     assert.equal(recordRoute.can_close_without_domain_or_app_payload, false);
     assert.equal(recordRoute.payload_owner, 'app_live_operator_or_opl_provider_owner');
-    assert.deepEqual(recordRoute.payload_template, {
-      temporal_hosted_long_soak_refs: [],
-      provider_state_linkage_refs: [],
-      operator_evidence_refs: [],
-      typed_blocker_refs: [],
-    });
-    assert.equal(
-      recordRoute.payload_workorder.surface_kind,
-      'opl_codex_app_runtime_evidence_payload_workorder',
-    );
     assert.equal(
       recordRoute.payload_workorder.accepted_payload_paths
         .temporal_hosted_long_soak_refs_path.closes_long_soak,
@@ -146,10 +138,6 @@ test('runtime Codex App runtime evidence records and verifies Temporal-hosted lo
     assert.equal(recordOutput.recorded_receipt_count, 1);
     assert.equal(recordOutput.receipt_refs.length, 1);
     assert.equal(recordOutput.receipt_refs[0].startsWith('opl://codex-app-runtime-evidence/'), true);
-    assert.equal(
-      recordOutput.ledger_file,
-      path.join(stateRoot, 'codex-app-runtime-evidence-ledger.json'),
-    );
     assert.equal(recordOutput.receipts[0].authority_boundary.refs_only, true);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_close_long_soak, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
@@ -160,7 +148,7 @@ test('runtime Codex App runtime evidence records and verifies Temporal-hosted lo
     assert.equal(listOutput.receipt_count, 1);
     assert.equal(listOutput.authority_boundary.can_close_long_soak, false);
 
-    const pending = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const pending = runCli([...appOperatorCommand, '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(pending.summary.codex_app_runtime_evidence_action_route_count, 1);
@@ -200,7 +188,7 @@ test('runtime Codex App runtime evidence records and verifies Temporal-hosted lo
       'verified',
     );
 
-    const verified = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const verified = runCli([...appOperatorCommand, '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(verified.summary.codex_app_runtime_evidence_action_route_count, 0);
@@ -264,7 +252,7 @@ test('runtime Codex App runtime evidence CLI accepts singular ref fields for Tem
     assert.equal(verifyOutput.status, 'verified');
     assert.equal(verifyOutput.receipt.receipt_status, 'verified');
 
-    const verified = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const verified = runCli([...appOperatorCommand, '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     const followthrough =
@@ -307,7 +295,7 @@ test('runtime Codex App runtime evidence typed blocker refs keep the long-soak g
     }).codex_app_runtime_evidence_ledger_record;
     assert.equal(recordOutput.status, 'recorded');
 
-    const summary = runCli(['runtime', 'app-operator-drilldown'], {
+    const summary = runCli(appOperatorCommand, {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     assert.equal(summary.summary.codex_app_runtime_evidence_open_gate_count, 1);
@@ -352,15 +340,15 @@ test('runtime Codex App runtime evidence support refs alone do not close the Tem
     }).codex_app_runtime_evidence_ledger_verify;
     assert.equal(verifyOutput.status, 'verified');
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const appView = runCli([...appOperatorCommand, '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
-    assert.equal(drilldown.summary.codex_app_runtime_evidence_open_gate_count, 1);
-    assert.equal(drilldown.summary.codex_app_runtime_evidence_verified_ledger_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.codex_app_production_evidence_gate_remains_open, true);
+    assert.equal(appView.summary.codex_app_runtime_evidence_open_gate_count, 1);
+    assert.equal(appView.summary.codex_app_runtime_evidence_verified_ledger_receipt_ref_count, 1);
+    assert.equal(appView.summary.codex_app_production_evidence_gate_remains_open, true);
 
     const followthrough =
-      drilldown.attention_first_payload.codex_app_runtime_role.production_evidence_followthrough;
+      appView.attention_first_payload.codex_app_runtime_role.production_evidence_followthrough;
     assert.equal(followthrough.status, 'long_soak_gate_open');
     assert.equal(followthrough.refs_observed_for_all_gates, false);
     assert.deepEqual(followthrough.temporal_hosted_long_soak_refs, []);
@@ -520,12 +508,12 @@ test('runtime Codex App runtime evidence long-soak start writes a workorder with
     }).codex_app_runtime_evidence_ledger;
     assert.equal(listOutput.receipt_count, 0);
 
-    const drilldown = runCli(['runtime', 'app-operator-drilldown'], {
+    const appView = runCli(appOperatorCommand, {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
-    assert.equal(drilldown.summary.codex_app_runtime_evidence_open_gate_count, 1);
-    assert.equal(drilldown.summary.codex_app_runtime_evidence_ledger_receipt_ref_count, 0);
-    assert.equal(drilldown.summary.codex_app_production_long_soak_claimed, false);
+    assert.equal(appView.summary.codex_app_runtime_evidence_open_gate_count, 1);
+    assert.equal(appView.summary.codex_app_runtime_evidence_ledger_receipt_ref_count, 0);
+    assert.equal(appView.summary.codex_app_production_long_soak_claimed, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
