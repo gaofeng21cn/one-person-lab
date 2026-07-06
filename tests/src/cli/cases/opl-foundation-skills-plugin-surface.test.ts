@@ -229,6 +229,51 @@ const expectedSkills = [
       'no provider readiness claim',
     ],
   },
+  {
+    id: 'opl-brand-l5-evidence-reviewer',
+    tokens: [
+      'Brand L5 evidence packet',
+      'l5_evidence_gap',
+      'no Brand L5 claim',
+      'no credential or endpoint lifecycle',
+    ],
+  },
+  {
+    id: 'opl-app-release-evidence-reviewer',
+    tokens: [
+      'App release evidence',
+      'release cohort refs',
+      'release_evidence_gap',
+      'no App release-ready claim',
+    ],
+  },
+  {
+    id: 'opl-runtime-soak-and-recovery-auditor',
+    tokens: [
+      'runtime soak evidence',
+      'provider observations',
+      'soak_evidence_gap',
+      'no runtime queue writes',
+    ],
+  },
+  {
+    id: 'opl-native-helper-diagnostics-reviewer',
+    tokens: [
+      'native helper diagnostics',
+      'helper envelopes',
+      'native_helper_envelope_gap',
+      'no native-helper health claim',
+    ],
+  },
+  {
+    id: 'opl-user-workbench-action-reviewer',
+    tokens: [
+      'user workbench action candidates',
+      'action_catalog_gap',
+      'safe_to_present',
+      'no action execution claim',
+    ],
+  },
 ] as const;
 
 function readJson(pathname: string) {
