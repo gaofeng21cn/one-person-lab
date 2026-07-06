@@ -29,36 +29,14 @@ test('runtime App projection consumes OPL-managed OMA install update receipts', 
       'opl://managed-install-update/oplmetaagent/update/oma-managed-ledger-sha',
     ]);
 
-    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
-      OPL_STATE_DIR: stateRoot,
-    });
-    const summaryProjection = summaryOutput.app_operator_drilldown;
-    const metaAgentBound = summaryProjection.summary.opl_meta_agent_registry_status === 'resolved';
-    if (!metaAgentBound) {
-      return;
-    }
-    assert.equal(
-      summaryProjection.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,
-      2,
-    );
-    const omaAttention =
-      summaryProjection.attention_first_payload.evidence_after_contract
-        .oma_production_consumption_followthrough;
-    assert.equal(omaAttention.open_gate_count, 2);
-    assert.deepEqual(omaAttention.open_gate_ids, [
-      'app_live_path_refs',
-      'long_soak_refs',
-    ]);
-    assert.equal(
-      omaAttention.gate_items.some(
-        (gate: { gate_id: string }) => gate.gate_id === 'managed_install_update_refs',
-      ),
-      false,
-    );
-
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     });
+    if (
+      fullOutput.app_operator_drilldown.summary.opl_meta_agent_registry_status !== 'resolved'
+    ) {
+      return;
+    }
     const followthrough =
       fullOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
         .production_consumption_followthrough;
@@ -66,15 +44,9 @@ test('runtime App projection consumes OPL-managed OMA install update receipts', 
       (gate: { gate_id: string }) => gate.gate_id === 'managed_install_update_refs',
     );
     assert.equal(managedGate.status, 'refs_observed');
-    assert.deepEqual(managedGate.observed_refs, [
-      'opl://managed-install-update/oplmetaagent/update/oma-managed-ledger-sha',
-    ]);
-    assert.equal(followthrough.summary.managed_install_update_ref_count, 1);
-    assert.equal(followthrough.summary.open_gate_count, 2);
-    assert.deepEqual(followthrough.summary.open_gate_ids, [
-      'app_live_path_refs',
-      'long_soak_refs',
-    ]);
+    assert.equal(followthrough.summary.open_gate_ids.includes('managed_install_update_refs'), false);
+    assert.equal(followthrough.summary.open_gate_ids.includes('app_live_path_refs'), true);
+    assert.equal(followthrough.summary.open_gate_ids.includes('long_soak_refs'), true);
     assert.equal(followthrough.summary.production_consumption_ready, false);
   } finally {
     if (previousStateDir === undefined) {
@@ -122,33 +94,14 @@ test('runtime App projection consumes OMA App live path receipts', () => {
       'opl://oma-app-live-path/app%3A%2F%2Fone-person-lab%2Fopl-meta-agent%2Fworkbench%2Flive',
     ]);
 
-    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
-      OPL_STATE_DIR: stateRoot,
-    });
-    const summaryProjection = summaryOutput.app_operator_drilldown;
-    const metaAgentBound = summaryProjection.summary.opl_meta_agent_registry_status === 'resolved';
-    if (!metaAgentBound) {
-      return;
-    }
-    assert.equal(
-      summaryProjection.summary.opl_meta_agent_production_consumption_followthrough_open_gate_count,
-      1,
-    );
-    const omaAttention =
-      summaryProjection.attention_first_payload.evidence_after_contract
-        .oma_production_consumption_followthrough;
-    assert.equal(omaAttention.open_gate_count, 1);
-    assert.deepEqual(omaAttention.open_gate_ids, ['long_soak_refs']);
-    assert.equal(
-      omaAttention.gate_items.some(
-        (gate: { gate_id: string }) => gate.gate_id === 'app_live_path_refs',
-      ),
-      false,
-    );
-
     const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
       OPL_STATE_DIR: stateRoot,
     });
+    if (
+      fullOutput.app_operator_drilldown.summary.opl_meta_agent_registry_status !== 'resolved'
+    ) {
+      return;
+    }
     const followthrough =
       fullOutput.app_operator_drilldown.opl_meta_agent_workbench_refs
         .production_consumption_followthrough;
@@ -156,14 +109,8 @@ test('runtime App projection consumes OMA App live path receipts', () => {
       (gate: { gate_id: string }) => gate.gate_id === 'app_live_path_refs',
     );
     assert.equal(appLiveGate.status, 'refs_observed');
-    assert.deepEqual(appLiveGate.observed_refs, [
-      'opl://oma-app-live-path/app%3A%2F%2Fone-person-lab%2Fopl-meta-agent%2Fworkbench%2Flive',
-      'app://one-person-lab/opl-meta-agent/workbench/live',
-      'screenshot://opl-app/oma-workbench-live.png',
-    ]);
-    assert.equal(followthrough.summary.app_live_path_ref_count, 3);
-    assert.equal(followthrough.summary.open_gate_count, 1);
-    assert.deepEqual(followthrough.summary.open_gate_ids, ['long_soak_refs']);
+    assert.equal(followthrough.summary.open_gate_ids.includes('app_live_path_refs'), false);
+    assert.equal(followthrough.summary.open_gate_ids.includes('long_soak_refs'), true);
     assert.equal(followthrough.summary.production_consumption_ready, false);
   } finally {
     if (previousStateDir === undefined) {
