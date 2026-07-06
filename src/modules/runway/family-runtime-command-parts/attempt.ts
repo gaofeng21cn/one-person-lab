@@ -5,7 +5,7 @@ import type {
   TemporalStageAttemptSignalKind,
 } from '../family-runtime-types.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
-import { assertDomainId, assertProviderKind, assertSignalKind, parsePayloadArg } from './shared.ts';
+import { assertDomainId, assertProviderKind, assertSignalKind, parseCliOptions, parsePayloadArg } from './shared.ts';
 
 export function parseAttemptArgs(rest: string[]): FamilyRuntimeCommandInput | undefined {
   if (rest[0] === 'list') {
@@ -60,18 +60,16 @@ function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {
   let sinceHours: number | undefined;
   let compactTimeline = false;
   let full = false;
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--domain' && value) {
       domainId = assertDomainId(value);
-      index += 1;
+      return true;
     } else if (token === '--status' && value) {
       status = value.trim();
-      index += 1;
+      return true;
     } else if (token === '--study' && value) {
       studyId = value.trim();
-      index += 1;
+      return true;
     } else if (token === '--since-hours' && value) {
       const parsed = Number(value);
       if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -81,18 +79,20 @@ function parseAttemptListArgs(rest: string[]): FamilyRuntimeCommandInput {
         });
       }
       sinceHours = parsed;
-      index += 1;
+      return true;
     } else if (token === '--compact-timeline') {
       compactTimeline = true;
+      return false;
     } else if (token === '--full') {
       full = true;
+      return false;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt list option: ${token}.`, {
         option: token,
         usage: 'opl family-runtime attempt list [--domain <domain>] [--status <status>] [--study <study_id>] [--since-hours <hours>] [--compact-timeline] [--full]',
       });
     }
-  }
+  });
   if (compactTimeline && full) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt list cannot combine --compact-timeline and --full.', {
       options: ['--compact-timeline', '--full'],
@@ -120,21 +120,19 @@ function parseAttemptCancelArgs(rest: string[]): FamilyRuntimeCommandInput {
   }
   let reason = '';
   let source: string | undefined;
-  for (let index = 2; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 2, (token, value) => {
     if (token === '--reason' && value) {
       reason = value;
-      index += 1;
+      return true;
     } else if (token === '--source' && value) {
       source = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt cancel option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   if (!reason.trim()) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt cancel requires --reason.', {
       usage: 'opl family-runtime attempt cancel <stage_attempt_id> --reason <operator_reason> [--source <source>]',
@@ -159,27 +157,25 @@ function parseAttemptSignalArgs(rest: string[]): FamilyRuntimeCommandInput {
   let payload: string | undefined;
   let payloadFile: string | undefined;
   let source: string | undefined;
-  for (let index = 2; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 2, (token, value) => {
     if (token === '--kind' && value) {
       signalKind = assertSignalKind(value);
-      index += 1;
+      return true;
     } else if (token === '--payload' && value) {
       payload = value;
-      index += 1;
+      return true;
     } else if (token === '--payload-file' && value) {
       payloadFile = value;
-      index += 1;
+      return true;
     } else if (token === '--source' && value) {
       source = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt signal option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   if (!signalKind) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime attempt signal requires --kind.', {
       required: ['--kind'],
@@ -205,27 +201,25 @@ function parseAttemptFixtureRunArgs(rest: string[]): FamilyRuntimeCommandInput {
   let closeoutPacket: string | undefined;
   let closeoutPacketFile: string | undefined;
   const checkpointRefs: string[] = [];
-  for (let index = 2; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 2, (token, value) => {
     if (token === '--stage-packet-ref' && value) {
       stagePacketRef = value;
-      index += 1;
+      return true;
     } else if (token === '--checkpoint-ref' && value) {
       checkpointRefs.push(value);
-      index += 1;
+      return true;
     } else if (token === '--closeout-packet' && value) {
       closeoutPacket = value;
-      index += 1;
+      return true;
     } else if (token === '--closeout-packet-file' && value) {
       closeoutPacketFile = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt fixture-run option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   return {
     mode: 'attempt_fixture_run',
     stageAttemptId,
@@ -259,45 +253,46 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   const checkpointRefs: string[] = [];
   const closeoutRefs: string[] = [];
   const humanGateRefs: string[] = [];
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--new-attempt') {
       newAttempt = true;
+      return false;
     } else if (token === '--start') {
       start = true;
+      return false;
     } else if (token === '--require-stage-admission') {
       requireStageAdmission = true;
+      return false;
     } else if (token === '--domain' && value) {
       domainId = assertDomainId(value);
-      index += 1;
+      return true;
     } else if (token === '--stage' && value) {
       stageId = value;
-      index += 1;
+      return true;
     } else if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else if (token === '--workspace-locator' && value) {
       workspaceLocator = value;
-      index += 1;
+      return true;
     } else if (token === '--workspace-locator-file' && value) {
       workspaceLocatorFile = value;
-      index += 1;
+      return true;
     } else if (token === '--retry-budget' && value) {
       retryBudget = value;
-      index += 1;
+      return true;
     } else if (token === '--retry-budget-file' && value) {
       retryBudgetFile = value;
-      index += 1;
+      return true;
     } else if (token === '--source-fingerprint' && value) {
       sourceFingerprint = value;
-      index += 1;
+      return true;
     } else if (token === '--executor-kind' && value) {
       executorKind = value;
-      index += 1;
+      return true;
     } else if (token === '--executor-binding-ref' && value) {
       executorBindingRef = value;
-      index += 1;
+      return true;
     } else if (token === '--invocation-mode' && value) {
       if (value !== 'invocation' && value !== 'authoring') {
         throw new FrameworkContractError('cli_usage_error', `Unsupported family-runtime attempt invocation mode: ${value}.`, {
@@ -305,31 +300,31 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
         });
       }
       invocationMode = value;
-      index += 1;
+      return true;
     } else if (token === '--bounded-edit-ref' && value) {
       boundedEditRef = value;
-      index += 1;
+      return true;
     } else if (token === '--task' && value) {
       taskId = value;
-      index += 1;
+      return true;
     } else if (token === '--checkpoint-ref' && value) {
       checkpointRefs.push(value);
-      index += 1;
+      return true;
     } else if (token === '--closeout-ref' && value) {
       closeoutRefs.push(value);
-      index += 1;
+      return true;
     } else if (token === '--human-gate-ref' && value) {
       humanGateRefs.push(value);
-      index += 1;
+      return true;
     } else if (token === '--blocked-reason' && value) {
       blockedReason = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime attempt create option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   if (!domainId || !stageId) {
     throw new FrameworkContractError(
       'cli_usage_error',

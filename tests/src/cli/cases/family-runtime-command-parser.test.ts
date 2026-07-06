@@ -1,5 +1,6 @@
 import { assert, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/kernel/contract-validation.ts';
+import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/modules/runway/family-runtime-command-parts/registry.ts';
 import { parseQueueArgs, parseTickArgs } from '../../../../src/modules/runway/family-runtime-command-parts/queue.ts';
 import {
   parseSchedulerLifecycleArgs,
@@ -130,6 +131,83 @@ test('family-runtime scheduler parser preserves tick and lifecycle options', () 
   });
 });
 
+test('family-runtime registry parser reuses shared option walking without changing command payloads', () => {
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'attempt',
+    'list',
+    '--domain',
+    'medautoscience',
+    '--study',
+    'DM002',
+    '--since-hours',
+    '2',
+    '--compact-timeline',
+  ]), {
+    mode: 'attempt_list',
+    filters: {
+      domainId: 'medautoscience',
+      status: undefined,
+      studyId: 'DM002',
+      sinceHours: 2,
+      compactTimeline: true,
+      full: false,
+    },
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'provider-slo',
+    'tick',
+    '--provider',
+    'temporal',
+    '--force',
+  ]), {
+    mode: 'provider_slo_tick',
+    providerKind: 'temporal',
+    force: true,
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'stage-artifact',
+    'commit',
+    '--domain',
+    'medautoscience',
+    '--program',
+    'dm-cvd',
+    '--topic',
+    'dm002',
+    '--deliverable',
+    'paper',
+    '--stage',
+    'draft',
+    '--attempt',
+    'attempt-1',
+    '--terminal-status',
+    'success',
+    '--required-output',
+    'artifact:paper',
+    '--owner-receipt-ref',
+    'receipt:owner',
+    '--apply',
+  ]), {
+    mode: 'stage_artifact',
+    input: {
+      action: 'commit',
+      domain_id: 'medautoscience',
+      program_id: 'dm-cvd',
+      topic_id: 'dm002',
+      deliverable_id: 'paper',
+      stage_id: 'draft',
+      attempt_id: 'attempt-1',
+      terminal_status: 'success',
+      required_outputs: ['artifact:paper'],
+      owner_receipt_refs: ['receipt:owner'],
+      typed_blocker_refs: [],
+      decision_receipt_refs: [],
+      dry_run: false,
+    },
+  });
+});
+
 test('family-runtime parser keeps command-specific unknown option payloads', () => {
   assert.throws(
     () => parseQueueArgs(['list', '--bogus']),
@@ -145,6 +223,14 @@ test('family-runtime parser keeps command-specific unknown option payloads', () 
     (error) => {
       assertUsageError(error, /Unknown family-runtime scheduler tick option: --bogus\./, '--bogus');
       assert.match((error as FrameworkContractError).details?.usage as string, /scheduler tick/);
+      return true;
+    },
+  );
+
+  assert.throws(
+    () => parseRegisteredFamilyRuntimeCommand(['attempt', 'create', '--bogus']),
+    (error) => {
+      assertUsageError(error, /Unknown family-runtime attempt create option: --bogus\./, '--bogus');
       return true;
     },
   );

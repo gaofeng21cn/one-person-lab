@@ -1,26 +1,24 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
-import { assertProviderKind } from './shared.ts';
+import { assertProviderKind, parseCliOptions } from './shared.ts';
 
 export function parseProviderOnlyArgs(
   mode: 'status' | 'doctor' | 'install' | 'repair',
   args: string[],
 ): FamilyRuntimeCommandInput {
   let providerKind: FamilyRuntimeProviderKind | undefined;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
+  parseCliOptions(args, 0, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `family-runtime ${mode} accepts only --provider.`, {
         extra_args: args,
         usage: `opl family-runtime ${mode} [--provider local_sqlite|temporal]`,
       });
     }
-  }
+  });
   return { mode, providerKind };
 }
 
@@ -28,23 +26,23 @@ export function parseResidencyProofArgs(rest: string[]): FamilyRuntimeCommandInp
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let live = false;
   let production = false;
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else if (token === '--live') {
       live = true;
+      return false;
     } else if (token === '--production') {
       production = true;
+      return false;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime residency proof option: ${token}.`, {
         option: token,
         usage: 'opl family-runtime residency proof --provider temporal [--live|--production]',
       });
     }
-  }
+  });
   if (live && production) {
     throw new FrameworkContractError('cli_usage_error', 'Use only one Temporal residency proof mode.', {
       mutually_exclusive: ['--live', '--production'],
@@ -56,21 +54,20 @@ export function parseResidencyProofArgs(rest: string[]): FamilyRuntimeCommandInp
 export function parseProviderSloTickArgs(rest: string[]): FamilyRuntimeCommandInput {
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let force = false;
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else if (token === '--force') {
       force = true;
+      return false;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime provider-slo tick option: ${token}.`, {
         option: token,
         usage: 'opl family-runtime provider-slo tick --provider temporal [--force]',
       });
     }
-  }
+  });
   return { mode: 'provider_slo_tick', providerKind, force };
 }
 
@@ -83,19 +80,17 @@ export function parseControlLoopStatusArgs(rest: string[]): FamilyRuntimeCommand
     });
   }
   let providerKind: FamilyRuntimeProviderKind | undefined;
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime control-loop option: ${token}.`, {
         option: token,
         usage: 'opl family-runtime control-loop status --provider temporal',
       });
     }
-  }
+  });
   return { mode: 'control_loop_status', providerKind };
 }
 
@@ -108,18 +103,16 @@ export function parseProviderWorkerSupervisorArgs(rest: string[]): FamilyRuntime
     });
   }
   let providerKind: FamilyRuntimeProviderKind | undefined;
-  for (let index = 2; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 2, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime provider-worker supervisor option: ${token}.`, {
         option: token,
         usage: 'opl family-runtime provider-worker supervisor status|install|remove|trigger --provider temporal',
       });
     }
-  }
+  });
   return { mode: 'provider_worker_supervisor', action, providerKind };
 }

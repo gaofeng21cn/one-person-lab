@@ -1,7 +1,7 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
-import { assertProviderKind } from './shared.ts';
+import { assertProviderKind, parseCliOptions } from './shared.ts';
 
 const EVIDENCE_WORKLIST_COMMAND = 'evidence-worklist';
 
@@ -20,11 +20,10 @@ export function parseEvidenceWorklistArgs(rest: string[]): FamilyRuntimeCommandI
   let executorKind: 'codex_cli' | undefined;
   let detailLevel: 'summary' | 'full' = 'summary';
 
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--family-defaults') {
       familyDefaults = true;
+      return false;
     } else if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
       if (providerKind !== 'temporal') {
@@ -33,7 +32,7 @@ export function parseEvidenceWorklistArgs(rest: string[]): FamilyRuntimeCommandI
           allowed_provider_kinds: ['temporal'],
         });
       }
-      index += 1;
+      return true;
     } else if (token === '--executor-kind' && value) {
       if (value !== 'codex_cli') {
         throw new FrameworkContractError('cli_usage_error', `family-runtime ${EVIDENCE_WORKLIST_COMMAND} supports only --executor-kind codex_cli.`, {
@@ -42,9 +41,10 @@ export function parseEvidenceWorklistArgs(rest: string[]): FamilyRuntimeCommandI
         });
       }
       executorKind = value;
-      index += 1;
+      return true;
     } else if (token === '--full') {
       detailLevel = 'full';
+      return false;
     } else if (token === '--detail' && value) {
       if (value !== 'summary' && value !== 'full') {
         throw new FrameworkContractError('cli_usage_error', `family-runtime ${EVIDENCE_WORKLIST_COMMAND} --detail must be summary or full.`, {
@@ -53,14 +53,14 @@ export function parseEvidenceWorklistArgs(rest: string[]): FamilyRuntimeCommandI
         });
       }
       detailLevel = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime ${EVIDENCE_WORKLIST_COMMAND} option: ${token}.`, {
         option: token,
         usage: evidenceWorklistUsage(),
       });
     }
-  }
+  });
 
   if (!familyDefaults) {
     throw new FrameworkContractError('cli_usage_error', `family-runtime ${EVIDENCE_WORKLIST_COMMAND} requires --family-defaults.`, {

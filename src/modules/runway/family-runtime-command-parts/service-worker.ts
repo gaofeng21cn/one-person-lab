@@ -1,7 +1,7 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeProviderKind } from '../family-runtime-types.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
-import { assertProviderKind } from './shared.ts';
+import { assertProviderKind, parseCliOptions } from './shared.ts';
 
 type RuntimeProcessKind = 'worker' | 'service';
 type RuntimeProcessAction = 'start' | 'status' | 'stop';
@@ -15,21 +15,20 @@ export function parseRuntimeProcessArgs(kind: RuntimeProcessKind, rest: string[]
   }
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let detach = true;
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
-      index += 1;
+      return true;
     } else if (token === '--foreground') {
       detach = false;
+      return false;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime ${kind} ${action} option: ${token}.`, {
         option: token,
         usage: `opl family-runtime ${kind} start|status|stop [--provider temporal] [--foreground]`,
       });
     }
-  }
+  });
   return {
     mode: runtimeProcessMode(kind, action),
     providerKind,

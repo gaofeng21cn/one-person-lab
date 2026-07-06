@@ -1,7 +1,7 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
 import type { PaperAutonomyStageRunIdentity } from '../family-runtime-paper-autonomy.ts';
-import { parsePayload, parsePayloadFile } from './shared.ts';
+import { parseCliOptions, parsePayload, parsePayloadFile } from './shared.ts';
 
 export type PaperAutonomySupervisorCommandInput =
   | {
@@ -58,60 +58,58 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
   const evidenceRefs: string[] = [];
   const observabilityRefs: string[] = [];
 
-  for (let index = 2; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 2, (token, value) => {
     if (token === '--obligation-ledger' && value) {
       obligationLedgerPath = value;
-      index += 1;
+      return true;
     } else if (token === '--decision-ledger' && value) {
       decisionLedgerPath = value;
-      index += 1;
+      return true;
     } else if (token === '--obligation-id' && value) {
       obligationId = value;
-      index += 1;
+      return true;
     } else if (token === '--current-identity' && value) {
       currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayload(value));
-      index += 1;
+      return true;
     } else if (token === '--current-identity-file' && value) {
       currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayloadFile(value));
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--current-owner-delta-ref' && value) {
       currentOwnerDeltaRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--provider-admission-identity-ref' && value) {
       providerAdmissionIdentityRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--terminal-closeout-ref' && value) {
       terminalCloseoutRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--recovery-action-ref' && value) {
       recoveryActionRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--no-progress-or-inconsistency-ref' && value) {
       noProgressOrInconsistencyRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--human-gate-ref' && value) {
       humanGateRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--resume-token' && value) {
       resumeToken = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--typed-blocker-ref' && value) {
       typedBlockerRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--owner-receipt-ref' && value) {
       ownerReceiptRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--budget-or-missing-evidence-ref' && value) {
       budgetOrMissingEvidenceRef = value;
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--evidence-ref' && value) {
       evidenceRefs.push(value);
-      index += 1;
+      return true;
     } else if (action === 'decide' && token === '--observability-ref' && value) {
       observabilityRefs.push(value);
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError(
         'cli_usage_error',
@@ -122,7 +120,7 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
         },
       );
     }
-  }
+  });
 
   const missing = [
     obligationLedgerPath ? null : '--obligation-ledger',

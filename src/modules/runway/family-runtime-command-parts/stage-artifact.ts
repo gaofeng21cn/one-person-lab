@@ -1,5 +1,6 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
+import { parseCliOptions } from './shared.ts';
 
 function requireValue(token: string, value: string | undefined) {
   if (!value) {
@@ -22,62 +23,62 @@ export function parseStageArtifactArgs(rest: string[]): FamilyRuntimeCommandInpu
   const ownerReceiptRefs: string[] = [];
   const typedBlockerRefs: string[] = [];
   const decisionReceiptRefs: string[] = [];
-  for (let index = 1; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 1, (token, value) => {
     if (token === '--domain') {
       input.domain_id = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--program') {
       input.program_id = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--topic') {
       input.topic_id = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--deliverable') {
       input.deliverable_id = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--stage') {
       input.stage_id = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--stage-order') {
       input.stage_order = Number.parseInt(requireValue(token, value), 10);
-      index += 1;
+      return true;
     } else if (token === '--attempt') {
       input.attempt_id = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--terminal-status') {
       input.terminal_status = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--required-output') {
       requiredOutputs.push(requireValue(token, value));
-      index += 1;
+      return true;
     } else if (token === '--owner-receipt-ref') {
       ownerReceiptRefs.push(requireValue(token, value));
-      index += 1;
+      return true;
     } else if (token === '--typed-blocker-ref') {
       typedBlockerRefs.push(requireValue(token, value));
-      index += 1;
+      return true;
     } else if (token === '--decision-receipt-ref') {
       decisionReceiptRefs.push(requireValue(token, value));
-      index += 1;
+      return true;
     } else if (token === '--artifact-ref') {
       input.artifact_ref = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--restore-ref') {
       input.restore_ref = requireValue(token, value);
-      index += 1;
+      return true;
     } else if (token === '--apply') {
       input.dry_run = false;
+      return false;
     } else if (token === '--dry-run') {
       input.dry_run = true;
+      return false;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown stage-artifact option: ${token}.`, {
         option: token,
         usage: 'opl stage-artifact status|explain|rebuild|promote|gc|restore|validate|conformance|workbench --domain <domain> --program <id> --topic <id> --deliverable <id>',
       });
     }
-  }
+  });
   for (const field of ['domain_id', 'program_id', 'topic_id', 'deliverable_id']) {
     if (!input[field]) {
       throw new FrameworkContractError('cli_usage_error', `stage-artifact ${action} requires --${field.replace('_id', '')}.`, {
