@@ -33,7 +33,13 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 | P0 | 一行 wrapper / re-export | 迁移 active imports 后删除无语义 wrapper，例如 Console management/runtime/workspace、stage-run cockpit、runway family runtime id 等只转发文件。 | `rg` 无 active import 指向退役 wrapper；`npm run typecheck`；source-module strict import/cycle gate。 |
 | P1 | Runway local scheduler / queue tail | 标记并收薄重复 durable lifecycle；保留 local provider/dev diagnostic，不再和 Temporal 并列为 production lifecycle truth。 | focused runtime tests；readback false-ready flags；不删除仍被 dev/CI 使用的 local diagnostic。 |
 | P1 | Ledger observability tail | 将私有 drilldown/ledger 字段收敛到 OTel-compatible event/ref projection；保留 OPL receipt refs。 | focused ledger/observability tests；no domain authority write proof。 |
-| P2 | 测试与 fixture surface | 删除 alias/tombstone/narrative 重复测试，改用 contract fixture 或 focused semantic cases。 | `npm test` / `npm run test:fast`；line budget 不增长。 |
+| P2 | 测试与 fixture surface | 已执行第一批收薄：删除测试中固定 active/history docs prose、章节、链接与旧叙事 wording 的重复断言；保留 machine-readable contract、source/help semantic guard 与 authority flag guard。 | focused P2 tests + `npm test`；line budget 下降，不声明 runtime/domain/App release ready。 |
+
+## P2 执行记录
+
+- `2026-07-06`：`tests/src/active-path-residue-scan.test.ts` 从 broad active-doc narrative scan 收薄为 source/help 语义 guard；不再把 active docs wording、章节链接、volatile read-model counter 固定为测试接口。
+- `2026-07-06`：`tests/src/stale-compat-retirement-guard.test.ts` 删除 docs/history/examples/admission prose 负向断言，保留 compatibility alias、Hermes provider/runtime、contract backend set、Agent Lab authority flag 与 retired helper export 的 machine/source guard。
+- 当前完成口径：P2 属于测试/fixture surface 结构收薄；验证只能证明本 lane 未降低保留的 machine/source guard，不能证明 live provider、domain owner-chain、App release 或 production readiness。
 
 ## 停止条件
 
