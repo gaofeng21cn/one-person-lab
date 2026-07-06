@@ -569,7 +569,7 @@
           "ref_id": "evidence-pack:example-domain",
           "role": "evidence_pack",
           "ref_kind": "contract_ref",
-          "ref": "contracts/family-orchestration/research-evidence-pack.schema.json#examples/0",
+          "ref": "contracts/family-orchestration/stage-run-evidence-pack.schema.json#examples/0",
           "status": "present",
           "required": false,
           "body_included": false

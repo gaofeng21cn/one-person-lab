@@ -203,7 +203,7 @@
       ],
       "reuse_dependencies": [
         "stage_descriptors",
-        "research_evidence"
+        "stage_run_evidence"
       ],
       "family_boundary_notes": [
         {
@@ -234,7 +234,7 @@
       ],
       "reuse_dependencies": [
         "stage_descriptors",
-        "research_evidence"
+        "stage_run_evidence"
       ],
       "family_boundary_notes": [
         {

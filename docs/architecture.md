@@ -347,7 +347,8 @@ Stage attempt 的终态只允许收敛到三类：`success` 表示 required outp
 - `family-action-catalog` 继续描述可调用 action metadata 和多 surface descriptor。
 - `family-stage-control-plane` 只声明 stage descriptor、skill / prompt / evaluation refs、tool affordance boundary、handoff refs 与 authority boundary，不新建完整流程引擎或工具编排脚本。
 - `family-stage-integrity-metadata` 只声明 stage-level integrity、citation-support、evidence-handoff、data-access 与 human-checkpoint metadata；这是从 academic research workflow 中吸收的通用模式，不是 MAS publication gate、MAG fundability gate、RCA visual-quality gate，也不接管任何 domain 的 direct skill path。
-- `stage-candidate-portfolio` 只声明 refs-only stage candidate portfolio、assumption decomposition、provenance check、negative / failed path、ranking / proximity advisory metric 与 human review refs/status；这是通用 stage candidate 投影模式，不是 domain candidate store、domain truth reducer、quality gate、artifact authority 或 owner receipt signer。
+- `stage-candidate-portfolio` 只声明 refs-only domain stage candidate portfolio、assumption / provenance / negative-path / advisory-metric / human-review refs 与状态；这是从 Co-Scientist 风格 hypothesis loop 中吸收的通用 stage-candidate 投影模式，不是 domain hypothesis store、scientific truth reducer、quality gate、artifact authority 或 owner receipt signer。医学或科研假设正文、novelty 判断、证据强度和 candidate 排序归 MAS / MAS Scholar Skills 等 domain owner。
+- `stage-run-evidence-pack` 只声明 stage run manifest、failed/negative path refs、decision trace refs、artifact lineage refs 与 reproducibility refs；它服务 replay、audit、handoff 和 App/operator projection，不是 research evidence body、claim-evidence truth、publication package 或 domain quality gate。
 - `opl stages list|inspect` 只做 discovery、inspection 与 parity，不执行 stage。
 - `OPL` 只做 shared vocabulary、manifest discovery、parity、projection 与 typed queue dispatch，不执行 stage 内部专家动作。
 - `MAS`、`RCA`、`MAG` 继续持有各自的写作、视觉设计、基金策略、审稿、publication / deliverable / package gate 与最终质量判断。
@@ -372,6 +373,7 @@ Stage attempt 的终态只允许收敛到三类：`success` 表示 required outp
 - `OPL` 不替代领域智能体自己的逻辑、domain transition semantics、quality verdict、artifact authority、memory body 或 owner receipt authority
 - `OPL` 负责 Codex-default session/runtime、activation layer、shared modules/contracts/indexes、统一入口与 projection surface
 - `OPL` 负责 stage-led family framework 支撑：stage descriptor、handoff、queue、wakeup、retry、approval、trace、projection 和 parity；domain agent 负责 stage pack、prompt/skill、quality gate、truth reducer 和交付 authority
+- `OPL` core surface 不应以 `research`、`hypothesis`、`publication`、`fundability`、`visual-quality`、`medical` 等 domain 语义命名通用 primitive。确需承载这些工作流的基座投影时，命名必须回到 `stage`、`candidate`、`evidence refs`、`owner route`、`receipt`、`replay`、`artifact lineage` 或 `connector receipt`；domain 判断与专业 Skill 留在对应 Foundry Agent。
 - `MAS`、`MAG`、`RCA` 作为独立 `domain agent`，可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用
 - 两条入口的工作逻辑保持一致
 - 对 `MAS` 来说，OPL projection 只携带 evidence、provenance、状态和路由信号；ready、submission、publication、quality 等最终判断仍回到 MAS-owned durable surfaces
