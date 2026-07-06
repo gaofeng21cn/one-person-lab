@@ -3,8 +3,8 @@ import { recordManagedInstallUpdateReceipts } from '../../../../src/modules/conn
 import { recordOmaAppLivePathReceipts } from '../../../../src/modules/foundry-lab/oma-app-live-path-ledger.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
-test('runtime App projection consumes OPL-managed OMA install update receipts', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-oma-managed-state-'));
+test('runtime app-operator consumes OPL-managed OMA install update receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-oma-managed-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {
@@ -63,8 +63,8 @@ test('runtime App projection consumes OPL-managed OMA install update receipts', 
   }
 });
 
-test('runtime App projection consumes OMA App live path receipts', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-oma-live-state-'));
+test('runtime app-operator consumes OMA App live path receipts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-oma-live-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   const previousOmaRepoDir = process.env.OPL_META_AGENT_REPO_DIR;
   try {

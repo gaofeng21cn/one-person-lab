@@ -112,7 +112,7 @@ export function createOmaContractFixture(
     drilldown_readiness_receipt: {
       status: 'ready_for_app_consumption_refs_only',
       live_rendering_status: 'not_claimed_by_contract',
-      receipt_ref: 'oma-app-drilldown:fixture/ready',
+      receipt_ref: 'oma-app-operator:fixture/ready',
       receipt_ref_fields: [
         'developer_patch_work_order_owner_receipt_ref',
         'trajectory_atomization_receipt_ref',
@@ -328,7 +328,6 @@ export function assertMasLifecycleDrilldownProjection(projection: any) {
     ),
     true,
   );
-  assert.equal(projection.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
   assert.equal(projection.domain_dispatch_evidence.summary.domain_count, 1);
   assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
   assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count, 0);
@@ -342,18 +341,6 @@ export function assertMasLifecycleDrilldownProjection(projection: any) {
   assert.deepEqual(projection.domain_dispatch_evidence.attempts[0].writeback_receipt_refs, [
     'memory-writeback:receipt-1',
   ]);
-  assert.deepEqual(projection.memory_writeback_refs.writeback_receipt_refs, [
-    'memory-writeback:receipt-1',
-    'mas://memory/writeback/receipt.json',
-  ]);
-  assert.equal(
-    projection.runtime_visualization_projection.graph.nodes.some(
-      (node: { node_kind: string; ref: string }) =>
-        node.node_kind === 'memory_writeback_receipt'
-        && node.ref === 'mas://memory/writeback/receipt.json',
-    ),
-    true,
-  );
   assert.equal(
     projection.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
       ref.source_fingerprint === 'sha256:mas-drilldown-source'

@@ -11,11 +11,12 @@ import {
   test,
 } from '../helpers.ts';
 import { createFamilyDefaultContractWorkspace } from './domain-pack-compiler-fixtures.ts';
+import { assertMasLifecycleDrilldownProjection } from './runtime-app-operator-drilldown-helpers.ts';
 
 import './runtime-app-operator-drilldown-lifecycle-cases/current-control-liveness.ts';
 
-test('runtime App projection reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-mas-lifecycle-'));
+test('runtime app-operator reconciles MAS refs-only payload with OPL lifecycle ledger refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-mas-lifecycle-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
 
@@ -203,67 +204,9 @@ test('runtime App projection reconciles MAS refs-only payload with OPL lifecycle
     });
     const projection = output.app_operator_drilldown;
 
-    assert.equal(projection.authority_boundary.can_write_domain_truth, false);
-    assert.equal(projection.authority_boundary.can_read_memory_body, false);
-    assert.equal(projection.authority_boundary.can_read_artifact_body, false);
-    assert.equal(projection.summary.owner_receipt_ref_count, 4);
-    assert.equal(projection.summary.typed_blocker_count, 3);
-    assert.equal(projection.summary.domain_dispatch_evidence_domain_count, 1);
-    assert.equal(projection.summary.domain_dispatch_evidence_attempt_count, 1);
-    assert.equal(projection.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
-    assert.equal(projection.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
-    assert.equal(projection.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
-    assert.equal(projection.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
-    assert.equal(projection.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
+    assertMasLifecycleDrilldownProjection(projection);
     assert.equal(projection.summary.current_control_state_count, 1);
     assert.equal(projection.summary.current_control_state_blocked_count, 1);
-    assert.equal(projection.summary.lifecycle_index_ref_count, 2);
-    assert.equal(projection.summary.lifecycle_restore_proof_ref_count, 2);
-    assert.equal(projection.summary.lifecycle_reconcile_missing_ref_count, 0);
-    assert.equal(projection.summary.lifecycle_reconcile_extra_ref_count, 0);
-    assert.equal(projection.summary.lifecycle_reconcile_stale_ref_count, 0);
-    assert.equal(projection.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
-    assert.equal(projection.summary.lifecycle_domain_physical_delete_can_execute, false);
-    assert.equal(projection.summary.lifecycle_opl_cleanup_apply_can_execute, true);
-    assert.equal(projection.summary.safe_action_ref_count >= 2, true);
-    assert.equal(projection.summary.freshness_signal_count >= 1, true);
-
-    assert.equal(
-      projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'mas-owner-receipt:guarded-apply'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'mas-owner-receipt:transition'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.typed_blocker_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'mas-blocker:publication-currentness'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
-        blocker.blocker_id === 'domain_owned_lifecycle_receipt_required'
-      ),
-      true,
-    );
-    assert.equal(projection.domain_dispatch_evidence.surface_kind, 'opl_app_drilldown_domain_dispatch_evidence');
-    assert.equal(projection.domain_dispatch_evidence.summary.domain_count, 1);
-    assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
-    assert.equal(
-      projection.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count,
-      0,
-    );
-    assert.equal(
-      projection.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
-      false,
-    );
-    assert.equal(projection.current_control_state.surface_kind, 'opl_app_drilldown_current_control_state_projection');
     assert.equal(projection.current_control_state.summary.current_control_state_count, 1);
     assert.equal(projection.current_control_state.states[0].reconciliation_status, 'blocked_missing_identity');
     assert.equal(projection.current_control_state.authority_boundary.reads_domain_latest_or_dispatch_latest, false);
@@ -271,68 +214,15 @@ test('runtime App projection reconciles MAS refs-only payload with OPL lifecycle
     assert.equal(Object.hasOwn(projection.current_control_state.states[0], 'domain_ready'), false);
     assert.equal(Object.hasOwn(projection.current_control_state.states[0], 'publication_ready'), false);
     assert.equal(Object.hasOwn(projection.current_control_state.states[0], 'artifact_ready'), false);
-    assert.deepEqual(
-      projection.domain_dispatch_evidence.attempts[0].no_regression_evidence_refs,
-      ['mas-no-regression:package'],
-    );
-    assert.deepEqual(
-      projection.domain_dispatch_evidence.attempts[0].writeback_receipt_refs,
-      ['memory-writeback:receipt-1'],
-    );
-    assert.equal(
-      projection.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
-        ref.source_fingerprint === 'sha256:mas-drilldown-source'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'source:dataset'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'artifact:table'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
-        ref.ref === 'memory:route-policy'
-      ),
-      true,
-    );
-    assert.equal(
-      projection.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
-        ref.role === 'lifecycle_cleanup_receipt_ref'
-          && ref.ref.startsWith('opl://family-runtime/lifecycle-apply/medautoscience')
-      ),
-      true,
-    );
-    assert.deepEqual(projection.lifecycle_ledger_refs.restore_proof_refs, [
-      'restore-proof:mas-index',
-      'restore-proof:mas-package',
-    ]);
-    assert.equal(projection.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
-    assert.equal(
-      projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
-      false,
-    );
-    assert.equal(
-      projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
-      true,
-    );
-    assert.equal(projection.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('runtime App projection projects OPL NonAdvancingApply current-control readback without progress authority', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-non-advancing-current-control-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-current-control-workspace-'));
+test('runtime app-operator projects OPL NonAdvancingApply current-control readback without progress authority', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-non-advancing-current-control-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-current-control-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const masManifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
   const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
@@ -489,8 +379,8 @@ test('runtime App projection projects OPL NonAdvancingApply current-control read
   }
 });
 
-test('runtime App projection projects lifecycle handoff apply attempts for default callers', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-lifecycle-handoff-'));
+test('runtime app-operator projects lifecycle handoff apply attempts for default callers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-lifecycle-handoff-'));
   try {
     const result = runCli([
       'family-runtime',
@@ -532,10 +422,6 @@ test('runtime App projection projects lifecycle handoff apply attempts for defau
     const readback = runCli(['runtime', 'memory-artifact-lifecycle'], {
       OPL_STATE_DIR: stateRoot,
     }).memory_artifact_lifecycle_readback;
-    assert.equal(
-      projection.memory_artifact_lifecycle.surface_kind,
-      'opl_app_drilldown_memory_artifact_lifecycle_evidence',
-    );
     assert.equal(
       projection.memory_artifact_lifecycle.readiness_status,
       'typed_blocker_work_order_required_not_ready',

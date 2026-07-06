@@ -10,7 +10,7 @@ import {
 } from '../../helpers.ts';
 
 test('runtime app-operator-drilldown summary exposes running provider attempts as liveness refs only', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-live-control-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-'));
   try {
     const enqueued = runCli([
       'family-runtime',
@@ -142,7 +142,7 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
 });
 
 test('runtime app-operator-drilldown does not count stale MAS work-unit live attempt as current running', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-stale-workunit-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stale-workunit-'));
   try {
     const staleTaskId = runCli([
       'family-runtime',
@@ -268,7 +268,7 @@ test('runtime app-operator-drilldown does not count stale MAS work-unit live att
 });
 
 test('runtime app-operator-drilldown exposes stall lineage for repeated typed blockers', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-stall-lineage-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stall-lineage-'));
   try {
     const attemptIds: string[] = [];
     for (const index of [0, 1]) {
@@ -355,7 +355,7 @@ test('runtime app-operator-drilldown exposes stall lineage for repeated typed bl
 });
 
 test('runtime app-operator-drilldown bounds running provider attempt liveness samples in default summary', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-live-control-bounded-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-bounded-'));
   try {
     const attemptIds: string[] = [];
     for (let index = 0; index < 7; index += 1) {
