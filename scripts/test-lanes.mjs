@@ -367,10 +367,6 @@ const lanes = {
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
     nodeTest(fastTestFiles, { batchSize: 20 }),
   ],
-  'fast-parallel': [
-    { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
-    nodeTest(fastTestFiles, { batchSize: 20 }),
-  ],
   'read-model-gates': [
     nodeTest(readModelGateNonTemporalHeavyTestFiles, {
       batchSize: 20,
@@ -460,6 +456,19 @@ const lanes = {
   ],
   'fresh-install': [
     nodeTest(['tests/src/fresh-install-smoke.test.ts']),
+  ],
+  full: [
+    { kind: 'npm', args: ['run', 'test:fast'] },
+    { kind: 'npm', args: ['run', 'test:fresh-install'] },
+    { kind: 'npm', args: ['run', 'test:structure'] },
+    { kind: 'npm', args: ['run', 'typecheck'] },
+    { kind: 'npm', args: ['run', 'lint'] },
+    { kind: 'npm', args: ['run', 'test:read-model-gates'] },
+    { kind: 'npm', args: ['run', 'test:meta'] },
+    { kind: 'npm', args: ['run', 'test:regression'] },
+    { kind: 'npm', args: ['run', 'test:integration'] },
+    { kind: 'npm', args: ['run', 'test:artifact'] },
+    { kind: 'npm', args: ['run', 'test:native'] },
   ],
 };
 

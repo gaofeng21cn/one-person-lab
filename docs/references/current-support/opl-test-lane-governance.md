@@ -5,7 +5,7 @@ Purpose: `references_current_support_opl_test_lane_governance`
 State: `support_reference`
 Machine boundary: 本文是人读 reference 支撑材料。机器 truth 继续归核心五件套、contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifests 和真实 evidence。
 
-本参考说明当前测试入口语义。机器真相在 `scripts/test-lanes.mjs`、`scripts/run-parallel-test-lanes.sh`、`scripts/verify.sh`、`package.json` 和 GitHub workflow；本文只解释维护口径，不冻结 lane 细节、单个测试文件列表、Sentrux baseline 数字或 CI 通过状态。
+本参考说明当前测试入口语义。机器真相在 `scripts/test-lanes.mjs`、`scripts/verify.sh`、`package.json` 和 GitHub workflow；本文只解释维护口径，不冻结 lane 细节、单个测试文件列表、Sentrux baseline 数字或 CI 通过状态。
 
 Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:*` scripts、`node scripts/test-lanes.mjs list`、`scripts/verify.sh` 的 case 分支和 `.github/workflows/verify.yml`。本文中的 lane 角色是稳定读法；测试文件增减、CI job 通过状态、quality details 数字、compare-ref 可用性和 full lane 内部日志都必须从 fresh 命令输出读取。
 
@@ -15,7 +15,6 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | --- | --- | --- |
 | smoke | `npm test` / `npm run test:smoke` | 默认秒级核心入口，覆盖 lane registry、CLI 模块边界、runtime state path 与 OPL session runtime 基础合同。 |
 | fast | `npm run test:fast` | 显式标准本地入口；覆盖 repo hygiene、合同治理、family shared release、native helper prebuild、轻量 runtime contract、stage pack 与 quality details。 |
-| fast-parallel | `npm run test:fast:parallel` | full wrapper 的并行 fast lane；与 `fast` 使用同一测试集合。 |
 | read-model-gates | `npm run test:read-model-gates` | 串行重型 read-model / runtime gate；覆盖 framework readiness、App drilldown、evidence worklist、Temporal/provider、workspace-domain、domain-pack compiler 与 agent conformance。 |
 | meta | `npm run test:meta` | 治理、quality、contract 和 generated/default surface 元测试 lane；不等价于 `fast`。 |
 | regression | `npm run test:regression` | 宽回归入口；覆盖 CLI 默认 shell、domain catalog、entry contracts、product-entry、orchestration、skills、automation 与 full internal package。 |
@@ -33,9 +32,9 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 | family | `./scripts/verify.sh family` | family shared release 与 Python shared harness bootstrap 验证；Python cache、pytest cache 和临时 venv 必须走 repo 外 temp env。 |
 | lint | `./scripts/verify.sh lint` | `npm run lint`，只执行 JS lint；行数预算通过 `line-budget` / `line-budget:strict` 或 `structure` / `structure:strict` 查看。 |
 | typecheck | `./scripts/verify.sh typecheck` | `npm run typecheck`。 |
-| full | `npm run test:full` / `./scripts/run-parallel-test-lanes.sh full` | clean-clone 基线入口；先并行 fast-parallel、fresh-install、structure、typecheck 与 lint，再串行 read-model-gates、meta、regression、integration、artifact 与 native。 |
+| full | `npm run test:full` | clean-clone 基线入口；由 `scripts/test-lanes.mjs` 顺序调用 fast、fresh-install、structure、typecheck、lint、read-model-gates、meta、regression、integration、artifact 与 native。 |
 
-`npm test` 等同 `npm run test:smoke`，用于普通开发的最低成本入口。`npm run test:fast` 是显式标准本地入口；当改动触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再运行。`test:fast:parallel` 与 `fast` 使用同一测试集合，只是供 full wrapper 并行调度。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
+`npm test` 等同 `npm run test:smoke`，用于普通开发的最低成本入口。`npm run test:fast` 是显式标准本地入口；当改动触及 shared runtime、contract registry、stage pack、Agent Lab 或 quality details 时再运行。`test:meta` 是独立治理 / quality / contract meta lane，不再等价 `test:fast`；共享 SQLite/state 的 framework readiness、App drilldown 和 evidence worklist 相关 read-model gates 通过 `test:read-model-gates` 串行执行，避免并行抢占同一状态面。
 
 ## 归属规则
 

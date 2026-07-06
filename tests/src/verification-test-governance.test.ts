@@ -123,7 +123,6 @@ const nativeHelperPrebuildWorkflowPatterns = [
 const expectedTestScripts = {
   'test:smoke': 'node ./scripts/test-lanes.mjs run smoke',
   'test:fast': 'node ./scripts/test-lanes.mjs run fast',
-  'test:fast:parallel': 'node ./scripts/test-lanes.mjs run fast-parallel',
   'test:meta': 'node ./scripts/test-lanes.mjs run meta',
   'test:read-model-gates': 'node ./scripts/test-lanes.mjs run read-model-gates',
   'test:regression': 'node ./scripts/test-lanes.mjs run regression',
@@ -132,29 +131,23 @@ const expectedTestScripts = {
   'test:fresh-install': 'node ./scripts/test-lanes.mjs run fresh-install',
   'test:native': './scripts/verify.sh native',
   'test:structure': './scripts/verify.sh structure',
+  'test:full': 'node ./scripts/test-lanes.mjs run full',
   test: 'npm run test:smoke',
 };
 
 const fullLanePatterns = [
-  /Usage: \$0 full/,
-  /run-with-repo-temp-env\.sh/,
-  /OPL_REPO_TEMP_ENV_ACTIVE/,
-  /parallel_lanes=\(/,
-  /serial_lanes=\(/,
-  /"test:fast:parallel"/,
-  /"test:read-model-gates"/,
-  /"test:meta"/,
-  /"test:regression"/,
-  /"test:integration"/,
-  /"test:artifact"/,
-  /"test:fresh-install"/,
-  /"test:native"/,
-  /"test:structure"/,
-  /"typecheck"/,
-  /"lint"/,
-  /for lane in "\$\{parallel_lanes\[@\]\}"/,
-  /for lane in "\$\{serial_lanes\[@\]\}"/,
-  /npm run "\$\{lane\}"/,
+  /full:/,
+  /'test:fast'/,
+  /'test:fresh-install'/,
+  /'test:structure'/,
+  /'typecheck'/,
+  /'lint'/,
+  /'test:read-model-gates'/,
+  /'test:meta'/,
+  /'test:regression'/,
+  /'test:integration'/,
+  /'test:artifact'/,
+  /'test:native'/,
 ];
 
 function read(relativePath: string) {
@@ -264,7 +257,7 @@ test('package.json exposes a single test lane registry for active test ownership
   assert.equal(coverage.status, 0, coverage.stderr);
 });
 
-test('test:full delegates to the parallel test lane wrapper', () => {
-  assert.equal(packageJson.scripts?.['test:full'], './scripts/run-parallel-test-lanes.sh full');
-  assertFilePatterns('scripts/run-parallel-test-lanes.sh', fullLanePatterns);
+test('test:full stays in the single test lane registry', () => {
+  assert.equal(packageJson.scripts?.['test:full'], 'node ./scripts/test-lanes.mjs run full');
+  assertFilePatterns('scripts/test-lanes.mjs', fullLanePatterns);
 });

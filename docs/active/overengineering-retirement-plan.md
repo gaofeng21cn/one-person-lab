@@ -58,6 +58,23 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 - 当前完成口径：P2 属于测试/fixture surface 结构收薄并已审计完成；验证只能证明本 lane 未降低保留的 machine/source guard，不能证明 live provider、domain owner-chain、App release 或 production readiness。
 - 新鲜证据：`npm run --silent line-budget -- --list` 只列出 `src/modules/connect/developer-mode.ts`、`src/entrypoints/cli/cases/public-command-specs-parts/connect.ts` 两个 source advisory，无剩余 over-budget test/fixture 文件；focused P2 wrapper tests 为 `30/30` 通过。
 
+## Test lane registry 收薄执行记录
+
+- `2026-07-06`：删除重复 full-test 并发 wrapper `scripts/run-parallel-test-lanes.sh`、`test:fast:parallel` npm script 和 `fast-parallel` lane。`test:full` 现在直接走 `scripts/test-lanes.mjs run full`，由唯一 test lane registry 顺序调用 fast、fresh-install、structure、typecheck、lint、read-model-gates、meta、regression、integration、artifact 与 native。
+- 该收薄只改变本地 full gate 编排方式，不改变各 lane 的验证内容、不声明 release-ready，也不触碰 Managed Update、Agent Packages owner-route 或 package lifecycle 动词面。
+- 维护口径同步到 `docs/references/current-support/opl-test-lane-governance.md`：机器真相只剩 `scripts/test-lanes.mjs`、`scripts/verify.sh`、`package.json` 与 GitHub workflow，不再维护第二套 shell wrapper。
+
+## 完成度审计
+
+| 条目 | 状态 | 完成度 | 新鲜证据口径 | 剩余缺口 |
+| --- | --- | ---: | --- | --- |
+| Agent Package Manager 边界 | excluded | 0% | 用户指定另会话处理；本会话不验收。 | 不触碰 Managed Update + Agent Packages owner-route 与 package lifecycle 动词面。 |
+| 一行 wrapper / re-export | done | 100% | `Merge OPL wrapper cleanup` / `refactor: retire OPL wrapper re-exports` 已进入 `main`；后续 verification 以 `npm run typecheck`、source-module strict gate 和 active import readback 为准。 | 无本会话继续项；production/live evidence 不适用。 |
+| Runway local scheduler / queue tail | done | 100% | 本文 P1 记录的 focused runtime tests、`npm run typecheck`、`git diff --check`、`npm test` 证明 local SQLite 只保 diagnostic/provider false-ready guard。 | local queue/scheduler/dedupe active code 仍是 dev/CI diagnostic 与 projection/readback cache，不能无替代 caller 物理删除。 |
+| Ledger observability tail | done | 100% | `Thin observability projection vocabulary` 与 P1 observability-export false-ready guard 已落在 `main`；focused runtime-observability tests 覆盖 local_sqlite 不计 provider-ready。 | OTel-compatible projection 不等于 provider/live readiness。 |
+| 测试与 fixture surface | done | 100% | P2 wrapper tests、line-budget readback、`npm test` smoke 证明 prose/assertion surface 已收薄且 over-budget test/fixture 清零。 | 不声明 runtime/domain/App release ready。 |
+| Test lane registry / full gate wrapper | done | 100% | `package.json`、`scripts/test-lanes.mjs`、`tests/src/verification-test-governance.test.ts` 和 `docs/references/current-support/opl-test-lane-governance.md` 同步到单一 registry；active command/test/reference surface 不再暴露被删并发 wrapper。 | full gate 改为顺序执行；如将来需要性能并发，应放在 CI job matrix 或显式 runner 需求中重新设计。 |
+
 ## 停止条件
 
 - 若 active caller、source of truth 或 authority owner 不清，先停在 typed blocker，不能靠兼容 wrapper 掩盖。
