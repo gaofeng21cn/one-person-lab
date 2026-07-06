@@ -1,220 +1,49 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import type { OplDeveloperSupervisorConfigFile } from '../../kernel/system-preferences.ts';
-import { readOplDeveloperSupervisorConfig, readOplWorkspaceRoot } from '../../kernel/system-preferences.ts';
+import { readOplDeveloperSupervisorConfig } from '../../kernel/system-preferences.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   resolveStandardAgent,
 } from '../atlas/index.ts';
-import { buildOplFrameworkLocator } from './opl-framework-locator.ts';
 import { listDefaultOplDomainModuleSpecs } from './system-installation/modules.ts';
 import { SCHOLARSKILLS_PACKAGE_SPEC } from './system-installation/scholarskills-package-channel.ts';
 import {
   type DeveloperModeGhFixture,
-  type DeveloperModeGithubIdentityProjection,
   detectDeveloperModeGithubIdentity,
   parseGithubRepoFromUrl,
   permissionAllowsDeveloperModeDirectWrite,
   readDeveloperModeGhFixture,
   readDeveloperModeRepoPermission,
 } from './developer-mode-source-policy.ts';
-
-type DeveloperModeStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'inactive';
-type DeveloperModeEffectiveState =
-  | 'active_direct'
-  | 'active_pr_only'
-  | 'active_mixed_routes'
-  | 'blocked'
-  | 'disabled'
-  | 'inactive_auto_identity_mismatch'
-  | 'observe_only';
-type DeveloperModeAllowedRoute =
-  | 'direct_repo_fix'
-  | 'fork_pull_request'
-  | 'mixed_direct_and_pr'
-  | 'observe_only'
-  | 'blocked'
-  | 'disabled';
-type GithubIdentityStatus = DeveloperModeGithubIdentityProjection['status'];
-type GithubIdentitySource = DeveloperModeGithubIdentityProjection['source'];
-type RepoAuthorityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
-type RepoTargetSource = 'opl_framework_constant' | 'domain_module_spec' | 'framework_capability_package_spec';
-type DeveloperProfileId = 'contributor' | 'maintainer' | 'runtime_maintainer';
-type DeveloperIdentityClass = 'opl_maintainer' | 'target_agent_developer' | 'contributor';
-type DeveloperCapabilityStatus = 'ready' | 'limited' | 'blocked' | 'disabled' | 'not_checked';
-type DeveloperCapabilityId =
-  | 'source_channel'
-  | 'workspace_trust'
-  | 'github_authority'
-  | 'agent_automation'
-  | 'runtime_mutation_scope';
-
-type GithubIdentityProjection = {
-  status: GithubIdentityStatus;
-  login: string | null;
-  source: GithubIdentitySource;
-  reason: string | null;
-};
-
-type RepoAuthorityTarget = {
-  target_id: string;
-  label: string;
-  repo: string;
-  repo_url: string;
-  source: RepoTargetSource;
-};
-
-type RepoAuthorityProjection = RepoAuthorityTarget & {
-  status: RepoAuthorityStatus;
-  permission: string | null;
-  direct_write_allowed: boolean;
-  allowed_route: DeveloperModeAllowedRoute;
-  reason: string | null;
-};
-
-type RepoAuthoritySummary = {
-  status: RepoAuthorityStatus;
-  required_repo_count: number;
-  direct_write_repo_count: number;
-  pr_route_repo_count: number;
-  blocked_repo_count: number;
-  repos: RepoAuthorityProjection[];
-};
-
-type DeveloperProfileProjection = {
-  profile_id: DeveloperProfileId;
-  status: DeveloperCapabilityStatus;
-  level: DeveloperProfileId;
-  source: string;
-  impact: string;
-};
-
-type DeveloperCapabilityProjection = {
-  status: DeveloperCapabilityStatus;
-  level: string;
-  source: string;
-  impact: string;
-};
-
-type DeveloperCapabilitiesProjection = Record<DeveloperCapabilityId, DeveloperCapabilityProjection>;
-type FrameworkLocatorResolution = ReturnType<typeof buildOplFrameworkLocator>['framework_locator']['resolved'];
-
-type DeveloperModeAgentAuthorityProjection = {
-  surface_kind: 'opl_developer_mode_agent_authority_policy';
-  policy_id: 'developer_mode_agent_authority_matrix.v1';
-  feedback_capture_requires_developer_mode: false;
-  self_evolution_repo_mutation_requires_developer_mode: true;
-  manual_enable_without_repo_write_cannot_grant_direct_write: true;
-  activation_sources: {
-    auto_github_identity: {
-      can_select_local_checkout_source: true;
-      can_grant_direct_repo_write: false;
-    };
-    manual_user_config: {
-      can_request_developer_routes: true;
-      no_direct_permission_route: 'fork_pull_request';
-      can_grant_direct_repo_write: false;
-    };
-  };
-  authority_levels: {
-    opl_maintainer: string;
-    target_agent_developer: string;
-    contributor: string;
-  };
-  route_matrix: Array<{
-    case_id: string;
-    route: DeveloperModeAllowedRoute;
-    direct_write_required: boolean;
-  }>;
-};
-
-export type OplDeveloperModeFrameworkCheckoutProjection = {
-  surface_kind: 'opl_developer_mode_framework_checkout_locator';
-  policy_id: 'developer_mode_framework_checkout_locator.v1';
-  status: 'resolved' | 'unresolved';
-  selected_source_kind: 'local_checkout' | 'managed_runtime';
-  should_use_local_checkout: boolean;
-  resolution_source: FrameworkLocatorResolution['source'] | 'developer_workspace_sibling_checkout' | 'unresolved';
-  checkout_root: string | null;
-  checkout_bin: string | null;
-  checkout_cli_entry: string | null;
-  reason: string | null;
-};
-
-type DeveloperModeTargetAuthorityStatus = RepoAuthorityStatus | 'unresolved';
-
-export type OplDeveloperModeTargetAuthorityInput = {
-  target_agent_id?: string | null;
-  target_repo_id?: string | null;
-  target_repo_url?: string | null;
-};
-
-export type OplDeveloperModeTargetAuthorityProjection = {
-  target_kind: 'standard_agent' | 'framework_capability_package' | 'explicit_repo' | 'unresolved';
-  resolution_source:
-    | 'standard_agent_registry'
-    | 'framework_capability_package_spec'
-    | 'explicit_target_repo_id'
-    | 'explicit_target_repo_url'
-    | 'unresolved';
-  target_agent_id: string | null;
-  target_repo_id: string | null;
-  target_repo_url: string | null;
-  target_label: string | null;
-  status: DeveloperModeTargetAuthorityStatus;
-  developer_identity_class: DeveloperIdentityClass;
-  permission: string | null;
-  direct_write_allowed: boolean;
-  allowed_route: DeveloperModeAllowedRoute;
-  feedback_capture_requires_developer_mode: false;
-  repo_mutation_requires_developer_mode: true;
-  manual_enable_cannot_grant_direct_write: true;
-  developer_mode_status: DeveloperModeStatus;
-  developer_mode_enabled: OplDeveloperSupervisorConfigFile['enabled'];
-  developer_mode_mode: OplDeveloperSupervisorConfigFile['mode'];
-  reason: string | null;
-};
-
-type OplDeveloperModeTargetAuthoritySurface = {
-  surface_kind: 'opl_developer_mode_target_authority_resolver';
-  policy_id: 'developer_mode_target_authority_resolver.v1';
-  accepted_inputs: ['target_agent_id', 'target_repo_id', 'target_repo_url'];
-  standard_targets: OplDeveloperModeTargetAuthorityProjection[];
-};
-
-type DeveloperModeContext = {
-  status: DeveloperModeStatus;
-  enabled: OplDeveloperSupervisorConfigFile['enabled'];
-  effectiveState: DeveloperModeEffectiveState;
-  mode: OplDeveloperSupervisorConfigFile['mode'];
-  configSource: OplDeveloperSupervisorConfigFile['source'];
-  autoEnableGithubLogin: string;
-  allowedRoute: DeveloperModeAllowedRoute;
-  githubIdentity: GithubIdentityProjection;
-  repoAuthority: RepoAuthoritySummary;
-  inspectionDetail: 'fast' | 'full';
-};
-
-export type OplDeveloperModeProjection = {
-  surface_id: 'opl_developer_mode';
-  status: DeveloperModeStatus;
-  enabled: OplDeveloperSupervisorConfigFile['enabled'];
-  effective_state: DeveloperModeEffectiveState;
-  mode: OplDeveloperSupervisorConfigFile['mode'];
-  config_source: OplDeveloperSupervisorConfigFile['source'];
-  auto_enable_github_login: string;
-  allowed_route: DeveloperModeAllowedRoute;
-  developer_profile: DeveloperProfileProjection;
-  capabilities: DeveloperCapabilitiesProjection;
-  agent_authority: DeveloperModeAgentAuthorityProjection;
-  framework_checkout: OplDeveloperModeFrameworkCheckoutProjection;
-  target_authority: OplDeveloperModeTargetAuthoritySurface;
-  github_identity: GithubIdentityProjection;
-  repo_authority: RepoAuthoritySummary;
-  inspection_detail?: 'fast' | 'full';
-};
+import { buildFrameworkCheckoutProjection } from './developer-mode-framework-checkout.ts';
+import type {
+  DeveloperCapabilitiesProjection,
+  DeveloperCapabilityProjection,
+  DeveloperCapabilityStatus,
+  DeveloperIdentityClass,
+  DeveloperModeAllowedRoute,
+  DeveloperModeAgentAuthorityProjection,
+  DeveloperModeContext,
+  DeveloperModeEffectiveState,
+  DeveloperModeStatus,
+  DeveloperModeTargetAuthorityStatus,
+  DeveloperProfileProjection,
+  GithubIdentityProjection,
+  GithubIdentityStatus,
+  OplDeveloperModeProjection,
+  OplDeveloperModeTargetAuthorityInput,
+  OplDeveloperModeTargetAuthorityProjection,
+  OplDeveloperModeTargetAuthoritySurface,
+  RepoAuthorityProjection,
+  RepoAuthorityStatus,
+  RepoAuthoritySummary,
+  RepoAuthorityTarget,
+} from './developer-mode-types.ts';
+export type {
+  OplDeveloperModeFrameworkCheckoutProjection,
+  OplDeveloperModeProjection,
+  OplDeveloperModeTargetAuthorityInput,
+  OplDeveloperModeTargetAuthorityProjection,
+} from './developer-mode-types.ts';
 
 type GhFixture = DeveloperModeGhFixture;
 
@@ -994,208 +823,6 @@ function buildTargetAuthoritySurface(context: DeveloperModeContext): OplDevelope
     standard_targets: STANDARD_AGENT_REGISTRY.map((entry) =>
       buildTargetAuthorityProjection(context, { target_agent_id: entry.agent_id })),
   };
-}
-
-function pathExistsFile(filePath: string) {
-  return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
-}
-
-function normalizeOptionalPath(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? path.resolve(trimmed) : null;
-}
-
-function safeRealpath(candidatePath: string | null) {
-  if (!candidatePath) {
-    return null;
-  }
-  try {
-    return fs.realpathSync.native(candidatePath);
-  } catch {
-    return null;
-  }
-}
-
-function isFrameworkCheckoutRoot(rootPath: string) {
-  return (
-    fs.existsSync(path.join(rootPath, '.git'))
-    && pathExistsFile(path.join(rootPath, 'contracts', 'opl-framework', 'public-surface-index.json'))
-    && pathExistsFile(path.join(rootPath, 'bin', 'opl'))
-    && (
-      pathExistsFile(path.join(rootPath, 'src', 'entrypoints', 'cli.ts'))
-      || pathExistsFile(path.join(rootPath, 'dist', 'entrypoints', 'cli.js'))
-    )
-  );
-}
-
-function currentFrameworkCheckoutRoot() {
-  const rootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-  return isFrameworkCheckoutRoot(rootPath) ? fs.realpathSync.native(rootPath) : null;
-}
-
-function resolveFrameworkRootFromBin(binPath: string) {
-  const realBinPath = fs.realpathSync.native(path.resolve(binPath));
-  return path.resolve(path.dirname(realBinPath), '..');
-}
-
-function safeResolveFrameworkRootFromBin(binPath: string | null) {
-  if (!binPath) {
-    return null;
-  }
-  try {
-    return resolveFrameworkRootFromBin(binPath);
-  } catch {
-    return null;
-  }
-}
-
-function resolveFrameworkCliEntryPath(rootPath: string) {
-  const sourceCli = path.join(rootPath, 'src', 'entrypoints', 'cli.ts');
-  if (pathExistsFile(sourceCli)) {
-    return sourceCli;
-  }
-  const distCli = path.join(rootPath, 'dist', 'entrypoints', 'cli.js');
-  return pathExistsFile(distCli) ? distCli : null;
-}
-
-function buildResolvedFrameworkCheckoutProjection(
-  selectedSourceKind: OplDeveloperModeFrameworkCheckoutProjection['selected_source_kind'],
-  shouldUseLocalCheckout: boolean,
-  resolutionSource: OplDeveloperModeFrameworkCheckoutProjection['resolution_source'],
-  checkoutRoot: string,
-): OplDeveloperModeFrameworkCheckoutProjection {
-  const cliEntry = resolveFrameworkCliEntryPath(checkoutRoot);
-  return {
-    surface_kind: 'opl_developer_mode_framework_checkout_locator',
-    policy_id: 'developer_mode_framework_checkout_locator.v1',
-    status: cliEntry ? 'resolved' : 'unresolved',
-    selected_source_kind: selectedSourceKind,
-    should_use_local_checkout: shouldUseLocalCheckout,
-    resolution_source: cliEntry ? resolutionSource : 'unresolved',
-    checkout_root: checkoutRoot,
-    checkout_bin: path.join(checkoutRoot, 'bin', 'opl'),
-    checkout_cli_entry: cliEntry,
-    reason: cliEntry ? null : 'framework_cli_entry_missing',
-  };
-}
-
-function resolveDeveloperWorkspaceFrameworkCheckoutRoot() {
-  const workspaceRoot = readOplWorkspaceRoot().selected_path;
-  if (!workspaceRoot) {
-    return null;
-  }
-  const candidate = path.join(workspaceRoot, 'one-person-lab');
-  return isFrameworkCheckoutRoot(candidate) ? fs.realpathSync.native(candidate) : null;
-}
-
-function resolveExplicitFrameworkCheckoutCandidate(preferWorkspaceCheckout: boolean): {
-  source: Exclude<OplDeveloperModeFrameworkCheckoutProjection['resolution_source'], 'PATH:opl' | 'unresolved'>;
-  root: string;
-} | null {
-  const workspaceCheckoutRoot = resolveDeveloperWorkspaceFrameworkCheckoutRoot();
-  if (preferWorkspaceCheckout && workspaceCheckoutRoot) {
-    return {
-      source: 'developer_workspace_sibling_checkout',
-      root: workspaceCheckoutRoot,
-    };
-  }
-
-  const configuredFrameworkRoot = safeRealpath(normalizeOptionalPath(process.env.OPL_FRAMEWORK_ROOT));
-  if (configuredFrameworkRoot && isFrameworkCheckoutRoot(configuredFrameworkRoot)) {
-    return {
-      source: 'OPL_FRAMEWORK_ROOT',
-      root: configuredFrameworkRoot,
-    };
-  }
-
-  const configuredCliBinRoot = safeResolveFrameworkRootFromBin(normalizeOptionalPath(process.env.OPL_CLI_BIN));
-  if (configuredCliBinRoot && isFrameworkCheckoutRoot(configuredCliBinRoot)) {
-    return {
-      source: 'OPL_CLI_BIN',
-      root: configuredCliBinRoot,
-    };
-  }
-
-  const configuredBinRoot = safeResolveFrameworkRootFromBin(normalizeOptionalPath(process.env.OPL_BIN));
-  if (configuredBinRoot && isFrameworkCheckoutRoot(configuredBinRoot)) {
-    return {
-      source: 'OPL_BIN',
-      root: configuredBinRoot,
-    };
-  }
-
-  const currentCheckoutRoot = currentFrameworkCheckoutRoot();
-  if (currentCheckoutRoot) {
-    return {
-      source: 'current_cli_entry',
-      root: currentCheckoutRoot,
-    };
-  }
-
-  if (workspaceCheckoutRoot) {
-    return {
-      source: 'developer_workspace_sibling_checkout',
-      root: workspaceCheckoutRoot,
-    };
-  }
-
-  return null;
-}
-
-function buildFrameworkCheckoutProjection(
-  context: Pick<DeveloperModeContext, 'enabled' | 'status' | 'mode'>,
-): OplDeveloperModeFrameworkCheckoutProjection {
-  const shouldUseLocalCheckout =
-    context.mode === 'developer_apply_safe'
-    && (
-      context.enabled === 'on'
-      || (
-        context.enabled === 'auto'
-        && context.status !== 'disabled'
-        && context.status !== 'inactive'
-        && context.status !== 'blocked'
-      )
-    );
-  const selectedSourceKind = shouldUseLocalCheckout ? 'local_checkout' : 'managed_runtime';
-
-  const explicitCheckout = resolveExplicitFrameworkCheckoutCandidate(shouldUseLocalCheckout);
-  if (explicitCheckout) {
-    return buildResolvedFrameworkCheckoutProjection(
-      selectedSourceKind,
-      shouldUseLocalCheckout,
-      explicitCheckout.source,
-      explicitCheckout.root,
-    );
-  }
-
-  try {
-    const locator = buildOplFrameworkLocator().framework_locator;
-    if (locator.resolved.source === 'PATH:opl') {
-      throw new Error('framework_locator_resolved_only_via_path_without_explicit_checkout_candidate');
-    }
-    if (shouldUseLocalCheckout && !isFrameworkCheckoutRoot(locator.resolved.root)) {
-      throw new Error('developer_mode_requires_local_framework_checkout_but_current_locator_is_not_a_git_checkout');
-    }
-    return buildResolvedFrameworkCheckoutProjection(
-      selectedSourceKind,
-      shouldUseLocalCheckout,
-      locator.resolved.source,
-      locator.resolved.root,
-    );
-  } catch (error) {
-    return {
-      surface_kind: 'opl_developer_mode_framework_checkout_locator',
-      policy_id: 'developer_mode_framework_checkout_locator.v1',
-      status: 'unresolved',
-      selected_source_kind: selectedSourceKind,
-      should_use_local_checkout: shouldUseLocalCheckout,
-      resolution_source: 'unresolved',
-      checkout_root: null,
-      checkout_bin: null,
-      checkout_cli_entry: null,
-      reason: error instanceof Error ? error.message : 'framework_locator_unavailable',
-    };
-  }
 }
 
 function buildDeveloperModeProjection(input: DeveloperModeContext): OplDeveloperModeProjection {
