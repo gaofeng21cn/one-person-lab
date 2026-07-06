@@ -1,7 +1,7 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
+import { runOplFlowIntelligenceEnhancementAction } from '../codexcont-intelligence-mode.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
-import { runOplFlowIntelligenceEnhancementAction } from '../../console/index.ts';
 
 import { buildOplEnvironment } from './environment.ts';
 import { buildDockerWebuiStartupReadback } from './docker-webui-doctor.ts';
