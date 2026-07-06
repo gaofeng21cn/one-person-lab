@@ -21,13 +21,14 @@ Codex metadata 本身也算暴露面。OPL 不应把 foundation support pack 的
 
 MAS / MDS 相关用户级全局 Skill 的当前审计见 [MAS 全局 Skill 暴露审计](./mas-global-skill-exposure-audit.md)。该审计只记录本机全局 metadata 污染风险和预期暴露层级，不把用户级安装状态当作 OPL 默认生态，也不替代 workspace / quest-local sync receipt。
 
-当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四十个 Skill 是：
+当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四十一个 Skill 是：
 
 - `opl-runway-compute-operator`：Runway compute / provider route 诊断和 handoff briefing。
 - `opl-runway-recovery-playbook-writer`：Runway / Connect / provider failure 的 recovery playbook、owner route 和 expected proof 编排。
 - `opl-stagecraft-stage-designer`：Stagecraft stage prompt、rubric、capability use 和 handoff lower-bound 设计。
 - `opl-stage-quality-gate-critic`：Stagecraft quality gate、evidence lower bound、rubric gap 和 no-authority gate delta 审查。
 - `opl-stage-assumption-lifecycle-reviewer`：stage assumption lifecycle projection 的 stale/missing/owner/monitor gap、stage impact 和 route-back 审查。
+- `opl-stage-candidate-portfolio-reviewer`：stage candidate portfolio refs-only projection 的 candidate/assumption/provenance/negative-path/advisory-metric/human-review ref gap、domain authority overclaim 和 owner-route 审查。
 - `opl-stage-pack-source-replay-reviewer`：stage-pack source spec / replay certification 的 body-free diff、replay blocker、missing receipt 和 owner-route workorder 审查。
 - `opl-connect-source-and-skill-router`：Connect external source / Skill search-inspect-sync、single-skill sync 和 connector receipt debug。
 - `opl-connect-connector-receipt-auditor`：Connect connector receipt candidate、normalized refs、failed provider 和 no-authority handoff 审查。
