@@ -1,4 +1,5 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
+import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { runOplFlowIntelligenceEnhancementAction } from '../codexcont-intelligence-mode.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
@@ -173,6 +174,12 @@ function normalizeError(error: unknown) {
     code: 'startup_maintenance_failed',
     message: error instanceof Error ? error.message : String(error),
   };
+}
+
+function isOplFlowScriptMissing(error: unknown) {
+  return error instanceof FrameworkContractError
+    && error.code === 'codex_command_failed'
+    && error.message === 'OPL Flow intelligence enhancement script is not installed.';
 }
 
 function readBlockedWorkflowStep(target: StartupMaintenanceModuleTarget) {
@@ -424,6 +431,18 @@ async function maybeRunIntelligenceEnhancementStartupMaintenance(): Promise<Star
       error: null,
     };
   } catch (error) {
+    if (isOplFlowScriptMissing(error)) {
+      return {
+        target_type: 'opl_flow_intelligence_enhancement',
+        target_id: 'codexcont',
+        status: 'skipped',
+        reason: 'intelligence_enhancement_script_not_installed',
+        action: null,
+        status_before: null,
+        result: null,
+        error: null,
+      };
+    }
     return {
       target_type: 'opl_flow_intelligence_enhancement',
       target_id: 'codexcont',

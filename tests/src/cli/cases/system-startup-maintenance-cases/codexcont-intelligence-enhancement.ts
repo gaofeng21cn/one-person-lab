@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, runCliInCwd, shellSingleQuote, test } from '../../helpers.ts';
 
 function writeExecutable(filePath: string, contents: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -131,6 +131,58 @@ test('system startup-maintenance repairs enabled CodexCont intelligence enhancem
       '--from git+https://github.com/ZhenHuangLab/CodexCont codexcont install -y',
       '--from git+https://github.com/ZhenHuangLab/CodexCont codexcont restart',
     ]);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system startup-maintenance skips CodexCont repair when OPL Flow script is not installed', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-no-opl-flow-'));
+  const isolatedCwd = path.join(homeRoot, 'isolated-cwd');
+  const fakeBin = path.join(homeRoot, 'fake-bin');
+  const fakeCodex = path.join(fakeBin, 'codex');
+
+  try {
+    fs.mkdirSync(isolatedCwd, { recursive: true });
+    writeExecutable(fakeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.134.0"\n');
+
+    const output = runCliInCwd(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], isolatedCwd, {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, '.codex'),
+      OPL_CODEX_BIN: fakeCodex,
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: repoRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: `${fakeBin}:/usr/bin:/bin`,
+      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
+    }) as {
+      system_action: {
+        status: string;
+        details: {
+          intelligence_enhancement_summary: {
+            skipped_targets_count: number;
+            manual_required_targets_count: number;
+          };
+          intelligence_enhancement_targets: Array<{
+            target_id: string;
+            status: string;
+            reason: string;
+            action: string | null;
+          }>;
+        };
+      };
+    };
+
+    assert.equal(output.system_action.status, 'completed');
+    assert.equal(output.system_action.details.intelligence_enhancement_summary.skipped_targets_count, 1);
+    assert.equal(output.system_action.details.intelligence_enhancement_summary.manual_required_targets_count, 0);
+    assert.equal(output.system_action.details.intelligence_enhancement_targets[0].target_id, 'codexcont');
+    assert.equal(output.system_action.details.intelligence_enhancement_targets[0].status, 'skipped');
+    assert.equal(
+      output.system_action.details.intelligence_enhancement_targets[0].reason,
+      'intelligence_enhancement_script_not_installed',
+    );
+    assert.equal(output.system_action.details.intelligence_enhancement_targets[0].action, null);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
