@@ -8,19 +8,15 @@ import {
   test,
 } from '../helpers.ts';
 
-const appOperatorCommand = ['runtime', 'app-operator-drilldown'];
-
-function readAppOperatorProjection(stateRoot: string, detail: 'summary' | 'full' = 'summary') {
-  return runCli(
-    detail === 'full' ? [...appOperatorCommand, '--detail', 'full'] : appOperatorCommand,
-    { OPL_STATE_DIR: stateRoot },
-  ).app_operator_drilldown;
-}
+const appOperatorSummaryCommand = ['runtime', 'app-operator-drilldown'];
+const appOperatorFullCommand = [...appOperatorSummaryCommand, '--detail', 'full'];
 
 test('runtime App release evidence CLI records refs-only user-path evidence without readiness claims', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-state-'));
   try {
-    const initial = readAppOperatorProjection(stateRoot, 'full');
+    const initial = runCli(appOperatorFullCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(initial.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(initial.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 0);
     assert.equal(
@@ -336,7 +332,9 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(listOutput.authority_boundary.refs_only, true);
     assert.equal(listOutput.authority_boundary.can_claim_production_ready, false);
 
-    const summary = readAppOperatorProjection(stateRoot, 'full');
+    const summary = runCli(appOperatorFullCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
@@ -431,7 +429,9 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       false,
     );
 
-    const verifiedSummary = readAppOperatorProjection(stateRoot, 'full');
+    const verifiedSummary = runCli(appOperatorFullCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(verifiedSummary.summary.app_release_user_path_evidence_action_route_count, 0);
     assert.equal(
       verifiedSummary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count,
@@ -526,7 +526,9 @@ test('runtime App release evidence CLI records release-owner acceptance refs wit
     assert.deepEqual(listOutput.receipts[0].owner_acceptance_refs, [ownerAcceptanceRef]);
     assert.equal(listOutput.authority_boundary.can_claim_release_ready, false);
 
-    const summary = readAppOperatorProjection(stateRoot, 'full');
+    const summary = runCli(appOperatorFullCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_owner_acceptance_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_release_ready_claimed, false);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
@@ -572,7 +574,9 @@ test('runtime App release evidence CLI keeps typed blockers as open operator att
     }).app_release_user_path_evidence_ledger_record;
     assert.equal(recordOutput.status, 'recorded');
 
-    const summary = readAppOperatorProjection(stateRoot);
+    const summary = runCli(appOperatorSummaryCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
@@ -631,7 +635,9 @@ test('runtime App release evidence CLI records release-owner verdict refs withou
     assert.equal(listOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
     assert.equal(listOutput.authority_boundary.can_claim_release_ready, false);
 
-    const summary = readAppOperatorProjection(stateRoot);
+    const summary = runCli(appOperatorSummaryCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     const evidence = summary.attention_first_payload.evidence_after_contract
       .app_release_user_path_evidence;
     assert.equal(evidence.open_gate_count, 5);
@@ -726,7 +732,9 @@ test('runtime App release evidence CLI accepts singular ref fields for operator 
       'screenshot:app/first-run.png',
     ]);
 
-    const summary = readAppOperatorProjection(stateRoot);
+    const summary = runCli(appOperatorSummaryCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
@@ -767,7 +775,9 @@ test('runtime App release evidence CLI records refs-only payload files', () => {
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_close_app_release_user_path, false);
 
-    const summary = readAppOperatorProjection(stateRoot);
+    const summary = runCli(appOperatorSummaryCommand, {
+      OPL_STATE_DIR: stateRoot,
+    }).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
   } finally {

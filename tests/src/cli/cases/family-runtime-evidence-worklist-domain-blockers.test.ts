@@ -31,13 +31,6 @@ import {
 
 const appOperatorDetailCommand = ['runtime', 'app-operator-drilldown', '--detail', 'full'];
 
-function readAppOperatorProjection(stateRoot: string, fixtureContractsRoot: string) {
-  return runCli(
-    appOperatorDetailCommand,
-    familyRuntimeEnv(stateRoot, fixtureContractsRoot),
-  ).app_operator_drilldown;
-}
-
 function completedTemporalObservationWithTypedBlocker(input: {
   stageAttemptId: string;
   workflowId: string;
@@ -716,8 +709,11 @@ test('family-runtime evidence-worklist treats domain-declared external closures 
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).runtime_operator_action_execution;
     assert.equal(verified.execution.result.external_evidence_apply.status, 'verified');
 
-    const afterProjection = readAppOperatorProjection(stateRoot, fixtureContractsRoot);
-    const receiptEnvelope = afterProjection.evidence_envelope.envelopes.find(
+    const after = runCli(
+      appOperatorDetailCommand,
+      familyRuntimeEnv(stateRoot, fixtureContractsRoot),
+    ).app_operator_drilldown;
+    const receiptEnvelope = after.evidence_envelope.envelopes.find(
       (envelope: { envelope_id: string }) =>
         envelope.envelope_id === 'external_evidence_receipt:med-autogrant:external_evidence_1',
     );
@@ -794,15 +790,18 @@ test('family-runtime evidence-worklist classifies blocked cleanup plans as route
       buildManifestCommand(manifest),
     ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
 
-    const projection = readAppOperatorProjection(stateRoot, fixtureContractsRoot);
-    const cleanupPlan = projection.domain_legacy_cleanup_plan_refs.refs.find(
+    const appView = runCli(
+      appOperatorDetailCommand,
+      familyRuntimeEnv(stateRoot, fixtureContractsRoot),
+    ).app_operator_drilldown;
+    const cleanupPlan = appView.domain_legacy_cleanup_plan_refs.refs.find(
       (plan: { command_domain_id: string }) => plan.command_domain_id === 'medautoscience',
     );
     assert.equal(cleanupPlan.plan_status, 'blocked');
     assert.equal(cleanupPlan.opl_cleanup_ledger_ready, false);
     assert.deepEqual(cleanupPlan.blocked_reasons, ['missing_replacement_parity_evidence']);
 
-    const cleanupEnvelope = projection.evidence_envelope.envelopes.find(
+    const cleanupEnvelope = appView.evidence_envelope.envelopes.find(
       (envelope: { envelope_id: string }) =>
         envelope.envelope_id === 'legacy_cleanup:med-autoscience:opl://agents/med-autoscience/legacy-cleanup-plan',
     );
@@ -811,14 +810,14 @@ test('family-runtime evidence-worklist classifies blocked cleanup plans as route
     assert.equal(cleanupEnvelope.claim_allowed.owner_receipt_observed, false);
     assert.deepEqual(cleanupEnvelope.typed_blocker_refs, []);
     assert.deepEqual(cleanupEnvelope.blocked_reasons, cleanupPlan.blocked_reasons);
-    assert.equal(projection.summary.evidence_envelope_blocked_count >= 1, true);
-    const cleanupTailItem = projection.production_evidence_tail_ledger.tail_items.find(
+    assert.equal(appView.summary.evidence_envelope_blocked_count >= 1, true);
+    const cleanupTailItem = appView.production_evidence_tail_ledger.tail_items.find(
       (item: { tail_id: string }) =>
         item.tail_id === 'legacy:med-autoscience:1',
     );
     assert.equal(cleanupTailItem.status, 'blocked');
     assert.deepEqual(cleanupTailItem.blocked_reasons, cleanupPlan.blocked_reasons);
-    assert.equal(projection.summary.app_operator_production_evidence_tail_blocking_item_count >= 1, true);
+    assert.equal(appView.summary.app_operator_production_evidence_tail_blocking_item_count >= 1, true);
 
     const worklist = runCli([
       'family-runtime',
