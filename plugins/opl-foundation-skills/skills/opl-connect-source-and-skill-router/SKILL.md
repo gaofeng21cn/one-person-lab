@@ -7,6 +7,9 @@ description: "Use for OPL Connect external skill/source search-inspect-sync rout
 
 Use this skill when a task needs OPL Connect to find, inspect, debug, or selectively sync an external source, connector, package descriptor, or Codex Skill.
 
+Optional helper: `kernel.py` provides deterministic source/ref normalization, request classification, handoff skeleton, and forbidden-claim lint helpers.
+It is stdlib-only, writes nothing, performs no network or subprocess calls, and does not claim domain truth, owner acceptance, or readiness.
+
 ## Boundary
 
 - Treat OPL Connect as the program owner for registry lookup, source and skill search, candidate inspection, selective sync, API normalization, and connector invocation receipt candidates.

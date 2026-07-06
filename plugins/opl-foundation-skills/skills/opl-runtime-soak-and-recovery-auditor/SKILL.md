@@ -15,6 +15,9 @@ This skill may:
 - classify `soak_evidence_gap`, `recovery_gap`, `provider_observation_gap`, `no_regression_gap`, `owner_route_gap`, or `runtime_ready_overclaim`;
 - prepare a refs-only audit note that distinguishes observed recovery from readiness.
 
+Optional helper: `kernel.py` provides deterministic runtime/ref normalization, soak checklist, gap classification, and forbidden-claim lint helpers.
+It is stdlib-only, writes nothing, performs no network or subprocess calls, and does not mutate runtime state or claim readiness.
+
 This skill must not:
 
 - submit, wait, harvest, redrive, retry, mutate runtime queues, write provider attempts, manage cloud resources, credentials, endpoints, owner receipts, typed blockers, or readiness ledgers;

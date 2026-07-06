@@ -7,6 +7,9 @@ description: "Use when auditing OPL Connect connector receipt candidates, normal
 
 Use this skill to audit an OPL Connect connector receipt candidate before an owner consumes it. Keep the audit refs-only: compare request, normalized refs, invocation evidence, failure records, and owner route without treating the receipt as truth.
 
+Optional helper: `kernel.py` provides deterministic connector/ref normalization, receipt checklist, finding classification, and forbidden-claim lint helpers.
+It is stdlib-only, writes nothing, performs no network or subprocess calls, and does not sign receipts, retry providers, or claim readiness.
+
 ## OPL Owner Boundary
 
 - Treat OPL Connect as authority for connector registry, access, normalization, invocation records, connector receipt candidates, failed-provider records, and source-ref transport.

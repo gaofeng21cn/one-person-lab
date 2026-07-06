@@ -7,6 +7,9 @@ description: Use when operating or debugging OPL Runway compute support, includi
 
 Use this skill to diagnose compute setup and prepare contract-light Runway handoff notes. Keep judgment AI-first: inspect the user's goal, environment signals, provider constraints, and existing receipts before suggesting the smallest viable route.
 
+Optional helper: `kernel.py` provides deterministic provider/endpoint/env normalization, failure classification, handoff skeleton, and forbidden-claim lint helpers.
+It is stdlib-only, writes nothing, performs no network or subprocess calls, and does not submit jobs, manage endpoints, or claim provider/live readiness.
+
 ## Authority Boundary
 
 - Treat Runway / Connect as the programmatic authority for credentials, submit/wait/harvest, endpoint registration, execution receipt, queue state, and provider readback.
