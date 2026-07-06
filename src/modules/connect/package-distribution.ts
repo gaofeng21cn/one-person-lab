@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   getMasCapabilityDependencies,
   getMasCodexStandaloneRequiredSkillIds,
+  getMasDistributionPayload,
 } from './agent-package-manifests.ts';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
@@ -233,6 +234,7 @@ function buildCodexStandaloneDistribution(spec: PackageModuleSpec) {
     plugin_id: 'mas',
     required_skill_ids: getMasCodexStandaloneRequiredSkillIds(),
     bundled_capability_package_ids: spec.capability_dependencies?.map((dependency) => dependency.package_id) ?? [],
+    distribution_payload: getMasDistributionPayload(),
     user_install_action_count: 1,
   };
 }

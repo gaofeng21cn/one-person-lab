@@ -59,11 +59,34 @@ function remotePayloadManifest() {
   };
 }
 
+function distributionPayload(input: { digest?: string; immutableTag?: string } = {}) {
+  const immutableTag = input.immutableTag ?? '1.2.3';
+  return {
+    payload_kind: 'ghcr_oci_agent_package',
+    payload_ref: `ghcr.io/example-org/opl-agent-third-party-research:latest`,
+    payload_digest_ref: input.digest ?? 'sha256:2222222222222222222222222222222222222222222222222222222222222222',
+    required_skill_pack_lock_refs: [
+      'opl://agent-package-lock/third-party-research-required-skills/1.2.3/fixture',
+    ],
+    proof_status: 'non_live_contract_fixture',
+    live_download_proof: false,
+    installed_reload_proof: false,
+    oci_ref: `ghcr.io/example-org/opl-agent-third-party-research:latest`,
+    oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
+    immutable_tag: immutableTag,
+    rolling_tag: 'latest',
+    promotion_policy: 'daily_candidate_gates_then_promote_latest',
+    install_truth: 'resolved_digest_lock',
+  };
+}
+
 function agentPackageManifest(input: {
   pluginSourcePath?: string;
   pluginPayloadManifestUrl?: string;
   packageId?: string;
   agentId?: string;
+  permissions?: unknown[];
+  distributionPayload?: Record<string, unknown> | null;
 } = {}) {
   return {
     package_id: input.packageId ?? 'third.party.research',
@@ -100,7 +123,8 @@ function agentPackageManifest(input: {
       kind: 'opl_package_receipt',
       required_surfaces: ['plugin_registry', 'required_skill_ids'],
     },
-    permissions: [],
+    permissions: input.permissions ?? [],
+    ...(input.distributionPayload === null ? {} : { distribution_payload: input.distributionPayload ?? distributionPayload() }),
     update_channel: 'manifest_url',
     rollback_ref: 'package-receipt-ref:previous',
   };
@@ -125,6 +149,18 @@ function registryPayload(baseUrl: string, input: { packageId?: string } = {}) {
         optional_skill_ids: ['officecli-docx'],
         home_shortcut_ids: ['research'],
         display_policy: 'refs_only_no_domain_verdict',
+        ordinary_user_source: {
+          kind: 'ghcr_oci_artifact_rolling_latest',
+          registry: 'ghcr.io',
+          artifact_ref: 'ghcr.io/example-org/opl-agent-third-party-research',
+          ordinary_user_ref: 'ghcr.io/example-org/opl-agent-third-party-research:latest',
+          immutable_version_ref: 'ghcr.io/example-org/opl-agent-third-party-research:1.2.3',
+          latest_is_only_ordinary_user_channel: true,
+          latest_role: 'ordinary_user_rolling_pointer_after_daily_candidate_gates',
+          install_truth: ['immutable_version_tag', 'oci_digest', 'package_lock_receipt'],
+          latest_is_install_truth: false,
+          developer_checkout_auto_apply_allowed: false,
+        },
       },
     ],
   };
@@ -302,6 +338,10 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
             trust_tier: string;
             source_kind: string;
             version_or_source_digest: string;
+            resolved_digest: string;
+            rolling_tag: string;
+            install_truth: string;
+            permission_scope_sha256: string;
             action_receipt_id: string;
             lock_ref: string;
             rollback_ref: string;
@@ -336,7 +376,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
             selected_package_id: string;
             owner_route: { readback_ref: string; package_manager_claim: boolean };
             packages: Array<{
-              digest: { version_or_source_digest: string; manifest_sha256: string };
+              digest: { version_or_source_digest: string; manifest_sha256: string; resolved_digest: string; install_truth: string };
               lock: { package_lock_ref: string; lifecycle_receipt_ref: string };
               materializer: { status: string; plugin_manifest_path: string; writes_performed: boolean };
             }>;
@@ -351,6 +391,17 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(install.opl_agent_package_install.package_lock.package_id, 'third.party.research');
       assert.equal(install.opl_agent_package_install.package_lock.trust_tier, 'third_party_verified');
       assert.equal(install.opl_agent_package_install.package_lock.source_kind, 'manifest_url');
+      assert.equal(
+        install.opl_agent_package_install.package_lock.version_or_source_digest,
+        '1.2.3@sha256:2222222222222222222222222222222222222222222222222222222222222222',
+      );
+      assert.equal(
+        install.opl_agent_package_install.package_lock.resolved_digest,
+        'sha256:2222222222222222222222222222222222222222222222222222222222222222',
+      );
+      assert.equal(install.opl_agent_package_install.package_lock.rolling_tag, 'latest');
+      assert.equal(install.opl_agent_package_install.package_lock.install_truth, 'resolved_digest_lock');
+      assert.match(install.opl_agent_package_install.package_lock.permission_scope_sha256, /^[a-f0-9]{64}$/);
       assert.equal(
         install.opl_agent_package_install.package_lock.action_receipt_id,
         install.opl_agent_package_install.lifecycle_receipt.receipt_ref,
@@ -370,6 +421,14 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].digest.version_or_source_digest,
         install.opl_agent_package_install.package_lock.version_or_source_digest,
+      );
+      assert.equal(
+        install.opl_agent_package_install.owner_route_readback.packages[0].digest.resolved_digest,
+        install.opl_agent_package_install.package_lock.resolved_digest,
+      );
+      assert.equal(
+        install.opl_agent_package_install.owner_route_readback.packages[0].digest.install_truth,
+        'resolved_digest_lock',
       );
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].lock.package_lock_ref,
@@ -992,6 +1051,99 @@ test('connect agent-packages rejects registry manifest identity drift before wri
     assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-lifecycle-ledger.json')), false);
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
+test('connect agent-packages fails closed when latest is treated as install truth', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-latest-truth-state-'));
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-latest-truth-'));
+  try {
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    fs.writeFileSync(
+      manifestPath,
+      formatJsonPayload(agentPackageManifest({
+        distributionPayload: {
+          ...distributionPayload(),
+          payload_digest_ref: 'registry.latest_version',
+        },
+      })),
+      'utf8',
+    );
+    const failure = runCliFailure([
+      'connect',
+      'agent-packages',
+      'install',
+      '--manifest-url',
+      pathToFileURL(manifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+    ], { OPL_STATE_DIR: stateDir });
+
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_distribution_digest_required');
+    assert.equal(fs.existsSync(path.join(stateDir, 'agent-package-locks.json')), false);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
+test('connect agent-packages rejects developer checkout auto-update and permission scope drift', async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-home-'));
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-policy-fixtures-'));
+  const env = {
+    OPL_STATE_DIR: stateDir,
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+  };
+  try {
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    const permissionManifestPath = path.join(fixtureDir, 'manifest-permission-change.json');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest()), 'utf8');
+    fs.writeFileSync(
+      permissionManifestPath,
+      formatJsonPayload(agentPackageManifest({ permissions: [{ id: 'filesystem.write' }] })),
+      'utf8',
+    );
+
+    await runCliAsync([
+      'connect',
+      'agent-packages',
+      'install',
+      '--manifest-url',
+      pathToFileURL(manifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+    ], env);
+
+    const developerUpdateFailure = runCliFailure([
+      'connect',
+      'agent-packages',
+      'update',
+      '--manifest-url',
+      pathToFileURL(manifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+      '--source-kind',
+      'developer_checkout_override',
+    ], env);
+    assert.equal(developerUpdateFailure.payload.error.details.failure_code, 'agent_package_developer_checkout_auto_update_forbidden');
+
+    const permissionFailure = runCliFailure([
+      'connect',
+      'agent-packages',
+      'update',
+      '--manifest-url',
+      pathToFileURL(permissionManifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+    ], env);
+    assert.equal(permissionFailure.payload.error.details.failure_code, 'agent_package_permission_scope_change_requires_manual_confirmation');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
     fs.rmSync(fixtureDir, { recursive: true, force: true });
   }
 });

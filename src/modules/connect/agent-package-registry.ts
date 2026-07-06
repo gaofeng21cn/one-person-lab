@@ -118,6 +118,34 @@ type AgentPackageRegistryEntry = {
   optional_skill_ids: string[];
   home_shortcut_ids: string[];
   display_policy: string | null;
+  ordinary_user_source: AgentPackageOrdinaryUserSource | null;
+};
+
+type AgentPackageOrdinaryUserSource = {
+  kind: 'ghcr_oci_artifact_rolling_latest';
+  artifact_ref: string;
+  ordinary_user_ref: string;
+  immutable_version_ref: string;
+  latest_is_only_ordinary_user_channel: true;
+  install_truth: string[];
+  latest_is_install_truth: false;
+  developer_checkout_auto_apply_allowed: false;
+};
+
+type AgentPackageDistributionPayload = {
+  payload_kind: string;
+  payload_ref: string;
+  payload_digest_ref: string;
+  required_skill_pack_lock_refs: string[];
+  proof_status: string;
+  live_download_proof: false;
+  installed_reload_proof: false;
+  oci_ref: string;
+  oci_media_type: string;
+  immutable_tag: string;
+  rolling_tag: 'latest';
+  promotion_policy: 'daily_candidate_gates_then_promote_latest';
+  install_truth: 'resolved_digest_lock';
 };
 
 type AgentPackageManifest = {
@@ -132,6 +160,7 @@ type AgentPackageManifest = {
   entrypoints: Record<string, unknown>[];
   health_check: Record<string, unknown>;
   permissions: unknown[];
+  distribution_payload: AgentPackageDistributionPayload | null;
   update_channel: string;
   rollback_ref: string;
   codex_visible_entry: string;
@@ -189,6 +218,12 @@ type AgentPackageLock = {
   rollback_ref: string;
   manifest_url: string;
   manifest_sha256: string;
+  oci_ref?: string;
+  resolved_digest?: string;
+  immutable_tag?: string;
+  rolling_tag?: 'latest';
+  install_truth?: 'resolved_digest_lock';
+  permission_scope_sha256: string;
   lock_ref: string;
   physical_surface?: AgentPackagePhysicalSurface;
   exposure_state?: 'visible' | 'hidden' | 'enabled' | 'disabled';
@@ -270,6 +305,8 @@ type AgentPackageOwnerRouteReadbackItem = {
     manifest_sha256: string | null;
     version_or_source_digest: string | null;
     plugin_payload_manifest_sha256: string | null;
+    resolved_digest: string | null;
+    install_truth: string | null;
     content_identity_fields: string[];
   };
   lock: {
@@ -482,6 +519,125 @@ function assertNoForbiddenFields(record: Record<string, unknown>, sourceLabel: s
   }
 }
 
+function assertStringValue(value: unknown, field: string): string {
+  const normalized = stringValue(value);
+  if (!normalized) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package field is required.', {
+      field,
+      failure_code: 'agent_package_field_required',
+    });
+  }
+  return normalized;
+}
+
+function normalizeDistributionPayload(value: unknown): AgentPackageDistributionPayload | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package distribution_payload must be a JSON object.', {
+      failure_code: 'agent_package_distribution_payload_invalid',
+    });
+  }
+  if (
+    value.live_download_proof !== false
+    || value.installed_reload_proof !== false
+    || value.rolling_tag !== 'latest'
+    || value.promotion_policy !== 'daily_candidate_gates_then_promote_latest'
+    || value.install_truth !== 'resolved_digest_lock'
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package OCI distribution must be latest-only and digest-lock based.', {
+      failure_code: 'agent_package_distribution_policy_invalid',
+      required: {
+        live_download_proof: false,
+        installed_reload_proof: false,
+        rolling_tag: 'latest',
+        promotion_policy: 'daily_candidate_gates_then_promote_latest',
+        install_truth: 'resolved_digest_lock',
+      },
+    });
+  }
+  const payloadDigestRef = assertStringValue(value.payload_digest_ref, 'distribution_payload.payload_digest_ref');
+  if (payloadDigestRef === 'latest' || payloadDigestRef === 'registry.latest_version') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package install truth must be a digest ref, not latest or registry.latest_version.', {
+      failure_code: 'agent_package_distribution_digest_required',
+      payload_digest_ref: payloadDigestRef,
+    });
+  }
+  const requiredSkillPackLockRefs = stringList(value.required_skill_pack_lock_refs);
+  if (requiredSkillPackLockRefs.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package distribution payload must lock required skill packs.', {
+      failure_code: 'agent_package_required_skill_pack_lock_missing',
+    });
+  }
+  return {
+    payload_kind: assertStringValue(value.payload_kind, 'distribution_payload.payload_kind'),
+    payload_ref: assertStringValue(value.payload_ref, 'distribution_payload.payload_ref'),
+    payload_digest_ref: payloadDigestRef,
+    required_skill_pack_lock_refs: requiredSkillPackLockRefs,
+    proof_status: assertStringValue(value.proof_status, 'distribution_payload.proof_status'),
+    live_download_proof: false,
+    installed_reload_proof: false,
+    oci_ref: assertStringValue(value.oci_ref, 'distribution_payload.oci_ref'),
+    oci_media_type: assertStringValue(value.oci_media_type, 'distribution_payload.oci_media_type'),
+    immutable_tag: assertStringValue(value.immutable_tag, 'distribution_payload.immutable_tag'),
+    rolling_tag: 'latest',
+    promotion_policy: 'daily_candidate_gates_then_promote_latest',
+    install_truth: 'resolved_digest_lock',
+  };
+}
+
+function normalizeOrdinaryUserSource(value: unknown, sourceLabel: string): AgentPackageOrdinaryUserSource | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package ordinary_user_source must be a JSON object.', {
+      source: sourceLabel,
+      failure_code: 'agent_package_ordinary_source_invalid',
+    });
+  }
+  if (
+    value.kind !== 'ghcr_oci_artifact_rolling_latest'
+    || value.latest_is_only_ordinary_user_channel !== true
+    || value.latest_is_install_truth !== false
+    || value.developer_checkout_auto_apply_allowed !== false
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package ordinary user source must use GHCR OCI rolling latest without treating latest as install truth.', {
+      source: sourceLabel,
+      failure_code: 'agent_package_ordinary_source_policy_invalid',
+    });
+  }
+  const installTruth = stringList(value.install_truth);
+  for (const required of ['immutable_version_tag', 'oci_digest', 'package_lock_receipt']) {
+    if (!installTruth.includes(required)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package ordinary user source must declare immutable tag, OCI digest, and package lock receipt as install truth.', {
+        source: sourceLabel,
+        failure_code: 'agent_package_ordinary_source_install_truth_invalid',
+        missing_install_truth: required,
+      });
+    }
+  }
+  const ordinaryUserRef = assertStringValue(value.ordinary_user_ref, `${sourceLabel}.ordinary_user_ref`);
+  if (!ordinaryUserRef.endsWith(':latest')) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package ordinary user ref must be the latest tag.', {
+      source: sourceLabel,
+      failure_code: 'agent_package_ordinary_source_latest_ref_required',
+      ordinary_user_ref: ordinaryUserRef,
+    });
+  }
+  return {
+    kind: 'ghcr_oci_artifact_rolling_latest',
+    artifact_ref: assertStringValue(value.artifact_ref, `${sourceLabel}.artifact_ref`),
+    ordinary_user_ref: ordinaryUserRef,
+    immutable_version_ref: assertStringValue(value.immutable_version_ref, `${sourceLabel}.immutable_version_ref`),
+    latest_is_only_ordinary_user_channel: true,
+    install_truth: installTruth,
+    latest_is_install_truth: false,
+    developer_checkout_auto_apply_allowed: false,
+  };
+}
+
 function normalizeRegistryEntry(entry: Record<string, unknown>, index: number): AgentPackageRegistryEntry {
   const missing = missingFields(entry, REGISTRY_REQUIRED_FIELDS);
   assertNoForbiddenFields(entry, `registry.entries.${index}`);
@@ -507,6 +663,7 @@ function normalizeRegistryEntry(entry: Record<string, unknown>, index: number): 
     optional_skill_ids: stringList(entry.optional_skill_ids),
     home_shortcut_ids: stringList(entry.home_shortcut_ids),
     display_policy: stringValue(entry.display_policy),
+    ordinary_user_source: normalizeOrdinaryUserSource(entry.ordinary_user_source, `registry.entries.${index}.ordinary_user_source`),
   };
 }
 
@@ -611,6 +768,7 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
   if (pluginPayloadManifestUrl) {
     validateUrlLike(pluginPayloadManifestUrl, 'codex_surface.plugin_payload_manifest_url');
   }
+  const distributionPayload = normalizeDistributionPayload(payload.distribution_payload);
   const codexVisibleEntry = pluginId
     ?? stringValue(payload.codex_surface.codex_visible_entry)
     ?? stringValue(payload.agent_id)!;
@@ -626,6 +784,7 @@ function normalizeManifest(payload: unknown, manifestUrl: string): AgentPackageM
     entrypoints,
     health_check: payload.health_check,
     permissions: payload.permissions,
+    distribution_payload: distributionPayload,
     update_channel: stringValue(payload.update_channel)!,
     rollback_ref: stringValue(payload.rollback_ref)!,
     codex_visible_entry: codexVisibleEntry,
@@ -696,10 +855,14 @@ function ownerRouteReadbackItem(input: {
       manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
       version_or_source_digest: input.lock?.version_or_source_digest ?? null,
       plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
+      resolved_digest: input.lock?.resolved_digest ?? null,
+      install_truth: input.lock?.install_truth ?? null,
       content_identity_fields: [
         'manifest_sha256',
         'version_or_source_digest',
         'plugin_payload_manifest_sha256',
+        'resolved_digest',
+        'package_lock_ref',
       ],
     },
     lock: {
@@ -1215,6 +1378,7 @@ function rematerializePhysicalCodexSurfaceFromLock(
     entrypoints: [],
     health_check: {},
     permissions: [],
+    distribution_payload: null,
     update_channel: '',
     rollback_ref: lock.rollback_ref,
     codex_visible_entry: lock.codex_visible_entry,
@@ -1518,6 +1682,54 @@ function assertManifestMatchesRegistrySelection(
       failure_code: 'registry_manifest_version_mismatch',
     });
   }
+  const ordinaryUserSource = selection.registryEntry.ordinary_user_source;
+  if (ordinaryUserSource && manifest.distribution_payload) {
+    if (manifest.distribution_payload.rolling_tag !== 'latest' || manifest.distribution_payload.install_truth !== 'resolved_digest_lock') {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution payload must keep latest as a rolling pointer and digest lock as install truth.', {
+        registry_url: selection.registryUrl,
+        manifest_url: selection.manifestUrl,
+        package_id: manifest.package_id,
+        failure_code: 'registry_manifest_distribution_policy_mismatch',
+      });
+    }
+    if (!ordinaryUserSource.immutable_version_ref.endsWith(`:${manifest.distribution_payload.immutable_tag}`)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package registry immutable version ref must match manifest immutable tag.', {
+        registry_url: selection.registryUrl,
+        manifest_url: selection.manifestUrl,
+        package_id: manifest.package_id,
+        registry_immutable_version_ref: ordinaryUserSource.immutable_version_ref,
+        manifest_immutable_tag: manifest.distribution_payload.immutable_tag,
+        failure_code: 'registry_manifest_immutable_tag_mismatch',
+      });
+    }
+  }
+}
+
+function permissionScopeSha256(manifest: AgentPackageManifest) {
+  return sha256Text(JSON.stringify({
+    codex_visible_entry: manifest.codex_visible_entry,
+    bundled_required_skill_ids: manifest.required_skill_ids,
+    optional_skill_refs: manifest.optional_skill_refs,
+    entrypoints: manifest.entrypoints,
+    permissions: manifest.permissions,
+  }));
+}
+
+function assertPermissionScopeUnchanged(previousLock: AgentPackageLock | null, manifest: AgentPackageManifest, action: 'install' | 'update' | 'rollback') {
+  if (!previousLock || action === 'install') {
+    return;
+  }
+  const nextSha256 = permissionScopeSha256(manifest);
+  if (previousLock.permission_scope_sha256 && previousLock.permission_scope_sha256 !== nextSha256) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package permission or scope changes require manual confirmation before update.', {
+      package_id: manifest.package_id,
+      action,
+      failure_code: 'agent_package_permission_scope_change_requires_manual_confirmation',
+      previous_permission_scope_sha256: previousLock.permission_scope_sha256,
+      next_permission_scope_sha256: nextSha256,
+      manual_confirmation_path: 'uninstall the existing lock, review the manifest, then run install explicitly',
+    });
+  }
 }
 
 function buildLock(input: {
@@ -1531,13 +1743,16 @@ function buildLock(input: {
   previousLock?: AgentPackageLock | null;
 }): AgentPackageLock {
   const timestamp = nowIso();
+  const distributionPayload = input.manifest.distribution_payload;
   return {
     surface_kind: 'opl_agent_package_lock',
     package_id: input.manifest.package_id,
     agent_id: input.manifest.agent_id,
     display_name: input.manifest.display_name,
     publisher: input.manifest.publisher,
-    version_or_source_digest: `${input.manifest.version}+sha256:${input.manifestSha256}`,
+    version_or_source_digest: distributionPayload
+      ? `${distributionPayload.immutable_tag}@${distributionPayload.payload_digest_ref}`
+      : `${input.manifest.version}+sha256:${input.manifestSha256}`,
     package_version: input.manifest.version,
     installed_at: input.previousLock?.installed_at ?? timestamp,
     updated_at: timestamp,
@@ -1550,6 +1765,16 @@ function buildLock(input: {
     rollback_ref: input.manifest.rollback_ref,
     manifest_url: input.manifestUrl,
     manifest_sha256: input.manifestSha256,
+    ...(distributionPayload
+      ? {
+          oci_ref: distributionPayload.oci_ref,
+          resolved_digest: distributionPayload.payload_digest_ref,
+          immutable_tag: distributionPayload.immutable_tag,
+          rolling_tag: distributionPayload.rolling_tag,
+          install_truth: distributionPayload.install_truth,
+        }
+      : {}),
+    permission_scope_sha256: permissionScopeSha256(input.manifest),
     lock_ref: packageLockRef(input.manifest.package_id, input.manifest.version, input.manifestSha256),
     physical_surface: input.physicalSurface,
     exposure_state: input.previousLock?.exposure_state ?? 'visible',
@@ -1615,6 +1840,15 @@ async function applyManifestPackageLock(
   const trustTier = stringValue(input.trustTier) ?? selection.trustTier;
   assertTrustTierAssigned(trustTier, selection.manifestUrl);
   const sourceKind = normalizeSourceKind(input.sourceKind, selection.manifestUrl);
+  if (sourceKind === 'developer_checkout_override' && action !== 'install') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Developer checkout agent package sources are Developer Profile inputs and must not auto-update.', {
+      package_id: manifest.package_id,
+      action,
+      source_kind: sourceKind,
+      failure_code: 'agent_package_developer_checkout_auto_update_forbidden',
+      manual_confirmation_path: 'review the checkout and run an explicit install from the selected manifest when intended',
+    });
+  }
   const lockRef = packageLockRef(manifest.package_id, manifest.version, fetched.source_sha256);
   const existingIndex = index.packages.findIndex((entry) => entry.package_id === manifest.package_id);
   if (action !== 'install' && existingIndex < 0) {
@@ -1625,6 +1859,7 @@ async function applyManifestPackageLock(
     });
   }
   const previousLock = existingIndex >= 0 ? index.packages[existingIndex] : null;
+  assertPermissionScopeUnchanged(previousLock, manifest, action);
   const physicalSurface = materializePhysicalCodexSurface(manifest, input.dryRun === true);
   const receipt = lifecycleReceipt({
     action,
@@ -1746,6 +1981,7 @@ export async function runOplAgentPackageManifestValidate(input: AgentPackageMani
       codex_visible_entry: manifest.codex_visible_entry,
       bundled_required_skill_ids: manifest.required_skill_ids,
       optional_skill_refs: manifest.optional_skill_refs,
+      distribution_payload: manifest.distribution_payload,
       rollback_ref: manifest.rollback_ref,
       registry_entry: selection.registryEntry,
       lifecycle_receipt: receipt,

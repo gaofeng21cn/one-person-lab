@@ -6,6 +6,23 @@ import type { ModuleCapabilityDependency } from './system-installation/shared.ts
 type FirstPartyAgentPackageManifest = {
   agent_id: string;
   package_id: string;
+  version: string;
+  source: string;
+  distribution_payload: {
+    payload_kind: string;
+    payload_ref: string;
+    payload_digest_ref: string;
+    required_skill_pack_lock_refs: readonly string[];
+    proof_status: string;
+    live_download_proof: false;
+    installed_reload_proof: false;
+    oci_ref: string;
+    oci_media_type: string;
+    immutable_tag: string;
+    rolling_tag: 'latest';
+    promotion_policy: 'daily_candidate_gates_then_promote_latest';
+    install_truth: 'resolved_digest_lock';
+  };
   codex_surface: {
     plugin_id: string;
     standalone_distribution: 'self_contained_fat_plugin';
@@ -52,6 +69,45 @@ function requireLiteral<T extends string>(value: unknown, expected: T, field: st
     expected,
     actual: value,
   });
+}
+
+function normalizeDistributionPayload(value: unknown) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare distribution_payload.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'distribution_payload',
+    });
+  }
+  const rollingTag = requireLiteral(value.rolling_tag, 'latest', 'distribution_payload.rolling_tag');
+  const installTruth = requireLiteral(value.install_truth, 'resolved_digest_lock', 'distribution_payload.install_truth');
+  if (value.live_download_proof !== false || value.installed_reload_proof !== false) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload must not claim live download or installed reload proof.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'distribution_payload',
+    });
+  }
+  return {
+    payload_kind: requiredString(value.payload_kind, 'distribution_payload.payload_kind'),
+    payload_ref: requiredString(value.payload_ref, 'distribution_payload.payload_ref'),
+    payload_digest_ref: requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref'),
+    required_skill_pack_lock_refs: requireStringList(
+      value.required_skill_pack_lock_refs,
+      'distribution_payload.required_skill_pack_lock_refs',
+    ),
+    proof_status: requiredString(value.proof_status, 'distribution_payload.proof_status'),
+    live_download_proof: false as const,
+    installed_reload_proof: false as const,
+    oci_ref: requiredString(value.oci_ref, 'distribution_payload.oci_ref'),
+    oci_media_type: requiredString(value.oci_media_type, 'distribution_payload.oci_media_type'),
+    immutable_tag: requiredString(value.immutable_tag, 'distribution_payload.immutable_tag'),
+    rolling_tag: rollingTag,
+    promotion_policy: requireLiteral(
+      value.promotion_policy,
+      'daily_candidate_gates_then_promote_latest',
+      'distribution_payload.promotion_policy',
+    ),
+    install_truth: installTruth,
+  };
 }
 
 function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependency {
@@ -123,6 +179,9 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
   return {
     agent_id: canonicalAgentPackageId(requiredString(payload.agent_id, 'agent_id'))!,
     package_id: canonicalAgentPackageId(requiredString(payload.package_id, 'package_id'))!,
+    version: requiredString(payload.version, 'version'),
+    source: requiredString(payload.source, 'source'),
+    distribution_payload: normalizeDistributionPayload(payload.distribution_payload),
     codex_surface: {
       plugin_id: requiredString(codexSurface.plugin_id, 'codex_surface.plugin_id'),
       standalone_distribution: requireLiteral(
@@ -145,4 +204,8 @@ export function getMasCapabilityDependencies() {
 
 export function getMasCodexStandaloneRequiredSkillIds() {
   return MAS_AGENT_PACKAGE_MANIFEST.codex_surface.required_skill_ids;
+}
+
+export function getMasDistributionPayload() {
+  return MAS_AGENT_PACKAGE_MANIFEST.distribution_payload;
 }
