@@ -1,3 +1,7 @@
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import {
   buildRuntimeEnvironmentBuildReadback,
   buildRuntimeEnvironmentCacheInventoryReadback,
@@ -33,6 +37,24 @@ const SANDBOX_PROVIDER_VALUES = [
 
 function sandboxProviderUsage() {
   return SANDBOX_PROVIDER_VALUES.join('|');
+}
+
+function currentPlatformId() {
+  if (process.platform === 'darwin' && process.arch === 'arm64') return 'macos-arm64';
+  if (process.platform === 'darwin') return 'macos-x64';
+  if (process.platform === 'linux' && process.arch === 'arm64') return 'linux-arm64';
+  if (process.platform === 'linux') return 'linux-x64';
+  return `${process.platform}-${process.arch}`;
+}
+
+function builtInRequirementProfilePath(domainId?: string, profileId?: string) {
+  if (domainId !== 'mas' || profileId !== 'display') {
+    return null;
+  }
+  return path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../../../contracts/opl-framework/runtime-environment-profiles/mas-display.json',
+  );
 }
 
 function parseTargetArgs(
@@ -155,6 +177,7 @@ function parseVerifyArgs(
 function parsePrepareArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
+  options: { allowOrdinaryDefaults?: boolean } = {},
 ): RuntimeEnvironmentPrepareInput {
   const parsed: Partial<RuntimeEnvironmentPrepareInput> = {};
   for (let index = 0; index < args.length; index += 1) {
@@ -241,6 +264,11 @@ function parsePrepareArgs(
     throw buildUsageError(`Unknown option for runtime env prepare: ${token}.`, spec, {
       option: token,
     });
+  }
+  if (options.allowOrdinaryDefaults) {
+    parsed.platformId ??= currentPlatformId();
+    parsed.paperRoot ??= process.cwd();
+    parsed.requirementProfilePath ??= builtInRequirementProfilePath(parsed.domainId, parsed.profileId) ?? undefined;
   }
   const required: Array<keyof RuntimeEnvironmentPrepareInput> = [
     'domainId',
@@ -366,8 +394,130 @@ function parseCachePruneArgs(
   return parsed;
 }
 
+function parseEnvRunArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const separatorIndex = args.indexOf('--');
+  if (separatorIndex < 0) {
+    throw buildUsageError('env run requires -- before the command to execute.', spec, {
+      required: ['--'],
+    });
+  }
+  const targetArgs = args.slice(0, separatorIndex).filter((arg) => arg !== '--json');
+  const commandArgs = args.slice(separatorIndex + 1);
+  if (commandArgs.length === 0) {
+    throw buildUsageError('env run requires a command after --.', spec, {
+      required: ['command'],
+    });
+  }
+  return {
+    target: parseTargetArgs(targetArgs, spec),
+    commandArgs,
+  };
+}
+
+function runCommandWithPreparedEnvironment(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const parsed = parseEnvRunArgs(args, spec);
+  const readback = buildRuntimeEnvironmentRunContextReadback(parsed.target) as Record<string, any>;
+  const runContext = readback.run_context as Record<string, any> | undefined;
+  const preflight = runContext?.consumer_preflight as Record<string, any> | undefined;
+  if (preflight?.can_consume_run_context !== true) {
+    throw buildUsageError('env run requires a prepared run-context. Run opl env prepare --apply first.', spec, {
+      status: runContext?.status ?? 'missing_run_context',
+      route_hint: 'opl env prepare',
+      host_environment_fallback_allowed: false,
+    });
+  }
+  const envVars = runContext?.env_vars as Record<string, string> | undefined;
+  const result = spawnSync(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      ...(envVars ?? {}),
+    },
+  });
+  process.exitCode = result.status ?? 1;
+  return { __handled: true };
+}
+
 export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
+    env: {
+      usage: 'opl env <doctor|prepare|run>',
+      summary:
+        'Operate the default Fast Local Env surface for R/Python dependency execution.',
+      examples: [
+        'opl env doctor --json',
+        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+        'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+      ],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs.env);
+        return {
+          runtime_environment: buildRuntimeEnvironmentDoctorReadback(),
+        };
+      },
+      subcommands: [
+        {
+          command: 'env doctor',
+          usage: 'opl env doctor',
+          summary:
+            'Read Fast Local Env doctor findings without claiming runtime/domain/App readiness.',
+        },
+        {
+          command: 'env prepare',
+          usage:
+            'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+          summary:
+            'Prepare declared R/Python dependencies into OPL-managed local environments.',
+        },
+        {
+          command: 'env run',
+          usage: 'opl env run --domain <domain> --profile <profile> --paper-root <path> -- <command...>',
+          summary:
+            'Run a command with the prepared Fast Local Env run-context; missing or mismatched run-context fails closed.',
+        },
+      ],
+    },
+    'env doctor': {
+      usage: 'opl env doctor',
+      summary:
+        'Read Fast Local Env doctor findings without claiming runtime/domain/App readiness.',
+      examples: ['opl env doctor --json'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['env doctor']);
+        return {
+          runtime_environment: buildRuntimeEnvironmentDoctorReadback(),
+        };
+      },
+    },
+    'env prepare': {
+      usage:
+        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+      summary:
+        'Prepare declared R/Python dependencies into OPL-managed local environments.',
+      examples: [
+        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
+      ],
+      handler: (args) => ({
+        runtime_environment: buildRuntimeEnvironmentPrepareReadback(
+          parsePrepareArgs(args, commandSpecs['env prepare'], { allowOrdinaryDefaults: true }),
+        ),
+      }),
+    },
+    'env run': {
+      usage: 'opl env run --domain <domain> --profile <profile> --paper-root <path> -- <command...>',
+      summary:
+        'Run a command with the prepared Fast Local Env run-context; missing or mismatched run-context fails closed.',
+      examples: [
+        'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+      ],
+      handler: (args) => runCommandWithPreparedEnvironment(args, commandSpecs['env run']),
+    },
     'runtime env': {
       usage:
         'opl runtime env <inspect|lock|build|prepare|materialize|verify|cache|doctor|run-context|contract>',

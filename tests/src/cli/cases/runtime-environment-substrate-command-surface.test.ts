@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliInCwd, runCliRaw, test } from '../helpers.ts';
 
 function stateEnv(label: string) {
   return {
@@ -175,6 +175,90 @@ test('runtime env CLI exposes deterministic projections before materializing run
     )),
     true,
   );
+});
+
+test('opl env aliases expose and consume the Fast Local Env run-context', () => {
+  const env = stateEnv('alias-');
+  const doctor = runCli(['env', 'doctor'], env).runtime_environment;
+  assert.equal(doctor.command, 'doctor');
+  assert.equal(doctor.sandbox_provider, 'fast_local_env');
+
+  const paperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-alias-paper-'));
+  const profilePath = path.join(paperRoot, 'renderer_dependency_profile.json');
+  fs.writeFileSync(
+    profilePath,
+    `${JSON.stringify({
+      profiles: [
+        {
+          profile_id: 'empty_display_v1',
+          runtime_binaries: [],
+          language_packages: {
+            r: [],
+            python: [],
+          },
+        },
+      ],
+    })}\n`,
+  );
+  const prepare = runCli([
+    'env',
+    'prepare',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--requirement-profile',
+    profilePath,
+    '--requirement-profile-id',
+    'empty_display_v1',
+    '--paper-root',
+    paperRoot,
+    '--apply',
+  ], env).runtime_environment;
+  assert.equal(prepare.prepare.status, 'prepared');
+  assert.equal(prepare.run_context.host_package_fallback_allowed, false);
+
+  const raw = runCliRaw([
+    'env',
+    'run',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--paper-root',
+    paperRoot,
+    '--',
+    process.execPath,
+    '-e',
+    'process.stdout.write(`${process.env.OPL_RUNTIME_ENVIRONMENT_TIER}:${process.env.R_LIBS_USER ? "r" : "missing"}:${process.env.UV_PROJECT_ENVIRONMENT ? "uv" : "missing"}`)',
+  ], env);
+  assert.equal(raw.stdout, 'fast_local_env:r:uv');
+});
+
+test('opl env prepare supplies the MAS display defaults for ordinary users', () => {
+  const env = stateEnv('ordinary-default-');
+  const paperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-paper-'));
+  const readback = runCliInCwd([
+    'env',
+    'prepare',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+  ], paperRoot, env).runtime_environment;
+
+  assert.equal(readback.prepare.environment_tier, 'fast_local_env');
+  assert.equal(readback.prepare.host_package_fallback_allowed, false);
+  assert.match(
+    readback.prepare.requirement_profile_identity.requirement_profile_ref,
+    /runtime-environment-profiles\/mas-display\.json$/,
+  );
+  assert.equal(readback.prepare.selected_requirement_profile_ids[0], 'r_ggplot2_ggconsort_reporting_flow_v1');
+  assert.equal(readback.prepare.managed_required_r_packages.includes('ggplot2'), true);
+  assert.equal(readback.prepare.managed_required_r_packages.includes('ggconsort'), true);
+  assert.equal(readback.prepare.run_context_ref, null);
 });
 
 test('runtime env build materialize verify and cache prune operate on OPL-managed runtime roots', () => {

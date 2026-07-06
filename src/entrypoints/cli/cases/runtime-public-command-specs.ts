@@ -11,6 +11,39 @@ export function buildPublicRuntimeCommandSpecs(
     buildPublicRuntimeDeveloperModeCloseoutCommandSpecs(commandSpecs);
 
   return {
+    env:
+      cloneCommandSpec(commandSpecs.env, {
+        usage: 'opl env <doctor|prepare|run>',
+        examples: [
+          'opl env doctor --json',
+          'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+          'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+        ],
+        group: 'env',
+      }),
+    'env doctor':
+      cloneCommandSpec(commandSpecs['env doctor'], {
+        usage: 'opl env doctor',
+        examples: ['opl env doctor --json'],
+        group: 'env',
+      }),
+    'env prepare':
+      cloneCommandSpec(commandSpecs['env prepare'], {
+        usage:
+          'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+        examples: [
+          'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+        ],
+        group: 'env',
+      }),
+    'env run':
+      cloneCommandSpec(commandSpecs['env run'], {
+        usage: 'opl env run --domain <domain> --profile <profile> --paper-root <path> -- <command...>',
+        examples: [
+          'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+        ],
+        group: 'env',
+      }),
     'runtime manager': cloneCommandSpec(commandSpecs['runtime manager'], {
       usage: 'opl runtime manager',
       examples: ['opl runtime manager'],
