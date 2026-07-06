@@ -108,6 +108,32 @@ export type CodexStageRunnerProcessOutputSummary = {
   provider_error_count?: number;
   provider_error_status_codes?: number[];
   provider_error_messages?: string[];
+  external_sandbox_execution?: {
+    execution_substrate: 'external_sandbox';
+    provider_kind: 'e2b';
+    sandbox_id: string;
+    sandbox_domain: string | null;
+    sandbox_reuse: 'created' | 'connected';
+    template: string | null;
+    sandbox_workspace_root: string;
+    workspace_transport: {
+      transport_kind: 'git_clone';
+      repo_url: string;
+      checkout_ref: string | null;
+      clone_exit_code: number;
+      checkout_exit_code: number | null;
+    };
+    command_exit_code: number;
+    jsonl_stdout_bytes: number;
+    stderr_tail: string[];
+    diff_refs: {
+      changed_file_refs: string[];
+      diff_stat: string[];
+    };
+    external_api_called: true;
+    credential_material_logged: false;
+    forwarded_env_keys: string[];
+  };
   closeout_enforcement?: {
     status: string;
     thread_id: string | null;

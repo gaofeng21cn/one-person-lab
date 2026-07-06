@@ -56,6 +56,12 @@ import {
   parseCapturedCloseoutMessage,
 } from './family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
 import {
+  runCodexInE2bSandbox,
+  sandboxAttemptForCodex,
+  shouldRunCodexStageInE2bSandbox,
+  type E2bCodexStageExecutionSummary,
+} from './e2b-codex-stage-execution.ts';
+import {
   isRecord,
   normalizeTimeoutMs,
   optionalString,
@@ -415,37 +421,73 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   });
   const codexExecOptions = codexExecOptionsFromPolicy(executorPolicyFromAttempt(input.attempt));
   const outputSchemaCapability = codexOutputSchemaCapabilityForProvider(codexExecOptions.provider);
+  let externalSandboxExecution: E2bCodexStageExecutionSummary | null = null;
+  const stageSandboxEnv = { ...process.env, ...input.env };
+  const runInE2bSandbox = shouldRunCodexStageInE2bSandbox(stageSandboxEnv);
   try {
-    const args = buildCodexExecArgs(runnerPromptFor(input), {
-      cwd: workspaceRoot,
+    const sandboxWorkspaceRoot = stageSandboxEnv.OPL_E2B_WORKSPACE_ROOT?.trim()
+      || stageSandboxEnv.OPL_EXTERNAL_SANDBOX_WORKSPACE_ROOT?.trim()
+      || '/home/user/opl-stage-workspace';
+    const executionAttempt = runInE2bSandbox
+      ? sandboxAttemptForCodex({ attempt: input.attempt, sandboxWorkspaceRoot })
+      : input.attempt;
+    const executionProviderEnv = codexStageAttemptEnv({
+      attempt: executionAttempt,
+      stagePacketRef,
+      workspaceRoot: runInE2bSandbox ? sandboxWorkspaceRoot : workspaceRoot,
+    });
+    const args = buildCodexExecArgs(runnerPromptFor({ attempt: executionAttempt, stagePacketRef }), {
+      cwd: runInE2bSandbox ? sandboxWorkspaceRoot : workspaceRoot,
       json: true,
-      ...codexCloseoutCaptureExecOptions({
-        codexExecOptions,
-        outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
-        outputSchemaPath: stageCloseoutCapture.outputSchemaPath,
-      }),
+      ...(runInE2bSandbox
+        ? codexExecOptions
+        : codexCloseoutCaptureExecOptions({
+            codexExecOptions,
+            outputLastMessagePath: stageCloseoutCapture.outputLastMessagePath,
+            outputSchemaPath: stageCloseoutCapture.outputSchemaPath,
+          })),
     });
-    const result = await runCodexCommandStreaming(args, {
-      cwd: workspaceRoot,
-      env: {
-        ...input.env,
-        ...providerEnv,
-      },
-      timeoutMs,
-      noOutputTimeoutMs,
-      commandNoProgressTimeoutMs,
-      signal: input.signal,
-      onProcessStarted(pid) {
-        processId = pid;
-      },
-      onStdoutEvent(event) {
-        const summary = eventSummary(event);
-        runnerEvents.push(summary);
-        input.onRunnerProgress?.(summary);
-      },
-    });
+    const result = runInE2bSandbox
+      ? await runCodexInE2bSandbox({
+          attempt: input.attempt,
+          args,
+          env: {
+            ...input.env,
+            ...executionProviderEnv,
+          },
+          timeoutMs,
+          signal: input.signal,
+          onRunnerProgress(summary) {
+            runnerEvents.push(summary);
+            input.onRunnerProgress?.(summary);
+          },
+        }).then((sandboxResult) => {
+          externalSandboxExecution = sandboxResult.summary;
+          return sandboxResult.result;
+        })
+      : await runCodexCommandStreaming(args, {
+          cwd: workspaceRoot,
+          env: {
+            ...input.env,
+            ...providerEnv,
+          },
+          timeoutMs,
+          noOutputTimeoutMs,
+          commandNoProgressTimeoutMs,
+          signal: input.signal,
+          onProcessStarted(pid) {
+            processId = pid;
+          },
+          onStdoutEvent(event) {
+            const summary = eventSummary(event);
+            runnerEvents.push(summary);
+            input.onRunnerProgress?.(summary);
+          },
+        });
   const parsed = parseCodexExecOutput(result.stdout);
-  const capturedLastMessage = parseCapturedCloseoutMessage(stageCloseoutCapture.outputLastMessagePath);
+  const capturedLastMessage = runInE2bSandbox
+    ? { message: null, closeoutPacket: null }
+    : parseCapturedCloseoutMessage(stageCloseoutCapture.outputLastMessagePath);
   let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages)
     ?? capturedLastMessage.closeoutPacket;
   let recoveredSessionPath: string | null = null;
@@ -468,7 +510,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let closeoutEnforcementUnsupportedFunctionCallSessionPath: string | null = null;
   let closeoutEnforcementProviderErrors: NonNullable<CodexCommandResult['providerErrors']> | null = null;
   if (
-    !closeoutPacket
+    !runInE2bSandbox
+    && !closeoutPacket
     && result.timeoutReason !== 'unsupported_tool_protocol'
     && result.timeoutReason !== 'activity_cancelled'
   ) {
@@ -487,7 +530,8 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     }
   }
   if (
-    !closeoutPacket
+    !runInE2bSandbox
+    && !closeoutPacket
     && parsed.threadId
     && result.timeoutReason !== 'unsupported_tool_protocol'
     && result.timeoutReason !== 'activity_cancelled'
@@ -572,10 +616,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       closeoutEnforcementCapture.cleanup();
     }
   }
-  if (!sessionUsageRef) {
+  if (!runInE2bSandbox && !sessionUsageRef) {
     sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(parsed.threadId));
   }
-  if (!closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
+  if (!runInE2bSandbox && !closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
     const domainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
       workspaceRoot,
       stagePacketRef,
@@ -687,6 +731,9 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
             provider_error_status_codes: providerErrorSummary.statusCodes,
             provider_error_messages: providerErrorSummary.messages,
           }
+        : {}),
+      ...(externalSandboxExecution
+        ? { external_sandbox_execution: externalSandboxExecution }
         : {}),
       ...(capturedLastMessage.message
         ? { captured_last_message_chars: capturedLastMessage.message.length }

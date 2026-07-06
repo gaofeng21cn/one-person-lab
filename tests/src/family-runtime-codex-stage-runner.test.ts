@@ -16,6 +16,10 @@ import {
   runAgentStageRunner,
 } from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
+import {
+  runCodexInE2bSandbox,
+  setE2bSandboxFactoryForTest,
+} from '../../src/modules/runway/e2b-codex-stage-execution.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
   const activity = buildCodexStageActivityInput({
@@ -424,6 +428,236 @@ exit 64
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('Codex stage runner can execute Codex inside an E2B sandbox and collect diff refs', async () => {
+  const remote = createGitModuleRemoteFixture('sandboxed-agent-workspace');
+  const commands: Array<{ cmd: string; cwd: string | null; envs: Record<string, string> }> = [];
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_e2b_codex_stage_test',
+    closeout_refs: ['receipt:e2b-codex-stage'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  setE2bSandboxFactoryForTest({
+    async create() {
+      return {
+        sandboxId: 'sandbox_e2b_created_test',
+        sandboxDomain: 'sandbox.e2b.test',
+        commands: {
+          async run(cmd, opts) {
+            commands.push({ cmd, cwd: opts?.cwd ?? null, envs: opts?.envs ?? {} });
+            if (cmd.includes(' diff --name-only')) {
+              return { exitCode: 0, stdout: 'artifacts/stage-output.json\n', stderr: '' };
+            }
+            if (cmd.includes(' diff --stat')) {
+              return { exitCode: 0, stdout: ' artifacts/stage-output.json | 1 +\n', stderr: '' };
+            }
+            if (cmd.startsWith("'codex' 'exec'")) {
+              return {
+                exitCode: 0,
+                stdout: [
+                  '{"type":"thread.started","thread_id":"thread-e2b-stage"}',
+                  JSON.stringify({
+                    type: 'item.completed',
+                    item: {
+                      type: 'agent_message',
+                      id: 'msg-e2b-stage',
+                      text: JSON.stringify(closeout),
+                    },
+                  }),
+                  '',
+                ].join('\n'),
+                stderr: '',
+              };
+            }
+            return { exitCode: 0, stdout: '', stderr: '' };
+          },
+        },
+      };
+    },
+    async connect() {
+      throw new Error('test should create a fresh sandbox');
+    },
+  });
+  const previous = {
+    provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
+    substrate: process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE,
+    endpoint: process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT,
+    credentialRef: process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF,
+    receiptRef: process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF,
+    apiKey: process.env.E2B_API_KEY,
+    workspaceRoot: process.env.OPL_E2B_WORKSPACE_ROOT,
+  };
+  try {
+    process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = 'e2b';
+    process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE = 'e2b';
+    process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT = 'https://api.e2b.test';
+    process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = 'env:E2B_API_KEY';
+    process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF = 'receipt:e2b-provider';
+    delete process.env.E2B_API_KEY;
+    process.env.OPL_E2B_WORKSPACE_ROOT = '/home/user/workspace';
+
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_e2b_codex_stage_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: remote.sourceRoot,
+          git_remote_url: remote.remoteRoot,
+          git_ref: remote.getHeadSha(),
+        },
+        checkpoint_refs: ['packet:e2b-stage'],
+      },
+      stagePacketRef: 'packet:e2b-stage',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.progress_summary.thread_id, 'thread-e2b-stage');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:e2b-codex-stage']);
+    const summary = receipt.process_output_summary?.external_sandbox_execution;
+    assert.ok(summary, 'receipt must include external sandbox execution summary');
+    assert.equal(summary.provider_kind, 'e2b');
+    assert.equal(summary.sandbox_id, 'sandbox_e2b_created_test');
+    assert.equal(summary.workspace_transport.repo_url, remote.remoteRoot);
+    assert.equal(summary.workspace_transport.checkout_ref, remote.getHeadSha());
+    assert.deepEqual(summary.diff_refs.changed_file_refs, ['artifacts/stage-output.json']);
+    assert.equal(summary.external_api_called, true);
+    assert.equal(summary.credential_material_logged, false);
+    assert.equal(commands.some((entry) => entry.cmd.includes('git clone')), true);
+    const codexCommand = commands.find((entry) => entry.cmd.startsWith("'codex' 'exec'"));
+    assert.ok(codexCommand, 'E2B command log must include sandboxed Codex execution');
+    assert.equal(codexCommand.cwd, '/home/user/workspace');
+    assert.match(codexCommand.cmd, /--cd' '\/home\/user\/workspace/);
+  } finally {
+    setE2bSandboxFactoryForTest(null);
+    for (const [key, value] of Object.entries(previous)) {
+      const envKey = {
+        provider: 'OPL_CODEX_STAGE_SANDBOX_PROVIDER',
+        substrate: 'OPL_EXTERNAL_SANDBOX_SUBSTRATE',
+        endpoint: 'OPL_EXTERNAL_SANDBOX_ENDPOINT',
+        credentialRef: 'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
+        receiptRef: 'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+        apiKey: 'E2B_API_KEY',
+        workspaceRoot: 'OPL_E2B_WORKSPACE_ROOT',
+      }[key]!;
+      if (value === undefined) {
+        delete process.env[envKey];
+      } else {
+        process.env[envKey] = value;
+      }
+    }
+    fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner fails closed when E2B is selected without workspace git transport', async () => {
+  setE2bSandboxFactoryForTest({
+    async create() {
+      throw new Error('sandbox must not be created without workspace transport');
+    },
+    async connect() {
+      throw new Error('sandbox must not be connected without workspace transport');
+    },
+  });
+  const previous = {
+    provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
+    substrate: process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE,
+    endpoint: process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT,
+    credentialRef: process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF,
+    receiptRef: process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF,
+  };
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-e2b-missing-transport-'));
+  try {
+    process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = 'e2b';
+    process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE = 'e2b';
+    process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT = 'https://api.e2b.test';
+    process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = 'env:E2B_API_KEY';
+    process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF = 'receipt:e2b-provider';
+
+    await assert.rejects(
+      () => runPublicCodexStageRunner({
+        attempt: {
+          stage_attempt_id: 'sat_e2b_missing_transport_test',
+          stage_id: 'domain_owner/default-executor-dispatch',
+          executor_kind: 'codex_cli',
+          workspace_locator: {
+            workspace_root: fixtureRoot,
+          },
+          checkpoint_refs: ['packet:e2b-missing-transport'],
+        },
+        stagePacketRef: 'packet:e2b-missing-transport',
+        runnerMode: 'codex_cli',
+        timeoutMs: 10_000,
+      }),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.blocked_reason === 'external_sandbox_workspace_transport_missing',
+    );
+  } finally {
+    setE2bSandboxFactoryForTest(null);
+    if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
+    if (previous.substrate === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE;
+    else process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE = previous.substrate;
+    if (previous.endpoint === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT;
+    else process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT = previous.endpoint;
+    if (previous.credentialRef === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF;
+    else process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = previous.credentialRef;
+    if (previous.receiptRef === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF;
+    else process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF = previous.receiptRef;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('E2B Codex stage execution requires live credential material before provider API use', async () => {
+  const remote = createGitModuleRemoteFixture('sandboxed-agent-workspace-no-key');
+  const previous = {
+    endpoint: process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT,
+    credentialRef: process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF,
+    receiptRef: process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF,
+    substrate: process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE,
+    apiKey: process.env.E2B_API_KEY,
+  };
+  try {
+    process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT = 'https://api.e2b.test';
+    process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = 'env:E2B_API_KEY';
+    process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF = 'receipt:e2b-provider';
+    process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE = 'e2b';
+    delete process.env.E2B_API_KEY;
+
+    await assert.rejects(
+      () => runCodexInE2bSandbox({
+        attempt: {
+          stage_attempt_id: 'sat_e2b_missing_key_test',
+          workspace_locator: {
+            git_remote_url: remote.remoteRoot,
+          },
+        },
+        args: ['exec', '--json', 'noop'],
+        timeoutMs: 10_000,
+      }),
+      (error) => error instanceof FrameworkContractError
+        && error.details?.blocked_reason === 'external_sandbox_e2b_configuration_missing'
+        && Array.isArray(error.details.missing_required_env)
+        && error.details.missing_required_env.includes('E2B_API_KEY')
+        && error.details.external_api_called === false,
+    );
+  } finally {
+    if (previous.endpoint === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT;
+    else process.env.OPL_EXTERNAL_SANDBOX_ENDPOINT = previous.endpoint;
+    if (previous.credentialRef === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF;
+    else process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = previous.credentialRef;
+    if (previous.receiptRef === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF;
+    else process.env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF = previous.receiptRef;
+    if (previous.substrate === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE;
+    else process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE = previous.substrate;
+    if (previous.apiKey === undefined) delete process.env.E2B_API_KEY;
+    else process.env.E2B_API_KEY = previous.apiKey;
+    fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
   }
 });
 

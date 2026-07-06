@@ -101,7 +101,8 @@
     "@temporalio/common": "^1.18.1",
     "@temporalio/worker": "^1.18.1",
     "@temporalio/workflow": "^1.18.1",
-    "ajv": "^8.20.0"
+    "ajv": "^8.20.0",
+    "e2b": "^2.31.0"
   },
   "devDependencies": {
     "@temporalio/testing": "^1.18.1",
