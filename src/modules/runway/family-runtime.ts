@@ -140,12 +140,12 @@ export async function runFamilyRuntime(
         family_runtime_doctor: {
           surface_id: 'opl_family_runtime_doctor',
           doctor_status: status.readiness.full_online_ready ? 'ready' : 'degraded',
-          blockers: [
+          blockers: [...new Set([
             ...(status.readiness.degraded_reason ? [status.readiness.degraded_reason] : []),
             ...(status.readiness.local_sqlite_is_dev_ci_offline_only
               ? ['local_sqlite_is_dev_ci_offline_only']
               : []),
-          ],
+          ])],
           repair_command: `opl family-runtime repair --provider ${status.configured_provider}`,
           status,
         },

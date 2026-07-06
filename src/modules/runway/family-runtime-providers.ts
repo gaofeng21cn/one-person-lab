@@ -155,8 +155,11 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
         'events_export',
       ],
       details: {
+        diagnostic_ready: true,
         durable_online_wakeup: false,
         external_runtime_required: false,
+        durable_lifecycle_truth: false,
+        provider_ready_counts_as_online_ready: false,
       },
     };
   }
@@ -217,8 +220,11 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
       'events_export',
     ],
     details: {
+      diagnostic_ready: true,
       durable_online_wakeup: false,
       external_runtime_required: false,
+      durable_lifecycle_truth: false,
+      provider_ready_counts_as_online_ready: false,
     },
   };
 }

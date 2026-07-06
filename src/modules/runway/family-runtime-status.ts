@@ -34,6 +34,7 @@ export async function buildFamilyRuntimeStatusPayload(
   const queueLifecycleBoundary = buildQueueTemporalLifecycleBoundary(db, selectedProvider);
   const queueTruthCompetesWithTemporal = queueLifecycleBoundary.gate.status === 'attention_needed';
   const providerCanReplaceDomainDaemons = temporalSelected && provider.ready && !queueTruthCompetesWithTemporal;
+  const providerReadyForOnlineRuntime = temporalSelected && provider.ready;
   const schedulerReplacementStatus = temporalSelected
     ? provider.ready
       ? queueTruthCompetesWithTemporal
@@ -45,6 +46,7 @@ export async function buildFamilyRuntimeStatusPayload(
     ? buildTemporalProviderLivenessBlocker(provider)
     : null;
   const degradedReason = provider.degraded_reason
+    ?? (selectedProvider === 'local_sqlite' ? 'local_sqlite_is_dev_ci_offline_only' : null)
     ?? (queueTruthCompetesWithTemporal ? 'local_sqlite_queue_lifecycle_competes_with_temporal' : null);
   const readinessReady = fullOnlineReady && !queueTruthCompetesWithTemporal;
 
@@ -61,7 +63,8 @@ export async function buildFamilyRuntimeStatusPayload(
         queue_schema_version: QUEUE_SCHEMA_VERSION,
       },
       readiness: {
-        provider_ready: provider.ready,
+        provider_ready: providerReadyForOnlineRuntime,
+        diagnostic_provider_ready: provider.ready,
         full_online_ready: readinessReady,
         durable_online_ready: readinessReady,
         default_standard_agent_runtime_path: 'opl_temporal_hosted_autonomous',
@@ -74,9 +77,10 @@ export async function buildFamilyRuntimeStatusPayload(
         production_provider_required: 'temporal',
         selected_provider_role: providerRuntime.provider_catalog[selectedProvider]?.provider_role ?? 'unknown',
         local_sqlite_is_dev_ci_offline_only: selectedProvider === 'local_sqlite',
+        local_sqlite_counts_as_provider_ready: false,
         selected_provider_can_replace_domain_daemons: providerCanReplaceDomainDaemons,
         queue_truth_competes_with_temporal: queueTruthCompetesWithTemporal,
-        degraded: !provider.ready || queueTruthCompetesWithTemporal,
+        degraded: !providerReadyForOnlineRuntime || queueTruthCompetesWithTemporal,
         degraded_reason: degradedReason,
       },
       provider_runtime: {
