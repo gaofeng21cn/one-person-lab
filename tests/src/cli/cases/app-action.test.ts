@@ -116,6 +116,17 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'settings_verify_workspace',
       'settings_sync_capabilities',
       'settings_apply_opl_packages',
+      'refresh_registry',
+      'install_from_manifest_url',
+      'agent_package_update',
+      'agent_package_rollback',
+      'agent_package_repair',
+      'agent_package_uninstall',
+      'agent_package_hide',
+      'agent_package_unhide',
+      'agent_package_enable',
+      'agent_package_disable',
+      'agent_package_home_shortcut_preferences_set',
       'settings_reload_codex_surface',
       'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
@@ -269,6 +280,34 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
     assert.equal(actions.get('settings_apply_opl_packages')?.delegated_surface, 'opl connect update --module <all-default-modules>');
+    assert.deepEqual(
+      [
+        'refresh_registry',
+        'install_from_manifest_url',
+        'agent_package_update',
+        'agent_package_rollback',
+        'agent_package_repair',
+        'agent_package_uninstall',
+        'agent_package_hide',
+        'agent_package_unhide',
+        'agent_package_enable',
+        'agent_package_disable',
+        'agent_package_home_shortcut_preferences_set',
+      ].map((actionId) => actions.get(actionId)?.delegated_surface),
+      [
+        'opl connect agent-packages registry refresh --registry-url <registry_url>',
+        'opl connect agent-packages install --manifest-url <manifest_url>',
+        'opl connect agent-packages update --manifest-url <manifest_url>',
+        'opl connect agent-packages rollback --manifest-url <manifest_url>', // reuse-first: allow owner-routed lifecycle projection assertion.
+        'opl connect agent-packages repair --package-id <package_id>',
+        'opl connect agent-packages uninstall --package-id <package_id>',
+        'opl connect agent-packages hide --package-id <package_id>',
+        'opl connect agent-packages unhide --package-id <package_id>',
+        'opl connect agent-packages enable --package-id <package_id>',
+        'opl connect agent-packages disable --package-id <package_id>',
+        'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+      ],
+    );
     assert.equal(
       actions.get('settings_reload_codex_surface')?.delegated_surface,
       'opl connect sync-skills --domain mas-scholar-skills --scope <workspace|quest>',

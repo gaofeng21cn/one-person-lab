@@ -1,4 +1,8 @@
-import { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from '../../connect/index.ts';
+import {
+  MANAGED_UPDATE_OWNER_ACTIONS,
+  listAgentPackageSettingsActions,
+  managedUpdateCommand,
+} from '../../connect/index.ts';
 
 export type SettingsActionTaskKind =
   | 'read'
@@ -12,6 +16,7 @@ export type SettingsActionTaskKind =
   | 'check'
   | 'refresh'
   | 'install'
+  | 'uninstall'
   | typeof MANAGED_UPDATE_OWNER_ACTIONS.revert;
 
 export type SettingsAction = {
@@ -453,57 +458,7 @@ export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
     rollback_action_id: 'settings_rollback_runtime_substrate',
     verify_action_id: 'provider_scheduler_status',
   },
-  {
-    action_id: 'refresh_registry',
-    stable_id: 'refresh_agent_package_registry',
-    label: 'Refresh agent registry',
-    section_id: 'capabilities',
-    task_kind: 'refresh',
-    taxonomy: 'settings.capabilities.agent_registry.refresh',
-    delegated_surface: 'opl connect agent-packages registry refresh --registry-url <registry_url>',
-    payload_fields: ['registry_url'],
-    mutates: 'opl_agent_package_registry_cache_and_lifecycle_receipt',
-    dry_run_supported: true,
-    confirmation_required: false,
-    danger_level: 'low',
-    impact: 'Fetches and validates a registry catalog for discovery only, then records a Framework-owned refresh receipt.',
-    follow_up_action_ids: ['install_from_manifest_url'],
-    verify_action_id: 'refresh_registry',
-  },
-  {
-    action_id: 'install_from_manifest_url',
-    stable_id: 'install_agent_package_from_manifest_url',
-    label: 'Install agent package',
-    section_id: 'capabilities',
-    task_kind: 'install',
-    taxonomy: 'settings.capabilities.agent_package.install',
-    delegated_surface: 'opl connect agent-packages install --manifest-url <manifest_url>',
-    payload_fields: ['manifest_url', 'registry_url', 'package_id', 'trust_tier', 'source_kind'],
-    mutates: 'opl_agent_package_lock_and_lifecycle_receipt',
-    dry_run_supported: true,
-    confirmation_required: true,
-    danger_level: 'medium',
-    impact: 'Validates one manifest and records package lock/receipt refs without owning agent domain semantics.',
-    follow_up_action_ids: ['settings_reload_codex_surface'],
-    verify_action_id: 'settings_reload_codex_surface',
-  },
-  {
-    action_id: 'agent_package_home_shortcut_preferences_set',
-    stable_id: 'set_agent_package_home_shortcut_preferences',
-    label: 'Set Home shortcut preference',
-    section_id: 'capabilities',
-    task_kind: 'configure',
-    taxonomy: 'settings.capabilities.agent_package.home_shortcut_preferences',
-    delegated_surface: 'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
-    payload_fields: ['package_id', 'shortcut_id', 'visible', 'sort_order'],
-    mutates: 'opl_agent_package_home_shortcut_preferences',
-    dry_run_supported: true,
-    confirmation_required: false,
-    danger_level: 'low',
-    impact: 'Persists user Home shortcut visibility/order preferences without owning App layout policy or agent domain semantics.',
-    follow_up_action_ids: [],
-    verify_action_id: 'agent_package_home_shortcut_preferences_set',
-  },
+  ...listAgentPackageSettingsActions(),
   {
     action_id: 'settings_reload_codex_surface',
     stable_id: 'reload_codex_surface',

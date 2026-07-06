@@ -26,6 +26,12 @@ export type {
   AgentPackagePackageActionInput,
   AgentPackageRollbackInput,
 } from './agent-package-registry.ts';
+export {
+  AGENT_PACKAGE_ACTION_CATALOG,
+  agentPackageDelegatedSurface,
+  findAgentPackageAction,
+  listAgentPackageSettingsActions,
+} from './agent-package-actions.ts';
 export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 export type { LocalCodexDefaults } from './local-codex-defaults.ts';
 export { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';

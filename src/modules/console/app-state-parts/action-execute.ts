@@ -11,6 +11,7 @@ import {
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
   runOplModuleAction,
+  agentPackageDelegatedSurface,
 } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
@@ -69,6 +70,16 @@ function parseJsonObject(value: string, context: string): JsonRecord {
     });
   }
   return parsed;
+}
+
+function requireAgentPackageDelegatedSurface(actionId: string) {
+  const delegatedSurface = agentPackageDelegatedSurface(actionId);
+  if (!delegatedSurface) {
+    throw new FrameworkContractError('contract_shape_invalid', `Unknown Agent Package action catalog entry: ${actionId}.`, {
+      action_id: actionId,
+    });
+  }
+  return delegatedSurface;
 }
 
 export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptions {
@@ -334,7 +345,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'refresh_registry' || options.actionId === 'agent_registry_refresh') {
     const registryUrl = agentPackageRegistryUrlPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect agent-packages registry refresh --registry-url <registry_url>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: options.dryRun
         ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
         : await runOplAgentPackageRegistryRefresh({ registryUrl }),
@@ -347,7 +358,7 @@ async function executeDirectAppAction(
   ) {
     const installPayload = agentPackageInstallPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect agent-packages install --manifest-url <manifest_url>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: await runOplAgentPackageInstall({
         ...installPayload,
         dryRun: options.dryRun,
@@ -358,7 +369,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'agent_package_update') {
     const installPayload = agentPackageInstallPayload(options.payload, { allowPackageOnly: true });
     return {
-      delegatedSurface: 'opl connect agent-packages update --manifest-url <manifest_url>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: await runOplAgentPackageUpdate({
         ...installPayload,
         dryRun: options.dryRun,
@@ -369,7 +380,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'agent_package_rollback') {
     const installPayload = agentPackageInstallPayload(options.payload, { allowPackageOnly: true });
     return {
-      delegatedSurface: 'opl connect agent-packages rollback --manifest-url <manifest_url>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: await runOplAgentPackageRollback({
         ...installPayload,
         dryRun: options.dryRun,
@@ -379,7 +390,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'agent_package_repair') {
     return {
-      delegatedSurface: 'opl connect agent-packages repair --package-id <package_id>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: runOplAgentPackageRepair({
         ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
@@ -389,7 +400,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'agent_package_uninstall') {
     return {
-      delegatedSurface: 'opl connect agent-packages uninstall --package-id <package_id>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: runOplAgentPackageUninstall({
         ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
@@ -406,7 +417,7 @@ async function executeDirectAppAction(
   if (options.actionId in exposureActions) {
     const action = exposureActions[options.actionId as keyof typeof exposureActions];
     return {
-      delegatedSurface: `opl connect agent-packages ${action} --package-id <package_id>`,
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: runOplAgentPackageExposureAction(action, {
         ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
@@ -416,7 +427,7 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'agent_package_home_shortcut_preferences_set') {
     return {
-      delegatedSurface: 'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
+      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: runOplAgentPackageHomeShortcutPreferencesSet({
         ...agentPackageHomeShortcutPreferencePayload(options.payload),
         dryRun: options.dryRun,
