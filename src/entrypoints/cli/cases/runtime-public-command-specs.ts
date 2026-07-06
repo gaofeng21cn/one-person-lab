@@ -634,12 +634,12 @@ export function buildPublicRuntimeCommandSpecs(
         ],
         group: 'runtime',
       }),
-    'runtime research-hypothesis-portfolio summary':
-      cloneCommandSpec(commandSpecs['runtime research-hypothesis-portfolio summary'], {
+    'runtime stage-candidate-portfolio summary':
+      cloneCommandSpec(commandSpecs['runtime stage-candidate-portfolio summary'], {
         usage:
-          'opl runtime research-hypothesis-portfolio summary (--payload <json>|--payload-file <path>)',
+          'opl runtime stage-candidate-portfolio summary (--payload <json>|--payload-file <path>)',
         examples: [
-          'opl runtime research-hypothesis-portfolio summary --payload-file research-hypothesis-portfolio.json',
+          'opl runtime stage-candidate-portfolio summary --payload-file stage-candidate-portfolio.json',
         ],
         group: 'runtime',
       }),

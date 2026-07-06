@@ -6,7 +6,7 @@ import {
   type JsonRecord,
 } from '../../kernel/json-record.ts';
 
-export interface ResearchHypothesisPortfolioValidationError {
+export interface StageCandidatePortfolioValidationError {
   code:
     | 'root_not_object'
     | 'surface_kind_invalid'
@@ -20,12 +20,12 @@ export interface ResearchHypothesisPortfolioValidationError {
   message: string;
 }
 
-export interface ResearchHypothesisPortfolioValidation {
+export interface StageCandidatePortfolioValidation {
   valid: boolean;
-  errors: ResearchHypothesisPortfolioValidationError[];
+  errors: StageCandidatePortfolioValidationError[];
 }
 
-export interface ResearchHypothesisPortfolioMissingRef {
+export interface StageCandidatePortfolioMissingRef {
   ref_id: string | null;
   role: string | null;
   ref_kind: string | null;
@@ -34,7 +34,7 @@ export interface ResearchHypothesisPortfolioMissingRef {
   status: string | null;
 }
 
-export interface ResearchHypothesisPortfolioRef {
+export interface StageCandidatePortfolioRef {
   ref: string;
   source_surface: string;
   ref_id: string | null;
@@ -44,18 +44,18 @@ export interface ResearchHypothesisPortfolioRef {
   required: boolean | null;
 }
 
-export interface ResearchHypothesisPortfolioSummary {
-  surface_kind: 'research_hypothesis_portfolio_summary';
-  version: 'research_hypothesis_portfolio_summary.v1';
+export interface StageCandidatePortfolioSummary {
+  surface_kind: 'stage_candidate_portfolio_summary';
+  version: 'stage_candidate_portfolio_summary.v1';
   portfolio_id: string | null;
   target_domain_id: string | null;
   portfolio_status: string | null;
-  portfolio_refs: ResearchHypothesisPortfolioRef[];
-  missing_refs: ResearchHypothesisPortfolioMissingRef[];
+  portfolio_refs: StageCandidatePortfolioRef[];
+  missing_refs: StageCandidatePortfolioMissingRef[];
   candidate_count: number;
   candidate_status_counts: Record<string, number>;
   assumption_count: number;
-  novelty_check_count: number;
+  provenance_check_count: number;
   failed_path_count: number;
   negative_result_count: number;
   advisory_metric_count: number;
@@ -68,13 +68,13 @@ export interface ResearchHypothesisPortfolioSummary {
   route_back_refs: string[];
   owner_refs: string[];
   authority_boundary: {
-    opl_role: 'hypothesis_portfolio_refs_projection_owner';
-    domain_role: 'hypothesis_truth_quality_receipt_and_artifact_authority';
+    opl_role: 'stage_candidate_portfolio_refs_projection_owner';
+    domain_role: 'domain_truth_quality_receipt_and_artifact_authority';
     portfolio_scope: 'refs_status_advisory_projection_only';
     holds_domain_truth: false;
     can_read_domain_body: false;
     can_write_domain_truth: false;
-    can_authorize_hypothesis_acceptance: false;
+    can_authorize_candidate_acceptance: false;
     can_authorize_domain_ready: false;
     can_authorize_quality_verdict: false;
     can_mutate_artifact_body: false;
@@ -85,7 +85,7 @@ export interface ResearchHypothesisPortfolioSummary {
     opl_role: 'advisory_metric_ref_projection_only';
     metrics_scope: 'refs_status_advisory_only';
     metrics_are_domain_verdict: false;
-    can_authorize_hypothesis_acceptance: false;
+    can_authorize_candidate_acceptance: false;
     can_authorize_domain_ready: false;
     can_authorize_quality_verdict: false;
     can_rank_as_domain_truth: false;
@@ -95,39 +95,39 @@ export interface ResearchHypothesisPortfolioSummary {
 const REQUIRED_SURFACES = [
   [
     'assumption_decomposition',
-    'research_hypothesis_assumption_decomposition',
-    'research_hypothesis_assumption_decomposition.v1',
+    'stage_candidate_assumption_refs',
+    'stage_candidate_assumption_refs.v1',
   ],
   [
-    'novelty_provenance_checks',
-    'research_hypothesis_novelty_provenance_checks',
-    'research_hypothesis_novelty_provenance_checks.v1',
+    'provenance_checks',
+    'stage_candidate_provenance_checks',
+    'stage_candidate_provenance_checks.v1',
   ],
   [
-    'negative_failed_path_ledger',
-    'research_hypothesis_negative_failed_path_ledger',
-    'research_hypothesis_negative_failed_path_ledger.v1',
+    'negative_path_ledger',
+    'stage_candidate_negative_path_ledger',
+    'stage_candidate_negative_path_ledger.v1',
   ],
   [
-    'ranking_proximity_advisory_metrics',
-    'research_hypothesis_ranking_proximity_advisory_metrics',
-    'research_hypothesis_ranking_proximity_advisory_metrics.v1',
+    'advisory_metrics',
+    'stage_candidate_advisory_metrics',
+    'stage_candidate_advisory_metrics.v1',
   ],
   [
     'human_review_refs',
-    'research_hypothesis_human_review_refs',
-    'research_hypothesis_human_review_refs.v1',
+    'stage_candidate_human_review_refs',
+    'stage_candidate_human_review_refs.v1',
   ],
 ] as const;
 
 const AUTHORITY_BOUNDARY = {
-  opl_role: 'hypothesis_portfolio_refs_projection_owner',
-  domain_role: 'hypothesis_truth_quality_receipt_and_artifact_authority',
+  opl_role: 'stage_candidate_portfolio_refs_projection_owner',
+  domain_role: 'domain_truth_quality_receipt_and_artifact_authority',
   portfolio_scope: 'refs_status_advisory_projection_only',
   holds_domain_truth: false,
   can_read_domain_body: false,
   can_write_domain_truth: false,
-  can_authorize_hypothesis_acceptance: false,
+  can_authorize_candidate_acceptance: false,
   can_authorize_domain_ready: false,
   can_authorize_quality_verdict: false,
   can_mutate_artifact_body: false,
@@ -139,7 +139,7 @@ const ADVISORY_METRICS_AUTHORITY_BOUNDARY = {
   opl_role: 'advisory_metric_ref_projection_only',
   metrics_scope: 'refs_status_advisory_only',
   metrics_are_domain_verdict: false,
-  can_authorize_hypothesis_acceptance: false,
+  can_authorize_candidate_acceptance: false,
   can_authorize_domain_ready: false,
   can_authorize_quality_verdict: false,
   can_rank_as_domain_truth: false,
@@ -155,17 +155,17 @@ function stringList(value: unknown) {
 }
 
 function validationError(
-  code: ResearchHypothesisPortfolioValidationError['code'],
+  code: StageCandidatePortfolioValidationError['code'],
   path: string,
   message: string,
-): ResearchHypothesisPortfolioValidationError {
+): StageCandidatePortfolioValidationError {
   return { code, path, message };
 }
 
 function collectForbiddenBodyErrors(
   value: unknown,
   path: string,
-  errors: ResearchHypothesisPortfolioValidationError[],
+  errors: StageCandidatePortfolioValidationError[],
 ) {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => collectForbiddenBodyErrors(entry, `${path}[${index}]`, errors));
@@ -176,11 +176,11 @@ function collectForbiddenBodyErrors(
   }
   for (const [key, entry] of Object.entries(value)) {
     const childPath = path === '$' ? `$.${key}` : `${path}.${key}`;
-    if (key === 'domain_body' || key === 'hypothesis_body' || key === 'evidence_body') {
+    if (key === 'domain_body' || key === 'candidate_body' || key === 'evidence_body') {
       errors.push(validationError(
         'domain_body_forbidden',
         childPath,
-        'OPL research hypothesis portfolios are refs/status/projection only and must not carry domain body.',
+        'OPL stage candidate portfolios are refs/status/projection only and must not carry domain body.',
       ));
       continue;
     }
@@ -188,7 +188,7 @@ function collectForbiddenBodyErrors(
       errors.push(validationError(
         'ref_body_forbidden',
         childPath,
-        'OPL research hypothesis portfolios must carry refs only; body-like payload fields are forbidden.',
+        'OPL stage candidate portfolios must carry refs only; body-like payload fields are forbidden.',
       ));
       continue;
     }
@@ -196,7 +196,7 @@ function collectForbiddenBodyErrors(
       errors.push(validationError(
         'ref_body_forbidden',
         childPath,
-        'body_included must be false for every research hypothesis portfolio ref.',
+        'body_included must be false for every stage candidate portfolio ref.',
       ));
       continue;
     }
@@ -208,7 +208,7 @@ function validateBoundary(
   value: unknown,
   expectedBoundary: Readonly<JsonRecord>,
   path: string,
-  errors: ResearchHypothesisPortfolioValidationError[],
+  errors: StageCandidatePortfolioValidationError[],
 ) {
   const boundary = record(value);
   for (const [key, expected] of Object.entries(expectedBoundary)) {
@@ -222,29 +222,29 @@ function validateBoundary(
   }
 }
 
-export function validateResearchHypothesisPortfolio(
+export function validateStageCandidatePortfolio(
   value: unknown,
-): ResearchHypothesisPortfolioValidation {
-  const errors: ResearchHypothesisPortfolioValidationError[] = [];
+): StageCandidatePortfolioValidation {
+  const errors: StageCandidatePortfolioValidationError[] = [];
   if (!isRecord(value)) {
     return {
       valid: false,
-      errors: [validationError('root_not_object', '$', 'Research hypothesis portfolio must be an object.')],
+      errors: [validationError('root_not_object', '$', 'Stage candidate portfolio must be an object.')],
     };
   }
 
-  if (value.surface_kind !== 'research_hypothesis_portfolio') {
+  if (value.surface_kind !== 'stage_candidate_portfolio') {
     errors.push(validationError(
       'surface_kind_invalid',
       '$.surface_kind',
-      'surface_kind must be research_hypothesis_portfolio.',
+      'surface_kind must be stage_candidate_portfolio.',
     ));
   }
-  if (value.version !== 'research_hypothesis_portfolio.v1') {
+  if (value.version !== 'stage_candidate_portfolio.v1') {
     errors.push(validationError(
       'version_invalid',
       '$.version',
-      'version must be research_hypothesis_portfolio.v1.',
+      'version must be stage_candidate_portfolio.v1.',
     ));
   }
 
@@ -265,9 +265,9 @@ export function validateResearchHypothesisPortfolio(
 
   validateBoundary(value.authority_boundary, AUTHORITY_BOUNDARY, '$.authority_boundary', errors);
   validateBoundary(
-    record(value.ranking_proximity_advisory_metrics).authority_boundary,
+    record(value.advisory_metrics).authority_boundary,
     ADVISORY_METRICS_AUTHORITY_BOUNDARY,
-    '$.ranking_proximity_advisory_metrics.authority_boundary',
+    '$.advisory_metrics.authority_boundary',
     errors,
   );
   collectForbiddenBodyErrors(value, '$', errors);
@@ -277,17 +277,17 @@ export function validateResearchHypothesisPortfolio(
 
 function surfaceRefRecords(portfolio: JsonRecord) {
   return [
-    ...recordList(portfolio.research_context_refs).map((ref) => ({
-      source_surface: 'research_hypothesis_portfolio.research_context_refs',
+    ...recordList(portfolio.stage_context_refs).map((ref) => ({
+      source_surface: 'stage_candidate_portfolio.stage_context_refs',
       ref,
     })),
-    ...recordList(portfolio.related_research_evidence_pack_refs).map((ref) => ({
-      source_surface: 'research_hypothesis_portfolio.related_research_evidence_pack_refs',
+    ...recordList(portfolio.related_evidence_pack_refs).map((ref) => ({
+      source_surface: 'stage_candidate_portfolio.related_evidence_pack_refs',
       ref,
     })),
-    ...recordList(portfolio.hypothesis_candidates).flatMap((candidate) =>
+    ...recordList(portfolio.stage_candidates).flatMap((candidate) =>
       recordList(candidate.evidence_refs).map((ref) => ({
-        source_surface: 'research_hypothesis_portfolio.hypothesis_candidates.evidence_refs',
+        source_surface: 'stage_candidate_portfolio.stage_candidates.evidence_refs',
         ref,
       }))
     ),
@@ -306,7 +306,7 @@ function scalarRefSummaries(sourceSurface: string, values: unknown, role: string
   }));
 }
 
-function refSummary(sourceSurface: string, ref: JsonRecord): ResearchHypothesisPortfolioRef | null {
+function refSummary(sourceSurface: string, ref: JsonRecord): StageCandidatePortfolioRef | null {
   const refValue = optionalString(ref.ref);
   if (!refValue) {
     return null;
@@ -326,7 +326,7 @@ function unique<T>(values: T[]) {
   return [...new Set(values.filter(Boolean))] as NonNullable<T>[];
 }
 
-function uniqueRefs(refs: ResearchHypothesisPortfolioRef[]) {
+function uniqueRefs(refs: StageCandidatePortfolioRef[]) {
   const seen = new Set<string>();
   return refs.filter((entry) => {
     const key = `${entry.source_surface}\0${entry.ref}`;
@@ -343,96 +343,96 @@ function portfolioRefs(
   surfaceRefs: Array<{ source_surface: string; ref: JsonRecord }>,
 ) {
   const assumptions = record(portfolio.assumption_decomposition).assumptions;
-  const noveltyChecks = record(portfolio.novelty_provenance_checks).checks;
-  const ledger = record(portfolio.negative_failed_path_ledger);
-  const metrics = record(portfolio.ranking_proximity_advisory_metrics);
+  const provenanceChecks = record(portfolio.provenance_checks).checks;
+  const ledger = record(portfolio.negative_path_ledger);
+  const metrics = record(portfolio.advisory_metrics);
   const reviews = record(portfolio.human_review_refs);
-  const candidateRefs = recordList(portfolio.hypothesis_candidates).flatMap((candidate) => [
+  const candidateRefs = recordList(portfolio.stage_candidates).flatMap((candidate) => [
     ...scalarRefSummaries(
-      'research_hypothesis_portfolio.hypothesis_candidates.hypothesis_ref',
-      optionalString(candidate.hypothesis_ref),
-      'hypothesis',
+      'stage_candidate_portfolio.stage_candidates.candidate_ref',
+      optionalString(candidate.candidate_ref),
+      'candidate',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_portfolio.hypothesis_candidates.rationale_ref',
+      'stage_candidate_portfolio.stage_candidates.rationale_ref',
       optionalString(candidate.rationale_ref),
       'rationale',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_portfolio.hypothesis_candidates.origin_ref',
+      'stage_candidate_portfolio.stage_candidates.origin_ref',
       optionalString(candidate.origin_ref),
       'origin',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_portfolio.hypothesis_candidates.owner_ref',
+      'stage_candidate_portfolio.stage_candidates.owner_ref',
       optionalString(candidate.owner_ref),
       'owner',
     ),
   ]);
   const assumptionRefs = recordList(assumptions).flatMap((entry) => [
     ...scalarRefSummaries(
-      'research_hypothesis_assumption_decomposition.assumptions.assumption_ref',
+      'stage_candidate_assumption_refs.assumptions.assumption_ref',
       optionalString(entry.assumption_ref),
       'assumption',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_assumption_decomposition.assumptions.support_ref_ids',
+      'stage_candidate_assumption_refs.assumptions.support_ref_ids',
       entry.support_ref_ids,
       'support_ref_id',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_assumption_decomposition.assumptions.contradiction_ref_ids',
+      'stage_candidate_assumption_refs.assumptions.contradiction_ref_ids',
       entry.contradiction_ref_ids,
       'contradiction_ref_id',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_assumption_decomposition.assumptions.owner_ref',
+      'stage_candidate_assumption_refs.assumptions.owner_ref',
       optionalString(entry.owner_ref),
       'owner',
     ),
   ]);
-  const noveltyRefs = recordList(noveltyChecks).flatMap((entry) => [
+  const provenanceRefs = recordList(provenanceChecks).flatMap((entry) => [
     ...scalarRefSummaries(
-      'research_hypothesis_novelty_provenance_checks.checks.check_ref',
+      'stage_candidate_provenance_checks.checks.check_ref',
       optionalString(entry.check_ref),
-      'novelty_check',
+      'provenance_check',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_novelty_provenance_checks.checks.source_ref_ids',
+      'stage_candidate_provenance_checks.checks.source_ref_ids',
       entry.source_ref_ids,
       'source_ref_id',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_novelty_provenance_checks.checks.result_ref',
+      'stage_candidate_provenance_checks.checks.result_ref',
       optionalString(entry.result_ref),
-      'novelty_result',
+      'provenance_result',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_novelty_provenance_checks.checks.owner_ref',
+      'stage_candidate_provenance_checks.checks.owner_ref',
       optionalString(entry.owner_ref),
       'owner',
     ),
   ]);
   const failedPathRefs = recordList(ledger.failed_paths).flatMap((entry) => [
     ...scalarRefSummaries(
-      'research_hypothesis_negative_failed_path_ledger.failed_paths.failed_path_ref',
+      'stage_candidate_negative_path_ledger.failed_paths.failed_path_ref',
       optionalString(entry.failed_path_ref),
       'failed_path',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_negative_failed_path_ledger.failed_paths.owner_ref',
+      'stage_candidate_negative_path_ledger.failed_paths.owner_ref',
       optionalString(entry.owner_ref),
       'owner',
     ),
   ]);
   const negativeResultRefs = recordList(ledger.negative_results).flatMap((entry) => [
     ...scalarRefSummaries(
-      'research_hypothesis_negative_failed_path_ledger.negative_results.result_ref',
+      'stage_candidate_negative_path_ledger.negative_results.result_ref',
       optionalString(entry.result_ref),
       'negative_result',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_negative_failed_path_ledger.negative_results.owner_ref',
+      'stage_candidate_negative_path_ledger.negative_results.owner_ref',
       optionalString(entry.owner_ref),
       'owner',
     ),
@@ -440,34 +440,34 @@ function portfolioRefs(
   const advisoryRefs = [
     ...recordList(metrics.metrics).flatMap((entry) => [
       ...scalarRefSummaries(
-        'research_hypothesis_ranking_proximity_advisory_metrics.metrics.metric_ref',
+        'stage_candidate_advisory_metrics.metrics.metric_ref',
         optionalString(entry.metric_ref),
         'advisory_metric',
       ),
       ...scalarRefSummaries(
-        'research_hypothesis_ranking_proximity_advisory_metrics.metrics.source_ref_ids',
+        'stage_candidate_advisory_metrics.metrics.source_ref_ids',
         entry.source_ref_ids,
         'advisory_source_ref_id',
       ),
       ...scalarRefSummaries(
-        'research_hypothesis_ranking_proximity_advisory_metrics.metrics.owner_ref',
+        'stage_candidate_advisory_metrics.metrics.owner_ref',
         optionalString(entry.owner_ref),
         'owner',
       ),
     ]),
     ...recordList(metrics.rankings).flatMap((entry) => [
       ...scalarRefSummaries(
-        'research_hypothesis_ranking_proximity_advisory_metrics.rankings.ranking_ref',
+        'stage_candidate_advisory_metrics.rankings.ranking_ref',
         optionalString(entry.ranking_ref),
         'advisory_ranking',
       ),
       ...scalarRefSummaries(
-        'research_hypothesis_ranking_proximity_advisory_metrics.rankings.candidate_ref_ids',
+        'stage_candidate_advisory_metrics.rankings.candidate_ref_ids',
         entry.candidate_ref_ids,
         'candidate_ref_id',
       ),
       ...scalarRefSummaries(
-        'research_hypothesis_ranking_proximity_advisory_metrics.rankings.owner_ref',
+        'stage_candidate_advisory_metrics.rankings.owner_ref',
         optionalString(entry.owner_ref),
         'owner',
       ),
@@ -475,22 +475,22 @@ function portfolioRefs(
   ];
   const reviewRefs = recordList(reviews.reviews).flatMap((entry) => [
     ...scalarRefSummaries(
-      'research_hypothesis_human_review_refs.reviews.reviewer_owner_ref',
+      'stage_candidate_human_review_refs.reviews.reviewer_owner_ref',
       optionalString(entry.reviewer_owner_ref),
       'reviewer_owner',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_human_review_refs.reviews.request_ref',
+      'stage_candidate_human_review_refs.reviews.request_ref',
       optionalString(entry.request_ref),
       'review_request',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_human_review_refs.reviews.decision_ref',
+      'stage_candidate_human_review_refs.reviews.decision_ref',
       optionalString(entry.decision_ref),
       'review_decision',
     ),
     ...scalarRefSummaries(
-      'research_hypothesis_human_review_refs.reviews.route_back_ref',
+      'stage_candidate_human_review_refs.reviews.route_back_ref',
       optionalString(entry.route_back_ref),
       'route_back',
     ),
@@ -499,10 +499,10 @@ function portfolioRefs(
   return uniqueRefs([
     ...surfaceRefs
       .map(({ source_surface, ref }) => refSummary(source_surface, ref))
-      .filter((entry): entry is ResearchHypothesisPortfolioRef => Boolean(entry)),
+      .filter((entry): entry is StageCandidatePortfolioRef => Boolean(entry)),
     ...candidateRefs,
     ...assumptionRefs,
-    ...noveltyRefs,
+    ...provenanceRefs,
     ...failedPathRefs,
     ...negativeResultRefs,
     ...advisoryRefs,
@@ -512,7 +512,7 @@ function portfolioRefs(
 
 function missingRefs(
   refs: Array<{ source_surface: string; ref: JsonRecord }>,
-): ResearchHypothesisPortfolioMissingRef[] {
+): StageCandidatePortfolioMissingRef[] {
   const seen = new Set<string>();
   return refs
     .filter(({ ref }) => ref.required === true && optionalString(ref.status) !== 'present')
@@ -544,30 +544,30 @@ function statusCounts(entries: JsonRecord[]) {
   return counts;
 }
 
-export function summarizeResearchHypothesisPortfolio(
+export function summarizeStageCandidatePortfolio(
   value: unknown,
-): ResearchHypothesisPortfolioSummary {
-  const validation = validateResearchHypothesisPortfolio(value);
+): StageCandidatePortfolioSummary {
+  const validation = validateStageCandidatePortfolio(value);
   if (!validation.valid) {
     throw new Error(
-      `Research hypothesis portfolio failed fail-closed validation: ${
+      `Stage candidate portfolio failed fail-closed validation: ${
         validation.errors.map((error) => error.code).join(', ')
       }`,
     );
   }
   const portfolio = value as JsonRecord;
-  const candidates = recordList(portfolio.hypothesis_candidates);
+  const candidates = recordList(portfolio.stage_candidates);
   const assumptions = recordList(record(portfolio.assumption_decomposition).assumptions);
-  const noveltyChecks = recordList(record(portfolio.novelty_provenance_checks).checks);
-  const ledger = record(portfolio.negative_failed_path_ledger);
-  const metrics = record(portfolio.ranking_proximity_advisory_metrics);
+  const provenanceChecks = recordList(record(portfolio.provenance_checks).checks);
+  const ledger = record(portfolio.negative_path_ledger);
+  const metrics = record(portfolio.advisory_metrics);
   const reviews = recordList(record(portfolio.human_review_refs).reviews);
   const surfaceRefs = surfaceRefRecords(portfolio);
   const refs = portfolioRefs(portfolio, surfaceRefs);
 
   return {
-    surface_kind: 'research_hypothesis_portfolio_summary',
-    version: 'research_hypothesis_portfolio_summary.v1',
+    surface_kind: 'stage_candidate_portfolio_summary',
+    version: 'stage_candidate_portfolio_summary.v1',
     portfolio_id: optionalString(portfolio.portfolio_id),
     target_domain_id: optionalString(portfolio.target_domain_id),
     portfolio_status: optionalString(portfolio.portfolio_status),
@@ -576,7 +576,7 @@ export function summarizeResearchHypothesisPortfolio(
     candidate_count: candidates.length,
     candidate_status_counts: statusCounts(candidates),
     assumption_count: assumptions.length,
-    novelty_check_count: noveltyChecks.length,
+    provenance_check_count: provenanceChecks.length,
     failed_path_count: recordList(ledger.failed_paths).length,
     negative_result_count: recordList(ledger.negative_results).length,
     advisory_metric_count: recordList(metrics.metrics).length,

@@ -91,8 +91,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - runtime-assumption lifecycle projection that turns stale assumptions, missing monitor refs, or missing owner refs into operator warnings with minimal counterexamples unless a caller explicitly promotes them to a launch-safety blocker
 - `family-stage-integrity-metadata.schema.json`
   - shared stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only
-- `research-hypothesis-portfolio.schema.json`
-  - refs-only hypothesis portfolio / evidence-pack companion for candidate refs, assumption decomposition, novelty/provenance checks, negative or failed path refs, advisory ranking/proximity metrics, and human review refs; OPL projects refs and status only, while domain repositories keep hypothesis truth, quality verdict, artifact authority, and owner receipt authority
+- `stage-candidate-portfolio.schema.json`
+  - refs-only stage candidate portfolio companion for candidate refs, assumption decomposition, provenance checks, negative or failed path refs, advisory ranking/proximity metrics, and human review refs; OPL projects refs and status only, while domain repositories keep candidate bodies, domain truth, quality verdict, artifact authority, and owner receipt authority
 - `family-domain-memory-ref.schema.json`
   - locator-only reference for domain-owned memory packs, including memory family, pack ref, stage applicability, retrieval/writeback/receipt/recall refs, freshness, and forbidden OPL authority
 - `family-domain-memory-writeback.schema.json`
@@ -250,11 +250,11 @@ For `MAS`, this means inventory and descriptor projection over the existing `sco
 
 The required authority boundary is explicit: OPL can index refs, show missing support, route a human checkpoint, and carry handoff receipts, but it cannot write domain truth, mutate artifact bodies, accept publication readiness, replace a domain direct skill path, or authorize any domain verdict.
 
-## Research Hypothesis Portfolio Freeze
+## Stage Candidate Portfolio Freeze
 
-`research-hypothesis-portfolio.schema.json` freezes the OPL-owned refs-only hypothesis portfolio / research hypothesis evidence-pack companion. It is inspired by Co-Scientist-style hypothesis candidate generation and review loops, but only as a contract-first projection surface: candidates, assumption decomposition, novelty / provenance checks, negative or failed paths, ranking / proximity / advisory metric refs, and human review refs are carried as refs and status.
+`stage-candidate-portfolio.schema.json` freezes the OPL-owned refs-only stage candidate portfolio companion. It is inspired by candidate generation and review-loop patterns, but only as a contract-first projection surface: candidates, assumption decomposition, provenance checks, negative or failed paths, ranking / proximity / advisory metric refs, and human review refs are carried as refs and status.
 
-The portfolio is not a domain hypothesis store, scientific truth reducer, quality gate, artifact authority, or owner receipt signer. Advisory ranking and proximity metrics remain review-routing inputs only. Domain repositories keep hypothesis body, evidence body, accept/reject decisions, domain truth, quality verdicts, publication / fundability / visual authority, artifact body authority, and owner receipts.
+The portfolio is not a domain candidate store, domain truth reducer, quality gate, artifact authority, or owner receipt signer. Advisory ranking and proximity metrics remain review-routing inputs only. Domain repositories keep candidate bodies, evidence bodies, accept/reject decisions, domain truth, quality verdicts, publication / fundability / visual authority, artifact body authority, and owner receipts.
 
 ## Domain Memory Ref / Writeback Freeze
 
@@ -323,7 +323,7 @@ This directory does not:
 - [`family-stage-cohort-loop.schema.json`](./family-stage-cohort-loop.schema.json)
 - [`family-stage-runtime-budget.schema.json`](./family-stage-runtime-budget.schema.json)
 - [`family-stage-integrity-metadata.schema.json`](./family-stage-integrity-metadata.schema.json)
-- [`research-hypothesis-portfolio.schema.json`](./research-hypothesis-portfolio.schema.json)
+- [`stage-candidate-portfolio.schema.json`](./stage-candidate-portfolio.schema.json)
 - [`family-domain-memory-ref.schema.json`](./family-domain-memory-ref.schema.json)
 - [`family-domain-memory-writeback.schema.json`](./family-domain-memory-writeback.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)

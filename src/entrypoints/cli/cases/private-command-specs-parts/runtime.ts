@@ -33,8 +33,8 @@ import { buildRuntimeOmaProductionConsumptionCommandSpecs } from '../runtime-oma
 import { buildIndexCommandSpec } from '../index-command-spec.ts';
 import { buildRuntimeResearchEvidencePackCommandSpecs } from '../runtime-research-evidence-pack-command-spec.ts';
 import {
-  buildRuntimeResearchHypothesisPortfolioCommandSpecs,
-} from '../runtime-research-hypothesis-portfolio-command-spec.ts';
+  buildRuntimeStageCandidatePortfolioCommandSpecs,
+} from '../runtime-stage-candidate-portfolio-command-spec.ts';
 import {
   buildRuntimeProviderLongSoakEvidenceCommandSpecs,
 } from '../runtime-provider-long-soak-evidence-command-spec.ts';
@@ -326,7 +326,7 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),
     ...buildRuntimeResearchEvidencePackCommandSpecs(),
-    ...buildRuntimeResearchHypothesisPortfolioCommandSpecs(),
+    ...buildRuntimeStageCandidatePortfolioCommandSpecs(),
     ...buildRuntimeEnvironmentCommandSpecs(),
     'runtime action execute': {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',

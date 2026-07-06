@@ -1,7 +1,7 @@
 import {
-  summarizeResearchHypothesisPortfolio,
-  validateResearchHypothesisPortfolio,
-} from '../../../modules/foundry-lab/research-hypothesis-portfolio.ts';
+  summarizeStageCandidatePortfolio,
+  validateStageCandidatePortfolio,
+} from '../../../modules/foundry-lab/stage-candidate-portfolio.ts';
 import {
   assertSinglePayloadSource,
   buildUsageError,
@@ -16,13 +16,13 @@ function parseJsonPayload(
 ) {
   return readJsonObject(`{"payload":${value}}`, spec, {
     parseErrorMessage:
-      'runtime research-hypothesis-portfolio summary payload must be valid JSON.',
+      'runtime stage-candidate-portfolio summary payload must be valid JSON.',
     objectErrorMessage:
-      'runtime research-hypothesis-portfolio summary payload must be valid JSON.',
+      'runtime stage-candidate-portfolio summary payload must be valid JSON.',
   }).payload;
 }
 
-function parseRuntimeResearchHypothesisPortfolioSummaryArgs(
+function parseRuntimeStageCandidatePortfolioSummaryArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
@@ -34,7 +34,7 @@ function parseRuntimeResearchHypothesisPortfolioSummaryArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime research-hypothesis-portfolio summary requires --payload value.',
+          'runtime stage-candidate-portfolio summary requires --payload value.',
           spec,
           { option: '--payload' },
         );
@@ -48,7 +48,7 @@ function parseRuntimeResearchHypothesisPortfolioSummaryArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime research-hypothesis-portfolio summary requires --payload-file value.',
+          'runtime stage-candidate-portfolio summary requires --payload-file value.',
           spec,
           { option: '--payload-file' },
         );
@@ -59,14 +59,14 @@ function parseRuntimeResearchHypothesisPortfolioSummaryArgs(
       continue;
     }
     throw buildUsageError(
-      `Unknown option for runtime research-hypothesis-portfolio summary: ${token}.`,
+      `Unknown option for runtime stage-candidate-portfolio summary: ${token}.`,
       spec,
       { option: token },
     );
   }
   if (!payloadPresent) {
     throw buildUsageError(
-      'runtime research-hypothesis-portfolio summary requires --payload or --payload-file.',
+      'runtime stage-candidate-portfolio summary requires --payload or --payload-file.',
       spec,
       { required_any: ['--payload', '--payload-file'] },
     );
@@ -74,39 +74,39 @@ function parseRuntimeResearchHypothesisPortfolioSummaryArgs(
   return payload;
 }
 
-function buildResearchHypothesisPortfolioReadModel(
+function buildStageCandidatePortfolioReadModel(
   payload: unknown,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  const validation = validateResearchHypothesisPortfolio(payload);
+  const validation = validateStageCandidatePortfolio(payload);
   if (!validation.valid) {
     throw buildUsageError(
-      'runtime research-hypothesis-portfolio summary requires a valid body-free research hypothesis portfolio.',
+      'runtime stage-candidate-portfolio summary requires a valid body-free stage candidate portfolio.',
       spec,
       { validation_errors: validation.errors },
     );
   }
-  return summarizeResearchHypothesisPortfolio(payload);
+  return summarizeStageCandidatePortfolio(payload);
 }
 
-export function buildRuntimeResearchHypothesisPortfolioCommandSpecs(): Record<string, CommandSpec> {
+export function buildRuntimeStageCandidatePortfolioCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
-    'runtime research-hypothesis-portfolio summary': {
+    'runtime stage-candidate-portfolio summary': {
       usage:
-        'opl runtime research-hypothesis-portfolio summary (--payload <json>|--payload-file <path>)',
+        'opl runtime stage-candidate-portfolio summary (--payload <json>|--payload-file <path>)',
       summary:
-        'Project a body-free research hypothesis portfolio read model without claiming hypothesis, quality, artifact, or owner receipt authority.',
+        'Project a body-free stage candidate portfolio read model without claiming candidate acceptance, quality, artifact, or owner receipt authority.',
       examples: [
-        'opl runtime research-hypothesis-portfolio summary --payload-file research-hypothesis-portfolio.json',
+        'opl runtime stage-candidate-portfolio summary --payload-file stage-candidate-portfolio.json',
       ],
       group: 'runtime',
       handler: (args) => ({
-        research_hypothesis_portfolio_read_model: buildResearchHypothesisPortfolioReadModel(
-          parseRuntimeResearchHypothesisPortfolioSummaryArgs(
+        stage_candidate_portfolio_read_model: buildStageCandidatePortfolioReadModel(
+          parseRuntimeStageCandidatePortfolioSummaryArgs(
             args,
-            commandSpecs['runtime research-hypothesis-portfolio summary'],
+            commandSpecs['runtime stage-candidate-portfolio summary'],
           ),
-          commandSpecs['runtime research-hypothesis-portfolio summary'],
+          commandSpecs['runtime stage-candidate-portfolio summary'],
         ),
       }),
     },

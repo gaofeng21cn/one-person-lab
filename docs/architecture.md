@@ -347,7 +347,7 @@ Stage attempt 的终态只允许收敛到三类：`success` 表示 required outp
 - `family-action-catalog` 继续描述可调用 action metadata 和多 surface descriptor。
 - `family-stage-control-plane` 只声明 stage descriptor、skill / prompt / evaluation refs、tool affordance boundary、handoff refs 与 authority boundary，不新建完整流程引擎或工具编排脚本。
 - `family-stage-integrity-metadata` 只声明 stage-level integrity、citation-support、evidence-handoff、data-access 与 human-checkpoint metadata；这是从 academic research workflow 中吸收的通用模式，不是 MAS publication gate、MAG fundability gate、RCA visual-quality gate，也不接管任何 domain 的 direct skill path。
-- `research-hypothesis-portfolio` 只声明 refs-only hypothesis candidate portfolio、assumption decomposition、novelty / provenance check、negative / failed path、ranking / proximity advisory metric 与 human review refs/status；这是从 Co-Scientist 风格 hypothesis loop 中吸收的通用投影模式，不是 domain hypothesis store、scientific truth reducer、quality gate、artifact authority 或 owner receipt signer。
+- `stage-candidate-portfolio` 只声明 refs-only stage candidate portfolio、assumption decomposition、provenance check、negative / failed path、ranking / proximity advisory metric 与 human review refs/status；这是通用 stage candidate 投影模式，不是 domain candidate store、domain truth reducer、quality gate、artifact authority 或 owner receipt signer。
 - `opl stages list|inspect` 只做 discovery、inspection 与 parity，不执行 stage。
 - `OPL` 只做 shared vocabulary、manifest discovery、parity、projection 与 typed queue dispatch，不执行 stage 内部专家动作。
 - `MAS`、`RCA`、`MAG` 继续持有各自的写作、视觉设计、基金策略、审稿、publication / deliverable / package gate 与最终质量判断。

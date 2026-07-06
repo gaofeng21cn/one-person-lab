@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://one-person-lab.local/contracts/family-orchestration/research-hypothesis-portfolio.schema.json",
-  "title": "OPL Research Hypothesis Portfolio",
-  "description": "Refs-only research hypothesis portfolio and evidence-pack companion for OPL indexing, projection, review routing, and stage readiness drilldown. It carries hypothesis, assumption, novelty/provenance, negative-path, ranking/proximity/advisory metric, and human-review refs/status only. Domain agents retain hypothesis body, domain truth, quality verdict, artifact authority, and owner receipt authority.",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/stage-candidate-portfolio.schema.json",
+  "title": "OPL Stage Candidate Portfolio",
+  "description": "Refs-only stage candidate portfolio companion for OPL indexing, projection, review routing, and stage readiness drilldown. It carries candidate, assumption, provenance, negative-path, ranking/proximity/advisory metric, and human-review refs/status only. Domain agents retain candidate body, domain truth, quality verdict, artifact authority, and owner receipt authority.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,41 +11,41 @@
     "portfolio_id",
     "target_domain_id",
     "portfolio_status",
-    "research_context_refs",
-    "related_research_evidence_pack_refs",
-    "hypothesis_candidates",
+    "stage_context_refs",
+    "related_evidence_pack_refs",
+    "stage_candidates",
     "assumption_decomposition",
-    "novelty_provenance_checks",
-    "negative_failed_path_ledger",
-    "ranking_proximity_advisory_metrics",
+    "provenance_checks",
+    "negative_path_ledger",
+    "advisory_metrics",
     "human_review_refs",
     "authority_boundary"
   ],
   "properties": {
-    "surface_kind": { "const": "research_hypothesis_portfolio" },
-    "version": { "const": "research_hypothesis_portfolio.v1" },
+    "surface_kind": { "const": "stage_candidate_portfolio" },
+    "version": { "const": "stage_candidate_portfolio.v1" },
     "portfolio_id": { "type": "string", "minLength": 1 },
     "target_domain_id": { "type": "string", "minLength": 1 },
     "portfolio_status": {
       "type": "string",
       "enum": ["draft", "active", "under_domain_review", "blocked", "closed", "superseded"]
     },
-    "research_context_refs": {
+    "stage_context_refs": {
       "type": "array",
       "items": { "$ref": "#/$defs/surface_ref" }
     },
-    "related_research_evidence_pack_refs": {
+    "related_evidence_pack_refs": {
       "type": "array",
       "items": { "$ref": "#/$defs/surface_ref" }
     },
-    "hypothesis_candidates": {
+    "stage_candidates": {
       "type": "array",
-      "items": { "$ref": "#/$defs/hypothesis_candidate" }
+      "items": { "$ref": "#/$defs/stage_candidate" }
     },
     "assumption_decomposition": { "$ref": "#/$defs/assumption_decomposition" },
-    "novelty_provenance_checks": { "$ref": "#/$defs/novelty_provenance_checks" },
-    "negative_failed_path_ledger": { "$ref": "#/$defs/hypothesis_negative_failed_path_ledger" },
-    "ranking_proximity_advisory_metrics": { "$ref": "#/$defs/ranking_proximity_advisory_metrics" },
+    "provenance_checks": { "$ref": "#/$defs/provenance_checks" },
+    "negative_path_ledger": { "$ref": "#/$defs/stage_candidate_negative_path_ledger" },
+    "advisory_metrics": { "$ref": "#/$defs/advisory_metrics" },
     "human_review_refs": { "$ref": "#/$defs/human_review_refs" },
     "authority_boundary": { "$ref": "#/$defs/authority_boundary" }
   },
@@ -89,18 +89,18 @@
         "accepted_by_domain_owner"
       ]
     },
-    "hypothesis_candidate": {
+    "stage_candidate": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "candidate_id",
         "status",
-        "hypothesis_ref",
+        "candidate_ref",
         "rationale_ref",
         "origin_ref",
         "owner_ref",
         "assumption_ref_ids",
-        "novelty_check_ref_ids",
+        "provenance_check_ref_ids",
         "negative_path_ref_ids",
         "advisory_metric_ref_ids",
         "human_review_ref_ids",
@@ -110,7 +110,7 @@
       "properties": {
         "candidate_id": { "type": "string", "minLength": 1 },
         "status": { "$ref": "#/$defs/candidate_status" },
-        "hypothesis_ref": { "type": "string", "minLength": 1 },
+        "candidate_ref": { "type": "string", "minLength": 1 },
         "rationale_ref": { "type": ["string", "null"], "minLength": 1 },
         "origin_ref": { "type": "string", "minLength": 1 },
         "owner_ref": { "type": "string", "minLength": 1 },
@@ -118,7 +118,7 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
-        "novelty_check_ref_ids": {
+        "provenance_check_ref_ids": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
@@ -150,8 +150,8 @@
         "assumptions"
       ],
       "properties": {
-        "surface_kind": { "const": "research_hypothesis_assumption_decomposition" },
-        "version": { "const": "research_hypothesis_assumption_decomposition.v1" },
+        "surface_kind": { "const": "stage_candidate_assumption_refs" },
+        "version": { "const": "stage_candidate_assumption_refs.v1" },
         "assumptions": {
           "type": "array",
           "items": { "$ref": "#/$defs/assumption_ref" }
@@ -178,14 +178,15 @@
         "role": {
           "type": "string",
           "enum": [
-            "mechanism",
-            "population",
-            "intervention",
-            "measurement",
+            "goal",
+            "input",
+            "output",
+            "constraint",
             "feasibility",
             "dependency",
             "risk",
-            "generalizability",
+            "ownership",
+            "timing",
             "other"
           ]
         },
@@ -206,7 +207,7 @@
         "body_included": { "const": false }
       }
     },
-    "novelty_provenance_checks": {
+    "provenance_checks": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -215,15 +216,15 @@
         "checks"
       ],
       "properties": {
-        "surface_kind": { "const": "research_hypothesis_novelty_provenance_checks" },
-        "version": { "const": "research_hypothesis_novelty_provenance_checks.v1" },
+        "surface_kind": { "const": "stage_candidate_provenance_checks" },
+        "version": { "const": "stage_candidate_provenance_checks.v1" },
         "checks": {
           "type": "array",
-          "items": { "$ref": "#/$defs/novelty_provenance_check" }
+          "items": { "$ref": "#/$defs/provenance_check" }
         }
       }
     },
-    "novelty_provenance_check": {
+    "provenance_check": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -243,7 +244,7 @@
         "check_type": {
           "type": "string",
           "enum": [
-            "novelty_search",
+            "provenance_search",
             "prior_art",
             "citation_provenance",
             "source_lineage",
@@ -266,7 +267,7 @@
         "body_included": { "const": false }
       }
     },
-    "hypothesis_negative_failed_path_ledger": {
+    "stage_candidate_negative_path_ledger": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -276,8 +277,8 @@
         "negative_results"
       ],
       "properties": {
-        "surface_kind": { "const": "research_hypothesis_negative_failed_path_ledger" },
-        "version": { "const": "research_hypothesis_negative_failed_path_ledger.v1" },
+        "surface_kind": { "const": "stage_candidate_negative_path_ledger" },
+        "version": { "const": "stage_candidate_negative_path_ledger.v1" },
         "failed_paths": {
           "type": "array",
           "items": { "$ref": "#/$defs/failed_path_ref" }
@@ -338,7 +339,7 @@
         "body_included": { "const": false }
       }
     },
-    "ranking_proximity_advisory_metrics": {
+    "advisory_metrics": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -349,8 +350,8 @@
         "authority_boundary"
       ],
       "properties": {
-        "surface_kind": { "const": "research_hypothesis_ranking_proximity_advisory_metrics" },
-        "version": { "const": "research_hypothesis_ranking_proximity_advisory_metrics.v1" },
+        "surface_kind": { "const": "stage_candidate_advisory_metrics" },
+        "version": { "const": "stage_candidate_advisory_metrics.v1" },
         "metrics": {
           "type": "array",
           "items": { "$ref": "#/$defs/advisory_metric_ref" }
@@ -383,7 +384,7 @@
           "enum": [
             "advisory_rank",
             "proximity_to_goal",
-            "novelty_signal",
+            "provenance_signal",
             "evidence_support_signal",
             "feasibility_signal",
             "risk_signal",
@@ -442,7 +443,7 @@
         "opl_role",
         "metrics_scope",
         "metrics_are_domain_verdict",
-        "can_authorize_hypothesis_acceptance",
+        "can_authorize_candidate_acceptance",
         "can_authorize_domain_ready",
         "can_authorize_quality_verdict",
         "can_rank_as_domain_truth"
@@ -451,7 +452,7 @@
         "opl_role": { "const": "advisory_metric_ref_projection_only" },
         "metrics_scope": { "const": "refs_status_advisory_only" },
         "metrics_are_domain_verdict": { "const": false },
-        "can_authorize_hypothesis_acceptance": { "const": false },
+        "can_authorize_candidate_acceptance": { "const": false },
         "can_authorize_domain_ready": { "const": false },
         "can_authorize_quality_verdict": { "const": false },
         "can_rank_as_domain_truth": { "const": false }
@@ -466,8 +467,8 @@
         "reviews"
       ],
       "properties": {
-        "surface_kind": { "const": "research_hypothesis_human_review_refs" },
-        "version": { "const": "research_hypothesis_human_review_refs.v1" },
+        "surface_kind": { "const": "stage_candidate_human_review_refs" },
+        "version": { "const": "stage_candidate_human_review_refs.v1" },
         "reviews": {
           "type": "array",
           "items": { "$ref": "#/$defs/human_review_ref" }
@@ -522,7 +523,7 @@
         "holds_domain_truth",
         "can_read_domain_body",
         "can_write_domain_truth",
-        "can_authorize_hypothesis_acceptance",
+        "can_authorize_candidate_acceptance",
         "can_authorize_domain_ready",
         "can_authorize_quality_verdict",
         "can_mutate_artifact_body",
@@ -530,13 +531,13 @@
         "advisory_metrics_are_domain_verdict"
       ],
       "properties": {
-        "opl_role": { "const": "hypothesis_portfolio_refs_projection_owner" },
-        "domain_role": { "const": "hypothesis_truth_quality_receipt_and_artifact_authority" },
+        "opl_role": { "const": "stage_candidate_portfolio_refs_projection_owner" },
+        "domain_role": { "const": "domain_truth_quality_receipt_and_artifact_authority" },
         "portfolio_scope": { "const": "refs_status_advisory_projection_only" },
         "holds_domain_truth": { "const": false },
         "can_read_domain_body": { "const": false },
         "can_write_domain_truth": { "const": false },
-        "can_authorize_hypothesis_acceptance": { "const": false },
+        "can_authorize_candidate_acceptance": { "const": false },
         "can_authorize_domain_ready": { "const": false },
         "can_authorize_quality_verdict": { "const": false },
         "can_mutate_artifact_body": { "const": false },
@@ -547,15 +548,15 @@
   },
   "examples": [
     {
-      "surface_kind": "research_hypothesis_portfolio",
-      "version": "research_hypothesis_portfolio.v1",
-      "portfolio_id": "hypothesis-portfolio:example-study",
+      "surface_kind": "stage_candidate_portfolio",
+      "version": "stage_candidate_portfolio.v1",
+      "portfolio_id": "stage-candidate-portfolio:example-domain",
       "target_domain_id": "example-domain",
       "portfolio_status": "active",
-      "research_context_refs": [
+      "stage_context_refs": [
         {
-          "ref_id": "context:example-study",
-          "role": "research_context",
+          "ref_id": "context:example-domain",
+          "role": "stage_context",
           "ref_kind": "workspace_relative_path",
           "ref": "studies/example/context/index.json",
           "status": "present",
@@ -563,10 +564,10 @@
           "body_included": false
         }
       ],
-      "related_research_evidence_pack_refs": [
+      "related_evidence_pack_refs": [
         {
-          "ref_id": "research-evidence-pack:example-study",
-          "role": "research_evidence_pack",
+          "ref_id": "evidence-pack:example-domain",
+          "role": "evidence_pack",
           "ref_kind": "contract_ref",
           "ref": "contracts/family-orchestration/research-evidence-pack.schema.json#examples/0",
           "status": "present",
@@ -574,25 +575,25 @@
           "body_included": false
         }
       ],
-      "hypothesis_candidates": [
+      "stage_candidates": [
         {
-          "candidate_id": "candidate:h1",
+          "candidate_id": "candidate:c1",
           "status": "selected_for_domain_review",
-          "hypothesis_ref": "domain://example-study/hypotheses/h1",
-          "rationale_ref": "domain://example-study/hypotheses/h1/rationale",
-          "origin_ref": "stage-attempt:example-study/idea/1",
+          "candidate_ref": "domain://example-domain/stage-candidates/c1",
+          "rationale_ref": "domain://example-domain/stage-candidates/c1/rationale",
+          "origin_ref": "stage-attempt:example-domain/idea/1",
           "owner_ref": "owner:example-domain",
-          "assumption_ref_ids": ["assumption:h1:mechanism"],
-          "novelty_check_ref_ids": ["novelty:h1:prior-art"],
-          "negative_path_ref_ids": ["failed-path:h1:model-a"],
-          "advisory_metric_ref_ids": ["metric:h1:review-priority"],
-          "human_review_ref_ids": ["review:h1:domain-owner"],
+          "assumption_ref_ids": ["assumption:c1:dependency"],
+          "provenance_check_ref_ids": ["provenance:c1:prior-art"],
+          "negative_path_ref_ids": ["failed-path:c1:model-a"],
+          "advisory_metric_ref_ids": ["metric:c1:review-priority"],
+          "human_review_ref_ids": ["review:c1:domain-owner"],
           "evidence_refs": [
             {
-              "ref_id": "evidence:h1:source-link",
+              "ref_id": "evidence:c1:source-link",
               "role": "supporting_evidence_ref",
               "ref_kind": "domain_owned_ref",
-              "ref": "domain://example-study/evidence/h1/source-link",
+              "ref": "domain://example-domain/evidence/c1/source-link",
               "status": "present",
               "required": true,
               "body_included": false
@@ -602,66 +603,66 @@
         }
       ],
       "assumption_decomposition": {
-        "surface_kind": "research_hypothesis_assumption_decomposition",
-        "version": "research_hypothesis_assumption_decomposition.v1",
+        "surface_kind": "stage_candidate_assumption_refs",
+        "version": "stage_candidate_assumption_refs.v1",
         "assumptions": [
           {
-            "assumption_id": "assumption:h1:mechanism",
-            "candidate_id": "candidate:h1",
-            "role": "mechanism",
+            "assumption_id": "assumption:c1:dependency",
+            "candidate_id": "candidate:c1",
+            "role": "dependency",
             "status": "supported_by_ref",
-            "assumption_ref": "domain://example-study/hypotheses/h1/assumptions/mechanism",
-            "support_ref_ids": ["evidence:h1:source-link"],
+            "assumption_ref": "domain://example-domain/stage-candidates/c1/assumptions/dependency",
+            "support_ref_ids": ["evidence:c1:source-link"],
             "contradiction_ref_ids": [],
             "owner_ref": "owner:example-domain",
             "body_included": false
           }
         ]
       },
-      "novelty_provenance_checks": {
-        "surface_kind": "research_hypothesis_novelty_provenance_checks",
-        "version": "research_hypothesis_novelty_provenance_checks.v1",
+      "provenance_checks": {
+        "surface_kind": "stage_candidate_provenance_checks",
+        "version": "stage_candidate_provenance_checks.v1",
         "checks": [
           {
-            "check_id": "novelty:h1:prior-art",
-            "candidate_id": "candidate:h1",
+            "check_id": "provenance:c1:prior-art",
+            "candidate_id": "candidate:c1",
             "check_type": "prior_art",
             "status": "concern_by_ref",
-            "check_ref": "domain://example-study/hypotheses/h1/novelty/prior-art",
-            "source_ref_ids": ["context:example-study"],
-            "result_ref": "domain://example-study/hypotheses/h1/novelty/prior-art/result",
+            "check_ref": "domain://example-domain/stage-candidates/c1/provenance/source-lineage",
+            "source_ref_ids": ["context:example-domain"],
+            "result_ref": "domain://example-domain/stage-candidates/c1/provenance/source-lineage/result",
             "owner_ref": "owner:example-domain",
             "body_included": false
           }
         ]
       },
-      "negative_failed_path_ledger": {
-        "surface_kind": "research_hypothesis_negative_failed_path_ledger",
-        "version": "research_hypothesis_negative_failed_path_ledger.v1",
+      "negative_path_ledger": {
+        "surface_kind": "stage_candidate_negative_path_ledger",
+        "version": "stage_candidate_negative_path_ledger.v1",
         "failed_paths": [
           {
-            "path_id": "failed-path:h1:model-a",
-            "candidate_id": "candidate:h1",
+            "path_id": "failed-path:c1:model-a",
+            "candidate_id": "candidate:c1",
             "stage_id": "idea",
             "status": "accepted_as_negative",
-            "failed_path_ref": "domain://example-study/hypotheses/h1/failed-paths/model-a",
+            "failed_path_ref": "domain://example-domain/stage-candidates/c1/negative-paths/model-a",
             "owner_ref": "owner:example-domain",
             "body_included": false
           }
         ],
         "negative_results": []
       },
-      "ranking_proximity_advisory_metrics": {
-        "surface_kind": "research_hypothesis_ranking_proximity_advisory_metrics",
-        "version": "research_hypothesis_ranking_proximity_advisory_metrics.v1",
+      "advisory_metrics": {
+        "surface_kind": "stage_candidate_advisory_metrics",
+        "version": "stage_candidate_advisory_metrics.v1",
         "metrics": [
           {
-            "metric_id": "metric:h1:review-priority",
-            "candidate_id": "candidate:h1",
+            "metric_id": "metric:c1:review-priority",
+            "candidate_id": "candidate:c1",
             "metric_kind": "review_priority",
             "status": "available_by_ref",
-            "metric_ref": "domain://example-study/hypotheses/h1/metrics/review-priority",
-            "source_ref_ids": ["evidence:h1:source-link", "novelty:h1:prior-art"],
+            "metric_ref": "domain://example-domain/stage-candidates/c1/metrics/review-priority",
+            "source_ref_ids": ["evidence:c1:source-link", "provenance:c1:prior-art"],
             "owner_ref": "owner:example-domain",
             "body_included": false
           }
@@ -671,8 +672,8 @@
             "ranking_id": "ranking:portfolio:review-queue",
             "scope": "review_queue",
             "status": "available_by_ref",
-            "ranking_ref": "domain://example-study/hypotheses/rankings/review-queue",
-            "candidate_ref_ids": ["candidate:h1"],
+            "ranking_ref": "domain://example-domain/stage-candidates/rankings/review-queue",
+            "candidate_ref_ids": ["candidate:c1"],
             "owner_ref": "owner:example-domain",
             "body_included": false
           }
@@ -681,23 +682,23 @@
           "opl_role": "advisory_metric_ref_projection_only",
           "metrics_scope": "refs_status_advisory_only",
           "metrics_are_domain_verdict": false,
-          "can_authorize_hypothesis_acceptance": false,
+          "can_authorize_candidate_acceptance": false,
           "can_authorize_domain_ready": false,
           "can_authorize_quality_verdict": false,
           "can_rank_as_domain_truth": false
         }
       },
       "human_review_refs": {
-        "surface_kind": "research_hypothesis_human_review_refs",
-        "version": "research_hypothesis_human_review_refs.v1",
+        "surface_kind": "stage_candidate_human_review_refs",
+        "version": "stage_candidate_human_review_refs.v1",
         "reviews": [
           {
-            "review_id": "review:h1:domain-owner",
-            "candidate_id": "candidate:h1",
+            "review_id": "review:c1:domain-owner",
+            "candidate_id": "candidate:c1",
             "review_type": "domain_owner_review",
             "status": "requested",
             "reviewer_owner_ref": "owner:example-domain",
-            "request_ref": "human-gate:example-study/h1/domain-owner-review",
+            "request_ref": "human-gate:example-domain/c1/domain-owner-review",
             "decision_ref": null,
             "route_back_ref": null,
             "body_included": false
@@ -705,13 +706,13 @@
         ]
       },
       "authority_boundary": {
-        "opl_role": "hypothesis_portfolio_refs_projection_owner",
-        "domain_role": "hypothesis_truth_quality_receipt_and_artifact_authority",
+        "opl_role": "stage_candidate_portfolio_refs_projection_owner",
+        "domain_role": "domain_truth_quality_receipt_and_artifact_authority",
         "portfolio_scope": "refs_status_advisory_projection_only",
         "holds_domain_truth": false,
         "can_read_domain_body": false,
         "can_write_domain_truth": false,
-        "can_authorize_hypothesis_acceptance": false,
+        "can_authorize_candidate_acceptance": false,
         "can_authorize_domain_ready": false,
         "can_authorize_quality_verdict": false,
         "can_mutate_artifact_body": false,
