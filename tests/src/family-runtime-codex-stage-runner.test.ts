@@ -20,6 +20,9 @@ import {
   runCodexInE2bSandbox,
   setE2bSandboxFactoryForTest,
 } from '../../src/modules/runway/e2b-codex-stage-execution.ts';
+import {
+  setLocalDockerCommandRunnerForTest,
+} from '../../src/modules/runway/local-docker-codex-stage-execution.ts';
 
 test('Codex stage activity binds stage packet from checkpoint refs before provider execution', () => {
   const activity = buildCodexStageActivityInput({
@@ -300,6 +303,158 @@ test('Codex stage runner fails closed when live runner lacks packet or workspace
   );
 });
 
+test('Codex stage runner defaults to local Docker sandbox and fails closed without an image', async () => {
+  const previous = {
+    provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
+    image: process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE,
+    devcontainerImage: process.env.OPL_DEVCONTAINER_IMAGE,
+    localImage: process.env.OPL_LOCAL_SANDBOX_IMAGE,
+  };
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-local-docker-missing-image-'));
+  try {
+    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    delete process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE;
+    delete process.env.OPL_DEVCONTAINER_IMAGE;
+    delete process.env.OPL_LOCAL_SANDBOX_IMAGE;
+
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_local_docker_missing_image_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['packet:local-docker-missing-image'],
+      },
+      stagePacketRef: 'packet:local-docker-missing-image',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.process_output_summary?.blocked_reason, 'local_docker_sandbox_image_missing');
+    assert.equal(receipt.closeout_packet?.rejected_writes?.[0]?.blocker_id, 'local_docker_sandbox_image_missing');
+    const summary = receipt.process_output_summary?.external_sandbox_execution;
+    assert.ok(summary, 'receipt must include local Docker sandbox execution summary');
+    assert.equal(summary.provider_kind, 'local_docker');
+    assert.equal(summary.external_api_called, false);
+    assert.equal(summary.credential_material_logged, false);
+    assert.equal(summary.preflight?.image, 'missing');
+  } finally {
+    if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
+    if (previous.image === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE = previous.image;
+    if (previous.devcontainerImage === undefined) delete process.env.OPL_DEVCONTAINER_IMAGE;
+    else process.env.OPL_DEVCONTAINER_IMAGE = previous.devcontainerImage;
+    if (previous.localImage === undefined) delete process.env.OPL_LOCAL_SANDBOX_IMAGE;
+    else process.env.OPL_LOCAL_SANDBOX_IMAGE = previous.localImage;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner runs Codex through local Docker sandbox when configured', async () => {
+  const remote = createGitModuleRemoteFixture('local-docker-agent-workspace');
+  const commands: Array<{ args: string[]; cwd: string | null; env: Record<string, string | undefined> }> = [];
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_local_docker_codex_stage_test',
+    closeout_refs: ['receipt:local-docker-codex-stage'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  setLocalDockerCommandRunnerForTest({
+    async run(args, opts) {
+      commands.push({ args, cwd: opts?.cwd ?? null, env: opts?.env ?? {} });
+      if (args[0] === 'version') {
+        return { exitCode: 0, stdout: '29.0.0\n', stderr: '' };
+      }
+      if (args[0] === 'image' && args[1] === 'inspect') {
+        return { exitCode: 0, stdout: '[]\n', stderr: '' };
+      }
+      if (args[0] === 'run') {
+        fs.mkdirSync(path.join(remote.sourceRoot, 'artifacts'), { recursive: true });
+        fs.writeFileSync(path.join(remote.sourceRoot, 'artifacts', 'stage-output.json'), '{}\n');
+        return {
+          exitCode: 0,
+          stdout: [
+            '{"type":"thread.started","thread_id":"thread-local-docker-stage"}',
+            JSON.stringify({
+              type: 'item.completed',
+              item: {
+                type: 'agent_message',
+                id: 'msg-local-docker-stage',
+                text: JSON.stringify(closeout),
+              },
+            }),
+            '',
+          ].join('\n'),
+          stderr: '',
+        };
+      }
+      return { exitCode: 64, stdout: '', stderr: `unexpected docker args: ${args.join(' ')}` };
+    },
+  });
+  const previous = {
+    provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
+    image: process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE,
+    workspaceRoot: process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT,
+    credentialRef: process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF,
+  };
+  try {
+    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE = 'opl-codex-stage:test';
+    process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT = '/workspace';
+    process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = 'env:SHOULD_NOT_FORWARD';
+
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_local_docker_codex_stage_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: remote.sourceRoot,
+        },
+        checkpoint_refs: ['packet:local-docker-stage'],
+      },
+      stagePacketRef: 'packet:local-docker-stage',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.progress_summary.thread_id, 'thread-local-docker-stage');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:local-docker-codex-stage']);
+    const summary = receipt.process_output_summary?.external_sandbox_execution;
+    assert.ok(summary, 'receipt must include local Docker execution summary');
+    assert.equal(summary.provider_kind, 'local_docker');
+    assert.equal(summary.workspace_transport.transport_kind, 'bind_mount');
+    assert.equal(summary.workspace_transport.host_workspace_root, remote.sourceRoot);
+    assert.deepEqual(summary.diff_refs.changed_file_refs, ['artifacts/stage-output.json']);
+    assert.equal(summary.external_api_called, false);
+    assert.equal(summary.credential_material_logged, false);
+    assert.ok(summary.forwarded_env_keys.includes('OPL_STAGE_PACKET_REF'));
+    assert.equal(summary.forwarded_env_keys.includes('OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF'), false);
+    const dockerRun = commands.find((entry) => entry.args[0] === 'run');
+    assert.ok(dockerRun, 'local Docker command log must include docker run');
+    assert.equal(dockerRun.cwd, remote.sourceRoot);
+    assert.equal(dockerRun.args.includes('opl-codex-stage:test'), true);
+    assert.equal(dockerRun.args.includes('codex'), true);
+    assert.equal(dockerRun.args.includes('--cd'), true);
+    assert.equal(dockerRun.args.includes('/workspace'), true);
+  } finally {
+    setLocalDockerCommandRunnerForTest(null);
+    if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
+    if (previous.image === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE = previous.image;
+    if (previous.workspaceRoot === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT = previous.workspaceRoot;
+    if (previous.credentialRef === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF;
+    else process.env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF = previous.credentialRef;
+    fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('Codex stage runner supervises a live Codex CLI process without accepting free-text completion', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
@@ -328,6 +483,9 @@ exit 64
       runnerMode: 'codex_cli',
       observedAt: '2026-05-11T00:00:00.000Z',
       timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
     });
 
     assert.equal(receipt.runner_status.runner_mode, 'codex_cli');
@@ -400,6 +558,9 @@ exit 64
       stagePacketRef: 'packet:policy',
       runnerMode: 'codex_cli',
       timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
     });
 
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:stage-runner-policy']);

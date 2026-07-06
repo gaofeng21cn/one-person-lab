@@ -19,6 +19,7 @@ export { buildAppDrilldownRefsOnlyAuthorityBoundary } from './runtime-tray-app-o
 export { frameworkDeveloperModeLiveCloseoutNextSafeAction } from './runtime-tray-app-operator-drilldown-parts/developer-mode-live-closeout.ts';
 export { buildMemoryTraceProjection } from '../runway/index.ts';
 export { buildRuntimeTraySnapshot } from './runtime-tray-snapshot.ts';
+export { runOplFlowIntelligenceEnhancementAction } from './app-state-parts/codexcont-intelligence-mode.ts';
 export type { JsonRecord } from './runtime-tray-snapshot-types.ts';
 export { sourceRef, uniqueByRef } from './runtime-tray-snapshot-utils.ts';
 export { buildAttemptGenericProjections } from '../runway/index.ts';

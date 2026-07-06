@@ -36,6 +36,34 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(developerRefresh.delegated_surface, 'opl system developer-supervisor');
     assert.equal(developerRefresh.result.system_action.status, 'dry_run');
 
+    const intelligenceEnhancement = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'intelligence_enhancement_enable',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(intelligenceEnhancement.delegated_surface, 'opl flow intelligence-enhancement enable');
+    assert.equal(
+      intelligenceEnhancement.result.opl_flow_intelligence_enhancement_action.status,
+      'dry_run',
+    );
+    assert.equal(
+      intelligenceEnhancement.result.opl_flow_intelligence_enhancement_action.proxy_base_url,
+      'http://127.0.0.1:8787/v1',
+    );
+    assert.deepEqual(
+      intelligenceEnhancement.result.opl_flow_intelligence_enhancement_action.authority_boundary,
+      {
+        owner: 'opl_flow',
+        can_write_domain_truth: false,
+        can_authorize_release_ready: false,
+        shell_must_not_edit_configs_directly: true,
+      },
+    );
+
     const module = runCli([
       'app',
       'action',

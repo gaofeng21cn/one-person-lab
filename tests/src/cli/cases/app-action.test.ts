@@ -80,6 +80,11 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'codex_reinstall',
       'codex_remove',
       'developer_supervisor_refresh',
+      'intelligence_enhancement_status',
+      'intelligence_enhancement_enable',
+      'intelligence_enhancement_disable',
+      'intelligence_enhancement_repair',
+      'intelligence_enhancement_uninstall',
       'module_install',
       'module_update',
       'module_sync',
@@ -145,6 +150,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       assert.equal(
         delegatedSurface.startsWith('opl ')
           || delegatedSurface.startsWith('printf <api-key> | opl ')
+          || delegatedSurface.startsWith('opl flow intelligence-enhancement ')
           || delegatedSurface.includes(' opl system startup-maintenance')
           || delegatedSurface === 'one-person-lab-app installation_carrier.macos_app status',
         true,
@@ -179,6 +185,31 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('provider_scheduler_status')?.can_submit_to_safe_action_shell, true);
     assert.equal(actions.get('provider_scheduler_status')?.dry_run_supported, true);
     assert.equal(actions.get('provider_scheduler_status')?.route, 'opl app action execute --action provider_scheduler_status');
+    assert.equal(
+      actions.get('intelligence_enhancement_status')?.delegated_surface,
+      'opl flow intelligence-enhancement status',
+    );
+    assert.equal(actions.get('intelligence_enhancement_status')?.mutates, 'none_read_only');
+    assert.equal(
+      actions.get('intelligence_enhancement_enable')?.delegated_surface,
+      'opl flow intelligence-enhancement enable',
+    );
+    assert.equal(actions.get('intelligence_enhancement_enable')?.mutates, 'local_codex_config_and_codexcont_proxy');
+    assert.equal(actions.get('intelligence_enhancement_enable')?.rollback_action_id, 'intelligence_enhancement_disable');
+    assert.equal(actions.get('intelligence_enhancement_enable')?.verify_action_id, 'intelligence_enhancement_status');
+    assert.equal(
+      actions.get('intelligence_enhancement_disable')?.delegated_surface,
+      'opl flow intelligence-enhancement disable',
+    );
+    assert.equal(actions.get('intelligence_enhancement_disable')?.rollback_action_id, 'intelligence_enhancement_enable');
+    assert.equal(
+      actions.get('intelligence_enhancement_repair')?.delegated_surface,
+      'opl flow intelligence-enhancement repair',
+    );
+    assert.equal(actions.get('intelligence_enhancement_repair')?.mutates, 'local_codexcont_proxy_service');
+    assert.equal(actions.get('intelligence_enhancement_repair')?.verify_action_id, 'intelligence_enhancement_status');
+    assert.deepEqual(actions.get('intelligence_enhancement_uninstall')?.payload_fields, ['confirmation']);
+    assert.equal(actions.get('intelligence_enhancement_uninstall')?.danger_level, 'high');
     assert.equal(actions.get('workspace_initialize')?.delegated_surface, 'opl workspace init');
     assert.equal(actions.get('workspace_initialize')?.dry_run_supported, true);
     assert.deepEqual(actions.get('workspace_initialize')?.payload_fields, [
@@ -442,6 +473,181 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app action execute enables and disables CodexCont intelligence enhancement through OPL Flow', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-codexcont-home-'));
+  const binDir = path.join(homeRoot, 'bin');
+  const uvxLog = path.join(homeRoot, 'uvx.log');
+  const codexHome = path.join(homeRoot, '.codex');
+  const codexConfig = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(binDir, 'uvx'),
+      [
+        '#!/bin/sh',
+        `printf '%s\\n' "$*" >> ${JSON.stringify(uvxLog)}`,
+        'exit 0',
+        '',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      codexConfig,
+      [
+        'model_provider = "gflab"',
+        'model = "gpt-5.5"',
+        '',
+        '[model_providers.gflab]',
+        'name = "gflab"',
+        'base_url = "https://gflabtoken.cn/v1"',
+        'wire_api = "responses"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const env = {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_CODEXCONT_SERVICE_MODE: 'manual',
+      OPL_CODEXCONT_SERVICE_SKIP: '1',
+      PATH: `${binDir}:/usr/bin:/bin`,
+    };
+
+    const enable = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'intelligence_enhancement_enable',
+    ], env).app_action_execution;
+
+    assert.equal(enable.delegated_surface, 'opl flow intelligence-enhancement enable');
+    assert.equal(enable.result.opl_flow_intelligence_enhancement_action.status, 'completed');
+    assert.equal(
+      enable.result.opl_flow_intelligence_enhancement_action.status_readback.codex_provider_base_url,
+      'http://127.0.0.1:8787/v1',
+    );
+    assert.match(fs.readFileSync(codexConfig, 'utf8'), /base_url = "http:\/\/127\.0\.0\.1:8787\/v1"/);
+    assert.match(
+      fs.readFileSync(path.join(homeRoot, '.codexcont', 'config.toml'), 'utf8'),
+      /url = "https:\/\/gflabtoken\.cn\/v1\/responses"/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(homeRoot, '.codexcont', 'opl-flow-intelligence-enhancement.json'), 'utf8'),
+      /"previous_provider_base_url": "https:\/\/gflabtoken\.cn\/v1"/,
+    );
+    assert.equal(
+      enable.result.opl_flow_intelligence_enhancement_action.status_readback.service.persistence_policy,
+      'manual_start_only',
+    );
+    assert.equal(
+      fs.existsSync(path.join(homeRoot, '.codexcont', 'opl-flow-codexcont-foreground.sh')),
+      true,
+    );
+
+    const repair = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'intelligence_enhancement_repair',
+    ], env).app_action_execution;
+
+    assert.equal(repair.delegated_surface, 'opl flow intelligence-enhancement repair');
+    assert.equal(repair.result.opl_flow_intelligence_enhancement_action.status, 'completed');
+
+    const disable = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'intelligence_enhancement_disable',
+    ], env).app_action_execution;
+
+    assert.equal(disable.delegated_surface, 'opl flow intelligence-enhancement disable');
+    assert.equal(disable.result.opl_flow_intelligence_enhancement_action.status, 'completed');
+    assert.match(fs.readFileSync(codexConfig, 'utf8'), /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
+    assert.match(fs.readFileSync(uvxLog, 'utf8'), /codexcont install -y/);
+    assert.match(fs.readFileSync(uvxLog, 'utf8'), /codexcont restart/);
+    assert.match(fs.readFileSync(uvxLog, 'utf8'), /codexcont stop/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('app action execute installs CodexCont as a Linux systemd user service when requested', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-codexcont-systemd-home-'));
+  const binDir = path.join(homeRoot, 'bin');
+  const uvxLog = path.join(homeRoot, 'uvx.log');
+  const codexHome = path.join(homeRoot, '.codex');
+  const codexConfig = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(binDir, 'uvx'),
+      [
+        '#!/bin/sh',
+        `printf '%s\\n' "$*" >> ${JSON.stringify(uvxLog)}`,
+        'exit 0',
+        '',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      codexConfig,
+      [
+        'model_provider = "gflab"',
+        '',
+        '[model_providers.gflab]',
+        'name = "gflab"',
+        'base_url = "https://gflabtoken.cn/v1"',
+        'wire_api = "responses"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const enable = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'intelligence_enhancement_enable',
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_CODEXCONT_SERVICE_MODE: 'systemd',
+      OPL_CODEXCONT_SERVICE_SKIP: '1',
+      PATH: `${binDir}:/usr/bin:/bin`,
+    }).app_action_execution;
+
+    const service = enable.result.opl_flow_intelligence_enhancement_action.service;
+    assert.equal(service.mode, 'systemd');
+    assert.equal(
+      service.definition_path,
+      path.join(homeRoot, '.config', 'systemd', 'user', 'org.onepersonlab.codexcont.service'),
+    );
+    assert.match(fs.readFileSync(service.definition_path, 'utf8'), /Restart=always/);
+    assert.match(fs.readFileSync(service.definition_path, 'utf8'), /WantedBy=default\.target/);
+    assert.deepEqual(service.commands.map((command: { command: string[] }) => command.command), [
+      ['systemctl', '--user', 'daemon-reload'],
+      ['systemctl', '--user', 'enable', '--now', 'org.onepersonlab.codexcont.service'],
+    ]);
+    assert.match(fs.readFileSync(uvxLog, 'utf8'), /codexcont install -y/);
+    assert.match(fs.readFileSync(uvxLog, 'utf8'), /codexcont stop/);
+    assert.doesNotMatch(fs.readFileSync(uvxLog, 'utf8'), /codexcont restart/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 

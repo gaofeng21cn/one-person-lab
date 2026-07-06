@@ -62,6 +62,11 @@ import {
   type E2bCodexStageExecutionSummary,
 } from './e2b-codex-stage-execution.ts';
 import {
+  runCodexInLocalDockerSandbox,
+  sandboxAttemptForLocalDockerCodex,
+  type LocalDockerCodexStageExecutionSummary,
+} from './local-docker-codex-stage-execution.ts';
+import {
   isRecord,
   normalizeTimeoutMs,
   optionalString,
@@ -136,6 +141,34 @@ function codexCloseoutCaptureExecOptions(input: {
     outputLastMessagePath: input.outputLastMessagePath,
     ...(schemaCapability.supported ? { outputSchemaPath: input.outputSchemaPath } : {}),
   };
+}
+
+type CodexStageSandboxProvider = 'local_docker' | 'e2b' | 'host';
+type CodexStageSandboxExecutionSummary =
+  | E2bCodexStageExecutionSummary
+  | LocalDockerCodexStageExecutionSummary;
+
+function codexStageSandboxProviderFromEnv(env: Record<string, string | undefined>): CodexStageSandboxProvider {
+  const explicit = env.OPL_CODEX_STAGE_SANDBOX_PROVIDER?.trim().toLowerCase().replace(/-/g, '_');
+  if (explicit === 'e2b') {
+    return 'e2b';
+  }
+  if (explicit === 'host' || explicit === 'host_codex' || explicit === 'codex_cli') {
+    return 'host';
+  }
+  if (
+    explicit === 'local'
+    || explicit === 'docker'
+    || explicit === 'devcontainer'
+    || explicit === 'local_docker'
+    || explicit === 'local_devcontainer'
+  ) {
+    return 'local_docker';
+  }
+  if (shouldRunCodexStageInE2bSandbox(env)) {
+    return 'e2b';
+  }
+  return 'local_docker';
 }
 
 function executorKindFromAttemptPolicy(attempt: JsonRecord) {
@@ -254,6 +287,11 @@ function summarizeCodexProviderErrors(errors?: CodexCommandResult['providerError
       ...new Set(normalized.map((error) => error.message)),
     ].slice(-3),
   };
+}
+
+function providerBlockedReasonFrom(errors?: CodexCommandResult['providerErrors'] | null) {
+  const messages = (errors ?? []).map((error) => error.message.trim());
+  return messages.find((message) => message.startsWith('local_docker_')) ?? null;
 }
 
 function readObservedTokenTotal(value: unknown) {
@@ -421,25 +459,41 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   });
   const codexExecOptions = codexExecOptionsFromPolicy(executorPolicyFromAttempt(input.attempt));
   const outputSchemaCapability = codexOutputSchemaCapabilityForProvider(codexExecOptions.provider);
-  let externalSandboxExecution: E2bCodexStageExecutionSummary | null = null;
+  let externalSandboxExecution: CodexStageSandboxExecutionSummary | null = null;
   const stageSandboxEnv = { ...process.env, ...input.env };
-  const runInE2bSandbox = shouldRunCodexStageInE2bSandbox(stageSandboxEnv);
+  const sandboxProvider = codexStageSandboxProviderFromEnv(stageSandboxEnv);
+  const runInE2bSandbox = sandboxProvider === 'e2b';
+  const runInLocalDockerSandbox = sandboxProvider === 'local_docker';
+  const runInSandboxProvider = runInE2bSandbox || runInLocalDockerSandbox;
   try {
-    const sandboxWorkspaceRoot = stageSandboxEnv.OPL_E2B_WORKSPACE_ROOT?.trim()
+    const e2bWorkspaceRoot = stageSandboxEnv.OPL_E2B_WORKSPACE_ROOT?.trim()
       || stageSandboxEnv.OPL_EXTERNAL_SANDBOX_WORKSPACE_ROOT?.trim()
       || '/home/user/opl-stage-workspace';
+    const localDockerWorkspaceRoot = stageSandboxEnv.OPL_CODEX_STAGE_SANDBOX_WORKSPACE_ROOT?.trim()
+      || stageSandboxEnv.OPL_DEVCONTAINER_WORKSPACE_ROOT?.trim()
+      || '/workspace';
     const executionAttempt = runInE2bSandbox
-      ? sandboxAttemptForCodex({ attempt: input.attempt, sandboxWorkspaceRoot })
+      ? sandboxAttemptForCodex({ attempt: input.attempt, sandboxWorkspaceRoot: e2bWorkspaceRoot })
+      : runInLocalDockerSandbox
+        ? sandboxAttemptForLocalDockerCodex({ attempt: input.attempt, sandboxWorkspaceRoot: localDockerWorkspaceRoot })
       : input.attempt;
     const executionProviderEnv = codexStageAttemptEnv({
       attempt: executionAttempt,
       stagePacketRef,
-      workspaceRoot: runInE2bSandbox ? sandboxWorkspaceRoot : workspaceRoot,
+      workspaceRoot: runInE2bSandbox
+        ? e2bWorkspaceRoot
+        : runInLocalDockerSandbox
+          ? localDockerWorkspaceRoot
+          : workspaceRoot,
     });
     const args = buildCodexExecArgs(runnerPromptFor({ attempt: executionAttempt, stagePacketRef }), {
-      cwd: runInE2bSandbox ? sandboxWorkspaceRoot : workspaceRoot,
+      cwd: runInE2bSandbox
+        ? e2bWorkspaceRoot
+        : runInLocalDockerSandbox
+          ? localDockerWorkspaceRoot
+          : workspaceRoot,
       json: true,
-      ...(runInE2bSandbox
+      ...(runInSandboxProvider
         ? codexExecOptions
         : codexCloseoutCaptureExecOptions({
             codexExecOptions,
@@ -465,6 +519,25 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           externalSandboxExecution = sandboxResult.summary;
           return sandboxResult.result;
         })
+      : runInLocalDockerSandbox
+        ? await runCodexInLocalDockerSandbox({
+            attempt: input.attempt,
+            args,
+            hostWorkspaceRoot: workspaceRoot,
+            env: {
+              ...input.env,
+              ...executionProviderEnv,
+            },
+            timeoutMs,
+            signal: input.signal,
+            onRunnerProgress(summary) {
+              runnerEvents.push(summary);
+              input.onRunnerProgress?.(summary);
+            },
+          }).then((sandboxResult) => {
+            externalSandboxExecution = sandboxResult.summary;
+            return sandboxResult.result;
+          })
       : await runCodexCommandStreaming(args, {
           cwd: workspaceRoot,
           env: {
@@ -485,7 +558,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
           },
         });
   const parsed = parseCodexExecOutput(result.stdout);
-  const capturedLastMessage = runInE2bSandbox
+  const capturedLastMessage = runInSandboxProvider
     ? { message: null, closeoutPacket: null }
     : parseCapturedCloseoutMessage(stageCloseoutCapture.outputLastMessagePath);
   let closeoutPacket = parseCloseoutFromCodexMessages(parsed.messages)
@@ -510,7 +583,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   let closeoutEnforcementUnsupportedFunctionCallSessionPath: string | null = null;
   let closeoutEnforcementProviderErrors: NonNullable<CodexCommandResult['providerErrors']> | null = null;
   if (
-    !runInE2bSandbox
+    !runInSandboxProvider
     && !closeoutPacket
     && result.timeoutReason !== 'unsupported_tool_protocol'
     && result.timeoutReason !== 'activity_cancelled'
@@ -530,7 +603,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     }
   }
   if (
-    !runInE2bSandbox
+    !runInSandboxProvider
     && !closeoutPacket
     && parsed.threadId
     && result.timeoutReason !== 'unsupported_tool_protocol'
@@ -616,10 +689,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       closeoutEnforcementCapture.cleanup();
     }
   }
-  if (!runInE2bSandbox && !sessionUsageRef) {
+  if (!runInSandboxProvider && !sessionUsageRef) {
     sessionUsageRef = extractCodexSessionUsageRef(recoverCodexExecOutputFromSession(parsed.threadId));
   }
-  if (!runInE2bSandbox && !closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
+  if (!runInSandboxProvider && !closeoutPacket && result.timeoutReason !== 'unsupported_tool_protocol') {
     const domainReceiptRecovery = recoverDefaultExecutorDomainReceiptCloseout({
       workspaceRoot,
       stagePacketRef,
@@ -642,10 +715,13 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
     || closeoutEnforcementTimeoutReason === 'provider_unavailable'
     || providerErrorSummary.count > 0
     || closeoutEnforcementProviderErrorSummary.count > 0;
+  const providerBlockedReason =
+    providerBlockedReasonFrom(result.providerErrors)
+    ?? providerBlockedReasonFrom(closeoutEnforcementProviderErrors);
   const primaryBlockedReason = closeoutRejection
     ? `typed_closeout_${closeoutRejection.reason}`
     : providerUnavailable
-    ? 'codex_cli_provider_unavailable'
+    ? providerBlockedReason ?? 'codex_cli_provider_unavailable'
     : result.timeoutReason === 'command_no_progress_timeout'
     ? 'codex_cli_command_execution_no_progress'
     : result.timeoutReason === 'unsupported_tool_protocol'
