@@ -16,7 +16,7 @@
   "interface": {
     "displayName": "OPL Foundation Skills",
     "shortDescription": "AI-first support skills for OPL Framework operators and agent authors.",
-    "longDescription": "Provides source-only OPL support skills for Runway compute diagnosis, Stagecraft stage design, Connect source and skill routing, and Foundry Lab agent improvement review. These skills preserve AI-first judgment while keeping runtime, provider, receipt, owner, and readiness authority in OPL Framework and domain owner surfaces.",
+    "longDescription": "Provides source-only OPL support skills for Runway compute diagnosis, Stagecraft stage design, Connect source and skill routing, Foundry Lab agent improvement review, Workspace handoffs, Ledger evidence curation, Console operator guidance, Pack capability review, Atlas capability routing, and Charter authority review. These skills preserve AI-first judgment while keeping runtime, provider, receipt, owner, and readiness authority in OPL Framework and domain owner surfaces.",
     "developerName": "One Person Lab",
     "category": "Productivity",
     "capabilities": [
@@ -26,7 +26,7 @@
     "defaultPrompt": [
       "Use OPL Foundation Skills to review a Runway compute handoff.",
       "Use OPL Foundation Skills to design a Stagecraft stage prompt.",
-      "Use OPL Foundation Skills to route an external source or improve an agent skill."
+      "Use OPL Foundation Skills to route sources, handoffs, evidence, packs, catalogs, authority, or agent improvements."
     ],
     "brandColor": "#0F766E"
   }

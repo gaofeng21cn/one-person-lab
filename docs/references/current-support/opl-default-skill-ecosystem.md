@@ -17,14 +17,20 @@ MAS professional skill dependency 只从 MAS agent package manifest 读取。`ma
 
 OPL 自身的 base / support Skill 只用于 Framework 运维、agent authoring、contract-light 调试、work-order 写法和 capability 审查。它们不是 MAS/MAG/RCA/BookForge 的专业领域 Skill，也不是 `src/modules/**` 的实现替身。推荐 source-only 位置是 `plugins/opl-foundation-skills/skills/<skill-id>/SKILL.md`；只有经过 Connect / Pack / managed profile 投影后，才进入 Codex-visible plugin surface、package payload、workspace / quest `.codex/skills/` 或用户级 discovery path。生成物、缓存和安装目标都不是 canonical source。
 
-当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四个首批 Skill 是：
+当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的十个 Skill 是：
 
 - `opl-runway-compute-operator`：Runway compute / provider route 诊断和 handoff briefing。
 - `opl-stagecraft-stage-designer`：Stagecraft stage prompt、rubric、capability use 和 handoff lower-bound 设计。
 - `opl-connect-source-and-skill-router`：Connect external source / Skill search-inspect-sync、single-skill sync 和 connector receipt debug。
 - `opl-foundry-agent-improver`：Foundry Lab work-order、conformance/eval、Skill rewrite 和 promotion/rollback briefing。
+- `opl-workspace-handoff-writer`：Workspace source/artifact refs、handoff packet、missing-input route-back 和 owner-route packet 写法。
+- `opl-ledger-evidence-curator`：Ledger refs-only evidence、claim support、closeout proof、provenance chain 和 evidence gap 分类。
+- `opl-console-operator-copilot`：Console current_owner_delta、action catalog、operator next action 和 forbidden claim 解读。
+- `opl-pack-capability-reviewer`：Pack capability/authority ABI、tool affordance、generated/hosted surface 输入和专业方法放置审查。
+- `opl-atlas-capability-router`：Atlas owner/source/skill/connector/tool-card/capability refs 路由和 catalog ambiguity diagnosis。
+- `opl-charter-authority-reviewer`：Charter authority boundary、owner split、no-second-truth、forbidden claim 和 readiness/closeout claim 审查。
 
-这四个 Skill 只把开放式判断、诊断和改写方法留在 AI 层；credential、queue、submit/wait/harvest、registry/sync、receipt、schema、runtime truth、owner receipt、typed blocker、domain verdict、App release verdict 和 production readiness 仍由对应模块或 domain owner surface 持有。
+这些 Skill 只把开放式判断、诊断、审查、路由和改写方法留在 AI 层；credential、queue、submit/wait/harvest、registry/sync、receipt、schema、runtime truth、owner receipt、typed blocker、domain verdict、App release verdict 和 production readiness 仍由对应模块或 domain owner surface 持有。
 
 ## 三层模型
 
@@ -39,7 +45,7 @@ OPL family domain agent 默认不写入顶层 `[mcp_servers.*]` standalone serve
 
 这里的 generated surface 是 Codex 可见暴露面，不是默认 companion skill sync 清单。Full runtime 可以携带 OPL Meta Agent 或其他 skill/module payload，但随包存在不等于已经写入用户级 `~/.codex/skills`；是否写入由 `opl connect sync-skills`、startup maintenance 或显式 managed companion sync 决定。
 
-MAS Scholar Skills 采用 profile-driven 同步模型：MAS profile/overlay 决定 required/default pack，OPL Connect 只负责分发、安装、同步和发现。当前 `mas-scholar-skills` 总入口是 MAS required capability package；`medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`、`medical-data-governance` 是默认 medical-paper professional specialist pack。MAS 的 `write`、`review`、`figure`、`data/cohort` 等 stage 主提示词留在 MAS 仓内，专业 Skill 从 MAS Scholar Skills 同步。原版 Codex App 独立安装 MAS 时，应由 MAS standalone fat plugin bundle 这些 required capability skill payload；OPL App 托管 MAS 时，则保持 MAS plugin / package thin，由 OPL managed dependency package 独立 materialize `mas-scholar-skills`，再通过 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest` 同步到目标 workspace / quest。source repo 未物化这些目录时，`opl connect skills --domain mas-scholar-skills --json` 和 `opl connect sync-skills --domain mas-scholar-skills ... --json` 必须显示 `available-but-not-materialized` 或 `source-missing`，不能把缺目录猜成已安装。Skill 包只是可同步能力源；MAS runtime 继续持有 owner gate、quality/domain truth、clinical data body/source readiness、owner receipt、typed blocker、runtime queue 与 publication/export readiness。
+MAS Scholar Skills 采用 profile-driven 同步模型：MAS profile/overlay 决定 required/default pack，OPL Connect 只负责分发、安装、同步和发现。当前 `mas-scholar-skills` 总入口是 MAS required capability package；`medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`、`medical-data-governance`、`medical-epidemiology-study-design`、`medical-cohort-phenotyping`、`medical-rebuttal-strategy`、`medical-display-qc`、`medical-omics-analysis-plan` 是默认 medical-paper professional specialist pack。MAS 的 `write`、`review`、`figure`、`data/cohort` 等 stage 主提示词留在 MAS 仓内，专业 Skill 从 MAS Scholar Skills 同步。原版 Codex App 独立安装 MAS 时，应由 MAS standalone fat plugin bundle 这些 required capability skill payload；OPL App 托管 MAS 时，则保持 MAS plugin / package thin，由 OPL managed dependency package 独立 materialize `mas-scholar-skills`，再通过 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest` 同步到目标 workspace / quest。source repo 未物化这些目录时，`opl connect skills --domain mas-scholar-skills --json` 和 `opl connect sync-skills --domain mas-scholar-skills ... --json` 必须显示 `available-but-not-materialized` 或 `source-missing`，不能把缺目录猜成已安装。Skill 包只是可同步能力源；MAS runtime 继续持有 owner gate、quality/domain truth、clinical data body/source readiness、owner receipt、typed blocker、runtime queue 与 publication/export readiness。
 
 MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目专用 skill 不属于 OPL 默认系统级生态。它们应该留在 MAS 控制下的项目目录或 domain runtime 内部，不升级为 OPL 默认 family skill。
 

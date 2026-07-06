@@ -40,6 +40,60 @@ const expectedSkills = [
       'no-authority caveat',
     ],
   },
+  {
+    id: 'opl-workspace-handoff-writer',
+    tokens: [
+      'OPL Workspace and the owning program surface',
+      'missing_input_route_back',
+      'handoff packet',
+      'Do not invent, mutate, normalize, or relocate source/artifact truth',
+    ],
+  },
+  {
+    id: 'opl-ledger-evidence-curator',
+    tokens: [
+      'append-only ledger',
+      'evidence sufficiency',
+      'evidence_gap',
+      'non-authoritative evidence brief',
+    ],
+  },
+  {
+    id: 'opl-console-operator-copilot',
+    tokens: [
+      'current_owner_delta',
+      'action_catalog',
+      'forbidden_claim_review',
+      'Do not execute actions',
+    ],
+  },
+  {
+    id: 'opl-pack-capability-reviewer',
+    tokens: [
+      'pack compiler, schema, validator',
+      'capability ABI',
+      'professional method',
+      'generated or hosted surface',
+    ],
+  },
+  {
+    id: 'opl-atlas-capability-router',
+    tokens: [
+      'catalog registry, lifecycle index, and refs graph',
+      'capability_route',
+      'catalog ambiguity',
+      'refs-only route packet',
+    ],
+  },
+  {
+    id: 'opl-charter-authority-reviewer',
+    tokens: [
+      'authority-boundary defects',
+      'no owner receipts',
+      'no typed blockers',
+      'no readiness claims',
+    ],
+  },
 ] as const;
 
 function readJson(pathname: string) {
