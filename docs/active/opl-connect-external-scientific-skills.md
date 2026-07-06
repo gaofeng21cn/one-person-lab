@@ -62,6 +62,8 @@ MAS 优先使用默认医学论文专业 Skill 包：
 - `medical-manuscript-writing`
 - `medical-manuscript-review`
 - `medical-figure-design`
+- `medical-figure-style`
+- `medical-figure-composer`
 - `medical-research-lit`
 - `medical-statistical-review`
 - `medical-table-design`
@@ -82,7 +84,7 @@ source index，不作为普通执行上下文的默认入口。
 
 - 用户明确命名外部工具、软件包、数据库或工作流；
 - MAS 专业 Skill 生成默认包无法覆盖的 route-back candidate；
-- MAS stage 主提示词识别出默认八个专业 Skill 之外的专科能力；
+- MAS stage 主提示词识别出默认专业 Skill 之外的专科能力；
 - 任务需要联网、云计算、敏感数据或受治理的软件环境策略检查。
 
 ## 边界
