@@ -17,6 +17,7 @@ import {
 } from '../../../src/modules/runway/e2b-codex-stage-execution.ts';
 import {
   runCodexInLocalSandbox,
+  selectCodexStageSandboxProvider,
   setLocalSandboxCommandRunnerForTest,
 } from '../../../src/modules/runway/local-codex-stage-sandbox.ts';
 
@@ -144,7 +145,70 @@ test('Codex stage runner can execute Codex inside an E2B sandbox and collect dif
   }
 });
 
-test('Codex stage runner defaults to local devcontainer sandbox and collects diff refs', async () => {
+test('Codex stage runner defaults to host provider unless sandbox is explicitly selected', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_default_host_codex_stage_test',
+    closeout_refs: ['receipt:host-codex-stage'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-default-host-stage"}\\n'
+  printf '%s\\n' "$(node -e 'const text = process.argv[1]; process.stdout.write(JSON.stringify({type:"item.completed",item:{type:"agent_message",id:"msg-default-host",text}}));' '${JSON.stringify(closeout)}')"
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previous = {
+    codexBin: process.env.OPL_CODEX_BIN,
+    provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
+    runtimeProvider: process.env.OPL_FAMILY_RUNTIME_PROVIDER,
+    substrate: process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE,
+  };
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    delete process.env.OPL_FAMILY_RUNTIME_PROVIDER;
+    delete process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE;
+
+    const receipt = await runAgentStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_default_host_codex_stage_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['packet:default-host-stage'],
+      },
+      stagePacketRef: 'packet:default-host-stage',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    }) as Awaited<ReturnType<typeof runPublicCodexStageRunner>>;
+
+    assert.equal(selectCodexStageSandboxProvider({}), 'host');
+    assert.equal(receipt.progress_summary.thread_id, 'thread-default-host-stage');
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:host-codex-stage']);
+    assert.equal(receipt.process_output_summary?.sandbox_execution, undefined);
+    assert.equal(receipt.process_output_summary?.external_sandbox_execution, undefined);
+  } finally {
+    if (previous.codexBin === undefined) delete process.env.OPL_CODEX_BIN;
+    else process.env.OPL_CODEX_BIN = previous.codexBin;
+    if (previous.provider === undefined) delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    else process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = previous.provider;
+    if (previous.runtimeProvider === undefined) delete process.env.OPL_FAMILY_RUNTIME_PROVIDER;
+    else process.env.OPL_FAMILY_RUNTIME_PROVIDER = previous.runtimeProvider;
+    if (previous.substrate === undefined) delete process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE;
+    else process.env.OPL_EXTERNAL_SANDBOX_SUBSTRATE = previous.substrate;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner uses explicit local devcontainer sandbox and collects diff refs', async () => {
   const remote = createGitModuleRemoteFixture('local-agent-workspace');
   const dockerCalls: string[][] = [];
   const closeout = {
@@ -188,7 +252,7 @@ test('Codex stage runner defaults to local devcontainer sandbox and collects dif
     workspaceRoot: process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT,
   };
   try {
-    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = 'local_devcontainer';
     process.env.OPL_LOCAL_SANDBOX_IMAGE = 'opl/devcontainer-codex:test';
     process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT = '/workspace/stage';
 
@@ -239,6 +303,25 @@ test('Codex stage runner defaults to local devcontainer sandbox and collects dif
     else process.env.OPL_LOCAL_SANDBOX_WORKSPACE_ROOT = previous.workspaceRoot;
     fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('Codex stage sandbox provider keeps explicit choices and external E2B auto-selection', () => {
+  assert.equal(selectCodexStageSandboxProvider({
+    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'local_docker',
+  }), 'local_docker');
+  assert.equal(selectCodexStageSandboxProvider({
+    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'local_devcontainer',
+  }), 'local_devcontainer');
+  assert.equal(selectCodexStageSandboxProvider({
+    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'e2b',
+  }), 'e2b');
+  assert.equal(selectCodexStageSandboxProvider({
+    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+  }), 'host');
+  assert.equal(selectCodexStageSandboxProvider({
+    OPL_FAMILY_RUNTIME_PROVIDER: 'external_sandbox',
+    OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'e2b',
+  }), 'e2b');
 });
 
 test('local Docker sandbox fails closed without image while preserving selected provider', async () => {

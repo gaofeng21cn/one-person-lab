@@ -99,7 +99,7 @@ export function selectCodexStageSandboxProvider(
   ) {
     return 'e2b';
   }
-  return 'local_devcontainer';
+  return 'host';
 }
 
 function shellQuote(value: string) {

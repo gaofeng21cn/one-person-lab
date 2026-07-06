@@ -300,7 +300,7 @@ test('Codex stage runner fails closed when live runner lacks packet or workspace
   );
 });
 
-test('Codex stage runner defaults to local sandbox and fails closed without an image', async () => {
+test('Codex stage runner uses explicit local devcontainer sandbox and fails closed without an image', async () => {
   const previous = {
     provider: process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER,
     image: process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE,
@@ -309,7 +309,7 @@ test('Codex stage runner defaults to local sandbox and fails closed without an i
   };
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-local-docker-missing-image-'));
   try {
-    delete process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER;
+    process.env.OPL_CODEX_STAGE_SANDBOX_PROVIDER = 'local_devcontainer';
     delete process.env.OPL_CODEX_STAGE_SANDBOX_IMAGE;
     delete process.env.OPL_DEVCONTAINER_IMAGE;
     delete process.env.OPL_LOCAL_SANDBOX_IMAGE;
