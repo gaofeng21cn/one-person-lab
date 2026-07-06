@@ -64,13 +64,13 @@ function skippedProviderSloTick() {
   } as const;
 }
 
-test('family-runtime scheduler tick immediately picks up MAS default-executor pending tasks when provider is ready', async () => {
+test('family-runtime scheduler tick projects MAS default-executor queue audit counts when provider is ready', async () => {
   const db = new DatabaseSync(':memory:');
   try {
     await withIsolatedFamilyRuntimeEnv(async () => {
-      const exportFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-ready-pickup-export-'));
+      const exportFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-queue-projection-export-'));
       const exportPath = path.join(exportFixtureRoot, 'export.mjs');
-      const payload = defaultExecutorPayload('source-ready-owner-action-pickup');
+      const payload = defaultExecutorPayload('source-queue-projection-bridge');
       try {
         createQueueTables(db);
         const exportPayload = {
@@ -81,7 +81,7 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
               task_kind: 'domain_owner/default-executor-dispatch',
               priority: 80,
               source: 'mas-domain-handler-export',
-              dedupe_key: 'mas:dm-cvd:002:default-executor:ready-owner-action-pickup',
+              dedupe_key: 'mas:dm-cvd:002:default-executor:queue-projection-bridge',
               payload,
             },
           ],
@@ -125,14 +125,19 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
           selected_count: number;
           dispatches: Array<{ status: string }>;
         };
-        const pickupSlo = tick.progress_first_ready_owner_action_pickup_slo as {
-          slo_id: string;
-          slo_status: string;
+        const queueProjectionBridge = tick.queue_projection_bridge as {
+          bridge_id: string;
+          bridge_status: string;
           trigger: string;
-          hydrated_pending_family_task_count: number;
-          same_tick_selected_count: number;
-          cadence_wait_required: boolean;
-          authority_boundary: { can_write_domain_truth: boolean };
+          hydrated_pending_family_task_projection_count: number;
+          selected_task_projection_count: number;
+          dispatch_projection_count: number;
+          durable_lifecycle_truth: boolean;
+          can_authorize_lifecycle_progress: boolean;
+          authority_boundary: {
+            can_write_domain_truth: boolean;
+            can_authorize_lifecycle_progress: boolean;
+          };
         };
 
         assert.equal(queueTickCalls, 1);
@@ -140,13 +145,16 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
         assert.equal(queueTick.hydration.enqueued_count, 1);
         assert.equal(queueTick.selected_count, 1);
         assert.equal(queueTick.dispatches[0].status, 'selected_for_immediate_pickup');
-        assert.equal(pickupSlo.slo_id, 'progress_first_ready_owner_action_pickup.v1');
-        assert.equal(pickupSlo.slo_status, 'satisfied');
-        assert.equal(pickupSlo.trigger, 'same_scheduler_tick_after_provider_ready');
-        assert.equal(pickupSlo.hydrated_pending_family_task_count, 1);
-        assert.equal(pickupSlo.same_tick_selected_count, 1);
-        assert.equal(pickupSlo.cadence_wait_required, false);
-        assert.equal(pickupSlo.authority_boundary.can_write_domain_truth, false);
+        assert.equal(queueProjectionBridge.bridge_id, 'scheduler_queue_projection_bridge.v1');
+        assert.equal(queueProjectionBridge.bridge_status, 'observed_projection');
+        assert.equal(queueProjectionBridge.trigger, 'scheduler_tick_projection_readback');
+        assert.equal(queueProjectionBridge.hydrated_pending_family_task_projection_count, 1);
+        assert.equal(queueProjectionBridge.selected_task_projection_count, 1);
+        assert.equal(queueProjectionBridge.dispatch_projection_count, 1);
+        assert.equal(queueProjectionBridge.durable_lifecycle_truth, false);
+        assert.equal(queueProjectionBridge.can_authorize_lifecycle_progress, false);
+        assert.equal(queueProjectionBridge.authority_boundary.can_write_domain_truth, false);
+        assert.equal(queueProjectionBridge.authority_boundary.can_authorize_lifecycle_progress, false);
 
         const queued = db.prepare('SELECT status FROM tasks').all() as Array<{ status: string }>;
         assert.deepEqual(queued.map((row) => row.status), ['queued']);
@@ -160,7 +168,7 @@ test('family-runtime scheduler tick immediately picks up MAS default-executor pe
   }
 });
 
-test('family-runtime scheduler tick passes MAS profile into domain hydration before dispatch', async () => {
+test('family-runtime scheduler tick passes MAS profile into projection hydration before dispatch', async () => {
   const db = new DatabaseSync(':memory:');
   try {
     await withIsolatedFamilyRuntimeEnv(async () => {
@@ -202,8 +210,9 @@ test('family-runtime scheduler tick passes MAS profile into domain hydration bef
 
       assert.equal(queueTickCalls, 1);
       assert.deepEqual(observedDomainProfiles, { medautoscience: profilePath });
-      assert.ok(tick.progress_first_ready_owner_action_pickup_slo);
-      assert.equal(tick.progress_first_ready_owner_action_pickup_slo.slo_status, 'satisfied');
+      assert.ok(tick.queue_projection_bridge);
+      assert.equal(tick.queue_projection_bridge.bridge_status, 'observed_projection');
+      assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
       assert.equal(tick.queue_tick.selected_count, 1);
       assert.equal(tick.queue_tick.dispatches.length, 1);
     });
@@ -288,13 +297,14 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
       },
       retained_diagnostic_body: hugeBody,
     },
-    progress_first_ready_owner_action_pickup_slo: {
-      surface_kind: 'opl_progress_first_ready_owner_action_pickup_slo',
-      slo_status: 'satisfied',
-      hydrated_pending_family_task_count: 1,
-      same_tick_selected_count: 1,
-      same_tick_dispatch_count: 1,
-      cadence_wait_required: false,
+    queue_projection_bridge: {
+      surface_kind: 'opl_scheduler_queue_projection_bridge',
+      bridge_status: 'observed_projection',
+      hydrated_pending_family_task_projection_count: 1,
+      selected_task_projection_count: 1,
+      dispatch_projection_count: 1,
+      durable_lifecycle_truth: false,
+      can_authorize_lifecycle_progress: false,
       diagnostic_body: hugeBody,
     },
     task_scope: {
@@ -322,9 +332,10 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
       }],
     },
     authority_boundary: {
-      opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+      opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
       domain: 'truth_quality_artifact_gate_owner',
       can_write_domain_truth: false,
+      can_authorize_lifecycle_progress: false,
       provider_completion_is_domain_ready: false,
       diagnostic_body: hugeBody,
     },
@@ -345,8 +356,8 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
   assert.equal('dispatches' in compact.queue_tick, false);
   const providerLivenessBlocker = compact.provider_liveness_blocker;
   assert.ok(providerLivenessBlocker);
-  const pickupSlo = compact.progress_first_ready_owner_action_pickup_slo;
-  assert.ok(pickupSlo);
+  const queueProjectionBridge = compact.queue_projection_bridge;
+  assert.ok(queueProjectionBridge);
   assert.equal(
     providerLivenessBlocker.next_repair_action.action_id,
     'start_worker',
@@ -356,10 +367,11 @@ test('temporal scheduler tick receipt is compact enough for workflow history', (
     false,
   );
   assert.equal(
-    'diagnostic_body' in pickupSlo,
+    'diagnostic_body' in queueProjectionBridge,
     false,
   );
   assert.equal(compact.authority_boundary.can_write_domain_truth, false);
+  assert.equal(compact.authority_boundary.can_authorize_lifecycle_progress, false);
   assert.equal(compact.authority_boundary.provider_completion_is_domain_ready, false);
   assert.equal(JSON.stringify(compact).includes(hugeBody), false);
   assert.ok(Buffer.byteLength(JSON.stringify(compact), 'utf8') < TEMPORAL_MAX_INLINE_PAYLOAD_BYTES);

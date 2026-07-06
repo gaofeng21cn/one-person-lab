@@ -82,36 +82,38 @@ function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind,
   };
 }
 
-function buildProgressFirstReadyOwnerActionPickupSlo(input: {
-  hydrate: boolean;
+function buildSchedulerQueueProjectionBridge(input: {
   limit: number;
   providerReady: boolean;
+  blockedReason?: string;
   queueTick: SchedulerQueueTickResult;
 }) {
   const hydration = input.queueTick.hydration;
   const hydratedPendingFamilyTaskCount = (hydration?.enqueued_count ?? 0) + (hydration?.requeued_count ?? 0);
   const selectedCount = input.queueTick.selected_count;
   const dispatchCount = input.queueTick.dispatches.length;
-  const applicable = input.hydrate && input.providerReady && hydratedPendingFamilyTaskCount > 0;
-  const satisfied = applicable && selectedCount > 0 && dispatchCount > 0;
   return {
-    surface_kind: 'opl_progress_first_ready_owner_action_pickup_slo',
-    slo_id: 'progress_first_ready_owner_action_pickup.v1',
+    surface_kind: 'opl_scheduler_queue_projection_bridge',
+    bridge_id: 'scheduler_queue_projection_bridge.v1',
     provider_ready_after_slo: input.providerReady,
-    trigger: 'same_scheduler_tick_after_provider_ready',
-    slo_status: applicable ? (satisfied ? 'satisfied' : 'violated') : 'not_applicable',
-    hydrated_pending_family_task_count: hydratedPendingFamilyTaskCount,
-    hydration_idempotent_noop_count: hydration?.idempotent_noop_count ?? 0,
-    hydration_filtered_count: hydration?.filtered_count ?? 0,
-    same_tick_selected_count: selectedCount,
-    same_tick_dispatch_count: dispatchCount,
+    bridge_status: input.blockedReason ? 'blocked_provider_not_ready' : 'observed_projection',
+    blocked_reason: input.blockedReason ?? null,
+    trigger: 'scheduler_tick_projection_readback',
+    hydrated_pending_family_task_projection_count: hydratedPendingFamilyTaskCount,
+    hydration_idempotent_noop_projection_count: hydration?.idempotent_noop_count ?? 0,
+    hydration_filtered_projection_count: hydration?.filtered_count ?? 0,
+    selected_task_projection_count: selectedCount,
+    dispatch_projection_count: dispatchCount,
     scheduler_limit: input.limit,
-    cadence_wait_required: applicable && !satisfied,
+    operator_audit_counts_only: true,
+    durable_lifecycle_truth: false,
+    can_authorize_lifecycle_progress: false,
     authority_boundary: {
-      opl: 'scheduler_queue_pickup_slo_projection_only',
+      opl: 'scheduler_queue_projection_bridge_only',
       domain: 'truth_quality_artifact_gate_owner',
       can_write_domain_truth: false,
       can_execute_domain_action_without_queue_claim: false,
+      can_authorize_lifecycle_progress: false,
       can_authorize_domain_ready: false,
       can_authorize_quality_verdict: false,
       can_authorize_export_verdict: false,
@@ -359,6 +361,12 @@ export async function runSchedulerTick(
         blockedReason: blocker.blocker_id,
       },
     );
+    const queueProjectionBridge = buildSchedulerQueueProjectionBridge({
+      limit: input.limit ?? 10,
+      providerReady: false,
+      blockedReason: blocker.blocker_id,
+      queueTick,
+    });
     return {
       surface_kind: 'opl_family_runtime_scheduler_tick',
       scheduler_owner: 'opl_provider_runtime_manager',
@@ -373,13 +381,15 @@ export async function runSchedulerTick(
       provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
       provider_slo: providerSlo,
       task_scope: input.taskScope ?? null,
+      queue_projection_bridge: queueProjectionBridge,
       queue_tick: blockQueueTickDispatch(queueTick, blocker.blocker_id),
       authority_boundary: {
-        opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+        opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
         domain: 'truth_quality_artifact_gate_owner',
         can_install_domain_daemon: false,
         can_write_domain_truth: false,
         can_write_domain_memory_body: false,
+        can_authorize_lifecycle_progress: false,
         can_authorize_quality_verdict: false,
         can_authorize_export_verdict: false,
         provider_completion_is_domain_ready: false,
@@ -393,8 +403,7 @@ export async function runSchedulerTick(
     input.taskScope,
     input.domainProfiles,
   );
-  const readyOwnerActionPickupSlo = buildProgressFirstReadyOwnerActionPickupSlo({
-    hydrate: input.hydrate ?? true,
+  const queueProjectionBridge = buildSchedulerQueueProjectionBridge({
     limit: input.limit ?? 10,
     providerReady: selected?.ready ?? false,
     queueTick,
@@ -411,9 +420,7 @@ export async function runSchedulerTick(
       domain_profiles: input.domainProfiles ?? null,
       provider_slo_receipt_status: providerSlo.provider_slo_execution_receipt.receipt_status,
       provider_slo_skip_reason: providerSloSkipReason(providerSlo),
-      queue_selected_count: queueTick.selected_count,
-      queue_dispatches_count: queueTick.dispatches.length,
-      progress_first_ready_owner_action_pickup_slo: readyOwnerActionPickupSlo,
+      queue_projection_bridge: queueProjectionBridge,
     },
   });
   return {
@@ -425,15 +432,16 @@ export async function runSchedulerTick(
     provider_runtime_after_slo: provider,
     provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
     provider_slo: providerSlo,
-    progress_first_ready_owner_action_pickup_slo: readyOwnerActionPickupSlo,
+    queue_projection_bridge: queueProjectionBridge,
     task_scope: input.taskScope ?? null,
     queue_tick: queueTick,
     authority_boundary: {
-      opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+      opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
       domain: 'truth_quality_artifact_gate_owner',
       can_install_domain_daemon: false,
       can_write_domain_truth: false,
       can_write_domain_memory_body: false,
+      can_authorize_lifecycle_progress: false,
       can_authorize_quality_verdict: false,
       can_authorize_export_verdict: false,
       provider_completion_is_domain_ready: false,

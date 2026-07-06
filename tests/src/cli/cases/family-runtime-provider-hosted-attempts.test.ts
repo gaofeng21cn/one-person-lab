@@ -5,7 +5,7 @@ import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-red
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-single-flight.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-current-source.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-progress-first-currentness.ts';
-import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-ready-pickup-slo.ts';
+import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-queue-projection-bridge.ts';
 import './family-runtime-provider-hosted-attempts-cases/provider-worker-liveness-preflight.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-stale-admission.ts';
 import './family-runtime-provider-hosted-attempts-cases/mas-default-executor-workspace.ts';

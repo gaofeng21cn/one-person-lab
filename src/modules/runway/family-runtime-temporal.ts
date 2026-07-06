@@ -210,7 +210,7 @@ export type TemporalSchedulerTickWorkflowState = {
   receipt: Record<string, unknown> | null;
   error: string | null;
   authority_boundary: {
-    opl: 'scheduler_cadence_queue_and_provider_slo_owner';
+    opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge';
     domain: 'truth_quality_artifact_gate_owner';
   };
 };
@@ -452,7 +452,7 @@ export function temporalPayloadHistoryPolicy() {
         'provider_liveness_blocker',
         'provider_blocker',
         'provider_slo_summary',
-        'progress_first_ready_owner_action_pickup_slo',
+        'queue_projection_bridge',
         'queue_tick',
         'authority_boundary',
       ],
@@ -465,7 +465,7 @@ export function temporalPayloadHistoryPolicy() {
         'provider_readiness_after_slo.repair_action.body',
         'provider_liveness_blocker.next_repair_action.body',
         'provider_blocker.next_repair_action.body',
-        'progress_first_ready_owner_action_pickup_slo.body',
+        'queue_projection_bridge.body',
         'queue_tick.dispatches',
       ],
       authority_boundary: {

@@ -130,6 +130,7 @@ function compactAuthorityBoundaryForTemporalResult(value: unknown) {
     can_create_domain_typed_blocker: readBoolean(authority.can_create_domain_typed_blocker),
     can_execute_domain_action_without_queue_claim:
       readBoolean(authority.can_execute_domain_action_without_queue_claim),
+    can_authorize_lifecycle_progress: readBoolean(authority.can_authorize_lifecycle_progress),
     can_authorize_domain_ready: readBoolean(authority.can_authorize_domain_ready),
     can_authorize_quality_verdict: readBoolean(authority.can_authorize_quality_verdict),
     can_authorize_export_verdict: readBoolean(authority.can_authorize_export_verdict),
@@ -322,23 +323,28 @@ function compactProviderSloForTemporalResult(value: unknown) {
   };
 }
 
-function compactPickupSloForTemporalResult(value: unknown) {
+function compactQueueProjectionBridgeForTemporalResult(value: unknown) {
   if (!isRecord(value)) {
     return null;
   }
   return {
     surface_kind: readString(value.surface_kind),
-    slo_id: readString(value.slo_id),
+    bridge_id: readString(value.bridge_id),
     provider_ready_after_slo: readBoolean(value.provider_ready_after_slo),
+    bridge_status: readString(value.bridge_status),
+    blocked_reason: readString(value.blocked_reason),
     trigger: readString(value.trigger),
-    slo_status: readString(value.slo_status),
-    hydrated_pending_family_task_count: readNumber(value.hydrated_pending_family_task_count) ?? 0,
-    hydration_idempotent_noop_count: readNumber(value.hydration_idempotent_noop_count) ?? 0,
-    hydration_filtered_count: readNumber(value.hydration_filtered_count) ?? 0,
-    same_tick_selected_count: readNumber(value.same_tick_selected_count) ?? 0,
-    same_tick_dispatch_count: readNumber(value.same_tick_dispatch_count) ?? 0,
+    hydrated_pending_family_task_projection_count:
+      readNumber(value.hydrated_pending_family_task_projection_count) ?? 0,
+    hydration_idempotent_noop_projection_count:
+      readNumber(value.hydration_idempotent_noop_projection_count) ?? 0,
+    hydration_filtered_projection_count: readNumber(value.hydration_filtered_projection_count) ?? 0,
+    selected_task_projection_count: readNumber(value.selected_task_projection_count) ?? 0,
+    dispatch_projection_count: readNumber(value.dispatch_projection_count) ?? 0,
     scheduler_limit: readNumber(value.scheduler_limit),
-    cadence_wait_required: readBoolean(value.cadence_wait_required),
+    operator_audit_counts_only: readBoolean(value.operator_audit_counts_only),
+    durable_lifecycle_truth: readBoolean(value.durable_lifecycle_truth),
+    can_authorize_lifecycle_progress: readBoolean(value.can_authorize_lifecycle_progress),
     authority_boundary: compactAuthorityBoundaryForTemporalResult(value.authority_boundary),
   };
 }
@@ -348,7 +354,7 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
   const authorityBoundary = isRecord(tick.authority_boundary)
     ? tick.authority_boundary
     : {
-        opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+        opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
         domain: 'truth_quality_artifact_gate_owner',
       };
   return {
@@ -368,8 +374,8 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
     provider_liveness_blocker: compactProviderBlockerForTemporalResult(tick.provider_liveness_blocker),
     provider_blocker: compactProviderBlockerForTemporalResult(tick.provider_blocker),
     provider_slo_summary: compactProviderSloForTemporalResult(tick.provider_slo),
-    progress_first_ready_owner_action_pickup_slo: compactPickupSloForTemporalResult(
-      tick.progress_first_ready_owner_action_pickup_slo,
+    queue_projection_bridge: compactQueueProjectionBridgeForTemporalResult(
+      tick.queue_projection_bridge,
     ),
     queue_tick: compactSchedulerQueueTickForTemporalResult(tick.queue_tick),
     full_scheduler_tick_omitted: true,
@@ -384,7 +390,7 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
       'provider_readiness_after_slo.repair_action.body',
       'provider_liveness_blocker.next_repair_action.body',
       'provider_blocker.next_repair_action.body',
-      'progress_first_ready_owner_action_pickup_slo.body',
+      'queue_projection_bridge.body',
       'queue_tick.dispatches',
     ],
     authority_boundary: {
@@ -410,7 +416,7 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
         'provider_liveness_blocker',
         'provider_blocker',
         'provider_slo_summary',
-        'progress_first_ready_owner_action_pickup_slo',
+        'queue_projection_bridge',
         'queue_tick',
         'authority_boundary',
       ],

@@ -523,7 +523,7 @@ test('family-runtime provider-slo tick persists blocked repair receipt when prod
   }
 });
 
-test('family-runtime scheduler tick owns provider cadence and queue dispatch without installing domain daemons', () => {
+test('family-runtime scheduler tick bridges provider cadence to queue projection without installing domain daemons', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-tick-'));
   try {
     insertProvenTemporalProofEvent(stateRoot);
@@ -548,8 +548,12 @@ test('family-runtime scheduler tick owns provider cadence and queue dispatch wit
     assert.equal(tick.provider_slo.provider_slo_execution_receipt.receipt_status, 'skipped');
     assert.equal(tick.queue_tick.source, 'opl-provider-scheduler');
     assert.equal(tick.queue_tick.hydration.source, 'opl-provider-scheduler:hydrate');
+    assert.equal(tick.queue_projection_bridge.surface_kind, 'opl_scheduler_queue_projection_bridge');
+    assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
+    assert.equal(tick.queue_projection_bridge.can_authorize_lifecycle_progress, false);
     assert.equal(tick.authority_boundary.can_install_domain_daemon, false);
     assert.equal(tick.authority_boundary.can_write_domain_truth, false);
+    assert.equal(tick.authority_boundary.can_authorize_lifecycle_progress, false);
 
     const events = runCli(['family-runtime', 'events', 'export'], familyRuntimeEnv(stateRoot));
     assert.equal(
@@ -606,6 +610,10 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
     assert.equal(tick.provider_liveness_blocker.next_repair_action.action_id, 'start_temporal_worker');
     assert.equal(tick.queue_tick.status, 'blocked_provider_not_ready');
     assert.equal(tick.queue_tick.dispatch_blocked_reason, 'temporal_worker_not_ready');
+    assert.equal(tick.queue_projection_bridge.bridge_status, 'blocked_provider_not_ready');
+    assert.equal(tick.queue_projection_bridge.blocked_reason, 'temporal_worker_not_ready');
+    assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
+    assert.equal(tick.queue_projection_bridge.can_authorize_lifecycle_progress, false);
     assert.equal(tick.queue_tick.selected_count, 0);
     assert.equal(tick.queue_tick.dispatches.length, 0);
     assert.equal(queueTickCalls, 1);
@@ -665,6 +673,10 @@ test('family-runtime scheduler tick repairs worker liveness before queue admissi
     assert.equal(tick.provider_readiness_after_slo.degraded_reason, null);
     assert.equal(tick.provider_readiness_after_slo.worker_lifecycle_status, 'ready');
     assert.equal(tick.provider_runtime_after_slo.providers.temporal?.ready, true);
+    assert.equal(tick.queue_projection_bridge.bridge_status, 'observed_projection');
+    assert.equal(tick.queue_projection_bridge.selected_task_projection_count, 1);
+    assert.equal(tick.queue_projection_bridge.dispatch_projection_count, 1);
+    assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
     assert.equal(tick.queue_tick.selected_count, 1);
     assert.equal(tick.queue_tick.dispatches.length, 1);
     assert.equal(queueTickCalls, 1);

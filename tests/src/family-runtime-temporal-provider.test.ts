@@ -427,7 +427,7 @@ test('Temporal stage attempt contract exposes Codex cancellation and payload-his
       'provider_readiness_after_slo.repair_action.body',
       'provider_liveness_blocker.next_repair_action.body',
       'provider_blocker.next_repair_action.body',
-      'progress_first_ready_owner_action_pickup_slo.body',
+      'queue_projection_bridge.body',
       'queue_tick.dispatches',
     ],
   );

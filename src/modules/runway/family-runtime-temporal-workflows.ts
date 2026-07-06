@@ -482,7 +482,7 @@ export async function SchedulerTickWorkflow(
     receipt: null,
     error: null,
     authority_boundary: {
-      opl: 'scheduler_cadence_queue_and_provider_slo_owner',
+      opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
       domain: 'truth_quality_artifact_gate_owner',
     },
   };
