@@ -115,9 +115,19 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
               install_root: string | null;
               system_codex_skill_install_default: boolean;
             };
+            source: {
+              source_repo_path: string;
+              plugin_source_path: string;
+              source_role: string;
+              canonical_source_repo_path: string;
+              plugin_mirror_path: string | null;
+              mirror_or_cache_is_not_skill_completeness_authority: boolean;
+            };
             packs: Array<{
               pack_id: string;
+              source_role: string;
               source_status: string;
+              resolved_source_path: string;
               installed: boolean;
               install_target_skill_root: string | null;
             }>;
@@ -204,8 +214,19 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_root, null);
     assert.equal(pack.mas_scholar_skills_profile.install_target.install_root, null);
     assert.equal(pack.mas_scholar_skills_profile.install_target.system_codex_skill_install_default, false);
+    assert.equal(pack.mas_scholar_skills_profile.source.source_repo_path, sourceRoot);
+    assert.equal(pack.mas_scholar_skills_profile.source.plugin_source_path, sourceRoot);
+    assert.equal(pack.mas_scholar_skills_profile.source.source_role, 'canonical_source_repo');
+    assert.equal(pack.mas_scholar_skills_profile.source.canonical_source_repo_path, sourceRoot);
+    assert.equal(pack.mas_scholar_skills_profile.source.plugin_mirror_path, null);
+    assert.equal(pack.mas_scholar_skills_profile.source.mirror_or_cache_is_not_skill_completeness_authority, true);
     const profilePacks = new Map(pack.mas_scholar_skills_profile.packs.map((entry) => [entry.pack_id, entry]));
     assert.equal(profilePacks.get('mas-scholar-skills')?.source_status, 'materialized');
+    assert.equal(profilePacks.get('mas-scholar-skills')?.source_role, 'canonical_source_repo');
+    assert.equal(
+      profilePacks.get('mas-scholar-skills')?.resolved_source_path,
+      path.join(sourceRoot, 'skills', 'mas-scholar-skills', 'SKILL.md'),
+    );
     assert.equal(profilePacks.get('mas-scholar-skills')?.installed, false);
     for (const packId of MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS) {
       assert.equal(profilePacks.get(packId)?.source_status, 'source-missing');

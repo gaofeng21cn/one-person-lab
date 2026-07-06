@@ -16,7 +16,7 @@
   "interface": {
     "displayName": "MAS Scholar Skills",
     "shortDescription": "Codex skill entry for MAS medical-paper specialist capabilities.",
-    "longDescription": "Provides a Codex skill entry for the ten MAS Scholar Skills capability modules, the eighteen MAS medical-paper specialist skills including medical data governance, epidemiology study design, cohort phenotyping, causal inference, survival analysis, rebuttal strategy, display QC, reference integrity, and omics analysis planning, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries.",
+    "longDescription": "Provides a thin OPL-side Codex skill entry and sync pointer for the canonical external MAS Scholar Skills repository, standard opl scholar-skills CLI readbacks, refs-only materialized candidate packages, and MAS owner-gated authority boundaries. Specialist medical-paper Skill bodies are resolved from the canonical mas-scholar-skills source, not inferred from this plugin mirror.",
     "developerName": "One Person Lab",
     "category": "Productivity",
     "capabilities": [

@@ -6,17 +6,6 @@ const skillRoot = path.join(pluginRoot, 'skills', 'mas-scholar-skills');
 const skillPath = path.join(skillRoot, 'SKILL.md');
 const displayGalleryDocPath = path.join(repoRoot, 'docs', 'active', 'opl-scholar-skills-display-gallery.md');
 
-const expectedSpecialistSkills = [
-  'medical-epidemiology-study-design',
-  'medical-cohort-phenotyping',
-  'medical-rebuttal-strategy',
-  'medical-display-qc',
-  'medical-omics-analysis-plan',
-  'medical-causal-inference-plan',
-  'medical-survival-analysis-plan',
-  'medical-reference-integrity-auditor',
-] as const;
-
 function readJson(pathname: string) {
   return parseJsonText(fs.readFileSync(pathname, 'utf8')) as any;
 }
@@ -35,11 +24,7 @@ function assertContains(contents: string, token: string) {
   assert.equal(contents.includes(token), true, `Expected SKILL.md to include ${token}`);
 }
 
-function readSpecialistSkill(skillId: string) {
-  return fs.readFileSync(path.join(pluginRoot, 'skills', skillId, 'SKILL.md'), 'utf8');
-}
-
-test('MAS Scholar Skills plugin manifest exposes a repo-tracked skill pack', () => {
+test('MAS Scholar Skills plugin manifest exposes a thin repo-tracked skill pack pointer', () => {
   const manifest = readJson(manifestPath);
 
   assert.equal(manifest.name, 'mas-scholar-skills');
@@ -56,13 +41,10 @@ test('MAS Scholar Skills plugin manifest exposes a repo-tracked skill pack', () 
     true,
   );
   assert.equal(fs.existsSync(skillPath), true);
-  for (const skillId of expectedSpecialistSkills) {
-    assert.equal(
-      fs.existsSync(path.join(pluginRoot, 'skills', skillId, 'SKILL.md')),
-      true,
-      `${skillId} must be materialized as source-only SKILL.md`,
-    );
-  }
+  assert.deepEqual(
+    fs.readdirSync(path.join(pluginRoot, 'skills')).sort(),
+    ['mas-scholar-skills'],
+  );
 });
 
 test('MAS Scholar Skills SKILL frontmatter is discoverable by Codex', () => {
@@ -70,29 +52,6 @@ test('MAS Scholar Skills SKILL frontmatter is discoverable by Codex', () => {
 
   assert.match(metadata, /^name:\s+mas-scholar-skills$/m);
   assert.match(metadata, /^description:\s+".*MAS Scholar Skills.*MAS owner.*"$/m);
-});
-
-test('new MAS medical specialist SKILL frontmatters are discoverable and authority false', () => {
-  const aggregate = readSkill();
-
-  for (const skillId of expectedSpecialistSkills) {
-    const skill = readSpecialistSkill(skillId);
-    const metadata = frontmatter(skill);
-
-    assert.match(metadata, new RegExp(`^name:\\s+${skillId}$`, 'm'));
-    assert.match(metadata, /^description:\s+.*MAS .+/m);
-    assertContains(aggregate, skillId);
-
-    for (const token of [
-      'MAS owner receipt',
-      'typed blocker',
-      'artifact authority',
-      'publication readiness',
-      'domain readiness',
-    ]) {
-      assert.equal(skill.includes(token), true, `Expected ${skillId} to include ${token}`);
-    }
-  }
 });
 
 test('MAS Scholar Skills SKILL covers contract modules, commands, and authority guardrails', () => {

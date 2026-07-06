@@ -25,6 +25,7 @@ type MasScholarSkillsPack = {
 };
 
 type MasScholarSkillsTargetScope = SkillPackSyncScope | 'inspect';
+type MasScholarSkillsSourceRole = 'canonical_source_repo' | 'plugin_mirror_or_packaging_copy';
 
 export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
   {
@@ -126,78 +127,6 @@ export const MAS_SCHOLAR_SKILLS_PROFILE_PACKS: MasScholarSkillsPack[] = [
     default_by_profile: true,
     missing_source_status: 'source-missing',
   },
-  {
-    pack_id: 'medical-epidemiology-study-design',
-    skill_dir: 'medical-epidemiology-study-design',
-    label: 'Medical epidemiology study design specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-cohort-phenotyping',
-    skill_dir: 'medical-cohort-phenotyping',
-    label: 'Medical cohort phenotyping specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-rebuttal-strategy',
-    skill_dir: 'medical-rebuttal-strategy',
-    label: 'Medical rebuttal strategy specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-display-qc',
-    skill_dir: 'medical-display-qc',
-    label: 'Medical display QC specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-omics-analysis-plan',
-    skill_dir: 'medical-omics-analysis-plan',
-    label: 'Medical omics analysis planning specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-causal-inference-plan',
-    skill_dir: 'medical-causal-inference-plan',
-    label: 'Medical causal inference planning specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-survival-analysis-plan',
-    skill_dir: 'medical-survival-analysis-plan',
-    label: 'Medical survival analysis planning specialist',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
-  {
-    pack_id: 'medical-reference-integrity-auditor',
-    skill_dir: 'medical-reference-integrity-auditor',
-    label: 'Medical reference integrity auditor',
-    role: 'specialist_entry',
-    required_by_profile: false,
-    default_by_profile: true,
-    missing_source_status: 'source-missing',
-  },
 ];
 
 export const MAS_SCHOLAR_SKILLS_REQUIRED_PACK_IDS = Object.freeze(
@@ -228,6 +157,12 @@ function sourceStatus(pluginSourcePath: string, pack: MasScholarSkillsPack) {
     : pack.missing_source_status;
 }
 
+function sourceRole(sourceRoot: string, pluginSourcePath: string): MasScholarSkillsSourceRole {
+  return path.resolve(sourceRoot) === path.resolve(pluginSourcePath)
+    ? 'canonical_source_repo'
+    : 'plugin_mirror_or_packaging_copy';
+}
+
 export function materializedMasScholarSkillsPackIds(pluginSourcePath: string) {
   return MAS_SCHOLAR_SKILLS_PROFILE_PACKS
     .filter((pack) => sourceStatus(pluginSourcePath, pack) === 'materialized')
@@ -246,8 +181,10 @@ export function buildMasScholarSkillsProfileManifest(options: {
   const targetRoot = options.targetRoot ? path.resolve(options.targetRoot) : null;
   const installRoot = options.installRoot ? path.resolve(options.installRoot) : null;
   const installedPackIds = new Set(options.installedPackIds ?? []);
+  const role = sourceRole(options.sourceRoot, options.pluginSourcePath);
   const packs = MAS_SCHOLAR_SKILLS_PROFILE_PACKS.map((pack) => {
     const status = sourceStatus(options.pluginSourcePath, pack);
+    const entryPath = sourceSkillEntryPath(options.pluginSourcePath, pack.skill_dir);
     return {
       pack_id: pack.pack_id,
       skill_dir: pack.skill_dir,
@@ -255,7 +192,9 @@ export function buildMasScholarSkillsProfileManifest(options: {
       role: pack.role,
       required_by_profile: pack.required_by_profile,
       default_by_profile: pack.default_by_profile,
-      source_entry_path: sourceSkillEntryPath(options.pluginSourcePath, pack.skill_dir),
+      source_role: role,
+      source_entry_path: entryPath,
+      resolved_source_path: entryPath,
       source_status: status,
       install_target_skill_root: installRoot
         ? path.join(
@@ -289,6 +228,14 @@ export function buildMasScholarSkillsProfileManifest(options: {
     source: {
       source_repo_path: path.resolve(options.sourceRoot),
       plugin_source_path: path.resolve(options.pluginSourcePath),
+      source_role: role,
+      canonical_source_repo_path: role === 'canonical_source_repo'
+        ? path.resolve(options.pluginSourcePath)
+        : path.resolve(options.sourceRoot),
+      plugin_mirror_path: role === 'canonical_source_repo'
+        ? null
+        : path.resolve(options.pluginSourcePath),
+      mirror_or_cache_is_not_skill_completeness_authority: true,
       source_status_values: [
         'materialized',
         'available-but-not-materialized',
