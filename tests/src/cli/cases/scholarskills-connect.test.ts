@@ -225,6 +225,11 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
       'medical-display-qc',
       'medical-causal-inference-plan',
       'medical-survival-analysis-plan',
+      'medical-risk-model-transportability-reviewer',
+      'medical-registry-atlas-story-architect',
+      'medical-owner-gate-handoff-reviewer',
+      'medical-display-regression-debugger',
+      'medical-data-freeze-and-analysis-readiness-reviewer',
     ]);
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_scope, 'inspect');
     assert.equal(pack.mas_scholar_skills_profile.install_target.target_root, null);
