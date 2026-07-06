@@ -599,6 +599,45 @@ test('reuse-first scan allows connect agent-package rollback fixture assertions 
   assert.equal(output.findings[0].path, 'tests/src/cli/cases/other-agent-packages.test.ts');
 });
 
+test('reuse-first scan allows Agent Package rollback only in Settings action contract taxonomy', () => {
+  const fixture = makeFixture();
+  const contractPath = path.join(fixture, 'contracts', 'opl-framework', 'reuse-first-governance.json');
+  const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
+  contract.scan.roots = ['contracts'];
+  fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+  writeFixtureFile(
+    fixture,
+    'contracts/opl-framework/settings-control-center-action-read-model-contract.json',
+    [
+      '{',
+      '  "allowed_action_ids": ["agent_package_rollback"],',
+      '  "action_taxonomy": {',
+      '    "agent_package_rollback": "settings.capabilities.agent_package.rollback"',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+  );
+  writeFixtureFile(
+    fixture,
+    'contracts/other/settings-copy.json',
+    '{ "action_taxonomy": { "agent_package_rollback": "settings.capabilities.agent_package.rollback" } }\n',
+  );
+
+  const result = spawnSync(process.execPath, [
+    script,
+    '--root',
+    fixture,
+    '--contract',
+    contractPath,
+  ], { encoding: 'utf8' });
+  const output = parseJsonText(result.stdout) as any;
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(output.finding_count, 1);
+  assert.equal(output.findings[0].path, 'contracts/other/settings-copy.json');
+});
+
 test('reuse-first scan allows rollback wording only in owner-routed command projections', () => {
   const fixture = makeFixture();
   writeFixtureFile(

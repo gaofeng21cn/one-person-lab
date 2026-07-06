@@ -658,6 +658,7 @@ function isAllowedMetadataLine(relativePath, line) {
     || isAllowedManagedUpdateOwnerBoundaryLine(relativePath, line)
     || isAllowedOwnerRoutedCommandProjectionLine(relativePath, line)
     || isAllowedAgentPackageLifecycleProjectionLine(relativePath, line)
+    || isAllowedSettingsAgentPackageActionContractLine(relativePath, line)
     || isAllowedAgentPackageLifecycleTestLine(relativePath, line)
     || isAllowedQueueProjectionVocabularyLine(relativePath, line)
     || isAllowedObservabilityProjectionVocabularyLine(relativePath, line)
@@ -725,6 +726,14 @@ function isAllowedAgentPackageLifecycleProjectionLine(relativePath, line) {
     ].some((term) => line.includes(term));
   }
   return false;
+}
+
+function isAllowedSettingsAgentPackageActionContractLine(relativePath, line) {
+  if (relativePath !== 'contracts/opl-framework/settings-control-center-action-read-model-contract.json') {
+    return false;
+  }
+  return line.includes('"agent_package_rollback"')
+    || line.includes('"settings.capabilities.agent_package.rollback"');
 }
 
 function isAllowedAgentPackageLifecycleTestLine(relativePath, line) {
