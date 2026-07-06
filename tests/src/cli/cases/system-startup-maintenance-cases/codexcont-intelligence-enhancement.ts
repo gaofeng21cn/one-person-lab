@@ -5,6 +5,40 @@ function writeExecutable(filePath: string, contents: string) {
   fs.writeFileSync(filePath, contents, { mode: 0o755 });
 }
 
+function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
+  const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(
+    scriptPath,
+    [
+      '#!/usr/bin/env python3',
+      'import json, os, pathlib, subprocess, sys',
+      'action = sys.argv[1] if len(sys.argv) > 1 else "status"',
+      'home = pathlib.Path(os.environ["HOME"])',
+      'codexcont_home = pathlib.Path(os.environ["OPL_CODEXCONT_HOME"])',
+      'service_mode = os.environ.get("OPL_CODEXCONT_SERVICE_MODE", "manual")',
+      'fake_uvx = os.environ["OPL_CODEXCONT_UVX"]',
+      'def service_paths():',
+      '    definition = codexcont_home / "container-service.json"',
+      '    script = codexcont_home / "container-entrypoint.sh"',
+      '    definition.write_text("container_entrypoint_or_opl_system_startup_maintenance_must_call_repair\\n")',
+      '    script.write_text("#!/bin/sh\\nexec codexcont start\\n")',
+      '    return {"mode": service_mode, "definition_path": str(definition), "script_path": str(script)}',
+      'if action == "status":',
+      '    print(json.dumps({"opl_flow_intelligence_enhancement": {"enabled": True, "proxy_running": False, "service": {"mode": service_mode, "definition_installed": False, "script_installed": False}}}))',
+      'elif action == "repair":',
+      '    subprocess.run([fake_uvx, "--from", "git+https://github.com/ZhenHuangLab/CodexCont", "codexcont", "install", "-y"], check=True)',
+      '    subprocess.run([fake_uvx, "--from", "git+https://github.com/ZhenHuangLab/CodexCont", "codexcont", "restart"], check=True)',
+      '    print(json.dumps({"opl_flow_intelligence_enhancement_action": {"action": "repair", "status": "completed", "service": service_paths()}}))',
+      'else:',
+      '    raise SystemExit(f"unsupported action: {action}")',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  return scriptPath;
+}
+
 test('system startup-maintenance repairs enabled CodexCont intelligence enhancement in container mode', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-codexcont-'));
   const fakeBin = path.join(homeRoot, 'fake-bin');
@@ -25,6 +59,7 @@ test('system startup-maintenance repairs enabled CodexCont intelligence enhancem
         '',
       ].join('\n'),
     );
+    const oplFlowScript = writeOplFlowIntelligenceEnhancementFixture(homeRoot);
     fs.mkdirSync(codexHome, { recursive: true });
     fs.mkdirSync(codexContHome, { recursive: true });
     fs.writeFileSync(
@@ -69,6 +104,7 @@ test('system startup-maintenance repairs enabled CodexCont intelligence enhancem
       OPL_CODEXCONT_HOME: codexContHome,
       OPL_CODEXCONT_SERVICE_MODE: 'container',
       OPL_CODEXCONT_UVX: fakeUvx,
+      OPL_FLOW_INTELLIGENCE_SCRIPT: oplFlowScript,
       OPL_FRAMEWORK_UPDATE_TARGET_ROOT: path.resolve('.'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${fakeBin}:/usr/bin:/bin`,
