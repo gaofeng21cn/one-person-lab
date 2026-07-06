@@ -44,6 +44,7 @@ test('public and internal command specs no longer carry removed UI adapter comma
   assert.equal(typeof publicSpecs['connect packages manifest'].handler, 'function');
   assert.equal(typeof publicSpecs['connect reconcile-modules'].handler, 'function');
   assert.equal(typeof publicSpecs['connect pubmed search'].handler, 'function');
+  assert.equal(typeof publicSpecs['connect scientific search'].handler, 'function');
   assert.equal(typeof publicSpecs['update status'].handler, 'function');
   assert.equal(typeof publicSpecs['update plan'].handler, 'function');
   assert.equal(typeof publicSpecs['update apply'].handler, 'function');
@@ -219,6 +220,7 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('connect install'), true);
   assert.equal(commands.includes('connect sync-skills'), true);
   assert.equal(commands.includes('connect pubmed search'), true);
+  assert.equal(commands.includes('connect scientific search'), true);
   assert.equal(commands.includes('connect packages manifest'), true);
   assert.equal(commands.includes('connect reconcile-modules'), true);
   assert.equal(commands.includes('agents foundry status'), true);

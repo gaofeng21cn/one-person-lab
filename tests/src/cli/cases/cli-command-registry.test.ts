@@ -38,6 +38,26 @@ test('connect pubmed search exposes registry metadata in command help', () => {
   assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
 });
 
+test('connect scientific search exposes registry metadata in command help', () => {
+  const help = runCli(['help', 'connect', 'scientific', 'search']).help;
+  const contract = loadCliCommandRegistryContract();
+
+  assert.equal(help.registry.command_id, 'connect scientific search');
+  assert.equal(contract.commands.connect_scientific_search.command_id, help.registry.command_id);
+  assert.equal(help.registry.parser_adapter, 'node_util_parse_args');
+  assert.equal(contract.commands.connect_scientific_search.parser_adapter, help.registry.parser_adapter);
+  assert.deepEqual(help.registry.options.map((option: { name: string }) => option.name), ['provider', 'query', 'limit']);
+  assert.equal(
+    help.registry.json_output_schema_ref,
+    'contracts/opl-framework/cli-command-registry.json#/commands/connect_scientific_search/output_schema',
+  );
+  assert.equal(contract.commands.connect_scientific_search.output_schema.properties.version.const, 'g2');
+  assert.equal(help.registry.authority_boundary.can_write_domain_truth, false);
+  assert.equal(help.registry.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(help.registry.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
+});
+
 test('connect references verify exposes registry metadata in command help', () => {
   const help = runCli(['help', 'connect', 'references', 'verify']).help;
   const contract = loadCliCommandRegistryContract();

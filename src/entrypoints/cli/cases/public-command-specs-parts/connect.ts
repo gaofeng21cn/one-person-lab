@@ -14,6 +14,10 @@ import {
 import { buildAgentPackageCommandSpecs } from './connect-agent-packages.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
 import {
+  runOplConnectScientificSearch,
+  type ScientificConnectorProviderId,
+} from '../../../../modules/connect/opl-connect-scientific.ts';
+import {
   runOplConnectReferenceVerification,
   type ReferenceVerificationInput,
 } from '../../../../modules/connect/opl-connect-reference-verification.ts';
@@ -37,6 +41,12 @@ import { buildNoArgSpec, commandActionSummary } from './shared.ts';
 type ModuleAction = 'install' | 'update' | 'reinstall' | 'remove';
 
 type PubMedSearchArgs = {
+  query: string;
+  limit: number;
+};
+
+type ScientificSearchArgs = {
+  provider: ScientificConnectorProviderId;
   query: string;
   limit: number;
 };
@@ -89,6 +99,29 @@ function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchA
   }
 
   return { query, limit: Number(parsed.limit) };
+}
+
+function parseScientificSearchArgs(args: string[], spec: CommandSpec): ScientificSearchArgs {
+  const parsed = parseRegisteredCommandOptions('connect scientific search', args, spec);
+  const provider = String(parsed.provider ?? '').trim().toLowerCase();
+  const query = String(parsed.query ?? '').trim();
+  const allowedProviders = new Set(['pubmed', 'crossref', 'openalex']);
+  if (!allowedProviders.has(provider)) {
+    throw buildUsageError('connect scientific search requires --provider pubmed,crossref,openalex.', spec, {
+      required: ['--provider'],
+      provider,
+    });
+  }
+  if (query.length === 0) {
+    throw buildUsageError('connect scientific search requires --query.', spec, {
+      required: ['--query'],
+    });
+  }
+  return {
+    provider: provider as ScientificConnectorProviderId,
+    query,
+    limit: Number(parsed.limit),
+  };
 }
 
 function parseReferenceProviders(raw: string, spec: CommandSpec): ReferenceVerificationInput['providers'] {
@@ -501,6 +534,62 @@ export function buildConnectCommandSpecs(
           parsePubMedSearchArgs(args, connectCommandSpecs['connect pubmed search']),
         ),
     },
+    'connect scientific search': {
+      usage: 'opl connect scientific search --provider <pubmed|crossref|openalex> --query <query> [--limit <n>]',
+      summary: 'Search an optional scientific provider profile through OPL Connect and return normalized read-only source refs.',
+      examples: [
+        'opl connect scientific search --provider pubmed --query "diabetes mortality prediction" --limit 5 --json',
+        'opl connect scientific search --provider crossref --query "clinical prediction model" --json',
+        'opl connect scientific search --provider openalex --query "causal inference EHR" --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect scientific search',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'provider',
+            flag: '--provider',
+            value_kind: 'string',
+            summary: 'Scientific provider id: pubmed, crossref, or openalex.',
+            required: true,
+          },
+          {
+            name: 'query',
+            flag: '--query',
+            value_kind: 'string',
+            summary: 'Provider search query.',
+            required: true,
+          },
+          {
+            name: 'limit',
+            flag: '--limit',
+            value_kind: 'integer',
+            summary: 'Maximum number of normalized source refs to return.',
+            default: 10,
+            allowed_range: {
+              min: 1,
+              max: 50,
+            },
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_scientific_search/output_schema',
+        authority_boundary: {
+          owner: 'OPL Connect',
+          surface: 'read_only_optional_scientific_connector_profile',
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_claim_domain_ready: false,
+          can_claim_production_ready: false,
+        },
+      },
+      handler: async (args) =>
+        runOplConnectScientificSearch(
+          parseScientificSearchArgs(args, connectCommandSpecs['connect scientific search']),
+        ),
+    },
     'connect references verify': {
       usage: 'opl connect references verify --references-file <json> [--providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher] [--cache-root <path>] [--max-retries <n>]',
       summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts.',
@@ -849,8 +938,8 @@ export function buildConnectCommandSpecs(
   };
 
   validateCommandRegistryCoverage(connectCommandSpecs, {
-    protectedCommandPrefixes: ['connect pubmed', 'connect references', 'connect external-skills', 'connect foundation-skills', 'connect agent-packages'],
-    requiredCommandIds: ['connect pubmed search', 'connect references verify', ...MODULE_ACTION_COMMANDS],
+    protectedCommandPrefixes: ['connect pubmed', 'connect scientific', 'connect references', 'connect external-skills', 'connect foundation-skills', 'connect agent-packages'],
+    requiredCommandIds: ['connect pubmed search', 'connect scientific search', 'connect references verify', ...MODULE_ACTION_COMMANDS],
   });
 
   return connectCommandSpecs;

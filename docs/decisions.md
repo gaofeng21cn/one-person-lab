@@ -137,15 +137,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 默认防止策略固定为三段：stage 主提示词不得冒充专业技能或 domain verdict；professional specialist skill 不得签 owner receipt、typed blocker、human gate、publication readiness 或 artifact authority；tool/connector 不得把 transport/read receipt 升级成领域判断。
 - 后续改造优先更新 domain stage pack、prompt、professional skill、knowledge/rubric refs 和独立 reviewer gate；不得把开放式专家判断下沉成脚本流程，也不得为了统一把所有 stage 强制物化为 Codex Skill。
 
-### 决策：PubMed 文献入口进入 OPL Connect，MAS 保留科研判断与论文权威
+### 决策：科学文献 connector profile 进入 OPL Connect，MAS 保留科研判断与论文权威
 
-原因：MAS 的文献检索原型过去主要靠 ScholarSkills/skill 说明和领域脚本承接，触发快，但稳定性、错误语义、source ref 结构和跨 App / Workspace / 本机 CLI 复用不够统一。OPL Connect 作为 Fabric 的通用连接能力，应承接高频外部资源的稳定 read-only connector；MAS/ScholarSkills 继续承接医学论文写作、审阅、图表和 citation judgment 的 AI-first 专家策略。
+原因：MAS 的文献检索原型过去主要靠 ScholarSkills/skill 说明和领域脚本承接，触发快，但稳定性、错误语义、source ref 结构和跨 App / Workspace / 本机 CLI 复用不够统一。OPL Connect 作为 Fabric 的通用连接能力，应承接高频外部资源的稳定 read-only connector；PubMed 只是医学文献 MVP，Crossref / OpenAlex 作为 metadata、coverage 与 citation graph fallback 同属 optional scientific connector profile。MAS/ScholarSkills 继续承接医学论文写作、审阅、图表和 citation judgment 的 AI-first 专家策略。
 
 影响：
 
-- `opl connect pubmed search --query <query> --limit <n> --json` 成为 PubMed 第一条稳定 read-only connector 入口，返回 normalized `pubmed:<pmid>` refs、metadata、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
-- 该 connector 只调用 PubMed E-utilities 和输出 refs/metadata，不保存全文、不创建 OPL 文献库、不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明引用质量、论文进度、publication-ready、domain-ready 或 production-ready。
-- MAS `scout`、`write`、`review`、`figure` 等 stage 主提示词可以优先调用该 connector 获取文献 refs；医学取舍、证据链、claim-evidence map、review ledger、写作质量和 owner route 仍归 MAS。
+- `opl connect scientific search --provider pubmed|crossref|openalex --query <query> --limit <n> --json` 成为 optional scientific connector profile 的统一 read-only search 入口，返回 normalized source refs、metadata、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
+- `opl connect pubmed search --query <query> --limit <n> --json` 继续保留为 PubMed 兼容入口，返回 normalized `pubmed:<pmid>` refs、metadata、source URLs、connector invocation ref、ledger receipt candidate ref 和 no-authority boundary。
+- 这些 connector 只调用 provider API 和输出 refs/metadata，不保存全文、不创建 OPL 文献库、不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明引用质量、论文进度、publication-ready、domain-ready 或 production-ready。
+- MAS `scout`、`write`、`review`、`figure` 等 stage 主提示词可以优先调用 PubMed refs，并在 metadata、coverage 或 citation graph 缺口时消费 Crossref/OpenAlex fallback refs；医学取舍、证据链、claim-evidence map、review ledger、写作质量和 owner route 仍归 MAS。
 - ScholarSkills / MAS Scholar Skills 仍可提供医学文献检索 playbook、query 设计、筛选策略和专门 Skill；高频稳定资源访问逐步从 skill 原型沉淀为 Connect connector，避免把 API 稳定性、限流和 source ref normalization 留在领域 prompt 里。
 - `OPL Fabric` 是通用资源底座，`OPL Connect` 是其中可独立调用的连接能力；Console 可治理和展示 connector 策略，但不是 Connect 的唯一入口。本机 OPL App、在线 Workspace、CLI 和 domain agent 都可以按权限与 profile 直接调用 Connect。
 
