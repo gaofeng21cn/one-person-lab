@@ -9,6 +9,7 @@
     "connect pubmed",
     "connect references",
     "connect external-skills",
+    "connect foundation-skills",
     "connect agent-packages",
     "update",
     "status",
@@ -24,6 +25,8 @@
     "connect update",
     "connect reinstall",
     "connect remove",
+    "connect foundation-skills inspect",
+    "connect foundation-skills sync",
     "connect agent-packages registry refresh",
     "connect agent-packages validate-manifest",
     "connect agent-packages install",
@@ -1469,6 +1472,103 @@
               "target_root",
               "target_skill_root",
               "trigger_policy",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_foundation_skills_inspect": {
+      "command_id": "connect foundation-skills inspect",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_foundation_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_foundation_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "skill_count",
+              "skills",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    "connect_foundation_skills_sync": {
+      "command_id": "connect foundation-skills sync",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "skill",
+          "flag": "--skill",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": true
+        },
+        {
+          "name": "target-root",
+          "flag": "--target-root",
+          "value_kind": "string",
+          "required": true
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_connect_foundation_skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_connect_foundation_skills": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "skill",
+              "target_scope",
+              "target_root",
+              "target_skill_root",
+              "readback_path",
+              "no_authority",
               "authority_boundary"
             ],
             "additionalProperties": true

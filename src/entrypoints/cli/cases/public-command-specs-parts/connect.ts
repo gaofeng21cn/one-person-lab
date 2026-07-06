@@ -6,6 +6,11 @@ import {
   runOplConnectExternalSkillsSourceAdd,
   runOplConnectExternalSkillsSync,
 } from '../../../../modules/connect/opl-connect-external-skills.ts';
+import {
+  runOplConnectFoundationSkillsInspect,
+  runOplConnectFoundationSkillsSync,
+  type FoundationSkillsSyncInput,
+} from '../../../../modules/connect/opl-foundation-skills.ts';
 import { buildAgentPackageCommandSpecs } from './connect-agent-packages.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
 import {
@@ -64,6 +69,8 @@ type ExternalSkillsSyncArgs = ExternalSkillsInspectArgs & {
   targetQuest?: string;
   targetRoot?: string;
 };
+
+type FoundationSkillsSyncArgs = FoundationSkillsSyncInput;
 
 const MODULE_ACTION_COMMANDS = [
   'connect install',
@@ -250,6 +257,21 @@ function parseExternalSkillsSyncArgs(args: string[], spec: CommandSpec): Externa
   };
 }
 
+function parseFoundationSkillsSyncArgs(args: string[], spec: CommandSpec): FoundationSkillsSyncArgs {
+  const parsed = parseRegisteredCommandOptions('connect foundation-skills sync', args, spec);
+  const skill = String(parsed.skill ?? '').trim();
+  if (skill.length === 0) {
+    throw buildUsageError('connect foundation-skills sync requires --skill.', spec, {
+      required: ['--skill'],
+    });
+  }
+  return {
+    skill,
+    scope: String(parsed.scope ?? '').trim(),
+    targetRoot: readOptionalString(parsed['target-root']) ?? undefined,
+  };
+}
+
 function parseModuleActionArgs(command: string, args: string[], spec: CommandSpec) {
   const parsed = parseRegisteredCommandOptions(command, args, spec);
   const moduleId = String(parsed.module ?? '').trim();
@@ -347,6 +369,15 @@ export function buildConnectCommandSpecs(
   const externalSkillsAuthorityBoundary = {
     owner: 'OPL Connect',
     surface: 'external_skill_library_connector',
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+  } as const;
+
+  const foundationSkillsAuthorityBoundary = {
+    owner: 'OPL Connect',
+    surface: 'foundation_support_skill_connector',
     can_write_domain_truth: false,
     can_create_owner_receipt: false,
     can_claim_domain_ready: false,
@@ -721,6 +752,67 @@ export function buildConnectCommandSpecs(
           parseExternalSkillsSyncArgs(args, connectCommandSpecs['connect external-skills sync']),
         ),
     },
+    'connect foundation-skills inspect': {
+      usage: 'opl connect foundation-skills inspect',
+      summary: 'Inspect OPL Foundation support skills without syncing or loading them globally.',
+      examples: [
+        'opl connect foundation-skills inspect --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect foundation-skills inspect',
+        parser_adapter: 'node_util_parse_args',
+        options: [],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_foundation_skills_inspect/output_schema',
+        authority_boundary: foundationSkillsAuthorityBoundary,
+      },
+      handler: () => runOplConnectFoundationSkillsInspect(),
+    },
+    'connect foundation-skills sync': {
+      usage: 'opl connect foundation-skills sync --skill <skill_id> --scope <project|workspace|quest> --target-root <path>',
+      summary: 'Sync exactly one OPL Foundation support skill into a project, workspace, or quest Codex discovery directory.',
+      examples: [
+        'opl connect foundation-skills sync --skill opl-completion-audit-writer --scope project --target-root /path/to/project --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      registry: {
+        command_id: 'connect foundation-skills sync',
+        parser_adapter: 'node_util_parse_args',
+        options: [
+          {
+            name: 'skill',
+            flag: '--skill',
+            value_kind: 'string',
+            summary: 'Foundation skill directory id.',
+            required: true,
+          },
+          {
+            name: 'scope',
+            flag: '--scope',
+            value_kind: 'string',
+            summary: 'Target Codex discovery scope: project, workspace, or quest.',
+            required: true,
+          },
+          {
+            name: 'target-root',
+            flag: '--target-root',
+            value_kind: 'string',
+            summary: 'Project, workspace, or quest root that receives .codex/skills/<skill-id>.',
+            required: true,
+          },
+        ],
+        json_output_schema_ref:
+          'contracts/opl-framework/cli-command-registry.json#/commands/connect_foundation_skills_sync/output_schema',
+        authority_boundary: foundationSkillsAuthorityBoundary,
+      },
+      handler: (args) =>
+        runOplConnectFoundationSkillsSync(
+          parseFoundationSkillsSyncArgs(args, connectCommandSpecs['connect foundation-skills sync']),
+        ),
+    },
     ...buildAgentPackageCommandSpecs((command) => connectCommandSpecs[command], agentPackageAuthorityBoundary),
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',
@@ -757,7 +849,7 @@ export function buildConnectCommandSpecs(
   };
 
   validateCommandRegistryCoverage(connectCommandSpecs, {
-    protectedCommandPrefixes: ['connect pubmed', 'connect references', 'connect external-skills', 'connect agent-packages'],
+    protectedCommandPrefixes: ['connect pubmed', 'connect references', 'connect external-skills', 'connect foundation-skills', 'connect agent-packages'],
     requiredCommandIds: ['connect pubmed search', 'connect references verify', ...MODULE_ACTION_COMMANDS],
   });
 
