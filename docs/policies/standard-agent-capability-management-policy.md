@@ -215,7 +215,7 @@ MAS 当前分工按下列口径读取：
 | Display gallery、人审样例、模板、rubric、reference scripts | `reference_pack` | 对应 domain / professional pack owner | refs-only 或 filtered copy 随专业 pack / workspace sync 暴露。 | 可审或可引用不等于 visual parity、artifact ready、owner accepted 或 publication-ready。 |
 | ScholarSkills descriptor、schema、validator、readback contract | `contract_module` | OPL Framework / ScholarSkills contract owner | `contracts/**`、source validator、`opl scholar-skills * --json` readback。 | contract module 不伪装成 true Skill，不替代默认 professional Skill，也不授权 domain authority。 |
 
-`source` 和 `intake` 当前不作为 active 外置合同：通用 source / external-learning intake 归 OPL Framework 或 MAS stage/source surface。组学、因果推断、生存分析、reference integrity 等如果要升级为独立 MAS professional Skill，必须先落在 canonical `mas-scholar-skills` source repo；不能在 OPL plugin mirror 里创建第二套正文。真实 Nextflow / RDKit / PyHealth / single-cell 等 executable runtime、数据访问、artifact mutation 和 readiness 仍需独立 owner / source / projection / sync / authority 后才可落地。
+`source` 和 `intake` 当前不作为 active 外置合同：通用 source / external-learning intake 归 OPL Framework 或 MAS stage/source surface。已经在 canonical `mas-scholar-skills` source repo 物化的因果推断、生存分析、reference integrity、risk-model transportability、registry atlas、owner-gate handoff、display regression 和 data-freeze/readiness 等 medical-method specialist，默认仍是 optional workspace / quest-local discovery，不升级为 required/default pack。组学、Nextflow、RDKit、PyHealth、single-cell 等 executable runtime、数据访问、artifact mutation 和 readiness 仍需独立 owner / source / projection / sync / authority 后才可落地；不能在 OPL plugin mirror 里创建第二套正文。
 
 ## 新能力审查清单
 
