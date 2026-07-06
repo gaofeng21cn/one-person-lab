@@ -13,6 +13,7 @@
     "ordinary_entry": "settings_control_center",
     "required_fields": [
       "settings_ia",
+      "settings_projection",
       "app_settings_read_model",
       "app_aion_consumer_only_readback",
       "control_center_groups",
@@ -69,6 +70,30 @@
       "app_state.settings_control_center.action_catalog",
       "app_state.settings_control_center.capability_task_awareness_refs"
     ],
+    "settings_projection": {
+      "surface_kind": "opl_settings_projection.v1",
+      "purpose": "Settings-specific projection sections for App/Aion rendering so the UI does not infer Settings IA from broad app_state.",
+      "ordinary_sections": [
+        "summary",
+        "access",
+        "workspace",
+        "capabilities",
+        "resources",
+        "maintenance",
+        "storage",
+        "diagnostics"
+      ],
+      "item_required_fields": [
+        "scope",
+        "owner",
+        "risk",
+        "normal_summary",
+        "next_action",
+        "details_ref",
+        "editable_reason"
+      ],
+      "authority_policy": "settings_projection_is_read_model_only_no_live_readiness_or_release_claim"
+    },
     "capability_task_awareness_refs": {
       "surface_kind": "opl_settings_capability_task_awareness_refs.v1",
       "purpose": "Refs-only Settings/Capabilities slice for capability health, connector readiness, reusable workflow refs, and export bundle preview entrypoints without moving domain truth into Settings.",

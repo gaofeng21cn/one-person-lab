@@ -864,7 +864,12 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       one_shot_plan_landing: oneShotPlanLanding,
       agent_lab_feedback_self_evolution: agentLabFeedbackSelfEvolution,
       feedbackops: input.feedbackOps ?? {},
-      settings_control_center: input.settingsControlCenter,
+      settings_control_center: {
+        surface_kind: 'opl_settings_control_center_workbench_ref.v1',
+        source_ref: 'app_state.settings_control_center',
+        settings_projection_ref: 'app_state.settings_control_center.settings_projection',
+        read_model_ref: 'app_state.settings_control_center.app_settings_read_model',
+      },
       ...currentOwnerDeltaTopline,
       runtime_scope: runtimeScope,
       user_task_status_summary: userTaskStatusSummary,

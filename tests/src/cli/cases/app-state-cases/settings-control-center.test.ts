@@ -161,6 +161,57 @@ exit 1
       output.app_state.settings_control_center.app_settings_read_model.surface_kind,
       'opl_app_settings_read_model.v1',
     );
+    const settingsProjection = output.app_state.settings_control_center.settings_projection;
+    assert.equal(settingsProjection.surface_kind, 'opl_settings_projection.v1');
+    assert.deepEqual(settingsProjection.ordinary_sections, [
+      'summary',
+      'access',
+      'workspace',
+      'capabilities',
+      'resources',
+      'maintenance',
+      'storage',
+      'diagnostics',
+    ]);
+    assert.deepEqual(
+      Object.keys(settingsProjection.sections),
+      settingsProjection.ordinary_sections,
+    );
+    const requiredProjectionItemFields = [
+      'scope',
+      'owner',
+      'risk',
+      'normal_summary',
+      'next_action',
+      'details_ref',
+      'editable_reason',
+    ];
+    assert.deepEqual(settingsProjection.item_required_fields, requiredProjectionItemFields);
+    assert.equal(
+      Object.values(settingsProjection.sections).every((section: any) =>
+        Array.isArray(section.items)
+          && section.items.length > 0
+          && section.items.every((item: AppStateListEntry) =>
+            requiredProjectionItemFields.every((field) => typeof item[field] === 'string' && item[field].length > 0)
+          )
+      ),
+      true,
+    );
+    assert.equal(
+      settingsProjection.sections.resources.items.some(
+        (entry: AppStateListEntry) => entry.item_id === 'connect_fabric_external_resources'
+          && entry.scope === 'resources'
+          && entry.risk === 'read_only',
+      ),
+      true,
+    );
+    assert.equal(
+      settingsProjection.sections.storage.items.some(
+        (entry: AppStateListEntry) => entry.item_id === 'runtime_roots_cleanup_plan'
+          && entry.next_action === 'settings_prune_runtime_roots_dry_run',
+      ),
+      true,
+    );
     assert.deepEqual(
       output.app_state.settings_control_center.app_settings_read_model.capability_task_awareness_refs,
       output.app_state.settings_control_center.capability_task_awareness_refs,
@@ -488,9 +539,13 @@ exit 1
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_owner_receipt, false);
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_typed_blocker, false);
-    assert.deepEqual(
-      output.app_state.operator.workbench.settings_control_center,
-      output.app_state.settings_control_center,
+    assert.equal(
+      output.app_state.operator.workbench.settings_control_center.source_ref,
+      'app_state.settings_control_center',
+    );
+    assert.equal(
+      output.app_state.operator.workbench.settings_control_center.settings_projection_ref,
+      'app_state.settings_control_center.settings_projection',
     );
     assert.equal(output.app_state.opl_agent_codex_context.source, 'one-person-lab-app/product_profile');
     assert.equal(output.app_state.opl_agent_codex_context.policy, 'app_repo_owns_gui_context_text');

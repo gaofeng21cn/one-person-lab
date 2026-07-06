@@ -270,6 +270,246 @@ function buildSettingsIa(taskEntries: ReturnType<typeof buildTaskEntries>) {
   };
 }
 
+type SettingsProjectionItem = {
+  item_id: string;
+  label: string;
+  state: string;
+  scope: string;
+  owner: string;
+  risk: string;
+  normal_summary: string;
+  next_action: string;
+  details_ref: string;
+  editable_reason: string;
+};
+
+function settingsItem(input: SettingsProjectionItem) {
+  return input;
+}
+
+function taskByActionId(taskEntries: ReturnType<typeof buildTaskEntries>, actionId: string) {
+  return taskEntries.find((entry) => entry.action_id === actionId);
+}
+
+function riskForTask(task: ReturnType<typeof buildTaskEntries>[number] | undefined) {
+  if (!task || task.mutates === 'none_read_only') {
+    return 'read_only';
+  }
+  if (task.danger_level === 'high') {
+    return 'high_confirmation_required';
+  }
+  return task.confirmation_required ? 'confirmation_required' : 'reversible';
+}
+
+function editableReasonForTask(
+  taskEntries: ReturnType<typeof buildTaskEntries>,
+  actionId: string | null,
+  fallback: string,
+) {
+  if (!actionId) return fallback;
+  const task = taskByActionId(taskEntries, actionId);
+  return task
+    ? `editable_via_listed_action:${task.action_id}`
+    : fallback;
+}
+
+function settingsSection(
+  sectionId: string,
+  label: string,
+  routeId: string,
+  role: string,
+  items: SettingsProjectionItem[],
+) {
+  return {
+    section_id: sectionId,
+    label,
+    route_id: routeId,
+    role,
+    item_count: items.length,
+    items,
+  };
+}
+
+function buildSettingsProjection(
+  input: BuildSettingsControlCenterInput,
+  taskEntries: ReturnType<typeof buildTaskEntries>,
+  issueQueue: Array<Record<string, unknown>>,
+  settingsIa: ReturnType<typeof buildSettingsIa>,
+) {
+  const moduleSummary = asRecord(asRecord(input.modules).summary);
+  const temporal = asRecord(asRecord(input.provider).temporal);
+  const workspaceRoot = asRecord(input.paths.workspace_root);
+  const codexAccess = resolveSettingsCodexAccess(input.core);
+  const temporalStatus = asString(temporal.health_status) ?? asString(temporal.status);
+  const moduleHealth = `${moduleSummary.healthy_default_modules_count ?? 0}/${moduleSummary.default_modules_count ?? 0}`;
+  const firstIssueAction = asString(issueQueue[0]?.recommended_action_id);
+  const modelAccessTask = taskByActionId(taskEntries, 'settings_repair_model_access');
+  const workspaceTask = taskByActionId(taskEntries, 'settings_verify_workspace');
+  const syncCapabilitiesTask = taskByActionId(taskEntries, 'settings_sync_capabilities');
+  const appUpdateTask = taskByActionId(taskEntries, 'settings_check_app_update');
+  const cleanupTask = taskByActionId(taskEntries, 'settings_prune_runtime_roots_dry_run');
+
+  const sections = {
+    summary: settingsSection('summary', 'Summary', settingsIa.ordinary_entry, 'settings_overview_and_recommended_action', [
+      settingsItem({
+        item_id: 'settings_overview',
+        label: 'Settings overview',
+        state: issueQueue.length > 0 ? 'attention_needed' : 'available',
+        scope: 'user',
+        owner: 'one-person-lab',
+        risk: 'read_only',
+        normal_summary: issueQueue.length > 0
+          ? `${issueQueue.length} settings item(s) need attention.`
+          : 'Settings has no projected attention item.',
+        next_action: firstIssueAction ?? 'none',
+        details_ref: 'app_state.settings_control_center.status_summary',
+        editable_reason: 'read_only_projection_from_settings_status_summary',
+      }),
+    ]),
+    access: settingsSection('access', 'Access', 'access', 'model_access_local_remote_and_codex_cli', [
+      settingsItem({
+        item_id: 'codex_model_access',
+        label: 'Codex model access',
+        state: codexAccess.model_access_status,
+        scope: 'user',
+        owner: 'one-person-lab',
+        risk: riskForTask(modelAccessTask),
+        normal_summary: codexAccess.model_access_ready
+          ? `Model access is configured from ${codexAccess.model_access_source}.`
+          : 'Model access is missing or unreadable.',
+        next_action: codexAccess.model_access_ready ? 'none' : 'settings_repair_model_access',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.codex_model_policy',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_repair_model_access', 'read_only_projection_from_codex_config'),
+      }),
+    ]),
+    workspace: settingsSection('workspace', 'Workspace', 'workspace', 'workspace_paths_permissions_and_default_outputs', [
+      settingsItem({
+        item_id: 'workspace_root',
+        label: 'Workspace root',
+        state: asString(workspaceRoot.health_status) ?? 'unknown',
+        scope: 'workspace',
+        owner: 'one-person-lab',
+        risk: riskForTask(workspaceTask),
+        normal_summary: asString(workspaceRoot.selected_path) ?? asString(input.paths.workspace_root_path) ?? 'Workspace root is not selected.',
+        next_action: 'settings_verify_workspace',
+        details_ref: 'app_state.paths.workspace_root',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_verify_workspace', 'read_only_projection_from_workspace_root'),
+      }),
+    ]),
+    capabilities: settingsSection('capabilities', 'Capabilities', 'capabilities', 'agent_packages_shortcuts_and_capability_health', [
+      settingsItem({
+        item_id: 'managed_agent_packages',
+        label: 'Managed agent packages',
+        state: moduleSummary.healthy_default_modules_count === moduleSummary.default_modules_count ? 'ready' : 'attention_needed',
+        scope: 'local_machine',
+        owner: 'one-person-lab',
+        risk: riskForTask(syncCapabilitiesTask),
+        normal_summary: `${moduleHealth} default OPL modules are healthy.`,
+        next_action: moduleSummary.healthy_default_modules_count === moduleSummary.default_modules_count
+          ? 'none'
+          : 'settings_sync_capabilities',
+        details_ref: 'app_state.settings_control_center.capability_task_awareness_refs.capability_health_refs',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_sync_capabilities', 'read_only_projection_from_modules_summary'),
+      }),
+    ]),
+    resources: settingsSection('resources', 'Resources', 'resources', 'connect_fabric_cloud_ssh_hpc_and_workspace_resource_directory', [
+      settingsItem({
+        item_id: 'connect_fabric_external_resources',
+        label: 'Connect, Fabric, Cloud, SSH, and HPC resources',
+        state: 'refs_only',
+        scope: 'resources',
+        owner: 'one-person-lab',
+        risk: 'read_only',
+        normal_summary: 'External resource refs are surfaced only when an owned read model supplies them.',
+        next_action: 'none',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.workspace_services',
+        editable_reason: 'read_only_no_owned_resource_credentials_in_settings_projection',
+      }),
+    ]),
+    maintenance: settingsSection('maintenance', 'Maintenance', 'environment', 'updates_repairs_runtime_fabric_package_sync_and_local_services', [
+      settingsItem({
+        item_id: 'maintenance_routes',
+        label: 'Maintenance routes',
+        state: asString(appUpdateTask?.state) ?? 'unknown',
+        scope: 'local_machine',
+        owner: 'one-person-lab',
+        risk: riskForTask(appUpdateTask),
+        normal_summary: `Release channel is ${asString(input.release.channel) ?? 'unknown'}; provider status is ${statusTone(temporalStatus)}; module health is ${moduleHealth}.`,
+        next_action: 'settings_check_app_update',
+        details_ref: 'app_state.settings_control_center.app_settings_read_model.local_environment',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_check_app_update', 'read_only_projection_from_release_state'),
+      }),
+    ]),
+    storage: settingsSection('storage', 'Storage', 'storage', 'storage_inventory_cleanup_plan_and_receipt_status', [
+      settingsItem({
+        item_id: 'runtime_roots_cleanup_plan',
+        label: 'Runtime roots cleanup plan',
+        state: 'plan_only',
+        scope: 'local_machine',
+        owner: 'one-person-lab',
+        risk: riskForTask(cleanupTask),
+        normal_summary: 'Runtime-root cleanup is dry-run plan only from Settings.',
+        next_action: 'settings_prune_runtime_roots_dry_run',
+        details_ref: 'app_state.settings_control_center.action_catalog#settings_prune_runtime_roots_dry_run',
+        editable_reason: editableReasonForTask(taskEntries, 'settings_prune_runtime_roots_dry_run', 'read_only_projection_from_action_catalog'),
+      }),
+    ]),
+    diagnostics: settingsSection('diagnostics', 'Diagnostics', 'advanced', 'raw_refs_logs_developer_source_and_action_routes', [
+      settingsItem({
+        item_id: 'diagnostic_refs',
+        label: 'Diagnostic refs',
+        state: 'available',
+        scope: 'developer',
+        owner: 'one-person-lab',
+        risk: 'read_only',
+        normal_summary: 'Raw app state, Developer Mode, action policy, and consumer-only readback stay in diagnostics.',
+        next_action: 'none',
+        details_ref: 'app_state.settings_control_center.app_aion_consumer_only_readback',
+        editable_reason: 'read_only_projection_from_app_state',
+      }),
+    ]),
+  };
+
+  return {
+    surface_kind: 'opl_settings_projection.v1',
+    schema_version: 'opl_settings_projection.v1',
+    owner: 'one-person-lab',
+    source_surface: 'app_state.settings_control_center',
+    source_refs: [
+      'app_state.settings_control_center.status_summary',
+      'app_state.settings_control_center.settings_ia',
+      'app_state.settings_control_center.action_catalog',
+      'app_state.settings_control_center.app_settings_read_model',
+      'app_state.core.codex',
+      'app_state.paths',
+      'app_state.modules',
+      'app_state.provider',
+      'app_state.release',
+    ],
+    item_required_fields: [
+      'scope',
+      'owner',
+      'risk',
+      'normal_summary',
+      'next_action',
+      'details_ref',
+      'editable_reason',
+    ],
+    ordinary_sections: [
+      'summary',
+      'access',
+      'workspace',
+      'capabilities',
+      'resources',
+      'maintenance',
+      'storage',
+      'diagnostics',
+    ],
+    sections,
+    authority_boundary: settingsAuthorityFlags(),
+  };
+}
+
 function buildAppSettingsReadModel(
   input: BuildSettingsControlCenterInput,
   taskEntries: ReturnType<typeof buildTaskEntries>,
@@ -556,6 +796,19 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const settingsIa = buildSettingsIa(taskEntries);
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
   const appAionConsumerOnlyReadback = buildAppAionConsumerOnlyReadback();
+  const settingsProjection = buildSettingsProjection(
+    input,
+    taskEntries,
+    issueQueue,
+    settingsIa,
+  );
+  const appSettingsReadModel = buildAppSettingsReadModel(
+    input,
+    taskEntries,
+    issueQueue,
+    settingsIa,
+    appAionConsumerOnlyReadback,
+  );
 
   return {
     surface_kind: 'opl_settings_control_center.v2',
@@ -578,13 +831,8 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       issue_count: issueQueue.length,
     },
     settings_ia: settingsIa,
-    app_settings_read_model: buildAppSettingsReadModel(
-      input,
-      taskEntries,
-      issueQueue,
-      settingsIa,
-      appAionConsumerOnlyReadback,
-    ),
+    settings_projection: settingsProjection,
+    app_settings_read_model: appSettingsReadModel,
     app_aion_consumer_only_readback: appAionConsumerOnlyReadback,
     capability_task_awareness_refs: capabilityTaskAwarenessRefs,
     control_center_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
