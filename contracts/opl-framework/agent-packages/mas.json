@@ -9,6 +9,24 @@
   "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
   "machine_boundary": "This manifest declares first-party package dependencies and distribution projections. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "package_core": {
+    "core_kind": "opl_agent_package_core",
+    "identity_fields": [
+      "package_id",
+      "agent_id",
+      "version"
+    ],
+    "content_identity_fields": [
+      "manifest_sha256",
+      "payload_digest_ref",
+      "required_skill_pack_lock_refs",
+      "package_lock_ref"
+    ],
+    "dependency_source": "manifest_declared_capability_dependencies",
+    "lock_owner": "opl_connect_agent_package_registry",
+    "lifecycle_receipt_owner": "opl_connect_agent_package_registry",
+    "exposure_owner": "opl_connect_agent_package_registry"
+  },
   "distribution_payload": {
     "payload_kind": "ghcr_oci_agent_package",
     "payload_ref": "ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest",
@@ -38,6 +56,16 @@
     ],
     "user_install_action_count": 1
   },
+  "carrier_adapters": [
+    {
+      "adapter_kind": "codex_plugin_carrier",
+      "carrier": "codex_plugin",
+      "source_surface": "codex_surface",
+      "projection_role": "package_carrier_adapter",
+      "owns_package_core": false,
+      "owns_domain_truth": false
+    }
+  ],
   "opl_managed_surface": {
     "package_shape": "thin_agent_package",
     "dependency_resolution": "managed_dependency_graph",
