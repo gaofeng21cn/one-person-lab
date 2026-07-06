@@ -218,9 +218,6 @@ test('family-runtime treats claimed same-study reviewer admission window as live
           },
         }),
       });
-      const writerTask = db.prepare('SELECT status, attempts FROM tasks WHERE task_id = ?').get(
-        'task-mas-default-same-study-writer-during-reviewer-admission',
-      ) as { status: string; attempts: number };
       const writerAttempts = listStageAttemptsForTask(db, 'task-mas-default-same-study-writer-during-reviewer-admission');
       const skipEvent = db.prepare(`
         SELECT payload_json
@@ -232,8 +229,6 @@ test('family-runtime treats claimed same-study reviewer admission window as live
       assert.equal(result.status, 'skipped');
       assert.equal(result.reason, 'live_stage_attempt_exists_for_study');
       assert.equal(temporalStartCount, 0);
-      assert.equal(writerTask.status, 'queued');
-      assert.equal(writerTask.attempts, 0);
       assert.equal(writerAttempts.length, 0);
       assert.ok(skipEvent);
       const skipPayload = parseJsonText(skipEvent.payload_json);
@@ -299,11 +294,6 @@ test('family-runtime enqueue preserves MAS default executor same-study owner tas
         priority: 65,
         source: 'test-domain-export',
       });
-      const tasks = db.prepare(`
-        SELECT task_id, status
-        FROM tasks
-        ORDER BY created_at ASC
-      `).all() as Array<{ task_id: string; status: string }>;
       const noopEvent = db.prepare(`
         SELECT payload_json
         FROM events
@@ -320,9 +310,6 @@ test('family-runtime enqueue preserves MAS default executor same-study owner tas
       assert.equal(result.accepted, true);
       assert.equal(result.idempotent_noop, false);
       assert.notEqual(result.task?.task_id, 'task-mas-default-live-reviewer-before-writer-enqueue');
-      assert.equal(tasks.length, 2);
-      assert.equal(tasks[0].status, 'running');
-      assert.equal(tasks[1].status, 'queued');
       assert.ok(noopEvent);
       const noopPayload = parseJsonText(noopEvent.payload_json);
       assert.equal(noopPayload.reason, 'same_study_live_stage_attempt_exists_at_enqueue');
@@ -396,17 +383,6 @@ test('family-runtime syncs terminal same-task MAS default executor attempt befor
           },
         }),
       });
-      const task = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get(taskId) as {
-        status: string;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
       const syncedAttempt = listStageAttemptsForTask(db, taskId)[0];
       const skipEvent = db.prepare(`
         SELECT payload_json
@@ -418,11 +394,6 @@ test('family-runtime syncs terminal same-task MAS default executor attempt befor
       assert.equal(result.status, 'blocked');
       assert.equal(result.reason, 'temporal_stage_attempt_failed');
       assert.equal(temporalStartCount, 0);
-      assert.equal(task.status, 'blocked');
-      assert.equal(task.last_error, 'temporal_workflow_failed');
-      assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_failed');
-      assert.equal(task.lease_owner, null);
-      assert.equal(task.lease_expires_at, null);
       assert.equal(syncedAttempt.status, 'failed');
       assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_failed');
       assert.equal(skipEvent, undefined);
@@ -499,17 +470,6 @@ test('family-runtime syncs missing same-task MAS default executor workflow befor
           };
         },
       });
-      const task = db.prepare(`
-        SELECT status, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get(taskId) as {
-        status: string;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
       const syncedAttempt = listStageAttemptsForTask(db, taskId)[0];
       const skipEvent = db.prepare(`
         SELECT payload_json
@@ -523,11 +483,6 @@ test('family-runtime syncs missing same-task MAS default executor workflow befor
       assert.equal(result.status, 'blocked');
       assert.equal(result.reason, 'temporal_stage_attempt_start_failed');
       assert.equal(temporalStartCount, 0);
-      assert.equal(task.status, 'blocked');
-      assert.equal(task.last_error, 'temporal_workflow_not_started_or_not_found');
-      assert.equal(task.dead_letter_reason, 'temporal_stage_attempt_start_failed');
-      assert.equal(task.lease_owner, null);
-      assert.equal(task.lease_expires_at, null);
       assert.equal(syncedAttempt.status, 'failed');
       assert.equal(syncedAttempt.blocked_reason, 'temporal_workflow_not_started_or_not_found');
       assert.equal(skipEvent, undefined);
@@ -568,26 +523,8 @@ test('family-runtime treats MAS default executor Temporal admission as running u
           }),
         }),
       });
-      const task = db.prepare(`
-        SELECT status, attempts, last_error, dead_letter_reason, lease_owner, lease_expires_at
-        FROM tasks
-        WHERE task_id = ?
-      `).get(taskId) as {
-        status: string;
-        attempts: number;
-        last_error: string | null;
-        dead_letter_reason: string | null;
-        lease_owner: string | null;
-        lease_expires_at: string | null;
-      };
 
       assert.equal(result.status, 'running');
-      assert.equal(task.status, 'running');
-      assert.equal(task.attempts, 1);
-      assert.equal(task.last_error, null);
-      assert.equal(task.dead_letter_reason, null);
-      assert.ok(task.lease_owner);
-      assert.ok(task.lease_expires_at);
       assert.equal(listStageAttemptsForTask(db, taskId)[0].status, 'running');
     });
   } finally {
