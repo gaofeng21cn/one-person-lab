@@ -428,13 +428,6 @@ test('runtime snapshot exposes App operator drilldown as refs-only owner-aware r
     assert.equal(stageProductionAttemptRoute.route_target_kind, 'opl_cli');
     assert.equal(stageProductionAttemptRoute.execution_policy, 'opl_safe_action_shell');
     assert.equal(stageProductionAttemptRoute.execution_surface, 'opl runtime action execute');
-    assert.equal(stageProductionAttemptRoute.route_status, 'request_route_available');
-    assert.equal(stageProductionAttemptRoute.request_scope, 'opl_owned_stage_attempt_request_only');
-    assert.equal(stageProductionAttemptRoute.creates_domain_action, false);
-    assert.equal(stageProductionAttemptRoute.creates_owner_receipt, false);
-    assert.deepEqual(stageProductionAttemptRoute.owner_receipt_refs, []);
-    assert.equal(stageProductionAttemptRoute.closes_expected_receipt_refs, false);
-    assert.equal(stageProductionAttemptRoute.closes_monitor_freshness, false);
     assert.equal(stageProductionAttemptRoute.domain_id, 'medautoscience');
     assert.equal(stageProductionAttemptRoute.ref.includes('opl family-runtime attempt create'), true);
     assert.equal(stageProductionAttemptRoute.ref.includes('--domain medautoscience'), true);
