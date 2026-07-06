@@ -158,6 +158,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - One Person Lab App 持有 GUI product truth、GUI runtime bridge 产品合同、release gate、updater metadata、用户教程、页面状态合同、首启验收和 active shell validation；`opl-aion-shell` 只持有当前 GUI shell implementation carrier 职责。更换 GUI shell 不得改变 OPL runtime CLI/projection protocol，不得把 runtime truth、domain truth、artifact body、memory body 或 quality/export verdict 下沉到 shell repo。
 - 当前 GUI 主线固定为 `one-person-lab-app` 通过 `shells/aionui` 消费的 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative GUI candidate。AG-UI/CopilotKit / `agui-codex` 只能作为 archived technical proof 与显式 replay surface 保留；除非用户明确要求 AGUI，不得继续作为日常候选推进、默认验证、功能抛光或 release/adoption 路线。
 - 外部壳不得反向改写默认 runtime 合同；GUI 定制只能建立在 Codex-default 路径之上。
+- 外部壳和 Native Workbench 不得自造 runtime / task / package 状态语义。AionUI 只能消费 App-owned canonical `app_state` / `action_refs` 并保留 canonical id；Native Workbench fallback 只能显示不可用、只预览或需要 payload，不能生成 fake action id，不能推断 package installed/executable、runtime ready、task running/current 或 owner receipt。
 - 普通用户 App 产品面必须固定为 `Codex CLI` concrete executor 与内置 Foundry Agent task entry；不得把 AionUI upstream 的多 backend、多 Agent 选择、通用 Agent host 或非默认 executor adapter 暴露成普通用户默认选择器。非默认 executor adapter 只能通过显式 request、stage attempt、handoff 或 developer/operator diagnostic 进入，并继续接受 OPL receipt / audit / fail-closed 约束。
 - 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。
 
