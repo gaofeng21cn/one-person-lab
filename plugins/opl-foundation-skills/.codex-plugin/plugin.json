@@ -1,0 +1,33 @@
+{
+  "name": "opl-foundation-skills",
+  "version": "0.1.0",
+  "description": "Source-only Codex plugin for OPL Framework base and support skills.",
+  "author": {
+    "name": "One Person Lab"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "opl",
+    "framework",
+    "foundation-skills",
+    "codex-skill"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OPL Foundation Skills",
+    "shortDescription": "AI-first support skills for OPL Framework operators and agent authors.",
+    "longDescription": "Provides source-only OPL support skills for Runway compute diagnosis, Stagecraft stage design, Connect source and skill routing, and Foundry Lab agent improvement review. These skills preserve AI-first judgment while keeping runtime, provider, receipt, owner, and readiness authority in OPL Framework and domain owner surfaces.",
+    "developerName": "One Person Lab",
+    "category": "Productivity",
+    "capabilities": [
+      "Skill",
+      "Developer Tools"
+    ],
+    "defaultPrompt": [
+      "Use OPL Foundation Skills to review a Runway compute handoff.",
+      "Use OPL Foundation Skills to design a Stagecraft stage prompt.",
+      "Use OPL Foundation Skills to route an external source or improve an agent skill."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

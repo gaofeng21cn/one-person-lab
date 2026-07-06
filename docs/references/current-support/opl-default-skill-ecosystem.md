@@ -17,6 +17,15 @@ MAS professional skill dependency 只从 MAS agent package manifest 读取。`ma
 
 OPL 自身的 base / support Skill 只用于 Framework 运维、agent authoring、contract-light 调试、work-order 写法和 capability 审查。它们不是 MAS/MAG/RCA/BookForge 的专业领域 Skill，也不是 `src/modules/**` 的实现替身。推荐 source-only 位置是 `plugins/opl-foundation-skills/skills/<skill-id>/SKILL.md`；只有经过 Connect / Pack / managed profile 投影后，才进入 Codex-visible plugin surface、package payload、workspace / quest `.codex/skills/` 或用户级 discovery path。生成物、缓存和安装目标都不是 canonical source。
 
+当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四个首批 Skill 是：
+
+- `opl-runway-compute-operator`：Runway compute / provider route 诊断和 handoff briefing。
+- `opl-stagecraft-stage-designer`：Stagecraft stage prompt、rubric、capability use 和 handoff lower-bound 设计。
+- `opl-connect-source-and-skill-router`：Connect external source / Skill search-inspect-sync、single-skill sync 和 connector receipt debug。
+- `opl-foundry-agent-improver`：Foundry Lab work-order、conformance/eval、Skill rewrite 和 promotion/rollback briefing。
+
+这四个 Skill 只把开放式判断、诊断和改写方法留在 AI 层；credential、queue、submit/wait/harvest、registry/sync、receipt、schema、runtime truth、owner receipt、typed blocker、domain verdict、App release verdict 和 production readiness 仍由对应模块或 domain owner surface 持有。
+
 ## 三层模型
 
 | 层级 | 例子 | 默认安装/同步位置 | 维护原则 |

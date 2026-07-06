@@ -122,6 +122,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/scholar-skills-command-surface.test.ts',
   'tests/src/cli/cases/scholar-skills-artifact-engines.test.ts',
   'tests/src/cli/cases/scholar-skills-plugin-surface.test.ts',
+  'tests/src/cli/cases/opl-foundation-skills-plugin-surface.test.ts',
   'tests/src/cli/cases/scholarskills-connect.test.ts',
   'tests/src/cli/cases/connect-pubmed.test.ts',
   'tests/src/cli/cases/connect-reference-verification.test.ts',
