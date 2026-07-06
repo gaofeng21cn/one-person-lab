@@ -6,10 +6,10 @@ import type {
   NormalizedSessionContinuity,
   NormalizedSkillCatalog,
 } from './types.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   isRecord,
   normalizeRecordList,
-  optionalString,
   readStringList,
   requireString,
   requireSurfaceKind,

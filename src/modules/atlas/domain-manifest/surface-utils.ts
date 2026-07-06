@@ -3,9 +3,9 @@ import type {
   NormalizedSurfaceRef,
   NormalizedTaskSurfaceDescriptor,
 } from './types.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   isRecord,
-  optionalString,
   readStringList,
   requireString,
   requireSurfaceKind,

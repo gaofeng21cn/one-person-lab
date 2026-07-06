@@ -8,9 +8,7 @@ import {
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
 } from './default-caller-retirement-guard.ts';
 import { isRecord } from './contract-validation.ts';
-import { optionalString } from './json-file.ts';
-
-export type JsonRecord = Record<string, unknown>;
+import { stringValue as optionalString, type JsonRecord } from './json-record.ts';
 
 const DEFAULT_CALLER_TARGET_KINDS = [
   'opl_generated_surface',

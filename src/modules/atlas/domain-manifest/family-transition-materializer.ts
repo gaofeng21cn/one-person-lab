@@ -5,9 +5,10 @@ import {
   prepareManagedShellCommandCwd,
 } from '../../../kernel/managed-shell-command-env.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import type { WorkspaceBinding } from '../../workspace/index.ts';
 import { unwrapManifestPayload } from './entry-surfaces.ts';
-import { isRecord, optionalString } from './shared-utils.ts';
+import { isRecord } from './shared-utils.ts';
 
 type JsonRecord = Record<string, unknown>;
 

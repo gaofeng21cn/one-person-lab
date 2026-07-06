@@ -1,5 +1,6 @@
 import type { listEvents } from './family-runtime-store.ts';
-import { isRecord, optionalString } from '../atlas/index.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
+import { isRecord } from '../atlas/index.ts';
 import { OBSERVABILITY_RUNTIME_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import {
   buildProviderLongSoakEvidenceProjection,

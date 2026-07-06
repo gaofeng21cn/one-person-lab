@@ -8,11 +8,11 @@ import {
   buildVisualTransitionMatrixCases,
   normalizeVisualTransitionSpec,
 } from '../../stagecraft/index.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import type { NormalizedFamilyTransitionProjection } from './types.ts';
 import {
   isRecord,
   normalizeRecordList,
-  optionalString,
   requireRecord,
   requireString,
 } from './shared-utils.ts';

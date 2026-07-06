@@ -1,7 +1,7 @@
 import { normalizeGrantTransitionOracle } from '../../stagecraft/index.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   isRecord,
-  optionalString,
   readStringList,
 } from './shared-utils.ts';
 import type { NormalizedDomainManifest } from './types.ts';

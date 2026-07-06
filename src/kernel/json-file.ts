@@ -4,8 +4,10 @@ import {
   FrameworkContractError,
   isRecord,
 } from './contract-validation.ts';
+import type { JsonRecord } from './json-record.ts';
 
-export type JsonRecord = Record<string, unknown>;
+export type { JsonRecord } from './json-record.ts';
+export { stringValue as optionalString } from './json-record.ts';
 
 export type JsonRecordFileBoundary = {
   missingMessage: (filePath: string) => string;
@@ -36,10 +38,6 @@ export type JsonFileReadResult =
 export type JsonReceiptLedger<Receipt> = {
   receipts: Receipt[];
 };
-
-export function optionalString(value: unknown) { // reuse-first: allow central JSON scalar boundary helper.
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
 
 export function parseJsonText(raw: string): unknown {
   return JSON.parse(raw); // reuse-first: allow central JSON file boundary parse.

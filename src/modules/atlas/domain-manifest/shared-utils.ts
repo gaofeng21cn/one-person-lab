@@ -2,7 +2,6 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringValue as optionalString, type JsonRecord } from '../../../kernel/json-record.ts';
 
 export { isRecord } from '../../../kernel/contract-validation.ts';
-export { stringValue as optionalString } from '../../../kernel/json-record.ts';
 
 export function requireString(value: unknown, field: string) {
   const text = optionalString(value);

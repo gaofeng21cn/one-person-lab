@@ -1,8 +1,8 @@
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   isRecord,
   normalizeRecordList,
   normalizeRecordMap,
-  optionalString,
   readStringList,
   requireString,
 } from './shared-utils.ts';

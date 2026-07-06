@@ -7,6 +7,7 @@ import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-cata
 import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../../../kernel/managed-runtime-contract.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { normalizeFamilyTransitionSurfaces } from './family-transition-normalizer.ts';
 import {
   normalizeArtifactInventory,
@@ -53,7 +54,6 @@ import {
   isRecord,
   normalizeRecordList,
   normalizeRecordMap,
-  optionalString,
   readStringList,
   requireRecord,
   requireString,

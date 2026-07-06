@@ -3,5 +3,3 @@ export {
   DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS,
   defaultCallerSurfaceGates,
 } from '../../kernel/default-caller-surface-gates.ts';
-
-export type { JsonRecord } from '../../kernel/default-caller-surface-gates.ts';

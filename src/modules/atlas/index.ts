@@ -11,7 +11,7 @@ export type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts
 export { normalizeManifest } from './domain-manifest/normalizers.ts';
 export { resolveBindingManifest } from './domain-manifest/resolver.ts';
 export type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts';
-export { isRecord, optionalString } from './domain-manifest/shared-utils.ts';
+export { isRecord } from './domain-manifest/shared-utils.ts';
 export type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 export { buildFamilyAgentDescriptorList } from './family-domain-agent-descriptor.ts';
 export { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
