@@ -7,9 +7,9 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 
 ## 品牌定位
 
-`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、Capability Invocation lifecycle descriptors、ToolResultEnvelope descriptors、App actions、Homebrew、installer 和 release artifacts。
+`OPL Connect` 是 OPL 的外部接口与分发模块。它把同一套 OPL / Foundry Agent contracts 派生到 CLI、MCP、Skill/plugin、OpenAI tools、AI SDK tools、Capability Invocation lifecycle descriptors、ToolResultEnvelope descriptors、App actions、Homebrew、installer 和 release artifacts，并承载 OPL Agent Package Core 的 registry / manifest / lock / lifecycle receipt / owner route readback。
 
-一句话：`Connect` 管“外部系统和用户怎样稳定接入同一套 OPL 能力”。
+一句话：`Connect` 管“外部系统和用户怎样稳定接入同一套 OPL 能力”，其中 Agent Package Core 是 OPL/App 管理智能体 package 的核心；Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release 只是 carrier 或 owner surfaces。
 
 ## 设计理念
 
@@ -33,6 +33,8 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | `ai_sdk_tool_descriptor` | AI SDK tool schema。 |
 | `app_action_descriptor` | App action list / execute 的合同。 |
 | `release_channel` | Homebrew、DMG、Full bundle、Docker/WebUI、GHCR 等分发入口。 |
+| `agent_package_core` | OPL/App 管理智能体 package 的核心：registry、manifest、digest lock、dependency graph、trust tier、lifecycle receipt、exposure、shortcut refs 和 owner-route readback。 |
+| `agent_package_carrier_adapter` | Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release、MCP/Web/native 等 carrier 投影；只提供可见面、route、readback、reload guidance 或 owner-specific action refs。 |
 | `external_source_connector` | PubMed 等外部资源的只读连接器，返回 normalized source refs、request/read receipt 和 no-authority boundary。 |
 | `generated_drift_manifest` | source input 与 generated artifact 的对齐状态。 |
 | `profile_driven_skill_sync_manifest` | 对 MAS Scholar Skills 等 profile/overlay 驱动的 skill pack，同步输出 required/default pack、安装落点、source status 与 false-authority boundary。 |
@@ -44,6 +46,7 @@ Workspace 级 L4 的 Connect 对象模型必须把 semantic authority 与 transp
 | `connect_read_model` | external surfaces、module install health、descriptor drift、transport channel 和 semantic source refs 的分层状态。 |
 | `semantic_surface_ref` | Atlas/Stagecraft/Workspace/Runway/Ledger/domain pack 等 canonical contract refs；决定接口语义。 |
 | `transport_install_ref` | Homebrew、App updater、Full bundle、skill/plugin sync、module install、package manifest 等安装/分发证据；只证明 transport。 |
+| `agent_package_owner_route_readback` | package core、carrier adapters、digest lock、lifecycle receipt、shortcut/exposure 和 no-package-manager boundary 的 refs-only readback。 |
 | `generated_interface_bundle` | CLI/MCP/Skill/OpenAI/AI SDK/App action descriptor bundle 与 source/generated fingerprint。 |
 | `connect_validation_report` | descriptor consistency、fingerprint、module install contract、fresh-install matrix 和 false authority flags。 |
 | `connect_doctor_report` | transport failure、semantic drift、missing descriptor、stale generated artifact 或 release evidence gap 的分层诊断。 |
@@ -90,6 +93,8 @@ opl brand-modules inspect --module connect --json
 
 Connect 暴露 Skill/MCP/plugin/install transport 时，必须能指回 Foundry Agent series spine：`opl connect skills` 和 `opl connect sync-skills` 输出 `foundry_agent_series`、`command_surface_spine`、`mcp_projection` 与旧桶退役策略。旧 `opl skill list|sync` 和 `opl module *` 只保留 fail-closed replacement，不再作为普通入口。
 
+Connect 暴露 OPL Agent Packages 时，必须把 Agent Package Core 和 carrier adapters 分开读：`opl connect agent-packages list|status --json` 输出 package core、descriptor/digest/lock/lifecycle/exposure、carrier readback 和 no-package-manager boundary；`install|update|repair|rollback|uninstall` 只写 Framework package lock、lifecycle receipt 与受控 carrier 物理面。Codex Plugin/local marketplace 只是 `codex_plugin_carrier`，OPL App shortcuts 只是 Home / cockpit 可见性 carrier，workflow profile 只是 Codex profile / instruction block carrier，runtime/app release 只是安装与更新 carrier。carrier 可以触发 reload guidance、semantic-merge guidance 或 owner route，但不得成为 package dependency graph、domain truth、runtime authority、release currentness 或 owner receipt 的真相源。
+
 Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。第一条稳定 connector 是 `opl connect pubmed search`：它只调用 PubMed E-utilities，返回 `pubmed:<pmid>` source refs、标题、期刊、作者、DOI、URL、connector invocation ref 和 ledger receipt candidate ref；它不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。MAS 的 scout/write/review/figure 等 Skill 可以把该 connector 作为稳定文献入口消费，再由 MAS 自己完成 citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
 
 MAS Scholar Skills 同步模型：
@@ -121,6 +126,9 @@ contracts/opl-framework/public-surface-index.json
 ## Authority boundary
 
 - Connect 持有 external surface generation、descriptor distribution、install transport 和 drift evidence。
+- Connect 持有 OPL Agent Package Core 的 registry / manifest / lock / lifecycle receipt / owner-route readback；该 core 只管理 package id、version、digest、dependency、trust、lock、lifecycle receipt、exposure 和 shortcut refs。
+- Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release、MCP/Web/native 只作为 carrier / owner surfaces；它们不拥有 package core、package truth、domain truth、runtime authority、release verdict 或 owner receipt。
+- Managed Update 对 agent packages 只提供 owner route、component receipt、safe action refs 和 readback projection；它不是私有 package manager，也不能用单独的 carrier apply 声称 package、release 或 domain 已完成。
 - Connect 持有 external source connector 的 API 调用、normalized refs、错误/限流语义和 invocation receipt candidate；domain agent 持有引用取舍、证据解释、artifact 写入和 owner verdict。
 - Atlas、Stagecraft、Workspace、Runway、Ledger 持有被派生 surface 的 canonical source。
 - Capability Invocation lifecycle descriptor 只描述 Pack 的三层 lifecycle；soft/scored 层不执行工具，hard gate 只引用 `current_owner_delta`，不让 Connect 判断 domain readiness。
@@ -134,6 +142,9 @@ contracts/opl-framework/public-surface-index.json
 - 不把 release/install pass 写成 App release-ready 之外的 domain ready。
 - 不把 Homebrew transport 写成 semantic authority。
 - 不把 Skill/MCP/OpenAI/AI SDK descriptor 存在写成 handler 可用。
+- 不把 Agent Package Core 写成 Codex Plugin/local marketplace、OPL App shortcut、workflow profile 或 runtime/app release 的附属物；carrier 只能投影 core，不能反向拥有 core。
+- 不把 Managed Update Kernel 写成 OPL 私有 package manager；它只做 owner route/readback/receipt projection 和受控 action refs。
+- 不把 Codex Plugin/local marketplace 安装、App shortcut 可见、workflow profile 同步或 runtime/app release 投影写成 package truth、domain ready、release currentness、owner receipt 或 runtime authority。
 - 不把 Capability Invocation lifecycle descriptor 写成 handler readiness、owner answer、typed blocker 或 current-owner authorization。
 - 不把 ToolResultEnvelope descriptor 或 structured result presence 写成 domain authority、owner answer 或 handler readiness。
 - 不把单一 channel 安装成功写成全渠道 release complete。
