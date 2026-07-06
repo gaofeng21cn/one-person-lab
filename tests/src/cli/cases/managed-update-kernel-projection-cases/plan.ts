@@ -51,7 +51,7 @@ exit 2
     assert.equal(agents.component_id, 'capability_packages');
     assert.equal(agents.provider_id, 'capability_packages');
     assert.equal(agents.receipt.schema_version, 'opl_managed_update_component_receipt.v1');
-    assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable'); // reuse-first: allow owner-routed descriptor projection assertion.
+    assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest'); // reuse-first: allow owner-routed descriptor projection assertion.
     assert.equal(agents.receipt.content_identity_fields.includes('digest'), true);
     assert.equal(agents.receipt.content_identity_fields.includes('sha256'), true);
     assert.equal(agents.receipt.post_apply_hooks.includes('sync_plugin_registry'), true); // reuse-first: allow post-apply projection assertion.

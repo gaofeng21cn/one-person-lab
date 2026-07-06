@@ -625,7 +625,7 @@ exit 2
     assert.equal(agents.current.tag_role, 'selector_only');
     assert.deepEqual(agents.current.oci_distribution, {
       descriptor_media_type: 'application/vnd.opl.capability-package.channel.v1+json',
-      channel_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable',
+      channel_ref: 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest',
       tag_role: 'selector_only',
       installed_receipt_must_record_digest: true,
       digest_field: 'to_digest',
@@ -640,7 +640,7 @@ exit 2
     assert.equal(typeof agents.status_detail.clean_managed_targets_count, 'number');
     assert.equal(agents.status_detail.manual_required_targets_count, 0);
     assert.equal(agents.post_apply_guidance.reload_guidance.reload_recommended, true);
-    assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:stable');
+    assert.equal(agents.receipt.source_manifest_ref, 'ghcr.io/gaofeng21cn/one-person-lab-manifest:latest');
     assert.equal(agents.receipt.apply_mode, 'auto_apply');
     assert.equal(agents.receipt.owner_projection.owner, 'one-person-lab-managed-modules');
     assert.equal(agents.receipt.owner_projection.apply_owner, 'opl_connect_managed_module_reconciler');
