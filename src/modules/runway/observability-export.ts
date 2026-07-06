@@ -93,10 +93,15 @@ function byDomainStatus(attempts: JsonRecord[]) {
 function buildProviderExport(snapshot: JsonRecord) {
   const runtimeHealth = record(snapshot.runtime_health);
   const proof = record(snapshot.provider_continuous_proof);
+  const providerKind = stringValue(runtimeHealth.provider_kind);
+  const diagnosticProviderReady = booleanValue(runtimeHealth.provider_ready);
+  const providerReady = providerKind === 'local_sqlite' ? false : diagnosticProviderReady;
   return {
     readiness: {
-      provider_kind: stringValue(runtimeHealth.provider_kind),
-      provider_ready: booleanValue(runtimeHealth.provider_ready),
+      provider_kind: providerKind,
+      provider_ready: providerReady,
+      diagnostic_provider_ready: diagnosticProviderReady,
+      local_sqlite_counts_as_provider_ready: false,
       runtime_health_status: stringValue(runtimeHealth.status),
     },
     proof_counts: {
