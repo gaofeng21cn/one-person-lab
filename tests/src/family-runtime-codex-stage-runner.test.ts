@@ -885,6 +885,9 @@ exit 0
       stagePacketRef: 'packet:gflab-no-output-schema',
       runnerMode: 'codex_cli',
       timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
     });
 
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
@@ -985,6 +988,9 @@ exit 64
       stagePacketRef: 'packet:gflab-enforcement-no-output-schema',
       runnerMode: 'codex_cli',
       timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
     });
 
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
@@ -1053,6 +1059,7 @@ exit 64
       runnerMode: 'codex_cli',
       timeoutMs: 10_000,
       env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
         OPL_WORKSPACE_ROOT: expectedWorkspaceRoot,
       },
     });
@@ -1168,6 +1175,9 @@ exit 64
       stagePacketRef: expectedStagePacketRef,
       runnerMode: 'codex_cli',
       timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
     });
 
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, [

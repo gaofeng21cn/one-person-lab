@@ -43,6 +43,7 @@ export { canonicalOwnerId } from './owner-id.ts';
 export { parseGithubRepoFromUrl } from './developer-mode-source-policy.ts';
 export { resolveOplDeveloperModeFrameworkCheckout } from './developer-mode.ts';
 export type { OplDeveloperModeFrameworkCheckoutProjection } from './developer-mode.ts';
+export { runOplFlowIntelligenceEnhancementAction } from './codexcont-intelligence-mode.ts';
 export { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
 export { runOplEngineAction } from './system-installation/engine-actions.ts';

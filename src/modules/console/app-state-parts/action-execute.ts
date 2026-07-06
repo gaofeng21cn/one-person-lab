@@ -10,6 +10,7 @@ import {
   runOplAgentPackageRollback,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
+  runOplFlowIntelligenceEnhancementAction,
   runOplModuleAction,
   agentPackageDelegatedSurface,
 } from '../../connect/index.ts';
@@ -53,7 +54,6 @@ import {
   dryRunFamilyRuntimeResult,
   dryRunModuleAction,
 } from './action-execute-previews.ts';
-import { runOplFlowIntelligenceEnhancementAction } from './codexcont-intelligence-mode.ts';
 
 type JsonRecord = Record<string, unknown>;
 
