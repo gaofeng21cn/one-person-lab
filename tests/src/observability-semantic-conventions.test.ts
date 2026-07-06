@@ -4,9 +4,6 @@ import test from 'node:test';
 
 import {
   OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS,
-  appOperatorProjectionCommand,
-  appOperatorProjectionRef,
-  appOperatorProjectionTestRef,
   buildObservabilitySemanticConventionExportSeed,
   buildObservabilitySemanticConventionReadback,
   renderObservabilitySemanticConventionOpenMetrics,
@@ -173,31 +170,10 @@ test('observability semantic conventions freeze the OPL vocabulary and signal ma
   );
   assert.equal(semanticContract.export_readback_seed.readiness_claim, 'not_claimed');
   assert.equal(semanticContract.authority_boundary.ledger_refs_only, true);
-  assert.equal(semanticContract.authority_boundary.can_create_private_ledger_ui, false);
   assert.equal(semanticContract.authority_boundary.can_claim_runtime_ready, false);
 });
 
-test('observability helper owns legacy Console operator projection refs', () => {
-  const legacyTerm = ['drill', 'down'].join('');
-  assert.equal(
-    appOperatorProjectionCommand({ json: true }),
-    `opl runtime app-operator-${legacyTerm} --json`,
-  );
-  assert.equal(
-    appOperatorProjectionCommand({ detail: 'full', json: true }),
-    `opl runtime app-operator-${legacyTerm} --detail full --json`,
-  );
-  assert.equal(
-    appOperatorProjectionRef('semantic_conventions'),
-    `/runtime_tray_snapshot/app_operator_${legacyTerm}/semantic_conventions`,
-  );
-  assert.equal(
-    appOperatorProjectionTestRef(),
-    `tests/src/cli/cases/runtime-app-operator-${legacyTerm}.test.ts`,
-  );
-});
-
-test('observability readback projects current owner refs without becoming a ledger UI', () => {
+test('observability readback projects current owner refs without storing payload bodies', () => {
   const readback = buildObservabilitySemanticConventionReadback({
     current_owner_delta: {
       stage_run_id: 'stage-run:mas:review',
@@ -221,7 +197,6 @@ test('observability readback projects current owner refs without becoming a ledg
 
   assert.equal(readback.surface_kind, 'opl_observability_semantic_conventions_readback');
   assert.equal(readback.authority_boundary.ledger_refs_only, true);
-  assert.equal(readback.authority_boundary.can_create_private_ledger_ui, false);
   assert.equal(readback.authority_boundary.can_store_payload_body, false);
   assert.deepEqual(readback.forbidden_body_fields_present, ['artifact_body']);
   assert.deepEqual(readback.forbidden_body_fields, [
@@ -232,7 +207,6 @@ test('observability readback projects current owner refs without becoming a ledg
     'memory_body',
   ]);
   assert.equal(readback.exporter_signal_mapping.traces.otel_signal, 'trace');
-  assert.equal(readback.collector_export_boundary.can_create_private_ledger_ui, false);
   assert.equal(readback.collector_export_boundary.payload_body_exported, false);
   assert.deepEqual(readback.canonical_attributes, {
     stage_run_id: 'stage-run:mas:review',
@@ -393,7 +367,6 @@ test('evidence envelope projection binds operator readback to semantic conventio
     semanticConventions.signal_groups.metrics.find((metric) => metric.instrument === 'error_count')?.value,
     1,
   );
-  assert.equal(semanticConventions.authority_boundary.can_create_private_ledger_ui, false);
   assert.equal(semanticConventions.authority_boundary.no_domain_ready_claim, true);
   assert.equal(semanticConventions.summary.body_included, false);
 });

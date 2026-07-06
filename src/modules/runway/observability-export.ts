@@ -186,12 +186,12 @@ function sourceRefs(snapshot: JsonRecord) {
 }
 
 function selectedSemanticAttempt(snapshot: JsonRecord, attempts: JsonRecord[]) {
-  const appDrilldown = record(snapshot.app_operator_drilldown);
-  const attentionPayload = record(appDrilldown.attention_first_payload);
+  const operatorProjection = record(snapshot.app_operator_drilldown);
+  const attentionPayload = record(operatorProjection.attention_first_payload);
   const currentOwnerDelta = record(attentionPayload.current_owner_delta);
   const selectedAttemptId = firstString(
     currentOwnerDelta.stage_attempt_id,
-    record(appDrilldown.current_owner_delta).stage_attempt_id,
+    record(operatorProjection.current_owner_delta).stage_attempt_id,
   );
   return {
     currentOwnerDelta,
@@ -316,7 +316,7 @@ function buildRuntimeSemanticConventionProjection(input: {
         'provider_continuous_proof',
       ],
       source_projection_command_ref: 'opl runtime app-operator-drilldown --detail full --json',
-      source_projection_boundary: 'refs_only_operator_projection_no_private_observability_ui',
+      source_projection_boundary: 'refs_only_current_owner_projection_no_observability_ui',
       exporter_signal_mapping_ref: 'semantic_conventions.exporter_signal_mapping',
       collector_export_boundary_ref: 'semantic_conventions.collector_export_boundary',
       exporter_seed_ref: 'semantic_conventions.exporter_seed',
@@ -450,7 +450,7 @@ export function renderObservabilityOpenMetrics(exportPayload: Awaited<ReturnType
     '# HELP opl_provider_ready Current configured family runtime provider readiness from the OPL read model.',
     '# TYPE opl_provider_ready gauge',
     metricLine('opl_provider_ready', providerReady, { provider_kind: providerKind }),
-    '# HELP opl_provider_proofs_total Temporal/provider residency proof receipts observed in the OPL ledger.',
+    '# HELP opl_provider_proofs_total Temporal/provider residency proof receipts observed in OPL runtime authority refs.',
     '# TYPE opl_provider_proofs_total counter',
     metricLine('opl_provider_proofs_total', exportPayload.provider.proof_counts.proof_event_count, {
       provider_kind: providerKind,

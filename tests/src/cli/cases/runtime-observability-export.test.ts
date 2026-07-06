@@ -162,12 +162,9 @@ db.close();`,
       OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     });
     const observability = output.observability_export;
-    const legacyOperatorProjectionTerm = ['drill', 'down'].join('');
 
     assert.equal(observability.surface_kind, 'opl_runtime_observability_export');
     assert.equal(observability.format, 'json');
-    assert.equal(observability.source_surfaces.includes('opl_runtime_ledger'), false);
-    assert.equal(observability.source_surfaces.includes('app_operator_drilldown_current_owner_delta'), false);
     assert.equal(observability.source_surfaces.includes('opl_runtime_authority_refs'), true);
     assert.equal(observability.source_surfaces.includes('opentelemetry_current_owner_delta_ref'), true);
     assert.equal(observability.provider.readiness.provider_ready, false);
@@ -206,23 +203,13 @@ db.close();`,
     );
     assert.equal(
       observability.semantic_conventions.runtime_export_binding.source_surfaces.includes(
-        'app_operator_drilldown_current_owner_delta',
-      ),
-      false,
-    );
-    assert.equal(
-      observability.semantic_conventions.runtime_export_binding.source_surfaces.includes(
         'opentelemetry_current_owner_delta_ref',
       ),
       true,
     );
     assert.equal(
-      observability.semantic_conventions.runtime_export_binding.source_projection_command_ref,
-      `opl runtime app-operator-${legacyOperatorProjectionTerm} --detail full --json`,
-    );
-    assert.equal(
       observability.semantic_conventions.runtime_export_binding.source_projection_boundary,
-      'refs_only_operator_projection_no_private_observability_ui',
+      'refs_only_current_owner_projection_no_observability_ui',
     );
     assert.equal(
       observability.semantic_conventions.runtime_export_binding.exporter_signal_mapping_ref,

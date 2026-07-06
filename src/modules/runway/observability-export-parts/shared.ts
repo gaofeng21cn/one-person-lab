@@ -180,7 +180,7 @@ export type ObservabilityCollectorSmokeReadback = {
 
 export const AUTHORITY_BOUNDARY = {
   opl: 'read_only_observability_export_projection',
-  source_authority: 'opl_runtime_ledger_provider_receipts_snapshot_and_domain_projection_refs',
+  source_authority: 'opl_runtime_authority_refs_provider_receipts_snapshot_and_domain_projection_refs',
   can_execute_repair: false,
   can_write_domain_truth: false,
   can_authorize_quality_verdict: false,
@@ -245,14 +245,14 @@ export function buildObservabilityOwnerRouteReadback(): ObservabilityOwnerRouteR
     ],
     forbidden_completion_evidence: [
       'OpenMetrics smoke endpoint alone',
-      'CLI diagnostic drilldown projection',
+      'CLI diagnostic operator projection',
       'phase10-src-modules-observability finding_count=0',
       'strict diff gate',
     ],
     legal_next_owner_action:
       'Open an OPL Observability owner lane for OTLP/OpenTelemetry SDK exporter and external collector consumption; bounded OpenMetrics seed remains diagnostic only.',
     stop_condition:
-      'Operator drilldown can read the same current owner delta through trace, metric, log, and event vocabulary from a live exporter/collector path, or Observability emits a typed blocker.',
+      'CLI operator projection reads the same current owner delta through trace, metric, log, and event vocabulary from a live exporter/collector path, or Observability emits a typed blocker.',
   };
 }
 
