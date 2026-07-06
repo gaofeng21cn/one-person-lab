@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://one-person-lab.local/contracts/family-orchestration/research-evidence-pack.schema.json",
-  "title": "OPL Research Evidence Pack",
-  "description": "Refs-only research evidence pack for OPL indexing, projection, and stage replay readiness. Domain agents retain body, receipt signing, accept/reject, ready, quality, and artifact authority.",
+  "$id": "https://one-person-lab.local/contracts/family-orchestration/stage-run-evidence-pack.schema.json",
+  "title": "OPL Stage Run Evidence Pack",
+  "description": "Refs-only stage run evidence pack for OPL indexing, projection, and stage replay readiness. Domain agents retain body, receipt signing, accept/reject, ready, quality, and artifact authority.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
     "version",
     "pack_id",
     "target_domain_id",
-    "study_id",
+    "stage_run_id",
     "run_manifest",
     "negative_failed_path_ledger",
     "decision_trace",
@@ -19,12 +19,12 @@
     "authority_boundary"
   ],
   "properties": {
-    "surface_kind": { "const": "research_evidence_pack" },
-    "version": { "const": "research_evidence_pack.v1" },
+    "surface_kind": { "const": "stage_run_evidence_pack" },
+    "version": { "const": "stage_run_evidence_pack.v1" },
     "pack_id": { "type": "string", "minLength": 1 },
     "target_domain_id": { "type": "string", "minLength": 1 },
-    "study_id": { "type": "string", "minLength": 1 },
-    "run_manifest": { "$ref": "#/$defs/research_run_manifest" },
+    "stage_run_id": { "type": "string", "minLength": 1 },
+    "run_manifest": { "$ref": "#/$defs/stage_run_manifest" },
     "negative_failed_path_ledger": { "$ref": "#/$defs/negative_failed_path_ledger" },
     "decision_trace": { "$ref": "#/$defs/decision_trace" },
     "artifact_lineage_graph": { "$ref": "#/$defs/artifact_lineage_graph" },
@@ -67,7 +67,7 @@
         "body_included": { "const": false }
       }
     },
-    "research_run_manifest": {
+    "stage_run_manifest": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -81,8 +81,8 @@
         "output_refs"
       ],
       "properties": {
-        "surface_kind": { "const": "research_run_manifest" },
-        "version": { "const": "research_run_manifest.v1" },
+        "surface_kind": { "const": "stage_run_manifest" },
+        "version": { "const": "stage_run_manifest.v1" },
         "run_id": { "type": "string", "minLength": 1 },
         "stage_id": { "type": "string", "minLength": 1 },
         "stage_attempt_id": { "type": "string", "minLength": 1 },
@@ -307,7 +307,7 @@
         "can_mutate_artifact_body"
       ],
       "properties": {
-        "opl_role": { "const": "research_evidence_pack_projection_only" },
+        "opl_role": { "const": "stage_run_evidence_pack_projection_only" },
         "evidence_scope": { "const": "refs_index_projection_replay_only" },
         "can_read_domain_body": { "const": false },
         "can_accept_or_reject_owner_receipt": { "const": false },
@@ -320,32 +320,32 @@
   },
   "examples": [
     {
-      "surface_kind": "research_evidence_pack",
-      "version": "research_evidence_pack.v1",
-      "pack_id": "pack:example:research-run",
+      "surface_kind": "stage_run_evidence_pack",
+      "version": "stage_run_evidence_pack.v1",
+      "pack_id": "pack:example:stage-run",
       "target_domain_id": "example-domain",
-      "study_id": "study-001",
+      "stage_run_id": "run-001",
       "run_manifest": {
-        "surface_kind": "research_run_manifest",
-        "version": "research_run_manifest.v1",
-        "run_id": "run:study-001:stage-1",
+        "surface_kind": "stage_run_manifest",
+        "version": "stage_run_manifest.v1",
+        "run_id": "run:run-001:stage-1",
         "stage_id": "stage-1",
-        "stage_attempt_id": "attempt:study-001:stage-1",
+        "stage_attempt_id": "attempt:run-001:stage-1",
         "replay_stages": [
           {
             "stage_id": "stage-1",
-            "append_only_event_log_refs": ["event-log:study-001/stage-1"],
-            "attempt_ledger_refs": ["attempt-ledger:study-001/stage-1"],
-            "recorded_runtime_event_refs": ["runtime-event:study-001/stage-1-closeout"],
-            "closeout_receipt_refs": ["owner-receipt:study-001/stage-1"]
+            "append_only_event_log_refs": ["event-log:run-001/stage-1"],
+            "attempt_ledger_refs": ["attempt-ledger:run-001/stage-1"],
+            "recorded_runtime_event_refs": ["runtime-event:run-001/stage-1-closeout"],
+            "closeout_receipt_refs": ["owner-receipt:run-001/stage-1"]
           }
         ],
         "input_refs": [
           {
-            "ref_id": "source:study-001",
-            "role": "research_source",
+            "ref_id": "input:run-001",
+            "role": "stage_input",
             "ref_kind": "workspace_relative_path",
-            "ref": "studies/study-001/source/index.json",
+            "ref": "runs/run-001/source/index.json",
             "status": "present",
             "required": true,
             "checksum_status": "verified",
@@ -368,7 +368,7 @@
           {
             "decision_id": "decision:stage-1-next-owner",
             "stage_id": "stage-1",
-            "decision_ref": "decision:study-001/stage-1",
+            "decision_ref": "decision:run-001/stage-1",
             "next_owner_ref": "owner:example-domain-review",
             "status": "handoff"
           }
@@ -384,14 +384,14 @@
       "reproducibility_bundle": {
         "surface_kind": "reproducibility_bundle",
         "version": "reproducibility_bundle.v1",
-        "environment_refs": ["env:study-001"],
-        "dependency_lock_refs": ["lock:study-001"],
-        "replay_command_refs": ["command:study-001/replay"],
+        "environment_refs": ["env:run-001"],
+        "dependency_lock_refs": ["lock:run-001"],
+        "replay_command_refs": ["command:run-001/replay"],
         "restore_refs": [],
-        "checksum_manifest_refs": ["checksum:study-001"]
+        "checksum_manifest_refs": ["checksum:run-001"]
       },
       "authority_boundary": {
-        "opl_role": "research_evidence_pack_projection_only",
+        "opl_role": "stage_run_evidence_pack_projection_only",
         "evidence_scope": "refs_index_projection_replay_only",
         "can_read_domain_body": false,
         "can_accept_or_reject_owner_receipt": false,

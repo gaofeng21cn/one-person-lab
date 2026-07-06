@@ -31,7 +31,7 @@ import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from '../runtime-develo
 import { buildRuntimeOmaAppLivePathCommandSpecs } from '../runtime-oma-app-live-path-command-spec.ts';
 import { buildRuntimeOmaProductionConsumptionCommandSpecs } from '../runtime-oma-production-consumption-command-spec.ts';
 import { buildIndexCommandSpec } from '../index-command-spec.ts';
-import { buildRuntimeResearchEvidencePackCommandSpecs } from '../runtime-research-evidence-pack-command-spec.ts';
+import { buildRuntimeStageRunEvidencePackCommandSpecs } from '../runtime-stage-run-evidence-pack-command-spec.ts';
 import {
   buildRuntimeStageCandidatePortfolioCommandSpecs,
 } from '../runtime-stage-candidate-portfolio-command-spec.ts';
@@ -325,7 +325,7 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeOmaAppLivePathCommandSpecs(),
     ...buildRuntimeOmaProductionConsumptionCommandSpecs(),
-    ...buildRuntimeResearchEvidencePackCommandSpecs(),
+    ...buildRuntimeStageRunEvidencePackCommandSpecs(),
     ...buildRuntimeStageCandidatePortfolioCommandSpecs(),
     ...buildRuntimeEnvironmentCommandSpecs(),
     'runtime action execute': {

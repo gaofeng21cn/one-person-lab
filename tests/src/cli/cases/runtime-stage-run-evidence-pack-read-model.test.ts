@@ -3,7 +3,7 @@ import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, t
 function readSchemaExample() {
   const schemaPath = path.join(
     repoRoot,
-    'contracts/family-orchestration/research-evidence-pack.schema.json',
+    'contracts/family-orchestration/stage-run-evidence-pack.schema.json',
   );
   const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as {
     examples: Array<Record<string, unknown>>;
@@ -12,13 +12,13 @@ function readSchemaExample() {
 }
 
 function writePayload(payload: unknown) {
-  const payloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-research-pack-cli-'));
-  const payloadFile = path.join(payloadDir, 'research-evidence-pack.json');
+  const payloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-pack-cli-'));
+  const payloadFile = path.join(payloadDir, 'stage-run-evidence-pack.json');
   fs.writeFileSync(payloadFile, `${JSON.stringify(payload, null, 2)}\n`);
   return { payloadDir, payloadFile };
 }
 
-test('runtime research-evidence-pack summary projects a body-free CLI read model', () => {
+test('runtime stage-run-evidence-pack summary projects a body-free CLI read model', () => {
   const pack = {
     ...readSchemaExample(),
     run_manifest: {
@@ -28,7 +28,7 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
           ref_id: 'artifact:table1',
           role: 'table_artifact',
           ref_kind: 'workspace_relative_path',
-          ref: 'studies/study-001/artifacts/table1.csv',
+          ref: 'runs/run-001/artifacts/table1.csv',
           status: 'missing',
           required: true,
           checksum_status: 'missing',
@@ -40,7 +40,7 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
         ...((readSchemaExample().run_manifest as { replay_stages: unknown[] }).replay_stages),
         {
           stage_id: 'review',
-          append_only_event_log_refs: ['event-log:study-001/review'],
+          append_only_event_log_refs: ['event-log:run-001/review'],
           attempt_ledger_refs: [],
           recorded_runtime_event_refs: [],
           closeout_receipt_refs: [],
@@ -54,7 +54,7 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
         {
           path_id: 'failed:model-a',
           stage_id: 'stage-1',
-          failed_path_ref: 'ledger:study-001/model-a',
+          failed_path_ref: 'ledger:run-001/path-a',
           owner_ref: 'owner:example-domain',
           status: 'failed',
           body_included: false,
@@ -65,8 +65,8 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
           path_id: 'negative:null-model',
           result_id: 'negative:null-model',
           stage_id: 'stage-1',
-          failed_path_ref: 'ledger:study-001/null-model',
-          result_ref: 'ledger:study-001/null-model',
+          failed_path_ref: 'ledger:run-001/no-match',
+          result_ref: 'ledger:run-001/no-match',
           owner_ref: 'owner:example-domain',
           status: 'negative_result',
           body_included: false,
@@ -78,21 +78,21 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
   try {
     const output = runCli([
       'runtime',
-      'research-evidence-pack',
+      'stage-run-evidence-pack',
       'summary',
       '--payload-file',
       payloadFile,
     ]);
-    const readModel = output.research_evidence_pack_read_model;
+    const readModel = output.stage_run_evidence_pack_read_model;
 
-    assert.equal(readModel.surface_kind, 'research_evidence_pack_summary');
-    assert.equal(readModel.pack_id, 'pack:example:research-run');
+    assert.equal(readModel.surface_kind, 'stage_run_evidence_pack_summary');
+    assert.equal(readModel.pack_id, 'pack:example:stage-run');
     assert.equal(readModel.pack_refs.some((entry: { ref: string }) =>
-      entry.ref === 'studies/study-001/source/index.json'), true);
+      entry.ref === 'runs/run-001/source/index.json'), true);
     assert.equal(readModel.pack_refs.some((entry: { ref: string }) =>
-      entry.ref === 'decision:study-001/stage-1'), true);
+      entry.ref === 'decision:run-001/stage-1'), true);
     assert.equal(readModel.pack_refs.some((entry: { ref: string }) =>
-      entry.ref === 'event-log:study-001/stage-1'), true);
+      entry.ref === 'event-log:run-001/stage-1'), true);
     assert.deepEqual(readModel.missing_refs.map((entry: { ref_id: string }) => entry.ref_id), [
       'artifact:table1',
     ]);
@@ -111,7 +111,7 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
     });
     assert.equal(readModel.failed_path_count, 1);
     assert.equal(readModel.negative_result_count, 1);
-    assert.deepEqual(readModel.decision_trace_refs, ['decision:study-001/stage-1']);
+    assert.deepEqual(readModel.decision_trace_refs, ['decision:run-001/stage-1']);
     assert.deepEqual(readModel.next_owner_refs, ['owner:example-domain-review']);
     assert.deepEqual(readModel.stage_replay_readiness, {
       stage_count: 2,
@@ -131,7 +131,7 @@ test('runtime research-evidence-pack summary projects a body-free CLI read model
   }
 });
 
-test('runtime research-evidence-pack summary fails closed on evidence bodies', () => {
+test('runtime stage-run-evidence-pack summary fails closed on evidence bodies', () => {
   const { payloadDir, payloadFile } = writePayload({
     ...readSchemaExample(),
     domain_body: { forbidden: true },
@@ -139,14 +139,14 @@ test('runtime research-evidence-pack summary fails closed on evidence bodies', (
   try {
     const failure = runCliFailure([
       'runtime',
-      'research-evidence-pack',
+      'stage-run-evidence-pack',
       'summary',
       '--payload-file',
       payloadFile,
     ]);
 
     assert.equal(failure.payload.error.code, 'cli_usage_error');
-    assert.match(failure.payload.error.message, /valid body-free research evidence pack/);
+    assert.match(failure.payload.error.message, /valid body-free stage run evidence pack/);
     assert.deepEqual(
       failure.payload.error.details.validation_errors.map((entry: { code: string }) => entry.code),
       ['domain_body_forbidden'],
@@ -154,4 +154,16 @@ test('runtime research-evidence-pack summary fails closed on evidence bodies', (
   } finally {
     fs.rmSync(payloadDir, { recursive: true, force: true });
   }
+});
+
+test('runtime stage-run-evidence-pack summary does not keep the old research alias', () => {
+  const failure = runCliFailure([
+    'runtime',
+    'research-evidence-pack',
+    'summary',
+    '--payload',
+    '{}',
+  ]);
+
+  assert.equal(failure.payload.error.code, 'unknown_command');
 });

@@ -625,12 +625,12 @@ export function buildPublicRuntimeCommandSpecs(
       examples: ['opl runtime index'],
       group: 'runtime',
     }),
-    'runtime research-evidence-pack summary':
-      cloneCommandSpec(commandSpecs['runtime research-evidence-pack summary'], {
+    'runtime stage-run-evidence-pack summary':
+      cloneCommandSpec(commandSpecs['runtime stage-run-evidence-pack summary'], {
         usage:
-          'opl runtime research-evidence-pack summary (--payload <json>|--payload-file <path>)',
+          'opl runtime stage-run-evidence-pack summary (--payload <json>|--payload-file <path>)',
         examples: [
-          'opl runtime research-evidence-pack summary --payload-file research-evidence-pack.json',
+          'opl runtime stage-run-evidence-pack summary --payload-file stage-run-evidence-pack.json',
         ],
         group: 'runtime',
       }),

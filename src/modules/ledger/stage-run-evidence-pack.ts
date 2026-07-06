@@ -9,7 +9,7 @@ import {
 type ChecksumStatus = 'verified' | 'missing' | 'mismatch' | 'unchecked';
 type RestoreStatus = 'restore_ready' | 'restore_pending' | 'restored' | 'restore_blocked' | 'not_required';
 
-export interface ResearchEvidencePackValidationError {
+export interface StageRunEvidencePackValidationError {
   code:
     | 'root_not_object'
     | 'surface_kind_invalid'
@@ -23,12 +23,12 @@ export interface ResearchEvidencePackValidationError {
   message: string;
 }
 
-export interface ResearchEvidencePackValidation {
+export interface StageRunEvidencePackValidation {
   valid: boolean;
-  errors: ResearchEvidencePackValidationError[];
+  errors: StageRunEvidencePackValidationError[];
 }
 
-export interface ResearchEvidencePackMissingRef {
+export interface StageRunEvidencePackMissingRef {
   ref_id: string | null;
   role: string | null;
   ref_kind: string | null;
@@ -37,7 +37,7 @@ export interface ResearchEvidencePackMissingRef {
   status: string | null;
 }
 
-export interface ResearchEvidencePackRef {
+export interface StageRunEvidencePackRef {
   ref: string;
   source_surface: string;
   ref_id: string | null;
@@ -49,14 +49,14 @@ export interface ResearchEvidencePackRef {
   restore_status: string | null;
 }
 
-export interface ResearchEvidencePackSummary {
-  surface_kind: 'research_evidence_pack_summary';
-  version: 'research_evidence_pack_summary.v1';
+export interface StageRunEvidencePackSummary {
+  surface_kind: 'stage_run_evidence_pack_summary';
+  version: 'stage_run_evidence_pack_summary.v1';
   pack_id: string | null;
   target_domain_id: string | null;
-  study_id: string | null;
-  pack_refs: ResearchEvidencePackRef[];
-  missing_refs: ResearchEvidencePackMissingRef[];
+  stage_run_id: string | null;
+  pack_refs: StageRunEvidencePackRef[];
+  missing_refs: StageRunEvidencePackMissingRef[];
   checksum_status: Record<`${ChecksumStatus}_count`, number>;
   restore_status: Record<`${RestoreStatus}_count`, number>;
   failed_path_count: number;
@@ -71,7 +71,7 @@ export interface ResearchEvidencePackSummary {
     blocked_stage_ids: string[];
   };
   authority_boundary: {
-    opl_role: 'research_evidence_pack_projection_only';
+    opl_role: 'stage_run_evidence_pack_projection_only';
     evidence_scope: 'refs_index_projection_replay_only';
     can_read_domain_body: false;
     can_accept_or_reject_owner_receipt: false;
@@ -83,7 +83,7 @@ export interface ResearchEvidencePackSummary {
 }
 
 const REQUIRED_SURFACES = [
-  ['run_manifest', 'research_run_manifest', 'research_run_manifest.v1'],
+  ['run_manifest', 'stage_run_manifest', 'stage_run_manifest.v1'],
   ['negative_failed_path_ledger', 'negative_failed_path_ledger', 'negative_failed_path_ledger.v1'],
   ['decision_trace', 'decision_trace', 'decision_trace.v1'],
   ['artifact_lineage_graph', 'artifact_lineage_graph', 'artifact_lineage_graph.v1'],
@@ -91,7 +91,7 @@ const REQUIRED_SURFACES = [
 ] as const;
 
 const AUTHORITY_BOUNDARY = {
-  opl_role: 'research_evidence_pack_projection_only',
+  opl_role: 'stage_run_evidence_pack_projection_only',
   evidence_scope: 'refs_index_projection_replay_only',
   can_read_domain_body: false,
   can_accept_or_reject_owner_receipt: false,
@@ -110,14 +110,14 @@ function stringListValue(value: unknown) {
 }
 
 function validationError(
-  code: ResearchEvidencePackValidationError['code'],
+  code: StageRunEvidencePackValidationError['code'],
   path: string,
   message: string,
-): ResearchEvidencePackValidationError {
+): StageRunEvidencePackValidationError {
   return { code, path, message };
 }
 
-function collectForbiddenBodyErrors(value: unknown, path: string, errors: ResearchEvidencePackValidationError[]) {
+function collectForbiddenBodyErrors(value: unknown, path: string, errors: StageRunEvidencePackValidationError[]) {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => collectForbiddenBodyErrors(entry, `${path}[${index}]`, errors));
     return;
@@ -132,7 +132,7 @@ function collectForbiddenBodyErrors(value: unknown, path: string, errors: Resear
       errors.push(validationError(
         'domain_body_forbidden',
         childPath,
-        'OPL research evidence packs are refs/index/projection/replay only and must not carry domain body.',
+        'OPL stage run evidence packs are refs/index/projection/replay only and must not carry domain body.',
       ));
       continue;
     }
@@ -140,7 +140,7 @@ function collectForbiddenBodyErrors(value: unknown, path: string, errors: Resear
       errors.push(validationError(
         'ref_body_forbidden',
         childPath,
-        'OPL research evidence packs must carry refs only; body-like payload fields are forbidden.',
+        'OPL stage run evidence packs must carry refs only; body-like payload fields are forbidden.',
       ));
       continue;
     }
@@ -148,7 +148,7 @@ function collectForbiddenBodyErrors(value: unknown, path: string, errors: Resear
       errors.push(validationError(
         'ref_body_forbidden',
         childPath,
-        'body_included must be false for every research evidence pack ref.',
+        'body_included must be false for every stage run evidence pack ref.',
       ));
       continue;
     }
@@ -156,7 +156,7 @@ function collectForbiddenBodyErrors(value: unknown, path: string, errors: Resear
   }
 }
 
-function validateAuthorityBoundary(value: unknown, errors: ResearchEvidencePackValidationError[]) {
+function validateAuthorityBoundary(value: unknown, errors: StageRunEvidencePackValidationError[]) {
   const boundary = record(value);
   for (const [key, expected] of Object.entries(AUTHORITY_BOUNDARY)) {
     if (boundary[key] !== expected) {
@@ -169,21 +169,21 @@ function validateAuthorityBoundary(value: unknown, errors: ResearchEvidencePackV
   }
 }
 
-export function validateResearchEvidencePack(value: unknown): ResearchEvidencePackValidation {
-  const errors: ResearchEvidencePackValidationError[] = [];
+export function validateStageRunEvidencePack(value: unknown): StageRunEvidencePackValidation {
+  const errors: StageRunEvidencePackValidationError[] = [];
   const pack = record(value);
   if (pack !== value) {
     return {
       valid: false,
-      errors: [validationError('root_not_object', '$', 'Research evidence pack must be an object.')],
+      errors: [validationError('root_not_object', '$', 'Stage run evidence pack must be an object.')],
     };
   }
 
-  if (pack.surface_kind !== 'research_evidence_pack') {
-    errors.push(validationError('surface_kind_invalid', '$.surface_kind', 'surface_kind must be research_evidence_pack.'));
+  if (pack.surface_kind !== 'stage_run_evidence_pack') {
+    errors.push(validationError('surface_kind_invalid', '$.surface_kind', 'surface_kind must be stage_run_evidence_pack.'));
   }
-  if (pack.version !== 'research_evidence_pack.v1') {
-    errors.push(validationError('version_invalid', '$.version', 'version must be research_evidence_pack.v1.'));
+  if (pack.version !== 'stage_run_evidence_pack.v1') {
+    errors.push(validationError('version_invalid', '$.version', 'version must be stage_run_evidence_pack.v1.'));
   }
 
   for (const [field, surfaceKind, version] of REQUIRED_SURFACES) {
@@ -213,8 +213,8 @@ function refRecords(pack: JsonRecord) {
   const artifactLineageGraph = record(pack.artifact_lineage_graph);
   const reproducibilityBundle = record(pack.reproducibility_bundle);
   return [
-    ...recordList(runManifest.input_refs).map((ref) => ({ source_surface: 'research_run_manifest.input_refs', ref })),
-    ...recordList(runManifest.output_refs).map((ref) => ({ source_surface: 'research_run_manifest.output_refs', ref })),
+    ...recordList(runManifest.input_refs).map((ref) => ({ source_surface: 'stage_run_manifest.input_refs', ref })),
+    ...recordList(runManifest.output_refs).map((ref) => ({ source_surface: 'stage_run_manifest.output_refs', ref })),
     ...recordList(artifactLineageGraph.artifact_refs).map((ref) => ({ source_surface: 'artifact_lineage_graph.artifact_refs', ref })),
     ...recordList(reproducibilityBundle.restore_refs).map((ref) => ({ source_surface: 'reproducibility_bundle.restore_refs', ref })),
   ];
@@ -224,7 +224,7 @@ function unique(values: Array<string | null>) {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
-function uniqueRefs(refs: ResearchEvidencePackRef[]) {
+function uniqueRefs(refs: StageRunEvidencePackRef[]) {
   const seen = new Set<string>();
   return refs.filter((entry) => {
     const key = `${entry.source_surface}\0${entry.ref}`;
@@ -236,7 +236,7 @@ function uniqueRefs(refs: ResearchEvidencePackRef[]) {
   });
 }
 
-function refSummary(sourceSurface: string, ref: JsonRecord): ResearchEvidencePackRef | null {
+function refSummary(sourceSurface: string, ref: JsonRecord): StageRunEvidencePackRef | null {
   const refValue = optionalString(ref.ref);
   if (!refValue) {
     return null;
@@ -276,22 +276,22 @@ function packRefs(pack: JsonRecord, refs: Array<{ source_surface: string; ref: J
   const reproducibilityBundle = record(pack.reproducibility_bundle);
   const replayStageRefs = recordList(runManifest.replay_stages).flatMap((entry) => [
     ...scalarRefSummaries(
-      'research_run_manifest.replay_stages.append_only_event_log_refs',
+      'stage_run_manifest.replay_stages.append_only_event_log_refs',
       entry.append_only_event_log_refs,
       'append_only_event_log',
     ),
     ...scalarRefSummaries(
-      'research_run_manifest.replay_stages.attempt_ledger_refs',
+      'stage_run_manifest.replay_stages.attempt_ledger_refs',
       entry.attempt_ledger_refs,
       'attempt_ledger',
     ),
     ...scalarRefSummaries(
-      'research_run_manifest.replay_stages.recorded_runtime_event_refs',
+      'stage_run_manifest.replay_stages.recorded_runtime_event_refs',
       entry.recorded_runtime_event_refs,
       'recorded_runtime_event',
     ),
     ...scalarRefSummaries(
-      'research_run_manifest.replay_stages.closeout_receipt_refs',
+      'stage_run_manifest.replay_stages.closeout_receipt_refs',
       entry.closeout_receipt_refs,
       'closeout_receipt',
     ),
@@ -330,7 +330,7 @@ function packRefs(pack: JsonRecord, refs: Array<{ source_surface: string; ref: J
     ...scalarRefSummaries('artifact_lineage_graph.lineage_edges.transform_ref', optionalString(entry.transform_ref), 'lineage_transform'),
   ]);
   return uniqueRefs([
-    ...refs.map(({ source_surface, ref }) => refSummary(source_surface, ref)).filter((entry): entry is ResearchEvidencePackRef => Boolean(entry)),
+    ...refs.map(({ source_surface, ref }) => refSummary(source_surface, ref)).filter((entry): entry is StageRunEvidencePackRef => Boolean(entry)),
     ...replayStageRefs,
     ...ledgerRefs,
     ...negativeResultRefs,
@@ -387,7 +387,7 @@ function restoreCounters(refs: Array<{ ref: JsonRecord }>): Record<`${RestoreSta
   return counts;
 }
 
-function missingRefs(refs: Array<{ source_surface: string; ref: JsonRecord }>): ResearchEvidencePackMissingRef[] {
+function missingRefs(refs: Array<{ source_surface: string; ref: JsonRecord }>): StageRunEvidencePackMissingRef[] {
   const seen = new Set<string>();
   return refs
     .filter(({ ref }) => ref.required === true && optionalString(ref.status) !== 'present')
@@ -432,10 +432,10 @@ function stageReplayReadiness(pack: JsonRecord) {
   };
 }
 
-export function summarizeResearchEvidencePack(value: unknown): ResearchEvidencePackSummary {
-  const validation = validateResearchEvidencePack(value);
+export function summarizeStageRunEvidencePack(value: unknown): StageRunEvidencePackSummary {
+  const validation = validateStageRunEvidencePack(value);
   if (!validation.valid) {
-    throw new Error(`Research evidence pack failed fail-closed validation: ${validation.errors.map((error) => error.code).join(', ')}`);
+    throw new Error(`Stage run evidence pack failed fail-closed validation: ${validation.errors.map((error) => error.code).join(', ')}`);
   }
   const pack = value as JsonRecord;
   const refs = refRecords(pack);
@@ -445,11 +445,11 @@ export function summarizeResearchEvidencePack(value: unknown): ResearchEvidenceP
   const decisionTraceRefs = recordList(decisions.decisions).map((decision) => optionalString(decision.decision_ref));
 
   return {
-    surface_kind: 'research_evidence_pack_summary',
-    version: 'research_evidence_pack_summary.v1',
+    surface_kind: 'stage_run_evidence_pack_summary',
+    version: 'stage_run_evidence_pack_summary.v1',
     pack_id: optionalString(pack.pack_id),
     target_domain_id: optionalString(pack.target_domain_id),
-    study_id: optionalString(pack.study_id),
+    stage_run_id: optionalString(pack.stage_run_id),
     pack_refs: packRefs(pack, refs),
     missing_refs: missingRefs(refs),
     checksum_status: checksumCounters(refs),

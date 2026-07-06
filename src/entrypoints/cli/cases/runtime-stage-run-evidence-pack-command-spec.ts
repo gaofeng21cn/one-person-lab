@@ -1,7 +1,7 @@
 import {
-  summarizeResearchEvidencePack,
-  validateResearchEvidencePack,
-} from '../../../modules/ledger/research-evidence-pack.ts';
+  summarizeStageRunEvidencePack,
+  validateStageRunEvidencePack,
+} from '../../../modules/ledger/stage-run-evidence-pack.ts';
 import {
   assertSinglePayloadSource,
   buildUsageError,
@@ -15,12 +15,12 @@ function parseJsonPayload(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
   return readJsonObject(`{"payload":${value}}`, spec, {
-    parseErrorMessage: 'runtime research-evidence-pack summary payload must be valid JSON.',
-    objectErrorMessage: 'runtime research-evidence-pack summary payload must be valid JSON.',
+    parseErrorMessage: 'runtime stage-run-evidence-pack summary payload must be valid JSON.',
+    objectErrorMessage: 'runtime stage-run-evidence-pack summary payload must be valid JSON.',
   }).payload;
 }
 
-function parseRuntimeResearchEvidencePackSummaryArgs(
+function parseRuntimeStageRunEvidencePackSummaryArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
@@ -32,7 +32,7 @@ function parseRuntimeResearchEvidencePackSummaryArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime research-evidence-pack summary requires --payload value.',
+          'runtime stage-run-evidence-pack summary requires --payload value.',
           spec,
           { option: '--payload' },
         );
@@ -46,7 +46,7 @@ function parseRuntimeResearchEvidencePackSummaryArgs(
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime research-evidence-pack summary requires --payload-file value.',
+          'runtime stage-run-evidence-pack summary requires --payload-file value.',
           spec,
           { option: '--payload-file' },
         );
@@ -57,14 +57,14 @@ function parseRuntimeResearchEvidencePackSummaryArgs(
       continue;
     }
     throw buildUsageError(
-      `Unknown option for runtime research-evidence-pack summary: ${token}.`,
+      `Unknown option for runtime stage-run-evidence-pack summary: ${token}.`,
       spec,
       { option: token },
     );
   }
   if (!payloadPresent) {
     throw buildUsageError(
-      'runtime research-evidence-pack summary requires --payload or --payload-file.',
+      'runtime stage-run-evidence-pack summary requires --payload or --payload-file.',
       spec,
       { required_any: ['--payload', '--payload-file'] },
     );
@@ -72,36 +72,36 @@ function parseRuntimeResearchEvidencePackSummaryArgs(
   return payload;
 }
 
-function buildResearchEvidencePackReadModel(
+function buildStageRunEvidencePackReadModel(
   payload: unknown,
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  const validation = validateResearchEvidencePack(payload);
+  const validation = validateStageRunEvidencePack(payload);
   if (!validation.valid) {
     throw buildUsageError(
-      'runtime research-evidence-pack summary requires a valid body-free research evidence pack.',
+      'runtime stage-run-evidence-pack summary requires a valid body-free stage run evidence pack.',
       spec,
       { validation_errors: validation.errors },
     );
   }
-  return summarizeResearchEvidencePack(payload);
+  return summarizeStageRunEvidencePack(payload);
 }
 
-export function buildRuntimeResearchEvidencePackCommandSpecs(): Record<string, CommandSpec> {
+export function buildRuntimeStageRunEvidencePackCommandSpecs(): Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
-    'runtime research-evidence-pack summary': {
+    'runtime stage-run-evidence-pack summary': {
       usage:
-        'opl runtime research-evidence-pack summary (--payload <json>|--payload-file <path>)',
+        'opl runtime stage-run-evidence-pack summary (--payload <json>|--payload-file <path>)',
       summary:
-        'Project a body-free research evidence pack read model without reading evidence bodies or claiming domain authority.',
+        'Project a body-free stage run evidence pack read model without reading evidence bodies or claiming domain authority.',
       examples: [
-        'opl runtime research-evidence-pack summary --payload-file research-evidence-pack.json',
+        'opl runtime stage-run-evidence-pack summary --payload-file stage-run-evidence-pack.json',
       ],
       group: 'runtime',
       handler: (args) => ({
-        research_evidence_pack_read_model: buildResearchEvidencePackReadModel(
-          parseRuntimeResearchEvidencePackSummaryArgs(args, commandSpecs['runtime research-evidence-pack summary']),
-          commandSpecs['runtime research-evidence-pack summary'],
+        stage_run_evidence_pack_read_model: buildStageRunEvidencePackReadModel(
+          parseRuntimeStageRunEvidencePackSummaryArgs(args, commandSpecs['runtime stage-run-evidence-pack summary']),
+          commandSpecs['runtime stage-run-evidence-pack summary'],
         ),
       }),
     },

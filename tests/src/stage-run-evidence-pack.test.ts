@@ -10,7 +10,7 @@ type JsonRecord = Record<string, unknown>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const schemaPath = 'contracts/family-orchestration/research-evidence-pack.schema.json';
+const schemaPath = 'contracts/family-orchestration/stage-run-evidence-pack.schema.json';
 
 function readJson(relativePath: string): JsonRecord {
   assert.equal(fs.existsSync(path.join(repoRoot, relativePath)), true, `${relativePath} should exist`);
@@ -26,9 +26,9 @@ function record(value: unknown): JsonRecord {
 
 async function loadHelper() {
   try {
-    return await import('../../src/modules/ledger/research-evidence-pack.ts');
+    return await import('../../src/modules/ledger/stage-run-evidence-pack.ts');
   } catch (error) {
-    assert.fail(error instanceof Error ? error.message : 'research evidence pack helper module should load');
+    assert.fail(error instanceof Error ? error.message : 'stage run evidence pack helper module should load');
   }
 }
 
@@ -40,15 +40,15 @@ function surfaceProps(surface: JsonRecord) {
   return record(surface.properties);
 }
 
-test('research evidence pack schema freezes the standard surface/version family', async () => {
+test('stage run evidence pack schema freezes the standard surface/version family', async () => {
   const schema = readJson(schemaPath);
   const props = record(schema.properties);
   const authority = surfaceProps(schemaDef(schema, 'authority_boundary'));
 
-  assert.equal(record(props.surface_kind).const, 'research_evidence_pack');
-  assert.equal(record(props.version).const, 'research_evidence_pack.v1');
+  assert.equal(record(props.surface_kind).const, 'stage_run_evidence_pack');
+  assert.equal(record(props.version).const, 'stage_run_evidence_pack.v1');
   for (const [defName, surfaceKind, version] of [
-    ['research_run_manifest', 'research_run_manifest', 'research_run_manifest.v1'],
+    ['stage_run_manifest', 'stage_run_manifest', 'stage_run_manifest.v1'],
     ['negative_failed_path_ledger', 'negative_failed_path_ledger', 'negative_failed_path_ledger.v1'],
     ['decision_trace', 'decision_trace', 'decision_trace.v1'],
     ['artifact_lineage_graph', 'artifact_lineage_graph', 'artifact_lineage_graph.v1'],
@@ -64,35 +64,35 @@ test('research evidence pack schema freezes the standard surface/version family'
 
   const helper = await loadHelper();
   const example = record((schema.examples as JsonRecord[])[0]);
-  const validation = helper.validateResearchEvidencePack(example);
+  const validation = helper.validateStageRunEvidencePack(example);
   assert.equal(validation.valid, true, JSON.stringify(validation.errors));
 });
 
-test('research evidence pack summary reports refs, checksums, restore, negative paths, owners, and replay readiness', async () => {
+test('stage run evidence pack summary reports refs, checksums, restore, negative paths, owners, and replay readiness', async () => {
   const helper = await loadHelper();
   const pack = {
-    surface_kind: 'research_evidence_pack',
-    version: 'research_evidence_pack.v1',
-    pack_id: 'pack:dm002:stage-write',
-    target_domain_id: 'med-autoscience',
-    study_id: 'DM002',
+    surface_kind: 'stage_run_evidence_pack',
+    version: 'stage_run_evidence_pack.v1',
+    pack_id: 'pack:example:stage-build',
+    target_domain_id: 'example-domain',
+    stage_run_id: 'run-alpha',
     run_manifest: {
-      surface_kind: 'research_run_manifest',
-      version: 'research_run_manifest.v1',
-      run_id: 'run:dm002:write:1',
-      stage_id: 'write',
-      stage_attempt_id: 'attempt:dm002:write:1',
+      surface_kind: 'stage_run_manifest',
+      version: 'stage_run_manifest.v1',
+      run_id: 'run:alpha:build:1',
+      stage_id: 'build',
+      stage_attempt_id: 'attempt:alpha:build:1',
       replay_stages: [
         {
-          stage_id: 'write',
-          append_only_event_log_refs: ['event-log:dm002/write'],
-          attempt_ledger_refs: ['attempt-ledger:dm002/write'],
-          recorded_runtime_event_refs: ['runtime-event:dm002/write-closeout'],
-          closeout_receipt_refs: ['owner-receipt:dm002/write'],
+          stage_id: 'build',
+          append_only_event_log_refs: ['event-log:alpha/build'],
+          attempt_ledger_refs: ['attempt-ledger:alpha/build'],
+          recorded_runtime_event_refs: ['runtime-event:alpha/build-closeout'],
+          closeout_receipt_refs: ['owner-receipt:alpha/build'],
         },
         {
           stage_id: 'review',
-          append_only_event_log_refs: ['event-log:dm002/review'],
+          append_only_event_log_refs: ['event-log:alpha/review'],
           attempt_ledger_refs: [],
           recorded_runtime_event_refs: [],
           closeout_receipt_refs: [],
@@ -100,10 +100,10 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
       ],
       input_refs: [
         {
-          ref_id: 'source:cohort',
-          role: 'analysis_source',
+          ref_id: 'input:dataset',
+          role: 'stage_input',
           ref_kind: 'workspace_relative_path',
-          ref: 'studies/DM002/data/cohort.parquet',
+          ref: 'runs/alpha/input/dataset.json',
           status: 'present',
           required: true,
           checksum_status: 'verified',
@@ -113,10 +113,10 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
       ],
       output_refs: [
         {
-          ref_id: 'artifact:table1',
-          role: 'table_artifact',
+          ref_id: 'artifact:summary',
+          role: 'stage_artifact',
           ref_kind: 'workspace_relative_path',
-          ref: 'studies/DM002/artifacts/table1.csv',
+          ref: 'runs/alpha/artifacts/summary.json',
           status: 'missing',
           required: true,
           checksum_status: 'missing',
@@ -130,20 +130,20 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
       version: 'negative_failed_path_ledger.v1',
       failed_paths: [
         {
-          path_id: 'failed:model-a',
-          stage_id: 'write',
-          failed_path_ref: 'ledger:dm002/model-a',
-          owner_ref: 'owner:mas',
+          path_id: 'failed:path-a',
+          stage_id: 'build',
+          failed_path_ref: 'ledger:alpha/path-a',
+          owner_ref: 'owner:example-domain',
           status: 'failed',
           body_included: false,
         },
       ],
       negative_results: [
         {
-          result_id: 'negative:null-model',
-          stage_id: 'write',
-          result_ref: 'ledger:dm002/null-model',
-          owner_ref: 'owner:mas',
+          result_id: 'negative:no-match',
+          stage_id: 'build',
+          result_ref: 'ledger:alpha/no-match',
+          owner_ref: 'owner:example-domain',
           status: 'negative_result',
           body_included: false,
         },
@@ -155,23 +155,23 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
       decisions: [
         {
           decision_id: 'decision:handoff-review',
-          stage_id: 'write',
-          decision_ref: 'decision:dm002/write-closeout',
-          next_owner_ref: 'owner:mas-review',
+          stage_id: 'build',
+          decision_ref: 'decision:alpha/build-closeout',
+          next_owner_ref: 'owner:example-review',
           status: 'handoff',
         },
       ],
-      next_owner_refs: ['owner:mas-review'],
+      next_owner_refs: ['owner:example-review'],
     },
     artifact_lineage_graph: {
       surface_kind: 'artifact_lineage_graph',
       version: 'artifact_lineage_graph.v1',
       artifact_refs: [
         {
-          ref_id: 'artifact:table1',
-          role: 'table_artifact',
+          ref_id: 'artifact:summary',
+          role: 'stage_artifact',
           ref_kind: 'workspace_relative_path',
-          ref: 'studies/DM002/artifacts/table1.csv',
+          ref: 'runs/alpha/artifacts/summary.json',
           status: 'missing',
           required: true,
           checksum_status: 'mismatch',
@@ -181,24 +181,24 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
       ],
       lineage_edges: [
         {
-          from_ref: 'source:cohort',
-          to_ref: 'artifact:table1',
-          transform_ref: 'analysis-script:table1',
+          from_ref: 'input:dataset',
+          to_ref: 'artifact:summary',
+          transform_ref: 'stage-transform:summary',
         },
       ],
     },
     reproducibility_bundle: {
       surface_kind: 'reproducibility_bundle',
       version: 'reproducibility_bundle.v1',
-      environment_refs: ['env:dm002'],
+      environment_refs: ['env:alpha'],
       dependency_lock_refs: ['lock:uv'],
       replay_command_refs: ['command:make-replay'],
       restore_refs: [
         {
-          ref_id: 'restore:table1',
+          ref_id: 'restore:summary',
           role: 'restore_manifest',
           ref_kind: 'workspace_relative_path',
-          ref: 'studies/DM002/restore/table1.json',
+          ref: 'runs/alpha/restore/summary.json',
           status: 'present',
           required: true,
           checksum_status: 'verified',
@@ -206,10 +206,10 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
           body_included: false,
         },
       ],
-      checksum_manifest_refs: ['checksum:dm002'],
+      checksum_manifest_refs: ['checksum:alpha'],
     },
     authority_boundary: {
-      opl_role: 'research_evidence_pack_projection_only',
+      opl_role: 'stage_run_evidence_pack_projection_only',
       evidence_scope: 'refs_index_projection_replay_only',
       can_read_domain_body: false,
       can_accept_or_reject_owner_receipt: false,
@@ -220,20 +220,20 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
     },
   };
 
-  const summary = helper.summarizeResearchEvidencePack(pack);
+  const summary = helper.summarizeStageRunEvidencePack(pack);
 
-  assert.equal(summary.surface_kind, 'research_evidence_pack_summary');
-  assert.equal(summary.pack_id, 'pack:dm002:stage-write');
+  assert.equal(summary.surface_kind, 'stage_run_evidence_pack_summary');
+  assert.equal(summary.pack_id, 'pack:example:stage-build');
   assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
-    entry.ref === 'studies/DM002/data/cohort.parquet'), true);
+    entry.ref === 'runs/alpha/input/dataset.json'), true);
   assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
-    entry.ref === 'decision:dm002/write-closeout'), true);
+    entry.ref === 'decision:alpha/build-closeout'), true);
   assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
-    entry.ref === 'event-log:dm002/write'), true);
+    entry.ref === 'event-log:alpha/build'), true);
   assert.equal(summary.pack_refs.some((entry: { ref: string }) =>
-    entry.ref === 'analysis-script:table1'), true);
+    entry.ref === 'stage-transform:summary'), true);
   assert.deepEqual(summary.missing_refs.map((entry) => entry.ref_id), [
-    'artifact:table1',
+    'artifact:summary',
   ]);
   assert.deepEqual(summary.checksum_status, {
     verified_count: 2,
@@ -250,8 +250,8 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
   });
   assert.equal(summary.failed_path_count, 1);
   assert.equal(summary.negative_result_count, 1);
-  assert.deepEqual(summary.decision_trace_refs, ['decision:dm002/write-closeout']);
-  assert.deepEqual(summary.next_owner_refs, ['owner:mas-review']);
+  assert.deepEqual(summary.decision_trace_refs, ['decision:alpha/build-closeout']);
+  assert.deepEqual(summary.next_owner_refs, ['owner:example-review']);
   assert.deepEqual(summary.stage_replay_readiness, {
     stage_count: 2,
     replay_ready_stage_count: 1,
@@ -264,7 +264,7 @@ test('research evidence pack summary reports refs, checksums, restore, negative 
   assert.equal(summary.authority_boundary.can_sign_domain_receipt, false);
 });
 
-test('research evidence pack helper fails closed on domain body or authority expansion', async () => {
+test('stage run evidence pack helper fails closed on domain body or authority expansion', async () => {
   const helper = await loadHelper();
   const pack = record((readJson(schemaPath).examples as JsonRecord[])[0]);
   const withDomainBody = {
@@ -282,12 +282,12 @@ test('research evidence pack helper fails closed on domain body or authority exp
   };
 
   assert.deepEqual(
-    helper.validateResearchEvidencePack(withDomainBody).errors.map((entry) => entry.code),
+    helper.validateStageRunEvidencePack(withDomainBody).errors.map((entry) => entry.code),
     ['domain_body_forbidden'],
   );
-  assert.equal(helper.validateResearchEvidencePack(withAuthorityExpansion).valid, false);
+  assert.equal(helper.validateStageRunEvidencePack(withAuthorityExpansion).valid, false);
   assert.throws(
-    () => helper.summarizeResearchEvidencePack(withAuthorityExpansion),
-    /Research evidence pack failed fail-closed validation/,
+    () => helper.summarizeStageRunEvidencePack(withAuthorityExpansion),
+    /Stage run evidence pack failed fail-closed validation/,
   );
 });
