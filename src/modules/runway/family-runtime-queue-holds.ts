@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import type { FamilyRuntimeTaskScope } from './family-runtime-command.ts';
-import { stableId } from './family-runtime-ids.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 import { nowIso } from './family-runtime-store.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import {

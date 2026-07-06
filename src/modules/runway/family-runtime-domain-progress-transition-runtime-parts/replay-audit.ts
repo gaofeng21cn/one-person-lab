@@ -1,5 +1,5 @@
 import { record, recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
-import { stableId } from '../family-runtime-ids.ts';
+import { stableId } from '../../../kernel/stable-id.ts';
 
 const STABLE_OUTCOMES = new Set([
   'provider_admission_enqueued_or_blocked',

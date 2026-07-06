@@ -1,4 +1,4 @@
-import { stableId } from './family-runtime-ids.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import {
   stringList,

@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { parseJsonText } from '../../../kernel/json-file.ts';
-import { stableId } from '../family-runtime-ids.ts';
+import { stableId } from '../../../kernel/stable-id.ts';
 import { auditDomainProgressTransitionReplay } from './replay-audit.ts';
 import {
   DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID,

@@ -9,7 +9,7 @@ import {
   type StageAttemptRow,
   type StageAttemptSignalRow,
 } from '../family-runtime-stage-attempt-ledger.ts';
-import { stableId } from '../family-runtime-ids.ts';
+import { stableId } from '../../../kernel/stable-id.ts';
 import {
   appendActivityEventToRow,
   normalizeJsonList,

@@ -5,7 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { stableId } from './family-runtime-ids.ts';
+import { stableId } from '../../kernel/stable-id.ts';
 import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
 import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
 import {
@@ -24,7 +24,7 @@ import {
   FAMILY_RUNTIME_TASK_STATUS,
 } from './family-runtime-queue-projection-boundary.ts';
 
-export { stableId } from './family-runtime-ids.ts';
+export { stableId } from '../../kernel/stable-id.ts';
 
 export const QUEUE_SCHEMA_VERSION = 2;
 export const DEFAULT_MAX_ATTEMPTS = 3;

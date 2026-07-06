@@ -1,4 +1,4 @@
-import { buildAppStageRunCockpit } from '../stagecraft/public/stage-run-cockpit.ts';
+import { buildAppStageRunCockpit } from '../stagecraft/index.ts';
 import {
   currentOwnerDeltaWithClosedStageRunAnswer,
   readModelWithClosedStageRunAnswer,

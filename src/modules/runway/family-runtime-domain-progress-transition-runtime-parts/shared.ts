@@ -1,6 +1,6 @@
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringList, stringValue as optionalString } from '../../../kernel/json-record.ts';
-import { stableId } from '../family-runtime-ids.ts';
+import { stableId } from '../../../kernel/stable-id.ts';
 
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID = 'opl_domain_progress_transition_runtime';
 export const DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE = {
