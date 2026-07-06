@@ -57,6 +57,16 @@ OPL Connect 同步的是 MAS Scholar Skills 的本地 Codex discovery surface，
 
 这些专业 Skill 是 MAS 消费的专业 playbook；`medical-figure-style` / `medical-figure-composer` 是 Display 子 Skill，不新增 active module。如果 source repo 已经物化 optional advanced / medical-method specialist，OPL Connect 会按同一 profile 把完整 skill 目录同步到 workspace / quest discovery path，包括 Skill-local `kernel.py` 等确定性小工具；这只是让 AI-first 专业 Skill 带上低门槛 deterministic helper，不把 PubMed/API/provider/credential/endpoint/cloud compute、MAS truth、owner receipt、typed blocker、artifact authority 或 publication readiness 下放给 Skill。MAS 的 `write`、`review`、`figure`、`data/cohort` 等 stage 主提示词仍在 MAS 仓内维护，负责 stage policy、证据门槛、route-back、owner gate、owner receipt、typed blocker、artifact authority、clinical data body/source readiness 和 publication readiness。
 
+### 三层能力读法
+
+MAS Scholar Skills 按 `professional Skill + skill-local deterministic helper + no-skill substrate` 三层运行：
+
+- `professional Skill`：`mas-scholar-skills` 聚合入口和各个 medical-paper specialist skill 承载专业判断、playbook、rubric、review lens、写作 / 审稿 / 图表 / 数据治理 route-back 和 AI-first stage 辅助。
+- `skill-local deterministic helper`：随 specialist skill 目录同步的 `kernel.py` 等小工具只能做局部、确定性、低成本检查或素材整理；它们跟随 Skill 分发，服务 AI 使用 Skill 时的可重复辅助，不升级为 OPL module、MAS authority function、runtime queue worker 或 publication helper owner。
+- `no-skill substrate`：OPL Connect、Pack、Runway、runtime environment substrate、package channel、credential / cache / provider / receipt surface 负责安装、同步、依赖准备、run-context、refs-only receipt 和 App/workspace 投影；这些通用运维能力不塞回 Skill 目录，也不写成新的专业 Skill。
+
+因此这里采用 `AI First, Contract Light`：模块化在 OPL 运维层完成，保证 sync、runtime env、receipt、no-authority flags 和可恢复边界可审计；弹性留在 Skill 层，允许专业 Skill profile 随 MAS 论文工作流扩展、收缩或替换。Connect sync 完整复制 specialist skill 目录，包括 `SKILL.md`、`kernel.py` 和 `.opl-connect-skill-sync.json`，只证明 Codex discovery 面可分发；它不证明 helper 已产生医学结果、不证明 MAS paper progress，也不授权 owner receipt、typed blocker、artifact authority、clinical data readiness 或 publication readiness。
+
 ## Runtime Env 关系
 
 ScholarSkills 只声明 dependency intent 与 run-context refs。实际依赖准备、缓存、run-context 生成和 fail-closed doctor 由 OPL runtime environment substrate 处理：
