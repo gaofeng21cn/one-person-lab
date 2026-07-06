@@ -79,6 +79,25 @@ Contract module 是 schema、descriptor、validator、readback shape 或 machine
 - 常见 `runtime_projection`：validator output、CLI contract mode、App / runtime read-model。
 - `authority_boundary`：contract pass 不等于 Skill 存在，不等于 domain result accepted，不等于 runtime / release / production ready；不得把 contract_module 伪装成 true Skill 进入 Codex discovery。
 
+## OPL 模块与 Skill 层分工
+
+OPL 的 AI-first / contract-light 读法是：模块化留在运维层，弹性留在 Skill 层。Framework 模块只提供 identity、contract、locator、catalog、readback、receipt、handoff、projection、distribution、validation 和 recovery 这类可审计边界；开放式评估、路线选择、调试策略、执行 playbook、审阅标准、修订方法和领域判断应进入专业 Skill、stage prompt、knowledge / rubric refs 或 domain-owned quality gate。
+
+| 模块 | OPL-owned 边界 | 不进入模块的开放式工作 |
+| --- | --- | --- |
+| `OPL Charter` | 术语、原则、authority matrix、forbidden claims、ADR/RFC lifecycle。 | 不写执行策略、调试 playbook、领域评价或 owner answer。 |
+| `OPL Pack` | Declarative pack、capability ABI、authority ABI、generated/hosted surface 输入、standard authority function 边界。 | 不把专业方法、评估 rubric 或执行策略硬编码成 pack schema。 |
+| `OPL Stagecraft` | Stage descriptor、stage prompt refs、capability use policy、handoff / receipt / blocker 下限。 | 不替 stage 内 AI executor 规划、审稿、诊断或选择路线。 |
+| `OPL Workspace` | Workspace / Project / Stage Artifact Unit locator、source shell、inspectable file structure、handoff refs。 | 不解释 source body，不判定 domain source readiness，不清洗或接受领域数据。 |
+| `OPL Atlas` | Agent / capability / tool-card / source / owner catalog、refs-only graph、lifecycle index。 | 不执行 capability，不排序开放式策略，不生成 domain verdict。 |
+| `OPL Connect` | Connector、external skill discovery、selective sync、plugin / descriptor / package 分发、invocation receipt candidate。 | 不承接专业筛选、临床/基金/视觉判断、citation judgment 或 install-ready claim。 |
+| `OPL Runway` | Durable attempt admission、queue、lease、retry / dead-letter、provider observation、recovery refs。 | 不把 provider completion、worker ready 或 queue clean 写成 domain progress / readiness。 |
+| `OPL Ledger` | Refs-only evidence、receipt / blocker refs、lineage、replay、provenance、cleanup proof。 | 不保存 artifact / memory body，不签 owner receipt，不替 reviewer 或 owner 接受结果。 |
+| `OPL Console` | App/operator projection、current-owner-delta-first cockpit、action catalog、invocation plan、drilldown。 | 不维护第二套 runtime truth、App release verdict 或 domain truth。 |
+| `OPL Foundry Lab` | Scaffold、conformance、work-order、canary、promotion / rollback refs、OMA improvement control plane。 | 不接管 target agent 的领域权威、质量 verdict 或交付物 acceptance。 |
+
+若某项能力需要“AI 判断怎么做”，默认先问它是否应是 `professional_skill`、`stage_prompt` 或 `reference_pack`；只有需要稳定身份、权限、输入输出、分发、receipt、readback 或 fail-closed 边界时，才提升为 OPL 模块合同。不要为了让模块看起来完整，把开放式 playbook 写进 `src/modules/**`、schema、validator 或 MAS/MAG/RCA 的私有 runtime 面。
+
 ## 默认归属与外置门
 
 默认原则：能力先内置在 domain agent。外置是例外，不是成熟标志。
@@ -102,6 +121,24 @@ Contract module 是 schema、descriptor、validator、readback shape 或 machine
 - Reference pack 默认 refs-only 或 filtered copy；重型生成中间结果、cache、runtime artifact 和 bulk asset 不进入普通同步面。
 - Contract module 只负责机器边界；如果需要 Codex Skill discovery，必须另有真实 `professional_skill` 或 `stage_prompt` wrapper，并写清 wrapper 不是第二真相源。
 - 外部大型 skill 库进入 OPL Connect 后，默认走 `search -> inspect -> single-skill sync`，而不是把全库变成默认上下文。`list` 只作为 source/index 审阅面；普通任务应从搜索或明确 selector 开始。
+
+## OPL-owned base / support Skill 归位
+
+OPL 可以持有少量 base / support Skill，但它们必须服务 Framework 使用者或 agent 作者，而不是替代 domain 专业 Skill。典型内容包括：标准 Agent 建模说明、capability 分类审查、contract-light 调试 playbook、workspace handoff 写法、owner-route 诊断、package / descriptor review、Foundry Lab work-order 写法。它们只给 AI executor 提供操作方法和审阅提示，不签 owner receipt、typed blocker、quality verdict、artifact authority、domain readiness、App release readiness 或 production readiness。
+
+推荐物理位置如下：
+
+- source-only OPL base/support Skill：`plugins/opl-foundation-skills/skills/<skill-id>/SKILL.md`，并可带同目录 `references/`、`templates/` 或 `scripts/`。
+- OPL-generated Codex-visible surface：由 Pack / Connect / plugin registry 从 source-only Skill 或 contract pack materialize；生成物不得成为 source of truth。
+- workspace / quest local discovery：通过 `opl connect sync-skills ... --scope workspace|quest` 或等价 managed profile 复制 refs-only 子集到目标 `.codex/skills/`。
+- packaged / managed payload：进入 OPL package / Full runtime / managed companion 路径时，只作为安装来源或缓存，当前状态以 fresh CLI/readback 和 receipt 为准。
+
+禁止归位：
+
+- 不把 OPL base/support Skill 的正文塞进 `src/modules/**`、validator、schema 或 CLI handler；源码只消费 stable refs、descriptor 和 receipt。
+- 不把 OPL-owned support Skill 放进 MAS/MAG/RCA/BookForge 等 domain 仓作为长期 source truth；domain 仓只声明采用、映射或 route-back refs。
+- 不把 `~/.codex/skills`、Codex plugin cache、workspace copy、generated plugin source 或 package payload 当作 canonical source。
+- 不把一次性调试提示、当前 lane 计划或尚未复用的专家判断提前沉淀成 OPL base Skill。
 
 ## MAS 当前示例
 
