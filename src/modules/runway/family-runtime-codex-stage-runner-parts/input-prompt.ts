@@ -107,8 +107,12 @@ function paperMissionProfileRef(locator: JsonRecord, workspaceRoot: string) {
   return '$OPL_PROFILE_REF';
 }
 
-function paperMissionPythonEntrypoint(workspaceRoot: string) {
-  return `${workspaceRoot}/.venv/bin/python3`;
+function paperMissionPaperMissionEntrypoint(workspaceRoot: string) {
+  return `${workspaceRoot}/ops/medautoscience/bin/paper-mission`;
+}
+
+function paperMissionStudyProgressEntrypoint(workspaceRoot: string) {
+  return `${workspaceRoot}/ops/medautoscience/bin/study-progress`;
 }
 
 function paperMissionTaskIntakeSummary(locator: JsonRecord) {
@@ -143,7 +147,8 @@ function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
   const workspaceRoot = workspaceRootFromAttempt(input.attempt) ?? '$OPL_WORKSPACE_ROOT';
   const profileRef = paperMissionProfileRef(locator, workspaceRoot);
   const studyId = optionalString(locator.study_id) ?? '$OPL_STUDY_ID';
-  const pythonEntrypoint = paperMissionPythonEntrypoint(workspaceRoot);
+  const paperMissionEntrypoint = paperMissionPaperMissionEntrypoint(workspaceRoot);
+  const studyProgressEntrypoint = paperMissionStudyProgressEntrypoint(workspaceRoot);
   const runtimeRoot = `${workspaceRoot}/runtime/quests`;
   const routeTarget = optionalString(locator.route_target);
   const commandKind = optionalString(locator.command_kind);
@@ -154,9 +159,9 @@ function paperMissionStageRoutePromptLines(input: { attempt: JsonRecord }) {
     `Profile ref: ${profileRef}`,
     routeTarget ? `Route target: ${routeTarget}` : null,
     commandKind ? `Route command kind: ${commandKind}` : null,
-    'Use the workspace-local MAS Python entrypoint only; do not invoke bare medautosci or global medautosci wrappers for this attempt.',
-    `First read: "${pythonEntrypoint}" -m med_autoscience.cli paper-mission inspect --profile "${profileRef}" --study-id "${studyId}" --format json`,
-    `Diagnostic readback when needed: first inspect "${pythonEntrypoint}" -m med_autoscience.cli runtime --help. Only run runtime subcommands that exist in that workspace-local CLI; do not invent domain-health-diagnostic when the command is absent. Runtime root: ${runtimeRoot}.`,
+    'Use the workspace-local MAS ops shims only; do not invoke bare medautosci, global medautosci wrappers, or guessed Python virtualenv paths for this attempt.',
+    `First read: "${paperMissionEntrypoint}" inspect --profile "${profileRef}" --study-id "${studyId}" --format json`,
+    `Diagnostic readback when needed: use "${studyProgressEntrypoint}" "${studyId}" --profile "${profileRef}" --format json and paper-mission inspect. Do not invent domain-health-diagnostic when the command is absent. Runtime root: ${runtimeRoot}.`,
     ...paperMissionTaskIntakePromptLines(locator),
     'Paper progress can be claimed only from MAS-owned mission artifact deltas, owner-consumption packets, route-back decisions, human gates, stable typed blockers, reviewer/gate deltas, or accepted owner receipts.',
     'This attempt is already running inside OPL provider-backed runtime for the route command. Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task from inside this attempt.',
