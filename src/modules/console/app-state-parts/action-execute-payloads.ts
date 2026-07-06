@@ -1,7 +1,12 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { optionalString } from '../../../kernel/json-file.ts';
 import type { OplUpdateChannel } from '../../../kernel/system-preferences.ts';
-import { type OplEngineAction, type OplModuleAction, type OplModuleId } from '../../connect/index.ts';
+import {
+  type OplEngineAction,
+  type OplModuleAction,
+  type OplModuleId,
+  type runOplAgentPackageInstall,
+} from '../../connect/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -166,4 +171,88 @@ export function schedulerTickArgs(payload: JsonRecord) {
     args.push('--no-hydrate');
   }
   return args;
+}
+
+export function settingsVerifyWorkspacePayload(payload: JsonRecord) {
+  const workspacePath = stringPayloadField(payload, 'workspace_path')
+    ?? stringPayloadField(payload, 'workspacePath')
+    ?? stringPayloadField(payload, 'workspace')
+    ?? stringPayloadField(payload, 'path');
+  if (!workspacePath) {
+    throw new FrameworkContractError('cli_usage_error', 'settings_verify_workspace action requires payload.workspace_path.', {
+      action_id: 'settings_verify_workspace',
+      required: ['workspace_path'],
+    });
+  }
+  return workspacePath;
+}
+
+export function agentPackageRegistryUrlPayload(payload: JsonRecord) {
+  const registryUrl = stringPayloadField(payload, 'registry_url')
+    ?? stringPayloadField(payload, 'registryUrl')
+    ?? stringPayloadField(payload, 'url');
+  if (!registryUrl) {
+    throw new FrameworkContractError('cli_usage_error', 'refresh_registry action requires payload.registry_url.', {
+      action_id: 'refresh_registry',
+      required: ['registry_url'],
+    });
+  }
+  return registryUrl;
+}
+
+export function agentPackageInstallPayload(payload: JsonRecord, options: { allowPackageOnly?: boolean } = {}) {
+  const manifestUrl = stringPayloadField(payload, 'manifest_url')
+    ?? stringPayloadField(payload, 'manifestUrl');
+  const registryUrl = stringPayloadField(payload, 'registry_url')
+    ?? stringPayloadField(payload, 'registryUrl');
+  const packageId = stringPayloadField(payload, 'package_id')
+    ?? stringPayloadField(payload, 'packageId');
+  const trustTier = stringPayloadField(payload, 'trust_tier')
+    ?? stringPayloadField(payload, 'trustTier');
+  const sourceKind = stringPayloadField(payload, 'source_kind')
+    ?? stringPayloadField(payload, 'sourceKind');
+  if (!manifestUrl && !(registryUrl && packageId) && !(options.allowPackageOnly && packageId)) {
+    throw new FrameworkContractError('cli_usage_error', 'install_from_manifest_url action requires payload.manifest_url or payload.registry_url + payload.package_id.', {
+      action_id: 'install_from_manifest_url',
+      required: ['manifest_url or registry_url + package_id'],
+    });
+  }
+  return {
+    manifestUrl,
+    registryUrl,
+    packageId,
+    trustTier,
+    sourceKind: sourceKind as Parameters<typeof runOplAgentPackageInstall>[0]['sourceKind'],
+  };
+}
+
+export function agentPackageIdPayload(actionId: string, payload: JsonRecord) {
+  const packageId = stringPayloadField(payload, 'package_id')
+    ?? stringPayloadField(payload, 'packageId');
+  if (!packageId) {
+    throw new FrameworkContractError('cli_usage_error', `${actionId} action requires payload.package_id.`, {
+      action_id: actionId,
+      required: ['package_id'],
+    });
+  }
+  return { packageId };
+}
+
+export function agentPackageHomeShortcutPreferencePayload(payload: JsonRecord) {
+  const { packageId } = agentPackageIdPayload('agent_package_home_shortcut_preferences_set', payload);
+  const shortcutId = stringPayloadField(payload, 'shortcut_id')
+    ?? stringPayloadField(payload, 'shortcutId');
+  if (!shortcutId) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_home_shortcut_preferences_set action requires payload.shortcut_id.', {
+      action_id: 'agent_package_home_shortcut_preferences_set',
+      required: ['shortcut_id'],
+    });
+  }
+  const visible = typeof payload.visible === 'boolean' ? payload.visible : undefined;
+  const sortOrder = typeof payload.sort_order === 'number' && Number.isFinite(payload.sort_order)
+    ? payload.sort_order
+    : typeof payload.sortOrder === 'number' && Number.isFinite(payload.sortOrder)
+      ? payload.sortOrder
+      : undefined;
+  return { packageId, shortcutId, visible, sortOrder };
 }

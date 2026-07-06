@@ -1,8 +1,5 @@
 import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
-import {
-  listDeveloperModeCloseoutReceipts,
-  type DeveloperModeCloseoutReceipt,
-} from './developer-mode-closeout-ledger.ts';
+import { listDeveloperModeCloseoutReceipts, type DeveloperModeCloseoutReceipt } from './developer-mode-closeout-ledger.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 

@@ -62,6 +62,18 @@ export {
   sourceFingerprint,
 } from './existing-dedupe-decisions.ts';
 
+function currentControlAdmissionAuthorityBoundary() {
+  return {
+    opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
+    domain: 'truth_quality_artifact_gate_owner',
+    domain_truth_mutation: false,
+    publication_quality_mutation: false,
+    artifact_gate_mutation: false,
+    current_package_mutation: false,
+    provider_completion_is_domain_ready: false,
+  };
+}
+
 export function reconcileExistingDedupeTask(
   db: DatabaseSync,
   context: {
@@ -426,15 +438,7 @@ export function reconcileExistingDedupeTask(
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
       eventPayload: {
         ...freshCurrentControlAdmissionRedrive,
-        authority_boundary: {
-          opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-          provider_completion_is_domain_ready: false,
-        },
+        authority_boundary: currentControlAdmissionAuthorityBoundary(),
       },
       notificationTitle: 'Family runtime task requeued from MAS current-control admission',
       requeuedFromTerminal: true,
@@ -461,15 +465,7 @@ export function reconcileExistingDedupeTask(
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
       eventPayload: {
         ...queuedCurrentControlAdmissionRefresh,
-        authority_boundary: {
-          opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-          provider_completion_is_domain_ready: false,
-        },
+        authority_boundary: currentControlAdmissionAuthorityBoundary(),
       },
       notificationTitle: 'Family runtime queued task refreshed from MAS current-control admission',
       requeuedFromTerminal: false,
@@ -491,15 +487,7 @@ export function reconcileExistingDedupeTask(
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
       eventPayload: {
         ...terminalAttemptCurrentControlAdmissionRedrive,
-        authority_boundary: {
-          opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-          provider_completion_is_domain_ready: false,
-        },
+        authority_boundary: currentControlAdmissionAuthorityBoundary(),
       },
       notificationTitle: 'Family runtime task requeued from MAS current-control terminal attempt',
       requeuedFromTerminal: true,
@@ -521,15 +509,7 @@ export function reconcileExistingDedupeTask(
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
       eventPayload: {
         ...succeededProviderLeaseRequiredRedrive,
-        authority_boundary: {
-          opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-          provider_completion_is_domain_ready: false,
-        },
+        authority_boundary: currentControlAdmissionAuthorityBoundary(),
       },
       notificationTitle: 'Family runtime task requeued because MAS still requires provider lease',
       requeuedFromTerminal: true,
@@ -551,15 +531,7 @@ export function reconcileExistingDedupeTask(
       eventType: 'task_requeued_from_mas_current_control_provider_admission',
       eventPayload: {
         ...supersededCurrentControlAdmissionRedrive,
-        authority_boundary: {
-          opl: 'queue_attempt_provider_transport_rehydrate_from_mas_current_control_only',
-          domain: 'truth_quality_artifact_gate_owner',
-          domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
-          provider_completion_is_domain_ready: false,
-        },
+        authority_boundary: currentControlAdmissionAuthorityBoundary(),
       },
       notificationTitle: 'Family runtime task requeued from MAS current-control supersession',
       requeuedFromTerminal: true,
