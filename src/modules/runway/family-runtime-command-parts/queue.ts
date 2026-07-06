@@ -5,7 +5,7 @@ import type {
   FamilyRuntimeDomainProfiles,
   FamilyRuntimeTaskScope,
 } from '../family-runtime-command.ts';
-import { assertDomainId, parsePayloadArg } from './shared.ts';
+import { assertDomainId, parseCliOptions, parsePayloadArg } from './shared.ts';
 
 export function parseTaskScopeOption(
   scope: FamilyRuntimeTaskScope,
@@ -89,21 +89,19 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
   if (rest[0] === 'list') {
     const taskScope: FamilyRuntimeTaskScope = {};
     let status: string | undefined;
-    for (let index = 1; index < rest.length; index += 1) {
-      const token = rest[index];
-      const value = rest[index + 1];
+    parseCliOptions(rest, 1, (token, value) => {
       if (parseTaskScopeOption(taskScope, token, value)) {
-        index += 1;
+        return true;
       } else if (token === '--status' && value) {
         status = value.trim();
-        index += 1;
+        return true;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue list option: ${token}.`, {
           option: token,
           usage: 'opl family-runtime queue list [--domain <domain>] [--study <study_id>] [--status <status>] [--task-kind <kind>] [--payload-match <path=value>]',
         });
       }
-    }
+    });
     return {
       mode: 'queue_list',
       status,
@@ -128,21 +126,19 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
         usage: 'opl family-runtime queue redrive <task_id> --reason <operator_reason> [--source <source>]',
       });
     }
-    for (let index = 2; index < rest.length; index += 1) {
-      const token = rest[index];
-      const value = rest[index + 1];
+    parseCliOptions(rest, 2, (token, value) => {
       if (token === '--reason' && value) {
         reason = value;
-        index += 1;
+        return true;
       } else if (token === '--source' && value) {
         source = value;
-        index += 1;
+        return true;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue redrive option: ${token}.`, {
           option: token,
         });
       }
-    }
+    });
     if (!reason.trim()) {
       throw new FrameworkContractError('cli_usage_error', 'family-runtime queue redrive requires --reason.', {
         usage: 'opl family-runtime queue redrive <task_id> --reason <operator_reason> [--source <source>]',
@@ -154,24 +150,22 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
     let reason = '';
     let source: string | undefined;
     const taskScope: FamilyRuntimeTaskScope = {};
-    for (let index = 1; index < rest.length; index += 1) {
-      const token = rest[index];
-      const value = rest[index + 1];
+    parseCliOptions(rest, 1, (token, value) => {
       if (token === '--reason' && value) {
         reason = value;
-        index += 1;
+        return true;
       } else if (token === '--source' && value) {
         source = value;
-        index += 1;
+        return true;
       } else if (parseTaskScopeOption(taskScope, token, value)) {
-        index += 1;
+        return true;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue hold option: ${token}.`, {
           option: token,
           usage: 'opl family-runtime queue hold --study <study_id> --reason <operator_reason> [--domain <domain>] [--task-kind <kind>] [--payload-match <path=value>] [--source <source>]',
         });
       }
-    }
+    });
     if (!reason.trim()) {
       throw new FrameworkContractError('cli_usage_error', 'family-runtime queue hold requires --reason.', {
         usage: 'opl family-runtime queue hold --study <study_id> --reason <operator_reason>',
@@ -195,26 +189,25 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
     let source: string | undefined;
     let repairStrandedHold = false;
     const taskScope: FamilyRuntimeTaskScope = {};
-    for (let index = 1; index < rest.length; index += 1) {
-      const token = rest[index];
-      const value = rest[index + 1];
+    parseCliOptions(rest, 1, (token, value) => {
       if (token === '--reason' && value) {
         reason = value;
-        index += 1;
+        return true;
       } else if (token === '--source' && value) {
         source = value;
-        index += 1;
+        return true;
       } else if (token === '--repair-stranded-hold') {
         repairStrandedHold = true;
+        return false;
       } else if (parseTaskScopeOption(taskScope, token, value)) {
-        index += 1;
+        return true;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue release option: ${token}.`, {
           option: token,
           usage: 'opl family-runtime queue release --study <study_id> --reason <operator_reason> [--domain <domain>] [--task-kind <kind>] [--payload-match <path=value>] [--source <source>] [--repair-stranded-hold]',
         });
       }
-    }
+    });
     if (!reason.trim()) {
       throw new FrameworkContractError('cli_usage_error', 'family-runtime queue release requires --reason.', {
         usage: 'opl family-runtime queue release --study <study_id> --reason <operator_reason>',
@@ -238,24 +231,22 @@ export function parseQueueArgs(rest: string[]): FamilyRuntimeCommandInput | unde
     let reason = '';
     let source: string | undefined;
     const taskScope: FamilyRuntimeTaskScope = {};
-    for (let index = 1; index < rest.length; index += 1) {
-      const token = rest[index];
-      const value = rest[index + 1];
+    parseCliOptions(rest, 1, (token, value) => {
       if (token === '--reason' && value) {
         reason = value;
-        index += 1;
+        return true;
       } else if (token === '--source' && value) {
         source = value;
-        index += 1;
+        return true;
       } else if (parseTaskScopeOption(taskScope, token, value)) {
-        index += 1;
+        return true;
       } else {
         throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime queue retire option: ${token}.`, {
           option: token,
           usage: 'opl family-runtime queue retire --study <study_id> --reason <operator_reason> [--domain <domain>] [--task-kind <kind>] [--payload-match <path=value>] [--source <source>]',
         });
       }
-    }
+    });
     if (!reason.trim()) {
       throw new FrameworkContractError('cli_usage_error', 'family-runtime queue retire requires --reason.', {
         usage: 'opl family-runtime queue retire --study <study_id> --reason <operator_reason>',
@@ -283,27 +274,26 @@ export function parseTickArgs(rest: string[]): FamilyRuntimeCommandInput {
   let hydrate = false;
   const taskScope: FamilyRuntimeTaskScope = {};
   const domainProfiles: FamilyRuntimeDomainProfiles = {};
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 0, (token, value) => {
     if (token === '--hydrate') {
       hydrate = true;
+      return false;
     } else if (parseTaskScopeOption(taskScope, token, value)) {
-      index += 1;
+      return true;
     } else if (parseDomainProfileOption(domainProfiles, taskScope.domainId, token, value)) {
-      index += 1;
+      return true;
     } else if (token === '--source' && value) {
       source = value;
-      index += 1;
+      return true;
     } else if (token === '--limit' && value) {
       limit = Number.parseInt(value, 10);
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime tick option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   if (!Number.isInteger(limit) || limit <= 0) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime tick --limit must be a positive integer.', {
       limit,
@@ -324,25 +314,23 @@ export function parseIntakeArgs(rest: string[]): FamilyRuntimeCommandInput {
   let source = 'manual';
   const taskScope: FamilyRuntimeTaskScope = {};
   const domainProfiles: FamilyRuntimeDomainProfiles = {};
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 0, (token, value) => {
     if (token === '--domain' && value) {
       domainId = assertDomainId(value);
-      index += 1;
+      return true;
     } else if (parseTaskScopeOption(taskScope, token, value)) {
-      index += 1;
+      return true;
     } else if (parseDomainProfileOption(domainProfiles, domainId ?? taskScope.domainId, token, value)) {
-      index += 1;
+      return true;
     } else if (token === '--source' && value) {
       source = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime intake option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   return {
     mode: 'intake',
     domainId: domainId ?? taskScope.domainId,
@@ -356,24 +344,22 @@ export function parseApproveArgs(rest: string[]): FamilyRuntimeCommandInput {
   let taskId = '';
   let decision: 'approve' | 'deny' = 'approve';
   let reason: string | undefined;
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 0, (token, value) => {
     if (token === '--task' && value) {
       taskId = value;
-      index += 1;
+      return true;
     } else if (token === '--decision' && (value === 'approve' || value === 'deny')) {
       decision = value;
-      index += 1;
+      return true;
     } else if (token === '--reason' && value) {
       reason = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime approve option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   if (!taskId) {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime approve requires --task <task_id>.', {
       usage: 'opl family-runtime approve --task <task_id> --decision approve',
@@ -392,40 +378,40 @@ export function parseEnqueueArgs(rest: string[]): FamilyRuntimeCommandInput {
   let source = 'opl-cli';
   let requiresApproval = false;
   let requireStageAdmission = false;
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    const value = rest[index + 1];
+  parseCliOptions(rest, 0, (token, value) => {
     if (token === '--requires-approval') {
       requiresApproval = true;
+      return false;
     } else if (token === '--require-stage-admission') {
       requireStageAdmission = true;
+      return false;
     } else if (token === '--domain' && value) {
       domainId = assertDomainId(value);
-      index += 1;
+      return true;
     } else if (token === '--task-kind' && value) {
       taskKind = value;
-      index += 1;
+      return true;
     } else if (token === '--payload' && value) {
       payload = value;
-      index += 1;
+      return true;
     } else if (token === '--payload-file' && value) {
       payloadFile = value;
-      index += 1;
+      return true;
     } else if (token === '--dedupe-key' && value) {
       dedupeKey = value;
-      index += 1;
+      return true;
     } else if (token === '--priority' && value) {
       priority = Number.parseInt(value, 10);
-      index += 1;
+      return true;
     } else if (token === '--source' && value) {
       source = value;
-      index += 1;
+      return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime enqueue option: ${token}.`, {
         option: token,
       });
     }
-  }
+  });
   if (!domainId || !taskKind) {
     throw new FrameworkContractError(
       'cli_usage_error',

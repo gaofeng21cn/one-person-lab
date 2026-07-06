@@ -41,6 +41,18 @@ export function parsePayloadArg(value: string | undefined, payloadFile: string |
   return {};
 }
 
+export function parseCliOptions(
+  rest: string[],
+  startIndex: number,
+  visit: (token: string, value: string | undefined) => boolean,
+) {
+  for (let index = startIndex; index < rest.length; index += 1) {
+    if (visit(rest[index], rest[index + 1])) {
+      index += 1;
+    }
+  }
+}
+
 export function assertDomainId(value: string | undefined): FamilyRuntimeDomainId {
   if (FAMILY_RUNTIME_DOMAIN_IDS.includes(value as FamilyRuntimeDomainId)) {
     return value as FamilyRuntimeDomainId;
