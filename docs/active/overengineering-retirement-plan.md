@@ -56,7 +56,7 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 - `2026-07-06`：`app-state-parts/action-execute.ts` 将 dry-run preview builder、settings manual/dry-run builder 与 package/action payload parser 移到邻近 part 文件；执行入口从 `1145` 行降到 `760` 行并退出 line-budget advisory。该拆分只改变文件组织，保留 App action execute 路由、Connect package action 与 Runway dry-run behavior。
 - `2026-07-06`：`agent-lab-developer-mode.ts` 删除多行 import 包装后回到 `1000` 行边界；这是纯格式/结构减法，不改变 Agent Lab developer-mode authority policy。
 - 当前完成口径：P2 属于测试/fixture surface 结构收薄并已审计完成；验证只能证明本 lane 未降低保留的 machine/source guard，不能证明 live provider、domain owner-chain、App release 或 production readiness。
-- 新鲜证据：`npm run --silent line-budget -- --list` 只列出 `src/modules/connect/agent-package-registry.ts`、`src/modules/connect/developer-mode.ts`、`src/entrypoints/cli/cases/public-command-specs-parts/connect.ts`、`src/modules/console/app-state-parts/action-execute.ts`、`src/modules/runway/family-runtime-enqueue-parts/existing-dedupe-reconcile.ts`、`src/modules/foundry-lab/agent-lab-developer-mode.ts`，无剩余 over-budget test/fixture 文件；focused P2 wrapper tests 为 `30/30` 通过。
+- 新鲜证据：`npm run --silent line-budget -- --list` 只列出 `src/modules/connect/developer-mode.ts`、`src/entrypoints/cli/cases/public-command-specs-parts/connect.ts` 两个 source advisory，无剩余 over-budget test/fixture 文件；focused P2 wrapper tests 为 `30/30` 通过。
 
 ## 停止条件
 
