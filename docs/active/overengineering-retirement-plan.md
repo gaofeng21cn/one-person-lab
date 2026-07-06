@@ -35,6 +35,11 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 | P1 | Ledger observability tail | 将私有 drilldown/ledger 字段收敛到 OTel-compatible event/ref projection；保留 OPL receipt refs。 | focused ledger/observability tests；no domain authority write proof。 |
 | P2 | 测试与 fixture surface | 审计完成：active/history docs prose 固定断言已删除；剩余过长测试文件已按行为簇拆分为小型 case modules；MAS activity 中的可变 next-step prose 断言收薄为 route/ref 语义 guard。 | focused P2 tests + `npm test`；`npm run line-budget` 仅剩非 P2 source advisory；不声明 runtime/domain/App release ready。 |
 
+## P0 Agent Package Manager 边界执行记录
+
+- `2026-07-06`：`src/modules/connect/agent-package-registry.ts` 完成 source surface 收薄，主文件只保留 CLI/public runner 编排与 package lock 应用流程；已成簇的类型、常量、manifest/registry 校验、fetch/shared helpers、payload materialize、physical Codex carrier、lock/lifecycle、readback 与 Home shortcut 状态读取迁入 `src/modules/connect/agent-package-registry-parts/`。未新增 package manager 语义、未改 `connect agent-packages` public exports，Codex Plugin 仍只是 carrier adapter。
+- `2026-07-06` 验证证据：`node --experimental-strip-types --test tests/src/cli/cases/connect-agent-packages.test.ts` 11/11 通过；`npm run typecheck` 通过；`npm run --silent line-budget -- --list` 不再列出 `src/modules/connect/agent-package-registry.ts`。本记录只证明结构收薄与 focused package behavior 未回归，不声明 App release、runtime currentness、domain owner-chain 或 production readiness。
+
 ## P1 Runway local scheduler / queue tail 执行记录
 
 - `2026-07-06`：完成 active caller proof。`family-runtime scheduler tick` active path 只接受 `--provider temporal`；`runSchedulerTick` / `runSchedulerQueueTick` 仍被 Temporal activity、control-loop、provider-hosted-attempts 与 provider SLO tests 调用，不能删除。`family-runtime-queue-projection-boundary.ts`、`family-runtime-store.ts`、`family-runtime-enqueue.ts`、`existing-dedupe-*` 仍是 active queue intake / projection / idempotency guard，不能物理删除，只能保留为 local projection、dev/CI diagnostic 与 operator readback cache。
