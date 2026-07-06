@@ -1,7 +1,7 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   isRecord,
-  optionalString,
   readRecordList,
   readStringList,
   type JsonRecord,

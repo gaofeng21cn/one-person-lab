@@ -69,9 +69,9 @@ import {
 import {
   isRecord,
   normalizeTimeoutMs,
-  optionalString,
   type JsonRecord,
 } from './family-runtime-codex-stage-runner-parts/shared.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
 
 export {
   normalizeTypedStageCloseoutPacket,

@@ -7,7 +7,8 @@ import {
   parseCodexExecEventFromLine,
 } from './codex-exec-events.ts';
 import type { CodexCommandResult } from './codex.ts';
-import { isRecord, normalizeTimeoutMs, optionalString, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
+import { stringValue as optionalString } from '../../kernel/json-record.ts';
+import { isRecord, normalizeTimeoutMs, type JsonRecord } from './family-runtime-codex-stage-runner-parts/shared.ts';
 import type { RunnerEventSummary } from './family-runtime-codex-stage-runner-parts/input-prompt.ts';
 
 type LocalSandboxProviderKind = 'local_devcontainer' | 'local_docker';

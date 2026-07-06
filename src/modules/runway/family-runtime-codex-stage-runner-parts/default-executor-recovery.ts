@@ -1,13 +1,13 @@
 import path from 'node:path';
 
 import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   type TypedStageCloseoutPacket,
 } from './closeout-normalization.ts';
 import {
   isRecord,
-  optionalString,
   readRecordList,
   readStringList,
   type JsonRecord,

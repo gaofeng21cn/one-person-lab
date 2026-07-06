@@ -1,4 +1,5 @@
-import { isRecord, optionalString, type JsonRecord } from './shared.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
+import { isRecord, type JsonRecord } from './shared.ts';
 
 function readRecordList(value: unknown) {
   if (!Array.isArray(value)) {

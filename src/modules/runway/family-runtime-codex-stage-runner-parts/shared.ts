@@ -1,14 +1,14 @@
 import { isRecord } from '../../../kernel/contract-validation.ts';
-import { stringValue as optionalString, type JsonRecord } from '../../../kernel/json-record.ts';
+import { stringValue, type JsonRecord } from '../../../kernel/json-record.ts';
 
-export { isRecord, optionalString, type JsonRecord };
+export { isRecord, type JsonRecord };
 
 export function readStringList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
   return value
-    .map((entry) => optionalString(entry))
+    .map((entry) => stringValue(entry))
     .filter((entry): entry is string => Boolean(entry));
 }
 

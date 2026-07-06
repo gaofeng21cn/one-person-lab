@@ -1,8 +1,8 @@
 import type { CodexExecEvent } from '../codex.ts';
+import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import { codexStageAttemptEnv } from './provider-env.ts';
 import {
   isRecord,
-  optionalString,
   readStringList,
   type JsonRecord,
 } from './shared.ts';
