@@ -24,6 +24,7 @@ import {
 import type { CommandSpec } from '../modules/support.ts';
 
 const SANDBOX_PROVIDER_VALUES = [
+  'fast_local_env',
   'local_devcontainer',
   'local_docker',
   'local_managed_root',
@@ -75,13 +76,13 @@ function parseTargetArgs(
       parsed.platformId = value;
       continue;
     }
-    if (token === '--sandbox-provider') {
+    if (token === '--sandbox-provider' || token === '--environment-profile') {
       const value = args[++index];
       if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
         throw buildUsageError(
-          `runtime env command --sandbox-provider must be ${sandboxProviderUsage()}.`,
+          `runtime env command ${token} must be ${sandboxProviderUsage()}.`,
           spec,
-          { option: '--sandbox-provider' },
+          { option: token },
         );
       }
       parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
@@ -195,13 +196,13 @@ function parsePrepareArgs(
       parsed.platformId = value;
       continue;
     }
-    if (token === '--sandbox-provider') {
+    if (token === '--sandbox-provider' || token === '--environment-profile') {
       const value = args[++index];
       if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
         throw buildUsageError(
-          `runtime env prepare --sandbox-provider must be ${sandboxProviderUsage()}.`,
+          `runtime env prepare ${token} must be ${sandboxProviderUsage()}.`,
           spec,
-          { option: '--sandbox-provider' },
+          { option: token },
         );
       }
       parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
@@ -297,13 +298,13 @@ function parseMaterializeArgs(
       parsed.platformId = value;
       continue;
     }
-    if (token === '--sandbox-provider') {
+    if (token === '--sandbox-provider' || token === '--environment-profile') {
       const value = args[++index];
       if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
         throw buildUsageError(
-          `runtime env materialize --sandbox-provider must be ${sandboxProviderUsage()}.`,
+          `runtime env materialize ${token} must be ${sandboxProviderUsage()}.`,
           spec,
-          { option: '--sandbox-provider' },
+          { option: token },
         );
       }
       parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
@@ -374,7 +375,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         'Inspect or operate the OPL-owned runtime environment substrate without granting domain/App readiness.',
       examples: [
         'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
-        'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --sandbox-provider external_sandbox --json',
+        'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --environment-profile external_sandbox --json',
         'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
         'opl runtime env cache status --json',
       ],
@@ -388,21 +389,21 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'runtime env inspect',
           usage:
-            'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]',
+            'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]',
           summary:
             'Read the planned descriptor/materialization boundary for one domain runtime environment.',
         },
         {
           command: 'runtime env lock',
           usage:
-            'opl runtime env lock --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]',
+            'opl runtime env lock --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]',
           summary:
             'Read the planned lock/layer boundary for one domain runtime environment.',
         },
         {
           command: 'runtime env build',
           usage:
-            'opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]',
+            'opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]',
           summary:
             'Project a deterministic dry-run runtime lock and bundle manifest without writing a runtime root.',
         },
@@ -416,7 +417,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'runtime env materialize',
           usage:
-            'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox] [--target current|rollback|staged] [--dry-run|--apply]',
+            'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] [--target current|rollback|staged] [--dry-run|--apply]',
           summary:
             'Materialize an OPL runtime root envelope under OPL_STATE_DIR when --apply is supplied.',
         },
@@ -460,7 +461,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env inspect': {
       usage:
-        'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]',
+        'opl runtime env inspect --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]',
       summary:
         'Read the OPL runtime environment descriptor/materialization boundary for one domain profile.',
       examples: [
@@ -476,7 +477,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env lock': {
       usage:
-        'opl runtime env lock --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]',
+        'opl runtime env lock --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]',
       summary:
         'Read the OPL runtime environment lock/layer boundary without generating a lock or writing a runtime root.',
       examples: [
@@ -492,11 +493,11 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env build': {
       usage:
-        'opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox]',
+        'opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]',
       summary:
         'Project a deterministic runtime lock and bundle manifest without building archives or writing runtime roots.',
       examples: [
-        'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --sandbox-provider external_sandbox --json',
+        'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --environment-profile external_sandbox --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentBuildReadback(
@@ -522,12 +523,12 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env materialize': {
       usage:
-        'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--sandbox-provider local_devcontainer|local_docker|local_managed_root|external_sandbox] [--target current|rollback|staged] [--dry-run|--apply]',
+        'opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] [--target current|rollback|staged] [--dry-run|--apply]',
       summary:
         'Materialize an OPL runtime root envelope under OPL_STATE_DIR when --apply is supplied.',
       examples: [
         'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --dry-run --json',
-        'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --sandbox-provider external_sandbox --apply --json',
+        'opl runtime env materialize --domain mas --profile analysis --platform macos-arm64 --environment-profile external_sandbox --apply --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentMaterializeReadback(

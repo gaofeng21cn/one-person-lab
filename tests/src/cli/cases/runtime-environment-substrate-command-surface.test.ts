@@ -69,6 +69,19 @@ const modalLikeEnvSpecIds = [
   'singlecell_gpu',
 ];
 
+function fastLocalEnvDefaultFields(readback: Record<string, any>) {
+  const defaultPath = readback.default_current_path ?? {};
+  const handoff = readback.standard_tool_handoff ?? {};
+  return {
+    sandbox_provider: readback.sandbox_provider,
+    default_strategy: defaultPath.strategy_id,
+    default_path: defaultPath.path_id,
+    renv_handoff: (handoff.renv ?? {}).tool,
+    uv_handoff: (handoff.uv ?? {}).tool,
+    host_environment_fallback_allowed: defaultPath.host_environment_fallback_allowed,
+  };
+}
+
 test('runtime env CLI exposes deterministic projections before materializing runtime roots', () => {
   const env = stateEnv('dry-run-');
   const inspect = runCli([
@@ -94,8 +107,18 @@ test('runtime env CLI exposes deterministic projections before materializing run
   assert.equal(inspect.can_claim_runtime_ready, false);
   assert.equal(inspect.can_claim_domain_ready, false);
   assert.equal(inspect.can_claim_app_release_ready, false);
-  assert.equal(inspect.sandbox_provider, 'local_devcontainer');
-  assert.equal(inspect.sandbox_provider_plan.selected_provider, 'local_devcontainer');
+  assert.deepEqual(fastLocalEnvDefaultFields(inspect), {
+    sandbox_provider: 'fast_local_env',
+    default_strategy: 'fast_local_env',
+    default_path: 'default_current_path',
+    renv_handoff: 'renv',
+    uv_handoff: 'uv',
+    host_environment_fallback_allowed: false,
+  });
+  assert.equal(inspect.sandbox_provider_plan.selected_provider, 'fast_local_env');
+  assert.equal(inspect.sandbox_provider_plan.provider_role, 'fast_local_env_default_current_path');
+  assert.deepEqual(inspect.sandbox_provider_plan.later_sandbox_provider_kinds, ['local_docker', 'external_sandbox']);
+  assert.deepEqual(inspect.sandbox_provider_plan.later_external_sandbox_substrates, ['e2b', 'daytona', 'modal']);
   assert.equal(inspect.sandbox_provider_plan.materialization_root_provider, 'local_managed_root');
   assert.equal(inspect.sandbox_provider_plan.can_claim_provider_ready, false);
   assert.equal(inspect.authority_boundary.can_claim_runtime_materialized_ready, false);
@@ -166,7 +189,17 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
   assert.equal(build.build_plan.writes_runtime_root, false);
   assert.equal(build.build_plan.creates_archive, false);
   assert.equal(build.build_plan.can_claim_runtime_ready, false);
-  assert.equal(build.sandbox_provider_plan.selected_provider, 'local_devcontainer');
+  assert.deepEqual(fastLocalEnvDefaultFields(build), {
+    sandbox_provider: 'fast_local_env',
+    default_strategy: 'fast_local_env',
+    default_path: 'default_current_path',
+    renv_handoff: 'renv',
+    uv_handoff: 'uv',
+    host_environment_fallback_allowed: false,
+  });
+  assert.equal(build.sandbox_provider_plan.selected_provider, 'fast_local_env');
+  assert.deepEqual(build.sandbox_provider_plan.later_sandbox_provider_kinds, ['local_docker', 'external_sandbox']);
+  assert.deepEqual(build.sandbox_provider_plan.later_external_sandbox_substrates, ['e2b', 'daytona', 'modal']);
   assert.equal(build.sandbox_provider_plan.materialization_root_provider, 'local_managed_root');
   assert.equal(build.sandbox_provider_plan.temporal_replacement, false);
   assert.equal(build.bundle_manifest.status, 'dry_run_bundle_manifest_projected');
