@@ -57,6 +57,13 @@ process.exit(0);
   return rscriptPath;
 }
 
+function writeFakeExecutable(binDir: string, name: string) {
+  fs.mkdirSync(binDir, { recursive: true });
+  const executablePath = path.join(binDir, name);
+  fs.writeFileSync(executablePath, '#!/usr/bin/env sh\nexit 0\n', { mode: 0o755 });
+  return executablePath;
+}
+
 const modalLikeEnvSpecIds = [
   'chemistry_gpu',
   'esmfold2_gpu',
@@ -534,6 +541,66 @@ test('runtime env prepare writes a dependency failure receipt without installing
   assert.equal(readback.run_context.consumer_preflight.route_hint, 'opl_runtime_env_prepare');
   assert.equal(readback.run_context.consumer_boundary.host_environment_fallback_allowed, false);
   assert.equal(readback.run_context.writes_runtime_root, false);
+});
+
+test('runtime env prepare treats Python packages as Fast Local Env managed uv requirements', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-python-prepare-'));
+  const stateRoot = path.join(root, 'opl-state');
+  const paperRoot = path.join(root, 'paper');
+  const binDir = path.join(root, 'bin');
+  const profilePath = path.join(root, 'python_dependency_profile.json');
+  const pythonPath = writeFakeExecutable(binDir, 'python3');
+  const uvPath = writeFakeExecutable(binDir, 'uv');
+  fs.writeFileSync(profilePath, JSON.stringify({
+    profiles: [
+      {
+        profile_id: 'python_display',
+        language_packages: {
+          python: [
+            { name: 'plotnine' },
+            { name: 'pandas' },
+          ],
+        },
+      },
+    ],
+  }));
+
+  const readback = runCli([
+    'runtime',
+    'env',
+    'prepare',
+    '--domain',
+    'mas',
+    '--profile',
+    'display',
+    '--platform',
+    'macos-arm64',
+    '--requirement-profile',
+    profilePath,
+    '--paper-root',
+    paperRoot,
+  ], {
+    OPL_STATE_DIR: stateRoot,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+  }).runtime_environment;
+
+  assert.equal(readback.prepare.status, 'missing_language_package');
+  assert.equal(readback.prepare.environment_tier, 'fast_local_env');
+  assert.deepEqual(readback.prepare.managed_required_python_packages, ['plotnine', 'pandas']);
+  assert.deepEqual(readback.prepare.missing_python_packages, ['plotnine', 'pandas']);
+  assert.equal(readback.prepare.binary_paths.python3, pythonPath);
+  assert.equal(readback.prepare.binary_paths.uv, uvPath);
+  assert.match(readback.prepare.managed_python_environment_path, /dependency-libraries\/[^/]+\/python$/);
+  assert.equal(readback.prepare.python_package_installation_receipt.status, 'not_requested');
+  assert.equal(readback.prepare.host_package_fallback_allowed, false);
+  assert.equal(readback.run_context, null);
+
+  const receipt = parseJsonText(
+    fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json'), 'utf8'),
+  ) as Record<string, any>;
+  assert.deepEqual(receipt.missing_python_packages, ['plotnine', 'pandas']);
+  assert.equal(receipt.managed_python_environment_path, readback.prepare.managed_python_environment_path);
+  assert.equal(receipt.host_package_fallback_allowed, false);
 });
 
 test('runtime env prepare aggregates multi-profile dependency requirements instead of only the first profile', () => {

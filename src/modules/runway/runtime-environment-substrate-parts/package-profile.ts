@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
-import type { JsonRecord, RPackageRequirement } from './contract.ts';
+import type { JsonRecord, PythonPackageRequirement, RPackageRequirement } from './contract.ts';
 import { contentFingerprint, objects } from './target-state.ts';
 
 export function requirementProfileIdentity(
@@ -145,6 +145,93 @@ export function uniqueRPackageRequirements(values: RPackageRequirement[]): RPack
   return result;
 }
 
+export function pythonPackageRequirementsFromEntries(value: unknown): PythonPackageRequirement[] {
+  return objects(value)
+    .filter((entry) => entry.required !== false)
+    .map((entry): PythonPackageRequirement | null => {
+      const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+      return name ? { name } : null;
+    })
+    .filter((entry): entry is PythonPackageRequirement => Boolean(entry));
+}
+
+export function uniquePythonPackageRequirements(values: PythonPackageRequirement[]): PythonPackageRequirement[] {
+  const seen = new Set<string>();
+  const result: PythonPackageRequirement[] = [];
+  values.forEach((value) => {
+    const key = normalizePythonPackageName(value.name);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(value);
+    }
+  });
+  return result;
+}
+
+export function normalizePythonPackageName(value: string) {
+  return value.trim().toLowerCase().replace(/[-_.]+/g, '-');
+}
+
+export function pythonExecutableInManagedEnv(environmentPath: string) {
+  return path.join(environmentPath, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+}
+
+export function installedPythonPackages(pythonPath: string): Set<string> {
+  const result = spawnSync(pythonPath, [
+    '-c',
+    'import importlib.metadata as m; print("\\n".join(d.metadata["Name"] for d in m.distributions() if d.metadata["Name"]))',
+  ], {
+    encoding: 'utf8',
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    return new Set();
+  }
+  return new Set(result.stdout.split('\n').map(normalizePythonPackageName).filter(Boolean));
+}
+
+export function installPythonPackagesIntoManagedEnv(
+  uvPath: string,
+  pythonPath: string,
+  environmentPath: string,
+  packages: string[],
+) {
+  if (packages.length === 0) {
+    return {
+      status: 'not_required',
+      installed: [],
+      failed: [],
+      managed_environment_path: environmentPath,
+      verified_with: 'importlib.metadata.distributions() in managed Python environment',
+      stderr: '',
+    };
+  }
+  fs.mkdirSync(path.dirname(environmentPath), { recursive: true });
+  const venvResult = spawnSync(uvPath, ['venv', environmentPath, '--python', pythonPath], {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const managedPythonPath = pythonExecutableInManagedEnv(environmentPath);
+  const installResult = venvResult.status === 0
+    ? spawnSync(uvPath, ['pip', 'install', '--python', managedPythonPath, ...packages], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    })
+    : venvResult;
+  const installed = fs.existsSync(managedPythonPath)
+    ? installedPythonPackages(managedPythonPath)
+    : new Set<string>();
+  const failed = packages.filter((packageName) => !installed.has(normalizePythonPackageName(packageName)));
+  return {
+    status: installResult.status === 0 && failed.length === 0 ? 'installed' : 'failed',
+    installed: packages.filter((packageName) => installed.has(normalizePythonPackageName(packageName))),
+    failed,
+    managed_environment_path: environmentPath,
+    verified_with: 'importlib.metadata.distributions() in managed Python environment',
+    stderr: `${venvResult.stderr.trim()}\n${installResult.stderr.trim()}`.trim(),
+  };
+}
+
 export function installRPackagesIntoManagedLibrary(
   rscriptPath: string,
   libraryPath: string,
@@ -246,6 +333,11 @@ export function readPrepareProfile(profilePath: string, requirementProfileId?: s
     const languagePackages = entry.language_packages as JsonRecord | undefined;
     return rPackageRequirementsFromEntries(languagePackages?.r);
   }));
+  const requiredPythonPackageRequirements = uniquePythonPackageRequirements(selectedProfiles.flatMap((entry) => {
+    const languagePackages = entry.language_packages as JsonRecord | undefined;
+    return pythonPackageRequirementsFromEntries(languagePackages?.python);
+  }));
+  const requiredPythonPackages = requiredPythonPackageRequirements.map((requirement) => requirement.name);
   return {
     profile,
     selected: selectedProfiles.length === 1 ? selectedProfiles[0] : {},
@@ -253,6 +345,8 @@ export function readPrepareProfile(profilePath: string, requirementProfileId?: s
     runtimeBinaries,
     requiredRPackages,
     requiredRPackageRequirements,
+    requiredPythonPackages,
+    requiredPythonPackageRequirements,
   };
 }
 
