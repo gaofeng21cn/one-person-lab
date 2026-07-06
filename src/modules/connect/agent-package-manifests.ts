@@ -8,6 +8,7 @@ type FirstPartyAgentPackageManifest = {
   package_id: string;
   version: string;
   source: string;
+  package_core: Record<string, unknown> | null;
   distribution_payload: {
     payload_kind: string;
     payload_ref: string;
@@ -29,6 +30,7 @@ type FirstPartyAgentPackageManifest = {
     required_skill_ids: readonly string[];
     bundled_capability_package_ids?: readonly string[];
   };
+  carrier_adapters: readonly Record<string, unknown>[];
   capability_dependencies: readonly ModuleCapabilityDependency[];
 };
 
@@ -181,6 +183,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     package_id: canonicalAgentPackageId(requiredString(payload.package_id, 'package_id'))!,
     version: requiredString(payload.version, 'version'),
     source: requiredString(payload.source, 'source'),
+    package_core: isRecord(payload.package_core) ? payload.package_core : null,
     distribution_payload: normalizeDistributionPayload(payload.distribution_payload),
     codex_surface: {
       plugin_id: requiredString(codexSurface.plugin_id, 'codex_surface.plugin_id'),
@@ -192,6 +195,9 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
       required_skill_ids: requireStringList(codexSurface.required_skill_ids, 'codex_surface.required_skill_ids'),
       bundled_capability_package_ids: stringList(codexSurface.bundled_capability_package_ids),
     },
+    carrier_adapters: Array.isArray(payload.carrier_adapters)
+      ? payload.carrier_adapters.filter(isRecord)
+      : [],
     capability_dependencies: payload.capability_dependencies.map(normalizeCapabilityDependency),
   };
 }

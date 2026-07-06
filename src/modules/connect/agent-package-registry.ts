@@ -199,6 +199,53 @@ type AgentPackagePhysicalSurface = {
   authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
 };
 
+type AgentPackageDescriptorReadback = {
+  manifest_url: string | null;
+  manifest_sha256: string | null;
+  registry_url: string | null;
+  package_version: string | null;
+  rollback_ref: string | null;
+  source_kind: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
+  trust_tier: string | null;
+};
+
+type AgentPackageDigestReadback = {
+  manifest_sha256: string | null;
+  version_or_source_digest: string | null;
+  plugin_payload_manifest_sha256: string | null;
+  resolved_digest: string | null;
+  install_truth: string | null;
+  content_identity_fields: string[];
+};
+
+type AgentPackageLockReadback = {
+  package_lock_ref: string | null;
+  lifecycle_receipt_ref: string | null;
+  lock_file: string;
+  lifecycle_ledger_file: string;
+};
+
+type AgentPackageCarrierAdapterReadback = {
+  adapter_kind: 'codex_plugin_carrier';
+  carrier: 'codex_plugin';
+  source_surface: 'codex_surface';
+  projection_role: 'package_carrier_adapter';
+  owns_package_core: false;
+  owns_domain_truth: false;
+  status: AgentPackagePhysicalSurface['status'];
+  plugin_id: string | null;
+  plugin_source_path: string | null;
+  plugin_manifest_path: string | null;
+  codex_plugin_cache_path: string | null;
+  plugin_payload_manifest_url: string | null;
+  plugin_payload_manifest_sha256: string | null;
+  plugin_payload_cache_path: string | null;
+  materialized_required_skill_ids: string[];
+  materialized_required_skill_paths: string[];
+  writes_performed: boolean;
+  reload_required: boolean;
+};
+
 type AgentPackageLock = {
   surface_kind: 'opl_agent_package_lock';
   package_id: string;
@@ -228,6 +275,28 @@ type AgentPackageLock = {
   physical_surface?: AgentPackagePhysicalSurface;
   exposure_state?: 'visible' | 'hidden' | 'enabled' | 'disabled';
   exposure_updated_at?: string;
+};
+
+type AgentPackageCoreReadback = {
+  core_kind: 'opl_agent_package_core';
+  package_id: string;
+  descriptor: AgentPackageDescriptorReadback;
+  digest: AgentPackageDigestReadback;
+  dependencies: {
+    required_skill_ids: string[];
+    optional_skill_refs: string[];
+  };
+  trust: {
+    trust_tier: string | null;
+  };
+  lock: AgentPackageLockReadback;
+  lifecycle: {
+    latest_receipt_ref: string | null;
+    latest_action: AgentPackageLifecycleAction | null;
+  };
+  exposure: {
+    state: AgentPackageLock['exposure_state'] | null;
+  };
 };
 
 type AgentPackageLifecycleReceipt = {
@@ -292,29 +361,9 @@ type AgentPackageLifecycleLedger = {
 
 type AgentPackageOwnerRouteReadbackItem = {
   package_id: string;
-  descriptor: {
-    manifest_url: string | null;
-    manifest_sha256: string | null;
-    registry_url: string | null;
-    package_version: string | null;
-    rollback_ref: string | null;
-    source_kind: AgentPackageLifecycleReceipt['source_kind'] | AgentPackageSourceKind | null;
-    trust_tier: string | null;
-  };
-  digest: {
-    manifest_sha256: string | null;
-    version_or_source_digest: string | null;
-    plugin_payload_manifest_sha256: string | null;
-    resolved_digest: string | null;
-    install_truth: string | null;
-    content_identity_fields: string[];
-  };
-  lock: {
-    package_lock_ref: string | null;
-    lifecycle_receipt_ref: string | null;
-    lock_file: string;
-    lifecycle_ledger_file: string;
-  };
+  descriptor: AgentPackageDescriptorReadback;
+  digest: AgentPackageDigestReadback;
+  lock: AgentPackageLockReadback;
   materializer: {
     status: AgentPackagePhysicalSurface['status'];
     plugin_id: string | null;
@@ -329,6 +378,8 @@ type AgentPackageOwnerRouteReadbackItem = {
     writes_performed: boolean;
     reload_required: boolean;
   };
+  package_core: AgentPackageCoreReadback;
+  carrier_adapters: AgentPackageCarrierAdapterReadback[];
   authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
 };
 
@@ -840,51 +891,85 @@ function ownerRouteReadbackItem(input: {
 }): AgentPackageOwnerRouteReadbackItem {
   const paths = resolveOplStatePaths();
   const surface = input.lock?.physical_surface ?? input.receipt?.physical_surface;
+  const descriptor = {
+    manifest_url: input.lock?.manifest_url ?? input.receipt?.manifest_url ?? input.manifestUrl ?? null,
+    manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
+    registry_url: input.receipt?.registry_url ?? input.registryUrl ?? null,
+    package_version: input.lock?.package_version ?? null,
+    rollback_ref: input.lock?.rollback_ref ?? input.receipt?.rollback_ref ?? input.rollbackRef ?? null,
+    source_kind: input.lock?.source_kind ?? input.receipt?.source_kind ?? input.sourceKind ?? null,
+    trust_tier: input.lock?.trust_tier ?? input.receipt?.trust_tier ?? input.trustTier ?? null,
+  };
+  const digest = {
+    manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
+    version_or_source_digest: input.lock?.version_or_source_digest ?? null,
+    plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
+    resolved_digest: input.lock?.resolved_digest ?? null,
+    install_truth: input.lock?.install_truth ?? null,
+    content_identity_fields: [
+      'manifest_sha256',
+      'version_or_source_digest',
+      'plugin_payload_manifest_sha256',
+      'resolved_digest',
+      'package_lock_ref',
+    ],
+  };
+  const lock = {
+    package_lock_ref: input.lock?.lock_ref ?? input.receipt?.package_lock_ref ?? null,
+    lifecycle_receipt_ref: input.receipt?.receipt_ref ?? input.lock?.action_receipt_id ?? null,
+    lock_file: paths.agent_package_lock_file,
+    lifecycle_ledger_file: paths.agent_package_lifecycle_ledger_file,
+  };
+  const materializer = {
+    status: surface?.status ?? 'not_requested',
+    plugin_id: surface?.plugin_id ?? null,
+    plugin_source_path: surface?.plugin_source_path ?? null,
+    plugin_manifest_path: surface?.plugin_manifest_path ?? null,
+    codex_plugin_cache_path: surface?.codex_plugin_cache_path ?? null,
+    plugin_payload_manifest_url: surface?.plugin_payload_manifest_url ?? null,
+    plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
+    plugin_payload_cache_path: surface?.plugin_payload_cache_path ?? null,
+    materialized_required_skill_ids: surface?.materialized_required_skill_ids ?? [],
+    materialized_required_skill_paths: surface?.materialized_required_skill_paths ?? [],
+    writes_performed: surface?.writes_performed ?? false,
+    reload_required: surface?.reload_required ?? false,
+  };
   return {
     package_id: input.packageId,
-    descriptor: {
-      manifest_url: input.lock?.manifest_url ?? input.receipt?.manifest_url ?? input.manifestUrl ?? null,
-      manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
-      registry_url: input.receipt?.registry_url ?? input.registryUrl ?? null,
-      package_version: input.lock?.package_version ?? null,
-      rollback_ref: input.lock?.rollback_ref ?? input.receipt?.rollback_ref ?? input.rollbackRef ?? null,
-      source_kind: input.lock?.source_kind ?? input.receipt?.source_kind ?? input.sourceKind ?? null,
-      trust_tier: input.lock?.trust_tier ?? input.receipt?.trust_tier ?? input.trustTier ?? null,
+    descriptor,
+    digest,
+    lock,
+    materializer,
+    package_core: {
+      core_kind: 'opl_agent_package_core',
+      package_id: input.packageId,
+      descriptor,
+      digest,
+      dependencies: {
+        required_skill_ids: input.lock?.bundled_required_skill_ids ?? surface?.materialized_required_skill_ids ?? [],
+        optional_skill_refs: input.lock?.optional_skill_refs ?? [],
+      },
+      trust: {
+        trust_tier: descriptor.trust_tier,
+      },
+      lock,
+      lifecycle: {
+        latest_receipt_ref: lock.lifecycle_receipt_ref,
+        latest_action: input.receipt?.action ?? null,
+      },
+      exposure: {
+        state: input.lock?.exposure_state ?? null,
+      },
     },
-    digest: {
-      manifest_sha256: input.lock?.manifest_sha256 ?? input.receipt?.manifest_sha256 ?? input.manifestSha256 ?? null,
-      version_or_source_digest: input.lock?.version_or_source_digest ?? null,
-      plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
-      resolved_digest: input.lock?.resolved_digest ?? null,
-      install_truth: input.lock?.install_truth ?? null,
-      content_identity_fields: [
-        'manifest_sha256',
-        'version_or_source_digest',
-        'plugin_payload_manifest_sha256',
-        'resolved_digest',
-        'package_lock_ref',
-      ],
-    },
-    lock: {
-      package_lock_ref: input.lock?.lock_ref ?? input.receipt?.package_lock_ref ?? null,
-      lifecycle_receipt_ref: input.receipt?.receipt_ref ?? input.lock?.action_receipt_id ?? null,
-      lock_file: paths.agent_package_lock_file,
-      lifecycle_ledger_file: paths.agent_package_lifecycle_ledger_file,
-    },
-    materializer: {
-      status: surface?.status ?? 'not_requested',
-      plugin_id: surface?.plugin_id ?? null,
-      plugin_source_path: surface?.plugin_source_path ?? null,
-      plugin_manifest_path: surface?.plugin_manifest_path ?? null,
-      codex_plugin_cache_path: surface?.codex_plugin_cache_path ?? null,
-      plugin_payload_manifest_url: surface?.plugin_payload_manifest_url ?? null,
-      plugin_payload_manifest_sha256: surface?.plugin_payload_manifest_sha256 ?? null,
-      plugin_payload_cache_path: surface?.plugin_payload_cache_path ?? null,
-      materialized_required_skill_ids: surface?.materialized_required_skill_ids ?? [],
-      materialized_required_skill_paths: surface?.materialized_required_skill_paths ?? [],
-      writes_performed: surface?.writes_performed ?? false,
-      reload_required: surface?.reload_required ?? false,
-    },
+    carrier_adapters: [{
+      adapter_kind: 'codex_plugin_carrier',
+      carrier: 'codex_plugin',
+      source_surface: 'codex_surface',
+      projection_role: 'package_carrier_adapter',
+      owns_package_core: false,
+      owns_domain_truth: false,
+      ...materializer,
+    }],
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }

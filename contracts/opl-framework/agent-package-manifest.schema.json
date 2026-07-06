@@ -33,6 +33,61 @@
       "type": "string",
       "minLength": 1
     },
+    "package_core": {
+      "type": "object",
+      "required": [
+        "core_kind",
+        "identity_fields",
+        "content_identity_fields",
+        "dependency_source",
+        "lock_owner",
+        "lifecycle_receipt_owner",
+        "exposure_owner"
+      ],
+      "properties": {
+        "core_kind": {
+          "const": "opl_agent_package_core"
+        },
+        "identity_fields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "package_id",
+              "agent_id",
+              "version"
+            ]
+          },
+          "minItems": 3,
+          "uniqueItems": true
+        },
+        "content_identity_fields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "manifest_sha256",
+              "payload_digest_ref",
+              "required_skill_pack_lock_refs",
+              "package_lock_ref"
+            ]
+          },
+          "minItems": 4,
+          "uniqueItems": true
+        },
+        "dependency_source": {
+          "const": "manifest_declared_capability_dependencies"
+        },
+        "lock_owner": {
+          "const": "opl_connect_agent_package_registry"
+        },
+        "lifecycle_receipt_owner": {
+          "const": "opl_connect_agent_package_registry"
+        },
+        "exposure_owner": {
+          "const": "opl_connect_agent_package_registry"
+        }
+      },
+      "additionalProperties": true
+    },
     "distribution_payload": {
       "type": "object",
       "required": [
@@ -132,6 +187,43 @@
         }
       },
       "additionalProperties": true
+    },
+    "carrier_adapters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "adapter_kind",
+          "carrier",
+          "source_surface",
+          "projection_role",
+          "owns_package_core",
+          "owns_domain_truth"
+        ],
+        "properties": {
+          "adapter_kind": {
+            "const": "codex_plugin_carrier"
+          },
+          "carrier": {
+            "const": "codex_plugin"
+          },
+          "source_surface": {
+            "const": "codex_surface"
+          },
+          "projection_role": {
+            "const": "package_carrier_adapter"
+          },
+          "owns_package_core": {
+            "const": false
+          },
+          "owns_domain_truth": {
+            "const": false
+          }
+        },
+        "additionalProperties": true
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "capability_dependencies": {
       "type": "array",

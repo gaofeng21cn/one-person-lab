@@ -604,7 +604,13 @@ test('MAS first-party agent package manifest declares standalone bundle and OPL 
   assert.equal(manifest.distribution_payload.install_truth, 'resolved_digest_lock');
   assert.equal(manifest.distribution_payload.live_download_proof, false);
   assert.equal(manifest.distribution_payload.installed_reload_proof, false);
+  assert.equal(manifest.package_core.core_kind, 'opl_agent_package_core');
+  assert.equal(manifest.package_core.dependency_source, 'manifest_declared_capability_dependencies');
+  assert.equal(manifest.carrier_adapters[0].carrier, 'codex_plugin');
+  assert.equal(manifest.carrier_adapters[0].owns_package_core, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
+  assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
+  assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
   assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
@@ -685,6 +691,8 @@ test('first-party agent package manifest canonicalizes legacy package and assist
   assert.equal(normalized.agent_id, 'med-autoscience');
   assert.equal(normalized.codex_surface.plugin_id, 'mas');
   assert.deepEqual(normalized.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
+  assert.equal(normalized.package_core, null);
+  assert.deepEqual(normalized.carrier_adapters, []);
   assert.equal(canonicalAgentPackageId('obf'), 'opl-bookforge');
 });
 

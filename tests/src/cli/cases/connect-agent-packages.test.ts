@@ -302,6 +302,8 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
           owner_route_readback: {
             owner_route: { readback_ref: string; package_manager_claim: boolean };
             packages: Array<{
+              package_core: { core_kind: string; package_id: string };
+              carrier_adapters: Array<{ carrier: string; owns_package_core: boolean }>;
               descriptor: { manifest_url: string; manifest_sha256: string; registry_url: string | null };
             }>;
             no_package_manager_boundary: { package_manager_claim: boolean };
@@ -320,6 +322,10 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.owner_route.readback_ref, 'opl connect agent-packages list --json');
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].descriptor.manifest_url, `${baseUrl}/manifest.json`);
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].descriptor.registry_url, registryUrl);
+      assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].package_core.core_kind, 'opl_agent_package_core');
+      assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].package_core.package_id, 'third.party.research');
+      assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].carrier_adapters[0].carrier, 'codex_plugin');
+      assert.equal(validated.opl_agent_package_manifest.owner_route_readback.packages[0].carrier_adapters[0].owns_package_core, false);
       assert.equal(validated.opl_agent_package_manifest.owner_route_readback.no_package_manager_boundary.package_manager_claim, false);
 
       const install = await runCliAsync([
@@ -376,6 +382,8 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
             selected_package_id: string;
             owner_route: { readback_ref: string; package_manager_claim: boolean };
             packages: Array<{
+              package_core: { core_kind: string; dependencies: { required_skill_ids: string[] } };
+              carrier_adapters: Array<{ carrier: string; status: string; plugin_manifest_path: string }>;
               digest: { version_or_source_digest: string; manifest_sha256: string; resolved_digest: string; install_truth: string };
               lock: { package_lock_ref: string; lifecycle_receipt_ref: string };
               materializer: { status: string; plugin_manifest_path: string; writes_performed: boolean };
@@ -436,6 +444,14 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       );
       assert.equal(
         install.opl_agent_package_install.owner_route_readback.packages[0].materializer.plugin_manifest_path,
+        install.opl_agent_package_install.physical_surface.plugin_manifest_path,
+      );
+      assert.deepEqual(
+        install.opl_agent_package_install.owner_route_readback.packages[0].package_core.dependencies.required_skill_ids,
+        ['third-party-research'],
+      );
+      assert.equal(
+        install.opl_agent_package_install.owner_route_readback.packages[0].carrier_adapters[0].plugin_manifest_path,
         install.opl_agent_package_install.physical_surface.plugin_manifest_path,
       );
       assert.equal(install.opl_agent_package_install.owner_route_readback.no_package_manager_boundary.package_manager_claim, false);
