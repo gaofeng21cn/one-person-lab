@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
-import { buildRuntimeEnvironmentBuildReadback } from '../../src/modules/runway/runtime-environment-substrate.ts';
+import {
+  buildRuntimeEnvironmentBuildReadback,
+  buildRuntimeEnvironmentPrepareReadback,
+  buildRuntimeEnvironmentRunContextReadback,
+} from '../../src/modules/runway/runtime-environment-substrate.ts';
 
 type Json = Record<string, unknown>;
 
@@ -49,6 +54,7 @@ test('runtime environment substrate keeps shared helpers split behind a thin fac
     'contract.ts',
     'target-state.ts',
     'package-profile.ts',
+    'language-lock-handoff.ts',
     'sandbox-provider-plan.ts',
     'projection-cache.ts',
   ];
@@ -418,4 +424,101 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(flags.modal_env_spec_id_counts_as_image_built, false);
   assert.equal(flags.modal_env_spec_id_counts_as_provider_ready, false);
   assert.equal(flags.model_endpoint_provider_receipt_counts_as_domain_ready, false);
+});
+
+test('runtime env prepare carries renv and uv lock refs into output, run-context, and identity', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-locks-'));
+  const paperRoot = path.join(tempRoot, 'paper');
+  const profilePath = path.join(tempRoot, 'requirements.json');
+  const profile = {
+    profiles: [
+      {
+        profile_id: 'analysis',
+        runtime_binaries: [],
+        language_packages: { r: [], python: [] },
+        language_locks: {
+          r: {
+            lock_ref: 'renv.lock',
+            source_ref: 'analysis/renv.lock',
+            project_ref: 'analysis',
+          },
+          python: {
+            lock_ref: 'uv.lock',
+            source_ref: 'analysis/uv.lock',
+            project_ref: 'analysis/pyproject.toml',
+          },
+        },
+      },
+    ],
+  };
+  fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+
+  const readback = buildRuntimeEnvironmentPrepareReadback({
+    domainId: 'mas',
+    profileId: 'analysis',
+    platformId: 'macos-arm64',
+    requirementProfilePath: profilePath,
+    requirementProfileId: 'analysis',
+    paperRoot,
+  }) as Json;
+  const prepare = readback.prepare as Json;
+  const handoff = prepare.language_lock_handoff as Json;
+  const rHandoff = handoff.r as Json;
+  const pythonHandoff = handoff.python as Json;
+
+  assert.equal(prepare.status, 'prepared');
+  assert.equal(prepare.host_package_fallback_allowed, false);
+  assert.deepEqual(rHandoff.lock_refs, ['renv.lock']);
+  assert.deepEqual(pythonHandoff.lock_refs, ['uv.lock']);
+  assert.equal(rHandoff.renv_backed_handoff, true);
+  assert.equal(pythonHandoff.uv_backed_handoff, true);
+  assert.deepEqual(prepare.requirement_lock_refs, ['renv.lock', 'uv.lock']);
+  assert.equal((prepare.source_requirement_refs as string[]).includes('analysis/renv.lock'), true);
+  assert.equal((prepare.source_requirement_refs as string[]).includes('analysis/uv.lock'), true);
+
+  const runContext = readback.run_context as Json;
+  assert.deepEqual(((runContext.language_lock_handoff as Json).r as Json).lock_refs, ['renv.lock']);
+  assert.deepEqual(((runContext.language_lock_handoff as Json).python as Json).lock_refs, ['uv.lock']);
+  const runContextReadback = buildRuntimeEnvironmentRunContextReadback({
+    domainId: 'mas',
+    profileId: 'analysis',
+    platformId: 'macos-arm64',
+    paperRoot,
+  }) as Json;
+  const boundRunContext = runContextReadback.run_context as Json;
+  assert.equal((boundRunContext.consumer_preflight as Json).status, 'bound');
+  assert.deepEqual(((boundRunContext.language_lock_handoff as Json).python as Json).project_refs, [
+    'analysis/pyproject.toml',
+  ]);
+
+  const firstIdentity = prepare.requirement_profile_identity as Json;
+  const firstFingerprint = firstIdentity.profile_fingerprint;
+  const firstRCacheKey = prepare.managed_r_library_path;
+  const firstPythonCacheKey = prepare.managed_python_environment_path;
+  fs.writeFileSync(
+    profilePath,
+    `${JSON.stringify({
+      profiles: [
+        {
+          ...profile.profiles[0],
+          language_locks: {
+            r: { lock_ref: 'renv-v2.lock' },
+            python: { lock_ref: 'uv-v2.lock' },
+          },
+        },
+      ],
+    }, null, 2)}\n`,
+  );
+  const changed = buildRuntimeEnvironmentPrepareReadback({
+    domainId: 'mas',
+    profileId: 'analysis',
+    platformId: 'macos-arm64',
+    requirementProfilePath: profilePath,
+    requirementProfileId: 'analysis',
+    paperRoot: path.join(tempRoot, 'paper-v2'),
+  }) as Json;
+  const changedPrepare = changed.prepare as Json;
+  assert.notEqual((changedPrepare.requirement_profile_identity as Json).profile_fingerprint, firstFingerprint);
+  assert.notEqual(changedPrepare.managed_r_library_path, firstRCacheKey);
+  assert.notEqual(changedPrepare.managed_python_environment_path, firstPythonCacheKey);
 });

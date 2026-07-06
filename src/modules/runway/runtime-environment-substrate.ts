@@ -22,6 +22,7 @@ import {
   locksRoot,
   normalizeTarget,
   objects,
+  profileLockHandoff,
   readJsonObject,
   readPrepareProfile,
   relativePaperBuildRef,
@@ -39,6 +40,7 @@ import {
   stateRef,
   normalizePythonPackageName,
   pythonExecutableInManagedEnv,
+  uniqueRefs,
   writeJsonFile,
   writePointer,
   writePreparedEnvironmentIndex,
@@ -137,6 +139,19 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     input.requirementProfilePath,
     input.requirementProfileId,
   );
+  const languageLockHandoff = profileLockHandoff(profile, selectedRequirementProfileIds);
+  const requirementLockRefs = uniqueRefs([
+    ...languageLockHandoff.r.lock_refs,
+    ...languageLockHandoff.python.lock_refs,
+  ]);
+  const sourceRequirementRefs = uniqueRefs([
+    path.resolve(input.requirementProfilePath),
+    ...requirementLockRefs,
+    ...languageLockHandoff.r.source_refs,
+    ...languageLockHandoff.r.project_refs,
+    ...languageLockHandoff.python.source_refs,
+    ...languageLockHandoff.python.project_refs,
+  ]);
   const buildRoot = path.join(path.resolve(input.paperRoot), 'build');
   fs.mkdirSync(buildRoot, { recursive: true });
 
@@ -172,6 +187,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       selected_requirement_profile_ids: selectedRequirementProfileIds,
       required_r_packages: requiredRPackages,
       managed_required_r_packages: managedRequiredRPackages,
+      language_lock_handoff: languageLockHandoff.r,
     }),
     'R',
   );
@@ -208,6 +224,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       selected_requirement_profile_id: selected.profile_id ?? null,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
       required_python_packages: requiredPythonPackages,
+      language_lock_handoff: languageLockHandoff.python,
     }),
     'python',
   );
@@ -258,6 +275,18 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     selectedRequirementProfileIds,
     profile,
   );
+  const requirementIdentity = {
+    ...profileIdentity,
+    language_lock_handoff: languageLockHandoff,
+    requirement_lock_refs: requirementLockRefs,
+    source_requirement_refs: sourceRequirementRefs,
+    profile_fingerprint: contentFingerprint({
+      ...profileIdentity,
+      language_lock_handoff: languageLockHandoff,
+      requirement_lock_refs: requirementLockRefs,
+      source_requirement_refs: sourceRequirementRefs,
+    }),
+  };
   const consumerBoundary = runtimeEnvironmentConsumerBoundary();
   const lockPayload = {
     surface_kind: 'opl_runtime_environment_dependency_lock',
@@ -273,19 +302,22 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     requested_requirement_profile_id: input.requirementProfileId ?? null,
     selected_requirement_profile_id: selected.profile_id ?? null,
     selected_requirement_profile_ids: selectedRequirementProfileIds,
-    requirement_profile_identity: profileIdentity,
-    source_requirement_refs: [path.resolve(input.requirementProfilePath)],
+    requirement_profile_identity: requirementIdentity,
+    requirement_lock_refs: requirementLockRefs,
+    source_requirement_refs: sourceRequirementRefs,
     runtime_binaries: requiredRuntimeBinaries,
     language_environment_model: {
       r: {
         binary: 'Rscript',
         managed_library_env: 'R_LIBS_USER',
         standard_tool_handoff: 'renv',
+        lock_handoff: languageLockHandoff.r,
       },
       python: {
         binary: 'python3',
         standard_tool_handoff: 'uv',
         managed_environment_env: 'UV_PROJECT_ENVIRONMENT',
+        lock_handoff: languageLockHandoff.python,
       },
     },
     required_r_packages: requiredRPackages,
@@ -337,7 +369,10 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     requested_requirement_profile_id: input.requirementProfileId ?? null,
     selected_requirement_profile_id: selected.profile_id ?? null,
     selected_requirement_profile_ids: selectedRequirementProfileIds,
-    requirement_profile_identity: profileIdentity,
+    requirement_profile_identity: requirementIdentity,
+    requirement_lock_refs: requirementLockRefs,
+    source_requirement_refs: sourceRequirementRefs,
+    language_lock_handoff: languageLockHandoff,
     package_installation_requested: input.apply === true,
     installed_packages: input.apply === true
       && (installReceipt.status === 'installed' || installReceipt.status === 'not_required')
@@ -389,7 +424,10 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       platform_id: target.platform_id,
       requested_requirement_profile_id: input.requirementProfileId ?? null,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
-      requirement_profile_identity: profileIdentity,
+      requirement_profile_identity: requirementIdentity,
+      requirement_lock_refs: requirementLockRefs,
+      source_requirement_refs: sourceRequirementRefs,
+      language_lock_handoff: languageLockHandoff,
       lock_ref: lockRef,
       lock_sha256: lockWithDigest.lock_sha256,
       binary_paths: binaryPaths,
@@ -406,6 +444,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
           managed_library_env: 'R_LIBS_USER',
           managed_library_path: managedLibraryPath,
           standard_tool_handoff: 'renv',
+          lock_handoff: languageLockHandoff.r,
         },
         python: {
           binary_path: binaryPaths.python3 ?? null,
@@ -413,6 +452,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
           standard_tool_handoff: 'uv',
           managed_environment_env: 'UV_PROJECT_ENVIRONMENT',
           managed_environment_path: managedPythonEnvironmentPath,
+          lock_handoff: languageLockHandoff.python,
         },
       },
       managed_r_library_path: managedLibraryPath,
@@ -468,7 +508,10 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       managed_r_library_path: managedLibraryPath,
       managed_python_environment_path: managedPythonEnvironmentPath,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
-      requirement_profile_identity: profileIdentity,
+      requirement_profile_identity: requirementIdentity,
+      requirement_lock_refs: requirementLockRefs,
+      source_requirement_refs: sourceRequirementRefs,
+      language_lock_handoff: languageLockHandoff,
       managed_required_r_packages: managedRequiredRPackages,
       managed_required_python_packages: requiredPythonPackages,
       base_or_recommended_r_packages: baseRPackageRequirements,
