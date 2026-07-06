@@ -47,6 +47,9 @@ import {
 } from './runtime-app-operator-drilldown-summary-memory-lifecycle.ts';
 import { assertOwnerDeltaTopline } from './runtime-app-operator-drilldown-owner-delta-topline-assertions.ts';
 
+const SUMMARY_COMMAND = ['runtime', 'app-operator-drilldown'];
+const FULL_DETAIL_COMMAND = [...SUMMARY_COMMAND, '--detail', 'full'];
+
 function seedSummaryStageAttempts(count: number) {
   const { db } = openQueueDb();
   try {
@@ -117,7 +120,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     process.env.OPL_STATE_DIR = stateRoot;
     seedSummaryStageAttempts(12);
 
-    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
+    const summaryOutput = runCli(SUMMARY_COMMAND, {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
@@ -638,12 +641,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     assert.deepEqual(aionConsumption.default_read_model_command, ['app', 'state', '--profile', 'fast']);
     assert.equal(aionConsumption.default_payload_ref, '/app_state/operator/current_owner_delta');
     assert.equal('compatibility_payload_ref' in aionConsumption, false);
-    assert.deepEqual(aionConsumption.full_detail_command, [
-      'runtime',
-      'app-operator-drilldown',
-      '--detail',
-      'full',
-    ]);
+    assert.deepEqual(aionConsumption.full_detail_command, FULL_DETAIL_COMMAND);
     assert.equal(
       aionConsumption.action_submission.surface,
       summaryDrilldown.attention_first_payload.next_safe_action.submit_via,
@@ -652,11 +650,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     assert.equal(aionConsumption.adapter_boundary.app_repo, 'gui_product_contract_and_release_wrapper_owner');
     assert.equal(aionConsumption.adapter_boundary.shell_adapter, 'replaceable_gui_adapter_implementation');
     assert.equal(aionConsumption.adapter_boundary.bridge_abstraction_owner, 'one_person_lab_app');
-    assert.deepEqual(aionConsumption.bridge_contract.summary_command, [
-      'runtime',
-      'app-operator-drilldown',
-      '--json',
-    ]);
+    assert.deepEqual(aionConsumption.bridge_contract.summary_command, [...SUMMARY_COMMAND, '--json']);
     assert.deepEqual(aionConsumption.bridge_contract.forbidden_truth_sources, [
       'direct_domain_repo_reads',
       'direct_runtime_state_file_reads',
@@ -666,7 +660,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     ]);
     assert.equal(aionConsumption.bridge_contract.shell_adapter_may_replace_ui_without_runtime_protocol_change, true);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });

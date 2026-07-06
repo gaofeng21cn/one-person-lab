@@ -9,7 +9,10 @@ import {
   test,
 } from '../../helpers.ts';
 
-test('runtime app-operator-drilldown summary exposes running provider attempts as liveness refs only', () => {
+const SUMMARY_COMMAND = ['runtime', 'app-operator-drilldown'];
+const FULL_DETAIL_COMMAND = [...SUMMARY_COMMAND, '--detail', 'full'];
+
+test('runtime operator summary exposes running provider attempts as liveness refs only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-'));
   try {
     const enqueued = runCli([
@@ -71,7 +74,7 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
       OPL_STATE_DIR: stateRoot,
     });
 
-    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
+    const summaryOutput = runCli(SUMMARY_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const summary = summaryOutput.app_operator_drilldown.summary;
@@ -103,7 +106,7 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
     assert.equal(Object.hasOwn(summary, 'publication_ready'), false);
     assert.equal(Object.hasOwn(summary, 'artifact_ready'), false);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const full = fullOutput.app_operator_drilldown;
@@ -141,7 +144,7 @@ test('runtime app-operator-drilldown summary exposes running provider attempts a
   }
 });
 
-test('runtime app-operator-drilldown does not count stale MAS work-unit live attempt as current running', () => {
+test('runtime operator projection does not count stale MAS work-unit live attempt as current running', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stale-workunit-'));
   try {
     const staleTaskId = runCli([
@@ -244,7 +247,7 @@ test('runtime app-operator-drilldown does not count stale MAS work-unit live att
       db.close();
     }
 
-    const projection = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const projection = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
     const staleState = projection.current_control_state.states.find((state: Record<string, unknown>) =>
@@ -267,7 +270,7 @@ test('runtime app-operator-drilldown does not count stale MAS work-unit live att
   }
 });
 
-test('runtime app-operator-drilldown exposes stall lineage for repeated typed blockers', () => {
+test('runtime operator projection exposes stall lineage for repeated typed blockers', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stall-lineage-'));
   try {
     const attemptIds: string[] = [];
@@ -331,7 +334,7 @@ test('runtime app-operator-drilldown exposes stall lineage for repeated typed bl
       });
     }
 
-    const full = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const full = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     }).app_operator_drilldown;
 
@@ -354,7 +357,7 @@ test('runtime app-operator-drilldown exposes stall lineage for repeated typed bl
   }
 });
 
-test('runtime app-operator-drilldown bounds running provider attempt liveness samples in default summary', () => {
+test('runtime operator summary bounds running provider attempt liveness samples', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-bounded-'));
   try {
     const attemptIds: string[] = [];
@@ -418,7 +421,7 @@ test('runtime app-operator-drilldown bounds running provider attempt liveness sa
       });
     }
 
-    const summaryOutput = runCli(['runtime', 'app-operator-drilldown'], {
+    const summaryOutput = runCli(SUMMARY_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const summary = summaryOutput.app_operator_drilldown.summary;
@@ -441,7 +444,7 @@ test('runtime app-operator-drilldown bounds running provider attempt liveness sa
       true,
     );
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     assert.equal(fullOutput.app_operator_drilldown.current_control_state.states.length, 7);

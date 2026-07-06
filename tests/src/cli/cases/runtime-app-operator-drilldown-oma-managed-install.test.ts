@@ -3,6 +3,8 @@ import { recordManagedInstallUpdateReceipts } from '../../../../src/modules/conn
 import { recordOmaAppLivePathReceipts } from '../../../../src/modules/foundry-lab/oma-app-live-path-ledger.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
+const FULL_DETAIL_COMMAND = ['runtime', 'app-operator-drilldown', '--detail', 'full'];
+
 test('runtime app-operator consumes OPL-managed OMA install update receipts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-oma-managed-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -29,7 +31,7 @@ test('runtime app-operator consumes OPL-managed OMA install update receipts', ()
       'opl://managed-install-update/oplmetaagent/update/oma-managed-ledger-sha',
     ]);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     if (
@@ -94,7 +96,7 @@ test('runtime app-operator consumes OMA App live path receipts', () => {
       'opl://oma-app-live-path/app%3A%2F%2Fone-person-lab%2Fopl-meta-agent%2Fworkbench%2Flive',
     ]);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     if (
@@ -187,7 +189,7 @@ test('runtime OMA App live path CLI records refs-only operator evidence without 
     assert.equal(listOutput.receipts[0].receipt_ref, recordOutput.receipt_refs[0]);
     assert.equal(listOutput.authority_boundary.can_write_domain_truth, false);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const followthrough =
@@ -262,7 +264,7 @@ test('runtime OMA App live path CLI records refs-only payload files', () => {
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_create_domain_owner_receipt, false);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const followthrough =
@@ -313,7 +315,7 @@ test('runtime OMA production-consumption CLI records refs-only operator evidence
       operator_evidence_refs: ['screenshot://opl-app/oma-workbench-live.png'],
     }]);
 
-    const initialFullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const initialFullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const initialFollowthrough =
@@ -446,7 +448,7 @@ test('runtime OMA production-consumption CLI records refs-only operator evidence
     assert.equal(listOutput.receipts[0].receipt_status, 'recorded');
     assert.equal(listOutput.authority_boundary.can_write_domain_truth, false);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const followthrough =
@@ -483,7 +485,7 @@ test('runtime OMA production-consumption CLI records refs-only operator evidence
     assert.equal(verifyOutput.receipt.receipt_status, 'verified');
     assert.equal(verifyOutput.authority_boundary.can_claim_production_ready, false);
 
-    const verifiedOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const verifiedOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const verifiedFollowthrough =
@@ -573,7 +575,7 @@ test('runtime OMA production-consumption CLI records refs-only payload files', (
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_create_domain_owner_receipt, false);
 
-    const fullOutput = runCli(['runtime', 'app-operator-drilldown', '--detail', 'full'], {
+    const fullOutput = runCli(FULL_DETAIL_COMMAND, {
       OPL_STATE_DIR: stateRoot,
     });
     const followthrough =
