@@ -94,6 +94,14 @@ test('packages manifest exposes active package-channel coordinates for module in
             plugin_id: string;
             required_skill_ids: string[];
             bundled_capability_package_ids: string[];
+            distribution_payload: {
+              oci_ref: string;
+              payload_digest_ref: string;
+              rolling_tag: string;
+              install_truth: string;
+              live_download_proof: boolean;
+              installed_reload_proof: boolean;
+            };
             user_install_action_count: number;
           };
           capability_dependencies: Array<Record<string, any>>;
@@ -365,6 +373,23 @@ test('packages manifest exposes active package-channel coordinates for module in
       plugin_id: 'mas',
       required_skill_ids: ['mas', 'mas-scholar-skills'],
       bundled_capability_package_ids: ['mas-scholar-skills'],
+      distribution_payload: {
+        payload_kind: 'ghcr_oci_agent_package',
+        payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+        payload_digest_ref: 'sha256:1111111111111111111111111111111111111111111111111111111111111111',
+        required_skill_pack_lock_refs: [
+          'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
+        ],
+        proof_status: 'non_live_contract_fixture',
+        live_download_proof: false,
+        installed_reload_proof: false,
+        oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+        oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
+        immutable_tag: '0.1.0a4',
+        rolling_tag: 'latest',
+        promotion_policy: 'daily_candidate_gates_then_promote_latest',
+        install_truth: 'resolved_digest_lock',
+      },
       user_install_action_count: 1,
     },
   );
@@ -574,7 +599,14 @@ test('MAS first-party agent package manifest declares standalone bundle and OPL 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'med-autoscience');
   assert.equal(manifest.agent_id, 'med-autoscience');
+  assert.equal(manifest.version, '0.1.0a4');
+  assert.equal(manifest.distribution_payload.rolling_tag, 'latest');
+  assert.equal(manifest.distribution_payload.install_truth, 'resolved_digest_lock');
+  assert.equal(manifest.distribution_payload.live_download_proof, false);
+  assert.equal(manifest.distribution_payload.installed_reload_proof, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
+  assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
+  assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(manifest.opl_managed_surface.package_shape, 'thin_agent_package');
@@ -603,6 +635,25 @@ test('first-party agent package manifest canonicalizes legacy package and assist
   const normalized = normalizeFirstPartyAgentPackageManifest({
     agent_id: 'mas',
     package_id: 'medautoscience',
+    version: '0.1.0a4',
+    source: 'first_party',
+    distribution_payload: {
+      payload_kind: 'ghcr_oci_agent_package',
+      payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+      payload_digest_ref: 'sha256:1111111111111111111111111111111111111111111111111111111111111111',
+      required_skill_pack_lock_refs: [
+        'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
+      ],
+      proof_status: 'non_live_contract_fixture',
+      live_download_proof: false,
+      installed_reload_proof: false,
+      oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+      oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
+      immutable_tag: '0.1.0a4',
+      rolling_tag: 'latest',
+      promotion_policy: 'daily_candidate_gates_then_promote_latest',
+      install_truth: 'resolved_digest_lock',
+    },
     codex_surface: {
       plugin_id: 'mas',
       standalone_distribution: 'self_contained_fat_plugin',
@@ -648,6 +699,16 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
       capability_dependencies: [],
     }),
     /must declare capability_dependencies/,
+  );
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      distribution_payload: {
+        ...manifest.distribution_payload,
+        install_truth: 'latest',
+      },
+    }),
+    /distribution_payload.install_truth must be resolved_digest_lock/,
   );
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({

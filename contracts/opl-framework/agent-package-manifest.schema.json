@@ -7,6 +7,9 @@
     "surface_kind",
     "agent_id",
     "package_id",
+    "version",
+    "source",
+    "distribution_payload",
     "codex_surface",
     "capability_dependencies"
   ],
@@ -21,6 +24,87 @@
     "package_id": {
       "type": "string",
       "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "distribution_payload": {
+      "type": "object",
+      "required": [
+        "payload_kind",
+        "payload_ref",
+        "payload_digest_ref",
+        "required_skill_pack_lock_refs",
+        "proof_status",
+        "live_download_proof",
+        "installed_reload_proof",
+        "oci_ref",
+        "oci_media_type",
+        "immutable_tag",
+        "rolling_tag",
+        "promotion_policy",
+        "install_truth"
+      ],
+      "properties": {
+        "payload_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "payload_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "payload_digest_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_skill_pack_lock_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "proof_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "live_download_proof": {
+          "const": false
+        },
+        "installed_reload_proof": {
+          "const": false
+        },
+        "oci_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "oci_media_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "immutable_tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rolling_tag": {
+          "const": "latest"
+        },
+        "promotion_policy": {
+          "const": "daily_candidate_gates_then_promote_latest"
+        },
+        "install_truth": {
+          "const": "resolved_digest_lock"
+        }
+      },
+      "additionalProperties": true
     },
     "codex_surface": {
       "type": "object",

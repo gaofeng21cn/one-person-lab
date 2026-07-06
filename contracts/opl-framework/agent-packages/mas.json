@@ -4,9 +4,28 @@
   "package_id": "med-autoscience",
   "display_name": "Med Auto Science",
   "publisher": "one-person-lab",
+  "version": "0.1.0a4",
+  "source": "first_party",
   "source_repo": "https://github.com/gaofeng21cn/med-autoscience.git",
   "schema_ref": "contracts/opl-framework/agent-package-manifest.schema.json",
   "machine_boundary": "This manifest declares first-party package dependencies and distribution projections. It does not write domain truth, sign owner receipts, create typed blockers, write runtime queues, or claim runtime/release readiness.",
+  "distribution_payload": {
+    "payload_kind": "ghcr_oci_agent_package",
+    "payload_ref": "ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest",
+    "payload_digest_ref": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "required_skill_pack_lock_refs": [
+      "opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package"
+    ],
+    "proof_status": "non_live_contract_fixture",
+    "live_download_proof": false,
+    "installed_reload_proof": false,
+    "oci_ref": "ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest",
+    "oci_media_type": "application/vnd.oci.image.manifest.v1+json",
+    "immutable_tag": "0.1.0a4",
+    "rolling_tag": "latest",
+    "promotion_policy": "daily_candidate_gates_then_promote_latest",
+    "install_truth": "resolved_digest_lock"
+  },
   "codex_surface": {
     "plugin_id": "mas",
     "standalone_distribution": "self_contained_fat_plugin",
