@@ -15,7 +15,9 @@ import {
   contentFingerprint,
   dependencyLibrariesRoot,
   descriptorProjection,
+  installPythonPackagesIntoManagedEnv,
   installRPackagesIntoManagedLibrary,
+  installedPythonPackages,
   installedRPackages,
   locksRoot,
   normalizeTarget,
@@ -35,6 +37,8 @@ import {
   shortDigest,
   statePathFromRef,
   stateRef,
+  normalizePythonPackageName,
+  pythonExecutableInManagedEnv,
   writeJsonFile,
   writePointer,
   writePreparedEnvironmentIndex,
@@ -243,6 +247,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     runtimeBinaries,
     requiredRPackages,
     requiredRPackageRequirements,
+    requiredPythonPackages,
+    requiredPythonPackageRequirements,
   } = readPrepareProfile(
     input.requirementProfilePath,
     input.requirementProfileId,
@@ -252,7 +258,11 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
 
   const binaryPaths: Record<string, string> = {};
   const missingBinaries: string[] = [];
-  runtimeBinaries.forEach((binaryName) => {
+  const requiredRuntimeBinaries = Array.from(new Set([
+    ...runtimeBinaries,
+    ...(requiredPythonPackages.length > 0 ? ['python3', 'uv'] : []),
+  ]));
+  requiredRuntimeBinaries.forEach((binaryName) => {
     const resolved = resolveBinary(binaryName);
     if (resolved) {
       binaryPaths[binaryName] = resolved;
@@ -306,9 +316,52 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     installedPackages = installedRPackages(rscriptPath, managedLibraryPath);
     missingRPackages = managedRequiredRPackages.filter((packageName) => !installedPackages.has(packageName));
   }
+  const managedPythonEnvironmentPath = path.join(
+    dependencyLibrariesRoot(target),
+    shortDigest({
+      requirement_profile: path.resolve(input.requirementProfilePath),
+      requested_requirement_profile_id: input.requirementProfileId ?? null,
+      selected_requirement_profile_id: selected.profile_id ?? null,
+      selected_requirement_profile_ids: selectedRequirementProfileIds,
+      required_python_packages: requiredPythonPackages,
+    }),
+    'python',
+  );
+  const managedPythonPath = pythonExecutableInManagedEnv(managedPythonEnvironmentPath);
+  let installedPythonPackageNames = fs.existsSync(managedPythonPath)
+    ? installedPythonPackages(managedPythonPath)
+    : new Set<string>();
+  let missingPythonPackages = requiredPythonPackages.filter(
+    (packageName) => !installedPythonPackageNames.has(normalizePythonPackageName(packageName)),
+  );
+  const pythonInstallReceipt = input.apply
+    && requiredPythonPackages.length > 0
+    && binaryPaths.python3
+    && binaryPaths.uv
+    && missingBinaries.length === 0
+    ? installPythonPackagesIntoManagedEnv(
+      binaryPaths.uv,
+      binaryPaths.python3,
+      managedPythonEnvironmentPath,
+      missingPythonPackages,
+    )
+    : {
+      status: input.apply && requiredPythonPackages.length === 0 ? 'not_required' : 'not_requested',
+      installed: [],
+      failed: [],
+      managed_environment_path: managedPythonEnvironmentPath,
+      verified_with: 'importlib.metadata.distributions() in managed Python environment',
+      stderr: '',
+    };
+  if (input.apply && pythonInstallReceipt.status !== 'not_requested' && fs.existsSync(managedPythonPath)) {
+    installedPythonPackageNames = installedPythonPackages(managedPythonPath);
+    missingPythonPackages = requiredPythonPackages.filter(
+      (packageName) => !installedPythonPackageNames.has(normalizePythonPackageName(packageName)),
+    );
+  }
   const status = missingBinaries.length > 0
     ? 'missing_runtime_binary'
-    : missingRPackages.length > 0
+    : missingRPackages.length > 0 || missingPythonPackages.length > 0
       ? 'missing_language_package'
       : 'prepared';
   const failureClass = status === 'prepared' ? '' : status;
@@ -338,7 +391,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     selected_requirement_profile_ids: selectedRequirementProfileIds,
     requirement_profile_identity: profileIdentity,
     source_requirement_refs: [path.resolve(input.requirementProfilePath)],
-    runtime_binaries: runtimeBinaries,
+    runtime_binaries: requiredRuntimeBinaries,
     language_environment_model: {
       r: {
         binary: 'Rscript',
@@ -346,6 +399,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         standard_tool_handoff: 'renv',
       },
       python: {
+        binary: 'python3',
         standard_tool_handoff: 'uv',
         managed_environment_env: 'UV_PROJECT_ENVIRONMENT',
       },
@@ -354,9 +408,15 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     managed_required_r_packages: managedRequiredRPackages,
     base_or_recommended_r_packages: baseRPackageRequirements,
     r_package_requirements: requiredRPackageRequirements,
+    required_python_packages: requiredPythonPackages,
+    managed_required_python_packages: requiredPythonPackages,
+    python_package_requirements: requiredPythonPackageRequirements,
     package_installation_requested: input.apply === true,
-    installed_packages: input.apply === true && installReceipt.status === 'installed',
+    installed_packages: input.apply === true
+      && (installReceipt.status === 'installed' || installReceipt.status === 'not_required')
+      && (pythonInstallReceipt.status === 'installed' || pythonInstallReceipt.status === 'not_required'),
     managed_r_library_path: managedLibraryPath,
+    managed_python_environment_path: managedPythonEnvironmentPath,
     writes_domain_truth: false,
     writes_runtime_root: false,
     can_claim_runtime_ready: false,
@@ -395,17 +455,24 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     selected_requirement_profile_ids: selectedRequirementProfileIds,
     requirement_profile_identity: profileIdentity,
     package_installation_requested: input.apply === true,
-    installed_packages: input.apply === true && installReceipt.status === 'installed',
+    installed_packages: input.apply === true
+      && (installReceipt.status === 'installed' || installReceipt.status === 'not_required')
+      && (pythonInstallReceipt.status === 'installed' || pythonInstallReceipt.status === 'not_required'),
     managed_r_library_path: managedLibraryPath,
+    managed_python_environment_path: managedPythonEnvironmentPath,
     managed_required_r_packages: managedRequiredRPackages,
+    managed_required_python_packages: requiredPythonPackages,
     base_or_recommended_r_packages: baseRPackageRequirements,
     r_package_requirements: requiredRPackageRequirements,
+    python_package_requirements: requiredPythonPackageRequirements,
     package_installation_receipt: installReceipt,
+    python_package_installation_receipt: pythonInstallReceipt,
     lock_ref: lockRef,
     lock_sha256: lockWithDigest.lock_sha256,
     binary_paths: binaryPaths,
     missing_runtime_binaries: missingBinaries,
     missing_r_packages: missingRPackages,
+    missing_python_packages: missingPythonPackages,
     receipt_ref: receiptRef,
     run_context_ref: status === 'prepared' ? runContextRef : null,
     route_hint: status === 'prepared' ? null : 'opl_runtime_env_doctor',
@@ -446,6 +513,8 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
         OPL_RUNTIME_ENVIRONMENT_STATUS: 'prepared',
         OPL_RUNTIME_ENVIRONMENT_TIER: 'fast_local_env',
         R_LIBS_USER: managedLibraryPath,
+        UV_PROJECT_ENVIRONMENT: managedPythonEnvironmentPath,
+        VIRTUAL_ENV: managedPythonEnvironmentPath,
       },
       language_environment_model: {
         r: {
@@ -455,15 +524,22 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
           standard_tool_handoff: 'renv',
         },
         python: {
+          binary_path: binaryPaths.python3 ?? null,
+          uv_binary_path: binaryPaths.uv ?? null,
           standard_tool_handoff: 'uv',
           managed_environment_env: 'UV_PROJECT_ENVIRONMENT',
+          managed_environment_path: managedPythonEnvironmentPath,
         },
       },
       managed_r_library_path: managedLibraryPath,
+      managed_python_environment_path: managedPythonEnvironmentPath,
       managed_required_r_packages: managedRequiredRPackages,
+      managed_required_python_packages: requiredPythonPackages,
       base_or_recommended_r_packages: baseRPackageRequirements,
       package_installation_requested: input.apply === true,
-      installed_packages: input.apply === true && installReceipt.status === 'installed',
+      installed_packages: input.apply === true
+        && (installReceipt.status === 'installed' || installReceipt.status === 'not_required')
+        && (pythonInstallReceipt.status === 'installed' || pythonInstallReceipt.status === 'not_required'),
       writes_domain_truth: false,
       writes_runtime_root: false,
       can_schedule_domain_stage: false,
@@ -502,13 +578,18 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       host_package_fallback_allowed: false,
       failure_class: failureClass,
       package_installation_requested: input.apply === true,
-      installed_packages: input.apply === true && installReceipt.status === 'installed',
+      installed_packages: input.apply === true
+        && (installReceipt.status === 'installed' || installReceipt.status === 'not_required')
+        && (pythonInstallReceipt.status === 'installed' || pythonInstallReceipt.status === 'not_required'),
       managed_r_library_path: managedLibraryPath,
+      managed_python_environment_path: managedPythonEnvironmentPath,
       selected_requirement_profile_ids: selectedRequirementProfileIds,
       requirement_profile_identity: profileIdentity,
       managed_required_r_packages: managedRequiredRPackages,
+      managed_required_python_packages: requiredPythonPackages,
       base_or_recommended_r_packages: baseRPackageRequirements,
       package_installation_receipt: installReceipt,
+      python_package_installation_receipt: pythonInstallReceipt,
       writes_domain_truth: false,
       writes_runtime_root: false,
       lock_ref: lockRef,
@@ -517,6 +598,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       binary_paths: binaryPaths,
       missing_runtime_binaries: missingBinaries,
       missing_r_packages: missingRPackages,
+      missing_python_packages: missingPythonPackages,
       route_hint: status === 'prepared' ? null : 'opl_runtime_env_doctor',
       authority_boundary: authority,
       consumer_boundary: consumerBoundary,

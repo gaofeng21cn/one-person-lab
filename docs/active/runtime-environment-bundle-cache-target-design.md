@@ -383,7 +383,7 @@ dependency intent 并消费 OPL-managed run-context。
 当前 runtime-environment substrate 应从本文开头列出的机器面读取，而不是从本目标设计里的历史 proof 日志读取。当前读法是：
 
 - OPL 持有 runtime environment substrate contract、deterministic lock / bundle projection、materialization receipt、verification readback、dependency prepare receipt、run-context handoff、cache inventory、protected prune receipt 和 doctor findings。
-- `prepare` 可以把 dependency lock / receipt / `dependency_run_context.json` 写入请求的 paper root，并且只能把缺失语言包安装到 OPL-managed library path。
+- `prepare` 可以把 dependency lock / receipt / `dependency_run_context.json` 写入请求的 paper root，并且只能把缺失 R 包安装到 OPL-managed R library、把缺失 Python 包安装到 OPL-managed uv environment。
 - `run-context` 在缺少必需 refs 或请求 target identity 与 prepared context 不一致时 fail closed。
 - cache inventory 与 prune receipt 必须保护 current / rollback pointers，且不得触碰 development checkout、user workspace、domain artifact body、memory body 或 owner answer。
 - doctor 输出可以把 consumer route 指回 `opl runtime env prepare` 或 `opl runtime env doctor`；它不是 domain readiness、App release readiness、provider readiness、publication readiness 或 production readiness oracle。

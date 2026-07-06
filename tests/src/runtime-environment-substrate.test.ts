@@ -210,8 +210,11 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   );
   assert.equal(preparePolicy.run_context_identity_required, true);
   assert.equal(preparePolicy.dependency_lock_counts_as_materialized_runtime_lock, false);
-  assert.equal(preparePolicy.installs_packages, 'only_when_apply_into_opl_managed_library');
-  assert.equal(preparePolicy.package_presence_verification, 'managed_library_only');
+  assert.equal(preparePolicy.installs_packages, 'only_when_apply_into_opl_managed_r_library_or_python_uv_environment');
+  assert.equal(preparePolicy.package_presence_verification, 'managed_r_library_or_managed_python_environment_only');
+  assert.equal(preparePolicy.r_package_environment, 'R_LIBS_USER');
+  assert.equal(preparePolicy.python_package_environment, 'UV_PROJECT_ENVIRONMENT');
+  assert.equal(preparePolicy.python_installer, 'uv');
   assert.equal(
     preparePolicy.requirement_profile_selection,
     'all_profiles_by_default_or_scoped_by_requirement_profile_id',

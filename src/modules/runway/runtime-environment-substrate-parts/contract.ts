@@ -10,6 +10,10 @@ export type RPackageRequirement = {
   github_repo?: string;
 };
 
+export type PythonPackageRequirement = {
+  name: string;
+};
+
 export type RuntimeEnvironmentCommand =
   | 'inspect'
   | 'lock'
