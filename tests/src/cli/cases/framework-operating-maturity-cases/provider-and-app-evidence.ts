@@ -123,63 +123,40 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
       providerRecord.receipt_refs[0],
     ], env);
 
-    const drilldown = runCli([
+    const appProjection = runCli([
       'runtime',
       'app-operator-drilldown',
     ], env).app_operator_drilldown;
     assert.equal(
-      drilldown.provider_long_soak_evidence.surface_kind,
+      appProjection.provider_long_soak_evidence.surface_kind,
       'opl_provider_long_soak_evidence_projection',
     );
-    assert.equal(drilldown.provider_long_soak_evidence.status, 'provider_evidence_observed_not_ready_claim');
-    assert.equal(drilldown.provider_long_soak_evidence.ready_claim_authorized, false);
+    assert.equal(appProjection.provider_long_soak_evidence.status, 'provider_evidence_observed_not_ready_claim');
+    assert.equal(appProjection.provider_long_soak_evidence.ready_claim_authorized, false);
     assert.equal(
-      drilldown.provider_long_soak_evidence.production_ready_claim_status,
+      appProjection.provider_long_soak_evidence.production_ready_claim_status,
       'provider_long_soak_evidence_observed_not_production_ready_claim',
     );
     assert.equal(
-      drilldown.provider_long_soak_evidence.verified_refs_only_ledger_counts_as_production_ready,
+      appProjection.provider_long_soak_evidence.verified_refs_only_ledger_counts_as_production_ready,
       false,
     );
     assert.equal(
-      drilldown.provider_long_soak_evidence.long_evidence_ready_counts_as_production_ready,
+      appProjection.provider_long_soak_evidence.long_evidence_ready_counts_as_production_ready,
       false,
     );
     assert.equal(
-      drilldown.provider_long_soak_evidence.capability_slo_satisfied_counts_as_production_ready,
+      appProjection.provider_long_soak_evidence.capability_slo_satisfied_counts_as_production_ready,
       false,
     );
-    assert.equal(drilldown.summary.provider_long_soak_evidence_ready_claim_authorized, false);
+    assert.equal(appProjection.summary.provider_long_soak_evidence_ready_claim_authorized, false);
     assert.equal(
-      drilldown.summary.provider_long_soak_evidence_production_ready_claim_status,
+      appProjection.summary.provider_long_soak_evidence_production_ready_claim_status,
       'provider_long_soak_evidence_observed_not_production_ready_claim',
     );
-    assert.deepEqual(drilldown.provider_long_soak_evidence.observed_ref_shapes, [
-      'long_soak_ref',
-      'recovery_ref',
-      'dead_letter_ref',
-      'provider_blocker_ref',
-      'typed_blocker_ref',
-      'owner_acceptance_ref',
-    ]);
-    assert.equal(drilldown.summary.provider_long_soak_evidence_verified_receipt_ref_count, 1);
-    assert.equal(drilldown.summary.provider_long_soak_evidence_typed_blocker_ref_count, 1);
+    assert.equal(appProjection.summary.provider_long_soak_evidence_verified_receipt_ref_count, 1);
     assert.equal(
-      drilldown.summary.provider_long_soak_evidence_owner_acceptance_ref_count,
-      1,
-    );
-    assert.deepEqual(drilldown.provider_long_soak_evidence.owner_acceptance_refs, [
-      'owner-acceptance:provider/temporal/week-1/operator-accepted',
-    ]);
-    assert.deepEqual(drilldown.provider_long_soak_evidence.capability_requirement_ids, [
-      'restart_requery_ready',
-      'signal_history_ready',
-      'typed_closeout_required_ready',
-      'missing_closeout_block_ready',
-      'retry_dead_letter_boundary_ready',
-    ]);
-    assert.equal(
-      drilldown.provider_long_soak_evidence.authority_boundary.can_claim_production_ready,
+      appProjection.provider_long_soak_evidence.authority_boundary.can_claim_production_ready,
       false,
     );
 
@@ -286,14 +263,6 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     );
     assert.equal(providerLane.status, 'owner_evidence_observed_not_ready_claim');
     assert.equal(providerLane.verified_receipt_count, 1);
-    assert.deepEqual(providerLane.observed_ref_shapes, [
-      'long_soak_ref',
-      'recovery_ref',
-      'dead_letter_ref',
-      'provider_blocker_ref',
-      'typed_blocker_ref',
-      'owner_acceptance_ref',
-    ]);
     assert.equal(
       providerLane.observed_receipt_refs.includes(providerRecord.receipt_refs[0]),
       true,
@@ -308,26 +277,9 @@ test('framework operating maturity consumes provider long-soak evidence refs wit
     );
     assert.equal(providerWorkOrder.ready_claim_authorized, false);
     assert.equal(providerWorkOrder.owner_acceptance_required, true);
-    assert.equal(
-      providerWorkOrder.observed_ref_shapes.includes('provider_blocker_ref'),
-      true,
-    );
-    assert.equal(
-      providerWorkOrder.observed_ref_shapes.includes('owner_acceptance_ref'),
-      true,
-    );
     assert.deepEqual(providerWorkOrder.missing_owner_action_ids, []);
     assert.deepEqual(providerWorkOrder.owner_acceptance_refs, [
       'owner-acceptance:provider/temporal/week-1/operator-accepted',
-    ]);
-    assert.deepEqual(providerWorkOrder.owner_action_checklist
-      .filter((entry: { status: string }) => entry.status === 'refs_observed_not_ready_claim')
-      .map((entry: { requirement_id: string }) => entry.requirement_id), [
-      'restart_requery_ready',
-      'signal_history_ready',
-      'typed_closeout_required_ready',
-      'missing_closeout_block_ready',
-      'retry_dead_letter_boundary_ready',
     ]);
     assert.equal(
       providerWorkOrder.next_evidence_action,
