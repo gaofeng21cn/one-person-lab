@@ -6,17 +6,45 @@ import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 
 const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
-const READINESS_ACTION = 'complete_medical_paper_readiness_surface';
-const STAGE_ID = '08-publication_package_handoff';
-const STAGE_OUTPUTS_FRAGMENT = `artifacts/stage_outputs/${STAGE_ID}`;
-const OWNER_RECEIPT_REF = `${STAGE_OUTPUTS_FRAGMENT}/receipts/owner_receipt.json`;
-const TYPED_BLOCKER_REF = `${STAGE_OUTPUTS_FRAGMENT}/receipts/typed_blocker.json`;
-const RELATIVE_OWNER_RECEIPT_REF = 'receipts/owner_receipt.json';
-const RELATIVE_TYPED_BLOCKER_REF = 'receipts/typed_blocker.json';
 const LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 
 export const MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON =
   'stage_native_owner_answer_missing_after_default_executor_completion';
+
+export type StageNativeOwnerAnswerProfile = {
+  profile_id: string;
+  domain_id: string;
+  dispatch_task_kind: string;
+  action_type: string;
+  work_unit_id: string;
+  next_executable_owner: string;
+  closeout_surface_kind: string;
+  stage_id: string;
+  stage_outputs_fragment: string;
+  owner_receipt_ref: string;
+  typed_blocker_ref: string;
+  relative_owner_receipt_ref: string;
+  relative_typed_blocker_ref: string;
+};
+
+export const MAS_PUBLICATION_HANDOFF_STAGE_NATIVE_OWNER_ANSWER_PROFILE = {
+  profile_id: 'medautoscience.publication_handoff.stage_native_owner_answer.v1',
+  domain_id: 'medautoscience',
+  dispatch_task_kind: DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
+  action_type: 'complete_medical_paper_readiness_surface',
+  work_unit_id: 'complete_medical_paper_readiness_surface',
+  next_executable_owner: 'medautoscience',
+  closeout_surface_kind: 'medical_paper_readiness_stage_native_closeout',
+  stage_id: '08-publication_package_handoff',
+  stage_outputs_fragment: 'artifacts/stage_outputs/08-publication_package_handoff',
+  owner_receipt_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/owner_receipt.json',
+  typed_blocker_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
+  relative_owner_receipt_ref: 'receipts/owner_receipt.json',
+  relative_typed_blocker_ref: 'receipts/typed_blocker.json',
+} as const satisfies StageNativeOwnerAnswerProfile;
+
+const DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE: StageNativeOwnerAnswerProfile =
+  MAS_PUBLICATION_HANDOFF_STAGE_NATIVE_OWNER_ANSWER_PROFILE;
 
 type StageAttemptPayload = {
   stage_attempt_id: string;
@@ -60,27 +88,34 @@ function refsFrom(record: Record<string, unknown>, keys: string[]) {
   ]).filter((entry): entry is string => Boolean(entry));
 }
 
-function hasStageNativeContext(record: Record<string, unknown>) {
-  return Boolean(stringValue(record.stage_id) === STAGE_ID
-    || stringValue(record.stage_manifest_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
-    || stringValue(record.current_pointer_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
-    || stringValue(record.written_ref)?.includes(STAGE_OUTPUTS_FRAGMENT)
-    || stringValue(record.terminal_outcome_ref)?.includes(STAGE_OUTPUTS_FRAGMENT));
+function hasStageNativeContext(
+  record: Record<string, unknown>,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+) {
+  return Boolean(stringValue(record.stage_id) === profile.stage_id
+    || stringValue(record.stage_manifest_ref)?.includes(profile.stage_outputs_fragment)
+    || stringValue(record.current_pointer_ref)?.includes(profile.stage_outputs_fragment)
+    || stringValue(record.written_ref)?.includes(profile.stage_outputs_fragment)
+    || stringValue(record.terminal_outcome_ref)?.includes(profile.stage_outputs_fragment));
 }
 
-function isStageNativeOwnerAnswerRef(ref: string, allowRelative: boolean) {
-  return ref.includes(OWNER_RECEIPT_REF)
-    || ref.includes(TYPED_BLOCKER_REF)
+function isStageNativeOwnerAnswerRef(
+  ref: string,
+  allowRelative: boolean,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+) {
+  return ref.includes(profile.owner_receipt_ref)
+    || ref.includes(profile.typed_blocker_ref)
     || (allowRelative && (
-      ref === RELATIVE_OWNER_RECEIPT_REF
-      || ref === RELATIVE_TYPED_BLOCKER_REF
+      ref === profile.relative_owner_receipt_ref
+      || ref === profile.relative_typed_blocker_ref
     ));
 }
 
-function stageNativeRefCandidates(ref: string) {
+function stageNativeRefCandidates(ref: string, profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE) {
   const trimmed = ref.trim();
   const studiesIndex = trimmed.indexOf('studies/');
-  const artifactsIndex = trimmed.indexOf(STAGE_OUTPUTS_FRAGMENT);
+  const artifactsIndex = trimmed.indexOf(profile.stage_outputs_fragment);
   return [...new Set([
     trimmed,
     studiesIndex >= 0 ? trimmed.slice(studiesIndex) : null,
@@ -120,17 +155,21 @@ function fingerprintsMatch(answer: Record<string, unknown>, currentPayload: Reco
   return [...answerSet].some((entry) => currentSet.has(entry));
 }
 
-function stageNativeCloseoutRefMatchesCurrentPayload(ref: string, currentPayload: Record<string, unknown>) {
+function stageNativeCloseoutRefMatchesCurrentPayload(
+  ref: string,
+  currentPayload: Record<string, unknown>,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+) {
   // Scoped to MAS default-executor owner-answer currentness repair only.
   // StageRun closeout admission still requires the separate idempotency-bound owner receipt / typed blocker gate.
-  if (!isStageNativeOwnerAnswerRef(ref, true)) {
+  if (!isStageNativeOwnerAnswerRef(ref, true, profile)) {
     return false;
   }
   const currentSet = currentFingerprints(currentPayload);
   if (currentSet.size === 0) {
     return false;
   }
-  const refCandidates = stageNativeRefCandidates(ref);
+  const refCandidates = stageNativeRefCandidates(ref, profile);
   return [...currentSet].some((fingerprint) =>
     refCandidates.some((candidate) => fingerprint.includes(candidate))
   );
@@ -139,23 +178,28 @@ function stageNativeCloseoutRefMatchesCurrentPayload(ref: string, currentPayload
 function closeoutRefsHaveCurrentStageNativeOwnerAnswer(
   refs: string[],
   currentPayload: Record<string, unknown>,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
 ) {
-  return refs.some((ref) => stageNativeCloseoutRefMatchesCurrentPayload(ref, currentPayload));
+  return refs.some((ref) => stageNativeCloseoutRefMatchesCurrentPayload(ref, currentPayload, profile));
 }
 
-function directStageNativeAnswer(record: Record<string, unknown>, currentPayload: Record<string, unknown>) {
+function directStageNativeAnswer(
+  record: Record<string, unknown>,
+  currentPayload: Record<string, unknown>,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+) {
   if (
-    stringValue(record.surface_kind) === 'medical_paper_readiness_stage_native_closeout'
+    stringValue(record.surface_kind) === profile.closeout_surface_kind
     && stringValue(record.status) === 'materialized'
     && fingerprintsMatch(record, currentPayload)
   ) {
     const writtenRef = stringValue(record.written_ref)
       ?? stringValue(record.terminal_outcome_ref);
-    if (!writtenRef || isStageNativeOwnerAnswerRef(writtenRef, true)) {
+    if (!writtenRef || isStageNativeOwnerAnswerRef(writtenRef, true, profile)) {
       return true;
     }
   }
-  const allowRelative = hasStageNativeContext(record);
+  const allowRelative = hasStageNativeContext(record, profile);
   const refs = refsFrom(record, [
     'owner_receipt_refs',
     'typed_blocker_refs',
@@ -168,12 +212,16 @@ function directStageNativeAnswer(record: Record<string, unknown>, currentPayload
     'terminal_outcome_ref',
     'source_ref',
   ]);
-  return refs.some((ref) => isStageNativeOwnerAnswerRef(ref, allowRelative))
+  return refs.some((ref) => isStageNativeOwnerAnswerRef(ref, allowRelative, profile))
     && fingerprintsMatch(record, currentPayload);
 }
 
-function hasStageNativeAnswerInRecord(record: Record<string, unknown>, currentPayload: Record<string, unknown>): boolean {
-  if (directStageNativeAnswer(record, currentPayload)) {
+function hasStageNativeAnswerInRecord(
+  record: Record<string, unknown>,
+  currentPayload: Record<string, unknown>,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+): boolean {
+  if (directStageNativeAnswer(record, currentPayload, profile)) {
     return true;
   }
   for (const key of [
@@ -189,12 +237,12 @@ function hasStageNativeAnswerInRecord(record: Record<string, unknown>, currentPa
     'record_payload',
   ]) {
     const nested = recordValue(record[key]);
-    if (nested && hasStageNativeAnswerInRecord(nested, currentPayload)) {
+    if (nested && hasStageNativeAnswerInRecord(nested, currentPayload, profile)) {
       return true;
     }
   }
   const evidence = recordValue(record.domain_dispatch_evidence_record_payload);
-  return Boolean(evidence && hasStageNativeAnswerInRecord(evidence, currentPayload));
+  return Boolean(evidence && hasStageNativeAnswerInRecord(evidence, currentPayload, profile));
 }
 
 function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
@@ -211,16 +259,17 @@ function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
 function stageAttemptHasStageNativeAnswer(
   attempt: StageAttemptPayload,
   currentPayload: Record<string, unknown>,
+  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
 ) {
-  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(attempt.closeout_refs, currentPayload)) {
+  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(attempt.closeout_refs, currentPayload, profile)) {
     return true;
   }
-  if (hasStageNativeAnswerInRecord(attempt.route_impact, currentPayload)) {
+  if (hasStageNativeAnswerInRecord(attempt.route_impact, currentPayload, profile)) {
     return true;
   }
   return attempt.activity_events.some((event) => {
     const record = recordValue(event);
-    return Boolean(record && hasStageNativeAnswerInRecord(record, currentPayload));
+    return Boolean(record && hasStageNativeAnswerInRecord(record, currentPayload, profile));
   });
 }
 
@@ -228,14 +277,22 @@ export function isMasReadinessStageNativeOwnerAction(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
 ) {
-  return row.domain_id === 'medautoscience'
-    && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-    && stringValue(payload.action_type) === READINESS_ACTION
+  return stageNativeOwnerActionMatchesProfile(row, payload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
+}
+
+export function stageNativeOwnerActionMatchesProfile(
+  row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
+  payload: Record<string, unknown>,
+  profile: StageNativeOwnerAnswerProfile,
+) {
+  return row.domain_id === profile.domain_id
+    && row.task_kind === profile.dispatch_task_kind
+    && stringValue(payload.action_type) === profile.action_type
     && (
       stringValue(payload.work_unit_id) === null
-      || stringValue(payload.work_unit_id) === READINESS_ACTION
+      || stringValue(payload.work_unit_id) === profile.work_unit_id
     )
-    && stringValue(payload.next_executable_owner)?.toLowerCase() === 'medautoscience';
+    && stringValue(payload.next_executable_owner)?.toLowerCase() === profile.next_executable_owner;
 }
 
 function sourceRefRecords(payload: Record<string, unknown>) {
@@ -244,7 +301,10 @@ function sourceRefRecords(payload: Record<string, unknown>) {
     : [];
 }
 
-export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Record<string, unknown>) {
+export function payloadReferencesStageNativeOwnerAnswer(
+  payload: Record<string, unknown>,
+  profile: StageNativeOwnerAnswerProfile,
+) {
   const basis = recordValue(payload.owner_route_currentness_basis);
   const ownerRoute = recordValue(payload.owner_route);
   const refs = [
@@ -285,14 +345,26 @@ export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Rec
       ].filter((entry): entry is string => Boolean(entry));
     }),
   ].filter((entry): entry is string => Boolean(entry));
-  return refs.some((ref) => isStageNativeOwnerAnswerRef(ref, true));
+  return refs.some((ref) => isStageNativeOwnerAnswerRef(ref, true, profile));
+}
+
+export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Record<string, unknown>) {
+  return payloadReferencesStageNativeOwnerAnswer(payload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
+}
+
+export function hasStageNativeOwnerAnswer(
+  value: Record<string, unknown> | null,
+  currentPayload: Record<string, unknown>,
+  profile: StageNativeOwnerAnswerProfile,
+) {
+  return Boolean(value && hasStageNativeAnswerInRecord(value, currentPayload, profile));
 }
 
 export function hasMasStageNativeOwnerAnswer(
   value: Record<string, unknown> | null,
   currentPayload: Record<string, unknown>,
 ) {
-  return Boolean(value && hasStageNativeAnswerInRecord(value, currentPayload));
+  return hasStageNativeOwnerAnswer(value, currentPayload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
 }
 
 export function stageAttemptRowHasMasStageNativeOwnerAnswer(
@@ -300,7 +372,11 @@ export function stageAttemptRowHasMasStageNativeOwnerAnswer(
   currentPayload: Record<string, unknown>,
 ) {
   const closeoutRefs = jsonStringList(row.closeout_refs_json);
-  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(closeoutRefs, currentPayload)) {
+  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(
+    closeoutRefs,
+    currentPayload,
+    DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  )) {
     return true;
   }
   const routeImpact = jsonRecord(row.route_impact_json);

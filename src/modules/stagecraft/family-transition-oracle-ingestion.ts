@@ -8,8 +8,10 @@ import type {
 
 type JsonRecord = Record<string, unknown>;
 
-export type GrantTransitionOracle = {
-  surface_kind: 'mag_grant_transition_oracle';
+export type DomainTransitionOracleSurfaceKind = 'domain_transition_oracle' | 'mag_grant_transition_oracle';
+
+export type DomainTransitionOracle = {
+  surface_kind: DomainTransitionOracleSurfaceKind;
   version?: string;
   oracle_id: string;
   target_domain_id: string;
@@ -41,6 +43,10 @@ export type GrantTransitionOracle = {
   validation?: JsonRecord;
 };
 
+export type GrantTransitionOracle = DomainTransitionOracle & {
+  surface_kind: 'mag_grant_transition_oracle';
+};
+
 const DEFAULT_AUTHORITY_BOUNDARY = {
   opl: 'transition_runner_transport_projection_only',
   domain: 'truth_quality_artifact_gate_owner',
@@ -49,62 +55,74 @@ const DEFAULT_AUTHORITY_BOUNDARY = {
 function requireOracleString(value: unknown, field: string) {
   const text = optionalString(value);
   if (!text) {
-    throw new Error(`Missing required grant transition oracle string field: ${field}`);
+    throw new Error(`Missing required domain transition oracle string field: ${field}`);
   }
   return text;
 }
 
 function requireOracleRecord(value: unknown, field: string) {
   if (!isRecord(value)) {
-    throw new Error(`Missing required grant transition oracle object field: ${field}`);
+    throw new Error(`Missing required domain transition oracle object field: ${field}`);
   }
   return value;
 }
 
 function requireOracleRecordList(value: unknown, field: string) {
   if (!Array.isArray(value)) {
-    throw new Error(`Missing required grant transition oracle list field: ${field}`);
+    throw new Error(`Missing required domain transition oracle list field: ${field}`);
   }
   return value.map((entry, index) => requireOracleRecord(entry, `${field}[${index}]`));
 }
 
-export function normalizeGrantTransitionOracle(value: unknown): GrantTransitionOracle {
-  const oracle = requireOracleRecord(value, 'grant_transition_oracle');
-  const transitionTable = requireOracleRecordList(oracle.transition_table, 'grant_transition_oracle.transition_table')
+function normalizeOracleSurfaceKind(value: unknown): DomainTransitionOracleSurfaceKind {
+  const surfaceKind = optionalString(value);
+  if (surfaceKind === 'domain_transition_oracle' || surfaceKind === 'mag_grant_transition_oracle') {
+    return surfaceKind;
+  }
+  throw new Error(`Unsupported domain transition oracle surface_kind: ${surfaceKind ?? '<missing>'}`);
+}
+
+function normalizeTransitionOracle(value: unknown): DomainTransitionOracle {
+  const oracle = requireOracleRecord(value, 'domain_transition_oracle');
+  const surfaceKind = normalizeOracleSurfaceKind(oracle.surface_kind);
+  const fieldPrefix = surfaceKind === 'mag_grant_transition_oracle'
+    ? 'grant_transition_oracle'
+    : 'domain_transition_oracle';
+  const transitionTable = requireOracleRecordList(oracle.transition_table, `${fieldPrefix}.transition_table`)
     .map((entry, index) => ({
-      transition_id: requireOracleString(entry.transition_id, `grant_transition_oracle.transition_table[${index}].transition_id`),
-      from_stage_id: requireOracleString(entry.from_stage_id, `grant_transition_oracle.transition_table[${index}].from_stage_id`),
-      to_stage_id: requireOracleString(entry.to_stage_id, `grant_transition_oracle.transition_table[${index}].to_stage_id`),
-      guard_id: requireOracleString(entry.guard_id, `grant_transition_oracle.transition_table[${index}].guard_id`),
-      owner_action: requireOracleString(entry.owner_action, `grant_transition_oracle.transition_table[${index}].owner_action`),
-      return_shape: requireOracleString(entry.return_shape, `grant_transition_oracle.transition_table[${index}].return_shape`),
-      receipt_requirement: requireOracleString(entry.receipt_requirement, `grant_transition_oracle.transition_table[${index}].receipt_requirement`),
+      transition_id: requireOracleString(entry.transition_id, `${fieldPrefix}.transition_table[${index}].transition_id`),
+      from_stage_id: requireOracleString(entry.from_stage_id, `${fieldPrefix}.transition_table[${index}].from_stage_id`),
+      to_stage_id: requireOracleString(entry.to_stage_id, `${fieldPrefix}.transition_table[${index}].to_stage_id`),
+      guard_id: requireOracleString(entry.guard_id, `${fieldPrefix}.transition_table[${index}].guard_id`),
+      owner_action: requireOracleString(entry.owner_action, `${fieldPrefix}.transition_table[${index}].owner_action`),
+      return_shape: requireOracleString(entry.return_shape, `${fieldPrefix}.transition_table[${index}].return_shape`),
+      receipt_requirement: requireOracleString(entry.receipt_requirement, `${fieldPrefix}.transition_table[${index}].receipt_requirement`),
       blocked_shape: optionalString(entry.blocked_shape) ?? undefined,
     }));
   const transitionIds = new Set(transitionTable.map((entry) => entry.transition_id));
-  const oracleFixtures = requireOracleRecordList(oracle.oracle_fixtures, 'grant_transition_oracle.oracle_fixtures')
+  const oracleFixtures = requireOracleRecordList(oracle.oracle_fixtures, `${fieldPrefix}.oracle_fixtures`)
     .map((entry, index) => {
       const expectedTransitionId = requireOracleString(
         entry.expected_transition_id,
-        `grant_transition_oracle.oracle_fixtures[${index}].expected_transition_id`,
+        `${fieldPrefix}.oracle_fixtures[${index}].expected_transition_id`,
       );
       if (!transitionIds.has(expectedTransitionId)) {
-        throw new Error(`grant_transition_oracle.oracle_fixtures[${index}].expected_transition_id is not declared in transition_table.`);
+        throw new Error(`${fieldPrefix}.oracle_fixtures[${index}].expected_transition_id is not declared in transition_table.`);
       }
       return {
-        fixture_id: requireOracleString(entry.fixture_id, `grant_transition_oracle.oracle_fixtures[${index}].fixture_id`),
-        source_stage_id: requireOracleString(entry.source_stage_id, `grant_transition_oracle.oracle_fixtures[${index}].source_stage_id`),
+        fixture_id: requireOracleString(entry.fixture_id, `${fieldPrefix}.oracle_fixtures[${index}].fixture_id`),
+        source_stage_id: requireOracleString(entry.source_stage_id, `${fieldPrefix}.oracle_fixtures[${index}].source_stage_id`),
         input_state: isRecord(entry.input_state) ? entry.input_state : undefined,
         expected_transition_id: expectedTransitionId,
       };
     });
 
   return {
-    surface_kind: 'mag_grant_transition_oracle',
+    surface_kind: surfaceKind,
     version: optionalString(oracle.version) ?? undefined,
-    oracle_id: requireOracleString(oracle.oracle_id, 'grant_transition_oracle.oracle_id'),
-    target_domain_id: requireOracleString(oracle.target_domain_id, 'grant_transition_oracle.target_domain_id'),
-    owner: requireOracleString(oracle.owner, 'grant_transition_oracle.owner'),
+    oracle_id: requireOracleString(oracle.oracle_id, `${fieldPrefix}.oracle_id`),
+    target_domain_id: requireOracleString(oracle.target_domain_id, `${fieldPrefix}.target_domain_id`),
+    owner: requireOracleString(oracle.owner, `${fieldPrefix}.owner`),
     state: optionalString(oracle.state) ?? undefined,
     runner_owner: optionalString(oracle.runner_owner) ?? undefined,
     runner_contract_ref: optionalString(oracle.runner_contract_ref) ?? undefined,
@@ -112,19 +130,35 @@ export function normalizeGrantTransitionOracle(value: unknown): GrantTransitionO
     oracle_fixture_status: optionalString(oracle.oracle_fixture_status) ?? undefined,
     stage_control_plane_ref: optionalString(oracle.stage_control_plane_ref) ?? undefined,
     action_catalog_ref: optionalString(oracle.action_catalog_ref) ?? undefined,
-    authority_boundary: requireOracleRecord(oracle.authority_boundary, 'grant_transition_oracle.authority_boundary'),
+    authority_boundary: requireOracleRecord(oracle.authority_boundary, `${fieldPrefix}.authority_boundary`),
     transition_table: transitionTable,
     oracle_fixtures: oracleFixtures,
     validation: isRecord(oracle.validation) ? oracle.validation : undefined,
   };
 }
 
-export function adaptGrantTransitionOracleToFamilyTransitionSpec(value: unknown): FamilyTransitionSpec {
-  const oracle = normalizeGrantTransitionOracle(value);
+export function normalizeDomainTransitionOracle(value: unknown): DomainTransitionOracle {
+  return normalizeTransitionOracle(value);
+}
+
+export function normalizeGrantTransitionOracle(value: unknown): GrantTransitionOracle {
+  const oracle = normalizeTransitionOracle(value);
+  if (oracle.surface_kind !== 'mag_grant_transition_oracle') {
+    throw new Error(`Expected mag_grant_transition_oracle but received ${oracle.surface_kind}.`);
+  }
+  return oracle as GrantTransitionOracle;
+}
+
+function oracleRefPrefix(oracle: DomainTransitionOracle) {
+  return oracle.surface_kind === 'mag_grant_transition_oracle' ? 'mag' : 'domain';
+}
+
+function adaptNormalizedTransitionOracleToFamilyTransitionSpec(oracle: DomainTransitionOracle): FamilyTransitionSpec {
+  const refPrefix = oracleRefPrefix(oracle);
   const guards: Record<string, FamilyTransitionGuardDefinition> = {};
   for (const transition of oracle.transition_table) {
     guards[transition.guard_id] = {
-      description: `MAG-owned guard for transition ${transition.transition_id}.`,
+      description: `Domain-owned guard for transition ${transition.transition_id}.`,
       owner: oracle.owner,
       source_ref: `${oracle.oracle_id}:guard:${transition.guard_id}`,
       authority_boundary: oracle.authority_boundary,
@@ -161,20 +195,20 @@ export function adaptGrantTransitionOracleToFamilyTransitionSpec(value: unknown)
             blocker_code: transition.receipt_requirement,
             owner: oracle.owner,
             refs: [
-              `mag-transition:${transition.transition_id}`,
-              `mag-transition-guard:${transition.guard_id}`,
+              `${refPrefix}-transition:${transition.transition_id}`,
+              `${refPrefix}-transition-guard:${transition.guard_id}`,
             ],
             metadata: transitionMetadata,
           }
         : null;
       const humanGate = transition.receipt_requirement === 'human_gate_receipt'
         ? {
-            gate_ref: `mag-human-gate:${transition.transition_id}`,
+            gate_ref: `${refPrefix}-human-gate:${transition.transition_id}`,
             owner: oracle.owner,
-            reason: 'mag_transition_requires_human_gate_receipt',
+            reason: `${refPrefix}_transition_requires_human_gate_receipt`,
             resume_refs: [
-              `mag-transition:${transition.transition_id}`,
-              `mag-action:${transition.owner_action}`,
+              `${refPrefix}-transition:${transition.transition_id}`,
+              `${refPrefix}-action:${transition.owner_action}`,
             ],
             metadata: transitionMetadata,
           }
@@ -186,26 +220,26 @@ export function adaptGrantTransitionOracleToFamilyTransitionSpec(value: unknown)
         required_guards: [transition.guard_id],
         next_state: transition.to_stage_id,
         next_work_unit: {
-          work_unit_ref: `mag-work-unit:${transition.to_stage_id}`,
+          work_unit_ref: `${refPrefix}-work-unit:${transition.to_stage_id}`,
           action_refs: [transition.owner_action],
           metadata: transitionMetadata,
         },
         owner_route: {
           owner: oracle.owner,
-          route_ref: `mag-transition:${transition.transition_id}`,
+          route_ref: `${refPrefix}-transition:${transition.transition_id}`,
           action_refs: [transition.owner_action],
           metadata: transitionMetadata,
         },
         human_gate: humanGate,
         typed_blocker: typedBlocker,
         receipt: {
-          receipt_refs: [`mag-transition-receipt:${transition.receipt_requirement}`],
+          receipt_refs: [`${refPrefix}-transition-receipt:${transition.receipt_requirement}`],
           metadata: transitionMetadata,
         },
         projection: {
           route_node_refs: [
-            `mag-stage:${transition.from_stage_id}`,
-            `mag-stage:${transition.to_stage_id}`,
+            `${refPrefix}-stage:${transition.from_stage_id}`,
+            `${refPrefix}-stage:${transition.to_stage_id}`,
           ],
           owner_action: transition.owner_action,
           return_shape: transition.return_shape,
@@ -217,8 +251,15 @@ export function adaptGrantTransitionOracleToFamilyTransitionSpec(value: unknown)
   };
 }
 
-export function buildGrantTransitionOracleMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
-  const oracle = normalizeGrantTransitionOracle(value);
+export function adaptDomainTransitionOracleToFamilyTransitionSpec(value: unknown): FamilyTransitionSpec {
+  return adaptNormalizedTransitionOracleToFamilyTransitionSpec(normalizeDomainTransitionOracle(value));
+}
+
+export function adaptGrantTransitionOracleToFamilyTransitionSpec(value: unknown): FamilyTransitionSpec {
+  return adaptNormalizedTransitionOracleToFamilyTransitionSpec(normalizeGrantTransitionOracle(value));
+}
+
+function buildTransitionOracleMatrixCases(oracle: DomainTransitionOracle): FamilyTransitionMatrixCase[] {
   const transitionById = new Map(oracle.transition_table.map((entry) => [entry.transition_id, entry]));
   return oracle.oracle_fixtures.map((fixture) => {
     const transition = transitionById.get(fixture.expected_transition_id);
@@ -240,4 +281,12 @@ export function buildGrantTransitionOracleMatrixCases(value: unknown): FamilyTra
       },
     };
   });
+}
+
+export function buildDomainTransitionOracleMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
+  return buildTransitionOracleMatrixCases(normalizeDomainTransitionOracle(value));
+}
+
+export function buildGrantTransitionOracleMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
+  return buildTransitionOracleMatrixCases(normalizeGrantTransitionOracle(value));
 }

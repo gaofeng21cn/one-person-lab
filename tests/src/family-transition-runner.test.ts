@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import {
+  adaptDomainTransitionOracleToFamilyTransitionSpec,
   adaptGrantTransitionOracleToFamilyTransitionSpec,
+  buildDomainTransitionOracleMatrixCases,
   buildGrantTransitionOracleMatrixCases,
 } from '../../src/modules/stagecraft/family-transition-oracle-ingestion.ts';
 import {
@@ -474,7 +476,11 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.equal(contract.runner_model, 'domain_declared_transition_table');
   assert.equal(contract.contract_version, 'family-transition-runner.v1');
   assert.equal(packageJson.exports['./family-transition-runner'], './dist/modules/stagecraft/family-transition-runner.js');
-  assert.deepEqual(contract.oracle_ingestion.supported_surfaces, ['mag_grant_transition_oracle']);
+  assert.deepEqual(contract.oracle_ingestion.supported_surfaces, [
+    'domain_transition_oracle',
+    'mag_grant_transition_oracle',
+  ]);
+  assert.deepEqual(contract.oracle_ingestion.compatibility_surfaces, ['mag_grant_transition_oracle']);
   assert.ok((contract.oracle_ingestion.adapter_boundary.opl as string[]).includes('adapt oracle fixtures into matrix cases'));
   assert.ok((contract.oracle_ingestion.adapter_boundary.domain_agent as string[]).includes('fundability verdict'));
   assert.ok((contract.runner_execution_boundary.opl_executes as string[]).includes('domain-declared transition spec'));
@@ -606,6 +612,35 @@ test('grant transition oracle adapts MAG-owned table and fixtures into the gener
     matrix.results[1].result.authority_boundary.opl_can_write_grant_truth,
     false,
   );
+});
+
+test('domain transition oracle adapts non-MAG domain tables through the same generic runner', () => {
+  const domainOracle = {
+    ...magLikeGrantTransitionOracle,
+    surface_kind: 'domain_transition_oracle',
+    oracle_id: 'domain.transition.oracle.v1',
+    target_domain_id: 'example-domain',
+    owner: 'example-domain-owner',
+    authority_boundary: {
+      domain_truth_owner: 'example-domain-owner',
+      opl_role: 'generic_transition_runner_only',
+      opl_can_write_domain_truth: false,
+    },
+  };
+  const spec = adaptDomainTransitionOracleToFamilyTransitionSpec(domainOracle);
+  const cases = buildDomainTransitionOracleMatrixCases(domainOracle);
+  const matrix = runFamilyTransitionMatrix({ spec, cases });
+
+  assert.equal(spec.spec_id, 'domain.transition.oracle.v1');
+  assert.equal(spec.target_domain_id, 'example-domain');
+  assert.equal(spec.transitions[0].owner_route.route_ref, 'domain-transition:call_intake_complete_to_fundability_strategy');
+  assert.equal(spec.transitions[0].next_work_unit?.work_unit_ref, 'domain-work-unit:fundability_strategy');
+  assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [
+    'domain-transition-receipt:intake_handoff_receipt',
+  ]);
+  assert.equal(spec.transitions[1].human_gate?.gate_ref, 'domain-human-gate:fundability_blocked_to_human_gate');
+  assert.equal(cases[0].domain_id, 'example-domain');
+  assert.equal(matrix.summary.transition_applied, 3);
 });
 
 test('visual transition ingestion uses generic adapter profile instead of RCA-only refs', () => {
