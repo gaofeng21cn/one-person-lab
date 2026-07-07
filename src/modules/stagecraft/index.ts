@@ -27,13 +27,11 @@ export { adaptVisualTransitionSpecToFamilyTransitionSpec, buildVisualTransitionM
 export type { VisualTransitionSpec } from './family-transition-visual-ingestion.ts';
 export { commitStageArtifactAttemptRuntime, conformanceStageArtifactRuntime, explainStageArtifactRuntime, gcStageArtifactRuntime, openStageArtifactAttemptRuntime, promoteStageArtifactRuntime, rebuildStageArtifactRuntime, restoreStageArtifactRuntime, statusStageArtifactRuntime, validateStageArtifactRuntime, workbenchStageArtifactRuntime } from './stage-artifact-runtime.ts';
 export { assertStageProductionEvidencePayloadReady, buildStageProductionEvidencePayloadWorkorder, preflightStageProductionEvidencePayload, STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS } from './stage-production-evidence-payload-preflight.ts';
-export { listStageReplayMissingReceiptReceipts, stageReplayMissingReceiptTargetKey } from './stage-replay-missing-receipt-ledger.ts';
+export { stageReplayMissingReceiptTargetKey } from './stage-replay-missing-receipt-ledger.ts';
 export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-receipt-ledger.ts';
 export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
-export { latestStageRunExecutionAuthorizationCloseoutReceiptForStageAttempt, latestStageRunExecutionAuthorizationCloseoutReceiptForStageRun, latestStageRunExecutionAuthorizationReceiptForStageAttempt, latestStageRunExecutionAuthorizationReceiptForStageAttemptAnyRun, latestStageRunExecutionAuthorizationReceiptForStageRun, listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
-export type { StageRunExecutionAuthorizationReceipt } from './stage-run-execution-authorization-ledger.ts';
+export { listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
 export { findMasPublicationHandoffOwnerAnswerProjection } from './mas-owner-answer-projection.ts';
-export { evaluateStageRunAdmission, evaluateStageRunExecutionAuthorization } from './stage-run-kernel.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './standard-typed-blocker-lineage-policy.ts';

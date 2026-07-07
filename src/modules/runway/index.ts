@@ -7,7 +7,6 @@ export const OPL_RUNWAY_SOURCE_MODULE = {
 
 export { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 export { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
-export { stableId } from '../../kernel/stable-id.ts';
 export { buildModelRouteCostProjection, buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
 export { buildStageProgressLog } from './family-runtime-stage-progress-log.ts';
 export { buildStageAttemptTruePathProof } from './family-runtime-stage-attempt-true-path-proof.ts';
@@ -17,7 +16,7 @@ export type { TemporalStageAttemptVisibilityReadiness } from './family-runtime-t
 export { inspectFamilyRuntimeProviderWithLifecycle, isFamilyRuntimeProviderKind, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 export { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 export { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
-export { resolveOplStatePaths, ensureOplStateDir, type OplStatePaths } from './runtime-state-paths.ts';
+export { resolveOplStatePaths } from './runtime-state-paths.ts';
 export { deriveCurrentControlStateForAttempt, deriveCurrentControlStateForTask } from './family-runtime-current-control-state.ts';
 export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stageAttemptSignalsByAttempt } from './family-runtime-stage-attempt-ledger.ts';
 export type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
@@ -43,16 +42,14 @@ export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidenc
 export { runFamilyRuntime } from './family-runtime.ts';
 export { DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT, DOMAIN_PROGRESS_TRANSITION_RUNTIME_ID, DOMAIN_PROGRESS_TRANSITION_RUNTIME_MODULE } from './family-runtime-domain-progress-transition-runtime.ts';
 export { readFamilyRuntimeLifecycleApplyReceipts, readFamilyRuntimeLifecycleRefs, reconcileFamilyRuntimeLifecycleRefs } from './family-runtime-lifecycle-index.ts';
-export { MAS_DOMAIN_ROUTE_RECONCILE_APPLY, MAS_RUNTIME_OWNER_ROUTE_HANDOFF, OPL_RUNTIME_OWNER_ROUTE } from './family-runtime-mas-domain-route.ts';
 export { providerProofStatusIsCurrentlyProven } from './family-runtime-provider-continuous-proof.ts';
 export { inspectFamilyRuntimeProvider, inspectSelectedFamilyRuntimeProvidersWithLifecycle } from './family-runtime-providers.ts';
 export { summarizeModelRouteCostProjections, summarizeStageAttemptUsageProjections } from './family-runtime-stage-attempt-usage.ts';
 export type { ModelRouteCostProjection, StageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';
-export { listStageAttemptCloseouts, listStageAttempts } from './family-runtime-stage-attempts.ts';
+export { listStageAttempts } from './family-runtime-stage-attempts.ts';
 export { summarizeStageProgressLogs } from './family-runtime-stage-progress-log.ts';
 export type { StageProgressLogProjection } from './family-runtime-stage-progress-log.ts';
-export { normalizeManagedRuntimeContract } from './managed-runtime-contract.ts';
-export { buildNativeHelperHealthStatus, buildNativeHelperProjection, DEFAULT_NATIVE_HELPERS, runNativeHelperRepairAction } from './native-helper-runtime.ts';
+export { buildNativeHelperHealthStatus, runNativeHelperRepairAction } from './native-helper-runtime.ts';
 export { buildNativeIndexSummary } from './native-index-summary.ts';
 export type { OplEndpoints } from './opl-runtime-paths.ts';
 export { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
@@ -60,5 +57,5 @@ export { buildRuntimeEnvironmentPrepareReadback, buildRuntimeEnvironmentRunConte
 export { buildRuntimeManager, runRuntimeManagerAction } from './runtime-manager.ts';
 export { runRuntimeOperatorActionExecute } from './runtime-operator-action-execution.ts';
 export { requireRuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
-export type { RuntimeTraySnapshotEnvelope, RuntimeTraySnapshotProvider, RuntimeTraySnapshotProviderOptions } from './runtime-tray-snapshot-provider.ts';
+export type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 export { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';

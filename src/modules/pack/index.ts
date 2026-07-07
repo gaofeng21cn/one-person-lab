@@ -11,8 +11,7 @@ export {
   buildGeneratedAgentInterfaces,
   buildRepoGeneratedInterfaceBundle,
 } from './domain-pack-compiler.ts';
-export { buildGeneratedInterfaceBundle, selectGeneratedInterfaceBundleFormat } from './domain-pack-compiler/generated-interface-read-model.ts';
-export { STANDARD_AGENT_PACK_ABI } from './standard-agent-pack-abi.ts';
+export { buildGeneratedInterfaceBundle } from './domain-pack-compiler/generated-interface-read-model.ts';
 export {
   buildFunctionalPrivatizationAudit,
   FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT,

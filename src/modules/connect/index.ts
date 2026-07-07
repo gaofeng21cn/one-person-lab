@@ -25,22 +25,18 @@ export type {
   AgentPackagePackageActionInput,
 } from './agent-package-registry.ts';
 export {
-  AGENT_PACKAGE_ACTION_CATALOG,
   agentPackageDelegatedSurface,
-  findAgentPackageAction,
   listAgentPackageSettingsActions,
 } from './agent-package-actions.ts';
 export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
 export type { LocalCodexDefaults } from './local-codex-defaults.ts';
 export { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 export { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from './managed-update-owner-boundary.ts';
-export { buildManagedShellCommandEnv, buildManagedShellEnvWithUvCacheRecovery, buildManagedShellRecoveryTmpRoot, prepareManagedShellCommandCwd, recordManagedShellUvCacheRecovery } from '../../kernel/managed-shell-command-env.ts';
+export { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../../kernel/managed-shell-command-env.ts';
 export { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 export { resolveDefaultFamilyWorkspaceRoot, syncFamilySkillPacks } from './opl-skills.ts';
 export { canonicalOwnerId } from './owner-id.ts';
 export { parseGithubRepoFromUrl } from './developer-mode-source-policy.ts';
-export { resolveOplDeveloperModeFrameworkCheckout } from './developer-mode.ts';
-export type { OplDeveloperModeFrameworkCheckoutProjection } from './developer-mode.ts';
 export { runOplFlowIntelligenceEnhancementAction } from './codexcont-intelligence-mode.ts';
 export { buildOplDeveloperModeSurface } from './system-installation/developer-mode.ts';
 export { buildOplDockerWebuiDoctor } from './system-installation/docker-webui-doctor.ts';
@@ -52,7 +48,7 @@ export {
   resolveOplModuleExecCommand,
   runOplModuleAction,
 } from './system-installation/modules.ts';
-export type { ModuleInspection, OplEngineAction, OplModuleAction, OplModuleId } from './system-installation/shared.ts';
+export type { OplEngineAction, OplModuleAction, OplModuleId } from './system-installation/shared.ts';
 export { SCHOLARSKILLS_PACKAGE_SPEC } from './system-installation/scholarskills-package-channel.ts';
 export { runOplSystemAction } from './system-installation/system-actions.ts';
 export { runOplTurnkeyInstall } from './system-installation/turnkey.ts';

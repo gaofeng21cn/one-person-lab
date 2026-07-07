@@ -8,14 +8,3 @@ export { OPL_LEDGER_SOURCE_MODULE } from './ledger/index.ts';
 export { OPL_CONSOLE_SOURCE_MODULE } from './console/index.ts';
 export { OPL_FOUNDRY_LAB_SOURCE_MODULE } from './foundry-lab/index.ts';
 export { OPL_CONNECT_SOURCE_MODULE } from './connect/index.ts';
-
-export * as OPLCharter from './charter/index.ts';
-export * as OPLAtlas from './atlas/index.ts';
-export * as OPLWorkspace from './workspace/index.ts';
-export * as OPLPack from './pack/index.ts';
-export * as OPLStagecraft from './stagecraft/index.ts';
-export * as OPLRunway from './runway/index.ts';
-export * as OPLLedger from './ledger/index.ts';
-export * as OPLConsole from './console/index.ts';
-export * as OPLFoundryLab from './foundry-lab/index.ts';
-export * as OPLConnect from './connect/index.ts';
