@@ -23,6 +23,7 @@ test('package archive builder writes channel manifest checksums git source and r
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
+    oplbookforge: createGitModuleRemoteFixture('opl-bookforge'),
     scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
   };
 
@@ -48,6 +49,7 @@ test('package archive builder writes channel manifest checksums git source and r
       OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
       OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
       OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
+      OPL_MODULE_PATH_OPLBOOKFORGE: fixtures.oplbookforge.sourceRoot,
       OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
     },
   });
@@ -149,6 +151,15 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.match(manifest.packages.modules.oplmetaagent.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
+    manifest.packages.modules.oplbookforge.source_git.head_sha,
+    fixtures.oplbookforge.getHeadSha(),
+  );
+  assert.equal(
+    manifest.packages.modules.oplbookforge.codex_standalone_distribution.distribution_shape,
+    'generated_carrier_surface',
+  );
+  assert.match(manifest.packages.modules.oplbookforge.source_archive.sha256, /^[0-9a-f]{64}$/);
+  assert.equal(
     manifest.packages.modules.scholarskills.source_git.head_sha,
     fixtures.scholarskills.getHeadSha(),
   );
@@ -157,6 +168,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.match(manifest.packages.modules.scholarskills.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.match(checksums, /med-autoscience-26\.4\.31\.tar\.gz/);
   assert.match(checksums, /opl-meta-agent-26\.4\.31\.tar\.gz/);
+  assert.match(checksums, /opl-bookforge-26\.4\.31\.tar\.gz/);
   assert.match(checksums, /mas-scholar-skills-26\.4\.31\.tar\.gz/);
   assert.match(checksums, new RegExp(manifest.packages.modules.medautoscience.source_archive.sha256));
 
@@ -170,20 +182,27 @@ test('package archive builder writes channel manifest checksums git source and r
   });
 });
 
-test('MAS first-party agent package manifest declares standalone bundle and OPL managed dependency from one source', () => {
-  const manifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/agent-packages/mas.json'),
-    'utf8',
-  )) as Record<string, any>;
+test('first-party agent package manifests declare Codex carrier and OPL package core from one source', () => {
   const schema = parseJsonText(fs.readFileSync(
     path.join(repoRoot, 'contracts/opl-framework/agent-package-manifest.schema.json'),
     'utf8',
   )) as Record<string, any>;
+  const manifests = Object.fromEntries(
+    ['mas', 'mag', 'rca', 'oma', 'bookforge'].map((id) => [
+      id,
+      parseJsonText(fs.readFileSync(
+        path.join(repoRoot, `contracts/opl-framework/agent-packages/${id}.json`),
+        'utf8',
+      )) as Record<string, any>,
+    ]),
+  );
+  const manifest = manifests.mas;
 
   assert.equal(manifest.schema_ref, 'contracts/opl-framework/agent-package-manifest.schema.json');
   assert.equal(manifest.package_id, 'med-autoscience');
   assert.equal(manifest.agent_id, 'med-autoscience');
   assert.equal(manifest.version, '0.1.0a4');
+  assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
   assert.equal(manifest.distribution_payload.rolling_tag, 'latest');
   assert.equal(manifest.distribution_payload.install_truth, 'resolved_digest_lock');
   assert.equal(manifest.distribution_payload.live_download_proof, false);
@@ -193,12 +212,24 @@ test('MAS first-party agent package manifest declares standalone bundle and OPL 
   assert.equal(manifest.carrier_adapters[0].carrier, 'codex_plugin');
   assert.equal(manifest.carrier_adapters[0].owns_package_core, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
+  assert.deepEqual(schema.properties.codex_surface.properties.standalone_distribution.enum, [
+    'repo_carrier_source',
+    'generated_carrier_surface',
+    'self_contained_fat_plugin',
+  ]);
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
   assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
+  assert.equal(manifests.mag.codex_surface.standalone_distribution, 'repo_carrier_source');
+  assert.equal(manifests.rca.codex_surface.standalone_distribution, 'repo_carrier_source');
+  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'generated_carrier_surface');
+  assert.equal(manifests.bookforge.codex_surface.standalone_distribution, 'generated_carrier_surface');
+  assert.deepEqual(manifests.mag.capability_dependencies, []);
+  assert.deepEqual(manifests.rca.capability_dependencies, []);
+  assert.deepEqual(manifests.oma.distribution_payload.required_skill_pack_lock_refs, []);
   assert.equal(manifest.opl_managed_surface.package_shape, 'thin_agent_package');
   assert.equal(manifest.opl_managed_surface.dependency_resolution, 'managed_dependency_graph');
   assert.deepEqual(
@@ -227,6 +258,7 @@ test('first-party agent package manifest canonicalizes legacy package and assist
     package_id: 'medautoscience',
     version: '0.1.0a4',
     source: 'first_party',
+    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     distribution_payload: {
       payload_kind: 'ghcr_oci_agent_package',
       payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
@@ -285,13 +317,14 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
     path.join(repoRoot, 'contracts/opl-framework/agent-packages/mas.json'),
     'utf8',
   )) as Record<string, any>;
-  assert.throws(
-    () => normalizeFirstPartyAgentPackageManifest({
-      ...manifest,
-      capability_dependencies: [],
-    }),
-    /must declare capability_dependencies/,
-  );
+  assert.deepEqual(normalizeFirstPartyAgentPackageManifest({
+    ...manifest,
+    capability_dependencies: [],
+    distribution_payload: {
+      ...manifest.distribution_payload,
+      required_skill_pack_lock_refs: [],
+    },
+  }).capability_dependencies, []);
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({
       ...manifest,
@@ -341,6 +374,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent'),
+    oplbookforge: createGitModuleRemoteFixture('opl-bookforge'),
     scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
   };
   fs.writeFileSync(
@@ -359,6 +393,7 @@ test('package archive builder refreshes reused managed clones before archiving s
     OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
     OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
     OPL_MODULE_PATH_OPLMETAAGENT: fixtures.oplmetaagent.sourceRoot,
+    OPL_MODULE_PATH_OPLBOOKFORGE: fixtures.oplbookforge.sourceRoot,
     OPL_MODULE_PATH_SCHOLARSKILLS: fixtures.scholarskills.sourceRoot,
   };
 

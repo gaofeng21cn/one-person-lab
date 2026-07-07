@@ -1,13 +1,23 @@
+import bookForgeAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/bookforge.json' with { type: 'json' };
+import magAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mag.json' with { type: 'json' };
 import masAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/mas.json' with { type: 'json' };
+import omaAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/oma.json' with { type: 'json' };
+import rcaAgentPackageManifest from '../../../contracts/opl-framework/agent-packages/rca.json' with { type: 'json' };
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
-import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
+import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';
+
+export type CodexCarrierDistribution =
+  | 'repo_carrier_source'
+  | 'generated_carrier_surface'
+  | 'self_contained_fat_plugin';
 
 type FirstPartyAgentPackageManifest = {
   agent_id: string;
   package_id: string;
   version: string;
   source: string;
+  carrier_source_role: 'codex_plugin_default_carrier_not_package_truth';
   package_core: Record<string, unknown> | null;
   distribution_payload: {
     payload_kind: string;
@@ -26,7 +36,7 @@ type FirstPartyAgentPackageManifest = {
   };
   codex_surface: {
     plugin_id: string;
-    standalone_distribution: 'self_contained_fat_plugin';
+    standalone_distribution: CodexCarrierDistribution;
     required_skill_ids: readonly string[];
     bundled_capability_package_ids?: readonly string[];
   };
@@ -54,6 +64,16 @@ function requireStringList(value: unknown, field: string) {
   const values = stringList(value);
   if (values.length > 0) {
     return values;
+  }
+  throw new FrameworkContractError('contract_shape_invalid', `Agent package manifest must declare ${field}.`, {
+    contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+    field,
+  });
+}
+
+function normalizeStringList(value: unknown, field: string) {
+  if (Array.isArray(value)) {
+    return stringList(value);
   }
   throw new FrameworkContractError('contract_shape_invalid', `Agent package manifest must declare ${field}.`, {
     contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -92,7 +112,7 @@ function normalizeDistributionPayload(value: unknown) {
     payload_kind: requiredString(value.payload_kind, 'distribution_payload.payload_kind'),
     payload_ref: requiredString(value.payload_ref, 'distribution_payload.payload_ref'),
     payload_digest_ref: requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref'),
-    required_skill_pack_lock_refs: requireStringList(
+    required_skill_pack_lock_refs: normalizeStringList(
       value.required_skill_pack_lock_refs,
       'distribution_payload.required_skill_pack_lock_refs',
     ),
@@ -171,47 +191,100 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
       field: 'codex_surface',
     });
   }
-  if (!Array.isArray(payload.capability_dependencies) || payload.capability_dependencies.length === 0) {
+  const codexSurface = payload.codex_surface;
+  const capabilityDependencies = Array.isArray(payload.capability_dependencies)
+    ? payload.capability_dependencies.map(normalizeCapabilityDependency)
+    : null;
+  if (!capabilityDependencies) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare capability_dependencies.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
       field: 'capability_dependencies',
     });
   }
-  const codexSurface = payload.codex_surface;
+  const standaloneDistribution = codexSurface.standalone_distribution;
+  if (
+    standaloneDistribution !== 'repo_carrier_source'
+    && standaloneDistribution !== 'generated_carrier_surface'
+    && standaloneDistribution !== 'self_contained_fat_plugin'
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest codex_surface.standalone_distribution is invalid.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'codex_surface.standalone_distribution',
+      actual: standaloneDistribution,
+    });
+  }
   return {
     agent_id: canonicalAgentPackageId(requiredString(payload.agent_id, 'agent_id'))!,
     package_id: canonicalAgentPackageId(requiredString(payload.package_id, 'package_id'))!,
     version: requiredString(payload.version, 'version'),
     source: requiredString(payload.source, 'source'),
+    carrier_source_role: requireLiteral(
+      payload.carrier_source_role,
+      'codex_plugin_default_carrier_not_package_truth',
+      'carrier_source_role',
+    ),
     package_core: isRecord(payload.package_core) ? payload.package_core : null,
     distribution_payload: normalizeDistributionPayload(payload.distribution_payload),
     codex_surface: {
       plugin_id: requiredString(codexSurface.plugin_id, 'codex_surface.plugin_id'),
-      standalone_distribution: requireLiteral(
-        codexSurface.standalone_distribution,
-        'self_contained_fat_plugin',
-        'codex_surface.standalone_distribution',
-      ),
+      standalone_distribution: standaloneDistribution,
       required_skill_ids: requireStringList(codexSurface.required_skill_ids, 'codex_surface.required_skill_ids'),
       bundled_capability_package_ids: stringList(codexSurface.bundled_capability_package_ids),
     },
     carrier_adapters: Array.isArray(payload.carrier_adapters)
       ? payload.carrier_adapters.filter(isRecord)
       : [],
-    capability_dependencies: payload.capability_dependencies.map(normalizeCapabilityDependency),
+    capability_dependencies: capabilityDependencies,
   };
 }
 
-export const MAS_AGENT_PACKAGE_MANIFEST = normalizeFirstPartyAgentPackageManifest(masAgentPackageManifest);
+export const FIRST_PARTY_AGENT_PACKAGE_MANIFESTS: Partial<Record<OplModuleId, FirstPartyAgentPackageManifest>> = {
+  medautoscience: normalizeFirstPartyAgentPackageManifest(masAgentPackageManifest),
+  medautogrant: normalizeFirstPartyAgentPackageManifest(magAgentPackageManifest),
+  redcube: normalizeFirstPartyAgentPackageManifest(rcaAgentPackageManifest),
+  oplmetaagent: normalizeFirstPartyAgentPackageManifest(omaAgentPackageManifest),
+  oplbookforge: normalizeFirstPartyAgentPackageManifest(bookForgeAgentPackageManifest),
+};
+
+export const MAS_AGENT_PACKAGE_MANIFEST = FIRST_PARTY_AGENT_PACKAGE_MANIFESTS.medautoscience!;
+
+export function getAgentPackageManifestByModuleId(moduleId: OplModuleId) {
+  return FIRST_PARTY_AGENT_PACKAGE_MANIFESTS[moduleId] ?? null;
+}
+
+export function getAgentPackageManifestByPackageId(packageId: string) {
+  const canonicalId = canonicalAgentPackageId(packageId);
+  return listFirstPartyAgentPackageManifests().find((manifest) => (
+    manifest.package_id === canonicalId
+  )) ?? null;
+}
+
+export function listFirstPartyAgentPackageManifests() {
+  return Object.values(FIRST_PARTY_AGENT_PACKAGE_MANIFESTS).filter(
+    (manifest): manifest is FirstPartyAgentPackageManifest => manifest !== undefined,
+  );
+}
+
+export function getCapabilityDependenciesForModule(moduleId: OplModuleId) {
+  return getAgentPackageManifestByModuleId(moduleId)?.capability_dependencies ?? [];
+}
+
+export function getCodexStandaloneRequiredSkillIdsForModule(moduleId: OplModuleId) {
+  return getAgentPackageManifestByModuleId(moduleId)?.codex_surface.required_skill_ids ?? [];
+}
+
+export function getDistributionPayloadForModule(moduleId: OplModuleId) {
+  return getAgentPackageManifestByModuleId(moduleId)?.distribution_payload ?? null;
+}
 
 export function getMasCapabilityDependencies() {
-  return MAS_AGENT_PACKAGE_MANIFEST.capability_dependencies;
+  return getCapabilityDependenciesForModule('medautoscience');
 }
 
 export function getMasCodexStandaloneRequiredSkillIds() {
-  return MAS_AGENT_PACKAGE_MANIFEST.codex_surface.required_skill_ids;
+  return getCodexStandaloneRequiredSkillIdsForModule('medautoscience');
 }
 
 export function getMasDistributionPayload() {
-  return MAS_AGENT_PACKAGE_MANIFEST.distribution_payload;
+  return getDistributionPayloadForModule('medautoscience')!;
 }

@@ -103,6 +103,8 @@ test('packages manifest exposes active package-channel coordinates for module in
             plugin_id: string;
             required_skill_ids: string[];
             bundled_capability_package_ids: string[];
+            carrier_source_role: string;
+            package_manifest_ref: string;
             distribution_payload: {
               oci_ref: string;
               payload_digest_ref: string;
@@ -382,6 +384,8 @@ test('packages manifest exposes active package-channel coordinates for module in
       plugin_id: 'mas',
       required_skill_ids: ['mas', 'mas-scholar-skills'],
       bundled_capability_package_ids: ['mas-scholar-skills'],
+      carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+      package_manifest_ref: 'contracts/opl-framework/agent-packages/mas.json',
       distribution_payload: {
         payload_kind: 'ghcr_oci_agent_package',
         payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
@@ -407,6 +411,33 @@ test('packages manifest exposes active package-channel coordinates for module in
     output.packages_manifest.packages.modules.redcube.install_strategy,
     'extract_to_managed_modules_root',
   );
+  assert.deepEqual(
+    output.packages_manifest.packages.modules.redcube.codex_standalone_distribution,
+    {
+      distribution_shape: 'repo_carrier_source',
+      plugin_id: 'redcube-ai',
+      required_skill_ids: ['redcube-ai'],
+      bundled_capability_package_ids: [],
+      carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
+      package_manifest_ref: 'contracts/opl-framework/agent-packages/rca.json',
+      distribution_payload: {
+        payload_kind: 'ghcr_oci_agent_package',
+        payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-redcube-ai:latest',
+        payload_digest_ref: 'sha256:3333333333333333333333333333333333333333333333333333333333333333',
+        required_skill_pack_lock_refs: [],
+        proof_status: 'non_live_contract_fixture',
+        live_download_proof: false,
+        installed_reload_proof: false,
+        oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-redcube-ai:latest',
+        oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
+        immutable_tag: '0.1.0',
+        rolling_tag: 'latest',
+        promotion_policy: 'daily_candidate_gates_then_promote_latest',
+        install_truth: 'resolved_digest_lock',
+      },
+      user_install_action_count: 1,
+    },
+  );
   assert.equal(
     output.packages_manifest.packages.modules.oplmetaagent.artifact,
     'ghcr.io/gaofeng21cn/one-person-lab-modules/opl-meta-agent:26.4.27',
@@ -419,6 +450,10 @@ test('packages manifest exposes active package-channel coordinates for module in
     output.packages_manifest.packages.modules.oplmetaagent.developer_git_checkout_override.repo_url,
     'https://github.com/gaofeng21cn/opl-meta-agent.git',
   );
+  const omaCodexStandaloneDistribution = output.packages_manifest.packages.modules.oplmetaagent.codex_standalone_distribution;
+  assert.ok(omaCodexStandaloneDistribution);
+  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'generated_carrier_surface');
+  assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/agent-packages/oma.json');
   assert.equal(
     output.packages_manifest.packages.modules.scholarskills.artifact,
     'ghcr.io/gaofeng21cn/one-person-lab-modules/mas-scholar-skills:26.4.27',

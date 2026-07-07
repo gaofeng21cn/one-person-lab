@@ -9,6 +9,7 @@
     "package_id",
     "version",
     "source",
+    "carrier_source_role",
     "distribution_payload",
     "codex_surface",
     "capability_dependencies"
@@ -32,6 +33,9 @@
     "source": {
       "type": "string",
       "minLength": 1
+    },
+    "carrier_source_role": {
+      "const": "codex_plugin_default_carrier_not_package_truth"
     },
     "package_core": {
       "type": "object",
@@ -124,7 +128,6 @@
             "type": "string",
             "minLength": 1
           },
-          "minItems": 1,
           "uniqueItems": true
         },
         "proof_status": {
@@ -174,7 +177,11 @@
           "minLength": 1
         },
         "standalone_distribution": {
-          "const": "self_contained_fat_plugin"
+          "enum": [
+            "repo_carrier_source",
+            "generated_carrier_surface",
+            "self_contained_fat_plugin"
+          ]
         },
         "required_skill_ids": {
           "type": "array",

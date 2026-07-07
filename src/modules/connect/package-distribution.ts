@@ -3,9 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
-  getMasCapabilityDependencies,
-  getMasCodexStandaloneRequiredSkillIds,
-  getMasDistributionPayload,
+  getAgentPackageManifestByModuleId,
+  getCapabilityDependenciesForModule,
 } from './agent-package-manifests.ts';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
@@ -27,6 +26,7 @@ type PackageModuleSpec = {
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency' | 'framework_capability_package';
   package_name: string;
+  agent_package_manifest_ref?: string;
   capability_dependencies?: readonly ModuleCapabilityDependency[];
 };
 
@@ -51,7 +51,8 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
     package_name: 'med-autoscience',
-    capability_dependencies: getMasCapabilityDependencies(),
+    agent_package_manifest_ref: 'contracts/opl-framework/agent-packages/mas.json',
+    capability_dependencies: getCapabilityDependenciesForModule('medautoscience'),
   },
   {
     module_id: 'medautogrant',
@@ -60,6 +61,7 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
     scope: 'domain_module',
     package_name: 'med-autogrant',
+    agent_package_manifest_ref: 'contracts/opl-framework/agent-packages/mag.json',
   },
   {
     module_id: 'redcube',
@@ -68,6 +70,7 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
     scope: 'domain_module',
     package_name: 'redcube-ai',
+    agent_package_manifest_ref: 'contracts/opl-framework/agent-packages/rca.json',
   },
   {
     module_id: 'oplmetaagent',
@@ -76,6 +79,7 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-meta-agent.git',
     scope: 'domain_module',
     package_name: 'opl-meta-agent',
+    agent_package_manifest_ref: 'contracts/opl-framework/agent-packages/oma.json',
   },
   {
     module_id: 'oplbookforge',
@@ -84,6 +88,7 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/opl-bookforge.git',
     scope: 'domain_module',
     package_name: 'opl-bookforge',
+    agent_package_manifest_ref: 'contracts/opl-framework/agent-packages/bookforge.json',
   },
   {
     module_id: 'scholarskills',
@@ -226,15 +231,18 @@ function dependencyOf(moduleId: PackageModuleId) {
 }
 
 function buildCodexStandaloneDistribution(spec: PackageModuleSpec) {
-  if (spec.module_id !== 'medautoscience') {
+  const agentPackageManifest = getAgentPackageManifestByModuleId(spec.module_id);
+  if (!agentPackageManifest) {
     return null;
   }
   return {
-    distribution_shape: 'self_contained_fat_plugin',
-    plugin_id: 'mas',
-    required_skill_ids: getMasCodexStandaloneRequiredSkillIds(),
-    bundled_capability_package_ids: spec.capability_dependencies?.map((dependency) => dependency.package_id) ?? [],
-    distribution_payload: getMasDistributionPayload(),
+    distribution_shape: agentPackageManifest.codex_surface.standalone_distribution,
+    plugin_id: agentPackageManifest.codex_surface.plugin_id,
+    required_skill_ids: agentPackageManifest.codex_surface.required_skill_ids,
+    bundled_capability_package_ids: agentPackageManifest.codex_surface.bundled_capability_package_ids ?? [],
+    carrier_source_role: agentPackageManifest.carrier_source_role,
+    package_manifest_ref: spec.agent_package_manifest_ref,
+    distribution_payload: agentPackageManifest.distribution_payload,
     user_install_action_count: 1,
   };
 }
