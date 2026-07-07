@@ -143,8 +143,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'oplmetaagent',
     pack_id: 'oplmetaagent',
-    marketplace_id: 'opl-meta-agent-local',
-    plugin_id: 'opl-meta-agent',
+    marketplace_id: 'oma-local',
+    plugin_id: 'oma',
     repo_name: 'opl-meta-agent',
     display_name: 'OPL Meta Agent Local',
     category: 'Productivity',
@@ -164,8 +164,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'oplbookforge',
     pack_id: 'oplbookforge',
-    marketplace_id: 'opl-bookforge-local',
-    plugin_id: 'opl-bookforge',
+    marketplace_id: 'obf-local',
+    plugin_id: 'obf',
     repo_name: 'opl-bookforge',
     display_name: 'OPL Book Forge Local',
     category: 'Productivity',

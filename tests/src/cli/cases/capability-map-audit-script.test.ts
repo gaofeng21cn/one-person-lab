@@ -29,6 +29,9 @@ function writeCapabilityRepo(root: string, overrides: Record<string, unknown> = 
         capability_kind: 'professional_skill',
         canonical_owner: 'demo-owner',
         canonical_target_paths: ['agent/professional_skills/demo/SKILL.md'],
+        exposure_layer: 'repo_internal_professional_skill',
+        codex_default_exposure: false,
+        allowed_exposure_scopes: ['domain_runtime_stage'],
         verification_refs: ['scripts/verify.sh#demo'],
         forbidden_surfaces: ['owner_receipts'],
         owner_closeout_boundary_ref: 'contracts/capability_map.json#/owner_closeout_boundary',
@@ -58,6 +61,39 @@ test('capability-map audit passes valid cross-repo capability maps', () => {
     assert.equal(payload.status, 'passed');
     assert.equal(payload.checked_repo_count, 2);
     assert.deepEqual(payload.results.map((entry: Record<string, unknown>) => entry.status), ['passed', 'passed']);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('capability-map audit blocks unlisted repo professional skills', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-unlisted-'));
+  try {
+    const repo = path.join(fixtureRoot, 'unlisted-agent');
+    writeCapabilityRepo(repo, {
+      physical_source_ref: {
+        ref_kind: 'repo_path',
+        ref: 'contracts/capability_map.json',
+        role: 'non_skill_source',
+      },
+      canonical_target_paths: ['contracts/capability_map.json'],
+    });
+
+    const result = spawnSync('node', [
+      path.join(repoRoot, 'scripts', 'capability-map-audit.mjs'),
+      repo,
+      '--json',
+    ], { encoding: 'utf8' });
+
+    assert.notEqual(result.status, 0);
+    const payload = readJsonPayload(result.stdout);
+    assert.equal(payload.status, 'blocked');
+    assert.equal(
+      payload.results[0].blockers.includes(
+        'missing_professional_skill_capability:agent/professional_skills/demo/SKILL.md',
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

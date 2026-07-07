@@ -36,7 +36,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     );
     assert.deepEqual(
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
-      ['mas', 'mag', 'rca', 'opl-meta-agent', 'opl-bookforge', 'mas-scholar-skills'],
+      ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills'],
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
@@ -52,6 +52,8 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.generated_skill_surface_ready, true);
     assert.equal(metaPack?.source_kind, 'opl_generated_plugin_surface');
     assert.equal(metaPack?.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(metaPack?.management_model, 'opl_managed_codex_plugin_surface');
+    assert.equal(metaPack?.management_model_role, 'unified_management_semantics_transport_may_differ');
     assert.equal(metaPack?.plugin_transport.source_kind, 'opl_generated_plugin_surface');
     assert.equal(metaPack?.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
     assert.equal(metaPack?.ready_to_sync, true);
@@ -70,6 +72,8 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(bookforgePack?.generated_skill_surface_ready, true);
     assert.equal(bookforgePack?.source_kind, 'opl_generated_plugin_surface');
     assert.equal(bookforgePack?.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(bookforgePack?.management_model, 'opl_managed_codex_plugin_surface');
+    assert.equal(bookforgePack?.management_model_role, 'unified_management_semantics_transport_may_differ');
     assert.equal(bookforgePack?.plugin_transport.source_kind, 'opl_generated_plugin_surface');
     assert.equal(bookforgePack?.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
     assert.equal(bookforgePack?.ready_to_sync, true);
@@ -352,7 +356,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(metaGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
     assert.match(
       metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
-      /generated-codex-plugins\/opl-meta-agent-local\/plugins\/opl-meta-agent$/,
+      /generated-codex-plugins\/oma-local\/plugins\/oma$/,
     );
     assert.equal(
       fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path),
@@ -383,13 +387,13 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(bookforgeGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
     assert.match(
       bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
-      /generated-codex-plugins\/opl-bookforge-local\/plugins\/opl-bookforge$/,
+      /generated-codex-plugins\/obf-local\/plugins\/obf$/,
     );
     const generatedBookForgeManifest = parseJsonText(fs.readFileSync(
       bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
       'utf8',
     )) as Record<string, any>;
-    assert.equal(generatedBookForgeManifest.name, 'opl-bookforge');
+    assert.equal(generatedBookForgeManifest.name, 'obf');
     assert.equal(generatedBookForgeManifest.interface.displayName, 'OPL Book Forge');
     assert.equal(generatedBookForgeManifest.repository, 'https://github.com/gaofeng21cn/opl-bookforge');
     const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
@@ -427,7 +431,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     for (const skillName of ['mas', 'mag', 'rca']) {
       assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
     }
-    for (const skillName of ['opl-meta-agent', 'opl-bookforge']) {
+    for (const skillName of ['oma', 'obf']) {
       assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
       assert.equal(
         fs.existsSync(path.join(
@@ -451,8 +455,8 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(config, /\[plugins\."mas@mas-local"\]/);
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
-    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
-    assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
+    assert.match(config, /\[plugins\."oma@oma-local"\]/);
+    assert.match(config, /\[plugins\."obf@obf-local"\]/);
     assert.doesNotMatch(config, /\[plugins\."mas-scholar-skills@mas-scholar-skills-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });

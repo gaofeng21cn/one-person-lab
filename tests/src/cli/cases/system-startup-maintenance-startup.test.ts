@@ -252,16 +252,16 @@ test('system startup-maintenance installs clean managed modules and returns App 
     for (const skillName of ['mas', 'mag', 'rca']) {
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), false);
     }
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-meta-agent', 'SKILL.md')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'opl-bookforge', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'oma', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'obf', 'SKILL.md')), false);
     assert.equal(
       fs.existsSync(path.join(
         homeRoot,
         'opl-state',
         'generated-codex-plugins',
-        'opl-meta-agent-local',
+        'oma-local',
         'plugins',
-        'opl-meta-agent',
+        'oma',
         '.codex-plugin',
         'plugin.json',
       )),
@@ -272,11 +272,11 @@ test('system startup-maintenance installs clean managed modules and returns App 
         homeRoot,
         'opl-state',
         'generated-codex-plugins',
-        'opl-meta-agent-local',
+        'oma-local',
         'plugins',
-        'opl-meta-agent',
+        'oma',
         'skills',
-        'opl-meta-agent',
+        'oma',
         'SKILL.md',
       )),
       true,
@@ -286,9 +286,9 @@ test('system startup-maintenance installs clean managed modules and returns App 
         homeRoot,
         'opl-state',
         'generated-codex-plugins',
-        'opl-bookforge-local',
+        'obf-local',
         'plugins',
-        'opl-bookforge',
+        'obf',
         '.codex-plugin',
         'plugin.json',
       )),
@@ -299,18 +299,18 @@ test('system startup-maintenance installs clean managed modules and returns App 
         homeRoot,
         'opl-state',
         'generated-codex-plugins',
-        'opl-bookforge-local',
+        'obf-local',
         'plugins',
-        'opl-bookforge',
+        'obf',
         'skills',
-        'opl-bookforge',
+        'obf',
         'SKILL.md',
       )),
       true,
     );
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
-    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
-    assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
+    assert.match(codexConfig, /\[plugins\."oma@oma-local"\]/);
+    assert.match(codexConfig, /\[plugins\."obf@obf-local"\]/);
     const previousStateDir = process.env.OPL_STATE_DIR;
     process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
     try {

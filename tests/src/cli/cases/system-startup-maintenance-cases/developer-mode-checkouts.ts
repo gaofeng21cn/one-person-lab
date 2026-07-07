@@ -193,10 +193,10 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       );
       assert.match(codexConfig, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     }
-    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
-    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
-    assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
-    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-bookforge-local/);
+    assert.match(codexConfig, /\[plugins\."oma@oma-local"\]/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/oma-local/);
+    assert.match(codexConfig, /\[plugins\."obf@obf-local"\]/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/obf-local/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });

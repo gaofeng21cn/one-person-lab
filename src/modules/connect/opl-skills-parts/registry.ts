@@ -13,6 +13,7 @@ export type SkillPackSyncScope = 'project' | 'codex' | 'workspace' | 'quest';
 export type SkillPackTargetProject = 'medautoscience';
 export type StandardAgentSeriesMembership = 'standard_domain_agent';
 export type SkillPackSourceKindRole = 'transport_install_detail_not_agent_membership_or_status';
+export type SkillPackManagementModel = 'opl_managed_codex_plugin_surface';
 
 export type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
@@ -20,7 +21,7 @@ export type SkillPackSpec = {
   project: string;
   label: string;
   plugin_name: string;
-  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge' | 'mas-scholar-skills';
+  canonical_plugin_name: 'mas' | 'mag' | 'rca' | 'oma' | 'obf' | 'mas-scholar-skills';
   source_kind: SkillPackSourceKind;
   distribution_role: SkillPackDistributionRole;
   installer_kind: SkillPackInstallerKind;
@@ -62,6 +63,20 @@ export type InspectFamilySkillPack = {
   capability_plugin_distribution: Record<string, unknown> | null;
   mas_scholar_skills_profile: Record<string, unknown> | null;
   plugin_transport: InspectFamilySkillPackPluginTransport;
+  management_model: SkillPackManagementModel;
+  management_model_role: 'unified_management_semantics_transport_may_differ';
+  professional_skill_exposure: {
+    surface_kind: 'opl_professional_skill_exposure_audit';
+    status: 'passed' | 'blocked' | 'skipped';
+    capability_map_path: string;
+    capability_map_found: boolean;
+    professional_skill_count: number;
+    repo_internal_professional_skill_count: number;
+    default_codex_exposed_count: number;
+    expected_exposure_layer: 'repo_internal_professional_skill';
+    codex_default_exposure_required: false;
+    blockers: string[];
+  };
   plugin_source_path: string;
   repo_root: string;
   repo_found: boolean;

@@ -399,6 +399,120 @@ function validateSkillEntry(spec: SkillPackSpec, skillEntryPath: string, skillEn
   };
 }
 
+function listRepoProfessionalSkillRefs(repoRoot: string) {
+  const professionalSkillsRoot = path.join(repoRoot, 'agent', 'professional_skills');
+  if (!fs.existsSync(professionalSkillsRoot) || !fs.statSync(professionalSkillsRoot).isDirectory()) {
+    return [];
+  }
+
+  return fs.readdirSync(professionalSkillsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join('agent', 'professional_skills', entry.name, 'SKILL.md'))
+    .filter((relativePath) => fs.existsSync(path.join(repoRoot, relativePath)))
+    .sort();
+}
+
+function capabilityKind(capability: Record<string, unknown>) {
+  return normalizeOptionalString(
+    typeof capability.capability_kind === 'string'
+      ? capability.capability_kind
+      : typeof capability.surface_role === 'string'
+        ? capability.surface_role
+        : null,
+  );
+}
+
+function capabilityRefs(capability: Record<string, unknown>) {
+  const refs: string[] = [];
+  const physicalSourceRef = isRecord(capability.physical_source_ref) && typeof capability.physical_source_ref.ref === 'string'
+    ? capability.physical_source_ref.ref
+    : null;
+  if (physicalSourceRef) {
+    refs.push(physicalSourceRef);
+  }
+  for (const field of ['canonical_target_paths', 'canonical_paths', 'skill_ref']) {
+    const value = capability[field];
+    if (typeof value === 'string') {
+      refs.push(value);
+    } else if (Array.isArray(value)) {
+      refs.push(...value.filter((entry): entry is string => typeof entry === 'string'));
+    }
+  }
+  return refs;
+}
+
+function inspectProfessionalSkillExposure(repoRoot: string): InspectFamilySkillPack['professional_skill_exposure'] {
+  const capabilityMapPath = path.join(repoRoot, 'contracts', 'capability_map.json');
+  const repoSkillRefs = listRepoProfessionalSkillRefs(repoRoot);
+  const capabilityMapFound = fs.existsSync(capabilityMapPath) && fs.statSync(capabilityMapPath).isFile();
+  const base = {
+    surface_kind: 'opl_professional_skill_exposure_audit' as const,
+    capability_map_path: capabilityMapPath,
+    capability_map_found: capabilityMapFound,
+    professional_skill_count: 0,
+    repo_internal_professional_skill_count: repoSkillRefs.length,
+    default_codex_exposed_count: 0,
+    expected_exposure_layer: 'repo_internal_professional_skill' as const,
+    codex_default_exposure_required: false as const,
+  };
+
+  if (!capabilityMapFound) {
+    return {
+      ...base,
+      status: repoSkillRefs.length > 0 ? 'blocked' : 'skipped',
+      blockers: repoSkillRefs.length > 0 ? ['missing_capability_map_for_repo_professional_skills'] : [],
+    };
+  }
+
+  const read = readJsonFileResult(capabilityMapPath);
+  if (read.status !== 'resolved' || !isRecord(read.payload)) {
+    return {
+      ...base,
+      status: 'blocked',
+      blockers: [`failed_to_read_capability_map:${read.error ?? 'invalid_root'}`],
+    };
+  }
+
+  const capabilities = Array.isArray(read.payload.capabilities)
+    ? read.payload.capabilities.filter(isRecord)
+    : [];
+  const professionalCapabilities = capabilities.filter((capability) => capabilityKind(capability) === 'professional_skill');
+  const blockers: string[] = [];
+  const representedRefs = new Set(professionalCapabilities.flatMap(capabilityRefs));
+  for (const relativePath of repoSkillRefs) {
+    if (!representedRefs.has(relativePath)) {
+      blockers.push(`missing_professional_skill_capability:${relativePath}`);
+    }
+  }
+
+  let defaultCodexExposedCount = 0;
+  for (const capability of professionalCapabilities) {
+    const capabilityId = typeof capability.capability_id === 'string' && capability.capability_id.trim()
+      ? capability.capability_id.trim()
+      : '<missing_capability_id>';
+    const refs = capabilityRefs(capability);
+    const isRepoInternal = refs.some((ref) => ref.startsWith('agent/professional_skills/'));
+    if (capability.codex_default_exposure === true) {
+      defaultCodexExposedCount += 1;
+      blockers.push(`${capabilityId}:codex_default_exposure_must_be_false`);
+    }
+    if (isRepoInternal && capability.exposure_layer !== 'repo_internal_professional_skill') {
+      blockers.push(`${capabilityId}:missing_repo_internal_exposure_layer`);
+    }
+    if (!Array.isArray(capability.allowed_exposure_scopes) || capability.allowed_exposure_scopes.length === 0) {
+      blockers.push(`${capabilityId}:missing_allowed_exposure_scopes`);
+    }
+  }
+
+  return {
+    ...base,
+    status: blockers.length > 0 ? 'blocked' : 'passed',
+    professional_skill_count: professionalCapabilities.length,
+    default_codex_exposed_count: defaultCodexExposedCount,
+    blockers,
+  };
+}
+
 function inspectFamilySkillPack(spec: SkillPackSpec): InspectFamilySkillPack {
   return inspectFamilySkillPackAtRepoRoot(spec, resolveRepoRoot(spec));
 }
@@ -471,6 +585,9 @@ function inspectFamilySkillPackAtRepoRoot(
     capability_plugin_distribution: capabilityPluginDistribution,
     mas_scholar_skills_profile: masScholarSkillsProfile,
     plugin_transport: pluginTransport,
+    management_model: 'opl_managed_codex_plugin_surface',
+    management_model_role: 'unified_management_semantics_transport_may_differ',
+    professional_skill_exposure: inspectProfessionalSkillExposure(repoRoot),
     plugin_source_path: pluginSourcePath,
     repo_root: repoRoot,
     repo_found: repoFound,
