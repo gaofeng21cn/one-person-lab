@@ -242,15 +242,59 @@ MAS 当前分工按下列口径读取：
 
 `source` 和 `intake` 当前不作为 active 外置合同：通用 source / external-learning intake 归 OPL Framework 或 MAS stage/source surface。已经在 canonical `mas-scholar-skills` source repo 物化的因果推断、生存分析、reference integrity、risk-model transportability、registry atlas、owner-gate handoff、display regression 和 data-freeze/readiness 等 medical-method specialist，默认仍是 optional workspace / quest-local discovery，不升级为 required/default pack。组学、Nextflow、RDKit、PyHealth、single-cell 等 executable runtime、数据访问、artifact mutation 和 readiness 仍需独立 owner / source / projection / sync / authority 后才可落地；不能在 OPL plugin mirror 里创建第二套正文。
 
+## 新能力准入门
+
+新增能力的第一步不是创建 Skill，而是填写 capability admission record。该 record 可以落在 `contracts/capability_map.json`、对应 active plan、work-order、PR 描述或审计文档中；只要本轮变更新增 `agent/professional_skills/**/SKILL.md`、`plugins/opl-foundation-skills/skills/**/SKILL.md`、外部 Skill registry 条目、connector、helper 或 authority surface，就必须先给出下列表格字段。
+
+| 字段 | 必填内容 |
+| --- | --- |
+| `capability_id` | 稳定能力 id；优先表达能力模块，不用文件名或临时任务名。 |
+| `user_need` | 用户/agent 需要完成的真实能力模块。 |
+| `existing_coverage` | 已有 stage prompt、professional skill、router、reviewer、connector、script、contract 或 authority surface 是否能覆盖。 |
+| `selected_layer` | 从 `existing`、`stage_prompt`、`professional_skill`、`deterministic_helper`、`tool_connector`、`reference_pack`、`contract_module`、`authority_surface`、`external_skill` 中选择。 |
+| `physical_owner` | canonical repo、目录和 owner surface。 |
+| `exposure_scope` | `source_only`、`project_local`、`workspace_local`、`quest_local`、`domain_profile`、`developer_codex` 或 `global_user`。 |
+| `activation_gate` | 什么条件下进入 Codex discovery / task context；默认不得 global。 |
+| `why_not_existing` | 如果不复用现有能力，说明现有能力具体缺什么。 |
+| `authority_boundary` | 明确不得写的 truth、verdict、receipt、typed blocker、artifact authority、human gate、readiness。 |
+| `verification_ref` | 证明 locator、exposure、sync 或 owner boundary 的验证入口；docs-only 只能证明规范落地。 |
+
+`selected_layer` 的判定顺序固定如下：
+
+| 问题 | 结果 |
+| --- | --- |
+| 现有 stage prompt、router、reviewer、professional skill 或 connector 能覆盖吗？ | 选择 `existing`，更新现有能力或补 route/ref；不新建 Skill。 |
+| 只是一次性提示、当前 lane 分析或临时计划吗？ | 不落盘；必要时写入本次 handoff，不进入能力目录。 |
+| 主要是阶段目标、输入输出、证据门槛、route-back、owner gate 或 handoff shape 吗？ | 选择 `stage_prompt`，放到 domain `agent/stages/`、`agent/prompts/` 或 stage pack。 |
+| 主要是专业判断、写作、审稿、策略、设计方法、诊断 lens 或 route-back 写法吗？ | 选择 `professional_skill`，默认 repo-local；满足外置门后才进 professional pack。 |
+| 主要是低成本、可重复、局部的解析、归一化、lint、skeleton、manifest / receipt shaping 吗？ | 选择 `deterministic_helper`，跟随 owning Skill 或 connector，不升级为独立专业 Skill。 |
+| 主要是 API、数据库、下载、同步、环境、渲染器、凭据、限流或 invocation receipt 吗？ | 选择 `tool_connector`，优先 OPL Connect / Fabric 或 domain connector source。 |
+| 主要是模板、rubric、gallery、样例、知识包或大体量上下文吗？ | 选择 `reference_pack`，按 refs-only / filtered copy 暴露。 |
+| 主要是 schema、validator、readback shape、resolver、policy 或机器边界吗？ | 选择 `contract_module`，不得伪装成 Codex Skill。 |
+| 会写 truth、签 owner receipt、创建 typed blocker、决定 artifact / quality / readiness / release 吗？ | 选择 `authority_surface`，必须留在对应 owner repo；禁止放进 Skill。 |
+| 默认包覆盖不到罕见专科工具、source、workflow 或 method 吗？ | 选择 `external_skill`，走 OPL Connect `search -> inspect -> single-skill sync`，不把全库注册进默认 Codex。 |
+
+拒绝条件：
+
+- `existing_coverage` 未说明，或只是因为“以后可能复用”就新增 Skill。
+- `selected_layer=professional_skill` 但内容主要是脚本、API 调用、安装同步、authority write 或 runtime provider lifecycle。
+- `exposure_scope` 默认为 `global_user`、`developer_codex` 或宽域 domain profile，但没有 activation gate 和污染风险说明。
+- 新增 `agent/professional_skills/**/SKILL.md` 后没有进入 owning repo 的 `contracts/capability_map.json` 或等价 capability resolver。
+- 新增 OPL foundation support Skill 后没有进入 `plugins/opl-foundation-skills/exposure.json`，或缺少 no-authority boundary。
+- 外置专业 Skill 没有说明为什么不能留在 consuming domain agent。
+
+这道准入门的目标是控制 Skill 膨胀，而不是压低能力上限。高价值开放式方法仍应放进 Skill；稳定重复动作放进 helper/connector；权威判断留在 owner surface；默认暴露面从最窄层级开始。
+
 ## 新能力审查清单
 
 新增或迁移能力前，最小审查问题是：
 
-1. 这是 stage 策略、专业方法、资源连接、参考材料、机器合同，还是 runtime projection？
-2. 默认放回 domain agent 是否已经够用？
-3. 若要外置，外置原因是否属于本文外置门，而不是未来想象或命名整齐？
-4. 外置后是否仍明确 domain owner 持有 truth、verdict、receipt、typed blocker、human gate 和 readiness？
-5. 同步路径是否避免把 cache、runtime data、bulk generated assets、domain truth 或 owner receipts 复制进错误位置？
-6. 是否需要在 `docs/decisions.md`、`docs/status.md`、相关 active doc 或 contract/source 中补最小链接，避免形成文档孤岛？
+1. 是否已经填写 capability admission record？
+2. 这是 stage 策略、专业方法、确定性 helper、资源连接、参考材料、机器合同，还是 authority surface / runtime projection？
+3. 默认放回 domain agent 是否已经够用？
+4. 若要外置，外置原因是否属于本文外置门，而不是未来想象或命名整齐？
+5. 外置后是否仍明确 domain owner 持有 truth、verdict、receipt、typed blocker、human gate 和 readiness？
+6. 同步路径是否避免把 cache、runtime data、bulk generated assets、domain truth 或 owner receipts 复制进错误位置？
+7. 是否需要在 `docs/decisions.md`、`docs/status.md`、相关 active doc 或 contract/source 中补最小链接，避免形成文档孤岛？
 
 通过清单只说明能力管理边界清楚，不说明实现已完成、runtime ready、release ready、domain ready 或 production ready。
