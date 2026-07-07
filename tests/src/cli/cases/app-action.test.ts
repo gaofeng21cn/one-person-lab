@@ -617,6 +617,56 @@ test('app action execute enables and disables CodexCont intelligence enhancement
   }
 });
 
+test('app action execute preflights OPL Flow plugin payload without profile writes', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-opl-flow-preflight-'));
+  const flowRoot = path.join(homeRoot, 'opl-flow-source');
+  const installerLog = path.join(homeRoot, 'installer.log');
+  const installerPath = path.join(flowRoot, 'scripts', 'install_local_plugin.py');
+  const userProfilePath = path.join(homeRoot, '.codex', 'AGENTS.md');
+
+  try {
+    fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    fs.mkdirSync(path.dirname(userProfilePath), { recursive: true });
+    fs.writeFileSync(userProfilePath, 'user profile must stay intact\n', 'utf8');
+    fs.writeFileSync(
+      installerPath,
+      [
+        '#!/usr/bin/env python3',
+        'import os, pathlib, sys',
+        'home = pathlib.Path(os.environ["HOME"])',
+        `pathlib.Path(${JSON.stringify(installerLog)}).write_text(" ".join(sys.argv[1:]))`,
+        'script = home / "plugins" / "opl-flow" / "scripts" / "intelligence_enhancement.py"',
+        'script.parent.mkdir(parents=True, exist_ok=True)',
+        'script.write_text(\'#!/usr/bin/env python3\\nimport json\\nprint(json.dumps({"opl_flow_intelligence_enhancement": {"status": "disabled", "script_installed": True}}))\\n\')',
+        'script.chmod(0o755)',
+        '',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+
+    const status = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'intelligence_enhancement_status',
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, '.codex'),
+      OPL_FLOW_REPO_ROOT: flowRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: '/usr/bin:/bin',
+    }).app_action_execution;
+
+    assert.equal(status.delegated_surface, 'opl flow intelligence-enhancement status');
+    assert.equal(status.result.opl_flow_intelligence_enhancement.status, 'disabled');
+    assert.equal(fs.readFileSync(installerLog, 'utf8'), '--no-profile');
+    assert.equal(fs.readFileSync(userProfilePath, 'utf8'), 'user profile must stay intact\n');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('app action execute installs CodexCont as a Linux systemd user service when requested', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-codexcont-systemd-home-'));
   const binDir = path.join(homeRoot, 'bin');
