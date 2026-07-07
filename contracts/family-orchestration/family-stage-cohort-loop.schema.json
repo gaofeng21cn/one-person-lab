@@ -200,8 +200,8 @@
     {
       "surface_kind": "opl_family_stage_cohort_loop",
       "version": "family-stage-cohort-loop.v1",
-      "plane_id": "mas_stage_control_plane",
-      "target_domain_id": "med-autoscience",
+      "plane_id": "example_stage_control_plane",
+      "target_domain_id": "example-domain",
       "summary": {
         "stage_count": 1,
         "closed_loop_ready_count": 1,
@@ -214,12 +214,12 @@
       },
       "stages": [
         {
-          "stage_id": "manuscript_authoring",
-          "owner": "med-autoscience",
+          "stage_id": "draft_authoring",
+          "owner": "example-domain",
           "closure_status": "closed_loop_ready",
           "source_scope_refs": [{ "ref_kind": "json_pointer", "ref": "/source_scope", "role": "launch_source_scope" }],
           "cohort_query_refs": [{ "ref_kind": "json_pointer", "ref": "/cohort_query", "role": "cohort_query" }],
-          "trigger_refs": [{ "ref_kind": "queue_ref", "ref": "queue:mas/manuscript_authoring", "role": "launch_trigger" }],
+          "trigger_refs": [{ "ref_kind": "queue_ref", "ref": "queue:example-domain/draft_authoring", "role": "launch_trigger" }],
           "monitor_refs": [],
           "metric_refs": [{ "ref_kind": "metric_ref", "ref": "metric:source_freshness", "role": "cohort_metric" }],
           "dashboard_metric_refs": [],

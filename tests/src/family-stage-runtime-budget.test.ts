@@ -234,7 +234,8 @@ test('family stage runtime budget schema freezes refs-only usage cost estimate c
   assert.ok((usageCostProjection.required as string[]).includes('calibration_sample_refs'));
   assert.ok((usageCostProjection.required as string[]).includes('estimated_cost_usd_p50'));
   assert.ok((usageCostProjection.required as string[]).includes('estimated_cost_usd_p90'));
-  assert.equal(Boolean(usageProperties.visual_stage_profile_refs), true);
+  assert.equal(Boolean(usageProperties.artifact_stage_profile_refs), true);
+  assert.equal(record(usageProperties.visual_stage_profile_refs).deprecated, true);
   assert.equal(Boolean(usageProperties.artifact_locator_refs), true);
   assert.equal(record(usageAuthority.opl_role).const, 'refs_only_usage_cost_estimate_projection');
   assert.equal(record(usageAuthority.can_read_domain_body).const, false);
@@ -247,9 +248,10 @@ test('family stage runtime budget schema freezes refs-only usage cost estimate c
   assert.equal(record(usageAuthority.can_authorize_artifact_mutation).const, false);
   assert.equal(record(usageAuthority.can_authorize_budget_spend).const, false);
   assert.equal(record(usageAuthority.can_write_owner_receipt).const, false);
-  assert.equal(exampleUsage.target_domain_id, 'redcube-ai');
-  assert.equal(exampleUsage.task_family, 'ppt_deck');
+  assert.equal(exampleUsage.target_domain_id, 'example-domain');
+  assert.equal(exampleUsage.task_family, 'domain_delivery');
   assert.equal(exampleUsage.model_id, 'gpt-5.5');
   assert.equal(exampleUsage.reasoning_effort, 'xhigh');
+  assert.equal(Array.isArray(exampleUsage.artifact_stage_profile_refs), true);
   assert.equal(record(exampleUsage.authority_boundary).can_authorize_budget_spend, false);
 });

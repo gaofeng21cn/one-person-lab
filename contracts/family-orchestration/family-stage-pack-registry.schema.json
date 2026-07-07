@@ -362,23 +362,23 @@
       },
       "entries": [
         {
-          "stage_pack_id": "med-autoscience:mas_stage_control_plane",
-          "target_domain_id": "med-autoscience",
-          "plane_id": "mas_stage_control_plane",
+          "stage_pack_id": "example-domain:example_stage_control_plane",
+          "target_domain_id": "example-domain",
+          "plane_id": "example_stage_control_plane",
           "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "stage_ids": ["manuscript_authoring"],
-          "action_catalog_id": "mas_stage_actions",
+          "stage_ids": ["draft_authoring"],
+          "action_catalog_id": "domain_stage_actions",
           "admission_status": "admitted",
           "reusable_library_entry": true,
           "refs": {
-            "proof_bundle_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/proof-bundles/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "graph_projection_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "integrity_ref": "opl://stage-packs/med-autoscience:mas_stage_control_plane/integrity/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "proof_bundle_ref": "opl://stage-packs/example-domain:example_stage_control_plane/proof-bundles/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "graph_projection_ref": "opl://stage-packs/example-domain:example_stage_control_plane/graphs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "integrity_ref": "opl://stage-packs/example-domain:example_stage_control_plane/integrity/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "migration_policy_ref": null
           },
           "library_lifecycle": {
             "status": "admitted",
-            "promotion_ref": "human_gate:mas-stage-pack-admission",
+            "promotion_ref": "human_gate:example-stage-pack-admission",
             "deprecation_ref": null,
             "supersession_ref": null,
             "superseded_by_stage_pack_ref": null,

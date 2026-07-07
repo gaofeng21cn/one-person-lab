@@ -28,8 +28,43 @@ function readFirstSchemaExample(relativePath: string): Json {
   return examples[0] as Json;
 }
 
+const genericExampleSchemaPaths = [
+  'contracts/family-orchestration/family-stage-admission.schema.json',
+  'contracts/family-orchestration/family-stage-replay-certification.schema.json',
+  'contracts/family-orchestration/family-stage-graph-projection.schema.json',
+  'contracts/family-orchestration/family-stage-proof-bundle.schema.json',
+  'contracts/family-orchestration/family-stage-pack-registry.schema.json',
+  'contracts/family-orchestration/family-stage-pack-source-spec.schema.json',
+  'contracts/family-orchestration/family-stage-cohort-loop.schema.json',
+  'contracts/family-orchestration/family-stage-runtime-budget.schema.json',
+  'contracts/family-orchestration/family-checkpoint-lineage.schema.json',
+  'contracts/family-orchestration/family-event-envelope.schema.json',
+  'contracts/family-orchestration/family-conflict-envelope.schema.json',
+] as const;
+
+const genericExampleResiduePattern =
+  /med-autoscience|medautoscience|mas_stage_control_plane|publication_review|manuscript_authoring|paper_autonomy|medical_paper|visual_stage_profile|redcube_ai|redcube_operator_review_gate|(?:^|[/:_-])rca(?:$|[/:_-])/i;
+
+function collectGenericExampleResidue(value: unknown, pathLabel = '$'): string[] {
+  if (typeof value === 'string') {
+    return genericExampleResiduePattern.test(value) ? [`${pathLabel}: ${value}`] : [];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((entry, index) => collectGenericExampleResidue(entry, `${pathLabel}[${index}]`));
+  }
+  if (value && typeof value === 'object') {
+    return Object.entries(value).flatMap(([key, entry]) =>
+      [
+        ...(genericExampleResiduePattern.test(key) ? [`${pathLabel}.${key}: <key>`] : []),
+        ...collectGenericExampleResidue(entry, `${pathLabel}.${key}`),
+      ],
+    );
+  }
+  return [];
+}
+
 export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
-  test('family orchestration schema examples stay aligned with canonical family manifest identifiers', () => {
+  test('family orchestration schema examples distinguish fixture-aligned and generic identifiers', () => {
     const redcubeManifest = readFamilyManifestFixture('redcube-product-entry-manifest.json');
     const redcubeExample = readFirstSchemaExample(
       'contracts/family-orchestration/family-product-entry-manifest-v2.schema.json',
@@ -37,7 +72,6 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
     const humanGateExample = readFirstSchemaExample(
       'contracts/family-orchestration/family-human-gate.schema.json',
     );
-    const medAutoScienceManifest = readFamilyManifestFixture('med-autoscience-product-entry-manifest.json');
     const eventEnvelopeExample = readFirstSchemaExample(
       'contracts/family-orchestration/family-event-envelope.schema.json',
     );
@@ -115,8 +149,17 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
       humanGateExample.gate_id,
       (((redcubeManifest.family_orchestration as Json).human_gates as Json[])[0] as Json).gate_id,
     );
-    assert.equal(eventEnvelopeExample.target_domain_id, medAutoScienceManifest.target_domain_id);
-    assert.equal(checkpointLineageExample.target_domain_id, medAutoScienceManifest.target_domain_id);
+    assert.equal(eventEnvelopeExample.target_domain_id, 'example-domain');
+    assert.equal(eventEnvelopeExample.envelope_id, 'evt-example-domain-2026-04-13-01');
+    assert.equal(checkpointLineageExample.target_domain_id, 'example-domain');
+    assert.equal(checkpointLineageExample.lineage_id, 'lineage-example-domain-2026-04-13-01');
+  });
+
+  test('selected generic family orchestration schema examples reject domain-specific residue', () => {
+    for (const schemaPath of genericExampleSchemaPaths) {
+      const firstExample = readFirstSchemaExample(schemaPath);
+      assert.deepEqual(collectGenericExampleResidue(firstExample), [], schemaPath);
+    }
   });
 
   test('family orchestration schemas use generic domain-boundary vocabulary', () => {

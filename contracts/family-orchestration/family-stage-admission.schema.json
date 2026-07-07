@@ -659,8 +659,8 @@
     {
       "surface_kind": "family_stage_admission_review",
       "version": "family-stage-admission-review.v1",
-      "plane_id": "mas_stage_control_plane",
-      "target_domain_id": "med-autoscience",
+      "plane_id": "example_stage_control_plane",
+      "target_domain_id": "example-domain",
       "status": "admitted",
       "summary": {
         "stages_count": 1,
@@ -677,7 +677,7 @@
       },
       "stage_results": [
         {
-          "stage_id": "manuscript_authoring",
+          "stage_id": "draft_authoring",
           "status": "admitted",
           "trust_lane": "domain_agent",
           "static_check_eligible": true,
@@ -729,7 +729,7 @@
         "surface_kind": "family_human_review_burden_budget",
         "version": "family-human-review-burden-budget.v1",
         "projection_scope": "stage_pack",
-        "target_domain_id": "med-autoscience",
+        "target_domain_id": "example-domain",
         "status": "no_human_review_required",
         "gates": [],
         "summary": {

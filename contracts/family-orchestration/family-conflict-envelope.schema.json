@@ -226,36 +226,36 @@
     {
       "kind": "opl_conflict_or_blocker.v1",
       "subject": {
-        "domain": "mas",
-        "stage_id": "paper_autonomy/guarded-apply",
-        "task_kind": "paper_autonomy/guarded-apply",
+        "domain": "example-domain",
+        "stage_id": "domain_delivery/guarded-apply",
+        "task_kind": "domain_delivery/guarded-apply",
         "source_fingerprint": "sha256:example",
-        "idempotency_key": "mas:dm002:guarded-apply:example",
+        "idempotency_key": "example-domain:domain-delivery:guarded-apply:example",
         "stage_attempt_id": "sat_example",
         "task_id": "frt_example",
         "source_refs": [
-          "mas://controller_decisions/latest.json"
+          "domain://controller_decisions/latest.json"
         ]
       },
       "identity": {
-        "domain": "mas",
-        "stage_id": "paper_autonomy/guarded-apply",
-        "task_kind": "paper_autonomy/guarded-apply",
+        "domain": "example-domain",
+        "stage_id": "domain_delivery/guarded-apply",
+        "task_kind": "domain_delivery/guarded-apply",
         "source_fingerprint": "sha256:example",
-        "idempotency_key": "mas:dm002:guarded-apply:example",
+        "idempotency_key": "example-domain:domain-delivery:guarded-apply:example",
         "stage_attempt_id": "sat_example",
         "task_id": "frt_example",
         "source_refs": [
-          "mas://controller_decisions/latest.json"
+          "domain://controller_decisions/latest.json"
         ]
       },
       "classification": "evidence_blocker",
       "owner": "domain_agent",
-      "authority": "mas",
+      "authority": "example-domain",
       "status": "blocked",
-      "reason": "medical_paper_readiness_missing",
+      "reason": "domain_delivery_evidence_missing",
       "evidence_refs": [
-        "mas://controller_decisions/latest.json",
+        "domain://controller_decisions/latest.json",
         "opl://stage_attempts/sat_example"
       ],
       "allowed_next_actions": [
@@ -271,8 +271,8 @@
       "operator_label": "证据不足，不能继续交付",
       "operator_questions": {
         "duplicate_task": false,
-        "current_blocker": "medical_paper_readiness_missing",
-        "authority_owner": "mas",
+        "current_blocker": "domain_delivery_evidence_missing",
+        "authority_owner": "example-domain",
         "automatic_retry": "not_applicable",
         "user_action_required": null
       },

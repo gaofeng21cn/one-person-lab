@@ -168,7 +168,13 @@
         "stage_estimate_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
         "model_pricing_profile_ref": { "$ref": "#/$defs/surface_ref" },
         "calibration_sample_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
-        "visual_stage_profile_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "artifact_stage_profile_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
+        "visual_stage_profile_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surface_ref" },
+          "deprecated": true,
+          "description": "Deprecated RCA compatibility alias. New generic usage-cost projections should use artifact_stage_profile_refs."
+        },
         "artifact_locator_refs": { "type": "array", "items": { "$ref": "#/$defs/surface_ref" } },
         "estimated_cost_usd_p50": { "type": "number", "minimum": 0 },
         "estimated_cost_usd_p90": { "type": "number", "minimum": 0 },
@@ -254,8 +260,8 @@
     {
       "surface_kind": "opl_family_stage_runtime_budget_projection",
       "version": "family-stage-runtime-budget.v1",
-      "plane_id": "mas_stage_control_plane",
-      "target_domain_id": "med-autoscience",
+      "plane_id": "example_stage_control_plane",
+      "target_domain_id": "example-domain",
       "summary": {
         "stage_count": 1,
         "ready_count": 1,
@@ -269,8 +275,8 @@
       },
       "stages": [
         {
-          "stage_id": "manuscript_authoring",
-          "owner": "med-autoscience",
+          "stage_id": "draft_authoring",
+          "owner": "example-domain",
           "boundary_count": 1,
           "runtime_guard_count": 1,
           "runtime_event_ref_count": 1,
@@ -293,23 +299,23 @@
         "surface_kind": "opl_family_stage_usage_cost_budget_projection",
         "projection_role": "usage_cost_estimate_projection_only",
         "refs_only": true,
-        "target_domain_id": "redcube-ai",
-        "task_family": "ppt_deck",
+        "target_domain_id": "example-domain",
+        "task_family": "domain_delivery",
         "model_id": "gpt-5.5",
         "reasoning_effort": "xhigh",
-        "route_profile": "image_first_40_page_ppt",
+        "route_profile": "default_domain_delivery",
         "stage_estimate_refs": [
-          { "ref_kind": "usage_cost_estimate_ref", "ref": "usage-cost-estimate:rca/ppt-deck-40/stage/storyline", "role": "stage_estimate" }
+          { "ref_kind": "usage_cost_estimate_ref", "ref": "usage-cost-estimate:example-domain/domain-delivery/stage/draft-authoring", "role": "stage_estimate" }
         ],
         "model_pricing_profile_ref": { "ref_kind": "model_pricing_profile_ref", "ref": "pricing-profile:openai/gpt-5.5/current", "role": "model_pricing_profile" },
         "calibration_sample_refs": [
-          { "ref_kind": "usage_calibration_sample_ref", "ref": "usage-sample:rca/ppt-deck/historical-p50", "role": "calibration_sample" }
+          { "ref_kind": "usage_calibration_sample_ref", "ref": "usage-sample:example-domain/domain-delivery/historical-p50", "role": "calibration_sample" }
         ],
-        "visual_stage_profile_refs": [
-          { "ref_kind": "visual_stage_profile_ref", "ref": "visual-profile:rca/ppt-deck/image-pages", "role": "domain_visual_profile" }
+        "artifact_stage_profile_refs": [
+          { "ref_kind": "artifact_stage_profile_ref", "ref": "artifact-profile:example-domain/domain-delivery/output-pages", "role": "domain_artifact_profile" }
         ],
         "artifact_locator_refs": [
-          { "ref_kind": "artifact_locator_ref", "ref": "artifact-locator:rca/ppt-deck/output", "role": "artifact_locator" }
+          { "ref_kind": "artifact_locator_ref", "ref": "artifact-locator:example-domain/domain-delivery/output", "role": "artifact_locator" }
         ],
         "estimated_cost_usd_p50": 45,
         "estimated_cost_usd_p90": 90,

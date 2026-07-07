@@ -452,10 +452,10 @@
     {
       "surface_kind": "opl_family_stage_graph_projection",
       "version": "family-stage-graph-projection.v1",
-      "project_id": "medautoscience",
-      "project": "medautoscience",
-      "target_domain_id": "med-autoscience",
-      "plane_id": "mas_stage_control_plane",
+      "project_id": "example-domain",
+      "project": "example-domain",
+      "target_domain_id": "example-domain",
+      "plane_id": "example_stage_control_plane",
       "graph_summary": {
         "node_count": 2,
         "edge_count": 1,
@@ -470,10 +470,10 @@
       },
       "nodes": [
         {
-          "stage_id": "publication_review",
+          "stage_id": "owner_review",
           "stage_kind": "review",
-          "title": "Publication review",
-          "owner": "med-autoscience",
+          "title": "Owner review",
+          "owner": "example-domain",
           "trust_lane": "human_gate",
           "admission_status": "admitted",
           "guarantee_modes": [
@@ -500,9 +500,9 @@
       ],
       "edges": [
         {
-          "edge_id": "manuscript_authoring->publication_review",
-          "upstream_stage_id": "manuscript_authoring",
-          "downstream_stage_id": "publication_review",
+          "edge_id": "draft_authoring->owner_review",
+          "upstream_stage_id": "draft_authoring",
+          "downstream_stage_id": "owner_review",
           "edge_kind": "handoff_requires_ensures",
           "upstream_ensures": [
             "draft_ready"

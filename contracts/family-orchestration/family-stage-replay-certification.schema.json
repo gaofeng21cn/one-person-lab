@@ -359,8 +359,8 @@
     {
       "surface_kind": "opl_family_stage_replay_certification",
       "version": "family-stage-replay-certification.v1",
-      "stage_pack_id": "med-autoscience:mas_stage_control_plane",
-      "target_domain_id": "med-autoscience",
+      "stage_pack_id": "example-domain:example_stage_control_plane",
+      "target_domain_id": "example-domain",
       "stage_pack_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "replay_status": "replay_ready",
       "summary": {
@@ -379,13 +379,13 @@
       },
       "stage_results": [
         {
-          "stage_id": "publication_review",
+          "stage_id": "owner_review",
           "replay_status": "replay_ready",
-          "required_runtime_event_refs": ["runtime_event:publication_review.gate_recorded"],
-          "recorded_runtime_event_refs": ["runtime_event:publication_review.gate_recorded"],
+          "required_runtime_event_refs": ["runtime_event:owner_review.gate_recorded"],
+          "recorded_runtime_event_refs": ["runtime_event:owner_review.gate_recorded"],
           "missing_runtime_event_refs": [],
-          "expected_receipt_refs": ["human_gate:publication_quality_gate"],
-          "recorded_receipt_refs": ["human_gate:publication_quality_gate"],
+          "expected_receipt_refs": ["human_gate:owner_review_gate"],
+          "recorded_receipt_refs": ["human_gate:owner_review_gate"],
           "missing_receipt_refs": [],
           "missing_receipt_workorders": []
         }
