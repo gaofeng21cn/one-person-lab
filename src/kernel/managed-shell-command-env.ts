@@ -12,6 +12,52 @@ const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
   'managed_python_env_missing_dependency',
 ]);
 
+type DomainCleanRunnerProfile = {
+  domainId: string;
+  legacyEnvRoots: ReadonlyArray<{
+    envName: string;
+    fallbackSubdir: string;
+  }>;
+  readOnlyCommandPatterns: ReadonlyArray<RegExp>;
+};
+
+const SHELL_COMMAND_BOUNDARY = String.raw`(?:^|(?:&&|\|\||[;&|])\s*)`;
+const UV_PYTHON_MODULE = String.raw`uv\s+run\s+(?:python|python3)\s+-m\s+`;
+const UV_DIRECTORY_PYTHON_INLINE = String.raw`uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*`;
+
+const DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> = [
+  {
+    domainId: 'med-autoscience',
+    legacyEnvRoots: [
+      { envName: 'MAS_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mas' },
+    ],
+    readOnlyCommandPatterns: [
+      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_PYTHON_MODULE}med_autoscience\\.cli\\s+product\\s+(?:manifest|status)\\b`),
+      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_PYTHON_MODULE}med_autoscience\\.cli\\s+study-state-matrix\\b`),
+      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_DIRECTORY_PYTHON_INLINE}med_autoscience\\.controllers\\.product_entry`),
+    ],
+  },
+  {
+    domainId: 'med-autogrant',
+    legacyEnvRoots: [
+      { envName: 'MAG_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mag' },
+      { envName: 'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT', fallbackSubdir: 'mag-editable-shared' },
+    ],
+    readOnlyCommandPatterns: [
+      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_PYTHON_MODULE}med_autogrant\\s+product\\s+(?:manifest|status)\\b`),
+      new RegExp(`${SHELL_COMMAND_BOUNDARY}uv\\s+run\\s+med_autogrant\\s+product\\s+(?:manifest|status)\\b`),
+      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_DIRECTORY_PYTHON_INLINE}med_autogrant\\.product_entry`),
+    ],
+  },
+  {
+    domainId: 'redcube-ai',
+    legacyEnvRoots: [
+      { envName: 'RCA_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'rca' },
+    ],
+    readOnlyCommandPatterns: [],
+  },
+];
+
 function normalizePath(value: string) {
   return path.resolve(value);
 }
@@ -88,6 +134,25 @@ function appendPytestCacheOption(existing: string | undefined, cacheDir: string)
   return parts.join(' ');
 }
 
+function buildDomainCleanRunnerEnv(
+  env: NodeJS.ProcessEnv,
+  cwd: string,
+  tmpRoot: string,
+) {
+  const nextEnv: Record<string, string> = {};
+  for (const profile of DOMAIN_CLEAN_RUNNER_PROFILES) {
+    for (const root of profile.legacyEnvRoots) {
+      nextEnv[root.envName] = externalPath(
+        env,
+        cwd,
+        root.envName,
+        path.join(tmpRoot, root.fallbackSubdir),
+      );
+    }
+  }
+  return nextEnv;
+}
+
 export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv = process.env) {
   const workspaceId = stableWorkspaceId(cwd);
   const tmpRoot = workspaceScopedExternalRoot(env, cwd, workspaceId);
@@ -96,15 +161,6 @@ export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv 
   const uvCacheDir = path.join(tmpRoot, 'uv-cache');
   const xdgCacheHome = path.join(tmpRoot, 'xdg-cache');
   const pipCacheDir = path.join(tmpRoot, 'pip-cache');
-  const masCleanRunnerRoot = externalPath(env, cwd, 'MAS_CLEAN_RUNNER_TMP_ROOT', path.join(tmpRoot, 'mas'));
-  const magCleanRunnerRoot = externalPath(env, cwd, 'MAG_CLEAN_RUNNER_TMP_ROOT', path.join(tmpRoot, 'mag'));
-  const rcaCleanRunnerRoot = externalPath(env, cwd, 'RCA_CLEAN_RUNNER_TMP_ROOT', path.join(tmpRoot, 'rca'));
-  const magEditableSharedRoot = externalPath(
-    env,
-    cwd,
-    'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT',
-    path.join(tmpRoot, 'mag-editable-shared'),
-  );
   const pytestCacheDir = path.join(tmpRoot, 'pytest-cache');
 
   return {
@@ -116,10 +172,7 @@ export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv 
     XDG_CACHE_HOME: xdgCacheHome,
     PIP_CACHE_DIR: pipCacheDir,
     OPL_DOMAIN_COMMAND_TMP_ROOT: tmpRoot,
-    MAS_CLEAN_RUNNER_TMP_ROOT: masCleanRunnerRoot,
-    MAG_CLEAN_RUNNER_TMP_ROOT: magCleanRunnerRoot,
-    RCA_CLEAN_RUNNER_TMP_ROOT: rcaCleanRunnerRoot,
-    MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT: magEditableSharedRoot,
+    ...buildDomainCleanRunnerEnv(env, cwd, tmpRoot),
     PYTEST_ADDOPTS: appendPytestCacheOption(env.PYTEST_ADDOPTS, pytestCacheDir),
   };
 }
@@ -208,20 +261,8 @@ export function shouldUseManagedShellScratchCwd(command: string | null | undefin
 
 function isReadOnlyProductEntryCommand(command: string) {
   const normalized = command.replace(/\s+/g, ' ');
-  if (normalized.match(
-    /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+(?:(?:python|python3)\s+-m\s+[\w.-]+\s+|[\w.-]+\s+)product\s+(?:manifest|status)\b/,
-  )) {
-    return true;
-  }
-
-  if (normalized.match(
-    /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+(?:python|python3)\s+-m\s+med_autoscience\.cli\s+study-state-matrix\b/,
-  )) {
-    return true;
-  }
-
-  return Boolean(normalized.match(
-    /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*(?:med_autoscience\.controllers\.product_entry|med_autogrant\.product_entry)/,
+  return DOMAIN_CLEAN_RUNNER_PROFILES.some((profile) => profile.readOnlyCommandPatterns.some(
+    (pattern) => pattern.test(normalized),
   ));
 }
 

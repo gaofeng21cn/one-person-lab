@@ -86,6 +86,31 @@ test('managed shell command env isolates project venvs per bound workspace', () 
   }
 });
 
+test('managed shell command env derives legacy clean runner roots from domain profiles', () => {
+  const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-profile-checkout-'));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-profile-root-'));
+  const externalMasRoot = path.join(externalRoot, 'external-mas');
+  try {
+    const env: Record<string, string | undefined> = buildManagedShellCommandEnv(checkoutRoot, {
+      OPL_DOMAIN_COMMAND_TMP_ROOT: externalRoot,
+      MAS_CLEAN_RUNNER_TMP_ROOT: externalMasRoot,
+      MAG_CLEAN_RUNNER_TMP_ROOT: path.join(checkoutRoot, 'mag-inside-checkout'),
+    });
+
+    const tmpRoot = path.join(externalRoot, path.basename(checkoutRoot));
+    assert.equal(env.MAS_CLEAN_RUNNER_TMP_ROOT, externalMasRoot);
+    assert.equal(env.MAG_CLEAN_RUNNER_TMP_ROOT, path.join(tmpRoot, 'mag'));
+    assert.equal(env.RCA_CLEAN_RUNNER_TMP_ROOT, path.join(tmpRoot, 'rca'));
+    assert.equal(
+      env.MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT,
+      path.join(tmpRoot, 'mag-editable-shared'),
+    );
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(externalRoot, { recursive: true, force: true });
+  }
+});
+
 test('managed shell command env reuses stable recovery root after uv cache recovery', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-domain-root-'));
   const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-recovery-checkout-'));
@@ -161,6 +186,7 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
       ),
       false,
     );
+    assert.equal(shouldUseManagedShellScratchCwd('uv run python -m random_domain product status'), true);
     assert.equal(shouldUseManagedShellScratchCwd(`${process.execPath} -e "process.stdout.write('uv run')"`) , false);
     assert.equal(shouldUseManagedShellScratchCwd('npm run product manifest'), false);
 
