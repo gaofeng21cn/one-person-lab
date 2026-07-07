@@ -15,15 +15,18 @@ import {
   DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND,
   DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
   DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND,
+  DOMAIN_ROUTE_TASK_KIND,
   FORBIDDEN_CLAIM_FLAGS,
   FORBIDDEN_WRITE_FLAGS,
   HANDOFF_SURFACE_KIND,
+  LEGACY_DOMAIN_ROUTE_PROFILE_ID,
   isRuntimeIntakeCommand,
   MATERIALIZED_READBACK_SURFACE_KIND,
   nestedRecord,
   optionalString,
   routeCommandKind,
   routeTarget,
+  RUNTIME_TASK_KIND,
   supportedCommandKind,
   type IntakeOptions,
   type JsonRecord,
@@ -51,9 +54,17 @@ function baseReadback(
   const supported = supportedCommandKind(commandKind) ? commandKind : null;
   return {
     surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback',
+    surface_id: DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND,
     legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback',
     schema_version: 1,
+    canonical_task_kind: DOMAIN_ROUTE_TASK_KIND,
+    legacy_task_kind: RUNTIME_TASK_KIND,
+    compatibility_profile: {
+      profile_id: LEGACY_DOMAIN_ROUTE_PROFILE_ID,
+      source_domain: 'medautoscience',
+      compatibility_only: true,
+    },
     source_surface_kind: handoff
       ? optionalString(handoff.source_surface_kind) ?? optionalString(handoff.surface_kind)
       : null,
@@ -291,6 +302,8 @@ export function intakeMasPaperMissionRouteHandoff(
   };
 }
 
+export const intakeDomainRouteHandoff = intakeMasPaperMissionRouteHandoff;
+
 export function intakeMasPaperMissionRouteHandoffsFromExport(
   output: unknown,
   options: IntakeOptions = {},
@@ -299,9 +312,12 @@ export function intakeMasPaperMissionRouteHandoffsFromExport(
   if (!outputRecord) {
     return {
       surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
+      surface_id: DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
       canonical_surface_kind: DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
       legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
       schema_version: 1,
+      canonical_task_kind: DOMAIN_ROUTE_TASK_KIND,
+      legacy_task_kind: RUNTIME_TASK_KIND,
       source_path: 'not_found',
       legacy_pending_family_tasks_considered: false,
       readbacks: [],
@@ -327,15 +343,20 @@ export function intakeMasPaperMissionRouteHandoffsFromExport(
     );
   return {
     surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
+    surface_id: DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
     legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
     schema_version: 1,
+    canonical_task_kind: DOMAIN_ROUTE_TASK_KIND,
+    legacy_task_kind: RUNTIME_TASK_KIND,
     source_path: selected.sourcePath,
     legacy_pending_family_tasks_considered: selected.legacyConsidered,
     readbacks,
     authority_boundary: exportAuthorityBoundary(),
   };
 }
+
+export const intakeDomainRouteHandoffsFromExport = intakeMasPaperMissionRouteHandoffsFromExport;
 
 function exportAuthorityBoundary(): MasPaperMissionRouteHandoffExportReadback['authority_boundary'] {
   return {

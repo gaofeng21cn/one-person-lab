@@ -15,6 +15,7 @@ import {
   buildPaperAutonomySupervisorDecisionReadback,
   consumePaperAutonomyCloseoutInboxEntry,
   currentPaperAutonomySupervisorDecision,
+  domainAutonomyProjection,
   listCurrentPaperAutonomySupervisorDecisions,
   PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS,
   readPaperAutonomySupervisorDecisionFromObligation,
@@ -98,6 +99,14 @@ test('paper autonomy supervisor readback emits all six closed decision packets',
 
   for (const packet of packets) {
     assert.equal(packet.surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
+    assert.equal(packet.surface_id, 'opl_domain_autonomy_supervisor_decision_readback');
+    assert.equal(packet.canonical_surface_kind, 'opl_domain_autonomy_supervisor_decision_readback');
+    assert.equal(packet.legacy_surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
+    assert.deepEqual(packet.compatibility_profile, {
+      profile_id: 'mas-paper-autonomy',
+      source_domain: 'medautoscience',
+      compatibility_only: true,
+    });
     assert.equal(packet.domain_truth_owner, 'med-autoscience');
     assert.equal(packet.substrate_owner, 'one-person-lab');
     assert.equal(packet.status, 'decision_ready_for_identity_bound_transition');
@@ -158,6 +167,9 @@ test('paper autonomy recovery obligation store query and update are identity-bou
   assert.equal(applied.obligation.status, 'recovery_materialized');
   assert.equal(applied.obligation.supervisor_decision_ref, packet.decision_id);
   assert.equal(applied.transition.surface_kind, 'opl_paper_autonomy_supervisor_transition_packet');
+  assert.equal(applied.transition.surface_id, 'opl_domain_autonomy_supervisor_transition_packet');
+  assert.equal(applied.transition.canonical_surface_kind, 'opl_domain_autonomy_supervisor_transition_packet');
+  assert.equal(applied.transition.legacy_surface_kind, 'opl_paper_autonomy_supervisor_transition_packet');
   assert.equal(applied.transition.transition_kind, 'materialize_recovery_action');
   assert.equal(applied.transition.transition_ref, 'opl://recovery-actions/dm002/materialize.json');
   assert.equal(applied.transition.current_identity.route_identity_key, currentIdentity.route_identity_key);
@@ -178,6 +190,30 @@ test('paper autonomy recovery obligation store query and update are identity-bou
   assert.equal(mismatch.applied, false);
   assert.equal(mismatch.reason, 'identity_mismatch');
   assert.equal(mismatch.obligation.status, 'open');
+});
+
+test('domain autonomy projection keeps MAS paper autonomy as a compatibility profile', () => {
+  const projection = domainAutonomyProjection({
+    domain_id: 'medautoscience',
+    task_kind: 'paper_autonomy/guarded-apply',
+    dedupe_key: 'paper-autonomy:dm002:1',
+  }, {
+    study_id: 'DM002',
+    source_fingerprint: 'sha256:source',
+  });
+
+  assert.equal(projection?.surface_kind, 'opl_mas_paper_autonomy_task_projection');
+  assert.equal(projection?.surface_id, 'opl_domain_autonomy_task_projection');
+  assert.equal(projection?.canonical_surface_kind, 'opl_domain_autonomy_task_projection');
+  assert.equal(projection?.legacy_surface_kind, 'opl_mas_paper_autonomy_task_projection');
+  assert.deepEqual(projection?.compatibility_profile, {
+    profile_id: 'mas-paper-autonomy',
+    source_domain: 'medautoscience',
+    compatibility_only: true,
+  });
+  assert.equal(projection?.domain_truth_owner, 'med-autoscience');
+  assert.equal(projection?.queue_owner, 'one-person-lab');
+  assert.equal(projection?.authority_boundary.writes_mas_truth, false);
 });
 
 test('paper autonomy supervisor execute decision produces provider admission transition packet', () => {

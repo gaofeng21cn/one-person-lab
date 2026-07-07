@@ -4,6 +4,14 @@ export type PaperAutonomyProjectionTask = {
   dedupe_key: string | null;
 };
 
+export const DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND =
+  'opl_domain_autonomy_supervisor_decision_readback';
+export const DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND =
+  'opl_domain_autonomy_supervisor_transition_packet';
+export const DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND =
+  'opl_domain_autonomy_task_projection';
+export const LEGACY_DOMAIN_AUTONOMY_PROFILE_ID = 'mas-paper-autonomy';
+
 export const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
   'paper_autonomy/repair-recheck',
   'paper_autonomy/ai-reviewer-recheck',
@@ -91,6 +99,14 @@ export type PaperAutonomySupervisorObligationReadbackInput = {
 
 export type PaperAutonomySupervisorDecisionReadback = {
   surface_kind: 'opl_paper_autonomy_supervisor_decision_readback';
+  surface_id: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
+  canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
+  legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback';
+  compatibility_profile: {
+    profile_id: typeof LEGACY_DOMAIN_AUTONOMY_PROFILE_ID;
+    source_domain: 'medautoscience';
+    compatibility_only: true;
+  };
   obligation_id: string;
   decision_id: string;
   decision_kind: PaperAutonomySupervisorDecisionKind;
@@ -142,6 +158,14 @@ export type PaperAutonomySupervisorDecisionReadback = {
 
 export type PaperAutonomySupervisorTransitionPacket = {
   surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
+  surface_id: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
+  canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
+  legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
+  compatibility_profile: {
+    profile_id: typeof LEGACY_DOMAIN_AUTONOMY_PROFILE_ID;
+    source_domain: 'medautoscience';
+    compatibility_only: true;
+  };
   obligation_id: string;
   supervisor_decision_ref: string;
   transition_kind: PaperAutonomySupervisorDecisionKind;
@@ -214,6 +238,14 @@ export function paperAutonomyProjection(
   const guardedApply = task.task_kind === 'paper_autonomy/guarded-apply';
   return {
     surface_kind: 'opl_mas_paper_autonomy_task_projection',
+    surface_id: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
+    canonical_surface_kind: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
+    legacy_surface_kind: 'opl_mas_paper_autonomy_task_projection',
+    compatibility_profile: {
+      profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
+      source_domain: 'medautoscience',
+      compatibility_only: true,
+    },
     domain_truth_owner: 'med-autoscience',
     queue_owner: 'one-person-lab',
     online_runtime_substrate_owner: 'provider_backed_family_runtime',
@@ -242,6 +274,8 @@ export function paperAutonomyProjection(
   };
 }
 
+export const domainAutonomyProjection = paperAutonomyProjection;
+
 export function buildPaperAutonomySupervisorDecisionReadback(
   input: PaperAutonomySupervisorDecisionInput,
 ): PaperAutonomySupervisorDecisionReadback {
@@ -258,6 +292,14 @@ export function buildPaperAutonomySupervisorDecisionReadback(
 
   return {
     surface_kind: 'opl_paper_autonomy_supervisor_decision_readback',
+    surface_id: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
+    canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
+    legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback',
+    compatibility_profile: {
+      profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
+      source_domain: 'medautoscience',
+      compatibility_only: true,
+    },
     obligation_id: input.obligation_id,
     decision_id: decisionId,
     decision_kind: input.decision_kind,
@@ -423,6 +465,14 @@ function buildPaperAutonomySupervisorTransitionPacket(
 ): PaperAutonomySupervisorTransitionPacket {
   return {
     surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    surface_id: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
+    canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
+    legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    compatibility_profile: {
+      profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
+      source_domain: 'medautoscience',
+      compatibility_only: true,
+    },
     obligation_id: decision.obligation_id,
     supervisor_decision_ref: decision.decision_id,
     transition_kind: decision.decision_kind,

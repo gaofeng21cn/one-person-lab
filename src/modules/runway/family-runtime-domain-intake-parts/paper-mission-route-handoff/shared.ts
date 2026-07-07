@@ -19,6 +19,7 @@ export const DOMAIN_ROUTE_RUNTIME_REQUEST_SURFACE_KIND = 'opl_domain_route_runti
 export const DOMAIN_ROUTE_RUNTIME_REQUEST_KIND = 'domain_route_stage_route';
 export const DOMAIN_ROUTE_TASK_KIND = 'domain_route/stage-route';
 export const DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND = 'domain_route_command_packet';
+export const LEGACY_DOMAIN_ROUTE_PROFILE_ID = 'mas-paper-mission-route';
 
 export const SUPPORTED_COMMAND_KINDS = [
   'start_next_stage',
@@ -108,9 +109,17 @@ export type MasPaperMissionRouteHandoffIntakeBlocker = {
 
 export type MasPaperMissionRouteHandoffIntakeReadback = {
   surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback';
+  surface_id: typeof DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND;
   canonical_surface_kind: typeof DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND;
   legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback';
   schema_version: 1;
+  canonical_task_kind: typeof DOMAIN_ROUTE_TASK_KIND;
+  legacy_task_kind: typeof RUNTIME_TASK_KIND;
+  compatibility_profile: {
+    profile_id: typeof LEGACY_DOMAIN_ROUTE_PROFILE_ID;
+    source_domain: 'medautoscience';
+    compatibility_only: true;
+  };
   source_surface_kind: string | null;
   domain_id: 'medautoscience';
   domain_truth_owner: 'med-autoscience';
@@ -180,9 +189,12 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
 
 export type MasPaperMissionRouteHandoffExportReadback = {
   surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback';
+  surface_id: typeof DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND;
   canonical_surface_kind: typeof DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND;
   legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback';
   schema_version: 1;
+  canonical_task_kind: typeof DOMAIN_ROUTE_TASK_KIND;
+  legacy_task_kind: typeof RUNTIME_TASK_KIND;
   source_path: '/paper_mission_default_tasks' | '/pending_family_tasks' | 'direct_handoff' | 'not_found';
   legacy_pending_family_tasks_considered: boolean;
   readbacks: MasPaperMissionRouteHandoffIntakeReadback[];

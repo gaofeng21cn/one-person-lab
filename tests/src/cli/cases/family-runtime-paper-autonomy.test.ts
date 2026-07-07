@@ -126,8 +126,11 @@ test('family-runtime autonomy-supervisor readback returns only identity-bound OP
     ], familyRuntimeEnv(stateRoot));
     const readback = output.family_runtime_paper_autonomy_supervisor_readback;
 
-    assert.equal(readback.surface_id, 'opl_family_runtime_paper_autonomy_supervisor_readback');
+    assert.equal(readback.surface_id, 'opl_family_runtime_domain_autonomy_supervisor_readback');
     assert.equal(readback.surface_kind, 'opl_family_runtime_paper_autonomy_supervisor_readback');
+    assert.equal(readback.canonical_surface_kind, 'opl_family_runtime_domain_autonomy_supervisor_readback');
+    assert.equal(readback.legacy_surface_kind, 'opl_family_runtime_paper_autonomy_supervisor_readback');
+    assert.equal(readback.decision_readback_canonical_surface_kind, 'opl_domain_autonomy_supervisor_decision_readback');
     assert.equal(readback.readback_status, 'decision_ready');
     assert.equal(readback.obligation_id, obligation.obligation_id);
     assert.equal(readback.recovery_obligation_found, true);
@@ -221,7 +224,11 @@ test('family-runtime autonomy-supervisor decide appends OPL decision and returns
       'opl://runway/dm003/non-advancing-apply.json',
     ], familyRuntimeEnv(stateRoot)).family_runtime_paper_autonomy_supervisor_decision;
 
-    assert.equal(decided.surface_id, 'opl_family_runtime_paper_autonomy_supervisor_decision');
+    assert.equal(decided.surface_id, 'opl_family_runtime_domain_autonomy_supervisor_decision');
+    assert.equal(decided.surface_kind, 'opl_family_runtime_paper_autonomy_supervisor_decision');
+    assert.equal(decided.canonical_surface_kind, 'opl_family_runtime_domain_autonomy_supervisor_decision');
+    assert.equal(decided.legacy_surface_kind, 'opl_family_runtime_paper_autonomy_supervisor_decision');
+    assert.equal(decided.decision_readback_canonical_surface_kind, 'opl_domain_autonomy_supervisor_decision_readback');
     assert.equal(decided.decision_status, 'decision_appended');
     assert.equal(decided.decision_readback.surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
     assert.equal(decided.decision_readback.decision_kind, 'stop_with_stable_typed_blocker');

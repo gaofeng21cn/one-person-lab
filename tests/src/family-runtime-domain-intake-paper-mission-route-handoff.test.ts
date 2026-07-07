@@ -167,8 +167,16 @@ test('domain route handoff accepts legacy MAS paper mission carrier as OPL runti
   });
 
   assert.equal(readback.surface_kind, 'opl_mas_paper_mission_route_handoff_intake_readback');
+  assert.equal(readback.surface_id, 'opl_domain_route_handoff_intake_readback');
   assert.equal(readback.canonical_surface_kind, 'opl_domain_route_handoff_intake_readback');
   assert.equal(readback.legacy_surface_kind, 'opl_mas_paper_mission_route_handoff_intake_readback');
+  assert.equal(readback.canonical_task_kind, 'domain_route/stage-route');
+  assert.equal(readback.legacy_task_kind, 'paper_mission/stage-route');
+  assert.deepEqual(readback.compatibility_profile, {
+    profile_id: 'mas-paper-mission-route',
+    source_domain: 'medautoscience',
+    compatibility_only: true,
+  });
   assert.equal(readback.domain_id, 'medautoscience');
   assert.equal(readback.status, 'accepted_for_runtime_intake');
   assert.equal(readback.command_kind, 'start_next_stage');
@@ -581,7 +589,10 @@ test('MAS paper mission route handoff export intake prefers paper_mission_defaul
 
   assert.equal(exportReadback.source_path, '/paper_mission_default_tasks');
   assert.equal(exportReadback.canonical_surface_kind, 'opl_domain_route_handoff_export_intake_readback');
+  assert.equal(exportReadback.surface_id, 'opl_domain_route_handoff_export_intake_readback');
   assert.equal(exportReadback.legacy_surface_kind, 'opl_mas_paper_mission_route_handoff_export_intake_readback');
+  assert.equal(exportReadback.canonical_task_kind, 'domain_route/stage-route');
+  assert.equal(exportReadback.legacy_task_kind, 'paper_mission/stage-route');
   assert.equal(exportReadback.readbacks.length, 1);
   assert.equal(exportReadback.readbacks[0].status, 'accepted_for_runtime_intake');
   assert.equal(exportReadback.legacy_pending_family_tasks_considered, false);

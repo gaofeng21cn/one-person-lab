@@ -1,5 +1,6 @@
 import type { FamilyRuntimeCommandInput } from './family-runtime-command.ts';
 import {
+  DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
   appendPaperAutonomySupervisorDecisionLedgerJsonl,
   currentPaperAutonomyRecoveryObligation,
   currentPaperAutonomySupervisorDecision,
@@ -26,6 +27,11 @@ const authorityBoundary = {
   provider_completion_is_domain_ready: false,
   readback_can_execute_transition: false,
 } as const;
+
+const LEGACY_SUPERVISOR_DECISION_SURFACE_KIND = 'opl_family_runtime_paper_autonomy_supervisor_decision';
+const LEGACY_SUPERVISOR_READBACK_SURFACE_KIND = 'opl_family_runtime_paper_autonomy_supervisor_readback';
+const CANONICAL_SUPERVISOR_DECISION_SURFACE_KIND = 'opl_family_runtime_domain_autonomy_supervisor_decision';
+const CANONICAL_SUPERVISOR_READBACK_SURFACE_KIND = 'opl_family_runtime_domain_autonomy_supervisor_readback';
 
 export function runFamilyRuntimePaperAutonomySupervisorReadbackCommand(
   parsed: PaperAutonomySupervisorReadbackCommand,
@@ -76,8 +82,11 @@ export function runFamilyRuntimePaperAutonomySupervisorDecideCommand(
     return {
       version: 'g2',
       family_runtime_paper_autonomy_supervisor_decision: {
-        surface_id: 'opl_family_runtime_paper_autonomy_supervisor_decision',
-        surface_kind: 'opl_family_runtime_paper_autonomy_supervisor_decision',
+        surface_id: CANONICAL_SUPERVISOR_DECISION_SURFACE_KIND,
+        surface_kind: LEGACY_SUPERVISOR_DECISION_SURFACE_KIND,
+        canonical_surface_kind: CANONICAL_SUPERVISOR_DECISION_SURFACE_KIND,
+        legacy_surface_kind: LEGACY_SUPERVISOR_DECISION_SURFACE_KIND,
+        decision_readback_canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
         decision_status: 'missing_obligation',
         missing_reason: 'identity_bound_recovery_obligation_not_found',
         obligation_id: parsed.input.obligation_id,
@@ -118,8 +127,11 @@ export function runFamilyRuntimePaperAutonomySupervisorDecideCommand(
   return {
     version: 'g2',
     family_runtime_paper_autonomy_supervisor_decision: {
-      surface_id: 'opl_family_runtime_paper_autonomy_supervisor_decision',
-      surface_kind: 'opl_family_runtime_paper_autonomy_supervisor_decision',
+      surface_id: CANONICAL_SUPERVISOR_DECISION_SURFACE_KIND,
+      surface_kind: LEGACY_SUPERVISOR_DECISION_SURFACE_KIND,
+      canonical_surface_kind: CANONICAL_SUPERVISOR_DECISION_SURFACE_KIND,
+      legacy_surface_kind: LEGACY_SUPERVISOR_DECISION_SURFACE_KIND,
+      decision_readback_canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
       decision_status: recorded.accepted ? 'decision_appended' : 'decision_rejected',
       missing_reason: null,
       obligation_id: parsed.input.obligation_id,
@@ -151,8 +163,11 @@ function supervisorReadbackPayload(input: {
 }) {
   const decisionReady = input.obligation_found && Boolean(input.decision);
   return {
-    surface_id: 'opl_family_runtime_paper_autonomy_supervisor_readback',
-    surface_kind: 'opl_family_runtime_paper_autonomy_supervisor_readback',
+    surface_id: CANONICAL_SUPERVISOR_READBACK_SURFACE_KIND,
+    surface_kind: LEGACY_SUPERVISOR_READBACK_SURFACE_KIND,
+    canonical_surface_kind: CANONICAL_SUPERVISOR_READBACK_SURFACE_KIND,
+    legacy_surface_kind: LEGACY_SUPERVISOR_READBACK_SURFACE_KIND,
+    decision_readback_canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
     readback_status: decisionReady ? 'decision_ready' : 'missing',
     missing_reason: decisionReady ? null : 'identity_bound_supervisor_decision_not_found',
     obligation_id: input.obligation_id,
