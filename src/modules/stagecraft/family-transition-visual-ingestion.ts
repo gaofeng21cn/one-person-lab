@@ -8,6 +8,15 @@ import type {
 
 type JsonRecord = Record<string, unknown>;
 
+export type VisualTransitionAdapterProfile = {
+  guardOwnerLabel: string;
+  workUnitRefPrefix: string;
+  ownerRouteRefPrefix: string;
+  ownerReceiptRefPrefix: string;
+  oracleFixtureRefPrefix: string;
+  stageRefPrefix: string;
+};
+
 export type VisualTransitionSpec = {
   surface_kind: 'visual_transition_spec';
   spec_id: string;
@@ -39,6 +48,23 @@ const DEFAULT_AUTHORITY_BOUNDARY = {
   opl: 'transition_runner_transport_projection_only',
   domain: 'visual_truth_review_export_artifact_owner',
 };
+
+function refPrefixForDomain(targetDomainId: string) {
+  const normalized = targetDomainId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return normalized === 'redcube-ai' || normalized === 'redcube' ? 'rca' : normalized || 'domain';
+}
+
+export function defaultVisualTransitionAdapterProfile(targetDomainId: string): VisualTransitionAdapterProfile {
+  const refPrefix = refPrefixForDomain(targetDomainId);
+  return {
+    guardOwnerLabel: refPrefix === 'rca' ? 'RCA' : targetDomainId,
+    workUnitRefPrefix: `${refPrefix}-work-unit`,
+    ownerRouteRefPrefix: `${refPrefix}-visual-transition`,
+    ownerReceiptRefPrefix: `${refPrefix}-domain-owner-receipt`,
+    oracleFixtureRefPrefix: `${refPrefix}-oracle-fixture`,
+    stageRefPrefix: `${refPrefix}-stage`,
+  };
+}
 
 function requireVisualString(value: unknown, field: string) {
   const text = optionalString(value);
@@ -168,14 +194,18 @@ export function normalizeVisualTransitionSpec(value: unknown): VisualTransitionS
   };
 }
 
-export function adaptVisualTransitionSpecToFamilyTransitionSpec(value: unknown, targetDomainId: string): FamilyTransitionSpec {
+export function adaptVisualTransitionSpecToFamilyTransitionSpec(
+  value: unknown,
+  targetDomainId: string,
+  adapterProfile = defaultVisualTransitionAdapterProfile(targetDomainId),
+): FamilyTransitionSpec {
   const spec = normalizeVisualTransitionSpec(value);
   const boundary = visualTransitionAuthorityBoundary(spec);
   const guards: Record<string, FamilyTransitionGuardDefinition> = {};
   for (const transition of spec.transition_table) {
     for (const guardRef of transition.required_guard_refs) {
       guards[guardRef] = {
-        description: `RCA-owned guard ref ${guardRef} for transition ${transition.transition_id}.`,
+        description: `${adapterProfile.guardOwnerLabel}-owned guard ref ${guardRef} for transition ${transition.transition_id}.`,
         owner: spec.owner,
         source_ref: `${spec.spec_id}:guard:${guardRef}`,
         authority_boundary: boundary,
@@ -207,27 +237,27 @@ export function adaptVisualTransitionSpecToFamilyTransitionSpec(value: unknown, 
         required_guards: transition.required_guard_refs,
         next_state: transition.to_stage,
         next_work_unit: {
-          work_unit_ref: `rca-work-unit:${transition.to_stage}`,
+          work_unit_ref: `${adapterProfile.workUnitRefPrefix}:${transition.to_stage}`,
           action_refs: [transition.owner_action],
           metadata,
         },
         owner_route: {
           owner: spec.owner,
-          route_ref: `rca-visual-transition:${transition.transition_id}`,
+          route_ref: `${adapterProfile.ownerRouteRefPrefix}:${transition.transition_id}`,
           action_refs: [transition.owner_action],
           metadata,
         },
         receipt: {
           receipt_refs: [
-            `rca-domain-owner-receipt:${transition.transition_id}`,
-            `rca-oracle-fixture:${spec.oracle_fixture.fixture_id}`,
+            `${adapterProfile.ownerReceiptRefPrefix}:${transition.transition_id}`,
+            `${adapterProfile.oracleFixtureRefPrefix}:${spec.oracle_fixture.fixture_id}`,
           ],
           metadata,
         },
         projection: {
           route_node_refs: [
-            `rca-stage:${transition.from_stage}`,
-            `rca-stage:${transition.to_stage}`,
+            `${adapterProfile.stageRefPrefix}:${transition.from_stage}`,
+            `${adapterProfile.stageRefPrefix}:${transition.to_stage}`,
           ],
           owner_action: transition.owner_action,
           expected_return_shapes: spec.oracle_fixture.expected_return_shapes,

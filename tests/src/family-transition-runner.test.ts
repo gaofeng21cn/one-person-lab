@@ -10,6 +10,12 @@ import {
   buildGrantTransitionOracleMatrixCases,
 } from '../../src/modules/stagecraft/family-transition-oracle-ingestion.ts';
 import {
+  adaptVisualTransitionSpecToFamilyTransitionSpec,
+  buildVisualTransitionMatrixCases,
+  defaultVisualTransitionAdapterProfile,
+  type VisualTransitionSpec,
+} from '../../src/modules/stagecraft/family-transition-visual-ingestion.ts';
+import {
   runFamilyTransition,
   runFamilyTransitionMatrix,
   type FamilyTransitionSpec,
@@ -217,6 +223,44 @@ const magLikeGrantTransitionOracle = {
     missing_fixture_transition_refs: [],
   },
 };
+
+const visualTransitionSpec = {
+  surface_kind: 'visual_transition_spec',
+  spec_id: 'visual.transition.spec.v1',
+  owner: 'example-visual-domain',
+  status: 'landed',
+  transition_model: 'domain_declared_visual_transition_table',
+  source_contract: 'contracts/example/visual-transition.json',
+  covered_family_stage_kinds: ['visual_intake', 'visual_export'],
+  transition_table: [
+    {
+      transition_id: 'intake_to_export_review',
+      from_stage: 'visual_intake',
+      to_stage: 'visual_export_review',
+      required_guard_refs: ['source_assets_indexed'],
+      owner_action: 'review_visual_export',
+    },
+  ],
+  guard_contract: {
+    source_assets_indexed: {
+      owner: 'example-visual-domain',
+    },
+  },
+  oracle_fixture: {
+    fixture_id: 'visual-intake-ready',
+    covered_families: ['example-visual-domain'],
+    expected_return_shapes: ['domain_owner_receipt'],
+    forbidden_oracle_fields: ['visual_ready_claimed', 'exportable_claimed'],
+  },
+  runner_boundary: {
+    opl_can_execute_transition_spec: true,
+    opl_can_retry_or_dead_letter: true,
+    opl_can_store_transition_metadata: true,
+  },
+  repository_boundary: {
+    domain_truth_owner: 'example-visual-domain',
+  },
+} satisfies VisualTransitionSpec;
 
 test('family transition runner advances bundle_stage_ready through domain-declared owner route without domain verdict ownership', () => {
   const result = runFamilyTransition({
@@ -562,4 +606,51 @@ test('grant transition oracle adapts MAG-owned table and fixtures into the gener
     matrix.results[1].result.authority_boundary.opl_can_write_grant_truth,
     false,
   );
+});
+
+test('visual transition ingestion uses generic adapter profile instead of RCA-only refs', () => {
+  const adapterProfile = defaultVisualTransitionAdapterProfile('example-visual-domain');
+  const spec = adaptVisualTransitionSpecToFamilyTransitionSpec(
+    visualTransitionSpec,
+    'example-visual-domain',
+    adapterProfile,
+  );
+  const cases = buildVisualTransitionMatrixCases(visualTransitionSpec, 'example-visual-domain');
+  const matrix = runFamilyTransitionMatrix({ spec, cases });
+
+  assert.equal(spec.target_domain_id, 'example-visual-domain');
+  assert.equal(spec.owner, 'example-visual-domain');
+  assert.equal(spec.guards.source_assets_indexed.description, 'example-visual-domain-owned guard ref source_assets_indexed for transition intake_to_export_review.');
+  assert.equal(spec.transitions[0].next_work_unit?.work_unit_ref, 'example-visual-domain-work-unit:visual_export_review');
+  assert.equal(spec.transitions[0].owner_route.route_ref, 'example-visual-domain-visual-transition:intake_to_export_review');
+  assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [
+    'example-visual-domain-domain-owner-receipt:intake_to_export_review',
+    'example-visual-domain-oracle-fixture:visual-intake-ready',
+  ]);
+  assert.deepEqual(spec.transitions[0].projection?.route_node_refs, [
+    'example-visual-domain-stage:visual_intake',
+    'example-visual-domain-stage:visual_export_review',
+  ]);
+  assert.equal(matrix.summary.transition_applied, 1);
+  assert.equal(matrix.results[0].result.next_state, 'visual_export_review');
+  assert.equal(matrix.results[0].result.authority_boundary.opl_can_declare_visual_ready, false);
+  assert.equal(matrix.results[0].result.authority_boundary.opl_can_mutate_artifacts, false);
+});
+
+test('visual transition legacy RCA adapter keeps existing ref compatibility', () => {
+  const spec = adaptVisualTransitionSpecToFamilyTransitionSpec(
+    {
+      ...visualTransitionSpec,
+      owner: 'redcube-ai',
+    },
+    'redcube-ai',
+  );
+
+  assert.equal(spec.guards.source_assets_indexed.description, 'RCA-owned guard ref source_assets_indexed for transition intake_to_export_review.');
+  assert.equal(spec.transitions[0].next_work_unit?.work_unit_ref, 'rca-work-unit:visual_export_review');
+  assert.equal(spec.transitions[0].owner_route.route_ref, 'rca-visual-transition:intake_to_export_review');
+  assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [
+    'rca-domain-owner-receipt:intake_to_export_review',
+    'rca-oracle-fixture:visual-intake-ready',
+  ]);
 });

@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   buildManagedShellCommandEnv,
   buildManagedShellEnvWithUvCacheRecovery,
+  createDomainCleanRunnerProfileRegistry,
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
   shouldUseManagedShellScratchCwd,
@@ -104,6 +105,46 @@ test('managed shell command env derives legacy clean runner roots from domain pr
     assert.equal(
       env.MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT,
       path.join(tmpRoot, 'mag-editable-shared'),
+    );
+  } finally {
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(externalRoot, { recursive: true, force: true });
+  }
+});
+
+test('managed shell command env accepts injected domain clean runner profiles', () => {
+  const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-custom-profile-checkout-'));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-custom-profile-root-'));
+  try {
+    const registry = createDomainCleanRunnerProfileRegistry([
+      {
+        domainId: 'example-domain',
+        legacyEnvRoots: [
+          { envName: 'EXAMPLE_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'example-domain' },
+        ],
+        readOnlyCommandPatterns: [
+          /(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+example-domain\s+product\s+status\b/,
+        ],
+      },
+    ]);
+    const env: Record<string, string | undefined> = buildManagedShellCommandEnv(
+      checkoutRoot,
+      {
+        OPL_DOMAIN_COMMAND_TMP_ROOT: externalRoot,
+        EXAMPLE_CLEAN_RUNNER_TMP_ROOT: path.join(checkoutRoot, 'inside-checkout'),
+      },
+      registry,
+    );
+    const tmpRoot = path.join(externalRoot, path.basename(checkoutRoot));
+
+    assert.equal(env.EXAMPLE_CLEAN_RUNNER_TMP_ROOT, path.join(tmpRoot, 'example-domain'));
+    assert.equal(
+      shouldUseManagedShellScratchCwd('uv run example-domain product status', registry),
+      false,
+    );
+    assert.equal(
+      shouldUseManagedShellScratchCwd('uv run example-domain mutate', registry),
+      true,
     );
   } finally {
     fs.rmSync(checkoutRoot, { recursive: true, force: true });

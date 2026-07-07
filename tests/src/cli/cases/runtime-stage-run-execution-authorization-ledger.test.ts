@@ -8,6 +8,7 @@ import {
   writeMasCleanRunnerFixture,
 } from '../helpers.ts';
 import { buildAppStageRunCockpit } from '../../../../src/modules/stagecraft/stage-run-cockpit.ts';
+import { findOwnerAnswerProjection } from '../../../../src/modules/stagecraft/mas-owner-answer-projection.ts';
 
 function authorizationPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -863,6 +864,100 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
     );
     assert.equal(cockpit.authority_boundary.can_create_typed_blocker, false);
     assert.equal(cockpit.authority_boundary.can_claim_production_ready, false);
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('owner-answer projection lookup accepts injected domain profile', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-answer-generic-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-answer-generic-workspace-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const receipt = {
+      domain_id: 'example-domain',
+      provider_attempt_ref: 'opl://stage_attempts/sat_example',
+      attempt_lease_ref: 'opl://stage_attempts/sat_example/lease/current',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref: 'opl://stage_attempts/sat_example/execution-authorization/current',
+      source_fingerprint: 'fingerprint:example',
+      idempotency_key: 'idem_example',
+    } as any;
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(stateRoot, 'workspace-registry.json'),
+      `${JSON.stringify({
+        version: 'g2',
+        bindings: [
+          {
+            binding_id: 'example-owner-answer',
+            project_id: 'example-domain',
+            project: 'example-domain',
+            workspace_path: workspaceRoot,
+            label: null,
+            status: 'active',
+            direct_entry: {
+              command: null,
+              manifest_command: null,
+              url: null,
+              workspace_locator: {
+                surface_kind: 'example_workspace_profile',
+                workspace_root: workspaceRoot,
+                profile_ref: null,
+                input_path: null,
+              },
+            },
+            created_at: '2026-07-07T00:00:00.000Z',
+            updated_at: '2026-07-07T00:00:00.000Z',
+            archived_at: null,
+          },
+        ],
+      }, null, 2)}\n`,
+      'utf8',
+    );
+    const projectionPath = path.join(workspaceRoot, 'cases', 'case-1', 'owner-answer.json');
+    fs.mkdirSync(path.dirname(projectionPath), { recursive: true });
+    fs.writeFileSync(
+      projectionPath,
+      `${JSON.stringify({
+        closeout_binding: {
+          trusted_opl_execution_authorization: true,
+          provider_attempt_ref: receipt.provider_attempt_ref,
+          attempt_lease_ref: receipt.attempt_lease_ref,
+          attempt_lease_status: receipt.attempt_lease_status,
+          execution_authorization_decision_ref: receipt.execution_authorization_decision_ref,
+          source_fingerprint: receipt.source_fingerprint,
+          idempotency_key: receipt.idempotency_key,
+        },
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const projection = findOwnerAnswerProjection({
+      receipt,
+      profiles: [
+        {
+          domainId: 'example-domain',
+          bindingProjectId: 'example-domain',
+          sourceOwner: 'example-domain',
+          studiesDirName: 'cases',
+          projectionRelativePath: ['owner-answer.json'],
+        },
+      ],
+    });
+
+    assert.equal(projection?.projection_ref, projectionPath);
+    assert.equal(projection?.workspace_root, workspaceRoot);
+    assert.equal(projection?.study_id, 'case-1');
+    assert.equal(projection?.authority_boundary.source_owner, 'example-domain');
+    assert.equal(projection?.authority_boundary.can_write_domain_truth, false);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;

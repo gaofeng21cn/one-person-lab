@@ -12,7 +12,7 @@ const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
   'managed_python_env_missing_dependency',
 ]);
 
-type DomainCleanRunnerProfile = {
+export type DomainCleanRunnerProfile = {
   domainId: string;
   legacyEnvRoots: ReadonlyArray<{
     envName: string;
@@ -21,11 +21,15 @@ type DomainCleanRunnerProfile = {
   readOnlyCommandPatterns: ReadonlyArray<RegExp>;
 };
 
+export type DomainCleanRunnerProfileRegistry = {
+  profiles: ReadonlyArray<DomainCleanRunnerProfile>;
+};
+
 const SHELL_COMMAND_BOUNDARY = String.raw`(?:^|(?:&&|\|\||[;&|])\s*)`;
 const UV_PYTHON_MODULE = String.raw`uv\s+run\s+(?:python|python3)\s+-m\s+`;
 const UV_DIRECTORY_PYTHON_INLINE = String.raw`uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*`;
 
-const DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> = [
+const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> = [
   {
     domainId: 'med-autoscience',
     legacyEnvRoots: [
@@ -57,6 +61,25 @@ const DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> = [
     readOnlyCommandPatterns: [],
   },
 ];
+
+export const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY: DomainCleanRunnerProfileRegistry = {
+  profiles: DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES,
+};
+
+export function createDomainCleanRunnerProfileRegistry(
+  extraProfiles: ReadonlyArray<DomainCleanRunnerProfile> = [],
+): DomainCleanRunnerProfileRegistry {
+  return {
+    profiles: [
+      ...DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY.profiles,
+      ...extraProfiles,
+    ],
+  };
+}
+
+function domainCleanRunnerProfiles(registry = DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY) {
+  return registry.profiles;
+}
 
 function normalizePath(value: string) {
   return path.resolve(value);
@@ -138,9 +161,10 @@ function buildDomainCleanRunnerEnv(
   env: NodeJS.ProcessEnv,
   cwd: string,
   tmpRoot: string,
+  registry = DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
 ) {
   const nextEnv: Record<string, string> = {};
-  for (const profile of DOMAIN_CLEAN_RUNNER_PROFILES) {
+  for (const profile of domainCleanRunnerProfiles(registry)) {
     for (const root of profile.legacyEnvRoots) {
       nextEnv[root.envName] = externalPath(
         env,
@@ -153,7 +177,11 @@ function buildDomainCleanRunnerEnv(
   return nextEnv;
 }
 
-export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv = process.env) {
+export function buildManagedShellCommandEnv(
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env,
+  registry = DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
+) {
   const workspaceId = stableWorkspaceId(cwd);
   const tmpRoot = workspaceScopedExternalRoot(env, cwd, workspaceId);
   const pycacheRoot = path.join(tmpRoot, 'pycache');
@@ -172,7 +200,7 @@ export function buildManagedShellCommandEnv(cwd: string, env: NodeJS.ProcessEnv 
     XDG_CACHE_HOME: xdgCacheHome,
     PIP_CACHE_DIR: pipCacheDir,
     OPL_DOMAIN_COMMAND_TMP_ROOT: tmpRoot,
-    ...buildDomainCleanRunnerEnv(env, cwd, tmpRoot),
+    ...buildDomainCleanRunnerEnv(env, cwd, tmpRoot, registry),
     PYTEST_ADDOPTS: appendPytestCacheOption(env.PYTEST_ADDOPTS, pytestCacheDir),
   };
 }
@@ -246,22 +274,28 @@ export function recordManagedShellUvCacheRecovery(
   }, null, 2)}\n`, 'utf8');
 }
 
-export function shouldUseManagedShellScratchCwd(command: string | null | undefined) {
+export function shouldUseManagedShellScratchCwd(
+  command: string | null | undefined,
+  registry = DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
+) {
   const value = command?.trim();
   if (!value) {
     return false;
   }
 
-  if (isReadOnlyProductEntryCommand(value)) {
+  if (isReadOnlyProductEntryCommand(value, registry)) {
     return false;
   }
 
   return Boolean(value.match(/(?:^|[;&|]\s*)uv\s+run\b/));
 }
 
-function isReadOnlyProductEntryCommand(command: string) {
+function isReadOnlyProductEntryCommand(
+  command: string,
+  registry = DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
+) {
   const normalized = command.replace(/\s+/g, ' ');
-  return DOMAIN_CLEAN_RUNNER_PROFILES.some((profile) => profile.readOnlyCommandPatterns.some(
+  return domainCleanRunnerProfiles(registry).some((profile) => profile.readOnlyCommandPatterns.some(
     (pattern) => pattern.test(normalized),
   ));
 }
@@ -282,8 +316,9 @@ export function prepareManagedShellCommandCwd(
   cwd: string,
   command: string | null | undefined,
   env: NodeJS.ProcessEnv = process.env,
+  registry = DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
 ): ManagedShellCommandCwd {
-  if (!shouldUseManagedShellScratchCwd(command)) {
+  if (!shouldUseManagedShellScratchCwd(command, registry)) {
     return {
       cwd,
       cleanup: () => {},
