@@ -11,6 +11,8 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
     verificationCommands: string[];
     codexBin: string | null;
     codexTimeoutMs: number | null;
+    codexNoOutputTimeoutMs: number | null;
+    codexCommandNoProgressTimeoutMs: number | null;
     dryRun: boolean;
   } = {
     workOrderPath: null,
@@ -20,6 +22,8 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
     verificationCommands: [],
     codexBin: null,
     codexTimeoutMs: null,
+    codexNoOutputTimeoutMs: null,
+    codexCommandNoProgressTimeoutMs: null,
     dryRun: false,
   };
 
@@ -82,13 +86,31 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
           option: '--codex-timeout-ms',
         });
       }
-      const numeric = Number.parseInt(value, 10);
-      if (!Number.isFinite(numeric) || numeric <= 0) {
-        throw buildUsageError('Option --codex-timeout-ms must be a positive integer.', spec, {
-          option: '--codex-timeout-ms',
+      parsed.codexTimeoutMs = parsePositiveInteger(value, '--codex-timeout-ms', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--codex-no-output-timeout-ms') {
+      if (!value) {
+        throw buildUsageError('Missing value for option: --codex-no-output-timeout-ms.', spec, {
+          option: '--codex-no-output-timeout-ms',
         });
       }
-      parsed.codexTimeoutMs = numeric;
+      parsed.codexNoOutputTimeoutMs = parsePositiveInteger(value, '--codex-no-output-timeout-ms', spec);
+      index += 1;
+      continue;
+    }
+    if (token === '--codex-command-no-progress-timeout-ms') {
+      if (!value) {
+        throw buildUsageError('Missing value for option: --codex-command-no-progress-timeout-ms.', spec, {
+          option: '--codex-command-no-progress-timeout-ms',
+        });
+      }
+      parsed.codexCommandNoProgressTimeoutMs = parsePositiveInteger(
+        value,
+        '--codex-command-no-progress-timeout-ms',
+        spec,
+      );
       index += 1;
       continue;
     }
@@ -107,6 +129,14 @@ function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLab
     ...parsed,
     workOrderPath: parsed.workOrderPath,
   };
+}
+
+function parsePositiveInteger(value: string, option: string, spec: CommandSpec): number {
+  const numeric = Number.parseInt(value, 10);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    throw buildUsageError(`Option ${option} must be a positive integer.`, spec, { option });
+  }
+  return numeric;
 }
 
 async function buildWorkOrderExecutePayload(args: string[], spec: CommandSpec) {

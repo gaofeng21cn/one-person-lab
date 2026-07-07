@@ -119,6 +119,13 @@ exit 17
 `, { mode: 0o755 });
 }
 
+export function createSilentFakeCodexWorkOrderExecutor(filePath: string): void {
+  fs.writeFileSync(filePath, `#!/usr/bin/env bash
+set -euo pipefail
+sleep 5
+`, { mode: 0o755 });
+}
+
 export function createOverlappingFakeCodexWorkOrderExecutor(filePath: string): void {
   fs.writeFileSync(filePath, `#!/usr/bin/env bash
 set -euo pipefail

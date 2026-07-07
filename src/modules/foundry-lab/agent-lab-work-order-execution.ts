@@ -33,6 +33,7 @@ import {
   buildExecutionReportMarkdown,
   buildExecutionSurfaces,
   buildFailureExecutionReportMarkdown,
+  type CodexWatchdogSettings,
   OPL_WORK_ORDER_PRIMITIVE_OWNER,
   type ExecutionSurfaceRef,
 } from './agent-lab-work-order-execution-surfaces.ts';
@@ -56,6 +57,8 @@ export type AgentLabWorkOrderExecutionOptions = {
   verificationCommands?: string[];
   codexBin?: string | null;
   codexTimeoutMs?: number | null;
+  codexNoOutputTimeoutMs?: number | null;
+  codexCommandNoProgressTimeoutMs?: number | null;
   dryRun?: boolean;
 };
 
@@ -88,6 +91,19 @@ const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   receiptVersion: 'opl.work-order-execution.v1',
   commandSurface: 'work-order execute',
 };
+
+const DEFAULT_CODEX_WORK_ORDER_TIMEOUT_MS = 60 * 60 * 1000;
+const DEFAULT_CODEX_WORK_ORDER_NO_OUTPUT_TIMEOUT_MS = 10 * 60 * 1000;
+const DEFAULT_CODEX_WORK_ORDER_COMMAND_NO_PROGRESS_TIMEOUT_MS = 10 * 60 * 1000;
+
+function codexWatchdogsFor(options: AgentLabWorkOrderExecutionOptions): CodexWatchdogSettings {
+  return {
+    timeoutMs: options.codexTimeoutMs ?? DEFAULT_CODEX_WORK_ORDER_TIMEOUT_MS,
+    noOutputTimeoutMs: options.codexNoOutputTimeoutMs ?? DEFAULT_CODEX_WORK_ORDER_NO_OUTPUT_TIMEOUT_MS,
+    commandNoProgressTimeoutMs: options.codexCommandNoProgressTimeoutMs
+      ?? DEFAULT_CODEX_WORK_ORDER_COMMAND_NO_PROGRESS_TIMEOUT_MS,
+  };
+}
 
 function assertWorktreeDirIgnored(targetAgentDir: string): void {
   const result = spawnSync('git', ['check-ignore', '-q', '.worktrees/agent-lab-ignore-probe'], {
@@ -485,6 +501,7 @@ function buildDryRunReceipt(input: {
   baseBranch: string;
   baseHead: string;
   verificationCommands: string[];
+  codexWatchdogs: CodexWatchdogSettings;
   requiredVerificationRefs: string[];
   targetDirtyStatusBeforeOpen: string[];
   targetDirtyFilesBeforeOpen: string[];
@@ -524,6 +541,11 @@ function buildDryRunReceipt(input: {
     planned_verification: {
       commands: input.verificationCommands,
       required_verification_refs: input.requiredVerificationRefs,
+    },
+    planned_codex_watchdogs: {
+      total_timeout_ms: input.codexWatchdogs.timeoutMs,
+      no_output_timeout_ms: input.codexWatchdogs.noOutputTimeoutMs,
+      command_no_progress_timeout_ms: input.codexWatchdogs.commandNoProgressTimeoutMs,
     },
     capability_resolution: {
       capability_hits: Array.isArray(input.workOrder.capability_hits) ? input.workOrder.capability_hits : [],
@@ -654,6 +676,7 @@ async function executeDeveloperWorkOrder(
   const branchName = `codex/work-order-${shortId(workOrderId)}`;
   const worktreePath = path.join(targetAgentDir, '.worktrees', `work-order-${shortId(workOrderId)}`);
   const verificationCommands = verificationCommandsFor(workOrder, options.verificationCommands);
+  const codexWatchdogs = codexWatchdogsFor(options);
   const executionSurfaces = buildExecutionSurfaces({
     outputDir,
     targetAgent,
@@ -668,6 +691,7 @@ async function executeDeveloperWorkOrder(
     baseBranch,
     baseHead,
     verificationCommands,
+    codexWatchdogs,
     allowedEditableSurfaces: stringList(workOrder.allowed_editable_surfaces),
     targetRepoFileHints: stringList(workOrder.target_repo_file_hints),
     forbiddenTargetSurfaces: stringList(isRecord(workOrder.implementation_controls)
@@ -687,6 +711,7 @@ async function executeDeveloperWorkOrder(
       baseBranch,
       baseHead,
       verificationCommands,
+      codexWatchdogs,
       requiredVerificationRefs: stringList(workOrder.required_verification_refs),
       targetDirtyStatusBeforeOpen,
       targetDirtyFilesBeforeOpen,
@@ -746,7 +771,9 @@ async function executeDeveloperWorkOrder(
     });
     let processId: number | null = null;
     const codexResult = await runCodexCommandStreaming(codexArgs, {
-      timeoutMs: options.codexTimeoutMs ?? 60 * 60 * 1000,
+      timeoutMs: codexWatchdogs.timeoutMs,
+      noOutputTimeoutMs: codexWatchdogs.noOutputTimeoutMs,
+      commandNoProgressTimeoutMs: codexWatchdogs.commandNoProgressTimeoutMs,
       onProcessStarted(pid) {
         processId = pid;
       },
@@ -758,6 +785,14 @@ async function executeDeveloperWorkOrder(
         {
           work_order_id: workOrderId,
           exit_code: codexResult.exitCode,
+          timeout_reason: codexResult.timeoutReason ?? null,
+          no_output_timeout_ms: codexResult.noOutputTimeoutMs ?? codexWatchdogs.noOutputTimeoutMs,
+          command_no_progress_timeout_ms: codexResult.commandNoProgressTimeoutMs
+            ?? codexWatchdogs.commandNoProgressTimeoutMs,
+          active_command: codexResult.activeCommand ?? null,
+          provider_errors: codexResult.providerErrors ?? [],
+          unsupported_function_calls: codexResult.unsupportedFunctionCalls ?? [],
+          stdout_tail: codexResult.stdout.split(/\r?\n/).filter(Boolean).slice(-20),
           stderr_tail: codexResult.stderr.split(/\r?\n/).filter(Boolean).slice(-20),
         },
       );
@@ -844,6 +879,11 @@ async function executeDeveloperWorkOrder(
         process_id: processId,
         exit_code: codexResult.exitCode,
         thread_id: parsedCodex.threadId,
+        watchdogs: {
+          total_timeout_ms: codexWatchdogs.timeoutMs,
+          no_output_timeout_ms: codexWatchdogs.noOutputTimeoutMs,
+          command_no_progress_timeout_ms: codexWatchdogs.commandNoProgressTimeoutMs,
+        },
       },
       target_worktree: {
         target_agent_dir: targetAgentDir,

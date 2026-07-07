@@ -6,6 +6,7 @@ import {
   createFakeCodexWorkOrderExecutor,
   createFakeOwnerCloseoutAction,
   createOverlappingFakeCodexWorkOrderExecutor,
+  createSilentFakeCodexWorkOrderExecutor,
   createWorkOrderTargetRepo,
   readJson,
   writeJson,
@@ -76,6 +77,9 @@ test('work-order execute is the canonical OPL work-order execution primitive', (
     assert.equal(receipt.execution_report.path, output.work_order_execution.artifacts.execution_report_path);
     assert.equal(receipt.execution_refs.execution_plan_ref, receipt.execution_plan.surface_ref);
     assert.equal(receipt.execution_refs.execution_report_ref, receipt.execution_report.surface_ref);
+    assert.equal(receipt.executor.watchdogs.total_timeout_ms, 10000);
+    assert.equal(receipt.executor.watchdogs.no_output_timeout_ms, 600000);
+    assert.equal(receipt.executor.watchdogs.command_no_progress_timeout_ms, 600000);
     assert.equal(fs.existsSync(receipt.execution_plan.path), true);
     assert.equal(fs.existsSync(receipt.execution_report.path), true);
   } finally {
@@ -178,6 +182,12 @@ test('work-order execute dry-run plans without launching Codex or opening a targ
       'test -f docs/efficiency.md',
       'git diff --check',
     ]);
+    assert.equal(receipt.planned_codex_watchdogs.total_timeout_ms, 3600000);
+    assert.equal(receipt.planned_codex_watchdogs.no_output_timeout_ms, 600000);
+    assert.equal(receipt.planned_codex_watchdogs.command_no_progress_timeout_ms, 600000);
+    const plan = fs.readFileSync(output.work_order_execution.artifacts.execution_plan_path, 'utf8');
+    assert.match(plan, /Codex watchdogs/);
+    assert.match(plan, /no_output_timeout_ms: `600000`/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -628,6 +638,58 @@ test('work-order execute cleans target worktree and branch after Codex failure',
     assert.equal(cleanupReceipt.surface_kind, 'opl_work_order_failure_cleanup_receipt');
     assert.equal(cleanupReceipt.cleanup_all_passed, true);
     assert.equal(fs.existsSync(path.join(targetRepo, 'docs/partial.md')), false);
+
+    const worktreeList = spawnSync('git', ['worktree', 'list', '--porcelain'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(worktreeList.status, 0, worktreeList.stderr);
+    assert.equal(worktreeList.stdout.includes('oma_developer_patch_work_order_test'), false);
+    const branchList = spawnSync('git', ['branch', '--list', 'codex/work-order-*'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(branchList.status, 0, branchList.stderr);
+    assert.equal(branchList.stdout.trim(), '');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('work-order execute fails closed when Codex produces no output before watchdog timeout', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-no-output-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    createSilentFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+
+    const failure = runCliFailure([
+      'work-order',
+      'execute',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--codex-timeout-ms',
+      '5000',
+      '--codex-no-output-timeout-ms',
+      '100',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    assert.equal(failure.payload.error.code, 'codex_command_failed');
+    assert.equal(failure.payload.error.details.timeout_reason, 'no_output_timeout');
+    assert.equal(failure.payload.error.details.no_output_timeout_ms, 100);
+    const cleanupReceipt = readJson(failure.payload.error.details.failure_cleanup_receipt_path);
+    assert.equal(cleanupReceipt.cleanup_all_passed, true);
 
     const worktreeList = spawnSync('git', ['worktree', 'list', '--porcelain'], {
       cwd: targetRepo,

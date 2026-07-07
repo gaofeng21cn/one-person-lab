@@ -20,6 +20,12 @@ type ExecutionCommandResult = {
 
 export const OPL_WORK_ORDER_PRIMITIVE_OWNER = 'one-person-lab/OPL';
 
+export type CodexWatchdogSettings = {
+  timeoutMs: number;
+  noOutputTimeoutMs: number;
+  commandNoProgressTimeoutMs: number;
+};
+
 function mdInline(value: unknown): string {
   return `\`${String(value ?? 'null').replace(/`/g, '\\`')}\``;
 }
@@ -77,6 +83,7 @@ export function buildExecutionPlanMarkdown(input: {
   baseBranch: string;
   baseHead: string;
   verificationCommands: string[];
+  codexWatchdogs: CodexWatchdogSettings;
   allowedEditableSurfaces: string[];
   targetRepoFileHints: string[];
   forbiddenTargetSurfaces: string[];
@@ -93,6 +100,11 @@ export function buildExecutionPlanMarkdown(input: {
     `Branch: ${mdInline(input.branchName)}`,
     `Base branch: ${mdInline(input.baseBranch)}`,
     `Base head: ${mdInline(input.baseHead)}`,
+    '',
+    '## Codex watchdogs',
+    `total_timeout_ms: ${mdInline(input.codexWatchdogs.timeoutMs)}`,
+    `no_output_timeout_ms: ${mdInline(input.codexWatchdogs.noOutputTimeoutMs)}`,
+    `command_no_progress_timeout_ms: ${mdInline(input.codexWatchdogs.commandNoProgressTimeoutMs)}`,
     '',
     '## Verification commands',
     mdList(input.verificationCommands),
