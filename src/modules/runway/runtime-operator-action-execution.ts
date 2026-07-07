@@ -27,7 +27,7 @@ import { domainDispatchExternalEvidenceApplyArgs } from './runtime-operator-acti
 import { appReleaseUserPathEvidenceExecution } from './runtime-operator-action-execution-parts/app-release-user-path-evidence-action.ts';
 import { codexAppRuntimeEvidenceExecution } from './runtime-operator-action-execution-parts/codex-app-runtime-evidence-action.ts';
 import { domainOwnerPayloadSummaryExecution } from './runtime-operator-action-execution-parts/domain-owner-payload-summary-action.ts';
-import { magManifestSustainedConsumptionExecution } from './runtime-operator-action-execution-parts/mag-manifest-sustained-consumption-action.ts';
+import { ownerEvidenceSustainedConsumptionExecution } from './runtime-operator-action-execution-parts/owner-evidence-sustained-consumption-action.ts';
 import { blockedActionRouteExecution } from './runtime-operator-action-execution-parts/blocked-action-route.ts';
 import { SUPPORTED_OPL_ACTION_ROUTE_KINDS } from './runtime-operator-action-execution-parts/supported-action-kinds.ts';
 import {
@@ -500,7 +500,7 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
         executionKind: actionKind === 'oma_production_consumption_receipt_record'
           ? 'opl_cli_oma_production_consumption_apply'
           : actionKind.startsWith('mag_manifest_sustained_consumption_')
-            ? 'opl_cli_mag_manifest_sustained_consumption_followthrough_apply'
+            ? 'opl_cli_owner_evidence_sustained_consumption_apply'
           : actionKind.startsWith('domain_owner_payload_summary_')
             ? 'opl_cli_domain_owner_payload_summary_apply'
           : actionKind.startsWith('codex_app_runtime_evidence_')
@@ -615,7 +615,7 @@ async function executeRoute(
     const domainOwnerPayloadSummaryAction =
       actionKind === 'domain_owner_payload_summary_receipt_record'
       || actionKind === 'domain_owner_payload_summary_receipt_verify';
-    const magManifestSustainedConsumptionAction =
+    const ownerEvidenceSustainedConsumptionAction =
       actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
       || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify';
     const omaProductionConsumptionAction =
@@ -644,8 +644,8 @@ async function executeRoute(
     const domainOwnerPayloadSummary = domainOwnerPayloadSummaryAction
       ? domainOwnerPayloadSummaryExecution(route, options.payload, { dryRun: options.dryRun })
       : null;
-    const magManifestSustainedConsumption = magManifestSustainedConsumptionAction
-      ? magManifestSustainedConsumptionExecution(route, options.payload, {
+    const ownerEvidenceSustainedConsumption = ownerEvidenceSustainedConsumptionAction
+      ? ownerEvidenceSustainedConsumptionExecution(route, options.payload, {
           dryRun: options.dryRun,
         })
       : null;
@@ -671,10 +671,10 @@ async function executeRoute(
           executionKind: domainOwnerPayloadSummary.executionKind,
           runtimeArgs: domainOwnerPayloadSummary.runtimeArgs,
         }
-      : magManifestSustainedConsumption
+      : ownerEvidenceSustainedConsumption
       ? {
-          executionKind: magManifestSustainedConsumption.executionKind,
-          runtimeArgs: magManifestSustainedConsumption.runtimeArgs,
+          executionKind: ownerEvidenceSustainedConsumption.executionKind,
+          runtimeArgs: ownerEvidenceSustainedConsumption.runtimeArgs,
         }
       : omaProductionConsumption
       ? {
@@ -704,7 +704,7 @@ async function executeRoute(
       executed_runtime_command: appReleaseUserPathEvidenceAction
         || codexAppRuntimeEvidenceAction
         || domainOwnerPayloadSummaryAction
-        || magManifestSustainedConsumptionAction
+        || ownerEvidenceSustainedConsumptionAction
         || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
         : providerWorkerRepair
@@ -720,8 +720,8 @@ async function executeRoute(
           ? codexAppRuntimeEvidence.result
         : domainOwnerPayloadSummary
           ? domainOwnerPayloadSummary.result
-        : magManifestSustainedConsumption
-          ? magManifestSustainedConsumption.result
+        : ownerEvidenceSustainedConsumption
+          ? ownerEvidenceSustainedConsumption.result
         : omaProductionConsumption
           ? omaProductionConsumption.result
         : options.dryRun

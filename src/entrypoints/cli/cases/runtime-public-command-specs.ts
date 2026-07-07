@@ -461,7 +461,7 @@ export function buildPublicRuntimeCommandSpecs(
       cloneCommandSpec(commandSpecs['runtime mag-manifest-sustained-consumption verify'], {
         usage: 'opl runtime mag-manifest-sustained-consumption verify [--receipt-ref <ref>]',
         examples: [
-          'opl runtime mag-manifest-sustained-consumption verify --receipt-ref opl://mag-manifest-sustained-consumption/medautogrant',
+          'opl runtime mag-manifest-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/medautogrant',
         ],
         group: 'runtime',
       }),

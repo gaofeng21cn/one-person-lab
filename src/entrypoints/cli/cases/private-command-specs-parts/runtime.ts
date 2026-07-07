@@ -25,8 +25,8 @@ import {
 import { buildRuntimeCodexAppRuntimeEvidenceCommandSpecs } from '../runtime-codex-app-runtime-evidence-command-spec.ts';
 import { buildRuntimeDomainOwnerPayloadSummaryCommandSpecs } from '../runtime-domain-owner-payload-summary-command-spec.ts';
 import {
-  buildRuntimeMagManifestSustainedConsumptionCommandSpecs,
-} from '../runtime-mag-manifest-sustained-consumption-command-spec.ts';
+  buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs,
+} from '../runtime-owner-evidence-sustained-consumption-command-spec.ts';
 import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from '../runtime-developer-mode-closeout-command-spec.ts';
 import { buildRuntimeOmaAppLivePathCommandSpecs } from '../runtime-oma-app-live-path-command-spec.ts';
 import { buildRuntimeOmaProductionConsumptionCommandSpecs } from '../runtime-oma-production-consumption-command-spec.ts';
@@ -318,7 +318,7 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeMemoryArtifactLifecycleEvidenceCommandSpecs(),
     ...buildRuntimeStandardAgentTemplateConsumptionCommandSpecs(),
     ...buildRuntimeDomainOwnerPayloadSummaryCommandSpecs(),
-    ...buildRuntimeMagManifestSustainedConsumptionCommandSpecs(),
+    ...buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs(),
     ...buildRuntimeStageReplayMissingReceiptCommandSpecs(),
     ...buildRuntimeStageRunAuthorizationCommandSpecs(),
     ...buildRuntimeStageTransitionAuthorityCommandSpecs(),
