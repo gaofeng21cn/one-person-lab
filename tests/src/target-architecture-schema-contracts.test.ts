@@ -400,12 +400,20 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     true,
   );
   assert.equal(
-    workspaceTopology.$defs.rca_series_profile.properties.project_collection_path.const,
+    workspaceTopology.$defs.series_profile.properties.project_collection_path.const,
     'projects',
   );
   assert.equal(
-    workspaceTopology.$defs.mas_portfolio_profile.properties.project_collection_path.const,
+    workspaceTopology.$defs.portfolio_profile.properties.project_collection_path.const,
     'projects',
+  );
+  assert.equal(
+    workspaceTopology.$defs.legacy_rca_series_profile.allOf[1].properties.canonical_profile_id.const,
+    'series',
+  );
+  assert.equal(
+    workspaceTopology.$defs.legacy_mas_portfolio_profile.allOf[1].properties.canonical_profile_id.const,
+    'portfolio',
   );
   assert.equal(
     workspaceTopology.properties.default_user_inspection_surface.properties.runtime_state_is_default_user_surface.const,
@@ -441,8 +449,16 @@ test('target architecture schema contracts keep owner delta root and audit tail 
     false,
   );
   assert.equal(
+    workspaceTopology.examples[0].default_profiles.portfolio.workspace_mode,
+    'portfolio',
+  );
+  assert.equal(
     workspaceTopology.examples[0].default_profiles.mas_portfolio.workspace_mode,
     'portfolio',
+  );
+  assert.equal(
+    workspaceTopology.examples[0].default_profiles.series.workspace_mode,
+    'series',
   );
   assert.equal(
     workspaceTopology.examples[0].default_profiles.rca_series.workspace_mode,

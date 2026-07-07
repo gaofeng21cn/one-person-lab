@@ -81,15 +81,24 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
   const oneOffWorkspaceProfile = isPlainRecord(defaultProfiles?.one_off)
     ? defaultProfiles.one_off
     : null;
-  const rcaSeriesWorkspaceProfile = isPlainRecord(defaultProfiles?.rca_series)
-    ? defaultProfiles.rca_series
+  const seriesWorkspaceProfile = isPlainRecord(defaultProfiles?.series)
+    ? defaultProfiles.series
     : null;
-  const masPortfolioWorkspaceProfile = isPlainRecord(defaultProfiles?.mas_portfolio)
-    ? defaultProfiles.mas_portfolio
+  const portfolioWorkspaceProfile = isPlainRecord(defaultProfiles?.portfolio)
+    ? defaultProfiles.portfolio
+    : null;
+  const legacyProfileAliases = isPlainRecord(workspaceTopologyProfile?.legacy_domain_profile_aliases)
+    ? workspaceTopologyProfile.legacy_domain_profile_aliases
+    : null;
+  const legacyMasPortfolioAlias = isPlainRecord(legacyProfileAliases?.mas_portfolio)
+    ? legacyProfileAliases.mas_portfolio
+    : null;
+  const legacyRcaSeriesAlias = isPlainRecord(legacyProfileAliases?.rca_series)
+    ? legacyProfileAliases.rca_series
     : null;
   const oneOffSharedResourceRoots = readStringArray(oneOffWorkspaceProfile?.shared_resource_roots);
-  const rcaSharedResourceRoots = readStringArray(rcaSeriesWorkspaceProfile?.shared_resource_roots);
-  const masSharedResourceRoots = readStringArray(masPortfolioWorkspaceProfile?.shared_resource_roots);
+  const seriesSharedResourceRoots = readStringArray(seriesWorkspaceProfile?.shared_resource_roots);
+  const portfolioSharedResourceRoots = readStringArray(portfolioWorkspaceProfile?.shared_resource_roots);
   const domainProfileDefaults = isPlainRecord(workspaceTopologyProfile?.domain_profile_defaults)
     ? workspaceTopologyProfile.domain_profile_defaults
     : null;
@@ -277,41 +286,41 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     oneOffSharedResourceRoots.includes('shared/sources')
       ? null
       : 'foundry_agent_series_workspace_topology_default_shared_sources_missing',
-    readOptionalString(masPortfolioWorkspaceProfile?.workspace_mode) === 'portfolio'
+    readOptionalString(portfolioWorkspaceProfile?.workspace_mode) === 'portfolio'
       ? null
-      : 'foundry_agent_series_workspace_topology_mas_mode_invalid',
-    readOptionalString(masPortfolioWorkspaceProfile?.project_collection_path) === 'projects'
+      : 'foundry_agent_series_workspace_topology_portfolio_mode_invalid',
+    readOptionalString(portfolioWorkspaceProfile?.project_collection_path) === 'projects'
       ? null
-      : 'foundry_agent_series_workspace_topology_mas_collection_path_invalid',
-    readOptionalString(masPortfolioWorkspaceProfile?.project_stage_outputs_root)
+      : 'foundry_agent_series_workspace_topology_portfolio_collection_path_invalid',
+    readOptionalString(portfolioWorkspaceProfile?.project_stage_outputs_root)
       === 'artifacts/stage_outputs'
       ? null
-      : 'foundry_agent_series_workspace_topology_mas_stage_outputs_root_invalid',
-    masSharedResourceRoots.includes('data')
+      : 'foundry_agent_series_workspace_topology_portfolio_stage_outputs_root_invalid',
+    portfolioSharedResourceRoots.includes('data')
       ? null
-      : 'foundry_agent_series_workspace_topology_mas_shared_data_missing',
-    masSharedResourceRoots.includes('literature')
+      : 'foundry_agent_series_workspace_topology_portfolio_shared_data_missing',
+    portfolioSharedResourceRoots.includes('literature')
       ? null
-      : 'foundry_agent_series_workspace_topology_mas_shared_literature_missing',
-    masSharedResourceRoots.includes('memory')
+      : 'foundry_agent_series_workspace_topology_portfolio_shared_literature_missing',
+    portfolioSharedResourceRoots.includes('memory')
       ? null
-      : 'foundry_agent_series_workspace_topology_mas_shared_memory_missing',
-    readOptionalString(rcaSeriesWorkspaceProfile?.workspace_mode) === 'series'
+      : 'foundry_agent_series_workspace_topology_portfolio_shared_memory_missing',
+    readOptionalString(seriesWorkspaceProfile?.workspace_mode) === 'series'
       ? null
-      : 'foundry_agent_series_workspace_topology_rca_mode_invalid',
-    readOptionalString(rcaSeriesWorkspaceProfile?.project_collection_path) === 'projects'
+      : 'foundry_agent_series_workspace_topology_series_mode_invalid',
+    readOptionalString(seriesWorkspaceProfile?.project_collection_path) === 'projects'
       ? null
-      : 'foundry_agent_series_workspace_topology_rca_collection_path_invalid',
-    readOptionalString(rcaSeriesWorkspaceProfile?.project_stage_outputs_root)
+      : 'foundry_agent_series_workspace_topology_series_collection_path_invalid',
+    readOptionalString(seriesWorkspaceProfile?.project_stage_outputs_root)
       === 'artifacts/stage_outputs'
       ? null
-      : 'foundry_agent_series_workspace_topology_rca_stage_outputs_root_invalid',
-    rcaSharedResourceRoots.includes('shared/brand')
+      : 'foundry_agent_series_workspace_topology_series_stage_outputs_root_invalid',
+    seriesSharedResourceRoots.includes('shared/brand')
       ? null
-      : 'foundry_agent_series_workspace_topology_rca_shared_brand_missing',
-    rcaSharedResourceRoots.includes('shared/visual_memory')
+      : 'foundry_agent_series_workspace_topology_series_shared_brand_missing',
+    seriesSharedResourceRoots.includes('shared/visual_memory')
       ? null
-      : 'foundry_agent_series_workspace_topology_rca_visual_memory_missing',
+      : 'foundry_agent_series_workspace_topology_series_visual_memory_missing',
     workspaceModes.includes('one_off')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_one_off_mode',
@@ -321,15 +330,21 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     workspaceModes.includes('portfolio')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_portfolio_mode',
-    readOptionalString(domainProfileDefaults?.mas) === 'mas_portfolio'
+    readOptionalString(domainProfileDefaults?.mas) === 'portfolio'
       ? null
       : 'foundry_agent_series_workspace_topology_mas_default_profile_invalid',
     readOptionalString(domainProfileDefaults?.mag) === 'one_off'
       ? null
       : 'foundry_agent_series_workspace_topology_mag_default_profile_invalid',
-    readOptionalString(domainProfileDefaults?.rca) === 'rca_series'
+    readOptionalString(domainProfileDefaults?.rca) === 'series'
       ? null
       : 'foundry_agent_series_workspace_topology_rca_default_profile_invalid',
+    readOptionalString(legacyMasPortfolioAlias?.canonical_profile_id) === 'portfolio'
+      ? null
+      : 'foundry_agent_series_workspace_topology_legacy_mas_alias_invalid',
+    readOptionalString(legacyRcaSeriesAlias?.canonical_profile_id) === 'series'
+      ? null
+      : 'foundry_agent_series_workspace_topology_legacy_rca_alias_invalid',
     readOptionalString(domainProfileDefaults?.oma) === 'one_off'
       ? null
       : 'foundry_agent_series_workspace_topology_oma_default_profile_invalid',
