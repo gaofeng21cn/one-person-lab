@@ -15,6 +15,7 @@ It is stdlib-only, writes nothing, performs no network or subprocess calls, and 
 - Treat OPL Connect as the program owner for registry lookup, source and skill search, candidate inspection, selective sync, API normalization, and connector invocation receipt candidates.
 - Treat this Skill as the AI judgment layer: decide whether external source or skill help is needed, which candidate fits the task and owner, whether the risk is too high, whether exactly one Skill should be synced, and how results should be handed to the owning domain.
 - Keep domain truth with the domain owner. Connect output and this Skill's judgment are candidate refs only.
+- Treat approved source registries, including `K-Dense-AI/scientific-agent-skills` when registered as `kdense-scientific-agent-skills`, as searchable source inventories, not default task context or default Codex metadata.
 
 ## AI-first / Contract-light Semantics
 
@@ -25,7 +26,7 @@ It is stdlib-only, writes nothing, performs no network or subprocess calls, and 
 ## Router Workflow
 
 1. Classify the request as `source_search`, `skill_search`, `candidate_inspect`, `single_skill_sync`, `connector_receipt_debug`, or `refs_only_review`.
-2. Start with search or an explicit selector. Use list/index views only for source review; do not turn a whole external library into default context.
+2. Start with search or an explicit selector. Use list/index views only for maintainer source review; do not turn a whole external library or its full metadata set into default context.
 3. Inspect the smallest plausible candidate before syncing. Check owner, source path or URL, capability kind, sync scope, expected target, authority boundary, and stale or missing source signals.
 4. Prefer one-skill sync. Sync only the selected Skill or refs-only subset needed for the current workspace or quest unless the domain owner explicitly requires a package-level install.
 5. For connector receipt debug, compare requested resource, normalized refs, invocation parameters, errors, no-authority flags, and receipt candidate path. Classify failures as access, normalization, receipt construction, sync target mismatch, or authority overclaim.
@@ -34,6 +35,7 @@ It is stdlib-only, writes nothing, performs no network or subprocess calls, and 
 ## Forbidden Claims
 
 - Do not full-install external skill libraries, source repos, runtime packages, caches, generated assets, or connector payloads by default.
+- Do not expose approved external source metadata broadly just because a source is registered; registration allows search, inspect, and selected sync only.
 - Do not treat connector metadata, registry entries, descriptor status, sync success, cache existence, package payload presence, or invocation receipts as domain truth, quality verdict, owner acceptance, artifact authority, typed blocker, human gate, release readiness, production readiness, or domain readiness.
 - Do not write domain truth, owner receipts, typed blockers, runtime queues, provider attempts, artifact bodies, quality verdicts, or live readiness surfaces from this Skill.
 - Do not promote a contract module, source index, or reference pack into a real Codex Skill unless there is a true stage prompt or professional Skill wrapper with its authority boundary stated.

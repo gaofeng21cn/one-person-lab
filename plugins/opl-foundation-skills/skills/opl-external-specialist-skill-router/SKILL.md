@@ -17,6 +17,9 @@ candidate.
   external Skill candidate and how to hand candidate refs back.
 - Domain truth stays with the domain owner. External Skill refs are candidate
   capability refs, not owner acceptance, quality verdicts, or readiness.
+- Approved sources such as `K-Dense-AI/scientific-agent-skills` are source
+  registries for search/inspect/sync. Approval does not make the full library
+  default context, a default install, or broad Codex metadata.
 - Do not bulk-load an external library, source tree, package index, or full
   Skill catalog into context.
 - Do not sign owner receipts, create typed blockers, issue domain verdicts,
@@ -52,7 +55,8 @@ Do not use it for work already covered by the active domain professional Skills.
    keywords, risk flags, trigger policy, license, source ref, and no-authority
    boundary.
 4. Sync only that selected Skill when the current workspace or quest needs it.
-   Do not bulk-sync a source.
+   Do not bulk-sync a source, expose all source metadata, or add a new physical
+   router Skill for a small category.
 5. Hand off source refs, selected Skill id, inspect evidence, optional sync
    receipt ref, residual risk, and the next legal domain-owner action.
 
@@ -64,9 +68,11 @@ opl connect external-skills inspect --skill <source>/<skill-id> --json
 opl connect external-skills sync --skill <source>/<skill-id> --scope workspace --target-workspace <workspace-root> --json
 ```
 
-Use `--source-root` only as a maintainer override for an already available local
-checkout. Use `list` only for maintainer source-index review; it is not the
-normal task entry because it can expose the whole external library metadata set.
+Use `--source kdense-scientific-agent-skills` or its approved alias `kdense` for
+the current K-Dense scientific-agent-skills source. Use `--source-root` only as a
+maintainer override for an already available local checkout. Use `list` only for
+maintainer source-index review; it is not the normal task entry because it can
+expose the whole external library metadata set.
 
 ## Output Shape
 
@@ -82,4 +88,4 @@ Return:
 - `authority_boundary`: no owner receipts, no typed blockers, no domain verdicts,
   no artifact authority, no runtime truth, and no readiness claims.
 
-Scientific routing note: this is also the canonical route for rare scientific tools, databases, workflows, and methods. There is no separate scientific alias Skill; use the smallest query and approved source selector instead of exposing another compatibility entry.
+Scientific routing note: this is also the canonical route for rare scientific tools, databases, workflows, and methods. There is no separate scientific alias Skill; use the smallest query and approved source selector instead of exposing another compatibility entry or creating one physical Skill per small scientific module.
