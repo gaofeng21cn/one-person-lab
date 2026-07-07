@@ -90,7 +90,7 @@ type SourceStructureReadbackOptions = {
 };
 
 function currentSourceRoot() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 }
 
 function positiveInteger(value: unknown) {

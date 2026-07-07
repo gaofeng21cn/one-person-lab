@@ -55,7 +55,7 @@ test('framework tranche backlog exposes generated surface and domain source guar
   assert.equal(
     readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
       .domain_pack_compiler_family_readback.summary.generated_surface_count,
-    48,
+    40,
   );
   assert.equal(
     readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
@@ -65,7 +65,15 @@ test('framework tranche backlog exposes generated surface and domain source guar
   assert.equal(
     readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
       .domain_pack_compiler_family_readback.summary.generated_surface_blocked_count,
-    8,
+    0,
+  );
+  assert.equal(
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .domain_pack_compiler_family_readback.summary.generated_surface_count,
+    readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+      .domain_pack_compiler_family_readback.summary.generated_surface_ready_count
+      + readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
+        .domain_pack_compiler_family_readback.summary.generated_surface_blocked_count,
   );
   assert.equal(
     readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
@@ -80,7 +88,7 @@ test('framework tranche backlog exposes generated surface and domain source guar
   assert.equal(
     readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
       .generated_interfaces_family_readback.consumption_status_counts.blocked,
-    8,
+    0,
   );
   assert.ok(
     readback.generated_hosted_surface_boundary.generated_surface_consumption_guard
