@@ -23,7 +23,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 
 | 范围 | 发现 | 合理性 | 优化空间 |
 | --- | --- | --- | --- |
-| OPL foundation support skills | 45 个 source skill，全部由 `plugins/opl-foundation-skills/exposure.json` 管理；当前分布为 `developer_codex=22`、`project_local=16`、`workspace_local=7`。 | 基本合理。它们是 framework support / reviewer / router，不是 domain professional pack，也没有默认 global user 暴露。 | 后续新增必须先填 admission record；优先复用 router/reviewer，避免为每个小任务新增 support Skill。 |
+| OPL foundation support skills | 27 个 source skill，全部由 `plugins/opl-foundation-skills/exposure.json` 管理；当前分布为 `developer_codex=6`、`project_local=15`、`workspace_local=6`。 | 基本合理。它们是 framework support / reviewer / router，不是 domain professional pack，也没有默认 global user 暴露。 | 后续新增必须先填 admission record；优先复用 router/reviewer，避免为每个小任务新增 support Skill。 |
 | MAS | MAS 本仓无 repo-local `agent/professional_skills`；`contracts/capability_map.json` 声明 13 个能力，其中 8 个 professional skill 指向外置 `mas-scholar-skills`。 | 合理。MAS 保持 stage / runtime / owner authority，专业方法由外置包承接。 | 继续避免 MAS 仓内复制 ScholarSkills 正文或 optional specialist catalog。 |
 | MAS ScholarSkills | 33 个真实 Codex Skill；默认 Codex exposure 为 false；默认 compact sync 只包含 aggregate + core skills，optional specialist 必须 named specialty / explicit developer。 | 合理。它是 OPL-owned 外置专业能力包，不是 MAS truth owner。 | optional skill 数量已大，新增 optional 必须证明 default core 覆盖不到，并保留 no-authority handoff。 |
 | MAG | 8 个 repo-local professional skills，全部进入 `contracts/capability_map.json`；另有 stage prompt、tool connector、reference pack、contract module。 | 合理。Grant 方法留 repo-local，authority 留 MAG。 | stage control plane 主要引用 `agent/skills/grant_authoring.md`，如未来需要 executor 直接按 specialist 注入，可从 capability map 投影，不另建新目录。 |
