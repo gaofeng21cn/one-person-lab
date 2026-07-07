@@ -171,6 +171,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(modalCatalog.env_id_counts_as_runtime_ready, false);
   assert.equal(sandboxPolicy.provider_role, 'post_default_execution_isolation_substrate');
   assert.equal(sandboxPolicy.e2b_default_dependency, false);
+  assert.equal(sandboxPolicy.e2b_package_dependency_class, 'optional_dependency');
   assert.equal(sandboxPolicy.e2b_connect_configuration_assist_only, true);
   const localSandboxReadbackPolicy = sandboxPolicy.local_sandbox_provider_readback_policy as Json;
   assert.equal(localSandboxReadbackPolicy.local_docker_status, 'local_docker_preflight_required');
@@ -188,6 +189,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
     (entry) => entry.substrate === 'e2b',
   ) as Json;
   assert.equal(e2bCatalogEntry.default_dependency, false);
+  assert.equal(e2bCatalogEntry.package_dependency_class, 'optional_dependency');
   assert.equal(e2bCatalogEntry.connect_role, 'external_provider_configuration_assist');
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('provider_receipt_ref'), true);
   assert.equal((sandboxPolicy.adapter_owned_fields as string[]).includes('sandbox_binding_ref'), true);
@@ -473,6 +475,9 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(plan.status, 'external_sandbox_provider_adapter_unconfigured');
   assert.equal(plan.provider_role, 'agent_sandbox_execution_substrate');
   assert.deepEqual(plan.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.equal(plan.e2b_default_dependency, false);
+  assert.equal(plan.e2b_package_dependency_class, 'optional_dependency');
+  assert.equal(plan.e2b_connect_configuration_assist_only, true);
   assert.deepEqual((plan.modal_like_env_spec_catalog as Json).env_ids, modalLikeEnvSpecIds);
   assert.equal((plan.modal_like_env_spec_catalog as Json).env_id_counts_as_provider_ready, false);
   assert.deepEqual((plan.model_endpoint_provider_family as Json).required_endpoint_refs, [

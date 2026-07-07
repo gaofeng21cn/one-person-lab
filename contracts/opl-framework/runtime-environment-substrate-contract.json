@@ -236,6 +236,7 @@
         "substrate": "e2b",
         "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs",
         "default_dependency": false,
+        "package_dependency_class": "optional_dependency",
         "connect_role": "external_provider_configuration_assist"
       },
       {
@@ -274,6 +275,7 @@
     },
     "provider_role": "post_default_execution_isolation_substrate",
     "e2b_default_dependency": false,
+    "e2b_package_dependency_class": "optional_dependency",
     "e2b_connect_configuration_assist_only": true,
     "external_provider_owns": [
       "isolated_filesystem",

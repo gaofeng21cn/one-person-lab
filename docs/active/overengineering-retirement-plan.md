@@ -90,6 +90,7 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 
 - `OPL Pack / Pack OS`：`pack-os.ts` 的 CLI 参数解析样板移到邻近 `pack-os-parts/cli-args.ts`，主文件保留 Pack OS 行为编排和 public builder/runner exports；未新增 CLI framework、未改变 refs-only pack authority boundary。
 - `OPL Runway`：`runtime-environment-substrate.ts` 的 build readback 移到 `runtime-environment-substrate-parts/build-readback.ts`，主文件只 re-export public function；保留 runtime environment false-ready / no-authority payload shape。
+- `OPL Runway runtime env / E2B optional adapter candidate`：候选 lane `codex/overeng-runway-20260707` 继续收薄 `runtime-environment-substrate.ts` 与 runtime env command-surface test：doctor readback 移到邻近 part，测试 fixture/helper 移到邻近 helper；`e2b` 从默认 dependency 移到 `optionalDependencies`，contract/readback 显式标记 `e2b_package_dependency_class=optional_dependency`。该候选只证明 package/结构边界，不声明 E2B provider ready、runtime ready、domain ready 或 production readiness；共享 root checkout 仍有同写集 dirty，需主会话做吸收门禁。
 - `Fallow source hygiene`：删除 3 个 fallow 证明的私有 unused wrapper/source hygiene 文件：`functional-privatization-audit-types.ts`、`opl-runtime-paths/shared.ts`、`family-workspace-root.ts`。拒绝删除 public barrel、dynamic/action surface、GitHub action runtime surface 与 owner-answer projection surface。
 - `2026-07-07` 主线验证读回：`node ./scripts/line-budget.mjs --format json` 为 `status=ok`、`oversize_count=0`；`hygiene:fallow` unused files 从 9 降到 6，剩余 6 个均需 dynamic/public/owner surface 复核，不能按 aggregate count 批量删。
 

@@ -100,8 +100,7 @@
     "@temporalio/common": "^1.18.1",
     "@temporalio/worker": "^1.18.1",
     "@temporalio/workflow": "^1.18.1",
-    "ajv": "^8.20.0",
-    "e2b": "^2.31.0"
+    "ajv": "^8.20.0"
   },
   "devDependencies": {
     "@temporalio/testing": "^1.18.1",
@@ -111,5 +110,8 @@
   "overrides": {
     "protobufjs": "7.6.4"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "optionalDependencies": {
+    "e2b": "^2.31.0"
+  }
 }
