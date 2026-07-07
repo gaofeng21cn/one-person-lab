@@ -7,12 +7,14 @@ import {
 } from '../../atlas/public/standard-agent-registry.ts';
 
 export type SkillPackInstallerKind = 'bash' | 'node';
-export type SkillPackSourceKind = 'repo_plugin_installer' | 'opl_generated_plugin_surface';
+export type SkillPackSourceKind = 'opl_standard_codex_carrier' | 'repo_plugin_installer';
 export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
 export type SkillPackSyncScope = 'project' | 'codex' | 'workspace' | 'quest';
 export type SkillPackTargetProject = 'medautoscience';
 export type StandardAgentSeriesMembership = 'standard_domain_agent';
-export type SkillPackSourceKindRole = 'transport_install_detail_not_agent_membership_or_status';
+export type SkillPackSourceKindRole =
+  | 'standard_source_model_not_agent_membership_or_status'
+  | 'transport_install_detail_not_agent_membership_or_status';
 export type SkillPackManagementModel = 'opl_managed_codex_plugin_surface';
 
 export type SkillPackSpec = {
@@ -32,8 +34,8 @@ export type InspectFamilySkillPackPluginTransport = {
   surface_kind: 'opl_connect_plugin_transport';
   source_kind: SkillPackSourceKind;
   source_kind_role: SkillPackSourceKindRole;
-  repo_plugin_installer: boolean;
-  opl_generated_plugin_surface: boolean;
+  standard_codex_carrier: boolean;
+  materializer: 'opl_standard_codex_plugin_materializer' | 'repo_plugin_installer';
   generated_skill_surface_ready: boolean;
   generated_skill_surface_status: string | null;
   installer_kind: SkillPackInstallerKind;

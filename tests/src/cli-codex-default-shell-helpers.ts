@@ -141,6 +141,26 @@ const fakeFamilySkillDescriptions: Record<string, string> = {
   'opl-bookforge': 'Use when Codex should operate OPL Book Forge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
 };
 
+function writeFakePrimarySkill(repoRoot: string, skillName: string, heading: string, body: string) {
+  const primarySkillRoot = path.join(repoRoot, 'agent', 'primary_skill');
+  fs.mkdirSync(primarySkillRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(primarySkillRoot, 'SKILL.md'),
+    [
+      '---',
+      `name: ${skillName}`,
+      `description: ${fakeFamilySkillDescriptions[skillName] ?? fakeFamilySkillDescriptions[heading] ?? `${heading} primary skill fixture.`}`,
+      '---',
+      '',
+      `# ${heading}`,
+      '',
+      body,
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+}
+
 export const retiredCliCommandMatrix: Array<{
   args: string[];
   command: string;
@@ -350,6 +370,12 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
     fs.mkdirSync(skillRoot, { recursive: true });
     fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    writeFakePrimarySkill(
+      repoRoot,
+      spec.canonicalPlugin,
+      `${spec.canonicalPlugin.toUpperCase()} Primary Skill`,
+      `This fixture represents the repo-owned rich primary skill for ${spec.project}. The tracked legacy plugin skill is only a compatibility mirror.`,
+    );
     fs.writeFileSync(
       path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
       JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
@@ -379,6 +405,12 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
   fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'runtime', 'authority_functions'), { recursive: true });
+  writeFakePrimarySkill(
+    repoRoot,
+    'opl-meta-agent',
+    'OPL Meta Agent',
+    'Use this rich primary skill to design, test, improve, or take over testing for OPL-compatible Foundry Agents. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
+  );
   fs.writeFileSync(
     path.join(repoRoot, 'agent', 'skills', 'opl-meta-agent-domain-skill.md'),
     [
@@ -600,6 +632,12 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
 export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
   fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
+  writeFakePrimarySkill(
+    repoRoot,
+    'opl-bookforge',
+    'OPL Book Forge',
+    'Use this rich primary skill to shape book storylines, materialize chapters, plan figures and tables, run style checks, and prepare owner-gated export handoff. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
+  );
   fs.writeFileSync(
     path.join(repoRoot, 'agent', 'skills', 'book-production.md'),
     [

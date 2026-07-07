@@ -12,7 +12,7 @@
     "artifacts"
   ],
   "repo_source_boundary": {
-    "agent": "stage descriptors, prompt refs, skill refs, knowledge refs, and domain entry metadata",
+    "agent": "repo-owned rich primary skill, stage descriptors, prompt refs, professional skill refs, knowledge refs, and domain entry metadata",
     "contracts": "machine-readable descriptor, generated-surface handoff, quality gate, receipt, and artifact locator contracts",
     "runtime": "minimal authority functions, domain handler targets, opaque ref projection outputs, and necessary native helpers only; generated sidecar, status, workbench, lifecycle, queue, ledger, and dispatch shells are OPL-owned",
     "docs": "human-readable governance, status, roadmap, and migration notes"
@@ -65,6 +65,14 @@
       "write_requires_explicit_target_dir": true,
       "template_source_of_truth": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json",
       "copy_existing_domain_repo_as_template": false
+    },
+    "required_primary_skill": {
+      "surface_kind": "opl_standard_agent_primary_skill_requirement",
+      "path": "agent/primary_skill/SKILL.md",
+      "role": "rich_default_codex_entry_source",
+      "codex_carrier_materializer": "one-person-lab opl_standard_codex_plugin_materializer",
+      "action_catalog_role": "append_command_contract_readback_not_primary_skill_source",
+      "required_for_standard_agent": true
     },
     "domain_id": "new-domain-agent",
     "domain_label": "New Domain Agent",

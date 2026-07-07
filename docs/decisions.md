@@ -7,16 +7,17 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-07
 
-### 决策：Agent 对外叙事统一为 OPL Agent Package，Codex Plugin 只作为 carrier detail
+### 决策：Agent Package 抽象统一，标准 Agent 的 Codex carrier 由 repo-owned primary skill 统一物化
 
-原因：同一个标准 OPL Agent 需要同时服务 Codex App 独立安装和 OPL App 托管管理。把两者说成两个不同智能体会制造身份割裂；把两者强行合并成同一个物理 carrier 又会丢失 App 侧 package graph、依赖、更新、receipt 和 Developer Mode 边界。正确口径是统一用户抽象，不统一物理 carrier。
+原因：同一个标准 OPL Agent 需要同时服务 Codex App 独立安装和 OPL App 托管管理。把两者说成两个不同智能体会制造身份割裂；让 MAS/MAG/RCA 保留旧 repo plugin installer，而让 OMA/OBF 走 OPL hardcoded generated skill，也会制造第二套物理行为。正确口径是：用户抽象统一为 `OPL Agent Package`；标准 agent 的 Codex Plugin carrier 统一由 repo-owned `agent/primary_skill/SKILL.md` materialize；OPL App 继续管理 package graph、依赖、更新、receipt、Developer Mode 和 shortcut/action refs，不把这些上层管理面写进 Codex plugin 格式。
 
 影响：
 
 - 用户叙事统一为“安装 / 管理 OPL Agent Package”；Codex Plugin、OPL App module、Capability Pack、MCP/Web/native surface 都只是 carrier / projection detail。
 - 标准 agent 公共身份继续来自 standard agent registry 和 Foundry Agent series；plugin transport、generated surface 或 OPL App shortcut 不能成为 membership/status 轴。
 - `contracts/opl-framework/foundry-agent-series-contract.json#agent_package_exposure_unification_policy` 是该规则的机器入口；`opl connect skills --json` 必须投影 `agent_package_exposure_model`。
-- 物理 carrier 仍保留差异：Codex App 可用 self-contained plugin；OPL App 使用 thin agent package、managed dependency graph、package lifecycle receipt 和 shortcut/action refs。
+- 标准 domain agent 的 Codex Plugin carrier 物理路径统一：domain repo 持有 rich primary skill 源，OPL Connect / materializer 生成 self-contained Codex plugin、marketplace wrapper 和 cache；旧 repo plugin 目录只能作为兼容 carrier / provenance mirror。
+- OPL App 不以 Codex plugin 格式作为主接口；它使用同一 Agent Package 抽象上的 managed dependency graph、package lifecycle receipt、exposure policy、shortcut/action refs 和 Developer Mode source channel。
 - App / carrier adapter 不拥有 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
 
 ### 决策：专业 Skill 默认按需暴露，metadata 也按暴露面治理
@@ -1028,10 +1029,10 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - One Person Lab App、`opl install`、`opl system initialize`、`opl connect modules`、`opl connect sync-skills` 与 Codex-visible plugin/skill metadata 默认以 OPL-managed modules 为产品运行来源。旧 `opl modules` 与 `opl skill sync` 已退役并 fail closed 到 Connect 替代入口，不作为机器或用户前门。
-- App 启动维护可以自动检查 managed module 是否 behind、skill/plugin metadata 是否 stale、health check 是否通过，并在 checkout clean 且可 fast-forward 时自动更新、同步和刷新投影；当 Developer Mode source channel 已命中本机开发 checkout 时，启动维护只对该外部 checkout 执行 tracked plugin source sync 与 health check，不做 bootstrap、pull、install、domain plugin installer 或 managed 覆盖。
+- App 启动维护可以自动检查 managed module 是否 behind、skill/plugin metadata 是否 stale、health check 是否通过，并在 checkout clean 且可 fast-forward 时自动更新、同步和刷新投影；当 Developer Mode source channel 已命中本机开发 checkout 时，启动维护只对该外部 checkout 执行 primary-skill carrier materialization 与 health check，不做 bootstrap、pull、install、domain plugin installer 或 managed 覆盖。
 - managed checkout 处于 dirty、ahead、diverged、no upstream、health check failed 或需要 Codex App restart/reload 时，启动维护必须停止自动覆盖并展示人工处理状态。
 - developer checkout 只通过显式开发模式、环境变量、workspace registry 或命令行 override 进入当前运行路径；默认 `auto` 配置在 GitHub identity 等于 `auto_enable_github_login`（当前默认 `gaofeng21cn`）且 mode 为 `developer_apply_safe` 时，等价命中 Developer Mode local checkout source channel。App 必须显示当前使用的是 managed checkout 还是 developer checkout。
-- 不得用 developer checkout 静默覆盖 managed runtime，不得把 Codex plugin cache、`~/.codex/skills` 或 domain repo 下的 `.agents/plugins/marketplace.json` 当成第二真相源；它们只是 active source channel 的本地投影。MAS/MAG/RCA 的 Codex config marketplace `source` 由 OPL 写到 `OPL_STATE_DIR/codex-plugin-marketplaces/<marketplace-id>` 这一 OPL-owned wrapper root；wrapper 内 `plugins/<plugin-id>` 是 OPL 从当前 active repo tracked plugin source 生成的 canonical Codex projection，会把 manifest / skill frontmatter / UI prompt 投影为 `mas`、`mag`、`rca`，但不把短名写回 domain repo 的 package/source identity。Developer Mode 命中开发 checkout 时不得继续读取 OPL-managed module copy，也不得为了刷新 Codex metadata 在 MAS/MAG/RCA 开发 checkout 写入 `.agents/plugins/marketplace.json`。OMA/OBF 的 Codex 可见入口分别使用 `oma`/`obf` 短名，由 OPL 从 OMA/BookForge contract pack 生成 plugin source，再通过同一 OPL-owned wrapper 暴露；对应 domain repo 只提供 contract/generation input。
+- 不得用 developer checkout 静默覆盖 managed runtime，不得把 Codex plugin cache、`~/.codex/skills` 或 domain repo 下的 `.agents/plugins/marketplace.json` 当成第二真相源；它们只是 active source channel 的本地投影。标准 domain agent 的 Codex config marketplace `source` 由 OPL 写到 `OPL_STATE_DIR/codex-plugin-marketplaces/<marketplace-id>` 这一 OPL-owned wrapper root；wrapper 内 `plugins/<plugin-id>` 是 OPL 从当前 active repo 的 `agent/primary_skill/SKILL.md` 和 action-contract readback 生成的 canonical Codex carrier，会把 Codex-visible id 投影为 `mas`、`mag`、`rca`、`oma`、`obf`，但不把短名写回 domain repo 的 package/source identity。Developer Mode 命中开发 checkout 时不得继续读取 OPL-managed module copy，也不得为了刷新 Codex metadata 在 domain agent 开发 checkout 写入 `.agents/plugins/marketplace.json`。旧 repo plugin 目录只能作为 compat/provenance mirror，不能替代 primary skill source。
 - managed module health check 必须调用目标 module 的真实验证入口。OPL Meta Agent 的 repo-owned contract 是 `scripts/verify.sh smoke|typecheck|full`，因此 OPL 对 `oplmetaagent` 使用 `smoke` lane；OPL 不要求 OMA 添加 `fast` 兼容 alias，也不把 OPL 自身 lane vocabulary 强加给目标仓。
 - `opl family-runtime intake|tick --hydrate` 使用 `OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE` 时，也必须先通过 OPL module locator 解析 active MAS module checkout，再以 `uv run --directory <checkout> --extra analysis medautosci sidecar export ...` 调用 domain sidecar；不得裸调用 PATH 上的旧 `medautosci` 工具。DM002 这类 live paper hydrate 的完成证据是 OPL queue/stage-attempt evidence 加 MAS owner receipt 或 typed blocker，不是 MAS 内部 runtime liveness/resume 投影。
 - 该决策不改变 domain truth、quality verdict、artifact authority 或 direct app skill path 的 owner。MAS/MAG/RCA 继续持有领域权威；OPL/App 只管理安装、发现、同步、投影、health 和可见维护状态。

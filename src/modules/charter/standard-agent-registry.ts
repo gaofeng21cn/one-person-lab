@@ -10,7 +10,7 @@ export type StandardAgentRegistryEntry = {
   canonical_plugin_name: string;
   project: string;
   module_id: string;
-  source_kind: 'repo_plugin_installer' | 'opl_generated_plugin_surface';
+  source_kind: 'opl_standard_codex_carrier' | 'repo_plugin_installer';
   installer_kind: 'bash' | 'node';
   installer_relative_paths: readonly string[];
   domain_alias: string;
@@ -36,7 +36,7 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'mas',
     project: 'med-autoscience',
     module_id: 'MEDAUTOSCIENCE',
-    source_kind: 'repo_plugin_installer',
+    source_kind: 'opl_standard_codex_carrier',
     installer_kind: 'bash',
     installer_relative_paths: ['scripts/install-codex-plugin.sh'],
     domain_alias: 'study',
@@ -64,7 +64,7 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'mag',
     project: 'med-autogrant',
     module_id: 'MEDAUTOGRANT',
-    source_kind: 'repo_plugin_installer',
+    source_kind: 'opl_standard_codex_carrier',
     installer_kind: 'bash',
     installer_relative_paths: ['scripts/install-codex-plugin.sh'],
     domain_alias: 'grant',
@@ -92,7 +92,7 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'rca',
     project: 'redcube-ai',
     module_id: 'REDCUBE',
-    source_kind: 'repo_plugin_installer',
+    source_kind: 'opl_standard_codex_carrier',
     installer_kind: 'node',
     installer_relative_paths: [
       'scripts/install-codex-plugin.ts',
@@ -123,7 +123,7 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'oma',
     project: 'opl-meta-agent',
     module_id: 'OPLMETAAGENT',
-    source_kind: 'opl_generated_plugin_surface',
+    source_kind: 'opl_standard_codex_carrier',
     installer_kind: 'node',
     installer_relative_paths: [],
     domain_alias: 'agent',
@@ -158,7 +158,7 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'obf',
     project: 'opl-bookforge',
     module_id: 'OPLBOOKFORGE',
-    source_kind: 'opl_generated_plugin_surface',
+    source_kind: 'opl_standard_codex_carrier',
     installer_kind: 'node',
     installer_relative_paths: [],
     domain_alias: 'book',
@@ -195,7 +195,7 @@ export const STANDARD_AGENT_REGISTRY = [
     canonical_plugin_name: 'mas-scholar-skills',
     project: 'mas-scholar-skills',
     module_id: 'SCHOLARSKILLS',
-    source_kind: 'opl_generated_plugin_surface',
+    source_kind: 'repo_plugin_installer',
     installer_kind: 'node',
     installer_relative_paths: [],
     domain_alias: 'scholarskills',

@@ -17,7 +17,7 @@ function recordList(value: unknown): Array<Record<string, unknown>> {
 }
 
 export function inspectGeneratedSkillSurface(spec: SkillPackSpec, repoRoot: string) {
-  if (spec.source_kind !== 'opl_generated_plugin_surface') {
+  if (spec.source_kind !== 'opl_standard_codex_carrier') {
     return {
       ready: false,
       status: null,
@@ -71,6 +71,116 @@ type GeneratedCodexPluginSpec = {
 };
 
 function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedCodexPluginSpec {
+  if (inspected.canonical_plugin_name === 'mas') {
+    return {
+      skillDescription: 'Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
+      heading: 'Med Auto Science',
+      intro: 'Use this skill for MedAutoScience paper-mission and research-delivery workflows. This surface is materialized by OPL Framework from the MAS repo-owned rich primary skill.',
+      authorityBoundary: [
+        'MAS owns medical research truth, study runtime state, paper artifact authority, publication quality verdicts, owner receipts, and typed blockers.',
+        'OPL owns the Codex carrier materialization and plugin registration surface only.',
+        'Do not treat plugin sync or generated interface readiness as study ready, paper ready, production ready, or owner accepted.',
+      ],
+      displayName: 'Med Auto Science',
+      shortDescription: 'Research Foundry Agent for paper-mission delivery.',
+      defaultPrompt: 'Use $mas to operate a MedAutoScience study, paper mission, source intake, analysis, manuscript, review, or owner handoff.',
+      pluginDescription: 'OPL materialized Codex plugin carrier for MedAutoScience.',
+      homepage: 'https://github.com/gaofeng21cn/med-autoscience',
+      repository: 'https://github.com/gaofeng21cn/med-autoscience',
+      keywords: ['opl', 'mas', 'medical-research', 'codex', 'foundry-agent'],
+      category: 'Research',
+      longDescription: 'Adds an OPL materialized Codex plugin entry for MedAutoScience while preserving MAS as the domain owner for research truth, study runtime, and paper delivery authority.',
+      capabilities: ['Interactive', 'Write'],
+      defaultPrompts: [
+        'Use MAS to inspect the current study runtime and route the next paper-mission step.',
+        'Use MAS to advance a source-grounded manuscript, analysis, review, or owner handoff without bypassing domain authority.',
+      ],
+      brandColor: '#2B6C5C',
+      icon: {
+        ariaLabel: 'Med Auto Science icon',
+        background: '#2B6C5C',
+        paths: [
+          '<path d="M18 46C28 24 36 24 46 46" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>',
+          '<path d="M23 34H41" stroke="#9AF0C8" stroke-width="5" stroke-linecap="round"/>',
+          '<path d="M32 16V44" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>',
+        ],
+      },
+    };
+  }
+
+  if (inspected.canonical_plugin_name === 'mag') {
+    return {
+      skillDescription: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',
+      heading: 'Med Auto Grant',
+      intro: 'Use this skill for Med Auto Grant funding strategy and grant-authoring workflows. This surface is materialized by OPL Framework from the MAG repo-owned rich primary skill.',
+      authorityBoundary: [
+        'MAG owns grant truth, fundability verdicts, package authority, owner receipts, and typed blockers.',
+        'OPL owns the Codex carrier materialization and plugin registration surface only.',
+        'Do not treat plugin sync or generated interface readiness as grant ready, submission ready, production ready, or owner accepted.',
+      ],
+      displayName: 'Med Auto Grant',
+      shortDescription: 'Grant Foundry Agent for funding-package delivery.',
+      defaultPrompt: 'Use $mag to operate a grant strategy, draft, review, fundability, package, or owner handoff workflow.',
+      pluginDescription: 'OPL materialized Codex plugin carrier for Med Auto Grant.',
+      homepage: 'https://github.com/gaofeng21cn/med-autogrant',
+      repository: 'https://github.com/gaofeng21cn/med-autogrant',
+      keywords: ['opl', 'mag', 'grant-writing', 'codex', 'foundry-agent'],
+      category: 'Research',
+      longDescription: 'Adds an OPL materialized Codex plugin entry for Med Auto Grant while preserving MAG as the grant-domain authority owner.',
+      capabilities: ['Interactive', 'Write'],
+      defaultPrompts: [
+        'Use MAG to shape a grant strategy, draft a grant section, or prepare owner-gated funding-package handoff.',
+        'Use MAG to audit a grant package for fundability, compliance, missing evidence, and owner-decision blockers.',
+      ],
+      brandColor: '#6C4A9B',
+      icon: {
+        ariaLabel: 'Med Auto Grant icon',
+        background: '#6C4A9B',
+        paths: [
+          '<path d="M18 17H46V47H18Z" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linejoin="round"/>',
+          '<path d="M24 27H40M24 36H36" stroke="#F3D28A" stroke-width="4.5" stroke-linecap="round"/>',
+          '<path d="M40 17V28L35 25L30 28V17" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linejoin="round"/>',
+        ],
+      },
+    };
+  }
+
+  if (inspected.canonical_plugin_name === 'rca') {
+    return {
+      skillDescription: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
+      heading: 'RedCube AI',
+      intro: 'Use this skill for RedCube AI visual-deliverable workflows. This surface is materialized by OPL Framework from the RCA repo-owned rich primary skill.',
+      authorityBoundary: [
+        'RCA owns visual truth, layout quality/export verdicts, artifact mutation authority, owner receipts, and typed blockers.',
+        'OPL owns the Codex carrier materialization and plugin registration surface only.',
+        'Do not treat plugin sync or generated interface readiness as deck ready, export ready, production ready, or owner accepted.',
+      ],
+      displayName: 'RedCube AI',
+      shortDescription: 'Visual Foundry Agent for deck and deliverable production.',
+      defaultPrompt: 'Use $rca to operate a visual deliverable, deck, layout review, export, or owner handoff workflow.',
+      pluginDescription: 'OPL materialized Codex plugin carrier for RedCube AI.',
+      homepage: 'https://github.com/gaofeng21cn/redcube-ai',
+      repository: 'https://github.com/gaofeng21cn/redcube-ai',
+      keywords: ['opl', 'rca', 'presentation', 'visual-deliverable', 'codex'],
+      category: 'Creative',
+      longDescription: 'Adds an OPL materialized Codex plugin entry for RedCube AI while preserving RCA as the visual-deliverable authority owner.',
+      capabilities: ['Interactive', 'Write'],
+      defaultPrompts: [
+        'Use RCA to prepare or repair a deck, visual package, layout review, or export handoff.',
+        'Use RCA to audit a visual deliverable for structure, design quality, missing assets, export blockers, and owner-gated decisions.',
+      ],
+      brandColor: '#A93232',
+      icon: {
+        ariaLabel: 'RedCube AI icon',
+        background: '#A93232',
+        paths: [
+          '<path d="M18 21L32 13L46 21V43L32 51L18 43Z" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linejoin="round"/>',
+          '<path d="M18 21L32 29L46 21M32 29V51" fill="none" stroke="#FFD0D0" stroke-width="4.5" stroke-linejoin="round"/>',
+        ],
+      },
+    };
+  }
+
   if (inspected.canonical_plugin_name === 'obf') {
     return {
       skillDescription: 'Use when Codex should operate OPL Book Forge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
@@ -227,37 +337,20 @@ function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedC
 function buildOplGeneratedSkillMarkdown(
   inspected: InspectFamilySkillPack,
   descriptors: Array<Record<string, unknown>>,
+  primarySkillText: string,
 ) {
-  const pluginSpec = generatedCodexPluginSpec(inspected);
   const workflowLines = descriptors.map((descriptor) => [
     `- \`${String(descriptor.action_id ?? descriptor.command_contract_id ?? 'unknown_action')}\`: ${String(descriptor.summary ?? '').trim()}`,
     `  Command contract: \`${String(descriptor.command_contract_id ?? 'unknown_contract')}\``,
   ].join('\n')).join('\n');
 
   return [
-    '---',
-    `name: ${inspected.canonical_plugin_name}`,
-    `description: ${pluginSpec.skillDescription}`,
-    '---',
-    '',
-    `# ${pluginSpec.heading}`,
-    '',
-    pluginSpec.intro,
+    primarySkillText.trimEnd(),
     '',
     '## Generated Action Contracts',
     '',
     workflowLines || '- No generated action contracts were exposed.',
     '',
-    '## Authority Boundary',
-    '',
-    ...pluginSpec.authorityBoundary.map((line) => `- ${line}`),
-    '',
-    ...(pluginSpec.generatedSkillSections ?? []).flatMap((section) => [
-      `## ${section.title}`,
-      '',
-      ...section.body,
-      '',
-    ]),
   ].join('\n');
 }
 
@@ -341,8 +434,18 @@ function syncGeneratedPluginCache(
   return cacheRoot;
 }
 
+function readActionContractDescriptors(repoRoot: string) {
+  try {
+    const generated = buildRepoGeneratedInterfaceBundle(repoRoot, 'skill');
+    const skillBlock = isRecord(generated.bundle.skill) ? generated.bundle.skill : null;
+    return recordList(skillBlock?.descriptors);
+  } catch {
+    return [];
+  }
+}
+
 export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack, home?: string) {
-  if (inspected.source_kind !== 'opl_generated_plugin_surface' || !inspected.generated_skill_surface_ready) {
+  if (inspected.source_kind !== 'opl_standard_codex_carrier' || !inspected.ready_to_sync) {
     return null;
   }
 
@@ -351,10 +454,9 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     return null;
   }
 
-  const generated = buildRepoGeneratedInterfaceBundle(inspected.repo_root, 'skill');
   const pluginSpec = generatedCodexPluginSpec(inspected);
-  const skillBlock = isRecord(generated.bundle.skill) ? generated.bundle.skill : null;
-  const descriptors = recordList(skillBlock?.descriptors);
+  const descriptors = readActionContractDescriptors(inspected.repo_root);
+  const primarySkillText = fs.readFileSync(inspected.skill_entry_path, 'utf8');
   const codexSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.canonical_plugin_name);
   fs.rmSync(codexSkillDir, { recursive: true, force: true });
 
@@ -392,7 +494,7 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
   });
   fs.writeFileSync(
     path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'SKILL.md'),
-    buildOplGeneratedSkillMarkdown(inspected, descriptors),
+    buildOplGeneratedSkillMarkdown(inspected, descriptors, primarySkillText),
     'utf8',
   );
   fs.writeFileSync(
@@ -416,6 +518,7 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     codex_plugin_cache_path: codexPluginCachePath,
     removed_standalone_skill_root: codexSkillDir,
     descriptor_count: descriptors.length,
-    source: 'opl_generated_agent_interface_bundle_codex_plugin',
+    source: 'opl_standard_agent_primary_skill_codex_plugin',
+    primary_skill_source_path: inspected.skill_entry_path,
   };
 }

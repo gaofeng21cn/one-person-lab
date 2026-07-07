@@ -4,7 +4,7 @@
   "schema_id": "opl.standard_agent_capability_map.v1",
   "surface_kind": "opl_standard_agent_capability_map_schema",
   "owner": "one-person-lab",
-  "purpose": "Define the standard Foundry Agent capability map resolver index that locates stage prompts, professional skills, tool connectors, knowledge packs, quality gates, and eval suites from one scaffolded contract.",
+  "purpose": "Define the standard Foundry Agent capability map resolver index that locates the rich primary skill, stage prompts, professional skills, tool connectors, knowledge packs, quality gates, and eval suites from one scaffolded contract.",
   "state": "active_contract",
   "machine_boundary": "The capability map is a resolver index over repo-owned capability refs. It does not copy domain truth, execute capabilities, sign owner receipts, create typed blockers, or authorize quality/export/domain readiness.",
   "type": "object",
@@ -84,6 +84,7 @@
         "stage_prompt",
         "stage_projection",
         "runtime_projection",
+        "primary_skill",
         "professional_skill",
         "tool_connector",
         "reference_pack",
@@ -93,6 +94,7 @@
     "surface_role": {
       "enum": [
         "stage_prompt",
+        "primary_skill",
         "professional_skill",
         "tool_connector",
         "knowledge_pack",

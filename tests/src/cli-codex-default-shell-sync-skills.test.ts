@@ -38,11 +38,11 @@ test('opl connect skills discovers the family plugin packs through the configure
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
       ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills'],
     );
-    assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
-    assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
+    assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /generated-codex-plugins\/mas-local\/plugins\/mas\/\.codex-plugin\/plugin\.json$/);
+    assert.match(output.skill_catalog.packs[0].skill_entry_path, /med-autoscience\/agent\/primary_skill\/SKILL\.md$/);
     assert.deepEqual(
       output.skill_catalog.packs.slice(0, 5).map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
-      [true, true, true, false, false],
+      [true, true, true, true, true],
     );
     const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
     assert.equal(metaPack?.plugin_manifest_found, false);
@@ -50,12 +50,14 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.agent_series_membership, 'standard_domain_agent');
     assert.equal(metaPack?.agent_projection_policy.plugin_transport_is_membership_axis, false);
     assert.equal(metaPack?.generated_skill_surface_ready, true);
-    assert.equal(metaPack?.source_kind, 'opl_generated_plugin_surface');
-    assert.equal(metaPack?.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(metaPack?.source_kind, 'opl_standard_codex_carrier');
+    assert.equal(metaPack?.source_kind_role, 'standard_source_model_not_agent_membership_or_status');
     assert.equal(metaPack?.management_model, 'opl_managed_codex_plugin_surface');
     assert.equal(metaPack?.management_model_role, 'unified_management_semantics_transport_may_differ');
-    assert.equal(metaPack?.plugin_transport.source_kind, 'opl_generated_plugin_surface');
-    assert.equal(metaPack?.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(metaPack?.plugin_transport.source_kind, 'opl_standard_codex_carrier');
+    assert.equal(metaPack?.plugin_transport.source_kind_role, 'standard_source_model_not_agent_membership_or_status');
+    assert.equal(metaPack?.plugin_transport.standard_codex_carrier, true);
+    assert.equal(metaPack?.plugin_transport.materializer, 'opl_standard_codex_plugin_materializer');
     assert.equal(metaPack?.ready_to_sync, true);
     assert.deepEqual(metaPack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplmetaagent']);
     assert.deepEqual(metaPack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
@@ -70,12 +72,14 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(bookforgePack?.agent_series_membership, 'standard_domain_agent');
     assert.equal(bookforgePack?.agent_projection_policy.plugin_transport_is_membership_axis, false);
     assert.equal(bookforgePack?.generated_skill_surface_ready, true);
-    assert.equal(bookforgePack?.source_kind, 'opl_generated_plugin_surface');
-    assert.equal(bookforgePack?.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(bookforgePack?.source_kind, 'opl_standard_codex_carrier');
+    assert.equal(bookforgePack?.source_kind_role, 'standard_source_model_not_agent_membership_or_status');
     assert.equal(bookforgePack?.management_model, 'opl_managed_codex_plugin_surface');
     assert.equal(bookforgePack?.management_model_role, 'unified_management_semantics_transport_may_differ');
-    assert.equal(bookforgePack?.plugin_transport.source_kind, 'opl_generated_plugin_surface');
-    assert.equal(bookforgePack?.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(bookforgePack?.plugin_transport.source_kind, 'opl_standard_codex_carrier');
+    assert.equal(bookforgePack?.plugin_transport.source_kind_role, 'standard_source_model_not_agent_membership_or_status');
+    assert.equal(bookforgePack?.plugin_transport.standard_codex_carrier, true);
+    assert.equal(bookforgePack?.plugin_transport.materializer, 'opl_standard_codex_plugin_materializer');
     assert.equal(bookforgePack?.ready_to_sync, true);
     assert.deepEqual(bookforgePack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplbookforge']);
     assert.deepEqual(bookforgePack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
@@ -252,10 +256,8 @@ test('opl connect sync-skills refuses to mirror legacy test skill stubs', () => 
   const stubPath = path.join(
     workspaceRoot,
     'med-autoscience',
-    'plugins',
-    'mas',
-    'skills',
-    'mas',
+    'agent',
+    'primary_skill',
     'SKILL.md',
   );
   fs.writeFileSync(stubPath, '---\nname: mas\ndescription: mas test skill\n---\n\n# mas\n');
@@ -288,8 +290,6 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
   const codexHome = path.join(homeDir, '.codex');
-  const masManifestPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', '.codex-plugin', 'plugin.json');
-  const masSkillPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', 'skills', 'mas', 'SKILL.md');
   fs.mkdirSync(codexHome, { recursive: true });
   fs.writeFileSync(
     path.join(codexHome, 'config.toml'),
@@ -307,24 +307,6 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     ].join('\n'),
     'utf8',
   );
-  const masManifest = parseJsonText(fs.readFileSync(masManifestPath, 'utf8')) as Record<string, any>;
-  masManifest.name = 'med-autoscience';
-  masManifest.interface = {
-    defaultPrompt: 'Use $med-autoscience for MAS work.',
-    composerIcon: './icon.svg',
-  };
-  fs.writeFileSync(masManifestPath, `${JSON.stringify(masManifest, null, 2)}\n`, 'utf8');
-  fs.writeFileSync(
-    path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', 'icon.svg'),
-    '<svg aria-label="MAS icon"></svg>\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    masSkillPath,
-    fs.readFileSync(masSkillPath, 'utf8').replace('name: mas', 'name: med-autoscience'),
-    'utf8',
-  );
-
   try {
     const output = runCli(['connect', 'sync-skills'], {
       HOME: homeDir,
@@ -342,12 +324,15 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     ] as const) {
       assert.equal(fs.existsSync(path.join(workspaceRoot, project, '.agents', 'plugins', 'marketplace.json')), false);
       const pack = output.skill_sync.packs.find((entry: { project: string }) => entry.project === project);
-      assert.equal(pack.installer_result.source, 'tracked_codex_plugin_source');
+      assert.equal(pack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
       assert.equal(
-        fs.realpathSync(pack.installer_result.plugin_source_path),
-        fs.realpathSync(path.join(workspaceRoot, project, 'plugins', plugin)),
+        fs.realpathSync(pack.installer_result.generated_codex_plugin.primary_skill_source_path),
+        fs.realpathSync(path.join(workspaceRoot, project, 'agent', 'primary_skill', 'SKILL.md')),
       );
-      assert.equal(pack.installer_result.repo_local_marketplace_written, false);
+      assert.match(
+        pack.installer_result.generated_codex_plugin.plugin_root,
+        new RegExp(`generated-codex-plugins/${plugin}-local/plugins/${plugin}$`),
+      );
     }
     const metaGeneratedPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
     const bookforgeGeneratedPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplbookforge');
@@ -372,7 +357,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       false,
     );
-    assert.equal(metaGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
+    assert.equal(metaGeneratedPack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
     assert.match(
       metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
       /generated-codex-plugins\/oma-local\/plugins\/oma$/,
@@ -401,9 +386,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.match(generatedPluginIcon, /M11 44V20L21 34L31 20V44/);
     assert.match(generatedPluginIcon, /M36 44L46 20L56 44/);
     const generatedOmaSkill = fs.readFileSync(metaGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
-    assert.match(generatedOmaSkill, /## New Agent Delivery Gate/);
-    assert.match(generatedOmaSkill, /Scaffold\/interface readiness alone is not an acceptable completion claim/);
-    assert.equal(bookforgeGeneratedPack.installer_result.generated_surface, 'opl_generated_codex_plugin_descriptor');
+    assert.match(generatedOmaSkill, /# OPL Meta Agent/);
+    assert.match(generatedOmaSkill, /Generated Action Contracts/);
+    assert.match(generatedOmaSkill, /build-agent-baseline/);
+    assert.equal(bookforgeGeneratedPack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
     assert.match(
       bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
       /generated-codex-plugins\/obf-local\/plugins\/obf$/,
@@ -417,19 +403,9 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(generatedBookForgeManifest.repository, 'https://github.com/gaofeng21cn/opl-bookforge');
     const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
     assert.match(generatedBookForgeSkill, /# OPL Book Forge/);
+    assert.match(generatedBookForgeSkill, /Generated Action Contracts/);
     assert.match(generatedBookForgeSkill, /shape-storyline/);
     assert.match(generatedBookForgeSkill, /materialize-book/);
-    assert.match(generatedBookForgeSkill, /reference-draft absorption/);
-    assert.match(generatedBookForgeSkill, /stronger reference draft/);
-    assert.match(generatedBookForgeSkill, /reader-entry plans/);
-    assert.match(generatedBookForgeSkill, /project hygiene scan/);
-    assert.match(generatedBookForgeSkill, /current measured extent/);
-    assert.match(generatedBookForgeSkill, /internal-language and AI-flavor scans/);
-    assert.match(generatedBookForgeSkill, /stale reports cannot support readiness claims/);
-    assert.match(generatedBookForgeSkill, /omits `asset_ready` figures/);
-    assert.match(generatedBookForgeSkill, /tombstone refs/);
-    assert.match(generatedBookForgeSkill, /教育实验观察窗口/);
-    assert.match(generatedBookForgeSkill, /观察它如何强调/);
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
@@ -441,7 +417,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(fs.lstatSync(masWrapperPluginPath).isSymbolicLink(), false);
     const masWrapperManifest = parseJsonText(fs.readFileSync(masPlugin.plugin_manifest_path, 'utf8')) as Record<string, any>;
     assert.equal(masWrapperManifest.name, 'mas');
-    assert.equal(masWrapperManifest.interface.defaultPrompt, 'Use $mas for MAS work.');
+    assert.deepEqual(masWrapperManifest.interface.defaultPrompt, [
+      'Use MAS to inspect the current study runtime and route the next paper-mission step.',
+      'Use MAS to advance a source-grounded manuscript, analysis, review, or owner handoff without bypassing domain authority.',
+    ]);
     assert.equal(masWrapperManifest.interface.composerIcon, './assets/icon.svg');
     assert.equal(
       fs.readFileSync(path.join(masWrapperPluginPath, 'skills', 'mas', 'SKILL.md'), 'utf8')
@@ -463,11 +442,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
-    for (const skillName of ['mas', 'mag', 'rca']) {
+    for (const skillName of ['mas', 'mag', 'rca', 'oma', 'obf']) {
       assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
     }
-    for (const skillName of ['oma', 'obf']) {
-      assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
+    for (const skillName of ['mas', 'mag', 'rca', 'oma', 'obf']) {
       assert.equal(
         fs.existsSync(path.join(
           homeDir,
@@ -499,7 +477,7 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
   }
 });
 
-test('opl connect sync-skills refuses standard agent manifests that expose standalone MCP servers', () => {
+test('opl connect sync-skills ignores legacy plugin MCP drift when standard agents use primary-skill carriers', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-mcp-drift-'));
   const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
@@ -518,14 +496,17 @@ test('opl connect sync-skills refuses standard agent manifests that expose stand
     });
 
     const masPack = output.skill_sync.packs.find((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name === 'mas');
-    assert.equal(masPack.sync_status, 'skipped');
-    assert.equal(masPack.ready_to_sync, false);
+    assert.equal(masPack.sync_status, 'synced');
+    assert.equal(masPack.ready_to_sync, true);
     assert.equal(masPack.plugin_manifest_valid, false);
-    assert.deepEqual(masPack.plugin_manifest_errors, [
-      'standard_domain_agent_manifest_must_not_expose_standalone_mcp_servers',
-    ]);
-    assert.equal(output.skill_sync.codex_plugin_registry, null);
-    assert.equal(fs.existsSync(path.join(codexHome, 'config.toml')), false);
+    assert.equal(masPack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
+    const generatedManifest = parseJsonText(fs.readFileSync(
+      masPack.installer_result.generated_codex_plugin.plugin_manifest_path,
+      'utf8',
+    )) as Record<string, any>;
+    assert.equal('mcpServers' in generatedManifest, false);
+    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 1);
+    assert.match(fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8'), /\[plugins\."mas@mas-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -563,8 +544,8 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
     ] as const) {
       const pack = output.skill_sync.packs.find((entry: { project: string }) => entry.project === project);
       assert.equal(
-        fs.realpathSync(pack.installer_result.plugin_source_path),
-        fs.realpathSync(path.join(workspaceRoot, project, 'plugins', plugin)),
+        fs.realpathSync(pack.installer_result.generated_codex_plugin.primary_skill_source_path),
+        fs.realpathSync(path.join(workspaceRoot, project, 'agent', 'primary_skill', 'SKILL.md')),
       );
       const registryItem = output.skill_sync.codex_plugin_registry.items.find(
         (entry: { plugin_id: string }) => entry.plugin_id === plugin,

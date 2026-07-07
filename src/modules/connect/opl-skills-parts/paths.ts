@@ -104,7 +104,7 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
 }
 
 export function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
-  if (spec.source_kind === 'opl_generated_plugin_surface') {
+  if (spec.source_kind === 'opl_standard_codex_carrier') {
     return path.join(
       resolveGeneratedPluginRootForName(spec.canonical_plugin_name),
       '.codex-plugin',
@@ -120,13 +120,8 @@ export function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
 }
 
 export function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
-  if (spec.source_kind === 'opl_generated_plugin_surface') {
-    return path.join(
-      resolveGeneratedPluginRootForName(spec.canonical_plugin_name),
-      'skills',
-      spec.canonical_plugin_name,
-      'SKILL.md',
-    );
+  if (spec.source_kind === 'opl_standard_codex_carrier') {
+    return path.join(repoRoot, 'agent', 'primary_skill', 'SKILL.md');
   }
 
   return resolveFirstExistingPath([

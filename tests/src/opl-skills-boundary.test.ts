@@ -128,28 +128,19 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       continue;
     }
     assert.equal(pack.agent_series_membership, 'standard_domain_agent');
-    if (pack.source_kind === 'repo_plugin_installer') {
-      if (pack.repo_found) {
-        assert.equal(pack.plugin_manifest_found, true);
-        assert.equal(pack.plugin_manifest_valid, true);
-        assert.deepEqual(pack.plugin_manifest_errors, []);
-      } else {
-        assert.equal(pack.plugin_manifest_found, false);
-        assert.deepEqual(pack.plugin_manifest_errors, []);
-      }
+    assert.equal(pack.source_kind, 'opl_standard_codex_carrier');
+    assert.equal(pack.plugin_transport.standard_codex_carrier, true);
+    assert.equal('repo_plugin_installer' in pack.plugin_transport, false);
+    assert.equal('opl_generated_plugin_surface' in pack.plugin_transport, false);
+    assert.equal(pack.plugin_transport.materializer, 'opl_standard_codex_plugin_materializer');
+    assert.match(pack.skill_entry_path, /agent\/primary_skill\/SKILL\.md$/);
+    if (pack.repo_found) {
+      assert.equal(pack.skill_entry_found, true);
+      assert.equal(pack.skill_entry_valid, true);
+      assert.deepEqual(pack.skill_entry_errors, []);
     } else {
-      assert.equal(pack.source_kind, 'opl_generated_plugin_surface');
-      if (pack.repo_found) {
-        assert.equal(pack.generated_skill_surface_ready, true);
-      } else {
-        assert.equal(pack.generated_skill_surface_ready, false);
-        assert.ok(
-          [
-            'blocked_invalid_generated_skill_contracts',
-            'blocked_missing_family_action_catalog',
-          ].includes(String(pack.generated_skill_surface_status)),
-        );
-      }
+      assert.equal(pack.skill_entry_found, false);
+      assert.equal(pack.skill_entry_valid, false);
     }
     const agentProjectionPolicy = pack.agent_projection_policy;
     if (agentProjectionPolicy === null) {
@@ -164,7 +155,12 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       'carrier_detail_for_codex_app_standalone_install',
     );
     assert.equal(pack.agent_package_exposure_model?.opl_app_role, 'package_cockpit_for_managed_agent_packages');
-    assert.equal(pack.agent_package_exposure_model?.physical_carriers_must_remain_distinct, true);
+    assert.equal(pack.agent_package_exposure_model?.physical_carriers_must_remain_distinct, false);
+    assert.equal(
+      pack.agent_package_exposure_model?.standard_physical_carrier,
+      'opl_materialized_codex_plugin_from_repo_owned_primary_skill',
+    );
+    assert.equal(pack.agent_package_exposure_model?.repo_owned_primary_skill_required, true);
     assert.equal(pack.agent_package_exposure_model?.user_story_must_not_split_by_carrier, true);
     assert.equal(pack.management_model, 'opl_managed_codex_plugin_surface');
     assert.equal(pack.management_model_role, 'unified_management_semantics_transport_may_differ');
@@ -184,7 +180,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       `opl foundry agents inspect ${pack.foundry_agent_series.foundry_agent_id}`,
     );
     assertOnlyAllowedFoundrySeriesFields(pack);
-    assert.equal(pack.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
+    assert.equal(pack.plugin_transport.source_kind_role, 'standard_source_model_not_agent_membership_or_status');
     assert.equal(pack.plugin_transport.public_agent_list_must_not_split_by_transport, true);
     if (pack.canonical_plugin_name === 'oma') {
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect oma');

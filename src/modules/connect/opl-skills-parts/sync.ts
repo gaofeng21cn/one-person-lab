@@ -729,7 +729,7 @@ export function runSkillPackInstaller(
     };
   }
 
-  if (inspected.source_kind === 'opl_generated_plugin_surface') {
+  if (inspected.source_kind === 'opl_standard_codex_carrier') {
     const codexPluginSurface = options.writeGeneratedPluginSurface(inspected, options.home);
     return {
       ...inspected,
@@ -743,7 +743,7 @@ export function runSkillPackInstaller(
       project_mirror_deprecated_for_paper_execution: false,
       project_mirror_non_default_paper_execution_path: false,
       installer_result: {
-        generated_surface: 'opl_generated_codex_plugin_descriptor',
+        generated_surface: 'opl_standard_codex_plugin_carrier',
         generated_codex_plugin: codexPluginSurface,
       },
       registry_repo_root: codexPluginSurface ? path.dirname(path.dirname(codexPluginSurface.plugin_root)) : null,

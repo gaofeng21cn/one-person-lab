@@ -17,7 +17,7 @@ type CodexFamilyPluginSpec = {
   repo_name: string;
   display_name: string;
   category: string;
-  ownership_kind: 'domain_plugin' | 'generated_domain_plugin' | 'framework_capability_plugin';
+  ownership_kind: 'standard_agent_codex_carrier' | 'framework_capability_plugin';
   distribution_role: 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
   framework_owned_capability: boolean;
   domain_module: boolean;
@@ -88,7 +88,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     repo_name: 'med-autoscience',
     display_name: 'Med Auto Science Local',
     category: 'Research',
-    ownership_kind: 'domain_plugin',
+    ownership_kind: 'standard_agent_codex_carrier',
     distribution_role: 'domain_agent_plugin_pack',
     framework_owned_capability: false,
     domain_module: true,
@@ -109,7 +109,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     repo_name: 'med-autogrant',
     display_name: 'Med Auto Grant Local',
     category: 'Research',
-    ownership_kind: 'domain_plugin',
+    ownership_kind: 'standard_agent_codex_carrier',
     distribution_role: 'domain_agent_plugin_pack',
     framework_owned_capability: false,
     domain_module: true,
@@ -130,7 +130,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     repo_name: 'redcube-ai',
     display_name: 'RedCube AI Local',
     category: 'Creative',
-    ownership_kind: 'domain_plugin',
+    ownership_kind: 'standard_agent_codex_carrier',
     distribution_role: 'domain_agent_plugin_pack',
     framework_owned_capability: false,
     domain_module: true,
@@ -151,7 +151,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     repo_name: 'opl-meta-agent',
     display_name: 'OPL Meta Agent Local',
     category: 'Productivity',
-    ownership_kind: 'generated_domain_plugin',
+    ownership_kind: 'standard_agent_codex_carrier',
     distribution_role: 'domain_agent_plugin_pack',
     framework_owned_capability: false,
     domain_module: true,
@@ -172,7 +172,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
     repo_name: 'opl-bookforge',
     display_name: 'OPL Book Forge Local',
     category: 'Productivity',
-    ownership_kind: 'generated_domain_plugin',
+    ownership_kind: 'standard_agent_codex_carrier',
     distribution_role: 'domain_agent_plugin_pack',
     framework_owned_capability: false,
     domain_module: true,

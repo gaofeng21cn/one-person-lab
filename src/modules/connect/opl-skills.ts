@@ -538,8 +538,16 @@ function inspectFamilySkillPackAtRepoRoot(
   const skillEntryValidation = validateSkillEntry(spec, skillEntryPath, skillEntryFound);
   const installerFound = fs.existsSync(installerPath) && fs.statSync(installerPath).isFile();
   const generatedSkillSurface = inspectGeneratedSkillSurface(spec, repoRoot);
-  const repoPluginReady =
+  const trackedRepoPluginReady =
     repoFound && pluginManifestFound && pluginManifestValidation.valid && skillEntryFound && skillEntryValidation.valid;
+  const standardCodexCarrierReady =
+    spec.source_kind === 'opl_standard_codex_carrier'
+    && repoFound
+    && skillEntryFound
+    && skillEntryValidation.valid;
+  const readyToSync = spec.source_kind === 'opl_standard_codex_carrier'
+    ? standardCodexCarrierReady
+    : trackedRepoPluginReady;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
   const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
   const masScholarSkillsProfile = spec.domain_id === 'scholarskills'
@@ -555,14 +563,18 @@ function inspectFamilySkillPackAtRepoRoot(
   const pluginTransport: InspectFamilySkillPackPluginTransport = {
     surface_kind: 'opl_connect_plugin_transport',
     source_kind: spec.source_kind,
-    source_kind_role: 'transport_install_detail_not_agent_membership_or_status',
-    repo_plugin_installer: spec.source_kind === 'repo_plugin_installer',
-    opl_generated_plugin_surface: spec.source_kind === 'opl_generated_plugin_surface',
+    source_kind_role: spec.source_kind === 'opl_standard_codex_carrier'
+      ? 'standard_source_model_not_agent_membership_or_status'
+      : 'transport_install_detail_not_agent_membership_or_status',
+    standard_codex_carrier: spec.source_kind === 'opl_standard_codex_carrier',
+    materializer: spec.source_kind === 'opl_standard_codex_carrier'
+      ? 'opl_standard_codex_plugin_materializer'
+      : 'repo_plugin_installer',
     generated_skill_surface_ready: generatedSkillSurface.ready,
     generated_skill_surface_status: generatedSkillSurface.status,
     installer_kind: spec.installer_kind,
     command_preview: buildInstallerCommandPreview(spec, repoRoot),
-    generation_preview_command: spec.source_kind === 'opl_generated_plugin_surface'
+    generation_preview_command: spec.source_kind === 'opl_standard_codex_carrier'
       ? ['opl', 'agents', 'interfaces', '--repo-dir', repoRoot, '--format', 'skill']
       : null,
     public_agent_list_must_not_split_by_transport: spec.distribution_role === 'domain_agent_plugin_pack',
@@ -611,10 +623,10 @@ function inspectFamilySkillPackAtRepoRoot(
     installer_path: installerPath,
     installer_found: installerFound,
     source_kind: spec.source_kind,
-    source_kind_role: 'transport_install_detail_not_agent_membership_or_status',
+    source_kind_role: pluginTransport.source_kind_role,
     generated_skill_surface_ready: generatedSkillSurface.ready,
     generated_skill_surface_status: generatedSkillSurface.status,
-    ready_to_sync: repoPluginReady || (repoFound && generatedSkillSurface.ready),
+    ready_to_sync: readyToSync,
     installer_kind: spec.installer_kind,
     command_preview: pluginTransport.command_preview,
   };
