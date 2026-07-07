@@ -25,7 +25,7 @@ Live Evidence 后置：release、production、Brand L5、owner-chain scaleout、
 - `med-autoscience`、`med-autogrant`、`redcube-ai` 是标准 OPL domain agent：domain truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate 留在各自 owner repo；OPL 只承接 generic stage/runtime/control-plane substrate。
 - `opl-meta-agent` 和 `opl-bookforge` 按标准 OPL Agent / Foundry Agent 目标态维护：domain pack、generated/hosted surface、default path、accepted owner-answer shape、source morphology、retired helper provenance 和 no-forbidden-write guard 清楚。
 - `one-person-lab-app` 是普通用户与 operator 的产品入口：Docker/WebUI beginner path、Settings control plane、runtime proxy、release/operator progress、active shell policy 和 App-owned contract 归 App owner；Framework 只提供受控 read/action surface。
-- Support repos、Aion/Hermes、ScholarSkills、Homebrew、OPL Doc 只按 carrier / support / capability-pack / distribution 边界读取；它们不成为默认七仓 truth owner，也不替代 domain/App/release evidence owner。
+- Support repos、Aion/Hermes、MAS Scholar Skills、Homebrew、OPL Doc 只按 carrier / support / capability-pack / distribution 边界读取；它们不成为默认七仓 truth owner，也不替代 domain/App/release evidence owner。
 
 North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)、[OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)、[OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md) 和核心五件套。本文不复制这些目标态细节，只维护当前 gap 与 baton。
 
@@ -58,7 +58,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 | 3 | MAS blocker action route | `main evidence`: MAS typed blocker owner handoff 与 OPL transition receipt projection 已折回 OPL read-model 边界。 | MAS `PaperMissionRun`、owner receipt、typed blocker / human gate 和 paper-progress truth 继续归 MAS；OPL receipt/readback 不算 paper progress。 |
 | 4 | StageRun default | `structural_foldback`: StageRun / owner-route structural baseline 已折回 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough` 和 Foundry target owner 读法；本文不保存 lane / worktree / commit 流水。 | Live StageRun owner receipt、typed blocker、human gate、owner acceptance 和 production evidence 仍后置。 |
 | 5 | Foundry registry | `main evidence`: standard agent / Foundry series 分类与 public projection 已在 `origin/main` 收敛到 OPL-generated / hosted surfaces。 | real target owner route、production generated-surface consumption 和 Brand L5 / owner acceptance 仍后置。 |
-| 6 | ScholarSkills refs-only | `main evidence`: ScholarSkills 按 framework capability package / refs-only skill sync 读取，不成为 standard domain agent 或第二 runtime truth。 | domain owner consumption、target quest / workspace 真实使用和 package release path 继续走 owner evidence。 |
+| 6 | MAS Scholar Skills refs-only | `main evidence`: MAS Scholar Skills 按 framework capability package / refs-only skill sync 读取，不成为 standard domain agent 或第二 runtime truth。 | domain owner consumption、target quest / workspace 真实使用和 package release path 继续走 owner evidence。 |
 | 7 | active legacy caller | `structural_foldback`: `opl agents default-callers` 默认读面暴露 `active_legacy_caller_deletion_gate`、active worklist 下一步、owner surface、stop condition 和 false-authority flags。 | 物理删除必须等 no-active-caller、replacement owner、tombstone/provenance、no-forbidden-write 和 owner decision；不能由 docs 或 cleanup ledger 授权。 |
 | 8 | docs / readback thinning | `docs_governance_guard`: status / tracker 只保留机器入口和 forbidden-claim 读法，不恢复过程 proof、branch、counter 或 closeout 流水。 | 后续发现新 gap 时从 fresh audit 重新开 lane；不恢复长 readback / closeout 清单。 |
 
@@ -129,5 +129,5 @@ rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs
 
 - `functional_structure_baseline_landed` 不等于 release-ready、production-ready、Brand L5、domain ready、artifact ready、quality/export ready、owner acceptance 或 physical delete authorized。
 - Docs foldback、contract pass、focused tests、projection clean、doctor clean、native-check pass 或 refs-only ledger 不能替代 runtime/live/owner evidence。
-- Support repo、Aion/Hermes、ScholarSkills、Homebrew 或 OPL Doc 不能反向定义默认七仓 domain/App/framework truth。
+- Support repo、Aion/Hermes、MAS Scholar Skills、Homebrew 或 OPL Doc 不能反向定义默认七仓 domain/App/framework truth。
 - 历史归档不能替代实现清理；旧模块、旧接口、旧测试和旧文档入口被当前 owner surface 替代后，只能按 owner decision 直接退役或 tombstone。

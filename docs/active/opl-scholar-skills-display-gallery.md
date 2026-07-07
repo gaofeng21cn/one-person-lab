@@ -3,7 +3,7 @@
 Owner: `One Person Lab`
 Purpose: `human_review_entry_for_scholar_display_capability`
 State: `active_support`
-Machine boundary: 本文是 Scholar Display 的人读审阅入口。Gallery artifact truth 归 MAS Display Pack；ScholarSkills 只引用 MAS-owned review refs，不复制、不改写、不授权 publication readiness。
+Machine boundary: 本文是 Scholar Display 的人读审阅入口。Gallery artifact truth 归 MAS Display Pack；MAS Scholar Skills 只引用 MAS-owned review refs，不复制、不改写、不授权 publication readiness。
 
 ## 定位
 
@@ -31,7 +31,7 @@ Fresh readback 口径：
 
 ## Scholar Display 调用边界
 
-ScholarSkills 输出的 `visual_audit_or_gallery_preview_ref` 应指向上述 MAS-owned gallery surface 或由 domain owner 接受的后续 gallery/ref。该 ref 是 review hint，不是 artifact body authority。
+MAS Scholar Skills 输出的 `visual_audit_or_gallery_preview_ref` 应指向上述 MAS-owned gallery surface 或由 domain owner 接受的后续 gallery/ref。该 ref 是 review hint，不是 artifact body authority。
 
 调用链仍保持：
 

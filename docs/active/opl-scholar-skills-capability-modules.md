@@ -69,14 +69,14 @@ MAS Scholar Skills 按 `professional Skill + skill-local deterministic helper + 
 
 ## Runtime Env 关系
 
-ScholarSkills 只声明 dependency intent 与 run-context refs。实际依赖准备、缓存、run-context 生成和 fail-closed doctor 由 OPL runtime environment substrate 处理：
+MAS Scholar Skills 只声明 dependency intent 与 run-context refs。实际依赖准备、缓存、run-context 生成和 fail-closed doctor 由 OPL runtime environment substrate 处理：
 
 ```bash
 opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json
 opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json
 ```
 
-ScholarSkills 自身提供的 bridge 命令只构建 deterministic refs-only envelope，不调用 renderer，不安装依赖，不写 runtime state，不写 artifact body，不签 owner receipt，也不声明 cache hit：
+MAS Scholar Skills 自身提供的 bridge 命令只构建 deterministic refs-only envelope，不调用 renderer，不安装依赖，不写 runtime state，不写 artifact body，不签 owner receipt，也不声明 cache hit：
 
 ```bash
 opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json
@@ -92,7 +92,7 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 `module_candidate.json` 仍不是 domain authority 的最终结果体：Display 不在这里直接声明可发表图，Stats 不在这里直接声明临床分析结论，Lit 不在这里直接声明文献证据裁决，Submit 不在这里直接声明投稿包 ready。它提供的是 OPL-owned standard handoff payload，使 MAS 等 domain agent 可以用同一消费入口读取候选 refs、质量检查需求和 owner gate 要求；真实图表、分析、文稿、审阅、投稿或数据结果体仍归 domain artifact surface，并必须由 domain owner gate 接收或拒绝。
 
-当 `materialize --emit-candidate-artifacts` 显式启用时，ScholarSkills 会调用八个 OPL-owned deterministic candidate artifact engine，为每个 active module 写出专业候选体、`input_requirements`、`validation_checks`、`engine_receipt_ref` 和 sha256 refs。Display 输出 SVG visual-plan candidate；Write/Review/Submit 输出 Markdown candidate；Tables/Stats/Lit/Data 输出 JSON structured candidate。该 engine 输出比 refs-only body 更接近可消费 artifact，但仍保持 `counts_as_paper_truth=false`、`counts_as_owner_receipt=false`、`can_authorize_publication_readiness=false`、`can_claim_quality_verdict=false`、`can_claim_artifact_authority=false`，不能替代 domain owner consumption。
+当 `materialize --emit-candidate-artifacts` 显式启用时，MAS Scholar Skills 会调用八个 OPL-owned deterministic candidate artifact engine，为每个 active module 写出专业候选体、`input_requirements`、`validation_checks`、`engine_receipt_ref` 和 sha256 refs。Display 输出 SVG visual-plan candidate；Write/Review/Submit 输出 Markdown candidate；Tables/Stats/Lit/Data 输出 JSON structured candidate。该 engine 输出比 refs-only body 更接近可消费 artifact，但仍保持 `counts_as_paper_truth=false`、`counts_as_owner_receipt=false`、`can_authorize_publication_readiness=false`、`can_claim_quality_verdict=false`、`can_claim_artifact_authority=false`，不能替代 domain owner consumption。
 
 仓内还提供 repo-tracked Codex plugin surface：`plugins/mas-scholar-skills/.codex-plugin/plugin.json` 与 `plugins/mas-scholar-skills/skills/mas-scholar-skills/SKILL.md`。该 skill pack 只是把 canonical contract、CLI readback 和 no-authority guard 暴露给 Codex discovery / sync layer；它不是第二真相源，也不能替代 `contracts/opl-framework/scholar-skills-capability-modules.json`、`src/scholar-skills.ts`、domain owner receipt、typed blocker、runtime evidence 或 paper artifact authority。
 
@@ -100,12 +100,12 @@ opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact
 
 普通 OPL App 用户路径分两层：
 
-1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 通过 GHCR `one-person-lab-manifest` capability packages channel 自动安装或更新 `MAS Scholar Skills` package 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/mas-scholar-skills`，或显式 `OPL_MODULES_ROOT/mas-scholar-skills`）。这个 target 是 `framework_capability_package`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 ScholarSkills 计入 OPL 品牌 agent module。普通 App / non-development 路径不维护 ScholarSkills 专属 git clone / pull source manager。
+1. `opl system startup-maintenance --json` 由 App-managed runtime / startup-maintenance 通过 GHCR `one-person-lab-manifest` capability packages channel 自动安装或更新 `MAS Scholar Skills` package 到 OPL managed modules root（默认 `<OPL_STATE_DIR>/modules/mas-scholar-skills`，或显式 `OPL_MODULES_ROOT/mas-scholar-skills`）。这个 target 是 `framework_capability_package`，不是 `DOMAIN_MODULE_SPECS` 里的 domain module，也不会把 MAS Scholar Skills 计入 OPL 品牌 agent module。普通 App / non-development 路径不维护 MAS Scholar Skills 专属 git clone / pull source manager。
 2. 具体论文 workspace / quest 需要调用 App action 或 CLI，把当前 managed package 里的 filtered skill pack 同步到该论文工作目录。App action 是 `scholarskills_workspace_sync` / `scholarskills_quest_sync`；CLI surface 是下面的 `opl connect sync-skills ... --target-*`。
 
 只有显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT`、`OPL_MODULE_PATH_SCHOLARSKILLS` 或 Developer Mode local checkout 时，startup-maintenance 才把本地 checkout 作为开发者 source 观察，不自动覆盖。普通 App 用户默认走 GHCR package channel 自动安装 / 更新，并把 package marker 里的 `source_git.head_sha` 作为 workspace / quest sync receipt 的 source head。
 
-ScholarSkills 的论文执行默认落点是 workspace / quest-local Codex discovery skill，而不是用户系统级 Codex skill registry，也不是 MAS project mirror。面向具体论文 workspace 或 quest 时，使用：
+MAS Scholar Skills 的论文执行默认落点是 workspace / quest-local Codex discovery skill，而不是用户系统级 Codex skill registry，也不是 MAS project mirror。面向具体论文 workspace 或 quest 时，使用：
 
 ```bash
 opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json

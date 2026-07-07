@@ -24,8 +24,8 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | 范围 | 发现 | 合理性 | 优化空间 |
 | --- | --- | --- | --- |
 | OPL foundation support skills | 27 个 source skill，全部由 `plugins/opl-foundation-skills/exposure.json` 管理；当前分布为 `developer_codex=6`、`project_local=15`、`workspace_local=6`。 | 基本合理。它们是 framework support / reviewer / router，不是 domain professional pack，也没有默认 global user 暴露。 | 后续新增必须先填 admission record；优先复用 router/reviewer，避免为每个小任务新增 support Skill。 |
-| MAS | MAS 本仓无 repo-local `agent/professional_skills`；`contracts/capability_map.json` 声明 13 个能力，其中 8 个 professional skill 指向外置 `mas-scholar-skills`。 | 合理。MAS 保持 stage / runtime / owner authority，专业方法由外置包承接。 | 继续避免 MAS 仓内复制 ScholarSkills 正文或 optional specialist catalog。 |
-| MAS ScholarSkills | 33 个真实 Codex Skill；默认 Codex exposure 为 false；默认 compact sync 只包含 aggregate + core skills，optional specialist 必须 named specialty / explicit developer。 | 合理。它是 OPL-owned 外置专业能力包，不是 MAS truth owner。 | optional skill 数量已大，新增 optional 必须证明 default core 覆盖不到，并保留 no-authority handoff。 |
+| MAS | MAS 本仓无 repo-local `agent/professional_skills`；`contracts/capability_map.json` 声明 13 个能力，其中 8 个 professional skill 指向外置 `mas-scholar-skills`。 | 合理。MAS 保持 stage / runtime / owner authority，专业方法由外置包承接。 | 继续避免 MAS 仓内复制 MAS Scholar Skills 正文或 optional specialist catalog。 |
+| MAS Scholar Skills | 33 个真实 Codex Skill；默认 Codex exposure 为 false；默认 compact sync 只包含 aggregate + core skills，optional specialist 必须 named specialty / explicit developer。 | 合理。它是 OPL-owned 外置专业能力包，不是 MAS truth owner。 | optional skill 数量已大，新增 optional 必须证明 default core 覆盖不到，并保留 no-authority handoff。 |
 | MAG | 8 个 repo-local professional skills，全部进入 `contracts/capability_map.json`；另有 stage prompt、tool connector、reference pack、contract module。 | 合理。Grant 方法留 repo-local，authority 留 MAG。 | stage control plane 主要引用 `agent/skills/grant_authoring.md`，如未来需要 executor 直接按 specialist 注入，可从 capability map 投影，不另建新目录。 |
 | RCA | 7 个 repo-local professional skills，全部进入 capability map；stage prompts / control plane 对主要 PPT specialist 有直接 refs。 | 合理。视觉方法、template profiling、native PPT design 与 memory curation 分层清楚。 | `agent/skills/*.md` 作为 legacy policy ref 的边界要继续保持，不能退回成“又一套 professional skill”。 |
 | OMA | 9 个 repo-local professional skills，全部进入 capability map；`agent/skills/*.md` 明确是 domain skill declarations。 | 合理。OMA 的 target-agent improvement / work-order / suite design 等是元智能体专业方法。 | 继续防止把 action flow、target truth 或 takeover authority 写进 professional Skill。 |
@@ -40,9 +40,9 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- | --- | --- |
 | Framework support / reviewer / router pack | `plugins/opl-foundation-skills/skills/**/SKILL.md` | `plugins/opl-foundation-skills/exposure.json`；禁止默认 global / codex scope。 | `professional_skill` 风格的 support playbook + exposure manifest；authority 留 OPL/domain owner surface。 | 合理，但数量增长需要准入门控制。 |
 | External specialist routing | `opl-external-specialist-skill-router`；scientific 只是 query / trigger specialization，不再保留单独 compatibility entry | workspace / quest 按 manifest 暴露；真实外部 skill 通过 Connect 单个 sync。 | router 是薄 Skill；下载、索引、sync receipt 属于 OPL Connect。 | 合理。避免把 K-Dense / scientific-agent-skills 全量注册成默认 Codex context，也避免 compatibility alias 污染 metadata。 |
-| MAS ScholarSkills plugin pointer | `plugins/mas-scholar-skills/skills/mas-scholar-skills/SKILL.md` | package/plugin pointer；真实 source 在 `mas-scholar-skills` repo。 | thin entry + Connect sync；不承接 MAS authority。 | 合理。继续保持 `opl-scholarskills` tombstone-only。 |
+| MAS Scholar Skills plugin pointer | `plugins/mas-scholar-skills/skills/mas-scholar-skills/SKILL.md` | package/plugin pointer；真实 source 在 `mas-scholar-skills` repo。 | thin entry + Connect sync；不承接 MAS authority。 | 合理。继续保持 `opl-scholarskills` tombstone-only。 |
 
-### MAS / MAS ScholarSkills
+### MAS / MAS Scholar Skills
 
 | 能力模块 | 对应 Skill / surface | 物理位置 | 暴露方式 | 合理性 |
 | --- | --- | --- | --- | --- |
@@ -126,7 +126,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- |
 | 新需求默认沉淀为新 Skill，导致 Skill 数量膨胀。 | 已处理到 policy。 | `standard-agent-capability-management-policy.md#新能力准入门` 增加 admission record、判定顺序和拒绝条件。 |
 | OPL foundation support Skill 数量增长，metadata 污染日常 Codex。 | 当前受控，需持续治理。 | `exposure.json` 已是 machine guard；新增 foundation Skill 必须登记 `exposure_scope` / `activation_gate` / no-authority。 |
-| Optional ScholarSkills 越积越多，变成默认上下文。 | 当前受控。 | default Codex exposure false；core / optional 分层明确；optional 只 named specialty 或 explicit developer。 |
+| Optional MAS Scholar Skills 越积越多，变成默认上下文。 | 当前受控。 | default Codex exposure false；core / optional 分层明确；optional 只 named specialty 或 explicit developer。 |
 | `agent/skills/*.md` 与 `agent/professional_skills/**` 混淆。 | 当前 RCA/OMA/BookForge/MAG 文档基本清楚。 | 新增能力必须先声明 `selected_layer`；`agent/skills/*.md` 默认按 domain skill declaration / policy ref 读取。 |
 | App `tmp/**`、VM evidence、generated cache 被误扫成当前 Skill source。 | 审计发现并排除。 | 当前 App repo-native skill source 只按 `assets/companion-skills/**` 与 contracts 读取。 |
 
@@ -134,7 +134,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 
 - 新增 repo-local professional Skill：必须同时更新 owning repo `contracts/capability_map.json` 或等价 resolver，并说明为什么不能由现有 Skill 覆盖。
 - 新增 OPL foundation support Skill：必须更新 `plugins/opl-foundation-skills/exposure.json`，默认从最窄 `source_only` / `project_local` / `workspace_local` 开始。
-- 新增 ScholarSkills optional Skill：必须证明不是 core `lit/write/review/figure/stats/tables/submit/data` 的子流程，并保持 optional named specialty sync。
+- 新增 MAS Scholar Skills optional Skill：必须证明不是 core `lit/write/review/figure/stats/tables/submit/data` 的子流程，并保持 optional named specialty sync。
 - 新增 connector / helper：优先放 Connect / Fabric / Skill-local helper，不包装成专业 Skill。
 - 新增 authority write：只能落 owner repo authority surface，禁止放进 Skill。
 

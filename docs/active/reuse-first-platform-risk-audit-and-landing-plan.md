@@ -63,7 +63,7 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 | App release/currentness owner route | App release owner / `one-person-lab-app` | 只保留 release truth 不属于 OPL Framework docs 的边界。 | 不用 Framework docs、scan、readback 或 focused tests 替代 App release owner receipt。 |
 | external Temporal live substrate | Runway Runtime owner + external Temporal environment | 只保留 `external_temporal_durable_lifecycle` 缺口。 | 不把 Temporal SDK、local/test-server proof、SQLite projection 或 docs 写成 production durable lifecycle ready。 |
 | OTLP/exporter live endpoint | Observability owner | 只保留 live endpoint / collector consumption 缺口。 | 不把 bounded OpenMetrics smoke、diagnostic drilldown 或 semantic convention contract 写成 production observability ready。 |
-| domain tail owner acceptance | MAS/MAG/RCA/OMA/BookForge/ScholarSkills owners | 只保留 refs-only matrix 和 owner decision gate。 | 不授权 physical delete，不声明 domain ready 或 owner acceptance。 |
+| domain tail owner acceptance | MAS/MAG/RCA/OMA/BookForge/MAS Scholar Skills owners | 只保留 refs-only matrix 和 owner decision gate。 | 不授权 physical delete，不声明 domain ready 或 owner acceptance。 |
 
 ## 当前可落地项
 
