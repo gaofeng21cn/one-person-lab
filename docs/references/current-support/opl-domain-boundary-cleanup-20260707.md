@@ -28,12 +28,22 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 | Runway runtime env root | dependency runtime bridge 曾把 `paper_root` / `--paper-root` 写成 substrate 主词汇。 | `artifact_root` / `--artifact-root` 是 canonical root；`paper_root` / `--paper-root` 只作为 compatibility alias 暂留，并由 `root_vocabulary` 明确标注。 |
 | Connect scientific connectors | Provider receipt 容易被误读成 citation truth。 | Scientific / PubMed readback 暴露 ownership boundary 和 no citation / domain truth flags。 |
 | ScholarSkills Pack bridge | OPL contract 容易被误读成 professional Skill source truth。 | Contract、pack readback 和 docs 区分 OPL descriptor / sync / env bridge 与 MAS Scholar Skills professional truth。 |
+| Family orchestration schema examples | 通用 schema 的 `examples[0]` 曾把 MAS / RCA sample 暴露成默认示例，容易被误读为 OPL canonical ontology。 | Stage admission / replay / graph / proof / registry / source-spec / cohort-loop / runtime-budget / event / checkpoint / conflict examples 已改成 `example-domain` 与 generic stage vocabulary，并由 focused guard 阻止回归。 |
+
+## 2026-07-07 追加收口：schema example hygiene
+
+本轮追加收口只处理 machine-readable example hygiene，不改变 domain truth、runtime behavior 或 active compatibility carrier。目标是消除“OPL 通用 schema 示例 = MAS/RCA ontology”的误读：
+
+- generic family-orchestration schema 的 first example 使用 `example-domain`、`example_stage_control_plane`、`draft_authoring`、`owner_review`、`domain_delivery`、`artifact_stage_profile_refs` 等通用词汇；
+- `family-stage-runtime-budget` 新增 canonical `artifact_stage_profile_refs`，旧 `visual_stage_profile_refs` 只作为 RCA compatibility alias 标记 `deprecated`；
+- `tests/src/family-orchestration-cases/schema-boundaries.ts` 增加 selected generic schema example residue guard，禁止 MAS / paper / publication / medical / RCA / visual-profile 名字重新进入 generic example；
+- product-entry、human-gate、domain-memory、runtime-supervision 等明确与 first-party domain fixture 对齐的示例继续保留为 fixture-aligned / compatibility surface，不作为 generic ontology。
 
 ## 剩余收口清单
 
 | 优先级 | 条目 | 需要做什么 | 已经不是问题 |
 | --- | --- | --- | --- |
-| P0 | 新 OPL surface 的 canonical vocabulary | 新增 Framework API、contract、readback、docs 和 tests 继续使用 `domain_*`、`stage_*`、`owner_evidence_*`；domain-named carrier 只当 compatibility。 | `domain_route`、`stage-candidate-portfolio`、`owner_evidence_sustained_consumption_*` 已提供 generic vocabulary；MAS paper mission、hypothesis、MAG manifest 名字不是缺 OPL primitive。 |
+| P0 | 新 OPL surface 的 canonical vocabulary | 新增 Framework API、contract、readback、docs、tests 和 generic schema examples 继续使用 `domain_*`、`stage_*`、`owner_evidence_*`、`artifact_*`；domain-named carrier 只当 compatibility 或 fixture。 | `domain_route`、`stage-candidate-portfolio`、`owner_evidence_sustained_consumption_*`、generic family-orchestration examples 已提供 generic vocabulary；MAS paper mission、hypothesis、MAG manifest 名字不是缺 OPL primitive。 |
 | P0 | Scientific connector boundary | PubMed、Crossref、OpenAlex、Semantic Scholar、Crossmark、Publisher 留在 `OPL Connect`，作为 provider receipt / normalized ref connector，不持有 citation-truth authority。 | PubMed / Crossref / OpenAlex 不是 domain truth gap，不迁出 Connect，也不复制成第二套 literature Skill。 |
 | P0 | ScholarSkills source truth | `one-person-lab/plugins/mas-scholar-skills` 保持 thin pointer / packaging mirror；professional Skill body 留在外部 MAS Scholar Skills source，经 OPL package / Connect surface 同步。 | OPL mirror 缺目录不代表 MAS Scholar Skills capability 缺失。 |
 | P0 | Stage candidate portfolio | `stage-candidate-portfolio` 保持 refs-only stage candidate / assumption / provenance / negative-path / advisory-metric / human-review projection。 | 它不是 hypothesis store、scientific truth reducer、quality gate、artifact authority 或 owner receipt signer。 |
@@ -53,6 +63,27 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 - RCA visual transition default adapter profile。
 
 这些 compatibility carrier 不能用于新增 canonical OPL ontology。
+
+## Residue 分类
+
+| 分类 | 当前处理 | 读法 |
+| --- | --- | --- |
+| `allowed_profile_or_compatibility_carrier` | `paper_mission/*`、`paper-autonomy`、`mag-manifest-sustained-consumption`、MAS publication handoff profile、RCA visual-transition default profile、`--paper-root` alias 暂留。 | active caller 退役前可存在；只能作为 compatibility，不得成为新增 canonical API / docs / test 名字。 |
+| `domain_fixture_or_first_party_example` | product-entry、human-gate、domain-memory、runtime-supervision 等 schema example 可继续对齐 MAS / MAG / RCA fixture。 | 这些示例证明 domain manifest / route projection 可被 OPL 读取；不代表 OPL 持有 domain truth、quality verdict 或 readiness authority。 |
+| `generic_schema_example` | 通用 stage / replay / graph / proof / registry / event / checkpoint / conflict / runtime-budget schema 使用 generic example vocabulary。 | 该类不允许 MAS / paper / publication / medical / RCA / visual-profile residue；由 focused guard 保护。 |
+| `history_or_provenance` | 历史计划、tombstone、旧路线和 closeout 流水进入 history / ledger / owner repo provenance。 | 可保留旧名字解释来龙去脉，但不能作为当前 OPL ontology 或 active work order。 |
+| `problematic_canonical_ontology` | 当前目标为 0。 | 一旦新 generic surface 把 domain-specific 名字写成 canonical 字段、默认示例或默认 route，必须收回到 generic vocabulary 或 profile / fixture。 |
+
+## Plan Completion Audit 口径
+
+| 条目 | 状态 | 完成度 | fresh evidence 类型 | 剩余动作 |
+| --- | --- | ---: | --- | --- |
+| 识别并保留 OPL 基座边界 | done | 100% | `docs/status.md`、本文件、brand module / source-module contracts 的当前读面。 | 后续新模块仍需按同一 owner / machine boundary 规则审查。 |
+| Runway / Stagecraft / Ledger / Kernel domain residue profile 化 | done | 100% | source + focused tests + root verify；canonical route / artifact root / owner-answer projection / owner-evidence 命名已落地。 | active compatibility carrier 只等 caller 退役后做 tombstone / delete。 |
+| Connect scientific connector authority boundary | done | 100% | scientific connector schemas / readback tests；provider receipt 明确 no citation truth / no domain truth。 | Live provider coverage、rate-limit、release acceptance 仍是后置 evidence lane。 |
+| ScholarSkills source truth 与 OPL packaging 分离 | done | 100% | OPL package / sync / skill catalog readback；MAS Scholar Skills 正文留在 external source repo。 | 不新增第二套 literature Skill truth；只维护 mirror / sync hygiene。 |
+| Family orchestration generic schema examples | done | 100% | selected schema examples + focused residue guard + focused tests。 | 后续新增 generic schema 必须加入同类 guard 或明确标注 fixture / compatibility。 |
+| Live evidence / owner acceptance / domain readiness | partial | 0% | 本轮没有声称也没有执行 long-soak、真实 owner chain、release cohort 或 domain owner verdict。 | 继续作为 release / production / Brand L5 / domain-ready 后置 lane。 |
 
 ## 禁止声明
 
