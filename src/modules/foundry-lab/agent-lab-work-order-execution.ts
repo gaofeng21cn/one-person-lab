@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -25,6 +24,19 @@ import {
   type JsonRecord,
 } from '../../kernel/json-record.ts';
 import { stableId } from '../../kernel/stable-id.ts';
+import {
+  assertExecutableWorkOrder,
+  assertOmaTargetAgentWorkOrderGuard,
+} from './agent-lab-work-order-execution/admission.ts';
+import {
+  assertWorktreeDirIgnored,
+  changedFiles,
+  cleanupTargetWorktree,
+  dirtyFiles,
+  intersection,
+  statusEntries,
+  writeAbsorptionTypedBlocker,
+} from './agent-lab-work-order-execution/target-worktree.ts';
 import {
   buildExecutionPlanMarkdown,
   buildExecutionReportMarkdown,
@@ -67,15 +79,6 @@ type WorkOrderExecutionPresentation = {
   commandSurface: 'work-order execute';
 };
 
-const OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS = [
-  'target_owner_route',
-  'source_morphology',
-  'generated_surface_consumption',
-  'private_residue_decision',
-  'no_forbidden_write_proof',
-  'owner_answer_shape',
-] as const;
-
 const WORK_ORDER_EXECUTION_PRESENTATION: WorkOrderExecutionPresentation = {
   envelopeKey: 'work_order_execution',
   resultSurfaceId: 'opl_work_order_codex_execution',
@@ -97,66 +100,8 @@ function codexWatchdogsFor(options: AgentLabWorkOrderExecutionOptions): CodexWat
   };
 }
 
-function assertWorktreeDirIgnored(targetAgentDir: string): void {
-  const result = spawnSync('git', ['check-ignore', '-q', '.worktrees/agent-lab-ignore-probe'], {
-    cwd: targetAgentDir,
-    encoding: 'utf8',
-  });
-  if ((result.status ?? 1) !== 0) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Target agent .worktrees directory must be gitignored before Agent Lab creates a target worktree.',
-      {
-        target_agent_dir: targetAgentDir,
-        required_ignore: '.worktrees',
-      },
-    );
-  }
-}
-
 function shortId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 48) || 'work-order';
-}
-
-function changedFiles(cwd: string): string[] {
-  return gitRawOutput(['status', '--porcelain', '-uall'], cwd)
-    .split(/\r?\n/)
-    .map((entry) => entry.replace(/^[A-Z? ][A-Z? ]\s+/, ''))
-    .flatMap((entry) => entry.includes(' -> ') ? entry.split(' -> ') : [entry])
-    .filter(Boolean);
-}
-
-function statusEntries(cwd: string): string[] {
-  return gitRawOutput(['status', '--porcelain'], cwd)
-    .split(/\r?\n/)
-    .filter(Boolean);
-}
-
-function dirtyFiles(cwd: string): string[] {
-  return statusEntries(cwd)
-    .map((entry) => entry.replace(/^[A-Z? ][A-Z? ]\s+/, ''))
-    .flatMap((entry) => entry.includes(' -> ') ? entry.split(' -> ') : [entry])
-    .filter(Boolean);
-}
-
-function intersection(left: string[], right: string[]): string[] {
-  const rightSet = new Set(right);
-  return [...new Set(left.filter((entry) => rightSet.has(entry)))].sort();
-}
-
-function writeAbsorptionTypedBlocker(
-  outputDir: string,
-  payload: JsonRecord,
-): string {
-  const typedBlockerPath = path.join(outputDir, 'typed-blocker.json');
-  writeJson(typedBlockerPath, {
-    surface_kind: 'opl_work_order_typed_blocker',
-    version: 'opl.work-order-execution.typed-blocker.v1',
-    status: 'blocked_before_absorption',
-    can_absorb_without_overwriting_external_changes: false,
-    ...payload,
-  });
-  return typedBlockerPath;
 }
 
 function commandInferredFromVerificationRef(ref: string): string | null {
@@ -177,144 +122,6 @@ function verificationCommandsFor(workOrder: JsonRecord, explicitCommands: string
     .map(commandInferredFromVerificationRef)
     .filter((entry): entry is string => Boolean(entry));
   return [...new Set([...explicitCommands, ...inferred, 'git diff --check'])];
-}
-
-function assertExecutableWorkOrder(workOrder: JsonRecord): void {
-  if (stringValue(workOrder.status) !== 'ready_for_target_agent_source_patch') {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'OPL work-order execute requires a source patch work order.',
-      {
-        work_order_id: stringValue(workOrder.work_order_id),
-        status: stringValue(workOrder.status),
-      },
-    );
-  }
-  if (stringValue(workOrder.executor_lease_ref)?.startsWith('executor-lease:codex-cli/') !== true) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'OPL work-order execute requires a Codex CLI executor lease ref.',
-      {
-        work_order_id: stringValue(workOrder.work_order_id),
-        executor_lease_ref: stringValue(workOrder.executor_lease_ref),
-      },
-    );
-  }
-  const boundary = isRecord(workOrder.authority_boundary) ? workOrder.authority_boundary : {};
-  if (boundary.can_write_target_domain_truth !== false || boundary.can_authorize_target_domain_quality_or_export !== false) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'OPL work-order execute refuses work orders that can write target truth or quality/export verdicts.',
-      {
-        work_order_id: stringValue(workOrder.work_order_id),
-        authority_boundary: boundary,
-      },
-    );
-  }
-}
-
-function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): string[] {
-  const machineCloseoutRefs = isRecord(workOrder.machine_closeout_refs) ? workOrder.machine_closeout_refs : {};
-  const noForbiddenWriteProof = isRecord(workOrder.no_forbidden_write_proof)
-    ? workOrder.no_forbidden_write_proof
-    : {};
-  const missing: string[] = [];
-  if (stringList(workOrder.owner_route_refs).length === 0) {
-    missing.push('target_owner_route');
-  }
-  if (!isRecord(workOrder.source_morphology_proof) && !stringValue(workOrder.source_morphology_proof_ref)) {
-    missing.push('source_morphology');
-  }
-  if (!stringValue(machineCloseoutRefs.target_runtime_read_model_consumption_ref)) {
-    missing.push('generated_surface_consumption');
-  }
-  if (!stringValue(workOrder.private_residue_decision_ref)) {
-    missing.push('private_residue_decision');
-  }
-  if (
-    noForbiddenWriteProof.required !== true
-    || noForbiddenWriteProof.can_write_target_domain_truth !== false
-    || noForbiddenWriteProof.can_write_target_domain_memory_body !== false
-    || noForbiddenWriteProof.can_mutate_target_domain_artifact_body !== false
-    || noForbiddenWriteProof.can_authorize_target_domain_quality_or_export !== false
-    || stringList(noForbiddenWriteProof.proof_refs).length === 0
-  ) {
-    missing.push('no_forbidden_write_proof');
-  }
-  if (!stringValue(machineCloseoutRefs.target_owner_receipt_or_typed_blocker_ref)) {
-    missing.push('owner_answer_shape');
-  }
-  return OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS.filter((field) => missing.includes(field));
-}
-
-function omaTargetAgentNoExecutorLaunchProof() {
-  return {
-    codex_process_started: false,
-    target_worktree_opened: false,
-    absorption_attempted: false,
-    cleanup_needed: false,
-    reason: 'oma_target_agent_work_order_guard_missing',
-  };
-}
-
-function writeOmaTargetAgentWorkOrderGuardBlocker(input: {
-  workOrder: JsonRecord;
-  workOrderId: string;
-  outputDir: string;
-  missingFields: string[];
-}): string {
-  const typedBlockerPath = path.join(input.outputDir, 'typed-blocker.json');
-  const noExecutorLaunchProof = omaTargetAgentNoExecutorLaunchProof();
-  writeJson(typedBlockerPath, {
-    surface_kind: 'opl_work_order_typed_blocker',
-    version: 'opl.work-order-execution.typed-blocker.v1',
-    blocker_kind: 'oma_target_agent_work_order_guard_missing',
-    status: 'developer_work_order_required',
-    executor_launch_admission: 'blocked_before_executor_launch',
-    work_order_id: input.workOrderId,
-    missing_guard_fields: input.missingFields,
-    required_guard_fields: OMA_TARGET_AGENT_WORK_ORDER_GUARD_FIELDS,
-    no_executor_launch_proof: noExecutorLaunchProof,
-    developer_work_order_required: true,
-    can_sign_target_owner_receipt: false,
-    can_create_target_typed_blocker: false,
-    can_write_target_truth: false,
-    required_next_shape: 'developer_work_order',
-    guard_policy_ref:
-      'contracts/opl-framework/standard-agent-landing-acceptance-contract.json#oma_target_agent_work_order_guard',
-  });
-  return typedBlockerPath;
-}
-
-function assertOmaTargetAgentWorkOrderGuard(input: {
-  workOrder: JsonRecord;
-  workOrderId: string;
-  outputDir: string;
-}): void {
-  const missingFields = missingOmaTargetAgentWorkOrderGuardFields(input.workOrder);
-  if (missingFields.length === 0) {
-    return;
-  }
-  const typedBlockerPath = writeOmaTargetAgentWorkOrderGuardBlocker({
-    ...input,
-    missingFields,
-  });
-  throw new FrameworkContractError(
-    'contract_shape_invalid',
-    'OMA target-agent work order guard requires target owner route, source morphology, generated surface consumption, private residue decision, no-forbidden-write proof, and owner answer shape before execution.',
-    {
-      work_order_id: input.workOrderId,
-      blocker_kind: 'oma_target_agent_work_order_guard_missing',
-      executor_launch_admission: 'blocked_before_executor_launch',
-      missing_guard_fields: missingFields,
-      typed_blocker_path: typedBlockerPath,
-      no_executor_launch_proof: omaTargetAgentNoExecutorLaunchProof(),
-      developer_work_order_required: true,
-      can_sign_target_owner_receipt: false,
-      can_create_target_typed_blocker: false,
-      can_write_target_truth: false,
-    },
-  );
 }
 
 function readSuiteResult(suitePath: string | null | undefined) {
@@ -440,26 +247,6 @@ function buildDryRunReceipt(input: {
       can_mutate_domain_artifact: false,
     },
   };
-}
-
-function cleanupTargetWorktree(input: {
-  targetAgentDir: string;
-  worktreePath: string;
-  branchName: string;
-}): CommandResult[] {
-  const cleanupResults: CommandResult[] = [];
-  if (fs.existsSync(input.worktreePath)) {
-    cleanupResults.push(runCommand('git', ['worktree', 'remove', '--force', input.worktreePath], input.targetAgentDir, {
-      allowFailure: true,
-    }));
-  }
-  cleanupResults.push(runCommand('git', ['branch', '-D', input.branchName], input.targetAgentDir, {
-    allowFailure: true,
-  }));
-  cleanupResults.push(runCommand('git', ['worktree', 'prune'], input.targetAgentDir, {
-    allowFailure: true,
-  }));
-  return cleanupResults;
 }
 
 function throwWithFailureCleanup(

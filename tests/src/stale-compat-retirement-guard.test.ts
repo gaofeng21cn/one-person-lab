@@ -162,7 +162,12 @@ test('Agent Lab and observability eval surfaces stay refs-only and non-authorita
     assert.match(authoritySource, new RegExp(`${flag}: false`));
   }
 
-  const workbenchSource = fs.readFileSync(path.join(repoRoot, 'src/modules/foundry-lab/agent-lab-complete.ts'), 'utf8');
+  const workbenchSource = [
+    'src/modules/foundry-lab/agent-lab-complete.ts',
+    'src/modules/foundry-lab/agent-lab-complete-control-plane.ts',
+  ]
+    .map((relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'))
+    .join('\n');
   assert.match(workbenchSource, /observability_export_readiness:\s*\{[\s\S]{0,240}upload_external_service: false,[\s\S]{0,80}reads_domain_body: false,/);
   assert.match(workbenchSource, /online_learning_refs:\s*\{[\s\S]{0,240}can_train_or_deploy_model_weights: false,[\s\S]{0,80}can_promote_default_agent_without_gate: false,/);
 });
