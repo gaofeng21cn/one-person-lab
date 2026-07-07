@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-08
+
+### 决策：OPL foundation/support Skill 增强优先改现有 AI 路由，不新增默认暴露
+
+原因：Foundation/support Skill 的价值在于把跨 MAS / MAG / RCA / BookForge 复用的判断经验留在 AI 层，而不是把每个经验都沉淀成新 Skill、schema 或默认 Codex metadata。正确边界是：能力模块先行、暴露方式后置；模块化只在运维层固定 identity、refs、receipt、sync scope 和 fail-closed 边界，弹性判断继续留在 Skill / stage prompt。Support Skill 数量增长本身不是能力成熟证据，必须继续由 `plugins/opl-foundation-skills/exposure.json` 控制暴露范围。
+
+影响：
+
+- `opl-external-specialist-skill-router` 与 `opl-connect-source-and-skill-router` 继续保持 gap-gated：默认 OPL/domain pack 不足时，才对 registered external skill/source registry 做最小 `search`、`inspect` 一个候选，并只在 workspace / quest 需要时 single-skill sync。
+- `K-Dense-AI/scientific-agent-skills` 等外部来源只读作 registered registry；不默认安装、不 bulk metadata、不全库同步、不写入 global/user Codex context，也不恢复 scientific-only alias router。
+- Stage support Skill 吸收 MAS/MAG/RCA/BookForge 的共同失败模式，但只作为 AI review heuristics：`critique_as_repair_hint`、`source_or_receipt_stale`、`owner_route_overclaim` 和 `candidate_body_reconstruction_forbidden`。
+- 这些 support Skill 只能输出 missing refs、repair hints、route-back、owner route 和 no-authority handoff；不能签 owner receipt、typed blocker、human gate、domain verdict、artifact authority、runtime/provider truth 或 readiness claim。
+- 后续若 support Skill 数量需要增长，先证明现有 Skill 无法覆盖该 AI 判断，并同步 `exposure.json` 的 scope / activation gate / no-regression redirect；不得通过新增 Skill 绕开按需暴露政策。
+
 ## 2026-07-07
 
 ### 决策：Agent Package 抽象统一，标准 Agent 的 Codex carrier 由 repo-owned primary skill 统一物化

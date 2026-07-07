@@ -38,6 +38,19 @@ skill/source registry may contain one approved Skill candidate.
   this Skill: decide whether the default pack is insufficient, inspect one
   candidate, and hand refs back to the domain owner.
 - If no single candidate fits, report the gap and owner route instead of syncing broad libraries or creating compatibility aliases.
+- Treat K-Dense/scientific-agent-skills and similar approved sources as
+  registered registries only. Registration allows targeted search/inspect and
+  optional single-skill sync; it is not default install, default context, broad
+  metadata exposure, or a reason to create a scientific-only router.
+
+## Default-Pack Gap Gate
+
+Before using an external source, name the default OPL/domain pack that was
+checked and why it is insufficient for this workspace or quest. If the default
+pack can handle the task with an owner route, use it and stop. If the gap is
+real, search the registered registry with the smallest query, inspect one
+candidate, and sync only that one Skill when the current workspace/quest needs
+the instructions locally.
 
 ## Trigger
 

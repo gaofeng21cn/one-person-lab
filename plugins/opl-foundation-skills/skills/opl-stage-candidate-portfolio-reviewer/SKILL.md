@@ -20,6 +20,24 @@ Use this skill to review `stage_candidate_portfolio` read models and projection 
 - Keep elastic portfolio review in this Skill: judge ref coverage, advisory metric restraint, negative-path preservation, human-review fit, and route-back quality.
 - If the read model cannot support a claim, classify the missing or stale ref instead of encoding candidate judgment in a module.
 
+## Cross-Domain Failure Patterns
+
+Use these MAS/MAG/RCA/BookForge-derived patterns as portfolio review
+heuristics, not new portfolio body rules:
+
+- `critique_as_repair_hint`: candidate critique can produce repair hints,
+  review questions, or route-back wording; it is not candidate acceptance,
+  rejection, ranking truth, or the repair itself.
+- `source_or_receipt_stale`: stale source, provenance, review, owner receipt,
+  visual artifact, grant package, or book memory refs cannot support current
+  portfolio claims.
+- `owner_route_overclaim`: human-review routes, domain owner refs, route-back
+  packets, or owner-evidence refs are not owner acceptance, quality verdict,
+  typed blocker, or readiness.
+- `candidate_body_reconstruction_forbidden`: never reconstruct candidate body,
+  domain body, clinical data, grant text, visual artifact body, or manuscript
+  body from refs, metrics, rankings, negative paths, hashes, or summaries.
+
 ## Inputs
 
 - `stage_candidate_portfolio` packets or `stage_candidate_portfolio_summary` read models.
@@ -61,6 +79,9 @@ Use this skill to review `stage_candidate_portfolio` read models and projection 
 - `human_review_route_gap`;
 - `owner_route_gap`;
 - `stale_or_missing_read_model_ref`;
+- `critique_as_repair_hint_overclaim`;
+- `source_or_receipt_stale`;
+- `candidate_body_reconstruction_forbidden`;
 - `no_issue_found`.
 
 ## Output Shape

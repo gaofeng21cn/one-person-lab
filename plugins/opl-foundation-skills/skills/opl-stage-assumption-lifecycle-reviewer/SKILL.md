@@ -20,6 +20,24 @@ Use this skill to turn `family-stage-assumption-lifecycle` projections into an A
 - Keep elastic review in this Skill: explain why the assumption matters, what stage path it affects, who owns repair, and what route-back clears it.
 - If the projection is too thin, name the missing ref or owner route instead of turning assumption meaning into a deterministic module.
 
+## Cross-Domain Failure Patterns
+
+Use these MAS/MAG/RCA/BookForge-derived patterns as review heuristics, not new
+contracts:
+
+- `critique_as_repair_hint`: a lifecycle critique may suggest the next repair
+  or route-back, but it does not mutate the assumption, close a monitor, or
+  become the repair itself.
+- `source_or_receipt_stale`: stale source, monitor, owner receipt, visual
+  evidence, grant evidence, or book memory refs stay stale until the owning
+  surface refreshes them.
+- `owner_route_overclaim`: a route to MAS/MAG/RCA/BookForge, OPL Stagecraft, or
+  a human reviewer is not owner acceptance, quality verdict, typed blocker, or
+  readiness.
+- `candidate_body_reconstruction_forbidden`: do not infer clinical data, grant
+  text, visual artifact body, book manuscript body, or candidate content from
+  refs, counts, hashes, monitor labels, or lifecycle summaries.
+
 ## Inputs
 
 - `opl_family_stage_assumption_lifecycle` projection refs.
@@ -36,6 +54,14 @@ Use this skill to turn `family-stage-assumption-lifecycle` projections into an A
    - `missing_owner`: no owner can repair or waive the assumption;
    - `invalidated_by_ref`: the projection names evidence that contradicts the assumption;
    - `repair_action_gap`: the proposed repair is too vague to execute;
+   - `critique_as_repair_hint_overclaim`: review wording treats critique as the
+     repair or closure;
+   - `source_or_receipt_stale`: source, monitor, or receipt evidence is stale or
+     not bound to the current owner route;
+   - `owner_route_overclaim`: a route/ref is being read as owner acceptance or
+     readiness;
+   - `candidate_body_reconstruction_forbidden`: the review depends on inferred
+     domain or candidate body content instead of explicit refs;
    - `no_issue_found`: no lifecycle action is needed.
 4. Map every material finding to stage impact: launch safety, evidence freshness, owner route, replay, cohort loop, quality gate, artifact mutation, or operator attention only.
 5. Recommend the smallest legal next action: add monitor ref, refresh observed evidence, clarify owner, route to domain owner, route to Stagecraft, or leave as warning.

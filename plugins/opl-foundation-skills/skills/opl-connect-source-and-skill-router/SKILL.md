@@ -16,17 +16,26 @@ It is stdlib-only, writes nothing, performs no network or subprocess calls, and 
 - Treat this Skill as the AI judgment layer: decide whether external source or skill help is needed, which candidate fits the task and owner, whether the risk is too high, whether exactly one Skill should be synced, and how results should be handed to the owning domain.
 - Keep domain truth with the domain owner. Connect output and this Skill's judgment are candidate refs only.
 - Treat approved source registries, including `K-Dense-AI/scientific-agent-skills` when registered as `kdense-scientific-agent-skills`, as searchable source inventories, not default task context or default Codex metadata.
+- Treat external specialist routing as gap-gated: only search/inspect external
+  registries after the active default OPL/domain pack is insufficient, and only
+  sync one selected Skill to workspace/quest scope when the task actually needs
+  local instructions.
 
 ## AI-first / Contract-light Semantics
 
 - Use Connect contracts and modules only for source identity, capability kind, candidate refs, sync receipts, recovery, and verification.
 - Keep elastic routing judgment in this Skill: decide whether a source or Skill is needed, inspect the smallest candidate, weigh authority risk, and shape route-back.
 - If metadata is ambiguous or stale, return a refs-only hold or owner route instead of broadening default exposure or hardcoding source semantics.
+- Keep K-Dense/scientific-agent-skills and similar libraries as registered
+  registries. Do not translate registration into default install, bulk metadata,
+  global/user Codex exposure, or a new alias router.
 
 ## Router Workflow
 
 1. Classify the request as `source_search`, `skill_search`, `candidate_inspect`, `single_skill_sync`, `connector_receipt_debug`, or `refs_only_review`.
-2. Start with search or an explicit selector. Use list/index views only for maintainer source review; do not turn a whole external library or its full metadata set into default context.
+2. Start with search or an explicit selector only after naming the default-pack
+   gap. Use list/index views only for maintainer source review; do not turn a
+   whole external library or its full metadata set into default context.
 3. Inspect the smallest plausible candidate before syncing. Check owner, source path or URL, capability kind, sync scope, expected target, authority boundary, and stale or missing source signals.
 4. Prefer one-skill sync. Sync only the selected Skill or refs-only subset needed for the current workspace or quest unless the domain owner explicitly requires a package-level install.
 5. For connector receipt debug, compare requested resource, normalized refs, invocation parameters, errors, no-authority flags, and receipt candidate path. Classify failures as access, normalization, receipt construction, sync target mismatch, or authority overclaim.
