@@ -5,6 +5,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stageAttemptSummary } from './family-runtime-stage-attempts.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
+import {
+  runTemporalProductionResidencyProofForWorker,
+} from './family-runtime-temporal-provider-parts/production-proof.ts';
+import {
+  inspectTemporalWorkerLifecycle,
+} from './family-runtime-temporal-worker-lifecycle.ts';
 
 type RuntimePaths = ReturnType<typeof familyRuntimePaths>;
 
@@ -32,13 +38,9 @@ export async function buildTemporalResidencyProof(
   paths: RuntimePaths,
   input: { live?: boolean; production?: boolean } = {},
 ) {
-  const {
-    inspectTemporalWorkerLifecycle,
-    runTemporalProductionResidencyProof,
-  } = await import('./family-runtime-temporal-provider.ts');
   const worker = await inspectTemporalWorkerLifecycle(paths);
   const liveProof = input.live ? await runTemporalLiveResidencyProof() : null;
-  const productionProof = input.production ? await runTemporalProductionResidencyProof(paths) : null;
+  const productionProof = input.production ? await runTemporalProductionResidencyProofForWorker(worker) : null;
   const attemptSummary = stageAttemptSummary(db);
   const temporalAttemptsTotal = countStageAttemptsWhere(db, "WHERE provider_kind = 'temporal'");
   const temporalTypedCloseoutAccepted = countStageAttemptsWhere(
