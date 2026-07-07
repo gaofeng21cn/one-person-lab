@@ -203,7 +203,7 @@ Temporal-backed provider support is the production online runtime target. Local 
 
 - [Documentation index](./docs/README.md)
 - [Public docs](./docs/public/README.md)
-- [OPL whitepaper](./docs/public/whitepaper/README.md)
+- [OPL whitepaper](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html)
 - [Project overview](./docs/project.md)
 - [Current status](./docs/status.md)
 - [Architecture](./docs/architecture.md)

@@ -105,7 +105,7 @@ OPL 系列项目开发的主参考是 [OPL 系列项目开发主参考](./active
 
 - [仓库首页](../README.md)
 - [公开文档入口](./public/README.md)
-- [OPL 白皮书](./public/whitepaper/README.md)
+- [OPL 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html)
 - [路线图](./public/roadmap.md)
 - [任务版图](./public/task-map.md)
 - [运行模型](./public/operating-model.md)

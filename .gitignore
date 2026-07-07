@@ -5,6 +5,7 @@
 .codegraph/
 .worktrees/
 tmp/
+docs/site/latest/
 dist/
 build/
 out/

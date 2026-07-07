@@ -15,10 +15,13 @@ type WhitepaperMetadata = {
 };
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const whitepaperDir = path.join(repoRoot, 'docs', 'public', 'whitepaper');
-const markdownPath = path.join(whitepaperDir, 'opl-whitepaper.md');
+const sourceDir = path.join(repoRoot, 'docs', 'whitepapers');
+const whitepaperDir = path.join(repoRoot, 'docs', 'site', 'latest', 'whitepapers');
+const markdownPath = path.join(sourceDir, 'opl-whitepaper.md');
+const generatedMarkdownPath = path.join(whitepaperDir, 'opl-whitepaper.md');
+const htmlPath = path.join(whitepaperDir, 'opl-whitepaper.html');
 const pdfPath = path.join(whitepaperDir, 'opl-whitepaper.pdf');
-const verificationPath = path.join(whitepaperDir, 'opl-whitepaper-verification.json');
+const verificationPath = path.join(repoRoot, 'docs', 'delivery', 'whitepapers', 'opl-whitepaper-verification.json');
 const tempDir = path.join(repoRoot, 'tmp', 'pdfs', 'opl-whitepaper');
 const tempMarkdownPath = path.join(tempDir, 'opl-whitepaper.pandoc.md');
 const tempHeaderPath = path.join(tempDir, 'opl-whitepaper-header.tex');
@@ -193,6 +196,7 @@ function buildHeader() {
 
 function buildPdf(metadata: WhitepaperMetadata, markdown: string, outputPath: string) {
   fs.mkdirSync(tempDir, { recursive: true });
+  fs.mkdirSync(whitepaperDir, { recursive: true });
   fs.writeFileSync(tempHeaderPath, buildHeader(), 'utf8');
   fs.writeFileSync(tempMarkdownPath, buildPdfMarkdown(metadata, markdown), 'utf8');
 
@@ -215,6 +219,17 @@ function buildPdf(metadata: WhitepaperMetadata, markdown: string, outputPath: st
     '-V', 'urlcolor=OPLTeal',
     '-o', outputPath,
   ], { env: { SOURCE_DATE_EPOCH: sourceDateEpoch } });
+}
+
+function buildHtml(metadata: WhitepaperMetadata) {
+  fs.mkdirSync(whitepaperDir, { recursive: true });
+  run('pandoc', [
+    markdownPath,
+    '--standalone',
+    '--metadata', `title=${metadata.title}`,
+    '--metadata', 'lang=zh-CN',
+    '-o', htmlPath,
+  ]);
 }
 
 function renderPdfToDir(pdfFile: string, renderDir: string) {
@@ -313,6 +328,7 @@ function main() {
   const markdown = fs.readFileSync(markdownPath, 'utf8');
   const metadata = parseMarkdownMetadata(markdown);
   scanTextForSecrets(markdown);
+  buildHtml(metadata);
   buildPdf(metadata, markdown, candidatePdfPath);
   const pdf_write_status = installPdfCandidate();
 
@@ -334,6 +350,8 @@ function main() {
     status: 'opl_whitepaper_ready',
     generated_at: `${metadata.publicationDate}T00:00:00.000Z`,
     source_markdown: relativeToRepo(markdownPath),
+    generated_markdown: relativeToRepo(generatedMarkdownPath),
+    generated_html: relativeToRepo(htmlPath),
     generated_pdf: relativeToRepo(pdfPath),
     pdf_write_status,
     temp_markdown: relativeToRepo(tempMarkdownPath),
@@ -352,6 +370,8 @@ function main() {
     },
     references: parseMarkdownLinks(markdown),
   };
+  fs.copyFileSync(markdownPath, generatedMarkdownPath);
+  fs.mkdirSync(path.dirname(verificationPath), { recursive: true });
   writeJson(verificationPath, verification);
   console.log(JSON.stringify(verification, null, 2));
 }

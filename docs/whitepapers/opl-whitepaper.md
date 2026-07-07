@@ -2,7 +2,7 @@
 
 > 让复杂知识工作进入可交付、可复查、可持续推进的专业系统
 
-<!-- Owner: `One Person Lab`; Purpose: `public_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable whitepaper body source. Public artifact index and update workflow live in `docs/public/whitepaper/README.md`; generated PDF and verification JSON come from `npm run docs:whitepaper`; runtime, release, domain, production, owner-receipt, and current product truth stay in their owning contracts, source, CLI/API/read-model, runtime ledgers, receipts, and evidence surfaces. -->
+<!-- Owner: `One Person Lab`; Purpose: `public_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable whitepaper body source. Public latest outputs live under `docs/site/latest/whitepapers/`; verification JSON comes from `npm run docs:latest`; runtime, release, domain, production, owner-receipt, and current product truth stay in their owning contracts, source, CLI/API/read-model, runtime ledgers, receipts, and evidence surfaces. -->
 
 发布日期：2026-07-04
 
