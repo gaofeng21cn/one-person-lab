@@ -31,6 +31,63 @@
     "plugin_transport_is_membership_axis": false,
     "plugin_transport_is_status_axis": false
   },
+  "agent_package_exposure_unification_policy": {
+    "surface_kind": "opl_agent_package_exposure_unification_policy",
+    "version": "agent-package-exposure-unification.v1",
+    "policy_id": "unified_agent_package_abstraction_distinct_carriers",
+    "unified_public_abstraction": "opl_agent_package",
+    "user_facing_verb": "install_manage_opl_agent_package",
+    "codex_plugin_role": "carrier_detail_for_codex_app_standalone_install",
+    "opl_app_role": "package_cockpit_for_managed_agent_packages",
+    "physical_carriers_must_remain_distinct": true,
+    "codex_plugin_is_agent_identity": false,
+    "opl_app_module_is_agent_identity": false,
+    "user_story_must_not_split_by_carrier": true,
+    "app_must_not_hardcode_domain_semantics": true,
+    "carrier_adapters_own_package_core": false,
+    "carrier_adapters_own_domain_authority": false
+  },
+  "skill_on_demand_exposure_policy": {
+    "surface_kind": "opl_skill_on_demand_exposure_policy",
+    "version": "skill-on-demand-exposure.v1",
+    "policy_id": "source_search_inspect_explicit_sync",
+    "codex_metadata_is_exposure": true,
+    "default_sync_model": "source_search_inspect_explicit_sync",
+    "default_context_model": "workspace_or_quest_local_only_after_explicit_selection",
+    "default_global_user_allowed": false,
+    "default_codex_scope_allowed": false,
+    "large_skill_library_default_flow": [
+      "source",
+      "search",
+      "inspect",
+      "explicit_sync",
+      "workspace_or_quest_local"
+    ],
+    "allowed_exposure_scopes": [
+      "source_only",
+      "project_local",
+      "workspace_local",
+      "quest_local",
+      "domain_profile",
+      "developer_codex",
+      "global_user_explicit_user_install_only"
+    ],
+    "preferred_task_scopes": [
+      "workspace_local",
+      "quest_local"
+    ],
+    "sync_surfaces": [
+      "opl connect sync-skills",
+      "opl connect foundation-skills sync"
+    ],
+    "authority_boundary": {
+      "can_write_domain_truth": false,
+      "can_sign_owner_receipt": false,
+      "can_create_typed_blocker": false,
+      "can_claim_domain_ready": false,
+      "can_claim_production_ready": false
+    }
+  },
   "standard_public_projection_policy": {
     "surface_kind": "opl_foundry_agent_standard_public_projection_policy",
     "version": "foundry-agent-standard-public-projection.v1",

@@ -5,6 +5,31 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-07
+
+### 决策：Agent 对外叙事统一为 OPL Agent Package，Codex Plugin 只作为 carrier detail
+
+原因：同一个标准 OPL Agent 需要同时服务 Codex App 独立安装和 OPL App 托管管理。把两者说成两个不同智能体会制造身份割裂；把两者强行合并成同一个物理 carrier 又会丢失 App 侧 package graph、依赖、更新、receipt 和 Developer Mode 边界。正确口径是统一用户抽象，不统一物理 carrier。
+
+影响：
+
+- 用户叙事统一为“安装 / 管理 OPL Agent Package”；Codex Plugin、OPL App module、Capability Pack、MCP/Web/native surface 都只是 carrier / projection detail。
+- 标准 agent 公共身份继续来自 standard agent registry 和 Foundry Agent series；plugin transport、generated surface 或 OPL App shortcut 不能成为 membership/status 轴。
+- `contracts/opl-framework/foundry-agent-series-contract.json#agent_package_exposure_unification_policy` 是该规则的机器入口；`opl connect skills --json` 必须投影 `agent_package_exposure_model`。
+- 物理 carrier 仍保留差异：Codex App 可用 self-contained plugin；OPL App 使用 thin agent package、managed dependency graph、package lifecycle receipt 和 shortcut/action refs。
+- App / carrier adapter 不拥有 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
+
+### 决策：专业 Skill 默认按需暴露，metadata 也按暴露面治理
+
+原因：标准 agent 和 OPL 基座都有大量专业 / support Skill。把所有本机已安装 package 的 Skill metadata 默认暴露给用户级 Codex，会污染普通任务上下文，也会让 source、安装 payload、Codex registry 和当前任务上下文四个层面混在一起。
+
+影响：
+
+- 专业 Skill 默认走 `source -> search/inspect -> explicit sync -> workspace_local|quest_local`；`global_user` 只允许用户显式个人安装。
+- `contracts/opl-framework/foundry-agent-series-contract.json#skill_on_demand_exposure_policy` 是统一机器政策；`opl connect skills --json` 的 `professional_skill_exposure.on_demand_exposure_policy` 必须投影该政策。
+- OPL foundation/support Skill 继续由 `plugins/opl-foundation-skills/exposure.json` 和 `opl connect foundation-skills inspect|sync` 管理，默认禁止 global / codex scope。
+- MAS ScholarSkills 等专业能力包可以作为 `domain_profile` 或 package dependency 出现，但实际进入任务上下文仍应优先同步到 workspace / quest-local discovery 面。
+
 ## 2026-07-06
 
 ### 决策：Agent Package Manager 保留为 OPL package core，不扩成私有通用 package manager

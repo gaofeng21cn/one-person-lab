@@ -158,8 +158,22 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(agentProjectionPolicy.standard_membership, 'standard_domain_agent');
     assert.equal(agentProjectionPolicy.plugin_transport_is_membership_axis, false);
     assert.equal(agentProjectionPolicy.plugin_transport_is_status_axis, false);
+    assert.equal(pack.agent_package_exposure_model?.unified_public_abstraction, 'opl_agent_package');
+    assert.equal(
+      pack.agent_package_exposure_model?.codex_plugin_role,
+      'carrier_detail_for_codex_app_standalone_install',
+    );
+    assert.equal(pack.agent_package_exposure_model?.opl_app_role, 'package_cockpit_for_managed_agent_packages');
+    assert.equal(pack.agent_package_exposure_model?.physical_carriers_must_remain_distinct, true);
+    assert.equal(pack.agent_package_exposure_model?.user_story_must_not_split_by_carrier, true);
     assert.equal(pack.management_model, 'opl_managed_codex_plugin_surface');
     assert.equal(pack.management_model_role, 'unified_management_semantics_transport_may_differ');
+    assert.equal(
+      pack.professional_skill_exposure.on_demand_exposure_policy.default_sync_model,
+      'source_search_inspect_explicit_sync',
+    );
+    assert.equal(pack.professional_skill_exposure.on_demand_exposure_policy.codex_metadata_is_exposure, true);
+    assert.equal(pack.professional_skill_exposure.on_demand_exposure_policy.default_global_user_allowed, false);
     assert.equal(pack.professional_skill_exposure.codex_default_exposure_required, false);
     assert.equal(pack.professional_skill_exposure.default_codex_exposed_count, 0);
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');

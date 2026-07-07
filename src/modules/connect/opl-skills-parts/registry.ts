@@ -57,6 +57,7 @@ export type InspectFamilySkillPack = {
     generated_surface_is_membership_axis: false;
     generated_surface_is_status_axis: false;
   } | null;
+  agent_package_exposure_model: Record<string, unknown> | null;
   foundry_agent_series: Record<string, unknown>;
   command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
@@ -75,6 +76,7 @@ export type InspectFamilySkillPack = {
     default_codex_exposed_count: number;
     expected_exposure_layer: 'repo_internal_professional_skill';
     codex_default_exposure_required: false;
+    on_demand_exposure_policy: Record<string, unknown>;
     blockers: string[];
   };
   plugin_source_path: string;
