@@ -90,7 +90,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-stage-assumption-lifecycle.schema.json`
   - runtime-assumption lifecycle projection that turns stale assumptions, missing monitor refs, or missing owner refs into operator warnings with minimal counterexamples unless a caller explicitly promotes them to a launch-safety blocker
 - `family-stage-integrity-metadata.schema.json`
-  - shared stage-level integrity / citation-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only
+  - shared stage-level integrity / claim-support / evidence-handoff / data-access / human-checkpoint metadata companion, inspired by academic workflow integrity patterns but kept as OPL-owned framework metadata projection only; legacy citation-support remains a profile alias
 - `stage-candidate-portfolio.schema.json`
   - refs-only stage candidate portfolio companion for candidate refs, assumption decomposition, provenance checks, negative or failed path refs, advisory ranking/proximity metrics, and human review refs; OPL projects refs and status only, while domain repositories keep candidate bodies, domain truth, quality verdict, artifact authority, and owner receipt authority
 - `family-domain-memory-ref.schema.json`
@@ -244,7 +244,7 @@ For `MAS`, this means inventory and descriptor projection over the existing `sco
 
 ## Stage Integrity Metadata Freeze
 
-`family-stage-integrity-metadata.schema.json` absorbs the useful academic-research workflow pattern of explicit integrity checks, citation-support audit refs, evidence handoff, verified data-access metadata, and human checkpoints. It is a companion metadata surface for stage packets and product-entry manifests; it is not a paper-reviewer, publication gate, fundability gate, visual-quality gate, or runtime dependency on `academic-research-skills`.
+`family-stage-integrity-metadata.schema.json` absorbs the useful academic-research workflow pattern of explicit integrity checks, claim-support audit refs, evidence handoff, verified data-access metadata, and human checkpoints. It is a companion metadata surface for stage packets and product-entry manifests; it is not a paper-reviewer, publication gate, fundability gate, visual-quality gate, or runtime dependency on `academic-research-skills`. Citation-specific support can remain in a domain profile alias, but the generic required metadata is `claim_support`.
 
 `OPL` owns the schema, discovery, transport, projection, and fail-closed routing vocabulary. `MAS`, `MAG`, `RCA`, and future Foundry Agents may expose thin domain projections or adapters into this shape. The domain repositories keep the underlying truth, audit bodies, evidence ledgers, review judgments, quality verdicts, publication / fundability / visual authority, artifact authority, owner receipts, and direct skill paths.
 

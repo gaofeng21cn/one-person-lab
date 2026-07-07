@@ -108,7 +108,7 @@
             "review",
             "revision",
             "packaging",
-            "publish",
+            "release_gate",
             "operator_gate",
             "domain_specific"
           ]

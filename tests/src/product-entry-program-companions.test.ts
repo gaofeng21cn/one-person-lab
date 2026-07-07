@@ -66,7 +66,7 @@ test('product entry program companions normalize preflight and detailed readines
   assert.deepEqual(blocked.blocking_check_ids, ['workspace_ready']);
 
   const readiness = buildDetailedReadiness({
-    surface_kind: 'grant_authoring_readiness',
+    surface_kind: 'product_entry_domain_readiness',
     verdict: 'agent_assisted_ready_not_product_grade',
     usable_now: true,
     good_to_use_now: false,
@@ -75,7 +75,7 @@ test('product entry program companions normalize preflight and detailed readines
     summary: 'Current workflow is usable with operator guidance.',
     recommended_start_surface: 'product_entry_surface',
     recommended_start_command: 'redcube product status',
-    recommended_loop_surface: 'grant_user_loop',
+    recommended_loop_surface: 'product_entry_loop',
     recommended_loop_command: 'redcube product invoke',
     workflow_coverage: [
       buildWorkflowCoverageItem({
@@ -89,7 +89,7 @@ test('product entry program companions normalize preflight and detailed readines
     blocking_gaps: ['Managed web shell pending.'],
   });
 
-  assert.equal(readiness.surface_kind, 'grant_authoring_readiness');
+  assert.equal(readiness.surface_kind, 'product_entry_domain_readiness');
   assert.equal(readiness.workflow_coverage[0].step_id, 'collect_materials');
   assert.deepEqual(readiness.blocking_gaps, ['Managed web shell pending.']);
 

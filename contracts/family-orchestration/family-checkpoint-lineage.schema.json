@@ -179,7 +179,8 @@
             "controller",
             "artifact",
             "workspace",
-            "publication"
+            "domain_delivery",
+            "owner_gate"
           ]
         },
         "ref_kind": {

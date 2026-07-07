@@ -32,13 +32,21 @@ test('family stage integrity metadata contract freezes generic metadata shape', 
   assert.equal(properties.surface_kind.const, 'family_stage_integrity_metadata');
   assert.equal(properties.version.const, 'family-stage-integrity-metadata.v1');
   assert.ok(required.includes('integrity_policy'));
-  assert.ok(required.includes('citation_support'));
+  assert.ok(required.includes('claim_support'));
+  assert.equal(required.includes('citation_support'), false);
   assert.ok(required.includes('evidence_handoff'));
   assert.ok(required.includes('data_access'));
   assert.ok(required.includes('human_checkpoints'));
+  assert.equal((properties.citation_support as JsonRecord).deprecated, true);
   assert.equal(example.surface_kind, 'family_stage_integrity_metadata');
   assert.equal((example.integrity_policy as JsonRecord).status, 'active');
-  assert.equal((example.citation_support as JsonRecord).support_mode, 'claim_ref_alignment_required');
+  const requiredCheckEnum = (
+    ((((properties.integrity_policy as JsonRecord).properties as Record<string, JsonRecord>)
+      .required_checks as JsonRecord).items as JsonRecord).enum
+  ) as string[];
+  assert.ok(requiredCheckEnum.includes('claim_support'));
+  assert.equal(requiredCheckEnum.includes('citation_support'), false);
+  assert.equal((example.claim_support as JsonRecord).support_mode, 'claim_ref_alignment_required');
   assert.equal((example.evidence_handoff as JsonRecord).handoff_mode, 'refs_only');
   assert.equal((example.data_access as JsonRecord).body_included, false);
   assert.equal((example.data_access as JsonRecord).write_permitted, false);
