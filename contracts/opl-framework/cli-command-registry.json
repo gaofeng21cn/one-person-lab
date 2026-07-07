@@ -934,7 +934,11 @@
                   "read_only",
                   "can_write_domain_truth",
                   "can_sign_owner_receipt",
-                  "can_claim_publication_readiness"
+                  "can_create_typed_blocker",
+                  "can_claim_publication_readiness",
+                  "can_claim_citation_truth",
+                  "can_claim_domain_ready",
+                  "can_claim_production_ready"
                 ],
                 "properties": {
                   "read_only": {
@@ -946,7 +950,19 @@
                   "can_sign_owner_receipt": {
                     "const": false
                   },
+                  "can_create_typed_blocker": {
+                    "const": false
+                  },
                   "can_claim_publication_readiness": {
+                    "const": false
+                  },
+                  "can_claim_citation_truth": {
+                    "const": false
+                  },
+                  "can_claim_domain_ready": {
+                    "const": false
+                  },
+                  "can_claim_production_ready": {
                     "const": false
                   }
                 }
@@ -1106,6 +1122,7 @@
                   "can_sign_owner_receipt",
                   "can_create_typed_blocker",
                   "can_claim_publication_readiness",
+                  "can_claim_citation_truth",
                   "can_claim_domain_ready",
                   "can_claim_production_ready"
                 ],
@@ -1123,6 +1140,9 @@
                     "const": false
                   },
                   "can_claim_publication_readiness": {
+                    "const": false
+                  },
+                  "can_claim_citation_truth": {
                     "const": false
                   },
                   "can_claim_domain_ready": {
@@ -1254,7 +1274,12 @@
                     "receipt_ref",
                     "authority"
                   ],
-                  "additionalProperties": true
+                  "additionalProperties": true,
+                  "properties": {
+                    "authority": {
+                      "const": "provider_receipt_candidate_only"
+                    }
+                  }
                 }
               },
               "cache": {
@@ -1286,7 +1311,11 @@
                   "can_write_domain_truth",
                   "can_create_owner_receipt",
                   "can_create_typed_blocker",
-                  "can_claim_reference_truth"
+                  "can_claim_reference_truth",
+                  "can_claim_citation_truth",
+                  "can_claim_publication_readiness",
+                  "can_claim_domain_ready",
+                  "can_claim_production_ready"
                 ],
                 "properties": {
                   "read_only": {
@@ -1302,6 +1331,18 @@
                     "const": false
                   },
                   "can_claim_reference_truth": {
+                    "const": false
+                  },
+                  "can_claim_citation_truth": {
+                    "const": false
+                  },
+                  "can_claim_publication_readiness": {
+                    "const": false
+                  },
+                  "can_claim_domain_ready": {
+                    "const": false
+                  },
+                  "can_claim_production_ready": {
                     "const": false
                   }
                 }

@@ -245,6 +245,10 @@ test('connect references verify returns provider receipts, cache metadata, retri
           can_create_owner_receipt: boolean;
           can_create_typed_blocker: boolean;
           can_claim_reference_truth: boolean;
+          can_claim_citation_truth: boolean;
+          can_claim_publication_readiness: boolean;
+          can_claim_domain_ready: boolean;
+          can_claim_production_ready: boolean;
         };
       };
     };
@@ -298,6 +302,10 @@ test('connect references verify returns provider receipts, cache metadata, retri
       can_create_owner_receipt: false,
       can_create_typed_blocker: false,
       can_claim_reference_truth: false,
+      can_claim_citation_truth: false,
+      can_claim_publication_readiness: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
     });
 
     const requestCountAfterFirstRun = fakeProviders.requests.length;

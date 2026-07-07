@@ -83,6 +83,74 @@ test('connect references verify exposes registry metadata in command help', () =
   assert.equal(help.registry.authority_boundary.can_claim_production_ready, false);
 });
 
+test('Connect scientific connector output schemas freeze no-authority flags', () => {
+  const contract = loadCliCommandRegistryContract();
+  const pubmedBoundary = contract.commands.connect_pubmed_search
+    .output_schema.properties.opl_connect_pubmed.properties.authority_boundary;
+  const scientificBoundary = contract.commands.connect_scientific_search
+    .output_schema.properties.opl_connect_scientific.properties.authority_boundary;
+  const referenceVerification = contract.commands.connect_references_verify
+    .output_schema.properties.opl_connect_reference_verification.properties;
+  const referenceBoundary = referenceVerification.no_authority_boundary;
+  const providerReceiptItem = referenceVerification.provider_receipts.items;
+
+  for (const field of [
+    'read_only',
+    'can_write_domain_truth',
+    'can_sign_owner_receipt',
+    'can_create_typed_blocker',
+    'can_claim_publication_readiness',
+    'can_claim_citation_truth',
+    'can_claim_domain_ready',
+    'can_claim_production_ready',
+  ]) {
+    assert.equal(pubmedBoundary.required.includes(field), true);
+  }
+  assert.equal(pubmedBoundary.properties.read_only.const, true);
+  for (const field of [
+    'can_write_domain_truth',
+    'can_sign_owner_receipt',
+    'can_create_typed_blocker',
+    'can_claim_publication_readiness',
+    'can_claim_citation_truth',
+    'can_claim_domain_ready',
+    'can_claim_production_ready',
+  ]) {
+    assert.equal(pubmedBoundary.properties[field].const, false);
+  }
+
+  assert.equal(scientificBoundary.required.includes('can_claim_citation_truth'), true);
+  assert.equal(scientificBoundary.properties.can_claim_citation_truth.const, false);
+
+  assert.equal(providerReceiptItem.properties.authority.const, 'provider_receipt_candidate_only');
+  for (const field of [
+    'read_only',
+    'can_write_domain_truth',
+    'can_create_owner_receipt',
+    'can_create_typed_blocker',
+    'can_claim_reference_truth',
+    'can_claim_citation_truth',
+    'can_claim_publication_readiness',
+    'can_claim_domain_ready',
+    'can_claim_production_ready',
+  ]) {
+    assert.equal(referenceBoundary.required.includes(field), true);
+  }
+  assert.equal(referenceBoundary.properties.read_only.const, true);
+  for (const field of [
+    'can_write_domain_truth',
+    'can_create_owner_receipt',
+    'can_create_typed_blocker',
+    'can_claim_reference_truth',
+    'can_claim_citation_truth',
+    'can_claim_publication_readiness',
+    'can_claim_domain_ready',
+    'can_claim_production_ready',
+  ]) {
+    assert.equal(referenceBoundary.properties[field].const, false);
+  }
+});
+
 test('connect module actions expose registry metadata in command help', () => {
   const contract = loadCliCommandRegistryContract();
 

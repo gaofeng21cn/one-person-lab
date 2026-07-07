@@ -903,6 +903,10 @@ function noAuthorityBoundary() {
     can_create_owner_receipt: false,
     can_create_typed_blocker: false,
     can_claim_reference_truth: false,
+    can_claim_citation_truth: false,
+    can_claim_publication_readiness: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
   };
 }
 
