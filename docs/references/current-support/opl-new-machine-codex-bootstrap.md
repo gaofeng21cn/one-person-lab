@@ -181,4 +181,4 @@ npm run new-machine:codex-bootstrap:docker-smoke -- --include-opl-doc
 - macOS Command Line Tools 未安装：按系统提示安装，安装完成后重跑 installer 或 `opl system initialize --json`。
 - Codex CLI 或 Codex 配置缺失：先让 OPL/App 初始化 core launch gate；涉及密钥时由用户手动提供。
 - managed checkout dirty/ahead/diverged：停止自动覆盖，报告路径和状态，由用户决定是否清理、rebase、push 或改用新路径。
-- plugin registry 更新后 Codex 不显示新 skill：重启 Codex 或刷新 plugin/skill discovery，再复查 `~/.codex/config.toml` 的 family marketplace `source` 是否指向 `OPL_STATE_DIR/codex-plugin-marketplaces/<marketplace-id>`，以及该 wrapper 下 `.agents/plugins/marketplace.json` 和 `plugins/<plugin-id>` symlink 是否存在；不要把 MAS/MAG/RCA 开发 checkout 下的 `.agents/plugins/marketplace.json` 当作当前 OPL/App truth。
+- plugin registry 更新后 Codex 不显示新 skill：重启 Codex 或刷新 plugin/skill discovery，再复查 `~/.codex/config.toml` 的 family marketplace `source` 是否指向 `OPL_STATE_DIR/codex-plugin-marketplaces/<marketplace-id>`，以及该 wrapper 下 `.agents/plugins/marketplace.json` 和 `plugins/<plugin-id>/.codex-plugin/plugin.json` / `skills/<plugin-id>/SKILL.md` 是否存在并使用 canonical id；不要把 MAS/MAG/RCA 开发 checkout 下的 `.agents/plugins/marketplace.json` 当作当前 OPL/App truth。
