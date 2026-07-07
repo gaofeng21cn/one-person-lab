@@ -106,6 +106,8 @@ The chain is straightforward: host specialized agents with OPL Framework, then p
 
 Users do not need to understand the repository split to use the product. For developers: `one-person-lab` maintains the framework and CLI, `one-person-lab-app` maintains the desktop product and release experience, and MAS, MAG, RCA, Book Forge, and other repositories maintain their professional capabilities, standards, and deliverables.
 
+For the complete repository split, see the [OPL family repository map](./docs/public/repo-map.md).
+
 The desktop product follows the Codex App interaction shape and presents MAS, MAG, RCA, and later Foundry Agents as built-in task entries. Users do not need to choose the underlying executor or shell implementation; those details stay in developer diagnostics and verification material.
 
 <p align="center">
@@ -203,6 +205,7 @@ Temporal-backed provider support is the production online runtime target. Local 
 
 - [Documentation index](./docs/README.md)
 - [Public docs](./docs/public/README.md)
+- [OPL family repository map](./docs/public/repo-map.md)
 - [OPL whitepaper](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html)
 - [Project overview](./docs/project.md)
 - [Current status](./docs/status.md)

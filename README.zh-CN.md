@@ -106,6 +106,8 @@ One Person Lab 同时包含框架、桌面工作台和专业 Agent 三层：
 
 如果只是使用产品，不需要理解这些仓库分工。对开发者来说：`one-person-lab` 维护框架和命令行，`one-person-lab-app` 维护桌面产品和发布体验，MAS、MAG、RCA、Book Forge 等仓库维护各自专业领域的能力、判断标准和交付物。
 
+完整仓库分工见 [OPL 系列仓库地图](./docs/public/repo-map.md)。
+
 桌面产品沿用 Codex App 的交互形态，把 MAS、MAG、RCA 及后续 Foundry Agents 呈现为内置任务入口。普通用户不需要选择底层执行器或界面实现；这些细节只出现在开发者诊断和验证材料里。
 
 <p align="center">
@@ -203,6 +205,7 @@ OPL 采用 AI-first、executor-first、contract-light 的 surface 模型：activ
 
 - [文档索引](./docs/README.md)
 - [公开文档入口](./docs/public/README.md)
+- [OPL 系列仓库地图](./docs/public/repo-map.md)
 - [OPL 白皮书](./docs/public/whitepaper/README.md)
 - [项目概览](./docs/project.md)
 - [当前状态](./docs/status.md)
