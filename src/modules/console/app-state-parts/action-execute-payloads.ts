@@ -238,14 +238,35 @@ export function agentPackageIdPayload(actionId: string, payload: JsonRecord) {
   return { packageId };
 }
 
-export function agentPackageHomeShortcutPreferencePayload(payload: JsonRecord) {
-  const { packageId } = agentPackageIdPayload('agent_package_home_shortcut_preferences_set', payload);
+export function agentPackagePreferencesPayload(payload: JsonRecord) {
+  const { packageId } = agentPackageIdPayload('agent_package_preferences_set', payload);
+  const exposureAction = stringPayloadField(payload, 'exposure_action')
+    ?? stringPayloadField(payload, 'exposureAction');
   const shortcutId = stringPayloadField(payload, 'shortcut_id')
     ?? stringPayloadField(payload, 'shortcutId');
-  if (!shortcutId) {
-    throw new FrameworkContractError('cli_usage_error', 'agent_package_home_shortcut_preferences_set action requires payload.shortcut_id.', {
-      action_id: 'agent_package_home_shortcut_preferences_set',
-      required: ['shortcut_id'],
+
+  if (
+    exposureAction != null
+    && exposureAction !== 'hide'
+    && exposureAction !== 'unhide'
+    && exposureAction !== 'enable'
+    && exposureAction !== 'disable'
+  ) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_preferences_set action requires payload.exposure_action hide, unhide, enable, or disable.', {
+      action_id: 'agent_package_preferences_set',
+      allowed_exposure_actions: ['hide', 'unhide', 'enable', 'disable'],
+    });
+  }
+  if (!exposureAction && !shortcutId) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_preferences_set action requires payload.exposure_action or payload.shortcut_id.', {
+      action_id: 'agent_package_preferences_set',
+      required: ['exposure_action or shortcut_id'],
+    });
+  }
+  if (exposureAction && shortcutId) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_preferences_set action accepts one preference target per request.', {
+      action_id: 'agent_package_preferences_set',
+      mutually_exclusive: ['exposure_action', 'shortcut_id'],
     });
   }
   const visible = typeof payload.visible === 'boolean' ? payload.visible : undefined;
@@ -254,5 +275,24 @@ export function agentPackageHomeShortcutPreferencePayload(payload: JsonRecord) {
     : typeof payload.sortOrder === 'number' && Number.isFinite(payload.sortOrder)
       ? payload.sortOrder
       : undefined;
-  return { packageId, shortcutId, visible, sortOrder };
+  if (exposureAction) {
+    return {
+      packageId,
+      exposureAction: exposureAction as 'hide' | 'unhide' | 'enable' | 'disable',
+      visible,
+      sortOrder,
+    };
+  }
+  if (!shortcutId) {
+    throw new FrameworkContractError('cli_usage_error', 'agent_package_preferences_set action requires payload.shortcut_id.', {
+      action_id: 'agent_package_preferences_set',
+      required: ['shortcut_id'],
+    });
+  }
+  return {
+    packageId,
+    shortcutId,
+    visible,
+    sortOrder,
+  };
 }

@@ -70,11 +70,7 @@ exit 1
         'agent_package_update',
         'agent_package_repair',
         'agent_package_uninstall',
-        'agent_package_hide',
-        'agent_package_unhide',
-        'agent_package_enable',
-        'agent_package_disable',
-        'agent_package_home_shortcut_preferences_set',
+        'agent_package_preferences_set',
         'settings_reload_codex_surface',
         'settings_check_app_update',
       'settings_prune_runtime_roots_dry_run',
@@ -480,11 +476,7 @@ exit 1
           'agent_package_update',
           'agent_package_repair',
           'agent_package_uninstall',
-          'agent_package_hide',
-          'agent_package_unhide',
-          'agent_package_enable',
-          'agent_package_disable',
-          'agent_package_home_shortcut_preferences_set',
+          'agent_package_preferences_set',
         ].map((actionId) => {
           const action = output.app_state.settings_control_center.action_catalog.find(
             (entry: AppStateListEntry) => entry.action_id === actionId,
@@ -497,15 +489,7 @@ exit 1
           ['agent_package_update', 'opl connect agent-packages update --manifest-url <manifest_url>', 'capabilities'],
           ['agent_package_repair', 'opl connect agent-packages repair --package-id <package_id>', 'capabilities'],
           ['agent_package_uninstall', 'opl connect agent-packages uninstall --package-id <package_id>', 'capabilities'],
-          ['agent_package_hide', 'opl connect agent-packages hide --package-id <package_id>', 'capabilities'],
-          ['agent_package_unhide', 'opl connect agent-packages unhide --package-id <package_id>', 'capabilities'],
-          ['agent_package_enable', 'opl connect agent-packages enable --package-id <package_id>', 'capabilities'],
-          ['agent_package_disable', 'opl connect agent-packages disable --package-id <package_id>', 'capabilities'],
-          [
-            'agent_package_home_shortcut_preferences_set',
-            'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
-            'capabilities',
-          ],
+          ['agent_package_preferences_set', 'opl app action execute --action agent_package_preferences_set', 'capabilities'],
         ],
       );
       assert.equal(

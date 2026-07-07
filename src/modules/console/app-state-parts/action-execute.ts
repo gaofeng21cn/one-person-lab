@@ -25,9 +25,9 @@ import { buildOplDockerWebuiDoctor } from '../../connect/index.ts';
 import { runOplTurnkeyInstall } from '../../connect/index.ts';
 import { buildRuntimeTraySnapshot } from '../runtime-tray-snapshot.ts';
 import {
-  agentPackageHomeShortcutPreferencePayload,
   agentPackageIdPayload,
   agentPackageInstallPayload,
+  agentPackagePreferencesPayload,
   agentPackageRegistryUrlPayload,
   dockerWebuiSeedEnv,
   modulePayload,
@@ -414,28 +414,24 @@ async function executeDirectAppAction(
     };
   }
 
-  const exposureActions = {
-    agent_package_hide: 'hide',
-    agent_package_unhide: 'unhide',
-    agent_package_enable: 'enable',
-    agent_package_disable: 'disable',
-  } as const;
-  if (options.actionId in exposureActions) {
-    const action = exposureActions[options.actionId as keyof typeof exposureActions];
+  if (options.actionId === 'agent_package_preferences_set') {
+    const preferencesPayload = agentPackagePreferencesPayload(options.payload);
+    if (preferencesPayload.exposureAction) {
+      return {
+        delegatedSurface: `opl connect agent-packages ${preferencesPayload.exposureAction} --package-id <package_id>`,
+        result: runOplAgentPackageExposureAction(preferencesPayload.exposureAction, {
+          packageId: preferencesPayload.packageId,
+          dryRun: options.dryRun,
+        }),
+      };
+    }
     return {
-      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
-      result: runOplAgentPackageExposureAction(action, {
-        ...agentPackageIdPayload(options.actionId, options.payload),
-        dryRun: options.dryRun,
-      }),
-    };
-  }
-
-  if (options.actionId === 'agent_package_home_shortcut_preferences_set') {
-    return {
-      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
+      delegatedSurface: 'opl connect agent-packages home-shortcut-preferences set --package-id <package_id> --shortcut-id <shortcut_id>',
       result: runOplAgentPackageHomeShortcutPreferencesSet({
-        ...agentPackageHomeShortcutPreferencePayload(options.payload),
+        packageId: preferencesPayload.packageId,
+        shortcutId: preferencesPayload.shortcutId,
+        visible: preferencesPayload.visible,
+        sortOrder: preferencesPayload.sortOrder,
         dryRun: options.dryRun,
       }),
     };

@@ -16,7 +16,7 @@ import type {
   AgentPackageSourceKind,
 } from './types.ts';
 
-export function ownerRouteReadbackCommands() {
+function ownerRouteReadbackCommands() {
   return {
     list: CAPABILITY_PACKAGE_READBACK_REF,
     status: CAPABILITY_PACKAGE_STATUS_READBACK_REF,
@@ -25,7 +25,7 @@ export function ownerRouteReadbackCommands() {
   };
 }
 
-export function ownerRouteReadbackItem(input: {
+function ownerRouteReadbackItem(input: {
   packageId: string;
   lock?: AgentPackageLock | null;
   receipt?: AgentPackageLifecycleReceipt | null;

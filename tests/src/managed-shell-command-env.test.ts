@@ -10,7 +10,7 @@ import {
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
   shouldUseManagedShellScratchCwd,
-} from '../../src/modules/connect/managed-shell-command-env.ts';
+} from '../../src/kernel/managed-shell-command-env.ts';
 
 test('managed shell command env routes python, uv, and pytest artifacts outside the checkout', () => {
   const checkoutRoot = path.join(os.tmpdir(), 'opl-managed-shell-checkout');

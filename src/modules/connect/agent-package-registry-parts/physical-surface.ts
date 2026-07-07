@@ -26,11 +26,11 @@ import type {
   AgentPackagePhysicalSurface,
 } from './types.ts';
 
-export function resolveLocalPath(value: string) {
+function resolveLocalPath(value: string) {
   return value.startsWith('file:') ? fileURLToPath(value) : path.resolve(value);
 }
 
-export function safeRelativePayloadPath(value: string) {
+function safeRelativePayloadPath(value: string) {
   const normalized = path.normalize(value);
   if (
     !value.trim()
@@ -47,7 +47,7 @@ export function safeRelativePayloadPath(value: string) {
   return normalized;
 }
 
-export function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): AgentPackagePayloadFile[] {
+function normalizePayloadFiles(payload: unknown, payloadManifestUrl: string): AgentPackagePayloadFile[] {
   if (!isRecord(payload) || !Array.isArray(payload.files)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package payload manifest must contain a files array.', {
       payload_manifest_url: payloadManifestUrl,
@@ -99,7 +99,7 @@ export function normalizePayloadFiles(payload: unknown, payloadManifestUrl: stri
   });
 }
 
-export async function materializePayloadManifestSource(input: {
+async function materializePayloadManifestSource(input: {
   manifest: AgentPackageManifest;
   payloadManifestUrl: string;
   dryRun: boolean;
@@ -157,7 +157,7 @@ export async function resolveManifestPhysicalSource(
   };
 }
 
-export function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
+function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   const codexHome = resolveCodexHome();
   const marketplaceId = `opl-agent-${safePathSegment(manifest.package_id)}-local`;
   const pluginId = manifest.plugin_id;

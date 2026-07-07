@@ -203,12 +203,45 @@ test('app action execute routes install_from_manifest_url to Framework package l
     assert.equal(repair.app_action_execution.result.opl_agent_package_repair.status, 'repaired');
     assert.equal(repair.app_action_execution.result.opl_agent_package_repair.lifecycle_receipt.action, 'repair');
 
+    const exposurePreference = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'agent_package_preferences_set',
+      '--payload',
+      JSON.stringify({
+        package_id: 'third.party.research',
+        exposure_action: 'disable',
+      }),
+    ], { OPL_STATE_DIR: stateDir }) as {
+      app_action_execution: {
+        delegated_surface: string;
+        result: {
+          opl_agent_package_exposure: {
+            status: string;
+            action: string;
+            package_lock: { exposure_state: string };
+            lifecycle_receipt: { action: string; writes_performed: boolean };
+          };
+        };
+      };
+    };
+    assert.equal(
+      exposurePreference.app_action_execution.delegated_surface,
+      'opl connect agent-packages disable --package-id <package_id>',
+    );
+    assert.equal(exposurePreference.app_action_execution.result.opl_agent_package_exposure.status, 'disabled');
+    assert.equal(exposurePreference.app_action_execution.result.opl_agent_package_exposure.action, 'disable');
+    assert.equal(exposurePreference.app_action_execution.result.opl_agent_package_exposure.package_lock.exposure_state, 'disabled');
+    assert.equal(exposurePreference.app_action_execution.result.opl_agent_package_exposure.lifecycle_receipt.action, 'disable');
+
     const shortcutPreference = runCli([
       'app',
       'action',
       'execute',
       '--action',
-      'agent_package_home_shortcut_preferences_set',
+      'agent_package_preferences_set',
       '--payload',
       JSON.stringify({
         package_id: 'third.party.research',

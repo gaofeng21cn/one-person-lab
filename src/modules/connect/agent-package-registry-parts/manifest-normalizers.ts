@@ -18,7 +18,7 @@ import type {
   AgentPackageRegistryEntry,
 } from './types.ts';
 
-export function normalizeDistributionPayload(value: unknown): AgentPackageDistributionPayload | null {
+function normalizeDistributionPayload(value: unknown): AgentPackageDistributionPayload | null {
   if (value === undefined || value === null) {
     return null;
   }
@@ -75,7 +75,7 @@ export function normalizeDistributionPayload(value: unknown): AgentPackageDistri
   };
 }
 
-export function normalizeOrdinaryUserSource(value: unknown, sourceLabel: string): AgentPackageOrdinaryUserSource | null {
+function normalizeOrdinaryUserSource(value: unknown, sourceLabel: string): AgentPackageOrdinaryUserSource | null {
   if (value === undefined || value === null) {
     return null;
   }
@@ -190,7 +190,7 @@ export function normalizeRegistry(payload: unknown, registryUrl: string, registr
   };
 }
 
-export function normalizeSkillPackRefs(skillPacks: Record<string, unknown>[]) {
+function normalizeSkillPackRefs(skillPacks: Record<string, unknown>[]) {
   return skillPacks.flatMap((pack) => {
     const packId = stringValue(pack.id);
     const source = stringValue(pack.source);
