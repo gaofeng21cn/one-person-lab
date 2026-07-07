@@ -1,5 +1,6 @@
 import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, parseJsonText, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import './contracts-entry-cases/native-helper-doctor.test.ts';
+import './contracts-entry-cases/native-helper-lifecycle.test.ts';
 
 test('loadFrameworkContracts returns the active framework registries', () => {
   const contracts = loadFrameworkContracts(repoRoot);
@@ -940,64 +941,6 @@ test('runtime manager records native index failure lifecycle when helpers are un
     const failure = parseJsonText(fs.readFileSync(persistence.failure_file, 'utf8').trim()) as any;
     assert.equal(failure.status, 'skipped_helper_unavailable');
     assert.equal(failure.errors[0].code, 'native_index_helper_unavailable');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime manager reports the native helper package and repair lifecycle', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
-
-  try {
-    const output = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-    });
-
-    assert.equal(output.runtime_manager.native_helper_target.lifecycle.status, 'ready_to_build');
-    assert.deepEqual(output.runtime_manager.native_helper_target.lifecycle.commands, {
-      build: 'npm run native:build',
-      cache: 'npm run native:cache',
-      doctor: 'npm run native:doctor',
-      prebuild: 'npm run native:prebuild',
-      prebuild_pack: 'npm run native:prebuild-pack',
-      prebuild_check: 'npm run native:prebuild-check',
-      repair: 'npm run native:repair',
-      test: 'npm run native:test',
-    });
-    assert.equal(
-      output.runtime_manager.native_helper_target.lifecycle.prebuild.install_command,
-      'npm run native:prebuild',
-    );
-    assert.deepEqual(
-      output.runtime_manager.native_helper_target.lifecycle.prebuild.restore_order,
-      [
-        'OPL_NATIVE_HELPER_PREBUILD_ROOT',
-        'package native-helper-prebuilds',
-        'GHCR one-person-lab-native-helper OCI archive',
-        'local Cargo build fallback',
-      ],
-    );
-    assert.match(
-      output.runtime_manager.native_helper_target.lifecycle.cache.cache_dir,
-      /native-helper\/bin\/.+\/0\.1\.0$/,
-    );
-    assert.equal(output.runtime_manager.native_helper_target.lifecycle.cache.target_triple, `${process.platform}-${process.arch}`);
-    assert.equal(output.runtime_manager.native_helper_target.lifecycle.package.status, 'included');
-    assert.equal(
-      output.runtime_manager.native_helper_target.lifecycle.package.required_files.includes('native/opl-native-helper/src/lib.rs'),
-      true,
-    );
-
-    const packageJson = parseJsonText(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as any;
-    assert.equal(packageJson.scripts['native:cache'], 'node ./scripts/native-helper-cache.mjs');
-    assert.equal(packageJson.scripts['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
-    assert.equal(packageJson.scripts['native:prebuild'], 'node ./scripts/native-helper-prebuild.mjs install');
-    assert.equal(packageJson.scripts['native:repair'], 'node ./scripts/native-helper-repair.mjs');
-    assert.equal(packageJson.files.includes('native-helper-prebuilds'), true);
-    assert.equal(packageJson.files.includes('native/opl-native-helper/src'), true);
-    assert.equal(packageJson.files.includes('scripts/native-helper-doctor.mjs'), true);
-    assert.equal(packageJson.files.includes('scripts/native-helper-prebuild.mjs'), true);
-    assert.equal(packageJson.files.includes('scripts/native-helper-repair.mjs'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
