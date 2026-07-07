@@ -131,7 +131,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.module_actions[0].module.module_id, 'medautoscience');
     assert.equal(output.install.module_actions[0].module.installed, true);
     assert.equal(output.install.module_actions[0].turnkey.skill_sync.status, 'completed');
-    assert.equal('codex_skill_mirror' in output.install.module_actions[0].turnkey.skill_sync.result.installer_result, false);
+    assert.equal(Object.prototype.hasOwnProperty.call(output.install.module_actions[0].turnkey.skill_sync.result.installer_result ?? {}, 'codex_skill_mirror'), false);
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas', 'SKILL.md')), false);
     assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md')), false);
     assert.equal(output.install.gui_open_action, null);
@@ -338,7 +338,7 @@ test('recommended system companion skills exclude MAS/MDS project-local stage sk
       assert.equal(skillIds.includes(stageSkillId), false);
     }
   } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
   }
 });
 

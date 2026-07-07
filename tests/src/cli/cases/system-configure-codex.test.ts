@@ -375,7 +375,7 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     const omaPack = output.codex_config.skill_sync.packs.find((pack) => pack.domain_id === 'oplmetaagent');
     assert.equal(
       (omaPack?.installer_result?.generated_codex_plugin as { source?: string } | undefined)?.source,
-      'opl_generated_agent_interface_bundle_codex_plugin',
+      'opl_standard_agent_primary_skill_codex_plugin',
     );
 
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');

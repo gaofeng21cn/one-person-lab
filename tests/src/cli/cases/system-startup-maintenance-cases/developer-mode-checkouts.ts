@@ -178,21 +178,16 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       'opl-bookforge-health',
     ]);
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
-    for (const [moduleId, marketplaceId, pluginId] of [
-      ['medautoscience', 'mas-local', 'mas'],
-      ['medautogrant', 'mag-local', 'mag'],
-      ['redcube', 'rca-local', 'rca'],
+    for (const [moduleId, marketplaceId] of [
+      ['medautoscience', 'mas-local'],
+      ['medautogrant', 'mag-local'],
+      ['redcube', 'rca-local'],
     ] as const) {
       const checkoutPath = siblingCheckouts[moduleId];
       const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
       assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
-      assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), true);
-      const wrapperPluginRoot = path.join(marketplaceRoot, 'plugins', pluginId);
-      const wrapperManifest = parseJsonText(fs.readFileSync(path.join(wrapperPluginRoot, '.codex-plugin', 'plugin.json'), 'utf8')) as Record<string, any>;
-      const wrapperSkill = fs.readFileSync(path.join(wrapperPluginRoot, 'skills', pluginId, 'SKILL.md'), 'utf8');
-      assert.equal(wrapperManifest.name, pluginId);
-      assert.match(wrapperSkill, new RegExp(`^name:\\s*${pluginId}$`, 'm'));
-      assert.match(codexConfig, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+      assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), false);
+      assert.equal(codexConfig.includes(`[marketplaces.${marketplaceId}]`), false);
     }
     assert.match(codexConfig, /\[plugins\."oma@oma-local"\]/);
     assert.match(codexConfig, /codex-plugin-marketplaces\/oma-local/);

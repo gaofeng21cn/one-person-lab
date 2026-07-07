@@ -373,7 +373,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assert.equal(bookforge.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
   assert.equal(bookforge.series_membership, 'standard_domain_agent');
   assert.equal(bookforge.work_object.natural_alias, 'book');
-  assert.equal(bookforge.brand_cli, 'opl-bookforge');
+  assert.equal(bookforge.brand_cli, 'obf');
   assert.equal(bookforge.foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
   assertOnlyAllowedFoundryProjectionFields(bookforge, allowedFoundryAgentInspectFields);
   assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect opl-bookforge --json');

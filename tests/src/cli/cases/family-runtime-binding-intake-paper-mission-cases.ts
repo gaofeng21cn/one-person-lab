@@ -224,7 +224,7 @@ test('family-runtime intake keeps MAS PaperMission typed blocker handoff out of 
     );
     assert.equal(
       routeIntake.readbacks[0].next_action.payload_requirement,
-      'record_domain_typed_blocker_ref_for_mas_paper_mission',
+      'record_domain_typed_blocker_ref_for_domain_route',
     );
     assert.deepEqual(routeIntake.readbacks[0].next_action.required_return_shapes, [
       'domain_typed_blocker_ref',

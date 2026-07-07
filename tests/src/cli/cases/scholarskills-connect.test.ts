@@ -954,7 +954,8 @@ test('connect sync-skills registers MAS Scholar Skills in Codex only with explic
     assert.equal(item.plugin_id, 'mas-scholar-skills');
     assert.equal(item.marketplace_id, 'mas-scholar-skills-local');
     assert.equal(item.plugin_source_path, sourceRoot);
-    assert.equal(item.plugin_manifest_path, path.join(sourceRoot, '.codex-plugin', 'plugin.json'));
+    assert.equal(item.plugin_manifest_path, path.join(item.marketplace_root, 'plugins', 'mas-scholar-skills', '.codex-plugin', 'plugin.json'));
+    assert.equal(fs.existsSync(item.plugin_manifest_path), true);
     assert.equal(item.status, 'registered');
     assert.equal(item.ownership_kind, 'framework_capability_plugin');
     assert.equal(item.distribution_role, 'framework_capability_plugin_pack');
@@ -971,10 +972,7 @@ test('connect sync-skills registers MAS Scholar Skills in Codex only with explic
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     assert.match(codexConfig, /\[marketplaces\.mas-scholar-skills-local\]/);
     assert.match(codexConfig, /\[plugins\."mas-scholar-skills@mas-scholar-skills-local"\]/);
-    assert.equal(
-      fs.realpathSync(path.join(item.marketplace_root, 'plugins', 'mas-scholar-skills')),
-      fs.realpathSync(sourceRoot),
-    );
+    assert.equal(fs.existsSync(path.join(item.marketplace_root, 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')), true);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
