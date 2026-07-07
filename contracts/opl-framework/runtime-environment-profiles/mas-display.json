@@ -3,6 +3,14 @@
   "version": "opl-runtime-environment-requirement-profile.v1",
   "domain_id": "mas",
   "profile_id": "display",
+  "ownership_boundary": {
+    "profile_owner": "OPL Framework",
+    "source_owner": "MAS Scholar Skills display pack",
+    "domain_truth_owner": "MAS / domain owner",
+    "no_authority_policy": "This profile only describes runtime dependencies for the MAS display pack bridge. It does not own renderer professional guidance, artifact body authority, visual quality verdict, citation judgment, owner receipt, publication readiness, or domain truth.",
+    "profile_counts_as_domain_truth": false,
+    "profile_counts_as_visual_quality_verdict": false
+  },
   "profiles": [
     {
       "profile_id": "r_ggplot2_ggconsort_reporting_flow_v1",

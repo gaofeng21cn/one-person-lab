@@ -92,11 +92,23 @@ test('connect pubmed search returns normalized read-only literature refs', async
           connector_invocation_ref: string;
           ledger_receipt_candidate_ref: string;
         };
+        provider_receipt_candidate_refs: string[];
+        ownership_boundary: {
+          connector_profile_owner: string;
+          provider_receipt_owner: string;
+          citation_judgment_owner: string;
+          connector_receipt_counts_as_citation_truth: boolean;
+          connector_receipt_counts_as_domain_truth: boolean;
+        };
         authority_boundary: {
           read_only: boolean;
           can_write_domain_truth: boolean;
           can_sign_owner_receipt: boolean;
+          can_create_typed_blocker: boolean;
           can_claim_publication_readiness: boolean;
+          can_claim_citation_truth: boolean;
+          can_claim_domain_ready: boolean;
+          can_claim_production_ready: boolean;
         };
       };
     };
@@ -132,11 +144,23 @@ test('connect pubmed search returns normalized read-only literature refs', async
       output.opl_connect_pubmed.receipt_refs.ledger_receipt_candidate_ref.startsWith('opl://ledger/connect/pubmed/search/'),
       true,
     );
+    assert.deepEqual(output.opl_connect_pubmed.provider_receipt_candidate_refs, [
+      output.opl_connect_pubmed.receipt_refs.ledger_receipt_candidate_ref,
+    ]);
+    assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_profile_owner, 'OPL Connect');
+    assert.equal(output.opl_connect_pubmed.ownership_boundary.provider_receipt_owner, 'OPL Connect');
+    assert.equal(output.opl_connect_pubmed.ownership_boundary.citation_judgment_owner, 'MAS / domain owner');
+    assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_receipt_counts_as_citation_truth, false);
+    assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_receipt_counts_as_domain_truth, false);
     assert.deepEqual(output.opl_connect_pubmed.authority_boundary, {
       read_only: true,
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
       can_claim_publication_readiness: false,
+      can_claim_citation_truth: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
     });
     assert.equal(fakePubMed.requests.some((entry) => entry.includes('esearch.fcgi')), true);
     assert.equal(fakePubMed.requests.some((entry) => entry.includes('esummary.fcgi')), true);

@@ -164,7 +164,30 @@ function buildAuthorityBoundary() {
     read_only: true,
     can_write_domain_truth: false,
     can_sign_owner_receipt: false,
+    can_create_typed_blocker: false,
     can_claim_publication_readiness: false,
+    can_claim_citation_truth: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+  };
+}
+
+function buildOwnershipBoundary() {
+  return {
+    opl_owned_surfaces: [
+      'connector_abi',
+      'provider_invocation_receipt_candidate',
+      'normalized_source_ref_transport',
+    ],
+    connector_profile_owner: 'OPL Connect',
+    provider_receipt_owner: 'OPL Connect',
+    provider: 'pubmed',
+    professional_skill_truth_owner: 'MAS Scholar Skills / domain agent',
+    citation_judgment_owner: 'MAS / domain owner',
+    domain_truth_owner: 'MAS / domain owner',
+    stores_literature_library: false,
+    connector_receipt_counts_as_citation_truth: false,
+    connector_receipt_counts_as_domain_truth: false,
   };
 }
 
@@ -230,6 +253,8 @@ export async function runOplConnectPubMedSearch(input: PubMedSearchInput) {
         connector_invocation_ref: `opl://connect/pubmed/search/${digest}`,
         ledger_receipt_candidate_ref: `opl://ledger/connect/pubmed/search/${digest}`,
       },
+      provider_receipt_candidate_refs: [`opl://ledger/connect/pubmed/search/${digest}`],
+      ownership_boundary: buildOwnershipBoundary(),
       authority_boundary: buildAuthorityBoundary(),
     },
   };

@@ -20,12 +20,20 @@ type ScientificSearchOutput = {
     receipt_refs: {
       connector_invocation_ref: string;
     };
+    ownership_boundary: {
+      connector_profile_owner: string;
+      provider_receipt_owner: string;
+      citation_judgment_owner: string;
+      connector_receipt_counts_as_citation_truth: boolean;
+      connector_receipt_counts_as_domain_truth: boolean;
+    };
     authority_boundary: {
       read_only: boolean;
       can_write_domain_truth: boolean;
       can_sign_owner_receipt: boolean;
       can_create_typed_blocker: boolean;
       can_claim_publication_readiness: boolean;
+      can_claim_citation_truth: boolean;
     };
   };
 };
@@ -149,6 +157,12 @@ test('connect scientific search returns normalized PubMed refs through the optio
     assert.equal(scientific.authority_boundary.can_sign_owner_receipt, false);
     assert.equal(scientific.authority_boundary.can_create_typed_blocker, false);
     assert.equal(scientific.authority_boundary.can_claim_publication_readiness, false);
+    assert.equal(scientific.authority_boundary.can_claim_citation_truth, false);
+    assert.equal(scientific.ownership_boundary.connector_profile_owner, 'OPL Connect');
+    assert.equal(scientific.ownership_boundary.provider_receipt_owner, 'OPL Connect');
+    assert.equal(scientific.ownership_boundary.citation_judgment_owner, 'MAS / domain owner');
+    assert.equal(scientific.ownership_boundary.connector_receipt_counts_as_citation_truth, false);
+    assert.equal(scientific.ownership_boundary.connector_receipt_counts_as_domain_truth, false);
   } finally {
     await fakeServer.close();
   }

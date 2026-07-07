@@ -2,6 +2,7 @@ import type {
   ScholarSkillAuthorityBoundary,
   ScholarSkillCapabilityModuleDescriptor,
   ScholarSkillModuleId,
+  ScholarSkillsOwnershipBoundary,
   ScholarSkillsCapabilityModulesContract,
 } from '../../../../../src/kernel/types.ts';
 
@@ -32,6 +33,24 @@ const MODULE_IDS = [
   'mas-scholar-skills.submit',
   'mas-scholar-skills.data',
 ] as const satisfies readonly ScholarSkillModuleId[];
+
+const OWNERSHIP_BOUNDARY: ScholarSkillsOwnershipBoundary = {
+  opl_owned_surfaces: [
+    'package_descriptor',
+    'skill_sync_projection',
+    'runtime_environment_bridge',
+    'execution_receipt_candidate_descriptor',
+  ],
+  package_descriptor_owner: 'OPL Pack',
+  skill_sync_owner: 'OPL Connect',
+  runtime_environment_bridge_owner: 'OPL Framework',
+  professional_skill_truth_owner: 'MAS Scholar Skills',
+  citation_judgment_owner: 'MAS / domain owner',
+  domain_truth_owner: 'MAS / domain owner',
+  no_authority_policy: 'Fixture only; refs-only OPL surfaces do not count as domain or citation truth.',
+  pack_or_bridge_receipt_counts_as_domain_truth: false,
+  pack_or_bridge_receipt_counts_as_citation_truth: false,
+};
 
 function moduleFixture(moduleId: ScholarSkillModuleId): ScholarSkillCapabilityModuleDescriptor {
   const profile = moduleId.replace('mas-scholar-skills.', '');
@@ -81,6 +100,7 @@ export const MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT: ScholarSkillsCa
   brand_family: 'MAS Scholar Skills',
   purpose: 'Fixture ScholarSkills capability module catalog.',
   machine_boundary: 'Fixture only; no authority or runtime readiness claim.',
+  ownership_boundary: OWNERSHIP_BOUNDARY,
   runtime_environment_bridge: {
     mode: 'refs_only',
     owner: 'OPL Framework',

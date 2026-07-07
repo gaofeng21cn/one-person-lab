@@ -6,6 +6,23 @@
   "brand_family": "MAS Scholar Skills",
   "purpose": "Canonical capability-module catalog for OPL-hosted scholarly skills that can be discovered by OPL Atlas, packaged by OPL Pack, prepared through OPL runtime env, invoked by OPL Runway, and consumed by domain agents as refs-only candidate outputs.",
   "machine_boundary": "This contract describes independent capability modules and their descriptor, dependency, run-context, artifact, receipt, and quality-evidence refs. It does not add an eleventh OPL brand module, execute domain stages, write domain truth, mutate artifact bodies, schedule runtime attempts, sign owner receipts, create typed blockers, or claim runtime, domain, quality, artifact, publication, App, or production readiness.",
+  "ownership_boundary": {
+    "opl_owned_surfaces": [
+      "package_descriptor",
+      "skill_sync_projection",
+      "runtime_environment_bridge",
+      "execution_receipt_candidate_descriptor"
+    ],
+    "package_descriptor_owner": "OPL Pack",
+    "skill_sync_owner": "OPL Connect",
+    "runtime_environment_bridge_owner": "OPL Framework",
+    "professional_skill_truth_owner": "MAS Scholar Skills",
+    "citation_judgment_owner": "MAS / domain owner",
+    "domain_truth_owner": "MAS / domain owner",
+    "no_authority_policy": "OPL-owned descriptors, sync projections, runtime env bridge envelopes, and unsigned receipt candidates expose refs only; they do not replace professional skill truth, citation judgment, domain truth, owner receipts, typed blockers, publication readiness, or quality verdicts.",
+    "pack_or_bridge_receipt_counts_as_domain_truth": false,
+    "pack_or_bridge_receipt_counts_as_citation_truth": false
+  },
   "runtime_environment_bridge": {
     "mode": "refs_only",
     "owner": "OPL Framework",

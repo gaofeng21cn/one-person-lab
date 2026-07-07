@@ -3,6 +3,7 @@ import type {
   ScholarSkillCapabilityModuleDescriptor,
   ScholarSkillDataGovernanceAssessmentPolicy,
   ScholarSkillModuleId,
+  ScholarSkillsOwnershipBoundary,
   ScholarSkillsCapabilityModulesContract,
 } from '../../../kernel/types.ts';
 import {
@@ -190,6 +191,51 @@ function validateDataGovernanceAssessmentPolicy(
     });
   }
   return policy;
+}
+
+function validateOwnershipBoundary(filePath: string, value: unknown): ScholarSkillsOwnershipBoundary {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'ownership_boundary must be an object.', {
+      file: filePath,
+      field: 'ownership_boundary',
+    });
+  }
+  return {
+    opl_owned_surfaces: expectNonEmptyStringArray(value.opl_owned_surfaces, 'ownership_boundary.opl_owned_surfaces', filePath),
+    package_descriptor_owner: expectString(
+      value.package_descriptor_owner,
+      'ownership_boundary.package_descriptor_owner',
+      filePath,
+    ),
+    skill_sync_owner: expectString(value.skill_sync_owner, 'ownership_boundary.skill_sync_owner', filePath),
+    runtime_environment_bridge_owner: expectString(
+      value.runtime_environment_bridge_owner,
+      'ownership_boundary.runtime_environment_bridge_owner',
+      filePath,
+    ),
+    professional_skill_truth_owner: expectString(
+      value.professional_skill_truth_owner,
+      'ownership_boundary.professional_skill_truth_owner',
+      filePath,
+    ),
+    citation_judgment_owner: expectString(
+      value.citation_judgment_owner,
+      'ownership_boundary.citation_judgment_owner',
+      filePath,
+    ),
+    domain_truth_owner: expectString(value.domain_truth_owner, 'ownership_boundary.domain_truth_owner', filePath),
+    no_authority_policy: expectString(value.no_authority_policy, 'ownership_boundary.no_authority_policy', filePath),
+    pack_or_bridge_receipt_counts_as_domain_truth: expectFalse(
+      value.pack_or_bridge_receipt_counts_as_domain_truth,
+      'ownership_boundary.pack_or_bridge_receipt_counts_as_domain_truth',
+      filePath,
+    ),
+    pack_or_bridge_receipt_counts_as_citation_truth: expectFalse(
+      value.pack_or_bridge_receipt_counts_as_citation_truth,
+      'ownership_boundary.pack_or_bridge_receipt_counts_as_citation_truth',
+      filePath,
+    ),
+  };
 }
 
 function validateRuntimeBridgeEnvelopePolicy(filePath: string, value: unknown) {
@@ -488,6 +534,7 @@ export function validateScholarSkillsCapabilityModules(
     brand_family: 'MAS Scholar Skills',
     purpose: expectString(value.purpose, 'purpose', filePath),
     machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    ownership_boundary: validateOwnershipBoundary(filePath, value.ownership_boundary),
     runtime_environment_bridge: {
       mode: 'refs_only',
       owner: 'OPL Framework',

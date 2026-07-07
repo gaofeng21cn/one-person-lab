@@ -213,6 +213,16 @@ test('opl scholar-skills list returns catalog readback with false authority boun
   assert.equal(output.scholar_skills.authority_boundary.can_write_domain_truth, false);
   assert.equal(output.scholar_skills.authority_boundary.can_schedule_runtime, false);
   assert.equal(output.scholar_skills.runtime_environment_bridge.mode, 'refs_only');
+  assert.deepEqual(output.scholar_skills.ownership_boundary.opl_owned_surfaces, [
+    'package_descriptor',
+    'skill_sync_projection',
+    'runtime_environment_bridge',
+    'execution_receipt_candidate_descriptor',
+  ]);
+  assert.equal(output.scholar_skills.ownership_boundary.professional_skill_truth_owner, 'MAS Scholar Skills');
+  assert.equal(output.scholar_skills.ownership_boundary.citation_judgment_owner, 'MAS / domain owner');
+  assert.equal(output.scholar_skills.ownership_boundary.pack_or_bridge_receipt_counts_as_domain_truth, false);
+  assert.equal(output.scholar_skills.ownership_boundary.pack_or_bridge_receipt_counts_as_citation_truth, false);
 });
 
 test('opl scholar-skills inspect returns Display dependency and run-context refs', () => {
@@ -234,6 +244,11 @@ test('opl scholar-skills inspect returns Display dependency and run-context refs
   assert.equal(module.authority_boundary.can_mutate_artifact_body, false);
   assert.equal(module.allowed_writes.length, 0);
   assert.equal(module.forbidden_writes.includes('runtime queues/outbox/state'), true);
+  assert.equal(module.ownership_boundary.package_descriptor_owner, 'OPL Pack');
+  assert.equal(module.ownership_boundary.skill_sync_owner, 'OPL Connect');
+  assert.equal(module.ownership_boundary.runtime_environment_bridge_owner, 'OPL Framework');
+  assert.equal(module.ownership_boundary.professional_skill_truth_owner, 'MAS Scholar Skills');
+  assert.equal(module.ownership_boundary.pack_or_bridge_receipt_counts_as_citation_truth, false);
 });
 
 test('opl scholar-skills exposes module-specific capability profiles for every ScholarSkills module', () => {
@@ -319,6 +334,9 @@ test('opl scholar-skills interfaces exposes JSON readback and runtime env bridge
   assert.equal(output.cli.commands.includes('opl scholar-skills validate --json'), true);
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json'), true);
+  assert.equal(output.ownership_boundary.package_descriptor_owner, 'OPL Pack');
+  assert.equal(output.ownership_boundary.skill_sync_owner, 'OPL Connect');
+  assert.equal(output.ownership_boundary.runtime_environment_bridge_owner, 'OPL Framework');
   assert.equal(output.authority_boundary.can_claim_runtime_ready, false);
 });
 

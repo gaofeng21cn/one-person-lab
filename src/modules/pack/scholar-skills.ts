@@ -223,6 +223,14 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
   ];
   const writeViolations: string[] = [];
   const capabilitySurfaceViolations: string[] = [];
+  const ownershipBoundaryViolations: string[] = [];
+
+  if (
+    contractRoot.ownership_boundary.pack_or_bridge_receipt_counts_as_domain_truth !== false
+    || contractRoot.ownership_boundary.pack_or_bridge_receipt_counts_as_citation_truth !== false
+  ) {
+    ownershipBoundaryViolations.push('ownership_boundary.pack_or_bridge_receipt_counts_as_*');
+  }
 
   for (const module of contractRoot.modules) {
     if (seen.has(module.module_id)) {
@@ -308,6 +316,13 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
       ) ? 'pass' : 'fail',
       detail: 'ScholarSkills bridge envelopes must remain deterministic refs-only candidates.',
     },
+    {
+      check_id: 'ownership_boundary_no_domain_truth',
+      status: ownershipBoundaryViolations.length === 0 ? 'pass' : 'fail',
+      detail: ownershipBoundaryViolations.length === 0
+        ? 'OPL-owned package, sync, and runtime bridge receipts do not count as domain or citation truth.'
+        : ownershipBoundaryViolations.join(', '),
+    },
   ];
 
   return {
@@ -332,6 +347,7 @@ export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
       brand_family: contractRoot.brand_family,
       purpose: contractRoot.purpose,
       machine_boundary: contractRoot.machine_boundary,
+      ownership_boundary: contractRoot.ownership_boundary,
       module_count: contractRoot.modules.length,
       modules: contractRoot.modules.map(moduleSummary),
       runtime_environment_bridge: contractRoot.runtime_environment_bridge,
@@ -362,6 +378,7 @@ export function buildScholarSkillModuleInspect(
       schema_version: contractRoot.schema_version,
       contract_ref: `contracts/opl-framework/scholar-skills-capability-modules.json#modules.${module.module_id}`,
       runtime_environment_bridge: contractRoot.runtime_environment_bridge,
+      ownership_boundary: contractRoot.ownership_boundary,
       module_profile: moduleCapabilityProfile(module),
       artifact_candidate_refs: buildArtifactCandidateRefTemplates(module),
       execution_receipt_candidate: buildExecutionReceiptCandidateTemplate(module),
@@ -444,6 +461,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
         can_claim_runtime_ready: contractRoot.runtime_environment_bridge.can_claim_runtime_ready,
         can_claim_domain_ready: contractRoot.runtime_environment_bridge.can_claim_domain_ready,
       },
+      ownership_boundary: contractRoot.ownership_boundary,
       authority_boundary: contractRoot.authority_boundary,
     },
   };

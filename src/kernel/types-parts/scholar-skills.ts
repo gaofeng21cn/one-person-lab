@@ -76,6 +76,19 @@ export interface ScholarSkillRuntimeBridgeEnvelopePolicy {
   can_create_typed_blocker: false;
 }
 
+export interface ScholarSkillsOwnershipBoundary {
+  opl_owned_surfaces: string[];
+  package_descriptor_owner: string;
+  skill_sync_owner: string;
+  runtime_environment_bridge_owner: string;
+  professional_skill_truth_owner: string;
+  citation_judgment_owner: string;
+  domain_truth_owner: string;
+  no_authority_policy: string;
+  pack_or_bridge_receipt_counts_as_domain_truth: false;
+  pack_or_bridge_receipt_counts_as_citation_truth: false;
+}
+
 export interface ScholarSkillCapabilityModuleDescriptor {
   module_id: ScholarSkillModuleId;
   brand_family: 'MAS Scholar Skills';
@@ -110,6 +123,7 @@ export interface ScholarSkillsCapabilityModulesContract {
   brand_family: 'MAS Scholar Skills';
   purpose: string;
   machine_boundary: string;
+  ownership_boundary: ScholarSkillsOwnershipBoundary;
   runtime_environment_bridge: {
     mode: 'refs_only';
     owner: 'OPL Framework';
