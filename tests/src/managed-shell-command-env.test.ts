@@ -8,6 +8,7 @@ import {
   buildManagedShellCommandEnv,
   buildManagedShellEnvWithUvCacheRecovery,
   createDomainCleanRunnerProfileRegistry,
+  DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
   shouldUseManagedShellScratchCwd,
@@ -112,6 +113,29 @@ test('managed shell command env derives legacy clean runner roots from domain pr
   }
 });
 
+test('managed shell command env labels built-in domain roots as compatibility carriers', () => {
+  assert.deepEqual(
+    DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY.profiles.map((profile) => ({
+      domainId: profile.domainId,
+      profileRole: profile.profileRole,
+    })),
+    [
+      {
+        domainId: 'med-autoscience',
+        profileRole: 'domain_compatibility_clean_runner',
+      },
+      {
+        domainId: 'med-autogrant',
+        profileRole: 'domain_compatibility_clean_runner',
+      },
+      {
+        domainId: 'redcube-ai',
+        profileRole: 'domain_compatibility_clean_runner',
+      },
+    ],
+  );
+});
+
 test('managed shell command env accepts injected domain clean runner profiles', () => {
   const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-custom-profile-checkout-'));
   const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-custom-profile-root-'));
@@ -119,6 +143,7 @@ test('managed shell command env accepts injected domain clean runner profiles', 
     const registry = createDomainCleanRunnerProfileRegistry([
       {
         domainId: 'example-domain',
+        profileRole: 'domain_compatibility_clean_runner',
         legacyEnvRoots: [
           { envName: 'EXAMPLE_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'example-domain' },
         ],

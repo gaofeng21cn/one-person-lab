@@ -105,7 +105,7 @@ export const MINIMAL_SCHOLAR_SKILLS_CAPABILITY_MODULES_CONTRACT: ScholarSkillsCa
     mode: 'refs_only',
     owner: 'OPL Framework',
     dependency_profile_owner_commands: [
-      'opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
+      'opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json',
     ],
     run_context_owner_commands: [
       'opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json',

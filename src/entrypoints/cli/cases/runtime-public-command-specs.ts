@@ -16,8 +16,8 @@ export function buildPublicRuntimeCommandSpecs(
         usage: 'opl env <doctor|prepare|run>',
         examples: [
           'opl env doctor --json',
-          'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
-          'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+          'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --artifact-root artifacts --apply --json',
+          'opl env run --domain mas --profile display --artifact-root artifacts -- Rscript render.R',
         ],
         group: 'env',
       }),
@@ -30,17 +30,17 @@ export function buildPublicRuntimeCommandSpecs(
     'env prepare':
       cloneCommandSpec(commandSpecs['env prepare'], {
         usage:
-          'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+          'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
         examples: [
-          'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
+          'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --artifact-root artifacts --apply --json',
         ],
         group: 'env',
       }),
     'env run':
       cloneCommandSpec(commandSpecs['env run'], {
-        usage: 'opl env run --domain <domain> --profile <profile> --paper-root <path> -- <command...>',
+        usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> -- <command...>',
         examples: [
-          'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+          'opl env run --domain mas --profile display --artifact-root artifacts -- Rscript render.R',
         ],
         group: 'env',
       }),
@@ -117,7 +117,7 @@ export function buildPublicRuntimeCommandSpecs(
         examples: [
           'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
           'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --json',
-          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
+          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
           'opl runtime env cache status --json',
         ],
         group: 'runtime',
@@ -152,9 +152,9 @@ export function buildPublicRuntimeCommandSpecs(
     'runtime env prepare':
       cloneCommandSpec(commandSpecs['runtime env prepare'], {
         usage:
-          'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+          'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
         examples: [
-          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
+          'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
         ],
         group: 'runtime',
       }),
@@ -203,10 +203,10 @@ export function buildPublicRuntimeCommandSpecs(
       }),
     'runtime env run-context':
       cloneCommandSpec(commandSpecs['runtime env run-context'], {
-        usage: 'opl runtime env run-context --domain <domain> --profile <profile> [--paper-root <path>]',
+        usage: 'opl runtime env run-context --domain <domain> --profile <profile> [--artifact-root <path>]',
         examples: [
           'opl runtime env run-context --domain bookforge --profile publication_proof --json',
-          'opl runtime env run-context --domain mas --profile display --paper-root paper --json',
+          'opl runtime env run-context --domain mas --profile display --artifact-root artifacts --json',
         ],
         group: 'runtime',
       }),

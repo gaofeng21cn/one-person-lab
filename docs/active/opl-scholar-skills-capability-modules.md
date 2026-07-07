@@ -72,14 +72,14 @@ MAS Scholar Skills 按 `professional Skill + skill-local deterministic helper + 
 ScholarSkills 只声明 dependency intent 与 run-context refs。实际依赖准备、缓存、run-context 生成和 fail-closed doctor 由 OPL runtime environment substrate 处理：
 
 ```bash
-opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json
+opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json
 opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json
 ```
 
 ScholarSkills 自身提供的 bridge 命令只构建 deterministic refs-only envelope，不调用 renderer，不安装依赖，不写 runtime state，不写 artifact body，不签 owner receipt，也不声明 cache hit：
 
 ```bash
-opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json
+opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json
 opl scholar-skills run-context --module <module_id> --profile <profile> --json
 opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json
 opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json
@@ -130,11 +130,11 @@ opl connect sync-skills --domain mas-scholar-skills --scope codex --json
 
 只有显式 `--scope codex` 才写用户 Codex plugin registry / config；默认 workspace/quest sync 返回 `codex_plugin_registry=null`。App 的普通用户同步入口是 `scholarskills_workspace_sync` / `scholarskills_quest_sync`，支持 dry-run readback；project-local mirror 只保留为显式 CLI/developer route，不作为 App 普通论文执行路径。
 
-需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 `paper/build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
+需要把 module id 绑定到真实 OPL runtime environment substrate 时，使用 runtime bridge 命令。它们复用 `opl runtime env prepare/run-context` 的实现，可在明确 `--apply` 时写入 OPL 管理依赖库和 artifact root 下的 `build/dependency_environment_lock.json`、`dependency_environment_receipt.json`、`dependency_run_context.json`，但仍不写 domain truth、artifact body、owner receipt、typed blocker 或 runtime queue：
 
 ```bash
-opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json
-opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path> --json
+opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> [--apply] --json
+opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --artifact-root <path> --json
 ```
 
 `prepared_ref_envelope`、`run_context_ref_envelope`、`invocation_ref_envelope`、`receipt_candidate_unsigned`、runtime dependency lock、runtime dependency receipt、bound run-context、`cache hit`、`descriptor exists` 或 `doctor pass` 只能证明 OPL substrate 的结构/读面成立，不能声明 domain ready、runtime ready、quality verdict、artifact authority、owner receipt、typed blocker 或 production ready。
@@ -175,10 +175,10 @@ MAS current_owner_delta
 ```bash
 opl scholar-skills list --json
 opl scholar-skills inspect --module mas-scholar-skills.display --json
-opl scholar-skills prepare --module mas-scholar-skills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --json
+opl scholar-skills prepare --module mas-scholar-skills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --artifact-root artifacts --json
 opl scholar-skills run-context --module mas-scholar-skills.display --profile display --json
-opl scholar-skills runtime-prepare --module mas-scholar-skills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json
-opl scholar-skills runtime-run-context --module mas-scholar-skills.display --profile display --platform macos-arm64 --paper-root paper --json
+opl scholar-skills runtime-prepare --module mas-scholar-skills.display --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --artifact-root artifacts --apply --json
+opl scholar-skills runtime-run-context --module mas-scholar-skills.display --profile display --platform macos-arm64 --artifact-root artifacts --json
 opl scholar-skills invoke --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json
 opl scholar-skills receipt --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --json
 opl scholar-skills materialize --module mas-scholar-skills.display --input-ref mas:current_owner_delta/display-intent --artifact-root artifact-root:display-pack-candidates --output-root /tmp/scholarskills-display-candidate --json

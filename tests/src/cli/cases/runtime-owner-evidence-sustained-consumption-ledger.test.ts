@@ -27,7 +27,7 @@ test('runtime owner-evidence sustained-consumption is canonical while MAG comman
     const commandSpecs = buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs();
     assert.equal(
       commandSpecs['runtime mag-manifest-sustained-consumption list'].summary,
-      'Legacy compatibility alias for runtime owner-evidence-sustained-consumption list.',
+      'Deprecated legacy compatibility alias for runtime owner-evidence-sustained-consumption list.',
     );
 
     const recorded = runCli([

@@ -14,6 +14,7 @@ const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
 
 export type DomainCleanRunnerProfile = {
   domainId: string;
+  profileRole: 'domain_compatibility_clean_runner';
   legacyEnvRoots: ReadonlyArray<{
     envName: string;
     fallbackSubdir: string;
@@ -32,6 +33,7 @@ const UV_DIRECTORY_PYTHON_INLINE = String.raw`uv\s+run\s+--directory\s+\S+\s+(?:
 const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> = [
   {
     domainId: 'med-autoscience',
+    profileRole: 'domain_compatibility_clean_runner',
     legacyEnvRoots: [
       { envName: 'MAS_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mas' },
     ],
@@ -43,6 +45,7 @@ const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfi
   },
   {
     domainId: 'med-autogrant',
+    profileRole: 'domain_compatibility_clean_runner',
     legacyEnvRoots: [
       { envName: 'MAG_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mag' },
       { envName: 'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT', fallbackSubdir: 'mag-editable-shared' },
@@ -55,6 +58,7 @@ const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfi
   },
   {
     domainId: 'redcube-ai',
+    profileRole: 'domain_compatibility_clean_runner',
     legacyEnvRoots: [
       { envName: 'RCA_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'rca' },
     ],
