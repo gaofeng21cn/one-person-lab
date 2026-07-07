@@ -188,7 +188,7 @@ test('workspace adopt apply materializes OPL metadata and generated inspection r
 
     assert.equal(output.workspace_adoption.status, 'applied');
     assert.equal(output.workspace_adoption.write_allowed, true);
-    assert.equal(output.workspace_adoption.profile.profile_id, 'rca_series');
+    assert.equal(output.workspace_adoption.profile.profile_id, 'series');
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_index.json')).isFile(), true);
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_map.json')).isFile(), true);
     assert.equal(fs.statSync(path.join(workspacePath, 'workspace_health.json')).isFile(), true);

@@ -94,7 +94,7 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
     const studyRoot = path.join(workspacePath, 'projects', 'DM002');
 
     assert.equal(output.workspace_initialization.agent.project_id, 'medautoscience');
-    assert.equal(output.workspace_initialization.profile.profile_id, 'mas_portfolio');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'portfolio');
     assert.equal(output.workspace_initialization.profile.workspace_mode, 'portfolio');
     assert.equal(output.workspace_initialization.project_root, studyRoot);
 
@@ -719,7 +719,7 @@ test('workspace adopt dry-run plans OPL topology without writing metadata', () =
 
     assert.equal(output.workspace_adoption.status, 'dry_run_ready');
     assert.equal(output.workspace_adoption.write_allowed, false);
-    assert.equal(output.workspace_adoption.profile.profile_id, 'mas_portfolio');
+    assert.equal(output.workspace_adoption.profile.profile_id, 'portfolio');
     assert.equal(output.workspace_adoption.canonical_topology.project_collection_path, 'projects');
     assert.equal(output.workspace_adoption.canonical_topology.project_unit_kind, 'study');
     assert.equal(output.workspace_adoption.project.stage_outputs_root, 'projects/DM002/artifacts/stage_outputs');

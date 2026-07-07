@@ -348,7 +348,7 @@ function validateAgentWorkspaceNormSemantics(
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
 
   assertDomainProfile(contract, 'mas', {
-    profile: 'mas_portfolio',
+    profile: 'portfolio',
     workspace_mode: 'portfolio',
     project_kind: 'study',
     project_collection_path: 'projects',
@@ -374,7 +374,7 @@ function validateAgentWorkspaceNormSemantics(
     shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
   }, filePath);
   assertDomainProfile(contract, 'rca', {
-    profile: 'rca_series',
+    profile: 'series',
     workspace_mode: 'series',
     project_kind: 'slide_deck',
     project_collection_path: 'projects',

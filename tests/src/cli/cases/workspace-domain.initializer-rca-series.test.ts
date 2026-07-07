@@ -39,7 +39,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
 
     assert.equal(output.workspace_initialization.action, 'init');
     assert.equal(output.workspace_initialization.agent.agent_id, 'rca');
-    assert.equal(output.workspace_initialization.profile.profile_id, 'rca_series');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'series');
     assert.equal(output.workspace_initialization.profile.workspace_mode, 'series');
     assert.equal(output.workspace_initialization.workspace_path, workspacePath);
     assert.equal(output.workspace_initialization.project_root, projectRoot);
@@ -70,8 +70,8 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     assert.equal(workspaceIndex.surface_kind, 'opl_workspace_index');
     assert.equal(workspaceIndex.agent.agent_id, 'rca');
     assert.equal(workspaceIndex.agent.project_id, 'redcube');
-    assert.equal(workspaceIndex.workspace_topology_profile.profile_id, 'rca_series');
-    assert.equal(workspaceIndex.profile_binding.profile_id, 'rca_series');
+    assert.equal(workspaceIndex.workspace_topology_profile.profile_id, 'series');
+    assert.equal(workspaceIndex.profile_binding.profile_id, 'series');
     assert.equal(workspaceIndex.profile_binding.profile_version, 'workspace-topology-profile.v2');
     assert.equal(workspaceIndex.profile_binding.profile_fingerprint, 'opl-workspace-topology-profile-v2-projects-stage-outputs');
     assert.equal(workspaceIndex.profile_binding.applied_by, 'opl_workspace_init');
@@ -165,7 +165,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     );
     assert.equal(workspaceIndex.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
     assert.equal(workspaceIndex.workspace_norm.default_workspace_precondition.command, 'opl workspace ensure');
-    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'rca_series');
+    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'series');
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.canonical_project_collection_role, 'project_units');
     assert.deepEqual(
       workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases,
@@ -196,7 +196,7 @@ test('workspace init materializes RCA series topology and binds the workspace', 
       ],
     );
     assert.equal(workspaceIndex.workspace_norm.authority_boundary.opl_can_create_owner_receipt, false);
-    assert.equal(workspaceIndex.expected_domain_topology_profile.profile, 'rca_series');
+    assert.equal(workspaceIndex.expected_domain_topology_profile.profile, 'series');
     assert.equal(workspaceIndex.expected_domain_topology_profile.project_kind, 'slide_deck');
     const sharedManifest = readJsonFile(path.join(workspacePath, 'shared', 'sources', 'opl_resource_manifest.json'));
     assert.equal(sharedManifest.surface_kind, 'opl_shared_resource_manifest');
@@ -347,4 +347,3 @@ test('workspace init materializes RCA series topology and binds the workspace', 
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
-

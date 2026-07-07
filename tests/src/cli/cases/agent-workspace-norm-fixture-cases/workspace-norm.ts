@@ -89,7 +89,7 @@ export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract =
   },
   domain_topology_profiles: {
     mas: {
-      profile: 'mas_portfolio',
+      profile: 'portfolio',
       workspace_mode: 'portfolio',
       project_kind: 'study',
       project_collection_path: 'projects',
@@ -115,7 +115,7 @@ export const MINIMAL_AGENT_WORKSPACE_NORM_CONTRACT: AgentWorkspaceNormContract =
       shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
     },
     rca: {
-      profile: 'rca_series',
+      profile: 'series',
       workspace_mode: 'series',
       project_kind: 'slide_deck',
       project_collection_path: 'projects',

@@ -226,7 +226,7 @@ test('app action execute owns settings, release channel, workspace root, and pro
 
     assert.equal(workspaceAdopt.delegated_surface, 'opl workspace adopt --dry-run');
     assert.equal(workspaceAdopt.result.workspace_adoption.write_allowed, false);
-    assert.equal(workspaceAdopt.result.workspace_adoption.profile.profile_id, 'mas_portfolio');
+    assert.equal(workspaceAdopt.result.workspace_adoption.profile.profile_id, 'portfolio');
 
     const workspaceAdoptApply = runCli([
       'app',

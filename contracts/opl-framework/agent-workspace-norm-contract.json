@@ -134,7 +134,7 @@
   },
   "domain_topology_profiles": {
     "mas": {
-      "profile": "mas_portfolio",
+      "profile": "portfolio",
       "workspace_mode": "portfolio",
       "project_kind": "study",
       "project_collection_path": "projects",
@@ -183,7 +183,7 @@
       ]
     },
     "rca": {
-      "profile": "rca_series",
+      "profile": "series",
       "workspace_mode": "series",
       "project_kind": "slide_deck",
       "project_collection_path": "projects",
