@@ -35,12 +35,30 @@ export type PaperAutonomySupervisorCommandInput =
     };
   };
 
+export type AutonomySupervisorCommandInput = PaperAutonomySupervisorCommandInput;
+
 export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInput | null {
   if (rest[0] !== 'supervisor' || (rest[1] !== 'readback' && rest[1] !== 'decide')) {
     return null;
   }
 
-  const action = rest[1];
+  return parseAutonomySupervisorAction(rest[1], rest, 2, 'paper-autonomy supervisor');
+}
+
+export function parseAutonomySupervisorArgs(rest: string[]): FamilyRuntimeCommandInput | null {
+  if (rest[0] !== 'readback' && rest[0] !== 'decide') {
+    return null;
+  }
+
+  return parseAutonomySupervisorAction(rest[0], rest, 1, 'autonomy-supervisor');
+}
+
+function parseAutonomySupervisorAction(
+  action: 'readback' | 'decide',
+  rest: string[],
+  optionStart: number,
+  commandPath: string,
+): FamilyRuntimeCommandInput {
   let obligationLedgerPath = '';
   let decisionLedgerPath = '';
   let obligationId = '';
@@ -58,7 +76,7 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
   const evidenceRefs: string[] = [];
   const observabilityRefs: string[] = [];
 
-  parseCliOptions(rest, 2, (token, value) => {
+  parseCliOptions(rest, optionStart, (token, value) => {
     if (token === '--obligation-ledger' && value) {
       obligationLedgerPath = value;
       return true;
@@ -69,10 +87,10 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
       obligationId = value;
       return true;
     } else if (token === '--current-identity' && value) {
-      currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayload(value));
+      currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayload(value), commandPath);
       return true;
     } else if (token === '--current-identity-file' && value) {
-      currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayloadFile(value));
+      currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayloadFile(value), commandPath);
       return true;
     } else if (action === 'decide' && token === '--current-owner-delta-ref' && value) {
       currentOwnerDeltaRef = value;
@@ -113,10 +131,10 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
     } else {
       throw new FrameworkContractError(
         'cli_usage_error',
-        `Unknown family-runtime paper-autonomy supervisor ${action} option: ${token}.`,
+        `Unknown family-runtime ${commandPath} ${action} option: ${token}.`,
         {
           option: token,
-          usage: `opl family-runtime paper-autonomy supervisor ${action} --obligation-ledger <path> --decision-ledger <path> --obligation-id <id> --current-identity <json>|--current-identity-file <path>`,
+          usage: `opl family-runtime ${commandPath} ${action} --obligation-ledger <path> --decision-ledger <path> --obligation-id <id> --current-identity <json>|--current-identity-file <path>`,
         },
       );
     }
@@ -131,7 +149,7 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
   if (missing.length > 0) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      `family-runtime paper-autonomy supervisor ${action} requires obligation ledger, decision ledger, obligation id, and current identity.`,
+      `family-runtime ${commandPath} ${action} requires obligation ledger, decision ledger, obligation id, and current identity.`,
       {
         required: missing,
       },
@@ -140,7 +158,7 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
   if (!currentIdentity) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      `family-runtime paper-autonomy supervisor ${action} requires current identity.`,
+      `family-runtime ${commandPath} ${action} requires current identity.`,
       {
         required: ['--current-identity', '--current-identity-file'],
       },
@@ -184,6 +202,7 @@ export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInpu
 
 function parsePaperAutonomyStageRunIdentity(
   payload: Record<string, unknown>,
+  commandPath: string,
 ): PaperAutonomyStageRunIdentity {
   const stagePacketRefs = Array.isArray(payload.stage_packet_refs)
     ? payload.stage_packet_refs.filter((value): value is string => typeof value === 'string')
@@ -191,35 +210,35 @@ function parsePaperAutonomyStageRunIdentity(
   if (stagePacketRefs.length === 0) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'family-runtime paper-autonomy supervisor readback current identity requires stage_packet_refs.',
+      `family-runtime ${commandPath} current identity requires stage_packet_refs.`,
       {
         field: 'stage_packet_refs',
       },
     );
   }
   return {
-    stage_run_id: stringField(payload, 'stage_run_id'),
-    route_identity_key: stringField(payload, 'route_identity_key'),
-    attempt_idempotency_key: stringField(payload, 'attempt_idempotency_key'),
-    selected_dispatch_ref: stringField(payload, 'selected_dispatch_ref'),
-    stage_packet_ref: stringField(payload, 'stage_packet_ref'),
+    stage_run_id: stringField(payload, 'stage_run_id', commandPath),
+    route_identity_key: stringField(payload, 'route_identity_key', commandPath),
+    attempt_idempotency_key: stringField(payload, 'attempt_idempotency_key', commandPath),
+    selected_dispatch_ref: stringField(payload, 'selected_dispatch_ref', commandPath),
+    stage_packet_ref: stringField(payload, 'stage_packet_ref', commandPath),
     stage_packet_refs: stagePacketRefs,
-    provider_attempt_ref: stringField(payload, 'provider_attempt_ref'),
-    attempt_lease_ref: stringField(payload, 'attempt_lease_ref'),
-    workflow_ref: stringField(payload, 'workflow_ref'),
-    source_fingerprint: stringField(payload, 'source_fingerprint'),
-    truth_epoch: stringField(payload, 'truth_epoch'),
-    runtime_health_epoch: stringField(payload, 'runtime_health_epoch'),
-    work_unit_fingerprint: stringField(payload, 'work_unit_fingerprint'),
+    provider_attempt_ref: stringField(payload, 'provider_attempt_ref', commandPath),
+    attempt_lease_ref: stringField(payload, 'attempt_lease_ref', commandPath),
+    workflow_ref: stringField(payload, 'workflow_ref', commandPath),
+    source_fingerprint: stringField(payload, 'source_fingerprint', commandPath),
+    truth_epoch: stringField(payload, 'truth_epoch', commandPath),
+    runtime_health_epoch: stringField(payload, 'runtime_health_epoch', commandPath),
+    work_unit_fingerprint: stringField(payload, 'work_unit_fingerprint', commandPath),
   };
 }
 
-function stringField(payload: Record<string, unknown>, field: string) {
+function stringField(payload: Record<string, unknown>, field: string, commandPath: string) {
   const value = payload[field];
   if (typeof value !== 'string' || value.length === 0) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      `family-runtime paper-autonomy supervisor readback current identity requires ${field}.`,
+      `family-runtime ${commandPath} current identity requires ${field}.`,
       {
         field,
       },

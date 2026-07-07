@@ -12,6 +12,9 @@ import {
   asRecord,
   booleanTrue,
   COMMAND_PACKET_SURFACE_KIND,
+  DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND,
+  DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
+  DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND,
   FORBIDDEN_CLAIM_FLAGS,
   FORBIDDEN_WRITE_FLAGS,
   HANDOFF_SURFACE_KIND,
@@ -48,10 +51,13 @@ function baseReadback(
   const supported = supportedCommandKind(commandKind) ? commandKind : null;
   return {
     surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback',
+    canonical_surface_kind: DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND,
+    legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback',
     schema_version: 1,
     source_surface_kind: handoff
       ? optionalString(handoff.source_surface_kind) ?? optionalString(handoff.surface_kind)
       : null,
+    domain_id: 'medautoscience',
     domain_truth_owner: 'med-autoscience',
     runtime_owner: 'one-person-lab',
     status: 'rejected',
@@ -61,6 +67,13 @@ function baseReadback(
     study_id: handoff ? optionalString(handoff.study_id) : null,
     mission_id: handoff ? optionalString(handoff.mission_id) : null,
     candidate_ref: handoff ? optionalString(handoff.candidate_ref) : null,
+    domain_route_handoff_ref: handoff
+      ? optionalString(handoff.opl_route_command_ref)
+        ?? optionalString(handoff.paper_mission_transaction_ref)
+        ?? optionalString(handoff.candidate_ref)
+      : null,
+    domain_route_command_ref: handoff ? optionalString(handoff.opl_route_command_ref) : null,
+    domain_route_transaction_ref: handoff ? optionalString(handoff.paper_mission_transaction_ref) : null,
     paper_mission_transaction_ref: handoff ? optionalString(handoff.paper_mission_transaction_ref) : null,
     opl_route_command_ref: handoff ? optionalString(handoff.opl_route_command_ref) : null,
     route_target: handoff ? routeTarget(handoff) : null,
@@ -84,6 +97,8 @@ function baseReadback(
     runtime_request_input: null,
     accepted_command_packet: {
       surface_kind: COMMAND_PACKET_SURFACE_KIND,
+      canonical_surface_kind: DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND,
+      legacy_surface_kind: COMMAND_PACKET_SURFACE_KIND,
       command_kind: supported,
       route_command_materialized: handoff?.transaction_materialized === true,
       writes_opl_outbox: false,
@@ -284,6 +299,8 @@ export function intakeMasPaperMissionRouteHandoffsFromExport(
   if (!outputRecord) {
     return {
       surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
+      canonical_surface_kind: DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
+      legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
       schema_version: 1,
       source_path: 'not_found',
       legacy_pending_family_tasks_considered: false,
@@ -310,6 +327,8 @@ export function intakeMasPaperMissionRouteHandoffsFromExport(
     );
   return {
     surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
+    canonical_surface_kind: DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND,
+    legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback',
     schema_version: 1,
     source_path: selected.sourcePath,
     legacy_pending_family_tasks_considered: selected.legacyConsidered,

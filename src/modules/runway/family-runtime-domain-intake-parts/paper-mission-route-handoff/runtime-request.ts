@@ -4,6 +4,9 @@ import type { EnqueueInput } from '../../family-runtime-command.ts';
 import {
   nestedRecord,
   optionalString,
+  DOMAIN_ROUTE_RUNTIME_REQUEST_KIND,
+  DOMAIN_ROUTE_RUNTIME_REQUEST_SURFACE_KIND,
+  DOMAIN_ROUTE_TASK_KIND,
   RUNTIME_REQUEST_SURFACE_KIND,
   RUNTIME_TASK_KIND,
   supportedCommandKind,
@@ -81,6 +84,13 @@ export function runtimeRequestInput(
     readback.paper_mission_transaction_ref,
     readback.command_kind,
   ].join(':');
+  const domainRouteDedupeKey = [
+    'domain-route',
+    readback.domain_id,
+    readback.study_id,
+    readback.paper_mission_transaction_ref,
+    readback.command_kind,
+  ].join(':');
   const workspaceRoot = workspaceRootForRuntimeRequest(handoff, options);
   const commandCwd = optionalString(options.commandCwd);
   const commandSource = optionalString(options.commandSource);
@@ -92,12 +102,23 @@ export function runtimeRequestInput(
     source: options.source ?? 'paper-mission-route-handoff',
     payload: {
       surface_kind: RUNTIME_REQUEST_SURFACE_KIND,
+      canonical_surface_kind: DOMAIN_ROUTE_RUNTIME_REQUEST_SURFACE_KIND,
+      legacy_surface_kind: RUNTIME_REQUEST_SURFACE_KIND,
       schema_version: 1,
       runtime_request_status: 'queued_request',
       runtime_request_kind: 'mas_paper_mission_stage_route',
+      canonical_runtime_request_kind: DOMAIN_ROUTE_RUNTIME_REQUEST_KIND,
+      canonical_task_kind: DOMAIN_ROUTE_TASK_KIND,
+      legacy_task_kind: RUNTIME_TASK_KIND,
+      canonical_dedupe_key: domainRouteDedupeKey,
+      legacy_dedupe_key: dedupeKey,
+      domain_id: readback.domain_id,
       study_id: readback.study_id,
       mission_id: readback.mission_id,
       candidate_ref: readback.candidate_ref,
+      domain_route_handoff_ref: readback.domain_route_handoff_ref,
+      domain_route_transaction_ref: readback.domain_route_transaction_ref,
+      domain_route_command_ref: readback.domain_route_command_ref,
       paper_mission_transaction_ref: readback.paper_mission_transaction_ref,
       opl_route_command_ref: readback.opl_route_command_ref,
       command_kind: readback.command_kind,

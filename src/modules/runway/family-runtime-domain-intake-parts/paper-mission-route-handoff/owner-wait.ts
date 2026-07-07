@@ -44,9 +44,12 @@ export function ownerWaitProjection(
     ?? readback.candidate_ref;
   const ownerRoute = {
     surface_kind: 'opl_mas_paper_mission_owner_route_projection',
+    canonical_surface_kind: 'opl_domain_owner_route_projection',
+    legacy_surface_kind: 'opl_mas_paper_mission_owner_route_projection',
     schema_version: 1,
     route_status: 'owner_wait',
     wait_kind: waitKind,
+    domain_id: 'medautoscience',
     domain_truth_owner: 'med-autoscience',
     runtime_owner: 'one-person-lab',
     resolution_owner: owner,
@@ -55,6 +58,9 @@ export function ownerWaitProjection(
     mission_id: readback.mission_id,
     command_kind: readback.command_kind,
     route_target: commandTarget,
+    domain_route_handoff_ref: handoffRef,
+    domain_route_transaction_ref: readback.domain_route_transaction_ref,
+    domain_route_command_ref: readback.domain_route_command_ref,
     paper_mission_transaction_ref: readback.paper_mission_transaction_ref,
     opl_route_command_ref: readback.opl_route_command_ref,
     route_identity_key: readback.route_identity_key,
@@ -68,6 +74,8 @@ export function ownerWaitProjection(
   };
   const nextAction = {
     surface_kind: 'opl_mas_paper_mission_owner_route_next_action',
+    canonical_surface_kind: 'opl_domain_owner_route_next_action',
+    legacy_surface_kind: 'opl_mas_paper_mission_owner_route_next_action',
     schema_version: 1,
     action_kind: actionKind,
     step_kind: actionKind,
@@ -92,6 +100,8 @@ export function ownerWaitProjection(
   };
   const handoffProjection = {
     surface_kind: 'opl_mas_paper_mission_executable_owner_handoff_projection',
+    canonical_surface_kind: 'opl_domain_executable_owner_handoff_projection',
+    legacy_surface_kind: 'opl_mas_paper_mission_executable_owner_handoff_projection',
     schema_version: 1,
     handoff_status: 'ready_for_owner_consumption',
     handoff_kind: isHumanGate ? 'human_gate_authority_handoff' : 'typed_blocker_authority_handoff',
@@ -107,6 +117,9 @@ export function ownerWaitProjection(
       mission_id: readback.mission_id,
       command_kind: readback.command_kind,
       route_target: commandTarget,
+      domain_route_handoff_ref: handoffRef,
+      domain_route_transaction_ref: readback.domain_route_transaction_ref,
+      domain_route_command_ref: readback.domain_route_command_ref,
       paper_mission_transaction_ref: readback.paper_mission_transaction_ref,
       opl_route_command_ref: readback.opl_route_command_ref,
       route_identity_key: readback.route_identity_key,

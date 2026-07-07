@@ -159,7 +159,7 @@ function materializedReadback(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test('MAS paper mission route handoff accepts ready command as OPL runtime request without StageRun or provider claims', () => {
+test('domain route handoff accepts legacy MAS paper mission carrier as OPL runtime request without StageRun or provider claims', () => {
   const readback = intakeMasPaperMissionRouteHandoff(readyHandoff({
     domain_workspace_root: '/tmp/yang-workspace',
   }), {
@@ -167,6 +167,9 @@ test('MAS paper mission route handoff accepts ready command as OPL runtime reque
   });
 
   assert.equal(readback.surface_kind, 'opl_mas_paper_mission_route_handoff_intake_readback');
+  assert.equal(readback.canonical_surface_kind, 'opl_domain_route_handoff_intake_readback');
+  assert.equal(readback.legacy_surface_kind, 'opl_mas_paper_mission_route_handoff_intake_readback');
+  assert.equal(readback.domain_id, 'medautoscience');
   assert.equal(readback.status, 'accepted_for_runtime_intake');
   assert.equal(readback.command_kind, 'start_next_stage');
   assert.equal(readback.can_submit_to_opl_runtime, true);
@@ -180,15 +183,34 @@ test('MAS paper mission route handoff accepts ready command as OPL runtime reque
   assert.equal(readback.can_claim_paper_progress, false);
   assert.equal(readback.can_claim_runtime_ready, false);
   assert.equal(readback.accepted_command_packet.surface_kind, 'mas_paper_mission_opl_route_command_packet');
+  assert.equal(readback.accepted_command_packet.canonical_surface_kind, 'domain_route_command_packet');
+  assert.equal(readback.accepted_command_packet.legacy_surface_kind, 'mas_paper_mission_opl_route_command_packet');
   assert.equal(readback.accepted_command_packet.command_kind, 'start_next_stage');
   assert.equal(readback.accepted_command_packet.route_command_materialized, true);
   assert.equal(readback.accepted_command_packet.writes_opl_outbox, false);
   assert.equal(readback.runtime_request_input?.taskKind, 'paper_mission/stage-route');
+  assert.equal(readback.runtime_request_input?.payload.canonical_task_kind, 'domain_route/stage-route');
+  assert.equal(readback.runtime_request_input?.payload.legacy_task_kind, 'paper_mission/stage-route');
   assert.equal(
     readback.runtime_request_input?.dedupeKey,
     'paper-mission-route:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
   );
+  assert.equal(
+    readback.runtime_request_input?.payload.canonical_dedupe_key,
+    'domain-route:medautoscience:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
+  );
+  assert.equal(
+    readback.runtime_request_input?.payload.legacy_dedupe_key,
+    'paper-mission-route:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
+  );
   assert.equal(readback.runtime_request_input?.payload.study_id, '001-paper');
+  assert.equal(readback.runtime_request_input?.payload.domain_id, 'medautoscience');
+  assert.equal(readback.runtime_request_input?.payload.canonical_surface_kind, 'opl_domain_route_runtime_request');
+  assert.equal(readback.runtime_request_input?.payload.legacy_surface_kind, 'opl_mas_paper_mission_route_runtime_request');
+  assert.equal(readback.runtime_request_input?.payload.canonical_runtime_request_kind, 'domain_route_stage_route');
+  assert.equal(readback.runtime_request_input?.payload.domain_route_command_ref, readback.opl_route_command_ref);
+  assert.equal(readback.runtime_request_input?.payload.domain_route_transaction_ref, readback.paper_mission_transaction_ref);
+  assert.equal(readback.runtime_request_input?.payload.domain_route_handoff_ref, readback.opl_route_command_ref);
   assert.equal(readback.runtime_request_input?.payload.command_kind, 'start_next_stage');
   assert.equal(
     readback.runtime_request_input?.payload.route_identity_key,
@@ -415,8 +437,11 @@ test('MAS paper mission route handoff emits typed waits for blocker human gate a
   }));
   assert.equal(typedBlocker.status, 'typed_wait');
   assert.equal(typedBlocker.wait_kind, 'typed_blocker_authority');
+  assert.equal(typedBlocker.owner_route?.canonical_surface_kind, 'opl_domain_owner_route_projection');
+  assert.equal(typedBlocker.owner_route?.legacy_surface_kind, 'opl_mas_paper_mission_owner_route_projection');
   assert.equal(typedBlocker.owner_route?.resolution_owner, 'med-autoscience');
   assert.equal(typedBlocker.next_action?.action_kind, 'domain_typed_blocker_resolution_required');
+  assert.equal(typedBlocker.next_action?.canonical_surface_kind, 'opl_domain_owner_route_next_action');
   assert.equal(
     typedBlocker.next_action?.payload_requirement,
     'record_domain_typed_blocker_ref_for_mas_paper_mission',
@@ -428,6 +453,10 @@ test('MAS paper mission route handoff emits typed waits for blocker human gate a
     'no_regression_ref',
   ]);
   assert.equal(typedBlocker.handoff_projection?.handoff_kind, 'typed_blocker_authority_handoff');
+  assert.equal(
+    typedBlocker.handoff_projection?.canonical_surface_kind,
+    'opl_domain_executable_owner_handoff_projection',
+  );
   const typedBlockerBoundary =
     typedBlocker.handoff_projection?.opl_authority_boundary as Record<string, unknown>;
   assert.equal(typedBlockerBoundary.can_create_typed_blocker, false);
@@ -551,6 +580,8 @@ test('MAS paper mission route handoff export intake prefers paper_mission_defaul
   });
 
   assert.equal(exportReadback.source_path, '/paper_mission_default_tasks');
+  assert.equal(exportReadback.canonical_surface_kind, 'opl_domain_route_handoff_export_intake_readback');
+  assert.equal(exportReadback.legacy_surface_kind, 'opl_mas_paper_mission_route_handoff_export_intake_readback');
   assert.equal(exportReadback.readbacks.length, 1);
   assert.equal(exportReadback.readbacks[0].status, 'accepted_for_runtime_intake');
   assert.equal(exportReadback.legacy_pending_family_tasks_considered, false);

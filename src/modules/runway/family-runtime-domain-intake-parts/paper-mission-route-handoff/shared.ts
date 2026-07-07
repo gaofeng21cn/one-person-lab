@@ -13,6 +13,12 @@ export const MATERIALIZED_READBACK_SURFACE_KIND = 'paper_mission_materialized_re
 export const COMMAND_PACKET_SURFACE_KIND = 'mas_paper_mission_opl_route_command_packet';
 export const RUNTIME_REQUEST_SURFACE_KIND = 'opl_mas_paper_mission_route_runtime_request';
 export const RUNTIME_TASK_KIND = 'paper_mission/stage-route';
+export const DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND = 'opl_domain_route_handoff_intake_readback';
+export const DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND = 'opl_domain_route_handoff_export_intake_readback';
+export const DOMAIN_ROUTE_RUNTIME_REQUEST_SURFACE_KIND = 'opl_domain_route_runtime_request';
+export const DOMAIN_ROUTE_RUNTIME_REQUEST_KIND = 'domain_route_stage_route';
+export const DOMAIN_ROUTE_TASK_KIND = 'domain_route/stage-route';
+export const DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND = 'domain_route_command_packet';
 
 export const SUPPORTED_COMMAND_KINDS = [
   'start_next_stage',
@@ -102,8 +108,11 @@ export type MasPaperMissionRouteHandoffIntakeBlocker = {
 
 export type MasPaperMissionRouteHandoffIntakeReadback = {
   surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback';
+  canonical_surface_kind: typeof DOMAIN_ROUTE_HANDOFF_INTAKE_READBACK_SURFACE_KIND;
+  legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_intake_readback';
   schema_version: 1;
   source_surface_kind: string | null;
+  domain_id: 'medautoscience';
   domain_truth_owner: 'med-autoscience';
   runtime_owner: 'one-person-lab';
   status: MasPaperMissionRouteHandoffIntakeStatus;
@@ -113,6 +122,9 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   study_id: string | null;
   mission_id: string | null;
   candidate_ref: string | null;
+  domain_route_handoff_ref: string | null;
+  domain_route_command_ref: string | null;
+  domain_route_transaction_ref: string | null;
   paper_mission_transaction_ref: string | null;
   opl_route_command_ref: string | null;
   route_target: string | null;
@@ -136,6 +148,8 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   runtime_request_input: EnqueueInput | null;
   accepted_command_packet: {
     surface_kind: typeof COMMAND_PACKET_SURFACE_KIND;
+    canonical_surface_kind: typeof DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND;
+    legacy_surface_kind: typeof COMMAND_PACKET_SURFACE_KIND;
     command_kind: SupportedCommandKind | null;
     route_command_materialized: boolean;
     writes_opl_outbox: false;
@@ -166,6 +180,8 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
 
 export type MasPaperMissionRouteHandoffExportReadback = {
   surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback';
+  canonical_surface_kind: typeof DOMAIN_ROUTE_HANDOFF_EXPORT_READBACK_SURFACE_KIND;
+  legacy_surface_kind: 'opl_mas_paper_mission_route_handoff_export_intake_readback';
   schema_version: 1;
   source_path: '/paper_mission_default_tasks' | '/pending_family_tasks' | 'direct_handoff' | 'not_found';
   legacy_pending_family_tasks_considered: boolean;

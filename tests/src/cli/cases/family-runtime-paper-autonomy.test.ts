@@ -55,7 +55,7 @@ function paperAutonomyIdentity(
   };
 }
 
-test('family-runtime paper-autonomy supervisor readback returns only identity-bound OPL supervisor decisions', () => {
+test('family-runtime autonomy-supervisor readback returns only identity-bound OPL supervisor decisions with legacy command compatibility', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-readback-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-readback-fixture-'));
   const obligationLedger = path.join(fixtureRoot, 'recovery-obligations.jsonl');
@@ -113,8 +113,7 @@ test('family-runtime paper-autonomy supervisor readback returns only identity-bo
 
     const output = runCli([
       'family-runtime',
-      'paper-autonomy',
-      'supervisor',
+      'autonomy-supervisor',
       'readback',
       '--obligation-ledger',
       obligationLedger,
@@ -152,6 +151,7 @@ test('family-runtime paper-autonomy supervisor readback returns only identity-bo
       ...currentIdentity,
       source_fingerprint: 'mas-source:dm003:stale',
     }), 'utf8');
+    // compatibility/readback: the legacy paper-autonomy command path still routes to the same supervisor mode.
     const staleOutput = runCli([
       'family-runtime',
       'paper-autonomy',
@@ -179,7 +179,7 @@ test('family-runtime paper-autonomy supervisor readback returns only identity-bo
   }
 });
 
-test('family-runtime paper-autonomy supervisor decide appends OPL decision and returns same identity readback', () => {
+test('family-runtime autonomy-supervisor decide appends OPL decision and returns same identity readback', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-decide-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paper-autonomy-supervisor-decide-fixture-'));
   const obligationLedger = path.join(fixtureRoot, 'recovery-obligations.jsonl');
@@ -203,8 +203,7 @@ test('family-runtime paper-autonomy supervisor decide appends OPL decision and r
 
     const decided = runCli([
       'family-runtime',
-      'paper-autonomy',
-      'supervisor',
+      'autonomy-supervisor',
       'decide',
       '--obligation-ledger',
       obligationLedger,
