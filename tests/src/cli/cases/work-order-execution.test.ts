@@ -50,6 +50,41 @@ function runWorkOrderExecution(commandPrefix: string[]) {
   };
 }
 
+function createTargetAdvancingFakeCodexWorkOrderExecutor(filePath: string): void {
+  fs.writeFileSync(filePath, `#!/usr/bin/env bash
+set -euo pipefail
+target=""
+previous=""
+for arg in "$@"; do
+  if [ "$previous" = "--cd" ]; then
+    target="$arg"
+  fi
+  previous="$arg"
+done
+if [ -z "$target" ]; then
+  echo "missing --cd" >&2
+  exit 64
+fi
+target_root="$(cd "$target/../.." && pwd)"
+mkdir -p "$target_root/notes"
+cat > "$target_root/notes/main-advanced.md" <<'DOC'
+# Main Advanced
+
+The target checkout moved while Codex was executing the work order.
+DOC
+git -C "$target_root" add notes/main-advanced.md
+git -C "$target_root" commit -m "advance target main"
+mkdir -p "$target/docs"
+cat > "$target/docs/efficiency.md" <<'DOC'
+# Efficiency Patch
+
+Codex CLI applied the developer work order in the target worktree.
+DOC
+printf '{"type":"thread.started","thread_id":"thread-work-order"}\\n'
+printf '{"type":"item.completed","item":{"type":"agent_message","id":"msg-1","text":"work order patch applied"}}\\n'
+`, { mode: 0o755 });
+}
+
 test('work-order execute is the canonical OPL work-order execution primitive', () => {
   const { fixtureRoot, targetRepo, output } = runWorkOrderExecution(['work-order', 'execute']);
   try {
@@ -82,6 +117,61 @@ test('work-order execute is the canonical OPL work-order execution primitive', (
     assert.equal(receipt.executor.watchdogs.command_no_progress_timeout_ms, 600000);
     assert.equal(fs.existsSync(receipt.execution_plan.path), true);
     assert.equal(fs.existsSync(receipt.execution_report.path), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('work-order execute rebases onto target checkout advances before absorption', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-currentness-'));
+  try {
+    const targetRepo = path.join(fixtureRoot, 'target-agent');
+    const outputDir = path.join(fixtureRoot, 'output');
+    const codexBin = path.join(fixtureRoot, 'codex');
+    const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
+    createWorkOrderTargetRepo(targetRepo);
+    createTargetAdvancingFakeCodexWorkOrderExecutor(codexBin);
+    writeExecutableWorkOrder(workOrderPath, targetRepo);
+
+    const output = runCli([
+      'work-order',
+      'execute',
+      '--work-order',
+      workOrderPath,
+      '--target-agent-dir',
+      targetRepo,
+      '--output-dir',
+      outputDir,
+      '--verification-command',
+      'test -f docs/efficiency.md',
+      '--codex-timeout-ms',
+      '10000',
+      '--json',
+    ], {
+      OPL_CODEX_BIN: codexBin,
+    });
+
+    const receipt = output.work_order_execution.receipt;
+    assert.equal(output.work_order_execution.status, 'executed_absorbed_and_cleaned');
+    assert.equal(receipt.absorption.rebased_before_absorption, true);
+    assert.equal(receipt.absorption.absorbed, true);
+    assert.equal(receipt.absorption.rebase_command_result.exit_code, 0);
+    assert.equal(fs.existsSync(path.join(targetRepo, 'notes/main-advanced.md')), true);
+    assert.equal(fs.existsSync(path.join(targetRepo, 'docs/efficiency.md')), true);
+
+    const log = spawnSync('git', ['log', '--oneline', '--max-count=2'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(log.status, 0, log.stderr);
+    assert.match(log.stdout, /work-order: execute oma_developer_patch_work_order_test/);
+    assert.match(log.stdout, /advance target main/);
+    const branchList = spawnSync('git', ['branch', '--list', 'codex/work-order-*'], {
+      cwd: targetRepo,
+      encoding: 'utf8',
+    });
+    assert.equal(branchList.status, 0, branchList.stderr);
+    assert.equal(branchList.stdout.trim(), '');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

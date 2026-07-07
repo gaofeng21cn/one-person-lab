@@ -144,6 +144,21 @@ function intersection(left: string[], right: string[]): string[] {
   return [...new Set(left.filter((entry) => rightSet.has(entry)))].sort();
 }
 
+function writeAbsorptionTypedBlocker(
+  outputDir: string,
+  payload: JsonRecord,
+): string {
+  const typedBlockerPath = path.join(outputDir, 'typed-blocker.json');
+  writeJson(typedBlockerPath, {
+    surface_kind: 'opl_work_order_typed_blocker',
+    version: 'opl.work-order-execution.typed-blocker.v1',
+    status: 'blocked_before_absorption',
+    can_absorb_without_overwriting_external_changes: false,
+    ...payload,
+  });
+  return typedBlockerPath;
+}
+
 function commandInferredFromVerificationRef(ref: string): string | null {
   if (ref.includes(':typecheck')) {
     return 'npm run typecheck';
@@ -650,7 +665,7 @@ async function executeDeveloperWorkOrder(
         },
       );
     }
-    const verificationResults = verificationCommands
+    let verificationResults = verificationCommands
       .map((command) => runShellVerification(command, worktreePath));
     const failedVerification = verificationResults.filter((result) => result.exit_code !== 0);
     if (failedVerification.length > 0) {
@@ -665,18 +680,13 @@ async function executeDeveloperWorkOrder(
     }
     const targetDirtyOverlap = intersection(changed, targetDirtyFilesBeforeOpen);
     if (targetDirtyOverlap.length > 0) {
-      const typedBlockerPath = path.join(outputDir, 'typed-blocker.json');
-      writeJson(typedBlockerPath, {
-        surface_kind: 'opl_work_order_typed_blocker',
-        version: 'opl.work-order-execution.typed-blocker.v1',
+      const typedBlockerPath = writeAbsorptionTypedBlocker(outputDir, {
         blocker_kind: 'target_dirty_checkout_overlap',
-        status: 'blocked_before_absorption',
         work_order_id: workOrderId,
         target_agent_dir: targetAgentDir,
         patch_changed_files: changed,
         target_dirty_files_before_open: targetDirtyFilesBeforeOpen,
         overlapping_files: targetDirtyOverlap,
-        can_absorb_without_overwriting_external_changes: false,
       });
       throw new FrameworkContractError(
         'contract_shape_invalid',
@@ -694,7 +704,127 @@ async function executeDeveloperWorkOrder(
 
     runCommand('git', ['add', '-A'], worktreePath);
     runCommand('git', ['commit', '-m', `work-order: execute ${workOrderId}`], worktreePath);
-    const patchCommit = gitRawOutput(['rev-parse', 'HEAD'], worktreePath).trim();
+    let patchCommit = gitRawOutput(['rev-parse', 'HEAD'], worktreePath).trim();
+    const targetBranchBeforeAbsorption = gitRawOutput(['branch', '--show-current'], targetAgentDir).trim()
+      || 'HEAD';
+    const targetHeadBeforeAbsorption = gitRawOutput(['rev-parse', 'HEAD'], targetAgentDir).trim();
+    let rebasedBeforeAbsorption = false;
+    let rebaseCommandResult: CommandResult | null = null;
+    if (targetBranchBeforeAbsorption !== baseBranch) {
+      const typedBlockerPath = writeAbsorptionTypedBlocker(outputDir, {
+        blocker_kind: 'target_branch_changed_before_absorption',
+        work_order_id: workOrderId,
+        target_agent_dir: targetAgentDir,
+        base_branch: baseBranch,
+        target_branch_before_absorption: targetBranchBeforeAbsorption,
+      });
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'Target checkout branch changed while Agent Lab work order was executing.',
+        {
+          work_order_id: workOrderId,
+          target_agent_dir: targetAgentDir,
+          base_branch: baseBranch,
+          target_branch_before_absorption: targetBranchBeforeAbsorption,
+          typed_blocker_path: typedBlockerPath,
+        },
+      );
+    }
+    if (targetHeadBeforeAbsorption !== baseHead) {
+      const ancestorCheck = runCommand(
+        'git',
+        ['merge-base', '--is-ancestor', baseHead, targetHeadBeforeAbsorption],
+        targetAgentDir,
+        { allowFailure: true },
+      );
+      if (ancestorCheck.exit_code !== 0) {
+        const typedBlockerPath = writeAbsorptionTypedBlocker(outputDir, {
+          blocker_kind: 'target_history_diverged_before_absorption',
+          work_order_id: workOrderId,
+          target_agent_dir: targetAgentDir,
+          base_head: baseHead,
+          target_head_before_absorption: targetHeadBeforeAbsorption,
+          ancestor_check: ancestorCheck,
+        });
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Target checkout history diverged while Agent Lab work order was executing.',
+          {
+            work_order_id: workOrderId,
+            target_agent_dir: targetAgentDir,
+            base_head: baseHead,
+            target_head_before_absorption: targetHeadBeforeAbsorption,
+            typed_blocker_path: typedBlockerPath,
+          },
+        );
+      }
+      const targetDirtyFilesBeforeAbsorption = dirtyFiles(targetAgentDir);
+      const targetDirtyOverlapBeforeAbsorption = intersection(changed, targetDirtyFilesBeforeAbsorption);
+      if (targetDirtyOverlapBeforeAbsorption.length > 0) {
+        const typedBlockerPath = writeAbsorptionTypedBlocker(outputDir, {
+          blocker_kind: 'target_dirty_checkout_overlap_before_absorption',
+          work_order_id: workOrderId,
+          target_agent_dir: targetAgentDir,
+          patch_changed_files: changed,
+          target_dirty_files_before_absorption: targetDirtyFilesBeforeAbsorption,
+          overlapping_files: targetDirtyOverlapBeforeAbsorption,
+        });
+        throw new FrameworkContractError(
+          'contract_shape_invalid',
+          'Agent Lab work order patch overlaps current target checkout dirty files.',
+          {
+            work_order_id: workOrderId,
+            target_agent_dir: targetAgentDir,
+            patch_changed_files: changed,
+            overlapping_files: targetDirtyOverlapBeforeAbsorption,
+            typed_blocker_path: typedBlockerPath,
+          },
+        );
+      }
+      rebaseCommandResult = runCommand('git', ['rebase', targetHeadBeforeAbsorption], worktreePath, {
+        allowFailure: true,
+      });
+      if (rebaseCommandResult.exit_code !== 0) {
+        const typedBlockerPath = writeAbsorptionTypedBlocker(outputDir, {
+          blocker_kind: 'target_currentness_rebase_failed',
+          work_order_id: workOrderId,
+          target_agent_dir: targetAgentDir,
+          base_head: baseHead,
+          target_head_before_absorption: targetHeadBeforeAbsorption,
+          rebase_result: rebaseCommandResult,
+        });
+        runCommand('git', ['rebase', '--abort'], worktreePath, { allowFailure: true });
+        throw new FrameworkContractError(
+          'build_command_failed',
+          'Agent Lab work order patch could not be rebased onto current target checkout.',
+          {
+            work_order_id: workOrderId,
+            target_agent_dir: targetAgentDir,
+            base_head: baseHead,
+            target_head_before_absorption: targetHeadBeforeAbsorption,
+            typed_blocker_path: typedBlockerPath,
+            rebase_result: rebaseCommandResult,
+          },
+        );
+      }
+      rebasedBeforeAbsorption = true;
+      patchCommit = gitRawOutput(['rev-parse', 'HEAD'], worktreePath).trim();
+      const postRebaseVerificationResults = verificationCommands
+        .map((command) => runShellVerification(command, worktreePath));
+      const failedPostRebaseVerification = postRebaseVerificationResults
+        .filter((result) => result.exit_code !== 0);
+      verificationResults = [...verificationResults, ...postRebaseVerificationResults];
+      if (failedPostRebaseVerification.length > 0) {
+        throw new FrameworkContractError(
+          'build_command_failed',
+          'OPL work-order target verification failed after currentness rebase.',
+          {
+            work_order_id: workOrderId,
+            failed_verification: failedPostRebaseVerification,
+          },
+        );
+      }
+    }
     runCommand('git', ['merge', '--ff-only', branchName], targetAgentDir);
     const absorbedHead = gitRawOutput(['rev-parse', 'HEAD'], targetAgentDir).trim();
     runCommand('git', ['worktree', 'remove', worktreePath], targetAgentDir);
@@ -734,6 +864,8 @@ async function executeDeveloperWorkOrder(
         base_branch: baseBranch,
         base_head: baseHead,
         target_dirty_status_before_open: targetDirtyStatusBeforeOpen,
+        target_branch_before_absorption: targetBranchBeforeAbsorption,
+        target_head_before_absorption: targetHeadBeforeAbsorption,
         patch_commit: patchCommit,
         open_receipt_ref: `target-worktree-open:${targetAgent.domain_id ?? 'target-agent'}/${workOrderId}`,
       },
@@ -754,6 +886,9 @@ async function executeDeveloperWorkOrder(
         patch_absorption_ref: isRecord(workOrder.machine_closeout_refs)
           ? workOrder.machine_closeout_refs.patch_absorption_ref
           : null,
+        target_head_before_absorption: targetHeadBeforeAbsorption,
+        rebased_before_absorption: rebasedBeforeAbsorption,
+        rebase_command_result: rebaseCommandResult,
         absorbed_head: absorbedHead,
       },
       cleanup: {
