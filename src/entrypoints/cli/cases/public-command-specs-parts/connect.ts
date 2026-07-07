@@ -380,21 +380,21 @@ export function buildConnectCommandSpecs(
       name: 'source',
       flag: '--source',
       value_kind: 'string' as const,
-      summary: 'External skill library source id. Defaults to kdense-scientific-agent-skills.',
+      summary: 'External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility.',
       required: false,
     },
     {
       name: 'source-root',
       flag: '--source-root',
       value_kind: 'string' as const,
-      summary: 'Local checkout path for the external skill library source.',
+      summary: 'Local checkout path for the external specialist source.',
       required: false,
     },
     {
       name: 'registry-root',
       flag: '--registry-root',
       value_kind: 'string' as const,
-      summary: 'Root containing the OPL Connect external skill source registry.',
+      summary: 'Root containing the OPL Connect external specialist source registry.',
       required: false,
     },
   ];
@@ -653,7 +653,7 @@ export function buildConnectCommandSpecs(
     },
     'connect external-skills list': {
       usage: 'opl connect external-skills list [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
-      summary: 'List registered external scientific skill libraries and their available skill cards.',
+      summary: 'List registered external specialist sources and their available skill cards.',
       examples: [
         'opl connect external-skills list --source kdense-scientific-agent-skills --json',
         'opl connect external-skills list --source-root /path/to/scientific-agent-skills --json',
@@ -675,7 +675,7 @@ export function buildConnectCommandSpecs(
     },
     'connect external-skills sources add': {
       usage: 'opl connect external-skills sources add --source <source_id> --repo <repo_url> --pin <ref> [--source-root <path>] [--registry-root <path>]',
-      summary: 'Register an approved external scientific skill library source without cloning or bulk installing it.',
+      summary: 'Register an approved external specialist source without cloning or bulk installing it.',
       examples: [
         'opl connect external-skills sources add --source kdense --repo https://github.com/K-Dense-AI/scientific-agent-skills --pin 1e024ea8547ada12039edbe8197aaa959d97763f --source-root /path/to/scientific-agent-skills --json',
       ],
@@ -712,7 +712,7 @@ export function buildConnectCommandSpecs(
     },
     'connect external-skills search': {
       usage: 'opl connect external-skills search --query <query> [--source <source_id>] [--source-root <path>] [--registry-root <path>] [--limit <n>]',
-      summary: 'Search an approved external scientific skill library before selectively syncing one skill.',
+      summary: 'Search an approved external specialist source before selectively syncing one skill.',
       examples: [
         'opl connect external-skills search --query "single cell RNA-seq" --source kdense --limit 5 --json',
       ],
@@ -753,7 +753,7 @@ export function buildConnectCommandSpecs(
     },
     'connect external-skills inspect': {
       usage: 'opl connect external-skills inspect --skill <skill_id|source_id/skill_id> [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
-      summary: 'Inspect one external scientific skill card before syncing it into a workspace or quest.',
+      summary: 'Inspect one external specialist skill card before syncing it into a workspace or quest.',
       examples: [
         'opl connect external-skills inspect --skill scanpy --source kdense --json',
         'opl connect external-skills inspect --skill kdense/scanpy --json',
@@ -784,7 +784,7 @@ export function buildConnectCommandSpecs(
     },
     'connect external-skills sync': {
       usage: 'opl connect external-skills sync --skill <skill_id|source_id/skill_id> --scope <workspace|quest> [--target-workspace <path>|--target-quest <path>|--target-root <path>] [--source <source_id>] [--source-root <path>] [--registry-root <path>]',
-      summary: 'Selectively sync one approved external scientific skill into a workspace or quest Codex discovery directory.',
+      summary: 'Selectively sync one approved external specialist skill into a workspace or quest Codex discovery directory.',
       examples: [
         'opl connect external-skills sync --skill scanpy --source kdense --scope workspace --target-workspace /path/to/workspace --json',
         'opl connect external-skills sync --skill kdense/scanpy --scope quest --target-quest /path/to/quest --json',

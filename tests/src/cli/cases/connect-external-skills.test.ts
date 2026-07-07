@@ -37,7 +37,10 @@ function createExternalSkillsFixture(extraSkills: Array<{
 
 type ExternalSkillTriggerPolicy = {
   policy_kind: string;
+  registry_role: string;
+  default_opl_domain_professional_pack_remains_primary: boolean;
   default_mas_pack_remains_primary: boolean;
+  external_specialist_requires_explicit_selection: boolean;
   external_skill_requires_explicit_selection: boolean;
   applies_when: string;
   coarse_entry_policy: string;
@@ -46,19 +49,34 @@ type ExternalSkillTriggerPolicy = {
 };
 
 function assertExternalSkillTriggerPolicy(policy: ExternalSkillTriggerPolicy) {
-  assert.equal(policy.policy_kind, 'opl_connect_external_skill_trigger_policy');
+  assert.equal(policy.policy_kind, 'opl_connect_external_specialist_registry_trigger_policy');
+  assert.equal(policy.registry_role, 'external_specialist_source_registry');
+  assert.equal(policy.default_opl_domain_professional_pack_remains_primary, true);
   assert.equal(policy.default_mas_pack_remains_primary, true);
+  assert.equal(policy.external_specialist_requires_explicit_selection, true);
   assert.equal(policy.external_skill_requires_explicit_selection, true);
-  assert.equal(policy.applies_when, 'default_mas_medical_paper_pack_does_not_cover_specialist_task');
+  assert.equal(policy.applies_when, 'default_opl_or_domain_professional_pack_does_not_cover_specialist_task');
   assert.equal(policy.coarse_entry_policy, 'ask_connect_before_loading_external_skill_library');
   assert.equal(policy.context_loading_policy, 'do_not_bulk_load_external_skill_library');
   assert.deepEqual(policy.trigger_signals, [
     'explicit_tool_package_database_or_workflow_name',
     'default_professional_skill_route_back',
-    'mas_stage_detects_capability_outside_default_eight_skills',
+    'domain_stage_detects_capability_outside_default_professional_pack',
     'governed_external_resource_or_environment_requirement',
   ]);
 }
+
+test('connect external-skills help names generic specialist registry while keeping K-Dense compatibility', () => {
+  const listHelp = runCli(['help', 'connect', 'external-skills', 'list']).help;
+  const sourceOption = listHelp.registry.options.find((option: { name: string }) => option.name === 'source');
+  assert.match(listHelp.summary, /external specialist sources/);
+  assert.doesNotMatch(listHelp.summary, /external scientific/);
+  assert.match(sourceOption.summary, /kdense-scientific-agent-skills for compatibility/);
+
+  const syncHelp = runCli(['help', 'connect', 'external-skills', 'sync']).help;
+  assert.match(syncHelp.summary, /external specialist skill/);
+  assert.doesNotMatch(syncHelp.summary, /external scientific/);
+});
 
 test('connect external-skills list exposes approved source and skill cards', () => {
   const sourceRoot = createExternalSkillsFixture();
@@ -76,9 +94,15 @@ test('connect external-skills list exposes approved source and skill cards', () 
         sources: Array<{
           source_id: string;
           status: string;
+          source_kind: string;
+          source_role: string;
+          source_profile: string;
+          canonical_ontology_role: string;
           default_install: boolean;
           can_install_all_skills_by_default: boolean;
+          default_opl_domain_professional_pack_remains_primary: boolean;
           default_mas_pack_remains_primary: boolean;
+          external_specialist_requires_explicit_selection: boolean;
           external_skill_requires_explicit_selection: boolean;
           install_policy: string;
           trigger_policy: ExternalSkillTriggerPolicy;
@@ -98,8 +122,12 @@ test('connect external-skills list exposes approved source and skill cards', () 
         authority_boundary: {
           selective_sync_only: boolean;
           can_install_all_skills_by_default: boolean;
+          default_opl_domain_professional_pack_remains_primary: boolean;
           default_mas_pack_remains_primary: boolean;
+          external_specialist_requires_explicit_selection: boolean;
           external_skill_requires_explicit_selection: boolean;
+          can_claim_runtime_readiness: boolean;
+          can_claim_live_readiness: boolean;
           can_write_domain_truth: boolean;
         };
       };
@@ -109,9 +137,15 @@ test('connect external-skills list exposes approved source and skill cards', () 
     assert.equal(output.opl_connect_external_skills.status, 'available');
     assert.equal(output.opl_connect_external_skills.sources[0].source_id, 'kdense-scientific-agent-skills');
     assert.equal(output.opl_connect_external_skills.sources[0].status, 'available');
+    assert.equal(output.opl_connect_external_skills.sources[0].source_kind, 'external_specialist_skill_source');
+    assert.equal(output.opl_connect_external_skills.sources[0].source_role, 'registered_external_specialist_source');
+    assert.equal(output.opl_connect_external_skills.sources[0].source_profile, 'kdense_scientific_agent_skills_compat_source');
+    assert.equal(output.opl_connect_external_skills.sources[0].canonical_ontology_role, 'registered_source_not_opl_canonical_ontology');
     assert.equal(output.opl_connect_external_skills.sources[0].default_install, false);
     assert.equal(output.opl_connect_external_skills.sources[0].can_install_all_skills_by_default, false);
+    assert.equal(output.opl_connect_external_skills.sources[0].default_opl_domain_professional_pack_remains_primary, true);
     assert.equal(output.opl_connect_external_skills.sources[0].default_mas_pack_remains_primary, true);
+    assert.equal(output.opl_connect_external_skills.sources[0].external_specialist_requires_explicit_selection, true);
     assert.equal(output.opl_connect_external_skills.sources[0].external_skill_requires_explicit_selection, true);
     assert.equal(output.opl_connect_external_skills.sources[0].install_policy, 'selective_sync_only');
     assertExternalSkillTriggerPolicy(output.opl_connect_external_skills.sources[0].trigger_policy);
@@ -135,8 +169,12 @@ test('connect external-skills list exposes approved source and skill cards', () 
       can_sign_owner_receipt: false,
       can_create_typed_blocker: false,
       can_claim_publication_readiness: false,
+      can_claim_runtime_readiness: false,
+      can_claim_live_readiness: false,
       can_install_all_skills_by_default: false,
+      default_opl_domain_professional_pack_remains_primary: true,
       default_mas_pack_remains_primary: true,
+      external_specialist_requires_explicit_selection: true,
       external_skill_requires_explicit_selection: true,
     });
   } finally {
@@ -168,6 +206,9 @@ test('connect external-skills sources add registers a pinned source for later di
         surface_kind: string;
         status: string;
         registry_path: string;
+        source_role: string;
+        source_profile: string;
+        canonical_ontology_role: string;
         source: {
           source_id: string;
           repo_url: string;
@@ -180,6 +221,9 @@ test('connect external-skills sources add registers a pinned source for later di
 
     assert.equal(added.opl_connect_external_skills.surface_kind, 'opl_connect_external_skill_source_registration');
     assert.equal(added.opl_connect_external_skills.status, 'registered');
+    assert.equal(added.opl_connect_external_skills.source_role, 'registered_external_specialist_source');
+    assert.equal(added.opl_connect_external_skills.source_profile, 'kdense_scientific_agent_skills_compat_source');
+    assert.equal(added.opl_connect_external_skills.canonical_ontology_role, 'registered_source_not_opl_canonical_ontology');
     assert.equal(added.opl_connect_external_skills.source.source_id, 'kdense-scientific-agent-skills');
     assert.equal(added.opl_connect_external_skills.source.pinned_ref, '1e024ea8547ada12039edbe8197aaa959d97763f');
     assert.equal(added.opl_connect_external_skills.authority_boundary.can_install_all_skills_by_default, false);
@@ -316,6 +360,8 @@ test('connect external-skills search and inspect return selected skill metadata'
       opl_connect_external_skills: {
         surface_kind: string;
         status: string;
+        source_role: string;
+        canonical_ontology_role: string;
         result_skill_ids: string[];
         results: Array<{ skill_id: string; match_score: number }>;
         trigger_policy: ExternalSkillTriggerPolicy;
@@ -324,6 +370,8 @@ test('connect external-skills search and inspect return selected skill metadata'
 
     assert.equal(search.opl_connect_external_skills.surface_kind, 'opl_connect_external_skill_search');
     assert.equal(search.opl_connect_external_skills.status, 'completed');
+    assert.equal(search.opl_connect_external_skills.source_role, 'registered_external_specialist_source');
+    assert.equal(search.opl_connect_external_skills.canonical_ontology_role, 'registered_source_not_opl_canonical_ontology');
     assert.deepEqual(search.opl_connect_external_skills.result_skill_ids, ['scanpy']);
     assert.equal(search.opl_connect_external_skills.results[0].match_score > 0, true);
     assertExternalSkillTriggerPolicy(search.opl_connect_external_skills.trigger_policy);
@@ -339,6 +387,8 @@ test('connect external-skills search and inspect return selected skill metadata'
     ]) as {
       opl_connect_external_skills: {
         surface_kind: string;
+        source_role: string;
+        canonical_ontology_role: string;
         skill: {
           skill_id: string;
           content_sha256: string;
@@ -355,6 +405,8 @@ test('connect external-skills search and inspect return selected skill metadata'
     };
 
     assert.equal(inspect.opl_connect_external_skills.surface_kind, 'opl_connect_external_skill_inspect');
+    assert.equal(inspect.opl_connect_external_skills.source_role, 'registered_external_specialist_source');
+    assert.equal(inspect.opl_connect_external_skills.canonical_ontology_role, 'registered_source_not_opl_canonical_ontology');
     assert.equal(inspect.opl_connect_external_skills.skill.skill_id, 'scanpy');
     assert.match(inspect.opl_connect_external_skills.skill.content_sha256, /^[a-f0-9]{64}$/);
     assert.equal(inspect.opl_connect_external_skills.skill.has_references, true);
@@ -370,7 +422,7 @@ test('connect external-skills search and inspect return selected skill metadata'
   }
 });
 
-test('connect external-skills classifies biomedical specialist families for on-demand MAS routing', () => {
+test('connect external-skills classifies specialist families for on-demand domain routing', () => {
   const sourceRoot = createExternalSkillsFixture([
     {
       skillId: 'pydicom',
@@ -391,6 +443,10 @@ test('connect external-skills classifies biomedical specialist families for on-d
     {
       skillId: 'pyzotero',
       description: 'Zotero citation library and literature metadata management.',
+    },
+    {
+      skillId: 'crm-admin',
+      description: 'Specialist CRM administration for account field hygiene.',
     },
   ]);
   try {
@@ -422,6 +478,7 @@ test('connect external-skills classifies biomedical specialist families for on-d
     assert.equal(byId.get('rdkit')?.risk_flags.includes('specialist_runtime_environment_review'), true);
     assert.equal(byId.get('pyzotero')?.category, 'literature');
     assert.equal(byId.get('pyzotero')?.risk_flags.includes('external_database_or_api_review'), true);
+    assert.equal(byId.get('crm-admin')?.category, 'general_external_specialist_skill');
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
   }
@@ -499,6 +556,8 @@ test('connect external-skills sync copies only the selected skill into workspace
       opl_connect_external_skills: {
         surface_kind: string;
         status: string;
+        source_role: string;
+        canonical_ontology_role: string;
         source_repo_url: string;
         source_pinned_ref: string | null;
         skill: { skill_id: string; content_sha256: string };
@@ -513,6 +572,8 @@ test('connect external-skills sync copies only the selected skill into workspace
     const synced = output.opl_connect_external_skills;
     assert.equal(synced.surface_kind, 'opl_connect_external_skill_sync');
     assert.equal(synced.status, 'synced');
+    assert.equal(synced.source_role, 'registered_external_specialist_source');
+    assert.equal(synced.canonical_ontology_role, 'registered_source_not_opl_canonical_ontology');
     assert.equal(synced.source_repo_url, 'https://github.com/K-Dense-AI/scientific-agent-skills');
     assert.equal(synced.source_pinned_ref, null);
     assert.equal(synced.skill.skill_id, 'scanpy');
@@ -528,17 +589,23 @@ test('connect external-skills sync copies only the selected skill into workspace
       fs.readFileSync(synced.install_receipt_path, 'utf8'),
     ) as {
       receipt_kind: string;
-      sync_policy: string;
       skill_content_sha256: string;
       skill_keywords: string[];
       skill_category: string;
       skill_risk_flags: string[];
       source_license: string;
+      sync_policy: string;
+      compat_sync_policy_aliases: string[];
+      source_role: string;
+      canonical_ontology_role: string;
       trigger_policy: ExternalSkillTriggerPolicy;
       authority_boundary: { can_install_all_skills_by_default: boolean };
     };
     assert.equal(receipt.receipt_kind, 'opl_connect_external_skill_sync_receipt');
-    assert.equal(receipt.sync_policy, 'single_skill_selected_by_user_or_mas_route');
+    assert.equal(receipt.source_role, 'registered_external_specialist_source');
+    assert.equal(receipt.canonical_ontology_role, 'registered_source_not_opl_canonical_ontology');
+    assert.equal(receipt.sync_policy, 'single_skill_selected_by_user_or_domain_route');
+    assert.deepEqual(receipt.compat_sync_policy_aliases, ['single_skill_selected_by_user_or_mas_route']);
     assert.equal(receipt.skill_content_sha256, synced.skill.content_sha256);
     assert.equal(receipt.skill_keywords.includes('scanpy'), true);
     assert.equal(receipt.skill_category, 'omics');
