@@ -465,10 +465,8 @@ function parseCliInput(argv: string[]): ParsedCliInput {
 
 export {
   CODEX_COMMAND_HELP_PASSTHROUGH,
-  COMMAND_GROUP_SUMMARIES,
   NON_PASSTHROUGH_COMMAND_PREFIXES,
   buildCommandHelp,
-  buildContractsContext,
   formatHumanCommandHelp,
   formatHumanRootHelp,
   buildRootHelp,

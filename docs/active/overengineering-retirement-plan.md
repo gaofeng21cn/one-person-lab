@@ -126,6 +126,12 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 - `OPL Connect external-skills`：`list` 与 `search/inspect/sync` 统一走 registered repo/pin 的 OPL state cache materialization。普通用户不再需要手动 clone K-Dense 外部库才能浏览 source card；`--source-root` 只保留为维护者调试、离线复核或私有 checkout 覆盖入口。该 cache 仍是 source/read path，不是 global Codex metadata install，也不写 domain truth、owner receipt、typed blocker 或 publication readiness。
 - `Workspace initializer test budget`：`workspace-domain.initializer.test.ts` 的 resource provenance 场景移到邻近 `workspace-domain-initializer-cases/resource-provenance.ts`，保留同一测试行为并让主测试文件回到 line budget 内。
 
+## 2026-07-07 fallow low-risk export 收薄
+
+- `OPL CLI support barrel`：按 `npm run hygiene:fallow -- --format json` 的 unused export/type-export 读回，删除 `src/entrypoints/cli/modules/support.ts` 中无外部消费者的 CLI helper re-export 与 10 个 CLI input type re-export；保留 `CommandSpec`、`ParsedCliInput` 等 active imports。
+- `OPL CLI parser/helper modules`：同步从 `help-output.ts`、`request-parsers.ts`、`system-action-parsers.ts` 的 export lists 收掉对应 internal helper exports；函数和类型定义仍在原文件内供当前实现自用，不改变 CLI parsing 或 help output 行为。
+- `scope guard`：本 lane 拒绝处理 kernel compatibility/test-imported vocabulary、public aggregate entrypoints、runtime/provider/dynamic/action surfaces、unused files、Connect dirty write set 和 owner-answer projection surface；本记录只说明 source export surface 收薄，不声明 runtime ready、release/currentness ready、domain ready 或 live evidence。
+
 ## 完成度审计
 
 | 条目 | 状态 | 完成度 | 新鲜证据口径 | 剩余缺口 |

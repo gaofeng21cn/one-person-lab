@@ -899,7 +899,6 @@ export {
   parseDeveloperSupervisorArgs,
   parseOplEngineArgs,
   parseOplModuleExecArgs,
-  parseOplModuleArgs,
   parseSessionRuntimeArgs,
   parseSystemConfigureCodexArgs,
   parseSystemDependencyArgs,
