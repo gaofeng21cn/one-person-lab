@@ -49,13 +49,6 @@ type OwnerEvidenceSustainedConsumptionLedger = {
   receipts: OwnerEvidenceSustainedConsumptionReceipt[];
 };
 
-export type MagManifestSustainedConsumptionReceipt =
-  OwnerEvidenceSustainedConsumptionReceipt;
-export type MagManifestSustainedConsumptionReceiptInput =
-  OwnerEvidenceSustainedConsumptionReceiptInput;
-export type MagManifestSustainedConsumptionReceiptVerifyInput =
-  OwnerEvidenceSustainedConsumptionReceiptVerifyInput;
-
 const SUCCESS_REF_FIELDS = [
   'app_operator_consumption_refs',
   'default_caller_consumption_refs',
@@ -606,16 +599,3 @@ export function verifyOwnerEvidenceSustainedConsumptionReceipt(
 export function listOwnerEvidenceSustainedConsumptionReceipts() {
   return readOwnerEvidenceSustainedConsumptionLedger().receipts;
 }
-
-export const magManifestSustainedConsumptionTargetKey =
-  ownerEvidenceSustainedConsumptionTargetKey;
-export const preflightMagManifestSustainedConsumptionReceiptInput =
-  preflightOwnerEvidenceSustainedConsumptionReceiptInput;
-export const assertMagManifestSustainedConsumptionReceiptInputReady =
-  assertOwnerEvidenceSustainedConsumptionReceiptInputReady;
-export const recordMagManifestSustainedConsumptionReceipts =
-  recordOwnerEvidenceSustainedConsumptionReceipts;
-export const verifyMagManifestSustainedConsumptionReceipt =
-  verifyOwnerEvidenceSustainedConsumptionReceipt;
-export const listMagManifestSustainedConsumptionReceipts =
-  listOwnerEvidenceSustainedConsumptionReceipts;

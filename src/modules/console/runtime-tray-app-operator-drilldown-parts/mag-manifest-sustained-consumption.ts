@@ -1,8 +1,8 @@
 import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
-  listMagManifestSustainedConsumptionReceipts,
-  magManifestSustainedConsumptionTargetKey,
-  type MagManifestSustainedConsumptionReceipt,
+  listOwnerEvidenceSustainedConsumptionReceipts as listMagManifestSustainedConsumptionReceipts,
+  ownerEvidenceSustainedConsumptionTargetKey as magManifestSustainedConsumptionTargetKey,
+  type OwnerEvidenceSustainedConsumptionReceipt as MagManifestSustainedConsumptionReceipt,
 } from '../../ledger/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { record, recordList, stringList, stringValue } from './value-utils.ts';

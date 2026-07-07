@@ -268,6 +268,3 @@ Record<string, CommandSpec> {
   };
   return commandSpecs;
 }
-
-export const buildRuntimeMagManifestSustainedConsumptionCommandSpecs =
-  buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs;

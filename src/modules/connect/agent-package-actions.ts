@@ -32,7 +32,7 @@ export type AgentPackageActionCatalogEntry = {
   verify_action_id?: string;
 };
 
-export const AGENT_PACKAGE_ACTION_CATALOG = [
+const AGENT_PACKAGE_ACTION_CATALOG = [
   {
     action_id: 'refresh_registry',
     aliases: ['agent_registry_refresh'],
@@ -143,7 +143,7 @@ export const AGENT_PACKAGE_ACTION_CATALOG = [
   },
 ] as const satisfies readonly AgentPackageActionCatalogEntry[];
 
-export function findAgentPackageAction(actionId: string): AgentPackageActionCatalogEntry | null {
+function findAgentPackageAction(actionId: string): AgentPackageActionCatalogEntry | null {
   return AGENT_PACKAGE_ACTION_CATALOG.find((entry) =>
     entry.action_id === actionId || entry.aliases.some((alias) => alias === actionId)
   ) ?? null;

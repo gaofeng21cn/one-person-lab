@@ -82,11 +82,11 @@ export function baseOrRecommendedRPackages(rscriptPath: string): Set<string> {
   return new Set(result.stdout.split('\n').map((entry) => entry.trim()).filter(Boolean));
 }
 
-export function rCharacterVector(values: string[]) {
+function rCharacterVector(values: string[]) {
   return `c(${values.map((value) => JSON.stringify(value)).join(', ')})`;
 }
 
-export function rPackageInstallSource(entry: JsonRecord): RPackageRequirement['install_source'] {
+function rPackageInstallSource(entry: JsonRecord): RPackageRequirement['install_source'] {
   const source = entry.source;
   if (source && typeof source === 'object' && !Array.isArray(source)) {
     const sourceRecord = source as JsonRecord;
@@ -97,7 +97,7 @@ export function rPackageInstallSource(entry: JsonRecord): RPackageRequirement['i
   return entry.install_source === 'github' ? 'github' : 'cran';
 }
 
-export function rPackageGithubRepo(entry: JsonRecord): string | undefined {
+function rPackageGithubRepo(entry: JsonRecord): string | undefined {
   const source = entry.source;
   if (source && typeof source === 'object' && !Array.isArray(source)) {
     const sourceRecord = source as JsonRecord;
@@ -108,7 +108,7 @@ export function rPackageGithubRepo(entry: JsonRecord): string | undefined {
   return typeof repo === 'string' && repo.trim() ? repo.trim() : undefined;
 }
 
-export function rPackageRequirementsFromEntries(value: unknown): RPackageRequirement[] {
+function rPackageRequirementsFromEntries(value: unknown): RPackageRequirement[] {
   return objects(value)
     .filter((entry) => entry.required !== false)
     .map((entry): RPackageRequirement | null => {
@@ -126,7 +126,7 @@ export function rPackageRequirementsFromEntries(value: unknown): RPackageRequire
     .filter((entry): entry is RPackageRequirement => Boolean(entry));
 }
 
-export function uniqueRPackageRequirements(values: RPackageRequirement[]): RPackageRequirement[] {
+function uniqueRPackageRequirements(values: RPackageRequirement[]): RPackageRequirement[] {
   const seen = new Set<string>();
   const result: RPackageRequirement[] = [];
   values.forEach((value) => {
@@ -145,7 +145,7 @@ export function uniqueRPackageRequirements(values: RPackageRequirement[]): RPack
   return result;
 }
 
-export function pythonPackageRequirementsFromEntries(value: unknown): PythonPackageRequirement[] {
+function pythonPackageRequirementsFromEntries(value: unknown): PythonPackageRequirement[] {
   return objects(value)
     .filter((entry) => entry.required !== false)
     .map((entry): PythonPackageRequirement | null => {
@@ -155,7 +155,7 @@ export function pythonPackageRequirementsFromEntries(value: unknown): PythonPack
     .filter((entry): entry is PythonPackageRequirement => Boolean(entry));
 }
 
-export function uniquePythonPackageRequirements(values: PythonPackageRequirement[]): PythonPackageRequirement[] {
+function uniquePythonPackageRequirements(values: PythonPackageRequirement[]): PythonPackageRequirement[] {
   const seen = new Set<string>();
   const result: PythonPackageRequirement[] = [];
   values.forEach((value) => {
@@ -293,7 +293,7 @@ export function installRPackagesIntoManagedLibrary(
   };
 }
 
-export function uniqueStrings(values: string[]): string[] {
+function uniqueStrings(values: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   values.forEach((value) => {

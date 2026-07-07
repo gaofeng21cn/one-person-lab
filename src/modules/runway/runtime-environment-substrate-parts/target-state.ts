@@ -16,7 +16,7 @@ export function stringList(value: unknown): string[] {
     : [];
 }
 
-export function defaultPlatform() {
+function defaultPlatform() {
   return process.platform === 'darwin' && process.arch === 'arm64'
     ? 'macos-arm64'
     : `${process.platform}-${process.arch}`;
@@ -31,7 +31,7 @@ export function normalizeTarget(input: RuntimeEnvironmentTargetInput) {
   };
 }
 
-export function stableJson(value: unknown): string {
+function stableJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((entry) => stableJson(entry)).join(',')}]`;
   }
@@ -73,7 +73,7 @@ export function safeSegment(value: string) {
   return encodeURIComponent(value).replace(/%/g, '_');
 }
 
-export function targetStateRoot(target: ReturnType<typeof normalizeTarget>) {
+function targetStateRoot(target: ReturnType<typeof normalizeTarget>) {
   return path.join(
     runtimeEnvironmentStateRoot(),
     'targets',
@@ -91,11 +91,11 @@ export function bundleRoot(target: ReturnType<typeof normalizeTarget>) {
   return path.join(targetStateRoot(target), 'bundles');
 }
 
-export function runtimeRootsRoot(target: ReturnType<typeof normalizeTarget>) {
+function runtimeRootsRoot(target: ReturnType<typeof normalizeTarget>) {
   return path.join(targetStateRoot(target), 'runtime-roots');
 }
 
-export function pointerRoot(target: ReturnType<typeof normalizeTarget>) {
+function pointerRoot(target: ReturnType<typeof normalizeTarget>) {
   return path.join(targetStateRoot(target), 'pointers');
 }
 
@@ -145,7 +145,7 @@ export function objects(value: unknown): JsonRecord[] {
     : [];
 }
 
-export function materializationId(bundleManifest: JsonRecord) {
+function materializationId(bundleManifest: JsonRecord) {
   const stableLayerRefs = objects(bundleManifest.layer_refs).map((layer) => ({
     layer_type: layer.layer_type,
     layer_id: layer.layer_id,
@@ -166,11 +166,11 @@ export function runtimeRootForBundle(
   return path.join(runtimeRootsRoot(target), materializationId(bundleManifest));
 }
 
-export function pointerPath(target: ReturnType<typeof normalizeTarget>, pointer: string) {
+function pointerPath(target: ReturnType<typeof normalizeTarget>, pointer: string) {
   return path.join(pointerRoot(target), `${pointer}.json`);
 }
 
-export function readPointer(target: ReturnType<typeof normalizeTarget>, pointer = 'current') {
+function readPointer(target: ReturnType<typeof normalizeTarget>, pointer = 'current') {
   return readJsonObject(pointerPath(target, pointer));
 }
 
@@ -178,7 +178,7 @@ export function writePointer(target: ReturnType<typeof normalizeTarget>, pointer
   writeJsonFile(pointerPath(target, pointer), payload);
 }
 
-export function preparedEnvironmentIndexPath() {
+function preparedEnvironmentIndexPath() {
   return path.join(runtimeEnvironmentStateRoot(), 'prepared-environments.json');
 }
 

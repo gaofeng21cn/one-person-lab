@@ -178,13 +178,13 @@ function buildPhysicalSurfacePaths(manifest: AgentPackageManifest) {
   };
 }
 
-export function copyDirectory(source: string, target: string) {
+function copyDirectory(source: string, target: string) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.cpSync(source, target, { recursive: true });
 }
 
-export function requiredSkillPath(pluginSourcePath: string, skillId: string) {
+function requiredSkillPath(pluginSourcePath: string, skillId: string) {
   const normalized = skillId.trim();
   if (!normalized || normalized.includes('/') || normalized.includes('\\') || normalized === '.' || normalized === '..') {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package required skill id must be a safe path segment.', {
@@ -195,7 +195,7 @@ export function requiredSkillPath(pluginSourcePath: string, skillId: string) {
   return path.join(pluginSourcePath, 'skills', normalized, 'SKILL.md');
 }
 
-export function validateMaterializedRequiredSkills(manifest: AgentPackageManifest, pluginSourcePath: string) {
+function validateMaterializedRequiredSkills(manifest: AgentPackageManifest, pluginSourcePath: string) {
   const requiredSkillPaths = manifest.required_skill_ids.map((skillId) => ({
     skillId,
     skillPath: requiredSkillPath(pluginSourcePath, skillId),

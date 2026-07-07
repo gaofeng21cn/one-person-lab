@@ -19,7 +19,7 @@ import type {
   AgentPackageRegistryCache,
 } from './types.ts';
 
-export function emptyLockIndex(): AgentPackageLockIndex {
+function emptyLockIndex(): AgentPackageLockIndex {
   return {
     surface_kind: 'opl_agent_package_lock_index',
     version: 'opl-agent-package-lock-index.v1',
@@ -27,7 +27,7 @@ export function emptyLockIndex(): AgentPackageLockIndex {
   };
 }
 
-export function emptyLifecycleLedger(): AgentPackageLifecycleLedger {
+function emptyLifecycleLedger(): AgentPackageLifecycleLedger {
   return {
     surface_kind: 'opl_agent_package_lifecycle_ledger',
     version: 'opl-agent-package-lifecycle-ledger.v1',
@@ -88,7 +88,7 @@ export function writeLockIndex(index: AgentPackageLockIndex) {
   writeJsonPayloadFile(paths.agent_package_lock_file, index);
 }
 
-export function writeLifecycleLedger(ledger: AgentPackageLifecycleLedger) {
+function writeLifecycleLedger(ledger: AgentPackageLifecycleLedger) {
   const paths = ensureOplStateDir();
   writeJsonReceiptLedger(paths.agent_package_lifecycle_ledger_file, ledger);
 }
