@@ -1,10 +1,7 @@
-import { MANAGED_UPDATE_OWNER_ACTIONS } from './managed-update-owner-boundary.ts';
-
 export type AgentPackageAppActionId =
   | 'refresh_registry'
   | 'install_from_manifest_url'
   | 'agent_package_update'
-  | 'agent_package_rollback'
   | 'agent_package_repair'
   | 'agent_package_uninstall'
   | 'agent_package_hide'
@@ -18,8 +15,7 @@ export type AgentPackageActionTaskKind =
   | 'install'
   | 'uninstall'
   | 'repair'
-  | 'configure'
-  | typeof MANAGED_UPDATE_OWNER_ACTIONS.revert;
+  | 'configure';
 
 export type AgentPackageActionCatalogEntry = {
   action_id: AgentPackageAppActionId;
@@ -92,24 +88,6 @@ export const AGENT_PACKAGE_ACTION_CATALOG = [
     confirmation_required: true,
     danger_level: 'medium',
     impact: 'Replaces an installed package lock through the package core lifecycle without owning carrier-specific release truth.',
-    follow_up_action_ids: ['settings_reload_codex_surface'],
-    verify_action_id: 'settings_reload_codex_surface',
-  },
-  {
-    action_id: 'agent_package_rollback', // reuse-first: allow owner-routed lifecycle projection, not package-manager truth.
-    aliases: [],
-    stable_id: 'rollback_agent_package',
-    label: 'Rollback agent package',
-    section_id: 'capabilities',
-    task_kind: MANAGED_UPDATE_OWNER_ACTIONS.revert,
-    taxonomy: 'settings.capabilities.agent_package.rollback', // reuse-first: allow owner-routed lifecycle projection, not package-manager truth.
-    delegated_surface: 'opl connect agent-packages rollback --manifest-url <manifest_url>', // reuse-first: allow owner-routed lifecycle projection, not package-manager truth.
-    payload_fields: ['manifest_url', 'registry_url', 'package_id', 'trust_tier', 'source_kind'],
-    mutates: 'opl_agent_package_lock_and_lifecycle_receipt',
-    dry_run_supported: true,
-    confirmation_required: true,
-    danger_level: 'medium',
-    impact: 'Records a rollback lock/receipt through the package core lifecycle without claiming App release or domain readiness.', // reuse-first: allow owner-routed lifecycle projection, not package-manager truth.
     follow_up_action_ids: ['settings_reload_codex_surface'],
     verify_action_id: 'settings_reload_codex_surface',
   },

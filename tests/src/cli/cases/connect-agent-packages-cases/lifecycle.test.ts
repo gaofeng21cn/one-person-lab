@@ -415,28 +415,6 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       assert.equal(enable.opl_agent_package_exposure.status, 'enabled');
       assert.equal(enable.opl_agent_package_exposure.package_lock.exposure_state, 'enabled');
 
-      const rollback = await runCliAsync([
-        'connect',
-        'agent-packages',
-        'rollback',
-        '--registry-url',
-        registryUrl,
-        '--package-id',
-        'third.party.research',
-      ], env) as {
-        opl_agent_package_rollback: {
-          status: string;
-          package_lock: { package_id: string };
-          physical_surface: { status: string };
-          lifecycle_receipt: { action: string; writes_performed: boolean; physical_surface: { status: string } };
-        };
-      };
-      assert.equal(rollback.opl_agent_package_rollback.status, 'rolled_back');
-      assert.equal(rollback.opl_agent_package_rollback.package_lock.package_id, 'third.party.research');
-      assert.equal(rollback.opl_agent_package_rollback.physical_surface.status, 'materialized');
-      assert.equal(rollback.opl_agent_package_rollback.lifecycle_receipt.action, 'rollback');
-      assert.equal(rollback.opl_agent_package_rollback.lifecycle_receipt.writes_performed, true);
-
       const status = runCli([
         'connect',
         'agent-packages',
@@ -465,7 +443,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       );
       assert.deepEqual(
         status.opl_agent_package_status.lifecycle_receipts.map((receipt) => receipt.action),
-        ['rollback', 'enable', 'disable', 'unhide', 'hide', 'repair', 'update', 'install', 'manifest_validate'],
+        ['enable', 'disable', 'unhide', 'hide', 'repair', 'update', 'install', 'manifest_validate'],
       );
 
       const uninstall = runCli([

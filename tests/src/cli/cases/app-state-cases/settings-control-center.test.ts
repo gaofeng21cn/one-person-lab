@@ -68,7 +68,6 @@ exit 1
         'refresh_registry',
         'install_from_manifest_url',
         'agent_package_update',
-        'agent_package_rollback',
         'agent_package_repair',
         'agent_package_uninstall',
         'agent_package_hide',
@@ -479,7 +478,6 @@ exit 1
           'refresh_registry',
           'install_from_manifest_url',
           'agent_package_update',
-          'agent_package_rollback',
           'agent_package_repair',
           'agent_package_uninstall',
           'agent_package_hide',
@@ -497,7 +495,6 @@ exit 1
           ['refresh_registry', 'opl connect agent-packages registry refresh --registry-url <registry_url>', 'capabilities'],
           ['install_from_manifest_url', 'opl connect agent-packages install --manifest-url <manifest_url>', 'capabilities'],
           ['agent_package_update', 'opl connect agent-packages update --manifest-url <manifest_url>', 'capabilities'],
-          ['agent_package_rollback', 'opl connect agent-packages rollback --manifest-url <manifest_url>', 'capabilities'], // reuse-first: allow owner-routed lifecycle projection assertion.
           ['agent_package_repair', 'opl connect agent-packages repair --package-id <package_id>', 'capabilities'],
           ['agent_package_uninstall', 'opl connect agent-packages uninstall --package-id <package_id>', 'capabilities'],
           ['agent_package_hide', 'opl connect agent-packages hide --package-id <package_id>', 'capabilities'],

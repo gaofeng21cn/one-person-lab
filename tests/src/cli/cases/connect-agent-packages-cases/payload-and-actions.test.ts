@@ -262,28 +262,6 @@ test('app action execute routes install_from_manifest_url to Framework package l
     }]);
     assert.equal(fs.existsSync(list.opl_agent_packages.files.home_shortcut_preferences_file), true);
 
-    const rollback = runCli([
-      'app',
-      'action',
-      'execute',
-      '--action',
-      'agent_package_rollback',
-      '--payload',
-      JSON.stringify({ package_id: 'third.party.research' }),
-    ], { OPL_STATE_DIR: stateDir }) as {
-      app_action_execution: {
-        delegated_surface: string;
-        result: {
-          opl_agent_package_rollback: {
-            status: string;
-            lifecycle_receipt: { action: string };
-          };
-        };
-      };
-    };
-    assert.equal(rollback.app_action_execution.delegated_surface, 'opl connect agent-packages rollback --manifest-url <manifest_url>');
-    assert.equal(rollback.app_action_execution.result.opl_agent_package_rollback.status, 'rolled_back');
-    assert.equal(rollback.app_action_execution.result.opl_agent_package_rollback.lifecycle_receipt.action, 'rollback');
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(fixtureDir, { recursive: true, force: true });

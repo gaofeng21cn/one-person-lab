@@ -7,7 +7,6 @@ import {
   runOplAgentPackageInstall,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,
-  runOplAgentPackageRollback,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
   runOplFlowIntelligenceEnhancementAction,
@@ -389,17 +388,6 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
       result: await runOplAgentPackageUpdate({
-        ...installPayload,
-        dryRun: options.dryRun,
-      }),
-    };
-  }
-
-  if (options.actionId === 'agent_package_rollback') {
-    const installPayload = agentPackageInstallPayload(options.payload, { allowPackageOnly: true });
-    return {
-      delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
-      result: await runOplAgentPackageRollback({
         ...installPayload,
         dryRun: options.dryRun,
       }),

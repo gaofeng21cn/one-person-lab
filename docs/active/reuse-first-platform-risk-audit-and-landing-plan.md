@@ -58,8 +58,8 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 
 | 排除项 | 当前 owner / session | 本文保留内容 | 禁止误读 |
 | --- | --- | --- | --- |
-| Managed Update + Agent Packages owner-route | 另会话 / Managed Update / Pack / Connect owners | 只保留 owner-route completion audit 入口和 forbidden claim。 | 不把 `owner_route_readback`、descriptor、digest、lock、repair/rollback verbs 写成 package lifecycle owner receipt 或 release/currentness ready。 |
-| package lifecycle verb surfaces | 另会话 / Pack / Connect owners | 只保留复用优先标准：descriptor + digest + lock + receipt projection。 | 不在本文继续追加 `install/update/repair/rollback/uninstall/status` 命令流水。 |
+| Managed Update + Agent Packages owner-route | 另会话 / Managed Update / Pack / Connect owners | 只保留 owner-route completion audit 入口和 forbidden claim。 | 不把 `owner_route_readback`、descriptor、digest、lock 或 repair verbs 写成 package lifecycle owner receipt 或 release/currentness ready；Agent Package rollback 已退役，真实 rollback 留给 Managed Update owner route。 |
+| package lifecycle verb surfaces | 另会话 / Pack / Connect owners | 只保留复用优先标准：descriptor + digest + lock + receipt projection。 | 不在本文继续追加 `install/update/repair/uninstall/status` 命令流水；不恢复 `connect agent-packages rollback`。 |
 | App release/currentness owner route | App release owner / `one-person-lab-app` | 只保留 release truth 不属于 OPL Framework docs 的边界。 | 不用 Framework docs、scan、readback 或 focused tests 替代 App release owner receipt。 |
 | external Temporal live substrate | Runway Runtime owner + external Temporal environment | 只保留 `external_temporal_durable_lifecycle` 缺口。 | 不把 Temporal SDK、local/test-server proof、SQLite projection 或 docs 写成 production durable lifecycle ready。 |
 | OTLP/exporter live endpoint | Observability owner | 只保留 live endpoint / collector consumption 缺口。 | 不把 bounded OpenMetrics smoke、diagnostic drilldown 或 semantic convention contract 写成 production observability ready。 |

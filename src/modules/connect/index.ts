@@ -14,7 +14,6 @@ export {
   runOplAgentPackageManifestValidate,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,
-  runOplAgentPackageRollback,
   runOplAgentPackageStatus,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
@@ -24,7 +23,6 @@ export type {
   AgentPackageInstallInput,
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
-  AgentPackageRollbackInput,
 } from './agent-package-registry.ts';
 export {
   AGENT_PACKAGE_ACTION_CATALOG,

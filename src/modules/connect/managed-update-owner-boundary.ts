@@ -20,7 +20,6 @@ export const CAPABILITY_PACKAGE_READBACK_REF = 'opl connect agent-packages list 
 export const CAPABILITY_PACKAGE_STATUS_READBACK_REF = 'opl connect agent-packages status --package-id <package_id> --json';
 export const CAPABILITY_PACKAGE_APPLY_COMMAND = 'opl update apply --component capability_packages --json';
 export const CAPABILITY_PACKAGE_REPAIR_COMMAND = 'opl connect agent-packages repair --package-id <package_id> --json';
-export const CAPABILITY_PACKAGE_ROLLBACK_COMMAND = 'opl connect agent-packages rollback --package-id <package_id> --json';
 export const CAPABILITY_PACKAGE_OWNER_FORBIDDEN_CLAIMS = [
   'capability_package_channel_signs_owner_receipt',
   'capability_package_channel_writes_domain_truth',

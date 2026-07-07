@@ -6,7 +6,6 @@ import {
   runOplAgentPackageManifestValidate,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,
-  runOplAgentPackageRollback,
   runOplAgentPackageStatus,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
@@ -14,7 +13,6 @@ import {
   type AgentPackageInstallInput,
   type AgentPackageManifestValidateInput,
   type AgentPackagePackageActionInput,
-  type AgentPackageRollbackInput,
 } from '../../../../modules/connect/index.ts';
 import { readOptionalString } from '../../modules/json-boundary.ts';
 import {
@@ -26,7 +24,6 @@ import {
 
 type AgentPackageSelectionArgs = AgentPackageManifestValidateInput;
 type AgentPackageInstallArgs = AgentPackageInstallInput;
-type AgentPackageRollbackArgs = AgentPackageRollbackInput;
 type AgentPackagePackageActionArgs = AgentPackagePackageActionInput;
 type AgentPackageHomeShortcutPreferencesSetArgs = AgentPackageHomeShortcutPreferencesSetInput;
 
@@ -66,10 +63,6 @@ function parseAgentPackageInstallArgs(command: string, args: string[], spec: Com
     sourceKind: readOptionalString(parsed['source-kind']) as AgentPackageInstallArgs['sourceKind'],
     dryRun: parsed['dry-run'] === true,
   };
-}
-
-function parseAgentPackageRollbackArgs(command: string, args: string[], spec: CommandSpec): AgentPackageRollbackArgs {
-  return parseAgentPackageInstallArgs(command, args, spec);
 }
 
 function parseAgentPackagePackageActionArgs(command: string, args: string[], spec: CommandSpec): AgentPackagePackageActionArgs {
@@ -313,40 +306,6 @@ export function buildAgentPackageCommandSpecs(
             'connect agent-packages repair',
             args,
             getCommandSpec('connect agent-packages repair'),
-          ),
-        ),
-    },
-    'connect agent-packages rollback': {
-      usage: 'opl connect agent-packages rollback (--manifest-url <url>|--registry-url <url> --package-id <id>) [--trust-tier <tier>] [--source-kind <kind>] [--dry-run]',
-      summary: 'Validate a rollback OPL Agent Package manifest and replace the Framework-owned package lock plus lifecycle receipt.',
-      examples: [
-        'opl connect agent-packages rollback --manifest-url file:///tmp/agent/rollback-manifest.json --trust-tier third_party_verified --json',
-      ],
-      group: 'connect',
-      help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages rollback',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...agentPackageSelectionOptions,
-          {
-            name: 'dry-run',
-            flag: '--dry-run',
-            value_kind: 'boolean',
-            summary: 'Validate and preview rollback lock/receipt output without writing state.',
-            required: false,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_rollback/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
-      handler: (args) =>
-        runOplAgentPackageRollback(
-          parseAgentPackageRollbackArgs(
-            'connect agent-packages rollback',
-            args,
-            getCommandSpec('connect agent-packages rollback'),
           ),
         ),
     },

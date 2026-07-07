@@ -173,7 +173,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'refresh_registry',
       'install_from_manifest_url',
       'agent_package_update',
-      'agent_package_rollback',
       'agent_package_repair',
       'agent_package_uninstall',
       'agent_package_hide',
@@ -365,7 +364,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
         'refresh_registry',
         'install_from_manifest_url',
         'agent_package_update',
-        'agent_package_rollback',
         'agent_package_repair',
         'agent_package_uninstall',
         'agent_package_hide',
@@ -378,7 +376,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
         'opl connect agent-packages registry refresh --registry-url <registry_url>',
         'opl connect agent-packages install --manifest-url <manifest_url>',
         'opl connect agent-packages update --manifest-url <manifest_url>',
-        'opl connect agent-packages rollback --manifest-url <manifest_url>', // reuse-first: allow owner-routed lifecycle projection assertion.
         'opl connect agent-packages repair --package-id <package_id>',
         'opl connect agent-packages uninstall --package-id <package_id>',
         'opl connect agent-packages hide --package-id <package_id>',

@@ -15,7 +15,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `OPL Connect` 保留 Agent Package registry / manifest / lock / lifecycle receipt；package core 只管理 package id、version、digest、dependency、trust tier、lock、lifecycle receipt、exposure 和 shortcut refs。
 - Carrier adapters 负责 Codex Plugin、OPL App、Capability Pack、MCP/Web/native 等物理投影；adapter 不能写入 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
-- `OPL App` 是 package cockpit 和操作入口，只消费 Framework 输出的 package refs、install/update/rollback action refs 和 receipt refs；App 不 hard-code MAS/MAG/RCA 语义，也不成为 package truth owner。
+- `OPL App` 是 package cockpit 和操作入口，只消费 Framework 输出的 package refs、install/update/repair/uninstall/exposure/shortcut action refs 和 receipt refs；App 不 hard-code MAS/MAG/RCA 语义，也不成为 package truth owner。Agent Package rollback 不再作为 Framework/App lifecycle 动词暴露；真实回滚归 Managed Update / runtime substrate / package-channel owner route。
 - Package manager 的优化路线写入 [OPL 过度设计退役与收薄计划](./active/overengineering-retirement-plan.md)：先迁移/删除无语义 wrapper，再收薄 local scheduler/observability/test tail。该计划只授权功能/结构清理，不声明 App release-ready、domain-ready、Brand L5 或 production-ready。
 
 ### 决策：Full runtime bundle producer 由 Framework `runtime env build` 暴露，App 只消费 refs
@@ -64,10 +64,10 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `opl connect agent-packages registry refresh --registry-url <url> --json` 是 registry URL 的真实拉取与缓存入口；registry 只做 discovery，不能成为安装 authority。
 - `opl connect agent-packages validate-manifest (--manifest-url <url>|--registry-url <url> --package-id <id>) --json` 校验单个 OPL Agent Package manifest 并写 validation receipt，显式拒绝 `session_contract_ref`、domain workflow schema、prompt body、artifact schema、readiness/quality verdict rule 和 owner receipt authority。
-- `opl connect agent-packages install ... --json` 在 Framework `OPL_STATE_DIR` 写 `agent-package-locks.json` 和 `agent-package-lifecycle-ledger.json`；lock/receipt 只记录 package id、version/source digest、Codex visible entry、required skill ids、optional skill refs、source kind、trust tier、rollback ref 和 no-authority boundary。
+- `opl connect agent-packages install ... --json` 在 Framework `OPL_STATE_DIR` 写 `agent-package-locks.json` 和 `agent-package-lifecycle-ledger.json`；lock/receipt 只记录 package id、version/source digest、Codex visible entry、required skill ids、optional skill refs、source kind、trust tier、manifest-provided rollback ref provenance 和 no-authority boundary。
 - `opl app action execute --action install_from_manifest_url --payload <json>` 只路由到上述 Framework package lock writer；App shell 仍只展示 package / shortcut / receipt refs，不拥有 agent 语义。
 - 该能力不接管 Pack OS generic capability-pack descriptor，也不替代 first-party GHCR package channel；第三方 agent package lifecycle 是 Connect 的 external descriptor / distribution surface，Pack OS 继续持有通用 capability pack descriptor / content-addressed cache / refs-only distribution lock。
-- 该 landing 不声明 domain ready、publication ready、visual/export ready、App release ready、Brand L5 或 production ready；真实安装后的 Codex plugin/materialized package health、uninstall/rollback physical mutation 和 live user path 仍需要后续 owner evidence。
+- 该 landing 不声明 domain ready、publication ready、visual/export ready、App release ready、Brand L5 或 production ready；真实安装后的 Codex plugin/materialized package health、uninstall physical mutation、Managed Update/package-channel rollback 和 live user path 仍需要后续 owner evidence。
 
 ### 决策：Display pack 作为通用 OPL Pack resource 消费，不新增 `opl display`
 

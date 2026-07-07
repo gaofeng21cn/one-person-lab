@@ -44,7 +44,6 @@ export function packageActionStatus(action: AgentPackageLifecycleAction) {
     install: 'installed',
     update: 'updated',
     repair: 'repaired',
-    rollback: 'rolled_back',
     uninstall: 'uninstalled',
     hide: 'hidden',
     unhide: 'visible',
@@ -134,7 +133,7 @@ export function permissionScopeSha256(manifest: AgentPackageManifest) {
   }));
 }
 
-export function assertPermissionScopeUnchanged(previousLock: AgentPackageLock | null, manifest: AgentPackageManifest, action: 'install' | 'update' | 'rollback') {
+export function assertPermissionScopeUnchanged(previousLock: AgentPackageLock | null, manifest: AgentPackageManifest, action: 'install' | 'update') {
   if (!previousLock || action === 'install') {
     return;
   }

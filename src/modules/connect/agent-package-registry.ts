@@ -58,7 +58,6 @@ import type {
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
   AgentPackageRegistryRefreshInput,
-  AgentPackageRollbackInput,
 } from './agent-package-registry-parts/types.ts';
 
 export type {
@@ -67,12 +66,11 @@ export type {
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
   AgentPackageRegistryRefreshInput,
-  AgentPackageRollbackInput,
 } from './agent-package-registry-parts/types.ts';
 
 async function applyManifestPackageLock(
   input: AgentPackageInstallInput,
-  action: 'install' | 'update' | 'rollback',
+  action: 'install' | 'update',
 ) {
   const packageId = stringValue(input.packageId);
   const index = readLockIndex();
@@ -300,29 +298,6 @@ export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) 
     version: 'g2',
     opl_agent_package_update: {
       surface_kind: 'opl_agent_package_update',
-      status: result.status,
-      dry_run: input.dryRun === true,
-      package_lock: result.lock,
-      physical_surface: result.physicalSurface,
-      lifecycle_receipt: result.receipt,
-      owner_route_readback: ownerRouteReadback({
-        selectedPackageId: result.lock.package_id,
-        packages: [{ packageId: result.lock.package_id, lock: result.lock, receipt: result.receipt }],
-      }),
-      lock_file: resolveOplStatePaths().agent_package_lock_file,
-      lifecycle_ledger_file: resolveOplStatePaths().agent_package_lifecycle_ledger_file,
-      registry_entry: result.registryEntry,
-      authority_boundary: refsOnlyAuthorityBoundary(),
-    },
-  };
-}
-
-export async function runOplAgentPackageRollback(input: AgentPackageRollbackInput) {
-  const result = await applyManifestPackageLock(input, 'rollback');
-  return {
-    version: 'g2',
-    opl_agent_package_rollback: {
-      surface_kind: 'opl_agent_package_rollback',
       status: result.status,
       dry_run: input.dryRun === true,
       package_lock: result.lock,

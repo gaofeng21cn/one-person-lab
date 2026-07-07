@@ -26,7 +26,6 @@ export type AgentPackageLifecycleAction =
   | 'install'
   | 'update'
   | 'repair'
-  | 'rollback'
   | 'uninstall'
   | 'hide'
   | 'unhide'
@@ -60,10 +59,6 @@ export type AgentPackageHomeShortcutPreferencesSetInput = {
   shortcutId: string;
   visible?: boolean | null;
   sortOrder?: number | null;
-  dryRun?: boolean;
-};
-
-export type AgentPackageRollbackInput = AgentPackageManifestValidateInput & {
   dryRun?: boolean;
 };
 
@@ -367,7 +362,6 @@ export type AgentPackageOwnerRouteReadback = {
     status: string;
     apply: string;
     repair: string;
-    rollback: string;
   };
   selected_package_id: string | null;
   package_count: number;
