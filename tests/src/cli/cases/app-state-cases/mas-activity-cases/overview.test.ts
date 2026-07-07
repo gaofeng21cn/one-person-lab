@@ -16,6 +16,87 @@ import {
   writeStudyRuntimeStatusSummaryFixture,
   writeWorkspaceStageAttemptCloseoutFixture,
 } from './helpers.ts';
+import { buildOrdinaryCockpit } from '../../../../../../src/modules/console/app-state-parts/view-model-operator-profiles.ts';
+import { buildCurrentOwnerDeltaReadModel } from '../../../../../../src/modules/ledger/current-owner-delta-projection.ts';
+import { buildCurrentOwnerDeltaTopline } from '../../../../../../src/modules/ledger/index.ts';
+
+test('ordinary cockpit does not mix current owner delta identity with stale runtime task fallback text', () => {
+  const studyId = '003-dpcc-primary-care-phenotype-treatment-gap';
+  const stageAttemptId = 'sat_app_state_dm003_completed_current';
+  const readModel = buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'med-autoscience',
+      next_required_delta: 'Return an owner receipt or typed blocker for the completed DM003 stage.',
+      required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+      domain_id: 'medautoscience',
+      primary_item: {
+        domain_id: 'medautoscience',
+        study_id: studyId,
+        stage_id: 'submission_milestone_candidate',
+        stage_attempt_id: stageAttemptId,
+        work_unit_id: 'dm003-submission-milestone',
+      },
+    },
+    countSummary: {
+      openSafeActionCount: 1,
+      payloadRequiredCount: 0,
+      payloadFreeCount: 0,
+      blockedRefsOnlyCount: 0,
+      evidenceEnvelopeOpenCount: 0,
+      evidenceEnvelopeBlockedCount: 0,
+      domainDispatchWorkorderCount: 0,
+      stageReplayMissingReceiptWorkorderCount: 0,
+    },
+  });
+
+  const cockpit = buildOrdinaryCockpit(
+    buildCurrentOwnerDeltaTopline({ currentOwnerDeltaReadModel: readModel }),
+    {
+      profile: 'fast',
+      core: {},
+      developerMode: {},
+      modules: {},
+      provider: {},
+      release: {},
+      paths: {},
+      actions: [],
+      settingsControlCenter: {},
+      uiDefaults: {},
+      runtimeActivityItems: [
+        {
+          lane: 'attention',
+          domain_owner: 'med-autoscience',
+          project_id: 'medautoscience',
+          item_id: 'medautoscience:binding:mas-app-state-activity:study:001-dm-cvd-mortality-risk',
+          study_id: '001-dm-cvd-mortality-risk',
+          active_stage_id: 'runtime_blocked',
+          stage_attempt_ids: ['sat_old_blocked_attempt'],
+          title: '001-dm-cvd-mortality-risk / OPL runtime blocked',
+          status_label: 'OPL runtime blocked',
+        },
+        {
+          lane: 'running',
+          domain_owner: 'med-autoscience',
+          project_id: 'medautoscience',
+          item_id: `medautoscience:binding:mas-app-state-activity:study:${studyId}`,
+          study_id: studyId,
+          active_stage_id: 'review',
+          stage_attempt_ids: ['sat_wrong_running_attempt'],
+          title: 'DM003 stale running review attempt',
+          status_label: 'OPL runtime running',
+        },
+      ],
+      brandSystemProfile: {},
+      targetOperatingArchitecture: {},
+      currentOwnerDeltaReadModel: readModel,
+    },
+  );
+
+  assert.equal(cockpit.display_payload.task.task_ref, studyId);
+  assert.equal(cockpit.display_payload.task.stage_ref, 'submission_milestone_candidate');
+  assert.equal(cockpit.display_payload.task.title, null);
+  assert.equal(cockpit.display_payload.task.status_label, null);
+});
 
 test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));

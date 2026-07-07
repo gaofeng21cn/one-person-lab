@@ -46,6 +46,12 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map(asString).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
 function asNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -54,7 +60,121 @@ function ownerKey(value: string | null) {
   return value?.toLowerCase().replace(/[^a-z0-9]+/g, '') ?? '';
 }
 
+function compactStrings(values: Array<string | null>) {
+  return [...new Set(values.filter((entry): entry is string => Boolean(entry)))];
+}
+
+function taskIdentityRecord(item: JsonRecord) {
+  return asRecord(item.task_identity);
+}
+
+function itemStudies(item: JsonRecord) {
+  const identity = taskIdentityRecord(item);
+  return compactStrings([
+    asString(item.study_id),
+    asString(identity.study_id),
+  ]);
+}
+
+function itemStages(item: JsonRecord) {
+  const identity = taskIdentityRecord(item);
+  const executionRun = asRecord(identity.execution_run);
+  return compactStrings([
+    asString(item.stage_id),
+    asString(item.stage_ref),
+    asString(item.active_stage_id),
+    asString(executionRun.stage_id),
+  ]);
+}
+
+function itemStageAttempts(item: JsonRecord) {
+  return compactStrings([
+    asString(item.stage_attempt_id),
+    ...asStringArray(item.stage_attempt_ids),
+  ]);
+}
+
+function itemTaskRefs(item: JsonRecord) {
+  const identity = taskIdentityRecord(item);
+  const workItem = asRecord(identity.work_item);
+  return compactStrings([
+    asString(item.item_id),
+    asString(item.task_id),
+    asString(item.task_ref),
+    asString(item.source_ref),
+    asString(identity.task_id),
+    asString(identity.task_ref),
+    asString(workItem.work_item_id),
+    ...itemStudies(item),
+    ...itemStageAttempts(item),
+  ]);
+}
+
+function itemWorkUnits(item: JsonRecord) {
+  return compactStrings([
+    asString(item.work_unit_id),
+    asString(item.action_id),
+    asString(item.item_id),
+  ]);
+}
+
+function valuesContain(values: string[], expected: string | null) {
+  return expected !== null && values.includes(expected);
+}
+
+function noIdentityConflict(expected: string | null, values: string[]) {
+  return !expected || values.length === 0 || values.includes(expected);
+}
+
+function currentOwnerDeltaHasTaskIdentity(currentOwnerDelta: JsonRecord) {
+  return Boolean(
+    asString(currentOwnerDelta.task_or_study_ref)
+      ?? asString(currentOwnerDelta.study_id)
+      ?? asString(currentOwnerDelta.stage_attempt_id)
+      ?? asString(currentOwnerDelta.work_unit_id)
+      ?? asString(currentOwnerDelta.stage_id)
+      ?? asString(currentOwnerDelta.stage_ref),
+  );
+}
+
+function matchesCurrentOwnerDeltaTaskIdentity(currentOwnerDelta: JsonRecord, item: JsonRecord) {
+  const taskRef = asString(currentOwnerDelta.task_or_study_ref);
+  const studyId = asString(currentOwnerDelta.study_id);
+  const stageAttemptId = asString(currentOwnerDelta.stage_attempt_id);
+  const workUnitId = asString(currentOwnerDelta.work_unit_id);
+  const stageId = asString(currentOwnerDelta.stage_id) ?? asString(currentOwnerDelta.stage_ref);
+  const itemTaskRefValues = itemTaskRefs(item);
+  const itemStudyValues = itemStudies(item);
+  const itemStageAttemptValues = itemStageAttempts(item);
+  const itemWorkUnitValues = itemWorkUnits(item);
+  const itemStageValues = itemStages(item);
+  const strongIdentityMatches = [
+    valuesContain(itemTaskRefValues, taskRef),
+    valuesContain(itemStudyValues, studyId),
+    valuesContain(itemStageAttemptValues, stageAttemptId),
+    valuesContain(itemWorkUnitValues, workUnitId),
+  ].some(Boolean);
+  const stageOnlyMatch = !strongIdentityMatches
+    && !taskRef
+    && !studyId
+    && !stageAttemptId
+    && !workUnitId
+    && valuesContain(itemStageValues, stageId);
+  return (strongIdentityMatches || stageOnlyMatch)
+    && noIdentityConflict(studyId, itemStudyValues)
+    && (!stageAttemptId || valuesContain(itemStageAttemptValues, stageAttemptId))
+    && (!stageId || valuesContain(itemStageValues, stageId));
+}
+
+function preferredRuntimeActivityItem(items: ReadonlyArray<JsonRecord>) {
+  return items.find((item) => asString(item.lane) === 'attention')
+    ?? items.find((item) => asString(item.lane) === 'running')
+    ?? items[0]
+    ?? null;
+}
+
 function selectOrdinaryCockpitTaskFallback(
+  currentOwnerDelta: JsonRecord,
   currentOwner: string,
   runtimeActivityItems: ReadonlyArray<JsonRecord>,
 ) {
@@ -65,10 +185,12 @@ function selectOrdinaryCockpitTaskFallback(
     return currentOwnerKey.length > 0
       && (itemOwnerKey === currentOwnerKey || itemProjectKey === currentOwnerKey);
   });
-  return matching.find((item) => asString(item.lane) === 'attention')
-    ?? matching.find((item) => asString(item.lane) === 'running')
-    ?? matching[0]
-    ?? null;
+  if (currentOwnerDeltaHasTaskIdentity(currentOwnerDelta)) {
+    return preferredRuntimeActivityItem(
+      matching.filter((item) => matchesCurrentOwnerDeltaTaskIdentity(currentOwnerDelta, item)),
+    );
+  }
+  return preferredRuntimeActivityItem(matching);
 }
 
 export function buildOrdinaryCockpit(
@@ -83,11 +205,12 @@ export function buildOrdinaryCockpit(
   const currentOwner = asString(currentOwnerDelta.current_owner)
     ?? asString(currentOwnerDelta.owner)
     ?? 'one-person-lab';
-  const taskFallback = selectOrdinaryCockpitTaskFallback(currentOwner, input.runtimeActivityItems);
-  const taskRef = asString(currentOwnerDelta.task_or_study_ref)
+  const taskFallback = selectOrdinaryCockpitTaskFallback(currentOwnerDelta, currentOwner, input.runtimeActivityItems);
+  const taskRef = asString(taskFallback?.item_id)
+    ?? asString(taskFallback?.task_id)
+    ?? asString(currentOwnerDelta.task_or_study_ref)
     ?? asString(currentOwnerDelta.stage_ref)
     ?? asString(currentOwnerDelta.stage_id)
-    ?? asString(taskFallback?.item_id)
     ?? asString(taskFallback?.study_id)
     ?? 'opl-current-owner-delta';
   const latestOwnerAnswerRef = asString(currentOwnerDelta.latest_owner_answer_ref)

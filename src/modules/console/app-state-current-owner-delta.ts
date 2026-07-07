@@ -1,6 +1,6 @@
 import type { OplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { stringValue, type JsonRecord } from '../../kernel/json-record.ts';
+import { stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 import {
   buildCurrentOwnerDeltaCacheRefreshRequiredReadModel,
@@ -18,6 +18,16 @@ function ownerDeltaReadModelFromRuntimeActivity(items: JsonRecord[]) {
   const domainOwner = stringValue(selected.domain_owner)
     ?? stringValue(selected.project_id)
     ?? 'one-person-lab';
+  const stageAttemptId = stringValue(selected.stage_attempt_id)
+    ?? stringList(selected.stage_attempt_ids)[0]
+    ?? null;
+  const studyId = stringValue(selected.study_id);
+  const stageId = stringValue(selected.active_stage_id)
+    ?? stringValue(selected.stage_id)
+    ?? stringValue(selected.stage_ref);
+  const workUnitId = stringValue(selected.item_id)
+    ?? stringValue(selected.task_id)
+    ?? studyId;
   const actionSummary = stringValue(selected.next_action_summary)
     ?? stringValue(selected.action_summary)
     ?? stringValue(selected.summary)
@@ -31,6 +41,21 @@ function ownerDeltaReadModelFromRuntimeActivity(items: JsonRecord[]) {
         'domain_typed_blocker_ref',
         'typed_blocker_ref',
       ],
+      domain_id: stringValue(selected.project_id) ?? domainOwner,
+      primary_item: {
+        source: 'runtime_activity_projection',
+        domain_id: stringValue(selected.project_id) ?? domainOwner,
+        study_id: studyId,
+        stage_id: stageId,
+        stage_attempt_id: stageAttemptId,
+        work_unit_id: workUnitId,
+        action_type: stringValue(selected.action_type),
+        currentness_basis: {
+          stage_attempt_id: stageAttemptId,
+          stage_id: stageId,
+          work_unit_id: workUnitId,
+        },
+      },
     },
     countSummary: {
       openSafeActionCount: items.filter((item) => stringValue(item.lane) === 'attention').length,
