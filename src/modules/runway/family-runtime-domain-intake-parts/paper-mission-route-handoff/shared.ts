@@ -21,6 +21,15 @@ export const DOMAIN_ROUTE_TASK_KIND = 'domain_route/stage-route';
 export const DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND = 'domain_route_command_packet';
 export const LEGACY_DOMAIN_ROUTE_PROFILE_ID = 'mas-paper-mission-route';
 
+export const MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE = {
+  profile_id: LEGACY_DOMAIN_ROUTE_PROFILE_ID,
+  profile_role: 'domain_owned_compatibility_profile',
+  source_domain: 'medautoscience',
+  domain_truth_owner: 'med-autoscience',
+  compatibility_only: true,
+  canonical_projection: 'domain_route',
+} as const;
+
 export const SUPPORTED_COMMAND_KINDS = [
   'start_next_stage',
   'resume_stage',
@@ -115,11 +124,8 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   schema_version: 1;
   canonical_task_kind: typeof DOMAIN_ROUTE_TASK_KIND;
   legacy_task_kind: typeof RUNTIME_TASK_KIND;
-  compatibility_profile: {
-    profile_id: typeof LEGACY_DOMAIN_ROUTE_PROFILE_ID;
-    source_domain: 'medautoscience';
-    compatibility_only: true;
-  };
+  compatibility_profile: typeof MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE;
+  projection_kind: 'domain_route_handoff_intake';
   source_surface_kind: string | null;
   domain_id: 'medautoscience';
   domain_truth_owner: 'med-autoscience';
@@ -159,6 +165,7 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
     surface_kind: typeof COMMAND_PACKET_SURFACE_KIND;
     canonical_surface_kind: typeof DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND;
     legacy_surface_kind: typeof COMMAND_PACKET_SURFACE_KIND;
+    compatibility_profile: typeof MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE;
     command_kind: SupportedCommandKind | null;
     route_command_materialized: boolean;
     writes_opl_outbox: false;
@@ -168,6 +175,12 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   };
   authority_boundary: {
     validates_mas_authority_boundary: boolean;
+    writes_domain_truth: false;
+    writes_domain_owner_receipt: false;
+    writes_domain_typed_blocker: false;
+    writes_domain_human_gate: false;
+    writes_domain_current_package: false;
+    writes_domain_artifact_body: false;
     writes_owner_receipt: false;
     writes_typed_blocker: false;
     writes_human_gate: false;
@@ -182,6 +195,8 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
     can_claim_opl_stage_run_created: false;
     can_claim_provider_running: false;
     can_claim_paper_progress: false;
+    can_claim_domain_progress: false;
+    can_claim_domain_ready: false;
     can_claim_runtime_ready: false;
   };
   blockers: MasPaperMissionRouteHandoffIntakeBlocker[];
@@ -195,6 +210,8 @@ export type MasPaperMissionRouteHandoffExportReadback = {
   schema_version: 1;
   canonical_task_kind: typeof DOMAIN_ROUTE_TASK_KIND;
   legacy_task_kind: typeof RUNTIME_TASK_KIND;
+  compatibility_profile: typeof MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE;
+  projection_kind: 'domain_route_handoff_export_intake';
   source_path: '/paper_mission_default_tasks' | '/pending_family_tasks' | 'direct_handoff' | 'not_found';
   legacy_pending_family_tasks_considered: boolean;
   readbacks: MasPaperMissionRouteHandoffIntakeReadback[];
@@ -206,6 +223,8 @@ export type MasPaperMissionRouteHandoffExportReadback = {
     can_claim_stage_run_created: false;
     can_claim_provider_running: false;
     can_claim_paper_progress: false;
+    can_claim_domain_progress: false;
+    can_claim_domain_ready: false;
     can_claim_runtime_ready: false;
   };
 };

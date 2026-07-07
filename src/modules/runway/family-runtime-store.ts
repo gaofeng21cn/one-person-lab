@@ -7,7 +7,10 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
-import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
+import {
+  domainAutonomyProjection,
+  paperAutonomyProjection,
+} from './family-runtime-paper-autonomy.ts';
 import {
   deriveCurrentControlStateForTask,
   latestProviderActivityHeartbeat,
@@ -260,6 +263,7 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
     task_kind: row.task_kind,
     payload,
     domain_route: masDomainRouteProjection(row, payload),
+    domain_autonomy: domainAutonomyProjection(row, payload),
     paper_autonomy: paperAutonomyProjection(row, payload),
     dedupe_key: row.dedupe_key,
     priority: row.priority,

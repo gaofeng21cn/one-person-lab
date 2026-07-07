@@ -174,9 +174,13 @@ test('domain route handoff accepts legacy MAS paper mission carrier as OPL runti
   assert.equal(readback.legacy_task_kind, 'paper_mission/stage-route');
   assert.deepEqual(readback.compatibility_profile, {
     profile_id: 'mas-paper-mission-route',
+    profile_role: 'domain_owned_compatibility_profile',
     source_domain: 'medautoscience',
+    domain_truth_owner: 'med-autoscience',
     compatibility_only: true,
+    canonical_projection: 'domain_route',
   });
+  assert.equal(readback.projection_kind, 'domain_route_handoff_intake');
   assert.equal(readback.domain_id, 'medautoscience');
   assert.equal(readback.status, 'accepted_for_runtime_intake');
   assert.equal(readback.command_kind, 'start_next_stage');
@@ -452,6 +456,10 @@ test('MAS paper mission route handoff emits typed waits for blocker human gate a
   assert.equal(typedBlocker.next_action?.canonical_surface_kind, 'opl_domain_owner_route_next_action');
   assert.equal(
     typedBlocker.next_action?.payload_requirement,
+    'record_domain_typed_blocker_ref_for_domain_route',
+  );
+  assert.equal(
+    typedBlocker.next_action?.legacy_payload_requirement,
     'record_domain_typed_blocker_ref_for_mas_paper_mission',
   );
   assert.deepEqual(typedBlocker.next_action?.required_return_shapes, [

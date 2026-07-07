@@ -5,8 +5,11 @@ export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY = 'domain_route/reconcile-apply';
 export const MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION = 'domain_route_reconcile_apply';
 export const MAS_RUNTIME_OWNER_ROUTE_HANDOFF = 'mas_runtime_owner_route_handoff';
 export const OPL_RUNTIME_OWNER_ROUTE = 'opl_runtime_owner_route';
+export const DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND = 'opl_domain_route_task_projection';
+export const DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF = 'domain_runtime_owner_route_handoff';
 const MAS_PUBLICATION_AFTERCARE_ANALYSIS_QUEUE = 'publication_aftercare/analysis-queue-progress';
 const MAS_PUBLICATION_AFTERCARE_REVIEWER_REFRESH = 'publication_aftercare/reviewer-refresh';
+const LEGACY_MAS_DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND = 'opl_mas_domain_route_task_projection';
 
 const MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS = [
   MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
@@ -39,6 +42,24 @@ const MAS_DOMAIN_ROUTE_ACCEPTED_RUNTIME_RESPONSIBILITIES = [
 const MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY =
   'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.';
 
+export const MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE = {
+  profile_id: 'medautoscience.domain_route.compatibility.v1',
+  profile_role: 'domain_owned_compatibility_profile',
+  source_domain: 'medautoscience',
+  domain_truth_owner: 'med-autoscience',
+  compatibility_only: true,
+  canonical_projection: 'domain_route',
+} as const;
+
+const DOMAIN_ROUTE_AUTHORITY_BOUNDARY = {
+  writes_domain_truth: false,
+  writes_domain_quality_verdict: false,
+  writes_domain_artifact_gate: false,
+  writes_domain_current_package: false,
+  queue_owns_attempts_retry_and_dead_letter: true,
+  opl_owns_generic_runtime_queue_attempt_liveness_redrive: true,
+} as const;
+
 type MasDomainRouteProjectionTask = {
   domain_id: string;
   task_kind: string;
@@ -53,7 +74,13 @@ const MAS_OWNER_ROUTE_TASK_ACTIONS = new Map([
 
 export function buildMasDomainRouteSupportProjection() {
   return {
+    surface_id: DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    canonical_surface_kind: DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    legacy_surface_kind: LEGACY_MAS_DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    compatibility_profile: MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE,
     owner_route_handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+    canonical_owner_route_handoff_ref: DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
+    legacy_owner_route_handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
     accepted_runtime_owner_route_ref: OPL_RUNTIME_OWNER_ROUTE,
     supported_task_kinds: [...MAS_DOMAIN_ROUTE_SUPPORTED_TASK_KINDS],
     action_refs: [...MAS_DOMAIN_ROUTE_ACTION_REFS],
@@ -61,6 +88,7 @@ export function buildMasDomainRouteSupportProjection() {
     repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
     accepted_runtime_responsibilities: [...MAS_DOMAIN_ROUTE_ACCEPTED_RUNTIME_RESPONSIBILITIES],
     authority_boundary: MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY,
+    authority_boundary_projection: DOMAIN_ROUTE_AUTHORITY_BOUNDARY,
   };
 }
 
@@ -123,11 +151,18 @@ export function masDomainRouteProjection(
   }
   const actionRef = MAS_OWNER_ROUTE_TASK_ACTIONS.get(task.task_kind);
   return {
-    surface_kind: 'opl_mas_domain_route_task_projection',
+    surface_id: DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    surface_kind: LEGACY_MAS_DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    canonical_surface_kind: DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    legacy_surface_kind: LEGACY_MAS_DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
+    compatibility_profile: MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE,
+    projection_kind: 'domain_route',
     domain_truth_owner: 'med-autoscience',
     queue_owner: 'one-person-lab',
     route_ref: task.task_kind,
     action_ref: actionRef,
+    canonical_route_ref: task.task_kind,
+    canonical_action_ref: actionRef,
     study_id: stringField(payload.study_id),
     source_refs: arrayField(payload.source_refs),
     source_fingerprint: stringField(payload.source_fingerprint),
@@ -142,17 +177,19 @@ export function masDomainRouteProjection(
     exported_recommended_task_kind: stringField(payload.recommended_task_kind),
     idempotency_key: task.dedupe_key,
     authority_boundary: {
+      ...DOMAIN_ROUTE_AUTHORITY_BOUNDARY,
       writes_mas_truth: false,
       writes_publication_quality: false,
       writes_artifact_gate: false,
       writes_current_package: false,
-      queue_owns_attempts_retry_and_dead_letter: true,
-      opl_owns_generic_runtime_queue_attempt_liveness_redrive: true,
     },
     owner_route_handoff: {
       exported_handoff: recordField(payload.opl_runtime_owner_route_handoff),
       handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+      canonical_handoff_ref: DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
+      legacy_handoff_ref: MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
       accepted_by: OPL_RUNTIME_OWNER_ROUTE,
+      compatibility_profile: MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE,
       accepted_runtime_responsibilities: [
         'generic_runtime_queue',
         'stage_attempt_ledger',

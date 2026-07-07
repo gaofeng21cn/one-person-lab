@@ -21,9 +21,11 @@ type PaperAutonomySupervisorDecideCommand = Extract<
 >;
 
 const authorityBoundary = {
+  opl_can_write_domain_truth: false,
   opl_can_write_mas_truth: false,
   opl_can_create_domain_owner_receipt: false,
   opl_can_create_domain_typed_blocker: false,
+  can_claim_domain_ready: false,
   provider_completion_is_domain_ready: false,
   readback_can_execute_transition: false,
 } as const;

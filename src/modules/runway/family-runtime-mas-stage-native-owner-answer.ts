@@ -13,6 +13,12 @@ export const MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON =
 
 export type StageNativeOwnerAnswerProfile = {
   profile_id: string;
+  profile_role: 'domain_owned_compatibility_profile';
+  source_domain: string;
+  domain_truth_owner: string;
+  runtime_owner: string;
+  compatibility_only: true;
+  canonical_projection: 'domain_stage_native_owner_answer';
   domain_id: string;
   dispatch_task_kind: string;
   action_type: string;
@@ -29,6 +35,12 @@ export type StageNativeOwnerAnswerProfile = {
 
 export const MAS_PUBLICATION_HANDOFF_STAGE_NATIVE_OWNER_ANSWER_PROFILE = {
   profile_id: 'medautoscience.publication_handoff.stage_native_owner_answer.v1',
+  profile_role: 'domain_owned_compatibility_profile',
+  source_domain: 'medautoscience',
+  domain_truth_owner: 'med-autoscience',
+  runtime_owner: 'one-person-lab',
+  compatibility_only: true,
+  canonical_projection: 'domain_stage_native_owner_answer',
   domain_id: 'medautoscience',
   dispatch_task_kind: DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
   action_type: 'complete_medical_paper_readiness_surface',
@@ -277,10 +289,10 @@ export function isMasReadinessStageNativeOwnerAction(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
 ) {
-  return stageNativeOwnerActionMatchesProfile(row, payload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
+  return isDomainStageNativeOwnerAction(row, payload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
 }
 
-export function stageNativeOwnerActionMatchesProfile(
+export function isDomainStageNativeOwnerAction(
   row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
   payload: Record<string, unknown>,
   profile: StageNativeOwnerAnswerProfile,
@@ -294,6 +306,8 @@ export function stageNativeOwnerActionMatchesProfile(
     )
     && stringValue(payload.next_executable_owner)?.toLowerCase() === profile.next_executable_owner;
 }
+
+export const stageNativeOwnerActionMatchesProfile = isDomainStageNativeOwnerAction;
 
 function sourceRefRecords(payload: Record<string, unknown>) {
   return Array.isArray(payload.source_refs)

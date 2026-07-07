@@ -105,13 +105,18 @@ JSON
     assert.equal(enqueue.family_runtime_enqueue.task.domain_route.action_ref, 'domain_route_reconcile_apply');
     assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
     assert.equal(task.family_runtime_task.task.task_kind, 'domain_route/reconcile-apply');
+    assert.equal(task.family_runtime_task.task.domain_route.canonical_surface_kind, 'opl_domain_route_task_projection');
+    assert.equal(task.family_runtime_task.task.domain_route.projection_kind, 'domain_route');
+    assert.equal(task.family_runtime_task.task.domain_route.compatibility_profile.compatibility_only, true);
     assert.equal(task.family_runtime_task.task.domain_route.domain_truth_owner, 'med-autoscience');
     assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_mas_truth, false);
+    assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_domain_truth, false);
     assert.equal(
       task.family_runtime_task.task.domain_route.authority_boundary.opl_owns_generic_runtime_queue_attempt_liveness_redrive,
       true,
     );
     assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.handoff_ref, 'mas_runtime_owner_route_handoff');
+    assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.canonical_handoff_ref, 'domain_runtime_owner_route_handoff');
     assert.equal(task.family_runtime_task.task.domain_route.owner_route_handoff.accepted_by, 'opl_runtime_owner_route');
     assert.deepEqual(task.family_runtime_task.task.domain_route.owner_route_handoff.accepted_runtime_responsibilities, [
       'generic_runtime_queue',

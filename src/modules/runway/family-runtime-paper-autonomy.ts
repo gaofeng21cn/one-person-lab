@@ -11,6 +11,26 @@ export const DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND =
 export const DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND =
   'opl_domain_autonomy_task_projection';
 export const LEGACY_DOMAIN_AUTONOMY_PROFILE_ID = 'mas-paper-autonomy';
+const LEGACY_PAPER_AUTONOMY_TASK_PROJECTION_SURFACE_KIND =
+  'opl_mas_paper_autonomy_task_projection';
+
+export const MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE = {
+  profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
+  profile_role: 'domain_owned_compatibility_profile',
+  source_domain: 'medautoscience',
+  domain_truth_owner: 'med-autoscience',
+  compatibility_only: true,
+  canonical_projection: 'domain_autonomy',
+} as const;
+
+type MasPaperAutonomyCompatibilityProfile = typeof MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE;
+
+const DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY = {
+  opl_can_write_domain_truth: false,
+  opl_can_create_domain_owner_receipt: false,
+  opl_can_create_domain_typed_blocker: false,
+  provider_completion_is_domain_ready: false,
+} as const;
 
 export const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
   'paper_autonomy/repair-recheck',
@@ -102,11 +122,7 @@ export type PaperAutonomySupervisorDecisionReadback = {
   surface_id: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
   canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
   legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback';
-  compatibility_profile: {
-    profile_id: typeof LEGACY_DOMAIN_AUTONOMY_PROFILE_ID;
-    source_domain: 'medautoscience';
-    compatibility_only: true;
-  };
+  compatibility_profile: MasPaperAutonomyCompatibilityProfile;
   obligation_id: string;
   decision_id: string;
   decision_kind: PaperAutonomySupervisorDecisionKind;
@@ -161,11 +177,7 @@ export type PaperAutonomySupervisorTransitionPacket = {
   surface_id: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
   canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
   legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
-  compatibility_profile: {
-    profile_id: typeof LEGACY_DOMAIN_AUTONOMY_PROFILE_ID;
-    source_domain: 'medautoscience';
-    compatibility_only: true;
-  };
+  compatibility_profile: MasPaperAutonomyCompatibilityProfile;
   obligation_id: string;
   supervisor_decision_ref: string;
   transition_kind: PaperAutonomySupervisorDecisionKind;
@@ -237,15 +249,12 @@ export function paperAutonomyProjection(
       : null;
   const guardedApply = task.task_kind === 'paper_autonomy/guarded-apply';
   return {
-    surface_kind: 'opl_mas_paper_autonomy_task_projection',
+    surface_kind: LEGACY_PAPER_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
     surface_id: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
-    legacy_surface_kind: 'opl_mas_paper_autonomy_task_projection',
-    compatibility_profile: {
-      profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
-      source_domain: 'medautoscience',
-      compatibility_only: true,
-    },
+    legacy_surface_kind: LEGACY_PAPER_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
+    compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
+    projection_kind: 'domain_autonomy',
     domain_truth_owner: 'med-autoscience',
     queue_owner: 'one-person-lab',
     online_runtime_substrate_owner: 'provider_backed_family_runtime',
@@ -266,10 +275,16 @@ export function paperAutonomyProjection(
     source_fingerprint: sourceFingerprint,
     idempotency_key: task.dedupe_key,
     authority_boundary: {
+      ...DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY,
       writes_mas_truth: false,
+      writes_domain_truth: false,
       writes_publication_quality: false,
+      writes_domain_quality_verdict: false,
       writes_artifact_gate: false,
+      writes_domain_artifact_gate: false,
       writes_current_package: false,
+      writes_domain_current_package: false,
+      can_claim_domain_ready: false,
     },
   };
 }
@@ -295,11 +310,7 @@ export function buildPaperAutonomySupervisorDecisionReadback(
     surface_id: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
     legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback',
-    compatibility_profile: {
-      profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
-      source_domain: 'medautoscience',
-      compatibility_only: true,
-    },
+    compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
     obligation_id: input.obligation_id,
     decision_id: decisionId,
     decision_kind: input.decision_kind,
@@ -321,6 +332,7 @@ export function buildPaperAutonomySupervisorDecisionReadback(
     evidence_refs: input.evidence_refs ?? [],
     observability_refs: input.observability_refs ?? [],
     authority_boundary: {
+      ...DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY,
       read_model_can_execute: false,
       observability_can_close_owner_answer: false,
       opl_can_write_mas_truth: false,
@@ -468,11 +480,7 @@ function buildPaperAutonomySupervisorTransitionPacket(
     surface_id: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
     legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
-    compatibility_profile: {
-      profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
-      source_domain: 'medautoscience',
-      compatibility_only: true,
-    },
+    compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
     obligation_id: decision.obligation_id,
     supervisor_decision_ref: decision.decision_id,
     transition_kind: decision.decision_kind,
@@ -483,6 +491,7 @@ function buildPaperAutonomySupervisorTransitionPacket(
     observability_refs: decision.observability_refs,
     runtime_apply_target: runtimeApplyTargetForDecision(decision.decision_kind),
     authority_boundary: {
+      ...DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY,
       opl_can_write_mas_truth: false,
       opl_can_create_domain_owner_receipt: false,
       opl_can_create_domain_typed_blocker: false,

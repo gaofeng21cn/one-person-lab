@@ -1,4 +1,5 @@
 import {
+  MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE,
   optionalString,
   type JsonRecord,
   type MasPaperMissionRouteHandoffIntakeReadback,
@@ -36,6 +37,9 @@ export function ownerWaitProjection(
     ? 'human_gate_resolution_required'
     : 'domain_typed_blocker_resolution_required';
   const nextRequiredDelta = isHumanGate
+    ? 'record_human_gate_or_owner_decision_ref_for_domain_route'
+    : 'record_domain_typed_blocker_ref_for_domain_route';
+  const legacyNextRequiredDelta = isHumanGate
     ? 'record_human_gate_or_owner_decision_ref_for_mas_paper_mission'
     : 'record_domain_typed_blocker_ref_for_mas_paper_mission';
   const commandTarget = readback.route_target;
@@ -46,7 +50,9 @@ export function ownerWaitProjection(
     surface_kind: 'opl_mas_paper_mission_owner_route_projection',
     canonical_surface_kind: 'opl_domain_owner_route_projection',
     legacy_surface_kind: 'opl_mas_paper_mission_owner_route_projection',
+    compatibility_profile: MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE,
     schema_version: 1,
+    projection_kind: 'domain_owner_route',
     route_status: 'owner_wait',
     wait_kind: waitKind,
     domain_id: 'medautoscience',
@@ -76,7 +82,9 @@ export function ownerWaitProjection(
     surface_kind: 'opl_mas_paper_mission_owner_route_next_action',
     canonical_surface_kind: 'opl_domain_owner_route_next_action',
     legacy_surface_kind: 'opl_mas_paper_mission_owner_route_next_action',
+    compatibility_profile: MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE,
     schema_version: 1,
+    projection_kind: 'domain_owner_route_next_action',
     action_kind: actionKind,
     step_kind: actionKind,
     owner,
@@ -88,6 +96,8 @@ export function ownerWaitProjection(
     wait_kind: waitKind,
     next_required_delta: nextRequiredDelta,
     payload_requirement: nextRequiredDelta,
+    legacy_next_required_delta: legacyNextRequiredDelta,
+    legacy_payload_requirement: legacyNextRequiredDelta,
     accepted_return_shapes: acceptedReturnShapes,
     required_return_shapes: acceptedReturnShapes,
     handoff_ref: handoffRef,
@@ -102,7 +112,9 @@ export function ownerWaitProjection(
     surface_kind: 'opl_mas_paper_mission_executable_owner_handoff_projection',
     canonical_surface_kind: 'opl_domain_executable_owner_handoff_projection',
     legacy_surface_kind: 'opl_mas_paper_mission_executable_owner_handoff_projection',
+    compatibility_profile: MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE,
     schema_version: 1,
+    projection_kind: 'domain_executable_owner_handoff',
     handoff_status: 'ready_for_owner_consumption',
     handoff_kind: isHumanGate ? 'human_gate_authority_handoff' : 'typed_blocker_authority_handoff',
     owner,

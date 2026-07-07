@@ -6,6 +6,34 @@ import {
 } from '../../kernel/json-record.ts';
 import { OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE } from '../../kernel/observability-projection-vocabulary.ts';
 
+export const MAS_DOMAIN_PROGRESS_REFS_COMPATIBILITY_PROFILE = {
+  profile_id: 'medautoscience.domain_progress_refs.compatibility.v1',
+  profile_role: 'domain_owned_compatibility_profile',
+  source_domain: 'medautoscience',
+  domain_truth_owner: 'med-autoscience',
+  compatibility_only: true,
+  canonical_projection: 'domain_progress_refs',
+  exclude_path_fragments: [
+    '/artifacts/supervision/consumer/default_executor_execution/',
+    '/artifacts/supervision/consumer/default_executor_dispatches/',
+    '/artifacts/supervision/consumer/stage_attempt_closeouts/',
+  ],
+  include_path_fragments: [
+    '/artifacts/controller/repair_execution_evidence/',
+    '/artifacts/controller/repair_execution_receipts/',
+    '/artifacts/controller/quality_repair_batch/',
+    '/artifacts/controller/gate_clearing_batch/',
+    '/artifacts/controller/gate_replay_requests/',
+    '/artifacts/publication_eval/ai_reviewer_responses/',
+    '/artifacts/reports/publishability_gate/',
+    '/paper/draft.md',
+    '/paper/build/review_manuscript.md',
+    OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE,
+    '/paper/claim_evidence_map.json',
+    '/paper/review/review_ledger.json',
+  ],
+} as const;
+
 function stringList(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return [value.trim()];
@@ -23,52 +51,14 @@ export function isMasDomainProgressRef(ref: string) {
     return false;
   }
   const normalizedPath = normalized.startsWith('/') ? normalized : `/${normalized}`;
-  if (normalizedPath.includes('/artifacts/supervision/consumer/default_executor_execution/')) {
+  if (MAS_DOMAIN_PROGRESS_REFS_COMPATIBILITY_PROFILE.exclude_path_fragments.some((fragment) =>
+    normalizedPath.includes(fragment)
+  )) {
     return false;
   }
-  if (normalizedPath.includes('/artifacts/supervision/consumer/default_executor_dispatches/')) {
-    return false;
-  }
-  if (normalizedPath.includes('/artifacts/supervision/consumer/stage_attempt_closeouts/')) {
-    return false;
-  }
-  if (normalizedPath.includes('/artifacts/controller/repair_execution_evidence/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/artifacts/controller/repair_execution_receipts/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/artifacts/controller/quality_repair_batch/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/artifacts/controller/gate_clearing_batch/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/artifacts/controller/gate_replay_requests/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/artifacts/publication_eval/ai_reviewer_responses/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/artifacts/reports/publishability_gate/')) {
-    return true;
-  }
-  if (normalizedPath.includes('/paper/draft.md')) {
-    return true;
-  }
-  if (normalizedPath.includes('/paper/build/review_manuscript.md')) {
-    return true;
-  }
-  if (normalizedPath.includes(OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE)) {
-    return true;
-  }
-  if (normalizedPath.includes('/paper/claim_evidence_map.json')) {
-    return true;
-  }
-  if (normalizedPath.includes('/paper/review/review_ledger.json')) {
-    return true;
-  }
-  return false;
+  return MAS_DOMAIN_PROGRESS_REFS_COMPATIBILITY_PROFILE.include_path_fragments.some((fragment) =>
+    normalizedPath.includes(fragment)
+  );
 }
 
 export function masDomainProgressRefsFromRecord(recordValue: JsonRecord) {

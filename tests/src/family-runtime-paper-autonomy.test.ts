@@ -17,6 +17,7 @@ import {
   currentPaperAutonomySupervisorDecision,
   domainAutonomyProjection,
   listCurrentPaperAutonomySupervisorDecisions,
+  MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
   PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS,
   readPaperAutonomySupervisorDecisionFromObligation,
   readPaperAutonomyCloseoutInboxEntry,
@@ -102,11 +103,7 @@ test('paper autonomy supervisor readback emits all six closed decision packets',
     assert.equal(packet.surface_id, 'opl_domain_autonomy_supervisor_decision_readback');
     assert.equal(packet.canonical_surface_kind, 'opl_domain_autonomy_supervisor_decision_readback');
     assert.equal(packet.legacy_surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
-    assert.deepEqual(packet.compatibility_profile, {
-      profile_id: 'mas-paper-autonomy',
-      source_domain: 'medautoscience',
-      compatibility_only: true,
-    });
+    assert.deepEqual(packet.compatibility_profile, MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE);
     assert.equal(packet.domain_truth_owner, 'med-autoscience');
     assert.equal(packet.substrate_owner, 'one-person-lab');
     assert.equal(packet.status, 'decision_ready_for_identity_bound_transition');
@@ -206,14 +203,12 @@ test('domain autonomy projection keeps MAS paper autonomy as a compatibility pro
   assert.equal(projection?.surface_id, 'opl_domain_autonomy_task_projection');
   assert.equal(projection?.canonical_surface_kind, 'opl_domain_autonomy_task_projection');
   assert.equal(projection?.legacy_surface_kind, 'opl_mas_paper_autonomy_task_projection');
-  assert.deepEqual(projection?.compatibility_profile, {
-    profile_id: 'mas-paper-autonomy',
-    source_domain: 'medautoscience',
-    compatibility_only: true,
-  });
+  assert.deepEqual(projection?.compatibility_profile, MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE);
+  assert.equal(projection?.projection_kind, 'domain_autonomy');
   assert.equal(projection?.domain_truth_owner, 'med-autoscience');
   assert.equal(projection?.queue_owner, 'one-person-lab');
   assert.equal(projection?.authority_boundary.writes_mas_truth, false);
+  assert.equal(projection?.authority_boundary.writes_domain_truth, false);
 });
 
 test('paper autonomy supervisor execute decision produces provider admission transition packet', () => {
