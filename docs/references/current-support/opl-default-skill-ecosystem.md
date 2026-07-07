@@ -21,7 +21,7 @@ Codex metadata 本身也算暴露面。OPL 不应把 foundation support pack 的
 
 MAS / MDS 相关用户级全局 Skill 的当前审计见 [MAS 全局 Skill 暴露审计](./mas-global-skill-exposure-audit.md)。该审计只记录本机全局 metadata 污染风险和预期暴露层级，不把用户级安装状态当作 OPL 默认生态，也不替代 workspace / quest-local sync receipt。
 
-当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四十二个 Skill 是：
+当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四十三个 Skill 是：
 
 - `opl-runway-compute-operator`：Runway compute / provider route 诊断和 handoff briefing。
 - `opl-runway-recovery-playbook-writer`：Runway / Connect / provider failure 的 recovery playbook、owner route 和 expected proof 编排。
