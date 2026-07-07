@@ -211,5 +211,10 @@ test('OPL Foundation Skills expose one canonical external specialist router', ()
   assert.equal(entries.has('opl-external-scientific-skill-router'), false);
   assert.equal(genericRouter.exposure_scope, 'workspace_local');
   assert.match(genericRouter.activation_gate, /rare scientific external tool/);
-  assert.equal(readSkill('opl-external-specialist-skill-router').includes('no separate scientific alias Skill'), true);
+  assert.match(genericRouter.activation_gate, /search\/inspect/);
+  assert.match(genericRouter.activation_gate, /sync one selected skill only/);
+  const routerSkill = readSkill('opl-external-specialist-skill-router');
+  assert.equal(routerSkill.includes('no separate scientific alias Skill'), true);
+  assert.equal(routerSkill.includes('support_map'), true);
+  assert.equal(routerSkill.includes('--scope quest'), true);
 });

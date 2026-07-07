@@ -11,6 +11,12 @@ OPL 只拥有连接、包描述、同步投影、provider receipt candidate 与 
 
 这次边界收口后的默认判断是：PubMed / Crossref / OpenAlex 留在 `OPL Connect` 不是缺能力；`one-person-lab/plugins/mas-scholar-skills` 作为 thin mirror 缺正文不是缺专业 Skill truth；`stage-candidate-portfolio` 是 refs-only 投影不是 domain hypothesis truth；`owner_evidence_sustained_consumption_*` 是 owner-evidence receipt transport 不是 owner acceptance 或 domain progress。
 
+## Foundation router guard
+
+- `opl-external-specialist-skill-router` 是 generic external specialist router，不是 scientific/MAS-only alias。
+- 它先使用 OPL Connect registered external skill/source registry 做最小 `search` 和单候选 `inspect`；只有 workspace / quest 需要时才 sync 一个 selected Skill。
+- K-Dense / scientific-agent-skills 这类 approved source 只表示可 search、inspect 和 single-skill sync，不表示默认安装、默认上下文、完整 Skill catalog 暴露或 citation truth。
+
 ## OPL Connect
 
 - `opl connect scientific search --provider pubmed|crossref|openalex --json` 是 optional scientific connector profile。

@@ -96,6 +96,8 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.deepEqual(externalSpecialistRouter.allowed_sync_scopes, ['workspace', 'quest']);
   assert.equal(externalSpecialistRouter.default_global_user, false);
   assert.match(externalSpecialistRouter.activation_gate, /rare scientific external tool/);
+  assert.match(externalSpecialistRouter.activation_gate, /search\/inspect/);
+  assert.match(externalSpecialistRouter.activation_gate, /sync one selected skill only/);
   assert.equal(
     output.opl_connect_foundation_skills.skills.some((entry) => entry.skill_id === 'opl-external-scientific-skill-router'),
     false,

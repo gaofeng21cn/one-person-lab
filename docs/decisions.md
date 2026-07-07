@@ -191,6 +191,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `opl-external-specialist-skill-router` 是 canonical foundation Skill，用于默认 OPL/domain professional pack 覆盖不到的专业工具、source、workflow 或 method。
 - 科研场景只是 `opl-external-specialist-skill-router` 的 trigger specialization，不再保留单独 compatibility alias，避免多一个 Codex metadata entry。
+- 默认路径是对 registered external skill/source registry 做最小 `search`，再 `inspect` 一个候选；只有 workspace/quest 需要时才 single-skill sync，不 bulk sync、不安装全库、不新增 scientific/MAS-only alias Skill。
 - router 只返回 selected external Skill refs、inspect evidence、sync receipt candidate 和 owner route；不签 owner receipt、typed blocker、domain verdict、artifact authority、runtime truth 或 readiness claim。
 
 ### 决策：标准 OPL Agent 用 Stage 主提示词承载阶段策略，不把 stage 定义成专业 Skill

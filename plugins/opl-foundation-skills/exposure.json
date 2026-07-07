@@ -371,7 +371,7 @@
     {
       "skill_id": "opl-external-specialist-skill-router",
       "exposure_scope": "workspace_local",
-      "activation_gate": "workspace or quest explicitly needs a specialist or rare scientific external tool, source, workflow, or method route after the default OPL/domain professional pack is insufficient",
+      "activation_gate": "workspace or quest explicitly needs a specialist or rare scientific external tool, source, workflow, or method route after the default OPL/domain professional pack is insufficient; use registered high-quality external skill/source registry search/inspect first, then optionally sync one selected skill only to workspace/quest",
       "default_global_user": false,
       "kernel": false,
       "authority_boundary": [

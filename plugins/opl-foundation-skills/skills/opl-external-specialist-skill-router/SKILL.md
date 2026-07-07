@@ -1,34 +1,42 @@
 ---
 name: opl-external-specialist-skill-router
-description: "Use when the default OPL/domain professional skills do not cover a specialist tool, source, workflow, or method and Codex should route through OPL Connect external-skills search/inspect/sync to select one approved external skill. Keeps large external skill libraries out of default context and returns refs-only handoff without owner receipts, typed blockers, domain verdicts, or readiness claims."
+description: "Use when the default OPL/domain professional skills do not cover a specialist tool, source, workflow, or method and Codex should route through OPL Connect registered external-skills search/inspect before optional single-skill workspace/quest sync. Keeps large external skill libraries out of default context and returns candidate refs, support map, and route recommendation without owner receipts, typed blockers, domain verdicts, or readiness claims."
 ---
 
 # OPL External Specialist Skill Router
 
 Use this source-only Skill when the current OPL/domain skill pack does not
-cover a specialist capability and the agent needs one approved external Skill
-candidate.
+cover a specialist capability and a registered high-quality external
+skill/source registry may contain one approved Skill candidate.
 
 ## Boundary
 
 - OPL Connect owns the external skill source registry, `search`, `inspect`,
-  selective `sync`, and sync receipts.
+  selective workspace/quest `sync`, and sync receipts.
 - This Skill is only a router. It decides whether to ask OPL Connect for one
-  external Skill candidate and how to hand candidate refs back.
+  external Skill candidate and how to hand candidate refs, support map, and
+  route recommendation back.
 - Domain truth stays with the domain owner. External Skill refs are candidate
   capability refs, not owner acceptance, quality verdicts, or readiness.
 - Approved sources such as `K-Dense-AI/scientific-agent-skills` are source
-  registries for search/inspect/sync. Approval does not make the full library
-  default context, a default install, or broad Codex metadata.
+  registries for targeted search/inspect and selected workspace/quest sync.
+  Approval does not make the full library default context, a default install,
+  or broad Codex metadata.
 - Do not bulk-load an external library, source tree, package index, or full
   Skill catalog into context.
+- Do not make K-Dense, scientific-agent-skills, or any other external source a
+  default installed pack.
 - Do not sign owner receipts, create typed blockers, issue domain verdicts,
-  mutate artifacts, write runtime truth, or claim readiness.
+  mutate artifacts, write runtime truth, declare provider/runtime state, or
+  claim readiness.
 
 ## AI-first / Contract-light Semantics
 
-- Use external-skill catalogs and Connect modules only for source identity, capability kind, candidate refs, sync receipts, recovery, and verification.
-- Keep elastic specialist routing in this Skill: decide whether the default pack is insufficient, inspect one candidate, and hand refs back to the domain owner.
+- Use external-skill catalogs and Connect modules only for source identity,
+  capability kind, candidate refs, sync receipts, recovery, and verification.
+- Keep operational modularity in OPL Connect and elastic specialist judgment in
+  this Skill: decide whether the default pack is insufficient, inspect one
+  candidate, and hand refs back to the domain owner.
 - If no single candidate fits, report the gap and owner route instead of syncing broad libraries or creating compatibility aliases.
 
 ## Trigger
@@ -49,16 +57,19 @@ Do not use it for work already covered by the active domain professional Skills.
 
 1. Classify the requested capability and name the default Skill that was checked
    or why the default pack is insufficient.
-2. Run or request OPL Connect `external-skills search` with the smallest query
-   and, when known, the approved source selector.
+2. Run or request OPL Connect `external-skills search` against the registered
+   external skill/source registry with the smallest query and, when known, the
+   approved source selector.
 3. Inspect one plausible candidate before sync. Read its skill card, category,
    keywords, risk flags, trigger policy, license, source ref, and no-authority
    boundary.
 4. Sync only that selected Skill when the current workspace or quest needs it.
-   Do not bulk-sync a source, expose all source metadata, or add a new physical
-   router Skill for a small category.
-5. Hand off source refs, selected Skill id, inspect evidence, optional sync
-   receipt ref, residual risk, and the next legal domain-owner action.
+   Use workspace or quest scope only. Do not bulk-sync a source, install a full
+   library, expose all source metadata, or add a new physical router Skill for a
+   small category.
+5. Hand off source refs, selected Skill id, inspect evidence, support map,
+   optional sync receipt ref, residual risk, route recommendation, and the next
+   legal domain-owner action.
 
 ## Command Pattern
 
@@ -66,6 +77,7 @@ Do not use it for work already covered by the active domain professional Skills.
 opl connect external-skills search --query "<tool-or-method>" --source <approved-source> --json
 opl connect external-skills inspect --skill <source>/<skill-id> --json
 opl connect external-skills sync --skill <source>/<skill-id> --scope workspace --target-workspace <workspace-root> --json
+opl connect external-skills sync --skill <source>/<skill-id> --scope quest --target-quest <quest-root> --json
 ```
 
 Use `--source kdense-scientific-agent-skills` or its approved alias `kdense` for
@@ -83,10 +95,14 @@ Return:
 - `inspected_candidate`: one Skill id with source, license, category, keywords,
   trigger policy, and risk flags;
 - `sync_decision`: `no_sync_needed`, `sync_one_skill`, or `blocked`;
+- `support_map`: how the candidate would support the workspace/quest without
+  becoming default context or authority;
+- `route_recommendation`: `use_default_pack`, `inspect_more`, `sync_one_skill`,
+  or `owner_route_only`;
 - `refs_only_handoff`: candidate refs, optional sync receipt ref, owner route,
   and residual risk;
 - `authority_boundary`: no owner receipts, no typed blockers, no domain verdicts,
-  no artifact authority, no runtime truth, and no readiness claims.
+  no artifact authority, no runtime/provider truth, and no readiness claims.
 
 Scientific routing note: this is also the canonical route for rare scientific tools, databases, workflows, and methods. There is no separate scientific alias Skill; use the smallest query and approved source selector instead of exposing another compatibility entry or creating one physical Skill per small scientific module.
 
