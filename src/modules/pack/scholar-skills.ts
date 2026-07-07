@@ -379,6 +379,20 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
       schema_version: contractRoot.schema_version,
       brand_family: contractRoot.brand_family,
       cli: {
+        canonical_command_family: 'opl capability-pack',
+        compatibility_alias: 'opl scholar-skills',
+        alias_scope: 'mas_scholar_skills_capability_pack_only',
+        canonical_commands: [
+          'opl capability-pack scholar-skills list --json',
+          'opl capability-pack scholar-skills inspect --module <module_id> --json',
+          'opl capability-pack scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
+          'opl capability-pack scholar-skills run-context --module <module_id> --profile <profile> --json',
+          'opl capability-pack scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
+          'opl capability-pack scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
+          'opl capability-pack scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json',
+          'opl capability-pack scholar-skills validate --json',
+          'opl capability-pack scholar-skills doctor --json',
+        ],
         commands: [
           'opl scholar-skills list --json',
           'opl scholar-skills inspect --module <module_id> --json',

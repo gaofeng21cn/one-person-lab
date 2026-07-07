@@ -689,13 +689,21 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(commands.includes('shell'), false);
   assert.equal(commands.includes('connect skills'), true);
   assert.equal(commands.includes('connect sync-skills'), true);
+  const diagnosticGroups = output.help.diagnostic_command_groups as Array<{ group_id: string; summary: string }>;
+  assert.equal(
+    diagnosticGroups.some((entry) => (
+      entry.group_id === 'scholar-skills'
+      && entry.summary.includes('compatibility / convenience alias')
+      && entry.summary.includes('OPL Connect / Pack')
+    )),
+    true,
+  );
   assert.equal(commands.includes('agents foundry status'), true);
   assert.equal(commands.includes('agents foundry peers'), true);
   assert.equal(commands.includes('skill list'), false);
   assert.equal(commands.includes('skill sync'), false);
-  const diagnostics = output.help.diagnostic_command_groups as Array<{ group_id: string }>;
   for (const groupId of ['domain', 'engine', 'runtime', 'session', 'skill', 'status', 'system']) {
-    assert.equal(diagnostics.some((entry) => entry.group_id === groupId), true, groupId);
+    assert.equal(diagnosticGroups.some((entry) => entry.group_id === groupId), true, groupId);
   }
   assert.equal(examples.some((entry) => entry.includes('opl ask')), false);
   assert.equal(examples.some((entry) => entry.includes('opl chat')), false);

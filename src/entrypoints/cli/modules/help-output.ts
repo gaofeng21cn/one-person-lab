@@ -9,6 +9,7 @@ const CODEX_COMMAND_HELP_PASSTHROUGH = new Set([
 
 const ROOT_HELP_DIAGNOSTIC_GROUPS = new Set([
   'contract',
+  'capability-pack',
   'domain',
   'engine',
   'framework',
@@ -19,6 +20,7 @@ const ROOT_HELP_DIAGNOSTIC_GROUPS = new Set([
   'session',
   'skill',
   'status',
+  'scholar-skills',
   'system',
 ]);
 
@@ -51,7 +53,8 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   'brand-console': '读取 OPL Console 的 App/operator read-model、safe action 和验收 surface。',
   'brand-foundry-lab': '读取 OPL Foundry Lab 的 agent factory、work-order、conformance 和验收 surface。',
   'brand-connect': '读取 OPL Connect 的 descriptor、package/install、skill sync 和验收 surface。',
-  'scholar-skills': '读取 MAS Scholar Skills 能力模块目录、descriptor、runtime env bridge 和 false-authority 边界。',
+  'capability-pack': '通用 capability-pack 入口；domain-specific 包只作为子入口或兼容别名暴露。',
+  'scholar-skills': 'MAS Scholar Skills capability-pack 的 compatibility / convenience alias；通用能力包优先走 OPL Connect / Pack。',
   framework: '定位和解释 OPL Framework 自身的运行依赖环境。',
   pack: '读取 Declarative Domain Pack、Pack OS lock/lifecycle、authority ABI、pack compiler 和 generated surface 边界读面。',
   stagecraft: '读取 stage 设计、认知计算、tool affordance 与 quality-gate 边界读面。',
@@ -88,6 +91,7 @@ const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
   'ask',
   'atlas',
   'brand-modules',
+  'capability-pack',
   'charter',
   'chat',
   'connect',

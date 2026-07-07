@@ -29,8 +29,8 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.equal(output.opl_connect_foundation_skills.status, 'completed');
   assert.equal(output.opl_connect_foundation_skills.manifest_status, 'exposure_manifest');
   assert.equal(output.opl_connect_foundation_skills.manifest_ref, 'plugins/opl-foundation-skills/exposure.json');
-  assert.equal(output.opl_connect_foundation_skills.skill_count, 42);
-  assert.equal(output.opl_connect_foundation_skills.skills.length, 42);
+  assert.equal(output.opl_connect_foundation_skills.skill_count, 43);
+  assert.equal(output.opl_connect_foundation_skills.skills.length, 43);
   const completionAudit = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-completion-audit-writer');
   assert.ok(completionAudit);
   assert.equal(completionAudit.exposure_scope, 'project_local');
@@ -38,11 +38,18 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.deepEqual(completionAudit.allowed_sync_scopes, ['project']);
   assert.equal(typeof completionAudit.activation_gate, 'string');
   assert.equal(completionAudit.activation_gate.length > 0, true);
+  const externalSpecialistRouter = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-external-specialist-skill-router');
+  assert.ok(externalSpecialistRouter);
+  assert.equal(externalSpecialistRouter.exposure_scope, 'workspace_local');
+  assert.deepEqual(externalSpecialistRouter.allowed_sync_scopes, ['workspace', 'quest']);
+  assert.equal(externalSpecialistRouter.default_global_user, false);
+  assert.match(externalSpecialistRouter.activation_gate, /specialist external tool/);
   const externalScientificRouter = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-external-scientific-skill-router');
   assert.ok(externalScientificRouter);
   assert.equal(externalScientificRouter.exposure_scope, 'workspace_local');
   assert.deepEqual(externalScientificRouter.allowed_sync_scopes, ['workspace', 'quest']);
   assert.equal(externalScientificRouter.default_global_user, false);
+  assert.match(externalScientificRouter.activation_gate, /compatibility scientific specialization/);
   assert.match(output.opl_connect_foundation_skills.skills[0].content_sha256, /^[a-f0-9]{64}$/);
   assert.deepEqual(output.opl_connect_foundation_skills.authority_boundary, {
     read_only_inspect: true,
@@ -87,7 +94,7 @@ test('connect foundation-skills sync copies only the selected skill into target 
       'foundation-skills',
       'sync',
       '--skill',
-      'opl-workspace-handoff-writer',
+      'opl-external-specialist-skill-router',
       '--scope',
       'workspace',
       '--target-root',
@@ -110,13 +117,13 @@ test('connect foundation-skills sync copies only the selected skill into target 
     const synced = output.opl_connect_foundation_skills;
     assert.equal(synced.surface_kind, 'opl_connect_foundation_skill_sync');
     assert.equal(synced.status, 'synced');
-    assert.equal(synced.skill.skill_id, 'opl-workspace-handoff-writer');
+    assert.equal(synced.skill.skill_id, 'opl-external-specialist-skill-router');
     assert.equal(synced.skill.exposure_scope, 'workspace_local');
     assert.deepEqual(synced.skill.allowed_sync_scopes, ['workspace', 'quest']);
     assert.match(synced.skill.content_sha256, /^[a-f0-9]{64}$/);
     assert.equal(synced.target_scope, 'workspace');
     assert.equal(synced.target_root, targetRoot);
-    assert.equal(synced.target_skill_root, path.join(targetRoot, '.codex', 'skills', 'opl-workspace-handoff-writer'));
+    assert.equal(synced.target_skill_root, path.join(targetRoot, '.codex', 'skills', 'opl-external-specialist-skill-router'));
     assert.equal(synced.no_authority, true);
     assert.equal(synced.authority_boundary.single_skill_sync_only, true);
     assert.equal(synced.authority_boundary.can_write_codex_global_config, false);
@@ -133,7 +140,7 @@ test('connect foundation-skills sync copies only the selected skill into target 
     };
     assert.equal(receipt.receipt_kind, 'opl_connect_foundation_skill_sync_readback');
     assert.equal(receipt.sync_policy, 'explicit_single_foundation_skill_only');
-    assert.equal(receipt.skill_id, 'opl-workspace-handoff-writer');
+    assert.equal(receipt.skill_id, 'opl-external-specialist-skill-router');
     assert.equal(receipt.target_scope, 'workspace');
     assert.equal(receipt.exposure_scope, 'workspace_local');
     assert.equal(receipt.authority_boundary.global_user_scope_allowed, false);

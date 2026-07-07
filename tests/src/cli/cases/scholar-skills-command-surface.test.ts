@@ -304,6 +304,11 @@ test('opl scholar-skills interfaces exposes JSON readback and runtime env bridge
   const output = runCli(['scholar-skills', 'interfaces', '--json']).scholar_skills_interfaces;
 
   assert.equal(output.surface_kind, 'opl_scholarskills_interface_bundle');
+  assert.equal(output.cli.canonical_command_family, 'opl capability-pack');
+  assert.equal(output.cli.compatibility_alias, 'opl scholar-skills');
+  assert.equal(output.cli.alias_scope, 'mas_scholar_skills_capability_pack_only');
+  assert.equal(output.cli.canonical_commands.includes('opl capability-pack scholar-skills list --json'), true);
+  assert.equal(output.cli.canonical_commands.includes('opl capability-pack scholar-skills validate --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills list --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills run-context --module <module_id> --profile <profile> --json'), true);
@@ -315,6 +320,22 @@ test('opl scholar-skills interfaces exposes JSON readback and runtime env bridge
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json'), true);
   assert.equal(output.authority_boundary.can_claim_runtime_ready, false);
+});
+
+test('opl capability-pack scholar-skills is the canonical CLI family for ScholarSkills modules', () => {
+  const canonical = runCli(['capability-pack', 'scholar-skills', 'list', '--json']).scholar_skills;
+  const compatibility = runCli(['scholar-skills', 'list', '--json']).scholar_skills;
+
+  assert.equal(canonical.surface_kind, 'opl_scholarskills_capability_module_catalog');
+  assert.deepEqual(
+    canonical.modules.map((entry: { module_id: string }) => entry.module_id),
+    compatibility.modules.map((entry: { module_id: string }) => entry.module_id),
+  );
+  const help = runCli(['help', 'capability-pack', 'scholar-skills']).help;
+  assert.equal(help.command, 'capability-pack scholar-skills');
+  assert.equal(help.subcommands.some((entry: { command: string }) =>
+    entry.command === 'capability-pack scholar-skills list'
+  ), true);
 });
 
 test('opl scholar-skills prepare returns a deterministic refs-only dependency envelope without runtime state writes', () => {

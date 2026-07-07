@@ -348,7 +348,7 @@ export function buildScholarSkillsCommandSpecs(
   const specs: Record<string, CommandSpec> = {
     'scholar-skills list': {
       usage: 'opl scholar-skills list',
-      summary: 'List MAS Scholar Skills capability modules and their refs-only authority boundary.',
+      summary: 'Compatibility alias for the MAS Scholar Skills capability-pack module catalog and refs-only authority boundary.',
       examples: ['opl scholar-skills list --json'],
       group: 'scholar-skills',
       handler: (args) => {
@@ -358,7 +358,7 @@ export function buildScholarSkillsCommandSpecs(
     },
     'scholar-skills inspect': {
       usage: 'opl scholar-skills inspect --module <module_id>',
-      summary: 'Inspect one MAS Scholar Skills capability module descriptor.',
+      summary: 'Compatibility alias to inspect one MAS Scholar Skills capability-pack module descriptor.',
       examples: [
         'opl scholar-skills inspect --module mas-scholar-skills.display --json',
         'opl scholar-skills inspect --id mas-scholar-skills.display --json',
@@ -471,7 +471,7 @@ export function buildScholarSkillsCommandSpecs(
     },
     'scholar-skills interfaces': {
       usage: 'opl scholar-skills interfaces',
-      summary: 'Read the ScholarSkills CLI, contract, and runtime-environment bridge interfaces.',
+      summary: 'Read the ScholarSkills compatibility alias, contract, and runtime-environment bridge interfaces.',
       examples: ['opl scholar-skills interfaces --json'],
       group: 'scholar-skills',
       handler: (args) => {
@@ -501,5 +501,30 @@ export function buildScholarSkillsCommandSpecs(
     },
   };
 
-  return specs;
+  return {
+    ...buildCapabilityPackScholarSkillsAliases(specs),
+    ...specs,
+  };
+}
+
+function buildCapabilityPackScholarSkillsAliases(
+  specs: Record<string, CommandSpec>,
+): Record<string, CommandSpec> {
+  const aliases: Record<string, CommandSpec> = {};
+  for (const [command, spec] of Object.entries(specs)) {
+    const suffix = command.slice('scholar-skills'.length);
+    const aliasCommand = `capability-pack scholar-skills${suffix}`;
+    aliases[aliasCommand] = {
+      ...spec,
+      usage: spec.usage.replace('opl scholar-skills', 'opl capability-pack scholar-skills'),
+      examples: spec.examples?.map((example) =>
+        example.replace('opl scholar-skills', 'opl capability-pack scholar-skills')
+      ),
+      group: 'capability-pack',
+      summary: spec.summary.startsWith('Compatibility alias')
+        ? spec.summary.replace('Compatibility alias', 'Canonical capability-pack entry')
+        : `Canonical capability-pack entry for MAS ScholarSkills: ${spec.summary}`,
+    };
+  }
+  return aliases;
 }
