@@ -2,10 +2,6 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
-  inspectFamilyRuntimeProvidersWithLifecycle,
-  resolveFamilyRuntimeProviderKind,
-} from './family-runtime-providers.ts';
-import {
   buildTemporalProviderLivenessBlocker,
   isTemporalWorkerLivenessBlocker,
 } from './family-runtime-provider-liveness-blocker.ts';
@@ -16,7 +12,10 @@ import {
   triggerTemporalSchedulerCadence,
 } from './family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
-import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+import {
+  FAMILY_RUNTIME_PROVIDER_KINDS,
+  type FamilyRuntimeProviderKind,
+} from './family-runtime-types.ts';
 import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import {
@@ -38,10 +37,12 @@ type SchedulerQueueTickResult = {
   [key: string]: unknown;
 };
 
-type ProviderInspection = Awaited<ReturnType<typeof inspectFamilyRuntimeProvidersWithLifecycle>>;
+type InspectFamilyRuntimeProvidersWithLifecycle =
+  typeof import('./family-runtime-providers.ts').inspectFamilyRuntimeProvidersWithLifecycle;
+type ProviderInspection = Awaited<ReturnType<InspectFamilyRuntimeProvidersWithLifecycle>>;
 type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
 type SchedulerTickDeps = {
-  inspectProvidersWithLifecycle?: typeof inspectFamilyRuntimeProvidersWithLifecycle;
+  inspectProvidersWithLifecycle?: InspectFamilyRuntimeProvidersWithLifecycle;
   runProviderSloTick?: typeof runTemporalProviderSloTick;
 };
 type RunQueueTick = (
@@ -55,6 +56,37 @@ type RunQueueTick = (
     blockedReason?: string;
   },
 ) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>;
+
+function resolveSchedulerFamilyRuntimeProviderKind(
+  requested?: FamilyRuntimeProviderKind,
+): FamilyRuntimeProviderKind {
+  if (requested) {
+    return requested;
+  }
+  const configured = process.env.OPL_FAMILY_RUNTIME_PROVIDER?.trim();
+  if (!configured) {
+    return 'temporal';
+  }
+  if (FAMILY_RUNTIME_PROVIDER_KINDS.includes(configured as FamilyRuntimeProviderKind)) {
+    return configured as FamilyRuntimeProviderKind;
+  }
+  throw new FrameworkContractError(
+    'cli_usage_error',
+    'Unsupported family runtime provider kind.',
+    {
+      provider_kind: configured,
+      allowed_provider_kinds: [...FAMILY_RUNTIME_PROVIDER_KINDS],
+      env_var: 'OPL_FAMILY_RUNTIME_PROVIDER',
+    },
+  );
+}
+
+async function inspectProvidersWithLifecycleDefault(
+  ...args: Parameters<InspectFamilyRuntimeProvidersWithLifecycle>
+): ReturnType<InspectFamilyRuntimeProvidersWithLifecycle> {
+  const { inspectFamilyRuntimeProvidersWithLifecycle } = await import('./family-runtime-providers.ts');
+  return inspectFamilyRuntimeProvidersWithLifecycle(...args);
+}
 
 function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind, selected: ProviderInspection['providers']['temporal']) {
   const workerReadiness = selected?.details && 'worker_readiness' in selected.details
@@ -122,7 +154,7 @@ function buildSchedulerQueueProjectionBridge(input: {
 }
 
 async function temporalProviderModule() {
-  return await import('./family-runtime-temporal-provider.ts');
+  return await import('./family-runtime-temporal-provider-parts/attempt-control.ts');
 }
 
 function deferredProviderSloTick(input: {
@@ -216,14 +248,14 @@ export async function runTemporalSchedulerCadenceCommand(
     domainProfiles?: FamilyRuntimeDomainProfiles;
   },
 ) {
-  const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
+  const providerKind = resolveSchedulerFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler cadence supports only --provider temporal.', {
       provider_kind: providerKind,
       allowed_provider_kinds: ['temporal'],
     });
   }
-  const provider = await inspectFamilyRuntimeProvidersWithLifecycle(providerKind, paths, {
+  const provider = await inspectProvidersWithLifecycleDefault(providerKind, paths, {
     managedProviderProjection: readMasManagedProviderProjection(),
   });
   const selected = provider.providers.temporal;
@@ -314,7 +346,7 @@ export async function runSchedulerTick(
   runQueueTick: RunQueueTick,
   deps: SchedulerTickDeps = {},
 ) {
-  const providerKind = resolveFamilyRuntimeProviderKind(input.providerKind);
+  const providerKind = resolveSchedulerFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler tick currently supports only --provider temporal.', {
       provider_kind: providerKind,
@@ -322,7 +354,7 @@ export async function runSchedulerTick(
     });
   }
   const source = 'opl-provider-scheduler';
-  const inspectProvidersWithLifecycle = deps.inspectProvidersWithLifecycle ?? inspectFamilyRuntimeProvidersWithLifecycle;
+  const inspectProvidersWithLifecycle = deps.inspectProvidersWithLifecycle ?? inspectProvidersWithLifecycleDefault;
   const runProviderSloTick = deps.runProviderSloTick ?? runTemporalProviderSloTick;
   const providerBeforeSlo = await inspectProvidersWithLifecycle(providerKind, paths, {
     managedProviderProjection: readMasManagedProviderProjection(),

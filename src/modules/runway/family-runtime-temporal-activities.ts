@@ -20,7 +20,7 @@ import {
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
 
 async function temporalProviderModule() {
-  return await import('./family-runtime-temporal-provider.ts');
+  return await import('./family-runtime-temporal-provider-parts/attempt-control.ts');
 }
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
