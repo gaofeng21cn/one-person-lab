@@ -15,6 +15,188 @@
     "developer_codex",
     "global_user"
   ],
+  "no_regression_redirects": [
+    {
+      "retired_skill_id": "opl-agent-package-trust-reviewer",
+      "covered_by_skill_id": "opl-agent-package-lifecycle-reviewer",
+      "coverage_kind": "consolidated_package_trust_and_lifecycle_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Package trust evidence is reviewed together with install, update, repair, rollback, carrier exposure, and Codex reload evidence."
+    },
+    {
+      "retired_skill_id": "opl-app-first-run-ux-reviewer",
+      "covered_by_skill_id": "opl-console-operator-copilot",
+      "coverage_kind": "consolidated_console_operator_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "First-run and onboarding wording are operator projection concerns inside the Console/App copilot surface."
+    },
+    {
+      "retired_skill_id": "opl-app-release-evidence-reviewer",
+      "covered_by_skill_id": "opl-console-operator-copilot",
+      "coverage_kind": "consolidated_console_operator_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "App release evidence refs are interpreted as operator-facing projection evidence without creating release authority."
+    },
+    {
+      "retired_skill_id": "opl-app-settings-ia-reviewer",
+      "covered_by_skill_id": "opl-console-operator-copilot",
+      "coverage_kind": "consolidated_console_operator_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Settings IA review stays inside the Console/App operator copilot rather than a separate default metadata entry."
+    },
+    {
+      "retired_skill_id": "opl-runtime-task-awareness-reviewer",
+      "covered_by_skill_id": "opl-console-operator-copilot",
+      "coverage_kind": "consolidated_console_operator_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Runtime page task-awareness interpretation is a Console/App projection review concern."
+    },
+    {
+      "retired_skill_id": "opl-user-workbench-action-reviewer",
+      "covered_by_skill_id": "opl-console-operator-copilot",
+      "coverage_kind": "consolidated_console_operator_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Workbench action review is covered by operator action classification and forbidden-claim review."
+    },
+    {
+      "retired_skill_id": "opl-brand-l5-evidence-reviewer",
+      "covered_by_skill_id": "opl-charter-authority-reviewer",
+      "coverage_kind": "authority_and_readiness_overclaim_review",
+      "exposure_scope": "project_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Brand L5 evidence language is an authority/readiness claim review concern."
+    },
+    {
+      "retired_skill_id": "opl-conflict-blocker-resolution-reviewer",
+      "covered_by_skill_id": "opl-incident-root-cause-triager",
+      "coverage_kind": "incident_root_cause_and_owner_route_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Conflict and blocker envelopes are routed through root-cause classification and owner-route review."
+    },
+    {
+      "retired_skill_id": "opl-stop-loss-and-nonprogress-reviewer",
+      "covered_by_skill_id": "opl-incident-root-cause-triager",
+      "coverage_kind": "incident_root_cause_and_owner_route_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Stop-loss and nonprogress loops are incident root-cause cases requiring owner-routable repair paths."
+    },
+    {
+      "retired_skill_id": "opl-domain-private-tail-retirement-reviewer",
+      "covered_by_skill_id": "opl-source-module-boundary-reviewer",
+      "coverage_kind": "source_module_and_private_tail_boundary_review",
+      "exposure_scope": "project_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Domain private-tail retirement is covered by source-module ownership, active-caller, tombstone, and delete-route review."
+    },
+    {
+      "retired_skill_id": "opl-shell-upstream-intake-reviewer",
+      "covered_by_skill_id": "opl-source-module-boundary-reviewer",
+      "coverage_kind": "source_module_and_upstream_intake_review",
+      "exposure_scope": "project_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Shell/upstream intake belongs to source-module boundary and owner-route review."
+    },
+    {
+      "retired_skill_id": "opl-external-runtime-provider-fit-reviewer",
+      "covered_by_skill_id": "opl-runtime-soak-and-recovery-auditor",
+      "coverage_kind": "runtime_provider_environment_soak_recovery_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "External runtime provider fit is covered with environment, diagnostic, soak, and recovery evidence."
+    },
+    {
+      "retired_skill_id": "opl-runtime-environment-bundle-reviewer",
+      "covered_by_skill_id": "opl-runtime-soak-and-recovery-auditor",
+      "coverage_kind": "runtime_provider_environment_soak_recovery_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Runtime environment bundle proof is a runtime/provider environment evidence class."
+    },
+    {
+      "retired_skill_id": "opl-native-helper-diagnostics-reviewer",
+      "covered_by_skill_id": "opl-runtime-soak-and-recovery-auditor",
+      "coverage_kind": "runtime_provider_environment_soak_recovery_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Native helper diagnostics are audited with provider, environment, recovery, and route-back evidence."
+    },
+    {
+      "retired_skill_id": "opl-runway-recovery-playbook-writer",
+      "covered_by_skill_id": "opl-runtime-soak-and-recovery-auditor",
+      "coverage_kind": "runtime_provider_environment_soak_recovery_review",
+      "exposure_scope": "developer_codex",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Runway recovery playbook review is covered as recovery evidence and owner-route preparation."
+    },
+    {
+      "retired_skill_id": "opl-external-scientific-skill-router",
+      "covered_by_skill_id": "opl-external-specialist-skill-router",
+      "coverage_kind": "general_external_specialist_skill_router",
+      "exposure_scope": "workspace_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Rare scientific skill discovery is handled by the general external specialist router with source selectors."
+    },
+    {
+      "retired_skill_id": "opl-foundry-promotion-reviewer",
+      "covered_by_skill_id": "opl-foundry-agent-improver",
+      "coverage_kind": "foundry_improvement_and_promotion_brief_review",
+      "exposure_scope": "project_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Foundry promotion, hold, and rollback interpretation is covered by the agent improver skill."
+    },
+    {
+      "retired_skill_id": "opl-local-data-lifecycle-reviewer",
+      "covered_by_skill_id": "opl-memory-artifact-lifecycle-curator",
+      "coverage_kind": "memory_artifact_local_data_lifecycle_review",
+      "exposure_scope": "workspace_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Local data lifecycle refs are handled with memory, artifact, retention, archive, restore, and cleanup refs."
+    },
+    {
+      "retired_skill_id": "opl-pack-capability-reviewer",
+      "covered_by_skill_id": "opl-pack-admission-reviewer",
+      "coverage_kind": "pack_admission_and_capability_review",
+      "exposure_scope": "project_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Pack capability review is part of pack admission and no-authority boundary review."
+    },
+    {
+      "retired_skill_id": "opl-stage-admission-reviewer",
+      "covered_by_skill_id": "opl-stage-quality-gate-critic",
+      "coverage_kind": "stage_quality_gate_and_admission_review",
+      "exposure_scope": "project_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Stage admission is covered by stage quality-gate critique and route-back review."
+    }
+  ],
   "skills": [
     {
       "skill_id": "opl-agent-package-lifecycle-reviewer",

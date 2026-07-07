@@ -24,6 +24,10 @@ Optional helper: `kernel.py` provides stdlib-only deterministic pack-ref normali
 4. Classify findings as `registry_fit_gap`, `contract_gap`, `capability_abi_gap`, `authority_abi_gap`, `evidence_gap`, `owner_route_gap`, `overclaim_gap`, or `no_issue_found`.
 5. Recommend the smallest route: schema fix, pack field fix, source ref fix, owner route clarification, admission hold, or no change.
 
+## Legacy Coverage
+
+This reviewer covers the retired `opl-pack-capability-reviewer` entry. Pack capability review stays inside admission, capability ABI, authority ABI, tool-affordance, and owner-route review.
+
 ## Output Shape
 
 Return:

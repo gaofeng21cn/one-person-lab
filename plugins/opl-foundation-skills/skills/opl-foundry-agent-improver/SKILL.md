@@ -28,6 +28,10 @@ Do not write target domain truth, owner receipts, typed blockers, quality verdic
 4. Propose the minimal rewrite that changes the agent's future behavior. Prefer deleting misleading instructions, tightening a boundary, or adding one concrete decision rule over adding broad process.
 5. Bind every recommendation to refs already present in the Foundry packet. If the packet lacks the needed ref, report the missing ref instead of inventing a result.
 
+## Legacy Coverage
+
+This improver covers the retired `opl-foundry-promotion-reviewer` entry. Promotion, hold, and rollback recommendations stay tied to Foundry work-order evidence, scorecards, rollback refs, and owner routes.
+
 ## Output Shape
 
 Return:

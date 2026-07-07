@@ -33,6 +33,10 @@ No-authority language: no owner receipts, no typed blockers, no domain truth, no
 6. Separate a reviewer recommendation from a source change.
 7. Route the finding to the module owner with the smallest correction and verification surface.
 
+## Legacy Coverage
+
+This reviewer covers the retired `opl-domain-private-tail-retirement-reviewer` and `opl-shell-upstream-intake-reviewer` entries. Private-tail retirement and shell/upstream intake are source-module ownership questions, not separate always-visible skill metadata.
+
 ## Output Shape
 
 Return:

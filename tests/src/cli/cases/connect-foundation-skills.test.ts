@@ -1,5 +1,28 @@
 import { assert, fs, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 
+const expectedNoRegressionRedirects = new Map([
+  ['opl-agent-package-trust-reviewer', 'opl-agent-package-lifecycle-reviewer'],
+  ['opl-app-first-run-ux-reviewer', 'opl-console-operator-copilot'],
+  ['opl-app-release-evidence-reviewer', 'opl-console-operator-copilot'],
+  ['opl-app-settings-ia-reviewer', 'opl-console-operator-copilot'],
+  ['opl-runtime-task-awareness-reviewer', 'opl-console-operator-copilot'],
+  ['opl-user-workbench-action-reviewer', 'opl-console-operator-copilot'],
+  ['opl-brand-l5-evidence-reviewer', 'opl-charter-authority-reviewer'],
+  ['opl-conflict-blocker-resolution-reviewer', 'opl-incident-root-cause-triager'],
+  ['opl-stop-loss-and-nonprogress-reviewer', 'opl-incident-root-cause-triager'],
+  ['opl-domain-private-tail-retirement-reviewer', 'opl-source-module-boundary-reviewer'],
+  ['opl-shell-upstream-intake-reviewer', 'opl-source-module-boundary-reviewer'],
+  ['opl-external-runtime-provider-fit-reviewer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-runtime-environment-bundle-reviewer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-native-helper-diagnostics-reviewer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-runway-recovery-playbook-writer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-external-scientific-skill-router', 'opl-external-specialist-skill-router'],
+  ['opl-foundry-promotion-reviewer', 'opl-foundry-agent-improver'],
+  ['opl-local-data-lifecycle-reviewer', 'opl-memory-artifact-lifecycle-curator'],
+  ['opl-pack-capability-reviewer', 'opl-pack-admission-reviewer'],
+  ['opl-stage-admission-reviewer', 'opl-stage-quality-gate-critic'],
+]);
+
 test('connect foundation-skills inspect lists manifest-governed foundation support skills', () => {
   const output = runCli(['connect', 'foundation-skills', 'inspect', '--json']) as {
     opl_connect_foundation_skills: {
@@ -15,6 +38,15 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
         activation_gate: string;
         default_global_user: boolean;
         allowed_sync_scopes: string[];
+      }>;
+      no_regression_redirects: Array<{
+        retired_skill_id: string;
+        covered_by_skill_id: string;
+        coverage_kind: string;
+        exposure_scope: string;
+        default_global_user: boolean;
+        capability_preserved: boolean;
+        reason: string;
       }>;
       authority_boundary: {
         read_only_inspect: boolean;
@@ -68,6 +100,22 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
     output.opl_connect_foundation_skills.skills.some((entry) => entry.skill_id === 'opl-external-scientific-skill-router'),
     false,
   );
+  const activeSkillIds = new Set(output.opl_connect_foundation_skills.skills.map((entry) => entry.skill_id));
+  assert.equal(output.opl_connect_foundation_skills.no_regression_redirects.length, expectedNoRegressionRedirects.size);
+  for (const redirect of output.opl_connect_foundation_skills.no_regression_redirects) {
+    assert.equal(
+      expectedNoRegressionRedirects.get(redirect.retired_skill_id),
+      redirect.covered_by_skill_id,
+      `${redirect.retired_skill_id} must route to its canonical coverage skill`,
+    );
+    assert.equal(activeSkillIds.has(redirect.retired_skill_id), false, `${redirect.retired_skill_id} must not be active metadata`);
+    assert.equal(activeSkillIds.has(redirect.covered_by_skill_id), true, `${redirect.covered_by_skill_id} must be active coverage`);
+    assert.equal(redirect.default_global_user, false, `${redirect.retired_skill_id} must not default global`);
+    assert.notEqual(redirect.exposure_scope, 'global_user', `${redirect.retired_skill_id} must not expose global metadata`);
+    assert.equal(redirect.capability_preserved, true, `${redirect.retired_skill_id} must explicitly preserve coverage`);
+    assert.equal(redirect.coverage_kind.length > 0, true);
+    assert.equal(redirect.reason.length > 0, true);
+  }
   assert.match(output.opl_connect_foundation_skills.skills[0].content_sha256, /^[a-f0-9]{64}$/);
   assert.deepEqual(output.opl_connect_foundation_skills.authority_boundary, {
     read_only_inspect: true,

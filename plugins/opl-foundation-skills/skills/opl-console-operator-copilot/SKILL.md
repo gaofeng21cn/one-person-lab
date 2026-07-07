@@ -26,6 +26,10 @@ description: "Use when interpreting OPL Console/App operator projections, curren
 6. Prefer the smallest legal operator move. If no legal move exists from the current projection, produce a route-back or missing-evidence note.
 7. Keep wording claim-safe: distinguish `projection says`, `owner ref proves`, `runtime readback proves`, and `not proven`.
 
+## Legacy Coverage
+
+This consolidated copilot covers the retired `opl-app-first-run-ux-reviewer`, `opl-app-release-evidence-reviewer`, `opl-app-settings-ia-reviewer`, `opl-runtime-task-awareness-reviewer`, and `opl-user-workbench-action-reviewer` entries. Keep those App/Console operator concerns here instead of restoring separate default metadata entries.
+
 ## Output Shape
 
 Return:

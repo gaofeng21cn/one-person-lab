@@ -29,6 +29,10 @@ No-authority language: no owner receipts, no typed blockers, no domain truth, no
 - Keep elastic lifecycle judgment in this Skill: separate body authority from refs-only notes, classify owner-consumption gaps, and draft route-back.
 - If lifecycle evidence is incomplete, name the missing ref or owner action instead of mutating artifact, memory, or local-data truth.
 
+## Legacy Coverage
+
+This curator covers the retired `opl-local-data-lifecycle-reviewer` entry. Local data lifecycle refs are reviewed with memory, artifact, retention, archive/restore, cleanup, and owner-route refs here.
+
 ## Workflow
 
 1. Identify the memory or artifact lifecycle claim and its owner surface.

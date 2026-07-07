@@ -50,6 +50,10 @@ No-authority language: no owner receipts, no typed blockers, no domain truth, no
    - `no_issue`.
 8. Prefer the smallest correction: delete the claim, downgrade it to candidate/review language, add the owner route, cite the real authority surface, or mark the missing evidence.
 
+## Legacy Coverage
+
+This reviewer covers the retired `opl-brand-l5-evidence-reviewer` entry. Brand L5 evidence language is reviewed here as authority wording and readiness-overclaim risk, not as a separate readiness surface.
+
 ## Output Shape
 
 Return a concise review with:

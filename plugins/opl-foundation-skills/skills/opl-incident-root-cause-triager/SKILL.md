@@ -42,6 +42,10 @@ Optional helper: `kernel.py` provides stdlib-only deterministic incident-ref nor
 7. For L3, name the next owner, legal action, expected artifact or readback, verification command/ref, and stopping condition.
 8. Add L4 prevention only when the incident is repeated, caused a false claim, or exposed a reusable workflow gap.
 
+## Legacy Coverage
+
+This triager covers the retired `opl-conflict-blocker-resolution-reviewer` and `opl-stop-loss-and-nonprogress-reviewer` entries. Conflict envelopes, blockers, stop-loss loops, and nonprogress loops should route through the same L0-L4 owner-routable root-cause review.
+
 ## Output Shape
 
 Return:

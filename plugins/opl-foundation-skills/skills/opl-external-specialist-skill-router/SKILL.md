@@ -89,3 +89,7 @@ Return:
   no artifact authority, no runtime truth, and no readiness claims.
 
 Scientific routing note: this is also the canonical route for rare scientific tools, databases, workflows, and methods. There is no separate scientific alias Skill; use the smallest query and approved source selector instead of exposing another compatibility entry or creating one physical Skill per small scientific module.
+
+## Legacy Coverage
+
+This router covers the retired `opl-external-scientific-skill-router` entry. Scientific external skill lookup remains a source-selected specialist route, not a separate physical router Skill.

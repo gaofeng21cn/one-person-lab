@@ -26,6 +26,10 @@ This skill must not:
 
 No-authority language: no owner receipts, no typed blockers, no runtime queue writes, no provider attempts, no credential or endpoint lifecycle, no runtime readiness claim, no readiness claims.
 
+## Legacy Coverage
+
+This consolidated auditor covers the retired `opl-external-runtime-provider-fit-reviewer`, `opl-runtime-environment-bundle-reviewer`, `opl-native-helper-diagnostics-reviewer`, and `opl-runway-recovery-playbook-writer` entries. Keep provider fit, environment materialization, helper diagnostics, soak, and recovery evidence together here.
+
 ## Workflow
 
 1. Identify the runtime surface, provider/substrate, environment bundle, helper diagnostic ref, soak window, recovery path, claimed outcome, and consuming owner.

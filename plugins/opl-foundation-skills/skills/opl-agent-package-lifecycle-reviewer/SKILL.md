@@ -23,6 +23,10 @@ This skill must not:
 
 No-authority language: no owner receipts, no typed blockers, no package mutation, no trust verdict, no Codex reload execution, no install-ready claim, no readiness claims.
 
+## Legacy Coverage
+
+This consolidated reviewer covers the retired `opl-agent-package-trust-reviewer` entry. Keep trust, provenance, carrier exposure, lifecycle receipts, and Codex reload proof together here instead of restoring a separate trust metadata entry.
+
 ## AI-first / Contract-light Semantics
 
 - Use package contracts and modules only for manifest identity, dependency refs, exposure policy, lifecycle receipts, rollback refs, recovery, and verification.

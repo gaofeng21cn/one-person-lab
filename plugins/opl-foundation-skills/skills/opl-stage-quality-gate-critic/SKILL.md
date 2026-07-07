@@ -29,6 +29,10 @@ Use this skill to critique an OPL stage quality gate, admission projection, or g
 5. Classify findings as `rubric_gap`, `evidence_gap`, `evaluator_overclaim`, `stage_admission_shape_gap`, `trust_lane_gap`, `composition_obligation_gap`, `failure_localization_gap`, `human_review_burden_gap`, `owner_route_gap`, `readiness_overclaim`, `typed_blocker_overclaim`, or `no_issue_found`.
 6. Recommend the smallest change: tighten rubric, add evidence lower bound, clarify trust lane, fix admission refs, clarify owner route, remove overclaim wording, or route back to the owning surface.
 
+## Legacy Coverage
+
+This critic covers the retired `opl-stage-admission-reviewer` entry. Stage admission projections are reviewed here as quality-gate, trust-lane, evidence, and owner-route questions.
+
 ## Output Shape
 
 Return:

@@ -43,6 +43,16 @@ type FoundationSkillExposureEntry = {
   authority_boundary: string[];
 };
 
+type FoundationSkillNoRegressionRedirect = {
+  retired_skill_id: string;
+  covered_by_skill_id: string;
+  coverage_kind: string;
+  exposure_scope: FoundationSkillExposureScope;
+  default_global_user: boolean;
+  capability_preserved: boolean;
+  reason: string;
+};
+
 const FOUNDATION_PLUGIN_ROOT = new URL('../../../plugins/opl-foundation-skills', import.meta.url);
 const FOUNDATION_EXPOSURE_REF = 'plugins/opl-foundation-skills/exposure.json';
 
@@ -180,7 +190,47 @@ function readExposureManifest() {
         : [],
     });
   }
-  return entries;
+  const redirects = (parsed as { no_regression_redirects?: unknown }).no_regression_redirects;
+  const noRegressionRedirects: FoundationSkillNoRegressionRedirect[] = [];
+  if (redirects !== undefined) {
+    if (!Array.isArray(redirects)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Foundation skills exposure manifest no_regression_redirects must be an array.', {
+        file: FOUNDATION_EXPOSURE_REF,
+      });
+    }
+    for (const [index, redirect] of redirects.entries()) {
+      if (!redirect || typeof redirect !== 'object' || Array.isArray(redirect)) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Foundation skills exposure manifest contains an invalid no-regression redirect.', {
+          file: FOUNDATION_EXPOSURE_REF,
+          index,
+        });
+      }
+      const record = redirect as Record<string, unknown>;
+      const retiredSkillId = assertSafeSkillId(String(record.retired_skill_id ?? ''));
+      const coveredBySkillId = assertSafeSkillId(String(record.covered_by_skill_id ?? ''));
+      const coverageKind = normalizeOptionalString(String(record.coverage_kind ?? ''));
+      const reason = normalizeOptionalString(String(record.reason ?? ''));
+      if (!coverageKind || !reason) {
+        throw new FrameworkContractError('contract_shape_invalid', 'Foundation skills no-regression redirect requires coverage_kind and reason.', {
+          file: FOUNDATION_EXPOSURE_REF,
+          retired_skill_id: retiredSkillId,
+        });
+      }
+      noRegressionRedirects.push({
+        retired_skill_id: retiredSkillId,
+        covered_by_skill_id: coveredBySkillId,
+        coverage_kind: coverageKind,
+        exposure_scope: parseExposureScope(record.exposure_scope, retiredSkillId),
+        default_global_user: record.default_global_user === true,
+        capability_preserved: record.capability_preserved === true,
+        reason,
+      });
+    }
+  }
+  return {
+    entries,
+    no_regression_redirects: noRegressionRedirects,
+  };
 }
 
 function allowedSyncScopesForExposure(exposureScope: FoundationSkillExposureScope | null): FoundationSkillScope[] {
@@ -205,7 +255,7 @@ function sourceSkillIds() {
   }
   const exposureEntries = readExposureManifest();
   const skillIds = exposureEntries
-    ? [...exposureEntries.keys()]
+    ? [...exposureEntries.entries.keys()]
     : fs.readdirSync(skillsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
@@ -213,7 +263,8 @@ function sourceSkillIds() {
     manifest_status: exposureEntries ? 'exposure_manifest' : 'derived_from_source_skills',
     manifest_ref: exposureEntries ? FOUNDATION_EXPOSURE_REF : null,
     skill_ids: skillIds.sort((a, b) => a.localeCompare(b)),
-    exposure_entries: exposureEntries,
+    exposure_entries: exposureEntries?.entries ?? null,
+    no_regression_redirects: exposureEntries?.no_regression_redirects ?? [],
   };
 }
 
@@ -308,6 +359,7 @@ export function runOplConnectFoundationSkillsInspect() {
       manifest_ref: source.manifest_ref,
       skill_count: skills.length,
       skills,
+      no_regression_redirects: source.no_regression_redirects,
       sync_command_ref: 'opl connect foundation-skills sync --skill <skill-id> --scope project|workspace|quest --target-root <path> --json',
       authority_boundary: authorityBoundary(),
     },
@@ -319,7 +371,7 @@ export function runOplConnectFoundationSkillsSync(input: FoundationSkillsSyncInp
   const scope = parseScope(input.scope);
   const targetRoot = requireTargetRoot(input.targetRoot);
   const exposureEntries = readExposureManifest();
-  const skill = readSkillCard(skillId, exposureEntries?.get(skillId));
+  const skill = readSkillCard(skillId, exposureEntries?.entries.get(skillId));
   assertSkillAllowedForScope(skill, scope);
   const targetSkillRoot = path.join(targetRoot, '.codex', 'skills', skillId);
 

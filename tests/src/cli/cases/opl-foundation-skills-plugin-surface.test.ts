@@ -14,6 +14,28 @@ const expectedDeveloperCodexSkills = new Set([
   'opl-runtime-soak-and-recovery-auditor',
   'opl-runway-compute-operator',
 ]);
+const expectedNoRegressionRedirects = new Map([
+  ['opl-agent-package-trust-reviewer', 'opl-agent-package-lifecycle-reviewer'],
+  ['opl-app-first-run-ux-reviewer', 'opl-console-operator-copilot'],
+  ['opl-app-release-evidence-reviewer', 'opl-console-operator-copilot'],
+  ['opl-app-settings-ia-reviewer', 'opl-console-operator-copilot'],
+  ['opl-runtime-task-awareness-reviewer', 'opl-console-operator-copilot'],
+  ['opl-user-workbench-action-reviewer', 'opl-console-operator-copilot'],
+  ['opl-brand-l5-evidence-reviewer', 'opl-charter-authority-reviewer'],
+  ['opl-conflict-blocker-resolution-reviewer', 'opl-incident-root-cause-triager'],
+  ['opl-stop-loss-and-nonprogress-reviewer', 'opl-incident-root-cause-triager'],
+  ['opl-domain-private-tail-retirement-reviewer', 'opl-source-module-boundary-reviewer'],
+  ['opl-shell-upstream-intake-reviewer', 'opl-source-module-boundary-reviewer'],
+  ['opl-external-runtime-provider-fit-reviewer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-runtime-environment-bundle-reviewer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-native-helper-diagnostics-reviewer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-runway-recovery-playbook-writer', 'opl-runtime-soak-and-recovery-auditor'],
+  ['opl-external-scientific-skill-router', 'opl-external-specialist-skill-router'],
+  ['opl-foundry-promotion-reviewer', 'opl-foundry-agent-improver'],
+  ['opl-local-data-lifecycle-reviewer', 'opl-memory-artifact-lifecycle-curator'],
+  ['opl-pack-capability-reviewer', 'opl-pack-admission-reviewer'],
+  ['opl-stage-admission-reviewer', 'opl-stage-quality-gate-critic'],
+]);
 const legalExposureScopes = new Set([
   'source_only',
   'project_local',
@@ -145,6 +167,39 @@ test('OPL Foundation Skills keep developer Codex exposure intentionally narrow',
   assert.equal(entries.has('opl-app-settings-ia-reviewer'), false);
   assert.equal(entries.has('opl-runtime-task-awareness-reviewer'), false);
   assert.equal(entries.has('opl-user-workbench-action-reviewer'), false);
+});
+
+test('OPL Foundation Skills preserve retired fine-grained coverage without restoring metadata', () => {
+  const exposureManifest = readJson(exposureManifestPath);
+  const diskSkillIds = new Set(skillIdsFromDisk());
+  const activeSkillIds = new Set(exposureManifest.skills.map((entry: any) => entry.skill_id));
+  const redirects = exposureManifest.no_regression_redirects ?? [];
+
+  assert.equal(redirects.length, expectedNoRegressionRedirects.size);
+
+  const seen = new Set<string>();
+  for (const entry of redirects) {
+    assert.equal(typeof entry.retired_skill_id, 'string');
+    assert.equal(typeof entry.covered_by_skill_id, 'string');
+    assert.equal(expectedNoRegressionRedirects.get(entry.retired_skill_id), entry.covered_by_skill_id);
+    assert.equal(seen.has(entry.retired_skill_id), false, `${entry.retired_skill_id} must be listed once`);
+    seen.add(entry.retired_skill_id);
+
+    assert.equal(diskSkillIds.has(entry.retired_skill_id), false, `${entry.retired_skill_id} must stay retired on disk`);
+    assert.equal(activeSkillIds.has(entry.retired_skill_id), false, `${entry.retired_skill_id} must not re-enter exposure`);
+    assert.equal(diskSkillIds.has(entry.covered_by_skill_id), true, `${entry.covered_by_skill_id} must exist on disk`);
+    assert.equal(activeSkillIds.has(entry.covered_by_skill_id), true, `${entry.covered_by_skill_id} must be an exposed canonical skill`);
+    assert.equal(entry.default_global_user, false, `${entry.retired_skill_id} redirect must not default global`);
+    assert.equal(entry.exposure_scope === 'global_user', false, `${entry.retired_skill_id} redirect must not be global`);
+    assert.equal(legalExposureScopes.has(entry.exposure_scope), true);
+    assert.equal(entry.capability_preserved, true, `${entry.retired_skill_id} must declare capability preservation`);
+    assert.equal(typeof entry.coverage_kind, 'string');
+    assert.equal(entry.coverage_kind.length > 0, true, `${entry.retired_skill_id} needs coverage_kind`);
+    assert.equal(typeof entry.reason, 'string');
+    assert.equal(entry.reason.length > 0, true, `${entry.retired_skill_id} needs reason`);
+  }
+
+  assert.deepEqual([...seen].sort(), [...expectedNoRegressionRedirects.keys()].sort());
 });
 
 test('OPL Foundation Skills expose one canonical external specialist router', () => {
