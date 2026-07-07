@@ -144,7 +144,7 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `agent-lab-failure-token-registry.json`
 - `self-evolution-work-order.schema.json`
 - `opl-flow-completion-audit-contract.json`
-- `agent-lab-mag-live-acceptance-suite.json`
+- `external-suites/mag-live-acceptance-suite.json`
 - `agent-platform-surface-ownership-contract.json`
 - `codex-default-profile.json`
 - `family-executor-adapter-defaults.json`

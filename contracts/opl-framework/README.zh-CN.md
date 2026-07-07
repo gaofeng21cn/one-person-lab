@@ -110,7 +110,7 @@ Machine boundary: 本文是 OPL Framework contracts 的人读支撑索引。机�
 - `agent-lab-contract.json`
 - `agent-lab-failure-token-registry.json`
 - `self-evolution-work-order.schema.json`
-- `agent-lab-mag-live-acceptance-suite.json`
+- `external-suites/mag-live-acceptance-suite.json`
 - `agent-platform-surface-ownership-contract.json`
 - `brand-module-registry.json`
 - `brand-cli-governance.json`

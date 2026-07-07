@@ -95,7 +95,7 @@ test('agent-lab longline exposes the central cross-domain longline suite and rep
 });
 
 test('agent-lab run accepts the MAG live owner acceptance suite as refs-only coordination evidence', () => {
-  const suitePath = path.join(repoRoot, 'contracts/opl-framework/agent-lab-mag-live-acceptance-suite.json');
+  const suitePath = path.join(repoRoot, 'contracts/opl-framework/external-suites/mag-live-acceptance-suite.json');
   const output = runCli(['agent-lab', 'run', '--suite', suitePath, '--json']);
 
   assert.equal(output.version, 'g2');
