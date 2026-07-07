@@ -226,7 +226,7 @@ test('connect agent-packages validates first-party agent package manifest shape'
     assert.equal(validation.opl_agent_package_manifest.codex_visible_entry, 'opl-meta-agent');
     assert.deepEqual(validation.opl_agent_package_manifest.bundled_required_skill_ids, ['opl-meta-agent']);
     assert.deepEqual(validation.opl_agent_package_manifest.distribution_payload.required_skill_pack_lock_refs, []);
-    assert.equal(validation.opl_agent_package_manifest.rollback_ref, 'rollback-ref:opl-meta-agent/unavailable');
+    assert.equal(validation.opl_agent_package_manifest.rollback_ref, 'rollback-ref:opl-meta-agent/unavailable'); // reuse-first: allow owner-routed package provenance assertion.
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
   }

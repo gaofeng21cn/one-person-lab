@@ -293,7 +293,7 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     permissions: rawPermissions,
     distribution_payload: distributionPayload,
     update_channel: stringValue(payload.update_channel) ?? 'manifest_url',
-    rollback_ref: stringValue(payload.rollback_ref) ?? `rollback-ref:${canonicalAgentPackageId(payload.package_id)!}/unavailable`,
+    rollback_ref: stringValue(payload.rollback_ref) ?? `rollback-ref:${canonicalAgentPackageId(payload.package_id)!}/unavailable`, // reuse-first: allow owner-routed package provenance ref, not package-manager rollback.
     codex_visible_entry: codexVisibleEntry,
     required_skill_ids: requiredSkillIds,
     optional_skill_refs: uniqueStrings([
