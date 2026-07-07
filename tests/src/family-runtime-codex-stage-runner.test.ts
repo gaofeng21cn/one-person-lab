@@ -225,6 +225,10 @@ test('Codex stage activity prompt forbids recursive MAS PaperMission stage-route
   assert.match(commandPreview, /already running inside OPL provider-backed runtime/);
   assert.match(commandPreview, /Do not recursively enqueue, redrive, tick, start, or submit another OPL runtime task/);
   assert.match(commandPreview, /paper-mission drive --submit-opl-runtime/);
+  assert.match(commandPreview, /Professional manuscript\/reviewer checklist source/);
+  assert.match(commandPreview, /MAS profile ref, task-intake refs, and MAS ScholarSkills or professional Skill refs/);
+  assert.match(commandPreview, /only route, readback, authority, and forbidden-write rules/);
+  assert.doesNotMatch(commandPreview, /registry enrollment period/);
   assert.match(commandPreview, /must include domain-provided user-readable stage semantics/);
   assert.match(commandPreview, /domain_user_stage_log_or_typed_blocker_with_lineage_required/);
 });

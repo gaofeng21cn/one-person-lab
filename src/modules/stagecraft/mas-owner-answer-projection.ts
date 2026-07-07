@@ -12,6 +12,8 @@ import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 type JsonRecord = Record<string, unknown>;
 
 export type OwnerAnswerProjectionProfile = {
+  profileId: string;
+  profileRole: 'registry' | 'compatibility';
   domainId: string;
   bindingProjectId: string;
   sourceOwner: string;
@@ -24,7 +26,9 @@ export type OwnerAnswerProjectionProfile = {
   projectionRelativePath: string[];
 };
 
-export const MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_PROFILE: OwnerAnswerProjectionProfile = {
+export const MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE: OwnerAnswerProjectionProfile = {
+  profileId: 'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',
+  profileRole: 'compatibility',
   domainId: 'medautoscience',
   bindingProjectId: 'medautoscience',
   sourceOwner: 'medautoscience',
@@ -43,8 +47,8 @@ export const MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_PROFILE: OwnerAnswe
   ],
 };
 
-const DEFAULT_OWNER_ANSWER_PROJECTION_PROFILES = [
-  MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_PROFILE,
+export const OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY = [
+  MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE,
 ] as const;
 
 function readJsonRecord(filePath: string) {
@@ -113,15 +117,6 @@ function bindingMatchesReceipt(
     && stringValue(closeoutBinding.idempotency_key) === receipt.idempotency_key;
 }
 
-export function findMasPublicationHandoffOwnerAnswerProjection(input: {
-  receipt: StageRunExecutionAuthorizationReceipt | null;
-}) {
-  return findOwnerAnswerProjection({
-    ...input,
-    profiles: [MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_PROFILE],
-  });
-}
-
 export function findOwnerAnswerProjection(input: {
   receipt: StageRunExecutionAuthorizationReceipt | null;
   profiles?: ReadonlyArray<OwnerAnswerProjectionProfile>;
@@ -129,7 +124,7 @@ export function findOwnerAnswerProjection(input: {
   if (!input.receipt) {
     return null;
   }
-  const profiles = input.profiles ?? DEFAULT_OWNER_ANSWER_PROJECTION_PROFILES;
+  const profiles = input.profiles ?? OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY;
   const profile = profiles.find((entry) => entry.domainId === input.receipt?.domain_id);
   if (!profile) {
     return null;
@@ -142,6 +137,8 @@ export function findOwnerAnswerProjection(input: {
         continue;
       }
       return {
+        profile_id: profile.profileId,
+        profile_role: profile.profileRole,
         projection,
         projection_ref: filePath,
         workspace_root: workspaceRoot,

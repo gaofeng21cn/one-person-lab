@@ -8,7 +8,7 @@ import {
   latestStageRunExecutionAuthorizationReceiptForStageRun,
 } from './stage-run-execution-authorization-ledger.ts';
 import {
-  findMasPublicationHandoffOwnerAnswerProjection,
+  findOwnerAnswerProjection,
 } from './mas-owner-answer-projection.ts';
 
 function strings(value: unknown) {
@@ -299,7 +299,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
     generation,
     current: true,
   };
-  const ownerAnswerProjectionMatch = findMasPublicationHandoffOwnerAnswerProjection({
+  const ownerAnswerProjectionMatch = findOwnerAnswerProjection({
     receipt: latestExecutionAuthorization,
   });
   const ownerAnswerProjection = record(ownerAnswerProjectionMatch?.projection);
@@ -517,6 +517,8 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
       },
       owner_answer_binding_projection: ownerAnswerProjectionMatch
         ? {
+            profile_id: ownerAnswerProjectionMatch.profile_id,
+            profile_role: ownerAnswerProjectionMatch.profile_role,
             projection_ref: ownerAnswerProjectionMatch.projection_ref,
             workspace_root: ownerAnswerProjectionMatch.workspace_root,
             study_id: ownerAnswerProjectionMatch.study_id,
@@ -526,7 +528,7 @@ export function buildAppStageRunCockpit(currentOwnerDeltaInput: unknown) {
             source_owner_answer_stage_run_id:
               stringValue(ownerAnswerProjectionHardGate.owner_answer_stage_run_id),
             bridged_stage_run_id: runId,
-            closeout_binding_source: 'mas_publication_handoff_current_owner_delta',
+            closeout_binding_source: 'owner_answer_projection_profile_registry',
             match_policy:
               'trusted_opl_execution_authorization_provider_attempt_lease_decision_source_idempotency_match',
             reason: stringValue(ownerAnswerProjection.reason),

@@ -859,6 +859,12 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
     }
     assert.equal(projection.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
     assert.equal(
+      projection.profile_id,
+      'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',
+    );
+    assert.equal(projection.profile_role, 'compatibility');
+    assert.equal(projection.closeout_binding_source, 'owner_answer_projection_profile_registry');
+    assert.equal(
       projection.authority_boundary.can_claim_domain_ready,
       false,
     );
@@ -944,6 +950,8 @@ test('owner-answer projection lookup accepts injected domain profile', () => {
       receipt,
       profiles: [
         {
+          profileId: 'example-domain.owner_answer_projection.test.v1',
+          profileRole: 'registry',
           domainId: 'example-domain',
           bindingProjectId: 'example-domain',
           sourceOwner: 'example-domain',
@@ -954,6 +962,8 @@ test('owner-answer projection lookup accepts injected domain profile', () => {
     });
 
     assert.equal(projection?.projection_ref, projectionPath);
+    assert.equal(projection?.profile_id, 'example-domain.owner_answer_projection.test.v1');
+    assert.equal(projection?.profile_role, 'registry');
     assert.equal(projection?.workspace_root, workspaceRoot);
     assert.equal(projection?.study_id, 'case-1');
     assert.equal(projection?.authority_boundary.source_owner, 'example-domain');

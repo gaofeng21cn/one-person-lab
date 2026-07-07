@@ -12,6 +12,7 @@ export type DomainStageRoutePromptInput = {
 
 export type DomainStageRoutePromptProfile = {
   profile_id: string;
+  profile_role: 'registry' | 'compatibility';
   matches(input: DomainStageRoutePromptInput): boolean;
   promptLines(input: DomainStageRoutePromptInput): string[];
 };
@@ -90,6 +91,7 @@ function paperMissionTaskIntakePromptLines(locator: JsonRecord) {
 
 export const MAS_PAPER_MISSION_STAGE_ROUTE_PROMPT_PROFILE: DomainStageRoutePromptProfile = {
   profile_id: 'medautoscience.paper_mission.stage_route.compatibility_prompt.v1',
+  profile_role: 'compatibility',
   matches: isMasPaperMissionStageRouteAttempt,
   promptLines(input) {
     const locator = input.workspaceLocator ?? {};
@@ -102,7 +104,7 @@ export const MAS_PAPER_MISSION_STAGE_ROUTE_PROMPT_PROFILE: DomainStageRoutePromp
     const routeTarget = optionalString(locator.route_target);
     const commandKind = optionalString(locator.command_kind);
     const lines = [
-      'MAS PaperMission stage-route execution affordance:',
+      'MAS PaperMission stage-route compatibility affordance:',
       'This is a medautoscience paper_mission/stage-route attempt. Treat PaperMissionRun inspect as the current study truth root before acting.',
       `Study id: ${studyId}`,
       `Profile ref: ${profileRef}`,
@@ -119,7 +121,7 @@ export const MAS_PAPER_MISSION_STAGE_ROUTE_PROMPT_PROFILE: DomainStageRoutePromp
       'If PaperMission inspect or publication_eval/latest.json exposes a next_work_unit for the route target, do the work needed to produce a refs-only owner answer candidate for that work unit, or a typed source-readiness blocker when the required source data/facts are genuinely unavailable.',
       'For write-lane medical manuscript repair, produce attempt-scoped refs under ops/medautoscience/paper_mission_stage_attempts/<stage_attempt_id>/ rather than editing current_package or publication authority surfaces directly.',
       'A meaningful non-authority candidate closeout should include owner_answer_kind "route_back_evidence_ref" and owner_answer_ref/route_back_evidence_ref pointing at the attempt-scoped candidate manifest or evidence packet. A genuine source/fact blocker should include owner_answer_kind "typed_blocker_ref" and typed_blocker_ref pointing at the attempt-scoped blocker packet.',
-      'For registry/medical SCI manuscript work units, explicitly check and repair or route blockers for: registry enrollment period, data lock date, source-specific windows, ethics/consent/deidentification metadata, cohort flow and inclusion/exclusion path, adult/child BMI boundary, adult-only sensitivity, diagnostic variable ascertainment table, burden/prevalence wording, internal workflow prose residue, figure denominator caveats, missingness atlas requirements, phenotype-treatment gap discovery contract, exact high-risk low-intensity definitions, medication-source sensitivity, transition trajectory categories, site-level gap variability, cardiometabolic-renal protection gaps, and rate/count separation.',
+      'Professional manuscript/reviewer checklist source: use the MAS profile ref, task-intake refs, and MAS ScholarSkills or professional Skill refs exposed by MAS. This OPL prompt carries only route, readback, authority, and forbidden-write rules.',
       'Do not write or synthesize MAS authority surfaces: publication_eval/latest.json, controller_decisions/latest.json, owner receipts, typed blockers, human gates, current_package, runtime queues, provider attempts, or Yang authority files.',
       'The final JSON closeout for this PaperMission stage-route must include domain-provided user-readable stage semantics in user_stage_log, stage_log_summary, human_stage_log, or route_impact.user_stage_log/stage_log_summary/human_stage_log.',
       'The stage log must name the paper-facing delta, owner/gate verdict, platform repair delta, remaining blocker, evidence refs, and next forced paper action; if no such domain semantic summary is available, return a typed blocker/route impact saying domain_user_stage_log_or_typed_blocker_with_lineage_required.',

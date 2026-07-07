@@ -66,6 +66,18 @@ test('app state fast folds MAS publication handoff owner answer projection into 
       cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.reason,
       'medical_paper_readiness_not_ready',
     );
+    assert.equal(
+      cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.profile_id,
+      'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',
+    );
+    assert.equal(
+      cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.profile_role,
+      'compatibility',
+    );
+    assert.equal(
+      cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.closeout_binding_source,
+      'owner_answer_projection_profile_registry',
+    );
     assert.equal(cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.authority_boundary.can_claim_domain_ready, false);
     assert.equal(cockpit.authority_boundary.can_write_domain_truth, false);
     assert.equal(cockpit.authority_boundary.can_create_typed_blocker, false);
