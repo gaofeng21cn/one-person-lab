@@ -1,4 +1,4 @@
-import { assert, fs, os, path, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, test } from '../helpers.ts';
 import { createFakeFamilySkillWorkspace } from '../../cli-codex-default-shell-helpers.ts';
 import {
   runCliWithStdin,
@@ -391,10 +391,11 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       const checkoutPath = path.join(familyWorkspace.workspaceRoot, project);
       const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
       assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
-      assert.equal(
-        fs.realpathSync(path.join(marketplaceRoot, 'plugins', pluginId)),
-        fs.realpathSync(path.join(checkoutPath, 'plugins', pluginId)),
-      );
+      const wrapperPluginRoot = path.join(marketplaceRoot, 'plugins', pluginId);
+      const wrapperManifest = parseJsonText(fs.readFileSync(path.join(wrapperPluginRoot, '.codex-plugin', 'plugin.json'), 'utf8')) as Record<string, any>;
+      const wrapperSkill = fs.readFileSync(path.join(wrapperPluginRoot, 'skills', pluginId, 'SKILL.md'), 'utf8');
+      assert.equal(wrapperManifest.name, pluginId);
+      assert.match(wrapperSkill, new RegExp(`^name:\\s*${pluginId}$`, 'm'));
       assert.match(config, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     }
     assert.equal(

@@ -1,4 +1,4 @@
-import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
   createBookForgeGeneratedSurfaceRemote,
@@ -187,10 +187,11 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
       assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
       assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), true);
-      assert.equal(
-        fs.realpathSync(path.join(marketplaceRoot, 'plugins', pluginId)),
-        fs.realpathSync(path.join(checkoutPath, 'plugins', pluginId)),
-      );
+      const wrapperPluginRoot = path.join(marketplaceRoot, 'plugins', pluginId);
+      const wrapperManifest = parseJsonText(fs.readFileSync(path.join(wrapperPluginRoot, '.codex-plugin', 'plugin.json'), 'utf8')) as Record<string, any>;
+      const wrapperSkill = fs.readFileSync(path.join(wrapperPluginRoot, 'skills', pluginId, 'SKILL.md'), 'utf8');
+      assert.equal(wrapperManifest.name, pluginId);
+      assert.match(wrapperSkill, new RegExp(`^name:\\s*${pluginId}$`, 'm'));
       assert.match(codexConfig, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]\\nsource_type = "local"\\nsource = "${marketplaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     }
     assert.match(codexConfig, /\[plugins\."oma@oma-local"\]/);

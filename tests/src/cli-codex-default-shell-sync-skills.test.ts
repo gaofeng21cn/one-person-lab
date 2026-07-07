@@ -288,6 +288,8 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
   const codexHome = path.join(homeDir, '.codex');
+  const masManifestPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', '.codex-plugin', 'plugin.json');
+  const masSkillPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', 'skills', 'mas', 'SKILL.md');
   fs.mkdirSync(codexHome, { recursive: true });
   fs.writeFileSync(
     path.join(codexHome, 'config.toml'),
@@ -303,6 +305,23 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       'args = ["/Users/test/redcube-ai/apps/redcube-mcp/dist/server.js"]',
       '',
     ].join('\n'),
+    'utf8',
+  );
+  const masManifest = parseJsonText(fs.readFileSync(masManifestPath, 'utf8')) as Record<string, any>;
+  masManifest.name = 'med-autoscience';
+  masManifest.interface = {
+    defaultPrompt: 'Use $med-autoscience for MAS work.',
+    composerIcon: './icon.svg',
+  };
+  fs.writeFileSync(masManifestPath, `${JSON.stringify(masManifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', 'icon.svg'),
+    '<svg aria-label="MAS icon"></svg>\n',
+    'utf8',
+  );
+  fs.writeFileSync(
+    masSkillPath,
+    fs.readFileSync(masSkillPath, 'utf8').replace('name: mas', 'name: med-autoscience'),
     'utf8',
   );
 
@@ -414,6 +433,22 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
+    const masPlugin = output.skill_sync.codex_plugin_registry.items.find(
+      (entry: { plugin_id: string }) => entry.plugin_id === 'mas',
+    );
+    assert.ok(masPlugin);
+    const masWrapperPluginPath = path.join(masPlugin.marketplace_root, 'plugins', 'mas');
+    assert.equal(fs.lstatSync(masWrapperPluginPath).isSymbolicLink(), false);
+    const masWrapperManifest = parseJsonText(fs.readFileSync(masPlugin.plugin_manifest_path, 'utf8')) as Record<string, any>;
+    assert.equal(masWrapperManifest.name, 'mas');
+    assert.equal(masWrapperManifest.interface.defaultPrompt, 'Use $mas for MAS work.');
+    assert.equal(masWrapperManifest.interface.composerIcon, './assets/icon.svg');
+    assert.equal(
+      fs.readFileSync(path.join(masWrapperPluginPath, 'skills', 'mas', 'SKILL.md'), 'utf8')
+        .includes('name: mas'),
+      true,
+    );
+    assert.equal(fs.existsSync(path.join(masWrapperPluginPath, 'assets', 'icon.svg')), true);
     const stateDir = process.env.OPL_STATE_DIR
       ? path.resolve(process.env.OPL_STATE_DIR)
       : path.join(homeDir, 'Library', 'Application Support', 'OPL', 'state');
@@ -534,10 +569,11 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
       const registryItem = output.skill_sync.codex_plugin_registry.items.find(
         (entry: { plugin_id: string }) => entry.plugin_id === plugin,
       );
-      assert.equal(
-        fs.realpathSync(path.join(registryItem.marketplace_root, 'plugins', plugin)),
-        fs.realpathSync(path.join(workspaceRoot, project, 'plugins', plugin)),
-      );
+      const wrapperPluginRoot = path.join(registryItem.marketplace_root, 'plugins', plugin);
+      const wrapperManifest = parseJsonText(fs.readFileSync(path.join(wrapperPluginRoot, '.codex-plugin', 'plugin.json'), 'utf8')) as Record<string, any>;
+      const wrapperSkill = fs.readFileSync(path.join(wrapperPluginRoot, 'skills', plugin, 'SKILL.md'), 'utf8');
+      assert.equal(wrapperManifest.name, plugin);
+      assert.match(wrapperSkill, new RegExp(`^name:\\s*${plugin}$`, 'm'));
     }
     const scholarSkillsPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'scholarskills');
     assert.equal(scholarSkillsPack.sync_status, 'skipped');

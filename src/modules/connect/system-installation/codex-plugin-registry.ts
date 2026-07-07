@@ -3,6 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isRecord } from '../../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
 import type { OplModuleId } from './shared.ts';
 
 export type CodexPluginRegistryPackId = OplModuleId | 'scholarskills';
@@ -53,6 +55,7 @@ export type CodexPluginRegistryItem = {
   plugin_manifest_path: string;
   marketplace_root: string;
   marketplace_path: string;
+  marketplace_plugin_path: string;
   status: 'registered' | 'missing_plugin_manifest';
   ownership_kind: CodexFamilyPluginSpec['ownership_kind'];
   distribution_role: CodexFamilyPluginSpec['distribution_role'];
@@ -303,10 +306,134 @@ function defaultRepoPathForSpec(spec: CodexFamilyPluginSpec, codexConfigPath: st
   return path.join(path.dirname(path.dirname(path.dirname(codexConfigPath))), spec.repo_name);
 }
 
-function refreshSourceSymlink(linkPath: string, targetPath: string) {
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+function readJsonRecord(filePath: string): Record<string, unknown> {
+  const parsed = parseJsonText(fs.readFileSync(filePath, 'utf8'));
+  return isRecord(parsed) ? parsed : {};
+}
+
+function copyFileIfPresent(sourcePath: string, targetPath: string) {
+  if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+    return false;
+  }
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.copyFileSync(sourcePath, targetPath);
+  return true;
+}
+
+function replaceSkillFrontmatterName(content: string, name: string) {
+  if (!content.startsWith('---\n')) {
+    return `---\nname: ${name}\n---\n\n${content}`;
+  }
+  const end = content.indexOf('\n---', 4);
+  if (end === -1) {
+    return content;
+  }
+  const frontmatter = content.slice(4, end);
+  const body = content.slice(end);
+  const nextFrontmatter = /^name:\s*.*$/m.test(frontmatter)
+    ? frontmatter.replace(/^name:\s*.*$/m, `name: ${name}`)
+    : `name: ${name}\n${frontmatter}`;
+  return `---\n${nextFrontmatter}${body}`;
+}
+
+function replacePromptSkillName(content: string, oldName: string | null, newName: string) {
+  return oldName && oldName !== newName
+    ? content.split(`$${oldName}`).join(`$${newName}`)
+    : content;
+}
+
+function resolveSourceSkillEntry(pluginSourcePath: string, manifest: Record<string, any>, pluginId: string) {
+  const skillsField = typeof manifest.skills === 'string' && manifest.skills.trim()
+    ? manifest.skills.trim()
+    : './skills/';
+  const skillRoot = path.resolve(pluginSourcePath, skillsField);
+  const manifestName = typeof manifest.name === 'string' && manifest.name.trim()
+    ? manifest.name.trim()
+    : null;
+  const candidates = [
+    path.join(skillRoot, pluginId, 'SKILL.md'),
+    manifestName ? path.join(skillRoot, manifestName, 'SKILL.md') : null,
+  ].filter((candidate): candidate is string => Boolean(candidate));
+  if (fs.existsSync(skillRoot) && fs.statSync(skillRoot).isDirectory()) {
+    for (const entry of fs.readdirSync(skillRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        candidates.push(path.join(skillRoot, entry.name, 'SKILL.md'));
+      }
+    }
+  }
+  return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? candidates[0];
+}
+
+function materializeCanonicalPluginWrapper(
+  spec: LocalCodexPluginMarketplaceSpec,
+  pluginSourcePath: string,
+  linkPath: string,
+) {
+  const sourceManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
+  const sourceManifest = readJsonRecord(sourceManifestPath);
+  const sourceName = typeof sourceManifest.name === 'string' && sourceManifest.name.trim()
+    ? sourceManifest.name.trim()
+    : null;
+  const sourceSkillEntryPath = resolveSourceSkillEntry(pluginSourcePath, sourceManifest, spec.plugin_id);
+  const sourceSkillText = fs.existsSync(sourceSkillEntryPath)
+    ? fs.readFileSync(sourceSkillEntryPath, 'utf8')
+    : `---\nname: ${spec.plugin_id}\ndescription: ${sourceManifest.description ?? spec.display_name}\n---\n\n# ${spec.display_name}\n`;
+
   fs.rmSync(linkPath, { recursive: true, force: true });
-  fs.symlinkSync(targetPath, linkPath, 'dir');
+  fs.mkdirSync(path.join(linkPath, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(linkPath, 'skills', spec.plugin_id), { recursive: true });
+
+  const manifestInterface: Record<string, unknown> = isRecord(sourceManifest.interface)
+    ? { ...sourceManifest.interface }
+    : {};
+  const manifest = {
+    ...sourceManifest,
+    name: spec.plugin_id,
+    skills: './skills/',
+    interface: manifestInterface,
+  };
+  if (manifest.interface.defaultPrompt) {
+    const replacePrompt = (value: unknown) => typeof value === 'string'
+      ? replacePromptSkillName(value, sourceName, spec.plugin_id)
+      : value;
+    manifest.interface.defaultPrompt = Array.isArray(manifest.interface.defaultPrompt)
+      ? manifest.interface.defaultPrompt.map(replacePrompt)
+      : replacePrompt(manifest.interface.defaultPrompt);
+  }
+
+  for (const iconField of ['composerIcon', 'logo']) {
+    const iconRef = manifest.interface[iconField];
+    if (typeof iconRef !== 'string' || !iconRef.startsWith('./')) {
+      continue;
+    }
+    const sourceIconPath = path.resolve(pluginSourcePath, iconRef.slice(2));
+    const targetIconPath = path.join(linkPath, 'assets', path.basename(iconRef));
+    if (copyFileIfPresent(sourceIconPath, targetIconPath)) {
+      manifest.interface[iconField] = `./assets/${path.basename(iconRef)}`;
+    }
+  }
+
+  writeJsonFile(path.join(linkPath, '.codex-plugin', 'plugin.json'), manifest);
+  fs.writeFileSync(
+    path.join(linkPath, 'skills', spec.plugin_id, 'SKILL.md'),
+    replaceSkillFrontmatterName(sourceSkillText, spec.plugin_id),
+    'utf8',
+  );
+
+  const sourceAgentsDir = path.join(path.dirname(sourceSkillEntryPath), 'agents');
+  if (fs.existsSync(sourceAgentsDir) && fs.statSync(sourceAgentsDir).isDirectory()) {
+    const targetAgentsDir = path.join(linkPath, 'skills', spec.plugin_id, 'agents');
+    fs.mkdirSync(targetAgentsDir, { recursive: true });
+    for (const entry of fs.readdirSync(sourceAgentsDir, { withFileTypes: true })) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      const sourceFile = path.join(sourceAgentsDir, entry.name);
+      const targetFile = path.join(targetAgentsDir, entry.name);
+      const text = fs.readFileSync(sourceFile, 'utf8');
+      fs.writeFileSync(targetFile, replacePromptSkillName(text, sourceName, spec.plugin_id), 'utf8');
+    }
+  }
 }
 
 export function materializeLocalCodexPluginMarketplace(
@@ -314,11 +441,11 @@ export function materializeLocalCodexPluginMarketplace(
   pluginSourcePath: string,
   marketplaceRoot: string,
 ): LocalCodexPluginMarketplace {
-  const pluginManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
   const marketplacePath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
   const linkPath = path.join(marketplaceRoot, 'plugins', spec.plugin_id);
+  const pluginManifestPath = path.join(linkPath, '.codex-plugin', 'plugin.json');
 
-  refreshSourceSymlink(linkPath, pluginSourcePath);
+  materializeCanonicalPluginWrapper(spec, pluginSourcePath, linkPath);
   writeJsonFile(marketplacePath, {
     name: spec.marketplace_id,
     interface: {
@@ -412,6 +539,7 @@ export function registerOplFamilyCodexPlugins(
         plugin_manifest_path: pluginManifestPath,
         marketplace_root: path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id),
         marketplace_path: path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id, '.agents', 'plugins', 'marketplace.json'),
+        marketplace_plugin_path: path.join(resolveOplStateDir(home), 'codex-plugin-marketplaces', spec.marketplace_id, 'plugins', spec.plugin_id),
         status: 'missing_plugin_manifest',
         ownership_kind: spec.ownership_kind,
         distribution_role: spec.distribution_role,
@@ -443,6 +571,7 @@ export function registerOplFamilyCodexPlugins(
       plugin_manifest_path: marketplace.plugin_manifest_path,
       marketplace_root: marketplace.marketplace_root,
       marketplace_path: marketplace.marketplace_path,
+      marketplace_plugin_path: marketplace.marketplace_plugin_path,
       status: 'registered',
       ownership_kind: spec.ownership_kind,
       distribution_role: spec.distribution_role,

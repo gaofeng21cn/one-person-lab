@@ -151,6 +151,10 @@ function cloneJsonRecordField(source: Record<string, unknown>, field: string) {
   return structuredClone(value) as Record<string, unknown>;
 }
 
+function readFoundryAgentContractPolicy(field: string) {
+  return cloneJsonRecordField(readFoundryAgentSeriesContract(), field);
+}
+
 function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
   if (spec.distribution_role !== 'domain_agent_plugin_pack') {
     return {
@@ -380,7 +384,8 @@ function validateSkillEntry(spec: SkillPackSpec, skillEntryPath: string, skillEn
   }
 
   const { name, description, body } = readSkillFrontmatter(content);
-  if (name !== spec.canonical_plugin_name) {
+  const allowedSourceNames = new Set([spec.canonical_plugin_name, spec.plugin_name]);
+  if (!allowedSourceNames.has(name)) {
     errors.push(`skill_name_mismatch:${name || '<missing>'}`);
   }
   if (!description) {
@@ -454,6 +459,7 @@ function inspectProfessionalSkillExposure(repoRoot: string): InspectFamilySkillP
     default_codex_exposed_count: 0,
     expected_exposure_layer: 'repo_internal_professional_skill' as const,
     codex_default_exposure_required: false as const,
+    on_demand_exposure_policy: readFoundryAgentContractPolicy('skill_on_demand_exposure_policy'),
   };
 
   if (!capabilityMapFound) {
@@ -580,6 +586,9 @@ function inspectFamilySkillPackAtRepoRoot(
           generated_surface_is_membership_axis: false,
           generated_surface_is_status_axis: false,
         }
+      : null,
+    agent_package_exposure_model: spec.distribution_role === 'domain_agent_plugin_pack'
+      ? readFoundryAgentContractPolicy('agent_package_exposure_unification_policy')
       : null,
     ...seriesProjection,
     capability_plugin_distribution: capabilityPluginDistribution,
