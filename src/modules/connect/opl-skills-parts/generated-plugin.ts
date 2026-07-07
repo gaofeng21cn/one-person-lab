@@ -71,7 +71,7 @@ type GeneratedCodexPluginSpec = {
 };
 
 function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedCodexPluginSpec {
-  if (inspected.canonical_plugin_name === 'opl-bookforge') {
+  if (inspected.canonical_plugin_name === 'obf') {
     return {
       skillDescription: 'Use when Codex should operate OPL Book Forge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
       heading: 'OPL Book Forge',
@@ -128,7 +128,7 @@ function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedC
       ],
       displayName: 'OPL Book Forge',
       shortDescription: 'Book Foundry Agent for storyline-to-manuscript delivery.',
-      defaultPrompt: 'Use $opl-bookforge to shape a book storyline, materialize chapters, plan figures and tables, run style/layout checks, or prepare owner-gated export handoff.',
+      defaultPrompt: 'Use $obf to shape a book storyline, materialize chapters, plan figures and tables, run style/layout checks, or prepare owner-gated export handoff.',
       pluginDescription: 'OPL-generated Codex plugin shell for OPL Book Forge.',
       homepage: 'https://github.com/gaofeng21cn/opl-bookforge',
       repository: 'https://github.com/gaofeng21cn/opl-bookforge',

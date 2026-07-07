@@ -13,6 +13,7 @@ const LOCAL_REF_PREFIXES = ['external_repo:', 'opl-framework:', 'human_doc:', 'r
 function refPath(ref) {
   const value = String(ref ?? '').trim();
   if (!value || LOCAL_REF_PREFIXES.some((prefix) => value.startsWith(prefix))) return null;
+  if (/\s|<|>/.test(value)) return null;
   const withoutAnchor = value.split('#')[0];
   if (!withoutAnchor || withoutAnchor.includes(':')) return null;
   return withoutAnchor;
@@ -107,6 +108,15 @@ function auditRepo(repoDir) {
   const blockers = [];
   const warnings = [];
   const seenIds = new Set();
+  const professionalSkillRoot = path.join(repoDir, 'agent', 'professional_skills');
+  const repoProfessionalSkillRefs = fs.existsSync(professionalSkillRoot)
+    ? fs.readdirSync(professionalSkillRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `agent/professional_skills/${entry.name}/SKILL.md`)
+      .filter((ref) => fs.existsSync(path.join(repoDir, ref)))
+      .sort()
+    : [];
+  const representedProfessionalSkillRefs = new Set();
 
   if (capabilities.length === 0) blockers.push('capability_map_has_no_capabilities');
 
@@ -126,6 +136,25 @@ function auditRepo(repoDir) {
     if (!ownerFor(capability, map)) blockers.push(`${id}:missing_owner`);
 
     const canonicalPaths = pathsFor(capability);
+    if (capabilityKind(capability) === 'professional_skill') {
+      for (const candidate of canonicalPaths) {
+        if (candidate.startsWith('agent/professional_skills/')) {
+          representedProfessionalSkillRefs.add(candidate);
+        }
+      }
+      if (capability.codex_default_exposure !== false) {
+        blockers.push(`${id}:codex_default_exposure_must_be_false`);
+      }
+      if (!Array.isArray(capability.allowed_exposure_scopes) || capability.allowed_exposure_scopes.length === 0) {
+        blockers.push(`${id}:missing_allowed_exposure_scopes`);
+      }
+      if (
+        canonicalPaths.some((candidate) => candidate.startsWith('agent/professional_skills/'))
+        && capability.exposure_layer !== 'repo_internal_professional_skill'
+      ) {
+        blockers.push(`${id}:missing_repo_internal_exposure_layer`);
+      }
+    }
     if (canonicalPaths.length === 0) blockers.push(`${id}:missing_canonical_paths`);
     for (const candidate of canonicalPaths) {
       const localPath = refPath(candidate);
@@ -147,6 +176,12 @@ function auditRepo(repoDir) {
     if (!ownerBoundaryFor(capability, map)) blockers.push(`${id}:missing_owner_closeout_boundary`);
   }
 
+  for (const ref of repoProfessionalSkillRefs) {
+    if (!representedProfessionalSkillRefs.has(ref)) {
+      blockers.push(`missing_professional_skill_capability:${ref}`);
+    }
+  }
+
   const owners = capabilities.map((capability) => ownerFor(capability, map)).filter(Boolean);
   const duplicateOwners = [...new Set(owners.filter((owner, index) => owners.indexOf(owner) !== index))];
   if (duplicateOwners.length > 0) {
@@ -158,6 +193,7 @@ function auditRepo(repoDir) {
     repo_dir: repoDir,
     status: blockers.length === 0 ? 'passed' : 'blocked',
     capability_count: capabilities.length,
+    repo_professional_skill_count: repoProfessionalSkillRefs.length,
     blockers,
     warnings,
   };

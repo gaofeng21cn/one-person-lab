@@ -382,7 +382,7 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     assert.match(config, /\[plugins\."mas@mas-local"\]/);
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
-    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(config, /\[plugins\."oma@oma-local"\]/);
     for (const [project, marketplaceId, pluginId] of [
       ['med-autoscience', 'mas-local', 'mas'],
       ['med-autogrant', 'mag-local', 'mag'],
@@ -402,9 +402,9 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
         homeRoot,
         'opl-state',
         'generated-codex-plugins',
-        'opl-meta-agent-local',
+        'oma-local',
         'plugins',
-        'opl-meta-agent',
+        'oma',
         '.codex-plugin',
         'plugin.json',
       )),

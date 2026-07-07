@@ -99,8 +99,8 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   assert.deepEqual(domainIds, ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'scholarskills']);
   assert.equal(domainIds.includes('meddeepscientist'), false);
   assert.equal(pluginNames.includes('deepscientist'), false);
-  assert.equal(pluginNames.includes('opl-meta-agent'), true);
-  assert.equal(pluginNames.includes('opl-bookforge'), true);
+  assert.equal(pluginNames.includes('oma'), true);
+  assert.equal(pluginNames.includes('obf'), true);
   assert.equal(pluginNames.includes('mas-scholar-skills'), true);
   for (const pack of catalog.packs) {
     const ordinaryOperations = pack.command_surface_spine.ordinary_operations as string[];
@@ -158,6 +158,10 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(agentProjectionPolicy.standard_membership, 'standard_domain_agent');
     assert.equal(agentProjectionPolicy.plugin_transport_is_membership_axis, false);
     assert.equal(agentProjectionPolicy.plugin_transport_is_status_axis, false);
+    assert.equal(pack.management_model, 'opl_managed_codex_plugin_surface');
+    assert.equal(pack.management_model_role, 'unified_management_semantics_transport_may_differ');
+    assert.equal(pack.professional_skill_exposure.codex_default_exposure_required, false);
+    assert.equal(pack.professional_skill_exposure.default_codex_exposed_count, 0);
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
     assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
@@ -168,10 +172,10 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assertOnlyAllowedFoundrySeriesFields(pack);
     assert.equal(pack.plugin_transport.source_kind_role, 'transport_install_detail_not_agent_membership_or_status');
     assert.equal(pack.plugin_transport.public_agent_list_must_not_split_by_transport, true);
-    if (pack.canonical_plugin_name === 'opl-meta-agent') {
+    if (pack.canonical_plugin_name === 'oma') {
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect oma');
-    } else if (pack.canonical_plugin_name === 'opl-bookforge') {
-      assert.equal(pack.foundry_agent_series.brand_cli, 'opl-bookforge');
+    } else if (pack.canonical_plugin_name === 'obf') {
+      assert.equal(pack.foundry_agent_series.brand_cli, 'obf');
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
       assert.equal(pack.command_surface_spine.work_alias, 'book');
     } else if (pack.canonical_plugin_name === 'mas') {
@@ -233,8 +237,8 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
           : moduleId === 'redcube'
             ? 'rca'
             : moduleId === 'oplmetaagent'
-              ? 'opl-meta-agent'
-              : 'opl-bookforge';
+              ? 'oma'
+              : 'obf';
       const pluginRoot = path.join(repoPath, 'plugins', pluginId);
       fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
       fs.writeFileSync(
@@ -280,8 +284,8 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.match(config, /\[plugins\."mas@mas-local"\]/);
     assert.match(config, /\[plugins\."mag@mag-local"\]/);
     assert.match(config, /\[plugins\."rca@rca-local"\]/);
-    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
-    assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
+    assert.match(config, /\[plugins\."oma@oma-local"\]/);
+    assert.match(config, /\[plugins\."obf@obf-local"\]/);
     for (const item of result.items) {
       assert.equal(item.status, 'registered');
       assert.equal(fs.existsSync(item.marketplace_path), true);
