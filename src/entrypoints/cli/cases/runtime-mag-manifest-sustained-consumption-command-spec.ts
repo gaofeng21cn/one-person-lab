@@ -1,8 +1,8 @@
 import {
-  listMagManifestSustainedConsumptionReceipts,
-  recordMagManifestSustainedConsumptionReceipts,
-  verifyMagManifestSustainedConsumptionReceipt,
-  type MagManifestSustainedConsumptionReceiptInput,
+  listOwnerEvidenceSustainedConsumptionReceipts,
+  recordOwnerEvidenceSustainedConsumptionReceipts,
+  verifyOwnerEvidenceSustainedConsumptionReceipt,
+  type OwnerEvidenceSustainedConsumptionReceiptInput,
 } from '../../../modules/ledger/mag-manifest-sustained-consumption-ledger.ts';
 import {
   readJsonObject,
@@ -31,7 +31,7 @@ function parseJsonObject(
 function payloadInput(
   payload: Record<string, unknown>,
   targetIdentity: Record<string, unknown>,
-): MagManifestSustainedConsumptionReceiptInput {
+): OwnerEvidenceSustainedConsumptionReceiptInput {
   return {
     target_identity: targetIdentity,
     source_ref: readOptionalString(payload.source_ref),
@@ -68,7 +68,7 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime mag-manifest-sustained-consumption record requires --payload.',
+          'runtime owner-evidence-sustained-consumption record requires --payload.',
           spec,
           { required_any: ['--payload', '--payload-file'] },
         );
@@ -76,7 +76,7 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
       assertSinglePayloadSource(Boolean(payload), spec);
       payload = parseJsonObject(
         value,
-        'runtime mag-manifest-sustained-consumption record payload must be a JSON object.',
+        'runtime owner-evidence-sustained-consumption record payload must be a JSON object.',
         spec,
       );
       continue;
@@ -85,7 +85,7 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime mag-manifest-sustained-consumption record requires --payload-file.',
+          'runtime owner-evidence-sustained-consumption record requires --payload-file.',
           spec,
           { required_any: ['--payload', '--payload-file'] },
         );
@@ -93,7 +93,7 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
       assertSinglePayloadSource(Boolean(payload), spec);
       payload = parseJsonObject(
         readPayloadFileText(value, spec),
-        'runtime mag-manifest-sustained-consumption record payload must be a JSON object.',
+        'runtime owner-evidence-sustained-consumption record payload must be a JSON object.',
         spec,
       );
       continue;
@@ -102,34 +102,34 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
       const value = args[++index];
       if (!value) {
         throw buildUsageError(
-          'runtime mag-manifest-sustained-consumption record requires --target-identity value.',
+          'runtime owner-evidence-sustained-consumption record requires --target-identity value.',
           spec,
           { option: '--target-identity' },
         );
       }
       targetIdentity = parseJsonObject(
         value,
-        'runtime mag-manifest-sustained-consumption target identity must be a JSON object.',
+        'runtime owner-evidence-sustained-consumption target identity must be a JSON object.',
         spec,
       );
       continue;
     }
     throw buildUsageError(
-      `Unknown option for runtime mag-manifest-sustained-consumption record: ${token}.`,
+      `Unknown option for runtime owner-evidence-sustained-consumption record: ${token}.`,
       spec,
       { option: token },
     );
   }
   if (!payload) {
     throw buildUsageError(
-      'runtime mag-manifest-sustained-consumption record requires --payload or --payload-file.',
+      'runtime owner-evidence-sustained-consumption record requires --payload or --payload-file.',
       spec,
       { required_any: ['--payload', '--payload-file'] },
     );
   }
   if (!targetIdentity) {
     throw buildUsageError(
-      'runtime mag-manifest-sustained-consumption record requires --target-identity.',
+      'runtime owner-evidence-sustained-consumption record requires --target-identity.',
       spec,
       { required: ['--target-identity'] },
     );
@@ -146,7 +146,7 @@ function parseVerifyArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     const token = args[index];
     if (token !== '--receipt-ref') {
       throw buildUsageError(
-        `Unknown option for runtime mag-manifest-sustained-consumption verify: ${token}.`,
+        `Unknown option for runtime owner-evidence-sustained-consumption verify: ${token}.`,
         spec,
         { option: token },
       );
@@ -154,7 +154,7 @@ function parseVerifyArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     const value = args[++index];
     if (!value) {
       throw buildUsageError(
-        'runtime mag-manifest-sustained-consumption verify requires --receipt-ref value.',
+        'runtime owner-evidence-sustained-consumption verify requires --receipt-ref value.',
         spec,
         { option: '--receipt-ref' },
       );
@@ -167,56 +167,56 @@ function parseVerifyArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
 export function buildRuntimeMagManifestSustainedConsumptionCommandSpecs():
 Record<string, CommandSpec> {
   const commandSpecs: Record<string, CommandSpec> = {
-    'runtime mag-manifest-sustained-consumption record': {
+    'runtime owner-evidence-sustained-consumption record': {
       usage:
-        'opl runtime mag-manifest-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
+        'opl runtime owner-evidence-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
       summary:
-        'Record refs-only MAG manifest sustained-consumption followthrough evidence without creating MAG owner receipts or readiness claims.',
+        'Record refs-only owner-evidence sustained-consumption evidence without creating domain owner receipts or readiness claims.',
       examples: [
-        'opl runtime mag-manifest-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
+        'opl runtime owner-evidence-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
       ],
       handler: (args) => {
         const parsed = parseRecordArgs(
           args,
-          commandSpecs['runtime mag-manifest-sustained-consumption record'],
+          commandSpecs['runtime owner-evidence-sustained-consumption record'],
         );
         return {
-          mag_manifest_sustained_consumption_followthrough_ledger_record:
-            recordMagManifestSustainedConsumptionReceipts([parsed.input], {
+          owner_evidence_sustained_consumption_ledger_record:
+            recordOwnerEvidenceSustainedConsumptionReceipts([parsed.input], {
               rawPayloads: [parsed.rawPayload],
             }),
         };
       },
     },
-    'runtime mag-manifest-sustained-consumption verify': {
-      usage: 'opl runtime mag-manifest-sustained-consumption verify [--receipt-ref <ref>]',
+    'runtime owner-evidence-sustained-consumption verify': {
+      usage: 'opl runtime owner-evidence-sustained-consumption verify [--receipt-ref <ref>]',
       summary:
-        'Verify an existing refs-only MAG manifest sustained-consumption followthrough receipt without claiming App sustained consumption or production readiness.',
+        'Verify an existing refs-only owner-evidence sustained-consumption receipt without claiming App sustained consumption or production readiness.',
       examples: [
-        'opl runtime mag-manifest-sustained-consumption verify --receipt-ref opl://mag-manifest-sustained-consumption/medautogrant',
+        'opl runtime owner-evidence-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/medautogrant',
       ],
       handler: (args) => ({
-        mag_manifest_sustained_consumption_followthrough_ledger_verify:
-          verifyMagManifestSustainedConsumptionReceipt(
+        owner_evidence_sustained_consumption_ledger_verify:
+          verifyOwnerEvidenceSustainedConsumptionReceipt(
             parseVerifyArgs(
               args,
-              commandSpecs['runtime mag-manifest-sustained-consumption verify'],
+              commandSpecs['runtime owner-evidence-sustained-consumption verify'],
             ),
           ),
       }),
     },
-    'runtime mag-manifest-sustained-consumption list': {
-      usage: 'opl runtime mag-manifest-sustained-consumption list',
+    'runtime owner-evidence-sustained-consumption list': {
+      usage: 'opl runtime owner-evidence-sustained-consumption list',
       summary:
-        'List refs-only MAG manifest sustained-consumption followthrough receipts in the local OPL state ledger.',
-      examples: ['opl runtime mag-manifest-sustained-consumption list --json'],
+        'List refs-only owner-evidence sustained-consumption receipts in the local OPL state ledger.',
+      examples: ['opl runtime owner-evidence-sustained-consumption list --json'],
       handler: (args) => {
-        assertNoArgs(args, commandSpecs['runtime mag-manifest-sustained-consumption list']);
-        const receipts = listMagManifestSustainedConsumptionReceipts();
+        assertNoArgs(args, commandSpecs['runtime owner-evidence-sustained-consumption list']);
+        const receipts = listOwnerEvidenceSustainedConsumptionReceipts();
         return {
-          mag_manifest_sustained_consumption_followthrough_ledger: {
+          owner_evidence_sustained_consumption_ledger: {
             surface_kind:
-              'opl_mag_manifest_sustained_consumption_followthrough_ledger_projection',
+              'opl_owner_evidence_sustained_consumption_ledger_projection',
             receipt_count: receipts.length,
             recorded_receipt_count:
               receipts.filter((receipt) => receipt.receipt_status === 'recorded').length,
@@ -231,7 +231,6 @@ Record<string, CommandSpec> {
               can_create_owner_receipt: false,
               can_generate_typed_blocker: false,
               can_claim_sustained_app_consumption_complete: false,
-              can_claim_grant_ready: false,
               can_claim_submission_ready: false,
               can_claim_provider_long_soak_complete: false,
               can_claim_production_ready: false,
@@ -240,6 +239,32 @@ Record<string, CommandSpec> {
         };
       },
     },
+  };
+  commandSpecs['runtime mag-manifest-sustained-consumption record'] = {
+    ...commandSpecs['runtime owner-evidence-sustained-consumption record'],
+    usage:
+      'opl runtime mag-manifest-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
+    summary:
+      'Compatibility alias for runtime owner-evidence-sustained-consumption record.',
+    examples: [
+      'opl runtime mag-manifest-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
+    ],
+  };
+  commandSpecs['runtime mag-manifest-sustained-consumption verify'] = {
+    ...commandSpecs['runtime owner-evidence-sustained-consumption verify'],
+    usage: 'opl runtime mag-manifest-sustained-consumption verify [--receipt-ref <ref>]',
+    summary:
+      'Compatibility alias for runtime owner-evidence-sustained-consumption verify.',
+    examples: [
+      'opl runtime mag-manifest-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/medautogrant',
+    ],
+  };
+  commandSpecs['runtime mag-manifest-sustained-consumption list'] = {
+    ...commandSpecs['runtime owner-evidence-sustained-consumption list'],
+    usage: 'opl runtime mag-manifest-sustained-consumption list',
+    summary:
+      'Compatibility alias for runtime owner-evidence-sustained-consumption list.',
+    examples: ['opl runtime mag-manifest-sustained-consumption list --json'],
   };
   return commandSpecs;
 }

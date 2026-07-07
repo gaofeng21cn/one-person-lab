@@ -5,11 +5,11 @@ import {
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
 import {
-  assertMagManifestSustainedConsumptionReceiptInputReady,
-  preflightMagManifestSustainedConsumptionReceiptInput,
-  recordMagManifestSustainedConsumptionReceipts,
-  verifyMagManifestSustainedConsumptionReceipt,
-  type MagManifestSustainedConsumptionReceiptInput,
+  assertOwnerEvidenceSustainedConsumptionReceiptInputReady,
+  preflightOwnerEvidenceSustainedConsumptionReceiptInput,
+  recordOwnerEvidenceSustainedConsumptionReceipts,
+  verifyOwnerEvidenceSustainedConsumptionReceipt,
+  type OwnerEvidenceSustainedConsumptionReceiptInput,
 } from '../../ledger/index.ts';
 
 function stringList(value: unknown) {
@@ -26,10 +26,20 @@ function refsFromPayload(payload: JsonRecord, keys: string[]) {
   return keys.flatMap((key) => stringList(payload[key]));
 }
 
-function magManifestSustainedConsumptionInput(
+const RECORD_ACTION_KINDS = [
+  'owner_evidence_sustained_consumption_receipt_record',
+  'mag_manifest_sustained_consumption_followthrough_receipt_record',
+] as const;
+
+const VERIFY_ACTION_KINDS = [
+  'owner_evidence_sustained_consumption_receipt_verify',
+  'mag_manifest_sustained_consumption_followthrough_receipt_verify',
+] as const;
+
+function ownerEvidenceSustainedConsumptionInput(
   route: JsonRecord,
   payload: JsonRecord,
-): MagManifestSustainedConsumptionReceiptInput {
+): OwnerEvidenceSustainedConsumptionReceiptInput {
   return {
     target_identity: record(route.target_identity),
     source_ref: stringValue(route.evidence_source_ref) ?? stringValue(route.ref),
@@ -71,54 +81,54 @@ export function magManifestSustainedConsumptionExecution(
   options: { dryRun: boolean },
 ) {
   const actionKind = stringValue(route.action_kind);
-  if (actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify') {
+  if (VERIFY_ACTION_KINDS.some((kind) => kind === actionKind)) {
     const receiptRef = stringValue(route.receipt_ref) ?? stringValue(payload.receipt_ref);
     return {
-      executionKind: 'opl_cli_mag_manifest_sustained_consumption_followthrough_apply',
+      executionKind: 'opl_cli_owner_evidence_sustained_consumption_apply',
       runtimeArgs: [
         'runtime',
-        'mag-manifest-sustained-consumption',
+        'owner-evidence-sustained-consumption',
         'verify',
         ...(receiptRef ? ['--receipt-ref', receiptRef] : []),
       ],
       result: options.dryRun
         ? null
         : {
-            mag_manifest_sustained_consumption_followthrough_ledger_verify:
-              verifyMagManifestSustainedConsumptionReceipt({ receipt_ref: receiptRef }),
+            owner_evidence_sustained_consumption_ledger_verify:
+              verifyOwnerEvidenceSustainedConsumptionReceipt({ receipt_ref: receiptRef }),
           },
     };
   }
 
-  if (actionKind !== 'mag_manifest_sustained_consumption_followthrough_receipt_record') {
+  if (!RECORD_ACTION_KINDS.some((kind) => kind === actionKind)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'Unsupported MAG manifest sustained consumption followthrough action kind.',
+      'Unsupported owner-evidence sustained consumption action kind.',
       {
         action_kind: actionKind,
         supported_action_kinds: [
-          'mag_manifest_sustained_consumption_followthrough_receipt_record',
-          'mag_manifest_sustained_consumption_followthrough_receipt_verify',
+          ...RECORD_ACTION_KINDS,
+          ...VERIFY_ACTION_KINDS,
         ],
       },
     );
   }
 
-  const input = magManifestSustainedConsumptionInput(route, payload);
+  const input = ownerEvidenceSustainedConsumptionInput(route, payload);
   const preflight = options.dryRun
-    ? preflightMagManifestSustainedConsumptionReceiptInput(input, payload)
-    : assertMagManifestSustainedConsumptionReceiptInputReady(input, payload);
+    ? preflightOwnerEvidenceSustainedConsumptionReceiptInput(input, payload)
+    : assertOwnerEvidenceSustainedConsumptionReceiptInputReady(input, payload);
   return {
-    executionKind: 'opl_cli_mag_manifest_sustained_consumption_followthrough_apply',
-    runtimeArgs: ['runtime', 'mag-manifest-sustained-consumption', 'record'],
+    executionKind: 'opl_cli_owner_evidence_sustained_consumption_apply',
+    runtimeArgs: ['runtime', 'owner-evidence-sustained-consumption', 'record'],
     result: options.dryRun
       ? {
-          mag_manifest_sustained_consumption_followthrough_payload_preflight: preflight,
+          owner_evidence_sustained_consumption_payload_preflight: preflight,
         }
       : {
-          mag_manifest_sustained_consumption_followthrough_payload_preflight: preflight,
-          mag_manifest_sustained_consumption_followthrough_ledger_record:
-            recordMagManifestSustainedConsumptionReceipts([input], {
+          owner_evidence_sustained_consumption_payload_preflight: preflight,
+          owner_evidence_sustained_consumption_ledger_record:
+            recordOwnerEvidenceSustainedConsumptionReceipts([input], {
               rawPayloads: [payload],
             }),
         },

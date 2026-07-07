@@ -425,6 +425,29 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime domain-owner-payload-summary list --json'],
         group: 'runtime',
       }),
+    'runtime owner-evidence-sustained-consumption record':
+      cloneCommandSpec(commandSpecs['runtime owner-evidence-sustained-consumption record'], {
+        usage:
+          'opl runtime owner-evidence-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
+        examples: [
+          'opl runtime owner-evidence-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
+        ],
+        group: 'runtime',
+      }),
+    'runtime owner-evidence-sustained-consumption verify':
+      cloneCommandSpec(commandSpecs['runtime owner-evidence-sustained-consumption verify'], {
+        usage: 'opl runtime owner-evidence-sustained-consumption verify [--receipt-ref <ref>]',
+        examples: [
+          'opl runtime owner-evidence-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/medautogrant',
+        ],
+        group: 'runtime',
+      }),
+    'runtime owner-evidence-sustained-consumption list':
+      cloneCommandSpec(commandSpecs['runtime owner-evidence-sustained-consumption list'], {
+        usage: 'opl runtime owner-evidence-sustained-consumption list',
+        examples: ['opl runtime owner-evidence-sustained-consumption list --json'],
+        group: 'runtime',
+      }),
     'runtime mag-manifest-sustained-consumption record':
       cloneCommandSpec(commandSpecs['runtime mag-manifest-sustained-consumption record'], {
         usage:

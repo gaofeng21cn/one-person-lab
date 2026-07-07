@@ -491,7 +491,7 @@ test('runtime App operator exposes MAG sustained consumption followthrough as re
   assert.equal(emptyPayloadExecution.payload.error.code, 'cli_usage_error');
   assert.equal(
     emptyPayloadExecution.payload.error.details.error_kind,
-    'mag_manifest_sustained_consumption_followthrough_payload_preflight_blocked',
+    'owner_evidence_sustained_consumption_payload_preflight_blocked',
   );
   const unknownPayloadExecution = runCliFailure([
     'runtime',
@@ -510,7 +510,7 @@ test('runtime App operator exposes MAG sustained consumption followthrough as re
   assert.equal(unknownPayloadExecution.payload.error.code, 'cli_usage_error');
   assert.equal(
     unknownPayloadExecution.payload.error.details.error_kind,
-    'mag_manifest_sustained_consumption_followthrough_payload_unknown_fields',
+    'owner_evidence_sustained_consumption_payload_unknown_fields',
   );
   assert.deepEqual(
     unknownPayloadExecution.payload.error.details.preflight.unknown_payload_fields,
@@ -532,7 +532,7 @@ test('runtime App operator exposes MAG sustained consumption followthrough as re
   ], env).runtime_operator_action_execution;
   assert.equal(
     recordExecution.execution.result
-      .mag_manifest_sustained_consumption_followthrough_ledger_record.status,
+      .owner_evidence_sustained_consumption_ledger_record.status,
     'recorded',
   );
 
@@ -555,14 +555,15 @@ test('runtime App operator exposes MAG sustained consumption followthrough as re
   ], env).runtime_operator_action_execution;
   assert.equal(
     verifyExecution.execution.result
-      .mag_manifest_sustained_consumption_followthrough_ledger_verify.status,
+      .owner_evidence_sustained_consumption_ledger_verify.status,
     'verified',
   );
   const ledger = runCli([
     'runtime',
     'mag-manifest-sustained-consumption',
     'list',
-  ], env).mag_manifest_sustained_consumption_followthrough_ledger;
+  ], env).owner_evidence_sustained_consumption_ledger;
+  assert.equal(ledger.surface_kind, 'opl_owner_evidence_sustained_consumption_ledger_projection');
   assert.equal(ledger.receipt_count, 1);
   assert.equal(ledger.verified_receipt_count, 1);
   assert.equal(ledger.authority_boundary.can_create_owner_receipt, false);
@@ -570,7 +571,6 @@ test('runtime App operator exposes MAG sustained consumption followthrough as re
     ledger.authority_boundary.can_claim_sustained_app_consumption_complete,
     false,
   );
-
   const finalDrilldown = runCli(appOperatorFullCommand, env)
     .app_operator_drilldown;
   assert.equal(

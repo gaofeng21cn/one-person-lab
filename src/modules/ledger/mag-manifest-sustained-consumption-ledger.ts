@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
 import { record, stringList } from '../../kernel/json-record.ts';
@@ -6,8 +7,8 @@ import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 
-export type MagManifestSustainedConsumptionReceipt = {
-  surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_receipt';
+export type OwnerEvidenceSustainedConsumptionReceipt = {
+  surface_kind: 'opl_owner_evidence_sustained_consumption_receipt';
   receipt_ref: string;
   receipt_status: 'recorded' | 'verified';
   recorded_at: string;
@@ -20,12 +21,12 @@ export type MagManifestSustainedConsumptionReceipt = {
   no_forbidden_write_refs: string[];
   long_soak_or_typed_blocker_refs: string[];
   typed_blocker_refs: string[];
-  source_surface: 'opl_mag_manifest_sustained_consumption_followthrough_refs';
+  source_surface: 'opl_owner_evidence_sustained_consumption_refs';
   source_ref: string | null;
   authority_boundary: ReturnType<typeof refsOnlyAuthorityBoundary>;
 };
 
-export type MagManifestSustainedConsumptionReceiptInput = {
+export type OwnerEvidenceSustainedConsumptionReceiptInput = {
   target_identity?: Record<string, unknown>;
   source_ref?: string | null;
   app_operator_consumption_refs?: string[];
@@ -38,15 +39,22 @@ export type MagManifestSustainedConsumptionReceiptInput = {
   receipt_ref?: string | null;
 };
 
-export type MagManifestSustainedConsumptionReceiptVerifyInput = {
+export type OwnerEvidenceSustainedConsumptionReceiptVerifyInput = {
   receipt_ref?: string | null;
 };
 
-type MagManifestSustainedConsumptionLedger = {
-  surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_ledger';
-  version: 'opl-mag-manifest-sustained-consumption-followthrough-ledger.v1';
-  receipts: MagManifestSustainedConsumptionReceipt[];
+type OwnerEvidenceSustainedConsumptionLedger = {
+  surface_kind: 'opl_owner_evidence_sustained_consumption_ledger';
+  version: 'opl-owner-evidence-sustained-consumption-ledger.v1';
+  receipts: OwnerEvidenceSustainedConsumptionReceipt[];
 };
+
+export type MagManifestSustainedConsumptionReceipt =
+  OwnerEvidenceSustainedConsumptionReceipt;
+export type MagManifestSustainedConsumptionReceiptInput =
+  OwnerEvidenceSustainedConsumptionReceiptInput;
+export type MagManifestSustainedConsumptionReceiptVerifyInput =
+  OwnerEvidenceSustainedConsumptionReceiptVerifyInput;
 
 const SUCCESS_REF_FIELDS = [
   'app_operator_consumption_refs',
@@ -130,8 +138,8 @@ function uniqueStrings(values: string[]) {
 
 function refsOnlyAuthorityBoundary() {
   return {
-    opl: 'mag_manifest_sustained_consumption_followthrough_ledger_refs_only',
-    domain: 'med_autogrant_manifest_consumption_payload_authority',
+    opl: 'owner_evidence_sustained_consumption_ledger_refs_only',
+    domain: 'domain_owner_evidence_or_sustained_consumption_authority',
     refs_only: true,
     payload_owner: 'app_operator_or_release_default_caller',
     can_write_domain_truth: false,
@@ -143,7 +151,6 @@ function refsOnlyAuthorityBoundary() {
     can_generate_typed_blocker: false,
     can_submit_operator_payload: false,
     can_claim_sustained_app_consumption_complete: false,
-    can_claim_grant_ready: false,
     can_claim_quality_ready: false,
     can_claim_export_ready: false,
     can_claim_submission_ready: false,
@@ -152,19 +159,23 @@ function refsOnlyAuthorityBoundary() {
   };
 }
 
-function emptyLedger(): MagManifestSustainedConsumptionLedger {
+function emptyLedger(): OwnerEvidenceSustainedConsumptionLedger {
   return {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_ledger',
-    version: 'opl-mag-manifest-sustained-consumption-followthrough-ledger.v1',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_ledger',
+    version: 'opl-owner-evidence-sustained-consumption-ledger.v1',
     receipts: [],
   };
 }
 
 function ledgerPath() {
+  return path.join(resolveOplStatePaths().state_dir, 'owner-evidence-sustained-consumption-ledger.json');
+}
+
+function legacyLedgerPath() {
   return resolveOplStatePaths().mag_manifest_sustained_consumption_ledger_file;
 }
 
-function allEvidenceRefs(input: MagManifestSustainedConsumptionReceiptInput) {
+function allEvidenceRefs(input: OwnerEvidenceSustainedConsumptionReceiptInput) {
   return uniqueStrings([
     ...(input.app_operator_consumption_refs ?? []),
     ...(input.default_caller_consumption_refs ?? []),
@@ -176,11 +187,11 @@ function allEvidenceRefs(input: MagManifestSustainedConsumptionReceiptInput) {
   ]);
 }
 
-function successRefs(input: MagManifestSustainedConsumptionReceiptInput) {
+function successRefs(input: OwnerEvidenceSustainedConsumptionReceiptInput) {
   return SUCCESS_REF_FIELDS.flatMap((field) => input[field] ?? []);
 }
 
-export function magManifestSustainedConsumptionTargetKey(value: unknown) {
+export function ownerEvidenceSustainedConsumptionTargetKey(value: unknown) {
   const target = record(value);
   const explicit = optionalString(target.target_key);
   if (explicit) {
@@ -189,18 +200,18 @@ export function magManifestSustainedConsumptionTargetKey(value: unknown) {
   return [
     optionalString(target.domain_id),
     optionalString(target.source_surface),
-    optionalString(target.workorder_kind) ?? 'manifest_sustained_consumption_followthrough',
+    optionalString(target.workorder_kind) ?? 'owner_evidence_sustained_consumption',
   ].filter(Boolean).join('/');
 }
 
-function receiptRef(input: MagManifestSustainedConsumptionReceiptInput) {
+function receiptRef(input: OwnerEvidenceSustainedConsumptionReceiptInput) {
   const explicitRef = optionalString(input.receipt_ref);
   if (explicitRef) {
     return explicitRef;
   }
-  const targetKey = magManifestSustainedConsumptionTargetKey(input.target_identity);
-  const primaryRef = targetKey || allEvidenceRefs(input)[0] || 'mag-manifest-sustained-consumption';
-  return `opl://mag-manifest-sustained-consumption/${encodeURIComponent(primaryRef)}`;
+  const targetKey = ownerEvidenceSustainedConsumptionTargetKey(input.target_identity);
+  const primaryRef = targetKey || allEvidenceRefs(input)[0] || 'owner-evidence-sustained-consumption';
+  return `opl://owner-evidence/sustained-consumption/${encodeURIComponent(primaryRef)}`;
 }
 
 function looksLikePlaceholderRef(ref: string) {
@@ -233,7 +244,7 @@ function forbiddenPayloadFields(
         ? [{
             path: pathValue,
             forbidden_value: child,
-            reason: 'mag_manifest_sustained_consumption_payload_must_be_body_free',
+            reason: 'owner_evidence_sustained_consumption_payload_must_be_body_free',
           }]
         : []),
       ...(FORBIDDEN_CLAIM_FIELDS.has(normalized) && child === true
@@ -241,7 +252,7 @@ function forbiddenPayloadFields(
             path: pathValue,
             forbidden_value: child,
             reason:
-              'mag_manifest_sustained_consumption_payload_must_not_carry_ready_or_soak_claims',
+              'owner_evidence_sustained_consumption_payload_must_not_carry_ready_or_soak_claims',
           }]
         : []),
       ...forbiddenPayloadFields(child, [...pathParts, key]),
@@ -262,24 +273,27 @@ function unknownTopLevelPayloadFields(value: unknown) {
 
 function normalizeTargetIdentity(value: unknown) {
   const target = record(value);
-  const targetKey = magManifestSustainedConsumptionTargetKey(target);
+  const targetKey = ownerEvidenceSustainedConsumptionTargetKey(target);
   return {
     ...target,
     ...(targetKey ? { target_key: targetKey } : {}),
   };
 }
 
-function normalizeReceipt(value: unknown): MagManifestSustainedConsumptionReceipt | null {
+function normalizeReceipt(value: unknown): OwnerEvidenceSustainedConsumptionReceipt | null {
   const source = record(value);
   const receipt_ref = optionalString(source.receipt_ref);
   if (
     !receipt_ref
-    || source.source_surface !== 'opl_mag_manifest_sustained_consumption_followthrough_refs'
+    || (
+      source.source_surface !== 'opl_owner_evidence_sustained_consumption_refs'
+      && source.source_surface !== 'opl_mag_manifest_sustained_consumption_followthrough_refs'
+    )
   ) {
     return null;
   }
   const receipt = {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_receipt',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_receipt',
     receipt_ref,
     receipt_status: source.receipt_status === 'verified' ? 'verified' : 'recorded',
     recorded_at: optionalString(source.recorded_at) ?? nowIso(),
@@ -300,18 +314,18 @@ function normalizeReceipt(value: unknown): MagManifestSustainedConsumptionReceip
       stringListValue(source.long_soak_or_typed_blocker_refs),
     ),
     typed_blocker_refs: uniqueStrings(stringListValue(source.typed_blocker_refs)),
-    source_surface: 'opl_mag_manifest_sustained_consumption_followthrough_refs',
+    source_surface: 'opl_owner_evidence_sustained_consumption_refs',
     source_ref: optionalString(source.source_ref),
     authority_boundary: refsOnlyAuthorityBoundary(),
-  } satisfies MagManifestSustainedConsumptionReceipt;
+  } satisfies OwnerEvidenceSustainedConsumptionReceipt;
   return allEvidenceRefs(receipt).length > 0 ? receipt : null;
 }
 
-function dedupeCurrentReceipts(receipts: MagManifestSustainedConsumptionReceipt[]) {
+function dedupeCurrentReceipts(receipts: OwnerEvidenceSustainedConsumptionReceipt[]) {
   const seenReceiptRefs = new Set<string>();
   const seenTargetKeys = new Set<string>();
   return receipts.filter((receipt) => {
-    const targetKey = magManifestSustainedConsumptionTargetKey(receipt.target_identity);
+    const targetKey = ownerEvidenceSustainedConsumptionTargetKey(receipt.target_identity);
     if (seenReceiptRefs.has(receipt.receipt_ref) || (targetKey && seenTargetKeys.has(targetKey))) {
       return false;
     }
@@ -323,8 +337,8 @@ function dedupeCurrentReceipts(receipts: MagManifestSustainedConsumptionReceipt[
   });
 }
 
-function readMagManifestSustainedConsumptionLedger(): MagManifestSustainedConsumptionLedger {
-  const file = ledgerPath();
+function readOwnerEvidenceSustainedConsumptionLedger(): OwnerEvidenceSustainedConsumptionLedger {
+  const file = fs.existsSync(ledgerPath()) ? ledgerPath() : legacyLedgerPath();
   if (!fs.existsSync(file)) {
     return emptyLedger();
   }
@@ -338,7 +352,7 @@ function readMagManifestSustainedConsumptionLedger(): MagManifestSustainedConsum
       receipts: dedupeCurrentReceipts(
         parsed.receipts
           .map(normalizeReceipt)
-          .filter((receipt): receipt is MagManifestSustainedConsumptionReceipt =>
+          .filter((receipt): receipt is OwnerEvidenceSustainedConsumptionReceipt =>
             Boolean(receipt)
           ),
       ),
@@ -348,15 +362,15 @@ function readMagManifestSustainedConsumptionLedger(): MagManifestSustainedConsum
   }
 }
 
-function writeMagManifestSustainedConsumptionLedger(
-  ledger: MagManifestSustainedConsumptionLedger,
+function writeOwnerEvidenceSustainedConsumptionLedger(
+  ledger: OwnerEvidenceSustainedConsumptionLedger,
 ) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.mag_manifest_sustained_consumption_ledger_file, ledger);
+  writeJsonPayloadFile(path.join(paths.state_dir, 'owner-evidence-sustained-consumption-ledger.json'), ledger);
 }
 
-export function preflightMagManifestSustainedConsumptionReceiptInput(
-  input: MagManifestSustainedConsumptionReceiptInput,
+export function preflightOwnerEvidenceSustainedConsumptionReceiptInput(
+  input: OwnerEvidenceSustainedConsumptionReceiptInput,
   rawPayload: Record<string, unknown> = {},
 ) {
   const targetIdentity = normalizeTargetIdentity(input.target_identity);
@@ -388,10 +402,10 @@ export function preflightMagManifestSustainedConsumptionReceiptInput(
           ? 'sustained_consumption_refs_path'
           : 'blocked';
   return {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_payload_preflight',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_payload_preflight',
     status: successPathReady || typedBlockerPathReady ? 'ready_to_record' : 'blocked',
     target_identity: targetIdentity,
-    payload_kind: 'manifest_sustained_consumption_refs_or_typed_blocker',
+    payload_kind: 'owner_evidence_sustained_consumption_refs_or_typed_blocker',
     payload_path: payloadPath,
     route_requires_domain_or_app_payload: true,
     required_operator_payload_refs: [
@@ -417,7 +431,6 @@ export function preflightMagManifestSustainedConsumptionReceiptInput(
         requires_long_soak_or_typed_blocker_ref: true,
         typed_blocker_refs_must_be_absent: true,
         closes_app_sustained_consumption: false,
-        closes_grant_ready: false,
         closes_submission_ready: false,
         closes_provider_long_soak: false,
       },
@@ -426,7 +439,6 @@ export function preflightMagManifestSustainedConsumptionReceiptInput(
         required_operator_payload_refs: ['typed_blocker_refs'],
         success_claimed: false,
         closes_app_sustained_consumption: false,
-        closes_grant_ready: false,
         closes_submission_ready: false,
         closes_provider_long_soak: false,
       },
@@ -458,23 +470,23 @@ export function preflightMagManifestSustainedConsumptionReceiptInput(
   };
 }
 
-export function assertMagManifestSustainedConsumptionReceiptInputReady(
-  input: MagManifestSustainedConsumptionReceiptInput,
+export function assertOwnerEvidenceSustainedConsumptionReceiptInputReady(
+  input: OwnerEvidenceSustainedConsumptionReceiptInput,
   rawPayload: Record<string, unknown> = {},
 ) {
-  const preflight = preflightMagManifestSustainedConsumptionReceiptInput(input, rawPayload);
+  const preflight = preflightOwnerEvidenceSustainedConsumptionReceiptInput(input, rawPayload);
   if (preflight.can_record_refs_only_receipt) {
     return preflight;
   }
   throw new FrameworkContractError(
     'cli_usage_error',
-    'MAG manifest sustained consumption followthrough record action requires body-free refs-only evidence.',
+    'Owner-evidence sustained consumption record action requires body-free refs-only evidence.',
     {
       error_kind: preflight.unknown_payload_fields.length > 0
-        ? 'mag_manifest_sustained_consumption_followthrough_payload_unknown_fields'
+        ? 'owner_evidence_sustained_consumption_payload_unknown_fields'
         : preflight.forbidden_payload_fields.length > 0
-        ? 'mag_manifest_sustained_consumption_followthrough_payload_authority_claims_or_body_forbidden'
-        : 'mag_manifest_sustained_consumption_followthrough_payload_preflight_blocked',
+        ? 'owner_evidence_sustained_consumption_payload_authority_claims_or_body_forbidden'
+        : 'owner_evidence_sustained_consumption_payload_preflight_blocked',
       receipt_recorded: false,
       empty_payload_template_is_success_evidence: false,
       preflight,
@@ -483,17 +495,17 @@ export function assertMagManifestSustainedConsumptionReceiptInputReady(
 }
 
 function normalizeInput(
-  input: MagManifestSustainedConsumptionReceiptInput,
+  input: OwnerEvidenceSustainedConsumptionReceiptInput,
   rawPayload: Record<string, unknown> = {},
-): MagManifestSustainedConsumptionReceipt {
-  const preflight = assertMagManifestSustainedConsumptionReceiptInputReady(input, rawPayload);
+): OwnerEvidenceSustainedConsumptionReceipt {
+  const preflight = assertOwnerEvidenceSustainedConsumptionReceiptInputReady(input, rawPayload);
   return {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_receipt',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_receipt',
     receipt_ref: receiptRef(input),
     receipt_status: 'recorded',
     recorded_at: nowIso(),
     target_identity: normalizeTargetIdentity(input.target_identity),
-    payload_path: preflight.payload_path as MagManifestSustainedConsumptionReceipt['payload_path'],
+    payload_path: preflight.payload_path as OwnerEvidenceSustainedConsumptionReceipt['payload_path'],
     app_operator_consumption_refs: uniqueStrings(input.app_operator_consumption_refs ?? []),
     default_caller_consumption_refs: uniqueStrings(input.default_caller_consumption_refs ?? []),
     owner_payload_response_refs: uniqueStrings(input.owner_payload_response_refs ?? []),
@@ -503,27 +515,27 @@ function normalizeInput(
     no_forbidden_write_refs: uniqueStrings(input.no_forbidden_write_refs ?? []),
     long_soak_or_typed_blocker_refs: uniqueStrings(input.long_soak_or_typed_blocker_refs ?? []),
     typed_blocker_refs: uniqueStrings(input.typed_blocker_refs ?? []),
-    source_surface: 'opl_mag_manifest_sustained_consumption_followthrough_refs',
+    source_surface: 'opl_owner_evidence_sustained_consumption_refs',
     source_ref: optionalString(input.source_ref),
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
 
-export function recordMagManifestSustainedConsumptionReceipts(
-  inputs: MagManifestSustainedConsumptionReceiptInput[],
+export function recordOwnerEvidenceSustainedConsumptionReceipts(
+  inputs: OwnerEvidenceSustainedConsumptionReceiptInput[],
   options: { rawPayloads?: Record<string, unknown>[] } = {},
 ) {
   const receipts = inputs.map((input, index) =>
     normalizeInput(input, options.rawPayloads?.[index] ?? {})
   );
-  const ledger = readMagManifestSustainedConsumptionLedger();
+  const ledger = readOwnerEvidenceSustainedConsumptionLedger();
   for (const receipt of receipts) {
-    const receiptTargetKey = magManifestSustainedConsumptionTargetKey(receipt.target_identity);
+    const receiptTargetKey = ownerEvidenceSustainedConsumptionTargetKey(receipt.target_identity);
     const existingIndex = ledger.receipts.findIndex((entry) =>
       entry.receipt_ref === receipt.receipt_ref
       || (
         Boolean(receiptTargetKey)
-        && magManifestSustainedConsumptionTargetKey(entry.target_identity) === receiptTargetKey
+        && ownerEvidenceSustainedConsumptionTargetKey(entry.target_identity) === receiptTargetKey
       )
     );
     if (existingIndex >= 0) {
@@ -533,9 +545,9 @@ export function recordMagManifestSustainedConsumptionReceipts(
     }
   }
   ledger.receipts = dedupeCurrentReceipts(ledger.receipts);
-  writeMagManifestSustainedConsumptionLedger(ledger);
+  writeOwnerEvidenceSustainedConsumptionLedger(ledger);
   return {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_ledger_record',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_ledger_record',
     status: 'recorded',
     recorded_receipt_count: receipts.length,
     receipt_refs: receipts.map((receipt) => receipt.receipt_ref),
@@ -544,10 +556,10 @@ export function recordMagManifestSustainedConsumptionReceipts(
   };
 }
 
-export function verifyMagManifestSustainedConsumptionReceipt(
-  input: MagManifestSustainedConsumptionReceiptVerifyInput = {},
+export function verifyOwnerEvidenceSustainedConsumptionReceipt(
+  input: OwnerEvidenceSustainedConsumptionReceiptVerifyInput = {},
 ) {
-  const ledger = readMagManifestSustainedConsumptionLedger();
+  const ledger = readOwnerEvidenceSustainedConsumptionLedger();
   const requestedReceiptRef = optionalString(input.receipt_ref);
   const receiptIndex = requestedReceiptRef
     ? ledger.receipts.findIndex((receipt) => receipt.receipt_ref === requestedReceiptRef)
@@ -557,15 +569,15 @@ export function verifyMagManifestSustainedConsumptionReceipt(
 
   if (selectedIndex < 0) {
     return {
-      surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_ledger_verify',
+      surface_kind: 'opl_owner_evidence_sustained_consumption_ledger_verify',
       status: 'blocked',
       writes_performed: false,
       receipt_ref: requestedReceiptRef,
       verified_receipt_count: 0,
       ledger_file: ledgerPath(),
       blocker: {
-        blocker_kind: 'mag_manifest_sustained_consumption_followthrough_receipt_gate',
-        blocker_id: 'mag_manifest_sustained_consumption_followthrough_receipt_not_found',
+        blocker_kind: 'owner_evidence_sustained_consumption_receipt_gate',
+        blocker_id: 'owner_evidence_sustained_consumption_receipt_not_found',
         required_owner: 'app_operator_or_release_default_caller',
       },
       authority_boundary: refsOnlyAuthorityBoundary(),
@@ -578,9 +590,9 @@ export function verifyMagManifestSustainedConsumptionReceipt(
     receipt_status: 'verified' as const,
   };
   ledger.receipts[selectedIndex] = verified;
-  writeMagManifestSustainedConsumptionLedger(ledger);
+  writeOwnerEvidenceSustainedConsumptionLedger(ledger);
   return {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_ledger_verify',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_ledger_verify',
     status: 'verified',
     writes_performed: current.receipt_status !== 'verified',
     receipt_ref: verified.receipt_ref,
@@ -591,6 +603,19 @@ export function verifyMagManifestSustainedConsumptionReceipt(
   };
 }
 
-export function listMagManifestSustainedConsumptionReceipts() {
-  return readMagManifestSustainedConsumptionLedger().receipts;
+export function listOwnerEvidenceSustainedConsumptionReceipts() {
+  return readOwnerEvidenceSustainedConsumptionLedger().receipts;
 }
+
+export const magManifestSustainedConsumptionTargetKey =
+  ownerEvidenceSustainedConsumptionTargetKey;
+export const preflightMagManifestSustainedConsumptionReceiptInput =
+  preflightOwnerEvidenceSustainedConsumptionReceiptInput;
+export const assertMagManifestSustainedConsumptionReceiptInputReady =
+  assertOwnerEvidenceSustainedConsumptionReceiptInputReady;
+export const recordMagManifestSustainedConsumptionReceipts =
+  recordOwnerEvidenceSustainedConsumptionReceipts;
+export const verifyMagManifestSustainedConsumptionReceipt =
+  verifyOwnerEvidenceSustainedConsumptionReceipt;
+export const listMagManifestSustainedConsumptionReceipts =
+  listOwnerEvidenceSustainedConsumptionReceipts;
