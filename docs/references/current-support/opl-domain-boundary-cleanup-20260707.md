@@ -25,6 +25,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 | Stagecraft owner-answer projection | MAS publication handoff path 曾硬编码在 lookup。 | Generic owner-answer projection profile 驱动 lookup；MAS publication handoff 只是一个 profile。 |
 | Stagecraft transition ingestion | Visual transition refs 曾是 RCA-only。 | Visual transition adapter profile 控制 ref prefix；RCA 只是默认 compatibility profile。 |
 | Kernel managed shell | Domain clean-runner roots 和 readonly commands 曾是固定内部数组。 | Domain clean-runner profiles 可注入 / 可扩展，同时保留当前 defaults。 |
+| Runway runtime env root | dependency runtime bridge 曾把 `paper_root` / `--paper-root` 写成 substrate 主词汇。 | `artifact_root` / `--artifact-root` 是 canonical root；`paper_root` / `--paper-root` 只作为 compatibility alias 暂留，并由 `root_vocabulary` 明确标注。 |
 | Connect scientific connectors | Provider receipt 容易被误读成 citation truth。 | Scientific / PubMed readback 暴露 ownership boundary 和 no citation / domain truth flags。 |
 | ScholarSkills Pack bridge | OPL contract 容易被误读成 professional Skill source truth。 | Contract、pack readback 和 docs 区分 OPL descriptor / sync / env bridge 与 MAS Scholar Skills professional truth。 |
 
@@ -46,6 +47,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 以下名字可在 active caller 退役前作为 compatibility carrier 暂留：
 
 - `paper_mission/*` route input 和 `paper-autonomy` CLI alias。
+- Runtime env / ScholarSkills runtime bridge 的 `--paper-root` input alias；canonical 命令、contract 和 readback 使用 `--artifact-root` / `artifact_root`。
 - `mag-manifest-sustained-consumption` CLI alias。
 - MAS publication handoff owner-answer profile。
 - RCA visual transition default adapter profile。

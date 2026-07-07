@@ -32,7 +32,9 @@ export interface RuntimeEnvironmentTargetInput {
   profileId?: string;
   platformId?: string;
   sandboxProvider?: 'fast_local_env' | 'local_devcontainer' | 'local_docker' | 'local_managed_root' | 'external_sandbox';
+  artifactRoot?: string;
   paperRoot?: string;
+  rootOption?: '--artifact-root' | '--paper-root';
 }
 
 export const RUNTIME_ENVIRONMENT_FALLBACK_POINTER = 'rollback'; // reuse-first: allow runtime-environment fallback pointer, not updater/package manager.
@@ -49,7 +51,8 @@ export interface RuntimeEnvironmentCachePruneInput {
 export interface RuntimeEnvironmentPrepareInput extends RuntimeEnvironmentTargetInput {
   requirementProfilePath: string;
   requirementProfileId?: string;
-  paperRoot: string;
+  artifactRoot?: string;
+  paperRoot?: string;
   apply?: boolean;
 }
 

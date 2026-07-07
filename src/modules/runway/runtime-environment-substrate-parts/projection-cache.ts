@@ -19,6 +19,7 @@ import {
   readJsonObject,
   readPreparedEnvironmentIndex,
   runtimeEnvironmentStateRoot,
+  runtimeRootVocabulary,
   runtimeRootForBundle,
   stateRef,
   stringList,
@@ -246,7 +247,7 @@ export function cacheInventoryProjection() {
         ...materializedRoots
           .filter((entry) => entry.protected === true)
           .map((entry) => entry.runtime_root),
-        ...preparedEnvironments.map((entry) => entry.paper_root),
+        ...preparedEnvironments.map((entry) => entry.artifact_root ?? entry.paper_root),
       ],
       protected_pointer_refs: pointerRefs,
       current_pointer_ref: pointerRefs.find((entry) => entry.pointer_kind === 'current')?.pointer_ref ?? null,
@@ -372,6 +373,7 @@ export function baseReadback(
     implementation_status: RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.implementation_status,
     target_planned: RUNTIME_ENVIRONMENT_SUBSTRATE_CONTRACT.target_planned,
     sandbox_provider: target.sandbox_provider,
+    root_vocabulary: runtimeRootVocabulary(input),
     default_current_path: fastLocalEnvCurrentPath(),
     standard_tool_handoff: standardToolHandoff(),
     dry_run: true,

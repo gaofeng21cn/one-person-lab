@@ -378,7 +378,7 @@ export function runContextTargetMismatchFields(
 }
 
 export function buildRunContextConsumerPreflight(
-  status: 'bound' | 'missing_run_context' | 'paper_root_not_supplied' | 'target_mismatch',
+  status: 'bound' | 'missing_run_context' | 'artifact_root_not_supplied' | 'target_mismatch',
   targetMismatchFields: string[] = [],
 ) {
   const canConsumeRunContext = status === 'bound';

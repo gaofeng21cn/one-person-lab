@@ -165,6 +165,10 @@ test('opl env aliases expose and consume the Fast Local Env run-context', () => 
     '--apply',
   ], env).runtime_environment;
   assert.equal(prepare.prepare.status, 'prepared');
+  assert.equal(prepare.root_vocabulary.canonical_option, '--artifact-root');
+  assert.equal(prepare.root_vocabulary.input_option, '--paper-root');
+  assert.equal(prepare.root_vocabulary.input_option_status, 'compatibility_alias');
+  assert.equal(prepare.root_vocabulary.artifact_root, path.resolve(paperRoot));
   assert.equal(prepare.run_context.host_package_fallback_allowed, false);
 
   const raw = runCliRaw([
@@ -516,7 +520,7 @@ test('runtime env prepare writes a dependency failure receipt without installing
     'macos-arm64',
     '--requirement-profile',
     profilePath,
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], {
     OPL_STATE_DIR: stateRoot,
@@ -528,8 +532,8 @@ test('runtime env prepare writes a dependency failure receipt without installing
   assert.equal(prepared.prepare.failure_class, 'missing_language_package');
   assert.equal(prepared.prepare.installed_packages, false);
   assert.equal(prepared.prepare.writes_domain_truth, false);
-  assert.equal(prepared.prepare.lock_ref, 'paper/build/dependency_environment_lock.json');
-  assert.equal(prepared.prepare.receipt_ref, 'paper/build/dependency_environment_receipt.json');
+  assert.equal(prepared.prepare.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
+  assert.equal(prepared.prepare.receipt_ref, 'artifact-root/build/dependency_environment_receipt.json');
   assert.equal(prepared.prepare.run_context_ref, null);
   assert.equal(prepared.prepare.binary_paths.Rscript, rscriptPath);
 
@@ -540,12 +544,12 @@ test('runtime env prepare writes a dependency failure receipt without installing
     fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json'), 'utf8'),
   ) as Record<string, any>;
   assert.equal(lock.status, 'missing_language_package');
-  assert.equal(lock.lock_ref, 'paper/build/dependency_environment_lock.json');
+  assert.equal(lock.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
   assert.match(lock.lock_sha256, /^sha256:[a-f0-9]{64}$/);
   assert.deepEqual(lock.required_r_packages, ['jsonlite', 'ggplot2', 'ggsci', 'grid', 'Rtsne', 'uwot']);
   assert.equal(receipt.status, 'missing_language_package');
   assert.equal(receipt.failure_class, 'missing_language_package');
-  assert.equal(receipt.lock_ref, 'paper/build/dependency_environment_lock.json');
+  assert.equal(receipt.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
   assert.equal(receipt.lock_sha256, lock.lock_sha256);
   assert.equal(receipt.run_context_ref, null);
   assert.equal(receipt.authority_boundary.can_authorize_publication_readiness, false);
@@ -566,7 +570,7 @@ test('runtime env prepare writes a dependency failure receipt without installing
     'mas',
     '--profile',
     'display',
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], { OPL_STATE_DIR: stateRoot }).runtime_environment;
   assert.equal(readback.run_context.status, 'missing_run_context');
@@ -611,7 +615,7 @@ test('runtime env prepare treats Python packages as Fast Local Env managed uv re
     'macos-arm64',
     '--requirement-profile',
     profilePath,
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], {
     OPL_STATE_DIR: stateRoot,
@@ -687,7 +691,7 @@ test('runtime env prepare aggregates multi-profile dependency requirements inste
     'macos-arm64',
     '--requirement-profile',
     profilePath,
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], {
     OPL_STATE_DIR: stateRoot,
@@ -766,7 +770,7 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
     profilePath,
     '--requirement-profile-id',
     'r_ggplot2_evidence_subprocess_v1',
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], env).runtime_environment;
   assert.equal(dryRun.prepare.status, 'missing_language_package');
@@ -787,7 +791,7 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
     profilePath,
     '--requirement-profile-id',
     'r_ggplot2_ggconsort_reporting_flow_v1',
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
     '--apply',
   ], env).runtime_environment;
@@ -841,7 +845,7 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
     'display',
     '--platform',
     'macos-arm64',
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], env).runtime_environment;
   assert.equal(readback.run_context.status, 'prepared');
@@ -862,7 +866,7 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
     'display',
     '--platform',
     'macos-arm64',
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], env).runtime_environment;
   assert.equal(mismatchReadback.run_context.status, 'prepared');
@@ -910,7 +914,7 @@ test('runtime env prepare returns a dependency failure without installing missin
     'macos-arm64',
     '--requirement-profile',
     profilePath,
-    '--paper-root',
+    '--artifact-root',
     paperRoot,
   ], {
     OPL_STATE_DIR: stateRoot,
@@ -920,7 +924,7 @@ test('runtime env prepare returns a dependency failure without installing missin
   assert.equal(result.prepare.status, 'missing_language_package');
   assert.equal(result.prepare.failure_class, 'missing_language_package');
   assert.equal(result.prepare.installed_packages, false);
-  assert.equal(result.prepare.lock_ref, 'paper/build/dependency_environment_lock.json');
+  assert.equal(result.prepare.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
   assert.equal(result.prepare.missing_r_packages[0], 'oplDefinitelyMissingPackageForRuntimeEnvTest');
   assert.equal(result.prepare.route_hint, 'opl_runtime_env_doctor');
 
@@ -935,7 +939,7 @@ test('runtime env prepare returns a dependency failure without installing missin
   assert.equal(receipt.status, 'missing_language_package');
   assert.equal(receipt.failure_class, 'missing_language_package');
   assert.equal(receipt.installed_packages, false);
-  assert.equal(receipt.lock_ref, 'paper/build/dependency_environment_lock.json');
+  assert.equal(receipt.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
   assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_run_context.json')), false);
 });
 
@@ -985,7 +989,7 @@ test('runtime env doctor and run-context preserve no-authority boundary', () => 
   );
   assert.equal(runContext.run_context.writes_domain_truth, false);
   assert.equal(runContext.run_context.writes_runtime_root, false);
-  assert.equal(runContext.run_context.consumer_preflight.status, 'paper_root_not_supplied');
+  assert.equal(runContext.run_context.consumer_preflight.status, 'artifact_root_not_supplied');
   assert.equal(runContext.run_context.consumer_preflight.can_consume_run_context, false);
   assert.equal(runContext.run_context.consumer_boundary.host_environment_fallback_allowed, false);
 });

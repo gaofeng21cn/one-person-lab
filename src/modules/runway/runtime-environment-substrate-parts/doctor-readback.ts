@@ -41,7 +41,7 @@ export function buildRuntimeEnvironmentDoctorReadback() {
           severity: 'info',
           code: 'runtime_environment_run_context_consumer_preflight_available',
           message:
-            'Run-context readback fail-closes when paper root, dependency_run_context.json, or target identity is missing or mismatched; consumers must not fall back to host environment packages.',
+            'Run-context readback fail-closes when artifact root, dependency_run_context.json, or target identity is missing or mismatched; consumers must not fall back to host environment packages.',
           can_block_domain_progress: false,
           host_environment_fallback_allowed: false,
           can_claim_provider_ready: false,

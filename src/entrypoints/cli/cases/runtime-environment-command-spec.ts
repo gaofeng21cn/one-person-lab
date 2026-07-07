@@ -57,6 +57,18 @@ function builtInRequirementProfilePath(domainId?: string, profileId?: string) {
   );
 }
 
+function assignRootArg(
+  parsed: RuntimeEnvironmentTargetInput,
+  token: '--artifact-root' | '--paper-root',
+  value: string,
+) {
+  parsed.artifactRoot = value;
+  parsed.rootOption = token;
+  if (token === '--paper-root') {
+    parsed.paperRoot = value;
+  }
+}
+
 function parseTargetArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -110,14 +122,14 @@ function parseTargetArgs(
       parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
       continue;
     }
-    if (token === '--paper-root') {
+    if (token === '--artifact-root' || token === '--paper-root') {
       const value = args[++index];
       if (!value) {
-        throw buildUsageError('runtime env command requires --paper-root value.', spec, {
-          option: '--paper-root',
+        throw buildUsageError(`runtime env command requires ${token} value.`, spec, {
+          option: token,
         });
       }
-      parsed.paperRoot = value;
+      assignRootArg(parsed, token, value);
       continue;
     }
     throw buildUsageError(`Unknown option for runtime env command: ${token}.`, spec, {
@@ -251,14 +263,14 @@ function parsePrepareArgs(
       parsed.requirementProfileId = value;
       continue;
     }
-    if (token === '--paper-root') {
+    if (token === '--artifact-root' || token === '--paper-root') {
       const value = args[++index];
       if (!value) {
-        throw buildUsageError('runtime env prepare requires --paper-root value.', spec, {
-          option: '--paper-root',
+        throw buildUsageError(`runtime env prepare requires ${token} value.`, spec, {
+          option: token,
         });
       }
-      parsed.paperRoot = value;
+      assignRootArg(parsed, token, value);
       continue;
     }
     throw buildUsageError(`Unknown option for runtime env prepare: ${token}.`, spec, {
@@ -267,7 +279,8 @@ function parsePrepareArgs(
   }
   if (options.allowOrdinaryDefaults) {
     parsed.platformId ??= currentPlatformId();
-    parsed.paperRoot ??= process.cwd();
+    parsed.artifactRoot ??= process.cwd();
+    parsed.rootOption ??= '--artifact-root';
     parsed.requirementProfilePath ??= builtInRequirementProfilePath(parsed.domainId, parsed.profileId) ?? undefined;
   }
   const required: Array<keyof RuntimeEnvironmentPrepareInput> = [
@@ -275,11 +288,11 @@ function parsePrepareArgs(
     'profileId',
     'platformId',
     'requirementProfilePath',
-    'paperRoot',
+    'artifactRoot',
   ];
   const missing = required.filter((field) => !parsed[field]);
   if (missing.length > 0) {
-    throw buildUsageError('runtime env prepare requires domain, profile, platform, requirement profile, and paper root.', spec, {
+    throw buildUsageError('runtime env prepare requires domain, profile, platform, requirement profile, and artifact root.', spec, {
       required: missing,
     });
   }
@@ -452,8 +465,8 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         'Operate the default Fast Local Env surface for R/Python dependency execution.',
       examples: [
         'opl env doctor --json',
-        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --paper-root paper --apply --json',
-        'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --artifact-root artifacts --apply --json',
+        'opl env run --domain mas --profile display --artifact-root artifacts -- Rscript render.R',
       ],
       handler: (args) => {
         assertNoArgs(args, commandSpecs.env);
@@ -471,13 +484,13 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'env prepare',
           usage:
-            'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+            'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
           summary:
             'Prepare declared R/Python dependencies into OPL-managed local environments.',
         },
         {
           command: 'env run',
-          usage: 'opl env run --domain <domain> --profile <profile> --paper-root <path> -- <command...>',
+          usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> -- <command...>',
           summary:
             'Run a command with the prepared Fast Local Env run-context; missing or mismatched run-context fails closed.',
         },
@@ -497,11 +510,11 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'env prepare': {
       usage:
-        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+        'opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
       summary:
         'Prepare declared R/Python dependencies into OPL-managed local environments.',
       examples: [
-        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
+        'opl env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentPrepareReadback(
@@ -510,11 +523,11 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       }),
     },
     'env run': {
-      usage: 'opl env run --domain <domain> --profile <profile> --paper-root <path> -- <command...>',
+      usage: 'opl env run --domain <domain> --profile <profile> --artifact-root <path> -- <command...>',
       summary:
         'Run a command with the prepared Fast Local Env run-context; missing or mismatched run-context fails closed.',
       examples: [
-        'opl env run --domain mas --profile display --paper-root paper -- Rscript render.R',
+        'opl env run --domain mas --profile display --artifact-root artifacts -- Rscript render.R',
       ],
       handler: (args) => runCommandWithPreparedEnvironment(args, commandSpecs['env run']),
     },
@@ -526,7 +539,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
       examples: [
         'opl runtime env inspect --domain mas --profile analysis --platform macos-arm64 --json',
         'opl runtime env build --domain mas --profile analysis --platform macos-arm64 --environment-profile external_sandbox --json',
-        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
         'opl runtime env cache status --json',
       ],
       handler: (args) => {
@@ -560,7 +573,7 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
         {
           command: 'runtime env prepare',
           usage:
-            'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+            'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
           summary:
             'Check declared dependency requirements; --apply installs missing packages only into the OPL-managed library.',
         },
@@ -659,11 +672,11 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env prepare': {
       usage:
-        'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+        'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
       summary:
         'Check a dependency requirement profile and write dependency receipt/run-context; --apply installs missing packages only into the OPL-managed library.',
       examples: [
-        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --paper-root paper --apply --json',
+        'opl runtime env prepare --domain mas --profile display --platform macos-arm64 --requirement-profile renderer_dependency_profile.json --requirement-profile-id r_ggplot2_ggconsort_reporting_flow_v1 --artifact-root artifacts --apply --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentPrepareReadback(
@@ -751,12 +764,12 @@ export function buildRuntimeEnvironmentCommandSpecs(): Record<string, CommandSpe
     },
     'runtime env run-context': {
       usage:
-        'opl runtime env run-context --domain <domain> --profile <profile> [--paper-root <path>]',
+        'opl runtime env run-context --domain <domain> --profile <profile> [--artifact-root <path>]',
       summary:
         'Read planned runtime run-context bindings without scheduling a stage or writing domain truth.',
       examples: [
         'opl runtime env run-context --domain bookforge --profile publication_proof --json',
-        'opl runtime env run-context --domain mas --profile display --paper-root paper --json',
+        'opl runtime env run-context --domain mas --profile display --artifact-root artifacts --json',
       ],
       handler: (args) => ({
         runtime_environment: buildRuntimeEnvironmentRunContextReadback(

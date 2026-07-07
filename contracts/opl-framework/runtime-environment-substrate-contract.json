@@ -434,7 +434,16 @@
   },
   "run_context_consumer_policy": {
     "status": "fail_closed_consumer_preflight_available",
-    "requires_paper_root_for_bound_readback": true,
+    "requires_artifact_root_for_bound_readback": true,
+    "compatibility_root_aliases": [
+      {
+        "option": "--paper-root",
+        "field": "paper_root",
+        "status": "compatibility_alias",
+        "canonical_option": "--artifact-root",
+        "canonical_field": "artifact_root"
+      }
+    ],
     "missing_run_context_status": "missing_run_context",
     "target_mismatch_status": "target_mismatch",
     "identity_fields": [
@@ -499,12 +508,12 @@
   ],
   "readback_commands": [
     "opl env doctor",
-    "opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]",
-    "opl env run --domain <domain> --profile <profile> [--paper-root <path>]",
+    "opl env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]",
+    "opl env run --domain <domain> --profile <profile> [--artifact-root <path>]",
     "opl runtime env inspect --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env lock --domain <domain> --profile <profile> --platform <platform>",
     "opl runtime env build --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox]",
-    "opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]",
+    "opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]",
     "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] --dry-run",
     "opl runtime env materialize --domain <domain> --profile <profile> --platform <platform> [--environment-profile fast_local_env|local_docker|external_sandbox] --apply",
     "opl runtime env verify --runtime-root <path>",
@@ -512,7 +521,7 @@
     "opl runtime env cache inventory",
     "opl runtime env cache prune --dry-run",
     "opl runtime env doctor",
-    "opl runtime env run-context --domain <domain> --profile <profile> [--paper-root <path>]"
+    "opl runtime env run-context --domain <domain> --profile <profile> [--artifact-root <path>]"
   ],
   "forbidden_claims": [
     "runtime_cache_hit_means_ready",

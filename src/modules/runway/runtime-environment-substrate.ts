@@ -25,7 +25,9 @@ import {
   profileLockHandoff,
   readJsonObject,
   readPrepareProfile,
-  relativePaperBuildRef,
+  relativeArtifactBuildRef,
+  requiredRuntimeArtifactRoot,
+  runtimeArtifactRoot,
   requirementProfileIdentity,
   receiptsRoot,
   resolveBinary,
@@ -130,6 +132,7 @@ export function buildRuntimeEnvironmentCacheStatusReadback() {
 
 export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironmentPrepareInput) {
   const target = normalizeTarget(input);
+  const artifactRoot = requiredRuntimeArtifactRoot(input);
   const {
     profile,
     selected,
@@ -156,7 +159,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
     ...languageLockHandoff.python.source_refs,
     ...languageLockHandoff.python.project_refs,
   ]);
-  const buildRoot = path.join(path.resolve(input.paperRoot), 'build');
+  const buildRoot = path.join(path.resolve(artifactRoot), 'build');
   fs.mkdirSync(buildRoot, { recursive: true });
 
   const binaryPaths: Record<string, string> = {};
@@ -270,9 +273,9 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       ? 'missing_language_package'
       : 'prepared';
   const failureClass = status === 'prepared' ? '' : status;
-  const lockRef = relativePaperBuildRef('dependency_environment_lock.json');
-  const receiptRef = relativePaperBuildRef('dependency_environment_receipt.json');
-  const runContextRef = relativePaperBuildRef('dependency_run_context.json');
+  const lockRef = relativeArtifactBuildRef('dependency_environment_lock.json');
+  const receiptRef = relativeArtifactBuildRef('dependency_environment_receipt.json');
+  const runContextRef = relativeArtifactBuildRef('dependency_run_context.json');
   const profileIdentity = requirementProfileIdentity(
     input.requirementProfilePath,
     input.requirementProfileId,
@@ -488,7 +491,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       domain_id: target.domain_id,
       profile_id: target.profile_id,
       platform_id: target.platform_id,
-      paper_root: path.resolve(input.paperRoot),
+      artifact_root: path.resolve(artifactRoot),
       lock_ref: lockRef,
       receipt_ref: receiptRef,
       run_context_ref: runContextRef,
@@ -871,8 +874,9 @@ export function buildRuntimeEnvironmentCachePruneReadback(input: RuntimeEnvironm
 export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironmentTargetInput) {
   const target = normalizeTarget(input);
   const bundleManifest = bundleManifestProjection(input);
-  if (input.paperRoot) {
-    const runContextPath = path.join(path.resolve(input.paperRoot), 'build', 'dependency_run_context.json');
+  const artifactRoot = runtimeArtifactRoot(input);
+  if (artifactRoot) {
+    const runContextPath = path.join(path.resolve(artifactRoot), 'build', 'dependency_run_context.json');
     if (fs.existsSync(runContextPath)) {
       const runContext = parseJsonText(fs.readFileSync(runContextPath, 'utf8')) as JsonRecord;
       const targetMismatchFields = runContextTargetMismatchFields(target, runContext);
@@ -900,13 +904,13 @@ export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironm
     return {
       ...baseReadback('run-context', input),
       run_context: {
-          surface_kind: 'opl_runtime_environment_run_context',
-          status: 'missing_run_context',
-          environment_tier: 'fast_local_env',
-          host_binary_allowed: true,
-          host_package_fallback_allowed: false,
-          paper_root: path.resolve(input.paperRoot),
-        run_context_ref: relativePaperBuildRef('dependency_run_context.json'),
+        surface_kind: 'opl_runtime_environment_run_context',
+        status: 'missing_run_context',
+        environment_tier: 'fast_local_env',
+        host_binary_allowed: true,
+        host_package_fallback_allowed: false,
+        artifact_root: path.resolve(artifactRoot),
+        run_context_ref: relativeArtifactBuildRef('dependency_run_context.json'),
         environment_bindings: {},
         runtime_lock_ref: bundleManifest.lock_ref,
         bundle_manifest_ref: bundleManifest.bundle_ref,
@@ -949,7 +953,7 @@ export function buildRuntimeEnvironmentRunContextReadback(input: RuntimeEnvironm
       can_claim_domain_ready: false,
       can_claim_app_release_ready: false,
       consumer_boundary: runtimeEnvironmentConsumerBoundary(),
-      consumer_preflight: buildRunContextConsumerPreflight('paper_root_not_supplied'),
+      consumer_preflight: buildRunContextConsumerPreflight('artifact_root_not_supplied'),
     },
   };
 }

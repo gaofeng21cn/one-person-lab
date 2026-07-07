@@ -279,7 +279,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
 
   const runContextPolicy = contract.run_context_consumer_policy as Json;
   assert.equal(runContextPolicy.status, 'fail_closed_consumer_preflight_available');
-  assert.equal(runContextPolicy.requires_paper_root_for_bound_readback, true);
+  assert.equal(runContextPolicy.requires_artifact_root_for_bound_readback, true);
   assert.equal(runContextPolicy.missing_run_context_status, 'missing_run_context');
   assert.equal(runContextPolicy.target_mismatch_status, 'target_mismatch');
   assert.equal(runContextPolicy.host_environment_fallback_allowed, false);
@@ -341,13 +341,13 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(readbackCommands.some((command) => command.startsWith('opl runtime env build')), true);
   assert.equal(
     readbackCommands.includes(
-      'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --paper-root <path> [--apply]',
+      'opl runtime env prepare --domain <domain> --profile <profile> --platform <platform> --requirement-profile <path> [--requirement-profile-id <id>] --artifact-root <path> [--apply]',
     ),
     true,
   );
   assert.equal(
     readbackCommands.includes(
-      'opl runtime env run-context --domain <domain> --profile <profile> [--paper-root <path>]',
+      'opl runtime env run-context --domain <domain> --profile <profile> [--artifact-root <path>]',
     ),
     true,
   );

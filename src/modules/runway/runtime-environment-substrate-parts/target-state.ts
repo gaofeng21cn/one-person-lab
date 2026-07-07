@@ -57,8 +57,41 @@ export function targetRef(target: ReturnType<typeof normalizeTarget>) {
   return `${target.domain_id}/${target.profile_id}/${target.platform_id}`;
 }
 
-export function relativePaperBuildRef(filename: string) {
-  return `paper/build/${filename}`;
+export function runtimeArtifactRoot(input: RuntimeEnvironmentTargetInput) {
+  return input.artifactRoot ?? input.paperRoot;
+}
+
+export function requiredRuntimeArtifactRoot(input: RuntimeEnvironmentTargetInput) {
+  const root = runtimeArtifactRoot(input);
+  if (!root) {
+    throw new Error('runtime env command requires --artifact-root.');
+  }
+  return root;
+}
+
+export function runtimeRootVocabulary(input: RuntimeEnvironmentTargetInput) {
+  const root = runtimeArtifactRoot(input);
+  const rootOption = input.rootOption ?? (input.paperRoot && !input.artifactRoot ? '--paper-root' : '--artifact-root');
+  return {
+    canonical_option: '--artifact-root',
+    canonical_field: 'artifact_root',
+    artifact_root: root ? path.resolve(root) : null,
+    input_option: root ? rootOption : null,
+    input_option_status: rootOption === '--paper-root' ? 'compatibility_alias' : 'canonical',
+    compatibility_aliases: [
+      {
+        option: '--paper-root',
+        field: 'paper_root',
+        status: 'compatibility_alias',
+        canonical_option: '--artifact-root',
+        canonical_field: 'artifact_root',
+      },
+    ],
+  };
+}
+
+export function relativeArtifactBuildRef(filename: string) {
+  return `artifact-root/build/${filename}`;
 }
 
 export function contentFingerprint(value: unknown) {
@@ -194,7 +227,7 @@ export function writePreparedEnvironmentIndex(entry: JsonRecord) {
   const root = runtimeEnvironmentStateRoot();
   fs.mkdirSync(root, { recursive: true });
   const entries = readPreparedEnvironmentIndex().filter((existing) => (
-    existing.paper_root !== entry.paper_root
+    (existing.artifact_root ?? existing.paper_root) !== entry.artifact_root
       || existing.domain_id !== entry.domain_id
       || existing.profile_id !== entry.profile_id
   ));

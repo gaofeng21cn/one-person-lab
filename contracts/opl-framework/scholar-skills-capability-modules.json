@@ -27,13 +27,13 @@
     "mode": "refs_only",
     "owner": "OPL Framework",
     "dependency_profile_owner_commands": [
-      "opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json"
+      "opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json"
     ],
     "run_context_owner_commands": [
       "opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json"
     ],
     "scholar_skill_prepare_commands": [
-      "opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json"
+      "opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json"
     ],
     "scholar_skill_run_context_commands": [
       "opl scholar-skills run-context --module <module_id> --profile <profile> --json"
@@ -48,10 +48,10 @@
       "opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json"
     ],
     "scholar_skill_runtime_prepare_commands": [
-      "opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json"
+      "opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> [--apply] --json"
     ],
     "scholar_skill_runtime_run_context_commands": [
-      "opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path> --json"
+      "opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --artifact-root <path> --json"
     ],
     "bridge_envelope_policy": {
       "refs_only": true,
@@ -104,7 +104,7 @@
       ],
       "dependency_profile_refs": [
         "runtime_env_dependency_profile:scholarskills_display_v1",
-        "opl runtime env prepare --domain mas-scholar-skills --profile display --platform <platform> --requirement-profile <path> --paper-root <path> --json"
+        "opl runtime env prepare --domain mas-scholar-skills --profile display --platform <platform> --requirement-profile <path> --artifact-root <path> --json"
       ],
       "run_context_refs": [
         "opl runtime env run-context --domain mas-scholar-skills --profile display --json"

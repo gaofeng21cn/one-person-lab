@@ -325,14 +325,14 @@ test('opl scholar-skills interfaces exposes JSON readback and runtime env bridge
   assert.equal(output.cli.canonical_commands.includes('opl capability-pack scholar-skills list --json'), true);
   assert.equal(output.cli.canonical_commands.includes('opl capability-pack scholar-skills validate --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills list --json'), true);
-  assert.equal(output.cli.commands.includes('opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
+  assert.equal(output.cli.commands.includes('opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills run-context --module <module_id> --profile <profile> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --emit-candidate-artifacts --payload-file <path> --json'), true);
   assert.equal(output.cli.commands.includes('opl scholar-skills validate --json'), true);
-  assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json'), true);
+  assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env prepare --domain mas-scholar-skills --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json'), true);
   assert.equal(output.runtime_environment_bridge.commands.includes('opl runtime env run-context --domain mas-scholar-skills --profile <profile> --json'), true);
   assert.equal(output.ownership_boundary.package_descriptor_owner, 'OPL Pack');
   assert.equal(output.ownership_boundary.skill_sync_owner, 'OPL Connect');
@@ -376,7 +376,7 @@ test('opl scholar-skills prepare returns a deterministic refs-only dependency en
         'macos-arm64',
         '--requirement-profile',
         'refs/requirements/display.json',
-        '--paper-root',
+        '--artifact-root',
         paperRoot,
         '--json',
       ],
@@ -388,8 +388,8 @@ test('opl scholar-skills prepare returns a deterministic refs-only dependency en
     assert.equal(output.prepared, false);
     assert.equal(output.can_claim_runtime_ready, false);
     assert.equal(output.can_write_runtime_state, false);
-    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain mas-scholar-skills --profile display --platform macos-arm64 --requirement-profile refs/requirements/display.json --paper-root ${paperRoot} --json`);
-    assert.equal(output.inputs.paper_root_ref, paperRoot);
+    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain mas-scholar-skills --profile display --platform macos-arm64 --requirement-profile refs/requirements/display.json --artifact-root ${paperRoot} --json`);
+    assert.equal(output.inputs.artifact_root_ref, paperRoot);
     assert.equal(output.authority_boundary.can_write_runtime_state, false);
     assert.deepEqual(fs.readdirSync(stateRoot), []);
     assert.deepEqual(fs.readdirSync(paperRoot), []);
@@ -423,7 +423,7 @@ test('opl scholar-skills runtime-prepare invokes OPL runtime env substrate witho
         profilePath,
         '--requirement-profile-id',
         'scholar_display_test_profile',
-        '--paper-root',
+        '--artifact-root',
         paperRoot,
         '--apply',
         '--json',
@@ -440,10 +440,10 @@ test('opl scholar-skills runtime-prepare invokes OPL runtime env substrate witho
     assert.equal(output.runtime_domain_id, 'scholarskills');
     assert.equal(output.apply_requested, true);
     assert.equal(output.requirement_profile_id, 'scholar_display_test_profile');
-    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain mas-scholar-skills --profile display --platform macos-arm64 --requirement-profile ${profilePath} --requirement-profile-id scholar_display_test_profile --paper-root ${paperRoot} --apply --json`);
-    assert.equal(output.dependency_lock_ref, 'paper/build/dependency_environment_lock.json');
-    assert.equal(output.dependency_receipt_ref, 'paper/build/dependency_environment_receipt.json');
-    assert.equal(output.dependency_run_context_ref, 'paper/build/dependency_run_context.json');
+    assert.equal(output.runtime_owner_command, `opl runtime env prepare --domain mas-scholar-skills --profile display --platform macos-arm64 --requirement-profile ${profilePath} --requirement-profile-id scholar_display_test_profile --artifact-root ${paperRoot} --apply --json`);
+    assert.equal(output.dependency_lock_ref, 'artifact-root/build/dependency_environment_lock.json');
+    assert.equal(output.dependency_receipt_ref, 'artifact-root/build/dependency_environment_receipt.json');
+    assert.equal(output.dependency_run_context_ref, 'artifact-root/build/dependency_run_context.json');
     assert.equal(output.consumer_preflight.status, 'bound');
     assert.equal(output.writes.dependency_lock_written, true);
     assert.equal(output.writes.dependency_receipt_written, true);
@@ -490,7 +490,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
         'macos-arm64',
         '--requirement-profile',
         profilePath,
-        '--paper-root',
+        '--artifact-root',
         paperRoot,
         '--apply',
         '--json',
@@ -508,7 +508,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
         'display',
         '--platform',
         'macos-arm64',
-        '--paper-root',
+        '--artifact-root',
         paperRoot,
         '--json',
       ],
@@ -528,7 +528,7 @@ test('opl scholar-skills runtime-run-context reads prepared context and keeps fa
     assert.equal(output.can_claim_app_release_ready, false);
     assert.equal(output.can_sign_owner_receipt, false);
     assert.equal(output.can_create_typed_blocker, false);
-    assert.equal(output.runtime_owner_command, `opl runtime env run-context --domain mas-scholar-skills --profile display --platform macos-arm64 --paper-root ${paperRoot} --json`);
+    assert.equal(output.runtime_owner_command, `opl runtime env run-context --domain mas-scholar-skills --profile display --platform macos-arm64 --artifact-root ${paperRoot} --json`);
     assert.equal(output.runtime_environment.run_context.consumer_preflight.status, 'bound');
     assert.equal(output.runtime_environment.run_context.consumer_boundary.host_environment_fallback_allowed, false);
   } finally {

@@ -39,7 +39,9 @@ type PrepareInput = {
   platform: string;
   requirementProfile: string;
   requirementProfileId?: string;
-  paperRoot: string;
+  artifactRoot: string;
+  paperRoot?: string;
+  rootOption?: '--artifact-root' | '--paper-root';
   apply?: boolean;
 };
 
@@ -47,14 +49,16 @@ type RunContextInput = {
   moduleId: string;
   profile: string;
   platform?: string;
+  artifactRoot?: string;
   paperRoot?: string;
+  rootOption?: '--artifact-root' | '--paper-root';
 };
 
 type RuntimePrepareInput = PrepareInput;
 
 type RuntimeRunContextInput = RunContextInput & {
   platform: string;
-  paperRoot: string;
+  artifactRoot: string;
 };
 
 type InvocationInput = {
@@ -75,7 +79,9 @@ type RuntimeEnvironmentPrepareReadbackBuilder = (input: {
   platformId: string;
   requirementProfilePath: string;
   requirementProfileId?: string;
-  paperRoot: string;
+  artifactRoot?: string;
+  paperRoot?: string;
+  rootOption?: '--artifact-root' | '--paper-root';
   apply?: boolean;
 }) => {
   prepare: {
@@ -94,7 +100,9 @@ type RuntimeEnvironmentRunContextReadbackBuilder = (input: {
   domainId: string;
   profileId: string;
   platformId: string;
-  paperRoot: string;
+  artifactRoot?: string;
+  paperRoot?: string;
+  rootOption?: '--artifact-root' | '--paper-root';
 }) => {
   run_context: {
     status?: string;
@@ -189,21 +197,42 @@ function runtimePrepareCommand(input: PrepareInput) {
     `--platform ${input.platform}`,
     `--requirement-profile ${input.requirementProfile}`,
     ...(input.requirementProfileId ? [`--requirement-profile-id ${input.requirementProfileId}`] : []),
-    `--paper-root ${input.paperRoot}`,
+    `--artifact-root ${input.artifactRoot}`,
     ...(input.apply === true ? ['--apply'] : []),
     '--json',
   ].join(' ');
 }
 
 function runtimeRunContextCommand(input: RunContextInput) {
+  const root = input.artifactRoot ?? input.paperRoot;
   return [
     'opl runtime env run-context',
     '--domain mas-scholar-skills',
     `--profile ${input.profile}`,
     ...(input.platform ? [`--platform ${input.platform}`] : []),
-    ...(input.paperRoot ? [`--paper-root ${input.paperRoot}`] : []),
+    ...(root ? [`--artifact-root ${root}`] : []),
     '--json',
   ].join(' ');
+}
+
+function rootVocabulary(input: { artifactRoot?: string; paperRoot?: string; rootOption?: '--artifact-root' | '--paper-root' }) {
+  const root = input.artifactRoot ?? input.paperRoot;
+  const inputOption = input.rootOption ?? (input.paperRoot && !input.artifactRoot ? '--paper-root' : '--artifact-root');
+  return {
+    canonical_option: '--artifact-root',
+    canonical_field: 'artifact_root_ref',
+    input_option: root ? inputOption : null,
+    input_option_status: inputOption === '--paper-root' ? 'compatibility_alias' : 'canonical',
+    compatibility_aliases: [
+      {
+        option: '--paper-root',
+        field: 'paper_root_ref',
+        status: 'compatibility_alias',
+        canonical_option: '--artifact-root',
+        canonical_field: 'artifact_root_ref',
+      },
+    ],
+  };
 }
 
 function scholarSkillMaterializeCommands(contractRoot: ScholarSkillsCapabilityModulesContract) {
@@ -402,7 +431,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
         canonical_commands: [
           'opl capability-pack scholar-skills list --json',
           'opl capability-pack scholar-skills inspect --module <module_id> --json',
-          'opl capability-pack scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
+          'opl capability-pack scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json',
           'opl capability-pack scholar-skills run-context --module <module_id> --profile <profile> --json',
           'opl capability-pack scholar-skills invoke --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
           'opl capability-pack scholar-skills receipt --module <module_id> --input-ref <ref> --artifact-root <ref> --json',
@@ -414,7 +443,7 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           'opl scholar-skills list --json',
           'opl scholar-skills inspect --module <module_id> --json',
           ...(contractRoot.runtime_environment_bridge.scholar_skill_prepare_commands ?? [
-            'opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> --json',
+            'opl scholar-skills prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> --json',
           ]),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_run_context_commands ?? [
             'opl scholar-skills run-context --module <module_id> --profile <profile> --json',
@@ -427,10 +456,10 @@ export function buildScholarSkillsInterfaces(contracts: FrameworkContracts) {
           ]),
           ...scholarSkillMaterializeCommands(contractRoot),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_prepare_commands ?? [
-            'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --paper-root <path> [--apply] --json',
+            'opl scholar-skills runtime-prepare --module <module_id> --profile <profile> --platform <platform> --requirement-profile <path> --artifact-root <path> [--apply] --json',
           ]),
           ...(contractRoot.runtime_environment_bridge.scholar_skill_runtime_run_context_commands ?? [
-            'opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --paper-root <path> --json',
+            'opl scholar-skills runtime-run-context --module <module_id> --profile <profile> --platform <platform> --artifact-root <path> --json',
           ]),
           'opl scholar-skills interfaces --json',
           'opl scholar-skills validate --json',
@@ -481,7 +510,9 @@ export function buildScholarSkillsRuntimePrepareReadback(
     platformId: input.platform,
     requirementProfilePath: input.requirementProfile,
     requirementProfileId: input.requirementProfileId,
+    artifactRoot: input.artifactRoot,
     paperRoot: input.paperRoot,
+    rootOption: input.rootOption,
     apply: input.apply,
   });
   return {
@@ -533,7 +564,9 @@ export function buildScholarSkillsRuntimeRunContextReadback(
     domainId: 'scholarskills',
     profileId: input.profile,
     platformId: input.platform,
+    artifactRoot: input.artifactRoot,
     paperRoot: input.paperRoot,
+    rootOption: input.rootOption,
   });
   return {
     version: 'g2',
@@ -546,7 +579,8 @@ export function buildScholarSkillsRuntimeRunContextReadback(
       descriptor_ref: moduleContractRef(module),
       runtime_domain_id: 'scholarskills',
       runtime_owner_command: runtimeRunContextCommand(input),
-      paper_root_ref: input.paperRoot,
+      artifact_root_ref: input.artifactRoot ?? input.paperRoot,
+      root_vocabulary: rootVocabulary(input),
       run_context_ref: runtimeEnvironment.run_context.run_context_ref ?? null,
       consumer_preflight: runtimeEnvironment.run_context.consumer_preflight,
       runtime_environment: runtimeEnvironment,
@@ -587,7 +621,8 @@ export function buildScholarSkillsPrepareEnvelope(
       runtime_owner_command: runtimePrepareCommand(input),
       inputs: {
         requirement_profile_ref: input.requirementProfile,
-        paper_root_ref: input.paperRoot,
+        artifact_root_ref: input.artifactRoot,
+        root_vocabulary: rootVocabulary(input),
       },
       cache_policy: {
         can_claim_cache_hit: false,
@@ -595,7 +630,7 @@ export function buildScholarSkillsPrepareEnvelope(
       },
       writes: {
         runtime_state_written: false,
-        paper_root_written: false,
+        artifact_root_written: false,
         artifact_body_written: false,
         owner_receipt_signed: false,
       },
