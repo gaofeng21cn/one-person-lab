@@ -29,8 +29,8 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.equal(output.opl_connect_foundation_skills.status, 'completed');
   assert.equal(output.opl_connect_foundation_skills.manifest_status, 'exposure_manifest');
   assert.equal(output.opl_connect_foundation_skills.manifest_ref, 'plugins/opl-foundation-skills/exposure.json');
-  assert.equal(output.opl_connect_foundation_skills.skill_count, 45);
-  assert.equal(output.opl_connect_foundation_skills.skills.length, 45);
+  assert.equal(output.opl_connect_foundation_skills.skill_count, 47);
+  assert.equal(output.opl_connect_foundation_skills.skills.length, 47);
   const completionAudit = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-completion-audit-writer');
   assert.ok(completionAudit);
   assert.equal(completionAudit.exposure_scope, 'project_local');
@@ -38,6 +38,16 @@ test('connect foundation-skills inspect lists manifest-governed foundation suppo
   assert.deepEqual(completionAudit.allowed_sync_scopes, ['project']);
   assert.equal(typeof completionAudit.activation_gate, 'string');
   assert.equal(completionAudit.activation_gate.length > 0, true);
+  const stageAdmissionReviewer = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-stage-admission-reviewer');
+  assert.ok(stageAdmissionReviewer);
+  assert.equal(stageAdmissionReviewer.exposure_scope, 'project_local');
+  assert.deepEqual(stageAdmissionReviewer.allowed_sync_scopes, ['project']);
+  assert.match(stageAdmissionReviewer.activation_gate, /stage admission review/);
+  const conflictBlockerReviewer = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-conflict-blocker-resolution-reviewer');
+  assert.ok(conflictBlockerReviewer);
+  assert.equal(conflictBlockerReviewer.exposure_scope, 'project_local');
+  assert.deepEqual(conflictBlockerReviewer.allowed_sync_scopes, ['project']);
+  assert.match(conflictBlockerReviewer.activation_gate, /conflict\/blocker review/);
   const externalSpecialistRouter = output.opl_connect_foundation_skills.skills.find((entry) => entry.skill_id === 'opl-external-specialist-skill-router');
   assert.ok(externalSpecialistRouter);
   assert.equal(externalSpecialistRouter.exposure_scope, 'workspace_local');
