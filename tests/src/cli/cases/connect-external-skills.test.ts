@@ -218,7 +218,7 @@ test('connect external-skills sources add registers a pinned source for later di
   }
 });
 
-test('connect external-skills auto-materializes a registered source before search', () => {
+test('connect external-skills auto-materializes a registered source before list and search', () => {
   const sourceRoot = createExternalSkillsFixture();
   const registryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-auto-registry-'));
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kdense-skills-auto-state-'));
@@ -244,6 +244,28 @@ test('connect external-skills auto-materializes a registered source before searc
     };
     assert.equal(registration.opl_connect_external_skills.clone_policy, 'opl_connect_auto_materialized_cache');
     assert.match(registration.opl_connect_external_skills.next_action, /materialize the registered source/);
+
+    const listed = runCli([
+      'connect',
+      'external-skills',
+      'list',
+      '--registry-root',
+      registryRoot,
+    ], { OPL_STATE_DIR: stateRoot }) as {
+      opl_connect_external_skills: {
+        status: string;
+        sources: Array<{ source_root: string; skill_count: number }>;
+        skills: Array<{ skill_id: string }>;
+      };
+    };
+
+    assert.equal(listed.opl_connect_external_skills.status, 'available');
+    assert.notEqual(listed.opl_connect_external_skills.sources[0].source_root, sourceRoot);
+    assert.equal(listed.opl_connect_external_skills.sources[0].skill_count, 2);
+    assert.deepEqual(
+      listed.opl_connect_external_skills.skills.map((entry) => entry.skill_id),
+      ['scanpy', 'scientific-writing'],
+    );
 
     const output = runCli([
       'connect',

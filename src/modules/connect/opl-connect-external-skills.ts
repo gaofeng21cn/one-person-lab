@@ -648,8 +648,8 @@ function syncTargetRoot(input: ExternalSkillSyncInput) {
 }
 
 export function runOplConnectExternalSkillsList(input: ExternalSkillInput = {}) {
-  const source = resolveSource(input);
-  const cards = source.status === 'available' && source.source_root ? listSkillCards(source.source_root) : [];
+  const source = requireAvailableSource(input);
+  const cards = listSkillCards(source.source_root!);
   return {
     version: 'g2',
     opl_connect_external_skills: {

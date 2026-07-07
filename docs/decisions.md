@@ -236,7 +236,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl connect external-skills sources add|list|search|inspect|sync --json` 成为外部科学 Skill 库的通用登记、发现和选择性同步面。
-- 当前支持的外部 source 是 `kdense-scientific-agent-skills`。Source registry 记录 repo、pin 和可选本地 checkout 路径；本地路径也可以通过 `--source-root` 或 `OPL_CONNECT_KDENSE_SCIENTIFIC_AGENT_SKILLS_ROOT` 提供。
+- 当前支持的外部 source 是 `kdense-scientific-agent-skills`。Source registry 记录 repo、pin 和可选本地 checkout 路径；本地路径也可以通过 `--source-root` 或 `OPL_CONNECT_KDENSE_SCIENTIFIC_AGENT_SKILLS_ROOT` 提供。缺少本地 source 时，OPL Connect 按登记的 repo/ref 自动 materialize tarball 到 OPL state cache，再从 cache 读取 `skills/`。
 - 默认策略是 `selective_sync_only`：只把一个被选中的 skill 同步到 workspace/quest 的 `.codex/skills/<skill-id>/`，并生成 `.opl-install-receipt.json`。
 - 触发方式必须明确：用户显式命名工具/数据库/工作流、MAS 核心专业 Skill route-back、stage prompt 判断默认八技不能覆盖，或任务需要联网、云计算、敏感数据与环境策略。
 - OPL Connect 只负责发现、读取、同步和 receipt；不写 MAS paper truth、不签 owner receipt、不创建 typed blocker / human gate，也不声明 domain-ready、publication-ready 或 production-ready。

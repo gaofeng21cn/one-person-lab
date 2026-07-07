@@ -33,7 +33,7 @@ opl connect external-skills sync --skill kdense/scanpy --scope workspace --targe
 ```
 
 该 registry 记录 source id、repo、pin 和可选本地 checkout 路径。普通用户不需要
-知道、clone 或安装 K-Dense repo；`search`、`inspect` 和 `sync` 在 source 缺失时
+知道、clone 或安装 K-Dense repo；`list`、`search`、`inspect` 和 `sync` 在 source 缺失时
 会按登记的 repo/pin materialize 到 OPL state cache。`--source-root` 只作为维护者
 调试、离线复核或私有 checkout 覆盖入口，不是普通使用路径。
 
