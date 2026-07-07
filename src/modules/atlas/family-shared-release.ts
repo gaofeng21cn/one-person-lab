@@ -67,7 +67,7 @@ function unique(values: string[]) {
 }
 
 function cloneJsonPayload<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 export function resolveCanonicalRepoRoot({ repoRoot = process.cwd() }: { repoRoot?: string } = {}) {
