@@ -3,8 +3,10 @@ import crypto from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { pathToFileURL } from 'node:url';
 
-import { assert, fs, os, path, runCli, runCliAsync, runCliFailure, test } from '../../helpers.ts';
+import { assert, fs, os, path, repoRoot, runCli, runCliAsync, runCliFailure, test } from '../../helpers.ts';
 import { formatJsonPayload, parseJsonText } from '../../../../../src/kernel/json-file.ts';
+
+export { repoRoot };
 
 export function createPluginSourceFixture(input: { includeRequiredSkill?: boolean } = {}) {
   const pluginSourcePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-plugin-source-'));
@@ -89,12 +91,14 @@ export function agentPackageManifest(input: {
   distributionPayload?: Record<string, unknown> | null;
 } = {}) {
   return {
+    surface_kind: 'opl_agent_package_manifest.v1',
     package_id: input.packageId ?? 'third.party.research',
     agent_id: input.agentId ?? 'third-party-research',
     display_name: 'Third Party Research',
     publisher: 'example-org',
     version: '1.2.3',
     source: 'third_party',
+    carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
     codex_surface: {
       plugin_ids: ['third-party-research'],
       required_skill_ids: ['third-party-research'],
@@ -102,6 +106,7 @@ export function agentPackageManifest(input: {
       ...(input.pluginSourcePath ? { plugin_source_path: input.pluginSourcePath } : {}),
       ...(input.pluginPayloadManifestUrl ? { plugin_payload_manifest_url: input.pluginPayloadManifestUrl } : {}),
     },
+    capability_dependencies: [],
     skill_packs: [
       {
         id: 'third-party-research-required-skills',

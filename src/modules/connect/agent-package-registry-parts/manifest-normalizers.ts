@@ -53,11 +53,6 @@ function normalizeDistributionPayload(value: unknown): AgentPackageDistributionP
     });
   }
   const requiredSkillPackLockRefs = stringList(value.required_skill_pack_lock_refs);
-  if (requiredSkillPackLockRefs.length === 0) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package distribution payload must lock required skill packs.', {
-      failure_code: 'agent_package_required_skill_pack_lock_missing',
-    });
-  }
   return {
     payload_kind: assertStringValue(value.payload_kind, 'distribution_payload.payload_kind'),
     payload_ref: assertStringValue(value.payload_ref, 'distribution_payload.payload_ref'),
@@ -214,27 +209,49 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
       failure_code: 'invalid_package_manifest',
     });
   }
-  if (!isRecord(payload.codex_surface) || !isRecord(payload.health_check)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest codex_surface and health_check must be JSON objects.', {
+  if (payload.surface_kind !== 'opl_agent_package_manifest.v1') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest surface_kind must be opl_agent_package_manifest.v1.', {
       manifest_url: manifestUrl,
       failure_code: 'invalid_package_manifest',
     });
   }
-  const skillPacks = recordList(payload.skill_packs);
-  const entrypoints = recordList(payload.entrypoints);
-  if (!Array.isArray(payload.skill_packs) || skillPacks.length !== payload.skill_packs.length) {
+  if (payload.carrier_source_role !== 'codex_plugin_default_carrier_not_package_truth') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest carrier_source_role must keep Codex plugin as carrier, not package truth.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_package_manifest',
+    });
+  }
+  if (!Array.isArray(payload.capability_dependencies)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest capability_dependencies must be an array.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_package_manifest',
+    });
+  }
+  const healthCheck = isRecord(payload.health_check) ? payload.health_check : {};
+  if (!isRecord(payload.codex_surface)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest codex_surface must be a JSON object.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_package_manifest',
+    });
+  }
+  const rawSkillPacks = payload.skill_packs ?? [];
+  const rawEntrypoints = payload.entrypoints ?? [];
+  const rawPermissions = payload.permissions ?? [];
+  const skillPacks = recordList(rawSkillPacks);
+  const entrypoints = recordList(rawEntrypoints);
+  if (!Array.isArray(rawSkillPacks) || skillPacks.length !== rawSkillPacks.length) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest skill_packs must be an array of objects.', {
       manifest_url: manifestUrl,
       failure_code: 'invalid_package_manifest',
     });
   }
-  if (!Array.isArray(payload.entrypoints) || entrypoints.length !== payload.entrypoints.length) {
+  if (!Array.isArray(rawEntrypoints) || entrypoints.length !== rawEntrypoints.length) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest entrypoints must be an array of objects.', {
       manifest_url: manifestUrl,
       failure_code: 'invalid_package_manifest',
     });
   }
-  if (!Array.isArray(payload.permissions)) {
+  if (!Array.isArray(rawPermissions)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest permissions must be an array.', {
       manifest_url: manifestUrl,
       failure_code: 'invalid_package_manifest',
@@ -247,7 +264,9 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
       failure_code: 'invalid_package_manifest',
     });
   }
-  const pluginId = stringList(payload.codex_surface.plugin_ids)[0] ?? null;
+  const pluginId = stringValue(payload.codex_surface.plugin_id)
+    ?? stringList(payload.codex_surface.plugin_ids)[0]
+    ?? null;
   const pluginSourcePath = stringValue(payload.codex_surface.plugin_source_path)
     ?? stringValue(payload.codex_surface.local_plugin_source_path)
     ?? stringValue(payload.codex_surface.plugin_root);
@@ -270,11 +289,11 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     codex_surface: payload.codex_surface,
     skill_packs: skillPacks,
     entrypoints,
-    health_check: payload.health_check,
-    permissions: payload.permissions,
+    health_check: healthCheck,
+    permissions: rawPermissions,
     distribution_payload: distributionPayload,
-    update_channel: stringValue(payload.update_channel)!,
-    rollback_ref: stringValue(payload.rollback_ref)!,
+    update_channel: stringValue(payload.update_channel) ?? 'manifest_url',
+    rollback_ref: stringValue(payload.rollback_ref) ?? `rollback-ref:${canonicalAgentPackageId(payload.package_id)!}/unavailable`,
     codex_visible_entry: codexVisibleEntry,
     required_skill_ids: requiredSkillIds,
     optional_skill_refs: uniqueStrings([

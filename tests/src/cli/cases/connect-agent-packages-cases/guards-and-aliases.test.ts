@@ -9,6 +9,7 @@ import {
   parseJsonText,
   path,
   pathToFileURL,
+  repoRoot,
   registryPayload,
   runCli,
   runCliAsync,
@@ -192,6 +193,42 @@ test('connect agent-packages rejects invalid manifests before writing locks', ()
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
+test('connect agent-packages validates first-party agent package manifest shape', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-first-party-manifest-state-'));
+  try {
+    const manifestPath = path.join(repoRoot, 'contracts', 'opl-framework', 'agent-packages', 'oma.json');
+    const validation = runCli([
+      'connect',
+      'agent-packages',
+      'validate-manifest',
+      '--manifest-url',
+      pathToFileURL(manifestPath).href,
+      '--trust-tier',
+      'first_party',
+      '--source-kind',
+      'local_file',
+    ], { OPL_STATE_DIR: stateDir }) as {
+      opl_agent_package_manifest: {
+        status: string;
+        package_id: string;
+        codex_visible_entry: string;
+        bundled_required_skill_ids: string[];
+        distribution_payload: { required_skill_pack_lock_refs: string[] };
+        rollback_ref: string;
+      };
+    };
+
+    assert.equal(validation.opl_agent_package_manifest.status, 'valid');
+    assert.equal(validation.opl_agent_package_manifest.package_id, 'opl-meta-agent');
+    assert.equal(validation.opl_agent_package_manifest.codex_visible_entry, 'opl-meta-agent');
+    assert.deepEqual(validation.opl_agent_package_manifest.bundled_required_skill_ids, ['opl-meta-agent']);
+    assert.deepEqual(validation.opl_agent_package_manifest.distribution_payload.required_skill_pack_lock_refs, []);
+    assert.equal(validation.opl_agent_package_manifest.rollback_ref, 'rollback-ref:opl-meta-agent/unavailable');
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
   }
 });
 

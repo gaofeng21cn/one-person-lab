@@ -9,19 +9,17 @@ export const REGISTRY_REQUIRED_FIELDS = [
 ] as const;
 
 export const MANIFEST_REQUIRED_FIELDS = [
+  'surface_kind',
   'package_id',
   'agent_id',
   'display_name',
   'publisher',
   'version',
   'source',
+  'carrier_source_role',
   'codex_surface',
-  'skill_packs',
-  'entrypoints',
-  'health_check',
-  'permissions',
-  'update_channel',
-  'rollback_ref',
+  'distribution_payload',
+  'capability_dependencies',
 ] as const;
 
 export const FORBIDDEN_AGENT_PACKAGE_FIELDS = [
