@@ -5,10 +5,55 @@
   "generated_markdown": "docs/site/latest/whitepapers/opl-whitepaper.md",
   "generated_html": "docs/site/latest/whitepapers/opl-whitepaper.html",
   "generated_pdf": "docs/site/latest/whitepapers/opl-whitepaper.pdf",
-  "pdf_write_status": "updated_pdf",
   "temp_markdown": "tmp/pdfs/opl-whitepaper/opl-whitepaper.pandoc.md",
   "rendered_dir": "tmp/pdfs/opl-whitepaper/rendered",
   "rendered_pages": 11,
+  "rendered_page_hashes": [
+    {
+      "page": "page-01.png",
+      "sha1": "6b65e985520eda54fc3b96321cbb6e5e5c15ca15"
+    },
+    {
+      "page": "page-02.png",
+      "sha1": "4222e753f57d6204921bae2b8a75008081d488e4"
+    },
+    {
+      "page": "page-03.png",
+      "sha1": "9e2a7538c3fca184ea3c2846cab8669ac741869b"
+    },
+    {
+      "page": "page-04.png",
+      "sha1": "cdd13fd89bf230597ec8fc39167449f0d9f520c1"
+    },
+    {
+      "page": "page-05.png",
+      "sha1": "57ea3f5f8918f5dfda9708270f92677762893be8"
+    },
+    {
+      "page": "page-06.png",
+      "sha1": "1185e2437958366c5c8bc53176aa82a28323e9f4"
+    },
+    {
+      "page": "page-07.png",
+      "sha1": "889ec943674376f58f4f3a84a66b93d2b2cac42d"
+    },
+    {
+      "page": "page-08.png",
+      "sha1": "5580172d4558e958b98350b1d6bff75070e4ef5e"
+    },
+    {
+      "page": "page-09.png",
+      "sha1": "6c3d40f73d0fd2750e601b94188335dcefe9eb8d"
+    },
+    {
+      "page": "page-10.png",
+      "sha1": "edcb84c09517f69edcf256ca16dd25fe82076c43"
+    },
+    {
+      "page": "page-11.png",
+      "sha1": "355edc12069bb7f64bb031c3bbda3cb49d844b2f"
+    }
+  ],
   "pdf_pages": 11,
   "pdf_page_size_pts": {
     "width": 612,
@@ -33,11 +78,12 @@
     "结语"
   ],
   "required_terms_status": "present",
+  "style_profile": "opl-whitepaper-pandoc-xelatex-v1",
   "tools": {
     "pandoc": "/opt/homebrew/bin/pandoc",
     "xelatex": "/opt/homebrew/bin/xelatex",
-    "pdftoppm": "/opt/homebrew/bin/pdftoppm",
     "pdfinfo": "/opt/homebrew/bin/pdfinfo",
+    "pdftoppm": "/opt/homebrew/bin/pdftoppm",
     "pdftotext": "/opt/homebrew/bin/pdftotext"
   },
   "references": []

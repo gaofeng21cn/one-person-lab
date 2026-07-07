@@ -69,6 +69,7 @@
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs",
     "capability-map:audit": "node ./scripts/capability-map-audit.mjs",
     "docs:whitepaper": "node --experimental-strip-types ./scripts/build-opl-whitepaper.ts",
+    "docs:whitepapers:family": "bash ./scripts/build-opl-family-whitepapers.sh",
     "docs:latest": "npm run docs:whitepaper",
     "docs:publish": "bash scripts/publish-docs-latest.sh",
     "repo:hygiene": "scripts/repo-hygiene.sh",
