@@ -23,6 +23,12 @@ This skill must not:
 
 No-authority language: no owner receipts, no typed blockers, no domain truth, no runtime truth, no memory or artifact authority, no readiness claims.
 
+## AI-first / Contract-light Semantics
+
+- Use lifecycle modules only for memory/artifact refs, retention state, storage/archive pointers, cleanup refs, recovery, and verification.
+- Keep elastic lifecycle judgment in this Skill: separate body authority from refs-only notes, classify owner-consumption gaps, and draft route-back.
+- If lifecycle evidence is incomplete, name the missing ref or owner action instead of mutating artifact, memory, or local-data truth.
+
 ## Workflow
 
 1. Identify the memory or artifact lifecycle claim and its owner surface.

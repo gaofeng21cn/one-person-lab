@@ -15,6 +15,12 @@ Use this skill to choose a refs-only route through OPL Atlas catalogs. Keep the 
 - Do not write or sign owner receipts, typed blockers, domain truth, artifact authority, runtime queues, quality verdicts, or readiness claims.
 - Do not treat a catalog match, lifecycle entry, refs graph edge, connector descriptor, tool-card, or route packet as owner acceptance, runtime ready, domain ready, release ready, or artifact authority.
 
+## AI-first / Contract-light Semantics
+
+- Use Atlas catalogs, indexes, and refs graphs only for identity, capability kind, graph edges, lifecycle state, recovery, and verification.
+- Keep elastic routing judgment in this Skill: choose likely owner/source/Skill/tool-card refs, diagnose ambiguity, reject noisy alternatives, and shape route packets.
+- If catalog signals conflict, preserve ambiguity and route to the catalog owner instead of manufacturing a canonical answer.
+
 ## Workflow / Checklist
 
 1. Classify the request as `owner_route`, `source_route`, `skill_route`, `connector_route`, `tool_card_route`, `capability_route`, `ambiguity_diagnosis`, or `refs_only_packet`.

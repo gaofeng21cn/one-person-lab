@@ -14,6 +14,12 @@ Use this skill to explain whether a body-free stage-pack source spec and replay 
 - Do not execute replay, re-query AI/human/external outcomes, write ledgers, sign owner receipts, create typed blockers, mutate source specs, mutate artifacts, or declare readiness.
 - A review recommendation is not replay certification, owner acceptance, domain readiness, production readiness, or stage admission.
 
+## AI-first / Contract-light Semantics
+
+- Use source-spec and replay modules only for hashes, refs, event indexes, receipt pointers, recovery, and verification.
+- Keep elastic replay review in this Skill: interpret source diffs, replay blockers, missing receipt workorders, owner routes, and route-back wording.
+- If replay evidence is incomplete, name the missing runtime event or receipt ref instead of asking contracts to recompute outcomes.
+
 ## Inputs
 
 - `opl_family_stage_pack_source_spec` refs.

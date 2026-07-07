@@ -14,6 +14,12 @@ Use this skill to turn `family-stage-assumption-lifecycle` projections into an A
 - Do not execute stages, mutate lifecycle projections, write domain truth, sign owner receipts, create typed blockers, authorize quality verdicts, mutate artifacts, or declare readiness.
 - A lifecycle review is not an assumption status update, owner acceptance, domain ready claim, runtime ready claim, quality verdict, or production ready claim.
 
+## AI-first / Contract-light Semantics
+
+- Use projections and modules only for assumption identity, owner refs, monitor refs, lifecycle counts, recovery, and verification.
+- Keep elastic review in this Skill: explain why the assumption matters, what stage path it affects, who owns repair, and what route-back clears it.
+- If the projection is too thin, name the missing ref or owner route instead of turning assumption meaning into a deterministic module.
+
 ## Inputs
 
 - `opl_family_stage_assumption_lifecycle` projection refs.

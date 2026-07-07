@@ -14,6 +14,12 @@ Use this skill to critique an OPL stage quality gate, admission projection, or g
 - Do not sign `owner receipts`, create `typed blockers`, issue quality verdicts, mutate ledgers, or declare `readiness`.
 - A gate critique is not a passed gate, failed gate, owner acceptance, promotion approval, runtime readiness, or domain readiness.
 
+## AI-first / Contract-light Semantics
+
+- Use contracts and modules only as light guardrails for gate identity, refs, receipts, recovery, and verification.
+- Keep elastic gate critique in this Skill: judge evidence fit, rubric quality, evaluator overclaim, owner route, and route-back wording.
+- If a deterministic surface lacks the needed ref, report the missing proof or owner route instead of hardening a new contract rule.
+
 ## Workflow
 
 1. Identify the stage, admission projection when present, gate objective, expected outputs, evaluator refs, evidence refs, trust lane, owner route, and forbidden authority surfaces.

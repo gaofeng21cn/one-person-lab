@@ -14,6 +14,12 @@ Use this skill to review `stage_candidate_portfolio` read models and projection 
 - Do not read or reconstruct candidate bodies, write domain truth, accept or reject candidates, rank candidates as truth, sign owner receipts, create typed blockers, mutate artifacts, or declare domain/source/publication/runtime readiness.
 - A stage candidate portfolio review is not a hypothesis quality verdict, research novelty verdict, owner acceptance, human-gate decision, stage admission, or production readiness claim.
 
+## AI-first / Contract-light Semantics
+
+- Use portfolio schemas, indexes, and modules only for candidate identity, body-free refs, owner routes, receipts, recovery, and verification.
+- Keep elastic portfolio review in this Skill: judge ref coverage, advisory metric restraint, negative-path preservation, human-review fit, and route-back quality.
+- If the read model cannot support a claim, classify the missing or stale ref instead of encoding candidate judgment in a module.
+
 ## Inputs
 
 - `stage_candidate_portfolio` packets or `stage_candidate_portfolio_summary` read models.

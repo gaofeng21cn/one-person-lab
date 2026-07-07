@@ -12,6 +12,12 @@ description: "Use when curating refs-only evidence, receipts, provenance, closeo
 - Do not write append-only ledger entries, sign owner receipts, create typed blockers, mutate domain truth, assert artifact authority, write runtime queues, or make readiness claims.
 - Tests, docs, projections, and refs-only packets can support a claim only within their evidence class; they do not prove owner acceptance, runtime truth, release readiness, or domain readiness.
 
+## AI-first / Contract-light Semantics
+
+- Use ledger and evidence modules only for refs, evidence classes, receipt pointers, provenance indexes, recovery, and verification.
+- Keep elastic evidence judgment in this Skill: decide claim fit, classify wrong evidence class, explain gaps, and prepare owner-consumable route-back.
+- If evidence is missing, preserve the gap and owner path instead of manufacturing ledger truth or adding a deterministic claim rule.
+
 ## Workflow
 
 1. Identify the claim under review: `closeout_proof`, `claim_support`, `provenance_chain`, `receipt_review`, `evidence_gap`, or `handoff_evidence`.

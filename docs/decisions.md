@@ -115,6 +115,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - OPL 持有 Standard Agent AI-first Principle Pack 的通用层：AI-first / contract-light、stage 主提示词优先、capability_kind 管理、workspace/source intake shell、generated/hosted surface、owner-answer shape、no-second-truth 和 false-ready guard。
+- 模块化只承担运维层边界：identity、capability_kind、index、refs、receipt、恢复和验证；开放判断、审计、路由、质控、route-back 与 owner-facing 解释保留在 Skill / stage prompt 层。
 - Domain agent 持有领域特化层：domain intake mapping、source body / source semantics、领域路线选择、专业 Skill / knowledge / rubric、quality/export/review verdict、artifact authority、owner receipt、typed blocker 和 human gate。
 - `intake` 不成为独立 OPL Skill。通用 intake 归 `OPL Workspace` / `OPL Atlas` / `OPL Stagecraft` / `OPL Runway` / `OPL Console` / `OPL Ledger` 的 locator、catalog、stage scope、attempt projection、operator drilldown 和 refs-only evidence；domain intake mapping 留在 domain stage pack、prompt、professional skill 或 domain-owned authority function。
 - 品牌模块组织口径固定为协同承载：`OPL Charter` 冻结原则和 forbidden claims；`OPL Pack` 承载 declarative pack、capability ABI 和 generated/hosted surfaces；`OPL Stagecraft` 承载 stage/prompt/capability use policy；`OPL Workspace` 承载 workspace/source shell；`OPL Atlas` 承载 capability / source / tool-card catalog；`OPL Connect` 承载 connector 与 Skill/descriptor 分发；`OPL Runway`、`OPL Ledger` 和 `OPL Console` 分别承载 durable attempt、refs-only evidence 和 owner-delta-first operator projection。

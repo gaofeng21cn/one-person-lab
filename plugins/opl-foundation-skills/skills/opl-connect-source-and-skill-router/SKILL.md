@@ -16,6 +16,12 @@ It is stdlib-only, writes nothing, performs no network or subprocess calls, and 
 - Treat this Skill as the AI judgment layer: decide whether external source or skill help is needed, which candidate fits the task and owner, whether the risk is too high, whether exactly one Skill should be synced, and how results should be handed to the owning domain.
 - Keep domain truth with the domain owner. Connect output and this Skill's judgment are candidate refs only.
 
+## AI-first / Contract-light Semantics
+
+- Use Connect contracts and modules only for source identity, capability kind, candidate refs, sync receipts, recovery, and verification.
+- Keep elastic routing judgment in this Skill: decide whether a source or Skill is needed, inspect the smallest candidate, weigh authority risk, and shape route-back.
+- If metadata is ambiguous or stale, return a refs-only hold or owner route instead of broadening default exposure or hardcoding source semantics.
+
 ## Router Workflow
 
 1. Classify the request as `source_search`, `skill_search`, `candidate_inspect`, `single_skill_sync`, `connector_receipt_debug`, or `refs_only_review`.

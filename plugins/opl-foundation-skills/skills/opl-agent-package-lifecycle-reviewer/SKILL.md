@@ -23,6 +23,12 @@ This skill must not:
 
 No-authority language: no owner receipts, no typed blockers, no package mutation, no trust verdict, no Codex reload execution, no install-ready claim, no readiness claims.
 
+## AI-first / Contract-light Semantics
+
+- Use package contracts and modules only for manifest identity, dependency refs, exposure policy, lifecycle receipts, rollback refs, recovery, and verification.
+- Keep elastic lifecycle review in this Skill: separate trust from lifecycle action evidence, interpret dirty/developer/manual-required states, and route owner questions.
+- If lifecycle proof is stale or missing, hold or route back instead of treating receipts, local smoke, or AI review as install-ready authority.
+
 ## Workflow
 
 1. Identify package id, manifest ref, digest, source/provenance refs, dependency refs, carrier exposure, action type, action receipt, issue status, Codex reload proof, lifecycle owner, and trust owner.

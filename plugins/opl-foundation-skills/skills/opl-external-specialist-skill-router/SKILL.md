@@ -22,6 +22,12 @@ candidate.
 - Do not sign owner receipts, create typed blockers, issue domain verdicts,
   mutate artifacts, write runtime truth, or claim readiness.
 
+## AI-first / Contract-light Semantics
+
+- Use external-skill catalogs and Connect modules only for source identity, capability kind, candidate refs, sync receipts, recovery, and verification.
+- Keep elastic specialist routing in this Skill: decide whether the default pack is insufficient, inspect one candidate, and hand refs back to the domain owner.
+- If no single candidate fits, report the gap and owner route instead of syncing broad libraries or creating compatibility aliases.
+
 ## Trigger
 
 Use this Skill only after the current default skill pack is insufficient, for

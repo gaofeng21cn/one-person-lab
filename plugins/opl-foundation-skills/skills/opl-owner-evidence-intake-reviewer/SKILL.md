@@ -23,6 +23,12 @@ This skill must not:
 
 No-authority language: no owner receipts, no typed blockers, no domain truth, no runtime truth, no owner acceptance claim, no readiness claims.
 
+## AI-first / Contract-light Semantics
+
+- Use owner-evidence modules only for observed refs, evidence class labels, intake receipt pointers, recovery, and verification.
+- Keep elastic owner-intake review in this Skill: judge whether refs fit the requested acceptance, explain overclaims, and draft the smallest owner question.
+- If acceptance proof is absent, route the missing proof to the owner instead of converting AI review or projections into acceptance.
+
 ## Workflow
 
 1. Identify the claimed owner evidence and the owner expected to consume it.

@@ -11,6 +11,12 @@ Treat Foundry Lab as the owner of harnesses, scorecards, work-order envelopes, p
 
 Do not write target domain truth, owner receipts, typed blockers, quality verdicts, artifact authority, readiness claims, runtime queues, or provider state. A scorecard pass can support a promotion briefing, but it is not owner acceptance or domain ready.
 
+## AI-first / Contract-light Semantics
+
+- Use Foundry contracts and modules only for work-order identity, harness refs, scorecard refs, patch refs, rollback refs, receipts, recovery, and verification.
+- Keep elastic improvement judgment in this Skill: diagnose failure class, decide whether the prompt or contract is wrong, and propose the smallest behavior-changing rewrite.
+- If the packet lacks the decisive ref, hold or route back instead of encoding agent-improvement judgment in a deterministic module.
+
 ## Review Flow
 
 1. Read the work-order envelope, harness output, scorecard, patch refs, receipt refs, and source Skill or prompt.
