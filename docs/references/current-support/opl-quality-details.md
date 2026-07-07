@@ -48,6 +48,8 @@ v1 rules reader 覆盖 family `.sentrux/rules.toml` 形状：`[constraints]`、`
 
 Domain repositories 可以在各自 Sentrux lane 之前或旁边消费该 advisory output。MAS、MAG、RCA 继续持有 domain-owned truth 和 product/runtime semantics；OPL 只持有 shared diagnostic tool。
 
+AI reviewer route：需要从 `opl quality details --json`、Sentrux output 或 line-budget sidecar 判断是否该修、怎么最小修、何时保持 advisory 时，使用 source-only `opl-code-quality-remediation-reviewer`。该 reviewer 只能输出 remediation brief / owner route / verification suggestion；不能创建质量分数、Sentrux verdict、CI verdict、owner receipt、typed blocker、release readiness 或 domain readiness。
+
 本地 structure lane 应先运行既有 Sentrux gate/check。在 OPL 中，`./scripts/verify.sh structure` 先运行 line-budget advisory，再委托给 `scripts/run-structural-quality-gate.sh`：
 
 - line budget 默认是 advisory，只有 `scripts/line-budget.mjs --strict`、`OPL_LINE_BUDGET_STRICT=1`、`npm run line-budget:strict` 或 `./scripts/verify.sh line-budget:strict` 才返回失败；

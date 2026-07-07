@@ -81,6 +81,14 @@
       "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
     },
     {
+      "skill_id": "opl-code-quality-remediation-reviewer",
+      "exposure_scope": "developer_codex",
+      "activation_gate": "developer/operator profile or explicit quality-details diagnostic selects this skill",
+      "default_global_user": false,
+      "kernel": false,
+      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+    },
+    {
       "skill_id": "opl-completion-audit-writer",
       "exposure_scope": "project_local",
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
@@ -324,6 +332,14 @@
       "skill_id": "opl-stage-quality-gate-critic",
       "exposure_scope": "project_local",
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
+      "default_global_user": false,
+      "kernel": false,
+      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+    },
+    {
+      "skill_id": "opl-stop-loss-and-nonprogress-reviewer",
+      "exposure_scope": "developer_codex",
+      "activation_gate": "developer/operator profile or explicit nonprogress diagnostic selects this skill",
       "default_global_user": false,
       "kernel": false,
       "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
