@@ -64,6 +64,31 @@ Foundry Agent product pack
 | Stage graph / transition / App drilldown | Stage graph、route transition、runtime visualization、App/operator drilldown 和 evidence worklist 只是 refs-only operator lens；可见、通过、blocked 或 closed counter 不能升级为 domain ready、artifact authority、quality/export verdict 或 production ready。Stage-native artifact progress 必须从 stage folder、manifest、receipt 和 current pointer 重建。 | `docs/runtime/stage-graph-route-transition-runtime.md`、`contracts/opl-framework/family-transition-runner-contract.json`、`src/runtime-tray-snapshot.ts`、`opl runtime app-operator-drilldown --json`、`opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json`。 |
 | State Index / SQLite sidecar | SQLite sidecar 是可重建索引，不是 truth。`doctor` 只读健康度；`rebuild` 从 Stage Folder manifest、receipt refs、content hash、lineage 和 retention proof 回填 artifact/read-model rows。SQLite row 不能让 stage complete。 | `contracts/opl-framework/state-index-kernel-contract.json`、`src/family-runtime-state-index.ts`、`tests/src/family-runtime-state-index.test.ts`、`opl index doctor|rebuild|checkpoint|integrity-check|backup --json`。 |
 
+## Runtime Environment / Sandbox 组织方式
+
+当前环境能力按三档组织，避免把普通 R/Python 依赖准备、local sandbox 和 remote sandbox 混成一套心智：
+
+```text
+Fast Local Env
+  -> Local Sandbox / Docker
+  -> Remote Sandbox / E2B-style provider
+```
+
+| 档位 | 默认状态 | 使用场景 | 主 owner | 协同模块 |
+| --- | --- | --- | --- | --- |
+| `Fast Local Env` | 默认路径 | R / Python / MAS display 等本机高频依赖；要求低 overhead、可诊断、可接力。 | `OPL Runway` 的 Runtime Environment Substrate | `OPL Pack` 声明 dependency intent；`OPL Workspace` 提供 paper/project root；`OPL Ledger` 保存 run-context / receipt refs；`OPL Console` 展示 doctor / repair。 |
+| `Local Sandbox / Docker` | 显式后置 provider | 需要更强隔离、跨机器复现、CI/release evidence 或 host 环境污染排查。 | `OPL Runway` 的 stage sandbox provider selection / executor run / receipt projection | `OPL Workspace` 负责 workspace transport / mount 语义；`OPL Ledger` 保存 `sandbox_execution` refs；`OPL Console` 展示 preflight blocker；`OPL Connect` 不拥有本地执行。 |
+| `Remote Sandbox / E2B-style` | 显式后置 provider | 需要远程隔离、云端长会话、扩容或 provider-managed sandbox。 | `OPL Runway` 的 external sandbox execution adapter | `OPL Connect` 只做 provider discovery / configuration / credential-ref assist；`OPL Ledger` 保存 provider receipt refs；`OPL Console` 展示 credential / provider receipt blocker。 |
+
+组织原则：
+
+- `Fast Local Env` 不要求 Docker，也不因为 doctor pass、run-context 存在或 cache hit 声明 provider/runtime/domain/App ready。
+- Local Docker / Devcontainer 不再是 Codex stage runner 默认路径；只有显式选择 sandbox provider 才进入 local sandbox。
+- E2B / Daytona / Modal 属于 remote provider option；缺 endpoint、credential ref、provider receipt 或 workspace transport 时 fail closed，不回落到 host。
+- `OPL Connect` 可以帮助配置 provider 和分发 connector，但不拥有 stage execution sandbox，也不替 Runway 签 provider ready。
+- `OPL Pack` 只声明 domain dependency intent；不把 R/Python/Docker/E2B 安装细节下沉到 domain agent。
+- `OPL Ledger` 只保存 refs-only evidence；不保存 artifact body、domain truth、quality verdict 或 App release verdict。
+
 ## Runtime 总览职责补充
 
 围绕 App Runtime 页，Framework 的职责固定为三层：
