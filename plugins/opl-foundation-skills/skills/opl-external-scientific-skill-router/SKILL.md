@@ -1,13 +1,14 @@
 ---
 name: opl-external-scientific-skill-router
-description: "Use when MAS/default professional skills do not cover a rare scientific tool, database, workflow, or method and Codex should route through OPL Connect external-skills search/inspect/sync to select one approved external skill. Keeps K-Dense-scale libraries out of default context and hands candidate refs back without owner receipts, typed blockers, domain verdicts, or readiness claims."
+description: "Compatibility scientific specialization of opl-external-specialist-skill-router. Use when MAS/default professional skills do not cover a rare scientific tool, database, workflow, or method and Codex should route through OPL Connect external-skills search/inspect/sync to select one approved external skill. Keeps K-Dense-scale libraries out of default context and hands candidate refs back without owner receipts, typed blockers, domain verdicts, or readiness claims."
 ---
 
 # OPL External Scientific Skill Router
 
-Use this source-only Skill when the user names a specialist scientific tool,
-database, workflow, or method that is not covered by the MAS/default
-professional Skill pack.
+This is the scientific compatibility specialization of
+`opl-external-specialist-skill-router`. Use it when the user names a specialist
+scientific tool, database, workflow, or method that is not covered by the
+MAS/default professional Skill pack.
 
 ## Boundary
 
@@ -15,6 +16,8 @@ professional Skill pack.
   `search`, `inspect`, selective `sync`, and sync receipts.
 - Treat this Skill as a thin router. It only decides whether to ask OPL
   Connect for one external Skill candidate and how to hand the refs back.
+- For non-scientific specialist capability routing, use
+  `opl-external-specialist-skill-router` instead.
 - Keep MAS/domain truth with the domain owner. External Skill refs are
   candidate capability refs, not medical truth or owner acceptance.
 - Do not load a full external library, K-Dense source tree, package index, or

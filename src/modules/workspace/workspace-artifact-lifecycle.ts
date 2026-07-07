@@ -19,6 +19,7 @@ export const MEMORY_LIFECYCLE_REF = `${ARTIFACT_LIFECYCLE_DIR}/memory_lifecycle.
 export const OUTPUT_LIFECYCLE_REF = `${ARTIFACT_LIFECYCLE_DIR}/output_lifecycle.json`;
 export const REVIEW_REPAIR_TRANSPORT_REF = `${ARTIFACT_LIFECYCLE_DIR}/review_repair_transport.json`;
 export const ARTIFACT_LIFECYCLE_HEALTH_REF = `${ARTIFACT_LIFECYCLE_DIR}/artifact_lifecycle_health.json`;
+export const ARTIFACT_LIFECYCLE_PROFILE_REF = `${ARTIFACT_LIFECYCLE_DIR}/artifact_lifecycle_profile.json`;
 export const DOMAIN_REVIEW_REPAIR_HANDOFF_REF = 'handoff/review-repair-transport.json';
 
 type JsonRecord = Record<string, unknown>;
@@ -47,6 +48,24 @@ type OpaqueTransportRefRecord = {
   file: FileRecord | null;
 };
 
+type LifecycleRefDescriptor = {
+  ref: string;
+  role: string;
+};
+
+type ArtifactLifecycleProfile = {
+  ref: string;
+  status: 'not_declared' | 'loaded' | 'invalid';
+  memory_model: string;
+  required_memory_refs: LifecycleRefDescriptor[];
+  current_output_refs: LifecycleRefDescriptor[];
+  blockers: Array<{
+    code: string;
+    ref: string;
+    reason: string;
+  }>;
+};
+
 type ReviewRepairTransportBlocker = {
   code: string;
   ref?: string;
@@ -73,6 +92,28 @@ function stringArray(value: unknown) {
   return value
     .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     .map((entry) => entry.trim());
+}
+
+function lifecycleRefDescriptors(value: unknown, defaultRole: string) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((entry): LifecycleRefDescriptor[] => {
+    if (typeof entry === 'string' && entry.trim()) {
+      return [{ ref: entry.trim(), role: defaultRole }];
+    }
+    if (!isRecord(entry)) {
+      return [];
+    }
+    const ref = stringValue(entry.ref);
+    if (!ref) {
+      return [];
+    }
+    return [{
+      ref,
+      role: stringValue(entry.role) ?? defaultRole,
+    }];
+  });
 }
 
 function safeReadJson(filePath: string) {
@@ -155,6 +196,52 @@ function projectFiles(workspaceRoot: string, project: WorkspaceProjectIndexEntry
   return listFiles(workspaceRoot, prefix).map((ref) => statRecord(workspaceRoot, ref, role));
 }
 
+function readArtifactLifecycleProfile(
+  workspaceRoot: string,
+  project: WorkspaceProjectIndexEntry,
+): ArtifactLifecycleProfile {
+  const ref = normalizeProjectRef(project, ARTIFACT_LIFECYCLE_PROFILE_REF);
+  const profile = safeReadJson(path.join(workspaceRoot, ref));
+  if (profile === null) {
+    return {
+      ref,
+      status: 'not_declared',
+      memory_model: 'not_declared',
+      required_memory_refs: [],
+      current_output_refs: [],
+      blockers: [],
+    };
+  }
+  if (!isRecord(profile)) {
+    return {
+      ref,
+      status: 'invalid',
+      memory_model: 'invalid',
+      required_memory_refs: [],
+      current_output_refs: [],
+      blockers: [{
+        code: 'artifact_lifecycle_profile_invalid',
+        ref,
+        reason: 'artifact lifecycle profile must be a JSON object with refs-only descriptors',
+      }],
+    };
+  }
+  return {
+    ref,
+    status: 'loaded',
+    memory_model: stringValue(profile.memory_model) ?? 'declared_refs',
+    required_memory_refs: lifecycleRefDescriptors(
+      profile.required_memory_refs ?? profile.memory_refs,
+      'memory_ref',
+    ),
+    current_output_refs: lifecycleRefDescriptors(
+      profile.current_output_refs ?? profile.current_refs,
+      'current_output_ref',
+    ),
+    blockers: [],
+  };
+}
+
 function sourceMapEntries(workspaceRoot: string, project: WorkspaceProjectIndexEntry) {
   const sourceMapRef = normalizeProjectRef(project, 'sources/source-map.json');
   const sourceMap = safeReadJson(path.join(workspaceRoot, sourceMapRef));
@@ -222,21 +309,24 @@ function buildSourcePassport(workspaceRoot: string, project: WorkspaceProjectInd
   };
 }
 
-function buildMemoryLifecycle(workspaceRoot: string, project: WorkspaceProjectIndexEntry, updatedAt: string) {
-  const requiredRefs = [
-    'book-memory/working.md',
-    'book-memory/episodic.md',
-    'book-memory/semantic.md',
-    'book-memory/memory-qc.md',
-  ];
-  const refs = requiredRefs.map((ref) => projectFileRecord(workspaceRoot, project, ref, 'book_memory_ref'));
+function buildMemoryLifecycle(
+  workspaceRoot: string,
+  project: WorkspaceProjectIndexEntry,
+  lifecycleProfile: ArtifactLifecycleProfile,
+  updatedAt: string,
+) {
+  const refs = lifecycleProfile.required_memory_refs.map((entry) => (
+    projectFileRecord(workspaceRoot, project, entry.ref, entry.role)
+  ));
   const present = refs.filter((entry) => entry.exists).length;
   return {
     surface_kind: 'opl_workspace_memory_lifecycle',
     version: 'workspace-artifact-lifecycle.v1',
     project_id: project.project_id,
     project_root: project.project_root,
-    memory_model: 'working_episodic_semantic_qc',
+    lifecycle_profile_ref: lifecycleProfile.ref,
+    lifecycle_profile_status: lifecycleProfile.status,
+    memory_model: lifecycleProfile.memory_model,
     required_refs: refs,
     summary: {
       required_ref_count: refs.length,
@@ -255,7 +345,12 @@ function buildMemoryLifecycle(workspaceRoot: string, project: WorkspaceProjectIn
   };
 }
 
-function buildOutputLifecycle(workspaceRoot: string, project: WorkspaceProjectIndexEntry, updatedAt: string) {
+function buildOutputLifecycle(
+  workspaceRoot: string,
+  project: WorkspaceProjectIndexEntry,
+  lifecycleProfile: ArtifactLifecycleProfile,
+  updatedAt: string,
+) {
   const outputGroups = [
     ['artifacts/manuscript', 'manuscript_artifact'],
     ['artifacts/review', 'review_artifact'],
@@ -266,17 +361,16 @@ function buildOutputLifecycle(workspaceRoot: string, project: WorkspaceProjectIn
     ['archive', 'retired_artifact'],
   ] as const;
   const records = outputGroups.flatMap(([relRoot, role]) => projectFiles(workspaceRoot, project, relRoot, role));
-  const reviewPdf = projectFileRecord(workspaceRoot, project, 'artifacts/review/completed-chapters.review.pdf', 'current_review_pdf');
-  const reviewReceipt = projectFileRecord(workspaceRoot, project, 'artifacts/review/completed-chapters.review-pdf-export.json', 'current_review_pdf_receipt');
-  const chapterManifest = projectFileRecord(workspaceRoot, project, 'artifacts/manuscript/chapter-manifest.json', 'chapter_manifest');
-  const figureManifest = projectFileRecord(workspaceRoot, project, 'artifacts/stage_outputs/book-materialization/figure-asset-manifest.json', 'figure_asset_manifest');
-  const hygieneReport = projectFileRecord(workspaceRoot, project, 'quality/book-project-hygiene.json', 'hygiene_report');
-  const currentRefs = [reviewPdf, reviewReceipt, chapterManifest, figureManifest, hygieneReport];
+  const currentRefs = lifecycleProfile.current_output_refs.map((entry) => (
+    projectFileRecord(workspaceRoot, project, entry.ref, entry.role)
+  ));
   return {
     surface_kind: 'opl_workspace_output_lifecycle',
     version: 'workspace-artifact-lifecycle.v1',
     project_id: project.project_id,
     project_root: project.project_root,
+    lifecycle_profile_ref: lifecycleProfile.ref,
+    lifecycle_profile_status: lifecycleProfile.status,
     artifacts: records,
     current_refs: currentRefs,
     summary: {
@@ -559,9 +653,13 @@ function buildLifecycleHealth(input: {
   memoryLifecycle: ReturnType<typeof buildMemoryLifecycle>;
   outputLifecycle: ReturnType<typeof buildOutputLifecycle>;
   reviewRepairTransport: ReturnType<typeof buildReviewRepairTransport>;
+  lifecycleProfile: ArtifactLifecycleProfile;
   updatedAt: string;
 }) {
   const blockers = [];
+  for (const blocker of input.lifecycleProfile.blockers) {
+    blockers.push(blocker);
+  }
   if (input.sourcePassport.summary.source_map_status !== 'loaded') {
     blockers.push({
       code: 'source_map_missing_or_invalid',
@@ -576,7 +674,7 @@ function buildLifecycleHealth(input: {
   }
   if (input.memoryLifecycle.summary.missing_required_ref_count > 0) {
     blockers.push({
-      code: 'book_memory_required_refs_missing',
+      code: 'memory_required_refs_missing',
       missing_required_ref_count: input.memoryLifecycle.summary.missing_required_ref_count,
     });
   }
@@ -651,15 +749,17 @@ export function materializeWorkspaceArtifactLifecycle(
   const apply = options.apply === true && options.dryRun !== true;
   const updatedAt = new Date().toISOString();
   const projectRootAbs = path.join(context.workspacePath, project.project_root);
+  const lifecycleProfile = readArtifactLifecycleProfile(context.workspacePath, project);
   const sourcePassport = buildSourcePassport(context.workspacePath, project, updatedAt);
-  const memoryLifecycle = buildMemoryLifecycle(context.workspacePath, project, updatedAt);
-  const outputLifecycle = buildOutputLifecycle(context.workspacePath, project, updatedAt);
+  const memoryLifecycle = buildMemoryLifecycle(context.workspacePath, project, lifecycleProfile, updatedAt);
+  const outputLifecycle = buildOutputLifecycle(context.workspacePath, project, lifecycleProfile, updatedAt);
   const reviewRepairTransport = buildReviewRepairTransport(context.workspacePath, project, updatedAt);
   const health = buildLifecycleHealth({
     sourcePassport,
     memoryLifecycle,
     outputLifecycle,
     reviewRepairTransport,
+    lifecycleProfile,
     updatedAt,
   });
   const index = {
@@ -675,6 +775,7 @@ export function materializeWorkspaceArtifactLifecycle(
       output_lifecycle: OUTPUT_LIFECYCLE_REF,
       review_repair_transport: REVIEW_REPAIR_TRANSPORT_REF,
       health: ARTIFACT_LIFECYCLE_HEALTH_REF,
+      artifact_lifecycle_profile: lifecycleProfile.ref,
     },
     status: health.status,
     authority_boundary: {

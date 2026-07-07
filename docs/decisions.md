@@ -123,6 +123,49 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-02
 
+### 决策：Workspace canonical profile 与 artifact lifecycle 必须保持 domain-neutral
+
+原因：OPL 是智能体开发、运行、测试基座，不应把 `MAS portfolio`、`RCA series` 或 `BookForge memory/artifact refs` 写成 framework default。Workspace 可以提供 topology、locator、refs-only lifecycle projection、safe delete gate 和 generated reports；domain-specific project taxonomy、memory model、current artifact refs、quality verdict、owner receipt 和 typed blocker 必须由 domain/project owner 声明或签收。
+
+影响：
+
+- 显式 `opl workspace init|ensure --mode series|portfolio` 使用通用 `series` / `portfolio` profile，不能把 portfolio 限定为 MAS，也不能把 series 绑定到 RCA。
+- `rca_series` / `mas_portfolio` 只作为 legacy/default profile alias 与 display compatibility 保留；它们不是新的 OPL canonical profile。
+- `opl workspace artifact-lifecycle` 默认只生成 source、output、review-repair 和 health 的 refs-only projection；project-specific memory/current refs 由 `<project-root>/control/opl/artifact_lifecycle/artifact_lifecycle_profile.json` 显式声明。
+- BookForge、MAS、MAG、RCA 或其他 domain 可以声明自己的 lifecycle refs，但 OPL 只检查文件 ref、hash、缺口和 no-authority guard，不解析 domain artifact body，不写 memory body，不签 owner receipt，也不宣称 publication/domain readiness。
+
+### 决策：Runway route handoff canonical surface 是 domain route，不是 MAS paper mission truth
+
+原因：OPL Runway 可以承载 domain stage route handoff、runtime request、attempt/queue/provider lifecycle 和 owner-route projection，但不能拥有 MAS paper progress、paper body、publication verdict、owner receipt、typed blocker 或 human gate。历史 MAS paper mission carrier 仍可作为 legacy input/output compatibility 存在；canonical 字段必须表达通用 `domain_route_*`。
+
+影响：
+
+- Runway route handoff readback 新增 `opl_domain_route_handoff_*`、`domain_route_*`、`canonical_task_kind`、`canonical_runtime_request_kind` 与 `canonical_dedupe_key`。
+- `paper_mission/stage-route`、`mas_paper_mission_*` 等旧字段只作为 legacy compatibility/readback 保留，不能作为 OPL 新能力命名。
+- `family-runtime autonomy-supervisor` 是 canonical supervisor CLI；`paper-autonomy supervisor` 只作为兼容入口。
+- Owner wait / executable owner handoff projection 使用 generic owner-route surface；MAS 继续持有 typed blocker、human gate、paper progress 和 publication authority。
+
+### 决策：Ledger sustained-consumption canonical surface 是 owner-evidence，不是 MAG manifest truth
+
+原因：OPL Ledger 可以保存 refs-only owner evidence / sustained-consumption receipts，支持 App/operator/default-caller followthrough 的可追踪投影；它不能声明 MAG grant ready、submission ready、grant artifact body 或 MAG owner receipt。历史 MAG sustained-consumption route 是第一个消费方，不应成为 OPL Ledger canonical ontology。
+
+影响：
+
+- Canonical CLI / ledger / action result 使用 `runtime owner-evidence-sustained-consumption ...` 与 `owner_evidence_sustained_consumption_*`。
+- `runtime mag-manifest-sustained-consumption ...` 保留为 compatibility alias。
+- Ledger payload 继续拒绝 domain body、ready claim、owner receipt、typed blocker creation 或 provider soak completion claim；允许记录 refs-only success path 或 typed blocker refs。
+- App/operator projection 如仍用 MAG action kind，应只被解释为 legacy route carrier；执行结果和 ledger readback 回 generic owner-evidence surface。
+
+### 决策：OPL foundation 外部 Skill router 是 generic specialist router，scientific 只是 specialization
+
+原因：外部 Skill discovery/sync 是 OPL Connect 的通用能力，不只服务医学/科研。把 router 命名和说明固定成 scientific-only，容易让非科研专业能力被误判为 MAS/science 能力，或者让 MAS Scholar Skills 被误读成 OPL core。
+
+影响：
+
+- `opl-external-specialist-skill-router` 是 canonical foundation Skill，用于默认 OPL/domain professional pack 覆盖不到的专业工具、source、workflow 或 method。
+- `opl-external-scientific-skill-router` 保留为科研场景 specialization / compatibility entry，不再代表 OPL foundation 的唯一外部 Skill 路由。
+- 两个 router 都只返回 selected external Skill refs、inspect evidence、sync receipt candidate 和 owner route；不签 owner receipt、typed blocker、domain verdict、artifact authority、runtime truth 或 readiness claim。
+
 ### 决策：标准 OPL Agent 用 Stage 主提示词承载阶段策略，不把 stage 定义成专业 Skill
 
 原因：MAS 的历史实现把部分 stage 主提示词物化成 `.codex/skills/medical-research-*`，容易让人误以为 OPL 标准智能体需要一类独立的 stage 专用 Skill。RCA 和 BookForge 的实际形态更接近标准：`agent/stages/` 定义阶段目标、输入输出、owner boundary、quality gate 与 route-back，`agent/prompts/` 承载 stage 执行主提示词，`agent/skills/` 或外部 specialist pack 承载专业方法。这个模型更符合 AI-first：stage 只说明“这一阶段怎么推进和守边界”，专业 Skill、工具、知识库和 connector 负责“具体专业任务怎么做好”。

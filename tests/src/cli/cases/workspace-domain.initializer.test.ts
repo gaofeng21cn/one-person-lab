@@ -267,6 +267,42 @@ test('workspace init materializes MAG one-off deliverable topology', () => {
   }
 });
 
+test('workspace init allows generic portfolio topology for non-MAS agents', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mag-portfolio-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mag-portfolio-root-'));
+
+  try {
+    const output = runCli([
+      'workspace',
+      'init',
+      '--agent',
+      'mag',
+      '--workspace-root',
+      workspaceRoot,
+      '--workspace-id',
+      'multi-grant',
+      '--project-id',
+      'grant-001',
+      '--mode',
+      'portfolio',
+    ], {
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    const workspacePath = path.join(workspaceRoot, 'multi-grant');
+    assert.equal(output.workspace_initialization.profile.profile_id, 'portfolio');
+    assert.equal(output.workspace_initialization.profile.workspace_mode, 'portfolio');
+    assert.equal(fs.statSync(path.join(workspacePath, 'projects', 'grant-001')).isDirectory(), true);
+
+    const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+    assert.equal(workspaceIndex.workspace_topology_profile.profile_id, 'portfolio');
+    assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('workspace init materializes Book Forge one-off book topology', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-bookforge-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-bookforge-root-'));

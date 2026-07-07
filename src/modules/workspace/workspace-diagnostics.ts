@@ -107,7 +107,13 @@ function normalizeProjectEntry(project: Record<string, unknown>): WorkspaceProje
 function profileIdFromIndex(index: Record<string, unknown>): WorkspaceProfileId | null {
   const profile = isRecord(index.workspace_topology_profile) ? index.workspace_topology_profile : null;
   const profileId = profile?.profile_id;
-  if (profileId === 'one_off' || profileId === 'rca_series' || profileId === 'mas_portfolio') {
+  if (
+    profileId === 'one_off'
+    || profileId === 'series'
+    || profileId === 'portfolio'
+    || profileId === 'rca_series'
+    || profileId === 'mas_portfolio'
+  ) {
     return profileId;
   }
   return null;

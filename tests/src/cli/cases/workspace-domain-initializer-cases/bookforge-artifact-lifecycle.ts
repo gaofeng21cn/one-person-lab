@@ -12,6 +12,41 @@ function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }
 
+function writeBookForgeLifecycleProfile(projectRoot: string) {
+  const profilePath = path.join(
+    projectRoot,
+    'control',
+    'opl',
+    'artifact_lifecycle',
+    'artifact_lifecycle_profile.json',
+  );
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, JSON.stringify({
+    surface_kind: 'opl_workspace_artifact_lifecycle_profile',
+    version: 'workspace-artifact-lifecycle-profile.v1',
+    owner: 'domain_project',
+    memory_model: 'bookforge_working_episodic_semantic_qc',
+    required_memory_refs: [
+      { ref: 'book-memory/working.md', role: 'book_memory_ref' },
+      { ref: 'book-memory/episodic.md', role: 'book_memory_ref' },
+      { ref: 'book-memory/semantic.md', role: 'book_memory_ref' },
+      { ref: 'book-memory/memory-qc.md', role: 'book_memory_ref' },
+    ],
+    current_output_refs: [
+      { ref: 'artifacts/review/completed-chapters.review.pdf', role: 'current_review_pdf' },
+      { ref: 'artifacts/review/completed-chapters.review-pdf-export.json', role: 'current_review_pdf_receipt' },
+      { ref: 'artifacts/manuscript/chapter-manifest.json', role: 'chapter_manifest' },
+      { ref: 'artifacts/stage_outputs/book-materialization/figure-asset-manifest.json', role: 'figure_asset_manifest' },
+      { ref: 'quality/book-project-hygiene.json', role: 'hygiene_report' },
+    ],
+    authority_boundary: {
+      profile_is_refs_only: true,
+      opl_can_write_domain_truth: false,
+      opl_can_mutate_artifact_body: false,
+    },
+  }, null, 2));
+}
+
 test('workspace artifact-lifecycle materializes refs-only Book Forge artifact projections', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-artifact-lifecycle-root-'));
@@ -34,6 +69,7 @@ test('workspace artifact-lifecycle materializes refs-only Book Forge artifact pr
 
     const workspacePath = path.join(workspaceRoot, 'bookforge-workspace');
     const projectRoot = path.join(workspacePath, 'projects', 'book-001');
+    writeBookForgeLifecycleProfile(projectRoot);
     fs.mkdirSync(path.join(projectRoot, 'inputs'), { recursive: true });
     fs.writeFileSync(path.join(projectRoot, 'inputs', 'initial-plan.md'), '# Initial plan\n');
     fs.mkdirSync(path.join(projectRoot, 'sources'), { recursive: true });
@@ -193,6 +229,7 @@ test('workspace artifact-lifecycle blocks missing Book Forge lifecycle refs with
 
     const workspacePath = path.join(workspaceRoot, 'bookforge-workspace');
     const projectRoot = path.join(workspacePath, 'projects', 'book-001');
+    writeBookForgeLifecycleProfile(projectRoot);
     fs.mkdirSync(path.join(projectRoot, 'sources'), { recursive: true });
     fs.writeFileSync(path.join(projectRoot, 'sources', 'source-map.json'), JSON.stringify([
       {
@@ -230,7 +267,7 @@ test('workspace artifact-lifecycle blocks missing Book Forge lifecycle refs with
     assert.deepEqual(
       output.workspace_artifact_lifecycle.health.blockers.map((entry: { code: string }) => entry.code).sort(),
       [
-        'book_memory_required_refs_missing',
+        'memory_required_refs_missing',
         'output_lifecycle_current_refs_missing',
         'review_repair_transport_blocked',
         'source_map_lifecycle_fields_missing',

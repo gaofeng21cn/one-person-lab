@@ -6,7 +6,7 @@ import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
 import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
 
 export type WorkspaceModeInput = 'auto' | 'one_off' | 'series' | 'portfolio';
-export type WorkspaceProfileId = 'one_off' | 'rca_series' | 'mas_portfolio';
+export type WorkspaceProfileId = 'one_off' | 'series' | 'portfolio' | 'rca_series' | 'mas_portfolio';
 
 export type TopologyProfile = {
   workspace_mode: 'one_off' | 'series' | 'portfolio';
@@ -124,6 +124,24 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
       project_stage_outputs_root: 'artifacts/stage_outputs',
     },
+    series: {
+      workspace_mode: 'series',
+      project_collection_path: 'projects',
+      shared_resource_roots: [
+        'shared/sources',
+        'shared/brand',
+        'shared/visual_memory',
+        'shared/style_system',
+        'shared/material_inventory',
+      ],
+      project_stage_outputs_root: 'artifacts/stage_outputs',
+    },
+    portfolio: {
+      workspace_mode: 'portfolio',
+      project_collection_path: 'projects',
+      shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
+      project_stage_outputs_root: 'artifacts/stage_outputs',
+    },
     rca_series: {
       workspace_mode: 'series',
       project_collection_path: 'projects',
@@ -209,6 +227,12 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
     },
   },
 } as const;
+
+const WORKSPACE_PROFILE_IDS = ['one_off', 'series', 'portfolio', 'rca_series', 'mas_portfolio'] as const;
+
+function isWorkspaceProfileId(value: unknown): value is WorkspaceProfileId {
+  return typeof value === 'string' && WORKSPACE_PROFILE_IDS.includes(value as WorkspaceProfileId);
+}
 
 const SHARED_RESOURCE_ROLES: Record<string, string> = {
   data: 'dataset_root',
@@ -296,7 +320,7 @@ export function defaultWorkspaceProfileId(agent: WorkspaceAgentProfile): Workspa
     );
   }
   const profileId = defaults[agent.agent_id];
-  if (profileId === 'one_off' || profileId === 'rca_series' || profileId === 'mas_portfolio') {
+  if (isWorkspaceProfileId(profileId)) {
     return profileId;
   }
   throw new FrameworkContractError(
@@ -318,17 +342,10 @@ export function selectWorkspaceProfileId(
     return 'one_off';
   }
   if (requestedMode === 'series') {
-    return 'rca_series';
+    return 'series';
   }
   if (requestedMode === 'portfolio') {
-    if (agent.agent_id !== 'mas') {
-      throw new FrameworkContractError(
-        'cli_usage_error',
-        `${commandName} --mode portfolio is reserved for MAS study portfolio workspaces.`,
-        { agent_id: agent.agent_id, mode: requestedMode },
-      );
-    }
-    return 'mas_portfolio';
+    return 'portfolio';
   }
   return defaultWorkspaceProfileId(agent);
 }
