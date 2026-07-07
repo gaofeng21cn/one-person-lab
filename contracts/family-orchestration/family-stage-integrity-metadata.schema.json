@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-stage-integrity-metadata.schema.json",
   "title": "OPL Family Stage Integrity Metadata",
-  "description": "Domain-neutral stage-level integrity, citation-support, evidence-handoff, data-access, and human-checkpoint metadata. OPL owns discovery, transport, projection, and fail-closed routing only; domain agents keep domain truth, quality verdicts, publication/fundability/visual judgment, artifact authority, and direct skill paths.",
+  "description": "Domain-neutral stage-level integrity, claim-support, evidence-handoff, data-access, and human-checkpoint metadata. OPL owns discovery, transport, projection, and fail-closed routing only; domain agents keep domain truth, quality verdicts, publication/fundability/visual judgment, artifact authority, and direct skill paths.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,7 +13,7 @@
     "stage_id",
     "owner",
     "integrity_policy",
-    "citation_support",
+    "claim_support",
     "evidence_handoff",
     "data_access",
     "human_checkpoints",
@@ -80,7 +80,7 @@
             "type": "string",
             "enum": [
               "stage_integrity",
-              "citation_support",
+              "claim_support",
               "claim_reference_alignment",
               "data_access",
               "evidence_handoff",
@@ -108,7 +108,51 @@
         }
       }
     },
+    "claim_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "support_mode",
+        "claim_registry_refs",
+        "support_audit_refs",
+        "unsupported_claim_policy"
+      ],
+      "properties": {
+        "support_mode": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "claim_ref_alignment_required",
+            "reference_locator_required",
+            "domain_declared"
+          ]
+        },
+        "claim_registry_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "support_audit_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
+        },
+        "unsupported_claim_policy": {
+          "type": "string",
+          "enum": [
+            "none",
+            "warn",
+            "human_gate",
+            "fail_closed"
+          ]
+        }
+      }
+    },
     "citation_support": {
+      "deprecated": true,
+      "description": "Deprecated profile compatibility alias for legacy citation-heavy domain projections. New generic OPL contracts must use claim_support.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -358,7 +402,7 @@
     {
       "surface_kind": "family_stage_integrity_metadata",
       "version": "family-stage-integrity-metadata.v1",
-      "metadata_id": "research_stage_integrity_metadata",
+      "metadata_id": "stage_integrity_metadata",
       "target_domain_id": "example-domain",
       "stage_id": "write",
       "owner": "one-person-lab",
@@ -375,7 +419,7 @@
         "status": "active",
         "required_checks": [
           "stage_integrity",
-          "citation_support",
+          "claim_support",
           "evidence_handoff",
           "data_access",
           "human_checkpoint"
@@ -392,7 +436,7 @@
           }
         ]
       },
-      "citation_support": {
+      "claim_support": {
         "support_mode": "claim_ref_alignment_required",
         "claim_registry_refs": [
           {
@@ -401,11 +445,11 @@
             "role": "claim_registry"
           }
         ],
-        "citation_audit_refs": [
+        "support_audit_refs": [
           {
             "ref_kind": "surface_kind",
-            "ref": "domain_citation_audit_report",
-            "role": "citation_support_audit"
+            "ref": "domain_reference_audit_report",
+            "role": "claim_support_audit"
           }
         ],
         "unsupported_claim_policy": "fail_closed"

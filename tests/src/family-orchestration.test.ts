@@ -742,6 +742,65 @@ test('family orchestration schema examples stay aligned with canonical family ma
   assert.equal(checkpointLineageExample.target_domain_id, medAutoScienceManifest.target_domain_id);
 });
 
+test('family orchestration schemas use generic domain-boundary vocabulary', () => {
+  const productEntrySchema = readJson(
+    'contracts/family-orchestration/family-product-entry-manifest-v2.schema.json',
+  );
+  const productEntryProperties = productEntrySchema.properties as Json;
+  const productEntryDefs = productEntrySchema.$defs as Json;
+  assert.equal(
+    (productEntryProperties.product_entry_domain_readiness as Json).$ref,
+    '#/$defs/domainReadinessProfile',
+  );
+  assert.equal((productEntryProperties.grant_authoring_readiness as Json).deprecated, true);
+  assert.equal(
+    (((productEntryDefs.domainReadinessProfile as Json).properties as Json).surface_kind as Json).const,
+    'product_entry_domain_readiness',
+  );
+  assert.equal(
+    (((productEntryDefs.grantAuthoringReadiness as Json).properties as Json).surface_kind as Json).const,
+    'grant_authoring_readiness',
+  );
+
+  const checkpointSchema = readJson(
+    'contracts/family-orchestration/family-checkpoint-lineage.schema.json',
+  );
+  const stateRefRoles = (
+    (((checkpointSchema.$defs as Json).stateRef as Json).properties as Json).role as Json
+  ).enum as string[];
+  assert.ok(stateRefRoles.includes('domain_delivery'));
+  assert.ok(stateRefRoles.includes('owner_gate'));
+  assert.equal(stateRefRoles.includes('publication'), false);
+
+  const actionGraphSchema = readJson(
+    'contracts/family-orchestration/family-action-graph.schema.json',
+  );
+  const actionGraphExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-action-graph.schema.json',
+  );
+  const nodeKinds = (
+    ((((actionGraphSchema.$defs as Json).node as Json).properties as Json).node_kind as Json)
+      .enum
+  ) as string[];
+  assert.ok(nodeKinds.includes('discovery'));
+  assert.ok(nodeKinds.includes('release_gate'));
+  assert.equal(nodeKinds.includes('research'), false);
+  assert.equal(nodeKinds.includes('publish'), false);
+  assert.equal(actionGraphExample.target_domain_id, 'example-domain');
+  assert.equal(String(actionGraphExample.graph_id).includes('grant'), false);
+  assert.equal(String(actionGraphExample.graph_kind).includes('grant'), false);
+
+  const stagePlaneSchema = readJson(
+    'contracts/family-orchestration/family-stage-control-plane.schema.json',
+  );
+  const stageKinds = (
+    ((((stagePlaneSchema.$defs as Json).stage as Json).properties as Json).stage_kind as Json)
+      .enum
+  ) as string[];
+  assert.ok(stageKinds.includes('release_gate'));
+  assert.equal(stageKinds.includes('publish'), false);
+});
+
 test('family manifest schema requires repo-owned runtime continuity discovery surfaces', () => {
   const schema = readJson('contracts/family-orchestration/family-product-entry-manifest-v2.schema.json');
   const required = schema.required as string[];

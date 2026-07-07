@@ -177,11 +177,16 @@
     "product_entry_readiness": {
       "$ref": "#/$defs/productEntryReadiness"
     },
+    "product_entry_domain_readiness": {
+      "$ref": "#/$defs/domainReadinessProfile"
+    },
     "product_entry_quickstart": {
       "$ref": "#/$defs/productEntryQuickstartSurface"
     },
     "grant_authoring_readiness": {
-      "$ref": "#/$defs/grantAuthoringReadiness"
+      "$ref": "#/$defs/grantAuthoringReadiness",
+      "deprecated": true,
+      "description": "Deprecated MAG compatibility alias. New generic manifests should use product_entry_domain_readiness."
     },
     "product_entry_guardrails": {
       "$ref": "#/$defs/productEntryGuardrails"
@@ -771,6 +776,70 @@
       "properties": {
         "surface_kind": {
           "const": "product_entry_readiness"
+        },
+        "verdict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "usable_now": {
+          "type": "boolean"
+        },
+        "good_to_use_now": {
+          "type": "boolean"
+        },
+        "fully_automatic": {
+          "type": "boolean"
+        },
+        "user_experience_level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_loop_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_loop_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflow_coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workflowCoverageItem"
+          }
+        },
+        "blocking_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "domainReadinessProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "blocking_gaps",
+        "workflow_coverage"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_domain_readiness"
         },
         "verdict": {
           "type": "string",

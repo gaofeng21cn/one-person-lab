@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-action-graph.schema.json",
   "title": "OPL Family Action Graph",
-  "description": "Shared domain-oriented action-graph topology contract across the OPL family. This schema freezes graph semantics without requiring one orchestration framework implementation.",
+  "description": "Shared action-graph topology contract across the OPL family. This schema freezes graph semantics without requiring one orchestration framework implementation.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -114,11 +114,11 @@
           "type": "string",
           "enum": [
             "intake",
-            "research",
+            "discovery",
             "authoring",
             "audit",
             "review",
-            "publish",
+            "release_gate",
             "operator_step",
             "controller",
             "tool_call"
@@ -197,49 +197,49 @@
   "examples": [
     {
       "version": "family-action-graph.v1",
-      "graph_id": "mag_grant_direct_entry_graph",
-      "target_domain_id": "medautogrant",
-      "graph_kind": "grant_direct_entry",
+      "graph_id": "sample_domain_delivery_graph",
+      "target_domain_id": "example-domain",
+      "graph_kind": "domain_delivery_entry",
       "graph_version": "2026-04-13",
       "nodes": [
         {
-          "node_id": "grant_progress_intake",
+          "node_id": "source_intake",
           "node_kind": "intake",
-          "title": "Grant progress intake",
+          "title": "Source intake",
           "executor_hint": "codex_cli",
           "produces_checkpoint": true
         },
         {
-          "node_id": "grant_authoring_loop",
+          "node_id": "draft_loop",
           "node_kind": "authoring",
-          "title": "Grant authoring loop"
+          "title": "Draft loop"
         },
         {
-          "node_id": "grant_publish_gate",
-          "node_kind": "review",
-          "title": "Grant publish gate"
+          "node_id": "delivery_release_gate",
+          "node_kind": "release_gate",
+          "title": "Delivery release gate"
         }
       ],
       "edges": [
         {
-          "from": "grant_progress_intake",
-          "to": "grant_authoring_loop",
+          "from": "source_intake",
+          "to": "draft_loop",
           "on": "success"
         },
         {
-          "from": "grant_authoring_loop",
-          "to": "grant_publish_gate",
+          "from": "draft_loop",
+          "to": "delivery_release_gate",
           "on": "decision"
         }
       ],
       "entry_nodes": [
-        "grant_progress_intake"
+        "source_intake"
       ],
       "human_gates": [
         {
-          "gate_id": "grant_publish_gate",
+          "gate_id": "delivery_release_gate",
           "trigger_nodes": [
-            "grant_authoring_loop"
+            "draft_loop"
           ],
           "blocking": true
         }
@@ -247,8 +247,8 @@
       "checkpoint_policy": {
         "mode": "node_boundary",
         "checkpoint_nodes": [
-          "grant_progress_intake",
-          "grant_authoring_loop"
+          "source_intake",
+          "draft_loop"
         ]
       }
     }
