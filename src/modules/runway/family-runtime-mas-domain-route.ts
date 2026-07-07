@@ -43,12 +43,16 @@ const MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY =
   'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.';
 
 export const MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE = {
+  surface_kind: 'opl_domain_route_profile_compatibility',
   profile_id: 'medautoscience.domain_route.compatibility.v1',
   profile_role: 'domain_owned_compatibility_profile',
   source_domain: 'medautoscience',
   domain_truth_owner: 'med-autoscience',
+  substrate_owner: 'one-person-lab',
   compatibility_only: true,
   canonical_projection: 'domain_route',
+  canonical_route_surface: 'domain_route',
+  canonical_progress_surface: 'domain_progress',
 } as const;
 
 const DOMAIN_ROUTE_AUTHORITY_BOUNDARY = {
@@ -150,6 +154,18 @@ export function masDomainRouteProjection(
     return null;
   }
   const actionRef = MAS_OWNER_ROUTE_TASK_ACTIONS.get(task.task_kind);
+  const domainRouteReadback = {
+    surface_kind: 'opl_domain_route_readback',
+    route_ref: task.task_kind,
+    action_ref: actionRef,
+    domain_id: task.domain_id,
+    domain_truth_owner: 'med-autoscience',
+    substrate_owner: 'one-person-lab',
+    profile_compatibility: MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE,
+    compatibility_only: true,
+    provider_completion_is_domain_progress: false,
+    provider_completion_is_domain_ready: false,
+  };
   return {
     surface_id: DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
     surface_kind: LEGACY_MAS_DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
@@ -157,6 +173,7 @@ export function masDomainRouteProjection(
     legacy_surface_kind: LEGACY_MAS_DOMAIN_ROUTE_TASK_PROJECTION_SURFACE_KIND,
     compatibility_profile: MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE,
     projection_kind: 'domain_route',
+    domain_route_readback: domainRouteReadback,
     domain_truth_owner: 'med-autoscience',
     queue_owner: 'one-person-lab',
     route_ref: task.task_kind,

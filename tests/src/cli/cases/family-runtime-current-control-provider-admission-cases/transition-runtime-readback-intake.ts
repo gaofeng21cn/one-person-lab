@@ -638,6 +638,10 @@ test('family-runtime records NonAdvancingApply when authorized stage packet lack
       false,
     );
     assert.equal(
+      refreshedCurrentControl.domain_progress_transition_projection_metadata.domain_progress_delta,
+      false,
+    );
+    assert.equal(
       refreshedCurrentControl.domain_progress_transition_projection_metadata.paper_progress_delta,
       false,
     );

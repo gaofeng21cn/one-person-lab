@@ -257,9 +257,53 @@ test('family-runtime intake admits MAS current-control provider candidates ahead
       'DomainProgressTransitionRuntime',
     );
     assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_route_profile_compatibility
+        .surface_kind,
+      'opl_domain_route_profile_compatibility',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_route_profile_compatibility
+        .canonical_route_surface,
+      'domain_route',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_route_profile_compatibility
+        .canonical_progress_surface,
+      'domain_progress',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_policy_adapter
+        .surface_kind,
+      'opl_domain_progress_policy_adapter_readback',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_policy_adapter
+        .adapter_role,
+      'domain_profile_compatibility_adapter',
+    );
+    assert.equal(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_policy_adapter
+        .provider_completion_is_domain_progress,
+      false,
+    );
+    assert.deepEqual(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_policy_result,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_policy_adapter,
+    );
+    assert.equal(
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.provider_admission_identity
         .current_control_command.postcondition.kind,
       'provider_admission_enqueued_or_blocked',
+    );
+    assert.deepEqual(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.provider_admission_identity
+        .domain_route_profile_compatibility,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_route_profile_compatibility,
+    );
+    assert.deepEqual(
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.provider_admission_identity
+        .domain_progress_policy_result,
+      tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.domain_progress_policy_adapter,
     );
     assert.equal(
       tasksByStudy['003-dpcc-primary-care-phenotype-treatment-gap'].payload.opl_transition_event

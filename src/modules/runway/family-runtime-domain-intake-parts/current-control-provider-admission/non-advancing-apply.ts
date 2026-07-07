@@ -241,6 +241,7 @@ function nonAdvancingApplyCommand(input: {
       stable_outcome: true,
       provider_completion_is_domain_completion: false,
       provider_completion_is_domain_ready: false,
+      domain_progress_delta: false,
       paper_progress_delta: false,
     },
     authority_boundary: {
@@ -250,6 +251,7 @@ function nonAdvancingApplyCommand(input: {
       opl_can_create_domain_typed_blocker: false,
       provider_completion_is_domain_completion: false,
       provider_completion_is_domain_ready: false,
+      non_advancing_apply_counts_as_domain_progress: false,
       non_advancing_apply_counts_as_paper_progress: false,
     },
   };
@@ -329,6 +331,7 @@ function publishNonAdvancingApplyToCurrentControl(input: {
       opl_can_create_domain_typed_blocker: false,
       provider_completion_is_domain_completion: false,
       provider_completion_is_domain_ready: false,
+      domain_progress_delta: false,
       paper_progress_delta: false,
     },
   };
@@ -345,6 +348,7 @@ function publishNonAdvancingApplyToCurrentControl(input: {
     transaction_complete: input.runtimeLiveReadback.transaction_complete === true,
     provider_admission_allowed: false,
     current_executable_owner_action_allowed: false,
+    domain_progress_delta: false,
     paper_progress_delta: false,
     provider_completion_is_domain_completion: false,
     provider_completion_is_domain_ready: false,
@@ -374,6 +378,7 @@ function publishNonAdvancingApplyToCurrentControl(input: {
             provider_admission_requires_opl_runtime_result: false,
             provider_completion_is_domain_completion: false,
             provider_completion_is_domain_ready: false,
+            domain_progress_delta: false,
             paper_progress_delta: false,
             non_advancing_apply: true,
           },

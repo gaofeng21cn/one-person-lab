@@ -780,8 +780,40 @@ export function currentControlProviderAdmissionInputFrom(
   const transitionRequest = isRecord(candidate.opl_domain_progress_transition_request)
     ? candidate.opl_domain_progress_transition_request
     : null;
+  const domainRouteProfileCompatibility = {
+    surface_kind: 'opl_domain_route_profile_compatibility',
+    profile_role: 'domain_owned_compatibility_profile',
+    source_domain: domainId,
+    domain_truth_owner: 'med-autoscience',
+    substrate_owner: 'one-person-lab',
+    profile_name: profileName,
+    profile_ref: profileRef,
+    compatibility_only: true,
+    canonical_route_surface: 'domain_route',
+    canonical_progress_surface: 'domain_progress',
+    retained_legacy_task_kind: optionalString(candidate.provider_admission_source_task_kind),
+  };
+  const domainProgressPolicyAdapter = {
+    surface_kind: 'opl_domain_progress_policy_adapter_readback',
+    adapter_role: 'domain_profile_compatibility_adapter',
+    domain_id: domainId,
+    domain_truth_owner: 'med-autoscience',
+    substrate_owner: 'one-person-lab',
+    profile_compatibility: domainRouteProfileCompatibility,
+    currentness_basis: currentnessBasis,
+    route_identity_key: routeIdentityKey,
+    attempt_idempotency_key: attemptIdempotencyKey,
+    provider_completion_is_domain_progress: false,
+    provider_completion_is_domain_ready: false,
+    opl_can_write_domain_truth: false,
+    opl_can_create_domain_owner_receipt: false,
+    opl_can_create_domain_typed_blocker: false,
+  };
   const providerAdmissionIdentity = {
     ...candidate,
+    domain_route_profile_compatibility: domainRouteProfileCompatibility,
+    domain_progress_policy_adapter: domainProgressPolicyAdapter,
+    domain_progress_policy_result: domainProgressPolicyAdapter,
     ...(transitionRequest ? { opl_domain_progress_transition_request: transitionRequest } : {}),
     current_control_command_outbox_record: currentControlCommand,
     current_control_command: currentControlCommand,
@@ -854,6 +886,9 @@ export function currentControlProviderAdmissionInputFrom(
           ? { required_output_surface: optionalString(candidate.required_output_surface) }
           : {}),
         ...(currentnessBasis ? { owner_route_currentness_basis: currentnessBasis } : {}),
+        domain_route_profile_compatibility: domainRouteProfileCompatibility,
+        domain_progress_policy_adapter: domainProgressPolicyAdapter,
+        domain_progress_policy_result: domainProgressPolicyAdapter,
         ...(transitionRequest ? { opl_domain_progress_transition_request: transitionRequest } : {}),
         current_control_command_outbox_record: currentControlCommand,
         current_control_command: currentControlCommand,

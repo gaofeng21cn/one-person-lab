@@ -22,7 +22,11 @@ import {
 
 function transitionPendingCandidateIdentity(candidate: Record<string, unknown>) {
   const sourceRefs = isRecord(candidate.source_refs) ? candidate.source_refs : {};
-  const policyResult = isRecord(candidate.paper_progress_policy_result) ? candidate.paper_progress_policy_result : {};
+  const policyResult = isRecord(candidate.domain_progress_policy_result)
+    ? candidate.domain_progress_policy_result
+    : isRecord(candidate.paper_progress_policy_result)
+      ? candidate.paper_progress_policy_result
+      : {};
   const request = isRecord(candidate.opl_domain_progress_transition_request)
     ? candidate.opl_domain_progress_transition_request
     : isRecord(candidate.opl_runtime_carrier)
@@ -318,6 +322,7 @@ function terminalConsumedReadback(input: {
       : null,
     provider_completion_is_domain_completion: false,
     provider_completion_is_domain_ready: false,
+    domain_progress_delta: false,
   };
   const studies = Array.isArray(input.currentControl.studies)
     ? input.currentControl.studies.map((study) => {
@@ -337,6 +342,7 @@ function terminalConsumedReadback(input: {
             provider_admission_requires_opl_runtime_result: false,
             provider_completion_is_domain_completion: false,
             provider_completion_is_domain_ready: false,
+            domain_progress_delta: false,
             terminal_stage_attempt_id: terminalReadback.terminal_stage_attempt_id,
           },
           provider_admission_pending_count: retainedStudyCandidates.length,
@@ -361,7 +367,10 @@ function terminalConsumedReadback(input: {
       authority: false,
       domain_truth_owner: 'med-autoscience',
       substrate_owner: 'one-person-lab',
+      domain_progress_delta: false,
       provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+      profile_compatibility_surface: 'domain_route_profile_compatibility',
       idempotency_key: optionalString(input.candidate.attempt_idempotency_key),
       route_identity_key: optionalString(input.candidate.route_identity_key),
       terminal_stage_attempt_id: terminalReadback.terminal_stage_attempt_id,
@@ -426,7 +435,10 @@ function publishProviderAdmissionCandidateToCurrentControl(input: {
       authority: false,
       domain_truth_owner: 'med-autoscience',
       substrate_owner: 'one-person-lab',
+      domain_progress_delta: false,
       provider_completion_is_domain_completion: false,
+      provider_completion_is_domain_ready: false,
+      profile_compatibility_surface: 'domain_route_profile_compatibility',
       idempotency_key: optionalString(input.candidate.attempt_idempotency_key),
       route_identity_key: optionalString(input.candidate.route_identity_key),
     },

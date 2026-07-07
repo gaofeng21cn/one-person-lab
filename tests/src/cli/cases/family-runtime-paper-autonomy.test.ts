@@ -136,9 +136,20 @@ test('family-runtime autonomy-supervisor readback returns only identity-bound OP
     assert.equal(readback.recovery_obligation_found, true);
     assert.equal(readback.supervisor_decision_found, true);
     assert.equal(readback.current_supervisor_decision_readback.surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
+    assert.equal(readback.current_supervisor_decision_readback.readback_kind, 'domain_autonomy_supervisor_decision');
+    assert.equal(
+      readback.current_supervisor_decision_readback.domain_progress_readback.surface_kind,
+      'opl_domain_progress_supervisor_decision_readback',
+    );
+    assert.equal(readback.current_supervisor_decision_readback.domain_progress_readback.domain_progress_delta, false);
+    assert.equal(
+      readback.current_supervisor_decision_readback.domain_progress_readback.provider_completion_is_domain_ready,
+      false,
+    );
     assert.equal(readback.current_supervisor_decision_readback.decision_id, currentDecision.decision_id);
     assert.equal(readback.current_supervisor_decision_readback.decision_kind, 'stop_with_stable_typed_blocker');
     assert.equal(readback.current_supervisor_decision_readback.current_identity.stage_run_id, currentIdentity.stage_run_id);
+    assert.equal(readback.current_supervisor_decision_readback.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(readback.current_supervisor_decision_readback.authority_boundary.opl_can_write_mas_truth, false);
     assert.equal(readback.current_supervisor_decision_readback.authority_boundary.opl_can_create_domain_owner_receipt, false);
     assert.equal(readback.current_supervisor_decision_readback.authority_boundary.opl_can_create_domain_typed_blocker, false);
@@ -231,9 +242,12 @@ test('family-runtime autonomy-supervisor decide appends OPL decision and returns
     assert.equal(decided.decision_readback_canonical_surface_kind, 'opl_domain_autonomy_supervisor_decision_readback');
     assert.equal(decided.decision_status, 'decision_appended');
     assert.equal(decided.decision_readback.surface_kind, 'opl_paper_autonomy_supervisor_decision_readback');
+    assert.equal(decided.decision_readback.readback_kind, 'domain_autonomy_supervisor_decision');
+    assert.equal(decided.decision_readback.domain_progress_readback.domain_progress_delta, false);
     assert.equal(decided.decision_readback.decision_kind, 'stop_with_stable_typed_blocker');
     assert.equal(decided.decision_readback.current_identity.stage_run_id, currentIdentity.stage_run_id);
     assert.equal(decided.decision_ledger_entry.entry_kind, 'supervisor_decision_appended');
+    assert.equal(decided.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(decided.authority_boundary.opl_can_write_mas_truth, false);
     assert.equal(decided.authority_boundary.opl_can_create_domain_owner_receipt, false);
     assert.equal(decided.authority_boundary.opl_can_create_domain_typed_blocker, false);

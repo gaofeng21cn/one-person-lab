@@ -123,6 +123,14 @@ export type PaperAutonomySupervisorDecisionReadback = {
   canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
   legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback';
   compatibility_profile: MasPaperAutonomyCompatibilityProfile;
+  readback_kind: 'domain_autonomy_supervisor_decision';
+  domain_progress_readback: {
+    surface_kind: 'opl_domain_progress_supervisor_decision_readback';
+    readback_role: 'identity_bound_transition_advice';
+    domain_progress_delta: false;
+    provider_completion_is_domain_ready: false;
+    compatibility_profile: MasPaperAutonomyCompatibilityProfile;
+  };
   obligation_id: string;
   decision_id: string;
   decision_kind: PaperAutonomySupervisorDecisionKind;
@@ -146,6 +154,7 @@ export type PaperAutonomySupervisorDecisionReadback = {
   authority_boundary: {
     read_model_can_execute: false;
     observability_can_close_owner_answer: false;
+    opl_can_write_domain_truth: false;
     opl_can_write_mas_truth: false;
     opl_can_create_domain_owner_receipt: false;
     opl_can_create_domain_typed_blocker: false;
@@ -178,6 +187,7 @@ export type PaperAutonomySupervisorTransitionPacket = {
   canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
   legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
   compatibility_profile: MasPaperAutonomyCompatibilityProfile;
+  transition_profile_kind: 'domain_progress_profile_compatibility';
   obligation_id: string;
   supervisor_decision_ref: string;
   transition_kind: PaperAutonomySupervisorDecisionKind;
@@ -205,6 +215,7 @@ export type PaperAutonomySupervisorTransitionPacket = {
     substrate_owner: 'one-person-lab';
   };
   authority_boundary: {
+    opl_can_write_domain_truth: false;
     opl_can_write_mas_truth: false;
     opl_can_create_domain_owner_receipt: false;
     opl_can_create_domain_typed_blocker: false;
@@ -311,6 +322,14 @@ export function buildPaperAutonomySupervisorDecisionReadback(
     canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
     legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback',
     compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
+    readback_kind: 'domain_autonomy_supervisor_decision',
+    domain_progress_readback: {
+      surface_kind: 'opl_domain_progress_supervisor_decision_readback',
+      readback_role: 'identity_bound_transition_advice',
+      domain_progress_delta: false,
+      provider_completion_is_domain_ready: false,
+      compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
+    },
     obligation_id: input.obligation_id,
     decision_id: decisionId,
     decision_kind: input.decision_kind,
@@ -481,6 +500,7 @@ function buildPaperAutonomySupervisorTransitionPacket(
     canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
     legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
     compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
+    transition_profile_kind: 'domain_progress_profile_compatibility',
     obligation_id: decision.obligation_id,
     supervisor_decision_ref: decision.decision_id,
     transition_kind: decision.decision_kind,

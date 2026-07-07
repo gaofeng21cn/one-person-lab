@@ -107,7 +107,17 @@ JSON
     assert.equal(task.family_runtime_task.task.task_kind, 'domain_route/reconcile-apply');
     assert.equal(task.family_runtime_task.task.domain_route.canonical_surface_kind, 'opl_domain_route_task_projection');
     assert.equal(task.family_runtime_task.task.domain_route.projection_kind, 'domain_route');
+    assert.equal(
+      task.family_runtime_task.task.domain_route.compatibility_profile.surface_kind,
+      'opl_domain_route_profile_compatibility',
+    );
     assert.equal(task.family_runtime_task.task.domain_route.compatibility_profile.compatibility_only, true);
+    assert.equal(task.family_runtime_task.task.domain_route.compatibility_profile.canonical_route_surface, 'domain_route');
+    assert.equal(task.family_runtime_task.task.domain_route.compatibility_profile.canonical_progress_surface, 'domain_progress');
+    assert.equal(task.family_runtime_task.task.domain_route.domain_route_readback.surface_kind, 'opl_domain_route_readback');
+    assert.equal(task.family_runtime_task.task.domain_route.domain_route_readback.profile_compatibility.compatibility_only, true);
+    assert.equal(task.family_runtime_task.task.domain_route.domain_route_readback.provider_completion_is_domain_progress, false);
+    assert.equal(task.family_runtime_task.task.domain_route.domain_route_readback.provider_completion_is_domain_ready, false);
     assert.equal(task.family_runtime_task.task.domain_route.domain_truth_owner, 'med-autoscience');
     assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_mas_truth, false);
     assert.equal(task.family_runtime_task.task.domain_route.authority_boundary.writes_domain_truth, false);

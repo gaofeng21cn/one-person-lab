@@ -67,8 +67,10 @@ function currentControlOwnerRouteSourceRefs(ownerRoute: Record<string, unknown> 
 }
 
 function transitionRequestFromCandidate(candidate: Record<string, unknown>) {
-  const policyResult = isRecord(candidate.paper_progress_policy_result)
-    ? candidate.paper_progress_policy_result
+  const policyResult = isRecord(candidate.domain_progress_policy_result)
+    ? candidate.domain_progress_policy_result
+    : isRecord(candidate.paper_progress_policy_result)
+      ? candidate.paper_progress_policy_result
     : null;
   return isRecord(candidate.opl_domain_progress_transition_request)
     ? candidate.opl_domain_progress_transition_request
