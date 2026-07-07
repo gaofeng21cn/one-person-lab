@@ -9,11 +9,11 @@ const STRUCTURAL_GUARD_REFS = [
   'contracts/opl-framework/private-platform-residue-owner-decisions.json',
   'contracts/opl-framework/standard-agent-landing-acceptance-contract.json#private_platform_residue_owner_decision',
   'contracts/opl-framework/brand-module-l5-operating-evidence.json#requirements[].no_resurrection_guard_ref',
-  'src/framework-tranche-backlog-parts/generated-hosted-boundary-guard.ts',
-  'src/framework-tranche-backlog-parts/standard-agent-landing-guard.ts',
-  'src/framework-tranche-backlog-parts/domain-source-ref-integrity-guard.ts',
-  'src/framework-tranche-backlog-parts/tranche-data.ts#APP_SHELL_CONVERGENCE_STRUCTURE_READBACK',
-  'src/framework-tranche-backlog-parts/tranche-data.ts#CROSS_REPO_REF_INTEGRITY_GUARD',
+  'src/modules/foundry-lab/framework-tranche-backlog-parts/generated-hosted-boundary-guard.ts',
+  'src/modules/foundry-lab/framework-tranche-backlog-parts/standard-agent-landing-guard.ts',
+  'src/modules/foundry-lab/framework-tranche-backlog-parts/domain-source-ref-integrity-guard.ts',
+  'src/modules/foundry-lab/framework-tranche-backlog-parts/tranche-data.ts#APP_SHELL_CONVERGENCE_STRUCTURE_READBACK',
+  'src/modules/foundry-lab/framework-tranche-backlog-parts/tranche-data.ts#CROSS_REPO_REF_INTEGRITY_GUARD',
 ] as const;
 
 const REGRESSION_GUARD_REFS = [

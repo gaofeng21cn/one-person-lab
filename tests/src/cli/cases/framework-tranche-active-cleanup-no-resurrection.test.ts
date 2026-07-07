@@ -45,7 +45,7 @@ test('framework tranche backlog exposes active cleanup current-role guard withou
   );
   assert.ok(
     guard.source_refs.includes(
-      'src/framework-tranche-backlog-parts/domain-source-ref-integrity-guard.ts',
+      'src/modules/foundry-lab/framework-tranche-backlog-parts/domain-source-ref-integrity-guard.ts',
     ),
   );
   assert.equal(
@@ -89,7 +89,7 @@ test('framework tranche backlog exposes active cleanup current-role guard withou
 
 test('framework tranche backlog guard readbacks stay split behind a thin facade', () => {
   const facade = fs.readFileSync(
-    path.join(repoRoot, 'src/framework-tranche-backlog-parts/guard-readbacks.ts'),
+    path.join(repoRoot, 'src/modules/foundry-lab/framework-tranche-backlog-parts/guard-readbacks.ts'),
     'utf8',
   );
 
@@ -102,7 +102,7 @@ test('framework tranche backlog guard readbacks stay split behind a thin facade'
       new RegExp(`export \\{ ${exportName} \\} from './${fileName.replace('.', '\\.')}'`),
     );
     const source = fs.readFileSync(
-      path.join(repoRoot, 'src/framework-tranche-backlog-parts', fileName),
+      path.join(repoRoot, 'src/modules/foundry-lab/framework-tranche-backlog-parts', fileName),
       'utf8',
     );
     assert.match(source, new RegExp(`export function ${exportName}\\(`));
