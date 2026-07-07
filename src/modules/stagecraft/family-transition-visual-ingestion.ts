@@ -9,6 +9,10 @@ import type {
 type JsonRecord = Record<string, unknown>;
 
 export type VisualTransitionAdapterProfile = {
+  profileSurfaceKind: 'opl_domain_transition_adapter_profile';
+  profileRole: 'domain_transition_profile_extension' | 'compatibility_projection';
+  profileExtensionKind: 'visual_transition';
+  compatibilitySurfaceKind?: 'visual_transition_spec';
   guardOwnerLabel: string;
   workUnitRefPrefix: string;
   ownerRouteRefPrefix: string;
@@ -46,7 +50,7 @@ export type VisualTransitionSpec = {
 
 const DEFAULT_AUTHORITY_BOUNDARY = {
   opl: 'transition_runner_transport_projection_only',
-  domain: 'visual_truth_review_export_artifact_owner',
+  domain: 'domain_transition_truth_review_artifact_owner',
 };
 
 function refPrefixForDomain(targetDomainId: string) {
@@ -57,6 +61,10 @@ function refPrefixForDomain(targetDomainId: string) {
 export function defaultVisualTransitionAdapterProfile(targetDomainId: string): VisualTransitionAdapterProfile {
   const refPrefix = refPrefixForDomain(targetDomainId);
   return {
+    profileSurfaceKind: 'opl_domain_transition_adapter_profile',
+    profileRole: refPrefix === 'rca' ? 'compatibility_projection' : 'domain_transition_profile_extension',
+    profileExtensionKind: 'visual_transition',
+    compatibilitySurfaceKind: 'visual_transition_spec',
     guardOwnerLabel: refPrefix === 'rca' ? 'RCA' : targetDomainId,
     workUnitRefPrefix: `${refPrefix}-work-unit`,
     ownerRouteRefPrefix: `${refPrefix}-visual-transition`,
@@ -97,9 +105,18 @@ function readVisualStringList(value: unknown, field: string) {
   );
 }
 
-function visualTransitionAuthorityBoundary(spec: VisualTransitionSpec) {
+function visualTransitionAuthorityBoundary(
+  spec: VisualTransitionSpec,
+  adapterProfile: VisualTransitionAdapterProfile,
+) {
   return {
     ...DEFAULT_AUTHORITY_BOUNDARY,
+    profile_surface_kind: adapterProfile.profileSurfaceKind,
+    profile_role: adapterProfile.profileRole,
+    profile_extension_kind: adapterProfile.profileExtensionKind,
+    compatibility_surface_kind: adapterProfile.compatibilitySurfaceKind ?? null,
+    domain_transition_profile_owner: spec.owner,
+    domain_transition_profile_extension_is_core_ontology: false,
     visual_transition_surface_kind: spec.surface_kind,
     visual_transition_status: spec.status ?? null,
     visual_transition_model: spec.transition_model ?? null,
@@ -200,7 +217,7 @@ export function adaptVisualTransitionSpecToFamilyTransitionSpec(
   adapterProfile = defaultVisualTransitionAdapterProfile(targetDomainId),
 ): FamilyTransitionSpec {
   const spec = normalizeVisualTransitionSpec(value);
-  const boundary = visualTransitionAuthorityBoundary(spec);
+  const boundary = visualTransitionAuthorityBoundary(spec, adapterProfile);
   const guards: Record<string, FamilyTransitionGuardDefinition> = {};
   for (const transition of spec.transition_table) {
     for (const guardRef of transition.required_guard_refs) {
@@ -224,6 +241,10 @@ export function adaptVisualTransitionSpecToFamilyTransitionSpec(
     transitions: spec.transition_table.map((transition) => {
       const metadata = {
         owner_action: transition.owner_action,
+        domain_transition_profile_surface_kind: adapterProfile.profileSurfaceKind,
+        domain_transition_profile_role: adapterProfile.profileRole,
+        domain_transition_profile_extension_kind: adapterProfile.profileExtensionKind,
+        compatibility_surface_kind: adapterProfile.compatibilitySurfaceKind ?? null,
         visual_transition_spec_id: spec.spec_id,
         visual_transition_status: spec.status ?? null,
         oracle_fixture_id: spec.oracle_fixture.fixture_id,
@@ -280,6 +301,9 @@ export function buildVisualTransitionMatrixCases(value: unknown, targetDomainId:
     event: 'domain_tick',
     guards: Object.fromEntries(transition.required_guard_refs.map((guardRef) => [guardRef, true])),
     context: {
+      domain_transition_profile_surface_kind: 'opl_domain_transition_adapter_profile',
+      domain_transition_profile_extension_kind: 'visual_transition',
+      compatibility_surface_kind: 'visual_transition_spec',
       visual_transition_spec_id: spec.spec_id,
       oracle_fixture_id: spec.oracle_fixture.fixture_id,
       expected_transition_id: transition.transition_id,

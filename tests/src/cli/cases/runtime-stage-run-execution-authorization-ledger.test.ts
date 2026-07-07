@@ -865,6 +865,12 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
     assert.equal(projection.profile_role, 'compatibility');
     assert.equal(projection.closeout_binding_source, 'owner_answer_projection_profile_registry');
     assert.equal(
+      projection.authority_boundary.projection_registry,
+      'opl_domain_owner_answer_projection_profile_registry',
+    );
+    assert.equal(projection.authority_boundary.projection_role, 'compatibility_projection');
+    assert.equal(projection.authority_boundary.compatibility_projection, true);
+    assert.equal(
       projection.authority_boundary.can_claim_domain_ready,
       false,
     );
@@ -962,11 +968,23 @@ test('owner-answer projection lookup accepts injected domain profile', () => {
     });
 
     assert.equal(projection?.projection_ref, projectionPath);
+    assert.equal(projection?.surface_kind, 'opl_domain_owner_answer_projection_registry_match');
+    assert.equal(
+      projection?.projection_registry,
+      'opl_domain_owner_answer_projection_profile_registry',
+    );
+    assert.equal(
+      projection?.projection_policy,
+      'generic_domain_owner_answer_refs_only_no_domain_truth_or_readiness_claim',
+    );
     assert.equal(projection?.profile_id, 'example-domain.owner_answer_projection.test.v1');
     assert.equal(projection?.profile_role, 'registry');
+    assert.equal(projection?.projection_role, 'domain_profile_projection');
     assert.equal(projection?.workspace_root, workspaceRoot);
     assert.equal(projection?.study_id, 'case-1');
+    assert.equal(projection?.domain_profile.compatibility_projection, false);
     assert.equal(projection?.authority_boundary.source_owner, 'example-domain');
+    assert.equal(projection?.authority_boundary.projection_role, 'domain_profile_projection');
     assert.equal(projection?.authority_boundary.can_write_domain_truth, false);
   } finally {
     if (previousStateDir === undefined) {

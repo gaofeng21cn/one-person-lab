@@ -655,8 +655,20 @@ test('visual transition ingestion uses generic adapter profile instead of RCA-on
 
   assert.equal(spec.target_domain_id, 'example-visual-domain');
   assert.equal(spec.owner, 'example-visual-domain');
+  assert.equal(spec.authority_boundary.profile_surface_kind, 'opl_domain_transition_adapter_profile');
+  assert.equal(spec.authority_boundary.profile_role, 'domain_transition_profile_extension');
+  assert.equal(spec.authority_boundary.profile_extension_kind, 'visual_transition');
+  assert.equal(spec.authority_boundary.domain_transition_profile_extension_is_core_ontology, false);
   assert.equal(spec.guards.source_assets_indexed.description, 'example-visual-domain-owned guard ref source_assets_indexed for transition intake_to_export_review.');
   assert.equal(spec.transitions[0].next_work_unit?.work_unit_ref, 'example-visual-domain-work-unit:visual_export_review');
+  assert.equal(
+    spec.transitions[0].next_work_unit?.metadata?.domain_transition_profile_surface_kind,
+    'opl_domain_transition_adapter_profile',
+  );
+  assert.equal(
+    spec.transitions[0].next_work_unit?.metadata?.domain_transition_profile_extension_kind,
+    'visual_transition',
+  );
   assert.equal(spec.transitions[0].owner_route.route_ref, 'example-visual-domain-visual-transition:intake_to_export_review');
   assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [
     'example-visual-domain-domain-owner-receipt:intake_to_export_review',
@@ -682,6 +694,8 @@ test('visual transition legacy RCA adapter keeps existing ref compatibility', ()
   );
 
   assert.equal(spec.guards.source_assets_indexed.description, 'RCA-owned guard ref source_assets_indexed for transition intake_to_export_review.');
+  assert.equal(spec.authority_boundary.profile_role, 'compatibility_projection');
+  assert.equal(spec.authority_boundary.compatibility_surface_kind, 'visual_transition_spec');
   assert.equal(spec.transitions[0].next_work_unit?.work_unit_ref, 'rca-work-unit:visual_export_review');
   assert.equal(spec.transitions[0].owner_route.route_ref, 'rca-visual-transition:intake_to_export_review');
   assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [

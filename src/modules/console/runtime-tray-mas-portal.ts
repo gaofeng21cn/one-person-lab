@@ -34,6 +34,12 @@ export type MasPortalProjection = {
   portal_workspace_roots: Set<string>;
 };
 
+const MAS_WORKBENCH_COMPATIBILITY_SURFACE_KIND = 'mas_opl_runtime_workbench_projection';
+const DOMAIN_WORKBENCH_PROFILE_SURFACE_KIND =
+  'opl_domain_runtime_workbench_profile_projection';
+const MAS_WORKBENCH_PROFILE_ID =
+  'medautoscience.runtime_workbench.projection.compatibility.v1';
+
 function fileUrl(filePath: string) {
   return pathToFileURL(filePath).href;
 }
@@ -170,13 +176,48 @@ function buildPortalFields(
 
 function isValidMasWorkbenchProjection(projection: JsonRecord | null) {
   const authority = nestedRecord(projection, 'authority');
+  const surfaceKind = firstString(projection?.surface_kind);
+  const compatibilitySurfaceKind = firstString(projection?.compatibility_surface_kind);
   return Boolean(
     projection
-      && projection.surface_kind === 'mas_opl_runtime_workbench_projection'
+      && (
+        surfaceKind === MAS_WORKBENCH_COMPATIBILITY_SURFACE_KIND
+        || (
+          surfaceKind === DOMAIN_WORKBENCH_PROFILE_SURFACE_KIND
+          && compatibilitySurfaceKind === MAS_WORKBENCH_COMPATIBILITY_SURFACE_KIND
+        )
+      )
       && projection.schema_version === 1
       && authority?.opl_role === 'projection_consumer_and_action_transport_only'
       && authority.mas_truth_owner === true,
   );
+}
+
+function normalizeMasWorkbenchProjection(projection: JsonRecord): JsonRecord {
+  const authority = nestedRecord(projection, 'authority') ?? {};
+  return {
+    ...projection,
+    surface_kind: DOMAIN_WORKBENCH_PROFILE_SURFACE_KIND,
+    compatibility_surface_kind: MAS_WORKBENCH_COMPATIBILITY_SURFACE_KIND,
+    projection_registry: 'opl_domain_runtime_workbench_projection_profile_registry',
+    profile_id: MAS_WORKBENCH_PROFILE_ID,
+    profile_role: 'compatibility_projection',
+    domain_id: 'medautoscience',
+    projection_policy:
+      'domain_profile_runtime_workbench_refs_only_no_domain_truth_or_progress_claim',
+    authority: {
+      ...authority,
+      domain_id: 'medautoscience',
+      domain_truth_owner: 'med-autoscience',
+      source_owner: 'med-autoscience',
+      consumer_owner: 'one-person-lab',
+      profile_id: MAS_WORKBENCH_PROFILE_ID,
+      profile_role: 'compatibility_projection',
+      compatibility_surface_kind: MAS_WORKBENCH_COMPATIBILITY_SURFACE_KIND,
+      can_claim_domain_progress_truth: false,
+      can_claim_runtime_ready: false,
+    },
+  };
 }
 
 function laneForMasWorkbenchStudy(study: JsonRecord): RuntimeTrayLane {
@@ -462,8 +503,11 @@ export function buildMasPortalItems(workspace: MasWorkspaceProjectionRef): MasPo
   const portalSourceRefs = compactPortalSourceRefs(workspace.workspace_root, portalPayloadPath, validHandoff);
   const workspaceRecord = nestedRecord(payload, 'workspace');
   const workbenchProjection = nestedRecord(payload, 'mas_opl_runtime_workbench_projection');
-  const studyItems = isValidMasWorkbenchProjection(workbenchProjection)
-    ? jsonRecordList(workbenchProjection?.studies)
+  const normalizedWorkbenchProjection = isValidMasWorkbenchProjection(workbenchProjection)
+    ? normalizeMasWorkbenchProjection(workbenchProjection as JsonRecord)
+    : null;
+  const studyItems = normalizedWorkbenchProjection
+    ? jsonRecordList(normalizedWorkbenchProjection.studies)
       .map((study) =>
         buildMasWorkbenchStudyItem(
           workspace,
@@ -472,7 +516,7 @@ export function buildMasPortalItems(workspace: MasWorkspaceProjectionRef): MasPo
           portalPayloadRef,
           portalFreshness,
           portalSourceRefs,
-          workbenchProjection as JsonRecord,
+          normalizedWorkbenchProjection,
           study,
         )
       )
@@ -490,10 +534,10 @@ export function buildMasPortalItems(workspace: MasWorkspaceProjectionRef): MasPo
         )
       )
       .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
-  const projectionSourceRefs = isValidMasWorkbenchProjection(workbenchProjection)
+  const projectionSourceRefs = normalizedWorkbenchProjection
     ? [
       sourceRef('/runtime_tray_snapshot/mas_opl_runtime_workbench_items', 'runtime_projection'),
-      fileSourceRef(portalPayloadPath, 'mas_opl_runtime_workbench_projection', 'MAS OPL Runtime Workbench projection'),
+      fileSourceRef(portalPayloadPath, 'mas_opl_runtime_workbench_projection', 'MAS OPL Runtime Workbench compatibility projection'),
     ]
     : [];
   const alertItems = jsonRecordList(workspaceRecord?.workspace_alert_items)

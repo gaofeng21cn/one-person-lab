@@ -153,10 +153,15 @@ test('runtime snapshot consumes MAS OPL workbench projection as read-only study 
     assert.equal(item.title, 'DM mortality attribution');
     assert.equal(item.summary, '最近 12 小时内仍有明确研究推进记录。');
     assert.equal(item.next_action_summary, '观察自动运行推进。');
-    assert.equal(item.workbench_projection.surface_kind, 'mas_opl_runtime_workbench_projection');
+    assert.equal(item.workbench_projection.surface_kind, 'opl_domain_runtime_workbench_profile_projection');
+    assert.equal(item.workbench_projection.compatibility_surface_kind, 'mas_opl_runtime_workbench_projection');
+    assert.equal(item.workbench_projection.profile_role, 'compatibility_projection');
     assert.equal(item.workbench_projection.schema_version, 1);
     assert.equal(item.workbench_projection.authority.mas_truth_owner, true);
+    assert.equal(item.workbench_projection.authority.domain_truth_owner, 'med-autoscience');
     assert.equal(item.workbench_projection.authority.opl_role, 'projection_consumer_and_action_transport_only');
+    assert.equal(item.workbench_projection.authority.can_claim_domain_progress_truth, false);
+    assert.equal(item.workbench_projection.authority.can_claim_runtime_ready, false);
     assert.deepEqual(item.workbench_projection.authority.forbidden_writes, [
       'study_truth',
       'publication_judgment',
@@ -170,6 +175,10 @@ test('runtime snapshot consumes MAS OPL workbench projection as read-only study 
     assert.equal(item.study_workbench.study_id, '002-dm-china-us-mortality-attribution');
     assert.equal(item.study_workbench.display_title, 'DM mortality attribution');
     assert.equal(item.study_workbench.macro_state, 'running');
+    assert.equal(item.current_work_unit.surface_kind, 'opl_domain_current_work_unit_profile_projection');
+    assert.equal(item.current_work_unit.compatibility_surface_kind, 'mas_current_work_unit_projection');
+    assert.equal(item.current_work_unit.projection_registry, 'opl_domain_current_work_unit_projection_profile_registry');
+    assert.equal(item.current_work_unit.profile_role, 'compatibility_projection');
     assert.equal(item.current_work_unit.status, 'executable_owner_action');
     assert.equal(item.current_work_unit.current_owner, 'write');
     assert.equal(item.current_work_unit.stage_id, 'publication_supervision');
@@ -186,6 +195,7 @@ test('runtime snapshot consumes MAS OPL workbench projection as read-only study 
     assert.equal(item.current_work_unit.authority_boundary.can_write_domain_truth, false);
     assert.equal(item.current_work_unit.authority_boundary.can_create_owner_receipt, false);
     assert.equal(item.current_work_unit.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(item.current_work_unit.authority_boundary.can_claim_domain_progress_truth, false);
     assert.equal(item.current_work_unit.authority_boundary.can_claim_domain_ready, false);
     assert.equal(item.study_workbench.terminal.mode, 'read_only_tail');
     assert.equal(item.study_workbench.links.progress_payload_ref, 'artifacts/runtime/progress_portal/studies/002-dm-china-us-mortality-attribution/latest.json');
@@ -297,10 +307,17 @@ process.stdout.write(JSON.stringify(payload));
     assert.equal(item.action_owner, 'opl');
     assert.equal(item.action_kind, 'quality_gate');
     assert.equal(item.current_work_unit.status, 'typed_blocker');
+    assert.equal(item.current_work_unit.surface_kind, 'opl_domain_current_work_unit_profile_projection');
+    assert.equal(item.current_work_unit.compatibility_surface_kind, 'mas_current_work_unit_projection');
     assert.equal(item.current_work_unit.current_owner, 'one-person-lab');
     assert.equal(item.current_work_unit.work_unit_id, 'truth-snapshot::fixture');
     assert.equal(item.current_work_unit.source_projection_ref, 'mas_study_progress/current_work_unit');
+    assert.equal(item.current_work_unit.compatibility_source_projection_ref, 'mas_study_progress/current_work_unit');
     assert.equal(item.study_progress_current_work_unit_diagnostic.status, 'fresh');
+    assert.equal(
+      item.study_progress_current_work_unit_diagnostic.projection_registry,
+      'opl_domain_current_work_unit_projection_profile_registry',
+    );
     assert.equal(
       item.source_refs.some((ref: { ref: string; role: string }) =>
         ref.ref === studyProgressPath && ref.role === 'mas_study_progress_probe'

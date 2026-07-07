@@ -11,6 +11,13 @@ import { getActiveWorkspaceBinding } from '../workspace/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
+const OWNER_ANSWER_PROJECTION_REGISTRY_SURFACE_KIND =
+  'opl_domain_owner_answer_projection_profile_registry';
+const OWNER_ANSWER_PROJECTION_MATCH_SURFACE_KIND =
+  'opl_domain_owner_answer_projection_registry_match';
+const OWNER_ANSWER_PROJECTION_POLICY =
+  'generic_domain_owner_answer_refs_only_no_domain_truth_or_readiness_claim';
+
 export type OwnerAnswerProjectionProfile = {
   profileId: string;
   profileRole: 'registry' | 'compatibility';
@@ -50,6 +57,12 @@ export const MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFI
 export const OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY = [
   MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE,
 ] as const;
+
+function profileProjectionRole(profile: OwnerAnswerProjectionProfile) {
+  return profile.profileRole === 'compatibility'
+    ? 'compatibility_projection'
+    : 'domain_profile_projection';
+}
 
 function readJsonRecord(filePath: string) {
   try {
@@ -136,14 +149,34 @@ export function findOwnerAnswerProjection(input: {
       if (!projection || !bindingMatchesReceipt(projection, input.receipt)) {
         continue;
       }
+      const projectionRole = profileProjectionRole(profile);
       return {
+        surface_kind: OWNER_ANSWER_PROJECTION_MATCH_SURFACE_KIND,
+        projection_registry: OWNER_ANSWER_PROJECTION_REGISTRY_SURFACE_KIND,
+        projection_policy: OWNER_ANSWER_PROJECTION_POLICY,
         profile_id: profile.profileId,
         profile_role: profile.profileRole,
+        projection_role: projectionRole,
+        domain_profile: {
+          profile_id: profile.profileId,
+          profile_role: profile.profileRole,
+          projection_role: projectionRole,
+          domain_id: profile.domainId,
+          source_owner: profile.sourceOwner,
+          compatibility_projection: profile.profileRole === 'compatibility',
+        },
         projection,
         projection_ref: filePath,
         workspace_root: workspaceRoot,
         study_id: path.basename(studyRoot),
         authority_boundary: {
+          surface_kind: 'opl_domain_owner_answer_projection_authority_boundary',
+          projection_registry: OWNER_ANSWER_PROJECTION_REGISTRY_SURFACE_KIND,
+          projection_role: projectionRole,
+          profile_id: profile.profileId,
+          profile_role: profile.profileRole,
+          domain_id: profile.domainId,
+          compatibility_projection: profile.profileRole === 'compatibility',
           refs_only: true,
           source_owner: profile.sourceOwner,
           consumer_owner: 'one-person-lab',

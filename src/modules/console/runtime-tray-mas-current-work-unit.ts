@@ -20,6 +20,16 @@ import {
 } from './runtime-tray-snapshot-utils.ts';
 
 const DEFAULT_STUDY_PROGRESS_TIMEOUT_MS = 15_000;
+const DOMAIN_CURRENT_WORK_UNIT_PROFILE_ID =
+  'medautoscience.current_work_unit.projection.compatibility.v1';
+const DOMAIN_CURRENT_WORK_UNIT_PROJECTION_REGISTRY =
+  'opl_domain_current_work_unit_projection_profile_registry';
+const DOMAIN_CURRENT_WORK_UNIT_PROJECTION_SURFACE_KIND =
+  'opl_domain_current_work_unit_profile_projection';
+const MAS_CURRENT_WORK_UNIT_COMPATIBILITY_SURFACE_KIND =
+  'mas_current_work_unit_projection';
+const DOMAIN_CURRENT_WORK_UNIT_PROJECTION_POLICY =
+  'domain_profile_current_work_unit_refs_only_no_domain_truth_or_progress_claim';
 
 export type MasStudyProgressCurrentWorkUnitReadout = {
   projection: JsonRecord | null;
@@ -47,18 +57,39 @@ function refValue(ref: string | RuntimeTraySourceRef | null | undefined) {
 
 function authorityBoundary() {
   return {
+    surface_kind: 'opl_domain_current_work_unit_projection_authority_boundary',
+    projection_registry: DOMAIN_CURRENT_WORK_UNIT_PROJECTION_REGISTRY,
+    profile_id: DOMAIN_CURRENT_WORK_UNIT_PROFILE_ID,
+    profile_role: 'compatibility_projection',
+    compatibility_surface_kind: MAS_CURRENT_WORK_UNIT_COMPATIBILITY_SURFACE_KIND,
+    domain_id: 'medautoscience',
+    domain_truth_owner: 'med-autoscience',
+    source_owner: 'med-autoscience',
+    consumer_owner: 'one-person-lab',
     mas_truth_owner: true,
     opl_role: 'projection_consumer_only',
     can_execute_domain_action: false,
     can_write_domain_truth: false,
     can_create_owner_receipt: false,
     can_create_typed_blocker: false,
+    can_claim_domain_progress_truth: false,
     can_close_owner_chain: false,
     can_close_domain_ready: false,
     can_authorize_quality_or_export: false,
     can_claim_domain_ready: false,
+    can_claim_runtime_ready: false,
     can_claim_production_ready: false,
     provider_completion_is_domain_ready: false,
+  };
+}
+
+function diagnosticProfileFields() {
+  return {
+    projection_registry: DOMAIN_CURRENT_WORK_UNIT_PROJECTION_REGISTRY,
+    profile_id: DOMAIN_CURRENT_WORK_UNIT_PROFILE_ID,
+    profile_role: 'compatibility_projection',
+    compatibility_surface_kind: MAS_CURRENT_WORK_UNIT_COMPATIBILITY_SURFACE_KIND,
+    domain_id: 'medautoscience',
   };
 }
 
@@ -104,8 +135,12 @@ export function normalizeMasCurrentWorkUnitProjection(input: {
   }
 
   return {
-    surface_kind: 'mas_current_work_unit_projection',
-    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    surface_kind: DOMAIN_CURRENT_WORK_UNIT_PROJECTION_SURFACE_KIND,
+    compatibility_surface_kind: MAS_CURRENT_WORK_UNIT_COMPATIBILITY_SURFACE_KIND,
+    projection_registry: DOMAIN_CURRENT_WORK_UNIT_PROJECTION_REGISTRY,
+    profile_id: DOMAIN_CURRENT_WORK_UNIT_PROFILE_ID,
+    profile_role: 'compatibility_projection',
+    projection_policy: DOMAIN_CURRENT_WORK_UNIT_PROJECTION_POLICY,
     domain_id: 'medautoscience',
     study_id: input.studyId,
     status,
@@ -130,6 +165,7 @@ export function normalizeMasCurrentWorkUnitProjection(input: {
       : null,
     source_refs: sourceRefs,
     source_projection_ref: input.sourceProjectionRef,
+    compatibility_source_projection_ref: input.sourceProjectionRef,
     authority_boundary: authorityBoundary(),
   };
 }
@@ -165,6 +201,7 @@ function unavailableReadout(
     projection: null,
     source_refs: sourceRefs,
     diagnostic: {
+      ...diagnosticProfileFields(),
       status: 'unavailable',
       reason: 'study_progress_wrapper_missing',
       script_path: scriptPath,
@@ -186,6 +223,7 @@ function failedReadout(input: {
     projection: null,
     source_refs: input.sourceRefs,
     diagnostic: {
+      ...diagnosticProfileFields(),
       status: input.status,
       reason: input.reason,
       exit_status: input.exitStatus,
@@ -235,6 +273,7 @@ function freshReadoutFromPayload(input: {
     }),
     source_refs: input.sourceRefs,
     diagnostic: {
+      ...diagnosticProfileFields(),
       status: 'fresh',
       generated_at: firstString(input.payload.generated_at),
       truth_epoch: firstString(input.payload.truth_epoch),

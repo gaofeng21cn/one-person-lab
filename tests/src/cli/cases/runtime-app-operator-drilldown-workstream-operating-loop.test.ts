@@ -655,8 +655,9 @@ test('owner delta first keeps unbound dispatch workstreams as provenance, not cu
 
 test('owner delta first projects MAS current work unit ahead of stale unbound dispatch residue', () => {
   const currentWorkUnit = {
-    surface_kind: 'mas_current_work_unit_projection',
-    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    surface_kind: 'opl_domain_current_work_unit_profile_projection',
+    compatibility_surface_kind: 'mas_current_work_unit_projection',
+    projection_policy: 'domain_profile_current_work_unit_refs_only_no_domain_truth_or_progress_claim',
     domain_id: 'medautoscience',
     study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
     stage_id: 'publication_supervision',
@@ -787,8 +788,9 @@ test('owner delta first projects MAS current work unit ahead of stale unbound di
 
 test('owner delta first prioritizes OPL-owned MAS current work-unit blockers over later domain actions', () => {
   const domainActionWorkUnit = {
-    surface_kind: 'mas_current_work_unit_projection',
-    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    surface_kind: 'opl_domain_current_work_unit_profile_projection',
+    compatibility_surface_kind: 'mas_current_work_unit_projection',
+    projection_policy: 'domain_profile_current_work_unit_refs_only_no_domain_truth_or_progress_claim',
     domain_id: 'medautoscience',
     study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
     stage_id: 'publication_supervision',
@@ -804,8 +806,9 @@ test('owner delta first prioritizes OPL-owned MAS current work-unit blockers ove
     },
   };
   const oplBlockerWorkUnit = {
-    surface_kind: 'mas_current_work_unit_projection',
-    projection_policy: 'refs_only_domain_currentness_projection_no_domain_truth_write',
+    surface_kind: 'opl_domain_current_work_unit_profile_projection',
+    compatibility_surface_kind: 'mas_current_work_unit_projection',
+    projection_policy: 'domain_profile_current_work_unit_refs_only_no_domain_truth_or_progress_claim',
     domain_id: 'medautoscience',
     study_id: '004-dpcc-longitudinal-care-inertia-intensification-gap',
     stage_id: 'managed_opl_runtime_owner_handoff_gap',
