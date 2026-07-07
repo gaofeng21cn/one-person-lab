@@ -25,7 +25,10 @@ import {
   resolveTemporalWorkerTaskQueue,
 } from './worker-task-queue.ts';
 
-export function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
+export function inspectTemporalWorkerLifecycleFast(
+  paths: TemporalWorkerPaths,
+  input: { providerModuleUrl?: string } = {},
+) {
   const resolved = resolveTemporalAddressForPaths(paths);
   const { address, addressSource, serviceState } = resolved;
   const namespace = resolveTemporalNamespace();
@@ -42,7 +45,7 @@ export function inspectTemporalWorkerLifecycleFast(paths: TemporalWorkerPaths) {
     || process.env.OPL_TEMPORAL_WORKER_STATUS?.trim() === 'ready';
   const workerStatusReady = statePidAlive || envWorkerReady;
   const workerMutationGuard = buildTemporalWorkerMutationGuard({
-    moduleUrl: new URL('../family-runtime-temporal-provider.ts', import.meta.url).href,
+    moduleUrl: input.providerModuleUrl ?? import.meta.url,
     paths,
   });
   const visibilityReadiness = buildTemporalStageAttemptVisibilityReadiness({

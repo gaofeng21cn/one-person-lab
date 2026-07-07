@@ -8,6 +8,9 @@ import {
   buildTemporalStageAttemptVisibilityReadiness,
   inspectTemporalStageAttemptVisibilityReadiness,
 } from './family-runtime-temporal-visibility.ts';
+import {
+  inspectTemporalWorkerLifecycleWithDetail,
+} from './family-runtime-temporal-worker-lifecycle.ts';
 import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -307,7 +310,6 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
     return inspectFamilyRuntimeProvider(kind);
   }
   const detail = options.detail ?? 'full';
-  const { inspectTemporalWorkerLifecycleWithDetail } = await import('./family-runtime-temporal-provider.ts');
   const workerReadiness = await inspectTemporalWorkerLifecycleWithDetail(paths, { detail });
   const managedProviderProjection = workerReadiness.worker_ready === true
     ? null
