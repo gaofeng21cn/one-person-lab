@@ -19,42 +19,19 @@
     {
       "skill_id": "opl-agent-package-lifecycle-reviewer",
       "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
+      "activation_gate": "developer/operator package profile or explicit package trust/lifecycle diagnostic selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-agent-package-trust-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-app-first-run-ux-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-app-release-evidence-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-app-settings-ia-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-atlas-capability-router",
@@ -62,15 +39,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-brand-l5-evidence-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-charter-authority-reviewer",
@@ -78,7 +56,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-code-quality-remediation-reviewer",
@@ -86,7 +73,16 @@
       "activation_gate": "developer/operator profile or explicit quality-details diagnostic selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-completion-audit-writer",
@@ -94,15 +90,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-conflict-blocker-resolution-reviewer",
-      "exposure_scope": "project_local",
-      "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local conflict/blocker review selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-connect-connector-receipt-auditor",
@@ -110,7 +107,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-connect-source-and-skill-router",
@@ -118,31 +124,50 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-console-operator-copilot",
       "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
+      "activation_gate": "developer/operator console, App, Settings, Runtime page, or workbench projection review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-domain-private-tail-retirement-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-domain-progress-transition-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
+      "exposure_scope": "project_local",
+      "activation_gate": "OPL repo maintenance, domain progress projection review, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-eval-harness-designer",
@@ -150,31 +175,33 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-external-runtime-provider-fit-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-external-specialist-skill-router",
       "exposure_scope": "workspace_local",
-      "activation_gate": "workspace or quest explicitly needs a specialist external tool, source, workflow, or method route after the default OPL/domain professional pack is insufficient",
+      "activation_gate": "workspace or quest explicitly needs a specialist or rare scientific external tool, source, workflow, or method route after the default OPL/domain professional pack is insufficient",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-external-scientific-skill-router",
-      "exposure_scope": "workspace_local",
-      "activation_gate": "compatibility scientific specialization of opl-external-specialist-skill-router for rare scientific tools after the default MAS/professional pack is insufficient",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-foundry-agent-improver",
@@ -182,23 +209,33 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-foundry-promotion-reviewer",
-      "exposure_scope": "project_local",
-      "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-incident-root-cause-triager",
       "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
+      "activation_gate": "developer/operator incident, blocker, conflict, stop-loss, or nonprogress diagnostic selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-ledger-evidence-curator",
@@ -206,15 +243,16 @@
       "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-local-data-lifecycle-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-memory-artifact-lifecycle-curator",
@@ -222,15 +260,16 @@
       "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-native-helper-diagnostics-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-owner-evidence-intake-reviewer",
@@ -238,7 +277,16 @@
       "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-pack-admission-reviewer",
@@ -246,39 +294,33 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-pack-capability-reviewer",
-      "exposure_scope": "project_local",
-      "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-runtime-environment-bundle-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-runtime-soak-and-recovery-auditor",
       "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
+      "activation_gate": "developer/operator runtime, provider, environment, native-helper, soak, or recovery diagnostic selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-runtime-task-awareness-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-runway-compute-operator",
@@ -286,23 +328,16 @@
       "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-runway-recovery-playbook-writer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-shell-upstream-intake-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-source-module-boundary-reviewer",
@@ -310,7 +345,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-stage-assumption-lifecycle-reviewer",
@@ -318,15 +362,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-stage-admission-reviewer",
-      "exposure_scope": "project_local",
-      "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local stage admission review selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-stage-candidate-portfolio-reviewer",
@@ -334,7 +379,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-stage-pack-source-replay-reviewer",
@@ -342,7 +396,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-stage-quality-gate-critic",
@@ -350,15 +413,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-stop-loss-and-nonprogress-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit nonprogress diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-stagecraft-stage-designer",
@@ -366,15 +430,16 @@
       "activation_gate": "OPL repo maintenance, agent authoring, or explicit project-local review selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
-    },
-    {
-      "skill_id": "opl-user-workbench-action-reviewer",
-      "exposure_scope": "developer_codex",
-      "activation_gate": "developer/operator profile or explicit framework diagnostic selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-workspace-handoff-writer",
@@ -382,7 +447,16 @@
       "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
       "default_global_user": false,
       "kernel": false,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     },
     {
       "skill_id": "opl-workspace-source-readiness-auditor",
@@ -390,7 +464,16 @@
       "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
       "default_global_user": false,
       "kernel": true,
-      "authority_boundary": ["no_owner_receipt", "no_typed_blocker", "no_human_gate", "no_artifact_authority", "no_quality_verdict", "no_readiness_claim", "no_runtime_mutation", "no_provider_mutation"]
+      "authority_boundary": [
+        "no_owner_receipt",
+        "no_typed_blocker",
+        "no_human_gate",
+        "no_artifact_authority",
+        "no_quality_verdict",
+        "no_readiness_claim",
+        "no_runtime_mutation",
+        "no_provider_mutation"
+      ]
     }
   ]
 }

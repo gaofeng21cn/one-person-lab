@@ -181,15 +181,15 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Ledger payload 继续拒绝 domain body、ready claim、owner receipt、typed blocker creation 或 provider soak completion claim；允许记录 refs-only success path 或 typed blocker refs。
 - App/operator projection 如仍用 MAG action kind，应只被解释为 legacy route carrier；执行结果和 ledger readback 回 generic owner-evidence surface。
 
-### 决策：OPL foundation 外部 Skill router 是 generic specialist router，scientific 只是 specialization
+### 决策：OPL foundation 外部 Skill router 是 generic specialist router，scientific 不再单独暴露
 
 原因：外部 Skill discovery/sync 是 OPL Connect 的通用能力，不只服务医学/科研。把 router 命名和说明固定成 scientific-only，容易让非科研专业能力被误判为 MAS/science 能力，或者让 MAS Scholar Skills 被误读成 OPL core。
 
 影响：
 
 - `opl-external-specialist-skill-router` 是 canonical foundation Skill，用于默认 OPL/domain professional pack 覆盖不到的专业工具、source、workflow 或 method。
-- `opl-external-scientific-skill-router` 保留为科研场景 specialization / compatibility entry，不再代表 OPL foundation 的唯一外部 Skill 路由。
-- 两个 router 都只返回 selected external Skill refs、inspect evidence、sync receipt candidate 和 owner route；不签 owner receipt、typed blocker、domain verdict、artifact authority、runtime truth 或 readiness claim。
+- 科研场景只是 `opl-external-specialist-skill-router` 的 trigger specialization，不再保留单独 compatibility alias，避免多一个 Codex metadata entry。
+- router 只返回 selected external Skill refs、inspect evidence、sync receipt candidate 和 owner route；不签 owner receipt、typed blocker、domain verdict、artifact authority、runtime truth 或 readiness claim。
 
 ### 决策：标准 OPL Agent 用 Stage 主提示词承载阶段策略，不把 stage 定义成专业 Skill
 

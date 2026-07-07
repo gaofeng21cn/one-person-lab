@@ -21,61 +21,51 @@ Codex metadata 本身也算暴露面。OPL 不应把 foundation support pack 的
 
 MAS / MDS 相关用户级全局 Skill 的当前审计见 [MAS 全局 Skill 暴露审计](./mas-global-skill-exposure-audit.md)。该审计只记录本机全局 metadata 污染风险和预期暴露层级，不把用户级安装状态当作 OPL 默认生态，也不替代 workspace / quest-local sync receipt。
 
-当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。已物化的四十七个 Skill 是：
+当前 `plugins/opl-foundation-skills/.codex-plugin/plugin.json` 暴露的是 source-only support pack。降噪合并后，物理 source 只保留二十七个 Skill；其中 `developer_codex` 只保留六个高频运维入口，其余按 `project_local` / `workspace_local` 场景显式同步。
+
+`developer_codex` 保留入口：
 
 - `opl-runway-compute-operator`：Runway compute / provider route 诊断和 handoff briefing。
-- `opl-runway-recovery-playbook-writer`：Runway / Connect / provider failure 的 recovery playbook、owner route 和 expected proof 编排。
+- `opl-runtime-soak-and-recovery-auditor`：runtime/provider/environment/native-helper/soak/recovery evidence 审查。
+- `opl-incident-root-cause-triager`：stall、currentness drift、conflict/blocker、stop-loss、nonprogress、heartbeat 和 false progress 的 L0-L4 root-cause brief。
+- `opl-console-operator-copilot`：Console/App/Settings/Runtime page/workbench operator projection、next action 和 forbidden claim 解读。
+- `opl-agent-package-lifecycle-reviewer`：agent package trust、manifest digest、dependency/provenance refs、install/update/repair/rollback、Codex reload proof 和 owner route 审查。
+- `opl-code-quality-remediation-reviewer`：`opl quality details --json` / Sentrux / line-budget sidecar 的 must-fix/advisory 判断、最小修复建议和 no-quality-verdict 路由审查。
+
+`project_local` 入口：
+
 - `opl-stagecraft-stage-designer`：Stagecraft stage prompt、rubric、capability use 和 handoff lower-bound 设计。
-- `opl-stage-quality-gate-critic`：Stagecraft quality gate、evidence lower bound、rubric gap 和 no-authority gate delta 审查。
-- `opl-stage-admission-reviewer`：family-stage-admission projection/schema、trust lane、composition obligation、failure localization 和 human-review burden 审查。
+- `opl-stage-quality-gate-critic`：Stagecraft quality gate、stage admission projection、evidence lower bound、trust lane、composition obligation、human-review burden 和 no-authority gate delta 审查。
 - `opl-stage-assumption-lifecycle-reviewer`：stage assumption lifecycle projection 的 stale/missing/owner/monitor gap、stage impact 和 route-back 审查。
 - `opl-stage-candidate-portfolio-reviewer`：stage candidate portfolio refs-only projection 的 candidate/assumption/provenance/negative-path/advisory-metric/human-review ref gap、domain authority overclaim 和 owner-route 审查。
 - `opl-stage-pack-source-replay-reviewer`：stage-pack source spec / replay certification 的 body-free diff、replay blocker、missing receipt 和 owner-route workorder 审查。
 - `opl-connect-source-and-skill-router`：Connect external source / Skill search-inspect-sync、single-skill sync 和 connector receipt debug。
 - `opl-connect-connector-receipt-auditor`：Connect connector receipt candidate、normalized refs、failed provider 和 no-authority handoff 审查。
-- `opl-external-specialist-skill-router`：默认 OPL / domain professional pack 覆盖不到专业工具、source、workflow 或 method 时，薄路由到 OPL Connect external-skills search/inspect/sync；只允许 workspace / quest-local 按需同步，不进入全局 Codex metadata。
-- `opl-external-scientific-skill-router`：`opl-external-specialist-skill-router` 的 scientific specialization / compatibility entry；只用于罕见科研工具、数据库、工作流或方法，不代表 OPL Connect external Skill router 的唯一或 canonical 入口。
-- `opl-foundry-agent-improver`：Foundry Lab work-order、conformance/eval、Skill rewrite 和 promotion/rollback briefing。
-- `opl-foundry-promotion-reviewer`：Foundry Lab promotion candidate、scorecard、rollback refs 和 operational confidence 审查。
+- `opl-foundry-agent-improver`：Foundry Lab work-order、conformance/eval、Skill rewrite、promotion/hold/rollback 和 operational confidence briefing。
+- `opl-eval-harness-designer`：Foundry Lab eval harness、task cases、scorecard、failure taxonomy 和 promotion/hold evidence 设计。
+- `opl-pack-admission-reviewer`：Pack admission、capability/authority ABI、tool affordance、registry fit、contract evidence、allowed/forbidden writes 和 owner route 审查。
+- `opl-atlas-capability-router`：Atlas owner/source/skill/connector/tool-card/capability refs 路由和 catalog ambiguity diagnosis。
+- `opl-charter-authority-reviewer`：Charter authority boundary、owner split、no-second-truth、forbidden claim 和 readiness/closeout claim 审查。
+- `opl-completion-audit-writer`：Plan Completion Audit、证据等级匹配、完成度、gap、next owner、Brand L5/release evidence overclaim 和 forbidden claim 编排。
+- `opl-domain-progress-transition-reviewer`：DomainProgressTransitionRuntime refs、current owner delta、transition candidate 和 route-back 的 no-authority 审查。
+- `opl-source-module-boundary-reviewer`：source-module owner、public entrypoint、dependency direction、upstream shell intake、private-tail retirement route 和 forbidden import 审查。
+
+`workspace_local` 入口：
+
+- `opl-external-specialist-skill-router`：默认 OPL / domain professional pack 覆盖不到专业或罕见科研工具、source、workflow 或 method 时，薄路由到 OPL Connect external-skills search/inspect/sync；只允许 workspace / quest-local 按需同步，不进入全局 Codex metadata。
 - `opl-workspace-handoff-writer`：Workspace source/artifact refs、handoff packet、missing-input route-back 和 owner-route packet 写法。
 - `opl-workspace-source-readiness-auditor`：Workspace source readiness、locator ambiguity、artifact-unit gap、freshness 和 owner-route audit。
 - `opl-ledger-evidence-curator`：Ledger refs-only evidence、claim support、closeout proof、provenance chain 和 evidence gap 分类。
-- `opl-console-operator-copilot`：Console current_owner_delta、action catalog、operator next action 和 forbidden claim 解读。
-- `opl-pack-capability-reviewer`：Pack capability/authority ABI、tool affordance、generated/hosted surface 输入和专业方法放置审查。
-- `opl-pack-admission-reviewer`：Pack admission candidate、registry fit、contract evidence、allowed/forbidden writes 和 owner route 审查。
-- `opl-atlas-capability-router`：Atlas owner/source/skill/connector/tool-card/capability refs 路由和 catalog ambiguity diagnosis。
-- `opl-charter-authority-reviewer`：Charter authority boundary、owner split、no-second-truth、forbidden claim 和 readiness/closeout claim 审查。
-- `opl-code-quality-remediation-reviewer`：`opl quality details --json` / Sentrux / line-budget sidecar 的 must-fix/advisory 判断、最小修复建议和 no-quality-verdict 路由审查。
-- `opl-completion-audit-writer`：Plan Completion Audit、证据等级匹配、完成度、gap、next owner 和 forbidden claim 编排。
-- `opl-conflict-blocker-resolution-reviewer`：family conflict/blocker envelope、duplicate task、authority/evidence/quality blocker、human gate、retry/dead-letter 和 operator next action 审查。
-- `opl-incident-root-cause-triager`：stall、currentness drift、heartbeat、provider failure、owner-route gap 的 L0-L4 root-cause brief。
-- `opl-eval-harness-designer`：Foundry Lab eval harness、task cases、scorecard、failure taxonomy 和 promotion/hold evidence 设计。
-- `opl-domain-progress-transition-reviewer`：DomainProgressTransitionRuntime refs、current owner delta、transition candidate 和 route-back 的 no-authority 审查。
 - `opl-owner-evidence-intake-reviewer`：owner_evidence_intake、observed refs、owner-chain evidence 和 acceptance overclaim 的证据类型审查。
-- `opl-source-module-boundary-reviewer`：source-module owner、public entrypoint、dependency direction、forbidden import 和 route-back 审查。
-- `opl-memory-artifact-lifecycle-curator`：memory/artifact lifecycle refs、artifact unit、retention/cleanup、provenance 和 owner-route brief 编排。
-- `opl-agent-package-trust-reviewer`：agent package trust、manifest digest、dependency refs、carrier exposure 和 install-ready overclaim 审查。
-- `opl-external-runtime-provider-fit-reviewer`：external runtime provider fit、sandbox substrate、credential boundary、provider receipt 和 long-soak overclaim 审查。
-- `opl-brand-l5-evidence-reviewer`：Brand L5 evidence packet、owner acceptance refs、long-soak refs、production-path refs 和 Brand L5 overclaim 审查。
-- `opl-app-release-evidence-reviewer`：App release evidence、release cohort refs、updater/readback refs、user-path refs 和 release-ready overclaim 审查。
-- `opl-app-first-run-ux-reviewer`：App first-run / onboarding、Core ready vs Full/background readiness、skip/defer wording 和 beginner blocking risk 审查。
-- `opl-app-settings-ia-reviewer`：Settings Control Center IA、ordinary vs secondary/deep-link/advanced routes、legacy redirects 和 user-task naming 审查。
-- `opl-runtime-task-awareness-reviewer`：Runtime page / current task / user-task-status 的 owner-delta-first display、diagnostic demotion 和 action visibility 审查。
-- `opl-shell-upstream-intake-reviewer`：AionUI / Hermes / OPL Native Workbench / AGUI 等 shell upstream capability 的 accepted/adapt/redirect/reject/requires_contract intake 审查。
-- `opl-runtime-soak-and-recovery-auditor`：runtime soak evidence、recovery attempts、provider observations、no-regression refs 和 runtime-ready overclaim 审查。
-- `opl-runtime-environment-bundle-reviewer`：runtime environment descriptor、materialized root、cache、lock、bundle manifest 和 reproducibility receipt 审查。
-- `opl-agent-package-lifecycle-reviewer`：agent package install/update/repair/rollback、dirty/developer/manual-required state、Codex surface reload proof 和 lifecycle owner route 审查。
-- `opl-domain-private-tail-retirement-reviewer`：domain private scheduler/queue/session/workbench/status/update tail 的 retain/absorb/delete/tombstone/owner-blocker route 审查。
-- `opl-local-data-lifecycle-reviewer`：App Storage/local data cleanup、conversation archive/restore proof、runtime pointer prune、log rotation 和 updater cache cleanup wording 审查。
-- `opl-native-helper-diagnostics-reviewer`：native helper diagnostics、sysprobe/state-index refs、helper envelopes、repair recommendation 和 helper authority overclaim 审查。
-- `opl-stop-loss-and-nonprogress-reviewer`：repeated no-progress、stop-loss、false-progress loop、owner-delta gap 和最小 legal next action 审查。
-- `opl-user-workbench-action-reviewer`：user workbench action candidates、action catalog、operator intent、safe-action wording 和 forbidden mutation 审查。
+- `opl-memory-artifact-lifecycle-curator`：memory/artifact/local-data lifecycle refs、artifact unit、archive/restore、retention/cleanup、provenance 和 owner-route brief 编排。
+
+本轮合并删除的窄入口不再单独暴露 metadata：package trust 合入 `opl-agent-package-lifecycle-reviewer`；App first-run / release evidence / Settings IA / Runtime task awareness / user workbench action 合入 `opl-console-operator-copilot`；runtime provider fit / environment bundle / native helper diagnostics / recovery playbook 合入 `opl-runtime-soak-and-recovery-auditor`；stop-loss / nonprogress / conflict-blocker resolution 合入 `opl-incident-root-cause-triager`；stage admission 合入 `opl-stage-quality-gate-critic`；Brand L5 / release evidence overclaim 由 `opl-completion-audit-writer` 和 Console/soak reviewer 分担；pack capability 合入 `opl-pack-admission-reviewer`；Foundry promotion 合入 `opl-foundry-agent-improver`；shell upstream intake 与 private-tail retirement 合入 `opl-source-module-boundary-reviewer`；local-data lifecycle 合入 `opl-memory-artifact-lifecycle-curator`；scientific external routing 合入 `opl-external-specialist-skill-router`，不再保留单独 compatibility alias。
 
 这些 Skill 只把开放式判断、诊断、审查、路由和改写方法留在 AI 层；credential、queue、submit/wait/harvest、registry/sync、receipt、schema、runtime truth、owner receipt、typed blocker、domain verdict、App release verdict 和 production readiness 仍由对应模块或 domain owner surface 持有。
 
 首批需要更强确定性辅助、但仍应保持 AI-first 弹性的 foundation Skill 已随目录携带 `kernel.py`：`opl-connect-source-and-skill-router`、`opl-connect-connector-receipt-auditor`、`opl-runway-compute-operator`、`opl-runtime-soak-and-recovery-auditor`、`opl-stagecraft-stage-designer`、`opl-pack-admission-reviewer`、`opl-workspace-source-readiness-auditor`、`opl-incident-root-cause-triager`。这些 helper 只做 refs 归一化、checklist / skeleton 生成、gap 分类和 forbidden-claim lint；不读取或写入 runtime state，不调用 provider，不管理 endpoint，不签 owner receipt / typed blocker，也不声明 release、domain、runtime 或 production readiness。
 
-`opl-runway-compute-operator` 与 `opl-external-runtime-provider-fit-reviewer` 可以审阅 Claude Science / AcademicForge 风格的 remote-compute Modal env spec 和 using-model-endpoint provider 经验，但 OPL 的机器 truth 只来自 `contracts/opl-framework/runtime-environment-substrate-contract.json` 与 `opl runtime env * --json` readback。Skill helper 只生成 no-authority handoff / reviewer notes；E2B、Daytona、Modal、model endpoint 的 endpoint/ref、credential ref、provider receipt ref、Modal-like env ID catalog、endpoint invoke/readback contract 和 lifecycle 禁止项由 Runway / Connect contract surface 持有，不由 Skill 正文、docs、provider SDK 或 cached receipts 持有。
+`opl-runway-compute-operator` 与 `opl-runtime-soak-and-recovery-auditor` 可以审阅 Claude Science / AcademicForge 风格的 remote-compute Modal env spec、using-model-endpoint provider 经验、runtime environment bundle 和 native-helper diagnostic refs，但 OPL 的机器 truth 只来自 `contracts/opl-framework/runtime-environment-substrate-contract.json` 与 `opl runtime env * --json` readback。Skill helper 只生成 no-authority handoff / reviewer notes；E2B、Daytona、Modal、model endpoint 的 endpoint/ref、credential ref、provider receipt ref、Modal-like env ID catalog、endpoint invoke/readback contract 和 lifecycle 禁止项由 Runway / Connect contract surface 持有，不由 Skill 正文、docs、provider SDK 或 cached receipts 持有。
 
 ## 三层模型
 

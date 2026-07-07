@@ -82,9 +82,8 @@ source index，不作为普通执行上下文的默认入口。
 不要把 K-Dense 全库塞进上下文，也不要把外部库当作 MAS 默认能力包的一部分。
 
 `plugins/opl-foundation-skills/skills/opl-external-specialist-skill-router/SKILL.md`
-是这个路径的通用极薄 source-only router；
-`plugins/opl-foundation-skills/skills/opl-external-scientific-skill-router/SKILL.md`
-只是科研场景 specialization / 兼容入口。它们只在默认 MAS / professional skills
+是这个路径的通用极薄 source-only router。科研场景不再保留单独 compatibility alias，
+而是作为 generic specialist router 的 trigger specialization。它只在默认 MAS / professional skills
 覆盖不了专业工具、数据库、工作流或方法时触发 Codex 走
 `opl connect external-skills search -> inspect -> sync`，并且只选择一个外部
 Skill 候选。它不读取 K-Dense 全量正文，不批量同步 source，不签 owner receipt、

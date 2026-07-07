@@ -1,6 +1,6 @@
 ---
 name: opl-pack-admission-reviewer
-description: "Use when reviewing OPL pack admission candidates, declarative pack boundaries, registry fit, contract evidence, owner routes, allowed writes, forbidden authority, and route-back decisions before a pack is admitted."
+description: "Use when reviewing OPL pack admission candidates, declarative pack boundaries, capability/authority ABI, tool affordance, generated or hosted surface inputs, registry fit, contract evidence, owner routes, allowed writes, forbidden authority, and route-back decisions before a pack is admitted."
 ---
 
 # OPL Pack Admission Reviewer
@@ -20,7 +20,7 @@ Optional helper: `kernel.py` provides stdlib-only deterministic pack-ref normali
 
 1. Identify the pack candidate, owning program, target registry, declared capabilities, authority refs, source refs, and validation evidence.
 2. Check that stable identity, lifecycle, capability ABI, authority ABI, allowed writes, forbidden writes, and evidence refs are explicit.
-3. Verify the pack does not smuggle professional method, domain truth, owner receipts, quality verdicts, or readiness claims into declarative fields.
+3. Verify the capability ABI, authority ABI, tool affordance, generated/hosted surface inputs, and that the pack does not smuggle professional method, domain truth, owner receipts, quality verdicts, or readiness claims into declarative fields.
 4. Classify findings as `registry_fit_gap`, `contract_gap`, `capability_abi_gap`, `authority_abi_gap`, `evidence_gap`, `owner_route_gap`, `overclaim_gap`, or `no_issue_found`.
 5. Recommend the smallest route: schema fix, pack field fix, source ref fix, owner route clarification, admission hold, or no change.
 

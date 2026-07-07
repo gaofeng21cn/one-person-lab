@@ -1,24 +1,24 @@
 ---
 name: opl-memory-artifact-lifecycle-curator
-description: "Use when curating OPL memory/artifact lifecycle refs, artifact-unit handoff, provenance, cleanup, retention, and owner-route briefs without writing artifact or memory authority."
+description: "Use when curating OPL memory/artifact/local-data lifecycle refs, artifact-unit handoff, provenance, cleanup, retention, storage archive/restore evidence, log/cache cleanup, and owner-route briefs without writing artifact, memory, or local-data authority."
 ---
 
 # OPL Memory Artifact Lifecycle Curator
 
 ## Boundary
 
-Use this skill to organize memory/artifact lifecycle evidence into a refs-only lifecycle brief.
+Use this skill to organize memory, artifact, and local-data lifecycle evidence into a refs-only lifecycle brief.
 
 This skill may:
 
-- inspect memory refs, artifact refs, lifecycle state, retention/cleanup notes, provenance, and owner-route material;
-- classify `artifact_body_missing`, `memory_ref_ambiguous`, `lifecycle_gap`, `retention_route_needed`, or `owner_consumption_needed`;
+- inspect memory refs, artifact refs, local storage/archive/restore refs, runtime pointer prune refs, log rotation refs, updater cache cleanup refs, lifecycle state, retention/cleanup notes, provenance, and owner-route material;
+- classify `artifact_body_missing`, `memory_ref_ambiguous`, `local_data_cleanup_evidence_gap`, `archive_restore_gap`, `runtime_pointer_prune_gap`, `lifecycle_gap`, `retention_route_needed`, or `owner_consumption_needed`;
 - prepare a concise lifecycle handoff for Workspace, Ledger, Console, or the domain owner.
 
 This skill must not:
 
 - write memory bodies, artifact bodies, queues, ledgers, runtime/provider/domain truth, owner receipts, typed blockers, or readiness claims;
-- accept, delete, relocate, normalize, or mutate memory/artifact truth;
+- accept, delete, relocate, normalize, or mutate memory/artifact/local-data truth;
 - declare artifact ready, memory accepted, lifecycle complete, App release ready, or production ready.
 
 No-authority language: no owner receipts, no typed blockers, no domain truth, no runtime truth, no memory or artifact authority, no readiness claims.

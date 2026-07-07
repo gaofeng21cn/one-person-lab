@@ -5,7 +5,15 @@ const pluginManifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json')
 const exposureManifestPath = path.join(pluginRoot, 'exposure.json');
 const skillsRoot = path.join(pluginRoot, 'skills');
 
-const expectedSkillCount = 47;
+const expectedSkillCount = 27;
+const expectedDeveloperCodexSkills = new Set([
+  'opl-agent-package-lifecycle-reviewer',
+  'opl-code-quality-remediation-reviewer',
+  'opl-console-operator-copilot',
+  'opl-incident-root-cause-triager',
+  'opl-runtime-soak-and-recovery-auditor',
+  'opl-runway-compute-operator',
+]);
 const legalExposureScopes = new Set([
   'source_only',
   'project_local',
@@ -122,16 +130,31 @@ test('OPL Foundation Skills exposure entries match frontmatter and exposure poli
   assert.equal(seen.size, diskSkillIds.size);
 });
 
-test('OPL Foundation Skills expose generic specialist router as the canonical external skill router', () => {
+test('OPL Foundation Skills keep developer Codex exposure intentionally narrow', () => {
   const exposureManifest = readJson(exposureManifestPath);
-  const entries = new Map(exposureManifest.skills.map((entry: any) => [entry.skill_id, entry]));
+  const entries = new Map<string, any>(exposureManifest.skills.map((entry: any) => [entry.skill_id, entry]));
+  const developerCodexSkills = exposureManifest.skills
+    .filter((entry: any) => entry.exposure_scope === 'developer_codex')
+    .map((entry: any) => entry.skill_id)
+    .sort();
+
+  assert.deepEqual(developerCodexSkills, [...expectedDeveloperCodexSkills].sort());
+  assert.equal(entries.get('opl-domain-progress-transition-reviewer')?.exposure_scope, 'project_local');
+  assert.equal(entries.has('opl-app-first-run-ux-reviewer'), false);
+  assert.equal(entries.has('opl-app-release-evidence-reviewer'), false);
+  assert.equal(entries.has('opl-app-settings-ia-reviewer'), false);
+  assert.equal(entries.has('opl-runtime-task-awareness-reviewer'), false);
+  assert.equal(entries.has('opl-user-workbench-action-reviewer'), false);
+});
+
+test('OPL Foundation Skills expose one canonical external specialist router', () => {
+  const exposureManifest = readJson(exposureManifestPath);
+  const entries = new Map<string, any>(exposureManifest.skills.map((entry: any) => [entry.skill_id, entry]));
   const genericRouter = entries.get('opl-external-specialist-skill-router') as any;
-  const scientificRouter = entries.get('opl-external-scientific-skill-router') as any;
 
   assert.ok(genericRouter);
-  assert.ok(scientificRouter);
+  assert.equal(entries.has('opl-external-scientific-skill-router'), false);
   assert.equal(genericRouter.exposure_scope, 'workspace_local');
-  assert.deepEqual(genericRouter.authority_boundary, scientificRouter.authority_boundary);
-  assert.match(scientificRouter.activation_gate, /compatibility scientific specialization/);
-  assert.equal(readSkill('opl-external-scientific-skill-router').includes('opl-external-specialist-skill-router'), true);
+  assert.match(genericRouter.activation_gate, /rare scientific external tool/);
+  assert.equal(readSkill('opl-external-specialist-skill-router').includes('no separate scientific alias Skill'), true);
 });

@@ -1,13 +1,13 @@
 ---
 name: opl-foundry-agent-improver
-description: Use when reviewing OPL Foundry Lab Agent/Skill failure analysis, work-order review, conformance or eval result interpretation, skill rewrite planning, and promotion/rollback briefing for an agent improvement candidate.
+description: Use when reviewing OPL Foundry Lab Agent/Skill failure analysis, work-order review, conformance or eval result interpretation, skill rewrite planning, scorecards, promotion/hold/rollback briefing, and operational confidence for an agent improvement candidate.
 ---
 
 # OPL Foundry Agent Improver
 
 ## Boundary
 
-Treat Foundry Lab as the owner of harnesses, scorecards, work-order envelopes, patch refs, and receipt refs. Use this skill only for AI analysis of failure patterns and the smallest useful Skill or prompt rewrite proposal.
+Treat Foundry Lab as the owner of harnesses, scorecards, work-order envelopes, patch refs, rollback refs, promotion candidates, and receipt refs. Use this skill only for AI analysis of failure patterns, operational confidence, and the smallest useful Skill or prompt rewrite proposal.
 
 Do not write target domain truth, owner receipts, typed blockers, quality verdicts, artifact authority, readiness claims, runtime queues, or provider state. A scorecard pass can support a promotion briefing, but it is not owner acceptance or domain ready.
 
@@ -32,4 +32,4 @@ Return:
 - verification to rerun in Foundry Lab;
 - promotion, rollback, or hold recommendation with no-authority caveat.
 
-For promotion briefs, say what Foundry evidence supports operational confidence and what still requires the real owner. For rollback briefs, name the failing rewrite, affected behavior, and the previous known-good ref if present.
+For promotion briefs, say what Foundry evidence supports operational confidence, what rollback evidence exists, and what still requires the real owner. For rollback briefs, name the failing rewrite, affected behavior, and the previous known-good ref if present.

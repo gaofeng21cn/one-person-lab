@@ -27,7 +27,7 @@ candidate.
 Use this Skill only after the current default skill pack is insufficient, for
 example:
 
-- a scientific, writing, design, data, workflow, compute, citation, imaging,
+- a scientific, scientific-agent, writing, design, data, workflow, compute, citation, imaging,
   chemistry, office, finance, or automation tool needs specialist instructions;
 - a domain route-back candidate explicitly says an external specialist Skill may
   be needed;
@@ -75,3 +75,5 @@ Return:
   and residual risk;
 - `authority_boundary`: no owner receipts, no typed blockers, no domain verdicts,
   no artifact authority, no runtime truth, and no readiness claims.
+
+Scientific routing note: this is also the canonical route for rare scientific tools, databases, workflows, and methods. There is no separate scientific alias Skill; use the smallest query and approved source selector instead of exposing another compatibility entry.
