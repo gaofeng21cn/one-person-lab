@@ -284,6 +284,19 @@ MAS 当前分工按下列口径读取：
 | 会写 truth、签 owner receipt、创建 typed blocker、决定 artifact / quality / readiness / release 吗？ | 选择 `authority_surface`，必须留在对应 owner repo；禁止放进 Skill。 |
 | 默认包覆盖不到罕见专科工具、source、workflow 或 method 吗？ | 选择 `external_skill`，走 OPL Connect `search -> inspect -> single-skill sync`，不把全库注册进默认 Codex。 |
 
+## Skill 合并与不降级门
+
+Skill 合并的目标是降低默认 metadata 暴露和认知负担，不是把专业能力压扁。合并前必须先把旧能力按 capability module 审计到下面四类之一；不能只因为 Skill 名称相近、数量多或目录想收薄就删除实体。
+
+| 类别 | 保留 / 合并规则 | 必要记录 |
+| --- | --- | --- |
+| `real_named_specialty_skill` | 不可替代的专业 playbook、方法判断、rubric、诊断 lens 或子领域流程应保留真实 `SKILL.md`，可作为 optional / named / workspace / quest-local 暴露。 | 在 owning repo 的 capability map 或 pack manifest 记录 `capability_kind=professional_skill`、canonical source、`exposure_scope`、activation gate 和 no-authority boundary。 |
+| `legacy_redirect` | 同一 workflow 下的旧细粒度入口、旧命名、operator 习惯或 compatibility alias 可以合并到 canonical workflow Skill；旧入口不再保留 active `SKILL.md`。 | 机器 redirect 必须记录 `covered_by_skill_ref`、`covered_by_capability_id`、`capability_preserved=true`、`default_codex_exposure=false` 和 reason；canonical Skill 必须能覆盖旧 playbook 的实质任务。 |
+| `no_merge_rationale` | 复杂多阶段能力或不同专业动作不能为了数量好看强行合并，例如构图 vs 绘图、style profiling vs native deliverable rendering、source integrity vs manuscript prose review。 | 在 capability map、audit doc 或 decision log 记录不合并原因、各自 owner、调用关系、暴露层级和防重复边界。 |
+| `deterministic_helper_or_runtime_surface` | 纯脚本、解析、归一化、下载、渲染、安装、凭据、runtime/provider、receipt、authority write 或 readback surface 不应被做成 Skill。 | 放入 helper、tool connector、contract module 或 authority surface，并记录 Skill 只引用 refs，不承接 mutation / truth / readiness。 |
+
+评估顺序固定为：先问旧 Skill 是否包含不可替代的专业判断；再问是否只是同一 workflow 的旧入口；再问是否属于复杂子能力需要拆开；最后把确定性或权威工作下沉到 helper / connector / contract / authority surface。合并后必须同时满足两点：能力实质不降级，默认 Codex metadata 暴露不扩大。
+
 拒绝条件：
 
 - `existing_coverage` 未说明，或只是因为“以后可能复用”就新增 Skill。
