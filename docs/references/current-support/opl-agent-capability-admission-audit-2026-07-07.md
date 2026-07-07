@@ -39,7 +39,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | 能力模块 | 物理位置 | 暴露方式 | 三层实现程度 | 评估 |
 | --- | --- | --- | --- | --- |
 | Framework support / reviewer / router pack | `plugins/opl-foundation-skills/skills/**/SKILL.md` | `plugins/opl-foundation-skills/exposure.json`；禁止默认 global / codex scope。 | `professional_skill` 风格的 support playbook + exposure manifest；authority 留 OPL/domain owner surface。 | 合理，但数量增长需要准入门控制。 |
-| External specialist routing | `opl-external-specialist-skill-router`，scientific compatibility entry 为 `opl-external-scientific-skill-router` | developer / workspace / project 按 manifest 暴露；真实外部 skill 通过 Connect 单个 sync。 | router 是薄 Skill；下载、索引、sync receipt 属于 OPL Connect。 | 合理。避免把 K-Dense / scientific-agent-skills 全量注册成默认 Codex context。 |
+| External specialist routing | `opl-external-specialist-skill-router`；scientific 只是 query / trigger specialization，不再保留单独 compatibility entry | workspace / quest 按 manifest 暴露；真实外部 skill 通过 Connect 单个 sync。 | router 是薄 Skill；下载、索引、sync receipt 属于 OPL Connect。 | 合理。避免把 K-Dense / scientific-agent-skills 全量注册成默认 Codex context，也避免 compatibility alias 污染 metadata。 |
 | MAS ScholarSkills plugin pointer | `plugins/mas-scholar-skills/skills/mas-scholar-skills/SKILL.md` | package/plugin pointer；真实 source 在 `mas-scholar-skills` repo。 | thin entry + Connect sync；不承接 MAS authority。 | 合理。继续保持 `opl-scholarskills` tombstone-only。 |
 
 ### MAS / MAS ScholarSkills
