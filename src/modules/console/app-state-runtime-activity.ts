@@ -18,6 +18,11 @@ const RUNNING_STAGE_ATTEMPT_STATUSES = new Set(['running']);
 const ATTENTION_STAGE_ATTEMPT_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);
 const RECENT_STAGE_ATTEMPT_STATUSES = new Set(['completed']);
 const MAX_STAGE_ATTEMPT_REFS_PER_STUDY = 8;
+const STUDY_DIRECTORY_FALLBACK_SOURCE_ROLES = new Set([
+  'study_status_markdown',
+  'submission_status',
+  'study_directory',
+]);
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -46,6 +51,12 @@ function sourceRef(filePath: string, role: string, label: string) {
     role,
     label,
   };
+}
+
+function isStudyDirectoryFallbackItem(item: JsonRecord) {
+  const sourceRefs = recordList(item.source_refs);
+  return sourceRefs.length > 0
+    && sourceRefs.every((ref) => STUDY_DIRECTORY_FALLBACK_SOURCE_ROLES.has(firstString(ref.role) ?? ''));
 }
 
 function numberValue(value: unknown) {
@@ -364,7 +375,14 @@ function overlayStageAttempts(input: {
     latestAttemptId: attemptId,
   });
   const ownerConsumptionDrift = Boolean(ownerConsumption && closeout && !ownerConsumption.matchesRuntimeCloseout);
-  const lane = ownerConsumptionDrift ? 'attention' : stageAttemptLane(latestStatus) ?? 'attention';
+  const rawLane = ownerConsumptionDrift ? 'attention' : stageAttemptLane(latestStatus) ?? 'attention';
+  const runtimeAttentionDemotedToDiagnostic =
+    rawLane === 'attention'
+    && isStudyDirectoryFallbackItem(input.item)
+    && !closeout
+    && !ownerConsumption
+    && !ownerConsumptionDrift;
+  const lane = runtimeAttentionDemotedToDiagnostic ? 'recent' : rawLane;
   const stageStartedAt = firstString(latestProviderRun.started_at, latest.created_at);
   const lastHeartbeatAt = firstString(latestProviderRun.last_heartbeat_at, latest.updated_at);
   const stageElapsedSeconds = durationSecondsBetween(stageStartedAt, firstString(
@@ -423,7 +441,10 @@ function overlayStageAttempts(input: {
     ...(ownerConsumption ? [sourceRef(ownerConsumption.path, 'mas_receipt_owner_consumption', 'MAS owner consumption readback')] : []),
   ];
   const updatedAt = firstString(closeout?.observedAt, latest.updated_at, input.item.updated_at);
-  const actionSummary = ownerConsumptionDrift
+  const actionSummary = runtimeAttentionDemotedToDiagnostic
+    ? masNextActionSummary
+      ?? '历史运行记录没有当前可执行动作；等待明确是否继续推进。'
+    : ownerConsumptionDrift
     ? 'Latest OPL runtime closeout differs from the MAS owner-consumed receipt; read MAS paper-mission/study-progress before any paper-progress claim.'
     : ownerConsumption?.matchesRuntimeCloseout
       ? masNextActionSummary
@@ -445,7 +466,9 @@ function overlayStageAttempts(input: {
       ? (firstString(input.item.status_label) ?? 'OPL runtime running')
       : ownerConsumptionDrift
         ? 'OPL/MAS readback attention'
-        : `OPL runtime ${latestStatus || 'needs attention'}`,
+        : runtimeAttentionDemotedToDiagnostic
+          ? (firstString(input.item.status_label) ?? '历史运行记录')
+          : `OPL runtime ${latestStatus || 'needs attention'}`,
     summary: firstString(input.item.summary)
       ?? (closeout && attemptId
         ? `OPL runtime attempt ${attemptId} has terminal closeout evidence.`
@@ -512,6 +535,7 @@ function overlayStageAttempts(input: {
     ],
     runtime_readback_source: 'opl_family_runtime_stage_attempt_projection',
     runtime_attempt_status: latestStatus,
+    runtime_attention_demoted_to_diagnostic: runtimeAttentionDemotedToDiagnostic,
     runtime_closeout_observed: Boolean(closeout),
     runtime_closeout_ref: closeout?.path ?? null,
     provider_kind: firstString(latest.provider_kind),

@@ -175,6 +175,75 @@ test('app state fast keeps MAS study directories visible without runtime telemet
   }
 });
 
+test('app state fast keeps historical study-directory runtime failures in diagnostics', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-history-failure-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-history-failure-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'history.workspace.toml');
+  const studyId = '001-history-stop-loss';
+  const studyRoot = path.join(workspaceRoot, 'studies', studyId);
+
+  try {
+    fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+    fs.writeFileSync(profilePath, '[workspace]\nname = "history"\n', 'utf8');
+    fs.mkdirSync(path.join(studyRoot, 'submission'), { recursive: true });
+    fs.writeFileSync(
+      path.join(studyRoot, 'STUDY_STATUS.md'),
+      [
+        '# 001-history-stop-loss',
+        '',
+        '- Status: `ready`',
+        '- Current stage: `01-study_intake`',
+        '- Submission package: `not_ready`',
+        '- Next action: `paper_clean_room_rebuild_required`',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    writeMasWorkspaceRegistryBindings({
+      stateDir,
+      bindings: [{
+        bindingId: 'mas-history-binding',
+        workspacePath: workspaceRoot,
+        profilePath,
+        status: 'active',
+        label: '历史论文',
+      }],
+    });
+    writeRunningStageAttemptFixture({
+      stateDir,
+      workspaceRoot,
+      studyId,
+      taskId: 'frt_history_failed',
+      stageAttemptId: 'sat_history_failed',
+      workflowId: 'wf_history_failed',
+      stageId: 'domain_route/reconcile-apply',
+      status: 'failed',
+      providerStatus: 'failed',
+      updatedAt: '2026-05-01T00:00:00.000Z',
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as { app_state: { operator: { workbench: { task_drilldowns: Array<Record<string, any>>; task_run_projection_v2: { summary: Record<string, any> } } } } };
+
+    const task = output.app_state.operator.workbench.task_drilldowns.find((entry) => entry.study_id === studyId);
+    assert.ok(task, 'historical study task should remain visible');
+    assert.equal(task.primary_state, 'paused_waiting_for_direction');
+    assert.equal(task.automation_state, 'automation_idle');
+    assert.equal(task.runtime_attempt_status, 'failed');
+    assert.equal(task.runtime_attention_demoted_to_diagnostic, true);
+    assert.equal(output.app_state.operator.workbench.task_run_projection_v2.summary.system_attention_count, 0);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('app state fast enumerates registered MAS project workspaces beyond Temporal attempts', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-project-universe-home-'));
   const workspaceBase = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-project-universe-workspaces-'));

@@ -96,6 +96,7 @@ Fast Local Env
 1. **Aggregation**
    - 从 admitted workspace bindings 和 domain workspace 的产品结构聚合候选任务线；MAS 论文全集来自已登记课题 workspace 的 `studies/`，不是来自 Temporal attempt 是否存在。
    - Temporal / provider read model 只叠加正在运行、heartbeat、duration、stage attempt refs 与 token/cost telemetry 等执行证据；历史论文没有 provider telemetry 时仍应显示为可见 work item。
+   - 只有结构化 domain progress 或当前可执行 owner route 表明需要处理时，默认页才显示“需要系统处理”。仅由 `studies/` / `STUDY_STATUS.md` / `submission/STATUS.json` 兜底发现的历史项目，即使存在旧 failed/blocked attempt，也只能把该 attempt 保留为诊断证据，不能抢占用户主状态。
    - 不把 active workspace 当成唯一范围。
 
 2. **Projection**

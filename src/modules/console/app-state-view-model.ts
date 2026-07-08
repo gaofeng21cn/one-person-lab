@@ -158,9 +158,11 @@ function deriveUserFacingTaskState(task: JsonRecord) {
   const masOwnerTypedBlockerObserved = isMasOwnerTypedBlockerObserved(task);
   const masOwnerRouteCheckpointConsumed = isMasOwnerRouteCheckpointConsumed(task);
   const terminalRouteConsumedWithoutOpenRuntime = masOwnerRouteCheckpointConsumed && !resultPendingTerminalization;
+  const runtimeAttentionDemotedToDiagnostic = asBoolean(task.runtime_attention_demoted_to_diagnostic);
   const automationFailed = ['failed', 'dead_lettered'].includes(status ?? '')
     && !terminalRouteConsumedWithoutOpenRuntime
-    && !masOwnerTypedBlockerObserved;
+    && !masOwnerTypedBlockerObserved
+    && !runtimeAttentionDemotedToDiagnostic;
   const ownerDecisionRequired = includesAny(text, [
     '需要你决定',
     '等待后续决定',
@@ -669,6 +671,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     paper_route_lens_ref_count: 0,
     runtime_readback_source: asString(item.runtime_readback_source),
     runtime_attempt_status: asString(item.runtime_attempt_status),
+    runtime_attention_demoted_to_diagnostic: asBoolean(item.runtime_attention_demoted_to_diagnostic),
     runtime_closeout_observed: item.runtime_closeout_observed === true,
     runtime_closeout_ref: asString(item.runtime_closeout_ref),
     mas_owner_consumption_status: asString(item.mas_owner_consumption_status),
