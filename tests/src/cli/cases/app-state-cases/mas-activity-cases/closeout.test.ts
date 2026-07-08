@@ -188,7 +188,7 @@ test('app state fast aggregates runtime overview across MAS bindings and keeps t
       {
         scope_kind: 'workspace',
         scope_id: 'workspace:mas-active-binding',
-        label: path.basename(activeRepoRoot),
+        label: path.basename(activeWorkspaceRoot),
         workspace_binding_id: 'mas-active-binding',
         workspace_path: activeWorkspaceRoot,
         project_id: 'medautoscience',

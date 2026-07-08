@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-08
 
+### 决策：Runtime workbench 默认投影按用户 Work Item 去重和命名
+
+原因：App Runtime 页是用户和智能体协作的项目控制台，不是 provider / binding / stage-attempt 诊断面。同一 MAS workspace path 可能因为自动 push、milestone follow-through 或历史 binding 产生多个 runtime binding；这些 binding 只能作为高级证据，不能在默认范围选择或任务列表中变成“项目”。同理，MAS 论文线的 owner typed blocker 在没有自动流程运行、没有 provider failure、没有 pending terminalization 时，表示“论文线暂停，等待后续方向”，不表示 OPL Framework 或 App 故障。
+
+影响：
+
+- `app state` / workbench 默认任务投影以 `workspace_path + study_id` 识别用户 Work Item；同一论文来自多个 binding 时只保留一条默认行，优先真实 workspace/project binding，autopush / milestone / stage-attempt binding 进入诊断证据层。
+- workspace scope 默认按真实 `workspace_path` 去重和命名；自动任务、autopush、milestone binding 不作为默认项目范围。
+- `system_attention_required` 只用于真实 runtime/provider/App/Framework repair 或 latest runtime result 待 owner 收口；MAS owner typed blocker idle 默认投影为 `paused_waiting_for_direction`。
+- MAS owner 已消费 route checkpoint 且没有更新的 runtime closeout pending 时，默认投影为 `delivered_auto_paused`，即使存在历史 autopush attempt failure residue。
+- raw stage id、typed blocker、binding id、attempt id 和 source refs 继续保留在 drilldown/advanced evidence；默认页不把它们直接翻译成用户需要处理的项目状态。
+
 ### 决策：标准智能体 canonical id 与 repo/package carrier 名分层
 
 原因：`opl-meta-agent`、`opl-bookforge` 这类 repo / package / plugin / carrier 名容易被误读成标准智能体 canonical id；`mas-scholar-skills` 也容易因为出现在 Foundry / package readback 中被误读成第六个 standard domain agent。当前机器读面已经把 Foundry Agent series 分成两层：standard domain agent 的 canonical ids 是 `mas`、`mag`、`rca`、`oma`、`obf`；`mas-scholar-skills` 的 membership 是 `framework_capability_package`。文档读法必须跟随这层身份边界，而不是跟随仓库名、GHCR package 名或 Codex carrier 名。

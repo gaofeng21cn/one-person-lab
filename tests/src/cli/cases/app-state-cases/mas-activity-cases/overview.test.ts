@@ -279,7 +279,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       {
         scope_kind: 'workspace',
         scope_id: 'workspace:mas-app-state-activity',
-        label: path.basename(masRepoRoot),
+        label: path.basename(workspaceRoot),
         workspace_binding_id: 'mas-app-state-activity',
         workspace_path: workspaceRoot,
         project_id: 'medautoscience',

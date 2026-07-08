@@ -97,6 +97,30 @@ function projectLineKey(task: JsonRecord) {
     ?? 'runtime-project-line';
 }
 
+function normalizedTextKey(value: unknown) {
+  return asString(value)?.toLowerCase().replace(/[^a-z0-9]+/g, '') ?? '';
+}
+
+function isMedAutoScienceTask(task: JsonRecord) {
+  const text = lowerText(task.project_id, task.domain_id, task.domain_owner, task.project_label);
+  return includesAny(text, ['medautoscience', 'med-autoscience', 'mas']);
+}
+
+function isMasOwnerTypedBlockerObserved(task: JsonRecord) {
+  return (
+    isMedAutoScienceTask(task)
+      && normalizedTextKey(task.active_stage_id) === 'domainroutereconcileapply'
+      && normalizedTextKey(task.typed_blocker_summary) === 'masowneranswertypedblockerobserved'
+  );
+}
+
+function isMasOwnerRouteCheckpointConsumed(task: JsonRecord) {
+  return (
+    isMedAutoScienceTask(task)
+      && asString(task.mas_owner_consumption_status) === 'owner_consumed_route_checkpoint'
+  );
+}
+
 function deriveUserFacingTaskState(task: JsonRecord) {
   const lane = asString(task.lane);
   const status = asString(task.status);
@@ -109,7 +133,13 @@ function deriveUserFacingTaskState(task: JsonRecord) {
   );
   const runtimeCloseoutObserved = asBoolean(task.runtime_closeout_observed);
   const ownerConsumedLatest = asBoolean(task.mas_owner_consumption_matches_runtime_closeout);
-  const automationFailed = ['failed', 'dead_lettered'].includes(status ?? '');
+  const resultPendingTerminalization = runtimeCloseoutObserved && !ownerConsumedLatest;
+  const masOwnerTypedBlockerObserved = isMasOwnerTypedBlockerObserved(task);
+  const masOwnerRouteCheckpointConsumed = isMasOwnerRouteCheckpointConsumed(task);
+  const terminalRouteConsumedWithoutOpenRuntime = masOwnerRouteCheckpointConsumed && !resultPendingTerminalization;
+  const automationFailed = ['failed', 'dead_lettered'].includes(status ?? '')
+    && !terminalRouteConsumedWithoutOpenRuntime
+    && !masOwnerTypedBlockerObserved;
   const ownerDecisionRequired = includesAny(text, [
     '需要你决定',
     '等待后续决定',
@@ -127,7 +157,6 @@ function deriveUserFacingTaskState(task: JsonRecord) {
     '等待用户显式恢复',
     '给出新方案',
   ]);
-  const resultPendingTerminalization = runtimeCloseoutObserved && !ownerConsumedLatest;
 
   const automationState = lane === 'running'
     ? 'automation_running'
@@ -153,7 +182,13 @@ function deriveUserFacingTaskState(task: JsonRecord) {
 
   const primaryState = lane === 'running'
     ? 'in_progress'
-    : pausedWaiting
+    : resultPendingTerminalization
+      ? 'system_attention_required'
+      : terminalRouteConsumedWithoutOpenRuntime
+        ? 'delivered_auto_paused'
+        : masOwnerTypedBlockerObserved
+          ? 'paused_waiting_for_direction'
+          : pausedWaiting
       ? 'paused_waiting_for_direction'
       : ownerDecisionRequired
         ? 'owner_decision_required'
@@ -191,6 +226,70 @@ function deriveUserFacingTaskState(task: JsonRecord) {
   };
 }
 
+function userFacingActivityState(
+  rawState: string,
+  primaryState: string,
+) {
+  if (primaryState === 'in_progress') return 'running';
+  if (primaryState === 'system_attention_required' || primaryState === 'owner_decision_required') {
+    return 'attention_needed';
+  }
+  if (primaryState === 'delivered_auto_paused') return 'completed';
+  if (primaryState === 'paused_waiting_for_direction') return 'waiting_for_direction';
+  return rawState;
+}
+
+function userFacingActivityPriorityBucket(primaryState: string) {
+  if (primaryState === 'in_progress') return 'running';
+  if (primaryState === 'system_attention_required' || primaryState === 'owner_decision_required') {
+    return 'needs_attention';
+  }
+  return 'recent';
+}
+
+function isAutomatedWorkspaceBindingLabel(value: unknown) {
+  const text = lowerText(value);
+  return includesAny(text, ['autopush', 'auto-push', 'milestone', 'paper-mission', 'stage-attempt']);
+}
+
+function runtimeTaskDedupeKey(task: JsonRecord) {
+  const studyId = asString(task.study_id);
+  const workspacePath = asString(task.workspace_path);
+  if (studyId && workspacePath) {
+    return `${asString(task.domain_id) ?? 'opl'}:${workspacePath}:${studyId}`;
+  }
+  return asString(task.task_id) ?? `${asString(task.domain_id) ?? 'opl'}:${asString(task.title) ?? 'runtime-task'}`;
+}
+
+function runtimeTaskRank(task: JsonRecord) {
+  const primaryState = asString(task.primary_state);
+  const stateRank = primaryState === 'in_progress'
+    ? 64
+    : primaryState === 'system_attention_required'
+      ? 48
+      : primaryState === 'delivered_auto_paused'
+        ? 32
+        : primaryState === 'owner_decision_required'
+          ? 24
+          : 16;
+  const bindingRank = asBoolean(task.workspace_binding_active) ? 8 : 0;
+  const labelRank = isAutomatedWorkspaceBindingLabel(task.workspace_label) ? 0 : 4;
+  const latest = Date.parse(asString(task.last_progress_at) ?? '');
+  return stateRank + bindingRank + labelRank + (Number.isFinite(latest) ? Math.min(latest / 1_000_000_000_000, 1) : 0);
+}
+
+function dedupeRuntimeActivityDrilldowns<T extends JsonRecord>(tasks: T[]): T[] {
+  const selected = new Map<string, T>();
+  for (const task of tasks) {
+    const key = runtimeTaskDedupeKey(task);
+    const existing = selected.get(key);
+    if (!existing || runtimeTaskRank(task) > runtimeTaskRank(existing)) {
+      selected.set(key, task);
+    }
+  }
+  return [...selected.values()];
+}
+
 function summarizeUserTaskStates(tasks: ReadonlyArray<JsonRecord>) {
   const uniqueProjectLines = new Set(tasks.map(projectLineKey));
   return {
@@ -220,10 +319,19 @@ function scopeOption(scopeKind: string, scopeId: string, label: string, extra: J
   };
 }
 
+function pathLeaf(value: string | null): string | null {
+  const parts = value?.split(/[\\/]+/).filter(Boolean);
+  return parts?.at(-1) ?? null;
+}
+
 function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
   const options = new Map<string, JsonRecord>();
   const addOption = (option: JsonRecord) => {
-    const key = `${asString(option.scope_kind) ?? 'scope'}:${asString(option.scope_id) ?? 'default'}`;
+    const kind = asString(option.scope_kind) ?? 'scope';
+    const identity = kind === 'workspace'
+      ? (asString(option.workspace_path) ?? asString(option.scope_id) ?? 'default')
+      : (asString(option.scope_id) ?? 'default');
+    const key = `${kind}:${identity}`;
     if (!options.has(key)) {
       options.set(key, option);
     }
@@ -240,10 +348,11 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
 
     const workspaceScopeId = asString(task.workspace_scope_id);
     const workspaceLabel = asString(task.workspace_label);
+    const workspacePath = asString(task.workspace_path);
     if (workspaceScopeId && workspaceLabel) {
-      addOption(scopeOption('workspace', workspaceScopeId, workspaceLabel, {
+      addOption(scopeOption('workspace', workspaceScopeId, pathLeaf(workspacePath) ?? workspaceLabel, {
         workspace_binding_id: asString(task.workspace_binding_id),
-        workspace_path: asString(task.workspace_path),
+        workspace_path: workspacePath,
         project_id: domainId,
       }));
     }
@@ -276,7 +385,7 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
       ? scopeOption(
           'workspace',
           asString(inferredWorkspace.workspace_scope_id) ?? 'workspace:inferred',
-          asString(inferredWorkspace.workspace_label) ?? '当前工作区',
+          pathLeaf(asString(inferredWorkspace.workspace_path)) ?? asString(inferredWorkspace.workspace_label) ?? '当前工作区',
           {
             workspace_binding_id: asString(inferredWorkspace.workspace_binding_id),
             workspace_path: asString(inferredWorkspace.workspace_path),
@@ -380,17 +489,6 @@ function activityState(item: JsonRecord) {
   return asString(item.status) ?? 'recent';
 }
 
-function activityPriorityBucket(item: JsonRecord) {
-  const lane = asString(item.lane);
-  if (lane === 'running') {
-    return 'running';
-  }
-  if (lane === 'attention') {
-    return 'needs_attention';
-  }
-  return 'recent';
-}
-
 function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
   const studyId = asString(item.study_id);
   const taskId = asString(item.item_id)
@@ -403,7 +501,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     ?? asString(item.action_summary)
     ?? asString(item.summary);
   const route = commandRoute(item);
-  const state = activityState(item);
+  const rawState = activityState(item);
   const domainId = asString(item.project_id) ?? 'opl';
   const domainLabel = asString(item.project_label) ?? asString(item.domain_owner) ?? 'OPL';
   const stageId = asString(item.active_stage_id)
@@ -412,6 +510,14 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     ?? asString(item.lane)
     ?? 'runtime_activity';
   const blockerRefCount = asRecordArray(item.blockers).length;
+  const currentStageUsage = asRecord(item.current_stage_usage);
+  const taskTotalUsage = asRecord(item.task_total_usage);
+  const typedBlockerSummary = asString(item.typed_blocker_summary);
+  const typedBlockerOwner = asString(item.typed_blocker_owner) ?? domainId ?? 'opl_framework';
+  const resolutionRoute = asString(item.resolution_route) ?? nextVisibleStep;
+  const userState = deriveUserFacingTaskState(item);
+  const state = userFacingActivityState(rawState, userState.primaryState);
+  const priorityBucket = userFacingActivityPriorityBucket(userState.primaryState);
   const refs = taskUserProjectionRefs({
     taskId,
     domainId,
@@ -420,12 +526,6 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     stageLabel: asString(item.status_label),
     blockerRefCount,
   });
-  const currentStageUsage = asRecord(item.current_stage_usage);
-  const taskTotalUsage = asRecord(item.task_total_usage);
-  const typedBlockerSummary = asString(item.typed_blocker_summary);
-  const typedBlockerOwner = asString(item.typed_blocker_owner) ?? domainId ?? 'opl_framework';
-  const resolutionRoute = asString(item.resolution_route) ?? nextVisibleStep;
-  const userState = deriveUserFacingTaskState(item);
   const agentDisplayName = asString(item.agent_display_name) ?? domainLabel;
   const projectDisplayName = asString(item.project_display_name)
     ?? asString(item.workspace_label)
@@ -541,7 +641,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     state,
     status: asString(item.status),
     status_label: asString(item.status_label),
-    priority_bucket: activityPriorityBucket(item),
+    priority_bucket: priorityBucket,
     active_stage_id: stageId,
     active_stage_label: asString(item.active_stage_label) ?? asString(item.status_label),
     active_run_id: activeRunId,
@@ -613,7 +713,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
 }
 
 function runtimeActivityDrilldowns(input: OplAppOperatorViewModelInput) {
-  return input.runtimeActivityItems.map(normalizeRuntimeActivityItem);
+  return dedupeRuntimeActivityDrilldowns(input.runtimeActivityItems.map(normalizeRuntimeActivityItem));
 }
 
 function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
