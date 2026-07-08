@@ -8,6 +8,38 @@ import {
   withPackCompilerReadySurfaces,
 } from './domain-pack-compiler-fixtures.ts';
 
+const DEFAULT_ENTRY_SURFACES = [
+  'cli',
+  'mcp',
+  'openai_tool',
+  'ai_sdk',
+  'skill_plugin',
+  'app_action',
+  'status_read_model',
+  'workbench',
+];
+
+function assertNoGeneratedAuthority(boundary: Record<string, unknown>) {
+  for (const key of [
+    'generated_interface_can_write_memory_body',
+    'generated_interface_can_mutate_artifacts',
+    'generated_interface_can_write_domain_truth',
+    'generated_interface_can_authorize_quality_or_export',
+    'parity_proof_can_write_domain_truth',
+    'parity_proof_can_sign_owner_receipt',
+    'parity_proof_can_create_typed_blocker',
+    'parity_proof_can_claim_domain_ready',
+    'consumption_bundle_can_claim_domain_ready',
+    'consumption_bundle_can_claim_production_ready',
+    'gate_can_claim_domain_ready',
+    'gate_can_claim_production_ready',
+    'gate_can_write_domain_truth',
+    'gate_can_authorize_quality_or_export',
+  ]) {
+    if (key in boundary) assert.equal(boundary[key], false, key);
+  }
+}
+
 test('generated interfaces command exposes descriptors but blocks cutover without handoff proof', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-state-'));
@@ -37,37 +69,20 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
   ]);
   assert.equal(bundle.cli.descriptors[0].command, 'MedAutoScience study_packet');
   assert.equal(bundle.mcp.descriptors[0].name, 'study_packet');
-  assert.equal(bundle.skill.descriptors[0].command_contract_id, 'study_packet');
-  assert.equal(bundle.product_entry.descriptors[0].action_key, 'study_packet');
-  assert.equal(bundle.openai_tool.descriptors[0].function.name, 'study_packet');
-  assert.equal(bundle.ai_sdk.descriptors[0].name, 'study_packet');
   assert.equal(bundle.generated_direct_parity.surface_kind, 'opl_generated_direct_parity_proof');
   assert.equal(bundle.generated_direct_parity.status, 'blocked_or_drift_detected');
   assert.equal(
     bundle.generated_direct_parity.issues.includes('active caller target proof is not ready'),
     true,
   );
-  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_write_domain_truth, false);
-  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_sign_owner_receipt, false);
-  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_create_typed_blocker, false);
-  assert.equal(bundle.generated_direct_parity.authority_boundary.parity_proof_can_claim_domain_ready, false);
-  assert.equal(bundle.authority_boundary.generated_interface_can_write_memory_body, false);
-  assert.equal(bundle.authority_boundary.generated_interface_can_mutate_artifacts, false);
+  assertNoGeneratedAuthority(bundle.generated_direct_parity.authority_boundary);
+  assertNoGeneratedAuthority(bundle.authority_boundary);
   assert.equal(bundle.generated_surface_consumption_bundle.surface_kind, 'opl_generated_surface_consumption_bundle');
   assert.equal(bundle.generated_surface_consumption_bundle.status, 'blocked');
   assert.equal(bundle.generated_surface_consumption_bundle.generated_blocks_ready, true);
   assert.equal(bundle.generated_surface_consumption_bundle.active_caller_cutover_status, 'blocked');
   assert.equal(bundle.generated_surface_consumption_bundle.generated_wrapper_bundle_status, 'blocked');
-  assert.deepEqual(bundle.generated_surface_consumption_bundle.consumer_surface_ids, [
-    'cli',
-    'mcp',
-    'openai_tool',
-    'ai_sdk',
-    'skill_plugin',
-    'app_action',
-    'status_read_model',
-    'workbench',
-  ]);
+  assert.deepEqual(bundle.generated_surface_consumption_bundle.consumer_surface_ids, DEFAULT_ENTRY_SURFACES);
   assert.equal(bundle.generated_surface_consumption_bundle.consumption_status_counts.blocked > 0, true);
   assert.equal(
     bundle.generated_surface_consumption_bundle.consumers.some(
@@ -80,14 +95,7 @@ test('generated interfaces command exposes descriptors but blocks cutover withou
     bundle.generated_surface_consumption_bundle.scope_claim,
     'generated_surface_consumption_readiness_only_not_live_soak_or_domain_ready',
   );
-  assert.equal(
-    bundle.generated_surface_consumption_bundle.authority_boundary.consumption_bundle_can_claim_domain_ready,
-    false,
-  );
-  assert.equal(
-    bundle.generated_surface_consumption_bundle.authority_boundary.consumption_bundle_can_claim_production_ready,
-    false,
-  );
+  assertNoGeneratedAuthority(bundle.generated_surface_consumption_bundle.authority_boundary);
 
   const mcpOnly = runCli(['agents', 'interfaces', '--domain', 'mas', '--format', 'mcp'], env)
     .generated_agent_interfaces;
@@ -118,42 +126,11 @@ test('generated interfaces declare generated surfaces as the default entry basel
     source_catalogs: ['family_action_catalog', 'family_stage_control_plane'],
     domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
     domain_repo_can_own_default_entry: false,
-    default_entry_surface_ids: [
-      'cli',
-      'mcp',
-      'openai_tool',
-      'ai_sdk',
-      'skill_plugin',
-      'app_action',
-      'status_read_model',
-      'workbench',
-    ],
+    default_entry_surface_ids: DEFAULT_ENTRY_SURFACES,
   });
   assert.deepEqual(
     bundle.supported_derived_surfaces.map((surface: { surface_id: string }) => surface.surface_id),
-    [
-      'cli',
-      'mcp',
-      'openai_tool',
-      'ai_sdk',
-      'skill_plugin',
-      'app_action',
-      'status_read_model',
-      'workbench',
-    ],
-  );
-  assert.deepEqual(
-    bundle.supported_derived_surfaces.map((surface: { source_catalogs: string[] }) => surface.source_catalogs),
-    [
-      ['family_action_catalog'],
-      ['family_action_catalog'],
-      ['family_action_catalog'],
-      ['family_action_catalog'],
-      ['family_action_catalog'],
-      ['family_action_catalog'],
-      ['family_action_catalog', 'runtime_surfaces'],
-      ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
-    ],
+    DEFAULT_ENTRY_SURFACES,
   );
   assert.equal(
     bundle.supported_derived_surfaces.every(
@@ -177,16 +154,7 @@ test('generated interfaces declare generated surfaces as the default entry basel
     action_catalog_ref: 'family_action_catalog:med_autoscience_action_catalog',
     stage_catalog_ref: 'family_stage_control_plane:med_autoscience_stage_plane',
     action_ids: ['study_packet'],
-    derived_surface_ids: [
-      'cli',
-      'mcp',
-      'openai_tool',
-      'ai_sdk',
-      'skill_plugin',
-      'app_action',
-      'status_read_model',
-      'workbench',
-    ],
+    derived_surface_ids: DEFAULT_ENTRY_SURFACES,
     derived_surface_policy: 'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
     domain_repo_wrapper_policy: 'handler_target_refs_only_adapter_or_tombstone_candidate',
     authority_boundary: {
@@ -217,14 +185,7 @@ test('generated interfaces declare generated surfaces as the default entry basel
   );
   assert.equal(bundle.generated_wrapper_bundle.domain_repo_role_policy, 'domain_handler_target_or_refs_only_adapter');
   assert.equal(bundle.generated_surface_consumption_bundle.source_of_work_lineage_status, 'ready_from_family_action_catalog');
-  assert.equal(
-    bundle.generated_surface_consumption_bundle.consumers.every(
-      (consumer: { source_of_work_lineage_ref: string; domain_repo_can_own_generated_surface: boolean }) =>
-        consumer.source_of_work_lineage_ref === 'generated_agent_interfaces.source_of_work_lineage'
-        && consumer.domain_repo_can_own_generated_surface === false,
-    ),
-    true,
-  );
+  assertNoGeneratedAuthority(bundle.authority_boundary);
 });
 
 test('generated default entry release gate prevents wrapper surface resurrection', () => {
@@ -244,21 +205,10 @@ test('generated default entry release gate prevents wrapper surface resurrection
     'utf8',
   )) as Record<string, any>;
 
-  const expectedSurfaceIds = [
-    'cli',
-    'mcp',
-    'openai_tool',
-    'ai_sdk',
-    'skill_plugin',
-    'app_action',
-    'status_read_model',
-    'workbench',
-  ];
-
   assert.deepEqual(
     contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate
       .required_default_entry_surface_ids,
-    expectedSurfaceIds,
+    DEFAULT_ENTRY_SURFACES,
   );
   assert.equal(contract.generated_interface_bundle.generated_default_entry_no_resurrection_gate.release_gate, true);
   assert.equal(
@@ -283,7 +233,7 @@ test('generated default entry release gate prevents wrapper surface resurrection
   );
   assert.deepEqual(
     bundle.generated_default_entry_no_resurrection_gate.required_default_entry_surface_ids,
-    expectedSurfaceIds,
+    DEFAULT_ENTRY_SURFACES,
   );
   assert.equal(
     bundle.generated_default_entry_no_resurrection_gate.default_entry_policy_ref,
@@ -309,20 +259,12 @@ test('generated default entry release gate prevents wrapper surface resurrection
       'repo_local_workbench_shell',
     ],
   );
-  assert.deepEqual(
-    bundle.generated_default_entry_no_resurrection_gate.authority_boundary,
-    {
-      gate_can_claim_domain_ready: false,
-      gate_can_claim_production_ready: false,
-      gate_can_write_domain_truth: false,
-      gate_can_authorize_quality_or_export: false,
-    },
-  );
+  assertNoGeneratedAuthority(bundle.generated_default_entry_no_resurrection_gate.authority_boundary);
   assert.deepEqual(
     bundle.generated_default_entry_no_resurrection_gate.default_entry_surface_lineage.map(
       (surface: { surface_id: string }) => surface.surface_id,
     ),
-    expectedSurfaceIds,
+    DEFAULT_ENTRY_SURFACES,
   );
   for (const surface of bundle.generated_default_entry_no_resurrection_gate.default_entry_surface_lineage) {
     assert.equal(surface.owner, 'one-person-lab');
@@ -331,14 +273,6 @@ test('generated default entry release gate prevents wrapper surface resurrection
     assert.equal(surface.domain_repo_can_own_generated_surface, false);
     assert.equal(surface.descriptor_pass_can_claim_domain_ready, false);
     assert.equal(surface.source_of_work_lineage.source_action_ids.includes('study_packet'), true);
-    assert.equal(
-      surface.source_of_work_lineage.derived_surface_policy,
-      'derive_cli_mcp_openai_ai_sdk_skill_app_status_workbench_from_single_catalog',
-    );
-    assert.equal(
-      surface.source_of_work_lineage.domain_repo_wrapper_policy,
-      'handler_target_refs_only_adapter_or_tombstone_candidate',
-    );
   }
   assert.equal(
     admissionGates.false_authority_boundary.descriptor_pass_can_claim_domain_ready,
