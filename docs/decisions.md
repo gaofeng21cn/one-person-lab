@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-08
 
+### 决策：Research Frontier Board 只作为 Runway refs-only 可视化投影
+
+原因：MAS 的 research frontier 属于 stage-local rolling board 与 research memory，候选路线、假设正文、证据正文、memory body、route decision、owner receipt、typed blocker、quality verdict、domain ready 和 artifact mutation 都归 domain owner。OPL Runway / Console 只需要把 domain 已给出的 frontier refs、status、candidate id、route family、rollback target 和 advisory reason ref 投影成 workbench 可视化概览，方便 operator 看到候选路线板，不制造第二真相源。
+
+影响：
+
+- stage attempt 的 `route_impact.research_frontier_board` / `frontier_board` / `stage_candidate_portfolio` 只作为 refs-only 输入读取；OPL 不读取或写入 memory body、hypothesis body、evidence body 或 artifact body。
+- `opl_research_frontier_board_projection` 的 owner 是 OPL projection owner only；所有 domain truth、memory accept/reject、owner receipt、typed blocker、quality verdict、domain ready、route decision 和 artifact mutation authority 均为 `false`。
+- Workbench 只汇总 `status_counts`、`route_family_counts`、`rollback_target_refs` 和 refs-only items；这些汇总不能声明 MAS frontier accepted、paper progress、domain ready、runtime ready、publication ready 或 owner acceptance。
+
 ### 决策：Runtime workbench 默认投影按用户 Work Item 去重和命名
 
 原因：App Runtime 页是用户和智能体协作的项目控制台，不是 provider / binding / stage-attempt 诊断面。同一 MAS workspace path 可能因为自动 push、milestone follow-through 或历史 binding 产生多个 runtime binding；这些 binding 只能作为高级证据，不能在默认范围选择或任务列表中变成“项目”。同理，MAS 论文线的 owner typed blocker 在没有自动流程运行、没有 provider failure、没有 pending terminalization 时，表示“论文线暂停，等待后续方向”，不表示 OPL Framework 或 App 故障。

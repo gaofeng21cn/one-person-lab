@@ -175,6 +175,16 @@ function stringRefsFromUnknown(value: unknown) {
   return [];
 }
 
+function researchFrontierBoardFromRouteImpact(routeImpact: JsonRecord) {
+  for (const key of ['research_frontier_board', 'frontier_board', 'stage_candidate_portfolio']) {
+    const value = routeImpact[key];
+    if (isRecord(value)) {
+      return value as JsonRecord;
+    }
+  }
+  return null;
+}
+
 function packetLikeRef(value: string) {
   return value.startsWith('packet:')
     || value.includes('/default_executor_dispatches/')
@@ -592,6 +602,7 @@ function attemptProjection(
     controlled_apply_contract: controlledApplyContract,
     lifecycle_primitives: lifecyclePrimitives,
     current_provider_readiness: currentProviderReadiness,
+    research_frontier_board: researchFrontierBoardFromRouteImpact(routeImpact),
   });
   const humanReviewBurdenBudget = buildAttemptHumanReviewBurdenBudget({
     targetDomainId: row.domain_id,
@@ -784,6 +795,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       model_route_cost_projection: EMPTY_WORKBENCH_METADATA.summary.model_route_cost_projection,
       stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
+      research_frontier_board: EMPTY_WORKBENCH_METADATA.summary.research_frontier_board,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,
@@ -853,6 +865,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       model_route_cost_projection: metadata.summary.model_route_cost_projection,
       stage_progress_log: metadata.summary.stage_progress_log,
       package_export_lifecycle: metadata.summary.package_export_lifecycle,
+      research_frontier_board: metadata.summary.research_frontier_board,
       action_routing: metadata.summary.action_routing,
       transition_bridge_evidence: metadata.summary.transition_bridge_evidence,
       control_loop_summary: metadata.summary.control_loop_summary,
@@ -889,6 +902,7 @@ export async function buildStageAttemptWorkbench(options: ProviderReadinessOptio
       model_route_cost_projection: EMPTY_WORKBENCH_METADATA.summary.model_route_cost_projection,
       stage_progress_log: EMPTY_WORKBENCH_METADATA.summary.stage_progress_log,
       package_export_lifecycle: EMPTY_WORKBENCH_METADATA.summary.package_export_lifecycle,
+      research_frontier_board: EMPTY_WORKBENCH_METADATA.summary.research_frontier_board,
       action_routing: EMPTY_WORKBENCH_METADATA.summary.action_routing,
       transition_bridge_evidence: EMPTY_WORKBENCH_METADATA.summary.transition_bridge_evidence,
       control_loop_summary: EMPTY_WORKBENCH_METADATA.summary.control_loop_summary,

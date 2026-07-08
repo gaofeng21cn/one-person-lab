@@ -223,6 +223,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/family-runtime-stage-attempts-residency-proof.test.ts',
   'tests/src/cli/cases/family-runtime-stage-launch-gates.test.ts',
   'tests/src/cli/cases/family-runtime-stage-admission-contract-light.test.ts',
+  'tests/src/cli/cases/runtime-stage-attempt-frontier-board-projection.test.ts',
   'tests/src/cli/cases/family-runtime-stage-attempt-usage-projection.test.ts',
   'tests/src/cli/cases/family-runtime-stage-attempt-usage.test.ts',
   'tests/src/cli/cases/family-runtime-stage-attempt-workbench-usage.test.ts',

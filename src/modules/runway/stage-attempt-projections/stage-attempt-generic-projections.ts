@@ -23,6 +23,10 @@ import {
   buildWorkbenchQualityReadiness,
 } from './quality-readiness.ts';
 import {
+  buildAttemptResearchFrontierBoard,
+  buildWorkbenchResearchFrontierBoard,
+} from './research-frontier-board.ts';
+import {
   buildAttemptReviewRepairQueue,
   buildWorkbenchReviewRepairQueue,
 } from './review-repair-queue.ts';
@@ -66,6 +70,7 @@ export type StageAttemptGenericProjectionInput = {
   lifecycle_primitives: JsonRecord;
   current_provider_readiness: JsonRecord | null;
   provider_readiness_currentness?: JsonRecord;
+  research_frontier_board?: JsonRecord | null;
 };
 
 export function buildAttemptGenericProjections(input: StageAttemptGenericProjectionInput) {
@@ -159,6 +164,12 @@ export function buildAttemptGenericProjections(input: StageAttemptGenericProject
       route_impact: input.route_impact,
       artifact_refs: input.artifact_refs,
     }),
+    research_frontier_board: buildAttemptResearchFrontierBoard({
+      stage_attempt_id: input.stage_attempt_id,
+      domain_id: input.domain_id,
+      stage_id: input.stage_id,
+      research_frontier_board: input.research_frontier_board,
+    }),
     action_routing: buildAttemptOperatorActionRouting({
       stage_attempt_id: input.stage_attempt_id,
       domain_id: input.domain_id,
@@ -183,6 +194,7 @@ export function buildWorkbenchGenericProjections(attempts: StageAttemptGenericPr
     workspace_source_intake: buildWorkbenchWorkspaceSourceIntake(attempts),
     memory_locator_index: buildWorkbenchMemoryLocatorIndex(attempts),
     package_export_lifecycle: buildWorkbenchPackageExportLifecycle(attempts),
+    research_frontier_board: buildWorkbenchResearchFrontierBoard(attempts),
     action_routing: buildWorkbenchOperatorActionRouting(attempts),
     transition_bridge_evidence: buildWorkbenchTransitionBridgeEvidence(attempts),
   };
