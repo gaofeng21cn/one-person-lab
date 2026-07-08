@@ -94,12 +94,13 @@ Fast Local Env
 围绕 App Runtime 页，Framework 的职责固定为三层：
 
 1. **Aggregation**
-   - 从 admitted workspace bindings、domain runtime payload 和 provider read model 聚合候选任务线。
+   - 从 admitted workspace bindings 和 domain workspace 的产品结构聚合候选任务线；MAS 论文全集来自已登记课题 workspace 的 `studies/`，不是来自 Temporal attempt 是否存在。
+   - Temporal / provider read model 只叠加正在运行、heartbeat、duration、stage attempt refs 与 token/cost telemetry 等执行证据；历史论文没有 provider telemetry 时仍应显示为可见 work item。
    - 不把 active workspace 当成唯一范围。
 
 2. **Projection**
-   - 输出 scope options、current scope、scope source 和 inferred scope hint。
-   - 输出用户主状态、自动运行副状态、阶段、时长、token、liveness、next owner 与 blocker route。
+   - 输出 scope options、current scope、scope source 和 inferred scope hint；默认 scope 只面向用户认知层：全部项目、智能体、项目。单篇论文 / task、workspace binding id、autopush 或 stage-attempt 名称只进任务详情或诊断。
+   - 输出用户主状态、自动运行副状态、阶段、时长、token、liveness、next owner 与 blocker route；未观测到 token/cost telemetry 时必须保持 missing / null，不得把未记录写成 0。
    - 保留 provider/control-plane 术语到 diagnostic refs。
 
 3. **Boundary**

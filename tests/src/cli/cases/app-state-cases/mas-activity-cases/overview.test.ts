@@ -510,7 +510,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.equal(runningTask.primary_state_label, '进行中');
     assert.equal(runningTask.automation_state, 'automation_running');
     assert.equal(runningTask.automation_state_label, '自动运行中');
-    assert.equal(runningTask.task_identity.agent.label, 'MAS');
+    assert.equal(runningTask.task_identity.agent.label, 'Med Auto Science');
     assert.equal(runningTask.task_identity.project.workspace_binding_id, 'mas-app-state-activity');
     assert.equal(runningTask.task_identity.work_item.kind, 'study');
     assert.equal(runningTask.task_identity.execution_run.stage_id, 'live');
@@ -703,7 +703,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.ok(runningWorkItem);
     assert.equal(runningWorkItem.scope.scope_kind, 'work_item');
     assert.equal(runningWorkItem.work_item.kind, 'study');
-    assert.equal(runningWorkItem.agent.label, 'MAS');
+    assert.equal(runningWorkItem.agent.label, 'Med Auto Science');
     assert.equal(runningWorkItem.stage.stage_id, 'live');
     assert.equal(
       runningWorkItem.stage.catalog_ref,

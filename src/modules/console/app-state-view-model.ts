@@ -101,6 +101,27 @@ function normalizedTextKey(value: unknown) {
   return asString(value)?.toLowerCase().replace(/[^a-z0-9]+/g, '') ?? '';
 }
 
+const DOMAIN_AGENT_DISPLAY_LABELS: Record<string, string> = {
+  mas: 'Med Auto Science',
+  medautoscience: 'Med Auto Science',
+  mag: 'Med Auto Grant',
+  medautogrant: 'Med Auto Grant',
+  rca: 'RedCube AI',
+  redcube: 'RedCube AI',
+  redcubeai: 'RedCube AI',
+  oma: 'OPL Meta Agent',
+  oplmetaagent: 'OPL Meta Agent',
+  bookforge: 'OPL Book Forge',
+  oplbookforge: 'OPL Book Forge',
+};
+
+function domainAgentDisplayLabel(domainId: string, label: string | null) {
+  return DOMAIN_AGENT_DISPLAY_LABELS[normalizedTextKey(label)]
+    ?? DOMAIN_AGENT_DISPLAY_LABELS[normalizedTextKey(domainId)]
+    ?? label
+    ?? domainId;
+}
+
 function isMedAutoScienceTask(task: JsonRecord) {
   const text = lowerText(task.project_id, task.domain_id, task.domain_owner, task.project_label);
   return includesAny(text, ['medautoscience', 'med-autoscience', 'mas']);
@@ -341,7 +362,10 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
   addOption(allProjects);
   for (const task of tasks) {
     const domainId = asString(task.domain_id) ?? 'opl';
-    const domainLabel = asString(task.agent_display_name) ?? asString(task.domain_label) ?? domainId;
+    const domainLabel = domainAgentDisplayLabel(
+      domainId,
+      asString(task.agent_display_name) ?? asString(task.domain_label),
+    );
     addOption(scopeOption('agent', asString(task.agent_scope_id) ?? `agent:${domainId}`, domainLabel, {
       domain_id: domainId,
     }));
@@ -349,7 +373,7 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
     const workspaceLabel = asString(task.workspace_label);
     const workspacePath = asString(task.workspace_path);
     const projectScopeId = asString(task.project_scope_id);
-    const projectLabel = asString(task.project_display_name) ?? workspaceLabel ?? domainLabel;
+    const projectLabel = workspaceLabel ?? asString(task.project_display_name) ?? domainLabel;
     if (projectScopeId) {
       addOption(scopeOption('project', projectScopeId, projectLabel, {
         scope_value: projectLabel,
@@ -370,8 +394,8 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
       ? scopeOption(
           'project',
           asString(inferredWorkspace.project_scope_id) ?? 'project:inferred',
-          asString(inferredWorkspace.project_display_name)
-            ?? asString(inferredWorkspace.workspace_label)
+          asString(inferredWorkspace.workspace_label)
+            ?? asString(inferredWorkspace.project_display_name)
             ?? pathLeaf(asString(inferredWorkspace.workspace_path))
             ?? '当前项目',
           {
@@ -515,7 +539,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     stageLabel: asString(item.status_label),
     blockerRefCount,
   });
-  const agentDisplayName = asString(item.agent_display_name) ?? domainLabel;
+  const agentDisplayName = domainAgentDisplayLabel(domainId, asString(item.agent_display_name) ?? domainLabel);
   const projectDisplayName = asString(item.project_display_name)
     ?? asString(item.workspace_label)
     ?? domainLabel;

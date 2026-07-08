@@ -180,17 +180,18 @@ test('app state fast aggregates runtime overview across MAS bindings and keeps t
     assert.equal(runtimeTasks.length, 6);
     assert.equal(new Set(runtimeTasks.map((entry: { task_id: string }) => entry.task_id)).size, 6);
     assert.equal(
-      workbench.runtime_scope.scope_options.filter((entry: { scope_kind: string }) => entry.scope_kind === 'workspace').length,
+      workbench.runtime_scope.scope_options.filter((entry: { scope_kind: string }) => entry.scope_kind === 'project').length,
       2,
     );
     assert.deepEqual(
       workbench.runtime_scope.inferred_scope_hint,
       {
-        scope_kind: 'workspace',
-        scope_id: 'workspace:mas-active-binding',
+        scope_kind: 'project',
+        scope_id: 'project:medautoscience:mas-active-binding',
         label: path.basename(activeWorkspaceRoot),
         workspace_binding_id: 'mas-active-binding',
         workspace_path: activeWorkspaceRoot,
+        workspace_label: path.basename(activeWorkspaceRoot),
         project_id: 'medautoscience',
         hint_source: 'workspace_registry_active_binding',
       },
