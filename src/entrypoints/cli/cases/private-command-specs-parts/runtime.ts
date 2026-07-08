@@ -16,7 +16,6 @@ import { buildStandardDomainAgentScaffold } from '../../../../modules/foundry-la
 import { runFamilyAgentLegacyCleanupApply } from '../../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
 import { recordOmaProductionConsumptionReceipts } from '../../../../modules/foundry-lab/oma-production-consumption-ledger.ts';
 import { repoTrackedOmaStageReplayMissingReceiptReceipts } from '../../../../modules/foundry-lab/oma-stage-replay-receipts.ts';
-import { resolveOplModuleExecCommand } from '../../../../modules/connect/index.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from '../runtime-app-release-evidence-command-spec.ts';
 import {
@@ -646,15 +645,13 @@ export function buildPrivateRuntimeCommandSpecs({
     index: buildIndexCommandSpec(),
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|intake|tick|enqueue|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|paper-autonomy supervisor decide|paper-autonomy supervisor readback|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|service start|service status|service stop|worker start|worker status|worker stop|scheduler install|scheduler status|scheduler trigger|scheduler remove|evidence-worklist|paper-autonomy supervisor decide|paper-autonomy supervisor readback|residency proof|attempt create|attempt list|attempt inspect|attempt start|attempt cancel|attempt query|attempt signal|attempt fixture-run|notify list|events export [options]',
       summary:
-        'Manage the provider-backed OPL family runtime queue, stage attempts, evidence worklist, notifications, approvals, and events.',
+        'Manage the provider-backed OPL family runtime stage attempts, evidence worklist, notifications, and events.',
       examples: [
         'opl family-runtime status',
         'opl family-runtime status --provider temporal',
-        'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
-        'opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator \'{"workspace_root":"/tmp/mas"}\'',
         'opl family-runtime attempt create --domain medautoscience --stage scout --provider temporal --workspace-locator \'{"workspace_root":"/tmp/mas"}\' --start',
         'opl family-runtime attempt start <stage_attempt_id>',
         'opl family-runtime attempt cancel <stage_attempt_id> --reason operator_superseded',
@@ -674,20 +671,13 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl family-runtime scheduler status --provider temporal',
         'opl family-runtime scheduler trigger --provider temporal',
         'opl family-runtime scheduler remove --provider temporal',
-        'opl family-runtime scheduler tick --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
         'opl family-runtime paper-autonomy supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json --typed-blocker-ref mas://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
         'opl family-runtime paper-autonomy supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json',
-        'opl family-runtime tick --source temporal-worker --hydrate',
-        'opl family-runtime queue list',
-        'opl family-runtime queue hold --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
-        'opl family-runtime queue release --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
-        'opl family-runtime queue retire --study 003-dpcc-primary-care-phenotype-treatment-gap --task-kind paper_autonomy/guarded-apply --reason superseded_by_publication_handoff_owner_gate',
       ],
       handler: (args) => runFamilyRuntime(args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,
-        dependencies: { resolveOplModuleExecCommand },
         stageReplayMissingReceiptExtraReceipts: repoTrackedOmaStageReplayMissingReceiptReceipts(),
       }),
     },

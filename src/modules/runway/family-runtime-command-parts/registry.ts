@@ -17,17 +17,7 @@ import {
   parsePaperAutonomyArgs,
 } from './paper-autonomy.ts';
 import { parseEvidenceWorklistArgs } from './evidence-worklist.ts';
-import {
-  parseApproveArgs,
-  parseEnqueueArgs,
-  parseIntakeArgs,
-  parseQueueArgs,
-  parseTickArgs,
-} from './queue.ts';
-import {
-  parseSchedulerLifecycleArgs,
-  parseSchedulerTickArgs,
-} from './scheduler.ts';
+import { parseSchedulerLifecycleArgs } from './scheduler.ts';
 import { parseRuntimeProcessArgs } from './service-worker.ts';
 import { parseStageArtifactArgs } from './stage-artifact.ts';
 
@@ -52,7 +42,7 @@ function staticCommand(
   };
 }
 
-const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|control-loop status|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|scheduler tick|evidence-worklist|intake|tick|enqueue|lifecycle apply|autonomy-supervisor decide|autonomy-supervisor readback|paper-autonomy supervisor decide|paper-autonomy supervisor readback|stage-artifact open|stage-artifact commit|stage-artifact status|stage-artifact explain|stage-artifact rebuild|stage-artifact promote|stage-artifact gc|stage-artifact restore|stage-artifact validate|stage-artifact conformance|stage-artifact workbench|attempt create|attempt start|attempt cancel|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|approve|notify list|events export';
+const FAMILY_RUNTIME_COMMAND_USAGE = 'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|control-loop status|service start|service status|service stop|worker start|worker status|worker stop|scheduler status|scheduler install|scheduler remove|scheduler trigger|evidence-worklist|lifecycle apply|autonomy-supervisor decide|autonomy-supervisor readback|paper-autonomy supervisor decide|paper-autonomy supervisor readback|stage-artifact open|stage-artifact commit|stage-artifact status|stage-artifact explain|stage-artifact rebuild|stage-artifact promote|stage-artifact gc|stage-artifact restore|stage-artifact validate|stage-artifact conformance|stage-artifact workbench|attempt create|attempt start|attempt cancel|attempt list|attempt inspect|attempt query|attempt signal|attempt fixture-run|notify list|events export';
 
 const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   {
@@ -102,11 +92,6 @@ const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
       mode === 'control-loop' && rest[0] === 'status' ? parseControlLoopStatusArgs(rest) : null,
   },
   {
-    command_path: 'scheduler tick',
-    parse: (mode, rest) =>
-      mode === 'scheduler' && rest[0] === 'tick' ? parseSchedulerTickArgs(rest) : null,
-  },
-  {
     command_path: 'scheduler lifecycle',
     parse: (mode, rest) =>
       mode === 'scheduler'
@@ -143,28 +128,8 @@ const FAMILY_RUNTIME_COMMAND_REGISTRY: FamilyRuntimeCommandParser[] = [
   staticCommand('notify list', { mode: 'notify_list' }),
   staticCommand('events export', { mode: 'events_export' }),
   {
-    command_path: 'queue',
-    parse: (mode, rest) => mode === 'queue' ? parseQueueArgs(rest) ?? null : null,
-  },
-  {
     command_path: 'attempt',
     parse: (mode, rest) => mode === 'attempt' ? parseAttemptArgs(rest) ?? null : null,
-  },
-  {
-    command_path: 'tick',
-    parse: (mode, rest) => mode === 'tick' ? parseTickArgs(rest) : null,
-  },
-  {
-    command_path: 'intake',
-    parse: (mode, rest) => mode === 'intake' ? parseIntakeArgs(rest) : null,
-  },
-  {
-    command_path: 'approve',
-    parse: (mode, rest) => mode === 'approve' ? parseApproveArgs(rest) : null,
-  },
-  {
-    command_path: 'enqueue',
-    parse: (mode, rest) => mode === 'enqueue' ? parseEnqueueArgs(rest) : null,
   },
 ];
 

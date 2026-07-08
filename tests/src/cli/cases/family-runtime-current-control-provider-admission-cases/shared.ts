@@ -1,15 +1,11 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { assert, fs, os, parseJsonText as parseJsonPayloadText, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
-import { enqueueTask } from '../../../../../src/modules/runway/family-runtime-enqueue.ts';
 import { ensureProviderHostedStageAttempt } from '../../../../../src/modules/runway/family-runtime-provider-hosted-attempts.ts';
-import type { FamilyRuntimeTaskRow } from '../../../../../src/modules/runway/family-runtime-store.ts';
 import {
-  createQueueTables,
-  defaultExecutorPayload,
-  insertQueuedTask,
-  insertSucceededTask,
-} from '../family-runtime-provider-hosted-attempts-cases/mas-default-executor-helpers.ts';
+  createFamilyRuntimeQueueTables,
+  type FamilyRuntimeTaskRow,
+} from '../../../../../src/modules/runway/family-runtime-store.ts';
 
 export function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -64,6 +60,111 @@ export function providerObservationBoundary() {
   };
 }
 
+export function createQueueTables(db: DatabaseSync) {
+  createFamilyRuntimeQueueTables(db);
+}
+
+export function insertSucceededTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    domainId: string;
+    taskKind: string;
+    payload: Record<string, unknown>;
+    dedupeKey: string;
+  },
+) {
+  const createdAt = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+      attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+      lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    input.domainId,
+    input.taskKind,
+    JSON.stringify(input.payload),
+    input.dedupeKey,
+    0,
+    'succeeded',
+    0,
+    3,
+    'test',
+    0,
+    null,
+    null,
+    null,
+    null,
+    null,
+    createdAt,
+    createdAt,
+  );
+}
+
+export function insertQueuedTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    domainId: string;
+    taskKind: string;
+    payload: Record<string, unknown>;
+    dedupeKey: string;
+    status?: 'queued' | 'waiting_approval';
+    requiresApproval?: boolean;
+    lastError?: string | null;
+  },
+) {
+  const status = input.status ?? 'queued';
+  const requiresApproval = input.requiresApproval ?? status === 'waiting_approval';
+  const createdAt = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+      attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+      lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    input.domainId,
+    input.taskKind,
+    JSON.stringify(input.payload),
+    input.dedupeKey,
+    0,
+    status,
+    0,
+    3,
+    'test',
+    requiresApproval ? 1 : 0,
+    null,
+    null,
+    null,
+    input.lastError ?? null,
+    null,
+    createdAt,
+    createdAt,
+  );
+}
+
+function defaultExecutorPayload(sourceFingerprint: string) {
+  return {
+    profile: '/tmp/dm-cvd.profile.toml',
+    study_id: '002-dm-china-us-mortality-attribution',
+    quest_id: '002-dm-china-us-mortality-attribution',
+    action_type: 'run_quality_repair_batch',
+    dispatch_authority: 'quality_repair_batch_writer_handoff',
+    next_executable_owner: 'write',
+    executor_kind: 'codex_cli_default',
+    dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
+    authority_boundary: 'mas_default_executor_dispatch_request_only',
+    workspace_root: '/tmp/explicit-workspace-root',
+    source_fingerprint: sourceFingerprint,
+  };
+}
+
 export function currentControlCommandOutboxRecord(input: {
   studyId: string;
   actionType: string;
@@ -107,7 +208,7 @@ export function currentControlCommandOutboxRecord(input: {
     source_generation: sourceGeneration,
     expected_version: input.expectedVersion ?? sourceGeneration,
     postcondition: {
-      kind: 'provider_admission_enqueued_or_blocked',
+      kind: 'provider_admission_projected_or_blocked',
       outcome_owner: 'one-person-lab',
       domain_state_owner: 'med-autoscience',
     },
@@ -158,7 +259,7 @@ export function masDomainProgressTransitionRequest(input: {
     source_generation: sourceGeneration,
     expected_version: input.expectedVersion ?? sourceGeneration,
     required_postcondition: {
-      kind: 'provider_admission_enqueued_or_blocked',
+      kind: 'provider_admission_projected_or_blocked',
       outcome_owner: 'one-person-lab',
       domain_state_owner: 'med-autoscience',
     },
@@ -231,7 +332,7 @@ export function masPaperMissionOplRuntimeCarrier(input: {
       work_unit_fingerprint: input.workUnitFingerprint,
     },
     required_postcondition: {
-      kind: 'provider_admission_enqueued_or_blocked',
+      kind: 'provider_admission_projected_or_blocked',
       outcome_owner: 'one-person-lab',
       domain_state_owner: 'med-autoscience',
     },
@@ -573,7 +674,6 @@ export function insertCompletedCurrentControlStageAttempt(
 export {
   assert,
   DatabaseSync,
-  enqueueTask,
   ensureProviderHostedStageAttempt,
   fs,
   os,
@@ -582,4 +682,3 @@ export {
   test,
 };
 export type { FamilyRuntimeTaskRow };
-export { createQueueTables, insertQueuedTask, insertSucceededTask };

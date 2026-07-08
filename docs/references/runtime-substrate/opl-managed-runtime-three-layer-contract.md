@@ -9,7 +9,7 @@ Machine boundary: 本文是人读边界参考；机器可读事实必须使用 `
 
 本文保留“三层 owner split”作为人读解释。机器合同归 `contracts/opl-framework/managed-runtime-three-layer-contract.json`，读取和校验实现归 `src/managed-runtime-contract.ts` 与相关测试；不要从本文复制字段值、已准入 repo 列表或 readiness 计数作为机器接口。
 
-当前长期口径是 provider-backed family runtime：Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。`hermes_agent`、`claude_code` 与 `antigravity_cli` 属于显式非默认 executor adapter/backend，必须独立 receipt / audit / fail-closed；旧 Hermes provider / Gateway / readiness / compat 面只作为 history/provenance/diagnostic source ref、fixture 或负向 guard。
+当前长期口径是 provider-backed family runtime：Temporal-backed provider 是 production online runtime 的必需 substrate；`local_sqlite` 只允许作为 retired-provider negative guard 和 SQLite projection/index 旧名语境。`hermes_agent`、`claude_code` 与 `antigravity_cli` 属于显式非默认 executor adapter/backend，必须独立 receipt / audit / fail-closed；旧 Hermes provider / Gateway / readiness / compat 面只作为 history/provenance/diagnostic source ref、fixture 或负向 guard。
 
 当前 default family、conformance、framework readiness、App/operator projection 和 evidence worklist 必须从 fresh read-model 读取：
 

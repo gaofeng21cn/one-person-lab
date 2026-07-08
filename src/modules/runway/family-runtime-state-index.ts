@@ -319,7 +319,7 @@ function stateIndexDatabaseDefinitions(): DatabaseDefinition[] {
   const paths = familyRuntimePaths();
   return [
     {
-      database_id: 'queue',
+      database_id: 'stage_attempt_index',
       path: paths.queue_db,
       owned_tables: ['tasks', 'events', 'notifications', 'queue_holds', 'stage_attempts'],
       ensure: () => {

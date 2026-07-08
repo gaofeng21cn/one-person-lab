@@ -143,9 +143,9 @@
         "domain_policy": "return_owner_receipt_or_typed_blocker"
       },
       {
-        "primitive_id": "queue_attempt_ledger",
+        "primitive_id": "stage_attempt_projection_ledger",
         "owner": "one-person-lab",
-        "replacement_surface": "family_runtime_queue",
+        "replacement_surface": "family_runtime_stage_attempt_index",
         "domain_policy": "do_not_own_generic_attempt_ledger"
       },
       {
@@ -1321,7 +1321,7 @@
       "codex_app_role": "start_observe_intervene_project_only",
       "provider_managed_surfaces": [
         "stage_attempt_runtime",
-        "typed_queue",
+        "stage_attempt_request_projection",
         "wakeup",
         "resume_requery",
         "retry_dead_letter",
@@ -2551,7 +2551,7 @@
           "opl_role": "replacement_or_generated_surface_owner",
           "examples": [
             "scheduler_daemon",
-            "queue_attempt_ledger",
+            "stage_attempt_projection_ledger",
             "generic_state_machine_runner",
             "session_store",
             "sqlite_lifecycle_engine",

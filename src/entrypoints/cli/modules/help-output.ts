@@ -48,7 +48,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   'brand-atlas': '读取 OPL Atlas 的 catalog、descriptor、graph、lifecycle 和验收 surface。',
   'brand-pack': '读取 OPL Pack 的 Domain Pack、Pack OS lifecycle、authority ABI、generated surface 和验收 surface。',
   'brand-stagecraft': '读取 OPL Stagecraft 的 stage grammar、StageRun、receipt/blocker 和验收 surface。',
-  'brand-runway': '读取 OPL Runway 的 runtime provider、queue、attempt、lease 和验收 surface。',
+  'brand-runway': '读取 OPL Runway 的 runtime provider、stage-attempt projection、attempt、lease 和验收 surface。',
   'brand-ledger': '读取 OPL Ledger 的 evidence、receipt、lineage、state-index 和验收 surface。',
   'brand-console': '读取 OPL Console 的 App/operator read-model、safe action 和验收 surface。',
   'brand-foundry-lab': '读取 OPL Foundry Lab 的 agent factory、work-order、conformance 和验收 surface。',
@@ -58,7 +58,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   framework: '定位和解释 OPL Framework 自身的运行依赖环境。',
   pack: '读取 Declarative Domain Pack、Pack OS lock/lifecycle、authority ABI、pack compiler 和 generated surface 边界读面。',
   stagecraft: '读取 stage 设计、认知计算、tool affordance 与 quality-gate 边界读面。',
-  runway: '读取 durable execution、typed queue、attempt、provider 和 runtime blocker 读面。',
+  runway: '读取 durable execution、stage-attempt request/projection、attempt、provider 和 runtime blocker 读面。',
   ledger: '读取 evidence、receipt、typed blocker、artifact lineage 和 refs-only ledger 读面。',
   console: '读取 App/operator console、current owner、next action 和 drilldown 读面。',
   'foundry-lab': '读取 Agent 创建、测试接管、机制改进、canary 与 work order 读面。',
@@ -79,7 +79,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   contract: '读取或验证 machine-readable contract / handoff surface。',
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
-  'family-runtime': '管理 provider-backed family runtime queue、stage attempt、dispatch、approval、notification 与事件。',
+  'family-runtime': '管理 Temporal-backed family runtime stage attempt、provider readback、notification 与事件。',
   index: '维护 OPL-owned SQLite sidecar indexes，不替代文件真相或 domain authority。',
 };
 

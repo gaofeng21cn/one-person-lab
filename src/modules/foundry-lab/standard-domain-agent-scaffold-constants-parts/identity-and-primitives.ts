@@ -31,9 +31,9 @@ export const OPL_OWNED_GENERIC_PRIMITIVES = [
     domain_policy: 'return_owner_receipt_or_typed_blocker',
   },
   {
-    primitive_id: 'queue_attempt_ledger',
+    primitive_id: 'stage_attempt_projection_ledger',
     owner: 'one-person-lab',
-    replacement_surface: 'family_runtime_queue',
+    replacement_surface: 'family_runtime_stage_attempt_index',
     domain_policy: 'do_not_own_generic_attempt_ledger',
   },
   {

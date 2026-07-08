@@ -72,7 +72,7 @@ src/modules/connect
 | `workspace` | Workspace protocol、Project Unit、Stage Artifact Unit 和文件生命周期投影。 | 给 Runway、Console、Ledger 和 domain owner 提供可检查落点。 |
 | `pack` | Declarative Domain Pack、Capability Invocation ABI、authority ABI、generated surfaces。 | 给 Stagecraft、Runway、Console、Connect 和 Foundry Lab 提供声明式 ABI。 |
 | `stagecraft` | Stage 设计、tool affordance、quality gate refs、handoff 和 route-back。 | 给 Runway 提供 launch/admission 约束，给 Console 提供 stage readiness 投影。 |
-| `runway` | Durable execution、typed queue、attempt、lease、retry/dead-letter、human gate 和 reconciler。 | 执行和恢复归 Runway；domain truth、owner receipt 和 quality verdict 回 domain owner。 |
+| `runway` | Durable execution、stage-attempt request/projection、attempt、lease、retry/dead-letter、human gate 和 reconciler。 | 执行和恢复归 Runway；domain truth、owner receipt 和 quality verdict 回 domain owner。 |
 | `ledger` | refs-only evidence、receipt/blocker refs、lineage、restore/no-regression refs。 | 给 Console、Runway、Foundry Lab 和 domain owner 提供可审计证据索引。 |
 | `console` | App/operator projection、current owner、next action、governance 和 drilldown。 | 负责展示和治理；需要连接/安装/同步时进入 Connect，运行恢复进入 Runway，证据进入 Ledger。 |
 | `foundry-lab` | Agent 创建、测试接管、自进化、work order、canary、promotion/rollback。 | 产出改进 work order 和 handoff；target domain owner 保留采纳/拒绝和 authority verdict。 |

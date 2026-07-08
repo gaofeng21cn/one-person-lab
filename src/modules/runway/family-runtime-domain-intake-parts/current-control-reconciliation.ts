@@ -3,14 +3,15 @@ import type { DatabaseSync } from 'node:sqlite';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
-import type { EnqueueInput } from '../family-runtime-command.ts';
+import type { StageAttemptProjectionInput } from '../family-runtime-command.ts';
 import {
   insertEvent,
   type FamilyRuntimeTaskRow,
 } from '../family-runtime-store.ts';
 import { taskFailureProjectionSql } from '../family-runtime-queue-projection-boundary.ts';
 import { updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
-import { DEFAULT_EXECUTOR_SUPERSEDED_REASON } from '../family-runtime-tick-parts/default-executor-currentness.ts';
+
+const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
 
 const EXISTING_DEFAULT_EXECUTOR_SUPPRESSIBLE_STATUSES = new Set([
   'queued',
@@ -24,7 +25,7 @@ const CURRENT_CONTROL_PROVIDER_ADMISSION_IDENTITY_BLOCKERS = new Set([
   'current_control_transition_non_advancing_apply_recorded',
 ]);
 
-function currentControlAdmissionStudyIds(inputs: EnqueueInput[]) {
+function currentControlAdmissionStudyIds(inputs: StageAttemptProjectionInput[]) {
   return new Set(inputs
     .map((input) => optionalString(input.payload.study_id))
     .filter((studyId): studyId is string => Boolean(studyId)));
@@ -57,11 +58,11 @@ function currentControlBlockedByStudy(blocked: Array<{ reason: string; task: unk
   return blockedByStudy;
 }
 
-function payloadString(input: EnqueueInput, key: string) {
+function payloadString(input: StageAttemptProjectionInput, key: string) {
   return optionalString(input.payload[key]);
 }
 
-function isMasPaperMissionStartOrResumeInput(input: EnqueueInput) {
+function isMasPaperMissionStartOrResumeInput(input: StageAttemptProjectionInput) {
   return input.domainId === 'medautoscience'
     && input.taskKind === 'paper_mission/start_or_resume'
     && (
@@ -70,13 +71,20 @@ function isMasPaperMissionStartOrResumeInput(input: EnqueueInput) {
     );
 }
 
-function samePayloadString(left: EnqueueInput, right: EnqueueInput, key: string) {
+function samePayloadString(
+  left: StageAttemptProjectionInput,
+  right: StageAttemptProjectionInput,
+  key: string,
+) {
   const leftValue = payloadString(left, key);
   const rightValue = payloadString(right, key);
   return Boolean(leftValue && rightValue && leftValue === rightValue);
 }
 
-function sameDefaultExecutorOwnerAction(left: EnqueueInput, right: EnqueueInput) {
+function sameDefaultExecutorOwnerAction(
+  left: StageAttemptProjectionInput,
+  right: StageAttemptProjectionInput,
+) {
   if (
     left.domainId !== 'medautoscience'
     || right.domainId !== 'medautoscience'
@@ -97,7 +105,7 @@ function sameDefaultExecutorOwnerAction(left: EnqueueInput, right: EnqueueInput)
     || samePayloadString(left, right, 'action_fingerprint');
 }
 
-function executableOwnerFromPendingTask(input: EnqueueInput) {
+function executableOwnerFromPendingTask(input: StageAttemptProjectionInput) {
   return payloadString(input, 'next_executable_owner')
     ?? payloadString(input, 'domain_owner')
     ?? payloadString(input, 'owner')
@@ -124,8 +132,8 @@ function isSuppressibleExistingDefaultExecutorRow(row: FamilyRuntimeTaskRow, pay
 }
 
 export function reconcileCurrentControlExecutableOwners(
-  currentInputs: EnqueueInput[],
-  pendingInputs: EnqueueInput[],
+  currentInputs: StageAttemptProjectionInput[],
+  pendingInputs: StageAttemptProjectionInput[],
 ) {
   return currentInputs.map((input) => {
     const pending = pendingInputs.find((candidate) => sameDefaultExecutorOwnerAction(input, candidate));
@@ -157,8 +165,8 @@ export function reconcileCurrentControlExecutableOwners(
 }
 
 export function suppressStaleDefaultExecutorInputs(
-  inputs: EnqueueInput[],
-  currentAdmissionInputs: EnqueueInput[],
+  inputs: StageAttemptProjectionInput[],
+  currentAdmissionInputs: StageAttemptProjectionInput[],
   currentAdmissionBlocked: Array<{ reason: string; task: unknown }> = [],
 ) {
   const currentStudyIds = currentControlAdmissionStudyIds(currentAdmissionInputs);
@@ -239,7 +247,7 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
         previous_last_error: previousLastError,
         operator_hold_preserved: operatorHoldPreserved,
         authority_boundary: {
-          opl: 'queue_currentness_supersession_only',
+          opl: 'stage_attempt_projection_currentness_supersession_only',
           domain: 'truth_quality_artifact_gate_owner',
           provider_completion_is_domain_ready: false,
         },
@@ -264,7 +272,7 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
         study_id: studyId,
         blocked_stage_attempt_ids: blockedAttempts.map((attempt) => attempt.stage_attempt_id),
         authority_boundary: {
-          opl: 'queue_currentness_supersession_only',
+          opl: 'stage_attempt_projection_currentness_supersession_only',
           domain: 'truth_quality_artifact_gate_owner',
           domain_truth_mutation: false,
           publication_quality_mutation: false,

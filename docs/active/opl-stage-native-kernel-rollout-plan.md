@@ -71,7 +71,7 @@ StageRun Kernel 的目标是让默认路径更短，而不是增加 admission、
 | `default_read_surface` | 默认只从 StageRun current owner delta 回答当前 Stage、缺什么 role/receipt/blocker、下一 owner。 | 默认首屏展示 raw worklist、replay packet、provider trace、typed blocker group、evidence ledger browser 或 route variant menu。 |
 | `progress_truth` | progress 从 Stage Folder、manifest、role artifact、owner receipt / typed blocker 和 current pointer 派生。 | 从 SQLite row、Temporal completion、stage_progress_log、readiness clean、verified ledger 或 file presence 推导完成。 |
 | `quality_gate` | gate receipt 是 Stage closeout 或下一 Stage 的明确 role artifact / receipt。 | gate evidence 漂在额外 worklist tail，导致 Stage 已有目录但无法定位推进口径。 |
-| `route_boundary` | route hydrate 成 StageRun request、typed queue task、human gate、typed blocker 或 owner projection。 | route 直接执行、生成候选、评审排序、签 receipt、创建 typed blocker 或写 domain truth。 |
+| `route_boundary` | route hydrate 成 StageRun request、stage-attempt projection、human gate、typed blocker 或 owner projection。 | route 直接执行、生成候选、评审排序、签 receipt、创建 typed blocker 或写 domain truth。 |
 | `agent_generalization` | MAS/MAG/RCA/OMA 共享 Stage Native Kernel，各自只声明 domain roles 和 owner authority。 | 把 MAS paper taxonomy、RCA visual taxonomy 或 OMA builder internals 写成 family lifecycle。 |
 
 ## Admission Policy

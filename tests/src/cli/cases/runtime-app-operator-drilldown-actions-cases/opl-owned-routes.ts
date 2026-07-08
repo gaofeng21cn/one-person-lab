@@ -28,7 +28,7 @@ test('runtime action execute can execute OPL-owned attempt query routes', () => 
       '--stage',
       'draft',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mag"}',
       '--source-fingerprint',

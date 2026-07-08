@@ -178,7 +178,7 @@ export function buildInternalCommandSpecs(
       usage: 'opl doctor',
       summary:
         'Check whether the local OPL product-entry shell and configured family runtime provider are ready for direct use.',
-      examples: ['opl doctor', 'OPL_FAMILY_RUNTIME_PROVIDER=local_sqlite opl doctor'],
+      examples: ['opl doctor', 'OPL_FAMILY_RUNTIME_PROVIDER=temporal opl doctor'],
       handler: () => {
         const validation = validateFrameworkContracts(parsedInput.loadOptions);
         return buildProductEntryDoctor(validation);

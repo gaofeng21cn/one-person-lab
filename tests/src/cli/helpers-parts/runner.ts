@@ -21,7 +21,6 @@ function cliTestEnv(envOverrides: Record<string, string> = {}) {
   return {
     ...process.env,
     NODE_NO_WARNINGS: '1',
-    OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
     ...envOverrides,
   };
 }

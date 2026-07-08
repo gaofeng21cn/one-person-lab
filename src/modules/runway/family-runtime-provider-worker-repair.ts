@@ -176,7 +176,7 @@ function inspectWorkerRestartGuardFromState(paths: TemporalWorkerPaths, before: 
     return buildWorkerRestartGuard({
       before,
       attempts: [],
-      stageAttemptLedgerError: 'family_runtime_queue_db_path_unavailable',
+      stageAttemptLedgerError: 'stage_attempt_index_db_path_unavailable',
     });
   }
   let db: FamilyRuntimeSqliteDb | null = null;

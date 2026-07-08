@@ -25,37 +25,14 @@ import {
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 
-type SchedulerQueueTickResult = {
-  selected_count: number;
-  dispatches: unknown[];
-  hydration?: {
-    enqueued_count?: number;
-    requeued_count?: number;
-    idempotent_noop_count?: number;
-    filtered_count?: number;
-  };
-  [key: string]: unknown;
-};
-
 type InspectFamilyRuntimeProvidersWithLifecycle =
   typeof import('./family-runtime-providers.ts').inspectFamilyRuntimeProvidersWithLifecycle;
 type ProviderInspection = Awaited<ReturnType<InspectFamilyRuntimeProvidersWithLifecycle>>;
 type ProviderSloTick = Awaited<ReturnType<typeof runTemporalProviderSloTick>>;
-type SchedulerTickDeps = {
+type ProviderCadenceReadbackDeps = {
   inspectProvidersWithLifecycle?: InspectFamilyRuntimeProvidersWithLifecycle;
   runProviderSloTick?: typeof runTemporalProviderSloTick;
 };
-type RunQueueTick = (
-  source: string,
-  limit: number,
-  hydrate: boolean,
-  taskScope?: FamilyRuntimeTaskScope,
-  domainProfiles?: import('./family-runtime-command.ts').FamilyRuntimeDomainProfiles,
-  options?: {
-    dispatchEnabled?: boolean;
-    blockedReason?: string;
-  },
-) => SchedulerQueueTickResult | Promise<SchedulerQueueTickResult>;
 
 function resolveSchedulerFamilyRuntimeProviderKind(
   requested?: FamilyRuntimeProviderKind,
@@ -114,34 +91,30 @@ function buildProviderReadinessAfterSlo(providerKind: FamilyRuntimeProviderKind,
   };
 }
 
-function buildSchedulerQueueProjectionBridge(input: {
+function buildRetiredQueueProjectionBridge(input: {
   limit: number;
   providerReady: boolean;
   blockedReason?: string;
-  queueTick: SchedulerQueueTickResult;
 }) {
-  const hydration = input.queueTick.hydration;
-  const hydratedPendingFamilyTaskCount = (hydration?.enqueued_count ?? 0) + (hydration?.requeued_count ?? 0);
-  const selectedCount = input.queueTick.selected_count;
-  const dispatchCount = input.queueTick.dispatches.length;
   return {
-    surface_kind: 'opl_scheduler_queue_projection_bridge',
-    bridge_id: 'scheduler_queue_projection_bridge.v1',
+    surface_kind: 'opl_provider_cadence_projection_bridge',
+    bridge_id: 'provider_cadence_projection_bridge.v1',
     provider_ready_after_slo: input.providerReady,
-    bridge_status: input.blockedReason ? 'blocked_provider_not_ready' : 'observed_projection',
+    bridge_status: input.blockedReason ? 'blocked_provider_not_ready' : 'retired_local_queue_runtime',
     blocked_reason: input.blockedReason ?? null,
-    trigger: 'scheduler_tick_projection_readback',
-    hydrated_pending_family_task_projection_count: hydratedPendingFamilyTaskCount,
-    hydration_idempotent_noop_projection_count: hydration?.idempotent_noop_count ?? 0,
-    hydration_filtered_projection_count: hydration?.filtered_count ?? 0,
-    selected_task_projection_count: selectedCount,
-    dispatch_projection_count: dispatchCount,
+    trigger: 'temporal_provider_cadence_readback',
+    hydrated_pending_family_task_projection_count: 0,
+    hydration_idempotent_noop_projection_count: 0,
+    hydration_filtered_projection_count: 0,
+    selected_task_projection_count: 0,
+    dispatch_projection_count: 0,
     scheduler_limit: input.limit,
     operator_audit_counts_only: true,
     durable_lifecycle_truth: false,
+    local_queue_runtime_retired: true,
     can_authorize_lifecycle_progress: false,
     authority_boundary: {
-      opl: 'scheduler_queue_projection_bridge_only',
+      opl: 'temporal_provider_cadence_readback_only',
       domain: 'truth_quality_artifact_gate_owner',
       can_write_domain_truth: false,
       can_execute_domain_action_without_queue_claim: false,
@@ -227,16 +200,6 @@ function deferredProviderSloTick(input: {
 function providerSloSkipReason(providerSlo: ProviderSloTick) {
   const receipt = providerSlo.provider_slo_execution_receipt as Record<string, unknown>;
   return typeof receipt.skip_reason === 'string' ? receipt.skip_reason : null;
-}
-
-function blockQueueTickDispatch(queueTick: SchedulerQueueTickResult, reason: string): SchedulerQueueTickResult {
-  return {
-    ...queueTick,
-    status: 'blocked_provider_not_ready',
-    dispatch_blocked_reason: reason,
-    selected_count: 0,
-    dispatches: [],
-  };
 }
 
 export async function runTemporalSchedulerCadenceCommand(
@@ -332,7 +295,7 @@ export async function runTemporalSchedulerCadenceCommand(
   };
 }
 
-export async function runSchedulerTick(
+export async function runTemporalProviderCadenceReadback(
   db: DatabaseSync,
   paths: FamilyRuntimePaths,
   input: {
@@ -343,17 +306,16 @@ export async function runSchedulerTick(
     taskScope?: FamilyRuntimeTaskScope;
     domainProfiles?: import('./family-runtime-command.ts').FamilyRuntimeDomainProfiles;
   },
-  runQueueTick: RunQueueTick,
-  deps: SchedulerTickDeps = {},
+  deps: ProviderCadenceReadbackDeps = {},
 ) {
   const providerKind = resolveSchedulerFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
-    throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler tick currently supports only --provider temporal.', {
+    throw new FrameworkContractError('cli_usage_error', 'temporal provider cadence readback supports only --provider temporal.', {
       provider_kind: providerKind,
       allowed_provider_kinds: ['temporal'],
     });
   }
-  const source = 'opl-provider-scheduler';
+  const source = 'opl-temporal-provider-cadence';
   const inspectProvidersWithLifecycle = deps.inspectProvidersWithLifecycle ?? inspectProvidersWithLifecycleDefault;
   const runProviderSloTick = deps.runProviderSloTick ?? runTemporalProviderSloTick;
   const providerBeforeSlo = await inspectProvidersWithLifecycle(providerKind, paths, {
@@ -382,29 +344,17 @@ export async function runSchedulerTick(
     blocker = selected ? buildTemporalProviderLivenessBlocker(selected) : null;
   }
   if (!selected?.ready && blocker) {
-    const queueTick = await runQueueTick(
-      source,
-      input.limit ?? 10,
-      input.hydrate ?? true,
-      input.taskScope,
-      input.domainProfiles,
-      {
-        dispatchEnabled: false,
-        blockedReason: blocker.blocker_id,
-      },
-    );
-    const queueProjectionBridge = buildSchedulerQueueProjectionBridge({
+    const queueProjectionBridge = buildRetiredQueueProjectionBridge({
       limit: input.limit ?? 10,
       providerReady: false,
       blockedReason: blocker.blocker_id,
-      queueTick,
     });
     return {
-      surface_kind: 'opl_family_runtime_scheduler_tick',
+      surface_kind: 'opl_temporal_provider_cadence_readback',
       scheduler_owner: 'opl_provider_runtime_manager',
       cadence_owner: 'provider_backed_family_runtime',
       provider_kind: providerKind,
-      tick_source: source,
+      cadence_source: source,
       status: 'blocked_provider_not_ready',
       provider_liveness_blocker: isTemporalWorkerLivenessBlocker(blocker) ? blocker : null,
       provider_blocker: blocker,
@@ -414,9 +364,9 @@ export async function runSchedulerTick(
       provider_slo: providerSlo,
       task_scope: input.taskScope ?? null,
       queue_projection_bridge: queueProjectionBridge,
-      queue_tick: blockQueueTickDispatch(queueTick, blocker.blocker_id),
+      retired_queue_tick: null,
       authority_boundary: {
-        opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
+        opl: 'temporal_provider_cadence_readback_only',
         domain: 'truth_quality_artifact_gate_owner',
         can_install_domain_daemon: false,
         can_write_domain_truth: false,
@@ -428,20 +378,12 @@ export async function runSchedulerTick(
       },
     };
   }
-  const queueTick = await runQueueTick(
-    source,
-    input.limit ?? 10,
-    input.hydrate ?? true,
-    input.taskScope,
-    input.domainProfiles,
-  );
-  const queueProjectionBridge = buildSchedulerQueueProjectionBridge({
+  const queueProjectionBridge = buildRetiredQueueProjectionBridge({
     limit: input.limit ?? 10,
     providerReady: selected?.ready ?? false,
-    queueTick,
   });
   insertEvent(db, {
-    eventType: 'opl_scheduler_tick_completed',
+    eventType: 'opl_temporal_provider_cadence_readback_completed',
     source,
     payload: {
       provider_kind: providerKind,
@@ -456,19 +398,19 @@ export async function runSchedulerTick(
     },
   });
   return {
-    surface_kind: 'opl_family_runtime_scheduler_tick',
+    surface_kind: 'opl_temporal_provider_cadence_readback',
     scheduler_owner: 'opl_provider_runtime_manager',
     cadence_owner: 'provider_backed_family_runtime',
     provider_kind: providerKind,
-    tick_source: source,
+    cadence_source: source,
     provider_runtime_after_slo: provider,
     provider_readiness_after_slo: buildProviderReadinessAfterSlo(providerKind, selected),
     provider_slo: providerSlo,
     queue_projection_bridge: queueProjectionBridge,
     task_scope: input.taskScope ?? null,
-    queue_tick: queueTick,
+    retired_queue_tick: null,
     authority_boundary: {
-      opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
+      opl: 'temporal_provider_cadence_readback_only',
       domain: 'truth_quality_artifact_gate_owner',
       can_install_domain_daemon: false,
       can_write_domain_truth: false,

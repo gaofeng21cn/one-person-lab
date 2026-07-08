@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   assert,
   fs,
+  insertFamilyRuntimeTaskProjectionFixture,
   os,
   path,
   runCli,
@@ -15,27 +16,19 @@ const FULL_DETAIL_COMMAND = [...SUMMARY_COMMAND, '--detail', 'full'];
 test('runtime operator summary exposes running provider attempts as liveness refs only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-live-control-'));
   try {
-    const enqueued = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'domain_owner/default-executor-dispatch',
-      '--payload',
-      JSON.stringify({
+    const taskId = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
         study_id: 'DM002',
         action_type: 'run_quality_repair_batch',
         dispatch_ref: 'studies/DM002/default-executor-dispatch.json',
         workspace_root: '/tmp/mas-live-control',
         source_fingerprint: 'mas-default-executor-source:live-control',
-      }),
-      '--dedupe-key',
-      'mas:DM002:default-executor:live-control-summary',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
-    const taskId = enqueued.family_runtime_enqueue.task.task_id;
+      },
+      dedupeKey: 'mas:DM002:default-executor:live-control-summary',
+    }).task_id;
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -45,7 +38,7 @@ test('runtime operator summary exposes running provider attempts as liveness ref
       '--stage',
       'write',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mas-live-control',
@@ -147,15 +140,11 @@ test('runtime operator summary exposes running provider attempts as liveness ref
 test('runtime operator projection does not count stale MAS work-unit live attempt as current running', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-operator-stale-workunit-'));
   try {
-    const staleTaskId = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'domain_owner/default-executor-dispatch',
-      '--payload',
-      JSON.stringify({
+    const staleTaskId = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
         study_id: 'DM002',
         action_type: 'return_to_ai_reviewer_workflow',
         work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_old_inputs',
@@ -164,12 +153,9 @@ test('runtime operator projection does not count stale MAS work-unit live attemp
         executor_kind: 'codex_cli_default',
         workspace_root: '/tmp/mas-stale-workunit',
         source_fingerprint: 'mas-domain-source:old-work-unit',
-      }),
-      '--dedupe-key',
-      'mas:DM002:default-executor:old-ai-reviewer-work-unit',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).family_runtime_enqueue.task.task_id;
+      },
+      dedupeKey: 'mas:DM002:default-executor:old-ai-reviewer-work-unit',
+    }).task_id;
     const staleAttempt = runCli([
       'family-runtime',
       'attempt',
@@ -179,7 +165,7 @@ test('runtime operator projection does not count stale MAS work-unit live attemp
       '--stage',
       'domain_owner/default-executor-dispatch',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mas-stale-workunit',
@@ -198,15 +184,11 @@ test('runtime operator projection does not count stale MAS work-unit live attemp
     ], {
       OPL_STATE_DIR: stateRoot,
     }).family_runtime_stage_attempt.attempt;
-    runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'domain_owner/default-executor-dispatch',
-      '--payload',
-      JSON.stringify({
+    insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'domain_owner/default-executor-dispatch',
+      payload: {
         study_id: 'DM002',
         action_type: 'run_quality_repair_batch',
         work_unit_id: 'run_current_quality_repair_batch',
@@ -215,11 +197,8 @@ test('runtime operator projection does not count stale MAS work-unit live attemp
         executor_kind: 'codex_cli_default',
         workspace_root: '/tmp/mas-stale-workunit',
         source_fingerprint: 'mas-domain-source:current-work-unit',
-      }),
-      '--dedupe-key',
-      'mas:DM002:default-executor:current-writer-work-unit',
-    ], {
-      OPL_STATE_DIR: stateRoot,
+      },
+      dedupeKey: 'mas:DM002:default-executor:current-writer-work-unit',
     });
 
     const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
@@ -284,7 +263,7 @@ test('runtime operator projection exposes stall lineage for repeated typed block
         '--stage',
         'write',
         '--provider',
-        'local_sqlite',
+        'temporal',
         '--workspace-locator',
         JSON.stringify({
           workspace_root: '/tmp/mas-stall-lineage',
@@ -362,26 +341,19 @@ test('runtime operator summary bounds running provider attempt liveness samples'
   try {
     const attemptIds: string[] = [];
     for (let index = 0; index < 7; index += 1) {
-      const enqueued = runCli([
-        'family-runtime',
-        'enqueue',
-        '--domain',
-        'medautoscience',
-        '--task-kind',
-        'domain_owner/default-executor-dispatch',
-        '--payload',
-        JSON.stringify({
+      const taskId = insertFamilyRuntimeTaskProjectionFixture({
+        stateRoot,
+        domainId: 'medautoscience',
+        taskKind: 'domain_owner/default-executor-dispatch',
+        payload: {
           study_id: `DM${String(index).padStart(3, '0')}`,
           action_type: 'run_quality_repair_batch',
           dispatch_ref: `studies/DM${String(index).padStart(3, '0')}/default-executor-dispatch.json`,
           workspace_root: `/tmp/mas-live-control-${index}`,
           source_fingerprint: `mas-default-executor-source:live-control-${index}`,
-        }),
-        '--dedupe-key',
-        `mas:DM${String(index).padStart(3, '0')}:default-executor:live-control-summary`,
-      ], {
-        OPL_STATE_DIR: stateRoot,
-      });
+        },
+        dedupeKey: `mas:DM${String(index).padStart(3, '0')}:default-executor:live-control-summary`,
+      }).task_id;
       const created = runCli([
         'family-runtime',
         'attempt',
@@ -391,7 +363,7 @@ test('runtime operator summary bounds running provider attempt liveness samples'
         '--stage',
         'write',
         '--provider',
-        'local_sqlite',
+        'temporal',
         '--workspace-locator',
         JSON.stringify({
           workspace_root: `/tmp/mas-live-control-${index}`,
@@ -403,7 +375,7 @@ test('runtime operator summary bounds running provider attempt liveness samples'
         '--source-fingerprint',
         `sha256:mas-live-control-${index}`,
         '--task',
-        enqueued.family_runtime_enqueue.task.task_id,
+        taskId,
       ], {
         OPL_STATE_DIR: stateRoot,
       });

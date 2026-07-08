@@ -358,7 +358,7 @@ export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContra
       ],
       current_state_claims: NO_READY_CLAIMS,
       required_boundary:
-        'Family runtime command parsing must stay split by provider/queue/lifecycle/stage responsibilities and must not become a semantic owner.',
+        'Family runtime command parsing must stay split by provider/stage-attempt-projection/lifecycle/stage responsibilities and must not become a semantic owner.',
       next_action:
         'Route new runtime command semantics through the command-parts registry and keep behavior tests focused on command ownership boundaries.',
     },

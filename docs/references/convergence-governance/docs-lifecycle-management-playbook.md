@@ -75,7 +75,7 @@ tombstone 必须短，不能写成新的执行手册。它只回答：
 
 ### Gateway / federation
 
-旧 `gateway / federation / routed-action` 文档曾经是 OPL 的顶层公开集成语言。当前主线已经是 `Codex CLI first-class executor -> explicit OPL activation -> typed family queue / Temporal-backed provider -> selected domain agent entry`，所以旧语料进入 `docs/history/compatibility/gateway-federation/`。active 文档只把它称为历史来源材料或负向 guard，并指向当前 core truth；不得恢复 machine-readable compatibility surface。
+旧 `gateway / federation / routed-action` 文档曾经是 OPL 的顶层公开集成语言。当前主线已经是 `Codex CLI first-class executor -> explicit OPL activation -> stage-attempt request/projection / Temporal-backed provider -> selected domain agent entry`，所以旧语料进入 `docs/history/compatibility/gateway-federation/`。active 文档只把它称为历史来源材料或负向 guard，并指向当前 core truth；不得恢复 machine-readable compatibility surface。
 
 ### Frontdoor
 

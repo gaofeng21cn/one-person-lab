@@ -31,7 +31,7 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     [
       'scheduler_supervision_cadence',
       'provider_slo_and_wakeup_transport',
-      'queue_attempt_ledger',
+      'stage_attempt_projection_ledger',
       'generic_transition_runner',
       'workspace_source_intake_shell',
       'memory_locator_writeback_transport',

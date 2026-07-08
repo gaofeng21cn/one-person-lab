@@ -894,7 +894,7 @@ export async function buildFrameworkReadinessSummary(
         surface_kind: stringValue(runtimeManagerRouteSupport.surface_kind)
           ?? 'opl_app_drilldown_runtime_manager_route_support',
         source_surface: stringValue(runtimeManagerRouteSupport.source_surface)
-          ?? 'opl_runtime_manager.family_runtime_queue.mas_domain_route_projection',
+          ?? 'opl_runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection',
         projection_policy: stringValue(runtimeManagerRouteSupport.projection_policy)
           ?? 'refs_only_supported_route_catalog_no_owner_chain_closure_or_domain_ready_claim',
         owner_route_handoff_ref: stringValue(runtimeManagerMasRouteSupport.owner_route_handoff_ref),

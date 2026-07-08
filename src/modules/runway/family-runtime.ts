@@ -14,10 +14,7 @@ import {
 import { buildStageLaunchInvocationProjection } from './family-runtime-launch-invocation.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 import { runTemporalServiceCommand } from './family-runtime-temporal-service-command.ts';
-import {
-  runSchedulerTick,
-  runTemporalSchedulerCadenceCommand,
-} from './family-runtime-scheduler.ts';
+import { runTemporalSchedulerCadenceCommand } from './family-runtime-scheduler.ts';
 import { buildFamilyRuntimeStatusPayload } from './family-runtime-status.ts';
 import {
   createStageAttempt,
@@ -42,32 +39,15 @@ import { runTemporalProviderSloTick } from './family-runtime-provider-slo-execut
 import { runProviderWorkerSupervisorCommand } from './family-runtime-provider-worker-supervisor.ts';
 import {
   familyRuntimePaths,
-  buildQueueTemporalLifecycleBoundary,
-  inspectTask,
-  inspectTaskWithStageAttemptProjections,
   insertEvent,
   listEvents,
   listNotifications,
-  listTasks,
   openQueueDb,
-  queueSummary,
   stableId,
-  taskToPayload,
-  type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
-import { enqueueTask } from './family-runtime-enqueue.ts';
-import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
-import { blockPaperMissionStageRouteTasksForProviderPreflight } from './family-runtime-tick.ts';
 import {
-  hydrateDomainTasks,
   readMasManagedProviderProjection,
-} from './family-runtime-task-dispatch.ts';
-import {
-  redriveFamilyRuntimeTask,
-} from './family-runtime-redrive.ts';
-import { holdFamilyRuntimeQueueTasks } from './family-runtime-queue-hold.ts';
-import { releaseFamilyRuntimeQueueHold } from './family-runtime-queue-release.ts';
-import { retireFamilyRuntimeQueueResidue } from './family-runtime-queue-retire.ts';
+} from './family-runtime-mas-managed-provider-projection.ts';
 import { queryTemporalStageAttemptReadModel } from './family-runtime-temporal-query.ts';
 import { reconcileFamilyRuntimeLifecycleRefs, runFamilyRuntimeLifecycleApply } from './family-runtime-lifecycle-index.ts';
 import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
@@ -81,22 +61,11 @@ import {
   runFamilyRuntimePaperAutonomySupervisorReadbackCommand,
 } from './family-runtime-paper-autonomy-command.ts';
 import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
-import type { FamilyRuntimeDomainIntakeDependencies } from './family-runtime-domain-intake.ts';
-import {
-  approveTask,
-} from './family-runtime-parts/approval.ts';
-import {
-  paperMissionRedriveProviderFollowthrough,
-  providerPreflightBlockedReason,
-  redrivenStageAttemptId,
-} from './family-runtime-parts/provider-followthrough.ts';
 import {
   blockAttemptForCheckoutCurrentness,
   combineLaunchGateWithCheckoutCurrentness,
   recordTemporalStartOnAttempt,
 } from './family-runtime-parts/stage-attempt-launch.ts';
-
-export { paperMissionRedriveProviderFollowthrough } from './family-runtime-parts/provider-followthrough.ts';
 
 async function temporalProviderModule() {
   return await import('./family-runtime-temporal-provider.ts');
@@ -121,7 +90,6 @@ export async function runFamilyRuntime(
   args: string[],
   options: {
     runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
-    dependencies?: FamilyRuntimeDomainIntakeDependencies;
     stageReplayMissingReceiptExtraReceipts?: Parameters<
       typeof runFamilyRuntimeEvidenceWorklistCommand
     >[0]['stageReplayMissingReceiptExtraReceipts'];
@@ -142,9 +110,6 @@ export async function runFamilyRuntime(
           doctor_status: status.readiness.full_online_ready ? 'ready' : 'degraded',
           blockers: [...new Set([
             ...(status.readiness.degraded_reason ? [status.readiness.degraded_reason] : []),
-            ...(status.readiness.local_sqlite_is_dev_ci_offline_only
-              ? ['local_sqlite_is_dev_ci_offline_only']
-              : []),
           ])],
           repair_command: `opl family-runtime repair --provider ${status.configured_provider}`,
           status,
@@ -327,21 +292,6 @@ export async function runFamilyRuntime(
         family_runtime_provider_worker_supervisor: await runProviderWorkerSupervisorCommand(db, paths, parsed),
       };
     }
-    if (parsed.mode === 'scheduler_tick') {
-      return {
-        version: 'g2',
-        family_runtime_scheduler_tick: await runSchedulerTick(
-          db,
-          paths,
-          parsed,
-          (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(db, paths, source, limit, hydrate, taskScope, domainProfiles, {
-            temporalProviderModule,
-            dispatchEnabled: queueTickOptions?.dispatchEnabled,
-            blockedReason: queueTickOptions?.blockedReason,
-          }),
-        ),
-      };
-    }
     if (
       parsed.mode === 'scheduler_status'
       || parsed.mode === 'scheduler_install'
@@ -385,229 +335,6 @@ export async function runFamilyRuntime(
     }
     if (parsed.mode === 'stage_artifact') {
       return runFamilyRuntimeStageArtifactCommand(parsed.input);
-    }
-    if (parsed.mode === 'enqueue') {
-      return {
-        version: 'g2',
-        family_runtime_enqueue: {
-          surface_id: 'opl_family_runtime_enqueue',
-          ...enqueueTask(db, parsed.input),
-        },
-      };
-    }
-    if (parsed.mode === 'tick') {
-      const providerKind = resolveFamilyRuntimeProviderKind();
-      if (providerKind === 'temporal') {
-        const schedulerTick = await runSchedulerTick(
-          db,
-          paths,
-          {
-            providerKind,
-            limit: parsed.limit,
-            hydrate: parsed.hydrate ?? false,
-            taskScope: parsed.taskScope,
-            domainProfiles: parsed.domainProfiles,
-          },
-          (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
-            db,
-            paths,
-            parsed.source ?? source,
-            limit,
-            hydrate,
-            taskScope,
-            domainProfiles,
-            {
-              temporalProviderModule,
-              dispatchEnabled: queueTickOptions?.dispatchEnabled,
-              blockedReason: queueTickOptions?.blockedReason,
-            },
-          ),
-        );
-        const paperMissionStageRouteProviderPreflight = schedulerTick.status === 'blocked_provider_not_ready'
-          ? blockPaperMissionStageRouteTasksForProviderPreflight(db, {
-              source: parsed.source ?? 'manual',
-              taskScope: parsed.taskScope,
-              reason: providerPreflightBlockedReason(schedulerTick),
-            })
-          : { blockedCount: 0, blockedTaskIds: [] };
-        return {
-          version: 'g2',
-          family_runtime_tick: {
-            surface_id: 'opl_family_runtime_tick',
-            ...(schedulerTick.queue_tick ?? {
-              source: parsed.source ?? 'manual',
-              task_scope: parsed.taskScope ?? null,
-              hydration: null,
-              selected_count: 0,
-              filtered_count: 0,
-              dispatches: [],
-            }),
-            provider_preflight: schedulerTick,
-            provider_runtime_after_slo: schedulerTick.provider_runtime_after_slo,
-            provider_readiness_after_slo: schedulerTick.provider_readiness_after_slo,
-            provider_liveness_blocker: 'provider_liveness_blocker' in schedulerTick
-              ? schedulerTick.provider_liveness_blocker
-              : null,
-            provider_blocker: 'provider_blocker' in schedulerTick
-              ? schedulerTick.provider_blocker
-              : null,
-            paper_mission_stage_route_provider_preflight: paperMissionStageRouteProviderPreflight,
-            queue: queueSummary(db),
-          },
-        };
-      }
-      return {
-        version: 'g2',
-        family_runtime_tick: {
-          surface_id: 'opl_family_runtime_tick',
-          ...await runSchedulerQueueTick(
-            db,
-            paths,
-            parsed.source ?? 'manual',
-            parsed.limit ?? 10,
-            parsed.hydrate ?? false,
-            parsed.taskScope,
-            parsed.domainProfiles,
-            {
-              temporalProviderModule,
-              dependencies: options.dependencies,
-            },
-          ),
-          queue: queueSummary(db),
-        },
-      };
-    }
-    if (parsed.mode === 'intake') {
-      return {
-        version: 'g2',
-        family_runtime_intake: {
-          surface_id: 'opl_family_runtime_intake',
-          ...hydrateDomainTasks(
-            db,
-            paths,
-            {
-              domainId: parsed.domainId,
-              source: parsed.source ?? 'manual',
-              taskScope: parsed.taskScope,
-              domainProfiles: parsed.domainProfiles,
-              dependencies: options.dependencies,
-            },
-            enqueueTask,
-          ),
-          queue: queueSummary(db),
-        },
-      };
-    }
-    if (parsed.mode === 'queue_list') {
-      const filter = {
-        status: parsed.status,
-        taskScope: parsed.taskScope,
-      };
-      return {
-        version: 'g2',
-        family_runtime_queue: {
-          surface_id: 'opl_family_runtime_queue',
-          filters: {
-            ...(filter.status ? { status: filter.status } : {}),
-            ...(filter.taskScope ? { taskScope: filter.taskScope } : {}),
-          },
-          queue_lifecycle_boundary: buildQueueTemporalLifecycleBoundary(db, resolveFamilyRuntimeProviderKind()),
-          queue: queueSummary(db, filter),
-          unfiltered_queue: queueSummary(db),
-          tasks: listTasks(db, filter),
-        },
-      };
-    }
-    if (parsed.mode === 'queue_inspect') {
-      await syncTemporalStageAttemptsForTask(db, paths, parsed.taskId);
-      const stageAttempts = await Promise.all(listStageAttemptsForTask(db, parsed.taskId).map(async (attempt) => {
-        const projection = (await queryStageAttemptWithCurrentProviderReadiness(db, attempt.stage_attempt_id, paths, {
-          managedProviderProjection: readMasManagedProviderProjection(),
-        })).stage_attempt_query;
-        return {
-          ...projection.attempt,
-          ...projection,
-        };
-      }));
-      return {
-        version: 'g2',
-        family_runtime_task: {
-          surface_id: 'opl_family_runtime_task',
-          ...inspectTaskWithStageAttemptProjections(db, parsed.taskId, stageAttempts),
-        },
-      };
-    }
-    if (parsed.mode === 'queue_redrive') {
-      const redrive = redriveFamilyRuntimeTask(db, {
-        taskId: parsed.taskId,
-        reason: parsed.reason,
-        source: parsed.source,
-      });
-      const providerFollowthrough = await paperMissionRedriveProviderFollowthrough(db, paths, parsed.taskId, redrive);
-      const refreshedTaskRow = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(parsed.taskId) as
-        | FamilyRuntimeTaskRow
-        | undefined;
-      const stageAttemptId = redrivenStageAttemptId(redrive);
-      const refreshedStageAttempt = stageAttemptId ? inspectStageAttempt(db, stageAttemptId) : null;
-      const redriveRecord = redrive as Record<string, unknown>;
-      const providerRedriveStarted = providerFollowthrough.status === 'not_applicable'
-        ? redriveRecord.provider_redrive_started ?? null
-        : providerFollowthrough.provider_started;
-      return {
-        version: 'g2',
-        family_runtime_redrive: {
-          surface_id: 'opl_family_runtime_redrive',
-          ...redrive,
-          task: refreshedTaskRow ? taskToPayload(refreshedTaskRow) : redrive.task,
-          redriven_stage_attempt: refreshedStageAttempt ?? redrive.redriven_stage_attempt,
-          provider_redrive_started: providerRedriveStarted,
-          provider_redrive_followthrough: providerFollowthrough,
-          queue: queueSummary(db),
-        },
-      };
-    }
-    if (parsed.mode === 'queue_hold') {
-      return {
-        version: 'g2',
-        family_runtime_queue_hold: {
-          surface_id: 'opl_family_runtime_queue_hold',
-          ...holdFamilyRuntimeQueueTasks(db, {
-            taskScope: parsed.taskScope,
-            reason: parsed.reason,
-            source: parsed.source,
-          }),
-          queue: queueSummary(db),
-        },
-      };
-    }
-    if (parsed.mode === 'queue_release') {
-      return {
-        version: 'g2',
-        family_runtime_queue_release: {
-          surface_id: 'opl_family_runtime_queue_release',
-          ...releaseFamilyRuntimeQueueHold(db, {
-            taskScope: parsed.taskScope,
-            reason: parsed.reason,
-            source: parsed.source,
-            repairStrandedHold: parsed.repairStrandedHold,
-          }),
-          queue: queueSummary(db),
-        },
-      };
-    }
-    if (parsed.mode === 'queue_retire') {
-      return {
-        version: 'g2',
-        family_runtime_queue_retire: {
-          surface_id: 'opl_family_runtime_queue_retire',
-          ...retireFamilyRuntimeQueueResidue(db, {
-            taskScope: parsed.taskScope,
-            reason: parsed.reason,
-            source: parsed.source,
-          }),
-          queue: queueSummary(db),
-        },
-      };
     }
     if (parsed.mode === 'attempt_create') {
       const providerKind = resolveFamilyRuntimeProviderKind(parsed.input.providerKind);
@@ -947,16 +674,6 @@ export async function runFamilyRuntime(
         family_runtime_stage_attempt_fixture_run: {
           surface_id: 'opl_family_runtime_stage_attempt_fixture_run',
           ...result,
-        },
-      };
-    }
-    if (parsed.mode === 'approve') {
-      return {
-        version: 'g2',
-        family_runtime_approval: {
-          surface_id: 'opl_family_runtime_approval',
-          decision: parsed.decision,
-          task: approveTask(db, parsed),
         },
       };
     }

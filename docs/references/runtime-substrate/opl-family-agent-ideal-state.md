@@ -18,7 +18,7 @@ Machine boundary: 本文是人读目标态参考。机器可读真相继续归 `
 
 ## 目标结论
 
-理想状态下，`OPL Framework` 是知识工程驱动的完整生产级智能体开发与运行框架。它负责开发接入、domain admission、stage-led runtime、provider-backed durable workflow、typed queue、attempt ledger、human gate、retry/dead-letter、memory/artifact/lifecycle locator、operator projection、App/workbench 投影、质量证据承载和跨 domain 审计。
+理想状态下，`OPL Framework` 是知识工程驱动的完整生产级智能体开发与运行框架。它负责开发接入、domain admission、stage-led runtime、provider-backed durable workflow、stage-attempt request/projection、attempt ledger、human gate、retry/dead-letter、memory/artifact/lifecycle locator、operator projection、App/workbench 投影、质量证据承载和跨 domain 审计。
 
 它的智能体原则是 AI-first、AI 原生专家判断优先、contract-light。OPL 不追求把专家智能写成越来越厚的固定流程；它把开放式规划、创作、评审、路线判断、诊断和修订交给 `Codex CLI` 等 AI executor、domain stage pack、prompt、skill、knowledge、rubric 与 quality gate，让后续 AI 能力提升能直接转化为 Agent 能力提升。合同只负责 owner boundary、权限、安全、审计、receipt、阻塞、恢复、projection 和 fail-closed 这些下限，不负责替 AI executor 决定怎么思考或怎么完成专家工作，也不让机械分数、checklist 或 contract completeness 替代专家判断。
 
@@ -106,7 +106,7 @@ User / Codex / CLI / One Person Lab App
   -> OPL Framework
   -> explicit domain-agent activation
   -> stage control plane
-  -> typed queue / provider-backed runtime
+  -> stage-attempt request/projection / provider-backed runtime
   -> selected Agent executor
   -> domain-owned stage pack
   -> domain-owned quality gate / truth reducer / artifact authority
@@ -124,7 +124,7 @@ User / Codex / CLI / One Person Lab App
 ### 运行与长时间在线
 
 - Temporal-backed provider 是 production online runtime 的必需 substrate。
-- `local_sqlite` 只作为 dev/CI/offline diagnostic baseline。
+- `local_sqlite` 只作为 retired-provider negative guard 和 SQLite projection/index 旧名语境。
 - OPL 持有 stage attempt、workflow id、activity、signal/query、heartbeat、retry/dead-letter、human gate、provider receipt、runtime event ledger 和 operator attention projection。
 - OPL runtime status 与 App/workbench 必须把 provider scheduler cadence、provider SLO receipt、repair command 和 domain-daemon replacement policy 作为同一套机器读面暴露；domain repo 不安装或维护自己的 scheduler / LaunchAgent / daemon。
 - `Codex CLI` 是当前第一公民 executor；`hermes_agent`、Claude Code、`antigravity_cli` 等只能作为显式非默认 executor adapter 接入。非默认 executor 必须通过 stage-level executor policy 声明 `executor_kind`、能力要求、receipt 要求与 `executor_binding_ref`；缺少 binding ref 或 receipt/audit/fail-closed 证明时不得启动，也不承诺行为或质量等价。
@@ -173,7 +173,7 @@ Stage 是 AI-first 的容器，不是把 AI 行为写死的流程节点。一个
 - `quality_gates`：本 stage 怎么算做好；必须指向 domain-owned review / quality / export / publication gate 或 AI-first reviewer/auditor receipt。
 - `gate_attempt_policy`：执行 attempt 与 reviewer/auditor attempt 必须分离。
 - `source_scope_refs` / `artifact_scope_refs` / `workspace_scope_refs`：本 stage 启动前冻结的 source cohort、artifact set 与 workspace/runtime scope；OPL 只投影 refs，不拥有 source truth、artifact authority 或 workspace truth。
-- `cohort_query_refs` / `trigger_refs` / `monitor_refs` / `dashboard_metric_refs`：本 stage 从“要处理哪组对象”到“由 OPL queue/provider 怎么触发”再到“如何观察同一组对象”的闭环引用；OPL 只检查和投影闭环声明，不执行 domain 判断、不写 source truth、不生成 owner receipt。
+- `cohort_query_refs` / `trigger_refs` / `monitor_refs` / `dashboard_metric_refs`：本 stage 从“要处理哪组对象”到“由 OPL provider 怎么触发”再到“如何观察同一组对象”的闭环引用；OPL 只检查和投影闭环声明，不执行 domain 判断、不写 source truth、不生成 owner receipt。
 - `guarantee_mode`：本 stage 对 App / scheduler 可声明的保证类型；`static_admission_only` 表示只能静态准入，`runtime_enforced` 需要运行时 receipt/gate 约束，`domain_owned_judgment` 表示判断归 domain owner，`observability_only` 只做可见性投影。
 - `outputs`：closeout packet、artifact delta refs、owner receipt、typed blocker、human gate、writeback proposal refs。
 - `handoff`：下一 stage、next owner、resume token、stop rule。

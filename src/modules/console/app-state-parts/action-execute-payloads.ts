@@ -154,25 +154,6 @@ export function dockerWebuiSeedEnv(payload: JsonRecord) {
   };
 }
 
-export function schedulerTickArgs(payload: JsonRecord) {
-  const args = ['scheduler', 'tick', '--provider', 'temporal'];
-  if (booleanPayloadField(payload, 'force')) {
-    args.push('--force');
-  }
-  const limit = positiveIntegerPayloadField(payload, 'limit');
-  if (limit !== null) {
-    args.push('--limit', String(limit));
-  }
-  const profile = stringPayloadField(payload, 'profile');
-  if (profile) {
-    args.push('--profile', profile);
-  }
-  if (payload.hydrate === false) {
-    args.push('--no-hydrate');
-  }
-  return args;
-}
-
 export function settingsVerifyWorkspacePayload(payload: JsonRecord) {
   const workspacePath = stringPayloadField(payload, 'workspace_path')
     ?? stringPayloadField(payload, 'workspacePath')

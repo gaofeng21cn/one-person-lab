@@ -510,7 +510,7 @@ function overlayStageAttempts(input: {
         ...stageAttemptIds,
       ]),
     ],
-    runtime_readback_source: 'opl_family_runtime_queue_stage_attempts',
+    runtime_readback_source: 'opl_family_runtime_stage_attempt_projection',
     runtime_attempt_status: latestStatus,
     runtime_closeout_observed: Boolean(closeout),
     runtime_closeout_ref: closeout?.path ?? null,

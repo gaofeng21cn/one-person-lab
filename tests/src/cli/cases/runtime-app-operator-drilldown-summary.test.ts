@@ -57,7 +57,7 @@ function seedSummaryStageAttempts(count: number) {
       const attempt = createStageAttempt(db, {
         domainId: 'medautoscience',
         stageId: `write_${index}`,
-        providerKind: 'local_sqlite',
+        providerKind: 'temporal',
         workspaceLocator: {
           workspace_root: `/tmp/mas-${index}`,
           artifact_root: `/tmp/mas-${index}/artifacts`,

@@ -2,7 +2,7 @@ import { record, recordList, stringValue as optionalString } from '../../../kern
 import { stableId } from '../../../kernel/stable-id.ts';
 
 const STABLE_OUTCOMES = new Set([
-  'provider_admission_enqueued_or_blocked',
+  'provider_admission_projected_or_blocked',
   'provider_admission_accepted',
   'running_provider_attempt',
   'owner_receipt_consumed',

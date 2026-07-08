@@ -312,7 +312,7 @@ test('domain memory read model projects runtime receipt refs without applying me
       '--stage',
       'review_and_rebuttal',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mag","runtime_root":"/tmp/mag/runtime"}',
       '--source-fingerprint',

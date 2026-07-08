@@ -322,7 +322,7 @@ test('runtime manager commands expose registry metadata and parse action mode th
     const action = runCli(['runtime', 'manager', 'action', '--dry-run'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     }).runtime_manager_action;
     assert.equal(action.mode, 'dry_run');
     assert.equal(action.dry_run, true);

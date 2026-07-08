@@ -166,7 +166,6 @@ export function familyRuntimePaths() {
     queue_db: path.join(root, 'queue.sqlite'),
     dispatch_dir: path.join(root, 'dispatch'),
     proof_dir: path.join(root, 'proofs'),
-    scheduler_dir: path.join(root, 'scheduler'), // reuse-first: allow local scheduler dir for dev/CI cadence artifacts only.
     latest_temporal_production_proof: path.join(root, 'proofs', 'latest-temporal-production-proof.json'),
   };
 }
@@ -241,7 +240,6 @@ export function openQueueDb() {
   fs.mkdirSync(paths.root, { recursive: true });
   fs.mkdirSync(paths.dispatch_dir, { recursive: true });
   fs.mkdirSync(paths.proof_dir, { recursive: true });
-  fs.mkdirSync(paths.scheduler_dir, { recursive: true }); // reuse-first: allow local scheduler dir creation for offline diagnostics only.
   const db = openFamilyRuntimeSqlite(paths.queue_db);
   db.exec(`
     PRAGMA journal_mode = WAL;
@@ -327,7 +325,7 @@ function compactStageProgressForLiveness(input: {
 }) {
   const latestActivity = latestActivityEvent(input.activityEvents);
   return {
-    surface_kind: 'opl_queue_task_linked_stage_attempt_progress_readback',
+    surface_kind: 'opl_stage_attempt_projection_linked_progress_readback',
     stage_attempt_id: input.stageAttemptId,
     activity_event_count: input.activityEvents.length,
     latest_activity_at: activityEventTime(latestActivity),
@@ -393,8 +391,8 @@ function queueTaskLinkedStageAttemptLiveness(db: DatabaseSync, row: FamilyRuntim
     ? (lastHeartbeatAt ? 'live' : 'live_missing_heartbeat')
     : 'not_live';
   return {
-    surface_kind: 'opl_queue_task_linked_stage_attempt_liveness',
-    projection_scope: 'queue_list',
+    surface_kind: 'opl_stage_attempt_projection_linked_liveness',
+    projection_scope: 'stage_attempt_index',
     status: livenessStatus,
     stage_attempt_id: stringValue(currentAttempt.stage_attempt_id),
     workflow_id: stringValue(currentAttempt.workflow_id),
@@ -668,12 +666,12 @@ function temporalCompetingQueueTasks(db: DatabaseSync) {
       stage_attempt_count: Number(row.stage_attempt_count ?? 0),
       temporal_stage_attempt_count: Number(row.temporal_stage_attempt_count ?? 0),
       projection_handoff: {
-        status_role: 'local_lifecycle_status_projection_only',
+      status_role: 'retired_task_status_projection_only',
         lease_role: 'local_worker_pickup_projection_only_not_live_attempt_truth',
         retry_budget_role: 'local_retry_budget_projection_only_temporal_retry_policy_required',
         terminal_reason_role: 'local_failure_projection_only_temporal_history_required',
-        allowed_local_action: 'read_projection_and_emit_operator_handoff_only',
-        scheduler_mutation_allowed: false,
+      allowed_local_action: 'read_projection_and_emit_operator_handoff_only',
+      scheduler_mutation_allowed: false,
         domain_progress_claim_allowed: false,
         ready_claim_allowed: false,
       },
@@ -689,11 +687,11 @@ export function buildQueueTemporalLifecycleBoundary(
   const competing = selectedProvider === 'temporal'
     ? temporalCompetingQueueTasks(db)
     : { totalCount: 0, tasks: [] };
-  const gateStatus = competing.totalCount > 0 ? 'attention_needed' : 'pass';
+  const gateStatus = competing.totalCount > 0 ? 'diagnostic_only' : 'pass';
   const temporalLifecycleHandoff = {
     surface_kind: 'opl_temporal_durable_lifecycle_handoff',
     mature_substrate: 'Temporal workflow history/task queue/retry policy/schedule',
-    status: gateStatus === 'attention_needed' ? 'required' : 'not_required',
+    status: gateStatus === 'diagnostic_only' ? 'diagnostic_only' : 'not_required',
     owner: 'opl_runway',
     migration_policy:
       'rebuild_or_link_lifecycle_from_temporal_history_before_runtime_ready_claim',
@@ -707,8 +705,8 @@ export function buildQueueTemporalLifecycleBoundary(
       'operator_projection_repair_or_retirement_receipt',
     ],
     readback_surfaces: [
-      'opl family-runtime queue list --json',
-      'opl family-runtime queue inspect <task_id> --json',
+      'opl family-runtime status --json',
+      'opl family-runtime attempt list --json',
       'opl runway reconcile --json',
     ],
     local_projection_field_policy: {
@@ -739,11 +737,9 @@ export function buildQueueTemporalLifecycleBoundary(
     },
   };
   return {
-    surface_kind: 'opl_family_runtime_queue_temporal_lifecycle_boundary',
+    surface_kind: 'opl_family_runtime_sqlite_sidecar_projection_boundary',
     selected_provider: selectedProvider,
-    sqlite_role: selectedProvider === 'temporal'
-      ? 'projection_audit_cache_not_durable_lifecycle_truth'
-      : 'dev_ci_offline_diagnostic_queue',
+    sqlite_role: 'stage_attempt_projection_index_not_runtime_queue_or_provider',
     temporal_role: 'durable_workflow_activity_retry_dead_letter_and_schedule_truth',
     field_roles: {
       projection_or_audit_when_temporal_selected: [
@@ -759,7 +755,7 @@ export function buildQueueTemporalLifecycleBoundary(
         'stage_attempts.activity_events_json',
         'stage_attempt_signals.*',
       ],
-      queue_intake_and_dedupe_fields: [
+      retired_task_identity_projection_fields: [
         'tasks.task_id',
         'tasks.domain_id',
         'tasks.task_kind',
@@ -783,28 +779,22 @@ export function buildQueueTemporalLifecycleBoundary(
     },
     gate: {
       status: gateStatus,
-      reason: gateStatus === 'attention_needed'
-        ? 'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt'
+      reason: gateStatus === 'diagnostic_only'
+        ? 'retired_local_task_projection_observed_without_temporal_stage_attempt'
         : null,
-      temporal_migration_required: temporalLifecycleHandoff.status === 'required',
+      temporal_migration_required: false,
       required_evidence: temporalLifecycleHandoff.required_evidence,
       allowed_readbacks: temporalLifecycleHandoff.readback_surfaces,
       competing_statuses: TEMPORAL_COMPETING_QUEUE_STATUSES,
       competing_task_count: competing.totalCount,
       competing_tasks: competing.tasks,
-      readiness_effect: gateStatus === 'attention_needed'
-        ? 'full_online_ready_false_until_temporal_history_or_authority_projection_rebuilds_lifecycle'
+      readiness_effect: gateStatus === 'diagnostic_only'
+        ? 'none_diagnostic_projection_only'
         : 'none',
-      scheduler_mutation_allowed: gateStatus !== 'attention_needed',
+      scheduler_mutation_allowed: false,
       domain_progress_claim_allowed: false,
-      ready_claim_allowed: gateStatus !== 'attention_needed',
-      forbidden_mutations_when_attention_needed: gateStatus === 'attention_needed'
-        ? [
-            'scheduler_tick_from_sqlite_lifecycle_projection',
-            'queue_redrive_without_temporal_history',
-            'domain_progress_or_ready_claim_from_sqlite_projection',
-          ]
-        : [],
+      ready_claim_allowed: false,
+      forbidden_mutations_when_attention_needed: [],
     },
     temporal_durable_lifecycle_handoff: temporalLifecycleHandoff,
     authority_boundary: {

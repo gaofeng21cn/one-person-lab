@@ -95,13 +95,13 @@ function buildProviderExport(snapshot: JsonRecord) {
   const proof = record(snapshot.provider_continuous_proof);
   const providerKind = stringValue(runtimeHealth.provider_kind);
   const diagnosticProviderReady = booleanValue(runtimeHealth.provider_ready);
-  const providerReady = providerKind === 'local_sqlite' ? false : diagnosticProviderReady;
+  const providerReady = providerKind === 'temporal' ? diagnosticProviderReady : false;
   return {
     readiness: {
       provider_kind: providerKind,
       provider_ready: providerReady,
       diagnostic_provider_ready: diagnosticProviderReady,
-      local_sqlite_counts_as_provider_ready: false,
+      retired_local_provider_counts_as_provider_ready: false,
       runtime_health_status: stringValue(runtimeHealth.status),
     },
     proof_counts: {

@@ -9,7 +9,7 @@ test('CLI exits cleanly when stdout pipe closes early', async () => {
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
-        OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+        OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     },

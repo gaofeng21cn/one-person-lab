@@ -32,15 +32,15 @@ const MAS_DOMAIN_ROUTE_STATE_PROJECTION_FIELDS = [
 ] as const;
 
 const MAS_DOMAIN_ROUTE_ACCEPTED_RUNTIME_RESPONSIBILITIES = [
-  'generic_runtime_queue',
+  'stage_attempt_index',
   'stage_attempt_ledger',
   'liveness_projection',
   'provider_wakeup',
-  'redrive_retry_dead_letter',
+  'typed_blocker_or_temporal_failure_projection',
 ] as const;
 
 const MAS_DOMAIN_ROUTE_AUTHORITY_BOUNDARY =
-  'OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package.';
+  'OPL indexes MAS domain route refs and Temporal attempt projections but never writes MAS truth, publication quality, artifact gates, or current_package.';
 
 export const MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE = {
   surface_kind: 'opl_domain_route_profile_compatibility',
@@ -60,8 +60,8 @@ const DOMAIN_ROUTE_AUTHORITY_BOUNDARY = {
   writes_domain_quality_verdict: false,
   writes_domain_artifact_gate: false,
   writes_domain_current_package: false,
-  queue_owns_attempts_retry_and_dead_letter: true,
-  opl_owns_generic_runtime_queue_attempt_liveness_redrive: true,
+  sqlite_sidecar_is_projection_index_only: true,
+  temporal_owns_attempt_lifecycle_retry_and_failure_history: true,
 } as const;
 
 type MasDomainRouteProjectionTask = {
@@ -208,11 +208,11 @@ export function masDomainRouteProjection(
       accepted_by: OPL_RUNTIME_OWNER_ROUTE,
       compatibility_profile: MAS_DOMAIN_ROUTE_COMPATIBILITY_PROFILE,
       accepted_runtime_responsibilities: [
-        'generic_runtime_queue',
+        'stage_attempt_index',
         'stage_attempt_ledger',
         'liveness_projection',
         'provider_wakeup',
-        'redrive_retry_dead_letter',
+        'typed_blocker_or_temporal_failure_projection',
       ],
       retained_domain_owner: 'med-autoscience',
       authority_boundary: {

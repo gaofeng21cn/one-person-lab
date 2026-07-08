@@ -64,7 +64,7 @@
       "replacement_opl_primitive": [
         "OPL Runway StageRun",
         "Temporal-backed provider runtime",
-        "typed queue / attempt projection refs",
+        "stage-attempt request/projection refs",
         "current_owner_delta projection",
         "App/operator generated read model"
       ],

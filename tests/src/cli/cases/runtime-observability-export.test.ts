@@ -73,7 +73,7 @@ db.close();`,
       '--stage',
       'analysis-campaign',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
     ], {
@@ -101,7 +101,7 @@ db.close();`,
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], {
@@ -131,7 +131,7 @@ db.close();`,
       '--stage',
       'draft',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mag"}',
     ], {
@@ -159,7 +159,7 @@ db.close();`,
     const output = runCli(['runtime', 'observability-export'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const observability = output.observability_export;
 
@@ -169,7 +169,7 @@ db.close();`,
     assert.equal(observability.source_surfaces.includes('opentelemetry_current_owner_delta_ref'), true);
     assert.equal(observability.provider.readiness.provider_ready, false);
     assert.equal(observability.provider.readiness.diagnostic_provider_ready, true);
-    assert.equal(observability.provider.readiness.local_sqlite_counts_as_provider_ready, false);
+    assert.equal(observability.provider.readiness.retired_local_provider_counts_as_provider_ready, false);
     assert.equal(observability.provider.proof_counts.proof_event_count, 1);
     assert.equal(observability.provider.proof_counts.proven_event_count, 1);
     assert.equal(observability.stage_attempts.total, 3);
@@ -297,10 +297,10 @@ db.close();`,
     const openMetrics = runCliRaw(['runtime', 'observability-export', '--format', 'openmetrics'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     assert.match(openMetrics.stdout, /# TYPE opl_provider_ready gauge/);
-    assert.match(openMetrics.stdout, /opl_provider_ready\{provider_kind="local_sqlite"\} 0/);
+    assert.match(openMetrics.stdout, /opl_provider_ready\{provider_kind="temporal"\} 0/);
     assert.match(openMetrics.stdout, /opl_stage_attempts_total\{domain_id="medautoscience",status="completed"\} 1/);
     assert.match(openMetrics.stdout, /opl_human_gate_total 1/);
     assert.match(openMetrics.stdout, /opl_dead_letter_total 1/);
@@ -326,7 +326,7 @@ db.close();`,
     const collectorConfigResult = runCliRaw(['runtime', 'observability-export', '--format', 'collector-config-json'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const collectorConfig = parseJsonText(collectorConfigResult.stdout) as any;
     assert.deepEqual(collectorConfig.service.pipelines.metrics, {
@@ -359,8 +359,8 @@ test('runtime observability metrics endpoint serves the OpenMetrics export over 
       runtime_tray_snapshot: {
         last_updated: '2026-07-04T00:00:00.000Z',
         runtime_health: {
-          provider_kind: 'local_sqlite',
-          provider_ready: true,
+          provider_kind: 'temporal',
+          provider_ready: false,
           status: 'ready',
         },
         provider_continuous_proof: {
@@ -473,7 +473,7 @@ test('runtime observability metrics endpoint serves the OpenMetrics export over 
     const body = await response.text();
 
     assert.match(body, /# TYPE opl_provider_ready gauge/);
-    assert.match(body, /opl_provider_ready\{provider_kind="local_sqlite"\} 0/);
+    assert.match(body, /opl_provider_ready\{provider_kind="temporal"\} 0/);
     assert.match(body, /# TYPE opl_queue_length gauge/);
     assert.match(body, /opl_queue_length(?:\{[^}]*\})? 1/);
     assert.match(body, /opl_observability_collector_consumption_config\{[^}]*metrics_path="\/metrics"[^}]*\} 1/);

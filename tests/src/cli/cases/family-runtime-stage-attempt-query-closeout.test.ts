@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, cliPath, fs, os, path, repoRoot, runCli, test, parseJsonText } from '../helpers.ts';
+import { assert, cliPath, fs, insertFamilyRuntimeTaskProjectionFixture, os, path, repoRoot, runCli, test, parseJsonText } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -12,17 +12,12 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
 test('family-runtime attempt query exposes task dead-letter ledger on linked attempts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-dead-letter-'));
   try {
-    const task = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'redcube',
-      '--task-kind',
-      'render/recover',
-      '--payload',
-      '{"workspace_root":"/tmp/rca"}',
-    ], familyRuntimeEnv(stateRoot));
-    const taskId = task.family_runtime_enqueue.task.task_id;
+    const taskId = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'redcube',
+      taskKind: 'render/recover',
+      payload: { workspace_root: '/tmp/rca' },
+    }).task_id;
     const created = runCli([
       'family-runtime',
       'attempt',
@@ -32,7 +27,7 @@ test('family-runtime attempt query exposes task dead-letter ledger on linked att
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
       '--task',
@@ -88,7 +83,7 @@ test('family-runtime attempt fixture-run rejects missing typed closeout refs wit
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], familyRuntimeEnv(stateRoot));
@@ -135,7 +130,7 @@ test('family-runtime attempt fixture-run ingests typed memory closeout refs and 
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts"}',
       '--source-fingerprint',

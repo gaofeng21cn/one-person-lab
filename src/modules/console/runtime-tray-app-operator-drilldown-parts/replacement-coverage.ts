@@ -92,7 +92,6 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       'opl family-runtime attempt create',
       'opl family-runtime attempt start',
       'opl family-runtime attempt query',
-      'opl family-runtime queue list',
       '/runtime_tray_snapshot/stage_attempt_workbench',
     ],
     focused_verification_refs: [
@@ -106,8 +105,7 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     replacement_owner: 'one-person-lab',
     replacement_surface_refs: [
       'opl family-runtime attempt signal',
-      'opl family-runtime approve',
-      'opl family-runtime scheduler tick --provider temporal',
+      'opl family-runtime provider-slo tick --provider temporal',
       appOperatorProjectionRef('review_repair_queue_refs'),
       appOperatorProjectionRef('typed_blocker_refs'),
     ],

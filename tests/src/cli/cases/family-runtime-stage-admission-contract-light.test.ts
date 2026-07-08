@@ -92,7 +92,7 @@ test('family-runtime required admission warns but does not block launch without 
       '--stage',
       'scout',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
       '--source-fingerprint',

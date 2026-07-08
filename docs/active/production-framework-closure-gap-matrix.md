@@ -13,11 +13,11 @@ Machine boundary: 本文是人读 production closure 证据门支撑。机器真
 
 ## 当前判断
 
-OPL 已具备 production framework control plane 的主要结构：Temporal-backed provider、typed queue、stage attempt ledger、retry/dead-letter、human gate transport、safe action shell、refs-only evidence ledger、stage artifact/progress truth、App/operator drilldown、generated surface read model、standard conformance、Agent Lab 与 lifecycle/source/artifact/memory refs-only primitives。
+OPL 已具备 production framework control plane 的主要结构：Temporal-backed provider、stage-attempt projection、stage attempt ledger、retry/dead-letter、human gate transport、safe action shell、refs-only evidence ledger、stage artifact/progress truth、App/operator drilldown、generated surface read model、standard conformance、Agent Lab 与 lifecycle/source/artifact/memory refs-only primitives。
 
 这仍不能写成全量 production ready。Production closure 只能由正确 owner 的真实 delta 关闭：
 
-- Framework closure：OPL 证明 stage runtime、provider、queue、projection、generated surface、guardrail 和 read model 同源可用。
+- Framework closure：OPL 证明 stage runtime、provider、stage-attempt projection、generated surface、guardrail 和 read model 同源可用。
 - App release/user path：App repo 的 contract、release artifact、screenshot、first-run/reload/user-path 和 release owner evidence 关闭。
 - Domain production tail：MAS/MAG/RCA/OMA 的 owner receipt、typed blocker、human gate、quality/export/review receipt、artifact/memory lifecycle receipt、no-regression 或 long-soak refs 关闭。
 - Physical deletion：每个 retained wrapper / adapter / alias / script 逐项满足 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write 与 tombstone/provenance。
@@ -36,7 +36,7 @@ OPL readiness、provider proof、generated surface proof、stage evidence workor
 | `memory_artifact_lifecycle_apply` | OPL 持 locator/index/ledger/ref transport；domain 持 body、mutation authority、accept/reject 和 final verdict。 | Domain-owned surface 产生真实 memory/artifact/lifecycle receipts；OPL 不保存 body、不判定 verdict。 |
 | `generated_surface_consumption` | OPL generated/hosted surfaces 已是 standard-agent replacement 输入。 | MAS/MAG/RCA/OMA 生产默认 caller 使用 generated/hosted surfaces；domain repo 只保 domain pack、authority function、domain handler target、native helper 或 direct skill path。 |
 | `wrapper_retirement` | Retained wrappers / adapters / aliases / scripts 是 deletion-gate 候选，不是长期组成。 | 逐 surface 满足 replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 后删除或 tombstone；不新增兼容入口。 |
-| `provider_long_soak` | Temporal 是 production required provider；local provider 只作 dev/CI/offline diagnostic baseline。 | 更长窗口内 provider cadence/capability、domain dispatch、retry/dead-letter、owner receipt / typed blocker 可重复 record/verify；不外推 domain production ready。 |
+| `provider_long_soak` | Temporal 是 production required provider；SQLite sidecar 只作 projection/readback index。 | 更长窗口内 provider cadence/capability、domain dispatch、retry/dead-letter、owner receipt / typed blocker 可重复 record/verify；不外推 domain production ready。 |
 | `no_resurrection` | 旧 gateway/frontdoor/federation/Hermes-first/local-manager、compat facade、old CLI alias、compatibility-only test 都只按 negative guard / history / tombstone 读取。 | Focused guard、docs scan、contract/source tests 和 review 阻断旧路径复活；保留旧词必须处在 history/provenance/negative-guard 语境。 |
 
 ## Forbidden Claims

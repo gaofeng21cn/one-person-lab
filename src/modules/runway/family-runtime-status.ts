@@ -29,26 +29,21 @@ export async function buildFamilyRuntimeStatusPayload(
       managedProviderProjection: readMasManagedProviderProjection(),
     },
   });
-  const fullOnlineReady = selectedProvider !== 'local_sqlite' && provider.ready;
+  const fullOnlineReady = selectedProvider === 'temporal' && provider.ready;
   const temporalSelected = selectedProvider === 'temporal';
   const queueLifecycleBoundary = buildQueueTemporalLifecycleBoundary(db, selectedProvider);
-  const queueTruthCompetesWithTemporal = queueLifecycleBoundary.gate.status === 'attention_needed';
-  const providerCanReplaceDomainDaemons = temporalSelected && provider.ready && !queueTruthCompetesWithTemporal;
+  const providerCanReplaceDomainDaemons = temporalSelected && provider.ready;
   const providerReadyForOnlineRuntime = temporalSelected && provider.ready;
   const schedulerReplacementStatus = temporalSelected
     ? provider.ready
-      ? queueTruthCompetesWithTemporal
-        ? 'blocked_local_queue_lifecycle_competes_with_temporal'
-        : 'provider_ready_scheduler_surface_available'
+      ? 'provider_ready_scheduler_surface_available'
       : 'blocked_provider_not_ready'
-    : 'dev_offline_provider_cannot_replace_domain_daemons';
+    : 'external_sandbox_cannot_replace_temporal_runtime';
   const providerLivenessBlocker = temporalSelected && !provider.ready
     ? buildTemporalProviderLivenessBlocker(provider)
     : null;
-  const degradedReason = provider.degraded_reason
-    ?? (selectedProvider === 'local_sqlite' ? 'local_sqlite_is_dev_ci_offline_only' : null)
-    ?? (queueTruthCompetesWithTemporal ? 'local_sqlite_queue_lifecycle_competes_with_temporal' : null);
-  const readinessReady = fullOnlineReady && !queueTruthCompetesWithTemporal;
+  const degradedReason = provider.degraded_reason;
+  const readinessReady = fullOnlineReady;
 
   return {
     version: 'g2',
@@ -59,8 +54,8 @@ export async function buildFamilyRuntimeStatusPayload(
       state: {
         state_dir: paths.state_dir,
         runtime_dir: paths.root,
-        queue_db: paths.queue_db,
-        queue_schema_version: QUEUE_SCHEMA_VERSION,
+        stage_attempt_index_db: paths.queue_db,
+        stage_attempt_index_schema_version: QUEUE_SCHEMA_VERSION,
       },
       readiness: {
         provider_ready: providerReadyForOnlineRuntime,
@@ -76,11 +71,11 @@ export async function buildFamilyRuntimeStatusPayload(
         codex_app_drives_long_running_tasks: false,
         production_provider_required: 'temporal',
         selected_provider_role: providerRuntime.provider_catalog[selectedProvider]?.provider_role ?? 'unknown',
-        local_sqlite_is_dev_ci_offline_only: selectedProvider === 'local_sqlite',
+        local_sqlite_provider_retired: true,
         local_sqlite_counts_as_provider_ready: false,
         selected_provider_can_replace_domain_daemons: providerCanReplaceDomainDaemons,
-        queue_truth_competes_with_temporal: queueTruthCompetesWithTemporal,
-        degraded: !providerReadyForOnlineRuntime || queueTruthCompetesWithTemporal,
+        queue_truth_competes_with_temporal: false,
+        degraded: !providerReadyForOnlineRuntime,
         degraded_reason: degradedReason,
       },
       provider_runtime: {
@@ -112,9 +107,8 @@ export async function buildFamilyRuntimeStatusPayload(
         status_command: 'opl family-runtime scheduler status --provider temporal',
         install_command: 'opl family-runtime scheduler install --provider temporal',
         trigger_command: 'opl family-runtime scheduler trigger --provider temporal',
-        tick_command: 'opl family-runtime scheduler tick --provider temporal',
         provider_slo_tick_command: 'opl family-runtime provider-slo tick --provider temporal',
-        local_sqlite_role: 'dev_ci_offline_diagnostic_baseline_only',
+        local_sqlite_role: 'retired_runtime_provider',
         replaces_domain_daemon_surface: {
           medautoscience: 'MAS LaunchAgent / local supervision tick must remain absent, tombstone, or explicit cleanup diagnostic only.',
           medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
@@ -122,13 +116,7 @@ export async function buildFamilyRuntimeStatusPayload(
         },
         blocker: providerLivenessBlocker
           ? providerLivenessBlocker
-          : selectedProvider === 'local_sqlite'
-            ? {
-                blocker_kind: 'provider_role',
-                blocker_id: 'local_sqlite_is_dev_ci_offline_only',
-                next_repair_command: 'opl family-runtime status --provider temporal',
-              }
-            : null,
+          : null,
         authority_boundary: {
           can_install_domain_daemon: false,
           can_write_domain_truth: false,
@@ -139,7 +127,7 @@ export async function buildFamilyRuntimeStatusPayload(
         },
       },
       opl_owner: {
-        queue: 'typed_family_queue',
+        sqlite_sidecar: 'stage_attempt_projection_and_readback_index',
         stage_attempt_ledger: 'provider_attempt_control_metadata_only',
         dispatch: 'domain_adapter_dispatch',
         notification_policy: 'all_delivery_events_are_written_to_local_inbox_first',
@@ -151,7 +139,7 @@ export async function buildFamilyRuntimeStatusPayload(
       },
       domain_adapters: DOMAIN_ADAPTERS,
       queue_lifecycle_boundary: queueLifecycleBoundary,
-      queue: queueSummary(db),
+      retired_task_projection: queueSummary(db),
       stage_attempts: stageAttemptSummary(db),
     },
   };

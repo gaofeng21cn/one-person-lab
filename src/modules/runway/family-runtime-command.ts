@@ -14,7 +14,7 @@ export {
   type FamilyRuntimeDomainId,
 } from './family-runtime-types.ts';
 
-export type EnqueueInput = {
+export type StageAttemptProjectionInput = {
   domainId: FamilyRuntimeDomainId;
   taskKind: string;
   payload: Record<string, unknown>;
@@ -55,15 +55,6 @@ export type FamilyRuntimeCommandInput =
     mode: 'provider_worker_supervisor';
     action: 'status' | 'install' | 'remove' | 'trigger';
     providerKind?: FamilyRuntimeProviderKind;
-  }
-  | {
-    mode: 'scheduler_tick';
-    providerKind?: FamilyRuntimeProviderKind;
-    force?: boolean;
-    limit?: number;
-    hydrate?: boolean;
-    taskScope?: FamilyRuntimeTaskScope;
-    domainProfiles?: FamilyRuntimeDomainProfiles;
   }
   | {
     mode: 'scheduler_status' | 'scheduler_install' | 'scheduler_remove' | 'scheduler_trigger';
@@ -126,11 +117,6 @@ export type FamilyRuntimeCommandInput =
   }
   | { mode: 'notify_list' | 'events_export' }
   | {
-    mode: 'queue_list';
-    status?: string;
-    taskScope?: FamilyRuntimeTaskScope;
-  }
-  | {
     mode: 'attempt_list';
     filters?: {
       domainId?: FamilyRuntimeDomainId;
@@ -141,27 +127,6 @@ export type FamilyRuntimeCommandInput =
       full?: boolean;
     };
   }
-  | {
-    mode: 'tick';
-    source?: string;
-    limit?: number;
-    hydrate?: boolean;
-    taskScope?: FamilyRuntimeTaskScope;
-    domainProfiles?: FamilyRuntimeDomainProfiles;
-  }
-  | {
-    mode: 'intake';
-    domainId?: FamilyRuntimeDomainId;
-    source?: string;
-    taskScope?: FamilyRuntimeTaskScope;
-    domainProfiles?: FamilyRuntimeDomainProfiles;
-  }
-  | { mode: 'enqueue'; input: EnqueueInput }
-  | { mode: 'queue_inspect'; taskId: string }
-  | { mode: 'queue_redrive'; taskId: string; reason: string; source?: string }
-  | { mode: 'queue_hold'; taskScope: FamilyRuntimeTaskScope; reason: string; source?: string }
-  | { mode: 'queue_release'; taskScope: FamilyRuntimeTaskScope; reason: string; source?: string; repairStrandedHold?: boolean }
-  | { mode: 'queue_retire'; taskScope: FamilyRuntimeTaskScope; reason: string; source?: string }
   | { mode: 'attempt_inspect'; stageAttemptId: string }
   | { mode: 'attempt_start'; stageAttemptId: string }
   | { mode: 'attempt_query'; stageAttemptId: string }
@@ -202,8 +167,7 @@ export type FamilyRuntimeCommandInput =
       newAttempt?: boolean;
       start?: boolean;
     };
-  }
-  | { mode: 'approve'; taskId: string; decision: 'approve' | 'deny'; reason?: string };
+  };
 
 export type FamilyRuntimeDomainAdapter = {
   repo_id: string;

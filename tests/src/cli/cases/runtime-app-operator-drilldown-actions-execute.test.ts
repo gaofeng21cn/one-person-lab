@@ -167,7 +167,7 @@ test('runtime action execute records MAS paper-line owner-chain results as refs-
       '--stage',
       'write',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts","dispatch_ref":"mas-domain-dispatch:dm003:paper-line-owner-chain"}',
       '--task',

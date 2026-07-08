@@ -11,7 +11,7 @@ export const STANDARD_AGENT_DEFAULT_RUNTIME_POLICY = {
   codex_app_role: 'start_observe_intervene_project_only',
   provider_managed_surfaces: [
     'stage_attempt_runtime',
-    'typed_queue',
+    'stage_attempt_request_projection',
     'wakeup',
     'resume_requery',
     'retry_dead_letter',

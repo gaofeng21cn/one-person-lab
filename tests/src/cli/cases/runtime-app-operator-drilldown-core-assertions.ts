@@ -364,8 +364,8 @@ export function assertCoreAppOperatorDrilldownProjection(
   assert.equal(
     projection.periodic_execution_refs.refs.some(
       (ref: { role: string; ref: string }) =>
-        ref.role === 'scheduler_tick_provider_slo_and_queue_dispatch'
-        && ref.ref === 'opl family-runtime scheduler tick --provider temporal',
+        ref.role === 'scheduler_cadence_manual_trigger'
+        && ref.ref === 'opl family-runtime scheduler trigger --provider temporal',
     ),
     true,
   );

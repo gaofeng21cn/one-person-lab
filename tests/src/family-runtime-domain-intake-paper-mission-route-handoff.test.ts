@@ -182,7 +182,7 @@ test('domain route handoff accepts legacy MAS paper mission carrier as OPL runti
   });
   assert.equal(readback.projection_kind, 'domain_route_handoff_intake');
   assert.equal(readback.domain_id, 'medautoscience');
-  assert.equal(readback.status, 'accepted_for_runtime_intake');
+  assert.equal(readback.status, 'accepted_for_provider_projection');
   assert.equal(readback.command_kind, 'start_next_stage');
   assert.equal(readback.can_submit_to_opl_runtime, true);
   assert.equal(readback.runtime_start_requested, false);
@@ -200,57 +200,7 @@ test('domain route handoff accepts legacy MAS paper mission carrier as OPL runti
   assert.equal(readback.accepted_command_packet.command_kind, 'start_next_stage');
   assert.equal(readback.accepted_command_packet.route_command_materialized, true);
   assert.equal(readback.accepted_command_packet.writes_opl_outbox, false);
-  assert.equal(readback.runtime_request_input?.taskKind, 'paper_mission/stage-route');
-  assert.equal(readback.runtime_request_input?.payload.canonical_task_kind, 'domain_route/stage-route');
-  assert.equal(readback.runtime_request_input?.payload.legacy_task_kind, 'paper_mission/stage-route');
-  assert.equal(
-    readback.runtime_request_input?.dedupeKey,
-    'paper-mission-route:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
-  );
-  assert.equal(
-    readback.runtime_request_input?.payload.canonical_dedupe_key,
-    'domain-route:medautoscience:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
-  );
-  assert.equal(
-    readback.runtime_request_input?.payload.legacy_dedupe_key,
-    'paper-mission-route:001-paper:paper-mission-transaction:001-paper:1:start_next_stage',
-  );
-  assert.equal(readback.runtime_request_input?.payload.study_id, '001-paper');
-  assert.equal(readback.runtime_request_input?.payload.domain_id, 'medautoscience');
-  assert.equal(readback.runtime_request_input?.payload.canonical_surface_kind, 'opl_domain_route_runtime_request');
-  assert.equal(readback.runtime_request_input?.payload.legacy_surface_kind, 'opl_mas_paper_mission_route_runtime_request');
-  assert.equal(readback.runtime_request_input?.payload.canonical_runtime_request_kind, 'domain_route_stage_route');
-  assert.equal(readback.runtime_request_input?.payload.domain_route_command_ref, readback.opl_route_command_ref);
-  assert.equal(readback.runtime_request_input?.payload.domain_route_transaction_ref, readback.paper_mission_transaction_ref);
-  assert.equal(readback.runtime_request_input?.payload.domain_route_handoff_ref, readback.opl_route_command_ref);
-  assert.equal(readback.runtime_request_input?.payload.command_kind, 'start_next_stage');
-  assert.equal(
-    readback.runtime_request_input?.payload.route_identity_key,
-    'paper-mission-transaction:001-paper:1::route',
-  );
-  assert.equal(
-    readback.runtime_request_input?.payload.attempt_idempotency_key,
-    '001-paper::gate-clearing::accepted_candidate::opl-attempt',
-  );
-  assert.equal(
-    readback.runtime_request_input?.payload.request_idempotency_key,
-    '001-paper::gate-clearing::accepted_candidate::opl-request',
-  );
-  assert.equal(
-    (readback.runtime_request_input?.payload.stage_run_request as Record<string, unknown>).route_identity_key,
-    'paper-mission-transaction:001-paper:1::route',
-  );
-  assert.equal(
-    (readback.runtime_request_input?.payload.stage_run_request as Record<string, unknown>).attempt_idempotency_key,
-    '001-paper::gate-clearing::accepted_candidate::opl-attempt',
-  );
-  assert.equal(readback.runtime_request_input?.payload.workspace_root, '/tmp/yang-workspace');
-  assert.equal(readback.runtime_request_input?.payload.domain_workspace_root, '/tmp/yang-workspace');
-  assert.equal(readback.runtime_request_input?.payload.command_cwd, '/tmp/opl-repo');
-  const requestAuthority = readback.runtime_request_input?.payload.authority_boundary as Record<string, unknown>;
-  assert.equal(requestAuthority.can_claim_opl_runtime_enqueued, false);
-  assert.equal(requestAuthority.can_claim_provider_running, false);
-  assert.equal(requestAuthority.can_claim_paper_progress, false);
+  assert.equal(readback.runtime_request_input, null);
   assert.deepEqual(readback.blockers, []);
 });
 
@@ -304,19 +254,17 @@ test('MAS paper mission route handoff can derive domain workspace from absolute 
     commandCwd: '/tmp/one-person-lab',
   });
 
-  assert.equal(readback.status, 'accepted_for_runtime_intake');
-  assert.equal(readback.runtime_request_input?.payload.workspace_root, '/tmp/yang-workspace');
-  assert.equal(readback.runtime_request_input?.payload.domain_workspace_root, '/tmp/yang-workspace');
-  assert.equal(readback.runtime_request_input?.payload.command_cwd, '/tmp/one-person-lab');
+  assert.equal(readback.status, 'accepted_for_provider_projection');
+  assert.equal(readback.runtime_request_input, null);
 });
 
-test('MAS paper mission materialized readback is normalized into OPL runtime request', () => {
+test('MAS paper mission materialized readback is normalized into provider projection', () => {
   const readback = intakeMasPaperMissionRouteHandoff(materializedReadback(), {
     source: 'profile-export',
   });
 
   assert.equal(readback.source_surface_kind, 'paper_mission_materialized_readback');
-  assert.equal(readback.status, 'accepted_for_runtime_intake');
+  assert.equal(readback.status, 'accepted_for_provider_projection');
   assert.equal(readback.study_id, '002-dm-china-us-mortality-attribution');
   assert.equal(readback.command_kind, 'start_next_stage');
   assert.equal(readback.route_target, 'publication_gate_replay');
@@ -325,35 +273,9 @@ test('MAS paper mission materialized readback is normalized into OPL runtime req
   assert.equal(readback.can_claim_runtime_enqueued, false);
   assert.equal(readback.can_claim_provider_running, false);
   assert.equal(readback.can_claim_paper_progress, false);
-  assert.equal(readback.runtime_request_input?.source, 'profile-export');
-  assert.equal(readback.runtime_request_input?.taskKind, 'paper_mission/stage-route');
-  assert.equal(
-    readback.runtime_request_input?.dedupeKey,
-    [
-      'paper-mission-route',
-      '002-dm-china-us-mortality-attribution',
-      'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration',
-      'start_next_stage',
-    ].join(':'),
-  );
-  const requestPayload = readback.runtime_request_input?.payload as Record<string, unknown>;
-  const sourceHandoff = requestPayload.opl_route_handoff_record as Record<string, unknown>;
-  const stageRunRequest = requestPayload.stage_run_request as Record<string, unknown>;
-  assert.equal(requestPayload.route_identity_key, sourceHandoff.route_identity_key);
-  assert.equal(requestPayload.attempt_idempotency_key, sourceHandoff.attempt_idempotency_key);
-  assert.equal(
-    requestPayload.route_identity_key,
-    'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration::route',
-  );
-  assert.equal(
-    requestPayload.attempt_idempotency_key,
-    '002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::accepted_candidate::opl-attempt',
-  );
-  assert.equal(stageRunRequest.route_identity_key, requestPayload.route_identity_key);
-  assert.equal(stageRunRequest.attempt_idempotency_key, requestPayload.attempt_idempotency_key);
-  assert.equal(sourceHandoff.source_surface_kind, 'paper_mission_materialized_readback');
-  assert.equal(stageRunRequest.stage_run_created, false);
-  assert.equal(stageRunRequest.provider_attempt_requested, false);
+  assert.equal(readback.route_identity_key, 'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration::route');
+  assert.equal(readback.attempt_idempotency_key, '002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::accepted_candidate::opl-attempt');
+  assert.equal(readback.runtime_request_input, null);
   assert.deepEqual(readback.blockers, []);
 });
 
@@ -602,7 +524,7 @@ test('MAS paper mission route handoff export intake prefers paper_mission_defaul
   assert.equal(exportReadback.canonical_task_kind, 'domain_route/stage-route');
   assert.equal(exportReadback.legacy_task_kind, 'paper_mission/stage-route');
   assert.equal(exportReadback.readbacks.length, 1);
-  assert.equal(exportReadback.readbacks[0].status, 'accepted_for_runtime_intake');
+  assert.equal(exportReadback.readbacks[0].status, 'accepted_for_provider_projection');
   assert.equal(exportReadback.legacy_pending_family_tasks_considered, false);
   assert.equal(exportReadback.authority_boundary.writes_opl_outbox, false);
   assert.equal(exportReadback.authority_boundary.writes_opl_stage_run, false);
@@ -634,7 +556,7 @@ test('MAS paper mission route handoff export intake can consume explicit legacy 
   assert.equal(exportReadback.source_path, '/pending_family_tasks');
   assert.equal(exportReadback.legacy_pending_family_tasks_considered, true);
   assert.equal(exportReadback.readbacks.length, 1);
-  assert.equal(exportReadback.readbacks[0].status, 'accepted_for_runtime_intake');
+  assert.equal(exportReadback.readbacks[0].status, 'accepted_for_provider_projection');
   assert.equal(exportReadback.readbacks[0].command_kind, 'route_back');
   assert.equal(exportReadback.readbacks[0].writes_opl_stage_run, false);
 });

@@ -143,7 +143,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'module_remove',
       'provider_scheduler_install',
       'provider_scheduler_trigger',
-      'provider_scheduler_tick',
       'provider_worker_start',
       'provider_worker_restart',
       'workspace_initialize',
@@ -319,9 +318,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('workspace_fleet_report')?.delegated_surface, 'opl workspace fleet report');
     assert.equal(actions.get('workspace_fleet_report')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('workspace_fleet_report')?.payload_fields, []);
-    assert.deepEqual(actions.get('provider_scheduler_tick')?.payload_fields, ['force', 'limit', 'hydrate', 'profile']);
-    assert.equal(actions.get('provider_scheduler_tick')?.route_requires_domain_or_app_payload, true);
-    assert.equal(actions.get('provider_scheduler_tick')?.can_submit_to_safe_action_shell, false);
+    assert.equal(actions.has('provider_scheduler_tick'), false);
     assert.equal(
       actions.get('task_action_receipt_preview')?.delegated_surface,
       'opl app action execute --action task_action_receipt_preview --dry-run',

@@ -70,7 +70,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
   const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   assert.equal(contract.provider_model, 'provider_backed_stage_attempt_runtime');
-  assert.deepEqual(contract.allowed_providers, ['local_sqlite', 'temporal']);
+  assert.deepEqual(contract.allowed_providers, ['temporal']);
   for (const state of [
     'queued',
     'running',
@@ -331,7 +331,7 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'same_stage_attempt_refs_only_no_domain_truth_no_long_soak_claim',
   );
   assert.equal(truePathProof.surface_refs.includes('attempt_query_ref'), true);
-  assert.equal(truePathProof.surface_refs.includes('queue_inspect_ref'), true);
+  assert.equal(truePathProof.surface_refs.includes('stage_attempt_projection_ref'), true);
   assert.equal(truePathProof.surface_refs.includes('app_drilldown_ref'), true);
   assert.equal(truePathProof.surface_refs.includes('temporal_webui_ref'), true);
   assert.equal(truePathProof.forbidden_derivation_sources.includes('long_soak_claim'), true);
@@ -352,7 +352,7 @@ test('family runtime attempt contract defines current control state as OPL-only 
 
   assert.equal(projection.surface_kind, 'opl_current_control_state');
   assert.deepEqual(projection.required_derivation_sources, [
-    'family_runtime_queue_task',
+    'stage_attempt_index_record',
     'stage_attempt_ledger',
     'provider_run_projection',
     'typed_stage_closeout_ledger',
@@ -462,7 +462,7 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   assert.equal(definitions.route_hydration.owner, 'one-person-lab');
   assert.deepEqual(definitions.route_hydration.must_only, [
     'hydrate_domain_owner_route_refs',
-    'reconcile_queue_provider_attempt_ledger_and_projection_state',
+    'reconcile_provider_attempt_ledger_and_projection_state',
     'emit_conflict_or_operator_projection_refs',
   ]);
   for (const forbiddenHydrationRole of [
@@ -476,13 +476,13 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
   ]) {
     assert.ok(definitions.route_hydration.must_not.includes(forbiddenHydrationRole));
   }
-  assert.ok(definitions.route_hydration.machine_surfaces.includes('opl family-runtime tick --hydrate'));
+  assert.ok(definitions.route_hydration.machine_surfaces.includes('opl family-runtime provider-slo tick --provider temporal'));
   assert.ok(definitions.attempt_ledger.machine_surfaces.includes('family-runtime-attempt-contract.json'));
 
   const masReference = contract.mas_reference_flow as Record<string, string[]>;
   assert.ok(masReference.domain_owner_outputs.includes('owner_route_refs'));
   assert.ok(masReference.domain_owner_outputs.includes('typed_blocker_refs'));
-  assert.ok(masReference.opl_owned_hydration_outputs.includes('typed_queue_task'));
+  assert.equal(masReference.opl_owned_hydration_outputs.includes('typed_queue_task'), false);
   assert.ok(masReference.opl_owned_hydration_outputs.includes('stage_attempt_ledger_entry'));
   assert.ok(masReference.forbidden_interpretations.includes('MAS route is a nested OPL stage'));
 
@@ -495,7 +495,7 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
 
   for (const step of [
     'discover_domain_owner_route_refs',
-    'hydrate_route_ref_into_typed_queue_or_stage_attempt_request',
+    'hydrate_route_ref_into_stage_attempt_request',
     'append_attempt_ledger_or_conflict_envelope',
     'reconcile_actual_status_back_to_operator_read_model',
   ]) {
@@ -514,7 +514,7 @@ test('stage route scheduler contract freezes route hydration as OPL reconciliati
     'route_generates_candidates',
     'route_evaluates_or_ranks_candidates',
     'route_reconciler_completes_stage_attempt',
-    'queue_task_admitted_equals_domain_work_done',
+    'stage_attempt_index_record_equals_domain_work_done',
     'provider_completed_equals_owner_receipt',
     'raw_evidence_envelope_generates_default_plan',
     'replay_packet_generates_default_plan',
@@ -583,7 +583,7 @@ test('family runtime attempt contract binds attempt ledger fields to the stage r
     route_is_domain_owner_semantic: true,
     route_is_small_stage: false,
     route_is_stage_internal_strategy: false,
-    route_hydrated_into_stage_or_queue_by_opl: true,
+    route_hydrated_into_stage_attempt_by_opl: true,
     route_completion_is_stage_completion: false,
     provider_completion_is_owner_receipt: false,
     route_reconciler_role: 'hydrate_reconcile_owner_routes_only',
@@ -596,7 +596,6 @@ test('family runtime attempt contract binds attempt ledger fields to the stage r
   const hydration = contract.route_hydration_contract as Record<string, any>;
   assert.ok(hydration.input_refs.includes('owner_route_refs'));
   assert.ok(hydration.input_refs.includes('typed_blocker_refs'));
-  assert.ok(hydration.output_records.includes('typed_queue_task'));
   assert.ok(hydration.output_records.includes('stage_attempt_request'));
   assert.ok(hydration.output_records.includes('conflict_or_blocker_envelope'));
   assert.ok(hydration.reconciliation_statuses.includes('hydrated_to_stage_attempt'));
@@ -744,7 +743,7 @@ test('standard domain-agent scaffold contract forbids domain-owned generic frame
   for (const primitive of [
     'scheduler_supervision_cadence',
     'provider_slo_and_wakeup_transport',
-    'queue_attempt_ledger',
+    'stage_attempt_projection_ledger',
     'generic_transition_runner',
     'workspace_source_intake_shell',
     'memory_locator_writeback_transport',

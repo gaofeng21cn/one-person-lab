@@ -21,10 +21,9 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.status, 'provider_code_landed_unconfigured');
     assert.equal(output.runtime_manager.owner_split.online_runtime_substrate_owner, 'provider_backed_family_runtime');
     assert.equal(output.runtime_manager.owner_split.product_control_plane_owner, 'one-person-lab');
-    assert.equal(output.runtime_manager.family_runtime_queue.provider_model, 'provider_backed_stage_attempt_runtime');
-    assert.equal(output.runtime_manager.family_runtime_queue.configured_provider, 'temporal');
-    assert.deepEqual(output.runtime_manager.family_runtime_queue.allowed_providers, [
-      'local_sqlite',
+    assert.equal(output.runtime_manager.family_runtime_stage_attempt_index.provider_model, 'provider_backed_stage_attempt_runtime');
+    assert.equal(output.runtime_manager.family_runtime_stage_attempt_index.configured_provider, 'temporal');
+    assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.allowed_providers, [
       'temporal',
       'external_sandbox',
     ]);
@@ -34,8 +33,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.family_scheduler_replacement.configured_provider, 'temporal');
     assert.deepEqual(output.runtime_manager.family_scheduler_replacement.allowed_opl_targets, [
       'provider_slo_tick',
-      'domain_registration_intake',
-      'family_runtime_tick',
+      'scheduler_cadence',
       'runtime_manager_projection',
     ]);
     assert.equal(
@@ -59,30 +57,30 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       'domain_route/reconcile-apply',
     );
     assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
-    assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.supported_task_kinds, [
+    assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.supported_task_kinds, [
       'domain_route/reconcile-apply',
       'publication_aftercare/analysis-queue-progress',
       'publication_aftercare/reviewer-refresh',
     ]);
     assert.equal(
-      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.owner_route_handoff_ref,
+      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.owner_route_handoff_ref,
       'mas_runtime_owner_route_handoff',
     );
     assert.equal(
-      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.accepted_runtime_owner_route_ref,
+      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.accepted_runtime_owner_route_ref,
       'opl_runtime_owner_route',
     );
     assert.deepEqual(
-      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.accepted_runtime_responsibilities,
+      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.accepted_runtime_responsibilities,
       [
-        'generic_runtime_queue',
+        'stage_attempt_index',
         'stage_attempt_ledger',
         'liveness_projection',
         'provider_wakeup',
-        'redrive_retry_dead_letter',
+        'typed_blocker_or_temporal_failure_projection',
       ],
     );
-    assert.deepEqual(output.runtime_manager.family_runtime_queue.mas_domain_route_projection.action_refs, [
+    assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.action_refs, [
       'domain_route_reconcile_apply',
       'ai_reviewer_recheck_execute_dispatch',
     ]);
@@ -90,10 +88,11 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_memory_body, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.provider_slo_tick, 'opl family-runtime provider-slo tick --provider temporal');
-    assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.family_runtime_tick, 'opl family-runtime tick --source provider-scheduler --hydrate');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.scheduler_status, 'opl family-runtime scheduler status --provider temporal');
+    assert.equal(output.runtime_manager.family_scheduler_replacement.command_set.scheduler_trigger, 'opl family-runtime scheduler trigger --provider temporal');
     assert.equal(output.runtime_manager.provider_runtime.selected_provider, 'temporal');
     assert.equal(output.runtime_manager.provider_runtime.default_resolution.fallback, 'temporal');
-    assert.equal(output.runtime_manager.provider_runtime.default_resolution.local_sqlite_role, 'dev_ci_offline_diagnostic_baseline');
+    assert.equal(output.runtime_manager.provider_runtime.default_resolution.local_sqlite_role, 'retired_runtime_provider');
     assert.equal(output.runtime_manager.provider_runtime.providers.temporal.ready, false);
     assert.equal(output.runtime_manager.provider_runtime.providers.temporal.details.worker_readiness.blockers.includes('temporal_runtime_not_configured'), true);
     assert.equal(
@@ -130,7 +129,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.standard_domain_agent_scaffold.generation_policy.creates_files, false);
     assert.equal(
       output.runtime_manager.standard_domain_agent_scaffold.opl_owned_generic_primitives
-        .some((primitive: { primitive_id: string }) => primitive.primitive_id === 'queue_attempt_ledger'),
+        .some((primitive: { primitive_id: string }) => primitive.primitive_id === 'stage_attempt_projection_ledger'),
       true,
     );
     assert.equal(
@@ -186,12 +185,12 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
     assert.deepEqual(
-      runtimeManagerContract.family_runtime_queue.mas_domain_route_projection.supported_task_kinds,
-      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.supported_task_kinds,
+      runtimeManagerContract.family_runtime_stage_attempt_index.mas_domain_route_projection.supported_task_kinds,
+      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.supported_task_kinds,
     );
     assert.deepEqual(
-      runtimeManagerContract.family_runtime_queue.mas_domain_route_projection.action_refs,
-      output.runtime_manager.family_runtime_queue.mas_domain_route_projection.action_refs,
+      runtimeManagerContract.family_runtime_stage_attempt_index.mas_domain_route_projection.action_refs,
+      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.action_refs,
     );
     assert.equal(
       runtimeManagerContract.standard_domain_agent_scaffold.surface_kind,
@@ -218,7 +217,7 @@ test('runtime manager fail-closes external sandbox provider when adapter config 
     }).runtime_manager;
 
     const provider = output.provider_runtime.providers.external_sandbox;
-    assert.equal(output.family_runtime_queue.configured_provider, 'external_sandbox');
+    assert.equal(output.family_runtime_stage_attempt_index.configured_provider, 'external_sandbox');
     assert.equal(output.status, 'provider_attention_needed');
     assert.equal(provider.status, 'attention_needed');
     assert.equal(provider.ready, false);
@@ -364,11 +363,7 @@ test('family-runtime status defaults to temporal production provider and blocks 
       output.provider_runtime.providers.temporal.details.worker_readiness.temporal_service_lifecycle.service_status,
       'not_configured',
     );
-    assert.equal(
-      output.provider_runtime.provider_catalog.local_sqlite.provider_role,
-      'dev_ci_offline_diagnostic_baseline',
-    );
-    assert.equal(output.provider_runtime.provider_catalog.local_sqlite.production_online_readiness_provider, false);
+    assert.equal(Object.hasOwn(output.provider_runtime.provider_catalog, 'local_sqlite'), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -462,7 +457,7 @@ esac
 
     assert.equal(runtimeStatus.configured_provider, 'temporal');
     assert.equal(familyRuntime.configured_provider, 'temporal');
-    assert.equal(runtimeManager.family_runtime_queue.configured_provider, 'temporal');
+    assert.equal(runtimeManager.family_runtime_stage_attempt_index.configured_provider, 'temporal');
     assert.equal(statusProvider.ready, true);
     assert.equal(familyProvider.ready, true);
     assert.equal(managerProvider.ready, true);

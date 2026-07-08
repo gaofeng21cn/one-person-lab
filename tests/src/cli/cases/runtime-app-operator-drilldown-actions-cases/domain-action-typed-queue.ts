@@ -8,7 +8,7 @@ import {
   test,
 } from '../../helpers.ts';
 
-test('runtime action execute routes domain actions through the OPL typed queue instead of direct domain execution', () => {
+test('runtime action execute blocks domain actions instead of creating a local runtime queue task', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-domain-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   try {
@@ -21,7 +21,7 @@ test('runtime action execute routes domain actions through the OPL typed queue i
       '--stage',
       'write',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts"}',
       '--task',
@@ -59,15 +59,16 @@ test('runtime action execute routes domain actions through the OPL typed queue i
     }).runtime_operator_action_execution;
 
     assert.equal(execution.surface_kind, 'opl_runtime_operator_action_execution');
-    assert.equal(execution.execution.execution_kind, 'domain_action_typed_queue_handoff');
-    assert.equal(execution.execution.execution_status, 'queued');
-    assert.equal(execution.execution.approval_policy, 'queued_waiting_approval');
+    assert.equal(execution.execution.execution_kind, 'domain_owner_handoff_required');
+    assert.equal(execution.execution.execution_status, 'blocked_owner_handoff_required');
+    assert.equal(execution.execution.approval_policy, 'domain_owner_route_required_no_runtime_queue');
     assert.equal(execution.authority_boundary.can_write_domain_truth, false);
     assert.equal(execution.route.execution_policy, 'opl_safe_action_shell');
     assert.equal(execution.route.execution_surface, 'opl runtime action execute');
-    assert.equal(execution.execution.result.family_runtime_enqueue.task.status, 'waiting_approval');
+    assert.equal(execution.execution.result.runtime_queue_mutation_performed, false);
+    assert.equal(execution.execution.result.authority_boundary.can_enqueue_family_runtime_task, false);
     assert.equal(
-      execution.execution.result.family_runtime_enqueue.task.payload.command_or_surface_ref,
+      execution.execution.result.handoff_payload.command_or_surface_ref,
       'medautosci domain-handler dispatch --task <task.json> --format json',
     );
   } finally {

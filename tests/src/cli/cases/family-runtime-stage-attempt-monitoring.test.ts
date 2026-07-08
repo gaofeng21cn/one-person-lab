@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, insertFamilyRuntimeTaskProjectionFixture, os, path, runCli, test } from '../helpers.ts';
 import { createFamilyRuntimeQueueTables } from '../../../../src/modules/runway/family-runtime-store.ts';
 import { listStageAttemptsWithMonitoringProjection } from '../../../../src/modules/runway/family-runtime-stage-attempt-monitoring.ts';
 import { createStageAttempt } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
@@ -15,30 +15,20 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
 test('family-runtime attempt list filters attempts and emits compact Progress-First timeline', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-monitoring-'));
   try {
-    const medTask = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'stage/scout',
-      '--payload',
-      '{"study_id":"DM002"}',
-      '--dedupe-key',
-      'mas:DM002:stage:scout',
-    ], familyRuntimeEnv(stateRoot)).family_runtime_enqueue.task;
-    const magTask = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautogrant',
-      '--task-kind',
-      'stage/scout',
-      '--payload',
-      '{"study_id":"GR001"}',
-      '--dedupe-key',
-      'mag:GR001:stage:scout',
-    ], familyRuntimeEnv(stateRoot)).family_runtime_enqueue.task;
+    const medTask = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'stage/scout',
+      payload: { study_id: 'DM002' },
+      dedupeKey: 'mas:DM002:stage:scout',
+    });
+    const magTask = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautogrant',
+      taskKind: 'stage/scout',
+      payload: { study_id: 'GR001' },
+      dedupeKey: 'mag:GR001:stage:scout',
+    });
     const medAttempt = runCli([
       'family-runtime',
       'attempt',
@@ -48,7 +38,7 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
       '--stage',
       'scout',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
       '--task',
@@ -65,7 +55,7 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
       '--stage',
       'scout',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mag"}',
       '--task',
@@ -106,7 +96,7 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].semantic_status, 'missing_domain_semantic_summary');
     assert.equal(output.compact_timeline[0].progress_delta_classification, 'typed_blocker');
     assert.equal(output.compact_timeline[0].timeline.last_heartbeat_at, null);
-    assert.equal(output.compact_timeline[0].current_provider_readiness.provider_kind, 'local_sqlite');
+    assert.equal(output.compact_timeline[0].current_provider_readiness.provider_kind, 'temporal');
     assert.equal(output.compact_timeline[0].current_provider_readiness.provider_ready, true);
     assert.equal(output.compact_timeline[0].provider_liveness_attention.attention_status, 'none');
     assert.equal(output.compact_timeline[0].provider_liveness_attention.severity, 'none');
@@ -162,18 +152,13 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
 test('family-runtime attempt list keeps stable array shape for full and compact views', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-stable-shape-'));
   try {
-    const task = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'stage/scout',
-      '--payload',
-      '{"study_id":"DM002"}',
-      '--dedupe-key',
-      'mas:DM002:stage:stable-shape',
-    ], familyRuntimeEnv(stateRoot)).family_runtime_enqueue.task;
+    const task = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'stage/scout',
+      payload: { study_id: 'DM002' },
+      dedupeKey: 'mas:DM002:stage:stable-shape',
+    });
     const attempt = runCli([
       'family-runtime',
       'attempt',
@@ -183,7 +168,7 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
       '--stage',
       'scout',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","study_id":"DM002"}',
       '--task',
@@ -221,7 +206,7 @@ test('family-runtime attempt list keeps stable array shape for full and compact 
     assert.equal(Array.isArray(compact.attempts), true);
     assert.equal(full.items[0].stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(full.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
-    assert.equal(full.attempts[0].provider_kind, 'local_sqlite');
+    assert.equal(full.attempts[0].provider_kind, 'temporal');
     assert.equal(compact.items[0].stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(compact.attempts[0].stage_attempt_id, attempt.stage_attempt_id);
     assert.equal('provider_run' in full.attempts[0], false);
@@ -304,7 +289,7 @@ test('family-runtime attempt list defaults filtered readout to bounded audit-saf
       const attempt = createStageAttempt(db, {
         domainId: 'medautoscience',
         stageId: `review-${String(index).padStart(2, '0')}`,
-        providerKind: 'local_sqlite',
+        providerKind: 'temporal',
         workspaceLocator: {
           workspace_root: '/tmp/mas',
           study_id: 'DM003',
@@ -369,7 +354,7 @@ test('family-runtime attempt list defaults unfiltered readout to bounded audit-s
       const attempt = createStageAttempt(db, {
         domainId: 'medautoscience',
         stageId: `review-${String(index).padStart(2, '0')}`,
-        providerKind: 'local_sqlite',
+        providerKind: 'temporal',
         workspaceLocator: {
           workspace_root: '/tmp/mas',
           study_id: 'DM003',
@@ -562,7 +547,7 @@ test('family-runtime attempt list compact timeline caps progress evidence refs',
     createStageAttempt(db, {
       domainId: 'medautoscience',
       stageId: 'review',
-      providerKind: 'local_sqlite',
+      providerKind: 'temporal',
       workspaceLocator: {
         workspace_root: '/tmp/mas',
         study_id: 'DM003',
@@ -596,7 +581,7 @@ test('family-runtime attempt list compact timeline returns latest bounded page',
       createStageAttempt(db, {
         domainId: 'medautoscience',
         stageId: `review-${String(index).padStart(2, '0')}`,
-        providerKind: 'local_sqlite',
+        providerKind: 'temporal',
         workspaceLocator: {
           workspace_root: '/tmp/mas',
           study_id: 'DM003',
@@ -623,22 +608,17 @@ test('family-runtime attempt list compact timeline returns latest bounded page',
 test('family-runtime attempt list matches study identity aliases from task payload and workspace locator', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-list-study-alias-'));
   try {
-    const medTask = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'stage/review',
-      '--payload',
-      JSON.stringify({
+    const medTask = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'stage/review',
+      payload: {
         target_studies: ['study-canonical-002'],
         study_aliases: ['mortality-risk-review'],
         quest_id: 'quest-study-002',
-      }),
-      '--dedupe-key',
-      'mas:study-canonical-002:stage:review',
-    ], familyRuntimeEnv(stateRoot)).family_runtime_enqueue.task;
+      },
+      dedupeKey: 'mas:study-canonical-002:stage:review',
+    });
     const medAttempt = runCli([
       'family-runtime',
       'attempt',
@@ -648,7 +628,7 @@ test('family-runtime attempt list matches study identity aliases from task paylo
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mas-study-alias',
@@ -669,7 +649,7 @@ test('family-runtime attempt list matches study identity aliases from task paylo
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mag","target_studies":["grant-canonical-001"]}',
     ], familyRuntimeEnv(stateRoot));

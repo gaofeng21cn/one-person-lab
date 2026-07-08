@@ -261,7 +261,7 @@ MAS 当前 stage plane 已映射现有 route contract、study charter、evidence
 
 ### S6. OPL discovery / workbench
 
-`OPL` 只做 discovery、index、parity、admission、projection 和 typed queue dispatch：显示当前 stage、可用 skill、下一步、blocker、source refs 和 handoff，不接管执行或质量 verdict。
+`OPL` 只做 discovery、index、parity、admission、projection 和 stage-attempt request/projection dispatch：显示当前 stage、可用 skill、下一步、blocker、source refs 和 handoff，不接管执行或质量 verdict。
 
 ## 验收口径
 

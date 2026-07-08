@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { record, recordList, stringValue as optionalString } from '../../../kernel/json-record.ts';
-import type { EnqueueInput } from '../family-runtime-command.ts';
+import type { StageAttemptProjectionInput } from '../family-runtime-command.ts';
 import type { familyRuntimePaths } from '../family-runtime-store.ts';
 import {
   appendPaperAutonomyRecoveryObligation,
@@ -116,7 +116,7 @@ function validAuthorityBoundary(value: unknown) {
     && boundary.opl_can_create_domain_typed_blocker === false;
 }
 
-function requestFrom(input: EnqueueInput) {
+function requestFrom(input: StageAttemptProjectionInput) {
   if (input.domainId !== 'medautoscience' || input.taskKind !== 'paper_autonomy/supervisor-decision') {
     return null;
   }
@@ -148,7 +148,7 @@ function recoveryObligation(input: {
 }
 
 function consumeSupervisorDecisionRequest(input: {
-  taskInput: EnqueueInput;
+  taskInput: StageAttemptProjectionInput;
   paths: ReturnType<typeof familyRuntimePaths>;
   recordedAt: string;
 }): PaperAutonomySupervisorDecisionConsumeResult | PaperAutonomySupervisorDecisionBlocked | null {
@@ -268,11 +268,11 @@ function consumeSupervisorDecisionRequest(input: {
 }
 
 export function consumePaperAutonomySupervisorDecisionRequests(input: {
-  inputs: EnqueueInput[];
+  inputs: StageAttemptProjectionInput[];
   paths: ReturnType<typeof familyRuntimePaths>;
   recordedAt?: string;
 }) {
-  const remainingInputs: EnqueueInput[] = [];
+  const remainingInputs: StageAttemptProjectionInput[] = [];
   const consumed: PaperAutonomySupervisorDecisionConsumeResult[] = [];
   const blocked: PaperAutonomySupervisorDecisionBlocked[] = [];
   const recordedAt = input.recordedAt ?? new Date().toISOString();

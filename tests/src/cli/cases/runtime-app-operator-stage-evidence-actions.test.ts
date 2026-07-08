@@ -177,7 +177,7 @@ function readFullAppOperatorProjection(stateRoot: string, fixtureContractsRoot: 
 function seedStageAttempt(input: Parameters<typeof createStageAttempt>[1]) {
   const { db } = openQueueDb();
   try {
-    const providerKind = input.providerKind ?? 'local_sqlite';
+    const providerKind = input.providerKind ?? 'temporal';
     const sourceFingerprint = input.sourceFingerprint?.trim() || null;
     const taskId = input.taskId?.trim() || null;
     const launchInvocation = input.executorBindingRef
@@ -313,7 +313,7 @@ test('stage production evidence consumes older ledger attempts beyond default wo
       seedStageAttempt({
         domainId: 'medautoscience',
         stageId: `overflow_${index}`,
-        providerKind: 'local_sqlite',
+        providerKind: 'temporal',
         workspaceLocator: { workspace_root: `/tmp/overflow-${index}` },
         newAttempt: true,
       });

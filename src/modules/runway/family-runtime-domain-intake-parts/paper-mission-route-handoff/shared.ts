@@ -3,7 +3,6 @@ import {
   stringValue as optionalString,
   type JsonRecord,
 } from '../../../../kernel/json-record.ts';
-import type { EnqueueInput } from '../../family-runtime-command.ts';
 
 export { optionalString };
 export type { JsonRecord };
@@ -90,7 +89,7 @@ export type IntakeOptions = {
 };
 
 export type MasPaperMissionRouteHandoffIntakeStatus =
-  | 'accepted_for_runtime_intake'
+  | 'accepted_for_provider_projection'
   | 'typed_wait'
   | 'terminal_no_runtime'
   | 'rejected';
@@ -160,7 +159,7 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   owner_route: JsonRecord | null;
   next_action: JsonRecord | null;
   handoff_projection: JsonRecord | null;
-  runtime_request_input: EnqueueInput | null;
+  runtime_request_input: null;
   accepted_command_packet: {
     surface_kind: typeof COMMAND_PACKET_SURFACE_KIND;
     canonical_surface_kind: typeof DOMAIN_ROUTE_COMMAND_PACKET_SURFACE_KIND;

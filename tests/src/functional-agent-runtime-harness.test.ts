@@ -128,7 +128,7 @@ test('functional agent runtime harness contract is active and exported as an OPL
   assert.equal(contract.live_soak_boundary.can_authorize_domain_ready, false);
 
   for (const observation of [
-    'queue_attempt_ledger_observed',
+    'stage_attempt_projection_ledger_observed',
     'typed_closeout_observed',
     'memory_refs_only_writeback_chain_observed',
     'state_transition_matrix_smooth',

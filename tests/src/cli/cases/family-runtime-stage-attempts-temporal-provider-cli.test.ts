@@ -185,7 +185,7 @@ test('family-runtime temporal attempt cancel refuses non-temporal attempts', () 
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], familyRuntimeEnv(stateRoot));
@@ -366,7 +366,7 @@ test('family-runtime temporal attempt start refuses non-temporal attempts', () =
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], familyRuntimeEnv(stateRoot));

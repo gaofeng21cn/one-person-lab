@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, fs, insertFamilyRuntimeTaskProjectionFixture, os, path, repoRoot, runCli, test } from '../helpers.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -75,17 +75,12 @@ db.close();`,
       'typed_closeout_packet_required',
     ], familyRuntimeEnv(stateRoot));
 
-    const task = runCli([
-      'family-runtime',
-      'enqueue',
-      '--domain',
-      'medautoscience',
-      '--task-kind',
-      'paper_autonomy/repair-recheck',
-      '--payload',
-      '{"workspace_root":"/tmp/mas"}',
-    ], familyRuntimeEnv(stateRoot));
-    const taskId = task.family_runtime_enqueue.task.task_id;
+    const taskId = insertFamilyRuntimeTaskProjectionFixture({
+      stateRoot,
+      domainId: 'medautoscience',
+      taskKind: 'paper_autonomy/repair-recheck',
+      payload: { workspace_root: '/tmp/mas' },
+    }).task_id;
     const deadLettered = runCli([
       'family-runtime',
       'attempt',

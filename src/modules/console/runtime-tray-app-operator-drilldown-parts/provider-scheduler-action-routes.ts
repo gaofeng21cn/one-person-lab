@@ -30,9 +30,6 @@ function schedulerAction(role: string | null) {
   if (role === 'scheduler_cadence_manual_trigger') {
     return { action: 'trigger', actionKind: 'provider_scheduler_trigger', mutation: true, diagnostic: false };
   }
-  if (role === 'scheduler_tick_provider_slo_and_queue_dispatch') {
-    return { action: 'tick', actionKind: 'provider_scheduler_tick', mutation: true, diagnostic: false };
-  }
   return null;
 }
 

@@ -10,61 +10,40 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   test,
 } from '../../helpers.ts';
-import { createDispatchFixture, familyRuntimeEnv } from './helpers.ts';
+import { familyRuntimeEnv } from './helpers.ts';
 
-test('family-runtime local provider status does not inspect a bad Hermes binary path', () => {
+test('family-runtime local provider status fails closed after provider retirement', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-local-provider-'));
   try {
-    const output = runCli(
+    const output = runCliFailure(
       ['family-runtime', 'status', '--provider', 'local_sqlite'],
       familyRuntimeEnv(stateRoot, {
         OPL_HERMES_BIN: path.join(stateRoot, 'missing-hermes'),
       }),
     );
 
-    assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
-    assert.equal(output.family_runtime.readiness.provider_ready, false);
-    assert.equal(output.family_runtime.readiness.diagnostic_provider_ready, true);
-    assert.equal(output.family_runtime.readiness.full_online_ready, false);
-    assert.equal(output.family_runtime.readiness.durable_online_ready, false);
-    assert.equal(output.family_runtime.readiness.degraded, true);
-    assert.equal(output.family_runtime.readiness.degraded_reason, 'local_sqlite_is_dev_ci_offline_only');
-    assert.equal(output.family_runtime.readiness.local_sqlite_is_dev_ci_offline_only, true);
-    assert.equal(output.family_runtime.readiness.local_sqlite_counts_as_provider_ready, false);
-    assert.equal(output.family_runtime.readiness.selected_provider_can_replace_domain_daemons, false);
-    assert.equal(output.family_runtime.periodic_execution.status, 'dev_offline_provider_cannot_replace_domain_daemons');
-    assert.equal(output.family_runtime.periodic_execution.local_sqlite_role, 'dev_ci_offline_diagnostic_baseline_only');
-    assert.equal(output.family_runtime.periodic_execution.blocker.blocker_id, 'local_sqlite_is_dev_ci_offline_only');
-    assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.ready, true);
-    assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.details.diagnostic_ready, true);
-    assert.equal(
-      output.family_runtime.provider_runtime.providers.local_sqlite.details.provider_ready_counts_as_online_ready,
-      false,
-    );
+    assert.equal(output.payload.error.code, 'cli_usage_error');
+    assert.equal(output.payload.error.details.provider_kind, 'local_sqlite');
+    assert.deepEqual(output.payload.error.details.allowed_provider_kinds, ['temporal', 'external_sandbox']);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('family-runtime doctor degrades explicit local sqlite because it cannot replace domain daemons', () => {
+test('family-runtime doctor rejects explicit local sqlite provider', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-local-doctor-'));
   try {
-    const output = runCli(
+    const output = runCliFailure(
       ['family-runtime', 'doctor', '--provider', 'local_sqlite'],
       familyRuntimeEnv(stateRoot),
     );
 
-    assert.equal(output.family_runtime_doctor.doctor_status, 'degraded');
-    assert.deepEqual(output.family_runtime_doctor.blockers, ['local_sqlite_is_dev_ci_offline_only']);
-    assert.equal(output.family_runtime_doctor.status.readiness.provider_ready, false);
-    assert.equal(output.family_runtime_doctor.status.readiness.diagnostic_provider_ready, true);
-    assert.equal(output.family_runtime_doctor.status.readiness.full_online_ready, false);
-    assert.equal(
-      output.family_runtime_doctor.status.readiness.selected_provider_can_replace_domain_daemons,
-      false,
-    );
+    assert.equal(output.payload.error.code, 'cli_usage_error');
+    assert.equal(output.payload.error.details.provider_kind, 'local_sqlite');
+    assert.deepEqual(output.payload.error.details.allowed_provider_kinds, ['temporal', 'external_sandbox']);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -98,18 +77,10 @@ test('family-runtime temporal provider reports landed code separately from live 
   }
 });
 
-test('family-runtime status flags local queue lifecycle truth when Temporal is selected', () => {
+test('family-runtime local queue commands are retired public runtime entrypoints', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-queue-boundary-'));
-  const dispatch = createDispatchFixture(`
-printf '{"accepted":false,"error":"planned local queue retry"}\\n'
-exit 1
-`);
   try {
-    const localEnv = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
-      OPL_FAMILY_RUNTIME_MEDAUTOGRANT_DISPATCH: dispatch.dispatchPath,
-    });
-    runCli([
+    const enqueue = runCliFailure([
       'family-runtime',
       'enqueue',
       '--domain',
@@ -120,90 +91,15 @@ exit 1
       '{"workspace":"/tmp/mag"}',
       '--dedupe-key',
       'mag:test:temporal-queue-boundary',
-    ], localEnv);
-    runCli(['family-runtime', 'tick', '--source', 'test'], localEnv);
+    ], familyRuntimeEnv(stateRoot));
+    const queueList = runCliFailure(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+    const tick = runCliFailure(['family-runtime', 'tick', '--source', 'test'], familyRuntimeEnv(stateRoot));
 
-    const temporalEnv = familyRuntimeEnv(stateRoot, {
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-      OPL_TEMPORAL_ADDRESS: '',
-      TEMPORAL_ADDRESS: '',
-    });
-    const queue = runCli(['family-runtime', 'queue', 'list'], temporalEnv);
-    const status = runCli(['family-runtime', 'status', '--provider', 'temporal'], temporalEnv);
-
-    assert.equal(queue.family_runtime_queue.queue.by_status.retry_waiting, 1);
-    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.status, 'attention_needed');
-    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.temporal_migration_required, true);
-    assert.deepEqual(
-      queue.family_runtime_queue.queue_lifecycle_boundary.gate.required_evidence,
-      [
-        'workflow_id',
-        'temporal_workflow_history_or_query_readback',
-        'stage_attempt_identity',
-        'temporal_retry_policy_readback_for_attempt_budget',
-        'temporal_activity_failure_or_dead_letter_history', // reuse-first: allow Temporal-owned dead-letter evidence vocabulary.
-        'authority_event_ref_or_projection_rebuild_ref',
-        'operator_projection_repair_or_retirement_receipt',
-      ],
-    );
-    assert.deepEqual(
-      queue.family_runtime_queue.queue_lifecycle_boundary.gate.allowed_readbacks,
-      [
-        'opl family-runtime queue list --json',
-        'opl family-runtime queue inspect <task_id> --json',
-        'opl runway reconcile --json',
-      ],
-    );
-    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.scheduler_mutation_allowed, false);
-    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.domain_progress_claim_allowed, false);
-    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.ready_claim_allowed, false);
-    assert.equal(
-      queue.family_runtime_queue.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.allowed_local_action,
-      'read_projection_and_emit_operator_handoff_only',
-    );
-    assert.equal(queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_task_count, 1);
-    const competingTask = queue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0];
-    assert.equal(
-      competingTask.status,
-      'retry_waiting',
-    );
-    assert.equal(typeof competingTask.attempts, 'number');
-    assert.equal(competingTask.max_attempts, 3); // reuse-first: allow local max_attempts vocabulary boundary.
-    assert.equal(competingTask.lease, null);
-    assert.equal(competingTask.dead_letter_reason, null); // reuse-first: allow local dead-letter vocabulary boundary.
-    assert.equal(competingTask.projection_handoff.allowed_local_action, 'read_projection_and_emit_operator_handoff_only');
-    assert.equal(competingTask.projection_handoff.scheduler_mutation_allowed, false);
-    assert.equal(competingTask.projection_handoff.domain_progress_claim_allowed, false);
-    runCli([
-      'family-runtime',
-      'queue',
-      'retire',
-      '--domain',
-      'medautogrant',
-      '--task-kind',
-      'stage-attempt/closeout',
-      '--reason',
-      'temporal_history_replaces_local_lifecycle_truth',
-    ], temporalEnv);
-    const retiredQueue = runCli(['family-runtime', 'queue', 'list'], temporalEnv);
-
-    assert.equal(retiredQueue.family_runtime_queue.queue.by_status.blocked, 1);
-    assert.equal(
-      retiredQueue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_statuses.includes('blocked'),
-      true,
-    );
-    assert.equal(
-      retiredQueue.family_runtime_queue.queue_lifecycle_boundary.gate.competing_tasks[0].status,
-      'blocked',
-    );
-    assert.equal(status.family_runtime.readiness.queue_truth_competes_with_temporal, true);
-    assert.equal(
-      status.family_runtime.queue_lifecycle_boundary.gate.reason,
-      'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt',
-    );
+    assert.equal(enqueue.payload.error.code, 'unknown_command');
+    assert.equal(queueList.payload.error.code, 'unknown_command');
+    assert.equal(tick.payload.error.code, 'unknown_command');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
   }
 });
 

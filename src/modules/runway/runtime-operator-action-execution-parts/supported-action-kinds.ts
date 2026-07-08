@@ -27,7 +27,6 @@ export const SUPPORTED_OPL_ACTION_ROUTE_KINDS = [
   'provider_scheduler_status',
   'provider_scheduler_install',
   'provider_scheduler_trigger',
-  'provider_scheduler_tick',
   'legacy_cleanup_apply',
   'legacy_cleanup_verify',
 ];

@@ -108,7 +108,6 @@ test('runtime App projection selects provider scheduler install before manual tr
     operator_action_routing_refs: {
       refs: [
         route('trigger', 'provider_scheduler_trigger'),
-        route('tick', 'provider_scheduler_tick'),
         route('status', 'provider_scheduler_status'),
         route('install', 'provider_scheduler_install'),
       ],
@@ -177,7 +176,6 @@ test('runtime App projection does not select scheduler mutation routes blocked b
     operator_action_routing_refs: {
       refs: [
         route('trigger', 'provider_scheduler_trigger'),
-        route('tick', 'provider_scheduler_tick'),
         route('status', 'provider_scheduler_status'),
         route('install', 'provider_scheduler_install'),
       ],
@@ -490,7 +488,6 @@ test('runtime App projection does not select closed provider SLO routes as next 
     operator_action_routing_refs: {
       refs: [
         route('trigger', 'provider_scheduler_trigger'),
-        route('tick', 'provider_scheduler_tick'),
         route('status', 'provider_scheduler_status'),
         route('install', 'provider_scheduler_install'),
       ],

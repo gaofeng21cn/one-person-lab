@@ -15,7 +15,7 @@ export function parseProviderOnlyArgs(
     } else {
       throw new FrameworkContractError('cli_usage_error', `family-runtime ${mode} accepts only --provider.`, {
         extra_args: args,
-        usage: `opl family-runtime ${mode} [--provider local_sqlite|temporal]`,
+        usage: `opl family-runtime ${mode} [--provider temporal]`,
       });
     }
   });

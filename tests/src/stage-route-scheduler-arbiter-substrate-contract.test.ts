@@ -78,7 +78,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
 
   const terminalOrdering = surfaces.terminal_closeout_precedes_live_projection;
   assert.ok(terminalOrdering.required_observations.includes('typed_closeout_packet_ref_or_blocker_ref'));
-  assert.ok(terminalOrdering.required_observations.includes('linked_queue_task_identity'));
+  assert.ok(terminalOrdering.required_observations.includes('linked_stage_attempt_projection_identity'));
   assert.equal(terminalOrdering.forbidden_fallbacks.includes('active_run_id_non_null'), true);
   assert.equal(terminalOrdering.forbidden_fallbacks.includes('stale_transport_status'), true);
 
@@ -314,7 +314,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     'domain_policy_request_only_normalized_before_command_materialization',
   );
   assert.equal(
-    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.queue_empty_terminal_evidence,
+    domainProgress.concepts.TransitionDecisionEngine.durable_substrate_first_slice.stage_attempt_projection_empty_terminal_evidence,
     false,
   );
   assert.match(
@@ -343,7 +343,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
     true,
   );
   assert.ok(domainProgress.not_complete_claims.includes(
-    'execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_tick_or_owner_runtime',
+    'execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_cadence_or_owner_runtime',
   ));
   assert.ok(domainProgress.not_complete_claims.includes(
     'mapping_landed_does_not_mean_domain_progress_transition_runtime_landed',

@@ -13,7 +13,7 @@ test('runtime snapshot projects cognitive kernel launch and closeout boundaries 
       '--stage',
       'analysis-campaign',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mas',

@@ -8,7 +8,7 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 ## 当前角色
 
 `OPL` 是 one-person research lab 的 stage-led、以 Agent executor 为最小执行单位的智能体运行框架。
-它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、typed queue、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力；domain truth 继续由各个 domain 仓直接持有。
+它以 `Codex CLI` 作为 stage 内默认具体执行器，用接近人类专家实施方式的 stage 组织大型任务，并持有 activation、stage attempt、stage-attempt request/projection、wakeup、receipt、recovery、projection、shared modules / contracts / indexes 等框架能力；domain truth 继续由各个 domain 仓直接持有。
 
 今天的公开 `OPL` 表面已经收口到这几层：
 
@@ -24,7 +24,7 @@ Machine boundary: 本文是人读公开路线图。当前实现和 readiness tru
 当前活跃路线有两条等价入口：
 
 - direct path：`Codex-default executor -> explicit OPL activation -> selected domain agent entry`
-- durable path：`Codex-default executor -> explicit OPL activation / typed family queue -> configured family runtime provider when durable orchestration is needed -> selected domain agent entry`
+- durable path：`Codex-default executor -> explicit OPL activation / stage-attempt request/projection -> configured family runtime provider when durable orchestration is needed -> selected domain agent entry`
 
 这条路线现在聚焦四件事：
 

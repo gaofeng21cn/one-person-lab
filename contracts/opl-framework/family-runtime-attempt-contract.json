@@ -9,7 +9,7 @@
     "route_is_domain_owner_semantic": true,
     "route_is_small_stage": false,
     "route_is_stage_internal_strategy": false,
-    "route_hydrated_into_stage_or_queue_by_opl": true,
+    "route_hydrated_into_stage_attempt_by_opl": true,
     "route_completion_is_stage_completion": false,
     "provider_completion_is_owner_receipt": false,
     "route_reconciler_role": "hydrate_reconcile_owner_routes_only",
@@ -19,7 +19,6 @@
     "route_reconciler_can_sign_receipts": false
   },
   "allowed_providers": [
-    "local_sqlite",
     "temporal"
   ],
   "observability_only": true,
@@ -133,14 +132,12 @@
       "dispatch_ref"
     ],
     "output_records": [
-      "typed_queue_task",
       "stage_attempt_request",
       "stage_attempt_ledger_entry",
       "conflict_or_blocker_envelope",
       "operator_projection"
     ],
     "reconciliation_statuses": [
-      "hydrated_to_queue",
       "hydrated_to_stage_attempt",
       "blocked_by_stage_admission",
       "blocked_by_identity_incomplete",
@@ -198,16 +195,6 @@
       ],
       "visibility_payload_policy": "refs_and_indexable_summary_only_no_transcript_artifact_memory_or_domain_body",
       "fixture_mode_allowed_without_temporal_server": true
-    },
-    "local_sqlite": {
-      "role": "development_and_offline_provider",
-      "stores": [
-        "attempt_ledger",
-        "signals",
-        "provider_run_receipts",
-        "activity_events",
-        "typed_closeout_receipts"
-      ]
     }
   },
   "typed_closeout_contract": {
@@ -527,7 +514,7 @@
     ],
     "surface_refs": [
       "attempt_query_ref",
-      "queue_inspect_ref",
+      "stage_attempt_projection_ref",
       "app_drilldown_ref",
       "stage_progress_log_ref",
       "temporal_visibility_ref",
@@ -547,9 +534,9 @@
   },
   "current_control_state_projection": {
     "surface_kind": "opl_current_control_state",
-    "projection_policy": "opl_reconciled_queue_attempt_provider_closeout_projection_only",
+    "projection_policy": "opl_reconciled_stage_attempt_provider_closeout_projection_only",
     "required_derivation_sources": [
-      "family_runtime_queue_task",
+      "stage_attempt_index_record",
       "stage_attempt_ledger",
       "provider_run_projection",
       "typed_stage_closeout_ledger"
@@ -642,7 +629,7 @@
         "truth_sources": [
           "opl_stage_attempt_ledger",
           "temporal_workflow_history",
-          "typed_queue",
+          "stage_attempt_index",
           "typed_closeout_packet",
           "domain_owned_receipt"
         ],

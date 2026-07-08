@@ -49,7 +49,7 @@ export type FunctionalAgentRuntimeHarnessInput = {
 };
 
 export type FunctionalAgentRuntimeObservationKey =
-  | 'queue_attempt_ledger_observed'
+  | 'stage_attempt_projection_ledger_observed'
   | 'typed_closeout_observed'
   | 'memory_refs_only_writeback_chain_observed'
   | 'state_transition_matrix_smooth'
@@ -63,7 +63,7 @@ export type FunctionalAgentRuntimeObservationKey =
 export type FunctionalAgentRuntimeHarnessResult = ReturnType<typeof runFunctionalAgentRuntimeHarness>;
 
 const REQUIRED_OBSERVATIONS: FunctionalAgentRuntimeObservationKey[] = [
-  'queue_attempt_ledger_observed',
+  'stage_attempt_projection_ledger_observed',
   'typed_closeout_observed',
   'memory_refs_only_writeback_chain_observed',
   'state_transition_matrix_smooth',
@@ -242,7 +242,7 @@ function buildObservations(input: FunctionalAgentRuntimeHarnessInput, matrix: Fa
 
   return {
     observations: {
-      queue_attempt_ledger_observed: input.attempts.some((attempt) =>
+      stage_attempt_projection_ledger_observed: input.attempts.some((attempt) =>
         Boolean(attempt.stage_attempt_id && attempt.task_id && attempt.retry_budget)),
       typed_closeout_observed: closeoutRefs.length > 0
         && input.attempts.some((attempt) => attempt.closeout_receipt_status === 'accepted'),

@@ -34,7 +34,6 @@ import {
   parseCodexAction,
   parseModuleAction,
   releaseChannelPayload,
-  schedulerTickArgs,
   scholarskillsQuestRootPayload,
   scholarskillsWorkspaceRootPayload,
   settingsReloadCodexSurfacePayload,
@@ -659,14 +658,6 @@ async function executeDirectAppAction(
     return {
       delegatedSurface: 'opl family-runtime scheduler trigger --provider temporal',
       result: options.dryRun ? dryRunFamilyRuntimeResult('scheduler_cadence', args) : await runFamilyRuntime(args),
-    };
-  }
-
-  if (options.actionId === 'provider_scheduler_tick') {
-    const args = schedulerTickArgs(options.payload);
-    return {
-      delegatedSurface: 'opl family-runtime scheduler tick --provider temporal',
-      result: options.dryRun ? dryRunFamilyRuntimeResult('scheduler_tick', args) : await runFamilyRuntime(args),
     };
   }
 

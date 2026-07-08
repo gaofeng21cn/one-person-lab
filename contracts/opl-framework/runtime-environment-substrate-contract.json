@@ -288,7 +288,7 @@
     ],
     "opl_keeps_authority_for": [
       "stage_lifecycle",
-      "typed_queue_and_attempt_ledger",
+      "stage_attempt_request_and_projection_ledger",
       "owner_boundary",
       "receipt_ref_transport",
       "run_context_binding",

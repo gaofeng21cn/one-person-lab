@@ -67,7 +67,7 @@ esac
     const success = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const successPersistence = success.runtime_manager.state_index_target.persistence;
     assert.equal(successPersistence.status, 'written');
@@ -79,7 +79,7 @@ esac
     const stale = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const staleFreshness = stale.runtime_manager.state_index_target.persistence.freshness;
     assert.equal(stale.runtime_manager.state_index_target.persistence.status, 'skipped_helper_unavailable');
@@ -112,7 +112,7 @@ esac
     const expired = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const expiredFreshness = expired.runtime_manager.state_index_target.persistence.freshness;
     assert.equal(expiredFreshness.status, 'expired_last_success');
@@ -367,7 +367,7 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
@@ -375,7 +375,7 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
     assert.equal(snapshot.runtime_health.label, '需用户处理');
-    assert.equal(snapshot.runtime_health.provider_kind, 'local_sqlite');
+    assert.equal(snapshot.runtime_health.provider_kind, 'temporal');
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
     assert.equal(snapshot.running_items[0].runtime_owner, 'provider_backed_family_runtime');
@@ -520,7 +520,7 @@ test('runtime snapshot keeps demo and descriptor-only domain manifests out of cu
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
@@ -563,12 +563,12 @@ test('runtime snapshot ignores retired Hermes cron residue', () => {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       HERMES_HOME: hermesHome,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
-    assert.equal(snapshot.runtime_health.provider_kind, 'local_sqlite');
+    assert.equal(snapshot.runtime_health.provider_kind, 'temporal');
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('hermes-cron')), false);
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), false);
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
@@ -726,7 +726,7 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
@@ -807,7 +807,7 @@ test('runtime manager rejects retired Hermes legacy provider selection', () => {
   assert.equal(failure.payload.error.code, 'cli_usage_error');
   assert.equal(failure.payload.error.details.provider_kind, 'hermes_legacy');
   assert.deepEqual(failure.payload.error.details.allowed_provider_kinds, [
-    'local_sqlite',
+    'temporal',
     'temporal',
     'external_sandbox',
   ]);
@@ -848,7 +848,7 @@ test('runtime manager action dry-run plans repairs without mutating native index
     const output = runCli(['runtime', 'manager', 'action', '--dry-run'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const action = output.runtime_manager_action;
 
@@ -886,7 +886,7 @@ test('runtime manager action apply repairs available native surfaces without leg
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'local_sqlite',
+      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
     const action = output.runtime_manager_action;
 

@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { parseJsonText } from '../../../../src/kernel/json-file.ts';
+import {
+  createFamilyRuntimeQueueTables,
+  DEFAULT_MAX_ATTEMPTS,
+} from '../../../../src/modules/runway/family-runtime-store.ts';
 
 import { repoRoot } from './constants.ts';
 import { createContractsFixtureRoot, readJsonFixture, shellSingleQuote } from './fixtures.ts';
@@ -180,6 +185,76 @@ export function createFamilyContractsFixtureRoot() {
 
     fs.writeFileSync(domainsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   });
+}
+
+export function insertFamilyRuntimeTaskProjectionFixture({
+  stateRoot,
+  taskId = `task_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+  domainId,
+  taskKind,
+  payload = {},
+  dedupeKey = null,
+  priority = 50,
+  status = 'queued',
+  source = 'test_projection_fixture',
+}: {
+  stateRoot: string;
+  taskId?: string;
+  domainId: string;
+  taskKind: string;
+  payload?: Record<string, unknown>;
+  dedupeKey?: string | null;
+  priority?: number;
+  status?: string;
+  source?: string;
+}) {
+  const runtimeRoot = path.join(stateRoot, 'family-runtime');
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  const db = new DatabaseSync(path.join(runtimeRoot, 'queue.sqlite'));
+  createFamilyRuntimeQueueTables(db);
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT OR REPLACE INTO tasks (
+      task_id,
+      domain_id,
+      task_kind,
+      payload_json,
+      dedupe_key,
+      priority,
+      status,
+      attempts,
+      max_attempts,
+      source,
+      requires_approval,
+      approved_at,
+      lease_owner,
+      lease_expires_at,
+      last_error,
+      dead_letter_reason,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, NULL, NULL, NULL, NULL, NULL, ?, ?)
+  `).run(
+    taskId,
+    domainId,
+    taskKind,
+    JSON.stringify(payload),
+    dedupeKey,
+    priority,
+    status,
+    DEFAULT_MAX_ATTEMPTS,
+    source,
+    now,
+    now,
+  );
+  db.close();
+  return {
+    task_id: taskId,
+    domain_id: domainId,
+    task_kind: taskKind,
+    payload,
+    status,
+  };
 }
 
 export function createFakeLaunchctlFixture() {

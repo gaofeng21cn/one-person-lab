@@ -18,7 +18,7 @@ const BRAND_MODULE_OBJECT_VIEWS: Partial<Record<BrandModuleId, readonly string[]
   atlas: ['list', 'surfaces', 'graph', 'lifecycle'],
   pack: ['domain-packs', 'authority-abi', 'generated-surfaces', 'compiler'],
   stagecraft: ['stages', 'graph', 'receipts', 'blockers'],
-  runway: ['queue', 'attempts', 'provider', 'blockers'],
+  runway: ['attempt-index', 'attempts', 'provider', 'blockers'],
   ledger: ['evidence', 'artifacts', 'receipts', 'lineage'],
   console: ['actions', 'read-model', 'drilldown'],
   'foundry-lab': ['blueprints', 'work-orders', 'conformance', 'promotions'],

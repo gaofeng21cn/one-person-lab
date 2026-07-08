@@ -1009,12 +1009,11 @@
         "validate": "opl runway validate --json",
         "doctor": "opl runway doctor --json",
         "additional_commands": [
-          "opl runway queue --json",
+          "opl runway attempt-index --json",
           "opl runway attempts --json",
           "opl runway provider --json",
           "opl runway blockers --json",
           "opl family-runtime status --json",
-          "opl family-runtime queue list --json",
           "opl family-runtime attempt list --json",
           "opl runway readiness --json",
           "opl runway reconcile --json",

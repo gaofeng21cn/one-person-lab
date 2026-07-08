@@ -101,8 +101,8 @@ test('family-runtime control-loop status distinguishes substrate liveness from s
   );
   assert.equal(
     controlLoop.provider_runtime.temporal_first_runtime_contract.event_history_mapping
-      .local_provider_role,
-    'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+      .sqlite_sidecar_role,
+    'projection_and_readback_index_only_not_runtime_provider',
   );
   assert.equal(
     controlLoop.provider_runtime.temporal_first_runtime_contract.false_ready_boundary
@@ -149,8 +149,8 @@ test('Runway Temporal-first contract readback maps workflows activities signals 
   );
   assert.equal(contract.durable_lifecycle_readback.ready_claim_allowed_without_temporal_history, false);
   assert.equal(
-    contract.event_history_mapping.local_provider_role,
-    'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+    contract.event_history_mapping.sqlite_sidecar_role,
+    'projection_and_readback_index_only_not_runtime_provider',
   );
   assert.equal(contract.workflow_activity_signal_mapping.human_gate_signal.contract_name, 'HumanGateSignal');
   assert.equal(contract.workflow_activity_signal_mapping.owner_receipt_signal.contract_name, 'OwnerReceiptSignal');
@@ -227,29 +227,28 @@ test('Runway control-loop sibling commands execute from the module surface', () 
   assert.equal(repair.authority_boundary.can_create_typed_blocker, false);
 });
 
-test('Runway reconcile projects competing local queue lifecycle as read-only observed status', () => {
+test('Runway reconcile projects retired local task rows as diagnostic-only observed status', () => {
   const reconcile = buildRunwayReconcileProjection({
-    control_loop_status: 'attention_required',
+    control_loop_status: 'idle_ready',
     desired_current_reconciliation: {
       reconciler_id: 'runway_progress_reconciler',
       desired_state_ref: 'current_owner_delta',
       current_state_refs: [
-        'typed_family_queue',
+        'stage_attempt_index',
         'temporal_workflow_visibility',
         'stage_attempt_ledger',
         'provider_worker_lifecycle',
         'scheduler_cadence',
       ],
-      allowed_next_actions: ['observe_queue_lifecycle_boundary'],
+      allowed_next_actions: ['no_safe_action'],
       selected_next_safe_action: {
-        action_id: 'observe_queue_lifecycle_boundary',
-        owner: 'opl_runway',
-        reason: 'local_sqlite_queue_lifecycle_competes_with_temporal',
-        command: 'opl family-runtime queue list --json',
+        action_id: 'no_safe_action',
+        owner: 'stage_transition_authority_or_domain_owner',
+        reason: 'runtime_idle_waiting_for_current_owner_delta',
+        command: 'opl runway handoff-gates --json',
         mutation: false,
-        competing_task_count: 1,
-        blocks_runtime_execution: true,
-        blocks_domain_progress_claim: true,
+        blocks_runtime_execution: false,
+        blocks_domain_progress_claim: false,
       },
       forbidden_next_actions: [
         'write_domain_truth',
@@ -264,10 +263,10 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
       selected_provider: 'temporal',
       selected_ready: true,
       selected_status: 'ready',
-      degraded_reason: 'local_sqlite_queue_lifecycle_competes_with_temporal',
+      degraded_reason: null,
       runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
-      local_provider_role: 'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
-      live_workflow_execution_ready: false,
+      sqlite_sidecar_role: 'projection_and_readback_index_only',
+      live_workflow_execution_ready: true,
     },
     scheduler_cadence: {
       substrate: 'temporal_scheduler',
@@ -288,9 +287,9 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
         temporal_owned_lifecycle_when_temporal_selected: ['workflow_history'],
       },
       gate: {
-        status: 'attention_needed',
-        reason: 'local_sqlite_task_lifecycle_status_without_temporal_stage_attempt',
-        temporal_migration_required: true,
+        status: 'diagnostic_only',
+        reason: 'retired_local_task_projection_observed_without_temporal_stage_attempt',
+        temporal_migration_required: false,
         required_evidence: [
           'workflow_id',
           'temporal_workflow_history_or_query_readback',
@@ -301,8 +300,8 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
           'operator_projection_repair_or_retirement_receipt',
         ],
         allowed_readbacks: [
-          'opl family-runtime queue list --json',
-          'opl family-runtime queue inspect <task_id> --json',
+          'opl family-runtime status --json',
+          'opl family-runtime attempt list --json',
           'opl runway reconcile --json',
         ],
         competing_statuses: ['running', 'retry_waiting', 'blocked', 'dead_letter', 'succeeded'], // reuse-first: allow legacy status fixture
@@ -358,8 +357,8 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
           'operator_projection_repair_or_retirement_receipt',
         ],
         readback_surfaces: [
-          'opl family-runtime queue list --json',
-          'opl family-runtime queue inspect <task_id> --json',
+          'opl family-runtime status --json',
+          'opl family-runtime attempt list --json',
           'opl runway reconcile --json',
         ],
         local_projection_field_policy: {
@@ -412,11 +411,11 @@ test('Runway reconcile projects competing local queue lifecycle as read-only obs
     },
   } as unknown as Parameters<typeof buildRunwayReconcileProjection>[0]);
 
-  assert.equal(reconcile.selected_next_safe_action.action_id, 'observe_queue_lifecycle_boundary');
-  assert.equal(reconcile.selected_next_safe_action.command, 'opl family-runtime queue list --json');
+  assert.equal(reconcile.selected_next_safe_action.action_id, 'no_safe_action');
+  assert.equal(reconcile.selected_next_safe_action.command, 'opl runway handoff-gates --json');
   assert.equal(reconcile.selected_next_safe_action.mutation, false);
   assert.equal(reconcile.apply_command, null);
-  assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.status, 'attention_needed');
+  assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.status, 'diagnostic_only');
   assert.equal(reconcile.observed_state.queue_lifecycle_boundary.gate.scheduler_mutation_allowed, false);
   assert.equal(
     reconcile.observed_state.queue_lifecycle_boundary.gate.competing_tasks[0].projection_handoff

@@ -5,9 +5,9 @@ import {
   reconcileCurrentControlExecutableOwners,
   suppressStaleDefaultExecutorInputs,
 } from '../../src/modules/runway/family-runtime-domain-intake-parts/current-control-reconciliation.ts';
-import type { EnqueueInput } from '../../src/modules/runway/family-runtime-command.ts';
+import type { StageAttemptProjectionInput } from '../../src/modules/runway/family-runtime-command.ts';
 
-function defaultExecutorInput(payload: Record<string, unknown>): EnqueueInput {
+function defaultExecutorInput(payload: Record<string, unknown>): StageAttemptProjectionInput {
   return {
     domainId: 'medautoscience',
     taskKind: 'domain_owner/default-executor-dispatch',
@@ -70,7 +70,7 @@ test('current-control reconciliation requires same owner-action identity', () =>
 test('current-control suppression removes stale default-executor pending tasks for admitted studies', () => {
   const stalePending = defaultExecutorInput({ study_id: 'DM002' });
   const retainedDifferentStudy = defaultExecutorInput({ study_id: 'DM003' });
-  const retainedDifferentKind: EnqueueInput = {
+  const retainedDifferentKind: StageAttemptProjectionInput = {
     domainId: 'medautoscience',
     taskKind: 'paper_autonomy/guarded-apply',
     payload: {

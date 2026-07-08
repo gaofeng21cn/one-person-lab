@@ -115,7 +115,6 @@ test('family-runtime evidence-worklist keeps provider scheduler diagnostics and 
               schedulerRoute('status', 'provider_scheduler_status'),
               schedulerRoute('install', 'provider_scheduler_install'),
               schedulerRoute('trigger', 'provider_scheduler_trigger'),
-              schedulerRoute('tick', 'provider_scheduler_tick'),
             ],
           },
           operator_action_routing_refs: {

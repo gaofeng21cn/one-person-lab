@@ -3,7 +3,7 @@
   "contract_id": "opl_family_runtime_online_substrate_contract",
   "contract_ref": "contracts/opl-framework/family-runtime-online-substrate-contract.json",
   "provider_model": "provider_backed_stage_attempt_runtime",
-  "scope": "OPL family provider-backed runtime substrate, typed queue, stage attempt ledger, dispatch, notification, approval, signal, and recovery bridge",
+  "scope": "OPL family Temporal-backed runtime substrate, stage attempt ledger/index, notification, signal, and recovery projection",
   "standard_agent_default_runtime_policy": {
     "surface_kind": "opl_standard_agent_default_runtime_policy",
     "default_runtime_path": "opl_temporal_hosted_autonomous",
@@ -27,15 +27,9 @@
     "concrete_executor_owner": "codex_cli_or_domain_selected_executor"
   },
   "allowed_providers": [
-    "local_sqlite",
     "temporal"
   ],
   "provider_semantics": {
-    "local_sqlite": {
-      "role": "local queue, receipt, and stage attempt ledger provider for development, CI, offline diagnostics, direct skill calls, and guarded local operation; not a production online readiness substitute",
-      "durable_online_wakeup": false,
-      "external_runtime_required": false
-    },
     "temporal": {
       "role": "required production durable stage-attempt workflow provider",
       "durable_online_wakeup": true,
@@ -65,9 +59,7 @@
   },
   "opl_owned_capabilities": [
     "provider_selection",
-    "typed_family_queue",
     "stage_attempt_ledger",
-    "domain_adapter_dispatch",
     "local_inbox_notification_copy",
     "family_runtime_events_export",
     "provider_slo_cadence_action_projection",
@@ -100,9 +92,8 @@
     "worker_launch_decision"
   ],
   "state": {
-    "queue_database": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+    "stage_attempt_index_database": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
     "stage_attempts_table": "stage_attempts",
-    "dispatch_task_dir": "${OPL_STATE_DIR}/family-runtime/dispatch",
     "local_inbox_table": "notifications",
     "events_table": "events"
   },
@@ -128,15 +119,14 @@
   ],
   "degraded_diagnostic_mode": {
     "selected_provider_when_unconfigured": "temporal",
-    "explicit_local_provider": "local_sqlite",
-    "local_provider_role": "dev_ci_offline_diagnostic_baseline",
+    "retired_local_provider": "local_sqlite",
+    "sqlite_sidecar_role": "projection_and_readback_index_only",
     "temporal_unready_policy": "fail_closed_blocked",
     "full_online_ready": false,
     "allowed_surfaces": [
       "local status",
       "manifest",
       "doctor diagnostics",
-      "queue read",
       "stage attempt create",
       "stage attempt inspect"
     ]
@@ -147,7 +137,8 @@
     "OPL cannot override artifact or publication authority",
     "Provider receipt cannot become MAS/MAG/RCA truth owner",
     "Hermes cannot be described as a family-runtime provider or default production substrate",
-    "Local sqlite provider cannot be described as production online ready",
+    "Local sqlite cannot be described as a family-runtime provider or production online ready",
+    "SQLite sidecar rows cannot drive scheduling, queue mutation, redrive, or provider readiness",
     "Temporal unavailable must be reported as a required dependency blocker for Full online readiness"
   ]
 }

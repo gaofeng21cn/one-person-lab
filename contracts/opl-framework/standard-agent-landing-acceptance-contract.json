@@ -31,7 +31,7 @@
     "opl_must_own": [
       "generated CLI/MCP/Skill/product-entry/status/workbench surfaces",
       "StageRun execution substrate",
-      "typed queue and attempt ledger",
+      "stage-attempt request/projection and attempt ledger",
       "retry/dead-letter/resume/wakeup shell",
       "state index and refs-only ledger",
       "generic lifecycle and locator shell",

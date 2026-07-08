@@ -96,7 +96,7 @@ export const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
       opl_role: 'replacement_or_generated_surface_owner',
       examples: [
         'scheduler_daemon',
-        'queue_attempt_ledger',
+        'stage_attempt_projection_ledger',
         'generic_state_machine_runner',
         'session_store',
         'sqlite_lifecycle_engine',
@@ -210,7 +210,7 @@ export const PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY = {
   ],
   forbidden_private_surface_classes: [
     'generic_scheduler_or_daemon',
-    'generic_queue_or_attempt_ledger',
+    'generic_local_queue_or_attempt_loop',
     'generic_state_machine_runner',
     'generic_persistence_or_sqlite_lifecycle_engine',
     'generic_cli_mcp_product_wrapper',

@@ -12,11 +12,9 @@ import {
   type StageAttemptStatus,
 } from './family-runtime-stage-attempt-ledger.ts';
 import {
-  DEFAULT_MAX_ATTEMPTS,
   insertEvent,
   insertNotification,
   nowIso,
-  stableId,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
 import {
@@ -30,8 +28,6 @@ export const PAPER_MISSION_STAGE_ROUTE_TASK_KIND = 'paper_mission/stage-route';
 export const PAPER_MISSION_STAGE_ROUTE_RUNTIME_REQUEST_KIND = 'mas_paper_mission_stage_route';
 
 const PAPER_MISSION_STAGE_ROUTE_DOMAIN_GATE_PENDING_REASON = 'paper_mission_stage_route_domain_gate_pending';
-const PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_REASON =
-  'paper_mission_stage_route_terminal_closeout_successor_admitted';
 const PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_POLICY =
   'terminal_provider_closeout_cannot_self_admit_successor_external_fresh_handoff_required';
 const MAX_TERMINAL_SUCCESSOR_GENERATION = 1;
@@ -381,187 +377,6 @@ function missingTerminalSuccessorIdentityFields(payload: Record<string, unknown>
   );
 }
 
-function successorDedupeKey(row: FamilyRuntimeTaskRow, terminalAttempt: StageAttemptPayload) {
-  return [
-    'paper-mission-route-terminal-successor',
-    row.task_id,
-    terminalAttempt.stage_attempt_id,
-  ].join(':');
-}
-
-function successorPayloadForTerminalAttempt(
-  payload: Record<string, unknown>,
-  row: FamilyRuntimeTaskRow,
-  terminalAttempt: StageAttemptPayload,
-  reason: string,
-) {
-  const stageRunRequest = recordValue(payload.stage_run_request);
-  const authorityBoundary = recordValue(payload.authority_boundary);
-  const generation = terminalSuccessorGeneration(payload) + 1;
-  const commandKind = paperMissionStageRouteIdentityValue(payload, 'command_kind');
-  const routeTarget = paperMissionStageRouteIdentityValue(payload, 'route_target');
-  const routeIdentityKey = paperMissionStageRouteIdentityValue(payload, 'route_identity_key');
-  const attemptIdempotencyKey = paperMissionStageRouteIdentityValue(payload, 'attempt_idempotency_key');
-  const requestIdempotencyKey = paperMissionStageRouteIdentityValue(payload, 'request_idempotency_key');
-  return {
-    ...payload,
-    runtime_request_status: 'queued_request',
-    ...(commandKind ? { command_kind: commandKind } : {}),
-    ...(routeTarget ? { route_target: routeTarget } : {}),
-    ...(routeIdentityKey ? { route_identity_key: routeIdentityKey } : {}),
-    ...(attemptIdempotencyKey ? { attempt_idempotency_key: attemptIdempotencyKey } : {}),
-    ...(requestIdempotencyKey ? { request_idempotency_key: requestIdempotencyKey } : {}),
-    terminal_successor_generation: generation,
-    terminal_successor_max_generation: MAX_TERMINAL_SUCCESSOR_GENERATION,
-    terminal_successor_root_task_id: optionalString(payload.terminal_successor_root_task_id) ?? row.task_id,
-    requeued_from_terminal_task_id: row.task_id,
-    requeued_from_terminal_stage_attempt_id: terminalAttempt.stage_attempt_id,
-    requeued_from_terminal_reason: reason,
-    requeued_from_terminal_closeout_refs: terminalAttempt.closeout_refs,
-    requeued_from_terminal_closeout_receipt_status: terminalAttempt.closeout_receipt_status,
-    stage_run_request: {
-      ...stageRunRequest,
-      request_status: 'requested',
-      requested_by: 'paper_mission_stage_route_terminal_closeout',
-      previous_task_id: row.task_id,
-      previous_stage_attempt_id: terminalAttempt.stage_attempt_id,
-      previous_terminal_reason: reason,
-      command_kind: commandKind,
-      route_target: routeTarget,
-      route_identity_key: routeIdentityKey,
-      attempt_idempotency_key: attemptIdempotencyKey,
-      request_idempotency_key: requestIdempotencyKey,
-      domain_truth_owner: 'med-autoscience',
-      runtime_owner: 'one-person-lab',
-      stage_run_created: false,
-      provider_attempt_requested: false,
-      provider_running: false,
-    },
-    authority_boundary: {
-      ...authorityBoundary,
-      writes_owner_receipt: false,
-      writes_typed_blocker: false,
-      writes_human_gate: false,
-      writes_current_package: false,
-      writes_paper_body: false,
-      can_claim_provider_running: false,
-      can_claim_paper_progress: false,
-      can_claim_runtime_ready: false,
-    },
-  };
-}
-
-function enqueuePaperMissionStageRouteSuccessor(
-  db: DatabaseSync,
-  input: {
-    row: FamilyRuntimeTaskRow;
-    payload: Record<string, unknown>;
-    terminalAttempt: StageAttemptPayload;
-    source: string;
-    reason: string;
-    queuedAt: string;
-  },
-) {
-  const dedupeKey = successorDedupeKey(input.row, input.terminalAttempt);
-  const existing = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
-    | FamilyRuntimeTaskRow
-    | undefined;
-  if (existing) {
-    return { created: false, taskId: existing.task_id, dedupeKey };
-  }
-  const payload = successorPayloadForTerminalAttempt(
-    input.payload,
-    input.row,
-    input.terminalAttempt,
-    input.reason,
-  );
-  const taskId = stableId('frt', [
-    input.row.domain_id,
-    input.row.task_kind,
-    dedupeKey,
-    payload,
-    input.queuedAt,
-  ]);
-  const task = {
-    task_id: taskId,
-    domain_id: input.row.domain_id,
-    task_kind: input.row.task_kind,
-    payload_json: JSON.stringify(payload),
-    dedupe_key: dedupeKey,
-    priority: input.row.priority,
-    status: 'queued',
-    attempts: 0,
-    [FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts]: DEFAULT_MAX_ATTEMPTS,
-    source: input.source,
-    requires_approval: 0,
-    approved_at: null,
-    [FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner]: null,
-    [FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt]: null,
-    last_error: null,
-    [FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason]: null,
-    created_at: input.queuedAt,
-    updated_at: input.queuedAt,
-  };
-  const result = db.prepare(`
-    INSERT OR IGNORE INTO tasks(
-      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts, ${FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts},
-      source, requires_approval, approved_at, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner}, ${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt}, last_error, ${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason},
-      created_at, updated_at
-    )
-    VALUES (
-      @task_id, @domain_id, @task_kind, @payload_json, @dedupe_key, @priority, @status, @attempts, @${FAMILY_RUNTIME_TASK_COLUMNS.maxAttempts},
-      @source, @requires_approval, @approved_at, @${FAMILY_RUNTIME_TASK_COLUMNS.leaseOwner}, @${FAMILY_RUNTIME_TASK_COLUMNS.leaseExpiresAt}, @last_error, @${FAMILY_RUNTIME_TASK_COLUMNS.deadLetterReason},
-      @created_at, @updated_at
-    )
-  `).run(task);
-  const refreshed = db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(dedupeKey) as
-    | FamilyRuntimeTaskRow
-    | undefined;
-  if (!refreshed) {
-    return { created: false, taskId: null, dedupeKey };
-  }
-  if (result.changes > 0) {
-    insertEvent(db, {
-      taskId: refreshed.task_id,
-      domainId: refreshed.domain_id,
-      eventType: 'task_enqueued',
-      source: input.source,
-      payload: {
-        task_kind: refreshed.task_kind,
-        dedupe_key: dedupeKey,
-        active_hold_id: null,
-        active_hold_reason: null,
-        requeued_from_terminal_task_id: input.row.task_id,
-        requeued_from_terminal_stage_attempt_id: input.terminalAttempt.stage_attempt_id,
-        reason: PAPER_MISSION_STAGE_ROUTE_TERMINAL_SUCCESSOR_REASON,
-      },
-    });
-    insertNotification(db, {
-      taskId: refreshed.task_id,
-      severity: 'info',
-      title: 'MAS PaperMission stage route successor queued',
-      body: `${refreshed.domain_id}:${refreshed.task_kind}`,
-      payload: {
-        status: 'queued',
-        dedupe_key: dedupeKey,
-        requeued_from_terminal_task_id: input.row.task_id,
-        requeued_from_terminal_stage_attempt_id: input.terminalAttempt.stage_attempt_id,
-      },
-    });
-  }
-  return { created: result.changes > 0, taskId: refreshed.task_id, dedupeKey };
-}
-
-function existingPaperMissionStageRouteSuccessor(
-  db: DatabaseSync,
-  row: FamilyRuntimeTaskRow,
-  terminalAttempt: StageAttemptPayload,
-) {
-  return db.prepare('SELECT * FROM tasks WHERE dedupe_key = ?').get(
-    successorDedupeKey(row, terminalAttempt),
-  ) as FamilyRuntimeTaskRow | undefined;
-}
-
 function existingTerminalSuccessorIdentityNotReadyEvent(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
@@ -696,9 +511,6 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   ) {
     return false;
   }
-  if (row.status === 'blocked' && admitSuccessor && existingPaperMissionStageRouteSuccessor(db, row, terminalAttempt)) {
-    return false;
-  }
   const backfillOnly = successorIdentityReady
     && canBackfillBlockedTerminalSuccessor(row, payload, terminalAttempt);
   const result = db.prepare(`
@@ -716,16 +528,6 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
   if (result.changes === 0 && !backfillOnly) {
     return false;
   }
-  const successor = admitSuccessor
-    ? enqueuePaperMissionStageRouteSuccessor(db, {
-        row,
-        payload,
-        terminalAttempt,
-        source,
-        reason: nextTask.reason,
-        queuedAt: reconciledAt,
-      })
-    : null;
   insertEvent(db, {
     taskId: row.task_id,
     domainId: row.domain_id,
@@ -757,13 +559,11 @@ function reconcilePaperMissionStageRouteTaskRowWithAttempt(
       mas_impact_receipt: oplTransitionReceipt.mas_impact_receipt,
       opl_transition_receipt: oplTransitionReceipt,
       domain_ready_verdict: terminalAttempt.route_impact.domain_ready_verdict ?? null,
-      successor_task_id: successor?.taskId ?? null,
-      successor_dedupe_key: successor?.dedupeKey ?? null,
-      successor_created: successor?.created ?? false,
+      successor_task_id: null,
+      successor_dedupe_key: null,
+      successor_created: false,
       authority_boundary: {
-        opl: successor
-          ? 'queue_attempt_terminal_reconciliation_and_successor_admission_only'
-          : 'queue_attempt_terminal_reconciliation_only',
+        opl: 'stage_attempt_terminal_reconciliation_projection_only',
         domain: 'truth_quality_artifact_gate_owner',
         domain_truth_mutation: false,
         publication_quality_mutation: false,

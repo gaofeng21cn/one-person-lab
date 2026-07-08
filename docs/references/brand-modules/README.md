@@ -39,7 +39,7 @@ OPL 借鉴的是成熟工程的分层原则，不引入外部 runtime dependency
 | [OPL Workspace](./workspace.md) | 用户项目空间、共享素材、stage outputs、handoff 和可检查文件结构。 | OPL Framework + domain workspace owner |
 | [OPL Pack](./pack.md) | Declarative Domain Pack、Capability Invocation ABI、authority ABI、execution view、operational card、result envelope、pack compiler、generated/hosted surfaces 和 standard authority functions。 | OPL Framework + Foundry Agent owners |
 | [OPL Stagecraft](./stagecraft.md) | Stage 设计、认知计算、capability use policy、tool affordance、quality gate 和 handoff。 | OPL Framework + Foundry Agent |
-| [OPL Runway](./runway.md) | Durable execution、typed queue、lease、retry/dead-letter、wakeup 和 human gate。 | OPL Framework |
+| [OPL Runway](./runway.md) | Durable execution、stage-attempt request/projection、lease、retry/dead-letter、wakeup 和 human gate。 | OPL Framework |
 | [OPL Ledger](./ledger.md) | Evidence、receipt、typed blocker、artifact lineage、restore/provenance 和 refs-only ledger。 | OPL Framework + domain authority owner |
 | [OPL Console](./console.md) | App/operator 工作台，消费 execution view、operational card、result envelope、current owner、invocation plan、next action、阻塞、产物和 drilldown。 | One Person Lab App |
 | [OPL Foundry Lab](./foundry-lab.md) | Agent 创建、测试接管、机制改进、canary、promotion 和 rollback。 | OPL Framework + OPL Meta Agent |

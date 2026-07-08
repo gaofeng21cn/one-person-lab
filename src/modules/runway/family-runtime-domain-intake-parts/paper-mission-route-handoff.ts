@@ -4,9 +4,8 @@ import {
   waitKindFor,
 } from './paper-mission-route-handoff/owner-wait.ts';
 import {
-  runtimeRequestInput,
   validateRuntimeIdentity,
-  workspaceRootForRuntimeRequest,
+  workspaceRootForProviderProjection,
 } from './paper-mission-route-handoff/runtime-request.ts';
 import {
   asRecord,
@@ -249,29 +248,22 @@ export function intakeMasPaperMissionRouteHandoff(
         blockers: [identityBlocker],
       };
     }
-    if (!workspaceRootForRuntimeRequest(handoff, options)) {
+    if (!workspaceRootForProviderProjection(handoff, options)) {
       return {
         ...readback,
         blockers: [{
           reason: 'missing_domain_workspace_root',
-          detail: 'MAS paper mission route handoff must carry a domain workspace_root/domain_workspace_root or an absolute candidate/source ref under ops/medautoscience before OPL can start a provider stage.',
+          detail: 'MAS paper mission route handoff must carry a domain workspace_root/domain_workspace_root or an absolute candidate/source ref under ops/medautoscience before OPL can project provider admission refs.',
           field: 'workspace_root',
         }],
       };
     }
     const accepted: MasPaperMissionRouteHandoffIntakeReadback = {
       ...readback,
-      status: 'accepted_for_runtime_intake',
+      status: 'accepted_for_provider_projection',
       can_submit_to_opl_runtime: true,
     };
-    return {
-      ...accepted,
-      runtime_request_input: runtimeRequestInput(
-        handoff,
-        accepted,
-        options,
-      ),
-    };
+    return accepted;
   }
 
   const waitKind = waitKindFor(handoffStatus, commandKind);

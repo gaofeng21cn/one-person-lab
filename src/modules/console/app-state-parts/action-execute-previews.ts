@@ -285,16 +285,6 @@ export function buildDockerWebuiSettingsManualAction(actionId: string, commandPr
 
 export function dryRunFamilyRuntimeResult(surface: string, args: string[]) {
   const commandPreview = ['opl', 'family-runtime', ...args];
-  if (surface === 'scheduler_tick') {
-    return {
-      family_runtime_scheduler_tick: {
-        action: 'tick',
-        provider_kind: 'temporal',
-        status: 'dry_run',
-        command_preview: commandPreview,
-      },
-    };
-  }
   if (surface === 'scheduler_cadence') {
     return {
       family_runtime_scheduler_cadence: {

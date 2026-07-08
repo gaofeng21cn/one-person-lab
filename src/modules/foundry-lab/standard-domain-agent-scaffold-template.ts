@@ -903,7 +903,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'docs/architecture.md',
-      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. OPL owns generic runtime, queue, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, transition runner, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
+      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. OPL owns generic runtime, stage-attempt request/projection, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, transition runner, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
     },
     {
       path: 'docs/invariants.md',

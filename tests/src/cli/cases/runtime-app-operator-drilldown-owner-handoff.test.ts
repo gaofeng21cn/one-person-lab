@@ -104,7 +104,7 @@ test('runtime App drilldown projects bounded owner handoff packet without author
         '--stage',
         `write_${index}`,
         '--provider',
-        'local_sqlite',
+        'temporal',
         '--workspace-locator',
         JSON.stringify({
           workspace_root: `/tmp/mas-owner-handoff-${index}`,

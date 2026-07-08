@@ -18,7 +18,7 @@ test('family-runtime lifecycle guarded apply separates OPL ledger apply from dom
       '--stage',
       'deliverable-review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/redcube',
@@ -111,7 +111,7 @@ test('family-runtime controlled apply contract returns MAS/MAG/RCA domain receip
       '--stage',
       'finalize-and-publication-handoff',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mas',
@@ -131,7 +131,7 @@ test('family-runtime controlled apply contract returns MAS/MAG/RCA domain receip
       '--stage',
       'specific-aims',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mag',
@@ -152,7 +152,7 @@ test('family-runtime controlled apply contract returns MAS/MAG/RCA domain receip
       '--stage',
       'visual-review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/rca',

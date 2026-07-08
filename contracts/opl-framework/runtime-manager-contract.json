@@ -3,7 +3,7 @@
   "contract_id": "opl_runtime_manager_contract",
   "contract_ref": "contracts/opl-framework/runtime-manager-contract.json",
   "scope": "opl_product_control_plane_over_provider_backed_family_runtime",
-  "description": "Freezes the OPL Runtime Manager boundary. OPL owns provider selection, typed family queue, stage attempt ledger, dispatch contracts, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
+  "description": "Freezes the OPL Runtime Manager boundary. OPL owns Temporal provider selection, stage attempt ledger/index, diagnostics, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
   "owner_split": {
     "product_control_plane_owner": "one-person-lab",
     "online_runtime_substrate_owner": "provider_backed_family_runtime",
@@ -20,7 +20,6 @@
     "temporal_hosted_autonomy_default_enabled": true,
     "codex_app_drives_long_running_tasks": false,
     "allowed_providers": [
-      "local_sqlite",
       "temporal"
     ],
     "default_resolution": {
@@ -30,15 +29,14 @@
     },
     "production_required_provider": "temporal",
     "production_candidate": "temporal",
-    "local_provider": "local_sqlite",
-    "local_provider_role": "dev_ci_offline_diagnostic_baseline"
+    "retired_local_provider": "local_sqlite",
+    "sqlite_sidecar_role": "projection_and_readback_index_only"
   },
   "manager_responsibilities": [
     "select_supported_family_runtime_provider",
     "project_provider_readiness_and_stage_attempt_history",
-    "own_typed_family_queue_and_domain_dispatch_contracts",
-    "wire_provider_wakeup_signal_delivery_and_approval_transport",
-    "hydrate_domain_task_registration_contracts",
+    "own_stage_attempt_index_and_provider_projection_contracts",
+    "wire_provider_signal_delivery_transport",
     "project_runtime_status_into_opl_sessions_progress_artifacts",
     "provide_runtime_doctor_repair_resume_entrypoints",
     "catalog_optional_native_helpers",
@@ -222,15 +220,15 @@
       "runtime_health_snapshot_index"
     ]
   },
-  "family_runtime_queue": {
-    "surface_kind": "opl_family_runtime_queue",
+  "family_runtime_stage_attempt_index": {
+    "surface_kind": "opl_family_runtime_stage_attempt_index",
     "contract_ref": "contracts/opl-framework/family-runtime-online-substrate-contract.json",
     "command": "opl family-runtime status",
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
     "provider_model": "provider_backed_stage_attempt_runtime",
     "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
-    "wakeup_bridge": "provider wakeup -> opl family-runtime tick --source <provider> --hydrate",
-    "webhook_bridge": "provider signal/webhook -> opl family-runtime enqueue",
+    "wakeup_bridge": "Temporal schedule/workflow history -> provider SLO and stage-attempt projection readback",
+    "webhook_bridge": "provider signal/webhook -> Temporal signal/update",
     "mas_domain_route_projection": {
       "owner_route_handoff_ref": "mas_runtime_owner_route_handoff",
       "accepted_runtime_owner_route_ref": "opl_runtime_owner_route",
@@ -244,13 +242,13 @@
         "ai_reviewer_recheck_execute_dispatch"
       ],
       "accepted_runtime_responsibilities": [
-        "generic_runtime_queue",
+        "stage_attempt_index",
         "stage_attempt_ledger",
         "liveness_projection",
         "provider_wakeup",
-        "redrive_retry_dead_letter"
+        "typed_blocker_or_temporal_failure_projection"
       ],
-      "authority_boundary": "OPL queues and dispatches MAS domain route refs but never writes MAS truth, publication quality, artifact gates, or current_package."
+      "authority_boundary": "OPL indexes MAS domain route refs and Temporal attempt projections but never writes MAS truth, publication quality, artifact gates, or current_package."
     }
   },
   "family_scheduler_replacement": {
@@ -262,19 +260,18 @@
     "replacement_status": "replacement_contract_available",
     "allowed_opl_targets": [
       "provider_slo_tick",
-      "domain_registration_intake",
-      "family_runtime_tick",
+      "scheduler_cadence",
       "runtime_manager_projection"
     ],
     "command_set": {
       "status": "opl runtime manager",
       "provider_slo_tick": "opl family-runtime provider-slo tick --provider temporal",
-      "domain_registration_intake": "opl family-runtime intake --domain <domain_id>",
-      "family_runtime_tick": "opl family-runtime tick --source provider-scheduler --hydrate"
+      "scheduler_status": "opl family-runtime scheduler status --provider temporal",
+      "scheduler_trigger": "opl family-runtime scheduler trigger --provider temporal"
     },
     "state_refs": {
       "provider_slo_receipts": "${OPL_STATE_DIR}/family-runtime/provider-slo",
-      "family_runtime_queue": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+      "stage_attempt_index": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
       "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
       "events_ledger": "${OPL_STATE_DIR}/family-runtime/events.jsonl"
     },
@@ -285,7 +282,7 @@
         "migration_priority": "p0",
         "legacy_scheduler_owner": null,
         "legacy_scheduler_residue_policy": "history_tombstone_or_negative_guard_only",
-        "replacement_role": "OPL owns scheduler lifecycle, cadence, provider SLO tick, queue intake, attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.",
+        "replacement_role": "OPL owns scheduler lifecycle, cadence, provider SLO tick, Temporal attempt ledger, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.",
         "required_domain_refs": [
           "mas_runtime_owner_route_handoff",
           "opl_runtime_owner_route",
@@ -329,7 +326,7 @@
       "can_authorize_domain_export": false,
       "can_install_domain_daemon": false,
       "can_execute_domain_repair_command_directly": false,
-      "can_enqueue_provider_stage_attempts": true,
+      "can_enqueue_provider_stage_attempts": false,
       "can_record_opl_provider_receipts": true,
       "can_project_operator_workbench": true
     },

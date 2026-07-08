@@ -55,7 +55,7 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
     opl_primitive: 'opl_generated_domain_handler_descriptor',
     surface_aliases: [
       'domain_handler',
-      'typed_queue_dispatch',
+      'stage_attempt_dispatch_intent',
     ],
     domain_allowed_role: 'domain_handler_target_or_refs_only_adapter',
   },
@@ -87,7 +87,7 @@ const OPL_OWNED_GENERIC_SUBDOMAINS = [
     domain_allowed_role: 'opaque_ref_provider',
   },
   {
-    subdomain_id: 'stage_attempt_queue_retry_dead_letter',
+    subdomain_id: 'stage_attempt_retry_dead_letter',
     opl_primitive: 'opl_provider_backed_family_runtime',
     surface_aliases: ['runtime', 'queue', 'attempt', 'attempt_ledger', 'retry', QUEUE_PROJECTION_VOCABULARY.deadLetter, 'scheduler', 'watch'],
     domain_allowed_role: 'domain_authority_receipt_or_typed_blocker_target',

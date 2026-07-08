@@ -418,7 +418,7 @@ test('Temporal stage attempt contract exposes Codex cancellation and payload-his
       'provider_liveness_blocker.next_repair_action.body',
       'provider_blocker.next_repair_action.body',
       'queue_projection_bridge.body',
-      'queue_tick.dispatches',
+      'retired_queue_tick.dispatches',
     ],
   );
   assert.equal(input.stage_packet_ref, 'payload_ref:sha256:bd0056ae8e68b912');

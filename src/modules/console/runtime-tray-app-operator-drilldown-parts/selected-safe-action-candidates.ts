@@ -89,9 +89,7 @@ function providerMaintenanceRoute(action: JsonRecord) {
   return actionKind === 'provider_slo_cadence_execution'
     || actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart'
-    || actionKind === 'blocked_transport_redrive'
     || actionKind === 'provider_scheduler_install'
-    || actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger'
     || actionKind === 'provider_scheduler_status';
 }
@@ -139,7 +137,6 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
     || actionKind === 'oma_production_consumption_receipt_record'
     || actionKind === 'provider_worker_start'
     || actionKind === 'provider_worker_restart'
-    || actionKind === 'blocked_transport_redrive'
     || actionKind === 'provider_slo_cadence_execution'
     || actionKind === 'stage_production_attempt_request'
     || actionKind === 'stage_production_evidence_receipt_record'
@@ -151,7 +148,6 @@ function routeEligibleForDefaultSelectedAction(action: JsonRecord) {
     || actionKind === 'evidence_gate_receipt_record'
     || actionKind === 'evidence_gate_receipt_verify'
     || actionKind === 'provider_scheduler_install'
-    || actionKind === 'provider_scheduler_tick'
     || actionKind === 'provider_scheduler_trigger';
 }
 
@@ -182,9 +178,6 @@ function actionPriority(action: JsonRecord) {
     || actionKind === 'provider_worker_restart') {
     return 2;
   }
-  if (actionKind === 'blocked_transport_redrive') {
-    return 4;
-  }
   if (actionKind === 'provider_slo_cadence_execution') {
     return 5;
   }
@@ -214,8 +207,7 @@ function actionPriority(action: JsonRecord) {
   if (actionKind === 'provider_scheduler_install') {
     return 13;
   }
-  if (actionKind === 'provider_scheduler_tick'
-    || actionKind === 'provider_scheduler_trigger') {
+  if (actionKind === 'provider_scheduler_trigger') {
     return 14;
   }
   return 16;

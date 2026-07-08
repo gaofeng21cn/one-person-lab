@@ -29,7 +29,6 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
     'lifecycle.ts',
     'paper-autonomy.ts',
     'provider.ts',
-    'queue.ts',
     'registry.ts',
     'scheduler.ts',
     'service-worker.ts',
@@ -46,6 +45,7 @@ test('family-runtime command parser keeps a thin public entrypoint and semantic 
   for (const fileName of expectedParserParts) {
     assert.equal(fs.existsSync(path.join(partsRoot, fileName)), true, `${fileName} parser part is missing`);
   }
+  assert.equal(fs.existsSync(path.join(partsRoot, 'queue.ts')), false);
 });
 
 test('standard domain-agent conformance keeps physical morphology in scoped modules', () => {

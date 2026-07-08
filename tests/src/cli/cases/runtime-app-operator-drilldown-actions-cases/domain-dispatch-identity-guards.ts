@@ -22,7 +22,7 @@ test('runtime action execute blocks domain dispatch evidence payloads bound to a
       '--stage',
       'publication_aftercare/reviewer-refresh',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         surface_kind: 'opl_provider_hosted_task_workspace_locator',
@@ -185,7 +185,7 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
       '--stage',
       'domain_owner/default-executor-dispatch',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         surface_kind: 'opl_provider_hosted_task_workspace_locator',

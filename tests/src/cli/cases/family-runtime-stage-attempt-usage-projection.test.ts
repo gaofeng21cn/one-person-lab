@@ -20,7 +20,7 @@ test('family-runtime attempt query exposes refs-only usage projection from obser
       '--stage',
       'analysis-campaign',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
       '--retry-budget',

@@ -199,34 +199,6 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(nonDryRunExportBundle.payload.error.details.required_mode, 'dry_run');
     assert.equal(nonDryRunExportBundle.payload.error.details.can_generate_domain_export_bundle, false);
 
-    const scheduler = runCli([
-      'app',
-      'action',
-      'execute',
-      '--action',
-      'provider_scheduler_tick',
-      '--payload',
-      '{"force":true,"limit":3,"hydrate":false,"profile":"/tmp/dm-cvd.local.toml"}',
-      '--dry-run',
-    ], env).app_action_execution;
-
-    assert.equal(scheduler.delegated_surface, 'opl family-runtime scheduler tick --provider temporal');
-    assert.equal(scheduler.result.family_runtime_scheduler_tick.status, 'dry_run');
-    assert.deepEqual(scheduler.result.family_runtime_scheduler_tick.command_preview, [
-      'opl',
-      'family-runtime',
-      'scheduler',
-      'tick',
-      '--provider',
-      'temporal',
-      '--force',
-      '--limit',
-      '3',
-      '--profile',
-      '/tmp/dm-cvd.local.toml',
-      '--no-hydrate',
-    ]);
-
     const worker = runCli([
       'app',
       'action',

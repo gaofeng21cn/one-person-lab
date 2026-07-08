@@ -323,7 +323,7 @@ export function normalizeDomainProgressPolicyAdapterRequest(
         ...requiredPostcondition,
         kind: firstString(requiredPostcondition.kind, requiredPostcondition.required_outcome)
           ?? firstString(recordValue(outcome, 'kind'), recordValue(outcome, 'status'))
-          ?? 'provider_admission_enqueued_or_blocked',
+          ?? 'provider_admission_projected_or_blocked',
         outcome_owner: firstString(requiredPostcondition.outcome_owner) ?? 'one-person-lab',
         domain_state_owner: firstString(requiredPostcondition.domain_state_owner) ?? adapterOwner,
       },

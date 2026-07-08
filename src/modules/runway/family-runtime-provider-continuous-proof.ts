@@ -332,7 +332,7 @@ function providerCadenceWindow(input: {
     ? 'Keep supervised Temporal provider SLO ticks running for the full operator evidence window.'
     : windowStatus === 'window_repair_receipt_observed'
       ? `Repair Temporal provider blockers, rerun provider SLO tick, and keep the repair receipt in the ${OBSERVABILITY_RUNTIME_LEDGER_LABEL}.`
-      : `Run opl family-runtime scheduler tick --provider temporal on cadence until the ${windowSeconds}s window has enough execution receipts.`;
+      : `Run opl family-runtime provider-slo tick --provider temporal on cadence until the ${windowSeconds}s window has enough execution receipts.`;
   return {
     surface_kind: 'opl_temporal_provider_cadence_window_projection',
     provider_kind: 'temporal',

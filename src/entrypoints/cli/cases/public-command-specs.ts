@@ -437,12 +437,11 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|intake|tick|enqueue|scheduler status|scheduler install|scheduler trigger|scheduler remove|scheduler tick|evidence-worklist|paper-autonomy supervisor decide|paper-autonomy supervisor readback|queue list|queue inspect|queue redrive|queue hold|queue release|queue retire|attempt list|attempt inspect|attempt query|attempt cancel|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|scheduler status|scheduler install|scheduler trigger|scheduler remove|evidence-worklist|paper-autonomy supervisor decide|paper-autonomy supervisor readback|attempt list|attempt inspect|attempt query|attempt cancel|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
         'opl family-runtime provider repair --provider temporal',
-        'opl family-runtime tick --source provider-cron --hydrate',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
         'opl family-runtime provider-slo tick --provider temporal',
         'opl family-runtime provider-worker supervisor install --provider temporal',
@@ -450,13 +449,10 @@ export function buildPublicCommandSpecs(
         'opl family-runtime scheduler status --provider temporal',
         'opl family-runtime scheduler trigger --provider temporal',
         'opl family-runtime scheduler remove --provider temporal',
-        'opl family-runtime scheduler tick --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
         'opl family-runtime paper-autonomy supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json --typed-blocker-ref mas://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
         'opl family-runtime paper-autonomy supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json',
-        'opl family-runtime queue hold --study 003-dpcc-primary-care-phenotype-treatment-gap --reason manual_pause_for_mas_upgrade',
-        'opl family-runtime queue retire --study 003-dpcc-primary-care-phenotype-treatment-gap --task-kind paper_autonomy/guarded-apply --reason superseded_by_publication_handoff_owner_gate',
       ],
       group: 'runtime',
     }),

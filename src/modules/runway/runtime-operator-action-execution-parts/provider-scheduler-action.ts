@@ -17,7 +17,7 @@ export function providerSchedulerArgs(route: JsonRecord, commandOrSurfaceRef: st
   if (args.length === 0) {
     throw new FrameworkContractError('contract_shape_invalid', 'Unsupported OPL provider scheduler action route.', {
       command_or_surface_ref: commandOrSurfaceRef,
-      supported_command: 'opl family-runtime scheduler <status|install|trigger|tick> --provider temporal',
+      supported_command: 'opl family-runtime scheduler <status|install|trigger|remove> --provider temporal',
     });
   }
   if (args[0] !== 'scheduler') {

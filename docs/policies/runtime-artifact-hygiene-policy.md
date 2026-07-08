@@ -53,7 +53,7 @@ workspace / file lifecycle 内容按职责落点：
 - `docs/policies/`：长期 file lifecycle、checkout hygiene、repo-source 边界和运行生成物隔离纪律。
 - `docs/source/`：workspace registry、source locator、source scope、source truth transport 与 source readiness projection；domain source semantics 仍归 MAS/MAG/RCA。
 - `docs/delivery/`：artifact locator、package/export lifecycle、restore/retention、handoff projection 与 artifact gallery；domain artifact body、mutation authority、ready/export/quality verdict 仍归 MAS/MAG/RCA。
-- `docs/runtime/`：provider/executor、stage attempt ledger、typed queue、resume/wakeup、operator projection 和 runtime manager 语义。
+- `docs/runtime/`：provider/executor、stage attempt ledger、stage-attempt request/projection、resume/wakeup、operator projection 和 runtime manager 语义。
 - `docs/specs/` 与 `contracts/`：当前 active boundary spec 与机器可读 contract；人读 prose 不作为稳定机器接口。
 - `docs/history/`：旧 workspace 布局、旧 artifact 存放路线、旧 cleanup 计划、完成 proof 和 tombstone。
 

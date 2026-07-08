@@ -76,7 +76,6 @@ export function summarizeSelectedSafeAction(action: JsonRecord | null) {
     typed_blocker_requirement: record(action.typed_blocker_requirement),
     attempt_status: stringValue(action.attempt_status),
     blocked_transport_dead_letter_reason: stringValue(action.blocked_transport_dead_letter_reason),
-    provider_transport_redrive_command: stringValue(action.provider_transport_redrive_command),
     task_id: stringValue(action.task_id),
     task_kind: stringValue(action.task_kind),
     payload_requirement: stringValue(action.payload_requirement),

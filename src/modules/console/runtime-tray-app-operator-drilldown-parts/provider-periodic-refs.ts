@@ -151,17 +151,6 @@ export function periodicExecutionRefs(providerActionRefs: ReturnType<typeof prov
       expected_surface_kind: 'temporal_scheduler_cadence_trigger_receipt',
       can_execute: false,
     },
-    {
-      ref: 'opl family-runtime scheduler tick --provider temporal',
-      role: 'scheduler_tick_provider_slo_and_queue_dispatch',
-      provider_kind: 'temporal',
-      schedule_id: scheduleId,
-      cadence_owner: 'provider_backed_family_runtime',
-      scheduler_owner: 'opl_provider_runtime_manager',
-      execution_policy: 'provider_backed_no_domain_daemon',
-      expected_surface_kind: 'opl_family_runtime_scheduler_tick',
-      can_execute: false,
-    },
   ];
   return {
     surface_kind: 'opl_app_drilldown_periodic_execution_refs',

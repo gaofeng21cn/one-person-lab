@@ -49,7 +49,7 @@ export function buildDomainProgressTransitionRuntimeResult(
   const outcome = isRecord(command.outcome) ? command.outcome : {};
   const outcomeKind = optionalString(outcome.kind)
     ?? optionalString((isRecord(command.postcondition) ? command.postcondition : {}).kind)
-    ?? 'provider_admission_enqueued_or_blocked';
+    ?? 'provider_admission_projected_or_blocked';
   const aggregateVersion = 1;
   const event = {
     surface_kind: 'opl_domain_progress_transition_event',

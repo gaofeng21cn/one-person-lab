@@ -166,7 +166,6 @@ async function buildProviderState(profile: AppStateProfile) {
           'provider_scheduler_status',
           'provider_scheduler_install',
           'provider_scheduler_trigger',
-          'provider_scheduler_tick',
           'provider_worker_start',
           'provider_worker_restart',
         ],

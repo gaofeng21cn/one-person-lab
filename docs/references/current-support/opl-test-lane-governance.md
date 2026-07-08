@@ -43,7 +43,7 @@ Currentness policy：查看当前 lane 集合时先读 `package.json` 的 `test:
 - active 测试目录不得保留无理由 `test.skip` 或 `describe.skip`。退役 surface 应改为 fail-closed 守护，或迁入历史文档。
 - `web`、`mcp-stdio` 与旧 alias 属于 retired surface；active 测试只保留 retired `cli_usage_error` 或 Codex-default passthrough 防回归断言。
 - 文档不作为机器断言对象；测试只钉 registry、contracts、schemas、CLI/API 行为、workflow 命令和生成产物结构。
-- CLI 测试 helper 默认会注入 `OPL_FAMILY_RUNTIME_PROVIDER=local_sqlite` 作为 dev/CI offline diagnostic baseline；若用例要断言产品默认 Temporal 未配置、`provider_ready=false` 或 runtime health `offline`，必须在该用例的 `runCli` env 中同时显式设置 `OPL_FAMILY_RUNTIME_PROVIDER: ''`、`OPL_TEMPORAL_ADDRESS: ''`、`TEMPORAL_ADDRESS: ''`、`OPL_TEMPORAL_WORKER_STATUS: ''` 和 `OPL_TEMPORAL_WORKER_ENABLED: ''`，不要依赖宿主或 CI 环境。
+- CLI 测试 helper 只能提供 isolated `OPL_STATE_DIR` 和必要的显式 env；不得默认注入 `OPL_FAMILY_RUNTIME_PROVIDER=local_sqlite`。若用例要断言产品默认 Temporal 未配置、`provider_ready=false` 或 runtime health `offline`，必须在该用例的 `runCli` env 中同时显式设置 `OPL_FAMILY_RUNTIME_PROVIDER: ''`、`OPL_TEMPORAL_ADDRESS: ''`、`TEMPORAL_ADDRESS: ''`、`OPL_TEMPORAL_WORKER_STATUS: ''` 和 `OPL_TEMPORAL_WORKER_ENABLED: ''`。若用例要验证 retired-provider guard，应显式传 `--provider local_sqlite` 并断言 fail-closed。
 - App/operator drilldown 纯 selection fixture 若只测试 provider、domain dispatch、legacy cleanup 或 diagnostic route 选择，必须显式满足或隔离无关 owner-delta surface，尤其 App release user-path evidence；不要让 `buildAppReleaseUserPathEvidence` 从开发机默认 ledger 或 GitHub runner clean state 推导 open gate，否则本地 verified ledger 与 CI 空 ledger 会产生不同的默认 next action。
 
 ## CI 与结构质量

@@ -102,7 +102,7 @@ test('runtime app-operator reconciles MAS refs-only payload with OPL lifecycle l
       '--stage',
       'write',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mas',

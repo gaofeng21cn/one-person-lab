@@ -120,7 +120,7 @@ test('family stage assumption lifecycle blocks stale typed assumptions with coun
       invalidated_by: ['receipt:provider-slo/stale'],
       freshness_window_ref: 'policy:provider-slo-window',
       observed_at_ref: 'receipt:provider-slo/latest',
-      repair_action: 'opl family-runtime scheduler tick --provider temporal',
+      repair_action: 'opl family-runtime provider-slo tick --provider temporal',
     },
   ]);
   const projection = buildFamilyStageAssumptionLifecycleProjection(plane);

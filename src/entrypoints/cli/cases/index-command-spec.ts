@@ -45,7 +45,7 @@ export function buildIndexCommandSpec(): CommandSpec {
   const spec: CommandSpec = {
     usage: 'opl index doctor|rebuild|checkpoint|integrity-check|backup [--domain <domain_id>]',
     summary:
-      'Maintain the OPL-owned SQLite sidecar indexes for queue, lifecycle refs, artifact locators, and operator read-model projections.',
+      'Maintain the OPL-owned SQLite sidecar indexes for stage-attempt projections, lifecycle refs, artifact locators, and operator read-model projections.',
     examples: [
       'opl index doctor --json',
       'opl index rebuild --domain medautoscience --json',

@@ -70,7 +70,6 @@ const FAILED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status 
 function readinessStatus(input: {
   providerReady: boolean;
   schedulerStatus: string | null;
-  queueLifecycleBoundaryGateStatus: string | null;
   queueTotal: number;
   attemptTotal: number;
 }) {
@@ -80,10 +79,7 @@ function readinessStatus(input: {
   if (input.schedulerStatus === 'attention_required' || input.schedulerStatus === 'blocked_provider_not_ready') {
     return 'attention_required';
   }
-  if (input.queueLifecycleBoundaryGateStatus === 'attention_needed') {
-    return 'attention_required';
-  }
-  if (input.queueTotal > 0 || input.attemptTotal > 0) {
+  if (input.attemptTotal > 0) {
     return 'active_or_queued';
   }
   return 'idle_ready';
@@ -212,47 +208,6 @@ function buildNextSafeAction(input: {
     };
   }
 
-  if (input.queueLifecycleBoundary.gate.status === 'attention_needed') {
-    return {
-      action_id: 'observe_queue_lifecycle_boundary',
-      owner: 'opl_runway',
-      reason: 'local_sqlite_queue_lifecycle_competes_with_temporal',
-      command: 'opl family-runtime queue list --json',
-      mutation: false,
-      competing_task_count: input.queueLifecycleBoundary.gate.competing_task_count,
-      blocks_runtime_execution: true,
-      blocks_domain_progress_claim: true,
-    };
-  }
-
-  const runnableQueueCount = countStatus(input.queue, ['queued', 'retry_waiting']);
-  if (runnableQueueCount > 0) {
-    return {
-      action_id: 'admit',
-      owner: 'opl_runway',
-      reason: 'queued_or_retry_waiting_family_runtime_tasks',
-      command: 'opl family-runtime scheduler tick --provider temporal --json',
-      mutation: true,
-      runnable_queue_count: runnableQueueCount,
-      blocks_runtime_execution: false,
-      blocks_domain_progress_claim: true,
-    };
-  }
-
-  const waitingApprovalCount = countStatus(input.queue, ['waiting_approval']);
-  if (waitingApprovalCount > 0) {
-    return {
-      action_id: 'wait_for_owner_answer',
-      owner: 'human_or_domain_owner',
-      reason: 'family_runtime_tasks_waiting_approval',
-      command: 'opl family-runtime queue list --status waiting_approval --json',
-      mutation: false,
-      waiting_approval_count: waitingApprovalCount,
-      blocks_runtime_execution: true,
-      blocks_domain_progress_claim: true,
-    };
-  }
-
   const activeAttemptCount = countStatus(input.attempts, ['created', 'starting', 'running', 'cancel_requested']);
   if (activeAttemptCount > 0) {
     return {
@@ -331,12 +286,10 @@ export async function buildFamilyRuntimeControlLoopStatus(
     : null;
   const queue = queueSummary(db);
   const queueLifecycleBoundary = buildQueueTemporalLifecycleBoundary(db, providerKind);
-  const queueLifecycleCompetesWithTemporal = queueLifecycleBoundary.gate.status === 'attention_needed';
   const attempts = stageAttemptSummary(db);
   const status = readinessStatus({
     providerReady: selected.ready,
     schedulerStatus: typeof scheduler.status === 'string' ? scheduler.status : null,
-    queueLifecycleBoundaryGateStatus: queueLifecycleBoundary.gate.status,
     queueTotal: queue.total,
     attemptTotal: attempts.total,
   });
@@ -371,10 +324,9 @@ export async function buildFamilyRuntimeControlLoopStatus(
       },
       execution_loop: {
         owner: 'opl_runway',
-        purpose: 'admit, queue, dispatch, retry, dead-letter, resume, and reconcile provider-backed stage attempts',
-        queue_command: 'opl family-runtime queue list --json',
+        purpose: 'observe, resume, repair, and reconcile provider-backed stage attempts',
         attempt_command: 'opl family-runtime attempt list --json',
-        scheduler_tick_command: 'opl family-runtime scheduler tick --provider temporal',
+        provider_slo_tick_command: 'opl family-runtime provider-slo tick --provider temporal',
       },
       semantic_loop: {
         owner: 'stage_transition_authority_and_domain_owner',
@@ -388,18 +340,15 @@ export async function buildFamilyRuntimeControlLoopStatus(
       reconciler_id: 'runway_progress_reconciler',
       desired_state_ref: 'current_owner_delta',
       current_state_refs: [
-        'typed_family_queue',
+        'stage_attempt_index',
         'temporal_workflow_visibility',
         'stage_attempt_ledger',
         'provider_worker_lifecycle',
         'scheduler_cadence',
       ],
       allowed_next_actions: [
-        'admit',
         'resume',
         'retry',
-        'hold',
-        'observe_queue_lifecycle_boundary',
         'repair_provider_liveness',
         'escalate_typed_blocker',
         'wait_for_owner_answer',
@@ -419,13 +368,11 @@ export async function buildFamilyRuntimeControlLoopStatus(
       selected_provider: providerRuntime.selectedProvider,
       selected_ready: selected.ready,
       selected_status: selected.status,
-      degraded_reason: selected.degraded_reason
-        ?? (queueLifecycleCompetesWithTemporal ? 'local_sqlite_queue_lifecycle_competes_with_temporal' : null),
+      degraded_reason: selected.degraded_reason ?? null,
       runtime_dependency: selected.details.runtime_dependency ?? null,
-      local_provider_role: 'dev_ci_offline_diagnostic_baseline_only_not_online_readiness_substitute',
+      sqlite_sidecar_role: 'projection_and_readback_index_only',
       live_workflow_execution_ready: selected.ready
-        && !schedulerNeedsRepair(schedulerStatus)
-        && !queueLifecycleCompetesWithTemporal,
+        && !schedulerNeedsRepair(schedulerStatus),
       temporal_first_runtime_contract: buildTemporalFirstRuntimeContract(),
     },
     worker_supervisor_liveness: {
@@ -454,11 +401,10 @@ export async function buildFamilyRuntimeControlLoopStatus(
     },
     readiness: {
       readiness_status: status,
-      provider_backed_runtime_ready: selected.ready && !queueLifecycleCompetesWithTemporal,
+      provider_backed_runtime_ready: selected.ready,
       scheduler_cadence_ready: !schedulerNeedsRepair(schedulerStatus),
       live_workflow_execution_ready: selected.ready
-        && !schedulerNeedsRepair(schedulerStatus)
-        && !queueLifecycleCompetesWithTemporal,
+        && !schedulerNeedsRepair(schedulerStatus),
       domain_progress_claim_ready: false,
       production_l5_ready: false,
       next_safe_action: nextSafeAction,

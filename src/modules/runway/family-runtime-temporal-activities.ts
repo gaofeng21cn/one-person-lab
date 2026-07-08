@@ -7,8 +7,7 @@ import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
   DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
 } from './family-runtime-temporal-constants.ts';
-import { runSchedulerTick } from './family-runtime-scheduler.ts';
-import { runSchedulerQueueTick } from './family-runtime-scheduler-tick-runner.ts';
+import { runTemporalProviderCadenceReadback } from './family-runtime-scheduler.ts';
 import { openQueueDb } from './family-runtime-store.ts';
 import {
   recordStageAttemptActivityHeartbeat,
@@ -18,10 +17,6 @@ import {
   runAgentStageRunner,
 } from './family-runtime-codex-stage-runner.ts';
 import { codexActivityEventForTemporalHistory } from './family-runtime-temporal-history-summary.ts';
-
-async function temporalProviderModule() {
-  return await import('./family-runtime-temporal-provider-parts/attempt-control.ts');
-}
 
 function closeoutPacketFromRunnerReceipt(receipt: Record<string, unknown>) {
   if (isRecord(receipt.closeout_packet)) {
@@ -354,19 +349,19 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
   const authorityBoundary = isRecord(tick.authority_boundary)
     ? tick.authority_boundary
     : {
-        opl: 'scheduler_cadence_provider_slo_and_queue_projection_bridge',
+        opl: 'temporal_provider_cadence_readback_only',
         domain: 'truth_quality_artifact_gate_owner',
       };
   return {
     surface_kind: 'temporal_scheduler_tick_activity_receipt',
     activity_kind: 'scheduler_tick_activity',
     activity_status: 'completed',
-    scheduler_tick_surface_kind: readString(tick.surface_kind),
+    provider_cadence_surface_kind: readString(tick.surface_kind),
     scheduler_owner: readString(tick.scheduler_owner),
     cadence_owner: readString(tick.cadence_owner),
     provider_kind: readString(tick.provider_kind),
-    tick_source: readString(tick.tick_source),
-    tick_status: readString(tick.status),
+    cadence_source: readString(tick.cadence_source),
+    cadence_status: readString(tick.status),
     task_scope: compactTaskScopeForTemporalResult(tick.task_scope),
     provider_readiness_after_slo: compactProviderReadinessAfterSloForTemporalResult(
       tick.provider_readiness_after_slo,
@@ -377,7 +372,7 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
     queue_projection_bridge: compactQueueProjectionBridgeForTemporalResult(
       tick.queue_projection_bridge,
     ),
-    queue_tick: compactSchedulerQueueTickForTemporalResult(tick.queue_tick),
+    retired_queue_tick: compactSchedulerQueueTickForTemporalResult(tick.retired_queue_tick),
     full_scheduler_tick_omitted: true,
     provider_runtime_after_slo_omitted: true,
     provider_slo_omitted: true,
@@ -391,7 +386,7 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
       'provider_liveness_blocker.next_repair_action.body',
       'provider_blocker.next_repair_action.body',
       'queue_projection_bridge.body',
-      'queue_tick.dispatches',
+      'retired_queue_tick.dispatches',
     ],
     authority_boundary: {
       ...compactAuthorityBoundaryForTemporalResult(authorityBoundary),
@@ -405,19 +400,19 @@ export function compactSchedulerTickForTemporalResult(value: unknown) {
       surface_kind: 'temporal_activity_compacted_scheduler_tick',
       full_scheduler_tick_body_omitted: true,
       retained_fields: [
-        'scheduler_tick_surface_kind',
+        'provider_cadence_surface_kind',
         'scheduler_owner',
         'cadence_owner',
         'provider_kind',
-        'tick_source',
-        'tick_status',
+        'cadence_source',
+        'cadence_status',
         'task_scope',
         'provider_readiness_after_slo',
         'provider_liveness_blocker',
         'provider_blocker',
         'provider_slo_summary',
         'queue_projection_bridge',
-        'queue_tick',
+        'retired_queue_tick',
         'authority_boundary',
       ],
     },
@@ -676,7 +671,7 @@ export async function schedulerTickActivity(input: {
     limit: input.limit ?? 10,
   });
   const { db, paths } = openQueueDb();
-  const tick = await runSchedulerTick(
+  const tick = await runTemporalProviderCadenceReadback(
     db,
     paths,
     {
@@ -686,24 +681,10 @@ export async function schedulerTickActivity(input: {
       hydrate: input.hydrate,
       domainProfiles: input.domain_profiles,
     },
-    (source, limit, hydrate, taskScope, domainProfiles, queueTickOptions) => runSchedulerQueueTick(
-      db,
-      paths,
-      source,
-      limit,
-      hydrate,
-      taskScope,
-      domainProfiles,
-      {
-        temporalProviderModule,
-        dispatchEnabled: queueTickOptions?.dispatchEnabled,
-        blockedReason: queueTickOptions?.blockedReason,
-      },
-    ),
   );
   return {
     version: 'g2',
-    family_runtime_scheduler_tick: compactSchedulerTickForTemporalResult(tick),
+    temporal_provider_cadence_readback: compactSchedulerTickForTemporalResult(tick),
   };
 }
 

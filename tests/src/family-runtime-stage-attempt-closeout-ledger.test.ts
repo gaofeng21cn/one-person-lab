@@ -26,7 +26,7 @@ test('stage attempt closeout ledger is idempotent and fails closed on conflictin
     const created = createStageAttempt(db, {
       domainId: 'medautoscience',
       stageId: 'review',
-      providerKind: 'local_sqlite',
+      providerKind: 'temporal',
       workspaceLocator: { workspace_root: '/tmp/mas' },
       sourceFingerprint: 'sha256:review',
     });
@@ -106,7 +106,7 @@ test('stage attempt closeout replay repairs accepted attempts that missed closeo
     const created = createStageAttempt(db, {
       domainId: 'medautoscience',
       stageId: 'publication_handoff',
-      providerKind: 'local_sqlite',
+      providerKind: 'temporal',
       workspaceLocator: { workspace_root: '/tmp/mas' },
       sourceFingerprint: 'sha256:handoff',
     });
@@ -149,7 +149,7 @@ test('stage attempt closeout replay can backfill missing provider run token usag
     const created = createStageAttempt(db, {
       domainId: 'medautoscience',
       stageId: 'publication_handoff',
-      providerKind: 'local_sqlite',
+      providerKind: 'temporal',
       workspaceLocator: { workspace_root: '/tmp/mas' },
       sourceFingerprint: 'sha256:handoff-token-backfill',
     });

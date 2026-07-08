@@ -153,7 +153,7 @@ test('runtime snapshot exposes App operator refs-only owner-aware read model', a
       '--stage',
       'write',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts","dispatch_ref":"mas-domain-dispatch:dm-cvd:app-drilldown","source_refs":["source:dataset"],"missing_material_refs":["material:irb"],"restore_refs":["restore:study-run"]}',
       '--task',
@@ -233,11 +233,12 @@ test('runtime snapshot exposes App operator refs-only owner-aware read model', a
       '--provider',
       'temporal',
     ]);
-    const schedulerTickRoute = projection.operator_action_routing_refs.refs.find(
-      (ref: { action_id: string }) => ref.action_id === 'provider-scheduler:temporal:tick',
+    assert.equal(
+      projection.operator_action_routing_refs.refs.some(
+        (ref: { action_id: string }) => ref.action_id === 'provider-scheduler:temporal:tick',
+      ),
+      false,
     );
-    assert.equal(schedulerTickRoute.action_kind, 'provider_scheduler_tick');
-    assert.equal(schedulerTickRoute.authority_boundary.can_install_domain_daemon, false);
     assert.equal(
       projection.domain_legacy_cleanup_plan_refs.surface_kind,
       'opl_app_drilldown_domain_legacy_cleanup_plan_refs',

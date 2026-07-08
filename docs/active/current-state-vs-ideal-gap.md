@@ -21,7 +21,7 @@ Live Evidence 后置：release、production、Brand L5、owner-chain scaleout、
 
 理想形态仍按目标态定义，不因为当前实现情况降低标准：
 
-- `one-person-lab` 持有 OPL framework runtime、activation、StageRun、typed queue、read-model、App/workbench contract、generated / hosted surface、no-second-truth guard 和跨仓 projection 边界。
+- `one-person-lab` 持有 OPL framework runtime、activation、StageRun、stage-attempt request/projection、read-model、App/workbench contract、generated / hosted surface、no-second-truth guard 和跨仓 projection 边界。
 - `med-autoscience`、`med-autogrant`、`redcube-ai` 是标准 OPL domain agent：domain truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate 留在各自 owner repo；OPL 只承接 generic stage/runtime/control-plane substrate。
 - `opl-meta-agent` 和 `opl-bookforge` 按标准 OPL Agent / Foundry Agent 目标态维护：domain pack、generated/hosted surface、default path、accepted owner-answer shape、source morphology、retired helper provenance 和 no-forbidden-write guard 清楚。
 - `one-person-lab-app` 是普通用户与 operator 的产品入口：Docker/WebUI beginner path、Settings control plane、runtime proxy、release/operator progress、active shell policy 和 App-owned contract 归 App owner；Framework 只提供受控 read/action surface。

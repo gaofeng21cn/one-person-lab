@@ -7,7 +7,7 @@ import {
   createFamilyRuntimeQueueTables,
   familyRuntimePaths,
 } from '../../../../src/modules/runway/family-runtime-store.ts';
-import { runSchedulerTick } from '../../../../src/modules/runway/family-runtime-scheduler.ts';
+import { runTemporalProviderCadenceReadback } from '../../../../src/modules/runway/family-runtime-scheduler.ts';
 import {
   runTemporalProviderSloTick,
 } from '../../../../src/modules/runway/family-runtime-provider-slo-executor.ts';
@@ -19,7 +19,7 @@ import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
 } from '../../../../src/modules/runway/family-runtime-types.ts';
 import {
-  assertBlockedSchedulerTick,
+  assertBlockedProviderCadenceReadback,
   assertTemporalWorkerLivenessBlocker,
 } from './family-runtime-provider-slo-assertions.ts';
 import {
@@ -48,7 +48,7 @@ function temporalProviderLifecycle(workerStatus: TemporalWorkerStatus): Provider
       env: 'OPL_FAMILY_RUNTIME_PROVIDER',
       fallback: 'temporal',
       production_required_provider: 'temporal',
-      local_sqlite_role: 'dev_ci_offline_diagnostic_baseline',
+      local_sqlite_role: 'retired_runtime_provider',
       fail_closed_when_temporal_not_ready: true,
     },
     providers: {
@@ -523,32 +523,35 @@ test('family-runtime provider-slo tick persists blocked repair receipt when prod
   }
 });
 
-test('family-runtime scheduler tick bridges provider cadence to queue projection without installing domain daemons', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-tick-'));
+test('family-runtime records Temporal provider cadence without local queue runtime', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-cadence-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousTemporalAddress = process.env.OPL_TEMPORAL_ADDRESS;
+  const previousTemporalWorkerStatus = process.env.OPL_TEMPORAL_WORKER_STATUS;
   try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    process.env.OPL_TEMPORAL_ADDRESS = '127.0.0.1:7233';
+    process.env.OPL_TEMPORAL_WORKER_STATUS = 'ready';
     insertProvenTemporalProofEvent(stateRoot);
-    const tick = runCli([
-      'family-runtime',
-      'scheduler',
-      'tick',
-      '--provider',
-      'temporal',
-      '--limit',
-      '1',
-    ], familyRuntimeEnv(stateRoot, {
-      OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
-      TEMPORAL_ADDRESS: '',
-      OPL_TEMPORAL_WORKER_STATUS: 'ready',
-    })).family_runtime_scheduler_tick;
+    const paths = familyRuntimePaths();
+    fs.mkdirSync(paths.root, { recursive: true });
+    const db = new DatabaseSync(paths.queue_db);
+    createFamilyRuntimeQueueTables(db);
+    const tick = await runTemporalProviderCadenceReadback(
+      db,
+      paths,
+      { providerKind: 'temporal', limit: 1 },
+    );
 
-    assert.equal(tick.surface_kind, 'opl_family_runtime_scheduler_tick');
+    assert.equal(tick.surface_kind, 'opl_temporal_provider_cadence_readback');
     assert.equal(tick.scheduler_owner, 'opl_provider_runtime_manager');
     assert.equal(tick.cadence_owner, 'provider_backed_family_runtime');
     assert.equal(tick.provider_kind, 'temporal');
     assert.equal(tick.provider_slo.provider_slo_execution_receipt.receipt_status, 'skipped');
-    assert.equal(tick.queue_tick.source, 'opl-provider-scheduler');
-    assert.equal(tick.queue_tick.hydration.source, 'opl-provider-scheduler:hydrate');
-    assert.equal(tick.queue_projection_bridge.surface_kind, 'opl_scheduler_queue_projection_bridge');
+    assert.equal(tick.retired_queue_tick, null);
+    assert.equal(tick.queue_projection_bridge.surface_kind, 'opl_provider_cadence_projection_bridge');
+    assert.equal(tick.queue_projection_bridge.bridge_status, 'retired_local_queue_runtime');
+    assert.equal(tick.queue_projection_bridge.local_queue_runtime_retired, true);
     assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
     assert.equal(tick.queue_projection_bridge.can_authorize_lifecycle_progress, false);
     assert.equal(tick.authority_boundary.can_install_domain_daemon, false);
@@ -558,38 +561,43 @@ test('family-runtime scheduler tick bridges provider cadence to queue projection
     const events = runCli(['family-runtime', 'events', 'export'], familyRuntimeEnv(stateRoot));
     assert.equal(
       events.family_runtime_events.events.some((event: { event_type: string }) =>
-        event.event_type === 'opl_scheduler_tick_completed'
+        event.event_type === 'opl_temporal_provider_cadence_readback_completed'
       ),
       true,
     );
   } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousTemporalAddress === undefined) {
+      delete process.env.OPL_TEMPORAL_ADDRESS;
+    } else {
+      process.env.OPL_TEMPORAL_ADDRESS = previousTemporalAddress;
+    }
+    if (previousTemporalWorkerStatus === undefined) {
+      delete process.env.OPL_TEMPORAL_WORKER_STATUS;
+    } else {
+      process.env.OPL_TEMPORAL_WORKER_STATUS = previousTemporalWorkerStatus;
+    }
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('family-runtime scheduler tick fails closed when worker liveness remains blocked after SLO repair', async () => {
+test('family-runtime provider cadence readback fails closed when worker liveness remains blocked after SLO repair', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-worker-liveness-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
-  let queueTickCalls = 0;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
     const paths = familyRuntimePaths();
     fs.mkdirSync(paths.root, { recursive: true });
     const db = new DatabaseSync(paths.queue_db);
     createFamilyRuntimeQueueTables(db);
-    const tick = await runSchedulerTick(
+    const tick = await runTemporalProviderCadenceReadback(
       db,
       paths,
       { providerKind: 'temporal', limit: 1 },
-      (_source, _limit, _hydrate, _taskScope, _domainProfiles, queueTickOptions) => {
-        queueTickCalls += 1;
-        assert.equal(queueTickOptions?.dispatchEnabled, false);
-        assert.equal(queueTickOptions?.blockedReason, 'temporal_worker_not_ready');
-        return {
-          selected_count: 1,
-          dispatches: [],
-        };
-      },
       {
         inspectProvidersWithLifecycle: async () => temporalProviderLifecycle('worker_not_ready'),
         runProviderSloTick: async () => providerSloTick(
@@ -598,7 +606,7 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
       },
     );
 
-    assertBlockedSchedulerTick(tick);
+    assertBlockedProviderCadenceReadback(tick);
     assert.equal(tick.provider_kind, 'temporal');
     assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_status, 'blocked');
     assert.equal(tick.provider_slo.provider_worker_repair_receipt.repair_action_id, 'start_temporal_worker');
@@ -608,15 +616,12 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
     assert.equal(tick.provider_liveness_blocker.temporal_service_status, 'running');
     assert.equal(tick.provider_liveness_blocker.next_repair_command, 'opl family-runtime worker start --provider temporal');
     assert.equal(tick.provider_liveness_blocker.next_repair_action.action_id, 'start_temporal_worker');
-    assert.equal(tick.queue_tick.status, 'blocked_provider_not_ready');
-    assert.equal(tick.queue_tick.dispatch_blocked_reason, 'temporal_worker_not_ready');
+    assert.equal(tick.retired_queue_tick, null);
     assert.equal(tick.queue_projection_bridge.bridge_status, 'blocked_provider_not_ready');
     assert.equal(tick.queue_projection_bridge.blocked_reason, 'temporal_worker_not_ready');
+    assert.equal(tick.queue_projection_bridge.local_queue_runtime_retired, true);
     assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
     assert.equal(tick.queue_projection_bridge.can_authorize_lifecycle_progress, false);
-    assert.equal(tick.queue_tick.selected_count, 0);
-    assert.equal(tick.queue_tick.dispatches.length, 0);
-    assert.equal(queueTickCalls, 1);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
@@ -627,10 +632,9 @@ test('family-runtime scheduler tick fails closed when worker liveness remains bl
   }
 });
 
-test('family-runtime scheduler tick repairs worker liveness before queue admission', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-scheduler-repair-before-queue-'));
+test('family-runtime provider cadence repairs worker liveness without local queue admission', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-provider-cadence-repair-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
-  let queueTickCalls = 0;
   try {
     process.env.OPL_STATE_DIR = stateRoot;
     const paths = familyRuntimePaths();
@@ -639,20 +643,10 @@ test('family-runtime scheduler tick repairs worker liveness before queue admissi
     createFamilyRuntimeQueueTables(db);
     let inspectionCount = 0;
 
-    const tick = await runSchedulerTick(
+    const tick = await runTemporalProviderCadenceReadback(
       db,
       paths,
       { providerKind: 'temporal', limit: 1 },
-      (source, limit, hydrate) => {
-        queueTickCalls += 1;
-        return {
-          source,
-          limit,
-          hydrate,
-          selected_count: 1,
-          dispatches: [{ task_id: 'task-1', dispatch_status: 'admitted' }],
-        };
-      },
       {
         inspectProvidersWithLifecycle: async () => {
           inspectionCount += 1;
@@ -673,13 +667,12 @@ test('family-runtime scheduler tick repairs worker liveness before queue admissi
     assert.equal(tick.provider_readiness_after_slo.degraded_reason, null);
     assert.equal(tick.provider_readiness_after_slo.worker_lifecycle_status, 'ready');
     assert.equal(tick.provider_runtime_after_slo.providers.temporal?.ready, true);
-    assert.equal(tick.queue_projection_bridge.bridge_status, 'observed_projection');
-    assert.equal(tick.queue_projection_bridge.selected_task_projection_count, 1);
-    assert.equal(tick.queue_projection_bridge.dispatch_projection_count, 1);
+    assert.equal(tick.queue_projection_bridge.bridge_status, 'retired_local_queue_runtime');
+    assert.equal(tick.queue_projection_bridge.selected_task_projection_count, 0);
+    assert.equal(tick.queue_projection_bridge.dispatch_projection_count, 0);
+    assert.equal(tick.queue_projection_bridge.local_queue_runtime_retired, true);
     assert.equal(tick.queue_projection_bridge.durable_lifecycle_truth, false);
-    assert.equal(tick.queue_tick.selected_count, 1);
-    assert.equal(tick.queue_tick.dispatches.length, 1);
-    assert.equal(queueTickCalls, 1);
+    assert.equal(tick.retired_queue_tick, null);
     assert.equal(inspectionCount, 2);
   } finally {
     if (previousStateDir === undefined) {

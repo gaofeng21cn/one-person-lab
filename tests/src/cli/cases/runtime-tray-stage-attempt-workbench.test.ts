@@ -15,7 +15,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
       '--stage',
       'analysis-campaign',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","runtime_root":"/tmp/mas/runtime","artifact_root":"/tmp/mas/artifacts","profile_ref":"profile:nfpitnet","source_refs":["source:dataset"],"material_refs":["material:table1"],"missing_material_refs":["material:irb"],"restore_refs":["restore:mas-runtime-loop"]}',
       '--task',
@@ -189,7 +189,7 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     assert.equal(snapshot.stage_attempt_workbench.control_loop_summary.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.stage_attempt_workbench.groups.by_domain.medautoscience.total, 1);
     assert.deepEqual(snapshot.stage_attempt_workbench.filter_metadata.group_keys, ['domain_id', 'stage_id', 'status']);
-    assert.equal(snapshot.stage_attempt_workbench.attempts[0].provider_kind, 'local_sqlite');
+    assert.equal(snapshot.stage_attempt_workbench.attempts[0].provider_kind, 'temporal');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].stage_id, 'analysis-campaign');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(snapshot.stage_attempt_workbench.attempts[0].completion_boundary.provider_completion, 'completed');
@@ -392,7 +392,7 @@ test('runtime snapshot exposes route-impact no-regression evidence in operator w
       '--stage',
       'proposal_authoring',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify({
         workspace_root: '/tmp/mag',
@@ -518,7 +518,7 @@ test('runtime snapshot exposes lifecycle guarded-apply receipt refs in operator 
       '--stage',
       'visual-review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify(workspaceLocator),
       '--source-fingerprint',
@@ -656,7 +656,7 @@ test('runtime snapshot exposes transition bridge owner evidence as refs-only ope
       '--stage',
       'family_transition:call_intake_complete_to_fundability_strategy',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       JSON.stringify(workspaceLocator),
       '--source-fingerprint',
@@ -778,7 +778,7 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
       '--stage',
       'analysis-campaign',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas"}',
     ], {
@@ -809,7 +809,7 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
       '--stage',
       'review',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], {
@@ -865,7 +865,7 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
       '--stage',
       'draft',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mag"}',
     ], {

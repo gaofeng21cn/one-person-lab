@@ -738,10 +738,9 @@ test('domain explain-boundary --help advertises the xiaohongshu family-boundary 
 
 test('family-runtime nested --help returns command help without executing runtime subcommands', () => {
   for (const args of [
-    ['family-runtime', 'queue', 'list', '--help'],
-    ['family-runtime', 'queue', 'release', '--help'],
-    ['family-runtime', 'tick', '--help'],
     ['family-runtime', 'provider-slo', 'tick', '--help'],
+    ['family-runtime', 'scheduler', 'tick', '--help'],
+    ['family-runtime', 'attempt', 'query', '--help'],
   ]) {
     const output = runCli(args);
 
@@ -749,9 +748,16 @@ test('family-runtime nested --help returns command help without executing runtim
     assert.equal(output.version, 'g2');
     assert.equal(output.help.command, 'family-runtime');
     assert.match(output.help.usage, /provider-slo tick/);
-    assert.match(output.help.usage, /queue list/);
-    assert.match(output.help.usage, /queue release/);
-    assert.match(output.help.usage, /queue retire/);
+    assert.doesNotMatch(output.help.usage, /scheduler tick/);
+    assert.match(output.help.usage, /attempt query/);
+    assert.doesNotMatch(output.help.usage, /\bintake\b/);
+    assert.doesNotMatch(output.help.usage, /(^|\|)tick(\||\s|\[)/);
+    assert.doesNotMatch(output.help.usage, /family-runtime tick/);
+    assert.doesNotMatch(output.help.usage, /\benqueue\b/);
+    assert.doesNotMatch(output.help.usage, /queue list/);
+    assert.doesNotMatch(output.help.usage, /queue release/);
+    assert.doesNotMatch(output.help.usage, /queue retire/);
+    assert.doesNotMatch(output.help.usage, /\bapprove\b/);
     assert.equal(Object.hasOwn(output, 'family_runtime_queue'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_queue_release'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_tick'), false);

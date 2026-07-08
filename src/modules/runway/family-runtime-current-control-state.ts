@@ -686,7 +686,7 @@ function deriveCurrentControlStateFromRows(
       : null,
     superseded_terminal_attempt_refs: terminalAttemptRefs(attempts, current),
     derivation_sources: [
-      'family_runtime_queue_task',
+      'stage_attempt_projection_task',
       'stage_attempt_ledger',
       'provider_run_projection',
       'typed_stage_closeout_ledger',

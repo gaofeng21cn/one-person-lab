@@ -2,7 +2,7 @@
   "contract_kind": "opl_state_index_kernel_contract.v1",
   "surface_kind": "opl_state_index_kernel_contract",
   "owner": "one-person-lab",
-  "purpose": "Freeze OPL-owned SQLite sidecar index boundaries for queue, attempt ledger, lifecycle refs, artifact locators, lineage, outbox, retention, restore, and operator read-model projections.",
+  "purpose": "Freeze OPL-owned SQLite sidecar index boundaries for stage-attempt projection, lifecycle refs, artifact locators, lineage, outbox, retention, restore, and operator read-model projections.",
   "state": "active_contract",
   "truth_split": {
     "file_truth": {
@@ -34,15 +34,16 @@
     "temporal_provider": {
       "role": "production_durable_execution",
       "production_required": true,
-      "local_sqlite_provider_role": "dev_ci_offline_diagnostic_baseline"
+      "sqlite_sidecar_role": "projection_and_readback_index_only"
     }
   },
   "sqlite_database_layout": {
     "state_root": "${OPL_STATE_DIR}/family-runtime",
     "databases": [
       {
-        "database_id": "queue",
+        "database_id": "stage_attempt_index",
         "path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+        "path_status": "legacy_filename_retained_for_migration_compat",
         "owned_tables": [
           "tasks",
           "events",

@@ -16,6 +16,7 @@ function readJson(relativePath: string) {
 type SqliteDatabaseContract = {
   database_id: string;
   path: string;
+  path_status?: string;
   owned_tables: string[];
 };
 
@@ -29,8 +30,8 @@ test('OPL State Index Kernel freezes File Truth plus SQLite sidecar plus Tempora
   assert.equal(contract.truth_split.sqlite_sidecar_index.role, 'rebuildable_operational_index');
   assert.equal(contract.truth_split.temporal_provider.production_required, true);
   assert.equal(
-    contract.truth_split.temporal_provider.local_sqlite_provider_role,
-    'dev_ci_offline_diagnostic_baseline',
+    contract.truth_split.temporal_provider.sqlite_sidecar_role,
+    'projection_and_readback_index_only',
   );
   assert.match(contract.status_rule, /physical outputs \+ manifest validity \+ receipt authority \+ current pointer/);
 });
@@ -44,8 +45,9 @@ test('OPL State Index Kernel declares bounded refs-only SQLite databases and req
     ]),
   );
 
-  assert.equal(databases.get('queue')?.path, '${OPL_STATE_DIR}/family-runtime/queue.sqlite');
-  assert.ok(databases.get('queue')?.owned_tables.includes('stage_attempts'));
+  assert.equal(databases.get('stage_attempt_index')?.path, '${OPL_STATE_DIR}/family-runtime/queue.sqlite');
+  assert.equal(databases.get('stage_attempt_index')?.path_status, 'legacy_filename_retained_for_migration_compat');
+  assert.ok(databases.get('stage_attempt_index')?.owned_tables.includes('stage_attempts'));
   assert.equal(databases.get('lifecycle_index')?.path, '${OPL_STATE_DIR}/family-runtime/lifecycle-index.sqlite');
   assert.ok(databases.get('artifact_index')?.owned_tables.includes('artifact_refs'));
   assert.ok(databases.get('operator_read_model')?.owned_tables.includes('owner_route_index'));

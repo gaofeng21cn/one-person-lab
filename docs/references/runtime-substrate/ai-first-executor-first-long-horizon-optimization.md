@@ -61,7 +61,7 @@ OPL 的长期目标继续固定为 `AI-first / executor-first / Codex-first`：O
 
 - OPL 三层读法固定为：`OPL Framework` 持有 framework/runtime/activation/projection；`One Person Lab App` 是用户工作台；`Foundry Agents` 持有 domain truth、quality verdict、artifact authority、memory body 与 owner receipt。
 - `Codex CLI` 是默认且第一公民 executor；`hermes_agent`、`claude_code`、`antigravity_cli` 等非默认 executor 只能以显式 adapter/backend 接入，并以 binding ref、receipt、audit 和 fail-closed 证明连接，不承诺行为、工具语义、质量或 resume 等价。
-- Temporal-backed provider 是 production online durable substrate；`local_sqlite` 只允许作为 dev/CI/offline diagnostic baseline。
+- Temporal-backed provider 是 production online durable substrate；`local_sqlite` 只允许作为 retired-provider negative guard 和 SQLite projection/index 旧名语境。
 - 核心 docs、contracts 与 CLI/read model 必须持续防止 `provider proof / readiness / generated surface / cleanup ledger = domain ready` 的误读。
 - `framework readiness` 的状态必须从 fresh `opl framework readiness --family-defaults --json` 读取。该 read-model 只能证明 framework control plane、provider cadence/capability、operator attention 和 refs-only worklist 的当前形状；authority boundary 固定禁止 OPL 声明 domain ready、production ready、quality/export verdict 或 artifact mutation authority。
 

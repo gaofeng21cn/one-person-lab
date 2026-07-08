@@ -528,7 +528,6 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     actionKind === 'provider_scheduler_status'
     || actionKind === 'provider_scheduler_install'
     || actionKind === 'provider_scheduler_trigger'
-    || actionKind === 'provider_scheduler_tick'
   ) {
     return {
       executionKind: 'opl_cli_provider_scheduler',
@@ -561,7 +560,7 @@ function domainIdFromRoute(route: JsonRecord): FamilyRuntimeDomainId {
 
 function executionBoundary() {
   return {
-    opl: 'operator_action_execution_shell_and_typed_queue_owner',
+    opl: 'operator_action_execution_shell_and_stage_attempt_projection_owner',
     provider: 'provider_signal_receipt_owner',
     domain: 'domain_handler_direct_skill_and_truth_owner',
     can_write_domain_truth: false,
@@ -801,7 +800,7 @@ async function executeRoute(
 
   if (owner === 'domain' && (targetKind === 'domain_handler' || targetKind === 'direct_skill')) {
     const domainId = domainIdFromRoute(route);
-    const taskPayload = {
+    const handoffPayload = {
       action: actionKind,
       action_id: options.actionId,
       route_target_kind: targetKind,
@@ -811,32 +810,28 @@ async function executeRoute(
       operator_payload: options.payload,
       authority_boundary: executionBoundary(),
     };
-    const runtimeArgs = [
-      'enqueue',
-      '--domain',
-      domainId,
-      '--task-kind',
-      actionKind || targetKind,
-      '--payload',
-      JSON.stringify(taskPayload),
-      '--dedupe-key',
-      `operator-action:${options.actionId}`,
-      '--source',
-      'app_operator_action_execute',
-      ...(options.approveDomainAction ? [] : ['--requires-approval']),
-    ];
     return {
-      execution_status: options.dryRun ? 'dry_run' : 'queued',
-      execution_kind: 'domain_action_typed_queue_handoff',
+      execution_status: options.dryRun ? 'dry_run' : 'blocked_owner_handoff_required',
+      execution_kind: 'domain_owner_handoff_required',
       route_ref: commandOrSurfaceRef,
       action_kind: actionKind,
-      approval_policy: options.approveDomainAction ? 'queued_without_extra_approval' : 'queued_waiting_approval',
-      executed_runtime_command: `opl family-runtime ${runtimeArgs.join(' ')}`,
-      result: options.dryRun
-        ? null
-        : await runFamilyRuntime(runtimeArgs, {
-            runtimeSnapshotProvider: dependencies.runtimeSnapshotProvider,
-          }),
+      domain_id: domainId,
+      approval_policy: 'domain_owner_route_required_no_runtime_queue',
+      executed_runtime_command: null,
+      result: {
+        surface_kind: 'opl_domain_owner_handoff_required',
+        status: 'blocked_owner_handoff_required',
+        domain_id: domainId,
+        handoff_payload: handoffPayload,
+        runtime_queue_mutation_performed: false,
+        replacement_path:
+          'route through a domain-owned owner receipt, typed blocker, or explicit Temporal stage attempt request',
+        authority_boundary: {
+          ...executionBoundary(),
+          can_enqueue_family_runtime_task: false,
+          can_write_sqlite_queue: false,
+        },
+      },
     };
   }
 

@@ -52,15 +52,6 @@ type ProviderLifecycleOptions = {
 };
 
 function providerMetadata(kind: FamilyRuntimeProviderKind) {
-  if (kind === 'local_sqlite') {
-    return {
-      provider_kind: kind,
-      provider_role: 'dev_ci_offline_diagnostic_baseline',
-      deep_inspection: 'selected_provider_only',
-      production_online_readiness_provider: false,
-      fail_closed_when_used_for_production: true,
-    };
-  }
   if (kind === 'temporal') {
     return {
       provider_kind: kind,
@@ -84,7 +75,7 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
   }
   return {
     provider_kind: kind,
-    provider_role: 'development_and_offline_provider',
+    provider_role: 'unsupported_provider',
     deep_inspection: 'selected_provider_only',
   };
 }
@@ -161,28 +152,6 @@ export function resolveFamilyRuntimeProviderKind(
 }
 
 export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): FamilyRuntimeProviderInspection {
-  if (kind === 'local_sqlite') {
-    return {
-      provider_kind: kind,
-      status: 'ready',
-      ready: true,
-      degraded_reason: null,
-      capabilities: [
-        'typed_family_queue',
-        'local_stage_attempt_ledger',
-        'local_inbox_notification_copy',
-        'events_export',
-      ],
-      details: {
-        diagnostic_ready: true,
-        durable_online_wakeup: false,
-        external_runtime_required: false,
-        durable_lifecycle_truth: false,
-        provider_ready_counts_as_online_ready: false,
-      },
-    };
-  }
-
   if (kind === 'temporal') {
     const address = temporalAddress();
     const workerReady = Boolean(address) && temporalWorkerConfigured();
@@ -280,25 +249,10 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
     };
   }
 
-  return {
+  throw new FrameworkContractError('cli_usage_error', 'Unsupported family runtime provider kind.', {
     provider_kind: kind,
-    status: 'ready',
-    ready: true,
-    degraded_reason: null,
-    capabilities: [
-      'typed_family_queue',
-      'local_stage_attempt_ledger',
-      'local_inbox_notification_copy',
-      'events_export',
-    ],
-    details: {
-      diagnostic_ready: true,
-      durable_online_wakeup: false,
-      external_runtime_required: false,
-      durable_lifecycle_truth: false,
-      provider_ready_counts_as_online_ready: false,
-    },
-  };
+    allowed_provider_kinds: [...FAMILY_RUNTIME_PROVIDER_KINDS],
+  });
 }
 
 export async function inspectFamilyRuntimeProviderWithLifecycle(
@@ -396,7 +350,7 @@ export async function inspectFamilyRuntimeProvidersWithLifecycle(
       env: 'OPL_FAMILY_RUNTIME_PROVIDER',
       fallback: 'temporal',
       production_required_provider: 'temporal',
-      local_sqlite_role: 'dev_ci_offline_diagnostic_baseline',
+      local_sqlite_role: 'retired_runtime_provider',
       fail_closed_when_temporal_not_ready: true,
     },
     providers: {
@@ -523,7 +477,7 @@ export function buildStageAttemptProviderReceipt(input: {
     workflow_id: input.workflowId,
     stage_attempt_id: input.stageAttemptId,
     receipt_status:
-      input.providerKind !== 'local_sqlite' && !provider.ready
+      !provider.ready
         ? 'provider_code_landed_unconfigured'
         : 'materialized',
     provider_ready: provider.ready,

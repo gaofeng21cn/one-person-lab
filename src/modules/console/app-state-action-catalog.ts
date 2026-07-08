@@ -445,14 +445,6 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
       mutates: 'opl_temporal_scheduler',
     },
     {
-      action_id: 'provider_scheduler_tick',
-      label: 'Run Temporal scheduler tick',
-      surface: 'opl app action execute',
-      delegated_surface: 'opl family-runtime scheduler tick --provider temporal',
-      payload_fields: ['force', 'limit', 'hydrate', 'profile'],
-      mutates: 'opl_temporal_scheduler_tick',
-    },
-    {
       action_id: 'provider_worker_status',
       label: 'Read Temporal worker status',
       surface: 'opl app action execute',

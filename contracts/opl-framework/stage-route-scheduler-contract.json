@@ -52,10 +52,10 @@
     },
     "route_hydration": {
       "owner": "one-person-lab",
-      "meaning": "OPL resolves domain owner route refs into typed queue tasks, stage attempt requests, conflict envelopes, or operator projections without executing the route itself",
+      "meaning": "OPL resolves domain owner route refs into Temporal-backed stage attempt requests, conflict envelopes, or operator projections without executing the route itself",
       "must_only": [
         "hydrate_domain_owner_route_refs",
-        "reconcile_queue_provider_attempt_ledger_and_projection_state",
+        "reconcile_provider_attempt_ledger_and_projection_state",
         "emit_conflict_or_operator_projection_refs"
       ],
       "must_not": [
@@ -68,8 +68,8 @@
         "derive_default_plan_from_audit_tail"
       ],
       "machine_surfaces": [
-        "opl family-runtime intake --hydrate",
-        "opl family-runtime tick --hydrate",
+        "opl family-runtime attempt create",
+        "opl family-runtime provider-slo tick --provider temporal",
         "family-runtime-attempt-contract.json",
         "family-conflict-envelope.schema.json"
       ]
@@ -96,7 +96,6 @@
       "recommended_task_kind"
     ],
     "opl_owned_hydration_outputs": [
-      "typed_queue_task",
       "stage_attempt_request",
       "stage_attempt_ledger_entry",
       "operator_projection",
@@ -105,7 +104,7 @@
     "forbidden_interpretations": [
       "MAS route is a nested OPL stage",
       "MAS route completion is OPL stage completion",
-      "OPL queue admission creates MAS owner receipt",
+      "OPL stage-attempt projection creates MAS owner receipt",
       "provider completion authorizes publication or artifact readiness"
     ]
   },
@@ -124,7 +123,7 @@
     {
       "layer": "owner_route_hydration",
       "owner": "one-person-lab",
-      "purpose": "consume domain owner route refs and produce queue, stage-attempt, or conflict/read-model records",
+      "purpose": "consume domain owner route refs and produce Temporal stage-attempt or conflict/read-model projection records",
       "primary_surfaces": [
         "family-owner-route.schema.json",
         "family-conflict-envelope.schema.json",
@@ -135,9 +134,9 @@
     {
       "layer": "reconciliation_loop",
       "owner": "one-person-lab",
-      "purpose": "compare desired route/stage refs with actual queue, provider, attempt ledger, human gate, dead-letter, and receipt state",
+      "purpose": "compare desired route/stage refs with actual Temporal provider history, stage-attempt ledger, human gate, dead-letter, and receipt state",
       "primary_surfaces": [
-        "opl family-runtime scheduler tick",
+        "opl family-runtime provider-slo tick --provider temporal",
         "opl runtime manager",
         "stage_attempt_workbench",
         "operator_conflicts"
@@ -151,7 +150,7 @@
       "primary_surfaces": [
         "family-runtime-attempt-contract.json",
         "Temporal workflow history",
-        "local_sqlite development ledger"
+        "sqlite projection/readback sidecar"
       ],
       "authority_boundary": "control_metadata_only"
     }
@@ -161,7 +160,7 @@
     "normalize_task_identity_and_idempotency_key",
     "resolve_admitted_stage_pack_or_return_typed_blocker",
     "check_stage_graph_requires_ensures_and_launch_boundary",
-    "hydrate_route_ref_into_typed_queue_or_stage_attempt_request",
+    "hydrate_route_ref_into_stage_attempt_request",
     "append_attempt_ledger_or_conflict_envelope",
     "dispatch_selected_executor_or_domain_callable_when_authorized",
     "observe_provider_history_checkpoint_closeout_and_receipts",
@@ -169,7 +168,7 @@
     "route_back_dead_letter_or_wait_for_human_gate_when_unclosed"
   ],
   "current_control_admission_currentness_policy": {
-    "purpose": "Classify which family-runtime default-executor queue rows may represent the current MAS provider admission during supersession and tick selection.",
+    "purpose": "Classify which provider-backed stage-attempt projection rows may represent the current MAS provider admission during supersession and provider cadence selection.",
     "current_admission_statuses": [
       "queued",
       "retry_waiting",
@@ -346,9 +345,9 @@
             "stale_read_model_lag",
             "transition_decision_ref"
           ],
-          "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into queue and StageAttempt locator without domain truth authority",
+          "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into stage-attempt request/projection locators without domain truth authority",
           "non_advancing_apply_current_transition_readback": {
-            "landed_support": "authorized default-executor stage packets that require OPL execution authorization but lack a domain transition request or OPL-native command record are recorded as complete DomainProgressTransitionRuntime NonAdvancingApply transactions instead of being enqueued as provider tasks",
+            "landed_support": "authorized default-executor stage packets that require OPL execution authorization but lack a domain transition request or OPL-native command record are recorded as complete DomainProgressTransitionRuntime NonAdvancingApply transactions instead of being admitted as provider tasks",
             "runtime_log_ref": "runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl",
             "current_control_refresh_source": "opl_transition_runtime_readback_non_advancing_apply",
             "current_control_action_status": "transition_non_advancing_apply_recorded",
@@ -410,7 +409,7 @@
             "read_model_rebuild_metadata": "derived_from_event_id_observed_generation_derived_generation_authority_false",
             "current_latest_policy": "exactly_one_latest_current_decision_per_obligation_identity",
             "identity_mismatch_policy": "reject_without_current_latest_projection",
-            "queue_empty_terminal_evidence": false,
+            "stage_attempt_projection_empty_terminal_evidence": false,
             "authority_boundary": {
               "opl_can_write_mas_truth": false,
               "opl_can_create_domain_owner_receipt": false,
@@ -553,7 +552,7 @@
           ],
           "drilldown_only": [
             "DHD",
-            "queue",
+            "retired_local_queue",
             "stage index",
             "trace",
             "lineage",
@@ -571,7 +570,7 @@
       },
       "not_complete_claims": [
         "mapping_landed_does_not_mean_domain_progress_transition_runtime_landed",
-        "execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_tick_or_owner_runtime",
+        "execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_cadence_or_owner_runtime",
         "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
         "read_model_projection_does_not_mean_domain_progress",
         "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"
@@ -644,7 +643,7 @@
           },
           {
             "surface": "terminal_closeout_reconcile",
-            "policy": "terminal closeout sync may reconcile a queued or running task to the matching stage attempt only when the same route currentness identity matches or the older provider-admission identity matches"
+            "policy": "terminal closeout sync may reconcile a pending or running stage-attempt projection to the matching stage attempt only when the same route currentness identity matches or the older provider-admission identity matches"
           },
           {
             "surface": "current_control_projection",
@@ -708,13 +707,13 @@
           "stage_attempt_ledger_terminal_state",
           "typed_closeout_packet_ref_or_blocker_ref",
           "closeout_receipt_status",
-          "linked_queue_task_identity"
+          "linked_stage_attempt_projection_identity"
         ],
-        "policy": "before a tick treats a task as live, OPL must sync terminal provider state and suppress older running projections for the same stage_attempt_id or currentness identity",
+        "policy": "before provider cadence readback treats a projection as live, OPL must sync terminal provider state and suppress older running projections for the same stage_attempt_id or currentness identity",
         "forbidden_fallbacks": [
           "active_run_id_non_null",
           "stale_transport_status",
-          "old_queue_running_without_fresh_terminal_sync"
+          "stale_stage_attempt_projection_without_fresh_terminal_sync"
         ]
       },
       "no_progress_budget_contract": {
@@ -785,7 +784,7 @@
       "trace_span_correlation_refs": {
         "required_ref_families": [
           "stage_attempt_ref",
-          "queue_task_ref",
+          "stage_attempt_projection_ref",
           "workflow_ref",
           "closeout_ref",
           "current_owner_delta_ref",
@@ -847,7 +846,7 @@
       "provider_completion_is_domain_ready": false
     },
     "false_authority_flags": {
-      "queue_or_transport_can_generate_domain_authority": false,
+      "retired_queue_or_transport_can_generate_domain_authority": false,
       "worker_source_stale_can_generate_owner_answer": false,
       "provider_completion_can_generate_owner_receipt": false,
       "trace_span_can_select_stage_route": false,
@@ -961,7 +960,7 @@
     "route_evaluates_or_ranks_candidates",
     "route_executes_without_stage_attempt",
     "route_reconciler_completes_stage_attempt",
-    "queue_task_admitted_equals_domain_work_done",
+    "stage_attempt_index_record_equals_domain_work_done",
     "provider_completed_equals_owner_receipt",
     "attempt_ledger_entry_equals_quality_verdict",
     "replay_packet_generates_default_plan",
@@ -981,7 +980,7 @@
     "authority_boundary"
   ],
   "required_hydration_outputs": [
-    "typed_queue_task_or_stage_attempt_request",
+    "stage_attempt_request",
     "attempt_ledger_ref_or_conflict_envelope_ref",
     "operator_projection_ref",
     "authority_boundary",

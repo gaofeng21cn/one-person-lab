@@ -22,7 +22,7 @@ test('runtime action execute records and verifies domain dispatch evidence recei
       '--stage',
       'write',
       '--provider',
-      'local_sqlite',
+      'temporal',
       '--workspace-locator',
       '{"workspace_root":"/tmp/mas","artifact_root":"/tmp/mas/artifacts","dispatch_ref":"mas-domain-dispatch:dm-cvd:domain-dispatch-evidence"}',
       '--task',

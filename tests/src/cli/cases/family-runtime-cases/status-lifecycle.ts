@@ -11,7 +11,7 @@ import {
 } from '../../helpers.ts';
 import { familyRuntimeEnv } from './helpers.ts';
 
-test('family-runtime status exposes provider-backed stage attempt runtime and SQLite queue path', () => {
+test('family-runtime status exposes Temporal provider runtime and SQLite projection index path', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-state-'));
   try {
     const output = runCli(['family-runtime', 'status'], familyRuntimeEnv(stateRoot, {
@@ -22,7 +22,6 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.provider_model, 'provider_backed_stage_attempt_runtime');
     assert.equal(output.family_runtime.configured_provider, 'temporal');
     assert.deepEqual(output.family_runtime.provider_runtime.allowed_providers, [
-      'local_sqlite',
       'temporal',
       'external_sandbox',
     ]);
@@ -33,7 +32,9 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.readiness.codex_app_drives_long_running_tasks, false);
     assert.equal(output.family_runtime.readiness.degraded, true);
     assert.equal(output.family_runtime.readiness.degraded_reason, 'temporal_runtime_not_configured');
+    assert.equal(output.family_runtime.readiness.local_sqlite_provider_retired, true);
     assert.equal(output.family_runtime.provider_runtime.default_resolution.fallback, 'temporal');
+    assert.equal(output.family_runtime.provider_runtime.default_resolution.local_sqlite_role, 'retired_runtime_provider');
     assert.equal(output.family_runtime.provider_runtime.default_resolution.fail_closed_when_temporal_not_ready, true);
     assert.equal(output.family_runtime.periodic_execution.surface_kind, 'opl_family_runtime_periodic_execution_summary');
     assert.equal(output.family_runtime.periodic_execution.default_for_standard_agents, true);
@@ -45,15 +46,15 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     assert.equal(output.family_runtime.periodic_execution.selected_provider_can_replace_domain_daemons, false);
     assert.equal(output.family_runtime.periodic_execution.status_command, 'opl family-runtime scheduler status --provider temporal');
     assert.equal(output.family_runtime.periodic_execution.authority_boundary.can_install_domain_daemon, false);
-    assert.equal(output.family_runtime.state.queue_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
-    assert.equal(output.family_runtime.state.queue_schema_version, 2);
+    assert.equal(output.family_runtime.state.stage_attempt_index_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    assert.equal(output.family_runtime.state.stage_attempt_index_schema_version, 2);
     assert.equal(
       output.family_runtime.queue_lifecycle_boundary.surface_kind,
-      'opl_family_runtime_queue_temporal_lifecycle_boundary',
+      'opl_family_runtime_sqlite_sidecar_projection_boundary',
     );
     assert.equal(
       output.family_runtime.queue_lifecycle_boundary.sqlite_role,
-      'projection_audit_cache_not_durable_lifecycle_truth',
+      'stage_attempt_projection_index_not_runtime_queue_or_provider',
     );
     assert.equal(output.family_runtime.queue_lifecycle_boundary.gate.status, 'pass');
     assert.equal(output.family_runtime.queue_lifecycle_boundary.gate.temporal_migration_required, false);
@@ -73,7 +74,7 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
     );
     assert.equal(
       output.family_runtime.queue_lifecycle_boundary.temporal_durable_lifecycle_handoff.readback_surfaces
-        .includes('opl family-runtime queue list --json'),
+        .includes('opl family-runtime attempt list --json'),
       true,
     );
     assert.equal(
@@ -81,7 +82,7 @@ test('family-runtime status exposes provider-backed stage attempt runtime and SQ
         .domain_progress_claim_allowed,
       false,
     );
-    assert.equal(fs.existsSync(output.family_runtime.state.queue_db), true);
+    assert.equal(fs.existsSync(output.family_runtime.state.stage_attempt_index_db), true);
     assert.equal(output.family_runtime.domain_adapters.medautogrant.truth_owner, 'med-autogrant');
     assert.equal(output.family_runtime.stage_attempts.total, 0);
   } finally {
