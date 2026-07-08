@@ -8,10 +8,9 @@ import type {
   AcpSessionSeedView,
   AcpTaskAcceptanceView,
   AcpUpdateEventView,
-  JsonRecord,
 } from './opl-acp-types.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
-import { stringValue as optionalString } from '../../kernel/json-record.ts';
+import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 
 export class AcpBridgePayloadError extends Error {
   constructor(message: string) {

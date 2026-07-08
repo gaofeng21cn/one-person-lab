@@ -1,5 +1,3 @@
-export type JsonRecord = Record<string, unknown>;
-
 export interface AcpTaskAcceptanceView {
   task_id: string;
   status: string;

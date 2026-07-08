@@ -15,13 +15,13 @@ import type {
   ManagedUpdateReceiptApplyMode,
   ManagedUpdateReceiptStatusDetail,
   ManagedUpdateReloadGuidance,
-} from './managed-update-owner-boundary.ts';
+} from './managed-update-owner-primitives.ts';
 import {
   capabilityPackageOwnerRoute,
   MANAGED_UPDATE_OWNER_ACTIONS,
   MANAGED_UPDATE_OWNER_FIELDS,
   ownerBoundaryRef,
-} from './managed-update-owner-boundary.ts';
+} from './managed-update-owner-primitives.ts';
 
 type ManagedUpdateComponentReceiptLedger = {
   surface_kind: 'opl_managed_update_component_receipt_ledger';
