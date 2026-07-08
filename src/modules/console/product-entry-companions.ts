@@ -39,7 +39,7 @@ export type {
   ProductEntryStepInput,
   ReturnSurfaceContractSurface,
   RuntimeSessionContractSurface,
-} from './product-entry-companions/types.ts';
+} from './product-entry-companions/types.js';
 export {
   buildDeliveryIdentitySurface,
   buildEntrySessionSurface,
@@ -52,8 +52,8 @@ export {
   buildProductEntryShellSurface,
   buildReturnSurfaceContract,
   buildRuntimeSessionContract,
-} from './product-entry-companions/shell-surfaces.ts';
-export { buildOplProductEntryLifecycleAdapterSurface } from './product-entry-companions/lifecycle-adapter.ts';
+} from './product-entry-companions/shell-surfaces.js';
+export { buildOplProductEntryLifecycleAdapterSurface } from './product-entry-companions/lifecycle-adapter.js';
 export {
   buildFamilyProductEntryManifest,
   buildFamilyProductEntrySurface,
@@ -65,8 +65,8 @@ export {
   buildProductEntryStart,
   buildProductEntrySurface,
   collectFamilyHumanGateIds,
-} from './product-entry-companions/builders.ts';
+} from './product-entry-companions/builders.js';
 export {
   validateFamilyProductEntryManifest,
   validateFamilyProductEntrySurface,
-} from './product-entry-companions/validators.ts';
+} from './product-entry-companions/validators.js';
