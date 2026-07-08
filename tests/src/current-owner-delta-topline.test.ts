@@ -37,6 +37,54 @@ function authorizationIdentity(input: {
   };
 }
 
+function ownerAnswerReadModel(
+  deltaOverrides: Record<string, unknown>,
+  actionOverrides: Record<string, unknown> = {},
+) {
+  const acceptedAnswerShape = [
+    'domain_owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'typed_blocker_ref',
+  ];
+  return {
+    surface_kind: 'opl_current_owner_delta_read_model',
+    current_owner_delta: {
+      surface_kind: 'opl_current_owner_delta',
+      delta_id: 'current-owner-delta:med-autoscience:paper-closeout:owner-answer',
+      domain: 'med-autoscience',
+      domain_id: 'med-autoscience',
+      current_owner: 'med-autoscience',
+      owner: 'med-autoscience',
+      stage_ref: 'paper_closeout',
+      desired_delta_kind: 'owner_answer',
+      desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      accepted_answer_shape: acceptedAnswerShape,
+      hard_gate: {
+        state: 'owner_delta_open',
+        human_or_domain_owner_required: true,
+      },
+      source_fingerprint: 'sha256:owner-delta-topline-test',
+      audit_refs: {},
+      ...deltaOverrides,
+    },
+    next_safe_action_or_none: {
+      surface_kind: 'opl_current_owner_delta_default_next_action',
+      action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
+      derivation_source: 'current_owner_delta',
+      default_planning_root: 'current_owner_delta',
+      current_owner: 'med-autoscience',
+      owner: 'med-autoscience',
+      next_required_owner: 'med-autoscience',
+      next_required_action: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      accepted_answer_shape: acceptedAnswerShape,
+      route_requires_domain_or_app_payload: true,
+      ...actionOverrides,
+    },
+  };
+}
+
 test('current owner delta topline keeps domain owner when only owner answer binding is missing', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -72,49 +120,7 @@ test('current owner delta topline keeps domain owner when only owner answer bind
     }]);
 
     const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: {
-        surface_kind: 'opl_current_owner_delta_read_model',
-        current_owner_delta: {
-          surface_kind: 'opl_current_owner_delta',
-          delta_id: 'current-owner-delta:med-autoscience:paper-closeout:owner-answer',
-          domain: 'med-autoscience',
-          domain_id: 'med-autoscience',
-          current_owner: 'med-autoscience',
-          owner: 'med-autoscience',
-          stage_ref: 'paper_closeout',
-          desired_delta_kind: 'owner_answer',
-          desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
-          hard_gate: {
-            state: 'owner_delta_open',
-            human_or_domain_owner_required: true,
-          },
-          source_fingerprint: 'sha256:owner-delta-topline-test',
-          audit_refs: {},
-        },
-        next_safe_action_or_none: {
-          surface_kind: 'opl_current_owner_delta_default_next_action',
-          action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
-          derivation_source: 'current_owner_delta',
-          default_planning_root: 'current_owner_delta',
-          current_owner: 'med-autoscience',
-          owner: 'med-autoscience',
-          next_required_owner: 'med-autoscience',
-          next_required_action: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
-          route_requires_domain_or_app_payload: true,
-        },
-      },
+      currentOwnerDeltaReadModel: ownerAnswerReadModel({}),
     });
 
     assert.equal(topline.operator_current_owner_delta_owner, 'med-autoscience');
@@ -179,26 +185,15 @@ test('current owner delta topline keeps current owner delta as ordinary root whe
   const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
   try {
     const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: {
-        surface_kind: 'opl_current_owner_delta_read_model',
-        current_owner_delta: {
-          surface_kind: 'opl_current_owner_delta',
+      currentOwnerDeltaReadModel: ownerAnswerReadModel(
+        {
           delta_id: 'current-owner-delta:medautoscience:reviewer-refresh:owner-answer',
           domain: 'medautoscience',
           domain_id: 'medautoscience',
-          current_owner: 'med-autoscience',
-          owner: 'med-autoscience',
           stage_ref: 'publication_aftercare/reviewer-refresh',
           stage_id: 'publication_aftercare/reviewer-refresh',
           lineage_ref: 'sat_missing_stage_run_refs',
           desired_delta_kind: 'owner_answer_or_typed_blocker',
-          desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
           required_return_shapes: [
             'domain_owner_receipt_ref',
             'quality_gate_receipt_ref',
@@ -211,28 +206,12 @@ test('current owner delta topline keeps current owner delta as ordinary root whe
             quality_or_export_authorized: false,
           },
           source_fingerprint: 'owner-delta-first:mas-reviewer-refresh',
-          audit_refs: {},
         },
-        next_safe_action_or_none: {
-          surface_kind: 'opl_current_owner_delta_default_next_action',
-          action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
-          derivation_source: 'current_owner_delta',
-          default_planning_root: 'current_owner_delta',
-          current_owner: 'med-autoscience',
-          owner: 'med-autoscience',
-          next_required_owner: 'med-autoscience',
-          next_required_action: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
-          route_requires_domain_or_app_payload: true,
+        {
           can_create_owner_receipt: false,
           can_claim_domain_ready: false,
         },
-      },
+      ),
     });
 
     assert.equal(topline.operator_next_action_source, 'current_owner_delta');
@@ -324,52 +303,18 @@ test('current owner delta topline folds closed StageRun owner answer into defaul
     }]);
 
     const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: {
-        surface_kind: 'opl_current_owner_delta_read_model',
-        current_owner_delta: {
-          surface_kind: 'opl_current_owner_delta',
-          delta_id: 'current-owner-delta:med-autoscience:paper-closeout-closed:owner-answer',
-          domain: 'med-autoscience',
-          domain_id: 'med-autoscience',
-          current_owner: 'med-autoscience',
-          owner: 'med-autoscience',
-          stage_ref: 'paper_closeout_closed',
-          stage_id: 'paper_closeout_closed',
-          lineage_ref: 'sat-owner-delta-topline-closed',
-          desired_delta_kind: 'owner_answer',
-          desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
-          hard_gate: {
-            state: 'owner_delta_open',
-            human_or_domain_owner_required: true,
-            domain_ready_authorized: false,
-          },
-          source_fingerprint: 'sha256:owner-delta-topline-closed-test',
-          audit_refs: {},
+      currentOwnerDeltaReadModel: ownerAnswerReadModel({
+        delta_id: 'current-owner-delta:med-autoscience:paper-closeout-closed:owner-answer',
+        stage_ref: 'paper_closeout_closed',
+        stage_id: 'paper_closeout_closed',
+        lineage_ref: 'sat-owner-delta-topline-closed',
+        hard_gate: {
+          state: 'owner_delta_open',
+          human_or_domain_owner_required: true,
+          domain_ready_authorized: false,
         },
-        next_safe_action_or_none: {
-          surface_kind: 'opl_current_owner_delta_default_next_action',
-          action_kind: 'current_owner_delta_owner_answer_or_typed_blocker_required',
-          derivation_source: 'current_owner_delta',
-          default_planning_root: 'current_owner_delta',
-          current_owner: 'med-autoscience',
-          owner: 'med-autoscience',
-          next_required_owner: 'med-autoscience',
-          next_required_action: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
-          route_requires_domain_or_app_payload: true,
-        },
-      },
+        source_fingerprint: 'sha256:owner-delta-topline-closed-test',
+      }),
     });
 
     assert.equal(topline.current_owner_delta.latest_owner_answer_ref, 'mas://owner-answer/dm003/typed-blocker');
