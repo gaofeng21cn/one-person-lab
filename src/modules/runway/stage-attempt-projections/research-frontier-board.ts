@@ -74,9 +74,17 @@ function boardItems(board: JsonRecord) {
     ...recordList(board.items),
     ...recordList(board.frontier_items),
     ...recordList(board.frontier_refs),
+    ...recordList(board.frontier_board_refs),
     ...recordList(board.candidate_routes),
     ...recordList(board.rollback_targets),
     ...recordList(board.rollback_target_refs),
+    ...recordList(board.rollback_target_suggestions).map((target) => ({
+      ...target,
+      stage_id: target.suggested_target_stage,
+      status: target.signal,
+      route_family: target.signal,
+      rollback_target_ref: target.rollback_target_ref ?? target.suggested_target_stage,
+    })),
     ...recordList(board.stage_candidates).map((candidate) => ({
       ...candidate,
       ref: candidate.candidate_ref,

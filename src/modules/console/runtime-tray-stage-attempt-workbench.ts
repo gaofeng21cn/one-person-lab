@@ -176,7 +176,12 @@ function stringRefsFromUnknown(value: unknown) {
 }
 
 function researchFrontierBoardFromRouteImpact(routeImpact: JsonRecord) {
-  for (const key of ['research_frontier_board', 'frontier_board', 'stage_candidate_portfolio']) {
+  for (const key of [
+    'research_frontier_board',
+    'opl_research_frontier_projection',
+    'frontier_board',
+    'stage_candidate_portfolio',
+  ]) {
     const value = routeImpact[key];
     if (isRecord(value)) {
       return value as JsonRecord;

@@ -13,7 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- stage attempt 的 `route_impact.research_frontier_board` / `frontier_board` / `stage_candidate_portfolio` 只作为 refs-only 输入读取；OPL 不读取或写入 memory body、hypothesis body、evidence body 或 artifact body。
+- stage attempt 的 `route_impact.research_frontier_board` / `opl_research_frontier_projection` / `frontier_board` / `stage_candidate_portfolio` 只作为 refs-only 输入读取；OPL 不读取或写入 memory body、hypothesis body、evidence body 或 artifact body。
 - MAS 8-stage rollback target board 只作为同一 refs-only 输入的一个 board item family 读取；OPL 只投影 stage/status label、route family、rollback target ref、advisory reason ref、board ref 和 summary ref，不推断医学路线或 rollback 决策。
 - `opl_research_frontier_board_projection` 的 owner 是 OPL projection owner only；所有 domain truth、memory accept/reject、owner receipt、typed blocker、quality verdict、domain ready、route decision 和 artifact mutation authority 均为 `false`。
 - Workbench 只汇总 `status_counts`、`route_family_counts`、`rollback_target_refs` 和 refs-only items；这些汇总不能声明 MAS frontier accepted、paper progress、domain ready、runtime ready、publication ready 或 owner acceptance。

@@ -68,6 +68,32 @@ function frontierBoard() {
   };
 }
 
+function masOplFrontierProjection() {
+  return {
+    surface: 'stage_research_frontier_board_opl_refs_projection',
+    display_role: 'refs_and_summary_only',
+    body_included: false,
+    frontier_board_refs: [{
+      ref_kind: 'research_frontier_candidate_ref',
+      candidate_id: 'endpoint-failed',
+      status: 'rejected',
+      failure_scope: 'endpoint',
+      signals: ['failure_scope:endpoint'],
+    }],
+    rollback_target_suggestions: [{
+      candidate_id: 'endpoint-failed',
+      signal: 'failure_scope:endpoint',
+      suggested_target_stage: '02-protocol_and_analysis_plan',
+      advisory_only: true,
+      reason: 'must-not-be-projected',
+    }],
+    authority_boundary: {
+      can_replace_next_action: false,
+      can_write_domain_truth: false,
+    },
+  };
+}
+
 test('stage attempt generic projections expose research frontier board as refs-only', () => {
   const projection = buildAttemptGenericProjections(baseAttempt({
     research_frontier_board: frontierBoard(),
@@ -97,6 +123,24 @@ test('stage attempt generic projections expose research frontier board as refs-o
   assert.equal(projection.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(projection.authority_boundary.can_authorize_domain_ready, false);
   assert.equal(projection.authority_boundary.can_mutate_artifact_body, false);
+  assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+});
+
+test('stage attempt generic projections read MAS OPL frontier projection shape', () => {
+  const projection = buildAttemptGenericProjections(baseAttempt({
+    research_frontier_board: masOplFrontierProjection(),
+  })).research_frontier_board;
+
+  assert.equal(projection.availability, 'frontier_refs_observed');
+  assert.equal(projection.summary.item_count, 2);
+  assert.equal(projection.summary.status_counts.rejected, 1);
+  assert.equal(projection.summary.status_counts['failure_scope:endpoint'], 1);
+  assert.equal(projection.summary.rollback_target_ref_count, 1);
+  assert.deepEqual(projection.summary.rollback_target_refs, ['02-protocol_and_analysis_plan']);
+  assert.equal(projection.items[1].stage_id, '02-protocol_and_analysis_plan');
+  assert.equal(projection.items[1].rollback_target_ref, '02-protocol_and_analysis_plan');
+  assert.equal(JSON.stringify(projection).includes('must-not-be-projected'), false);
+  assert.equal(projection.authority_boundary.can_infer_route_decision, false);
   assert.equal(projection.authority_boundary.can_write_domain_truth, false);
 });
 
@@ -194,7 +238,7 @@ test('runtime workbench summarizes frontier board status counts and rollback ref
         surface_kind: 'stage_attempt_closeout_packet',
         closeout_refs: ['receipt:frontier-active'],
         route_impact: {
-          research_frontier_board: frontierBoard(),
+          opl_research_frontier_projection: masOplFrontierProjection(),
         },
       }),
     ], env);
@@ -231,12 +275,13 @@ test('runtime workbench summarizes frontier board status counts and rollback ref
     assert.equal(board.surface_kind, 'opl_research_frontier_board_projection');
     assert.equal(board.projection_scope, 'stage_attempt_workbench');
     assert.equal(board.availability, 'frontier_refs_observed');
-    assert.equal(board.summary.item_count, 2);
-    assert.equal(board.summary.status_counts.active, 1);
+    assert.equal(board.summary.item_count, 3);
+    assert.equal(board.summary.status_counts.rejected, 1);
+    assert.equal(board.summary.status_counts['failure_scope:endpoint'], 1);
     assert.equal(board.summary.status_counts.blocked, 1);
     assert.deepEqual(board.summary.rollback_target_refs, [
       'rollback:frontier/b',
-      'rollback:frontier/a',
+      '02-protocol_and_analysis_plan',
     ]);
     assert.equal(board.authority_boundary.can_write_domain_truth, false);
     assert.equal(board.authority_boundary.can_authorize_domain_ready, false);
