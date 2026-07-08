@@ -1,4 +1,13 @@
 type JsonRecord = Record<string, unknown>;
+type ActionKind = 'user_action' | 'system_action' | 'agent_action' | 'safe_action' | 'blocked_no_action';
+
+const ACTION_KINDS = new Set<ActionKind>([
+  'user_action',
+  'system_action',
+  'agent_action',
+  'safe_action',
+  'blocked_no_action',
+]);
 
 function asRecord(value: unknown): JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
@@ -10,6 +19,22 @@ function asString(value: unknown): string | null {
 
 function asBoolean(value: unknown): boolean {
   return value === true;
+}
+
+function asObservedGeneration(value: unknown): string | number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return asString(value);
+}
+
+function asActionKind(value: unknown): ActionKind | null {
+  const candidate = asString(value) as ActionKind | null;
+  return candidate && ACTION_KINDS.has(candidate) ? candidate : null;
+}
+
+function asRecordArray(value: unknown): JsonRecord[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is JsonRecord => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
+    : [];
 }
 
 function asNumber(value: unknown): number | null {
@@ -34,6 +59,7 @@ function taskRunProjectionCondition(input: {
   severity: string;
   owner: string;
   lastTransitionTime: string | null;
+  observedGeneration: string | number | null;
   ref: string;
 }) {
   return {
@@ -44,6 +70,7 @@ function taskRunProjectionCondition(input: {
     severity: input.severity,
     owner: input.owner,
     last_transition_time: input.lastTransitionTime,
+    observed_generation: input.observedGeneration,
     ref: input.ref,
   };
 }
@@ -70,6 +97,7 @@ function taskRunProjectionConditions(task: JsonRecord) {
   const nextOwner = asRecord(task.next_owner);
   const sourceRefCount = Number(task.source_ref_count ?? 0);
   const lastProgressAt = asString(task.last_progress_at);
+  const observedGeneration = asObservedGeneration(task.observed_generation);
   const statusReason = taskRunProjectionStatusReason(state, priorityBucket);
   const statusSeverity = state === 'attention_needed'
     || statusReason.includes('stale')
@@ -96,6 +124,7 @@ function taskRunProjectionConditions(task: JsonRecord) {
       severity: statusSeverity,
       owner: domainId,
       lastTransitionTime: lastProgressAt,
+      observedGeneration,
       ref: `${ref}.progress`,
     }),
     taskRunProjectionCondition({
@@ -108,6 +137,7 @@ function taskRunProjectionConditions(task: JsonRecord) {
       severity: ownerAttentionReason === 'next_owner_ref_available' ? 'none' : 'warning',
       owner: asString(nextOwner.owner) ?? domainId,
       lastTransitionTime: lastProgressAt,
+      observedGeneration,
       ref: `${ref}.next_owner`,
     }),
     taskRunProjectionCondition({
@@ -118,14 +148,22 @@ function taskRunProjectionConditions(task: JsonRecord) {
       severity: sourceRefCount > 0 ? 'none' : 'warning',
       owner: 'opl_framework',
       lastTransitionTime: lastProgressAt,
+      observedGeneration,
       ref: `${ref}.source_refs`,
     }),
   ];
 }
 
-function taskOpenAction(taskId: string, actionId: string, actionRef: string | null, route: string | null) {
+function taskOpenAction(
+  taskId: string,
+  actionId: string,
+  actionRef: string | null,
+  route: string | null,
+  actionKind: ActionKind = 'safe_action',
+) {
   return {
     action_id: actionId,
+    action_kind: actionKind,
     action_ref: actionRef,
     route,
     required_mode: 'dry_run',
@@ -301,6 +339,7 @@ function taskRunProjectionTask(task: JsonRecord) {
     action_cards: [
       {
         card_id: `${taskId}:next_action`,
+        action_kind: asActionKind(actionReceipt.action_kind) ?? 'safe_action',
         risk: {
           mutation_policy: 'no_writes_preview_only',
           authority_boundary: 'cannot_create_owner_receipt_or_domain_truth',
@@ -357,8 +396,284 @@ function taskRunProjectionTask(task: JsonRecord) {
   };
 }
 
+function workItemActionKind(task: JsonRecord): ActionKind {
+  const primaryState = asString(task.primary_state);
+  const automationState = asString(task.automation_state);
+  if (primaryState === 'owner_decision_required' || primaryState === 'paused_waiting_for_direction') {
+    return 'user_action';
+  }
+  if (primaryState === 'system_attention_required') {
+    return 'system_action';
+  }
+  if (primaryState === 'in_progress' || automationState === 'automation_running') {
+    return 'agent_action';
+  }
+  return asRecordArray(task.action_cards).length > 0 ? 'safe_action' : 'blocked_no_action';
+}
+
+function workItemStageCatalogSummary() {
+  return {
+    source_catalog: 'family_stage_control_plane',
+    source_catalog_ref: 'contracts/family-orchestration/family-stage-control-plane.schema.json',
+    action_catalog_ref: 'contracts/family-orchestration/family-action-catalog.schema.json',
+    action_lineage_ref: 'family_action_catalog.source_of_work.stage_catalog_ref',
+    label_source_policy: 'task_drilldowns.active_stage_label_else_active_stage_id',
+    next_action_template_source_policy:
+      'stage_run_cockpit_summary.next_safe_action_ref_else_family_action_catalog.source_of_work.stage_catalog_ref',
+    refs_only: true,
+  };
+}
+
+function workItemCondition(condition: JsonRecord) {
+  return {
+    type: asString(condition.type) ?? 'unknown',
+    status: asString(condition.status) ?? 'unknown',
+    reason: asString(condition.reason) ?? 'unknown',
+    message: asString(condition.message),
+    owner: asString(condition.owner) ?? 'unknown',
+    last_transition_time: asString(condition.last_transition_time),
+    observed_generation: asObservedGeneration(condition.observed_generation),
+    ref: asString(condition.ref),
+  };
+}
+
+function hasUsageOrHeartbeat(task: JsonRecord) {
+  return asString(task.last_heartbeat_at) !== null
+    || asNumber(task.elapsed_seconds) !== null
+    || Object.keys(asRecord(task.current_stage_usage)).length > 0
+    || Object.keys(asRecord(task.task_total_usage)).length > 0;
+}
+
+function canonicalWorkItemCondition(input: {
+  type: string;
+  status: 'True' | 'False' | 'Unknown';
+  reason: string;
+  message: string;
+  owner: string;
+  lastTransitionTime: string | null;
+  observedGeneration: string | number | null;
+  ref: string;
+}) {
+  return {
+    type: input.type,
+    status: input.status,
+    reason: input.reason,
+    message: input.message,
+    owner: input.owner,
+    last_transition_time: input.lastTransitionTime,
+    observed_generation: input.observedGeneration,
+    ref: input.ref,
+  };
+}
+
+function canonicalWorkItemConditions(task: JsonRecord) {
+  const taskId = asString(task.task_id) ?? 'unknown-task';
+  const ref = baseRef(taskId);
+  const primaryState = asString(task.primary_state);
+  const automationState = asString(task.automation_state);
+  const owner = asString(task.domain_id) ?? 'opl_framework';
+  const lastTransitionTime = asString(task.last_progress_at);
+  const observedGeneration = asObservedGeneration(task.observed_generation);
+  const running = primaryState === 'in_progress' || automationState === 'automation_running';
+  const succeeded = primaryState === 'delivered_auto_paused';
+  const needsUserDecision = primaryState === 'owner_decision_required' || primaryState === 'paused_waiting_for_direction';
+  const needsSystemRepair = primaryState === 'system_attention_required';
+  const paused = succeeded || primaryState === 'paused_waiting_for_direction';
+  const telemetryFresh = hasUsageOrHeartbeat(task);
+
+  return [
+    canonicalWorkItemCondition({
+      type: 'Running',
+      status: running ? 'True' : 'False',
+      reason: running ? 'automation_or_user_progress_running' : 'not_running',
+      message: running ? 'Work item is being advanced.' : 'No active running proof is projected.',
+      owner,
+      lastTransitionTime,
+      observedGeneration,
+      ref: `${ref}.status`,
+    }),
+    canonicalWorkItemCondition({
+      type: 'Succeeded',
+      status: succeeded ? 'True' : 'False',
+      reason: succeeded ? 'delivered_auto_paused' : 'not_delivered',
+      message: succeeded ? 'Milestone deliverable is present and automation is paused.' : 'No delivered milestone is projected.',
+      owner,
+      lastTransitionTime,
+      observedGeneration,
+      ref: `${ref}.status.primary_state`,
+    }),
+    canonicalWorkItemCondition({
+      type: 'NeedsUserDecision',
+      status: needsUserDecision ? 'True' : 'False',
+      reason: needsUserDecision ? 'user_direction_required' : 'no_user_decision_required',
+      message: needsUserDecision ? 'User direction is needed before the work item can continue.' : 'No user decision is projected.',
+      owner: needsUserDecision ? 'user' : owner,
+      lastTransitionTime,
+      observedGeneration,
+      ref: `${ref}.next_owner`,
+    }),
+    canonicalWorkItemCondition({
+      type: 'NeedsSystemRepair',
+      status: needsSystemRepair ? 'True' : 'False',
+      reason: needsSystemRepair ? 'system_attention_required' : 'no_system_repair_required',
+      message: needsSystemRepair ? 'System or framework repair is needed.' : 'No system repair is projected.',
+      owner: needsSystemRepair ? 'opl_framework' : owner,
+      lastTransitionTime,
+      observedGeneration,
+      ref: `${ref}.next_owner`,
+    }),
+    canonicalWorkItemCondition({
+      type: 'Paused',
+      status: paused ? 'True' : 'False',
+      reason: paused ? primaryState ?? 'paused' : 'not_paused',
+      message: paused ? 'Work item is paused from the user perspective.' : 'Work item is not paused.',
+      owner,
+      lastTransitionTime,
+      observedGeneration,
+      ref: `${ref}.status.primary_state`,
+    }),
+    canonicalWorkItemCondition({
+      type: 'TelemetryFresh',
+      status: telemetryFresh ? 'True' : 'Unknown',
+      reason: telemetryFresh ? 'telemetry_projected' : 'telemetry_not_projected',
+      message: telemetryFresh ? 'Runtime telemetry is projected.' : 'Runtime telemetry is missing from the fast projection.',
+      owner: 'opl_framework',
+      lastTransitionTime: asString(task.last_heartbeat_at) ?? lastTransitionTime,
+      observedGeneration,
+      ref: `${ref}.telemetry`,
+    }),
+  ];
+}
+
+function workItemEvidenceCard(card: JsonRecord) {
+  return {
+    card_id: asString(card.card_id) ?? 'unknown',
+    kind: asString(card.kind) ?? 'unknown',
+    title: asString(card.title) ?? 'Evidence refs',
+    summary: asString(card.summary) ?? 'refs_available',
+    owner: asString(card.owner) ?? 'unknown',
+    ref: asString(card.ref),
+    content_policy: asString(card.content_policy) ?? 'refs_only',
+  };
+}
+
+function workItemProjectionItem(task: JsonRecord) {
+  const taskId = asString(task.task_id) ?? 'unknown-task';
+  const identity = asRecord(task.task_identity);
+  const agent = asRecord(identity.agent);
+  const project = asRecord(identity.project);
+  const workItem = asRecord(identity.work_item);
+  const executionRun = asRecord(identity.execution_run);
+  const status = asRecord(task.status);
+  const actionCard = asRecordArray(task.action_cards)[0] ?? {};
+  const openAction = asRecord(actionCard.open_action);
+  const stageCatalog = workItemStageCatalogSummary();
+  const stageRunCockpitSummary = asRecord(task.stage_run_cockpit_summary);
+  const stageId = asString(task.active_stage_id) ?? asString(executionRun.stage_id) ?? 'unknown';
+  const stageLabel = asString(task.active_stage_label)
+    ?? asString(executionRun.stage_label)
+    ?? asString(stageRunCockpitSummary.current_stage)
+    ?? stageId;
+  const actionKind = workItemActionKind(task);
+  const evidenceCards = asRecordArray(task.evidence_cards).map(workItemEvidenceCard);
+
+  return {
+    item_id: taskId,
+    title: asString(task.title) ?? taskId,
+    scope: {
+      scope_kind: 'work_item',
+      scope_id: asString(workItem.scope_id) ?? `task:${taskId}`,
+      agent_scope_id: asString(agent.scope_id),
+      project_scope_id: asString(project.scope_id),
+      work_item_scope_id: asString(workItem.scope_id),
+      task_ref: asString(identity.task_ref) ?? baseRef(taskId),
+    },
+    work_item: {
+      work_item_id: asString(workItem.work_item_id) ?? asString(task.study_id) ?? taskId,
+      label: asString(workItem.label) ?? asString(task.work_item_display_name) ?? asString(task.title) ?? taskId,
+      kind: asString(workItem.kind) ?? (asString(task.study_id) ? 'study' : 'runtime_activity'),
+      study_id: asString(task.study_id),
+      project_label: asString(project.label) ?? asString(task.project_display_name),
+    },
+    agent: {
+      agent_id: asString(agent.agent_id) ?? asString(task.domain_id) ?? 'unknown',
+      label: asString(agent.label) ?? asString(task.agent_display_name) ?? asString(task.domain_label) ?? 'unknown',
+      owner: asString(task.domain_id) ?? 'unknown',
+    },
+    stage: {
+      stage_id: stageId,
+      display_label: stageLabel,
+      display_label_source: asString(task.active_stage_label)
+        ? `${baseRef(taskId)}.active_stage_label`
+        : `${baseRef(taskId)}.active_stage_id`,
+      catalog_ref: stageCatalog.source_catalog_ref,
+      next_action_template_source: stageCatalog.next_action_template_source_policy,
+      execution_run_label: asString(executionRun.label) ?? asString(task.execution_run_label),
+    },
+    action: {
+      action_kind: actionKind,
+      title: asString(actionCard.title) ?? 'Next action',
+      summary: asString(actionCard.summary) ?? asString(task.next_visible_step),
+      owner: actionKind === 'user_action'
+        ? 'user'
+        : actionKind === 'system_action'
+          ? 'opl_framework'
+          : asString(task.domain_id) ?? 'unknown',
+      ref: asString(actionCard.ref),
+      action_ref: asString(actionCard.action_ref) ?? asString(openAction.action_ref),
+      route: asString(openAction.route),
+      dry_run_required: asBoolean(actionCard.dry_run_required) || asString(openAction.required_mode) === 'dry_run',
+      catalog_ref: stageCatalog.action_catalog_ref,
+    },
+    evidence: {
+      refs_only: true,
+      card_count: evidenceCards.length,
+      cards: evidenceCards,
+      source_ref: `${baseRef(taskId)}.source_refs`,
+      body_policy: 'no_artifact_body_no_memory_body_no_quality_verdict',
+    },
+    status: {
+      primary_state: asString(task.primary_state) ?? asString(status.primary_state) ?? 'unknown',
+      primary_state_label: asString(task.primary_state_label) ?? asString(status.primary_state_label),
+      automation_state: asString(task.automation_state) ?? asString(status.automation_state) ?? 'unknown',
+      automation_state_label: asString(task.automation_state_label) ?? asString(status.automation_state_label),
+    },
+    diagnostic_conditions: asRecordArray(task.conditions).map(workItemCondition),
+    conditions: canonicalWorkItemConditions(task),
+  };
+}
+
+function buildWorkItemProjectionV1(tasks: ReadonlyArray<JsonRecord>) {
+  return {
+    surface_kind: 'opl_work_item_projection',
+    schema_version: 'work-item-projection.v1',
+    source_ref: 'app_state.operator.workbench.task_run_projection_v2.tasks',
+    derived_from: 'task_run_projection_v2',
+    refs_only: true,
+    stage_catalog_summary: workItemStageCatalogSummary(),
+    summary: {
+      item_count: tasks.length,
+      agent_action_count: tasks.filter((task) => workItemActionKind(task) === 'agent_action').length,
+      user_action_count: tasks.filter((task) => workItemActionKind(task) === 'user_action').length,
+      system_action_count: tasks.filter((task) => workItemActionKind(task) === 'system_action').length,
+      safe_action_count: tasks.filter((task) => workItemActionKind(task) === 'safe_action').length,
+      blocked_no_action_count: tasks.filter((task) => workItemActionKind(task) === 'blocked_no_action').length,
+    },
+    items: tasks.map(workItemProjectionItem),
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_read_artifact_body: false,
+      can_read_memory_body: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_quality_verdict: false,
+    },
+  };
+}
+
 export function buildTaskRunProjectionV2(rawTasks: ReadonlyArray<JsonRecord>) {
   const tasks = rawTasks.map(taskRunProjectionTask);
+  const workItemProjection = buildWorkItemProjectionV1(tasks);
   return {
     surface_kind: 'task_run_projection_v2',
     schema_version: 'task-run-projection.v2',
@@ -384,6 +699,7 @@ export function buildTaskRunProjectionV2(rawTasks: ReadonlyArray<JsonRecord>) {
       system_attention_count: tasks.filter((task) => task.primary_state === 'system_attention_required').length,
       automation_running_count: tasks.filter((task) => task.automation_state === 'automation_running').length,
     },
+    work_item_projection_v1: workItemProjection,
     tasks,
     authority_boundary: {
       can_write_domain_truth: false,

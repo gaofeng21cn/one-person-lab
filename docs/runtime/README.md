@@ -107,9 +107,13 @@ Fast Local Env
    - 不把 stale blocked attempt、queue residue 或 provider counter 直接当用户项目结论。
    - 不把 shell 分组需求写回 runtime truth。
 
-因此，`runtime_activity_items`、`task_drilldowns`、`task_run_projection_v2` 和相关
-scope/status projection 是 Framework owner surface；“显示成什么词、分成哪几组、哪些
-细节默认折叠”是 App 与 shell owner surface。
+因此，`runtime_activity_items`、`task_drilldowns`、`task_run_projection_v2`、`work_item_projection_v1`
+和相关 scope/status projection 是 Framework owner surface；`work_item_projection_v1`
+只把同一 `task_run_projection_v2` refs-only 数据整理成用户认知顺序：scope、work item、agent、stage、
+action、evidence 与 conditions envelope，并通过 `family_stage_control_plane` / `family_action_catalog`
+refs 标明 stage label 与 next-action template 来源。它不写 domain truth，不生成 owner receipt、
+typed blocker、quality verdict 或 App release/currentness 结论；“显示成什么词、分成哪几组、哪些
+细节默认折叠”仍是 App 与 shell owner surface。
 
 ## 内容
 

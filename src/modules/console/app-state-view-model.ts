@@ -820,6 +820,7 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
   const activityCenter = buildActivityCenter(input);
   const domainLaneMap = buildDomainLaneMap(input);
   const taskDrilldowns = buildTaskDrilldowns(input);
+  const taskRunProjection = buildTaskRunProjectionV2(runtimeTasks);
   const currentOwnerDeltaReadModel = asRecord(input.currentOwnerDeltaReadModel);
   const currentOwnerDeltaTopline = buildCurrentOwnerDeltaTopline({
     currentOwnerDeltaReadModel,
@@ -880,7 +881,8 @@ export function buildOplAppOperatorViewModel(input: OplAppOperatorViewModelInput
       activity_center: activityCenter,
       domain_lane_map: domainLaneMap,
       task_drilldowns: taskDrilldowns,
-      task_run_projection_v2: buildTaskRunProjectionV2(runtimeTasks),
+      task_run_projection_v2: taskRunProjection,
+      work_item_projection_v1: taskRunProjection.work_item_projection_v1,
       safe_action_routes: safeActionRoutes,
       refresh_policy: {
         summary_poll_interval_seconds: 10,

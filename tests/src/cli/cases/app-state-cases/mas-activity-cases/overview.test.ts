@@ -163,6 +163,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
               refs_only: boolean;
               source_ref: string;
               summary: Record<string, number>;
+              work_item_projection_v1: Record<string, any>;
               tasks: Array<{
                 task_identity: Record<string, any>;
                 status: Record<string, any>;
@@ -176,6 +177,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
               }>;
               authority_boundary: Record<string, any>;
             };
+            work_item_projection_v1: Record<string, any>;
           };
           visual_ref_groups: {
             active_project_refs: Array<{ study_id?: string; state: string }>;
@@ -384,6 +386,33 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.equal(taskRunProjection.authority_boundary.can_create_typed_blocker, false);
     assert.equal(taskRunProjection.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal('provider_completion_is_domain_ready' in taskRunProjection.authority_boundary, false);
+    assert.deepEqual(
+      output.app_state.operator.workbench.work_item_projection_v1,
+      taskRunProjection.work_item_projection_v1,
+    );
+    const workItemProjection = output.app_state.operator.workbench.work_item_projection_v1;
+    assert.equal(workItemProjection.surface_kind, 'opl_work_item_projection');
+    assert.equal(workItemProjection.schema_version, 'work-item-projection.v1');
+    assert.equal(workItemProjection.refs_only, true);
+    assert.equal(workItemProjection.derived_from, 'task_run_projection_v2');
+    assert.deepEqual(workItemProjection.summary, {
+      item_count: 3,
+      agent_action_count: 1,
+      user_action_count: 1,
+      system_action_count: 1,
+      safe_action_count: 0,
+      blocked_no_action_count: 0,
+    });
+    assert.equal(
+      workItemProjection.stage_catalog_summary.source_catalog_ref,
+      'contracts/family-orchestration/family-stage-control-plane.schema.json',
+    );
+    assert.equal(
+      workItemProjection.stage_catalog_summary.action_catalog_ref,
+      'contracts/family-orchestration/family-action-catalog.schema.json',
+    );
+    assert.equal(workItemProjection.authority_boundary.can_write_domain_truth, false);
+    assert.equal(workItemProjection.authority_boundary.can_create_owner_receipt, false);
 
     const runningProjection = taskRunProjection.tasks.find(
       (entry) => entry.task_identity.study_id === '002-dm-china-us-mortality-attribution',
@@ -404,9 +433,10 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     for (const condition of runningProjection.conditions) {
       assert.deepEqual(
         Object.keys(condition),
-        ['type', 'status', 'reason', 'message', 'severity', 'owner', 'last_transition_time', 'ref'],
+        ['type', 'status', 'reason', 'message', 'severity', 'owner', 'last_transition_time', 'observed_generation', 'ref'],
       );
       assert.equal(typeof condition.ref, 'string');
+      assert.equal(condition.observed_generation, null);
     }
     const attentionProjection = taskRunProjection.tasks.find(
       (entry) => entry.task_identity.study_id === '003-dpcc-primary-care-phenotype-treatment-gap',
@@ -444,7 +474,9 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     assert.equal(
       runningProjection.action_cards.every((card: any) =>
-        typeof card.ref === 'string'
+        ['user_action', 'system_action', 'agent_action', 'safe_action', 'blocked_no_action'].includes(card.action_kind)
+          && card.action_kind === 'safe_action'
+          && typeof card.ref === 'string'
           && typeof card.summary === 'string'
           && card.risk?.mutation_policy === 'no_writes_preview_only'
           && Array.isArray(card.write_targets)
@@ -453,6 +485,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
           && typeof card.rollback_ref === 'string'
           && typeof card.verify_ref === 'string'
           && card.open_action?.required_mode === 'dry_run'
+          && card.open_action?.action_kind === 'safe_action'
           && !('body' in card)
           && !('receipt_body' in card)
           && !('verdict' in card)
@@ -491,6 +524,42 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.equal(Array.isArray(runningProjection.diagnostic_substrate_refs), true);
     assert.equal(runningProjection.stage_run_cockpit.refs_only, true);
     assert.equal(runningProjection.stage_run_cockpit_summary.current_stage, 'live');
+    const runningWorkItem = workItemProjection.items.find(
+      (entry: any) => entry.work_item.study_id === '002-dm-china-us-mortality-attribution',
+    ) as any;
+    assert.ok(runningWorkItem);
+    assert.equal(runningWorkItem.scope.scope_kind, 'work_item');
+    assert.equal(runningWorkItem.work_item.kind, 'study');
+    assert.equal(runningWorkItem.agent.label, 'MAS');
+    assert.equal(runningWorkItem.stage.stage_id, 'live');
+    assert.equal(
+      runningWorkItem.stage.catalog_ref,
+      'contracts/family-orchestration/family-stage-control-plane.schema.json',
+    );
+    assert.equal(runningWorkItem.action.action_kind, 'agent_action');
+    assert.equal(
+      runningWorkItem.action.catalog_ref,
+      'contracts/family-orchestration/family-action-catalog.schema.json',
+    );
+    assert.equal(runningWorkItem.evidence.refs_only, true);
+    assert.equal(runningWorkItem.evidence.card_count, 3);
+    assert.deepEqual(
+      runningWorkItem.conditions.map((condition: any) => condition.type),
+      ['Running', 'Succeeded', 'NeedsUserDecision', 'NeedsSystemRepair', 'Paused', 'TelemetryFresh'],
+    );
+    assert.equal(runningWorkItem.conditions.find((condition: any) => condition.type === 'Running')?.status, 'True');
+    assert.equal(
+      runningWorkItem.conditions.find((condition: any) => condition.type === 'NeedsSystemRepair')?.status,
+      'False',
+    );
+    assert.equal(runningWorkItem.diagnostic_conditions[0].type, 'task_status');
+    assert.equal(
+      runningWorkItem.conditions.every((condition: any) =>
+        ['type', 'status', 'reason', 'message', 'owner', 'last_transition_time', 'observed_generation', 'ref']
+          .every((key) => key in condition)
+      ),
+      true,
+    );
     assert.equal(
       [null, 'not_applicable', 'running_confirmed'].includes(runningProjection.status.running_proof_status ?? null),
       true,
