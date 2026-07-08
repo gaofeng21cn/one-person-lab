@@ -246,6 +246,25 @@ type ManagedUpdateModuleFixture = {
   sourceHeadSha: string;
 };
 
+const CAPABILITY_PACKAGE_MODULES = [
+  ['medautoscience', 'med-autoscience', 'mas', 'mas', 'mas'],
+  ['medautogrant', 'med-autogrant', 'mag', 'mag', 'mag'],
+  ['redcube', 'redcube-ai', 'rca', 'rca', 'rca'],
+  ['oplmetaagent', 'opl-meta-agent', 'opl-meta-agent', 'opl-meta-agent', 'oma'],
+  ['oplbookforge', 'opl-bookforge', 'opl-bookforge', 'opl-bookforge', 'bookforge'],
+  ['scholarskills', 'mas-scholar-skills', 'mas-scholar-skills', 'mas-scholar-skills', 'scholarskills'],
+] as const;
+
+function managedUpdateModules(sourceShaLabel: string): ManagedUpdateModuleFixture[] {
+  return CAPABILITY_PACKAGE_MODULES.map(([moduleId, repoName, pluginName, skillName, shaPrefix]) => ({
+    moduleId,
+    repoName,
+    pluginName,
+    skillName,
+    sourceHeadSha: `${shaPrefix}-${sourceShaLabel}-sha`,
+  }));
+}
+
 function writeModuleSourceFiles(root: string, module: ManagedUpdateModuleFixture, label: string) {
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(path.join(root, 'README.md'), `${module.repoName} ${label}\n`, 'utf8');
@@ -443,54 +462,10 @@ test('update apply for capability packages executes the managed adapter and reco
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-apply-agent-'));
   const stateRoot = path.join(homeRoot, 'state');
   const moduleEnv = writeManagedUpdateModuleFixtures(homeRoot);
-  const updateModules: ManagedUpdateModuleFixture[] = [
-    {
-      moduleId: 'medautoscience',
-      repoName: 'med-autoscience',
-      pluginName: 'mas',
-      skillName: 'mas',
-      sourceHeadSha: 'mas-updated-head-sha',
-    },
-    {
-      moduleId: 'medautogrant',
-      repoName: 'med-autogrant',
-      pluginName: 'mag',
-      skillName: 'mag',
-      sourceHeadSha: 'mag-updated-head-sha',
-    },
-    {
-      moduleId: 'redcube',
-      repoName: 'redcube-ai',
-      pluginName: 'rca',
-      skillName: 'rca',
-      sourceHeadSha: 'rca-updated-head-sha',
-    },
-    {
-      moduleId: 'oplmetaagent',
-      repoName: 'opl-meta-agent',
-      pluginName: 'opl-meta-agent',
-      skillName: 'opl-meta-agent',
-      sourceHeadSha: 'oma-updated-head-sha',
-    },
-    {
-      moduleId: 'oplbookforge',
-      repoName: 'opl-bookforge',
-      pluginName: 'opl-bookforge',
-      skillName: 'opl-bookforge',
-      sourceHeadSha: 'bookforge-updated-head-sha',
-    },
-    {
-      moduleId: 'scholarskills',
-      repoName: 'mas-scholar-skills',
-      pluginName: 'mas-scholar-skills',
-      skillName: 'mas-scholar-skills',
-      sourceHeadSha: 'scholarskills-updated-head-sha',
-    },
-  ];
   const packageChannel = writeManagedUpdatePackageChannelFixture({
     root: path.join(homeRoot, 'channel-update'),
     version: '26.6.99-nightly',
-    modules: updateModules,
+    modules: managedUpdateModules('updated-head'),
   });
   const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then
@@ -512,134 +487,7 @@ exit 2
       OPL_PACKAGES_OWNER: 'owner',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.99-nightly',
       PATH: `${codexFixture.fixtureRoot}${path.delimiter}${packageChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
-    })) as {
-      managed_update: {
-        operation: string;
-        operation_mode: string;
-        idempotency_lock: { status: string; lock_file: string };
-        components: Array<{
-          component_id: string;
-          receipt: {
-            last_receipt_ref: string | null;
-            verify_result: string;
-            activated_at: string | null;
-            post_apply_hooks: string[];
-            repair_action: string | null;
-            apply_mode: string;
-            status_detail: {
-              auto_apply_eligible: boolean | null;
-              app_background_safe: boolean | null;
-              clean_managed_targets_count: number | null;
-              manual_required_targets_count: number | null;
-              post_apply_status: string;
-              reload_status: string;
-            };
-            post_apply_action_statuses: Array<{ action_id: string; status: string; result_ref: string | null }>;
-            reload_guidance: {
-              reload_required: boolean;
-              reload_recommended: boolean;
-              reload_targets: string[];
-              command_ref: string | null;
-              reason: string | null;
-            };
-          };
-          auto_apply: { eligible: boolean; app_background_safe: boolean; command_ref: string | null };
-          status_detail: {
-            auto_apply_eligible: boolean | null;
-            app_background_safe: boolean | null;
-            clean_managed_targets_count: number | null;
-            manual_required_targets_count: number | null;
-            post_apply_status: string;
-            reload_status: string;
-          };
-          post_apply_guidance: {
-            reload_guidance: {
-              reload_required: boolean;
-              reload_recommended: boolean;
-              reload_targets: string[];
-              command_ref: string | null;
-              reason: string | null;
-            };
-          };
-        }>;
-        execution: {
-          status: string;
-          adapter_results: Array<{
-            adapter_id: string;
-            owner_route: {
-              owner: string;
-              apply_owner: string;
-              package_manager_claim: boolean;
-            };
-            owner_execution_boundary: {
-              owner_executor_id: string;
-              runner_can_execute: boolean;
-              package_manager_claim: boolean;
-            };
-            status: string;
-            reason: string;
-            apply_mode: string;
-            status_detail: {
-              auto_apply_eligible: boolean | null;
-              app_background_safe: boolean | null;
-              clean_managed_targets_count: number | null;
-              manual_required_targets_count: number | null;
-              post_apply_status: string;
-              reload_status: string;
-            };
-            reload_guidance: {
-              reload_required: boolean;
-              reload_recommended: boolean;
-              reload_targets: string[];
-              command_ref: string | null;
-              reason: string | null;
-            };
-            result: {
-              apply_mode: string;
-              app_background_safe: boolean;
-              auto_apply_scope: string;
-              status_detail: {
-                auto_apply_eligible: boolean | null;
-                app_background_safe: boolean | null;
-                clean_managed_targets_count: number | null;
-                manual_required_targets_count: number | null;
-                post_apply_status: string;
-                reload_status: string;
-              };
-              reload_guidance: {
-                reload_required: boolean;
-                reload_recommended: boolean;
-                reload_targets: string[];
-                command_ref: string | null;
-                reason: string | null;
-              };
-              read_model_guidance: {
-                status_plane: string;
-                component_receipt_ledger: string;
-                app_consumer: string;
-              };
-            };
-            post_apply_actions: Array<{
-              action_id: string;
-              status: string;
-              result_ref: string | null;
-              result: Record<string, unknown> | null;
-            }>;
-          }>;
-          receipt_record: {
-            status: string;
-            recorded_receipt_count: number;
-            receipt_refs: string[];
-            ledger_file: string;
-          };
-        };
-        receipts: { write_policy: string; component_receipt_ledger_file: string };
-        authority_boundary: {
-          can_silently_update_clean_managed_modules: boolean;
-          can_write_domain_truth: boolean;
-        };
-      };
-    };
+    })) as any;
 
     assert.equal(output.managed_update.operation, 'apply');
     assert.equal(output.managed_update.operation_mode, 'controlled_apply');
@@ -680,14 +528,14 @@ exit 2
       path.join(stateRoot, 'managed-update-component-receipts.json'),
     );
     assert.deepEqual(
-      output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry) => entry.action_id),
+      output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry: any) => entry.action_id),
       ['reconcile_modules', 'sync_skills', 'codex_surface'],
     );
     assert.deepEqual(
-      output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry) => entry.status),
+      output.managed_update.execution.adapter_results[0].post_apply_actions.map((entry: any) => entry.status),
       ['completed', 'completed', 'completed'],
     );
-    const capabilityExposure = output.managed_update.execution.adapter_results[0].post_apply_actions.find((entry) => (
+    const capabilityExposure = output.managed_update.execution.adapter_results[0].post_apply_actions.find((entry: any) => (
       entry.action_id === 'codex_surface'
     ));
     assert.deepEqual(
@@ -702,40 +550,7 @@ exit 2
     assert.equal(output.managed_update.execution.receipt_record.recorded_receipt_count, 1);
     assert.equal(output.managed_update.execution.receipt_record.receipt_refs[0].startsWith('opl://managed-update/capability_packages/apply/'), true);
     assert.equal(fs.existsSync(path.join(stateRoot, 'managed-update-kernel.lock')), false);
-    const receiptLedger = readJsonFile(path.join(stateRoot, 'managed-update-component-receipts.json')) as {
-      receipts: Array<{
-        receipt_ref: string;
-        component_id: string;
-        operation: string;
-        verify_result: string;
-        activated_at: string;
-        post_apply_hooks: string[];
-        authority_boundary: { can_write_domain_truth: boolean };
-        adapter_result_ref: string | null;
-        apply_mode: string;
-        owner_projection: {
-          owner: string;
-          apply_owner: string;
-          package_manager_claim: boolean;
-        };
-        status_detail: {
-          auto_apply_eligible: boolean | null;
-          app_background_safe: boolean | null;
-          clean_managed_targets_count: number | null;
-          manual_required_targets_count: number | null;
-          post_apply_status: string;
-          reload_status: string;
-        };
-        post_apply_action_statuses: Array<{ action_id: string; status: string; result_ref: string | null }>;
-        reload_guidance: {
-          reload_required: boolean;
-          reload_recommended: boolean;
-          reload_targets: string[];
-          command_ref: string | null;
-          reason: string | null;
-        };
-      }>;
-    };
+    const receiptLedger = readJsonFile(path.join(stateRoot, 'managed-update-component-receipts.json')) as any;
     assert.equal(receiptLedger.receipts.length, 1);
     assert.equal(receiptLedger.receipts[0].component_id, 'capability_packages');
     assert.equal(receiptLedger.receipts[0].operation, 'apply');
@@ -753,7 +568,7 @@ exit 2
     assert.equal(receiptLedger.receipts[0].status_detail.post_apply_status, 'completed');
     assert.equal(receiptLedger.receipts[0].status_detail.reload_status, 'recommended');
     assert.deepEqual(
-      receiptLedger.receipts[0].post_apply_action_statuses.map((entry) => entry.action_id),
+      receiptLedger.receipts[0].post_apply_action_statuses.map((entry: any) => entry.action_id),
       ['reconcile_modules', 'sync_skills', 'codex_surface'],
     );
     assert.equal(receiptLedger.receipts[0].reload_guidance.reload_recommended, true);
@@ -801,23 +616,7 @@ exit 2
       OPL_PACKAGES_OWNER: 'owner',
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.99-nightly',
       PATH: `${codexFixture.fixtureRoot}${path.delimiter}${packageChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
-    })) as {
-      managed_update: {
-        components: Array<{
-          receipt: {
-            last_receipt_ref: string | null;
-            verify_result: string;
-            activated_at: string | null;
-            apply_mode: string;
-            status_detail: {
-              post_apply_status: string;
-              reload_status: string;
-            };
-            reload_guidance: { reload_recommended: boolean };
-          };
-        }>;
-      };
-    };
+    })) as any;
     assert.equal(status.managed_update.components[0].receipt.last_receipt_ref, receiptLedger.receipts[0].receipt_ref);
     assert.equal(status.managed_update.components[0].receipt.verify_result, 'passed');
     assert.equal(typeof status.managed_update.components[0].receipt.activated_at, 'string');
@@ -835,54 +634,10 @@ test('update rollback for capability packages restores recorded previous package
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-rollback-agent-'));
   const stateRoot = path.join(homeRoot, 'state');
   const moduleEnv = writeManagedUpdateModuleFixtures(homeRoot);
-  const updateModules: ManagedUpdateModuleFixture[] = [
-    {
-      moduleId: 'medautoscience',
-      repoName: 'med-autoscience',
-      pluginName: 'mas',
-      skillName: 'mas',
-      sourceHeadSha: 'mas-rollback-current-sha',
-    },
-    {
-      moduleId: 'medautogrant',
-      repoName: 'med-autogrant',
-      pluginName: 'mag',
-      skillName: 'mag',
-      sourceHeadSha: 'mag-rollback-current-sha',
-    },
-    {
-      moduleId: 'redcube',
-      repoName: 'redcube-ai',
-      pluginName: 'rca',
-      skillName: 'rca',
-      sourceHeadSha: 'rca-rollback-current-sha',
-    },
-    {
-      moduleId: 'oplmetaagent',
-      repoName: 'opl-meta-agent',
-      pluginName: 'opl-meta-agent',
-      skillName: 'opl-meta-agent',
-      sourceHeadSha: 'oma-rollback-current-sha',
-    },
-    {
-      moduleId: 'oplbookforge',
-      repoName: 'opl-bookforge',
-      pluginName: 'opl-bookforge',
-      skillName: 'opl-bookforge',
-      sourceHeadSha: 'bookforge-rollback-current-sha',
-    },
-    {
-      moduleId: 'scholarskills',
-      repoName: 'mas-scholar-skills',
-      pluginName: 'mas-scholar-skills',
-      skillName: 'mas-scholar-skills',
-      sourceHeadSha: 'scholarskills-rollback-current-sha',
-    },
-  ];
   const packageChannel = writeManagedUpdatePackageChannelFixture({
     root: path.join(homeRoot, 'channel-rollback'),
     version: '26.6.100-nightly',
-    modules: updateModules,
+    modules: managedUpdateModules('rollback-current'),
   });
   const codexFixture = createFakeCodexFixture(`
 if [ "$1" = "--version" ]; then
@@ -911,17 +666,7 @@ exit 2
       'mas-rollback-current-sha',
     );
 
-    const rollback = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'capability_packages'], env)) as {
-      managed_update: {
-        operation: string;
-        execution: {
-          status: string;
-          adapter_results: Array<{ status: string; result: { summary: { completed_targets_count: number } } }>;
-          receipt_record: { status: string; recorded_receipt_count: number };
-        };
-        components: Array<{ receipt: { verify_result: string; rollback_ref: string | null } }>;
-      };
-    };
+    const rollback = withCliTimeout('120000', () => runCli(['update', 'rollback', '--component', 'capability_packages'], env)) as any;
 
     assert.equal(rollback.managed_update.operation, 'rollback');
     assert.equal(rollback.managed_update.execution.status, 'completed');

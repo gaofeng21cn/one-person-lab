@@ -6,6 +6,24 @@ import {
   MAS_SCHOLAR_SKILLS_SPECIALIST_PACK_IDS,
 } from '../../../../src/modules/connect/opl-skills-parts/scholarskills-profile.ts';
 
+const NO_SCHOLARSKILLS_AUTHORITY = {
+  can_write_domain_truth: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_write_runtime_queue: false,
+  can_write_owner_receipt: false,
+  can_write_paper_body: false,
+  can_write_artifact_authority: false,
+  can_authorize_publication_readiness: false,
+} as const;
+
+const NO_CAPABILITY_REGISTRY_AUTHORITY = {
+  can_write_domain_truth: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_write_runtime_queue: false,
+} as const;
+
 function createScholarSkillsRepoFixture(options: { specialistSkills?: readonly string[] } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-source-'));
   const pluginDir = path.join(root, '.codex-plugin');
@@ -59,102 +77,7 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
   try {
     const output = runCli(['connect', 'skills', '--domain', 'scholarskills'], {
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
-    }) as {
-      skill_catalog: {
-        packs: Array<{
-          domain_id: string;
-          canonical_plugin_name: string;
-          distribution_role: string;
-          project: string;
-          plugin_source_path: string;
-          plugin_manifest_path: string;
-          skill_entry_path: string;
-          repo_root: string;
-          ready_to_sync: boolean;
-          capability_plugin_distribution: {
-            surface_kind: string;
-            capability_plugin_id: string;
-            ownership_kind: string;
-            github_repo: string;
-            source_of_truth: string[];
-            connect_readback_commands: string[];
-            default_sync_scope: string;
-            default_target_project: string | null;
-            recommended_paper_execution_scopes: string[];
-            project_mirror_deprecated_for_paper_execution: boolean;
-            project_mirror_non_default_paper_execution_path: boolean;
-            project_scope_requires_explicit_request: boolean;
-            codex_scope_requires_explicit_request: boolean;
-            profile_driven_sync_model: {
-              profile_owner: string;
-              connect_role: string;
-              manifest_projection_ref: string;
-              source_status_values: string[];
-            };
-            framework_owned_capability: boolean;
-            domain_module: boolean;
-            brand_module: boolean;
-            authority_boundary: {
-              can_write_domain_truth: boolean;
-              can_sign_owner_receipt: boolean;
-              can_create_typed_blocker: boolean;
-              can_write_runtime_queue: boolean;
-              can_write_owner_receipt: boolean;
-              can_write_paper_body: boolean;
-              can_write_artifact_authority: boolean;
-              can_authorize_publication_readiness: boolean;
-            };
-          };
-          mas_scholar_skills_profile: {
-            surface_kind: string;
-            profile_id: string;
-            profile_driver: {
-              owner: string;
-              connect_role: string;
-              connect_does_not_own_quality_or_domain_truth: boolean;
-            };
-            required_skill_pack: string[];
-            default_skill_pack: string[];
-            install_target: {
-              target_scope: string;
-              target_root: string | null;
-              install_root: string | null;
-              system_codex_skill_install_default: boolean;
-            };
-            source: {
-              source_repo_path: string;
-              plugin_source_path: string;
-              source_role: string;
-              canonical_source_repo_path: string;
-              plugin_mirror_path: string | null;
-              mirror_or_cache_is_not_skill_completeness_authority: boolean;
-            };
-            packs: Array<{
-              pack_id: string;
-              source_role: string;
-              source_status: string;
-              resolved_source_path: string;
-              installed: boolean;
-              install_target_skill_root: string | null;
-            }>;
-            authority_boundary: {
-              can_write_domain_truth: boolean;
-              can_sign_owner_receipt: boolean;
-              can_create_typed_blocker: boolean;
-              can_write_runtime_queue: boolean;
-              can_write_owner_receipt: boolean;
-              can_write_paper_body: boolean;
-              can_write_artifact_authority: boolean;
-              can_authorize_publication_readiness: boolean;
-            };
-          };
-        }>;
-        summary: {
-          total: number;
-          ready_to_sync: number;
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.skill_catalog.summary.total, 1);
     assert.equal(output.skill_catalog.summary.ready_to_sync, 1);
@@ -241,7 +164,9 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
     assert.equal(pack.mas_scholar_skills_profile.source.canonical_source_repo_path, sourceRoot);
     assert.equal(pack.mas_scholar_skills_profile.source.plugin_mirror_path, null);
     assert.equal(pack.mas_scholar_skills_profile.source.mirror_or_cache_is_not_skill_completeness_authority, true);
-    const profilePacks = new Map(pack.mas_scholar_skills_profile.packs.map((entry) => [entry.pack_id, entry]));
+    const profilePacks = new Map<string, any>(
+      pack.mas_scholar_skills_profile.packs.map((entry: any) => [entry.pack_id, entry]),
+    );
     assert.equal(profilePacks.get('mas-scholar-skills')?.source_status, 'materialized');
     assert.equal(profilePacks.get('mas-scholar-skills')?.source_role, 'canonical_source_repo');
     assert.equal(
@@ -258,25 +183,11 @@ test('connect skills exposes MAS Scholar Skills as a framework-owned capability 
       assert.equal(profilePacks.get(packId)?.source_status, 'available-but-not-materialized');
       assert.equal(profilePacks.get(packId)?.installed, false);
     }
-    assert.deepEqual(pack.mas_scholar_skills_profile.authority_boundary, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-      can_write_owner_receipt: false,
-      can_write_paper_body: false,
-      can_write_artifact_authority: false,
-      can_authorize_publication_readiness: false,
-    });
+    assert.deepEqual(pack.mas_scholar_skills_profile.authority_boundary, NO_SCHOLARSKILLS_AUTHORITY);
     assert.equal(pack.capability_plugin_distribution.framework_owned_capability, true);
     assert.equal(pack.capability_plugin_distribution.domain_module, false);
     assert.equal(pack.capability_plugin_distribution.brand_module, false);
-    assert.deepEqual(pack.capability_plugin_distribution.authority_boundary, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    });
+    assert.deepEqual(pack.capability_plugin_distribution.authority_boundary, NO_CAPABILITY_REGISTRY_AUTHORITY);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
   }
@@ -318,21 +229,7 @@ test('connect sync-skills finds canonical sibling MAS Scholar Skills checkout wi
       OPL_MODULE_PATH_SCHOLARSKILLS: '',
       OPL_MODULE_PATH_MAS_SCHOLAR_SKILLS: '',
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          repo_root: string;
-          sync_status: string;
-          installer_result: {
-            workspace_or_quest_local_skill: {
-              install_receipt: {
-                source_repo_path: string;
-              };
-            };
-          };
-        }>;
-      };
-    };
+    }) as any;
 
     const pack = output.skill_sync.packs[0];
     assert.equal(fs.realpathSync(pack.repo_root), fs.realpathSync(siblingRoot));
@@ -360,31 +257,7 @@ test('connect sync-skills without a target does not install ScholarSkills to MAS
       OPL_MEDAUTOSCIENCE_REPO_ROOT: masRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          domain_id: string;
-          sync_status: string;
-          sync_scope: string;
-          target_scope: string;
-          target_project: null;
-          target_root: null;
-          workspace_or_quest_local_skill_root: null;
-          codex_discovery_kind: string;
-          installer_result: {
-            source: string;
-            workspace_or_quest_local_skill: {
-              status: string;
-              skip_reason: string;
-              target_scope: string;
-              target_root: null;
-              required: string[];
-            };
-          };
-        }>;
-        codex_plugin_registry: null;
-      };
-    };
+    }) as any;
 
     assert.equal(output.skill_sync.codex_plugin_registry, null);
     assert.equal(output.skill_sync.packs.length, 1);
@@ -421,12 +294,8 @@ test('connect sync-skills installs MAS Scholar Skills to the MAS project-local p
   const masRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mas-scholar-skills-mas-root-'));
 
   try {
-    const modules = runCli(['connect', 'modules']) as {
-      modules: {
-        items: Array<{ module_id: string }>;
-      };
-    };
-    assert.equal(modules.modules.items.some((module) => module.module_id === 'scholarskills'), false);
+    const modules = runCli(['connect', 'modules']) as any;
+    assert.equal(modules.modules.items.some((module: any) => module.module_id === 'scholarskills'), false);
 
     const output = runCli([
       'connect',
@@ -446,59 +315,7 @@ test('connect sync-skills installs MAS Scholar Skills to the MAS project-local p
       OPL_MEDAUTOSCIENCE_REPO_ROOT: masRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          domain_id: string;
-          sync_status: string;
-          sync_scope: string;
-          target_scope: string;
-          target_project: string;
-          target_root: string;
-          workspace_or_quest_local_skill_root: null;
-          codex_discovery_kind: string;
-          project_mirror_deprecated_for_paper_execution: boolean;
-          project_mirror_non_default_paper_execution_path: boolean;
-          registry_repo_root: string | null;
-          installer_result: {
-            source: string;
-            plugin_source_path: string;
-            project_local_skill_mirror: {
-              status: string;
-              target_scope: string;
-              target_project: string;
-              target_repo_root: string;
-              project_local_plugin_root: string;
-              project_local_plugin_manifest_path: string;
-              project_local_skill_entry_path: string;
-              project_mirror_deprecated_for_paper_execution: boolean;
-              project_mirror_non_default_paper_execution_path: boolean;
-              project_local_git_exclude: {
-                status: string;
-                exclude_path: string | null;
-                pattern: string;
-              };
-              project_local_copy: {
-                copy_policy: string;
-                copied_roots: string[];
-                excluded_roots: string[];
-              };
-              authority_boundary: {
-                can_write_domain_truth: boolean;
-                can_sign_owner_receipt: boolean;
-                can_create_typed_blocker: boolean;
-                can_write_runtime_queue: boolean;
-                can_write_owner_receipt: boolean;
-                can_write_paper_body: boolean;
-                can_write_artifact_authority: boolean;
-                can_authorize_publication_readiness: boolean;
-              };
-            };
-          };
-        }>;
-        codex_plugin_registry: null;
-      };
-    };
+    }) as any;
 
     assert.equal(output.skill_sync.packs.length, 1);
     const pack = output.skill_sync.packs[0];
@@ -546,16 +363,7 @@ test('connect sync-skills installs MAS Scholar Skills to the MAS project-local p
     assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', '.git')), false);
     assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', 'gallery', 'medical-display', 'assets')), false);
     assert.equal(fs.existsSync(path.join(masRoot, 'plugins', 'mas-scholar-skills', 'gallery', 'medical-display', 'medical_display_gallery.pdf')), true);
-    assert.deepEqual(mirror.authority_boundary, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-      can_write_owner_receipt: false,
-      can_write_paper_body: false,
-      can_write_artifact_authority: false,
-      can_authorize_publication_readiness: false,
-    });
+    assert.deepEqual(mirror.authority_boundary, NO_SCHOLARSKILLS_AUTHORITY);
     assert.equal(mirror.project_local_git_exclude.status, 'skipped_not_git_repo');
     assert.equal(mirror.project_local_git_exclude.pattern, '/plugins/mas-scholar-skills/');
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
@@ -590,40 +398,7 @@ test('connect sync-skills installs MAS Scholar Skills to a workspace-local Codex
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          domain_id: string;
-          sync_status: string;
-          sync_scope: string;
-          target_scope: string;
-          target_project: string | null;
-          target_root: string;
-          workspace_or_quest_local_skill_root: string;
-          codex_discovery_kind: string;
-          project_mirror_deprecated_for_paper_execution: boolean;
-          project_mirror_non_default_paper_execution_path: boolean;
-          registry_repo_root: string | null;
-          installer_result: {
-            source: string;
-            workspace_or_quest_local_skill: {
-              status: string;
-              target_scope: string;
-              target_root: string;
-              workspace_or_quest_local_skill_root: string;
-              workspace_or_quest_local_skill_entry_path: string;
-              install_receipt_path: string;
-              copy: {
-                copy_policy: string;
-                copied_roots: string[];
-                excluded_roots: string[];
-              };
-            };
-          };
-        }>;
-        codex_plugin_registry: null;
-      };
-    };
+    }) as any;
 
     assert.equal(output.skill_sync.codex_plugin_registry, null);
     const pack = output.skill_sync.packs[0];
@@ -662,35 +437,13 @@ test('connect sync-skills installs MAS Scholar Skills to a workspace-local Codex
     assert.equal(fs.existsSync(path.join(skillRoot, '.git')), false);
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills', 'SKILL.md')), false);
 
-    const receipt = parseJsonText(fs.readFileSync(path.join(skillRoot, '.opl-install-receipt.json'), 'utf8')) as {
-      receipt_kind: string;
-      target_scope: string;
-      target_root: string;
-      skill_root: string;
-      source_repo_path: string;
-      authority_flags: {
-        can_write_domain_truth: boolean;
-        can_sign_owner_receipt: boolean;
-        can_create_typed_blocker: boolean;
-        can_write_runtime_queue: boolean;
-        can_write_paper_body: boolean;
-      };
-    };
+    const receipt = parseJsonText(fs.readFileSync(path.join(skillRoot, '.opl-install-receipt.json'), 'utf8')) as any;
     assert.equal(receipt.receipt_kind, 'opl_scholarskills_workspace_or_quest_local_install_receipt');
     assert.equal(receipt.target_scope, 'workspace');
     assert.equal(receipt.target_root, workspaceRoot);
     assert.equal(receipt.skill_root, skillRoot);
     assert.equal(receipt.source_repo_path, sourceRoot);
-    assert.deepEqual(receipt.authority_flags, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-      can_write_owner_receipt: false,
-      can_write_paper_body: false,
-      can_write_artifact_authority: false,
-      can_authorize_publication_readiness: false,
-    });
+    assert.deepEqual(receipt.authority_flags, NO_SCHOLARSKILLS_AUTHORITY);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -723,49 +476,14 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          installer_result: {
-            workspace_or_quest_local_skill: {
-              mas_scholar_skills_profile_manifest_path: string;
-              mas_scholar_skills_profile: {
-                required_skill_pack: string[];
-                default_skill_pack: string[];
-                install_target: {
-                  target_scope: string;
-                  target_root: string;
-                  install_root: string;
-                  system_codex_skill_install_default: boolean;
-                };
-                packs: Array<{
-                  pack_id: string;
-                  default_by_profile: boolean;
-                  source_status: string;
-                  installed: boolean;
-                  install_target_skill_root: string;
-                }>;
-                authority_boundary: {
-                  can_write_domain_truth: boolean;
-                  can_sign_owner_receipt: boolean;
-                  can_create_typed_blocker: boolean;
-                  can_write_runtime_queue: boolean;
-                  can_write_owner_receipt: boolean;
-                  can_write_paper_body: boolean;
-                  can_write_artifact_authority: boolean;
-                  can_authorize_publication_readiness: boolean;
-                };
-              };
-            };
-          };
-        }>;
-      };
-    };
+    }) as any;
 
     const localSkill = output.skill_sync.packs[0].installer_result.workspace_or_quest_local_skill;
     const profile = localSkill.mas_scholar_skills_profile;
     const skillRoot = path.join(workspaceRoot, '.codex', 'skills', 'mas-scholar-skills');
-    const profilePacks = new Map(profile.packs.map((entry) => [entry.pack_id, entry]));
+    const profilePacks = new Map<string, any>(
+      profile.packs.map((entry: any) => [entry.pack_id, entry]),
+    );
 
     assert.equal(localSkill.mas_scholar_skills_profile_manifest_path, path.join(skillRoot, '.opl-mas-scholarskills-sync-manifest.json'));
     assert.equal(fs.existsSync(localSkill.mas_scholar_skills_profile_manifest_path), true);
@@ -802,16 +520,7 @@ test('connect sync-skills installs materialized MAS ScholarSkills specialist dir
         true,
       );
     }
-    assert.deepEqual(profile.authority_boundary, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-      can_write_owner_receipt: false,
-      can_write_paper_body: false,
-      can_write_artifact_authority: false,
-      can_authorize_publication_readiness: false,
-    });
+    assert.deepEqual(profile.authority_boundary, NO_SCHOLARSKILLS_AUTHORITY);
   } finally {
     fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -844,23 +553,7 @@ test('connect sync-skills installs MAS Scholar Skills to a quest-local Codex dis
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          sync_status: string;
-          sync_scope: string;
-          target_scope: string;
-          target_root: string;
-          workspace_or_quest_local_skill_root: string;
-          installer_result: {
-            workspace_or_quest_local_skill: {
-              install_receipt_path: string;
-              target_scope: string;
-            };
-          };
-        }>;
-      };
-    };
+    }) as any;
 
     const pack = output.skill_sync.packs[0];
     const skillRoot = path.join(questRoot, '.codex', 'skills', 'mas-scholar-skills');
@@ -891,49 +584,7 @@ test('connect sync-skills registers MAS Scholar Skills in Codex only with explic
       OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-    }) as {
-      skill_sync: {
-        packs: Array<{
-          domain_id: string;
-          sync_status: string;
-          sync_scope: string;
-          target_project: string | null;
-          registry_repo_root: string;
-          installer_result: {
-            source: string;
-            plugin_source_path: string;
-          };
-        }>;
-        codex_plugin_registry: {
-          surface_id: string;
-          items: Array<{
-            module_id: string | null;
-            pack_id: string;
-            plugin_id: string;
-            marketplace_id: string;
-            plugin_source_path: string;
-            plugin_manifest_path: string;
-            marketplace_root: string;
-            status: string;
-            ownership_kind: string;
-            distribution_role: string;
-            framework_owned_capability: boolean;
-            domain_module: boolean;
-            brand_module: boolean;
-            authority_boundary: {
-              can_write_domain_truth: boolean;
-              can_sign_owner_receipt: boolean;
-              can_create_typed_blocker: boolean;
-              can_write_runtime_queue: boolean;
-            };
-          }>;
-          summary: {
-            total: number;
-            registered: number;
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.skill_sync.packs.length, 1);
     assert.equal(output.skill_sync.packs[0].domain_id, 'scholarskills');
@@ -962,12 +613,7 @@ test('connect sync-skills registers MAS Scholar Skills in Codex only with explic
     assert.equal(item.framework_owned_capability, true);
     assert.equal(item.domain_module, false);
     assert.equal(item.brand_module, false);
-    assert.deepEqual(item.authority_boundary, {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    });
+    assert.deepEqual(item.authority_boundary, NO_CAPABILITY_REGISTRY_AUTHORITY);
 
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     assert.match(codexConfig, /\[marketplaces\.mas-scholar-skills-local\]/);
