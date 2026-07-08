@@ -4,7 +4,6 @@ Owner: `One Person Lab`
 Purpose: `family_live_evidence_maintenance`
 State: `support_reference`
 Machine boundary: 本文是人读 live / production / release / owner-evidence lane 维护入口。当前证据真相继续归各 repo 的 contracts、source、tests、CLI/API readback、runtime ledger、provider receipt、release artifact、domain-owned owner receipt / typed blocker / human gate 和真实 workspace / App evidence。
-Last reviewed: `2026-06-30`
 
 ## 读法
 
