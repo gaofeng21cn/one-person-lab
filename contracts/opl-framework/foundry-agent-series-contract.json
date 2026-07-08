@@ -31,6 +31,24 @@
     "plugin_transport_is_membership_axis": false,
     "plugin_transport_is_status_axis": false
   },
+  "primary_skill_carrier_projection_policy": {
+    "surface_kind": "opl_primary_skill_carrier_projection_policy",
+    "version": "primary-skill-carrier-projection.v1",
+    "policy_id": "repo_owned_primary_skill_materialized_as_codex_plugin_carrier",
+    "applies_to_series_membership": "standard_domain_agent",
+    "canonical_primary_skill_path": "agent/primary_skill/SKILL.md",
+    "codex_plugin_skill_path": "skills/<canonical_plugin_name>/SKILL.md",
+    "carrier_materialization": "materialized_full_skill_copy",
+    "materializer": "opl_standard_codex_plugin_materializer",
+    "codex_install_requires_real_skill_md": true,
+    "plugin_skill_may_be_stub_or_pointer": false,
+    "repo_local_plugin_mirror_is_compat_carrier_only": true,
+    "generated_plugin_carrier_is_transport_only": true,
+    "carrier_can_claim_domain_ready": false,
+    "carrier_can_write_domain_truth": false,
+    "carrier_can_sign_owner_receipt": false,
+    "carrier_can_create_typed_blocker": false
+  },
   "agent_package_exposure_unification_policy": {
     "surface_kind": "opl_agent_package_exposure_unification_policy",
     "version": "agent-package-exposure-unification.v1",

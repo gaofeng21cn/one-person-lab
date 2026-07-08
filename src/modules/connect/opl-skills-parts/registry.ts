@@ -36,6 +36,16 @@ export type InspectFamilySkillPackPluginTransport = {
   source_kind_role: SkillPackSourceKindRole;
   standard_codex_carrier: boolean;
   materializer: 'opl_standard_codex_plugin_materializer' | 'repo_plugin_installer';
+  primary_skill_projection: {
+    canonical_source_path: 'agent/primary_skill/SKILL.md';
+    carrier_materialization: 'materialized_full_skill_copy';
+    codex_install_requires_real_skill_md: true;
+    plugin_skill_may_be_stub_or_pointer: false;
+    carrier_is_membership_axis: false;
+    carrier_is_status_axis: false;
+    carrier_can_claim_domain_ready: false;
+    carrier_can_write_domain_truth: false;
+  } | null;
   generated_skill_surface_ready: boolean;
   generated_skill_surface_status: string | null;
   installer_kind: SkillPackInstallerKind;

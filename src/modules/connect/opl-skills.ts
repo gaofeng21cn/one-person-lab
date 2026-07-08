@@ -570,6 +570,18 @@ function inspectFamilySkillPackAtRepoRoot(
     materializer: spec.source_kind === 'opl_standard_codex_carrier'
       ? 'opl_standard_codex_plugin_materializer'
       : 'repo_plugin_installer',
+    primary_skill_projection: spec.source_kind === 'opl_standard_codex_carrier'
+      ? {
+          canonical_source_path: 'agent/primary_skill/SKILL.md',
+          carrier_materialization: 'materialized_full_skill_copy',
+          codex_install_requires_real_skill_md: true,
+          plugin_skill_may_be_stub_or_pointer: false,
+          carrier_is_membership_axis: false,
+          carrier_is_status_axis: false,
+          carrier_can_claim_domain_ready: false,
+          carrier_can_write_domain_truth: false,
+        }
+      : null,
     generated_skill_surface_ready: generatedSkillSurface.ready,
     generated_skill_surface_status: generatedSkillSurface.status,
     installer_kind: spec.installer_kind,

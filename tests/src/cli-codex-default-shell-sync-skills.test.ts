@@ -44,6 +44,14 @@ test('opl connect skills discovers the family plugin packs through the configure
       output.skill_catalog.packs.slice(0, 5).map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
       [true, true, true, true, true],
     );
+    for (const pack of output.skill_catalog.packs.slice(0, 5)) {
+      assert.equal(pack.plugin_transport.primary_skill_projection.canonical_source_path, 'agent/primary_skill/SKILL.md');
+      assert.equal(pack.plugin_transport.primary_skill_projection.carrier_materialization, 'materialized_full_skill_copy');
+      assert.equal(pack.plugin_transport.primary_skill_projection.codex_install_requires_real_skill_md, true);
+      assert.equal(pack.plugin_transport.primary_skill_projection.plugin_skill_may_be_stub_or_pointer, false);
+      assert.equal(pack.plugin_transport.primary_skill_projection.carrier_is_membership_axis, false);
+      assert.equal(pack.plugin_transport.primary_skill_projection.carrier_can_claim_domain_ready, false);
+    }
     const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
     assert.equal(metaPack?.plugin_manifest_found, false);
     assert.equal(metaPack?.installer_found, false);
@@ -375,6 +383,23 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       true,
     );
     const generatedPluginRoot = metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root;
+    const generatedPluginProvenance = parseJsonText(fs.readFileSync(
+      metaGeneratedPack.installer_result.generated_codex_plugin.carrier_provenance_path,
+      'utf8',
+    )) as Record<string, any>;
+    assert.equal(generatedPluginProvenance.surface_kind, 'opl_standard_primary_skill_carrier_projection');
+    assert.equal(generatedPluginProvenance.carrier_materialization, 'materialized_full_skill_copy');
+    assert.equal(generatedPluginProvenance.codex_install_requires_real_skill_md, true);
+    assert.equal(generatedPluginProvenance.plugin_skill_may_be_stub_or_pointer, false);
+    assert.equal(generatedPluginProvenance.authority_boundary.plugin_transport_is_membership_axis, false);
+    assert.equal(generatedPluginProvenance.authority_boundary.generated_surface_can_claim_domain_ready, false);
+    assert.equal(
+      fs.existsSync(path.join(
+        metaGeneratedPack.installer_result.generated_codex_plugin.codex_plugin_cache_path,
+        'opl-carrier.json',
+      )),
+      true,
+    );
     const generatedPluginManifest = parseJsonText(fs.readFileSync(
       metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
       'utf8',

@@ -444,6 +444,33 @@ function readActionContractDescriptors(repoRoot: string) {
   }
 }
 
+function buildOplGeneratedPluginProvenance(
+  inspected: InspectFamilySkillPack,
+  descriptors: Array<Record<string, unknown>>,
+) {
+  return {
+    surface_kind: 'opl_standard_primary_skill_carrier_projection',
+    version: 'primary-skill-carrier-projection.v1',
+    source: 'opl_standard_agent_primary_skill_codex_plugin',
+    materializer: 'opl_standard_codex_plugin_materializer',
+    carrier_role: 'codex_plugin_install_transport',
+    carrier_materialization: 'materialized_full_skill_copy',
+    canonical_primary_skill_source_path: inspected.skill_entry_path,
+    codex_plugin_skill_path: path.join('skills', inspected.canonical_plugin_name, 'SKILL.md'),
+    codex_install_requires_real_skill_md: true,
+    plugin_skill_may_be_stub_or_pointer: false,
+    descriptor_count: descriptors.length,
+    authority_boundary: {
+      plugin_transport_is_membership_axis: false,
+      plugin_transport_is_status_axis: false,
+      generated_surface_can_claim_domain_ready: false,
+      generated_surface_can_write_domain_truth: false,
+      generated_surface_can_sign_owner_receipt: false,
+      generated_surface_can_create_typed_blocker: false,
+    },
+  };
+}
+
 export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack, home?: string) {
   if (inspected.source_kind !== 'opl_standard_codex_carrier' || !inspected.ready_to_sync) {
     return null;
@@ -502,6 +529,11 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     buildOplGeneratedSkillAgentMetadata(inspected),
     'utf8',
   );
+  const carrierProvenancePath = path.join(pluginRoot, 'opl-carrier.json');
+  writeJsonFile(
+    carrierProvenancePath,
+    buildOplGeneratedPluginProvenance(inspected, descriptors),
+  );
   const marketplacePath = writeGeneratedPluginMarketplace(inspected, pluginRoot);
   const codexPluginCachePath = syncGeneratedPluginCache(
     inspected,
@@ -515,6 +547,7 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     plugin_manifest_path: path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
     marketplace_path: marketplacePath,
     skill_entry_path: path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'SKILL.md'),
+    carrier_provenance_path: carrierProvenancePath,
     codex_plugin_cache_path: codexPluginCachePath,
     removed_standalone_skill_root: codexSkillDir,
     descriptor_count: descriptors.length,

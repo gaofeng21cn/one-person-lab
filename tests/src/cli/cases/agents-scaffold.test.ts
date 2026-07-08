@@ -205,6 +205,26 @@ test('agents scaffold exposes OPL-owned reusable agent scaffold without owning d
     scaffold.foundry_agent_series_contract.agent_membership_projection_policy.plugin_transport_is_status_axis,
     false,
   );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.primary_skill_carrier_projection_policy
+      .canonical_primary_skill_path,
+    'agent/primary_skill/SKILL.md',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.primary_skill_carrier_projection_policy
+      .carrier_materialization,
+    'materialized_full_skill_copy',
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.primary_skill_carrier_projection_policy
+      .codex_install_requires_real_skill_md,
+    true,
+  );
+  assert.equal(
+    scaffold.foundry_agent_series_contract.primary_skill_carrier_projection_policy
+      .plugin_skill_may_be_stub_or_pointer,
+    false,
+  );
   assert.deepEqual(scaffold.foundry_agent_series_contract.shared_progress_projection_fields, [
     'progress_delta_classification',
     'deliverable_progress_delta',
