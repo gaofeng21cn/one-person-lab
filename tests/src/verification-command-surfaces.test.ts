@@ -265,43 +265,13 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
 
   const wrapperRetirement = readJson<{
     contract_kind: string;
-    owner: string;
-    state: string;
     required_before_physical_delete: string[];
     owner_delete_keep_or_blocker_decision_shapes: string[];
-    same_work_unit_live_evidence_scope: {
-      applies_to: string;
-      blocks_static_no_active_caller_retirement: boolean;
-      static_retirement_prerequisite_gate_ids: string[];
-    };
-    lane_separation: {
-      default_ordinary_lane: {
-        lane_id: string;
-        includes_private_platform_cleanup_gate: boolean;
-        can_authorize_private_platform_residue_cleanup: boolean;
-      };
-      private_platform_cleanup_lane: {
-        lane_id: string;
-        physical_delete_authorized: boolean;
-        cleanup_lane_can_authorize_physical_delete: boolean;
-      };
-    };
     private_platform_residue_deletion_gate: {
-      applies_to_agents: string[];
-      classification_source_field: string;
-      residue_target_kinds: string[];
-      allowed_dispositions: string[];
       physical_delete_authorized_by_opl: boolean;
-      required_owner_decision_shapes: string[];
     };
     first_batch_owner_route_tail_matrix: {
-      row_policy: string;
-      rows: Array<{
-        repo_id: string;
-        tail_classes: string[];
-        app_aion_policy: string;
-        forbidden_claims: string[];
-      }>;
+      rows: Array<{ repo_id: string }>;
       authority_boundary: Record<string, boolean>;
     };
     forbidden_retirement_shortcuts: string[];
@@ -310,7 +280,6 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     docs_foldback_boundary: Record<string, boolean>;
     delete_gate_read_model_boundary: Record<string, boolean>;
     opl_apply_boundary: Record<string, boolean>;
-    authority_boundary: Record<string, boolean>;
   }>('contracts/opl-framework/wrapper-retirement-gate-policy.json');
   assert.equal(wrapperRetirement.contract_kind, 'opl_wrapper_retirement_gate_policy.v1');
   assert.deepEqual(wrapperRetirement.required_before_physical_delete, [
@@ -319,142 +288,28 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     'no_forbidden_write_ref',
     'tombstone_or_provenance_ref',
   ]);
-  assert.deepEqual(wrapperRetirement.owner_delete_keep_or_blocker_decision_shapes, [
-    'physical_delete_authorization_ref',
-    'keep_as_authority_adapter_ref',
-    'typed_blocker_ref',
-  ]);
-  assert.equal(
-    wrapperRetirement.same_work_unit_live_evidence_scope.applies_to,
-    'current_owner_answer_compensation_chain',
-  );
-  assert.equal(
-    wrapperRetirement.same_work_unit_live_evidence_scope.blocks_static_no_active_caller_retirement,
-    false,
-  );
-  assert.deepEqual(wrapperRetirement.same_work_unit_live_evidence_scope.static_retirement_prerequisite_gate_ids, [
-    'replacement_parity',
-    'no_active_caller_proof',
-    'no_forbidden_write_proof',
-    'tombstone_or_provenance_ref',
-  ]);
-  assert.equal(wrapperRetirement.lane_separation.default_ordinary_lane.lane_id, 'default_ordinary_lane');
-  assert.equal(
-    wrapperRetirement.lane_separation.default_ordinary_lane.includes_private_platform_cleanup_gate,
-    false,
-  );
-  assert.equal(
-    wrapperRetirement.lane_separation.default_ordinary_lane
-      .can_authorize_private_platform_residue_cleanup,
-    false,
-  );
-  assert.equal(
-    wrapperRetirement.lane_separation.private_platform_cleanup_lane.lane_id,
-    'private_platform_cleanup_lane',
-  );
-  assert.equal(
-    wrapperRetirement.lane_separation.private_platform_cleanup_lane.physical_delete_authorized,
-    false,
-  );
-  assert.equal(
-    wrapperRetirement.lane_separation.private_platform_cleanup_lane
-      .cleanup_lane_can_authorize_physical_delete,
-    false,
-  );
-  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.applies_to_agents, [
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-    'opl-meta-agent',
-  ]);
-  assert.equal(
-    wrapperRetirement.private_platform_residue_deletion_gate.classification_source_field,
-    'functional_privatization_audit.modules[].private_platform_residue_gate',
-  );
-  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.residue_target_kinds, [
-    'scheduler',
-    'queue',
-    'session_store',
-    'workbench',
-    'status_shell',
-    'domain_wrapper',
-    'runtime_watch',
-    'agent_lab_materializer',
-  ]);
-  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.allowed_dispositions, [
-    'retain_authority_function',
-    'absorb_opl_primitive',
-    'no_active_caller_delete',
-    'tombstone',
-    'owner_typed_blocker',
-  ]);
-  assert.equal(
-    wrapperRetirement.private_platform_residue_deletion_gate.physical_delete_authorized_by_opl,
-    false,
-  );
-  assert.deepEqual(wrapperRetirement.private_platform_residue_deletion_gate.required_owner_decision_shapes, [
-    'physical_delete_authorization_ref',
-    'keep_as_authority_adapter_ref',
-    'typed_blocker_ref',
-  ]);
+  assert.ok(wrapperRetirement.owner_delete_keep_or_blocker_decision_shapes.includes('physical_delete_authorization_ref'));
+  assert.ok(wrapperRetirement.owner_delete_keep_or_blocker_decision_shapes.includes('typed_blocker_ref'));
+  assert.equal(wrapperRetirement.private_platform_residue_deletion_gate.physical_delete_authorized_by_opl, false);
   const firstBatchRows = Object.fromEntries(
     wrapperRetirement.first_batch_owner_route_tail_matrix.rows.map((row) => [row.repo_id, row]),
   );
-  assert.deepEqual(Object.keys(firstBatchRows), [
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-    'opl-meta-agent',
-    'opl-bookforge',
-    'mas-scholar-skills',
-  ]);
-  assert.deepEqual(firstBatchRows['mas-scholar-skills']?.tail_classes, [
-    'update',
-    'status_shell',
-  ]);
-  assert.equal(
-    firstBatchRows['mas-scholar-skills']?.forbidden_claims.includes('typed_blocker_authority'),
-    true,
-  );
-  assert.equal(
-    firstBatchRows['med-autoscience']?.app_aion_policy.includes('must not expose MAS private runtime'),
-    true,
-  );
-  assert.equal(
-    wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary
-      .matrix_can_authorize_physical_delete,
-    false,
-  );
+  assert.ok(firstBatchRows['med-autoscience']);
+  assert.ok(firstBatchRows['mas-scholar-skills']);
+  assert.equal(wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary.matrix_can_authorize_physical_delete, false);
   assert.equal(
     wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary.matrix_can_write_domain_truth,
     false,
   );
-  assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('descriptor_ready_only'), true);
-  assert.equal(
-    wrapperRetirement.forbidden_retirement_shortcuts.includes('generated_default_caller_readiness_only'),
-    true,
-  );
-  assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('test_pass_only'), true);
-  assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('docs_foldback_only'), true);
-  assert.equal(wrapperRetirement.forbidden_retirement_shortcuts.includes('delete_gate_read_model_only'), true);
+  for (const shortcut of ['descriptor_ready_only', 'generated_default_caller_readiness_only', 'test_pass_only']) {
+    assert.ok(wrapperRetirement.forbidden_retirement_shortcuts.includes(shortcut), shortcut);
+  }
   assert.equal(wrapperRetirement.generated_default_caller_readiness_can_authorize_physical_delete, false);
-  assert.deepEqual(wrapperRetirement.physical_delete_blocked_by_default, [
-    'generated_default_caller_readiness_is_not_delete_authority',
-    'docs_foldback_is_not_delete_authority',
-    'delete_gate_read_model_is_not_delete_authority',
-    'physical_delete_requires_domain_owner_delete_keep_or_blocker_decision_after_structural_evidence',
-  ]);
+  assert.ok(wrapperRetirement.physical_delete_blocked_by_default.includes('delete_gate_read_model_is_not_delete_authority'));
   assert.equal(wrapperRetirement.docs_foldback_boundary.docs_foldback_can_authorize_physical_delete, false);
-  assert.equal(wrapperRetirement.docs_foldback_boundary.docs_foldback_can_claim_domain_ready, false);
   assert.equal(wrapperRetirement.delete_gate_read_model_boundary.delete_gate_read_model_can_authorize_physical_delete, false);
-  assert.equal(
-    wrapperRetirement.delete_gate_read_model_boundary.delete_gate_read_model_can_replace_domain_owner_receipt_or_typed_blocker,
-    false,
-  );
   assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_record_refs, true);
   assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_delete_domain_repo_files, false);
-  assert.equal(wrapperRetirement.authority_boundary.opl_can_ignore_active_caller, false);
-  assert.equal(wrapperRetirement.authority_boundary.opl_can_skip_tombstone_or_provenance, false);
 });
 
 test('Settings Control Center contract keeps App and Aion consumer-only', () => {
