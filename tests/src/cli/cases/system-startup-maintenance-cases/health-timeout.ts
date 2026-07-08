@@ -1,9 +1,8 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
 import { runGitFixtureCommand } from '../../helpers-parts/family-fixtures.ts';
 import {
-  createBookForgeGeneratedSurfaceRemote,
-  createDomainModuleRemote,
-  createOmaGeneratedSurfaceRemote,
+  createStartupDomainModuleRemotes,
+  removeStartupDomainModuleRemotes,
   withCliTimeout,
   writeStartupPackageChannelFixture,
 } from './shared.ts';
@@ -13,30 +12,8 @@ test('system startup-maintenance does not block all modules on a timed-out modul
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-timeout-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const logPath = path.join(homeRoot, 'startup-maintenance-timeout.log');
-  const masRemote = createDomainModuleRemote({
-    repoName: 'med-autoscience',
-    pluginName: 'mas',
-    installerKind: 'bash',
-    logPath,
-  });
-  const magRemote = createDomainModuleRemote({
-    repoName: 'med-autogrant',
-    pluginName: 'mag',
-    installerKind: 'bash',
-    logPath,
-  });
-  const rcaRemote = createDomainModuleRemote({
-    repoName: 'redcube-ai',
-    pluginName: 'rca',
-    installerKind: 'node',
-    logPath,
-  });
-  const metaRemote = createOmaGeneratedSurfaceRemote({
-    logPath,
-  });
-  const bookForgeRemote = createBookForgeGeneratedSurfaceRemote({
-    logPath,
-  });
+  const remotes = createStartupDomainModuleRemotes({ logPath });
+  const { masRemote, magRemote, rcaRemote, metaRemote, bookForgeRemote } = remotes;
   const scholarSkillsChannel = writeStartupPackageChannelFixture({
     root: path.join(homeRoot, 'scholarskills-channel'),
     version: '26.6.10-nightly',
@@ -156,10 +133,6 @@ test('system startup-maintenance does not block all modules on a timed-out modul
     assert.equal(fs.readFileSync(logPath, 'utf8').includes('opl-bookforge-health'), true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(masRemote.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(magRemote.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(rcaRemote.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(metaRemote.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    removeStartupDomainModuleRemotes(remotes);
   }
 });

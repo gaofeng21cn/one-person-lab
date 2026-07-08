@@ -253,6 +253,47 @@ export function createBookForgeGeneratedSurfaceRemote(input: {
   return remote;
 }
 
+export function createStartupDomainModuleRemotes(input: {
+  logPath: string;
+  omaHealthcheckLogPath?: string;
+  bookForgeHealthcheckLogPath?: string;
+}) {
+  return {
+    masRemote: createDomainModuleRemote({
+      repoName: 'med-autoscience',
+      pluginName: 'mas',
+      installerKind: 'bash',
+      logPath: input.logPath,
+    }),
+    magRemote: createDomainModuleRemote({
+      repoName: 'med-autogrant',
+      pluginName: 'mag',
+      installerKind: 'bash',
+      logPath: input.logPath,
+    }),
+    rcaRemote: createDomainModuleRemote({
+      repoName: 'redcube-ai',
+      pluginName: 'rca',
+      installerKind: 'node',
+      logPath: input.logPath,
+    }),
+    metaRemote: createOmaGeneratedSurfaceRemote({
+      logPath: input.logPath,
+      healthcheckLogPath: input.omaHealthcheckLogPath,
+    }),
+    bookForgeRemote: createBookForgeGeneratedSurfaceRemote({
+      logPath: input.logPath,
+      healthcheckLogPath: input.bookForgeHealthcheckLogPath,
+    }),
+  };
+}
+
+export function removeStartupDomainModuleRemotes(remotes: ReturnType<typeof createStartupDomainModuleRemotes>) {
+  for (const remote of Object.values(remotes)) {
+    fs.rmSync(remote.fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 export function writeStartupPackageChannelFixture(input: {
   root: string;
   version: string;
