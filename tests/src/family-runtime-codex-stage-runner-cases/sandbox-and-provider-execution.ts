@@ -546,6 +546,107 @@ exit 0
   }
 });
 
+test('Codex stage runner omits structured output schema for default gflab provider', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:gflab-default-closeout-without-output-schema'],
+    consumed_refs: ['paper:default-provider.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-gflab-default-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+output_last_message=""
+output_schema_seen="false"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-last-message)
+      output_last_message="$2"
+      shift 2
+      ;;
+    --output-schema)
+      output_schema_seen="true"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
+if [ -z "$output_last_message" ]; then
+  echo "missing output-last-message capture" >&2
+  exit 64
+fi
+if [ "$output_schema_seen" = "true" ]; then
+  echo "default gflab fixture rejects unsupported output-schema" >&2
+  exit 64
+fi
+printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
+printf '{"type":"thread.started","thread_id":"thread-gflab-default-no-output-schema"}\\n'
+printf '{"type":"turn.completed"}\\n'
+exit 0
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCodexHome = process.env.CODEX_HOME;
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, 'config.toml'), [
+    'model_provider = "gflab"',
+    'model = "gpt-5.5"',
+    '',
+    '[model_providers.gflab]',
+    'name = "gflab"',
+    'base_url = "http://127.0.0.1:8787/v1"',
+    '',
+  ].join('\n'), 'utf8');
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.CODEX_HOME = codexHome;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_gflab_default_no_output_schema_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        executor_kind: 'codex_cli',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:gflab-default-no-output-schema'],
+      },
+      stagePacketRef: 'packet:gflab-default-no-output-schema',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+      env: {
+        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
+      },
+    });
+
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      'receipt:gflab-default-closeout-without-output-schema',
+    ]);
+    assert.deepEqual(receipt.process_output_summary?.structured_output_schema, {
+      enabled: false,
+      policy: 'provider_disabled_gflab_structured_output_request',
+      provider: 'gflab',
+      output_last_message_capture_enabled: true,
+    });
+    const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
+    assert.notEqual(captured[0], '');
+    assert.equal(captured[1], 'false');
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    previousCodexHome === undefined
+      ? delete process.env.CODEX_HOME
+      : process.env.CODEX_HOME = previousCodexHome;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
 test('Codex closeout enforcement also omits structured output schema for gflab', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',

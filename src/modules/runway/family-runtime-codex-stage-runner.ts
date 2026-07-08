@@ -1,4 +1,5 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { readLocalCodexDefaultsIfAvailable } from '../../kernel/local-codex-defaults.ts';
 import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   buildCodexExecResumeArgs,
@@ -114,12 +115,18 @@ function normalizedCodexProviderName(provider?: string | null) {
   return optionalString(provider)?.toLowerCase() ?? null;
 }
 
+function effectiveCodexProviderName(provider?: string | null) {
+  return normalizedCodexProviderName(provider)
+    ?? normalizedCodexProviderName(readLocalCodexDefaultsIfAvailable()?.model_provider);
+}
+
 function codexOutputSchemaCapabilityForProvider(provider?: string | null) {
-  const normalizedProvider = normalizedCodexProviderName(provider);
+  const normalizedProvider = effectiveCodexProviderName(provider);
   if (normalizedProvider === 'gflab') {
     return {
       supported: false,
       policy: 'provider_disabled_gflab_structured_output_request' as const,
+      provider: normalizedProvider,
     };
   }
   return {
@@ -127,6 +134,7 @@ function codexOutputSchemaCapabilityForProvider(provider?: string | null) {
     policy: normalizedProvider
       ? 'provider_supported_structured_output_request' as const
       : 'provider_unknown_preserve_codex_default_structured_output_request' as const,
+    provider: normalizedProvider,
   };
 }
 
@@ -791,7 +799,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       structured_output_schema: {
         enabled: outputSchemaCapability.supported,
         policy: outputSchemaCapability.policy,
-        provider: normalizedCodexProviderName(codexExecOptions.provider),
+        provider: outputSchemaCapability.provider,
         output_last_message_capture_enabled: true,
       },
       ...(result.activeCommand
