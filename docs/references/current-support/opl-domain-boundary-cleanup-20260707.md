@@ -39,6 +39,17 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 - `tests/src/family-orchestration-cases/schema-boundaries.ts` 增加 selected generic schema example residue guard，禁止 MAS / paper / publication / medical / RCA / visual-profile 名字重新进入 generic example；
 - product-entry、human-gate、domain-memory、runtime-supervision 等明确与 first-party domain fixture 对齐的示例继续保留为 fixture-aligned / compatibility surface，不作为 generic ontology。
 
+## 2026-07-08 追加收口：active caller readback hygiene
+
+本轮追加收口处理 active compatibility caller 的实现级读法，不删除真实消费面，也不把 docs/test pass 写成 readiness。目标是让仍需保留的 MAS/RCA carrier 在机器读回中先呈现 OPL generic substrate，再把 domain 名字放入 profile / compatibility 字段：
+
+- `connect external-skills` 读作 generic external specialist source registry；`kdense-scientific-agent-skills` 是 registered compatibility source，不是 scientific-only OPL ontology，sync policy 是 single selected external specialist Skill。
+- Runway MAS domain route / paper autonomy 保留兼容入口，但新增 `domain_route_readback`、`domain_progress_policy_adapter`、`domain_progress_delta=false`、`provider_completion_is_domain_ready=false` 等字段；`paper_progress_*` 字段只作为 legacy compatibility。
+- Stagecraft owner-answer projection lookup 读作 `opl_domain_owner_answer_projection_profile_registry`；MAS publication handoff 是 compatibility projection，不是 OPL owner answer truth。
+- Stagecraft visual transition ingestion 读作 `opl_domain_transition_adapter_profile`；RCA visual transition 是 compatibility projection / profile extension，不是 core visual ontology。
+- Console MAS current-work-unit / runtime workbench 投影 normalize 到 `opl_domain_current_work_unit_profile_projection` / `opl_domain_runtime_workbench_profile_projection`；旧 `mas_*` surface 只作为 `compatibility_surface_kind`。
+- Foundation support Skills 吸收跨 domain 失败模式，但只作为 AI review heuristics 和 no-authority route-back，不新增默认暴露。
+
 ## 剩余收口清单
 
 | 优先级 | 条目 | 需要做什么 | 已经不是问题 |
@@ -48,7 +59,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 | P0 | ScholarSkills source truth | `one-person-lab/plugins/mas-scholar-skills` 保持 thin pointer / packaging mirror；professional Skill body 留在外部 MAS Scholar Skills source，经 OPL package / Connect surface 同步。 | OPL mirror 缺目录不代表 MAS Scholar Skills capability 缺失。 |
 | P0 | Stage candidate portfolio | `stage-candidate-portfolio` 保持 refs-only stage candidate / assumption / provenance / negative-path / advisory-metric / human-review projection。 | 它不是 hypothesis store、scientific truth reducer、quality gate、artifact authority 或 owner receipt signer。 |
 | P0 | Owner-evidence sustained consumption | sustained consumption 保持 generic owner-evidence receipt transport 和 readback。 | 它只证明 owner-evidence intake 结构，不代表 MAS paper progress、grant acceptance、visual readiness 或 owner acceptance。 |
-| P1 | Compatibility carrier retirement | 只有 active caller 迁到 generic surface 后，才退役 `paper_mission/*`、`paper-autonomy`、`mag-manifest-sustained-consumption`、MAS publication handoff 和 RCA visual-transition default profile。 | active caller 存在时 compatibility 可以暂留；不能围绕这些名字新增 canonical docs 或 contracts。 |
+| P1 | Compatibility carrier retirement | 只有 active caller 迁到 generic surface 后，才退役 `paper_mission/*`、`paper-autonomy`、`mag-manifest-sustained-consumption`、MAS publication handoff、MAS current-work-unit 和 RCA visual-transition default profile。 | active caller 存在时 compatibility 可以暂留；当前 readback 已先暴露 generic profile / substrate 字段，不能围绕旧名字新增 canonical docs 或 contracts。 |
 | P1 | Domain profile placement | 不属于 generic substrate 的 profile-specific example 和 route detail，迁回 profile docs、domain repo 或 specialist Skill docs。 | Domain example 可以作为示例存在，前提是所在 surface 明确不持有 domain truth 或 readiness authority。 |
 | P2 | History / tombstone cleanup | caller 退役后，把旧名字移入 history、tombstone 或 provenance docs，并删除把它们写成当前 OPL ontology 的 prose。 | 无 active caller 后，历史名字不需要 compatibility alias 或测试保护。 |
 
@@ -79,8 +90,9 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 | 条目 | 状态 | 完成度 | fresh evidence 类型 | 剩余动作 |
 | --- | --- | ---: | --- | --- |
 | 识别并保留 OPL 基座边界 | done | 100% | `docs/status.md`、本文件、brand module / source-module contracts 的当前读面。 | 后续新模块仍需按同一 owner / machine boundary 规则审查。 |
-| Runway / Stagecraft / Ledger / Kernel domain residue profile 化 | done | 100% | source + focused tests + root verify；canonical route / artifact root / owner-answer projection / owner-evidence 命名已落地。 | active compatibility carrier 只等 caller 退役后做 tombstone / delete。 |
+| Runway / Stagecraft / Ledger / Kernel domain residue profile 化 | done | 100% | source + focused tests + root verify；canonical route / artifact root / owner-answer projection / owner-evidence 命名已落地；2026-07-08 追加把 active MAS/RCA caller 的 readback 也 profile 化。 | active compatibility carrier 只等 caller 退役后做 tombstone / delete。 |
 | Connect scientific connector authority boundary | done | 100% | scientific connector schemas / readback tests；provider receipt 明确 no citation truth / no domain truth。 | Live provider coverage、rate-limit、release acceptance 仍是后置 evidence lane。 |
+| Connect external specialist registry 泛化 | done | 100% | `connect external-skills` source/readback/tests；K-Dense/scientific 只作为 registered compatibility source，默认专业包 gap 后 single-skill sync。 | 不 bulk sync 外部库；不把 external source 写成 global Codex context 或 domain authority。 |
 | ScholarSkills source truth 与 OPL packaging 分离 | done | 100% | OPL package / sync / skill catalog readback；MAS Scholar Skills 正文留在 external source repo。 | 不新增第二套 literature Skill truth；只维护 mirror / sync hygiene。 |
 | Family orchestration generic schema examples | done | 100% | selected schema examples + focused residue guard + focused tests。 | 后续新增 generic schema 必须加入同类 guard 或明确标注 fixture / compatibility。 |
 | Live evidence / owner acceptance / domain readiness | partial | 0% | 本轮没有声称也没有执行 long-soak、真实 owner chain、release cohort 或 domain owner verdict。 | 继续作为 release / production / Brand L5 / domain-ready 后置 lane。 |

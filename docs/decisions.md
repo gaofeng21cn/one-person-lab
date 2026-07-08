@@ -19,6 +19,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 这些 support Skill 只能输出 missing refs、repair hints、route-back、owner route 和 no-authority handoff；不能签 owner receipt、typed blocker、human gate、domain verdict、artifact authority、runtime/provider truth 或 readiness claim。
 - 后续若 support Skill 数量需要增长，先证明现有 Skill 无法覆盖该 AI 判断，并同步 `exposure.json` 的 scope / activation gate / no-regression redirect；不得通过新增 Skill 绕开按需暴露政策。
 
+### 决策：domain-specific active caller 继续保留，但 readback 必须 profile 化
+
+原因：OPL 当前仍有 MAS paper route、MAS current-work-unit、MAS publication owner-answer 和 RCA visual-transition 等 active compatibility caller。直接删除这些 carrier 会破坏真实消费面；把它们继续写成 OPL core ontology 又会混淆 Framework substrate 与 domain truth。正确边界是：旧 carrier 可以留，但新增 readback / policy / tests 必须先暴露 generic `domain_route`、`domain_progress`、`domain_owner_answer_projection`、`domain_current_work_unit_projection` 和 `domain_transition_adapter_profile`，再把 MAS/RCA 名字标为 compatibility profile。
+
+影响：
+
+- Runway 的 MAS paper route / paper autonomy 继续可用，但 readback 增加 `domain_route_readback`、`domain_progress_policy_adapter` 和 false-ready flags；provider completion 不等于 domain progress、domain ready 或 owner receipt。
+- Stagecraft owner-answer lookup 读作 generic domain owner-answer projection registry；MAS publication handoff 只是 compatibility projection。
+- Stagecraft visual ingestion 读作 generic domain transition adapter profile；RCA visual transition 只是 compatibility projection / profile extension。
+- Console MAS current-work-unit / runtime workbench 投影 normalize 到 generic domain profile projection；MAS source projection ref 只作为 compatibility source。
+- 这些字段只证明 OPL 能消费和投影 refs；不能声明 paper progress、publication/export/grant/visual readiness、runtime readiness、owner acceptance、typed blocker 或 human gate。
+
 ## 2026-07-07
 
 ### 决策：Agent Package 抽象统一，标准 Agent 的 Codex carrier 由 repo-owned primary skill 统一物化
