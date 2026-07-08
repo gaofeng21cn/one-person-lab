@@ -7,7 +7,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';
 
-export type CodexCarrierDistribution =
+type CodexCarrierDistribution =
   | 'repo_carrier_source'
   | 'generated_carrier_surface'
   | 'self_contained_fat_plugin';
@@ -238,7 +238,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
   };
 }
 
-export const FIRST_PARTY_AGENT_PACKAGE_MANIFESTS: Partial<Record<OplModuleId, FirstPartyAgentPackageManifest>> = {
+const FIRST_PARTY_AGENT_PACKAGE_MANIFESTS: Partial<Record<OplModuleId, FirstPartyAgentPackageManifest>> = {
   medautoscience: normalizeFirstPartyAgentPackageManifest(masAgentPackageManifest),
   medautogrant: normalizeFirstPartyAgentPackageManifest(magAgentPackageManifest),
   redcube: normalizeFirstPartyAgentPackageManifest(rcaAgentPackageManifest),
@@ -246,45 +246,10 @@ export const FIRST_PARTY_AGENT_PACKAGE_MANIFESTS: Partial<Record<OplModuleId, Fi
   oplbookforge: normalizeFirstPartyAgentPackageManifest(bookForgeAgentPackageManifest),
 };
 
-export const MAS_AGENT_PACKAGE_MANIFEST = FIRST_PARTY_AGENT_PACKAGE_MANIFESTS.medautoscience!;
-
 export function getAgentPackageManifestByModuleId(moduleId: OplModuleId) {
   return FIRST_PARTY_AGENT_PACKAGE_MANIFESTS[moduleId] ?? null;
 }
 
-export function getAgentPackageManifestByPackageId(packageId: string) {
-  const canonicalId = canonicalAgentPackageId(packageId);
-  return listFirstPartyAgentPackageManifests().find((manifest) => (
-    manifest.package_id === canonicalId
-  )) ?? null;
-}
-
-export function listFirstPartyAgentPackageManifests() {
-  return Object.values(FIRST_PARTY_AGENT_PACKAGE_MANIFESTS).filter(
-    (manifest): manifest is FirstPartyAgentPackageManifest => manifest !== undefined,
-  );
-}
-
 export function getCapabilityDependenciesForModule(moduleId: OplModuleId) {
   return getAgentPackageManifestByModuleId(moduleId)?.capability_dependencies ?? [];
-}
-
-export function getCodexStandaloneRequiredSkillIdsForModule(moduleId: OplModuleId) {
-  return getAgentPackageManifestByModuleId(moduleId)?.codex_surface.required_skill_ids ?? [];
-}
-
-export function getDistributionPayloadForModule(moduleId: OplModuleId) {
-  return getAgentPackageManifestByModuleId(moduleId)?.distribution_payload ?? null;
-}
-
-export function getMasCapabilityDependencies() {
-  return getCapabilityDependenciesForModule('medautoscience');
-}
-
-export function getMasCodexStandaloneRequiredSkillIds() {
-  return getCodexStandaloneRequiredSkillIdsForModule('medautoscience');
-}
-
-export function getMasDistributionPayload() {
-  return getDistributionPayloadForModule('medautoscience')!;
 }

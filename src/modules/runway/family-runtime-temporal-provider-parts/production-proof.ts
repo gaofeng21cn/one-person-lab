@@ -46,7 +46,7 @@ type TemporalProductionUpdateHandle = {
   ): Promise<unknown>;
 };
 
-export function temporalProductionProbeInput(
+function temporalProductionProbeInput(
   suffix: string,
   closeoutPacket: Record<string, unknown> | null,
 ): TemporalStageAttemptWorkflowInput {
@@ -69,7 +69,7 @@ export function temporalProductionProbeInput(
   };
 }
 
-export function temporalProductionTypedCloseoutPacket() {
+function temporalProductionTypedCloseoutPacket() {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
     closeout_refs: ['receipt:temporal-production-residency-domain-closeout'],
