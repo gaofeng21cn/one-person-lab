@@ -21,7 +21,7 @@ Ordinary Progress Spine
 
 Audit / Evidence Sidecar
   trace / lineage / refs / replay / restore / long-soak / full readiness / cleanup / production evidence
-  -> passive evidence vault and drilldown
+  -> passive evidence ledger and drilldown
   -> hard gate only when safety, authority, irreversible mutation, delivery, publication, release, or human decision requires it
 ```
 
@@ -55,7 +55,7 @@ Audit / Evidence Sidecar
 | [Argo CD automated sync](https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/) / [sync options](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/) / [resource health](https://argo-cd.readthedocs.io/en/latest/operator-manual/health/) | GitOps 用 desired/live diff 驱动 sync，用 health/status 观测结果；prune/delete/replace/force 等危险操作有显式策略或确认。 | OPL 可以自动推进 owner delta 与可恢复 attempt；physical delete、artifact/package mutation、publication/submission/release claim 必须显式 owner/human gate。 |
 | [SLSA provenance](https://slsa.dev/spec/latest/) | provenance/attestation 证明产物来源、构建输入和供应链完整性，但下游仍要验证并按风险解释。 | Stage Artifact Unit 保留 manifest、hash、lineage、restore refs；这些证明进入 artifact authority 输入，不能单独升级为 publication-ready、package-ready 或 production-ready。 |
 | [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence) | checkpoint 支撑 human-in-the-loop、time travel、fault-tolerant execution。 | checkpoint / event log 服务 resume、replay 和 human gate；默认推进仍看 artifact delta 与 owner answer。 |
-| [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs、baggage 等信号分层观察系统。 | Vault 记录信号；Console 默认只显示 owner signal，trace/log/raw refs 进入 drilldown。 |
+| [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs、baggage 等信号分层观察系统。 | Ledger 记录信号；Console 默认只显示 owner signal，trace/log/raw refs 进入 drilldown。 |
 | [Backstage software templates](https://backstage.io/docs/software-templates/generated-index) / golden paths | 平台给用户 paved road，而不是把内部路径都暴露给用户。 | 每个 Foundry Agent 只有一个 ordinary golden path；variant、diagnostic、proof、cleanup 显式进入。 |
 | [Google SRE toil elimination](https://sre.google/sre-book/eliminating-toil/) | 重复、手工、战术性、无长期价值的工作应通过工程设计消除。 | receipt-only、read-model reconcile-only、stale route redrive-only、accounting-only 循环进入 stop-loss 或 sidecar，不再作为日常推进。 |
 | [DORA continuous delivery](https://dora.dev/capabilities/continuous-delivery/) | 快速、安全、可持续交付依赖过程简化、架构改善和每个人可见的快速反馈。 | Operator 默认反馈必须是 owner、delta、artifact/blocker 和 accepted answer shape，而不是内部计数。 |
@@ -184,7 +184,7 @@ MDS / DeepScientist 的经验吸收口径固定为：
 | `OPL Runway` | stage attempt、lease、retry、dead-letter、closeout binding、provider observation 统一围绕 StageRun。 | Runway 只证明能执行和恢复；不生成 domain goal。 |
 | `OPL Stagecraft` | stage pack 提供 goal、context、tool affordance、knowledge、rubric、quality gate；Stage 内保留 executor 自主策略。 | prompt/tool/knowledge/rubric refs 缺失默认 advisory，除非破坏启动安全或 closeout。 |
 | `OPL Pack` | domain pack + authority ABI + generated surfaces 生成普通入口和 accepted answer shape。 | Domain repo 保留 semantic pack 与最小 authority function，不复制 wrapper / scheduler。 |
-| `OPL Vault` | passive evidence vault；record everything, plan from folded owner delta only。 | verified ledger 只证明 refs transport，不关闭 stage。 |
+| `OPL Ledger` | passive evidence ledger；record everything, plan from folded owner delta only。 | verified ledger 只证明 refs transport，不关闭 stage。 |
 | `OPL Console` | 默认 cockpit 只显示 purpose、stage、current owner、required delta、accepted answer shape、artifact/blocker。 | raw worklist、provider trace、release proof、L5 evidence、cleanup gate 只在 drilldown。 |
 | `OPL Foundry Lab` | improvement work order 从 progress failures 和 sidecar evidence 生成。 | improvement 不抢占 domain ordinary path，除非当前 owner 是 OPL runtime / framework。 |
 
@@ -245,7 +245,7 @@ MDS / DeepScientist 的经验吸收口径固定为：
 
 验收：
 
-- Vault / worklist / drilldown 能解释证据，但不能替代 owner answer。
+- Ledger / worklist / drilldown 能解释证据，但不能替代 owner answer。
 - release、publication、export、physical delete、production-ready 声明仍由对应 owner receipt / verdict 关闭。
 
 ### P5：私有平台和旧补偿链退役

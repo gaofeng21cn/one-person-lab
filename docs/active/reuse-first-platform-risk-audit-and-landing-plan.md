@@ -36,21 +36,13 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 
 长期治理规则已沉淀到 [OPL 复用优先治理政策](../policies/reuse-first-governance-policy.md)。本文只作为 active_support：提供复用优先风险模型、Phase 0-10 标准、当前 completion audit 和下一轮 lane seed。
 
-2026-07-06 主线吸收后的结构 readback：
+当前结构 readback 不在本文冻结日期、计数或单轮 proof。维护者需要判断当前状态时，fresh-read 以下 owner surface：
 
-- `reuse-first-scan` 已支持 `--help`、显式 `--format json` 和紧凑 `--summary`，默认 JSON 输出保持兼容。
-- `source-module-boundary` 已支持 `--help` 和显式 `--format json`，不再让 maintainer script 参数面靠试错发现。
-- `line-budget` 已支持 `--help` 和显式 `--format json`，默认 text/advisory 行为保持兼容。
-- `source-module-public-imports` 已支持 `--help` 和显式 `--format json`，默认 JSON readback 保持兼容。
-- `native-helper-prebuild` 已改用 `node:util.parseArgs`，支持 `--help/-h`，help 路径不触发默认 install 或 prebuild/cache 状态写入。
-- Observability export 的默认 source wording 已从 private ledger / app drilldown 词汇收薄为 `opl_runtime_authority_refs`、`opentelemetry_current_owner_delta_ref` 和 refs-only source projection boundary。
-- `framework-operating-maturity` 的 provider evidence 测试删除重复 projection 断言，只保留 ready-claim guard、receipt count 和 owner-route 行为断言。
-- Test projection pruning 继续收薄非 package/update 断言：删除重复 `runtime app-operator-drilldown` registry 词汇测试、合并 current-control repair 中的 lease 字段级断言、删除重复 MAS redrive / provider attempts 低层场景断言，删除 route-support 测试里重复锁 App release evidence gate 的字段级断言，并收薄 App operator drilldown lifecycle、OMA、provider-worker、MAG/MAS/RCA payload、App release user-path、evidence worklist route support 以及 MAS default-executor redrive/stale-admission 中重复低层 projection 字段断言；保留 cross-repo runtime queue E2E、关键 redrive readback、dedicated App release evidence guard 和 authority false-ready guard。
-- `2026-07-07` 主线继续关闭过度设计尾巴：Temporal test-server proof 移出生产 `src/**`，文件型 JSON receipt ledger 复用 `src/kernel/json-file.ts` shared helper，retired family-runtime queue / scheduler CLI option loops 收到邻近 thin parser helper，超长 tests 按行为簇拆分。
-- `2026-07-07` second pass 继续收薄三类剩余结构项：`.fallowrc.json` stale entrypoint 改回真实 source paths 并切断 `foreground-paths.ts` cycle tail；family-runtime attempt/provider/service-worker/lifecycle/paper-autonomy/evidence-worklist/stage-artifact 命令复用同一 thin parser helper；Atlas / Foundry / Runway touched callers 直接复用 `json-record.ts` scalar helper，stage-runner shared helper 不再 re-export `optionalString`。
-- `2026-07-07` final source-advisory pass 关闭剩余 source line-budget watch：Pack OS CLI args 移到 `pack-os-parts/cli-args.ts`，Runtime Environment build readback 移到 `runtime-environment-substrate-parts/build-readback.ts`，并删除 3 个 fallow 证明的私有 unused wrapper/source hygiene files。剩余 fallow unused files 为 6，仍按 public/dynamic/action/owner surface 风险保留审查，不授权批量删除。
-- 当前 full scan summary 为 `finding_count=534`、`hard_gate_finding_count=210`、`advisory_finding_count=324`、`undecisioned_finding_count=0`、`open_worklist_finding_count=13`、`blocking_worklist_finding_count=5`、`owner_route_open_count=5`；`phase10-test-and-fixture-projections=387` 全部为 `allowed_projection_boundary`。这些剩余项是用户排除、contract provenance、真实 CLI/schema/projection 名或 runtime queue protocol fixture，不得写成 release/currentness/production/domain ready。
-- `line-budget` 当前 JSON 读回为 `status=ok`、`oversize_count=0`、`failure_count=0`。该读回只证明 repo-tracked source/test 文件回到默认结构预算以内，不证明 live runtime、App release、domain owner-chain 或 production readiness。
+- `reuse-first-scan`、`source-module-boundary`、`line-budget`、`source-module-public-imports` 和 `native-helper-prebuild` 的 CLI/help/JSON 行为；
+- `contracts/`、source、focused tests、typecheck、reuse-first diff gate 和 source-module gate；
+- Observability、framework operating maturity、test projection pruning、schema/JSON helpers、parser helpers、fallow/cycle/source-size advisory 的 owning source/test/readback。
+
+本文只保留风险模型、当前排除项、可落地范围和 forbidden claims。任何 dated scan count、line-budget count、test count、commit list、worktree closeout 或 source advisory snapshot 都只能作为 history/provenance 或 fresh command output 读取，不能在本文继承为 release/currentness/production/domain-ready 证据。
 
 ## 排除项
 
@@ -181,8 +173,8 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 | --- | --- | ---: | --- | --- |
 | active reuse-first 文档去流水账化 | `done` | 100% | 本文入口压缩为 current status / exclusions / landable items / audit；历史流水移到 history archive。 | 后续不得在本文继续追加 dated closeout ledger。 |
 | Reuse-first governance gate | `partial` | 98% | contract/support doc、scan/diff gate、policy、history archive 指针；`reuse-first-scan --help/--format json/--summary` 已落。 | 继续按 fresh scan/worklist 消化新增 hard finding；不能声明历史风险清零。 |
-| Schema boundary consolidation | `partial` | 88% | shared schema/JSON helper、focused tests、typecheck、diff gate；`2026-07-07` 把重复 JSON receipt ledger read/write/upsert 样板收到 `src/kernel/json-file.ts`，second pass 又把 Atlas / Foundry / Runway touched scalar callers 收到 `json-record.ts`。 | 继续禁止新增分散 validator；receipt helper 不改变 payload semantics 或 owner receipt shape；`json-file.ts` legacy alias 随 caller 迁移逐步退休。 |
-| CLI parser/command registry | `partial` | 92% | command registry、parser adapter、protected/required command set；`source-module-boundary`、`source-module-public-imports`、`line-budget` 的 help/json maintainer surface 已落，`native-helper-prebuild` 已回到 stdlib `parseArgs` 并补 `--help/-h`；retired family-runtime queue / scheduler / attempt / provider / service-worker / lifecycle / paper-autonomy / evidence-worklist / stage-artifact option loops 已收到邻近 thin helper。 | 继续迁 remaining public/runtime diagnostic commands；避免新增 parser dependency。 |
+| Schema boundary consolidation | `partial` | 88% | shared schema/JSON helper、focused tests、typecheck、diff gate；receipt ledger 和 scalar handling 的当前 owner 是 `src/kernel/json-file.ts`、`json-record.ts` 与实际 consumer imports。 | 继续禁止新增分散 validator；receipt helper 不改变 payload semantics 或 owner receipt shape；legacy alias 随 caller 迁移逐步退休。 |
+| CLI parser/command registry | `partial` | 92% | command registry、parser adapter、protected/required command set，以及 maintainer scripts / runtime command 的 fresh help/json readback。 | 继续迁 remaining public/runtime diagnostic commands；避免新增 parser dependency。 |
 | Runway Temporal-first runtime | `blocked` | 88% | local/test-server proof、readback contract、queue projection boundary。 | 需要 external Temporal history/query、managed worker、真实 executor closeout、owner/domain refs。 |
 | Kubernetes-style reconciler | `partial` | 68% | safe-action source / desired-observed readback。 | 继续把 worker/App/domain helper mutation 收到 canonical safe-action source。 |
 | Managed update split | `partial` | 80% | owner-route projection、receipt boundary、component owner split。 | 排除：Managed Update owner-route 另会话处理；不声明 release/currentness ready。 |
@@ -190,10 +182,10 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 | Domain private platform retirement | `blocked` | 92% | OPL refs-only matrix、domain repo structural follow-ups。 | 需要 domain owner acceptance / typed blocker / explicit physical-delete decision。 |
 | App/Aion consumer-only | `partial` | 93% | App/Aion refresh/projection-only contract/readback evidence。 | 需要 App release owner receipt 和 release/currentness source ref。 |
 | OpenTelemetry-style observability | `partial` | 94% | semantic convention、bounded endpoint/readback、collector smoke；export source wording 已从 private ledger/drilldown 收薄到 OpenTelemetry/ref projection。 | 需要 OTLP/exporter live endpoint、external collector owner receipt、production chain evidence。 |
-| Test / contract projection pruning | `done` | 100% | provider evidence projection test 已删除重复断言；非 package/update 测试词汇继续收薄后 full scan 从 735 降到 534，phase10-test-and-fixture-projections 从 571 降到 387；剩余 phase10 findings 全部为 `allowed_projection_boundary`，不是 undecisioned backlog；`runtime-app-operator-drilldown-route-support` 只保 route support guard，App release evidence gate 回 dedicated tests / shared assertions，App operator drilldown lifecycle/OMA/payload/provider-worker、App release user-path/evidence worklist route support 与 MAS default-executor redrive/stale-admission 删除重复低层 queue / drilldown projection 字段断言；超长测试已拆分到 `line-budget` 的 `oversize_count=0`。 | residual watch-only：package/update 相关项由另会话处理，runtime protocol fixture 保留真实 queue 语义，contract/CLI/schema/projection 名保留真实 surface；不声明 runtime/domain/App release ready。 |
+| Test / contract projection pruning | `done` | 100% | provider evidence projection tests、route-support tests、App release evidence guard、runtime protocol fixtures 和 source/test size gate 共同持有当前结构读法；具体 scan/count 只能 fresh-read。 | residual watch-only：package/update 相关项由另会话处理，runtime protocol fixture 保留真实 queue 语义，contract/CLI/schema/projection 名保留真实 surface；不声明 runtime/domain/App release ready。 |
 | Fallow / source owner hygiene | `partial` | 90% | `.fallowrc.json` stale source entrypoint 改回真实 `src/entrypoints/**` / `src/modules/**` paths；`foreground-paths.ts` 不再 import family runtime store，切断 Runway Temporal provider cycle tail；删除 3 个私有 unused wrapper/source hygiene files 后，fresh fallow unused files 为 6。 | `hygiene:fallow` 仍是 advisory cleanup gate；剩余 public/dynamic/action/owner surfaces、dead exports / clone groups 需要逐项 active caller 与 owner route 审核，不能按 aggregate count 批量 physical delete。 |
 | No-resurrection governance | `partial` | 91% | scan/diff gate、tombstone/archive policy、compact scan summary。 | 继续用 fresh diff gate 防新增 hard finding。 |
-| Source/test size watch-only | `done` | 100% | 原 oversize test/fixture 拆分已完成；Pack OS 与 Runtime Environment Substrate 两个剩余 source advisory 已按邻近 part 拆分；当前 `node ./scripts/line-budget.mjs --format json` 读回 `status=ok`、`oversize_count=0`、`failure_count=0`。 | 后续 touched source 文件继续按语义拆；不能把结构预算通过写成 readiness、release/currentness 或 owner acceptance。 |
+| Source/test size watch-only | `done` | 100% | 当前结构预算只能从 `node ./scripts/line-budget.mjs --format json` 和 touched source/test diff fresh-read；本文不冻结 oversize/failure count。 | 后续 touched source 文件继续按语义拆；不能把结构预算通过写成 readiness、release/currentness 或 owner acceptance。 |
 
 ## Forbidden Claims
 

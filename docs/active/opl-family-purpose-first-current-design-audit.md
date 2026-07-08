@@ -45,7 +45,7 @@ Declarative Domain Pack
 - 默认读面压到 `current_owner_delta`：当前有没有 safe action、等哪个 owner、缺什么 answer shape、是否 hard gate。
 - Stage 内保留 Codex executor 的开放式专家工作；工具目录只声明 affordance 和边界，不写死认知流程。
 - Progress 回到 Stage Artifact Unit：physical output、valid manifest、owner answer、current pointer。
-- Evidence Vault 保持 passive：raw evidence、replay、typed-blocker group、provider trace 和 private residue 只能作为 full-detail / audit。
+- passive evidence ledger 保持 passive：raw evidence、replay、typed-blocker group、provider trace 和 private residue 只能作为 full-detail / audit。
 - Domain verdict 留在 domain owner：MAS paper、MAG grant、RCA visual、OMA target-agent closeout 只能由各自 owner receipt、typed blocker、human gate 或质量/导出/审查 receipt 关闭。
 - Support repo 只做 support：shell 是 App renderer carrier，OPL Doc 是 workflow steward，不能反向定义 OPL/App/domain truth。
 

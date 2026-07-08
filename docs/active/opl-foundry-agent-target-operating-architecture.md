@@ -92,7 +92,7 @@ Domain Intent
 | P0 | `domain_golden_path_single_default` | MAS/MAG/RCA/OMA 每个 agent 只有一个 ordinary golden path；proof lane、diagnostic lane、route variant、long-soak、cleanup 和 legacy provenance 必须显式进入。 |
 | P1 | `generated_surface_absorbs_wrappers` | CLI/MCP/App/status/workbench/default-caller shell 由 OPL generated/hosted surface 承担；domain repo 只保 semantic pack、authority functions、native helpers 和 direct skill path。 |
 | P1 | `app_cockpit_not_ledger_browser` | App 默认页只显示任务、stage、owner、缺什么 answer、artifact、hard blocker 和用户介入点；full ledger、raw count、provider trace 和 route menu 只在 drilldown。 |
-| P1 | `evidence_vault_passive` | Evidence Vault 的规则固定为 record everything, plan from nothing；证据增长不等于进度，typed blocker 增长不等于完成。 |
+| P1 | `evidence_ledger_passive` | passive evidence ledger 的规则固定为 record everything, plan from nothing；证据增长不等于进度，typed blocker 增长不等于完成。 |
 
 ### Per-agent ideal shape
 
@@ -109,7 +109,7 @@ Domain Intent
 | --- | --- | --- | --- |
 | 目标对齐 | framework/domain/App owner 边界已经基本正确。 | 高 | 需要继续防止 evidence tail 和 wrapper retirement 被误读成 domain progress。 |
 | MVP 可用性 | ordinary path 已收窄到 owner-delta-first。 | 中高 | worklist/evidence/readiness 仍容易在 operator 视角重新变成 action root。 |
-| 可维护性 | primitive 已明确，但历史命令和长文件仍有迁移压力。 | 中 | 代码结构应继续围绕 `owner-delta-controller`、`stage-attempt-runtime`、`stage-artifact-kernel`、`evidence-vault` 等 primitive 收束。 |
+| 可维护性 | primitive 已明确，但历史命令和长文件仍有迁移压力。 | 中 | 代码结构应继续围绕 `owner-delta-controller`、`stage-attempt-runtime`、`stage-artifact-kernel`、`evidence-ledger` 等 primitive 收束。 |
 | 可扩展性 | standard pack / generated surface / conformance 方向正确。 | 中高 | 新 agent onboarding 应从 product pack + golden path + authority functions 生成，而不是复制 MAS/MAG/RCA 历史 wrapper。 |
 | 可审计性 | refs-only ledger、Stage Artifact Unit、Temporal provider 和 owner receipt 边界强。 | 高 | audit plane 必须保持 passive，不能用审计计数驱动 planning。 |
 
@@ -193,7 +193,7 @@ DeepScientist / 旧 MDS 的流畅经验只能在这一层被吸收为 `single or
 | `golden_path` | 每个 Foundry Agent 只有一个 ordinary route；proof、diagnostic、cleanup、long-soak、variant 都显式 lane 化。 | route variant、proof lane、legacy helper 或 support wrapper 与 ordinary path 同级展示。 |
 | `wrapper_retirement` | replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 满足后删除或 tombstone。 | 为兼容、历史说明或“可能有用”继续保留 active facade、alias、wrapper、session/status shell 或 compatibility-only test。 |
 | `app_cockpit` | App 默认只显示 purpose、task/stage、next owner、accepted answer shape、artifact/blocker、用户介入和 release/user-path facts。 | App 普通页暴露 backend/provider/permission/executor selector、raw ledger、full drilldown、shell candidate 或 upstream implementation detail。 |
-| `evidence_vault` | Evidence Vault 记录一切，但只有 fold 成 owner delta、hard gate、owner answer 或 typed blocker 后影响 default planning。 | evidence 增长、typed blocker 聚合、replay ref 或 production tail count 直接生成默认下一步。 |
+| `evidence_ledger` | passive evidence ledger 记录一切，但只有 fold 成 owner delta、hard gate、owner answer 或 typed blocker 后影响 default planning。 | evidence 增长、typed blocker 聚合、replay ref 或 production tail count 直接生成默认下一步。 |
 
 审计结论应拆成三类，不再混写：
 
@@ -343,9 +343,9 @@ progress = physical output + valid manifest + owner answer + current pointer
 
 没有 owner answer 的文件是 orphan artifact；有 receipt 但文件/hash 不匹配是 broken artifact；历史 attempt 不被 current pointer 选中就只是 provenance。
 
-### 7. Evidence Vault
+### 7. passive evidence ledger
 
-Evidence Vault 是 passive audit store：
+passive evidence ledger 是 passive audit store：
 
 - raw evidence envelope；
 - provider trace；
@@ -357,7 +357,7 @@ Evidence Vault 是 passive audit store：
 - cleanup provenance；
 - diagnostic logs / metrics。
 
-Vault 的原则是 `record everything, plan from nothing`。只有当 evidence 被 fold 成 `current_owner_delta`、hard gate、owner answer 或 typed blocker，它才影响默认路径。
+Ledger 的原则是 `record everything, plan from nothing`。只有当 evidence 被 fold 成 `current_owner_delta`、hard gate、owner answer 或 typed blocker，它才影响默认路径。
 
 ### 8. App Cockpit
 
@@ -523,7 +523,7 @@ OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 O
 
 | Surface | 目标处置 |
 | --- | --- |
-| Raw evidence envelope | Evidence Vault / full drilldown。 |
+| Raw evidence envelope | passive evidence ledger / full drilldown。 |
 | Full worklist | 从 `current_owner_delta` 派生的 secondary view；不作为 next-action root。 |
 | Stage replay packet | Release/audit lane；只在阻断 launch/handoff 时进入 default blocker。 |
 | Runtime budget / cohort / assumption warning | Production hardening backlog；除非影响启动安全或 provider liveness。 |
@@ -543,7 +543,7 @@ OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 O
 | `current-owner-delta.schema.json` | 默认 owner/delta/hard-gate/action payload。 |
 | `stage-artifact-unit.schema.json` | physical output + manifest + owner answer + current pointer。 |
 | `owner-answer.schema.json` | owner receipt / typed blocker / human decision / route-back 的统一 return shape。 |
-| `evidence-vault-event.schema.json` | audit-only evidence 分类和 bounded envelope。 |
+| `evidence-ledger-event.schema.json` | audit-only evidence 分类和 bounded envelope。 |
 | `golden-path-profile.schema.json` | 每个 Foundry Agent 的 ordinary path 与 explicit variants。 |
 | `stop-loss-policy.schema.json` | lineage repeat、receipt-only、platform-repair-only、stale-route 的冻结规则。 |
 | `default-surface-budget.schema.json` | default / diagnostic / audit / production / cleanup 的升级门。 |
@@ -562,7 +562,7 @@ src/
   stage-attempt-runtime/
   owner-delta-controller/
   stage-artifact-kernel/
-  evidence-vault/
+  evidence-ledger/
   app-cockpit-projection/
   generated-surfaces/
   provider-temporal/
@@ -598,7 +598,7 @@ domain-agent-repo/
 | `current-owner-delta.schema.json` | 默认 owner / delta / accepted answer shape / hard gate payload。 |
 | `stage-artifact-progress-truth-policy.json` | progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer。 |
 | `cognitive-computation-kernel.json` | stage 内认知计算、tool affordance boundary、knowledge refs 和 independent gate 的 refs-only 组织边界。 |
-| `evidence-vault-event.schema.json` | raw evidence、trace、replay、typed blocker group、long-soak 和 cleanup provenance 只作为 passive audit。 |
+| `evidence-ledger-event.schema.json` | raw evidence、trace、replay、typed blocker group、long-soak 和 cleanup provenance 只作为 passive audit。 |
 | `stop-loss-policy.schema.json` | receipt-only、platform-repair-only、read-model-reconcile-only 或 stale-route lineage 的默认冻结规则。 |
 | `guardrail-tier-policy.json` | launch-hard、runtime-enforced、domain/human gate、audit-only 分级。 |
 | `wrapper-retirement-gate-policy.json` | replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 删除门。 |
@@ -612,7 +612,7 @@ domain-agent-repo/
 
 | Phase | 当前读法 |
 | --- | --- |
-| Design target | 目标架构已冻结为 `OPL resource model + current_owner_delta + Cognitive Computation Kernel + Stage Artifact Unit + Passive Evidence Vault + App Cockpit + Agent Lab improvement control plane`。 |
+| Design target | 目标架构已冻结为 `OPL resource model + current_owner_delta + Cognitive Computation Kernel + Stage Artifact Unit + Passive passive evidence ledger + App Cockpit + Agent Lab improvement control plane`。 |
 | Owner delta contract | 所有默认 read surface 应从同一 `current_owner_delta` 派生；raw worklist 不能覆盖 owner delta。 |
 | Audit-plane passivity | raw evidence、stage replay、typed blocker group 和 private residue 只能在 fold 成 owner answer / typed blocker / hard gate / owner delta 后影响默认路径。 |
 | Cognitive kernel | Stage pack 只声明 prompt / skill / tool affordance / knowledge / rubric / quality gate refs；工具目录不能变成 workflow script。 |
@@ -620,7 +620,7 @@ domain-agent-repo/
 | Golden path | MAS/MAG/RCA/OMA 每个 agent 只有一个 ordinary route；proof/diagnostic/cleanup/long-soak/variant 显式 lane 化。 |
 | Generated surface / Domain Pack | Declarative Domain Pack 和 authority ABI 是新 Agent 默认形态；OPL pack compiler / generated interface bundle 可以生成 CLI/MCP/Skill/product-entry/OpenAI/AI SDK/status/workbench surface，但 generated ready 只能证明结构归位，不证明 domain ready。 |
 | Surface budget compiler policy | 新 default surface 先按 `contracts/opl-framework/default-surface-budget.schema.json` 和 `surface-budget-policy.json` 分类；debug、history、telemetry、cleanup、proof lane 和 long-soak 只能作为 explicit lane，不能抢 ordinary path。 |
-| Small reconcilers | Route、artifact、owner-delta、Atlas/Vault telemetry 和 App Console reconciler 都只做 desired/current 对齐与 refs-only 投影；Stage current pointer、terminal state 和 `current_owner_delta` 仍归 Stage Transition Authority。 |
+| Small reconcilers | Route、artifact、owner-delta、Atlas/Ledger telemetry 和 App Console reconciler 都只做 desired/current 对齐与 refs-only 投影；Stage current pointer、terminal state 和 `current_owner_delta` 仍归 Stage Transition Authority。 |
 | App Console thinning | App 默认页只消费 `opl app state`、`current_owner_delta`、artifact/blocker summary 和 allowed action；full worklist、provider trace、ledger browser、route variants、private residue 和 replay packet 只在 explicit drilldown。 |
 | Agent Lab loop | Agent Lab / OMA 只产出 improvement candidate、work order、mechanism proposal、risk gate、target owner receipt / typed blocker ref 或 follow-up；target owner 关闭真实 owner receipt。 |
 | Wrapper retirement | Domain repo retained surface 逐项按删除门处理；OPL descriptor ready、conformance pass、generated surface visible 或 test pass 不授权跨仓删除。 |
@@ -638,7 +638,7 @@ domain-agent-repo/
 | `tool_affordance_boundary` | 工具目录只标准化能力、权限、凭据、可写范围、side effect 和 forbidden authority；不能规定工具顺序、替代 executor 规划或授权 forbidden write。 |
 | `stage_artifact_progress_truth` | progress 必须同时具备 output、manifest、owner answer、current pointer。 |
 | `golden_path_single_default` | 每个 agent ordinary route 只有一个；variants 显式选择。 |
-| `audit_plane_passive` | Evidence Vault 写入不改变 delivery state，除非 fold 成 owner answer / hard gate / owner delta。 |
+| `audit_plane_passive` | passive evidence ledger 写入不改变 delivery state，除非 fold 成 owner answer / hard gate / owner delta。 |
 | `stage_transition_authority` | 多模块只能提交 transition intent / owner answer / typed blocker / human gate / provider observation；Stage current pointer、StageRun terminal state 和 `current_owner_delta` 只能从 OPL append-only authority event log 派生。 |
 | `route_not_stage_strategy` | Route reconciler 只 hydrate/reconcile owner route；候选生成、评估排序、stage completion、receipt signing 和 typed blocker creation 只能发生在 stage attempt / independent gate / domain owner 边界内。 |
 | `audit_tail_cannot_plan` | raw evidence、replay packet、receipt ledger、typed blocker group 和 private residue inventory 只能作为 audit/detail refs；未折叠为 current owner delta / owner answer / typed blocker / hard gate 前不能生成默认计划。 |
@@ -666,7 +666,7 @@ domain-agent-repo/
 
 ## Design Decision
 
-推荐方案是 `Cognitive Computation Kernel + Owner Delta Kernel + Stage Artifact Unit + Passive Evidence Vault`。
+推荐方案是 `Cognitive Computation Kernel + Owner Delta Kernel + Stage Artifact Unit + Passive passive evidence ledger`。
 
 与只修补现有 worklist 相比，它把默认推进根从 “还有多少 evidence item” 改成 “谁欠什么 owner delta”。与完全重写成通用 workflow engine 相比，它保留 OPL 的 AI-first / executor-first / contract-light / Codex-first 定位，让 stage 内认知计算继续由 executor 自主完成，让工具目录保持 affordance catalog，让 domain 专家判断继续由 independent gate 和 owner receipt 承接。
 

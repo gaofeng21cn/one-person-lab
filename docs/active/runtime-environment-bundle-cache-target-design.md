@@ -36,7 +36,7 @@ One Person Lab App Full、MAS、MAG、RCA、BookForge、OMA、CI/VM smoke 和部
   receipt。
 - 协同模块：`OPL Pack`，负责 descriptor、lock、layer manifest 和 distribution
   refs；`OPL Connect` 负责 CLI/App/install/update 入口；`OPL Console` 负责 operator
-  projection；`OPL Vault` 负责 refs-only evidence；`OPL Workspace` 负责 runtime root
+  projection；`OPL Ledger` 负责 refs-only evidence；`OPL Workspace` 负责 runtime root
   与 workspace state 分离；`OPL Atlas` 负责 package/module registry。
 - 不触碰：domain truth、domain owner receipt、quality/export verdict、artifact body、
   memory body、App release verdict。

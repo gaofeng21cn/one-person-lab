@@ -31,36 +31,24 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 ## Current Completion Progress / 当前完成进度
 
-2026-06-30 functional closure follow-through 已吸收并推送七个默认 OPL series repo：
+当前默认读法：默认 OPL series repo 的非 live 功能/结构基线只能从 fresh repo truth 与 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough` 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
 
-| repo | 当前非 live 功能 / 结构状态 |
-| --- | --- |
-| `one-person-lab` | `functional_structure_baseline_landed` |
-| `med-autoscience` | `functional_structure_baseline_landed` |
-| `med-autogrant` | `functional_structure_baseline_landed` |
-| `redcube-ai` | `functional_structure_baseline_landed` |
-| `opl-meta-agent` | `functional_structure_baseline_landed` |
-| `opl-bookforge` | `functional_structure_baseline_landed` |
-| `one-person-lab-app` | `functional_structure_baseline_landed` |
+当前没有已选中的 active 非 live 功能/结构 gap。后续若发现新的 gap，必须从 fresh code/contracts/tests/CLI/read-model/docs 审计重新开 lane，而不是从本文恢复已完成任务清单。
 
-统一机器折回入口是 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough`。该入口当前只授权非 live 功能/结构基线判断，不授权 release、production、Brand L5、domain ready、owner acceptance、owner receipt、typed blocker、human gate 或 physical delete。
+## 八条调研建议 Current Tracker
 
-当前默认七仓范围内没有已选中的 active 非 live 功能/结构 gap。后续若发现新的 gap，必须从 fresh repo truth 重新开 lane，而不是从本文恢复已完成任务清单。
+本 tracker 只保留用户原始 8 条调研建议的当前 owner route 与后置 evidence lane；它不是 readback ledger、branch ledger 或完成史。所有 proof 细节回提交历史、runtime ledger、owner repo evidence surface 和 `docs/history/`。
 
-## 2026-06-30 八条调研建议 Current Tracker
-
-本 tracker 只把用户原始 8 条调研建议映射到当前功能 / 结构闭环和后置 evidence lane。它不是 readback ledger、branch ledger 或完成史；proof 细节回提交历史、runtime ledger、owner repo evidence surface 和 `docs/history/**`。`main evidence` 只表示当前 `origin/main` 上已有可读的结构 / readback / docs 折回，不授权 Live Evidence、owner acceptance、release 或 production claim。
-
-| # | 建议主题 | 当前功能 / 结构闭环 | 后置 lane / 下一 owner |
+| # | 建议主题 | 当前功能/结构读法 | 后置 lane / 下一 owner |
 | --- | --- | --- | --- |
-| 1 | Docker WebUI beginner path | `structural_foldback`: Settings read model 已提供 `.app_settings_read_model.docker_webui` 默认消费面；真实 Docker/runtime 诊断仍回 `opl system docker-webui doctor --json`。 | App release cohort、真实用户路径、Aion shell / App owner consumption 后置；不写成 App release-ready。 |
-| 2 | Settings SSOT | `structural_foldback`: Settings Control Center v2 contract/read model 明确 App/OPL 是 policy/action source，Aion/host shell 只消费 adapter/view model。 | App page-state / release artifact / active-shell validation 继续归 App repo。 |
-| 3 | MAS blocker action route | `main evidence`: MAS typed blocker owner handoff 与 OPL transition receipt projection 已折回 OPL read-model 边界。 | MAS `PaperMissionRun`、owner receipt、typed blocker / human gate 和 paper-progress truth 继续归 MAS；OPL receipt/readback 不算 paper progress。 |
-| 4 | StageRun default | `structural_foldback`: StageRun / owner-route structural baseline 已折回 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough` 和 Foundry target owner 读法；本文不保存 lane / worktree / commit 流水。 | Live StageRun owner receipt、typed blocker、human gate、owner acceptance 和 production evidence 仍后置。 |
-| 5 | Foundry registry | `main evidence`: standard agent / Foundry series 分类与 public projection 已在 `origin/main` 收敛到 OPL-generated / hosted surfaces。 | real target owner route、production generated-surface consumption 和 Brand L5 / owner acceptance 仍后置。 |
-| 6 | MAS Scholar Skills refs-only | `main evidence`: MAS Scholar Skills 按 framework capability package / refs-only skill sync 读取，不成为 standard domain agent 或第二 runtime truth。 | domain owner consumption、target quest / workspace 真实使用和 package release path 继续走 owner evidence。 |
-| 7 | active legacy caller | `structural_foldback`: `opl agents default-callers` 默认读面暴露 `active_legacy_caller_deletion_gate`、active worklist 下一步、owner surface、stop condition 和 false-authority flags。 | 物理删除必须等 no-active-caller、replacement owner、tombstone/provenance、no-forbidden-write 和 owner decision；不能由 docs 或 cleanup ledger 授权。 |
-| 8 | docs / readback thinning | `docs_governance_guard`: status / tracker 只保留机器入口和 forbidden-claim 读法，不恢复过程 proof、branch、counter 或 closeout 流水。 | 后续发现新 gap 时从 fresh audit 重新开 lane；不恢复长 readback / closeout 清单。 |
+| 1 | Docker WebUI beginner path | Settings/Docker WebUI 只按 App/OPL read-model 与 doctor 入口读取。 | App release cohort、真实用户路径、Aion shell/App owner consumption 后置；不写成 App release-ready。 |
+| 2 | Settings SSOT | Settings Control Center v2 由 App/OPL policy/action source 持有；Aion/host shell 只消费 adapter/view model。 | App page-state、release artifact、active-shell validation 继续归 App repo。 |
+| 3 | MAS blocker action route | MAS typed blocker owner handoff 与 OPL transition receipt 只作为 projection/transport 边界读取。 | MAS `PaperMissionRun`、owner receipt、typed blocker/human gate 和 paper-progress truth 继续归 MAS。 |
+| 4 | StageRun default | StageRun/owner-route structural baseline 只按 standard-agent landing evidence 与 Foundry target owner 读法读取。 | Live StageRun owner receipt、typed blocker、human gate、owner acceptance 和 production evidence 仍后置。 |
+| 5 | Foundry registry | Standard agent/Foundry series 分类与 public projection 只证明 OPL-generated/hosted surface 结构边界。 | real target owner route、production generated-surface consumption、Brand L5 和 owner acceptance 仍后置。 |
+| 6 | MAS Scholar Skills refs-only | MAS Scholar Skills 是 framework capability package/refs-only skill sync，不是 standard domain agent 或第二 runtime truth。 | domain owner consumption、target quest/workspace 真实使用和 package release path 继续走 owner evidence。 |
+| 7 | active legacy caller | `opl agents default-callers` 是 deletion-gate read model；worklist/closed gate 不授权 physical delete。 | 物理删除必须等 no-active-caller、replacement owner、tombstone/provenance、no-forbidden-write 和 owner decision。 |
+| 8 | docs / readback thinning | status/tracker 只保留机器入口和 forbidden-claim 读法，不恢复过程 proof、branch、counter 或 closeout 流水。 | 后续发现新 gap 时从 fresh audit 重新开 lane；不恢复长 readback/closeout 清单。 |
 
 ## Plan Completion Audit 入口
 

@@ -19,7 +19,7 @@ Source of truth：
 涉及的 OPL 品牌模块：
 
 - 主模块：`OPL Charter` 和 `OPL Atlas`。Charter 持有 cleanup 的命名、authority boundary、forbidden claim 和 lifecycle discipline；Atlas 持有 repo/module/owner surface 的 catalog 读法。
-- 协同模块：`OPL Pack`、`OPL Runway`、`OPL Vault`、`OPL Console` 和 `OPL Connect`。Pack/Connect 决定 generated/hosted surface 与外部调用面是否可收薄；Runway/Vault 决定 runtime evidence、receipt、typed blocker 与 refs-only ledger 边界；Console 只消费 projection，不授权 cleanup。
+- 协同模块：`OPL Pack`、`OPL Runway`、`OPL Ledger`、`OPL Console` 和 `OPL Connect`。Pack/Connect 决定 generated/hosted surface 与外部调用面是否可收薄；Runway/Ledger 决定 runtime evidence、receipt、typed blocker 与 refs-only ledger 边界；Console 只消费 projection，不授权 cleanup。
 - 不触碰范围：本文不新增品牌模块，不修改 brand module registry，不改 machine-readable contract，不把 cleanup matrix 升级成 App/product/runtime/domain authority。
 
 ## 启动策略
