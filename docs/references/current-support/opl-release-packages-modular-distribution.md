@@ -30,10 +30,12 @@ Agent package 与 capability dependency 采用双形态单源：MAS、MAS Schola
 | MDS | MAS 显式可选 companion；不进入默认 OPL package / Full payload | 否 | 仅作为 MAS-declared backend audit、provenance、historical fixture、intake 或 parity oracle 引用 |
 | MAG | 默认 GHCR `one-person-lab-modules/med-autogrant`；Developer Mode 可显式切到 git checkout / path / repo URL | 否 | domain agent 独立演进，按环境管理安装/更新 |
 | RCA | 默认 GHCR `one-person-lab-modules/redcube-ai`；Developer Mode 可显式切到 git checkout / path / repo URL | 否 | 交付物链路可能较大，不应拖慢 App 更新 |
-| OPL Meta Agent / OMA | 默认 GHCR `one-person-lab-modules/opl-meta-agent`；Developer Mode 可显式切到 git checkout / path / repo URL | 否 | Agent Foundry 的 managed builder/tester module，随 App/OPL 环境维护，但不作为默认 Home assistant 入口 |
+| OMA (`oma`; package / repo carrier `opl-meta-agent`) | 默认 GHCR `one-person-lab-modules/opl-meta-agent`；Developer Mode 可显式切到 git checkout / path / repo URL | 否 | Agent Foundry 的 managed builder/tester module，随 App/OPL 环境维护；`opl-meta-agent` 是 carrier 名，不替代 `oma` 作为 standard-agent canonical id，也不作为默认 Home assistant 入口 |
 | MAS Scholar Skills | 默认 GHCR `one-person-lab-modules/mas-scholar-skills`；Developer Mode 可显式切到 local checkout / path / repo URL | 否 | MAS required capability package；Codex standalone MAS plugin 应随包 bundle，OPL App 托管时作为 managed dependency package 独立安装、更新和修复，供 MAS/MAG/RCA/OMA 等 agent 同步到 workspace / quest 使用 |
 | OPL Flow | 不属于 `one-person-lab-modules/*` package；从 `gaofeng21cn/opl-flow` 安装 Codex workflow plugin/profile | 否 | 只负责 Codex 工作流 profile、角色库和 managed instruction block，不是 domain module 或 GHCR module package |
 | WebUI Docker 镜像 | App-owned GitHub Packages container registry | 否 | 实际坐标、构建发布、digest 和 release evidence 归 `one-person-lab-app`；Framework package manifest 不再暴露该 App-owned reference |
+
+表中的 package、repo、plugin 和 module 名是分发 / carrier 名，不是 standard-agent identity 轴。标准 domain agent canonical ids 仍是 `mas`、`mag`、`rca`、`oma`、`obf`；`opl-meta-agent` / `opl-bookforge` 这类名称只在对应 repo、package、plugin、alias 或 carrier 语境中读取。`mas-scholar-skills` 是 framework capability package，不是 standard domain agent。
 
 ## 模块体积基线
 

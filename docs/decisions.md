@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-08
 
+### 决策：标准智能体 canonical id 与 repo/package carrier 名分层
+
+原因：`opl-meta-agent`、`opl-bookforge` 这类 repo / package / plugin / carrier 名容易被误读成标准智能体 canonical id；`mas-scholar-skills` 也容易因为出现在 Foundry / package readback 中被误读成第六个 standard domain agent。当前机器读面已经把 Foundry Agent series 分成两层：standard domain agent 的 canonical ids 是 `mas`、`mag`、`rca`、`oma`、`obf`；`mas-scholar-skills` 的 membership 是 `framework_capability_package`。文档读法必须跟随这层身份边界，而不是跟随仓库名、GHCR package 名或 Codex carrier 名。
+
+影响：
+
+- `opl-meta-agent`、`opl-bookforge`、Codex Plugin、OPL App shortcut、GHCR package、workflow profile 和 generated surface 都只能作为 carrier / projection / distribution 名称；标准智能体身份仍分别写作 `oma`、`obf`。
+- `mas-scholar-skills` 只作为 MAS required capability package、professional Skill source 和 framework capability package 读取；它不进入 standard domain agent membership、domain-agent default-caller deletion gate 或 physical-delete 判断。
+- OPL core 中的 domain-specific 名称只能作为 compatibility carrier、profile、fixture 或 refs-only evidence 出现；不得被写成 OPL canonical ontology、domain truth、quality verdict、owner receipt、typed blocker、human gate 或 artifact authority。
+- `opl agents default-callers --family-defaults --json` 可以提供 no-active-caller、no-forbidden-write、tombstone/provenance 和 refs-only deletion evidence 读面，但 empty worklist / zero missing gate / closed retirement gate 不等于 physical delete ready。物理删除仍需要 domain owner 返回 `physical_delete_authorization_ref`、`keep_as_authority_adapter_ref` 或 `typed_blocker_ref`。
+- 该决策只澄清身份和 owner gate，不声明 domain ready、runtime ready、App release ready、production ready 或 owner acceptance。
+
 ### 决策：OPL foundation/support Skill 增强优先改现有 AI 路由，不新增默认暴露
 
 原因：Foundation/support Skill 的价值在于把跨 MAS / MAG / RCA / BookForge 复用的判断经验留在 AI 层，而不是把每个经验都沉淀成新 Skill、schema 或默认 Codex metadata。正确边界是：能力模块先行、暴露方式后置；模块化只在运维层固定 identity、refs、receipt、sync scope 和 fail-closed 边界，弹性判断继续留在 Skill / stage prompt。Support Skill 数量增长本身不是能力成熟证据，必须继续由 `plugins/opl-foundation-skills/exposure.json` 控制暴露范围。

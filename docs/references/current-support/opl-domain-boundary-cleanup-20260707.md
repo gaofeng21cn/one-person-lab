@@ -52,7 +52,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 
 ## 2026-07-08 追加收口：standard agent registry pointer hygiene
 
-本轮继续排查标准智能体边界，确认 `mas`、`mag`、`rca`、`oma`、`obf` 是 standard domain agents，`mas-scholar-skills` 是 `framework_capability_package`。`opl-bookforge` 只作为 BookForge repo / alias / package carrier 名保留，不再作为 standard-agent canonical id。已把 Standard Agent Registry 的 canonical pointer 从旧 root-level 路径修正为 `src/modules/charter/standard-agent-registry.ts`，并同步 foundry series contract、target architecture、Foundry CLI / skill boundary tests 与默认 Skill 生态文档。详细矩阵见 [OPL 标准智能体边界调整 2026-07-08](./opl-standard-agent-boundary-adjustment-20260708.md)。
+本轮继续排查标准智能体边界，确认 `mas`、`mag`、`rca`、`oma`、`obf` 是 standard domain agents，`mas-scholar-skills` 是 `framework_capability_package`。`opl-meta-agent` 与 `opl-bookforge` 只作为 OMA / BookForge repo、alias、plugin 或 package carrier 名保留，不再作为 standard-agent canonical id。已把 Standard Agent Registry 的 canonical pointer 从旧 root-level 路径修正为 `src/modules/charter/standard-agent-registry.ts`，并同步 foundry series contract、target architecture、Foundry CLI / skill boundary tests 与默认 Skill 生态文档。详细矩阵见 [OPL 标准智能体边界调整 2026-07-08](./opl-standard-agent-boundary-adjustment-20260708.md)。
 
 ## 剩余收口清单
 
@@ -77,7 +77,9 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 - MAS publication handoff owner-answer profile。
 - RCA visual transition default adapter profile。
 
-这些 compatibility carrier 不能用于新增 canonical OPL ontology。
+这些 compatibility carrier 不能用于新增 canonical OPL ontology。`opl-meta-agent`、`opl-bookforge`、`paper_mission`、`paper-autonomy`、`mag-manifest-sustained-consumption`、MAS publication handoff 和 RCA visual transition 这类名字即使仍出现在 repo/package/profile/readback 中，也只能证明 carrier、profile 或 refs-only evidence 仍需被 OPL 消费；不能证明 OPL 持有对应 domain authority。
+
+`opl agents default-callers --family-defaults --json` 的空 worklist、zero missing gate 或 closed retirement gate 不等于 delete-ready。物理删除仍由 domain owner gate 决定；没有 `physical_delete_authorization_ref` / `keep_as_authority_adapter_ref` / `typed_blocker_ref` 时，OPL 文档和 readback 都不能把 compatibility carrier 写成可删。
 
 ## Residue 分类
 
