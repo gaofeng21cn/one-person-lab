@@ -72,52 +72,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   };
 
   try {
-    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], env) as {
-      install: {
-        surface_id: string;
-        status: string;
-        selected_engines: string[];
-        selected_modules: string[];
-        codex_plugin_registry: {
-          surface_id: string;
-          summary: { registered: number };
-        };
-        engine_actions: unknown[];
-        module_actions: Array<{
-          action: string;
-          module: { module_id: string; installed: boolean };
-          turnkey: {
-            skill_sync: {
-              status: string;
-              result: {
-                installer_result: Record<string, unknown>;
-              };
-            };
-          };
-        }>;
-        gui_open_action: unknown | null;
-        codex_config_bootstrap: { status: string; api_key_present: boolean };
-        companion_skill_sync: {
-          surface_id: string;
-          mode: string;
-          tools: Array<{ tool_id: string; status: string; action: string; version: string | null }>;
-          items: Array<{ skill_id: string; status: string; action: string }>;
-          summary: { total: number; tools_ready: number; tools_total: number };
-        };
-        runtime_manager_action: { executed_actions: Array<{ action_id: string }> };
-        first_run_log: { surface_id: string; log_path: string; event_schema_version: string };
-        first_run_log_events: Array<{
-          status: string;
-          event_type: string;
-          log_path: string;
-        }>;
-        system_initialize: {
-          surface_id: string;
-          recommended_skills: { surface_id: string };
-          gui_shell: { shell_id: string };
-        };
-      };
-    };
+    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], env) as any;
 
     assert.equal(output.install.surface_id, 'opl_install');
     assert.equal(output.install.status, 'completed');
@@ -141,7 +96,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.companion_skill_sync.mode, 'managed');
     assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
     assert.deepEqual(
-      output.install.companion_skill_sync.tools.map((entry) => [entry.tool_id, entry.status, entry.action, entry.version]),
+      output.install.companion_skill_sync.tools.map((entry: any) => [entry.tool_id, entry.status, entry.action, entry.version]),
       [
         ['officecli', 'installed', 'install', '1.0.70-test'],
         ['mineru-open-api', 'installed', 'install', 'mineru-open-api version v0.1.3-test'],
@@ -149,9 +104,9 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     );
     assert.equal(output.install.companion_skill_sync.summary.tools_ready, 2);
     assert.equal(output.install.companion_skill_sync.summary.tools_total, 2);
-    assert.equal(output.install.runtime_manager_action.executed_actions.some((entry) => ['install_hermes_online_runtime', 'repair_hermes_legacy_provider'].includes(entry.action_id)), false);
+    assert.equal(output.install.runtime_manager_action.executed_actions.some((entry: any) => ['install_hermes_online_runtime', 'repair_hermes_legacy_provider'].includes(entry.action_id)), false);
     for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max', 'mineru-document-extractor']) {
-      const item = output.install.companion_skill_sync.items.find((entry) => entry.skill_id === skillName);
+      const item = output.install.companion_skill_sync.items.find((entry: any) => entry.skill_id === skillName);
       assert.equal(item?.status, 'synced');
       assert.equal(item?.action, 'symlink');
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
@@ -163,7 +118,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.first_run_log.event_schema_version, 'opl_first_run_event.v1');
     assert.equal(output.install.first_run_log.log_path, path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl'));
     assert.deepEqual(
-      output.install.first_run_log_events.map((entry) => [entry.event_type, entry.status, entry.log_path]),
+      output.install.first_run_log_events.map((entry: any) => [entry.event_type, entry.status, entry.log_path]),
       [
         ['install_started', 'written', output.install.first_run_log.log_path],
         ['runtime_manager_repair_started', 'written', output.install.first_run_log.log_path],
@@ -174,8 +129,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     const firstRunEvents = fs.readFileSync(output.install.first_run_log.log_path, 'utf8')
       .trim()
       .split('\n')
-      .map((line) => parseJsonText(line) as { event_type: string; payload: Record<string, unknown> });
-    assert.deepEqual(firstRunEvents.map((entry) => entry.event_type), [
+      .map((line) => parseJsonText(line) as any);
+    assert.deepEqual(firstRunEvents.map((entry: any) => entry.event_type), [
       'install_started',
       'runtime_manager_repair_started',
       'runtime_manager_repair_completed',
@@ -223,13 +178,9 @@ test('managed companion sync writes materialized skills with readable permission
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
       ...env,
-    }) as {
-      companion_skills: {
-        items: Array<{ skill_id: string; status: string; source_path: string | null }>;
-      };
-    };
+    }) as any;
 
-    const mineru = output.companion_skills.items.find((entry) => entry.skill_id === 'mineru-document-extractor');
+    const mineru = output.companion_skills.items.find((entry: any) => entry.skill_id === 'mineru-document-extractor');
     assert.equal(mineru?.status, 'synced');
     assert.equal(mineru?.source_path, path.join(homeRoot, 'companion-sources', 'materialized', 'mineru-document-extractor'));
 
@@ -263,15 +214,9 @@ test('recommended companion skills require their skill payloads and companion bi
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       PATH: '/usr/bin:/bin',
-    }) as {
-      system_initialize: {
-        recommended_skills: {
-          skills: Array<{ skill_id: string; status: string }>;
-        };
-      };
-    };
+    }) as any;
     const missingById = new Map(
-      missingTool.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
+      missingTool.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
     );
     for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
       assert.equal(missingById.get(skillName), 'missing');
@@ -297,15 +242,9 @@ test('recommended companion skills require their skill payloads and companion bi
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       PATH: `${toolBin}:/usr/bin:/bin`,
-    }) as {
-      system_initialize: {
-        recommended_skills: {
-          skills: Array<{ skill_id: string; status: string }>;
-        };
-      };
-    };
+    }) as any;
     const readyById = new Map(
-      readyTool.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
+      readyTool.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
     );
     for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
       assert.equal(readyById.get(skillName), 'ready');
@@ -325,15 +264,9 @@ test('recommended system companion skills exclude MAS/MDS project-local stage sk
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: '/usr/bin:/bin',
-    }) as {
-      system_initialize: {
-        recommended_skills: {
-          skills: Array<{ skill_id: string }>;
-        };
-      };
-    };
+    }) as any;
 
-    const skillIds = output.system_initialize.recommended_skills.skills.map((skill) => skill.skill_id);
+    const skillIds = output.system_initialize.recommended_skills.skills.map((skill: any) => skill.skill_id);
     for (const stageSkillId of ['deepscientist', 'scout', 'finalize', 'write', 'review', 'baseline']) {
       assert.equal(skillIds.includes(stageSkillId), false);
     }
@@ -390,15 +323,9 @@ test('recommended system companion skills keep family domain skills plugin-only 
       OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
       PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
-    }) as {
-      install: {
-        companion_skill_sync: {
-          items: Array<{ skill_id: string; status: string }>;
-        };
-      };
-    };
+    }) as any;
 
-    const syncedById = new Map(output.install.companion_skill_sync.items.map((item) => [item.skill_id, item.status]));
+    const syncedById = new Map(output.install.companion_skill_sync.items.map((item: any) => [item.skill_id, item.status]));
     for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
       assert.equal(syncedById.has(skillId), false);
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), false);
@@ -426,15 +353,9 @@ test('recommended system companion skills keep family domain skills plugin-only 
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
       PATH: `${toolBin}:/usr/bin:/bin`,
-    }) as {
-      system_initialize: {
-        recommended_skills: {
-          skills: Array<{ skill_id: string; status: string }>;
-        };
-      };
-    };
+    }) as any;
     const readyById = new Map(
-      ready.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
+      ready.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
     );
     assert.equal(readyById.get('superpowers'), 'ready');
     for (const skillId of [
@@ -469,13 +390,9 @@ test('managed companion sync does not mirror MAS/MDS project-local stage skills 
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       ...disableRemoteCompanionInstall(),
-    }) as {
-      companion_skills: {
-        items: Array<{ skill_id: string }>;
-      };
-    };
+    }) as any;
 
-    const skillIds = output.companion_skills.items.map((item) => item.skill_id);
+    const skillIds = output.companion_skills.items.map((item: any) => item.skill_id);
     for (const stageSkillId of ['deepscientist', 'scout', 'finalize', 'write', 'review', 'baseline']) {
       assert.equal(skillIds.includes(stageSkillId), false);
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', stageSkillId, 'SKILL.md')), false);
@@ -527,23 +444,7 @@ printf 'native repair completed\\n'
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
       ...disableRemoteCompanionInstall(),
-    }) as {
-      install: {
-        native_helper_action: {
-          action: string;
-          status: string;
-          command_preview: string[];
-          before: { runtime: { status: string } };
-          after: { runtime: { status: string } };
-        };
-        system_initialize: {
-          native_helpers: {
-            health_status: string;
-            runtime: { status: string };
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.install.native_helper_action.action, 'repair_native_helpers');
     assert.equal(output.install.native_helper_action.status, 'completed');
@@ -570,18 +471,7 @@ test('install command can bootstrap Codex defaults from environment without leak
       OPL_CODEX_BASE_URL: 'https://codex-provider.example.test/v1',
       OPL_CODEX_API_KEY: 'secret-test-key',
       ...disableRemoteCompanionInstall(),
-    }) as {
-      install: {
-        codex_config_bootstrap: {
-          status: string;
-          config_path: string;
-          model: string;
-          reasoning_effort: string;
-          provider_base_url: string;
-          api_key_present: boolean;
-        };
-      };
-    };
+    }) as any;
 
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.status, 'completed');
@@ -613,34 +503,12 @@ test('system initialize blocks launch when compatible Codex CLI lacks configured
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
-    }) as {
-      system_initialize: {
-        setup_flow: {
-          phase: string;
-          ready_to_launch: boolean;
-          blocking_items: string[];
-          maintenance_items: string[];
-        };
-        checklist: Array<{
-          item_id: string;
-          blocking: boolean;
-          readiness_layer: string;
-          severity: string;
-          action_command_ref: string | null;
-        }>;
-        core_engines: {
-          codex: {
-            config_status: string;
-            api_key_present: boolean;
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.system_initialize.setup_flow.phase, 'environment');
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), true);
-    const codexConfigItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex_config');
+    const codexConfigItem = output.system_initialize.checklist.find((entry: any) => entry.item_id === 'codex_config');
     assert.equal(codexConfigItem?.blocking, true);
     assert.equal(codexConfigItem?.readiness_layer, 'core_launch');
     assert.equal(codexConfigItem?.severity, 'blocking');
@@ -672,31 +540,11 @@ test('system initialize accepts existing Codex login without OPL Gateway API key
       CODEX_HOME: codexHome,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
-    }) as {
-      system_initialize: {
-        setup_flow: {
-          ready_to_launch: boolean;
-          blocking_items: string[];
-        };
-        checklist: Array<{
-          item_id: string;
-          blocking: boolean;
-          detail_summary: string;
-        }>;
-        core_engines: {
-          codex: {
-            api_key_present: boolean;
-            opl_gateway_configured: boolean;
-            model_access_ready: boolean;
-            model_access_source: string;
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), false);
-    const codexConfigItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex_config');
+    const codexConfigItem = output.system_initialize.checklist.find((entry: any) => entry.item_id === 'codex_config');
     assert.equal(codexConfigItem?.blocking, false);
     assert.match(codexConfigItem?.detail_summary ?? '', /Using existing Codex model access/);
     assert.equal(output.system_initialize.core_engines.codex.api_key_present, false);
@@ -722,23 +570,7 @@ test('system initialize accepts environment API key model access without local C
       OPENAI_API_KEY: 'redacted-env-key',
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
-    }) as {
-      system_initialize: {
-        setup_flow: {
-          ready_to_launch: boolean;
-          blocking_items: string[];
-        };
-        core_engines: {
-          codex: {
-            api_key_present: boolean;
-            opl_gateway_configured: boolean;
-            model_access_ready: boolean;
-            model_access_source: string;
-            env_api_key_present: boolean;
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), false);
@@ -772,22 +604,7 @@ test('system initialize reports selected OPL Gateway config as the model access 
       CODEX_HOME: codexConfigFixture.codexHome,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
-    }) as {
-      system_initialize: {
-        setup_flow: {
-          ready_to_launch: boolean;
-          blocking_items: string[];
-        };
-        core_engines: {
-          codex: {
-            api_key_present: boolean;
-            opl_gateway_configured: boolean;
-            model_access_ready: boolean;
-            model_access_source: string;
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), false);
@@ -829,31 +646,7 @@ test('system initialize accepts App-managed runtime Codex when PATH has no Codex
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
       PATH: '/usr/bin:/bin',
-    }) as {
-      system_initialize: {
-        setup_flow: {
-          ready_to_launch: boolean;
-          blocking_items: string[];
-        };
-        core_engines: {
-          codex: {
-            installed: boolean;
-            binary_path: string | null;
-            binary_source: string | null;
-            health_status: string;
-            opl_gateway_configured: boolean;
-            model_access_ready: boolean;
-            model_access_source: string;
-            issues: string[];
-            runtime_substrate_updater: {
-              current_binary_installed: boolean;
-              current_binary_path: string;
-              current_version_status: string;
-            };
-          };
-        };
-      };
-    };
+    }) as any;
 
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
     assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex'), false);
@@ -891,7 +684,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       ...disableRemoteCompanionInstall(),
-    }) as { install: { notes: string[] } };
+    }) as any;
 
     assert.doesNotMatch(output.install.notes.join('\n'), /serve-web|8787|Product API service/);
     assert.match(output.install.notes.join('\n'), /GUI startup opens/);
@@ -921,25 +714,17 @@ test('install command reuses only the default Codex engine and reports Temporal 
         PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
         ...disableRemoteCompanionInstall(),
       },
-    ) as {
-      install: {
-        engine_actions: Array<{ engine_id: string; status: string; strategy: string }>;
-        selected_engines: string[];
-        runtime_manager_action: {
-          executed_actions: Array<{ action_id: string }>;
-        };
-      };
-    };
+    ) as any;
 
     assert.deepEqual(output.install.selected_engines, ['codex']);
     assert.deepEqual(
-      output.install.engine_actions.map((entry) => [entry.engine_id, entry.status, entry.strategy]),
+      output.install.engine_actions.map((entry: any) => [entry.engine_id, entry.status, entry.strategy]),
       [
         ['codex', 'skipped_installed', 'already_installed'],
       ],
     );
     assert.deepEqual(
-      output.install.runtime_manager_action.executed_actions.map((entry) => entry.action_id),
+      output.install.runtime_manager_action.executed_actions.map((entry: any) => entry.action_id),
       ['configure_temporal_provider'],
     );
   } finally {

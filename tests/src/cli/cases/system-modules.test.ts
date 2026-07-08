@@ -63,25 +63,11 @@ EOF
   };
 
   try {
-    const initial = runCli(['connect', 'modules'], env) as {
-      modules: {
-        summary: {
-          total_modules_count: number;
-          installed_modules_count: number;
-        };
-        items: Array<{
-          module_id: string;
-          installed: boolean;
-          install_origin: string;
-          available_actions: string[];
-          capability_dependencies: Array<Record<string, unknown>>;
-        }>;
-      };
-    };
+    const initial = runCli(['connect', 'modules'], env) as any;
     assert.equal(initial.modules.summary.total_modules_count, 6);
-    const initialMasDependencyReadback = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
+    const initialMasDependencyReadback = initial.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     assert.deepEqual(
-      initialMasDependencyReadback?.capability_dependencies.map((dependency) => ({
+      initialMasDependencyReadback?.capability_dependencies.map((dependency: any) => ({
         package_id: dependency.package_id,
         codex_distribution: dependency.codex_distribution,
         opl_distribution: dependency.opl_distribution,
@@ -96,7 +82,7 @@ EOF
         },
       ],
     );
-    const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
+    const initialMas = initial.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);
     assert.equal(initialMas.install_origin, 'missing');
@@ -105,33 +91,7 @@ EOF
     const install = runCli(
       ['connect', 'install', '--module', 'medautoscience'],
       env,
-    ) as {
-      module_action: {
-        action: string;
-        status: string;
-        turnkey: {
-          bootstrap: {
-            status: string;
-          };
-          skill_sync: {
-            status: string;
-            domain_id: string | null;
-          };
-          health_check: {
-            status: string;
-          };
-        };
-        module: {
-          module_id: string;
-          installed: boolean;
-          install_origin: string;
-          checkout_path: string;
-          git: {
-            head_sha: string | null;
-          };
-        };
-      };
-    };
+    ) as any;
     assert.equal(install.module_action.action, 'install');
     assert.equal(install.module_action.status, 'completed');
     assert.equal(install.module_action.module.module_id, 'medautoscience');
@@ -157,10 +117,8 @@ EOF
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const readMasModule = () => (
-      runCli(['connect', 'modules'], env) as {
-        modules: { items: Array<{ module_id: string; recommended_action: string | null; available_actions: string[]; git: Record<string, unknown> | null }> };
-      }
-    ).modules.items.find((entry) => entry.module_id === 'medautoscience');
+      runCli(['connect', 'modules'], env) as any
+    ).modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     const syncedMas = readMasModule();
     assert.ok(syncedMas);
     assert.equal(syncedMas.git?.sync_status, 'synced');
@@ -194,17 +152,7 @@ EOF
     const update = runCli(
       ['connect', 'update', '--module', 'medautoscience'],
       env,
-    ) as {
-      module_action: {
-        action: string;
-        status: string;
-        module: {
-          git: {
-            head_sha: string | null;
-          };
-        };
-      };
-    };
+    ) as any;
     assert.equal(update.module_action.action, 'update');
     assert.equal(update.module_action.status, 'completed');
     assert.equal(update.module_action.module.git.head_sha, nextSha);
@@ -217,16 +165,7 @@ EOF
     const remove = runCli(
       ['connect', 'remove', '--module', 'medautoscience'],
       env,
-    ) as {
-      module_action: {
-        action: string;
-        status: string;
-        module: {
-          installed: boolean;
-          checkout_path: string;
-        };
-      };
-    };
+    ) as any;
     assert.equal(remove.module_action.action, 'remove');
     assert.equal(remove.module_action.status, 'completed');
     assert.equal(remove.module_action.module.installed, false);
@@ -277,17 +216,8 @@ test('module install creates an OPL-managed root even when a sibling checkout is
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({ login: 'ordinary-user' }),
     };
 
-    const beforeInstall = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as {
-      modules: {
-        items: Array<{
-          module_id: string;
-          install_origin: string;
-          checkout_path: string;
-          health_status: string;
-        }>;
-      };
-    };
-    const beforeMeta = beforeInstall.modules.items.find((entry) => entry.module_id === 'oplmetaagent');
+    const beforeInstall = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as any;
+    const beforeMeta = beforeInstall.modules.items.find((entry: any) => entry.module_id === 'oplmetaagent');
     assert.equal(beforeMeta?.install_origin, 'sibling_workspace');
     assert.equal(beforeMeta?.checkout_path, siblingCheckout);
     assert.equal(beforeMeta?.health_status, 'dirty');
@@ -296,22 +226,7 @@ test('module install creates an OPL-managed root even when a sibling checkout is
       ['connect', 'install', '--module', 'oplmetaagent'],
       onePersonLabRoot,
       env,
-    ) as {
-      module_action: {
-        action: string;
-        module: {
-          module_id: string;
-          install_origin: string;
-          checkout_path: string;
-          managed_checkout_path: string;
-          git: { dirty: boolean };
-        };
-        turnkey: {
-          skill_sync: { status: string; domain_id: string | null };
-          health_check: { status: string };
-        };
-      };
-    };
+    ) as any;
 
     const managedCheckout = path.join(modulesRoot, 'opl-meta-agent');
     assert.equal(install.module_action.action, 'install');
@@ -384,17 +299,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     const install = runCli(
       ['connect', 'install', '--module', 'medautoscience'],
       env,
-    ) as {
-      module_action: {
-        action: string;
-        status: string;
-        module: {
-          installed: boolean;
-          install_origin: string;
-          checkout_path: string;
-        };
-      };
-    };
+    ) as any;
 
     assert.equal(install.module_action.action, 'install');
     assert.equal(install.module_action.status, 'completed');
@@ -463,17 +368,7 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     const install = runCli(
       ['connect', 'install', '--module', 'medautoscience'],
       env,
-    ) as {
-      module_action: {
-        action: string;
-        status: string;
-        module: {
-          installed: boolean;
-          install_origin: string;
-          checkout_path: string;
-        };
-      };
-    };
+    ) as any;
 
     assert.equal(install.module_action.action, 'install');
     assert.equal(install.module_action.status, 'completed');
@@ -537,16 +432,9 @@ test('modules projection prefers local developer checkouts when Developer Mode i
       env,
     );
 
-    const output = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as {
-      modules: {
-        summary: {
-          managed_default_modules_count: number;
-        };
-        items: Array<any>;
-      };
-    };
+    const output = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as any;
 
-    const mas = output.modules.items.find((entry) => entry.module_id === 'medautoscience');
+    const mas = output.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     assert.equal(mas?.install_origin, 'sibling_workspace');
     assert.equal(mas?.checkout_path, siblingCheckout);
     assert.equal(mas?.managed_checkout_path, path.join(modulesRoot, 'med-autoscience'));
@@ -623,29 +511,13 @@ git ls-files >/dev/null
   };
 
   try {
-    const beforeInstall = runCli(['connect', 'modules'], env) as {
-      modules: { items: Array<{ module_id: string; installed: boolean; install_origin: string; checkout_path: string }> };
-    };
-    const beforeRca = beforeInstall.modules.items.find((entry) => entry.module_id === 'redcube');
+    const beforeInstall = runCli(['connect', 'modules'], env) as any;
+    const beforeRca = beforeInstall.modules.items.find((entry: any) => entry.module_id === 'redcube');
     assert.equal(beforeRca?.installed, false);
     assert.equal(beforeRca?.install_origin, 'missing');
     assert.equal(beforeRca?.checkout_path, managedRcaRoot);
 
-    const install = runCli(['connect', 'install', '--module', 'redcube'], env) as {
-      module_action: {
-        module: {
-          module_id: string;
-          install_origin: string;
-          checkout_path: string;
-          git: { head_sha: string | null } | null;
-        };
-        turnkey: {
-          bootstrap: { status: string };
-          skill_sync: { status: string; domain_id: string | null };
-          health_check: { status: string; result: { packaged_runtime?: boolean } };
-        };
-      };
-    };
+    const install = runCli(['connect', 'install', '--module', 'redcube'], env) as any;
 
     assert.equal(install.module_action.module.module_id, 'redcube');
     assert.equal(install.module_action.module.install_origin, 'managed_root');
@@ -700,27 +572,11 @@ test('modules projection treats Full runtime packaged overrides as launch source
       env[`OPL_MODULE_PATH_${moduleId.toUpperCase()}`] = moduleRoot;
     }
 
-    const output = runCli(['connect', 'modules'], env) as {
-      modules: {
-        summary: {
-          installed_default_modules_count: number;
-          healthy_default_modules_count: number;
-        };
-        items: Array<{
-          module_id: string;
-          installed: boolean;
-          install_origin: string;
-          health_status: string;
-          available_actions: string[];
-          recommended_action: string | null;
-          git: { head_sha: string | null; sync_status: string } | null;
-        }>;
-      };
-    };
+    const output = runCli(['connect', 'modules'], env) as any;
 
     assert.equal(output.modules.summary.installed_default_modules_count, 5);
     assert.equal(output.modules.summary.healthy_default_modules_count, 5);
-    const modulesById = new Map(output.modules.items.map((entry) => [entry.module_id, entry]));
+    const modulesById = new Map<string, any>(output.modules.items.map((entry: any) => [entry.module_id, entry]));
     for (const [moduleId] of packagedModules) {
       const module = modulesById.get(moduleId);
       assert.equal(module?.installed, true);
@@ -832,15 +688,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     const masExec = runCli(
       ['connect', 'exec', '--module', 'medautoscience', '--', 'doctor', 'entry-modes', '--json'],
       env,
-    ) as {
-      module_exec: {
-        module_id: string;
-        command_preview: string[];
-        working_directory: string;
-        exit_code: number;
-        result: { ok?: boolean; runner?: string } | null;
-      };
-    };
+    ) as any;
     assert.equal(masExec.module_exec.module_id, 'medautoscience');
     assert.equal(masExec.module_exec.working_directory, masFixture.sourceRoot);
     assert.equal(masExec.module_exec.exit_code, 0);
@@ -860,14 +708,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     const magExec = runCli(
       ['connect', 'exec', '--module', 'mag', '--', '--help'],
       env,
-    ) as {
-      module_exec: {
-        module_id: string;
-        command_preview: string[];
-        working_directory: string;
-        result: { ok?: boolean; runner?: string } | null;
-      };
-    };
+    ) as any;
     assert.equal(magExec.module_exec.module_id, 'medautogrant');
     assert.equal(magExec.module_exec.working_directory, magFixture.sourceRoot);
     assert.deepEqual(magExec.module_exec.result, { ok: true, runner: 'mag-clean-runner' });
@@ -885,14 +726,7 @@ printf '{"ok":true,"runner":"npm"}\\n'
     const rcaExec = runCli(
       ['connect', 'exec', '--module', 'redcube', '--', 'product', 'manifest', '--workspace-root', '/tmp/demo'],
       env,
-    ) as {
-      module_exec: {
-        module_id: string;
-        command_preview: string[];
-        working_directory: string;
-        result: { ok?: boolean; runner?: string } | null;
-      };
-    };
+    ) as any;
     assert.equal(rcaExec.module_exec.module_id, 'redcube');
     assert.equal(rcaExec.module_exec.working_directory, rcaFixture.sourceRoot);
     assert.deepEqual(rcaExec.module_exec.result, { ok: true, runner: 'npm' });
@@ -954,15 +788,7 @@ test('module exec captures large domain CLI stdout without default spawnSync ENO
     const masExec = runCli(
       ['connect', 'exec', '--module', 'medautoscience', '--', 'sidecar', 'export', '--format', 'json'],
       env,
-    ) as {
-      module_exec: {
-        module_id: string;
-        exit_code: number;
-        stdout: string;
-        max_buffer_bytes: number;
-        result: Record<string, unknown> | null;
-      };
-    };
+    ) as any;
 
     assert.equal(masExec.module_exec.module_id, 'medautoscience');
     assert.equal(masExec.module_exec.exit_code, 0);

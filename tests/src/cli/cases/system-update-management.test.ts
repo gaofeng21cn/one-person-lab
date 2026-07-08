@@ -77,25 +77,7 @@ exit 1
         TEMPORAL_ADDRESS: '',
         PATH: `${compatibleCodexFixture.fixtureRoot}:${outdatedCodexFixture.fixtureRoot}:/usr/bin:/bin`,
       },
-    ) as {
-      system: {
-        overall_status: string;
-        core_engines: {
-          codex: {
-            version_status: string;
-            health_status: string;
-            issues: string[];
-            diagnostics: string[];
-            candidates: Array<{
-              path: string;
-              selected: boolean;
-              parsed_version: string | null;
-              version_status: string;
-            }>;
-          };
-        };
-      };
-    };
+    ) as any;
 
     assert.equal(output.system.overall_status, 'attention_needed');
     assert.equal(output.system.core_engines.codex.version_status, 'compatible');
@@ -103,7 +85,7 @@ exit 1
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.deepEqual(output.system.core_engines.codex.diagnostics, ['codex_cli_path_version_conflict_nonblocking']);
     assert.deepEqual(
-      output.system.core_engines.codex.candidates.map((candidate) => [
+      output.system.core_engines.codex.candidates.map((candidate: any) => [
         candidate.path,
         candidate.selected,
         candidate.parsed_version,
@@ -161,25 +143,7 @@ exit 1
         HOME: homeRoot,
         PATH: `${firstAliasRoot}:${secondAliasRoot}:${codexFixture.fixtureRoot}:${appBundledRoot}:/usr/bin:/bin`,
       },
-    ) as {
-      system: {
-        core_engines: {
-          codex: {
-            version_status: string;
-            health_status: string;
-            issues: string[];
-            diagnostics: string[];
-            candidates: Array<{
-              path: string;
-              selected: boolean;
-              parsed_version: string | null;
-              version_status: string;
-              aliases?: string[];
-            }>;
-          };
-        };
-      };
-    };
+    ) as any;
 
     const codex = output.system.core_engines.codex;
     assert.equal(codex.version_status, 'compatible');
@@ -187,7 +151,7 @@ exit 1
     assert.deepEqual(codex.issues, []);
     assert.deepEqual(codex.diagnostics, []);
     assert.deepEqual(
-      codex.candidates.map((candidate) => [
+      codex.candidates.map((candidate: any) => [
         candidate.path,
         candidate.selected,
         candidate.parsed_version,
@@ -289,9 +253,7 @@ EOF
 
   try {
     runCli(['connect', 'install', '--module', 'medautoscience'], env);
-    const medAutoGrantInstall = runCli(['connect', 'install', '--module', 'medautogrant'], env) as {
-      module_action: { module: { checkout_path: string } };
-    };
+    const medAutoGrantInstall = runCli(['connect', 'install', '--module', 'medautogrant'], env) as any;
     fs.writeFileSync(
       path.join(medAutoGrantInstall.module_action.module.checkout_path, 'LOCAL-CHANGE.md'),
       '# Local change\n',
@@ -303,28 +265,9 @@ EOF
       'Advance MAS for system update',
     );
 
-    const output = runCli(['system', 'update'], env) as {
-      system_action: {
-        action: string;
-        status: string;
-        details: {
-          summary: {
-            total_targets_count: number;
-            completed_targets_count: number;
-            skipped_targets_count: number;
-            manual_required_targets_count: number;
-          };
-          targets: Array<{
-            target_type: string;
-            target_id: string;
-            status: string;
-            reason: string;
-          }>;
-        };
-      };
-    };
-    const targets = new Map(
-      output.system_action.details.targets.map((entry) => [`${entry.target_type}:${entry.target_id}`, entry]),
+    const output = runCli(['system', 'update'], env) as any;
+    const targets = new Map<string, any>(
+      output.system_action.details.targets.map((entry: any) => [`${entry.target_type}:${entry.target_id}`, entry]),
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
@@ -344,10 +287,8 @@ EOF
     assert.equal(targets.get('module:oplbookforge')?.reason, 'module_missing');
 
     const updatedMas = (
-      runCli(['connect', 'modules'], env) as {
-        modules: { items: Array<{ module_id: string; git: Record<string, unknown> | null; recommended_action: string | null }> };
-      }
-    ).modules.items.find((entry) => entry.module_id === 'medautoscience');
+      runCli(['connect', 'modules'], env) as any
+    ).modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     assert.ok(updatedMas);
     assert.equal(updatedMas.git?.head_sha, nextMasSha);
     assert.equal(updatedMas.recommended_action, null);
@@ -404,17 +345,7 @@ test('module bootstrap recovers broken bundled npm shim during system-managed in
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_TEST_NPM_LOG: npmLogPath,
       PATH: `${bundledNodeBin}:/usr/bin:/bin`,
-    }) as {
-      module_action: {
-        module: { checkout_path: string };
-        turnkey: {
-          bootstrap: {
-            status: string;
-            command_preview: string[] | null;
-          };
-        };
-      };
-    };
+    }) as any;
     const npmLog = fs.readFileSync(npmLogPath, 'utf8').trim().split('\n');
 
     assert.equal(output.module_action.turnkey.bootstrap.status, 'completed');
@@ -452,22 +383,9 @@ test('system update refreshes a non-git managed OPL Framework runtime from an ex
       OPL_FRAMEWORK_UPDATE_SKIP_DEPENDENCY_INSTALL: '1',
       OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
       PATH: '/usr/bin:/bin',
-    }) as {
-      system_action: {
-        status: string;
-        details: {
-          targets: Array<{
-            target_type: string;
-            target_id: string;
-            status: string;
-            reason: string;
-            result: Record<string, unknown> | null;
-          }>;
-        };
-      };
-    };
+    }) as any;
 
-    const frameworkTarget = output.system_action.details.targets.find((target) => (
+    const frameworkTarget = output.system_action.details.targets.find((target: any) => (
       target.target_type === 'framework' && target.target_id === 'opl-framework'
     ));
     assert.equal(output.system_action.status, 'completed');
@@ -514,20 +432,9 @@ exit 1
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_CODEX_UPDATE_COMMAND: updateScript,
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
-    }) as {
-      system_action: {
-        details: {
-          targets: Array<{
-            target_type: string;
-            target_id: string;
-            status: string;
-            reason: string;
-          }>;
-        };
-      };
-    };
+    }) as any;
 
-    const codexTarget = output.system_action.details.targets.find((target) => (
+    const codexTarget = output.system_action.details.targets.find((target: any) => (
       target.target_type === 'engine' && target.target_id === 'codex'
     ));
     assert.equal(codexTarget?.status, 'completed');
@@ -657,9 +564,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
 
   try {
     runCli(['connect', 'install', '--module', 'medautoscience'], env);
-    const grantInstall = runCli(['connect', 'install', '--module', 'medautogrant'], env) as {
-      module_action: { module: { checkout_path: string } };
-    };
+    const grantInstall = runCli(['connect', 'install', '--module', 'medautogrant'], env) as any;
     fs.writeFileSync(path.join(grantInstall.module_action.module.checkout_path, 'LOCAL-CHANGE.md'), '# Local change\n');
     const nextMasSha = remotes.medautoscience.advance(
       'CHANGELOG.md',
@@ -668,27 +573,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     );
     fs.writeFileSync(turnkeyLogPath, '', 'utf8');
 
-    const output = runCli(['system', 'reconcile-modules'], env) as {
-      system_action: {
-        action: string;
-        status: string;
-        details: {
-          summary: {
-            total_targets_count: number;
-            completed_targets_count: number;
-            skipped_targets_count: number;
-            manual_required_targets_count: number;
-          };
-          targets: Array<{
-            target_type: string;
-            target_id: string;
-            status: string;
-            reason: string;
-          }>;
-        };
-      };
-    };
-    const targets = new Map(output.system_action.details.targets.map((entry) => [entry.target_id, entry]));
+    const output = runCli(['system', 'reconcile-modules'], env) as any;
+    const targets = new Map<string, any>(output.system_action.details.targets.map((entry: any) => [entry.target_id, entry]));
     assert.equal(output.system_action.action, 'reconcile_modules');
     assert.equal(output.system_action.status, 'manual_required');
     assert.deepEqual(output.system_action.details.summary, {
@@ -722,12 +608,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.match(turnkeyLog, /bootstrap:opl-bookforge/);
     assert.match(turnkeyLog, /health:opl-bookforge:fast/);
 
-    const modules = runCli(['connect', 'modules'], env) as {
-      modules: {
-        items: Array<{ module_id: string; installed: boolean; git: { head_sha: string | null } | null }>;
-      };
-    };
-    const byId = new Map(modules.modules.items.map((entry) => [entry.module_id, entry]));
+    const modules = runCli(['connect', 'modules'], env) as any;
+    const byId = new Map<string, any>(modules.modules.items.map((entry: any) => [entry.module_id, entry]));
     assert.equal(byId.get('medautoscience')?.git?.head_sha, nextMasSha);
     assert.equal(byId.get('meddeepscientist')?.installed, false);
     assert.equal(byId.get('redcube')?.installed, true);
@@ -835,16 +717,7 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
 
   try {
     for (const moduleId of Object.keys(packagedModules)) {
-      const install = runCli(['connect', 'install', '--module', moduleId], env) as {
-        module_action: {
-          module: {
-            checkout_path: string;
-            git: { head_sha: string | null; sync_status: string };
-            recommended_action: string | null;
-            available_actions: string[];
-          };
-        };
-      };
+      const install = runCli(['connect', 'install', '--module', moduleId], env) as any;
       const packaged = packagedModules[moduleId as keyof typeof packagedModules];
       assert.equal(install.module_action.module.git.head_sha, packaged.packagedSha);
       assert.equal(install.module_action.module.git.sync_status, 'no_upstream');
@@ -853,32 +726,16 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
       assert.equal(fs.existsSync(path.join(install.module_action.module.checkout_path, 'opl-runtime-module.json')), true);
     }
 
-    const output = runCli(['system', 'reconcile-modules'], env) as {
-      system_action: {
-        status: string;
-        details: {
-          targets: Array<{ target_id: string; status: string; reason: string }>;
-        };
-      };
-    };
+    const output = runCli(['system', 'reconcile-modules'], env) as any;
     assert.equal(output.system_action.status, 'completed');
-    const targets = new Map(output.system_action.details.targets.map((entry) => [entry.target_id, entry]));
+    const targets = new Map<string, any>(output.system_action.details.targets.map((entry: any) => [entry.target_id, entry]));
     for (const moduleId of Object.keys(packagedModules)) {
       assert.equal(targets.get(moduleId)?.status, 'completed');
       assert.equal(targets.get(moduleId)?.reason, 'module_update_available');
     }
 
-    const modules = runCli(['connect', 'modules'], env) as {
-      modules: {
-        items: Array<{
-          module_id: string;
-          install_origin: string;
-          git: { head_sha: string | null; sync_status: string; upstream_ref: string | null } | null;
-          recommended_action: string | null;
-        }>;
-      };
-    };
-    const modulesById = new Map(modules.modules.items.map((entry) => [entry.module_id, entry]));
+    const modules = runCli(['connect', 'modules'], env) as any;
+    const modulesById = new Map<string, any>(modules.modules.items.map((entry: any) => [entry.module_id, entry]));
     for (const [moduleId, packaged] of Object.entries(packagedModules)) {
       const module = modulesById.get(moduleId);
       assert.equal(module?.install_origin, 'managed_root');
