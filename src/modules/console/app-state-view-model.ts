@@ -376,6 +376,18 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
     const workspacePath = asString(task.workspace_path);
     const projectScopeId = asString(task.project_scope_id);
     const projectLabel = workspaceLabel ?? asString(task.project_display_name) ?? domainLabel;
+    if (workspacePath) {
+      addOption(scopeOption(
+        'workspace',
+        asString(task.workspace_scope_id) ?? `workspace:${workspacePath}`,
+        pathLeaf(workspacePath) ?? workspaceLabel ?? 'Workspace',
+        {
+          workspace_binding_id: asString(task.workspace_binding_id),
+          workspace_path: workspacePath,
+          workspace_label: workspaceLabel,
+        },
+      ));
+    }
     if (projectScopeId) {
       addOption(scopeOption('project', projectScopeId, projectLabel, {
         scope_value: projectLabel,

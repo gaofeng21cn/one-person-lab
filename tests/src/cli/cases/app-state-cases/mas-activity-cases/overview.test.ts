@@ -571,7 +571,7 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     );
     assert.deepEqual(
       new Set(output.app_state.operator.workbench.runtime_scope.scope_options.map((entry: Record<string, any>) => entry.scope_kind)),
-      new Set(['all_projects', 'agent', 'project']),
+      new Set(['all_projects', 'agent', 'workspace', 'project']),
     );
     assert.deepEqual(
       output.app_state.operator.workbench.user_task_status_summary,

@@ -318,15 +318,15 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
-if [ -z "$output_last_message" ] || [ -z "$output_schema" ]; then
+if [ -z "$output_last_message" ]; then
   echo "missing structured output capture args" >&2
   exit 64
 fi
-if ! grep -q '"uri"' "$output_schema"; then
+if [ -n "$output_schema" ] && ! grep -q '"uri"' "$output_schema"; then
   echo "schema does not allow object uri closeout refs" >&2
   exit 64
 fi
-dirname "$output_schema" > "$capture_root_log"
+dirname "\${output_schema:-$output_last_message}" > "$capture_root_log"
 printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
 printf '{"type":"thread.started","thread_id":"thread-output-last-message-closeout"}\\n'
 printf '{"type":"turn.completed"}\\n'

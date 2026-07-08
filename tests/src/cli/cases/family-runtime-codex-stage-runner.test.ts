@@ -331,7 +331,7 @@ if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
     echo "unexpected resume session: $session_id" >&2
     exit 65
   fi
-  if [ ! -f "$output_schema" ]; then
+  if [ -n "$output_schema" ] && [ ! -f "$output_schema" ]; then
     echo "missing output schema: $output_schema" >&2
     exit 67
   fi

@@ -64,7 +64,7 @@ test('runtime scope dedupes workspace options by workspace path', () => {
   assert.equal(workspaceOptions[0]?.label, 'DM-CVD-Mortality-Risk');
   const inferredScope = operator.workbench.runtime_scope.inferred_scope_hint;
   assert.ok(inferredScope);
-  assert.equal(inferredScope.label, 'DM-CVD-Mortality-Risk');
+  assert.equal(inferredScope.label, 'dm-cvd-mortality-risk');
 });
 
 test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspace study', () => {

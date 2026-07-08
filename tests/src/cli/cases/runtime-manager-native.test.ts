@@ -73,8 +73,11 @@ esac
     assert.equal(successPersistence.status, 'written');
     assert.equal(successPersistence.freshness.status, 'fresh');
     assert.equal(success.runtime_manager.reconcile.surface_kind, 'opl_runtime_manager_reconcile');
-    assert.equal(success.runtime_manager.reconcile.overall_status, 'ready');
-    assert.deepEqual(success.runtime_manager.reconcile.recommended_actions, []);
+    assert.equal(success.runtime_manager.reconcile.overall_status, 'attention_needed');
+    assert.deepEqual(
+      success.runtime_manager.reconcile.recommended_actions.map((action: { action_id: string }) => action.action_id),
+      ['configure_temporal_provider'],
+    );
 
     const stale = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
@@ -102,7 +105,7 @@ esac
     assert.equal(stale.runtime_manager.reconcile.overall_status, 'attention_needed');
     assert.deepEqual(
       stale.runtime_manager.reconcile.recommended_actions.map((action: { action_id: string }) => action.action_id),
-      ['repair_native_helpers', 'refresh_native_indexes'],
+      ['configure_temporal_provider', 'repair_native_helpers', 'refresh_native_indexes'],
     );
 
     const lastSuccess = parseJsonText(fs.readFileSync(successPersistence.last_success_file, 'utf8')) as any;
@@ -373,8 +376,8 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
 
     assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
-    assert.equal(snapshot.runtime_health.status, 'needs_attention');
-    assert.equal(snapshot.runtime_health.label, '需用户处理');
+    assert.equal(snapshot.runtime_health.status, 'offline');
+    assert.equal(snapshot.runtime_health.label, '未连接');
     assert.equal(snapshot.runtime_health.provider_kind, 'temporal');
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
@@ -731,8 +734,8 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
-    assert.equal(snapshot.runtime_health.status, 'needs_attention');
-    assert.equal(snapshot.runtime_health.label, '需用户处理');
+    assert.equal(snapshot.runtime_health.status, 'offline');
+    assert.equal(snapshot.runtime_health.label, '未连接');
     assert.equal(snapshot.attention_items.length, 2);
     const dm002Item = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:study:002-dm-china-us-mortality-attribution');
     assert.equal(dm002Item.active_run_id, 'run-002');
@@ -808,7 +811,6 @@ test('runtime manager rejects retired Hermes legacy provider selection', () => {
   assert.equal(failure.payload.error.details.provider_kind, 'hermes_legacy');
   assert.deepEqual(failure.payload.error.details.allowed_provider_kinds, [
     'temporal',
-    'temporal',
     'external_sandbox',
   ]);
 });
@@ -862,6 +864,7 @@ test('runtime manager action dry-run plans repairs without mutating native index
         entry.execution_status,
       ]),
       [
+        ['configure_temporal_provider', 'not_executed'],
         ['repair_native_helpers', 'not_executed'],
         ['refresh_native_indexes', 'not_executed'],
       ],
@@ -892,16 +895,20 @@ test('runtime manager action apply repairs available native surfaces without leg
 
     assert.equal(action.mode, 'apply');
     assert.equal(action.dry_run, false);
-    assert.equal(action.before.reconcile.checked_surfaces.provider_runtime, 'ready');
+    assert.equal(action.before.reconcile.checked_surfaces.provider_runtime, 'provider_code_landed_unconfigured');
     assert.equal(action.before.reconcile.checked_surfaces.hermes_legacy_runtime, undefined);
-    assert.equal(action.after.reconcile.overall_status, 'ready');
-    assert.deepEqual(action.after.reconcile.recommended_actions, []);
+    assert.equal(action.after.reconcile.overall_status, 'attention_needed');
+    assert.deepEqual(
+      action.after.reconcile.recommended_actions.map((entry: { action_id: string }) => entry.action_id),
+      ['configure_temporal_provider'],
+    );
     assert.deepEqual(
       action.executed_actions.map((entry: { action_id: string; status: string }) => [
         entry.action_id,
         entry.status,
       ]),
       [
+        ['configure_temporal_provider', 'blocked_manual_configuration_required'],
         ['repair_native_helpers', 'completed'],
         ['refresh_native_indexes', 'completed'],
       ],

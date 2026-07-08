@@ -128,11 +128,11 @@ db.close();`,
       '--experimental-strip-types',
       '-e',
       `import { DatabaseSync } from 'node:sqlite';
-	const db = new DatabaseSync(${JSON.stringify(queueDb)});
-	db.prepare("UPDATE stage_attempts SET status = 'human_gate', human_gate_refs_json = '[\\"gate:review\\"]', blocked_reason = NULL WHERE stage_attempt_id = ?").run(${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
-	db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(deadLetterAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
-	db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_observability_human_gate_fixture', ${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)}, 'human_gate', '{"human_gate_ref":"gate:review"}', 'test-fixture-projection', '2026-05-14T00:00:01.000Z');
-	db.close();`,
+    const db = new DatabaseSync(${JSON.stringify(queueDb)});
+    db.prepare("UPDATE stage_attempts SET status = 'human_gate', human_gate_refs_json = '[\\"gate:review\\"]', blocked_reason = NULL WHERE stage_attempt_id = ?").run(${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
+    db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(deadLetterAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
+    db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_observability_human_gate_fixture', ${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)}, 'human_gate', '{"human_gate_ref":"gate:review"}', 'test-fixture-projection', '2026-05-14T00:00:01.000Z');
+    db.close();`,
     ], {
       cwd: repoRoot,
       encoding: 'utf8',

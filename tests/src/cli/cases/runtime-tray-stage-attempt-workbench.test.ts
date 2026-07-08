@@ -839,13 +839,13 @@ test('runtime snapshot projects multi-attempt workbench groups, filters, and att
       '--experimental-strip-types',
       '-e',
       `import { DatabaseSync } from 'node:sqlite';
-	const db = new DatabaseSync(${JSON.stringify(queueDb)});
-	db.prepare("UPDATE stage_attempts SET status = 'human_gate', human_gate_refs_json = '[\\"gate:review\\"]', blocked_reason = NULL WHERE stage_attempt_id = ?").run(${JSON.stringify(gatedAttemptId)});
-	db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(deadLetterAttemptId)});
-	db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_gated_human_gate_fixture', ${JSON.stringify(gatedAttemptId)}, 'human_gate', '{"human_gate_ref":"gate:review","reason":"operator_review"}', 'test-fixture-projection', '2026-05-14T00:00:01.000Z');
-	db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_gated_user_instruction_fixture', ${JSON.stringify(gatedAttemptId)}, 'user_instruction', '{"instruction_ref":"user:review-note"}', 'test-fixture-projection', '2026-05-14T00:00:02.000Z');
-	db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_gated_resume_fixture', ${JSON.stringify(gatedAttemptId)}, 'resume', '{"resume_token":"resume:review"}', 'test-fixture-projection', '2026-05-14T00:00:03.000Z');
-	db.close();`,
+    const db = new DatabaseSync(${JSON.stringify(queueDb)});
+    db.prepare("UPDATE stage_attempts SET status = 'human_gate', human_gate_refs_json = '[\\"gate:review\\"]', blocked_reason = NULL WHERE stage_attempt_id = ?").run(${JSON.stringify(gatedAttemptId)});
+    db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(deadLetterAttemptId)});
+    db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_gated_human_gate_fixture', ${JSON.stringify(gatedAttemptId)}, 'human_gate', '{"human_gate_ref":"gate:review","reason":"operator_review"}', 'test-fixture-projection', '2026-05-14T00:00:01.000Z');
+    db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_gated_user_instruction_fixture', ${JSON.stringify(gatedAttemptId)}, 'user_instruction', '{"instruction_ref":"user:review-note"}', 'test-fixture-projection', '2026-05-14T00:00:02.000Z');
+    db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_gated_resume_fixture', ${JSON.stringify(gatedAttemptId)}, 'resume', '{"resume_token":"resume:review"}', 'test-fixture-projection', '2026-05-14T00:00:03.000Z');
+    db.close();`,
     ], {
       cwd: repoRoot,
       encoding: 'utf8',
