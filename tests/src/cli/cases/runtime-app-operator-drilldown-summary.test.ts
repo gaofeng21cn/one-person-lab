@@ -49,6 +49,85 @@ import { assertOwnerDeltaTopline } from './runtime-app-operator-drilldown-owner-
 
 const SUMMARY_COMMAND = ['runtime', 'app-operator-drilldown'];
 const FULL_DETAIL_COMMAND = [...SUMMARY_COMMAND, '--detail', 'full'];
+const DOMAIN_OR_APP_PAYLOAD_OWNER = 'domain_repository_or_app_live_operator';
+const DOMAIN_DISPATCH_OPERATOR_PAYLOAD_REFS = [
+  'domain_receipt_refs',
+  'typed_blocker_refs',
+  'owner_chain_refs',
+  'no_regression_refs',
+];
+
+function assertIncludesAll(values: string[], expected: readonly string[]) {
+  for (const value of expected) {
+    assert.equal(values.includes(value), true);
+  }
+}
+
+function assertCanonicalDomainOwner(item: any) {
+  assert.equal(typeof item.canonical_domain_id, 'string');
+  assert.equal(item.canonical_domain_id.includes('-'), true);
+  assert.equal(item.owner, item.canonical_domain_id);
+}
+
+function assertFalseFields(item: any, fields: readonly string[]) {
+  for (const field of fields) {
+    if (field in item) {
+      assert.equal(item[field], false);
+    }
+  }
+}
+
+function assertDomainDispatchGroupShape(group: any) {
+  assertCanonicalDomainOwner(group);
+  assert.equal(typeof group.stage_id, 'string');
+  assert.equal(group.workorder_count > 0, true);
+  assert.equal(group.stage_attempt_count > 0, true);
+  assert.equal(group.payload_owner, DOMAIN_OR_APP_PAYLOAD_OWNER);
+  assert.equal(group.sample_stage_attempt_ids.length <= 3, true);
+  assert.equal(group.stage_attempt_id_omitted_count >= 0, true);
+  assert.equal(group.sample_action_refs.length <= 3, true);
+  assert.equal(group.action_ref_omitted_count >= 0, true);
+  assert.equal(group.sample_required_evidence_refs.length <= 3, true);
+  assert.equal(group.required_evidence_ref_omitted_count >= 0, true);
+  assert.equal('required_evidence_refs' in group, false);
+  assertFalseFields(group, [
+    'can_execute_domain_action',
+    'can_create_owner_receipt',
+    'can_close_domain_ready',
+    'can_claim_production_ready',
+    'worklist_item_is_completion_claim',
+  ]);
+  if ('record_action_id_omitted_count' in group) {
+    assert.equal(group.record_action_id_omitted_count >= 0, true);
+  }
+  if ('record_command_ref_omitted_count' in group) {
+    assert.equal(group.record_command_ref_omitted_count >= 0, true);
+  }
+  assertIncludesAll(group.required_operator_payload_refs, DOMAIN_DISPATCH_OPERATOR_PAYLOAD_REFS);
+}
+
+function assertDomainDispatchWorkorderShape(workorder: any) {
+  assert.equal(workorder.route_domain_id, workorder.domain_id);
+  assertCanonicalDomainOwner(workorder);
+  assert.equal(
+    workorder.domain_id_policy,
+    'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
+  );
+  assert.equal(workorder.payload_owner, DOMAIN_OR_APP_PAYLOAD_OWNER);
+  assert.equal(workorder.route_requires_domain_or_app_payload, true);
+  assertFalseFields(workorder, [
+    'can_execute',
+    'creates_domain_action',
+    'creates_owner_receipt',
+    'can_create_owner_receipt',
+    'can_close_domain_ready',
+    'can_claim_production_ready',
+  ]);
+  if ('worklist_item_is_completion_claim' in workorder) {
+    assert.equal(workorder.worklist_item_is_completion_claim, false);
+  }
+  assertIncludesAll(workorder.required_operator_payload_refs, DOMAIN_DISPATCH_OPERATOR_PAYLOAD_REFS);
+}
 
 function seedSummaryStageAttempts(count: number) {
   const { db } = openQueueDb();
@@ -301,33 +380,8 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     );
     const dispatchWorkorderGroup = dispatchWorkorderGroups[0];
     if (dispatchWorkorderGroup) {
-      assert.equal(typeof dispatchWorkorderGroup.canonical_domain_id, 'string');
-      assert.equal(dispatchWorkorderGroup.canonical_domain_id.includes('-'), true);
-      assert.equal(dispatchWorkorderGroup.owner, dispatchWorkorderGroup.canonical_domain_id);
-      assert.equal(typeof dispatchWorkorderGroup.stage_id, 'string');
-      assert.equal(dispatchWorkorderGroup.workorder_count > 0, true);
-      assert.equal(dispatchWorkorderGroup.stage_attempt_count > 0, true);
-      assert.equal(dispatchWorkorderGroup.payload_owner, 'domain_repository_or_app_live_operator');
+      assertDomainDispatchGroupShape(dispatchWorkorderGroup);
       assert.equal(dispatchWorkorderGroup.route_requires_domain_or_app_payload, true);
-      assert.equal(dispatchWorkorderGroup.can_execute_domain_action, false);
-      assert.equal(dispatchWorkorderGroup.can_create_owner_receipt, false);
-      assert.equal(dispatchWorkorderGroup.can_close_domain_ready, false);
-      assert.equal(dispatchWorkorderGroup.can_claim_production_ready, false);
-      assert.equal(dispatchWorkorderGroup.worklist_item_is_completion_claim, false);
-      assert.equal(dispatchWorkorderGroup.sample_stage_attempt_ids.length <= 3, true);
-      assert.equal(dispatchWorkorderGroup.stage_attempt_id_omitted_count >= 0, true);
-      assert.equal(dispatchWorkorderGroup.sample_action_refs.length <= 3, true);
-      assert.equal(dispatchWorkorderGroup.action_ref_omitted_count >= 0, true);
-      assert.equal(dispatchWorkorderGroup.sample_required_evidence_refs.length <= 3, true);
-      assert.equal(dispatchWorkorderGroup.required_evidence_ref_omitted_count >= 0, true);
-      assert.equal(
-        'required_evidence_refs' in dispatchWorkorderGroup,
-        false,
-      );
-      assert.equal(dispatchWorkorderGroup.required_operator_payload_refs.includes('domain_receipt_refs'), true);
-      assert.equal(dispatchWorkorderGroup.required_operator_payload_refs.includes('typed_blocker_refs'), true);
-      assert.equal(dispatchWorkorderGroup.required_operator_payload_refs.includes('owner_chain_refs'), true);
-      assert.equal(dispatchWorkorderGroup.required_operator_payload_refs.includes('no_regression_refs'), true);
     }
     assert.equal(
       summaryDrilldown.attention_first_payload.evidence_after_contract
@@ -339,24 +393,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
         .domain_dispatch_evidence_workorder_attention_items[0];
     if (dispatchWorkorder) {
       assert.equal(dispatchWorkorder.action_kind, 'domain_dispatch_evidence_receipt_record');
-      assert.equal(dispatchWorkorder.route_domain_id, dispatchWorkorder.domain_id);
-      assert.equal(typeof dispatchWorkorder.canonical_domain_id, 'string');
-      assert.equal(dispatchWorkorder.canonical_domain_id.includes('-'), true);
-      assert.equal(dispatchWorkorder.owner, dispatchWorkorder.canonical_domain_id);
-      assert.equal(
-        dispatchWorkorder.domain_id_policy,
-        'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
-      );
-      assert.equal(dispatchWorkorder.payload_owner, 'domain_repository_or_app_live_operator');
-      assert.equal(dispatchWorkorder.route_requires_domain_or_app_payload, true);
-      assert.equal(dispatchWorkorder.can_execute, false);
-      assert.equal(dispatchWorkorder.creates_domain_action, false);
-      assert.equal(dispatchWorkorder.creates_owner_receipt, false);
-      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('domain_receipt_refs'), true);
-      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('typed_blocker_refs'), true);
-      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('owner_chain_refs'), true);
-      assert.equal(dispatchWorkorder.required_operator_payload_refs.includes('no_regression_refs'), true);
-      assert.equal(dispatchWorkorder.worklist_item_is_completion_claim, false);
+      assertDomainDispatchWorkorderShape(dispatchWorkorder);
     }
     const topDispatchOwner = dispatchWorkorderGroup?.canonical_domain_id
       ?? dispatchWorkorder?.canonical_domain_id
@@ -452,7 +489,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     );
     if (dispatchStep) {
       assert.equal(dispatchStep.owner, topDispatchOwner);
-      assert.equal(dispatchStep.payload_owner, 'domain_repository_or_app_live_operator');
+      assert.equal(dispatchStep.payload_owner, DOMAIN_OR_APP_PAYLOAD_OWNER);
       assert.equal(dispatchStep.route_support_closes_owner_chain, false);
     }
     const dispatchWorkorderStep = summaryDrilldown.attention_first_payload.evidence_next_steps.items.find(
@@ -463,40 +500,8 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
     );
     assert.equal(Boolean(dispatchWorkorderGroupStep), dispatchWorkorderGroups.length > 0);
     if (dispatchWorkorderGroupStep) {
-      assert.equal(typeof dispatchWorkorderGroupStep.canonical_domain_id, 'string');
-      assert.equal(dispatchWorkorderGroupStep.canonical_domain_id.includes('-'), true);
-      assert.equal(dispatchWorkorderGroupStep.owner, dispatchWorkorderGroupStep.canonical_domain_id);
-      assert.equal(
-        dispatchWorkorderGroupStep.payload_owner,
-        'domain_repository_or_app_live_operator',
-      );
-      assert.equal(typeof dispatchWorkorderGroupStep.stage_id, 'string');
-      assert.equal(dispatchWorkorderGroupStep.workorder_count > 0, true);
-      assert.equal(dispatchWorkorderGroupStep.stage_attempt_count > 0, true);
-      assert.equal(dispatchWorkorderGroupStep.sample_stage_attempt_ids.length <= 3, true);
-      assert.equal(dispatchWorkorderGroupStep.stage_attempt_id_omitted_count >= 0, true);
-      assert.equal(dispatchWorkorderGroupStep.sample_action_refs.length <= 3, true);
-      assert.equal(dispatchWorkorderGroupStep.action_ref_omitted_count >= 0, true);
-      assert.equal(dispatchWorkorderGroupStep.record_action_id_omitted_count >= 0, true);
-      assert.equal(dispatchWorkorderGroupStep.record_command_ref_omitted_count >= 0, true);
+      assertDomainDispatchGroupShape(dispatchWorkorderGroupStep);
       assertDomainDispatchGroupExecutorHints(dispatchWorkorderGroupStep);
-      assert.equal(dispatchWorkorderGroupStep.sample_required_evidence_refs.length <= 3, true);
-      assert.equal(dispatchWorkorderGroupStep.required_evidence_ref_omitted_count >= 0, true);
-      assert.equal(
-        'required_evidence_refs' in dispatchWorkorderGroupStep,
-        false,
-      );
-      assert.equal(dispatchWorkorderGroupStep.can_create_owner_receipt, false);
-      assert.equal(dispatchWorkorderGroupStep.can_close_domain_ready, false);
-      assert.equal(dispatchWorkorderGroupStep.can_claim_production_ready, false);
-      assert.equal(
-        dispatchWorkorderGroupStep.required_operator_payload_refs.includes('domain_receipt_refs'),
-        true,
-      );
-      assert.equal(
-        dispatchWorkorderGroupStep.required_operator_payload_refs.includes('typed_blocker_refs'),
-        true,
-      );
       assert.equal(
         dispatchWorkorderGroupStep.payload_path_policy,
         'operator_must_choose_success_refs_path_or_domain_owned_typed_blocker_path_empty_template_blocks',
@@ -524,21 +529,7 @@ test('runtime app operator defaults to summary-first refs and keeps full refs ex
       );
     }
     if (dispatchWorkorderStep) {
-      assert.equal(dispatchWorkorderStep.route_domain_id, dispatchWorkorderStep.domain_id);
-      assert.equal(typeof dispatchWorkorderStep.canonical_domain_id, 'string');
-      assert.equal(dispatchWorkorderStep.canonical_domain_id.includes('-'), true);
-      assert.equal(dispatchWorkorderStep.owner, dispatchWorkorderStep.canonical_domain_id);
-      assert.equal(dispatchWorkorderStep.payload_owner, 'domain_repository_or_app_live_operator');
-      assert.equal(
-        dispatchWorkorderStep.domain_id_policy,
-        'domain_id_is_route_domain_id_for_action_execution_canonical_domain_id_is_owner_facing_semantics',
-      );
-      assert.equal(dispatchWorkorderStep.route_requires_domain_or_app_payload, true);
-      assert.equal(dispatchWorkorderStep.can_create_owner_receipt, false);
-      assert.equal(dispatchWorkorderStep.can_close_domain_ready, false);
-      assert.equal(dispatchWorkorderStep.can_claim_production_ready, false);
-      assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('domain_receipt_refs'), true);
-      assert.equal(dispatchWorkorderStep.required_operator_payload_refs.includes('typed_blocker_refs'), true);
+      assertDomainDispatchWorkorderShape(dispatchWorkorderStep);
       assert.equal(
         dispatchWorkorderStep.accepted_payload_paths.typed_blocker_path.success_claimed,
         false,

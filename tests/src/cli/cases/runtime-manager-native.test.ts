@@ -1,4 +1,5 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
 
 function createNativeHelperRepairScript(root: string, helperBinDir: string) {
   const repairScript = path.join(root, 'repair-native.sh');
@@ -39,29 +40,7 @@ test('runtime manager reports stale and expired native index freshness from the 
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-stale-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
 
-  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
-    fs.writeFileSync(
-      path.join(helperBinDir, binary),
-      `#!/bin/sh
-cat >/dev/null
-case "$(basename "$0")" in
-  opl-doctor-native)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
-    ;;
-  opl-runtime-watch)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
-    ;;
-  opl-artifact-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
-    ;;
-  opl-state-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
-    ;;
-esac
-`,
-      { mode: 0o755 },
-    );
-  }
+  writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
 
   try {
     const success = runCli(['runtime', 'manager'], {
@@ -132,7 +111,7 @@ test('runtime manager records structured native index diff and history GC report
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-index-gc-bin-'));
   const runtimeDir = path.join(stateRoot, 'runtime-manager');
   fs.mkdirSync(runtimeDir, { recursive: true });
-  writeRuntimeManagerNativeHelpers(helperBinDir);
+  writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
 
   const historyFile = path.join(runtimeDir, 'native-state-index-history.jsonl');
   for (let index = 0; index < 55; index += 1) {
@@ -774,32 +753,6 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
-
-function writeRuntimeManagerNativeHelpers(helperBinDir: string) {
-  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
-    fs.writeFileSync(
-      path.join(helperBinDir, binary),
-      `#!/bin/sh
-cat >/dev/null
-case "$(basename "$0")" in
-  opl-doctor-native)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
-    ;;
-  opl-runtime-watch)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
-    ;;
-  opl-artifact-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
-    ;;
-  opl-state-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
-    ;;
-esac
-`,
-      { mode: 0o755 },
-    );
-  }
-}
 
 test('runtime manager rejects retired Hermes legacy provider selection', () => {
   const failure = runCliFailure(['runtime', 'manager'], {

@@ -1,4 +1,5 @@
 import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, parseJsonText, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
 import './contracts-entry-cases/native-helper-doctor.test.ts';
 import './contracts-entry-cases/native-helper-lifecycle.test.ts';
 
@@ -777,30 +778,7 @@ test('runtime manager invokes native helpers and persists the state index projec
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
 
-  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
-    const helperPath = path.join(helperBinDir, binary);
-    fs.writeFileSync(
-      helperPath,
-      `#!/bin/sh
-cat >/dev/null
-case "$(basename "$0")" in
-  opl-doctor-native)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot","checks":[{"check_id":"json_stdio_protocol","status":"ok"}]},"errors":[]}'
-    ;;
-  opl-runtime-watch)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
-    ;;
-  opl-artifact-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
-    ;;
-  opl-state-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
-    ;;
-esac
-`,
-      { mode: 0o755 },
-    );
-  }
+  writeNativeHelperFixtureScripts(helperBinDir, { doctorChecks: true });
 
   try {
     const output = runCli(['runtime', 'manager'], {
@@ -850,29 +828,7 @@ test('runtime manager discovers cached native helpers and records index lifecycl
   );
   fs.mkdirSync(helperCacheDir, { recursive: true });
 
-  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
-    fs.writeFileSync(
-      path.join(helperCacheDir, binary),
-      `#!/bin/sh
-cat >/dev/null
-case "$(basename "$0")" in
-  opl-doctor-native)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
-    ;;
-  opl-runtime-watch)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
-    ;;
-  opl-artifact-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
-    ;;
-  opl-state-indexer)
-    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
-    ;;
-esac
-`,
-      { mode: 0o755 },
-    );
-  }
+  writeNativeHelperFixtureScripts(helperCacheDir, { includeVersionFields: true });
 
   try {
     const output = runCli(['runtime', 'manager'], {
