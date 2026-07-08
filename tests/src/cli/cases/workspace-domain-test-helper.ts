@@ -30,9 +30,9 @@ export function bindManifest(
   ], env);
 }
 
-export function findDomainManifest(output: JsonRecord, projectId: string) {
+export function findDomainManifest(output: JsonRecord, projectId: string): any {
   return ((output.domain_manifests as JsonRecord).projects as JsonRecord[])
-    .find((entry) => entry.project_id === projectId) as JsonRecord;
+    .find((entry) => entry.project_id === projectId);
 }
 
 export function standardProgressFirstPolicies() {
