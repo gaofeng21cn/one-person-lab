@@ -1,5 +1,3 @@
-import { SearchAttributeType } from '@temporalio/common';
-import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import * as activities from '../../../../src/modules/runway/family-runtime-temporal-activities.ts';
@@ -19,6 +17,7 @@ import {
   repoRoot,
   test,
 } from '../helpers.ts';
+import { createSearchableTemporalTestEnvironment } from './family-runtime-stage-attempts-temporal-helpers.ts';
 
 type TemporalStageAttemptCreateOutput = {
   family_runtime_stage_attempt: {
@@ -61,24 +60,6 @@ type TemporalStageAttemptInspectOutput = {
     temporal_query: TemporalStageAttemptQueryOutput['family_runtime_stage_attempt_query']['temporal_query'];
   };
 };
-
-function createSearchableTemporalTestEnvironment() {
-  return TestWorkflowEnvironment.createLocal({
-    server: {
-      searchAttributes: [
-        { name: 'OplStageAttemptId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplDomainId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplStageId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplAttemptStatus', type: SearchAttributeType.KEYWORD },
-        { name: 'OplStagePhase', type: SearchAttributeType.KEYWORD },
-        { name: 'OplBlockedReason', type: SearchAttributeType.KEYWORD },
-        { name: 'OplTaskId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplSourceFingerprint', type: SearchAttributeType.KEYWORD },
-        { name: 'OplExecutorKind', type: SearchAttributeType.KEYWORD },
-      ],
-    },
-  });
-}
 
 test('family-runtime temporal terminal failure is projected into local attempt query and inspect', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-failed-projection-'));

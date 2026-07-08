@@ -15,13 +15,10 @@ import {
 } from '../helpers.ts';
 import { createFamilyRuntimeQueueTables } from '../../../../src/modules/runway/family-runtime-store.ts';
 import { createStageAttempt } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
-
-function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
-  return {
-    OPL_STATE_DIR: stateRoot,
-    ...extra,
-  };
-}
+import {
+  assertTemporalLifecycleReadbackFalseReady,
+  familyRuntimeEnv,
+} from './family-runtime-stage-attempts-temporal-helpers.ts';
 
 test('family-runtime temporal attempt signal fails closed when Temporal address is not configured', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-signal-missing-'));
@@ -316,33 +313,14 @@ test('family-runtime attempt query exposes stable top-level attempt alias', () =
       result.temporal_durable_lifecycle_readback,
       result.stage_attempt_query.temporal_durable_lifecycle_readback,
     );
-    assert.equal(
-      result.temporal_durable_lifecycle_readback.readback_status,
-      'missing_temporal_history_or_query',
-    );
-    assert.equal(
-      result.temporal_durable_lifecycle_readback.stage_attempt_identity.workflow_id,
-      result.attempt.workflow_id,
-    );
-    assert.equal(
-      result.temporal_durable_lifecycle_readback.schedule_identity.schedule_id,
-      'opl-family-runtime-provider-scheduler',
-    );
-    assert.equal(
-      result.temporal_durable_lifecycle_readback.task_queue_identity.default_task_queue,
-      'opl-stage-attempts',
-    );
-    assert.equal(
-      result.temporal_durable_lifecycle_readback.required_evidence.includes(
-        'temporal_workflow_history_or_query_readback',
-      ),
-      true,
-    );
-    assert.equal(
-      result.temporal_durable_lifecycle_readback.observed_evidence.includes('temporal_workflow_query_readback'),
-      false,
-    );
-    assert.equal(result.temporal_durable_lifecycle_readback.ready_claim_allowed, false);
+    assertTemporalLifecycleReadbackFalseReady(result.temporal_durable_lifecycle_readback, {
+      readbackStatus: 'missing_temporal_history_or_query',
+      identity: 'stage_attempt',
+      workflowId: result.attempt.workflow_id,
+      taskQueue: 'opl-stage-attempts',
+      requiredHistoryOrQueryEvidence: true,
+      observedQueryReadback: false,
+    });
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

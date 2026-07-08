@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 
-import { SearchAttributeType } from '@temporalio/common';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
@@ -34,33 +33,13 @@ import {
   type TemporalStageAttemptCreateOutput,
   type TemporalStageAttemptQueryOutput,
 } from './family-runtime-stage-attempts-temporal-provider-fixtures.ts';
+import {
+  assertTemporalLifecycleReadbackFalseReady,
+  createSearchableTemporalTestEnvironment,
+  familyRuntimeEnv,
+} from './family-runtime-stage-attempts-temporal-helpers.ts';
 import './family-runtime-stage-attempts-temporal-provider-cases/current-provider-readiness.ts';
 import './family-runtime-stage-attempts-temporal-provider-cases/local-ledger-fail-closed.ts';
-
-function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
-  return {
-    OPL_STATE_DIR: stateRoot,
-    ...extra,
-  };
-}
-
-function createSearchableTemporalTestEnvironment() {
-  return TestWorkflowEnvironment.createLocal({
-    server: {
-      searchAttributes: [
-        { name: 'OplStageAttemptId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplDomainId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplStageId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplAttemptStatus', type: SearchAttributeType.KEYWORD },
-        { name: 'OplStagePhase', type: SearchAttributeType.KEYWORD },
-        { name: 'OplBlockedReason', type: SearchAttributeType.KEYWORD },
-        { name: 'OplTaskId', type: SearchAttributeType.KEYWORD },
-        { name: 'OplSourceFingerprint', type: SearchAttributeType.KEYWORD },
-        { name: 'OplExecutorKind', type: SearchAttributeType.KEYWORD },
-      ],
-    },
-  });
-}
 
 function writeReadyTemporalWorkerFixture(input: {
   runtimeRoot: string;
@@ -411,13 +390,14 @@ test('family-runtime temporal attempt query reads managed local service state wh
     assert.equal(temporalQuery.surface_kind, 'temporal_stage_attempt_query_receipt');
     assert.equal(temporalQuery.stage_attempt_id, attempt.stage_attempt_id);
     assert.equal(temporalQuery.workflow_id, attempt.workflow_id);
-    assert.equal(lifecycleReadback.readback_status, 'bound_to_temporal_query');
-    assert.equal(lifecycleReadback.workflow_history_identity.workflow_id, attempt.workflow_id);
-    assert.equal(lifecycleReadback.workflow_history_identity.run_id, (temporalQuery as Record<string, any>).run_id);
-    assert.equal(lifecycleReadback.schedule_identity.schedule_id, 'opl-family-runtime-provider-scheduler');
-    assert.equal(lifecycleReadback.task_queue_identity.default_task_queue, taskQueue);
-    assert.equal(lifecycleReadback.observed_evidence.includes('temporal_workflow_query_readback'), true);
-    assert.equal(lifecycleReadback.ready_claim_allowed, false);
+    assertTemporalLifecycleReadbackFalseReady(lifecycleReadback, {
+      readbackStatus: 'bound_to_temporal_query',
+      identity: 'workflow_history',
+      workflowId: attempt.workflow_id,
+      runId: (temporalQuery as Record<string, any>).run_id,
+      taskQueue,
+      observedQueryReadback: true,
+    });
     assert.ok(temporalQuery.query);
     assert.equal(['registered', 'running', 'checkpointed', 'completed'].includes(temporalQuery.query.status), true);
     assert.equal(temporalQuery.query.provider_kind, 'temporal');
