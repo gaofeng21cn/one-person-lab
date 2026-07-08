@@ -159,6 +159,97 @@ test('connect agent-packages rejects developer checkout auto-update and permissi
   }
 });
 
+test('connect agent-packages preserves installed lock and receipt trail when update materialization fails', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-update-failure-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-update-failure-home-'));
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-update-failure-fixtures-'));
+  const pluginSourcePath = createPluginSourceFixture();
+  const brokenPluginSourcePath = createPluginSourceFixture({ includeRequiredSkill: false });
+  const env = {
+    OPL_STATE_DIR: stateDir,
+    HOME: homeDir,
+    CODEX_HOME: path.join(homeDir, '.codex'),
+  };
+  try {
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    const brokenManifestPath = path.join(fixtureDir, 'manifest-broken.json');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath })), 'utf8');
+    fs.writeFileSync(brokenManifestPath, formatJsonPayload(agentPackageManifest({ pluginSourcePath: brokenPluginSourcePath })), 'utf8');
+
+    const install = runCli([
+      'connect',
+      'agent-packages',
+      'install',
+      '--manifest-url',
+      pathToFileURL(manifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+    ], env) as {
+      opl_agent_package_install: {
+        lock_file: string;
+        lifecycle_ledger_file: string;
+        package_lock: {
+          action_receipt_id: string;
+          lock_ref: string;
+          physical_surface: { codex_plugin_cache_path: string };
+        };
+      };
+    };
+    const lockFileBefore = fs.readFileSync(install.opl_agent_package_install.lock_file, 'utf8');
+    const ledgerBefore = fs.readFileSync(install.opl_agent_package_install.lifecycle_ledger_file, 'utf8');
+    const installedCachePath = install.opl_agent_package_install.package_lock.physical_surface.codex_plugin_cache_path;
+
+    const failure = runCliFailure([
+      'connect',
+      'agent-packages',
+      'update',
+      '--manifest-url',
+      pathToFileURL(brokenManifestPath).href,
+      '--trust-tier',
+      'third_party_verified',
+    ], env);
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_required_skill_missing');
+    assert.equal(fs.existsSync(installedCachePath), true);
+    assert.equal(fs.readFileSync(install.opl_agent_package_install.lock_file, 'utf8'), lockFileBefore);
+    assert.equal(fs.readFileSync(install.opl_agent_package_install.lifecycle_ledger_file, 'utf8'), ledgerBefore);
+
+    const status = runCli([
+      'connect',
+      'agent-packages',
+      'status',
+      '--package-id',
+      'third.party.research',
+    ], env) as {
+      opl_agent_package_status: {
+        installed_package_count: number;
+        installed_packages: Array<{
+          action_receipt_id: string;
+          lock_ref: string;
+          physical_surface: { codex_plugin_cache_path: string };
+        }>;
+        lifecycle_receipts: Array<{ action: string }>;
+      };
+    };
+    assert.equal(status.opl_agent_package_status.installed_package_count, 1);
+    assert.equal(
+      status.opl_agent_package_status.installed_packages[0].action_receipt_id,
+      install.opl_agent_package_install.package_lock.action_receipt_id,
+    );
+    assert.equal(
+      status.opl_agent_package_status.installed_packages[0].lock_ref,
+      install.opl_agent_package_install.package_lock.lock_ref,
+    );
+    assert.equal(status.opl_agent_package_status.installed_packages[0].physical_surface.codex_plugin_cache_path, installedCachePath);
+    assert.deepEqual(status.opl_agent_package_status.lifecycle_receipts.map((receipt) => receipt.action), ['install']);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+    fs.rmSync(brokenPluginSourcePath, { recursive: true, force: true });
+  }
+});
+
 test('connect agent-packages rejects invalid manifests before writing locks', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-invalid-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-invalid-'));
