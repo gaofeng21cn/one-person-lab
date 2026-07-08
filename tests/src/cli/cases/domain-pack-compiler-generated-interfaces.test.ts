@@ -555,7 +555,7 @@ test('generated interfaces family-defaults prove four-domain direct generated ac
       ['mas', { domain: 'med-autoscience', action: 'study_packet', owner: 'MedAutoScience' }],
       ['mag', { domain: 'med-autogrant', action: 'grant_packet', owner: 'MedAutoGrant' }],
       ['rca', { domain: 'redcube_ai', action: 'visual_packet', owner: 'RedCubeAI' }],
-      ['opl-meta-agent', { domain: 'opl-meta-agent', action: 'agent_packet', owner: 'OPLMetaAgent' }],
+      ['oma', { domain: 'opl-meta-agent', action: 'agent_packet', owner: 'OPLMetaAgent' }],
     ]);
 
     assert.deepEqual(
