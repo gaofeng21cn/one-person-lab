@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../../modules/connect/local-codex-defaults.ts';
+import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../../kernel/local-codex-defaults.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from '../../../modules/foundry-lab/framework-semantic-hygiene.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
 import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';

@@ -28,8 +28,8 @@ export {
   agentPackageDelegatedSurface,
   listAgentPackageSettingsActions,
 } from './agent-package-actions.ts';
-export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
-export type { LocalCodexDefaults } from './local-codex-defaults.ts';
+export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCodexDefaultsIfAvailable } from '../../kernel/local-codex-defaults.ts';
+export type { LocalCodexDefaults } from '../../kernel/local-codex-defaults.ts';
 export { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 export { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from './managed-update-owner-boundary.ts';
 export { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../../kernel/managed-shell-command-env.ts';

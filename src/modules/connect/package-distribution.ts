@@ -7,7 +7,7 @@ import {
   getCapabilityDependenciesForModule,
 } from './agent-package-manifests.ts';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
-import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
+import { readBundledCodexDefaultProfile } from '../../kernel/local-codex-defaults.ts';
 import { MANAGED_UPDATE_OWNER_FIELDS } from './managed-update-owner-boundary.ts';
 import type { ModuleCapabilityDependency } from './system-installation/shared.ts';
 

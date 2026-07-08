@@ -5,7 +5,7 @@ import {
   type FeedbackKind,
 } from '../../../modules/foundry-lab/agent-lab-feedbackops.ts';
 import { buildOplDeveloperModeSurface } from '../../../modules/connect/system-installation/developer-mode.ts';
-import { buildOplEndpoints } from '../../../modules/runway/opl-runtime-paths.ts';
+import { buildOplEndpoints } from '../../../kernel/opl-runtime-endpoints.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
 

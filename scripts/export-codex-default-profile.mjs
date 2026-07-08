@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseRequiredValueOptions } from './required-value-options.mjs';
-import { buildCodexDefaultProfileFromLocalConfig } from '../src/modules/connect/local-codex-defaults.ts';
+import { buildCodexDefaultProfileFromLocalConfig } from '../src/kernel/local-codex-defaults.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

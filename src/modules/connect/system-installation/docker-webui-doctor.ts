@@ -6,7 +6,7 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { recordList, stringValue } from '../../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
-import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
+import { readLocalCodexDefaultsIfAvailable } from '../../../kernel/local-codex-defaults.ts';
 import { readOplSeedInstallManifest } from './seed-manifest.ts';
 
 type DoctorStatus = 'ok' | 'attention' | 'not_configured';

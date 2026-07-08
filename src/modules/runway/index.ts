@@ -22,7 +22,7 @@ export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stage
 export type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 export { readMasManagedProviderProjection, projectionFromMasManifestEntry } from './family-runtime-mas-managed-provider-projection.ts';
 export { readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain } from './family-domain-memory-runtime-receipts.ts';
-export { buildOplEndpoints } from './opl-runtime-paths.ts';
+export { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
 export { applyProviderClosureEvidence, providerClosureEvidence, providerResidencyGapStatus, readProviderContinuousProof } from './family-domain-agent-provider-closure.ts';
 export type { ProviderContinuousProof } from './family-domain-agent-provider-closure.ts';
@@ -51,7 +51,7 @@ export { summarizeStageProgressLogs } from './family-runtime-stage-progress-log.
 export type { StageProgressLogProjection } from './family-runtime-stage-progress-log.ts';
 export { buildNativeHelperHealthStatus, runNativeHelperRepairAction } from './native-helper-runtime.ts';
 export { buildNativeIndexSummary } from './native-index-summary.ts';
-export type { OplEndpoints } from './opl-runtime-paths.ts';
+export type { OplEndpoints, OplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildOplRuntimeEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildRuntimeEnvironmentPrepareReadback, buildRuntimeEnvironmentRunContextReadback } from './runtime-environment-substrate.ts';
 export { buildRuntimeManager, runRuntimeManagerAction } from './runtime-manager.ts';

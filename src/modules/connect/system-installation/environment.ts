@@ -10,7 +10,7 @@ import {
   readBundledCodexDefaultProfile,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
-} from '../local-codex-defaults.ts';
+} from '../../../kernel/local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../../runway/index.ts';
 import { buildOplEndpoints } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
