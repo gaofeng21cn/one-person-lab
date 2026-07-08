@@ -14,17 +14,26 @@ const EXPECTED_GATES = [
   'app_release_evidence_not_contract_only',
   'family_runtime_parser_monolith',
   'stage_launch_guarantee_clarity',
+  'domain_specific_carrier_boundary',
   'legacy_vocabulary_active_leakage',
 ] as const;
 
-test('system semantic hygiene exposes ten machine gates without production or domain-ready claims', () => {
+const EXPECTED_DOMAIN_CARRIERS = [
+  'paper_mission',
+  'paper_autonomy',
+  'visual_transition',
+  'publication',
+  'fundability',
+] as const;
+
+test('system semantic hygiene exposes machine gates without production or domain-ready claims', () => {
   const output = runCli(['system', 'semantic-hygiene', '--json']);
   const audit = output.semantic_hygiene;
 
   assert.equal(output.version, 'g2');
   assert.equal(audit.surface_kind, 'opl_framework_semantic_hygiene_audit');
-  assert.equal(audit.summary.gate_count, 10);
-  assert.equal(audit.summary.guarded_gate_count, 10);
+  assert.equal(audit.summary.gate_count, EXPECTED_GATES.length);
+  assert.equal(audit.summary.guarded_gate_count, EXPECTED_GATES.length);
   assert.equal(audit.summary.attention_required_gate_count, 0);
   assert.equal(audit.summary.production_or_domain_ready, false);
   assert.equal(audit.summary.production_ready_claim_count, 0);
@@ -266,6 +275,101 @@ test('system semantic hygiene exposes ten machine gates without production or do
     false,
   );
   assert.match(String(functionalGate.next_action), /semantic-equivalence evidence gate/);
+
+  const domainCarrierGate = gates.get('domain_specific_carrier_boundary') as {
+    status?: unknown;
+    source_evidence?: { ref?: unknown }[];
+    next_action?: unknown;
+    domain_specific_carrier_boundary?: {
+      carrier_string_count?: unknown;
+      covered_carrier_strings?: unknown;
+      all_carriers_have_non_ontology_boundary?: unknown;
+      forbidden_interpretations?: unknown;
+      authority_boundary?: {
+        can_define_opl_core_ontology?: unknown;
+        can_claim_domain_ready?: unknown;
+        can_authorize_quality_or_export?: unknown;
+        can_write_domain_truth?: unknown;
+        can_replace_domain_owner?: unknown;
+      };
+      carrier_boundaries?: Array<{
+        carrier_string?: unknown;
+        carrier_kind?: unknown;
+        domain_specific_carrier_only?: unknown;
+        opl_core_ontology?: unknown;
+        opl_domain_authority?: unknown;
+        can_claim_domain_ready?: unknown;
+        can_authorize_quality_or_export?: unknown;
+        can_write_domain_truth?: unknown;
+      }>;
+    };
+  };
+  assert.equal(domainCarrierGate.status, 'guarded');
+  assert.equal(domainCarrierGate.domain_specific_carrier_boundary?.carrier_string_count, 5);
+  assert.deepEqual(
+    [...(domainCarrierGate.domain_specific_carrier_boundary?.covered_carrier_strings as string[])].sort(),
+    [...EXPECTED_DOMAIN_CARRIERS].sort(),
+  );
+  assert.equal(
+    domainCarrierGate.domain_specific_carrier_boundary?.all_carriers_have_non_ontology_boundary,
+    true,
+  );
+  assert.deepEqual(
+    domainCarrierGate.domain_specific_carrier_boundary?.forbidden_interpretations,
+    [
+      'opl_core_ontology',
+      'opl_domain_authority',
+      'domain_ready_claim',
+      'quality_or_export_authority',
+      'domain_truth_write_authority',
+    ],
+  );
+  assert.equal(
+    domainCarrierGate.domain_specific_carrier_boundary?.authority_boundary
+      ?.can_define_opl_core_ontology,
+    false,
+  );
+  assert.equal(
+    domainCarrierGate.domain_specific_carrier_boundary?.authority_boundary?.can_claim_domain_ready,
+    false,
+  );
+  assert.equal(
+    domainCarrierGate.domain_specific_carrier_boundary?.authority_boundary
+      ?.can_authorize_quality_or_export,
+    false,
+  );
+  assert.equal(
+    domainCarrierGate.domain_specific_carrier_boundary?.authority_boundary?.can_write_domain_truth,
+    false,
+  );
+  assert.equal(
+    domainCarrierGate.domain_specific_carrier_boundary?.authority_boundary?.can_replace_domain_owner,
+    false,
+  );
+  assert.equal(
+    domainCarrierGate.source_evidence?.some((evidence) =>
+      evidence.ref === 'src/modules/stagecraft/family-transition-visual-ingestion.ts'
+    ),
+    true,
+  );
+  assert.match(String(domainCarrierGate.next_action), /domain-specific carrier strings/);
+
+  const carrierBoundaries =
+    domainCarrierGate.domain_specific_carrier_boundary?.carrier_boundaries ?? [];
+  const carriers = new Map(carrierBoundaries.map((carrier) => [carrier.carrier_string, carrier]));
+  for (const carrierString of EXPECTED_DOMAIN_CARRIERS) {
+    const carrier = carriers.get(carrierString);
+    assert.equal(carrier?.domain_specific_carrier_only, true);
+    assert.equal(carrier?.opl_core_ontology, false);
+    assert.equal(carrier?.opl_domain_authority, false);
+    assert.equal(carrier?.can_claim_domain_ready, false);
+    assert.equal(carrier?.can_authorize_quality_or_export, false);
+    assert.equal(carrier?.can_write_domain_truth, false);
+  }
+  assert.equal(carriers.get('paper_mission')?.carrier_kind, 'compatibility_profile');
+  assert.equal(carriers.get('visual_transition')?.carrier_kind, 'domain_transition_profile_extension');
+  assert.equal(carriers.get('publication')?.carrier_kind, 'domain_owned_verdict_ref');
+  assert.equal(carriers.get('fundability')?.carrier_kind, 'domain_owned_verdict_ref');
 
   const appReleaseGate = gates.get('app_release_evidence_not_contract_only') as {
     status?: unknown;

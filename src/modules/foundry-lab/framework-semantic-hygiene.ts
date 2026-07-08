@@ -11,6 +11,7 @@ export type SemanticHygieneGateId =
   | 'app_release_evidence_not_contract_only'
   | 'family_runtime_parser_monolith'
   | 'stage_launch_guarantee_clarity'
+  | 'domain_specific_carrier_boundary'
   | 'legacy_vocabulary_active_leakage';
 
 export type SemanticHygieneGate = {
@@ -28,6 +29,7 @@ export type SemanticHygieneGate = {
   next_action: string;
   surface_budget_conformance?: SurfaceBudgetConformance;
   functional_privatization_evidence_gate?: FunctionalPrivatizationEvidenceGateConformance;
+  domain_specific_carrier_boundary?: DomainSpecificCarrierBoundaryConformance;
 };
 
 const NO_READY_CLAIMS = {
@@ -46,6 +48,62 @@ function sourceEvidence(...refs: string[]) {
 type SurfaceBudgetConformance = ReturnType<typeof buildSurfaceBudgetConformance>;
 type FunctionalPrivatizationEvidenceGateConformance =
   ReturnType<typeof buildFunctionalPrivatizationEvidenceGateConformance>;
+type DomainSpecificCarrierBoundaryConformance =
+  ReturnType<typeof buildDomainSpecificCarrierBoundaryConformance>;
+
+const DOMAIN_SPECIFIC_CARRIER_BOUNDARIES = [
+  {
+    carrier_string: 'paper_mission',
+    carrier_kind: 'compatibility_profile',
+    boundary_ref: 'MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE',
+    allowed_machine_role: 'mas_domain_route_compatibility_carrier',
+    source_evidence_refs: [
+      'src/modules/runway/family-runtime-domain-intake-parts/paper-mission-route-handoff/shared.ts',
+      'src/modules/runway/family-runtime-paper-mission-stage-route-runner.ts',
+    ],
+  },
+  {
+    carrier_string: 'paper_autonomy',
+    carrier_kind: 'domain_owned_task_profile',
+    boundary_ref: 'paper_autonomy_supervisor_decision authority_boundary',
+    allowed_machine_role: 'mas_domain_recovery_supervisor_projection',
+    source_evidence_refs: [
+      'src/modules/runway/family-runtime-domain-intake-parts/paper-autonomy-supervisor-decision.ts',
+      'src/modules/runway/family-runtime-paper-autonomy.ts',
+    ],
+  },
+  {
+    carrier_string: 'visual_transition',
+    carrier_kind: 'domain_transition_profile_extension',
+    boundary_ref: 'domain_transition_profile_extension_is_core_ontology=false',
+    allowed_machine_role: 'domain_transition_profile_or_fixture_projection',
+    source_evidence_refs: [
+      'src/modules/stagecraft/family-transition-visual-ingestion.ts',
+    ],
+  },
+  {
+    carrier_string: 'publication',
+    carrier_kind: 'domain_owned_verdict_ref',
+    boundary_ref: 'qualityGateRuntimeAuthorityBoundary',
+    allowed_machine_role: 'refs_only_quality_or_publication_receipt_projection',
+    source_evidence_refs: [
+      'src/modules/stagecraft/quality-gate-runtime.ts',
+      'src/modules/stagecraft/stage-transition-authority.ts',
+      'src/modules/ledger/current-owner-delta-parts/projection.ts',
+    ],
+  },
+  {
+    carrier_string: 'fundability',
+    carrier_kind: 'domain_owned_verdict_ref',
+    boundary_ref: 'generic substrate non_authority_flags',
+    allowed_machine_role: 'domain_owned_fundability_verdict_ref_projection',
+    source_evidence_refs: [
+      'src/modules/runway/generic-substrate-projection.ts',
+      'src/modules/charter/standard-agent-registry.ts',
+      'src/modules/foundry-lab/agent-lab-promotion.ts',
+    ],
+  },
+] as const;
 
 function buildSurfaceBudgetConformance(contracts: FrameworkContracts) {
   const surfaces = contracts.publicSurfaceIndex.surfaces;
@@ -115,10 +173,58 @@ function buildFunctionalPrivatizationEvidenceGateConformance() {
   };
 }
 
+function buildDomainSpecificCarrierBoundaryConformance() {
+  const carrierBoundaries = DOMAIN_SPECIFIC_CARRIER_BOUNDARIES.map((carrier) => ({
+    ...carrier,
+    domain_specific_carrier_only: true,
+    opl_core_ontology: false,
+    opl_domain_authority: false,
+    can_claim_domain_ready: false,
+    can_authorize_quality_or_export: false,
+    can_write_domain_truth: false,
+  }));
+
+  return {
+    carrier_string_count: carrierBoundaries.length,
+    covered_carrier_strings: carrierBoundaries.map((carrier) => carrier.carrier_string),
+    all_carriers_have_non_ontology_boundary: carrierBoundaries.every((carrier) =>
+      carrier.domain_specific_carrier_only
+      && carrier.opl_core_ontology === false
+      && carrier.opl_domain_authority === false
+      && carrier.can_claim_domain_ready === false
+      && carrier.can_authorize_quality_or_export === false
+      && carrier.can_write_domain_truth === false
+    ),
+    allowed_machine_roles: carrierBoundaries.map((carrier) => ({
+      carrier_string: carrier.carrier_string,
+      carrier_kind: carrier.carrier_kind,
+      allowed_machine_role: carrier.allowed_machine_role,
+      boundary_ref: carrier.boundary_ref,
+    })),
+    forbidden_interpretations: [
+      'opl_core_ontology',
+      'opl_domain_authority',
+      'domain_ready_claim',
+      'quality_or_export_authority',
+      'domain_truth_write_authority',
+    ],
+    authority_boundary: {
+      can_define_opl_core_ontology: false,
+      can_claim_domain_ready: false,
+      can_authorize_quality_or_export: false,
+      can_write_domain_truth: false,
+      can_replace_domain_owner: false,
+    },
+    carrier_boundaries: carrierBoundaries,
+  };
+}
+
 export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContracts) {
   const surfaceBudgetConformance = buildSurfaceBudgetConformance(contracts);
   const functionalPrivatizationEvidenceGate =
     buildFunctionalPrivatizationEvidenceGateConformance();
+  const domainSpecificCarrierBoundary =
+    buildDomainSpecificCarrierBoundaryConformance();
   const gates: SemanticHygieneGate[] = [
     {
       gate_id: 'provider_readiness_single_truth',
@@ -271,6 +377,27 @@ export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContra
         'Stage launch admission can allow executor start only after admission checks; it does not guarantee completion, quality, or domain readiness.',
       next_action:
         'Route launch guarantees through admission/blocker envelopes and keep completion/readiness claims in domain-owned receipts.',
+    },
+    {
+      gate_id: 'domain_specific_carrier_boundary',
+      pollution_point: 'domain-specific compatibility/profile carrier boundary',
+      status: domainSpecificCarrierBoundary.all_carriers_have_non_ontology_boundary
+        ? 'guarded'
+        : 'attention_required',
+      owner: 'one-person-lab',
+      source_evidence: [
+        'src/modules/runway/family-runtime-domain-intake-parts/paper-mission-route-handoff/shared.ts',
+        'src/modules/runway/family-runtime-domain-intake-parts/paper-autonomy-supervisor-decision.ts',
+        'src/modules/stagecraft/family-transition-visual-ingestion.ts',
+        'src/modules/stagecraft/quality-gate-runtime.ts',
+        'src/modules/runway/generic-substrate-projection.ts',
+      ],
+      current_state_claims: NO_READY_CLAIMS,
+      required_boundary:
+        'Active paper_mission, paper_autonomy, visual_transition, publication, and fundability strings are compatibility/profile/fixture/ref-only carriers; they must not be read as OPL core ontology or domain authority.',
+      next_action:
+        'Keep domain-specific carrier strings explicitly classified with false OPL ontology, domain-ready, quality/export, and domain-truth authority flags before adding or retiring related active surfaces.',
+      domain_specific_carrier_boundary: domainSpecificCarrierBoundary,
     },
     {
       gate_id: 'legacy_vocabulary_active_leakage',

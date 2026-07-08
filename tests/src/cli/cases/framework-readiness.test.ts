@@ -425,6 +425,11 @@ test('framework readiness summarizes default control-plane surfaces without auth
     'guarded',
   );
   assert.equal(
+    readiness.attention_first_payload.semantic_hygiene_contract_floor
+      .domain_specific_carrier_boundary_status,
+    'guarded',
+  );
+  assert.equal(
     readiness.attention_first_payload.semantic_hygiene_contract_floor.contract_floor_only,
     true,
   );
