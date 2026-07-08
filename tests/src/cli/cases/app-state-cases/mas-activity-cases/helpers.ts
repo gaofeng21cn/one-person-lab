@@ -261,6 +261,7 @@ export function writeMasWorkspaceRegistryBindings(input: {
   bindings: Array<{
     bindingId: string;
     workspacePath: string;
+    workspaceRoot?: string;
     profilePath: string;
     status: 'active' | 'inactive';
     label?: string | null;
@@ -285,7 +286,7 @@ export function writeMasWorkspaceRegistryBindings(input: {
           url: null,
           workspace_locator: {
             surface_kind: 'med_autoscience_workspace_profile',
-            workspace_root: binding.workspacePath,
+            workspace_root: binding.workspaceRoot ?? binding.workspacePath,
             profile_ref: binding.profilePath,
             input_path: null,
           },

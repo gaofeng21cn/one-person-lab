@@ -95,6 +95,31 @@ function tokenUsage(value: unknown) {
   };
 }
 
+function usageStatus(usage: JsonRecord, nestedCost: JsonRecord) {
+  return firstString(
+    usage.cost_status,
+    usage.usage_status,
+    usage.telemetry_status,
+    nestedCost.cost_status,
+    nestedCost.usage_status,
+    nestedCost.telemetry_status,
+  );
+}
+
+function isUnreportedUsageStatus(status: string | null) {
+  const normalized = status?.trim().toLowerCase() ?? '';
+  return normalized.includes('unreported') || normalized.startsWith('not_measured');
+}
+
+function isZeroTokenUsage(tokens: ReturnType<typeof tokenUsage>) {
+  return Boolean(
+    tokens
+      && tokens.input_tokens === 0
+      && tokens.output_tokens === 0
+      && tokens.total_tokens === 0
+  );
+}
+
 function usageRecord(value: unknown) {
   return isRecord(value) ? value : {};
 }
@@ -352,9 +377,11 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
     const usage = entry.usage;
     const nestedCost = usageRecord(usage.cost_summary);
     const tokens = tokenUsage(usage.token_usage) ?? tokenUsage(nestedCost.token_usage);
+    const status = usageStatus(usage, nestedCost);
+    const unreportedZeroUsage = isUnreportedUsageStatus(status) && isZeroTokenUsage(tokens);
     const entryUsageRefs = usageRefs(usage);
     sourceRefs.push(...entryUsageRefs);
-    if (tokens) {
+    if (tokens && !unreportedZeroUsage) {
       const tokenRefs = entryUsageRefs.length > 0 ? entryUsageRefs : [entry.ref];
       inputTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.input_tokens);
       outputTokens += add(tokenSourceRefs, tokenRefs[0]!, tokens.output_tokens);
@@ -365,7 +392,7 @@ export function buildStageAttemptUsageProjection(input: StageAttemptUsageInput) 
       }
     }
     const cost = numberValue(usage.estimated_cost_usd) ?? numberValue(nestedCost.estimated_cost_usd);
-    if (cost !== null) {
+    if (cost !== null && !(isUnreportedUsageStatus(status) && cost === 0)) {
       estimatedCostUsd += cost;
       costObservedCount += 1;
       costSourceRefs.push(entry.ref);
@@ -452,6 +479,10 @@ export function summarizeStageAttemptUsageProjections(
   projectionScope = 'stage_attempt_workbench',
 ) {
   const sourceRefs = uniqueStrings(projections.flatMap((projection) => projection.source_refs));
+  const tokenObservedCount = projections.reduce((count, projection) => count + projection.token.observed_count, 0);
+  const costObservedCount = projections.reduce((count, projection) => count + projection.cost.observed_count, 0);
+  const apiCallObservedCount = projections.reduce((count, projection) => count + projection.api_calls.observed_count, 0);
+  const durationObservedCount = projections.reduce((count, projection) => count + projection.duration.observed_count, 0);
   const resourceObserved = projections.filter((projection) =>
     projection.token.observed_count
     + projection.cost.observed_count
@@ -475,28 +506,30 @@ export function summarizeStageAttemptUsageProjections(
     ).length,
     source_ref_count: sourceRefs.length,
     token: {
-      observed_count: projections.reduce((count, projection) => count + projection.token.observed_count, 0),
-      total_tokens_observed: projections.reduce((count, projection) =>
-        count + (projection.token.total_tokens_observed ?? 0), 0
-      ),
+      observed_count: tokenObservedCount,
+      total_tokens_observed: tokenObservedCount > 0
+        ? projections.reduce((count, projection) => count + (projection.token.total_tokens_observed ?? 0), 0)
+        : null,
     },
     cost: {
-      observed_count: projections.reduce((count, projection) => count + projection.cost.observed_count, 0),
-      estimated_cost_usd_observed: Number(projections.reduce((count, projection) =>
-        count + (projection.cost.estimated_cost_usd_observed ?? 0), 0
-      ).toFixed(6)),
+      observed_count: costObservedCount,
+      estimated_cost_usd_observed: costObservedCount > 0
+        ? Number(projections.reduce((count, projection) =>
+            count + (projection.cost.estimated_cost_usd_observed ?? 0), 0
+          ).toFixed(6))
+        : null,
     },
     api_calls: {
-      observed_count: projections.reduce((count, projection) => count + projection.api_calls.observed_count, 0),
-      count_observed: projections.reduce((count, projection) =>
-        count + (projection.api_calls.count_observed ?? 0), 0
-      ),
+      observed_count: apiCallObservedCount,
+      count_observed: apiCallObservedCount > 0
+        ? projections.reduce((count, projection) => count + (projection.api_calls.count_observed ?? 0), 0)
+        : null,
     },
     duration: {
-      observed_count: projections.reduce((count, projection) => count + projection.duration.observed_count, 0),
-      duration_ms_observed: projections.reduce((count, projection) =>
-        count + (projection.duration.duration_ms_observed ?? 0), 0
-      ),
+      observed_count: durationObservedCount,
+      duration_ms_observed: durationObservedCount > 0
+        ? projections.reduce((count, projection) => count + (projection.duration.duration_ms_observed ?? 0), 0)
+        : null,
     },
     cadence: {
       observed_count: uniqueStrings(projections.flatMap((projection) => projection.cadence.cadence_refs)).length,

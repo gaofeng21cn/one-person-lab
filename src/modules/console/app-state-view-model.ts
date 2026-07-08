@@ -346,49 +346,38 @@ function buildRuntimeScope(tasks: ReadonlyArray<JsonRecord>) {
       domain_id: domainId,
     }));
 
-    const workspaceScopeId = asString(task.workspace_scope_id);
     const workspaceLabel = asString(task.workspace_label);
     const workspacePath = asString(task.workspace_path);
-    if (workspaceScopeId && workspaceLabel) {
-      addOption(scopeOption('workspace', workspaceScopeId, pathLeaf(workspacePath) ?? workspaceLabel, {
-        workspace_binding_id: asString(task.workspace_binding_id),
-        workspace_path: workspacePath,
-        project_id: domainId,
-      }));
-    }
-
     const projectScopeId = asString(task.project_scope_id);
     const projectLabel = asString(task.project_display_name) ?? workspaceLabel ?? domainLabel;
     if (projectScopeId) {
       addOption(scopeOption('project', projectScopeId, projectLabel, {
+        scope_value: projectLabel,
         project_id: domainId,
         workspace_binding_id: asString(task.workspace_binding_id),
-      }));
-    }
-
-    const taskId = asString(task.task_id);
-    if (taskId) {
-      addOption(scopeOption('task', asString(task.task_scope_id) ?? `task:${taskId}`, asString(task.title) ?? taskId, {
-        task_id: taskId,
-        project_id: domainId,
-        study_id: asString(task.study_id),
+        workspace_path: workspacePath,
+        workspace_label: workspaceLabel,
       }));
     }
   }
 
-  const inferredWorkspace = tasks.find((task) => asBoolean(task.workspace_binding_active) && Boolean(asString(task.workspace_scope_id)));
+  const inferredWorkspace = tasks.find((task) => asBoolean(task.workspace_binding_active) && Boolean(asString(task.project_scope_id)));
   return {
     scope_options: [...options.values()],
     current_scope: allProjects,
     scope_source: 'default_global',
     inferred_scope_hint: inferredWorkspace
       ? scopeOption(
-          'workspace',
-          asString(inferredWorkspace.workspace_scope_id) ?? 'workspace:inferred',
-          pathLeaf(asString(inferredWorkspace.workspace_path)) ?? asString(inferredWorkspace.workspace_label) ?? '当前工作区',
+          'project',
+          asString(inferredWorkspace.project_scope_id) ?? 'project:inferred',
+          asString(inferredWorkspace.project_display_name)
+            ?? asString(inferredWorkspace.workspace_label)
+            ?? pathLeaf(asString(inferredWorkspace.workspace_path))
+            ?? '当前项目',
           {
             workspace_binding_id: asString(inferredWorkspace.workspace_binding_id),
             workspace_path: asString(inferredWorkspace.workspace_path),
+            workspace_label: asString(inferredWorkspace.workspace_label),
             project_id: asString(inferredWorkspace.domain_id),
             hint_source: 'workspace_registry_active_binding',
           },

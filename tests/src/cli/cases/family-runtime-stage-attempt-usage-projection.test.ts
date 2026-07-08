@@ -214,3 +214,74 @@ db.close();`;
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
+
+test('family-runtime usage projection treats unreported zero cost summaries as missing telemetry', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-usage-zero-placeholder-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'analysis-campaign',
+      '--provider',
+      'temporal',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--retry-budget',
+      '{"max_attempts":2}',
+      '--source-fingerprint',
+      'sha256:usage-zero-placeholder',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
+    const updateUsageSql = `
+import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(${JSON.stringify(queueDb)});
+const row = db.prepare('SELECT provider_run_json FROM stage_attempts WHERE stage_attempt_id = ?').get(${JSON.stringify(attemptId)});
+const providerRun = {
+  ...JSON.parse(row.provider_run_json),
+  cost_summary: {
+    cost_status: 'observed_or_unreported',
+    estimated_cost_usd: 0,
+    token_usage: {
+      input_tokens: 0,
+      output_tokens: 0,
+      total_tokens: 0
+    }
+  }
+};
+db.prepare('UPDATE stage_attempts SET provider_run_json = ? WHERE stage_attempt_id = ?').run(JSON.stringify(providerRun), ${JSON.stringify(attemptId)});
+db.close();`;
+    const result = spawnSync(process.execPath, ['--experimental-strip-types', '-e', updateUsageSql], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+    const projection = query.family_runtime_stage_attempt_query.stage_attempt_query.usage_projection;
+    const stageLog = query.family_runtime_stage_attempt_query.stage_attempt_query.stage_progress_log.user_stage_log;
+
+    assert.equal(projection.availability, 'retry_budget_observed');
+    assert.equal(projection.telemetry_status, 'missing');
+    assert.equal(projection.token.observed_count, 0);
+    assert.equal(projection.token.input_tokens_observed, null);
+    assert.equal(projection.token.output_tokens_observed, null);
+    assert.equal(projection.token.total_tokens_observed, null);
+    assert.equal(projection.cost.observed_count, 0);
+    assert.equal(projection.cost.estimated_cost_usd_observed, null);
+    assert.equal(stageLog.token_usage.status, 'missing');
+    assert.equal(stageLog.token_usage.total_tokens, null);
+    assert.equal(stageLog.cost.status, 'missing');
+    assert.equal(stageLog.cost.estimated_cost_usd, null);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});

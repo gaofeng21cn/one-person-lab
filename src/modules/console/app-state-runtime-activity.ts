@@ -681,6 +681,15 @@ function normalizeStudyItem(input: {
     next_action_summary: nextActionSummary,
     active_run_id: firstString(input.study.active_run_id, runtimeStatusSummary.active_run_id),
     health_status: firstString(input.study.worker_state, input.study.macro_state, input.study.runtime_health_status),
+    current_stage_usage: {
+      telemetry_status: 'missing',
+      total_tokens_observed: null,
+    },
+    task_total_usage: {
+      telemetry_status: 'missing',
+      total_tokens_observed: null,
+    },
+    usage_telemetry_status: 'missing',
     blockers: [],
     recommended_commands: commands,
   };
@@ -700,6 +709,90 @@ function studyRuntimeStatusSummaryPath(workspaceRoot: string, studyId: string) {
 function readStudyRuntimeStatusSummary(workspaceRoot: string, studyId: string) {
   const payload = readJsonFileOrNull(studyRuntimeStatusSummaryPath(workspaceRoot, studyId));
   return isRecord(payload) ? payload : null;
+}
+
+function readBacktickMarkdownField(markdown: string, label: string) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`^-\\s*${escaped}:\\s*\`?([^\\\`\\n]+)\`?\\s*$`, 'im'));
+  return match?.[1]?.trim() || null;
+}
+
+function readStudyStatusMarkdown(studyRoot: string) {
+  const statusPath = path.join(studyRoot, 'STUDY_STATUS.md');
+  let markdown: string;
+  try {
+    markdown = fs.readFileSync(statusPath, 'utf8');
+  } catch {
+    return null;
+  }
+  return {
+    source_path: statusPath,
+    status: readBacktickMarkdownField(markdown, 'Status'),
+    current_stage: readBacktickMarkdownField(markdown, 'Current stage'),
+    submission_package: readBacktickMarkdownField(markdown, 'Submission package'),
+    next_action_summary: readBacktickMarkdownField(markdown, 'Next action'),
+  };
+}
+
+function readSubmissionPackageStatus(studyRoot: string) {
+  const statusPath = path.join(studyRoot, 'submission', 'STATUS.json');
+  const payload = readJsonFileOrNull(statusPath);
+  return isRecord(payload)
+    ? ({
+        ...payload,
+        source_path: statusPath,
+      } as JsonRecord)
+    : null;
+}
+
+function buildStudyDirectoryItem(workspaceRoot: string, profileRef: string | null, studyId: string) {
+  const studyRoot = path.join(workspaceRoot, 'studies', studyId);
+  const statusMarkdown = readStudyStatusMarkdown(studyRoot);
+  const submissionStatus = readSubmissionPackageStatus(studyRoot);
+  const sourcePath = firstString(
+    statusMarkdown?.source_path,
+    submissionStatus?.source_path,
+    studyRoot,
+  ) ?? studyRoot;
+  const submissionPackage = firstString(statusMarkdown?.submission_package, submissionStatus?.status);
+  const nextActionSummary = firstString(
+    statusMarkdown?.next_action_summary,
+    submissionStatus?.reason,
+    submissionPackage === 'not_ready' ? 'paper_clean_room_rebuild_required' : null,
+  );
+  const stateSummary = firstString(
+    submissionStatus?.reason,
+    submissionPackage ? `submission_package_${submissionPackage}` : null,
+    'study_directory_registered_without_runtime_attempt',
+  );
+
+  return normalizeStudyItem({
+    workspaceRoot,
+    profileRef,
+    sourcePath,
+    sourceRole: statusMarkdown
+      ? 'study_status_markdown'
+      : submissionStatus
+        ? 'submission_status'
+        : 'study_directory',
+    sourceLabel: statusMarkdown
+      ? 'STUDY_STATUS.md'
+      : submissionStatus
+        ? 'submission/STATUS.json'
+        : 'MAS study directory',
+    study: {
+      study_id: studyId,
+      display_title: studyId,
+      current_stage: statusMarkdown?.current_stage,
+      macro_state: statusMarkdown?.status,
+      runtime_health_status: statusMarkdown?.status,
+      state_summary: stateSummary,
+      next_action_summary: nextActionSummary,
+      last_seen_at: firstString(submissionStatus?.recorded_at),
+      submission_package_status: submissionPackage,
+      promotion_allowed: submissionStatus?.promotion_allowed,
+    },
+  });
 }
 
 function portalPayloadPath(workspaceRoot: string) {
@@ -864,7 +957,8 @@ function buildFromStudyRuntimeFiles(workspaceRoot: string, profileRef: string | 
     const supervision = isRecord(supervisionPayload) ? supervisionPayload : null;
     const status = isRecord(statusPayload) ? statusPayload : null;
     if (!supervision && !status) {
-      return [];
+      const item = buildStudyDirectoryItem(workspaceRoot, profileRef, studyId);
+      return item ? [item] : [];
     }
     const study = {
       study_id: studyId,
@@ -909,7 +1003,7 @@ export function buildAppStateRuntimeActivityItems() {
             candidateRoots,
           }),
           binding,
-          workspaceRoot,
+          candidateRoot,
         );
       }
     }
@@ -920,7 +1014,7 @@ export function buildAppStateRuntimeActivityItems() {
         return decorateRuntimeItemsForBinding(
           mergeFamilyRuntimeStageAttempts({ items, candidateRoots }),
           binding,
-          workspaceRoot,
+          candidateRoot,
         );
       }
     }

@@ -368,7 +368,7 @@ function validateProjectLocatorOptions(
     .map(([key]) => key)
     .filter((key) => {
       if (projectId === 'medautoscience') {
-        return key !== 'profile';
+        return key !== 'profile' && key !== 'workspace_root';
       }
       if (projectId === 'medautogrant') {
         return key !== 'input';
@@ -407,10 +407,11 @@ function buildWorkspaceLocator(
     if (!profileRef) {
       return null;
     }
+    const workspaceRoot = normalizeExistingDirectoryPath(options.workspaceRoot, 'workspace_root') ?? workspacePath;
 
     return {
       surface_kind: 'med_autoscience_workspace_profile',
-      workspace_root: workspacePath,
+      workspace_root: workspaceRoot,
       profile_ref: profileRef,
       input_path: null,
     };
@@ -563,12 +564,12 @@ function buildProjectBindingContract(
       project: projectName,
       workspace_locator_surface_kind: 'med_autoscience_workspace_profile',
       required_locator_fields: ['profile_ref'],
-      optional_locator_fields: [],
+      optional_locator_fields: ['workspace_root'],
       derived_entry_command_template:
-        '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
+        '<workspace_root>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
       derived_manifest_command_template:
-        '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
-      quick_bind_hint: '绑定现有 MAS workspace_path 后，再给 profile_ref，OPL 就能稳定派生 direct entry 与 manifest surface。',
+        '<workspace_root>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
+      quick_bind_hint: '绑定 MAS 课题 workspace_path 与 profile_ref；如果 MAS 代码仓不在课题目录内，用 workspace_root 指向 MAS 代码仓来派生 direct entry 与 manifest surface。',
     };
   }
 

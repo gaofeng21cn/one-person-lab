@@ -212,17 +212,18 @@ test('workspace-bind derives family direct-entry locators from structured projec
       'uv run --directory <workspace_path> python -c <mag_generated_product_entry_manifest_materializer>',
     );
     assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
+    assert.deepEqual(masProject.binding_contract.optional_locator_fields, ['workspace_root']);
     assert.equal(
       masProject.binding_contract.workspace_locator_surface_kind,
       'med_autoscience_workspace_profile',
     );
     assert.equal(
       masProject.binding_contract.derived_entry_command_template,
-      '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
+      '<workspace_root>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
     );
     assert.equal(
       masProject.binding_contract.derived_manifest_command_template,
-      '<workspace_path>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
+      '<workspace_root>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
     );
     assert.deepEqual(redcubeProject.binding_contract.optional_locator_fields, ['workspace_root']);
     assert.equal(
@@ -280,6 +281,66 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
   } finally {
     fs.rmSync(commandFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(locatorRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace-bind can bind a MAS project workspace while using a separate MAS code root', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-mas-project-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const locatorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-mas-project-'));
+  const masCodeRoot = path.join(locatorRoot, 'med-autoscience');
+  const masProjectWorkspace = path.join(locatorRoot, 'Yang', 'Obesity');
+  const masProfilePath = path.join(masProjectWorkspace, 'ops', 'medautoscience', 'profiles', 'obesity.local.toml');
+
+  fs.mkdirSync(path.dirname(masProfilePath), { recursive: true });
+  fs.writeFileSync(masProfilePath, '[workspace]\nname = "obesity"\n', 'utf8');
+  writeMasCleanRunnerFixture(masCodeRoot, {
+    profilePath: masProfilePath,
+    manifest: fixtures.medautoscience,
+  });
+
+  const env = {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    const bindOutput = runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      masProjectWorkspace,
+      '--workspace-root',
+      masCodeRoot,
+      '--profile',
+      masProfilePath,
+      '--label',
+      'Obesity',
+    ], env);
+    const binding = bindOutput.workspace_catalog.binding;
+    const expectedMasEntryCommand =
+      `${shellSingleQuote(path.join(path.resolve(masCodeRoot), 'scripts', 'run-python-clean.sh'))} -c ${
+        shellSingleQuote(
+          `from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status; import json; profile_ref = ${JSON.stringify(path.resolve(masProfilePath))}; print(json.dumps(build_product_entry_status(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
+        )
+      }`;
+
+    assert.equal(binding.project_id, 'medautoscience');
+    assert.equal(binding.workspace_path, path.resolve(masProjectWorkspace));
+    assert.equal(binding.direct_entry.command, expectedMasEntryCommand);
+    assert.deepEqual(binding.direct_entry.workspace_locator, {
+      surface_kind: 'med_autoscience_workspace_profile',
+      workspace_root: path.resolve(masCodeRoot),
+      profile_ref: path.resolve(masProfilePath),
+      input_path: null,
+    });
+  } finally {
     fs.rmSync(locatorRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });

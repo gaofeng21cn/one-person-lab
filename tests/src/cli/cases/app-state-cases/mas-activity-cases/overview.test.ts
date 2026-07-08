@@ -98,6 +98,178 @@ test('ordinary cockpit does not mix current owner delta identity with stale runt
   assert.equal(cockpit.display_payload.task.status_label, null);
 });
 
+test('app state fast keeps MAS study directories visible without runtime telemetry', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-study-directory-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-study-directory-workspace-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'history.workspace.toml');
+  const studyId = '002-history-paper';
+  const studyRoot = path.join(workspaceRoot, 'studies', studyId);
+
+  try {
+    fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+    fs.writeFileSync(profilePath, '[workspace]\nname = "history"\n', 'utf8');
+    fs.mkdirSync(path.join(studyRoot, 'submission'), { recursive: true });
+    fs.writeFileSync(
+      path.join(studyRoot, 'STUDY_STATUS.md'),
+      [
+        '# 002-history-paper',
+        '',
+        '- Status: `ready`',
+        '- Current stage: `01-study_intake`',
+        '- Submission package: `not_ready`',
+        '- Next action: `paper_clean_room_rebuild_required`',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(studyRoot, 'submission', 'STATUS.json'),
+      `${JSON.stringify({
+        surface_kind: 'study_current_package_status',
+        schema_version: 1,
+        status: 'not_ready',
+        reason: 'submission_package_not_promoted_by_publication_gate',
+        promotion_allowed: false,
+        recorded_at: '2026-07-05T11:05:30+00:00',
+      }, null, 2)}\n`,
+      'utf8',
+    );
+    writeMasWorkspaceRegistryBindings({
+      stateDir,
+      bindings: [{
+        bindingId: 'mas-history-binding',
+        workspacePath: workspaceRoot,
+        profilePath,
+        status: 'active',
+        label: '历史论文',
+      }],
+    });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as { app_state: { operator: { workbench: { task_drilldowns: Array<Record<string, any>>; runtime_scope: { scope_options: Array<Record<string, any>> } } } } };
+
+    const task = output.app_state.operator.workbench.task_drilldowns.find((entry) => entry.study_id === studyId);
+    assert.ok(task, 'study directory fallback should produce a visible MAS task');
+    assert.equal(task.primary_state, 'paused_waiting_for_direction');
+    assert.equal(task.automation_state, 'automation_idle');
+    assert.equal(task.next_visible_step, 'paper_clean_room_rebuild_required');
+    assert.equal(task.workspace_label, '历史论文');
+    assert.equal(task.source_ref_count > 0, true);
+    assert.equal(task.current_stage_usage.telemetry_status, 'missing');
+    assert.equal(task.task_total_usage.telemetry_status, 'missing');
+    assert.equal(
+      output.app_state.operator.workbench.runtime_scope.scope_options.some((option) =>
+        option.scope_kind === 'project' && option.label === '历史论文'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('app state fast enumerates registered MAS project workspaces beyond Temporal attempts', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-project-universe-home-'));
+  const workspaceBase = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-project-universe-workspaces-'));
+  const masCodeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-code-root-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const projects = [
+    {
+      bindingId: 'mas-dm-binding',
+      dir: 'dm',
+      label: '糖尿病',
+      profile: 'dm.local.toml',
+      studies: [
+        '001-dm-cvd-mortality-risk',
+        '002-dm-china-us-mortality-attribution',
+        '003-dpcc-primary-care-phenotype-treatment-gap',
+        '004-dpcc-longitudinal-care-inertia-intensification-gap',
+      ],
+      status: 'active' as const,
+    },
+    {
+      bindingId: 'mas-obesity-binding',
+      dir: 'obesity',
+      label: '肥胖',
+      profile: 'obesity.local.toml',
+      studies: ['obesity_multicenter_phenotype_atlas'],
+      status: 'inactive' as const,
+    },
+    {
+      bindingId: 'mas-nfpitnet-binding',
+      dir: 'nfpitnet',
+      label: '无功能垂体瘤',
+      profile: 'nfpitnet.workspace.toml',
+      studies: [
+        '001-lineage-pfs',
+        '002-early-residual-risk',
+        '003-endocrine-burden-followup',
+        '004-invasive-architecture',
+      ],
+      status: 'inactive' as const,
+    },
+  ];
+
+  try {
+    const bindings = projects.map((project) => {
+      const workspaceRoot = path.join(workspaceBase, project.dir);
+      const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', project.profile);
+      fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+      fs.writeFileSync(profilePath, `[workspace]\nname = "${project.dir}"\n`, 'utf8');
+      for (const studyId of project.studies) {
+        fs.mkdirSync(path.join(workspaceRoot, 'studies', studyId), { recursive: true });
+      }
+      return {
+        bindingId: project.bindingId,
+        workspacePath: workspaceRoot,
+        workspaceRoot: masCodeRoot,
+        profilePath,
+        status: project.status,
+        label: project.label,
+      };
+    });
+    writeMasWorkspaceRegistryBindings({ stateDir, bindings });
+
+    const output = runCli(['app', 'state', '--profile', 'fast'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      PATH: '/usr/bin:/bin',
+    }) as { app_state: { operator: { workbench: { task_drilldowns: Array<Record<string, any>>; runtime_scope: { scope_options: Array<Record<string, any>> } } } } };
+
+    const studyTasks = output.app_state.operator.workbench.task_drilldowns.filter((entry) => entry.domain_id === 'medautoscience' && entry.study_id);
+    assert.equal(studyTasks.length, 9);
+    assert.deepEqual(
+      new Set(studyTasks.map((entry) => entry.workspace_label)),
+      new Set(['糖尿病', '肥胖', '无功能垂体瘤']),
+    );
+    assert.deepEqual(
+      output.app_state.operator.workbench.runtime_scope.scope_options
+        .filter((option) => option.scope_kind === 'project')
+        .map((option) => option.label)
+        .sort(),
+      ['无功能垂体瘤', '糖尿病', '肥胖'].sort(),
+    );
+    assert.equal(
+      output.app_state.operator.workbench.runtime_scope.scope_options.some((option) => option.scope_kind === 'task'),
+      false,
+    );
+    assert.equal(studyTasks.every((entry) => entry.task_total_usage.telemetry_status === 'missing'), true);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceBase, { recursive: true, force: true });
+    fs.rmSync(masCodeRoot, { recursive: true, force: true });
+  }
+});
+
 test('app state fast exposes MAS study-level running activity refs for the GUI', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-activity-home-'));
   const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-repo-'));
@@ -277,18 +449,19 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
     assert.deepEqual(
       output.app_state.operator.workbench.runtime_scope.inferred_scope_hint,
       {
-        scope_kind: 'workspace',
-        scope_id: 'workspace:mas-app-state-activity',
+        scope_kind: 'project',
+        scope_id: 'project:medautoscience:mas-app-state-activity',
         label: path.basename(workspaceRoot),
         workspace_binding_id: 'mas-app-state-activity',
         workspace_path: workspaceRoot,
+        workspace_label: path.basename(workspaceRoot),
         project_id: 'medautoscience',
         hint_source: 'workspace_registry_active_binding',
       },
     );
     assert.deepEqual(
       new Set(output.app_state.operator.workbench.runtime_scope.scope_options.map((entry: Record<string, any>) => entry.scope_kind)),
-      new Set(['all_projects', 'agent', 'workspace', 'project', 'task']),
+      new Set(['all_projects', 'agent', 'project']),
     );
     assert.deepEqual(
       output.app_state.operator.workbench.user_task_status_summary,
