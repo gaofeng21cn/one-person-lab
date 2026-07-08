@@ -62,7 +62,9 @@ test('runtime scope dedupes workspace options by workspace path', () => {
   );
   assert.equal(workspaceOptions.length, 1);
   assert.equal(workspaceOptions[0]?.label, 'DM-CVD-Mortality-Risk');
-  assert.equal(operator.workbench.runtime_scope.inferred_scope_hint.label, 'DM-CVD-Mortality-Risk');
+  const inferredScope = operator.workbench.runtime_scope.inferred_scope_hint;
+  assert.ok(inferredScope);
+  assert.equal(inferredScope.label, 'DM-CVD-Mortality-Risk');
 });
 
 test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspace study', () => {
@@ -107,7 +109,7 @@ test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspa
     (entry: Record<string, unknown>) => entry.study_id === '001-dm-cvd-mortality-risk',
   );
   assert.equal(studyTasks.length, 1);
-  assert.equal(studyTasks[0]?.workspace_label, 'dm-cvd-mortality-risk');
+  assert.equal((studyTasks[0] as Record<string, unknown> | undefined)?.workspace_label, 'dm-cvd-mortality-risk');
   assert.equal(operator.workbench.user_task_status_summary.active_project_count, 1);
 });
 
