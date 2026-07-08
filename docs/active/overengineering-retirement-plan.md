@@ -113,6 +113,11 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 - `Fallow entrypoint readback`：`.github/actions/quality-details/emit-quality-details.mjs`、`src/modules/index.ts` 与 `src/modules/console/index.ts` 改为 `.fallowrc.json` 显式 entry。它们分别是 GitHub composite action runtime、Framework aggregate module identity entrypoint 和 Console source-module public entrypoint，不靠 `fallow-ignore` 注释掩盖，也不为清零 advisory 物理删除。
 - 新鲜证据：`npm run typecheck` 通过；`npm run source:modules -- --format json` 为 `status=ok`、`module_entrypoints.expected_count=10`、`deep_import_violations.count=0`、`forbidden_dependency_violations.count=0`；`npm run hygiene:fallow` 仍为 exit 1，后续 Connect lane 删除 `src/modules/connect/managed-shell-command-env.ts` 后 unused files 降到 4；本轮 entrypoint lane 将 3 个真实 runtime/public entry 写入 `.fallowrc.json`，并删除 owner-answer shim 后预期 unused files 降到 0；`git diff --check` 通过。
 
+## 2026-07-08 runtime env CLI parser 收薄
+
+- `OPL CLI / Runway runtime env`：`runtime-environment-command-spec.ts` 的 target / prepare / materialize / verify / cache-prune 手写 token loop 收敛到本文件局部 visitor 与 target-option helper；未引入 commander/yargs，未启用 shared `parseRegisteredCommandOptions`，因为该 registry parser 会改变当前 runtime env CLI 的错误文案契约。
+- 新鲜证据：lane 已 rebase 到 root `main` `2de376bd5`；`runtime-environment-substrate-command-surface.test.ts` 为 `11/11` 通过；`npm run typecheck`、`git diff --check`、`npm run reuse-first:scan:diff -- --format json` 通过；fallow target 读回不再列出该文件的 parser clone/refactor target，仅剩既有 coverage/CRAP advisory。本记录只证明 parser 样板收薄和 focused CLI behavior 未回归，不声明 runtime/provider/domain/App ready。
+
 ## 2026-07-07 Connect package preference surface 收薄
 
 - `OPL Connect managed-shell wrapper`：删除 `src/modules/connect/managed-shell-command-env.ts` 薄 wrapper，测试直接从 `src/kernel/managed-shell-command-env.ts` 引入。Connect 不再为 kernel managed-shell 环境维护第二入口。

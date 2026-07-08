@@ -69,73 +69,99 @@ function assignRootArg(
   }
 }
 
+function visitRuntimeEnvOptions(
+  args: string[],
+  visit: (token: string, value: string | undefined) => boolean,
+) {
+  for (let index = 0; index < args.length; index += 1) {
+    if (visit(args[index], args[index + 1])) {
+      index += 1;
+    }
+  }
+}
+
+function requireOptionValue(
+  token: string,
+  value: string | undefined,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+  message: string,
+) {
+  if (!value) {
+    throw buildUsageError(message, spec, {
+      option: token,
+    });
+  }
+  return value;
+}
+
+function parseSandboxProviderOption(
+  commandLabel: string,
+  token: '--sandbox-provider' | '--environment-profile',
+  value: string | undefined,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
+    throw buildUsageError(
+      `${commandLabel} ${token} must be ${sandboxProviderUsage()}.`,
+      spec,
+      { option: token },
+    );
+  }
+  return value as RuntimeEnvironmentTargetInput['sandboxProvider'];
+}
+
+function parseTargetOption(
+  parsed: RuntimeEnvironmentTargetInput,
+  token: string,
+  value: string | undefined,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+  commandLabel: string,
+  options: { allowRoot?: boolean } = {},
+) {
+  if (token === '--domain') {
+    parsed.domainId = requireOptionValue(token, value, spec, `${commandLabel} requires --domain value.`);
+    return true;
+  }
+  if (token === '--profile') {
+    parsed.profileId = requireOptionValue(token, value, spec, `${commandLabel} requires --profile value.`);
+    return true;
+  }
+  if (token === '--platform') {
+    parsed.platformId = requireOptionValue(token, value, spec, `${commandLabel} requires --platform value.`);
+    return true;
+  }
+  if (token === '--sandbox-provider' || token === '--environment-profile') {
+    parsed.sandboxProvider = parseSandboxProviderOption(commandLabel, token, value, spec);
+    return true;
+  }
+  if (options.allowRoot && (token === '--artifact-root' || token === '--paper-root')) {
+    assignRootArg(
+      parsed,
+      token,
+      requireOptionValue(token, value, spec, `${commandLabel} requires ${token} value.`),
+    );
+    return true;
+  }
+  return false;
+}
+
 function parseTargetArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
   options: { requirePlatform?: boolean } = {},
 ): RuntimeEnvironmentTargetInput {
   const parsed: RuntimeEnvironmentTargetInput = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
+  visitRuntimeEnvOptions(args, (token, value) => {
     if (token === '--json') {
-      continue;
+      return false;
     }
-    if (token === '--domain') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env command requires --domain value.', spec, {
-          option: '--domain',
-        });
-      }
-      parsed.domainId = value;
-      continue;
-    }
-    if (token === '--profile') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env command requires --profile value.', spec, {
-          option: '--profile',
-        });
-      }
-      parsed.profileId = value;
-      continue;
-    }
-    if (token === '--platform') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env command requires --platform value.', spec, {
-          option: '--platform',
-        });
-      }
-      parsed.platformId = value;
-      continue;
-    }
-    if (token === '--sandbox-provider' || token === '--environment-profile') {
-      const value = args[++index];
-      if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
-        throw buildUsageError(
-          `runtime env command ${token} must be ${sandboxProviderUsage()}.`,
-          spec,
-          { option: token },
-        );
-      }
-      parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
-      continue;
-    }
-    if (token === '--artifact-root' || token === '--paper-root') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(`runtime env command requires ${token} value.`, spec, {
-          option: token,
-        });
-      }
-      assignRootArg(parsed, token, value);
-      continue;
+    if (parseTargetOption(parsed, token, value, spec, 'runtime env command', { allowRoot: true })) {
+      return true;
     }
     throw buildUsageError(`Unknown option for runtime env command: ${token}.`, spec, {
       option: token,
     });
-  }
+  });
   if (!parsed.domainId) {
     throw buildUsageError('runtime env command requires --domain.', spec, {
       required: ['--domain'],
@@ -159,25 +185,23 @@ function parseVerifyArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): RuntimeEnvironmentVerifyInput {
   const parsed: Partial<RuntimeEnvironmentVerifyInput> = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
+  visitRuntimeEnvOptions(args, (token, value) => {
     if (token === '--json') {
-      continue;
+      return false;
     }
     if (token === '--runtime-root') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env verify requires --runtime-root value.', spec, {
-          option: '--runtime-root',
-        });
-      }
-      parsed.runtimeRoot = value;
-      continue;
+      parsed.runtimeRoot = requireOptionValue(
+        token,
+        value,
+        spec,
+        'runtime env verify requires --runtime-root value.',
+      );
+      return true;
     }
     throw buildUsageError(`Unknown option for runtime env verify: ${token}.`, spec, {
       option: token,
     });
-  }
+  });
   if (!parsed.runtimeRoot) {
     throw buildUsageError('runtime env verify requires --runtime-root.', spec, {
       required: ['--runtime-root'],
@@ -192,91 +216,39 @@ function parsePrepareArgs(
   options: { allowOrdinaryDefaults?: boolean } = {},
 ): RuntimeEnvironmentPrepareInput {
   const parsed: Partial<RuntimeEnvironmentPrepareInput> = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
+  visitRuntimeEnvOptions(args, (token, value) => {
     if (token === '--json') {
-      continue;
+      return false;
     }
     if (token === '--apply') {
       parsed.apply = true;
-      continue;
+      return false;
     }
-    if (token === '--domain') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env prepare requires --domain value.', spec, {
-          option: '--domain',
-        });
-      }
-      parsed.domainId = value;
-      continue;
-    }
-    if (token === '--profile') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env prepare requires --profile value.', spec, {
-          option: '--profile',
-        });
-      }
-      parsed.profileId = value;
-      continue;
-    }
-    if (token === '--platform') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env prepare requires --platform value.', spec, {
-          option: '--platform',
-        });
-      }
-      parsed.platformId = value;
-      continue;
-    }
-    if (token === '--sandbox-provider' || token === '--environment-profile') {
-      const value = args[++index];
-      if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
-        throw buildUsageError(
-          `runtime env prepare ${token} must be ${sandboxProviderUsage()}.`,
-          spec,
-          { option: token },
-        );
-      }
-      parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
-      continue;
+    if (parseTargetOption(parsed, token, value, spec, 'runtime env prepare', { allowRoot: true })) {
+      return true;
     }
     if (token === '--requirement-profile') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env prepare requires --requirement-profile value.', spec, {
-          option: '--requirement-profile',
-        });
-      }
-      parsed.requirementProfilePath = value;
-      continue;
+      parsed.requirementProfilePath = requireOptionValue(
+        token,
+        value,
+        spec,
+        'runtime env prepare requires --requirement-profile value.',
+      );
+      return true;
     }
     if (token === '--requirement-profile-id') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env prepare requires --requirement-profile-id value.', spec, {
-          option: '--requirement-profile-id',
-        });
-      }
-      parsed.requirementProfileId = value;
-      continue;
-    }
-    if (token === '--artifact-root' || token === '--paper-root') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(`runtime env prepare requires ${token} value.`, spec, {
-          option: token,
-        });
-      }
-      assignRootArg(parsed, token, value);
-      continue;
+      parsed.requirementProfileId = requireOptionValue(
+        token,
+        value,
+        spec,
+        'runtime env prepare requires --requirement-profile-id value.',
+      );
+      return true;
     }
     throw buildUsageError(`Unknown option for runtime env prepare: ${token}.`, spec, {
       option: token,
     });
-  }
+  });
   if (options.allowOrdinaryDefaults) {
     parsed.platformId ??= currentPlatformId();
     parsed.artifactRoot ??= process.cwd();
@@ -304,71 +276,30 @@ function parseMaterializeArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): RuntimeEnvironmentMaterializeInput {
   const parsed: RuntimeEnvironmentMaterializeInput = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
+  visitRuntimeEnvOptions(args, (token, value) => {
     if (token === '--json' || token === '--dry-run') {
-      continue;
+      return false;
     }
-    if (token === '--domain') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env materialize requires --domain value.', spec, {
-          option: '--domain',
-        });
-      }
-      parsed.domainId = value;
-      continue;
-    }
-    if (token === '--profile') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env materialize requires --profile value.', spec, {
-          option: '--profile',
-        });
-      }
-      parsed.profileId = value;
-      continue;
-    }
-    if (token === '--platform') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime env materialize requires --platform value.', spec, {
-          option: '--platform',
-        });
-      }
-      parsed.platformId = value;
-      continue;
-    }
-    if (token === '--sandbox-provider' || token === '--environment-profile') {
-      const value = args[++index];
-      if (!SANDBOX_PROVIDER_VALUES.includes(value as typeof SANDBOX_PROVIDER_VALUES[number])) {
-        throw buildUsageError(
-          `runtime env materialize ${token} must be ${sandboxProviderUsage()}.`,
-          spec,
-          { option: token },
-        );
-      }
-      parsed.sandboxProvider = value as RuntimeEnvironmentTargetInput['sandboxProvider'];
-      continue;
+    if (parseTargetOption(parsed, token, value, spec, 'runtime env materialize')) {
+      return true;
     }
     if (token === '--apply') {
       parsed.apply = true;
-      continue;
+      return false;
     }
     if (token === '--target') {
-      const value = args[++index];
       if (value !== 'current' && value !== 'rollback' && value !== 'staged') {
         throw buildUsageError('runtime env materialize --target must be current, rollback, or staged.', spec, {
           option: '--target',
         });
       }
       parsed.targetPointer = value;
-      continue;
+      return true;
     }
     throw buildUsageError(`Unknown option for runtime env materialize: ${token}.`, spec, {
       option: token,
     });
-  }
+  });
   if (!parsed.domainId) {
     throw buildUsageError('runtime env materialize requires --domain.', spec, {
       required: ['--domain'],
@@ -392,18 +323,18 @@ function parseCachePruneArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): RuntimeEnvironmentCachePruneInput {
   const parsed: RuntimeEnvironmentCachePruneInput = {};
-  for (const token of args) {
+  visitRuntimeEnvOptions(args, (token) => {
     if (token === '--json' || token === '--dry-run') {
-      continue;
+      return false;
     }
     if (token === '--apply') {
       parsed.apply = true;
-      continue;
+      return false;
     }
     throw buildUsageError(`Unknown option for runtime env cache prune: ${token}.`, spec, {
       option: token,
     });
-  }
+  });
   return parsed;
 }
 
