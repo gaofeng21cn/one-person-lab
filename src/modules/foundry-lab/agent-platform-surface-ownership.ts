@@ -579,6 +579,17 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
+    const physicalDeleteAuthorized = surfaceRetirementGates.length > 0
+      && surfaceRetirementGates.every((worklist) => worklist.physical_delete_authorized === true);
+    const physicalDeleteBlockedBy = physicalDeleteAuthorized
+      ? []
+      : [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS];
+    const notAuthorizedClaims = physicalDeleteAuthorized
+      ? []
+      : [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS];
+    const physicalDeleteAuthorizationStatus = physicalDeleteAuthorized
+      ? 'authorized_by_domain_owner_physical_delete_ref'
+      : 'not_authorized_by_opl_projection';
     const nextRequiredOwnerAction = deleteOrKeepPrerequisitesObserved
       ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
       : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review';
@@ -614,6 +625,10 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         same_work_unit_live_evidence_scope: {
           ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
         },
+        default_caller_delete_ready: physicalDeleteAuthorized,
+        physical_delete_authorized: physicalDeleteAuthorized,
+        generated_default_caller_readiness_can_authorize_physical_delete: false,
+        physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
       },
       default_caller_owner: 'one-person-lab',
       source_commands: {
@@ -642,13 +657,16 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         same_work_unit_live_evidence_scope: {
           ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
         },
-        physical_delete_authorized: false,
+        physical_delete_authorized: physicalDeleteAuthorized,
         all_deletion_evidence_requirements_observed: allDeletionEvidenceRequirementsObserved,
         delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
-        default_caller_delete_ready: false,
+        default_caller_delete_ready: physicalDeleteAuthorized,
+        owner_decision_result_shape: physicalDeleteAuthorized
+          ? 'physical_delete_authorization_ref'
+          : undefined,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
-        physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
-        physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        physical_delete_blocked_by: physicalDeleteBlockedBy,
+        physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
         owner_decision_required_after_prerequisites_observed:
           deleteOrKeepPrerequisitesObserved,
         next_required_owner_action: nextRequiredOwnerAction,
@@ -656,7 +674,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         owner_decision_required_after_all_refs_observed:
           allDeletionEvidenceRequirementsObserved,
         deletion_evidence_requirements_are_completion_claims: false,
-        not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
+        not_authorized_claims: notAuthorizedClaims,
         physical_delete_authority_owner: 'domain_repo_owner_after_receipt_parity',
         evidence_worklist_count: deletionEvidenceWorklists.length,
         missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
@@ -788,6 +806,17 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
   const ownerDecisionStatus = optionalString(
     physicalDeleteAuthorityReadModel.owner_decision_status,
   );
+  const physicalDeleteAuthorized =
+    physicalDeleteAuthorityReadModel.physical_delete_authorized === true;
+  const physicalDeleteAuthorizationStatus =
+    optionalString(physicalDeleteAuthorityReadModel.physical_delete_authorization_status)
+    ?? 'not_authorized_by_opl_projection';
+  const physicalDeleteBlockedBy = physicalDeleteAuthorized
+    ? []
+    : [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS];
+  const notAuthorizedClaims = physicalDeleteAuthorized
+    ? []
+    : [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS];
   const structuralOwnerDecisionMissingCount = Number(
     physicalDeleteAuthorityReadModel
       .structural_prerequisites_observed_but_domain_owner_decision_missing_count || 0,
@@ -816,14 +845,14 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       same_work_unit_live_evidence_scope: {
         ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
       },
-      physical_delete_authorized: false,
+      physical_delete_authorized: physicalDeleteAuthorized,
       refs_only_receipt_can_authorize_physical_delete: false,
       conformance_can_authorize_physical_delete: false,
       readiness_can_authorize_physical_delete: false,
     },
-    default_caller_delete_ready: false,
-    physical_delete_authorized: false,
-    physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    default_caller_delete_ready: physicalDeleteAuthorized,
+    physical_delete_authorized: physicalDeleteAuthorized,
+    physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
     owner_decision_status: ownerDecisionStatus,
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       structuralOwnerDecisionMissingCount,
@@ -863,22 +892,22 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         same_work_unit_live_evidence_scope: {
           ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
         },
-        physical_delete_authorized: false,
+        physical_delete_authorized: physicalDeleteAuthorized,
         refs_only_receipt_can_authorize_physical_delete: false,
         conformance_can_authorize_physical_delete: false,
         readiness_can_authorize_physical_delete: false,
       },
-      default_caller_delete_ready: false,
-      physical_delete_authorized: false,
+      default_caller_delete_ready: physicalDeleteAuthorized,
+      physical_delete_authorized: physicalDeleteAuthorized,
       generated_default_caller_readiness_can_authorize_physical_delete: false,
-      physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+      physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
       owner_decision_status: ownerDecisionStatus,
       structural_prerequisites_observed_but_domain_owner_decision_missing_count:
         structuralOwnerDecisionMissingCount,
       active_legacy_caller_deletion_gate:
         physicalDeleteAuthorityReadModel.active_legacy_caller_deletion_gate,
       domain_private_platform_tail_matrix: domainPrivatePlatformTailMatrix,
-      physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
+      physical_delete_blocked_by: physicalDeleteBlockedBy,
       physical_delete_authority_read_model: physicalDeleteAuthorityReadModel,
       repo_deletion_gate_summary:
         physicalDeleteAuthorityReadModel.repo_deletion_gate_summary,
@@ -904,10 +933,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         same_work_unit_live_evidence_scope: {
           ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
         },
-        default_caller_delete_ready: false,
-        physical_delete_authorized: false,
+        default_caller_delete_ready: physicalDeleteAuthorized,
+        physical_delete_authorized: physicalDeleteAuthorized,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
-        physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+        physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
         owner_decision_status: ownerDecisionStatus,
         structural_prerequisites_observed_but_domain_owner_decision_missing_count:
           structuralOwnerDecisionMissingCount,
@@ -918,7 +947,7 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         no_active_caller_proof_still_required: true,
         no_forbidden_write_proof_still_required: true,
         zero_missing_deletion_evidence_is_not_delete_ready: true,
-        observed_deletion_evidence_refs_are_refs_only_inputs: true,
+        observed_deletion_evidence_refs_are_refs_only_inputs: !physicalDeleteAuthorized,
         retirement_guard_target_classes: [...DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES],
         mandatory_gate_ids: [...DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS],
         static_retirement_prerequisite_gate_ids: [
@@ -929,8 +958,9 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
           ...DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
         },
         generated_default_caller_readiness_can_authorize_physical_delete: false,
-        physical_delete_authorized_by_this_report: false,
-        physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
+        physical_delete_authorized_by_this_report: physicalDeleteAuthorized,
+        physical_delete_blocked_by: physicalDeleteBlockedBy,
+        not_authorized_claims: notAuthorizedClaims,
         owner_decision_after_structural_prerequisites_observed_required: true,
         next_required_owner_action_after_structural_prerequisites_observed:
           DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,

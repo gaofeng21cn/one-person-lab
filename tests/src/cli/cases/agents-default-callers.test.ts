@@ -660,6 +660,87 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(defaultCallers.authority_boundary.report_can_authorize_domain_repo_physical_delete, false);
 });
 
+test('agents default-callers consumes explicit domain owner physical delete authorization refs', () => {
+  const repoDir = buildReadyAgentRepo();
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
+  const bridgeExitGate = {
+    physical_delete_authorization_ref:
+      'owner-authorization:sample/default-caller-physical-delete',
+    no_active_caller_refs: ['no-active-caller:sample/default-caller-delete'],
+    no_forbidden_write_refs: ['no-forbidden-write:sample/default-caller-delete'],
+    tombstone_refs: ['tombstone:sample/default-caller-delete'],
+    provenance_refs: ['provenance:sample/default-caller-delete'],
+  };
+  functionalAudit.modules = functionalAudit.modules.map((module: { module_id?: string }) => ({
+    ...module,
+    current_surface_refs: [
+      'cli',
+      'mcp',
+      'skill',
+      'product_entry_manifest',
+      'status_read_model',
+      'domain_handler',
+      'workbench_drilldown',
+      'functional_harness_cases',
+    ],
+    bridge_exit_gate: bridgeExitGate,
+  }));
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const defaultCallersPayload = runCli([
+    'agents',
+    'default-callers',
+    '--agent',
+    `sample=${repoDir}`,
+  ]);
+  const defaultCallers = defaultCallersPayload.agent_default_caller_readiness;
+
+  assert.equal(defaultCallers.status, 'ready_domain_evidence_required');
+  assert.equal(defaultCallers.default_caller_delete_ready, true);
+  assert.equal(defaultCallers.physical_delete_authorized, true);
+  assert.equal(
+    defaultCallers.physical_delete_authorization_status,
+    'authorized_by_domain_owner_physical_delete_ref',
+  );
+  assert.equal(defaultCallers.summary.default_caller_delete_ready, true);
+  assert.equal(defaultCallers.summary.physical_delete_authorized, true);
+  assert.equal(defaultCallersPayload.default_caller_delete_ready, true);
+  assert.equal(defaultCallersPayload.physical_delete_authorized, true);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.status,
+    'authorized_by_domain_owner_physical_delete_ref',
+  );
+  assert.equal(defaultCallers.physical_delete_authority_read_model.default_caller_delete_ready, true);
+  assert.equal(defaultCallers.physical_delete_authority_read_model.physical_delete_authorized, true);
+  assert.deepEqual(defaultCallers.physical_delete_authority_read_model.physical_delete_blocked_by, []);
+  assert.deepEqual(defaultCallers.physical_delete_authority_read_model.not_authorized_claims, []);
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model
+      .observed_deletion_evidence_refs_are_refs_only_inputs,
+    false,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_status,
+    'owner_decision_observed_physical_delete_authorized',
+  );
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].default_caller_delete_ready, true);
+  assert.equal(defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorized, true);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].owner_decision_status,
+    'owner_decision_observed_physical_delete_authorized',
+  );
+  assert.deepEqual(defaultCallers.repo_deletion_gate_summary[0].physical_delete_blocked_by, []);
+  assert.deepEqual(defaultCallers.repo_deletion_gate_summary[0].not_authorized_claims, []);
+  assert.equal(defaultCallers.reports[0].deletion_gate.default_caller_delete_ready, true);
+  assert.equal(defaultCallers.reports[0].deletion_gate.physical_delete_authorized, true);
+  assert.equal(
+    defaultCallers.reports[0].deletion_gate.owner_decision_result_shape,
+    'physical_delete_authorization_ref',
+  );
+  assert.deepEqual(defaultCallers.reports[0].deletion_gate.physical_delete_blocked_by, []);
+});
+
 test('agents default-callers asks domain owner to choose delete keep or blocker after structural delete evidence', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');

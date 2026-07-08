@@ -273,6 +273,11 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
     const allDeletionEvidenceRequirementsObserved =
       deleteOrKeepPrerequisitesObserved
       && observedDomainReceiptOrBlockerRefs.length > 0;
+    const physicalDeleteAuthorized =
+      deleteOrKeepPrerequisitesObserved
+      && observedPhysicalDeleteAuthorizationRefs.length > 0
+      && observedKeepAsAuthorityAdapterRefs.length === 0
+      && observedTypedBlockerRefs.length === 0;
     const worklistStatus = ready
       ? (
         allDeletionEvidenceRequirementsObserved
@@ -346,12 +351,16 @@ export function defaultCallerSurfaceGates(bundle: JsonRecord) {
       keep_as_authority_adapter_refs: observedKeepAsAuthorityAdapterRefs,
       owner_receipt_refs: observedOwnerReceiptRefs,
       typed_blocker_refs: observedTypedBlockerRefs,
-      physical_delete_authorized: false,
-      default_caller_delete_ready: false,
+      physical_delete_authorized: physicalDeleteAuthorized,
+      default_caller_delete_ready: physicalDeleteAuthorized,
       generated_default_caller_readiness_can_authorize_physical_delete: false,
-      physical_delete_blocked_by: [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
+      physical_delete_blocked_by: physicalDeleteAuthorized
+        ? []
+        : [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS],
       worklist_item_is_completion_claim: false,
-      physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+      physical_delete_authorization_status: physicalDeleteAuthorized
+        ? 'authorized_by_domain_owner_physical_delete_ref'
+        : 'not_authorized_by_opl_projection',
       delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
       owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
       next_required_owner_action: deleteOrKeepPrerequisitesObserved
