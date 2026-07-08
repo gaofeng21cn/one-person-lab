@@ -8,6 +8,10 @@ import type {
   BrandModuleRegistryEntry,
   FrameworkContracts,
 } from '../../kernel/types.ts';
+import {
+  listStandardDomainAgentIds,
+  resolveStandardAgent,
+} from './standard-agent-registry.ts';
 
 type BrandModuleCommandArgs = string[];
 type AgentInternalModuleCommandArgs = string[];
@@ -191,10 +195,12 @@ function buildBrandModuleSurface(
   };
 }
 
-function agentDomainIds(contracts: FrameworkContracts) {
-  return contracts.domains.domains
-    .filter((entry) => entry.independent_domain_agent?.opl_top_level_domain_agent === true)
-    .map((entry) => entry.domain_id);
+function agentDomainIds(): string[] {
+  return [...listStandardDomainAgentIds()];
+}
+
+function normalizeAgentDomainId(domainId: string) {
+  return resolveStandardAgent(domainId)?.agent_id ?? domainId;
 }
 
 function findAgentInternalModuleOrThrow(contracts: FrameworkContracts, agentModuleId: string) {
@@ -229,7 +235,7 @@ function parseAgentInternalModuleInspectArgs(args: AgentInternalModuleCommandArg
   ) {
     throw new FrameworkContractError('cli_usage_error', 'agents modules inspect requires --domain <domain_id> --module <agent_module_id>.', {
       usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
-      examples: ['opl agents modules inspect --domain medautoscience --module agent-runway --json'],
+      examples: ['opl agents modules inspect --domain mas --module agent-runway --json'],
       required: ['--domain', '--module'],
       unexpected_args: extraArgs,
     });
@@ -496,7 +502,7 @@ export function buildBrandModuleInterfaces(contracts: FrameworkContracts) {
 
 export function buildAgentInternalBrandModulesList(contracts: FrameworkContracts) {
   const governance = brandCliGovernance(contracts).agent_internal_modules;
-  const domainIds = agentDomainIds(contracts);
+  const domainIds = agentDomainIds();
   return {
     version: 'g2',
     agent_internal_modules: {
@@ -519,8 +525,9 @@ export function buildAgentInternalBrandModuleInspect(
   args: AgentInternalModuleCommandArgs,
 ) {
   const { domainId, agentModuleId } = parseAgentInternalModuleInspectArgs(args);
-  const domainIds = agentDomainIds(contracts);
-  if (!domainIds.includes(domainId)) {
+  const normalizedDomainId = normalizeAgentDomainId(domainId);
+  const domainIds = agentDomainIds();
+  if (!domainIds.includes(normalizedDomainId)) {
     throw new FrameworkContractError('cli_usage_error', `Unknown OPL top-level domain agent: ${domainId}.`, {
       usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
       domain_id: domainId,
@@ -536,13 +543,13 @@ export function buildAgentInternalBrandModuleInspect(
     version: 'g2',
     agent_internal_module: {
       surface_kind: 'opl_agent_internal_brand_module_inspect',
-      domain_id: domainId,
+      domain_id: normalizedDomainId,
       agent_module_id: internalModule.agent_module_id,
       platform_analogue_module_id: internalModule.platform_analogue_module_id,
       platform_module_brand_name: platformModule.brand_name,
       purpose: internalModule.purpose,
       canonical_command_surface: governance.canonical_command_surface,
-      module_command_surface: `opl agents modules inspect --domain ${domainId} --module ${internalModule.agent_module_id}`,
+      module_command_surface: `opl agents modules inspect --domain ${normalizedDomainId} --module ${internalModule.agent_module_id}`,
       command_pattern: internalModule.command_pattern,
       registry_ref: `contracts/opl-framework/brand-module-registry.json#modules.${platformModule.module_id}`,
       governance_ref: `contracts/opl-framework/brand-cli-governance.json#agent_internal_modules.module_spine.${internalModule.agent_module_id}`,
@@ -582,7 +589,7 @@ export function buildAgentInternalBrandModuleInterfaces(contracts: FrameworkCont
 
 export function buildAgentInternalBrandModuleValidation(contracts: FrameworkContracts) {
   const governance = brandCliGovernance(contracts).agent_internal_modules;
-  const domainIds = agentDomainIds(contracts);
+  const domainIds = agentDomainIds();
   const platformModuleIds = new Set(brandModuleRegistry(contracts).modules.map((entry) => entry.module_id));
   const missingDomainModuleSets = domainIds
     .filter(() => governance.module_spine.some((entry) => !platformModuleIds.has(entry.platform_analogue_module_id)))

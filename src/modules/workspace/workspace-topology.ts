@@ -178,7 +178,7 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
     mag: 'one_off',
     rca: 'series',
     oma: 'one_off',
-    bookforge: 'one_off',
+    obf: 'one_off',
   },
   legacy_domain_profile_aliases: {
     mas_portfolio: {
@@ -285,7 +285,7 @@ const PROJECT_COLLECTION_DISPLAY_LABELS: Record<WorkspaceAgentProfile['agent_id'
   mag: 'deliverables',
   rca: 'deliverables',
   oma: 'deliverables',
-  bookforge: 'books',
+  obf: 'books',
 };
 
 function topologyContract() {

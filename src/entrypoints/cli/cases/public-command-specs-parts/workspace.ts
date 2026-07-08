@@ -5,11 +5,11 @@ export function buildWorkspaceCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
 ): Record<string, CommandSpec> {
   const workspaceInitUsage = commandSpecs['workspace-init']?.usage
-    ?? 'opl workspace init --agent <mas|mag|rca|oma|bookforge> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
+    ?? 'opl workspace init --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
   const workspaceEnsureUsage = commandSpecs['workspace-ensure']?.usage
-    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|bookforge> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
+    ?? 'opl workspace ensure --agent <mas|mag|rca|oma|obf> [--workspace <path>|--workspace-root <dir>] [--workspace-id <id>] [--project-id <id>]';
   const workspaceAdoptUsage = commandSpecs['workspace adopt']?.usage
-    ?? 'opl workspace adopt --agent <mas|mag|rca|oma|bookforge> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]';
+    ?? 'opl workspace adopt --agent <mas|mag|rca|oma|obf> --workspace <path> [--project-id <id>] [--mode auto|one_off|series|portfolio] [--dry-run|--apply]';
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
@@ -122,7 +122,7 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
         'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
-        'opl workspace init --agent bookforge --workspace /Users/gaofeng/workspace/bookforge --dry-run',
+        'opl workspace init --agent obf --workspace /Users/gaofeng/workspace/bookforge --dry-run',
       ],
       group: 'workspace',
     }),

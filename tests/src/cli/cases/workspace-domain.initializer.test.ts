@@ -325,6 +325,7 @@ test('workspace init materializes Book Forge one-off book topology', () => {
     });
 
     const workspacePath = path.join(workspaceRoot, 'bookforge-workspace');
+    assert.equal(output.workspace_initialization.agent.agent_id, 'obf');
     assert.equal(output.workspace_initialization.agent.project_id, 'opl-bookforge');
     assert.equal(output.workspace_initialization.profile.profile_id, 'one_off');
     assert.equal(output.workspace_initialization.profile.workspace_mode, 'one_off');
@@ -697,8 +698,8 @@ test('workspace interfaces exports the OPL-owned initializer surfaces for tools 
   assert.equal(output.workspace_interfaces.surfaces.app.health_action_id, 'workspace_health');
   assert.equal(output.workspace_interfaces.surfaces.app.report_action_id, 'workspace_report');
   assert.equal(output.workspace_interfaces.surfaces.app.fleet_report_action_id, 'workspace_fleet_report');
-  assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma', 'bookforge']);
-  assert.match(output.workspace_interfaces.surfaces.cli.usage, /bookforge/);
+  assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma', 'obf']);
+  assert.match(output.workspace_interfaces.surfaces.cli.usage, /obf/);
 });
 
 test('workspace adopt dry-run plans OPL topology without writing metadata', () => {

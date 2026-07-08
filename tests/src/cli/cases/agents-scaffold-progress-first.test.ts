@@ -395,7 +395,7 @@ test('agents scaffold emits canonical workspace topology profile', () => {
     assert.equal(topology.domain_profile_defaults.rca, 'series');
     assert.equal(topology.domain_profile_defaults.mag, 'one_off');
     assert.equal(topology.domain_profile_defaults.oma, 'one_off');
-    assert.equal(topology.domain_profile_defaults.bookforge, 'one_off');
+    assert.equal(topology.domain_profile_defaults.obf, 'one_off');
     assert.equal(topology.legacy_domain_profile_aliases.mas_portfolio.canonical_profile_id, 'portfolio');
     assert.equal(topology.legacy_domain_profile_aliases.rca_series.canonical_profile_id, 'series');
     assert.equal(

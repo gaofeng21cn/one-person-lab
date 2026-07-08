@@ -48,7 +48,7 @@ export function buildWorkspaceInitializeCommandSpecs(
         'opl workspace init --agent rca --workspace-root /Users/gaofeng/workspace --workspace-id visual-theme-a --project-id deck-001',
         'opl workspace init --agent mas --workspace-root /Users/gaofeng/workspace --workspace-id dm-cvd --project-id DM002',
         'opl workspace init --agent oma --workspace /Users/gaofeng/workspace/agent-foundry --dry-run',
-        'opl workspace init --agent bookforge --workspace /Users/gaofeng/workspace/bookforge --dry-run',
+        'opl workspace init --agent obf --workspace /Users/gaofeng/workspace/bookforge --dry-run',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceInitializeArgs(args, specs['workspace-init']);

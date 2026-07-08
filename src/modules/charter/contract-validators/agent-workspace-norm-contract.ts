@@ -235,7 +235,7 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(contract.version, 'agent-workspace-norm.v1', 'version', filePath);
   assertExactString(contract.norm_id, 'opl.agent_workspace_norm.v1', 'norm_id', filePath);
   assertExactString(contract.owner, 'one-person-lab', 'owner', filePath);
-  assertExactStringArray(contract.supported_agents, ['mas', 'mag', 'rca', 'oma', 'bookforge'], 'supported_agents', filePath);
+  assertExactStringArray(contract.supported_agents, ['mas', 'mag', 'rca', 'oma', 'obf'], 'supported_agents', filePath);
 
   const precondition = contract.default_workspace_precondition;
   assertExactString(precondition.action_id, 'opl_workspace_ensure', 'default_workspace_precondition.action_id', filePath);
@@ -405,7 +405,7 @@ function validateAgentWorkspaceNormSemantics(
     user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
     shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
   }, filePath);
-  assertDomainProfile(contract, 'bookforge', {
+  assertDomainProfile(contract, 'obf', {
     profile: 'one_off',
     workspace_mode: 'one_off',
     project_kind: 'book_project',

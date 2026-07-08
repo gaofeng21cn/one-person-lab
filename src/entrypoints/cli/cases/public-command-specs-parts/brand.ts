@@ -152,7 +152,7 @@ export function buildBrandCommandSpecs(
     'agents modules inspect': {
       usage: 'opl agents modules inspect --domain <domain_id> --module <agent_module_id>',
       summary: 'Inspect one domain-agent internal brand-module spine from the OPL governance contract.',
-      examples: ['opl agents modules inspect --domain medautoscience --module agent-runway --json'],
+      examples: ['opl agents modules inspect --domain mas --module agent-runway --json'],
       group: 'brand',
       handler: (args) => buildAgentInternalBrandModuleInspect(getContracts(), args),
     },

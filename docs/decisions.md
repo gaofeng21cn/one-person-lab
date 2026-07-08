@@ -37,6 +37,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 影响：
 
 - `opl-meta-agent`、`opl-bookforge`、Codex Plugin、OPL App shortcut、GHCR package、workflow profile 和 generated surface 都只能作为 carrier / projection / distribution 名称；标准智能体身份仍分别写作 `oma`、`obf`。
+- `opl agents modules`、workspace norm、conformance projection 和 generated / hosted surface 的标准智能体读回都必须输出 `mas`、`mag`、`rca`、`oma`、`obf`；`medautoscience`、`medautogrant`、`redcube`、`oplmetaagent`、`oplbookforge`、`bookforge` 只能作为输入 alias、package/module carrier 或 repo owner 名出现。
 - `mas-scholar-skills` 只作为 MAS required capability package、professional Skill source 和 framework capability package 读取；它不进入 standard domain agent membership、domain-agent default-caller deletion gate 或 physical-delete 判断。
 - OPL core 中的 domain-specific 名称只能作为 compatibility carrier、profile、fixture 或 refs-only evidence 出现；不得被写成 OPL canonical ontology、domain truth、quality verdict、owner receipt、typed blocker、human gate 或 artifact authority。
 - `opl agents default-callers --family-defaults --json` 可以提供 no-active-caller、no-forbidden-write、tombstone/provenance 和 refs-only deletion evidence 读面，但 empty worklist / zero missing gate / closed retirement gate 不等于 physical delete ready。物理删除仍需要 domain owner 返回 `physical_delete_authorization_ref`、`keep_as_authority_adapter_ref` 或 `typed_blocker_ref`。
@@ -1163,8 +1164,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl workspace init --agent <mas|mag|rca|oma|bookforge>` 是显式初始化面，可使用已配置 OPL workspace root 或显式路径，按 `workspace_topology_profile` 物化 shared roots、project root、`artifacts/stage_outputs`、`workspace.yaml` 和 `workspace_index.json`，并默认激活 workspace registry binding；同 topology 的 series / portfolio workspace 可追加 project，而不是覆盖 metadata。
-- `opl workspace ensure --agent <mas|mag|rca|oma|bookforge>` 是默认快速入口：先复用 active binding 和已有 project，缺 workspace 或缺 project 时再调用同一 topology initializer；复用 active binding 时也必须补齐并检查 OPL-owned protocol refs，不能把旧 binding 当成结构健康证明。`opl workspace interfaces` 以 ensure 作为 CLI/App/MCP/Skill/OpenAI/AI SDK command contract；App 的 `workspace_ensure` action 调 ensure，`workspace_initialize` 保留为显式 init action。
+- `opl workspace init --agent <mas|mag|rca|oma|obf>` 是显式初始化面，可使用已配置 OPL workspace root 或显式路径，按 `workspace_topology_profile` 物化 shared roots、project root、`artifacts/stage_outputs`、`workspace.yaml` 和 `workspace_index.json`，并默认激活 workspace registry binding；同 topology 的 series / portfolio workspace 可追加 project，而不是覆盖 metadata。
+- `opl workspace ensure --agent <mas|mag|rca|oma|obf>` 是默认快速入口：先复用 active binding 和已有 project，缺 workspace 或缺 project 时再调用同一 topology initializer；复用 active binding 时也必须补齐并检查 OPL-owned protocol refs，不能把旧 binding 当成结构健康证明。`opl workspace interfaces` 以 ensure 作为 CLI/App/MCP/Skill/OpenAI/AI SDK command contract；App 的 `workspace_ensure` action 调 ensure，`workspace_initialize` 保留为显式 init action。
 - `opl actions export --domain ...` 继续只投影 domain-owned `family_action_catalog`，不导出或执行 framework workspace initialization。
 - 该 action 只写 OPL topology metadata 和 registry binding，不写 domain truth、不创建 owner receipt 或 typed blocker、不修改 artifact body、不授权 quality/export 或 production readiness。
 - 2026-06-07 追加：`contracts/opl-framework/agent-workspace-norm-contract.json` 是 OPL Agent workspace 的可执行规范锚点，`contract validate`、`opl workspace interfaces`、workspace-local `workspace_index.json`、App workspace actions 和 `opl agents conformance` 都必须消费它。它固定 `workspace ensure` 为默认 pre-task gate、`workspace init` 为显式初始化、MCP/Skill/OpenAI/AI SDK 为 descriptor-only delegate、Stage Native 用户检查面为 project-local `artifacts/stage_outputs`，并把 runtime-state / conformance pass / OPL registry projection 的 authority false flags 固定为机器检查项，避免各 domain agent 或 GUI 入口各自漂移。

@@ -3,14 +3,14 @@
   "version": "agent-workspace-norm.v1",
   "norm_id": "opl.agent_workspace_norm.v1",
   "owner": "one-person-lab",
-  "scope": "OPL-owned executable workspace norm for MAS, MAG, RCA, OMA, and future Foundry Agents",
+  "scope": "OPL-owned executable workspace norm for MAS, MAG, RCA, OMA, OBF, and future Foundry Agents",
   "machine_boundary": "This contract fixes the framework-owned workspace precondition, topology, registry, descriptor delegate, user inspection, and authority boundary. Domain agents keep domain truth, source/artifact/memory bodies, owner receipts, typed blockers, and quality/export verdicts.",
   "supported_agents": [
     "mas",
     "mag",
     "rca",
     "oma",
-    "bookforge"
+    "obf"
   ],
   "default_workspace_precondition": {
     "action_id": "opl_workspace_ensure",
@@ -233,7 +233,7 @@
         "deliverables"
       ]
     },
-    "bookforge": {
+    "obf": {
       "profile": "one_off",
       "workspace_mode": "one_off",
       "project_kind": "book_project",
