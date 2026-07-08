@@ -536,6 +536,13 @@ test('app state fast exposes MAS study-level running activity refs for the GUI',
       runningWorkItem.stage.catalog_ref,
       'contracts/family-orchestration/family-stage-control-plane.schema.json',
     );
+    assert.equal(runningWorkItem.attempt.refs_only, true);
+    assert.equal(runningWorkItem.attempt.attempt_count, runningProjection.stage_attempt_ids.length);
+    assert.equal(runningWorkItem.attempt.attempt_ids_ref.endsWith('.stage_attempt_ids'), true);
+    assert.equal(runningWorkItem.attempt.active_run_ref.endsWith('.active_run_id'), true);
+    assert.equal('elapsed_seconds' in runningWorkItem.attempt, true);
+    assert.deepEqual(runningWorkItem.attempt.stage_usage, runningProjection.current_stage_usage);
+    assert.deepEqual(runningWorkItem.attempt.task_total_usage, runningProjection.task_total_usage);
     assert.equal(runningWorkItem.action.action_kind, 'agent_action');
     assert.equal(
       runningWorkItem.action.catalog_ref,

@@ -569,6 +569,10 @@ function workItemProjectionItem(task: JsonRecord) {
   const openAction = asRecord(actionCard.open_action);
   const stageCatalog = workItemStageCatalogSummary();
   const stageRunCockpitSummary = asRecord(task.stage_run_cockpit_summary);
+  const stageRunCockpit = asRecord(task.stage_run_cockpit);
+  const currentStageUsage = asRecord(task.current_stage_usage);
+  const taskTotalUsage = asRecord(task.task_total_usage);
+  const stageAttemptIds = asStringArray(task.stage_attempt_ids);
   const stageId = asString(task.active_stage_id) ?? asString(executionRun.stage_id) ?? 'unknown';
   const stageLabel = asString(task.active_stage_label)
     ?? asString(executionRun.stage_label)
@@ -609,6 +613,23 @@ function workItemProjectionItem(task: JsonRecord) {
       catalog_ref: stageCatalog.source_catalog_ref,
       next_action_template_source: stageCatalog.next_action_template_source_policy,
       execution_run_label: asString(executionRun.label) ?? asString(task.execution_run_label),
+    },
+    attempt: {
+      attempt_id: stageAttemptIds[0] ?? null,
+      attempt_ref: stageAttemptIds[0] ? `${baseRef(taskId)}.stage_attempt_ids[0]` : null,
+      attempt_ids_ref: `${baseRef(taskId)}.stage_attempt_ids`,
+      attempt_count: stageAttemptIds.length,
+      active_run_ref: asString(task.active_run_id) ? `${baseRef(taskId)}.active_run_id` : null,
+      active_run_label: asString(executionRun.label) ?? asString(task.execution_run_label),
+      status: asString(task.runtime_attempt_status)
+        ?? asString(task.running_proof_status)
+        ?? asString(task.automation_state),
+      elapsed_seconds: asNumber(task.elapsed_seconds) ?? asNumber(stageRunCockpit.elapsed_seconds),
+      last_heartbeat_at: asString(task.last_heartbeat_at) ?? asString(stageRunCockpit.last_heartbeat_at),
+      stage_usage: currentStageUsage,
+      task_total_usage: taskTotalUsage,
+      telemetry_status: asString(task.usage_telemetry_status),
+      refs_only: true,
     },
     action: {
       action_kind: actionKind,
