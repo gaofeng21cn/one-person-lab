@@ -22,21 +22,10 @@ Use this skill to review `stage_candidate_portfolio` read models and projection 
 
 ## Cross-Domain Failure Patterns
 
-Use these MAS/MAG/RCA/BookForge-derived patterns as portfolio review
-heuristics, not new portfolio body rules:
-
-- `critique_as_repair_hint`: candidate critique can produce repair hints,
-  review questions, or route-back wording; it is not candidate acceptance,
-  rejection, ranking truth, or the repair itself.
-- `source_or_receipt_stale`: stale source, provenance, review, owner receipt,
-  visual artifact, grant package, or book memory refs cannot support current
-  portfolio claims.
-- `owner_route_overclaim`: human-review routes, domain owner refs, route-back
-  packets, or owner-evidence refs are not owner acceptance, quality verdict,
-  typed blocker, or readiness.
-- `candidate_body_reconstruction_forbidden`: never reconstruct candidate body,
-  domain body, clinical data, grant text, visual artifact body, or manuscript
-  body from refs, metrics, rankings, negative paths, hashes, or summaries.
+Use the shared pattern ids in
+`../../references/stage-cross-domain-failure-patterns.md` as portfolio review
+heuristics, not new portfolio body rules. Map them to candidate-ref coverage,
+advisory-metric restraint, human-review route clarity, and owner-route gaps.
 
 ## Inputs
 

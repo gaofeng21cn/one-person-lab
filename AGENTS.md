@@ -16,7 +16,7 @@
 ## 开发原则
 
 - 维护开发判断默认遵循用户级 `~/.codex/TASTE.md` 的原则；如果本仓事实、contracts、runtime evidence 或更深层 `AGENTS.md` 需要局部偏离，必须把偏离原因和适用范围写清楚。
-- 第一优先级：保持 `Codex CLI first-class executor -> explicit OPL activation -> provider-backed stage runtime / typed queue when durable orchestration is needed -> selected domain agent entry` 这条当前主链路；domain app skill 的 direct path 仍是一等入口，其他 executor 只通过显式 adapter 进入。
+- 第一优先级：保持 `Codex CLI first-class executor -> explicit OPL activation -> stage-attempt projection / Temporal-backed provider runtime -> selected domain agent entry` 这条当前主链路；domain app skill 的 direct path 仍是一等入口，其他 executor 只通过显式 adapter 进入。
 - 第二优先级：把 shared modules / contracts / indexes 的共享边界放在 domain 仓之上，同时保留 domain-owned truth。
 - 第三优先级：保证 public docs、machine-readable contracts、reference docs 与 active domain agent 状态同步，不制造第二真相源。
 - 面向本仓的方案、重构、优化、代码改动、配置改动和文档改动，必须在方案说明、执行说明和最终汇报中标明涉及的 OPL 品牌模块；若涉及多个模块，应分别列出主模块、协同模块和不触碰范围。当前品牌模块集合以 `contracts/opl-framework/brand-module-registry.json`、`docs/references/brand-modules/`、核心五件套和 fresh `opl brand-modules * --json` 输出为准；本规则只约束表达透明度，不把当前模块数量冻结为上限。若实际需要新增、合并、拆分或退役模块，必须说明必要性、目标 owner、machine boundary、验证口径和文档 / contract foldback。

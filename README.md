@@ -194,12 +194,12 @@ This repository maintains the One Person Lab framework layer:
 
 - CLI entry points for installation, initialization, diagnostics, and repair.
 - Explicit activation, route orchestration, stage control, cognitive computation kernel boundaries, handoff, receipts, human gates, and recovery.
-- Runtime providers, typed queue, stage attempt ledger, runtime snapshots, and projection consumption.
+- Temporal runtime provider, stage-attempt projection, attempt ledger, runtime snapshots, and projection consumption.
 - Machine-readable contracts, module discovery, `opl connect exec`, and Connect skill synchronization.
 
 OPL follows an AI-first, contract-light surface model: the active framework narrative is `Minimal Trust Kernel + Stage Strategy Kernel + Readiness + Derived Diagnostic Lenses + Surface Budget + AI Capability Aperture`. The kernel admits stage packs and binds owner boundaries, permissions, expected receipts, audit, replay, and route-back evidence. Prompt/skill/tool-affordance/knowledge/rubric refs are strategy and boundary refs for inspectability and reuse, but their completeness is not an OPL launch hard gate. Tool refs are an affordance catalog, not a workflow script: OPL standardizes permission, credential, write-scope, side-effect, and forbidden-authority boundaries, while the executor decides which tools to use, skip, combine, replace, or ask about during the attempt. Readiness aggregates launch and evidence gaps without issuing domain verdicts. Diagnostic lenses can explain blockers, stale assumptions, replay gaps, or route-back evidence, but they do not become runtime planners, proof assistants, workflow compilers, or quality authorities. The surface budget keeps new default surfaces limited to launch safety, authority boundary, evidence/replay/audit/route-back, or repeated App/runtime consumption; other learning points stay as refs, warnings, diagnostics, or history. The AI Capability Aperture keeps open-ended expert work available to stronger executors while routing quality, publication, fundability, visual, and export judgment back to independent AI reviewer or domain-owner receipts.
 
-Temporal-backed provider support is the production online runtime target. Local providers are used for development, testing, and offline diagnostics. Codex CLI is the current first-class executor; Hermes-Agent, Claude Code, and similar tools can enter as explicit executor adapters with receipts and auditability.
+Temporal-backed provider support is the production online runtime target. Local/offline diagnostics use projection/readback indexes, not provider fallback. Codex CLI is the current first-class executor; Hermes-Agent, Claude Code, and similar tools can enter as explicit executor adapters with receipts and auditability.
 
 ### Documentation
 

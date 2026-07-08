@@ -1,4 +1,4 @@
-"""Deterministic local helpers for the OPL Workspace Source Readiness Auditor skill."""
+"""Deterministic local helpers for the OPL Workspace Handoff Writer skill."""
 
 from __future__ import annotations
 

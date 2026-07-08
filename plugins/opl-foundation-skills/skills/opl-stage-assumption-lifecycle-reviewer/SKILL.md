@@ -22,21 +22,10 @@ Use this skill to turn `family-stage-assumption-lifecycle` projections into an A
 
 ## Cross-Domain Failure Patterns
 
-Use these MAS/MAG/RCA/BookForge-derived patterns as review heuristics, not new
-contracts:
-
-- `critique_as_repair_hint`: a lifecycle critique may suggest the next repair
-  or route-back, but it does not mutate the assumption, close a monitor, or
-  become the repair itself.
-- `source_or_receipt_stale`: stale source, monitor, owner receipt, visual
-  evidence, grant evidence, or book memory refs stay stale until the owning
-  surface refreshes them.
-- `owner_route_overclaim`: a route to MAS/MAG/RCA/BookForge, OPL Stagecraft, or
-  a human reviewer is not owner acceptance, quality verdict, typed blocker, or
-  readiness.
-- `candidate_body_reconstruction_forbidden`: do not infer clinical data, grant
-  text, visual artifact body, book manuscript body, or candidate content from
-  refs, counts, hashes, monitor labels, or lifecycle summaries.
+Use the shared pattern ids in
+`../../references/stage-cross-domain-failure-patterns.md` as lifecycle review
+heuristics, not new contracts. Map them to assumption meaning, stage impact,
+monitor completeness, owner-route clarity, and repair recommendation quality.
 
 ## Inputs
 

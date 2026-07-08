@@ -22,21 +22,10 @@ Use this skill to critique an OPL stage quality gate, admission projection, or g
 
 ## Cross-Domain Failure Patterns
 
-Use these MAS/MAG/RCA/BookForge-derived patterns as quality-gate critique
-heuristics, not new evaluator contracts:
-
-- `critique_as_repair_hint`: a critique should name a repair hint, missing
-  proof, or route-back. It is not a gate pass/fail, repair execution, owner
-  receipt, typed blocker, or promotion decision.
-- `source_or_receipt_stale`: stale source, reviewer receipt, publication/grant
-  evidence, visual export proof, or book artifact refs cannot satisfy the
-  current gate.
-- `owner_route_overclaim`: owner route coverage, route-back packets, connector
-  receipts, or OPL evidence refs are not domain owner acceptance, quality
-  verdict, readiness, or human decision.
-- `candidate_body_reconstruction_forbidden`: do not reconstruct or judge hidden
-  candidate/artifact/source bodies from refs, metrics, hashes, summaries, or
-  gate evidence lower bounds.
+Use the shared pattern ids in
+`../../references/stage-cross-domain-failure-patterns.md` as quality-gate
+critique heuristics, not new evaluator contracts. Map them to evidence fit,
+rubric quality, evaluator overclaim, owner route, and route-back wording.
 
 ## Workflow
 
