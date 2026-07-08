@@ -186,7 +186,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect oma');
     } else if (pack.canonical_plugin_name === 'obf') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'obf');
-      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
+      assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect obf');
       assert.equal(pack.command_surface_spine.work_alias, 'book');
     } else if (pack.canonical_plugin_name === 'mas') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mas');

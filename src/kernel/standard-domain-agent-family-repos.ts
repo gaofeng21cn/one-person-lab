@@ -13,7 +13,7 @@ export const DEFAULT_FAMILY_REPOS = [
   { requested_agent_id: 'mag', directory: 'med-autogrant' },
   { requested_agent_id: 'rca', directory: 'redcube-ai' },
   { requested_agent_id: 'opl-meta-agent', directory: 'opl-meta-agent' },
-  { requested_agent_id: 'opl-bookforge', directory: 'opl-bookforge' },
+  { requested_agent_id: 'obf', directory: 'opl-bookforge' },
   { requested_agent_id: 'mas-scholar-skills', directory: 'mas-scholar-skills' },
 ] as const;
 

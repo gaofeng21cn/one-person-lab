@@ -463,7 +463,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'mag',
     'rca',
     'oma',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.deepEqual(contract.foundry_agent_os_standard.framework_capability_packages?.map((entry) => entry.agent_id), [
     'mas-scholar-skills',
@@ -481,14 +481,14 @@ test('target operating architecture contract freezes resource, authority, lane, 
     'Scholar Capability Pack',
   );
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.mas, 'Medical Research Pack');
-  assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-bookforge'], 'Book Manuscript Pack');
+  assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.obf, 'Book Manuscript Pack');
   assert.equal('mas-scholar-skills' in contract.foundry_agent_os_standard.domain_pack_examples, false);
   assert.equal(
     contract.foundry_agent_os_standard.domain_authority_kernel_examples.mag.includes('fundability quality/export verdict'),
     true,
   );
   assert.equal(
-    contract.foundry_agent_os_standard.domain_authority_kernel_examples['opl-bookforge'].includes('book manuscript truth'),
+    contract.foundry_agent_os_standard.domain_authority_kernel_examples.obf.includes('book manuscript truth'),
     true,
   );
   assert.equal('mas-scholar-skills' in contract.foundry_agent_os_standard.domain_authority_kernel_examples, false);

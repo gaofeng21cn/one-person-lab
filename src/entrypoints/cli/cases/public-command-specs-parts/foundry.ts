@@ -31,12 +31,12 @@ export function buildFoundryCommandSpecs(): Record<string, CommandSpec> {
       handler: (args) => buildFoundryAgentsList(args),
     },
     'foundry agents inspect': {
-      usage: 'opl foundry agents inspect <mas|mag|rca|oma|opl-bookforge>',
+    usage: 'opl foundry agents inspect <mas|mag|rca|oma|obf>',
       summary: 'Inspect one standard Foundry Agent series member and its direct CLI foundry spine, ordinary work alias, Skill/MCP projection, and authority boundary.',
       examples: [
         'opl foundry agents inspect mas --json',
         'opl foundry agents inspect rca --json',
-        'opl foundry agents inspect opl-bookforge --json',
+        'opl foundry agents inspect obf --json',
       ],
       group: 'foundry',
       handler: (args) => buildFoundryAgentInspect(args),

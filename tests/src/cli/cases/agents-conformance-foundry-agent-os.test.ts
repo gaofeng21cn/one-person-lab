@@ -42,7 +42,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     '--agent',
     `oma=${omaRepo}`,
     '--agent',
-    `opl-bookforge=${bookForgeRepo}`,
+    `obf=${bookForgeRepo}`,
     '--agent',
     `mas-scholar-skills=${scholarSkillsRepo}`,
   ]);
@@ -60,7 +60,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     'mag',
     'rca',
     'oma',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.deepEqual(foundry.framework_capability_package_ids, ['mas-scholar-skills']);
   assert.deepEqual(foundry.observed_domain_agent_ids, [
@@ -68,7 +68,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     'mag',
     'rca',
     'oma',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.deepEqual(foundry.observed_framework_capability_package_ids, ['mas-scholar-skills']);
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
@@ -124,7 +124,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     'mag',
     'rca',
     'oma',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.equal(foundry.default_owner_route_policy.default_route_root, 'current_owner_delta');
   assert.equal(foundry.default_owner_route_policy.default_execution_resource, 'StageRun');
@@ -180,7 +180,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.standard_membership_policy.policy_id, 'foundry_agent_standard_membership_is_not_surface_origin.v1');
   assert.deepEqual(
     foundry.standard_membership_policy.standard_member_agent_ids,
-    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+    ['mas', 'mag', 'rca', 'oma', 'obf'],
   );
   assert.deepEqual(foundry.new_agent_baseline_handoff_policy.required_gates, [
     'scaffold_validation',
@@ -257,7 +257,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(mas.flagship_experience_mapping.private_platform_residue_inputs.includes('private_workbench'), true);
   assert.equal(mas.default_owner_route, null);
 
-  for (const agentId of ['mag', 'rca', 'oma', 'opl-bookforge']) {
+  for (const agentId of ['mag', 'rca', 'oma', 'obf']) {
     const domain = foundry.domains.find((entry: { canonical_agent_id: string }) =>
       entry.canonical_agent_id === agentId
     );
@@ -307,7 +307,7 @@ test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming doma
     'mas',
     'mag',
     'rca',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.deepEqual(foundry.observed_domain_agent_ids, ['oma']);
   assert.equal(oma.domain_id, 'opl-meta-agent');
@@ -355,13 +355,13 @@ test('Foundry Agent OS treats BookForge as a standard member without using gener
     '--agent',
     `oma=${omaRepo}`,
     '--agent',
-    `opl-bookforge=${bookForgeRepo}`,
+    `obf=${bookForgeRepo}`,
     '--agent',
     `mas-scholar-skills=${scholarSkillsRepo}`,
   ]);
   const foundry = payload.standard_domain_agent_conformance.foundry_agent_os_conformance;
   const bookForge = foundry.domains.find((domain: { canonical_agent_id: string }) =>
-    domain.canonical_agent_id === 'opl-bookforge'
+    domain.canonical_agent_id === 'obf'
   );
   const scholarSkills = foundry.domains.find((domain: { canonical_agent_id: string }) =>
     domain.canonical_agent_id === 'mas-scholar-skills'
@@ -373,7 +373,7 @@ test('Foundry Agent OS treats BookForge as a standard member without using gener
     'mag',
     'rca',
     'oma',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.deepEqual(foundry.framework_capability_package_ids, ['mas-scholar-skills']);
   assert.deepEqual(foundry.observed_domain_agent_ids, [
@@ -381,19 +381,20 @@ test('Foundry Agent OS treats BookForge as a standard member without using gener
     'mag',
     'rca',
     'oma',
-    'opl-bookforge',
+    'obf',
   ]);
   assert.deepEqual(foundry.observed_framework_capability_package_ids, ['mas-scholar-skills']);
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
   assert.deepEqual(foundry.missing_domain_agent_ids, []);
   assert.deepEqual(foundry.missing_framework_capability_package_ids, []);
   assert.equal(
-    foundry.blockers.includes('domain_not_in_foundry_agent_os_standard:opl-bookforge'),
+    foundry.blockers.includes('domain_not_in_foundry_agent_os_standard:obf'),
     false,
   );
   assert.ok(bookForge);
   assert.equal(bookForge.domain_id, 'opl-bookforge');
-  assert.equal(bookForge.requested_agent_id, 'opl-bookforge');
+  assert.equal(bookForge.requested_agent_id, 'obf');
+  assert.equal(bookForge.canonical_agent_id, 'obf');
   assert.equal(bookForge.standard_membership, 'standard_domain_agent');
   assert.equal(bookForge.foundry_agent_os_standard_member, true);
   assert.equal(bookForge.status, 'passed');

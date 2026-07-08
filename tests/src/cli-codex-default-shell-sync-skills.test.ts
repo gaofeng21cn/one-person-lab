@@ -84,7 +84,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.deepEqual(bookforgePack?.command_preview, ['opl', 'connect', 'sync-skills', '--domain', 'oplbookforge']);
     assert.deepEqual(bookforgePack?.plugin_transport.generation_preview_command?.slice(0, 3), ['opl', 'agents', 'interfaces']);
     assert.equal(bookforgePack?.foundry_agent_series?.canonical_command_surface, 'opl agents foundry');
-    assert.equal(bookforgePack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
+    assert.equal(bookforgePack?.foundry_agent_series?.default_foundry_command_surface, 'opl foundry agents inspect obf');
     assert.deepEqual(Object.keys(bookforgePack.foundry_agent_series).sort(), [
       'brand_cli',
       'canonical_command_surface',

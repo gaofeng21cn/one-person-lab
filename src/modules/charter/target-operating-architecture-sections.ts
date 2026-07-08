@@ -370,7 +370,7 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
   }
   requireEveryValue(
     defaultOwnerRoutePolicyAgentIds,
-    ['mag', 'rca', 'oma', 'opl-bookforge'],
+    ['mag', 'rca', 'oma', 'obf'],
     'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
     filePath,
   );

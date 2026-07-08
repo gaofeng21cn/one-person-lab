@@ -203,7 +203,7 @@ export const FOUNDRY_STANDARD_AGENT_MEMBERSHIP_READBACK = {
   guard_role:
     'foundry_agent_standard_membership_is_not_split_by_generated_surface_opl_hosted_command_route_or_plugin_transport',
   cli_readback_command: './bin/opl agents conformance --family-defaults --json',
-  standard_member_agent_ids: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+  standard_member_agent_ids: ['mas', 'mag', 'rca', 'oma', 'obf'],
   public_projection_policy: {
     standard_membership_value: 'standard_domain_agent',
     generated_surface_or_hosted_route_is_membership_axis: false,

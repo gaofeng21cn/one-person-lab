@@ -116,7 +116,7 @@ test('agent-owned internal modules expose the same branding spine without becomi
 });
 
 test('Foundry Agent series exposes a shared CLI spine instead of copying OPL brand modules into each agent', () => {
-  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'mas-scholar-skills'];
+  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills'];
 
   for (const operation of ['status', 'inspect', 'interfaces', 'validate', 'doctor', 'peers']) {
     const output = runCli(['agents', 'foundry', operation]).foundry_agent_cli_spine;
@@ -182,7 +182,7 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
 
 test('OPL Foundry Agent index exposes all standard agents as one standard series', () => {
   const list = runCli(['foundry', 'agents', 'list']).foundry_agents;
-  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'mas-scholar-skills'];
+  const expectedStandardAgentIds = ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills'];
 
   assert.deepEqual(
     list.agents.map((entry: { agent_id: string }) => entry.agent_id),
@@ -368,23 +368,28 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
   assertSelfEvolutionTrigger(oma, 'domain_thin_feedback_adapter');
   assertDeveloperModeTargetHint(oma, 'domain_module');
 
-  const bookforge = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
+  const bookforge = runCli(['foundry', 'agents', 'inspect', 'obf']).foundry_agent;
   assert.equal(bookforge.status, 'standard_domain_agent');
+  assert.equal(bookforge.agent_id, 'obf');
   assert.equal(bookforge.standard_agent_registry_ref, 'src/modules/charter/standard-agent-registry.ts');
   assert.equal(bookforge.series_membership, 'standard_domain_agent');
   assert.equal(bookforge.work_object.natural_alias, 'book');
   assert.equal(bookforge.brand_cli, 'obf');
-  assert.equal(bookforge.foundry_command_surface, 'opl foundry agents inspect opl-bookforge');
+  assert.equal(bookforge.foundry_command_surface, 'opl foundry agents inspect obf');
   assertOnlyAllowedFoundryProjectionFields(bookforge, allowedFoundryAgentInspectFields);
-  assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect opl-bookforge --json');
+  assert.equal(bookforge.cli_smoke.status_json_command, 'opl foundry agents inspect obf --json');
   assert.equal(bookforge.cli_smoke.executable_brand_cli_command_surface, null);
   assert.equal(bookforge.command_surface_policy.first_screen_must_identify_series, true);
   assertSelfEvolutionTrigger(bookforge, 'domain_thin_feedback_adapter');
   assertDeveloperModeTargetHint(bookforge, 'domain_module');
 
   const bookforgeAlias = runCli(['foundry', 'agents', 'inspect', 'bookforge']).foundry_agent;
-  assert.equal(bookforgeAlias.agent_id, 'opl-bookforge');
+  assert.equal(bookforgeAlias.agent_id, 'obf');
   assert.equal(bookforgeAlias.status, 'standard_domain_agent');
+
+  const bookforgeRepoAlias = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
+  assert.equal(bookforgeRepoAlias.agent_id, 'obf');
+  assert.equal(bookforgeRepoAlias.foundry_command_surface, 'opl foundry agents inspect obf');
 
   const scholarSkills = runCli(['foundry', 'agents', 'inspect', 'mas-scholar-skills']).foundry_agent;
   assert.equal(scholarSkills.status, 'framework_capability_package');

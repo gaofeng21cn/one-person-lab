@@ -1023,14 +1023,14 @@
       "mag",
       "rca",
       "oma",
-      "opl-bookforge"
+      "obf"
     ],
     "domain_pack_examples": {
       "mas": "Medical Research Pack",
       "mag": "Grant Pack",
       "rca": "Visual Deliverable Pack",
       "oma": "Agent-Building Pack",
-      "opl-bookforge": "Book Manuscript Pack"
+      "obf": "Book Manuscript Pack"
     },
     "domain_authority_kernel_examples": {
       "mas": [
@@ -1064,7 +1064,7 @@
         "target-agent no-forbidden-write proof",
         "target-agent typed blocker signer"
       ],
-      "opl-bookforge": [
+      "obf": [
         "book manuscript truth",
         "manuscript quality/export verdict",
         "book artifact authority",
@@ -1167,7 +1167,7 @@
         "mag",
         "rca",
         "oma",
-        "opl-bookforge"
+        "obf"
       ],
       "default_route_root": "current_owner_delta",
       "default_execution_resource": "StageRun",

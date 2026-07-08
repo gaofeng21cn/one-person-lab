@@ -149,7 +149,7 @@ export const STANDARD_AGENT_REGISTRY = [
     ],
   },
   {
-    agent_id: 'opl-bookforge',
+    agent_id: 'obf',
     domain_id: 'oplbookforge',
     label: 'OPL Book Forge',
     series_membership: STANDARD_AGENT_SERIES_MEMBERSHIP,

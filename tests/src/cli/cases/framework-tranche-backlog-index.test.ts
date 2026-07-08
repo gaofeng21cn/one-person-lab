@@ -345,7 +345,7 @@ test('framework tranche backlog exposes current selection and closed tranche arc
   );
   assert.deepEqual(
     readback.foundry_standard_agent_membership_readback.standard_member_agent_ids,
-    ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+    ['mas', 'mag', 'rca', 'oma', 'obf'],
   );
   assert.equal(
     readback.foundry_standard_agent_membership_readback.public_projection_policy

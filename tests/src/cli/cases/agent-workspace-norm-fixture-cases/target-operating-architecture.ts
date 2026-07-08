@@ -394,7 +394,7 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
     source_pattern_ref: 'human_doc:mas_opl_agent_os_target_operating_architecture',
     standard_agent_registry_ref: 'src/modules/charter/standard-agent-registry.ts',
     target_shape: 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
-    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'obf'],
     framework_capability_packages: [
       {
         agent_id: 'mas-scholar-skills',
@@ -421,14 +421,14 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       mag: 'Grant Pack',
       rca: 'Visual Deliverable Pack',
       oma: 'Agent-Building Pack',
-      'opl-bookforge': 'Book Manuscript Pack',
+      obf: 'Book Manuscript Pack',
     },
     domain_authority_kernel_examples: {
       mas: ['medical research truth', 'owner receipt signer'],
       mag: ['grant truth', 'owner receipt signer'],
       rca: ['visual truth', 'owner receipt signer'],
       oma: ['agent-building semantics', 'target-agent typed blocker signer'],
-      'opl-bookforge': ['book manuscript truth', 'owner receipt signer'],
+      obf: ['book manuscript truth', 'owner receipt signer'],
     },
     new_agent_baseline_handoff_policy: {
       surface_kind: 'opl_foundry_new_agent_baseline_handoff_policy',
