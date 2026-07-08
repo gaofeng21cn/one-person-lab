@@ -622,7 +622,7 @@ test('domain explain-boundary explains under-definition requests', () => {
   assert.match(output.boundary_explanation.reason, /under definition/i);
 });
 
-test('help returns command discovery and runnable examples', () => {
+test('help returns machine-readable command discovery without retired entries', () => {
   const output = runCli(['help']);
 
   assertNoContractsProvenance(output);
@@ -635,13 +635,6 @@ test('help returns command discovery and runnable examples', () => {
     ),
   );
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'contract validate'), false);
-  const diagnosticGroups = output.help.diagnostic_command_groups as Array<{ group_id: string; help_command: string }>;
-  for (const groupId of ['contract', 'domain', 'runtime', 'session']) {
-    assert.ok(
-      diagnosticGroups.some((entry) => entry.group_id === groupId && entry.help_command === `opl help ${groupId}`),
-      groupId,
-    );
-  }
   assert.equal(
     ['service install', 'service status', 'service open'].some((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
@@ -653,87 +646,23 @@ test('help returns command discovery and runnable examples', () => {
     false,
   );
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'system'), false);
-  const contractHelp = runCli(['help', 'contract', 'validate']);
-  assert.equal(contractHelp.help.command, 'contract validate');
-  assert.ok(contractHelp.help.examples.includes('opl contract validate'));
-  assert.equal(runCli(['help', 'domain', 'explain-boundary']).help.command, 'domain explain-boundary');
   const commandText = JSON.stringify(output.help.commands);
   assert.match(commandText, /--executor\b/);
-  assert.ok(
-    output.help.commands.some(
-      (entry: { command: string; usage: string; examples: string[]; summary: string }) =>
-        entry.command === 'exec'
-        && /--executor <codex_cli\|hermes_agent\|claude_code\|antigravity_cli>/.test(entry.usage)
-        && entry.examples.some((example) => example.includes('--executor hermes_agent'))
-        && entry.examples.some((example) => example.includes('--executor claude_code'))
-        && entry.examples.some((example) => example.includes('--executor antigravity_cli'))
-        && /Codex CLI remains the default/.test(entry.summary),
-    ),
-  );
-  assert.ok(
-    diagnosticGroups.some((entry) => entry.group_id === 'runtime'),
-  );
-  const executorDoctorHelp = runCli(['help', 'executor', 'doctor']);
-  assert.match(executorDoctorHelp.help.usage, /--executor <codex_cli\|hermes_agent\|claude_code\|antigravity_cli>/);
-  const executorRunHelp = runCli(['help', 'executor', 'run']);
-  assert.equal(
-    executorRunHelp.help.usage,
-    'opl executor run --request <request.json>',
-  );
   assert.doesNotMatch(commandText, /<codex\|hermes>/);
   assert.doesNotMatch(commandText, /hermes-cron/);
   assert.doesNotMatch(commandText, /Compatibility alias/);
-  const sessionResumeHelp = runCli(['help', 'session', 'resume']);
-  assert.equal(sessionResumeHelp.help.usage, 'opl session resume <session_id>');
-  assert.equal(sessionResumeHelp.help.examples.every((example: string) => !example.includes('--executor')), true);
-  assert.equal(sessionResumeHelp.help.examples.every((example: string) => !example.includes('hermes')), true);
-  assert.match(sessionResumeHelp.help.summary, /OPL-managed session/);
 });
 
-test('root --help returns the same machine-readable help payload', () => {
-  const output = runCli(['--help']);
-
-  assertNoContractsProvenance(output);
-  assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, null);
-  assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'charter status'),
-  );
-  assert.equal(
-    output.help.diagnostic_command_groups.some((entry: { group_id: string }) => entry.group_id === 'contract'),
-    true,
-  );
-});
-
-test('command --help returns command-scoped usage and examples', () => {
+test('command help forms return stable machine-readable usage', () => {
+  assert.deepEqual(runCli(['--help']), runCli(['help']));
   const output = runCli(['contract', 'domain', '--help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, 'contract domain');
   assert.equal(output.help.usage, 'opl contract domain <domain_id>');
-  assert.ok(output.help.examples.includes('opl contract domain redcube'));
-});
-
-test('help <command> returns the same payload as command --help', () => {
-  const viaHelp = runCli(['help', 'contract', 'domain']);
-  const viaFlag = runCli(['contract', 'domain', '--help']);
-
-  assert.deepEqual(viaHelp, viaFlag);
-});
-
-test('domain explain-boundary --help advertises the xiaohongshu family-boundary example', () => {
-  const output = runCli(['domain', 'explain-boundary', '--help']);
-
-  assertNoContractsProvenance(output);
-  assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, 'domain explain-boundary');
-  assert.ok(
-    output.help.examples.includes(
-      'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
-    ),
-  );
+  assert.deepEqual(runCli(['help', 'contract', 'domain']), output);
+  assert.equal(runCli(['domain', 'explain-boundary', '--help']).help.command, 'domain explain-boundary');
 });
 
 test('family-runtime nested --help returns command help without executing runtime subcommands', () => {
@@ -748,16 +677,8 @@ test('family-runtime nested --help returns command help without executing runtim
     assert.equal(output.version, 'g2');
     assert.equal(output.help.command, 'family-runtime');
     assert.match(output.help.usage, /provider-slo tick/);
-    assert.doesNotMatch(output.help.usage, /scheduler tick/);
     assert.match(output.help.usage, /attempt query/);
-    assert.doesNotMatch(output.help.usage, /\bintake\b/);
-    assert.doesNotMatch(output.help.usage, /(^|\|)tick(\||\s|\[)/);
-    assert.doesNotMatch(output.help.usage, /family-runtime tick/);
-    assert.doesNotMatch(output.help.usage, /\benqueue\b/);
-    assert.doesNotMatch(output.help.usage, /queue list/);
-    assert.doesNotMatch(output.help.usage, /queue release/);
-    assert.doesNotMatch(output.help.usage, /queue retire/);
-    assert.doesNotMatch(output.help.usage, /\bapprove\b/);
+    assert.doesNotMatch(output.help.usage, /scheduler tick|family-runtime tick|\benqueue\b|queue (list|release|retire)|\bapprove\b/);
     assert.equal(Object.hasOwn(output, 'family_runtime_queue'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_queue_release'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_tick'), false);

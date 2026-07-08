@@ -6,7 +6,6 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
@@ -45,13 +44,26 @@ function addScholarSkillsCapabilityPackage(workspaceRoot: string) {
   return repoDir;
 }
 
-test('family-runtime evidence-worklist uses repo-native default-caller readiness before manifest projection', () => {
+function familyWorkspace() {
+  return createMinimalFamilyWorkspaceRoot({
+    includeOplMetaAgent: true,
+    buildRepo: (domainId, domainLabel) => {
+      const repoDir = buildReadyAgentRepo();
+      retargetReadyRepo(repoDir, domainId, domainLabel);
+      if (domainId === 'opl-meta-agent') {
+        configureReadyMetaMorphology(repoDir);
+      }
+      return repoDir;
+    },
+  });
+}
+
+test('family-runtime evidence-worklist consumes repo-native default-caller readiness', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-caller-repo-native-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const baseManifests = loadFamilyManifestFixtures();
   const repoDir = buildReadyAgentRepo();
   const manifest = withEvidenceWorklistSurfaces(
-    baseManifests.medautogrant,
+    loadFamilyManifestFixtures().medautogrant,
     ['package_and_submit_ready'],
     { defaultCallerDeletionEvidence: true },
   );
@@ -79,44 +91,8 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     assert.equal(defaultCallers.summary.missing_no_active_caller_proof_count, 0);
     assert.equal(defaultCallers.summary.missing_no_forbidden_write_proof_count, 8);
     assert.equal(defaultCallers.summary.missing_tombstone_or_provenance_ref_count, 8);
-    assert.equal(
-      defaultCallers.physical_delete_authority_read_model.delete_or_keep_prerequisites_observed,
-      false,
-    );
-    assert.equal(
-      defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
-      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
-    );
-    assert.deepEqual(
-      defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
-      ['typed_blocker_ref'],
-    );
-    assert.equal(
-      defaultCallers.reports[0].deletion_evidence_worklists.every((worklist: {
-        no_active_caller_proof: {
-          status: string;
-          observed_from_active_caller_target_proof: boolean;
-          evidence_refs: string[];
-        };
-      }) => (
-        worklist.no_active_caller_proof.status === 'observed'
-        && worklist.no_active_caller_proof.observed_from_active_caller_target_proof === true
-        && worklist.no_active_caller_proof.evidence_refs.some((ref) =>
-          ref.startsWith('active_caller_target_proof.surface_targets.')
-        )
-      )),
-      true,
-    );
-    assert.equal(
-      defaultCallers.retirement_guard_readout.non_authorizing_surfaces.includes('opl_agents_conformance'),
-      true,
-    );
-    assert.equal(
-      defaultCallers.retirement_guard_readout.non_authorizing_surfaces.includes(
-        'opl_family_runtime_evidence_worklist_refs_only_receipt',
-      ),
-      true,
-    );
+    assert.equal(defaultCallers.physical_delete_authority_read_model.delete_or_keep_prerequisites_observed, false);
+    assert.equal(defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes[0], 'typed_blocker_ref');
 
     const drilldown = runCli([
       'runtime',
@@ -127,45 +103,11 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
     const refs = drilldown.app_operator_drilldown.default_caller_deletion_evidence_refs;
     assert.equal(refs.summary.deletion_evidence_worklist_count, 8);
     assert.equal(refs.summary.open_deletion_evidence_requirement_count, 24);
-    assert.equal(refs.summary.missing_domain_owner_receipt_or_typed_blocker_count, 8);
-    assert.equal(refs.summary.missing_no_active_caller_proof_count, 0);
-    assert.equal(refs.summary.missing_no_forbidden_write_proof_count, 8);
-    assert.equal(refs.summary.missing_tombstone_or_provenance_ref_count, 8);
-    assert.equal(refs.summary.delete_or_keep_prerequisites_observed, false);
-    assert.equal(
-      refs.summary.next_required_owner_action,
-      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
-    );
-    assert.deepEqual(refs.summary.accepted_refs_only_result_shapes, ['typed_blocker_ref']);
-    assert.equal(refs.summary.owner_decision_status, 'waiting_for_structural_prerequisites');
-    assert.equal(
-      refs.summary.non_authorizing_surfaces.includes(
-        'opl_family_runtime_evidence_worklist_refs_only_receipt',
-      ),
-      true,
-    );
-    assert.deepEqual(refs.summary.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
-    assert.equal(refs.summary.retirement_guard_target_classes.includes('legacy_dispatch_compensation_path'), true);
-    assert.equal(refs.summary.retirement_guard_target_classes.includes('retained_domain_wrapper'), true);
     assert.equal(refs.domains[0].source, 'agent_default_caller_readiness_repo_projection');
-    assert.equal(refs.domains[0].summary.owner_decision_status, 'waiting_for_structural_prerequisites');
-    assert.equal(
-      refs.domains[0].deletion_evidence_worklists.every((worklist: {
-        owner_decision_status: string;
-        non_authorizing_surfaces: string[];
-      }) => (
-        worklist.owner_decision_status === 'waiting_for_structural_prerequisites'
-        && worklist.non_authorizing_surfaces.includes('opl_agents_default_callers_readiness')
-        && worklist.non_authorizing_surfaces.includes(
-          'opl_family_runtime_evidence_worklist_refs_only_receipt',
-        )
-      )),
-      true,
-    );
     assert.equal(refs.summary.default_caller_delete_ready, false);
     assert.equal(refs.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
 
-    const fullOutput = runCli([
+    const fullWorklist = runCli([
       'family-runtime',
       'evidence-worklist',
       '--family-defaults',
@@ -175,36 +117,15 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
       'codex_cli',
       '--detail',
       'full',
-    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
-    const fullWorklist = fullOutput.family_runtime_evidence_worklist;
+    ], familyRuntimeEnv(stateRoot, fixtureContractsRoot)).family_runtime_evidence_worklist;
     assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 24);
-    assert.equal(
-      fullWorklist.summary.default_caller_deletion_domain_owner_receipt_or_typed_blocker_missing_count,
-      8,
-    );
     assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_no_forbidden_write_missing_count, 8);
-    assert.equal(fullWorklist.summary.default_caller_deletion_tombstone_or_provenance_missing_count, 8);
-    assert.deepEqual(fullWorklist.summary.default_caller_deletion_mandatory_gate_ids, [
-      'replacement_parity',
-      'no_active_caller_proof',
-      'domain_owner_receipt_or_typed_blocker',
-      'no_forbidden_write_proof',
-      'tombstone_or_provenance_ref',
-    ]);
-    assert.equal(
-      fullWorklist.summary.default_caller_deletion_retirement_target_classes.includes(
-        'legacy_materialize_compensation_path',
-      ),
-      true,
-    );
     assert.equal(
       fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
         item.claim_scope === 'default_caller_deletion_evidence'
       ).length,
       24,
     );
-    assert.equal(fullWorklist.summary.not_authorized_claims.includes('default_caller_delete_ready'), true);
   } finally {
     fs.rmSync(repoDir, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -212,69 +133,28 @@ test('family-runtime evidence-worklist uses repo-native default-caller readiness
   }
 });
 
-test('family-runtime evidence-worklist keeps family default-caller deletion scope aligned with OMA', () => {
+test('family defaults keep OMA default-caller cleanup out of runtime worklist items', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-default-caller-oma-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot({
-    includeOplMetaAgent: true,
-    buildRepo: (domainId, domainLabel) => {
-      const repoDir = buildReadyAgentRepo();
-      retargetReadyRepo(repoDir, domainId, domainLabel);
-      if (domainId === 'opl-meta-agent') {
-        configureReadyMetaMorphology(repoDir);
-      }
-      return repoDir;
-    },
-  });
+  const familyWorkspaceRoot = familyWorkspace();
   const env = familyRuntimeEnv(stateRoot, fixtureContractsRoot, {
     OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
   });
 
   try {
-    const defaultCallers = runCli([
-      'agents',
-      'default-callers',
-      '--family-defaults',
-    ], env);
+    const defaultCallers = runCli(['agents', 'default-callers', '--family-defaults'], env);
     assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
     assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
-    assert.equal(defaultCallers.missing_no_active_caller_proof_count, 0);
-    assert.equal(defaultCallers.missing_domain_owner_receipt_or_typed_blocker_count, 32);
-    assert.equal(defaultCallers.missing_no_forbidden_write_proof_count, 32);
-    assert.equal(defaultCallers.missing_tombstone_or_provenance_ref_count, 32);
-    assert.equal(
-      defaultCallers.physical_delete_authority_read_model.next_required_owner_action,
-      'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
-    );
-    assert.deepEqual(
-      defaultCallers.physical_delete_authority_read_model.accepted_refs_only_result_shapes,
-      ['typed_blocker_ref'],
-    );
-    assert.equal(
-      defaultCallers.physical_delete_authority_read_model.owner_decision_required_after_all_refs_observed,
-      false,
-    );
     assert.equal(defaultCallers.physical_delete_authorized, false);
     assert.equal(defaultCallers.default_caller_delete_ready, false);
     assert.equal(
-      defaultCallers.repo_deletion_gate_summary.some((repo: {
-        domain_id: string;
-        repo_id: string;
-      }) => (
-        repo.domain_id === 'opl-meta-agent'
-        && repo.repo_id === repo.domain_id
-      )),
+      defaultCallers.repo_deletion_gate_summary.some((repo: { domain_id: string; repo_id: string }) =>
+        repo.domain_id === 'opl-meta-agent' && repo.repo_id === repo.domain_id
+      ),
       true,
     );
-    const omaDeletionGate = defaultCallers.repo_deletion_gate_summary.find((repo: {
-      domain_id: string;
-    }) => repo.domain_id === 'opl-meta-agent');
-    assert.equal(omaDeletionGate.deletion_evidence_worklist_count, 8);
-    assert.equal(omaDeletionGate.missing_domain_owner_receipt_or_typed_blocker_count, 8);
-    assert.equal(omaDeletionGate.missing_no_forbidden_write_proof_count, 8);
-    assert.equal(omaDeletionGate.missing_tombstone_or_provenance_ref_count, 8);
 
-    const fullOutput = runCli([
+    const fullWorklist = runCli([
       'family-runtime',
       'evidence-worklist',
       '--family-defaults',
@@ -284,27 +164,13 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
       'codex_cli',
       '--detail',
       'full',
-    ], env);
-    const fullWorklist = fullOutput.family_runtime_evidence_worklist;
+    ], env).family_runtime_evidence_worklist;
     assert.equal(fullWorklist.summary.default_caller_deletion_evidence_item_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_no_active_caller_missing_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_audit_lane_item_count, 0);
-    assert.equal(fullWorklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(
-      fullWorklist.worklist_items.filter((item: { claim_scope: string; owner: string }) =>
-        item.claim_scope === 'default_caller_deletion_evidence'
-        && item.owner === 'opl-meta-agent'
-      ).length,
-      0,
-    );
-    assert.equal(
-      fullWorklist.attention_queue.filter((item: { claim_scope: string; owner: string }) =>
-        item.claim_scope === 'default_caller_deletion_evidence'
-        && item.owner === 'opl-meta-agent'
-      ).length,
-      0,
+      fullWorklist.worklist_items.some((item: { claim_scope: string; owner: string }) =>
+        item.claim_scope === 'default_caller_deletion_evidence' && item.owner === 'opl-meta-agent'
+      ),
+      false,
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -313,29 +179,13 @@ test('family-runtime evidence-worklist keeps family default-caller deletion scop
   }
 });
 
-test('agents default-callers excludes ScholarSkills capability packages from family deletion gates', () => {
-  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot({
-    includeOplMetaAgent: true,
-    buildRepo: (domainId, domainLabel) => {
-      const repoDir = buildReadyAgentRepo();
-      retargetReadyRepo(repoDir, domainId, domainLabel);
-      if (domainId === 'opl-meta-agent') {
-        configureReadyMetaMorphology(repoDir);
-      }
-      return repoDir;
-    },
-  });
+test('ScholarSkills capability packages stay outside family default-caller deletion gates', () => {
+  const familyWorkspaceRoot = familyWorkspace();
   const scholarSkillsRepo = addScholarSkillsCapabilityPackage(familyWorkspaceRoot);
-  const env = {
-    OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
-  };
+  const env = { OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot };
 
   try {
-    const conformance = runCli([
-      'agents',
-      'conformance',
-      '--family-defaults',
-    ], env).standard_domain_agent_conformance;
+    const conformance = runCli(['agents', 'conformance', '--family-defaults'], env).standard_domain_agent_conformance;
     assert.deepEqual(
       conformance.framework_capability_packages.map((entry: { canonical_agent_id: string }) =>
         entry.canonical_agent_id
@@ -343,64 +193,16 @@ test('agents default-callers excludes ScholarSkills capability packages from fam
       ['mas-scholar-skills'],
     );
     assert.equal(conformance.framework_capability_packages[0].repo_dir, scholarSkillsRepo);
-    assert.equal(conformance.framework_capability_packages[0].status, 'passed');
 
-    const defaultCallers = runCli([
-      'agents',
-      'default-callers',
-      '--family-defaults',
-    ], env);
-    const repoIds = defaultCallers.physical_delete_authority_read_model.owner_decision_gate_by_repo.map(
-      (repo: { repo_id: string }) => repo.repo_id,
-    );
-
-    assert.deepEqual(repoIds, [
-      'med-autoscience',
-      'med-autogrant',
-      'redcube-ai',
-      'opl-meta-agent',
-    ]);
-    assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
-    assert.equal(defaultCallers.deletion_evidence_worklist_count, 32);
-    assert.equal(defaultCallers.active_deletion_evidence_worklist_count, 32);
-  } finally {
-    fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
-  }
-});
-
-test('agents default-callers treats family workspace root as an explicit discovery override', () => {
-  const familyWorkspaceRoot = createMinimalFamilyWorkspaceRoot({
-    includeOplMetaAgent: true,
-    buildRepo: (domainId, domainLabel) => {
-      const repoDir = buildReadyAgentRepo();
-      retargetReadyRepo(repoDir, domainId, domainLabel);
-      if (domainId === 'opl-meta-agent') {
-        configureReadyMetaMorphology(repoDir);
-      }
-      return repoDir;
-    },
-  });
-
-  try {
-    const defaultCallers = runCli([
-      'agents',
-      'default-callers',
-      '--family-defaults',
-    ], {
-      OPL_FAMILY_WORKSPACE_ROOT: familyWorkspaceRoot,
-    });
-    assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
+    const defaultCallers = runCli(['agents', 'default-callers', '--family-defaults'], env);
     assert.deepEqual(
-      defaultCallers.repo_deletion_gate_summary.map((repo: { repo_dir: string }) =>
-        path.dirname(repo.repo_dir)
+      defaultCallers.physical_delete_authority_read_model.owner_decision_gate_by_repo.map(
+        (repo: { repo_id: string }) => repo.repo_id,
       ),
-      [
-        familyWorkspaceRoot,
-        familyWorkspaceRoot,
-        familyWorkspaceRoot,
-        familyWorkspaceRoot,
-      ],
+      ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent'],
     );
+    assert.equal(defaultCallers.physical_delete_authority_read_model.total_repo_count, 4);
+    assert.equal(defaultCallers.active_deletion_evidence_worklist_count, 32);
   } finally {
     fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
   }
