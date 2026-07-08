@@ -118,7 +118,7 @@ test('family-runtime attempt fixture-run rejects missing typed closeout refs wit
   }
 });
 
-test('family-runtime attempt fixture-run ingests typed memory closeout refs and signal history', () => {
+test('family-runtime attempt fixture-run ingests typed memory closeout refs without local signal history', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-memory-closeout-'));
   try {
     const created = runCli([
@@ -138,31 +138,6 @@ test('family-runtime attempt fixture-run ingests typed memory closeout refs and 
     ], familyRuntimeEnv(stateRoot));
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
 
-    runCli([
-      'family-runtime',
-      'attempt',
-      'signal',
-      attemptId,
-      '--kind',
-      'user_instruction',
-      '--payload',
-      '{"instruction_ref":"user:revision-10","instruction_count":10}',
-      '--source',
-      'operator',
-    ], familyRuntimeEnv(stateRoot));
-    runCli([
-      'family-runtime',
-      'attempt',
-      'signal',
-      attemptId,
-      '--kind',
-      'resume',
-      '--payload',
-      '{"resume_token":"resume:review-memory","reason":"operator_resume"}',
-      '--source',
-      'operator',
-    ], familyRuntimeEnv(stateRoot));
-
     const fixtureRun = runCli([
       'family-runtime',
       'attempt',
@@ -181,9 +156,8 @@ test('family-runtime attempt fixture-run ingests typed memory closeout refs and 
     assert.deepEqual(visibility.writeback_receipt_refs, ['memory-writeback:receipt-1']);
     assert.equal(visibility.rejected_writes[0].reason, 'domain_router_rejected');
     assert.equal(visibility.route_impact.impact, 'needs_revision');
-    assert.equal(visibility.user_instructions.length, 1);
-    assert.equal(visibility.resume_signals.length, 1);
-    assert.equal(visibility.resume_signals[0].payload.resume_token, 'resume:review-memory');
+    assert.equal(visibility.user_instructions.length, 0);
+    assert.equal(visibility.resume_signals.length, 0);
     assert.equal(
       visibility.authority_boundary.domain,
       'truth_quality_artifact_gate_owner',

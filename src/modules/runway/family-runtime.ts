@@ -626,16 +626,21 @@ export async function runFamilyRuntime(
       };
     }
     if (parsed.mode === 'attempt_signal') {
+      const currentAttempt = inspectStageAttempt(db, parsed.stageAttemptId);
+      if (currentAttempt.provider_kind !== 'temporal') {
+        throw new FrameworkContractError('cli_usage_error', 'Temporal signal requires a temporal stage attempt.', {
+          stage_attempt_id: currentAttempt.stage_attempt_id,
+          provider_kind: currentAttempt.provider_kind,
+        });
+      }
+      const temporal_signal = await (await temporalProviderModule()).signalTemporalStageAttemptWorkflow({
+        attempt: currentAttempt,
+        signalKind: parsed.signalKind,
+        payload: parsed.payload,
+        source: parsed.source,
+        paths,
+      });
       const result = signalStageAttempt(db, parsed);
-      const temporal_signal = result.attempt.provider_kind === 'temporal'
-        ? await (await temporalProviderModule()).signalTemporalStageAttemptWorkflow({
-            attempt: result.attempt,
-            signalKind: parsed.signalKind,
-            payload: parsed.payload,
-            source: parsed.source,
-            paths,
-          })
-        : null;
       insertEvent(db, {
         taskId: result.attempt.task_id,
         domainId: result.attempt.domain_id,

@@ -106,13 +106,13 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(worklist.selected_executor_kind, 'codex_cli');
     assert.equal(worklist.summary.domain_ready_authorized, false);
     assert.equal(worklist.summary.production_ready_authorized, false);
-    assert.equal(worklist.summary.worklist_item_count, 49);
-    assert.equal(worklist.summary.open_worklist_item_count, 18);
+    assert.equal(worklist.summary.worklist_item_count, 48);
+    assert.equal(worklist.summary.open_worklist_item_count, 17);
     assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(worklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
     assert.equal(worklist.summary.closed_refs_only_item_count, 0);
     assert.equal(worklist.summary.stage_receipt_freshness_open_workorder_count, 15);
-    assert.equal(worklist.summary.open_safe_action_item_count, 18);
+    assert.equal(worklist.summary.open_safe_action_item_count, 17);
     assert.equal(
       worklist.summary.open_safe_action_payload_requirement_semantics,
       'open_safe_action_payload_required_is_domain_or_app_live_refs_payload_subset_not_opl_self_closure',
@@ -126,7 +126,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     assert.equal(Object.hasOwn(worklist.summary, 'production_closeout_open_safe_action_item_count'), false);
     assert.equal(Object.hasOwn(output, 'family_runtime_production_closeout'), false);
     assert.equal(Object.hasOwn(worklist, 'production_closeout_open_safe_action_item_count'), false);
-    assert.equal(worklist.open_worklist_item_count, 18);
+    assert.equal(worklist.open_worklist_item_count, 17);
     assert.equal(worklist.closed_refs_only_item_count, 0);
     assert.equal(
       worklist.open_safe_action_payload_required_item_count,
@@ -145,7 +145,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       worklist.summary.stage_receipt_freshness_open_workorder_count,
     );
     assert.equal(worklist.summary.closed_worklist_item_count, 1);
-    assert.equal(worklist.counts.open_safe_action_item_count, 18);
+    assert.equal(worklist.counts.open_safe_action_item_count, 17);
     assert.equal(
       worklist.counts.open_safe_action_payload_required_item_count,
       worklist.summary.open_safe_action_payload_required_item_count,
@@ -154,8 +154,8 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       worklist.counts.open_safe_action_payload_free_item_count,
       worklist.summary.open_safe_action_payload_free_item_count,
     );
-    assert.equal(worklist.counts.open_worklist_item_count, 18);
-    assert.equal(worklist.counts.next_action_item_count, 18);
+    assert.equal(worklist.counts.open_worklist_item_count, 17);
+    assert.equal(worklist.counts.next_action_item_count, 17);
     assert.deepEqual(worklist.full_detail_args, ['--detail', 'full']);
     assert.match(worklist.full_detail_command, /evidence-worklist .*--detail full --json/);
     assert.equal(worklist.worklist_items, undefined);
@@ -193,7 +193,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
     const fullWorklist = fullOutput.family_runtime_evidence_worklist;
     assert.equal(fullWorklist.detail_level, 'full');
     assert.equal(fullWorklist.command, 'evidence-worklist');
-    assert.equal(fullWorklist.worklist_items.length, 49);
+    assert.equal(fullWorklist.worklist_items.length, 48);
     assert.equal(
       fullWorklist.worklist_items.every((item: {
         worklist_lane: string;
@@ -204,7 +204,7 @@ test('family-runtime evidence-worklist summarizes OPL-owned safe-action closure 
       ),
       true,
     );
-    assert.equal(fullWorklist.attention_queue.length, 18);
+    assert.equal(fullWorklist.attention_queue.length, 17);
     assert.equal(
       fullWorklist.attention_queue.every((item: {
         item_id: string;

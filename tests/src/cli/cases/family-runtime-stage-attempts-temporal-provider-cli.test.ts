@@ -69,6 +69,12 @@ test('family-runtime temporal attempt signal fails closed when Temporal address 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');
     assert.match(output.error.message, /OPL_TEMPORAL_ADDRESS/);
+
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot, {
+      OPL_TEMPORAL_ADDRESS: '',
+      TEMPORAL_ADDRESS: '',
+    }));
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -121,6 +127,55 @@ test('family-runtime temporal attempt start blocks dirty MAS checkout before Tem
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime temporal attempt signal refuses non-temporal attempts before projection write', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-signal-provider-'));
+  try {
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'redcube',
+      '--stage',
+      'review',
+      '--provider',
+      'external_sandbox',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/rca"}',
+    ], familyRuntimeEnv(stateRoot));
+    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      cliPath,
+      'family-runtime',
+      'attempt',
+      'signal',
+      attemptId,
+      '--kind',
+      'resume',
+      '--payload',
+      '{"reason":"operator_resume"}',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...familyRuntimeEnv(stateRoot),
+      },
+    });
+    const output = parseJsonText(result.stdout || result.stderr) as any;
+    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], familyRuntimeEnv(stateRoot));
+
+    assert.notEqual(result.status, 0);
+    assert.equal(output.error.code, 'cli_usage_error');
+    assert.match(output.error.message, /temporal stage attempt/);
+    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
@@ -185,7 +240,7 @@ test('family-runtime temporal attempt cancel refuses non-temporal attempts', () 
       '--stage',
       'review',
       '--provider',
-      'temporal',
+      'external_sandbox',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], familyRuntimeEnv(stateRoot));
@@ -366,7 +421,7 @@ test('family-runtime temporal attempt start refuses non-temporal attempts', () =
       '--stage',
       'review',
       '--provider',
-      'temporal',
+      'external_sandbox',
       '--workspace-locator',
       '{"workspace_root":"/tmp/rca"}',
     ], familyRuntimeEnv(stateRoot));

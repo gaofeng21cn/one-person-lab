@@ -97,12 +97,12 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].progress_delta_classification, 'typed_blocker');
     assert.equal(output.compact_timeline[0].timeline.last_heartbeat_at, null);
     assert.equal(output.compact_timeline[0].current_provider_readiness.provider_kind, 'temporal');
-    assert.equal(output.compact_timeline[0].current_provider_readiness.provider_ready, true);
-    assert.equal(output.compact_timeline[0].provider_liveness_attention.attention_status, 'none');
-    assert.equal(output.compact_timeline[0].provider_liveness_attention.severity, 'none');
+    assert.equal(output.compact_timeline[0].current_provider_readiness.provider_ready, false);
+    assert.equal(output.compact_timeline[0].provider_liveness_attention.attention_status, 'blocked_provider_not_ready');
+    assert.equal(output.compact_timeline[0].provider_liveness_attention.severity, 'blocking');
     assert.equal(
       output.compact_timeline[0].provider_liveness_attention.progress_first_effect,
-      'provider_live_continue_with_stage_progress_evidence',
+      'attempt_exists_but_provider_not_live_repair_provider_before_read_model_reconcile',
     );
     assert.equal(
       output.compact_timeline[0].provider_readiness_currentness.effective_provider_readiness_source,
@@ -131,8 +131,11 @@ test('family-runtime attempt list filters attempts and emits compact Progress-Fi
     assert.equal(output.compact_timeline[0].operator_summary.timing.started_at, null);
     assert.equal(output.compact_timeline[0].operator_summary.timing.completed_at, null);
     assert.equal(output.compact_timeline[0].operator_summary.timing.last_heartbeat_at, null);
-    assert.equal(output.compact_timeline[0].operator_summary.provider_readiness.provider_ready, true);
-    assert.equal(output.compact_timeline[0].operator_summary.provider_liveness_attention.attention_status, 'none');
+    assert.equal(output.compact_timeline[0].operator_summary.provider_readiness.provider_ready, false);
+    assert.equal(
+      output.compact_timeline[0].operator_summary.provider_liveness_attention.attention_status,
+      'blocked_provider_not_ready',
+    );
     assert.equal(output.compact_timeline[0].operator_summary.progress_delta_classification, 'typed_blocker');
     assert.deepEqual(output.compact_timeline[0].operator_summary.closeout_refs, []);
     assert.equal(output.compact_timeline[0].operator_summary.closeout_ref_count, 0);

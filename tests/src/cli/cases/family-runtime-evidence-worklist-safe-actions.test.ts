@@ -66,7 +66,7 @@ test('family-runtime evidence-worklist reports safe-action evidence tail without
     assert.equal(report.apply_supported, false);
     assert.equal(report.summary.domain_ready_authorized, false);
     assert.equal(report.summary.production_ready_authorized, false);
-    assert.equal(report.summary.provider_scheduler_item_count, 4);
+    assert.equal(report.summary.provider_scheduler_item_count, 3);
     assert.equal(report.summary.open_worklist_item_count > 0, true);
     assert.equal(report.summary.closed_refs_only_item_count, 0);
     assert.equal(report.summary.open_safe_action_item_count > 0, true);

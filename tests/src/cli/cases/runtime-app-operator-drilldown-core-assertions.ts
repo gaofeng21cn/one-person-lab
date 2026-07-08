@@ -50,7 +50,7 @@ export function assertCoreAppOperatorDrilldownProjection(
   assert.equal(projection.summary.provider_cadence_window_observed_receipt_count, 0);
   assert.equal(projection.summary.provider_cadence_window_missing_receipt_count, 7);
   assert.equal(projection.summary.provider_cadence_window_blocked_repair_receipt_count, 0);
-  assert.equal(projection.summary.periodic_execution_ref_count, 5);
+  assert.equal(projection.summary.periodic_execution_ref_count, 4);
   assert.equal(
     projection.summary.operator_action_route_count,
     projection.operator_action_routing_refs.refs.length,
@@ -58,7 +58,7 @@ export function assertCoreAppOperatorDrilldownProjection(
   assert.equal(projection.summary.operator_action_route_count >= 26, true);
   assert.equal(
     projection.summary.operator_action_route_count,
-    30,
+    29,
   );
   assert.equal(
     projection.summary.operator_executable_route_count,
@@ -67,7 +67,7 @@ export function assertCoreAppOperatorDrilldownProjection(
   assert.equal(projection.summary.operator_executable_route_count >= 16, true);
   assert.equal(
     projection.summary.operator_executable_route_count,
-    20,
+    19,
   );
   assert.equal(projection.summary.stage_production_evidence_receipt_action_route_count, 2);
   assert.equal(

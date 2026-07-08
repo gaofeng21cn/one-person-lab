@@ -17,6 +17,7 @@ import { createStageAttempt } from '../../../../src/modules/runway/family-runtim
 import {
   applyAppOperatorDrilldownDetail,
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/detail-view.ts';
+import { buildStageAttemptWorkbench } from '../../../../src/modules/console/runtime-tray-stage-attempt-workbench.ts';
 import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
@@ -209,7 +210,7 @@ function seedStageAttempt(input: Parameters<typeof createStageAttempt>[1]) {
   }
 }
 
-test('stage production evidence consumes older ledger attempts beyond default workbench list', () => {
+test('stage production evidence consumes older ledger attempts beyond default workbench list', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-production-full-ledger-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -320,19 +321,20 @@ test('stage production evidence consumes older ledger attempts beyond default wo
     }
 
     const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
-    const snapshot = runCli(['runtime', 'snapshot'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    }).runtime_tray_snapshot;
+    const workbench = await buildStageAttemptWorkbench() as {
+      attempts: unknown[];
+      evidence_attempt_count: number;
+      attempt_list_limit: number;
+    };
     const stageProductionEvidence = projection.stage_production_evidence.stages.find(
       (stage: { target_domain_id: string; stage_id: string }) =>
         stage.target_domain_id === 'med-autogrant'
         && stage.stage_id === 'fundability_strategy',
     );
     assert.equal(stageProductionEvidence.stage_attempt_refs.length, 1);
-    assert.equal(snapshot.stage_attempt_workbench.attempts.length, 25);
-    assert.equal(snapshot.stage_attempt_workbench.evidence_attempt_count, 27);
-    assert.equal(snapshot.stage_attempt_workbench.attempt_list_limit, 25);
+    assert.equal(workbench.attempts.length, 25);
+    assert.equal(workbench.evidence_attempt_count, 27);
+    assert.equal(workbench.attempt_list_limit, 25);
     assert.equal(
       stageProductionEvidence.missing_production_evidence.includes('production_caller_attempt_not_observed'),
       false,

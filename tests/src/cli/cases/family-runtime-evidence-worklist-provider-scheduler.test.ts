@@ -148,7 +148,7 @@ test('family-runtime evidence-worklist keeps provider scheduler diagnostics and 
     item.claim_scope === 'provider_scheduler_cadence'
   );
 
-  assert.equal(providerItems.length, 4);
+  assert.equal(providerItems.length, 3);
   assert.equal(fullWorklist.summary.open_worklist_item_count, 0);
   assert.equal(
     fullWorklist.attention_queue.some((item: { claim_scope: string }) =>
@@ -175,7 +175,7 @@ test('family-runtime evidence-worklist keeps provider scheduler diagnostics and 
   const mutationItems = providerItems.filter(
     (item: { action_kind: string }) => item.action_kind !== 'provider_scheduler_status',
   );
-  assert.equal(mutationItems.length, 3);
+  assert.equal(mutationItems.length, 2);
   assert.equal(
     mutationItems.every((item: {
       status: string;

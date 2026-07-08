@@ -466,7 +466,7 @@ test('family-runtime Temporal production proof writes provider SLO execution rec
   }
 });
 
-test('family-runtime attempt query, signal, and fixture-run expose provider lifecycle without domain verdict ownership', () => {
+test('family-runtime attempt query and fixture-run expose provider lifecycle without domain verdict ownership', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-query-'));
   try {
     const created = runCli([
@@ -491,42 +491,6 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       'query',
       attemptId,
     ], familyRuntimeEnv(stateRoot));
-    const humanGate = runCli([
-      'family-runtime',
-      'attempt',
-      'signal',
-      attemptId,
-      '--kind',
-      'human_gate',
-      '--payload',
-      '{"human_gate_ref":"gate:analysis-review","reason":"needs_human_review"}',
-    ], familyRuntimeEnv(stateRoot));
-    const humanGateQuery = runCli([
-      'family-runtime',
-      'attempt',
-      'query',
-      attemptId,
-    ], familyRuntimeEnv(stateRoot));
-    const resumed = runCli([
-      'family-runtime',
-      'attempt',
-      'signal',
-      attemptId,
-      '--kind',
-      'resume',
-      '--payload',
-      '{"reason":"operator_resume"}',
-    ], familyRuntimeEnv(stateRoot));
-    const userInstruction = runCli([
-      'family-runtime',
-      'attempt',
-      'signal',
-      attemptId,
-      '--kind',
-      'user_instruction',
-      '--payload',
-      '{"instruction_ref":"user:revision-10","instruction_count":10}',
-    ], familyRuntimeEnv(stateRoot));
     const fixtureRun = runCli([
       'family-runtime',
       'attempt',
@@ -546,26 +510,18 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       attemptId,
     ], familyRuntimeEnv(stateRoot));
 
-    assert.equal(queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.workflow_contract, null);
-    assert.equal(queryBefore.family_runtime_stage_attempt_query.temporal_query, null);
+    assert.equal(
+      queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.workflow_contract.provider_kind,
+      'temporal',
+    );
+    assert.equal(
+      queryBefore.family_runtime_stage_attempt_query.temporal_query.status,
+      'unavailable',
+    );
     assert.equal(
       queryBefore.family_runtime_stage_attempt_query.stage_attempt_query.completion_boundary.provider_completion_is_domain_ready,
       false,
     );
-    assert.equal(humanGate.family_runtime_stage_attempt_signal.attempt.status, 'human_gate');
-    assert.deepEqual(humanGate.family_runtime_stage_attempt_signal.attempt.human_gate_refs, ['gate:analysis-review']);
-    assert.equal(
-      humanGateQuery.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.human_gate_ledger[0].payload.reason,
-      'needs_human_review',
-    );
-    assert.equal(
-      humanGateQuery.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.operator_conflicts.some(
-        (envelope: { classification: string }) => envelope.classification === 'human_gate',
-      ),
-      true,
-    );
-    assert.equal(resumed.family_runtime_stage_attempt_signal.attempt.status, 'queued');
-    assert.equal(userInstruction.family_runtime_stage_attempt_signal.signal.signal_kind, 'user_instruction');
     assert.equal(fixtureRun.family_runtime_stage_attempt_fixture_run.provider_fixture_run.provider_completion, 'completed');
     assert.equal(
       fixtureRun.family_runtime_stage_attempt_fixture_run.provider_fixture_run.domain_ready_verdict,
@@ -595,22 +551,22 @@ test('family-runtime attempt query, signal, and fixture-run expose provider life
       'temporal',
     );
     assert.equal(
-      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.codex_stage_activity_timeout_policy,
-      null,
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.codex_stage_activity_timeout_policy.start_to_close_timeout,
+      '65 minutes',
     );
     assert.ok(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.activity_events.length >= 2);
-    assert.equal(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 3);
+    assert.equal(queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.signals.length, 0);
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.human_gate_ledger.length,
-      1,
+      0,
     );
     assert.equal(
-      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.user_instruction_ledger[0].payload.instruction_ref,
-      'user:revision-10',
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.user_instruction_ledger.length,
+      0,
     );
     assert.equal(
-      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.resume_ledger[0].payload.reason,
-      'operator_resume',
+      queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.resume_ledger.length,
+      0,
     );
     assert.equal(
       queryAfter.family_runtime_stage_attempt_query.stage_attempt_query.operator_visibility.rejected_writes[0].reason,

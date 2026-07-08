@@ -25,13 +25,13 @@ export function parseEvidenceWorklistArgs(rest: string[]): FamilyRuntimeCommandI
       familyDefaults = true;
       return false;
     } else if (token === '--provider' && value) {
-      providerKind = assertProviderKind(value);
-      if (providerKind !== 'temporal') {
+      if (value !== 'temporal') {
         throw new FrameworkContractError('cli_usage_error', `family-runtime ${EVIDENCE_WORKLIST_COMMAND} supports only --provider temporal.`, {
-          provider_kind: providerKind,
+          provider_kind: value,
           allowed_provider_kinds: ['temporal'],
         });
       }
+      providerKind = assertProviderKind(value);
       return true;
     } else if (token === '--executor-kind' && value) {
       if (value !== 'codex_cli') {

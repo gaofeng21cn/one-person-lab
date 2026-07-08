@@ -118,12 +118,12 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     assert.equal(Object.hasOwn(worklist, 'command_alias'), false);
     assert.equal(Object.hasOwn(worklist, 'deprecated_alias_of'), false);
     assert.equal(Object.hasOwn(worklist, 'deprecated_alias'), false);
-    assert.equal(worklist.summary.worklist_item_count, 49);
-    assert.equal(worklist.summary.closed_worklist_item_count, 10);
+    assert.equal(worklist.summary.worklist_item_count, 48);
+    assert.equal(worklist.summary.closed_worklist_item_count, 9);
     assert.equal(worklist.summary.open_worklist_item_count, 15);
     assert.equal(worklist.summary.default_caller_deletion_audit_lane_item_count, 0);
     assert.equal(worklist.summary.default_caller_deletion_open_safe_action_item_count, 0);
-    assert.equal(worklist.summary.closed_refs_only_item_count, 10);
+    assert.equal(worklist.summary.closed_refs_only_item_count, 9);
     assert.equal(worklist.summary.open_safe_action_item_count, 15);
     assert.equal(
       worklist.summary.open_safe_action_payload_required_item_count
@@ -185,7 +185,7 @@ test('family-runtime evidence-worklist closes only OPL-owned provider and cleanu
     const providerItems = fullWorklist.worklist_items.filter((item: { claim_scope: string }) =>
       item.claim_scope === 'provider_scheduler_cadence'
     );
-    assert.equal(providerItems.length, 4);
+    assert.equal(providerItems.length, 3);
     assert.equal(
       providerItems.every((item: { status: string }) =>
         item.status === 'closed_by_receipt_ref'

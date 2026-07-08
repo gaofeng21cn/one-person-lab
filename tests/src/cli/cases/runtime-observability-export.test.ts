@@ -108,20 +108,6 @@ db.close();`,
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
-    runCli([
-      'family-runtime',
-      'attempt',
-      'signal',
-      gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id,
-      '--kind',
-      'human_gate',
-      '--payload',
-      '{"human_gate_ref":"gate:review"}',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-
     const deadLetterAttempt = runCli([
       'family-runtime',
       'attempt',
@@ -142,10 +128,11 @@ db.close();`,
       '--experimental-strip-types',
       '-e',
       `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-db.prepare("UPDATE stage_attempts SET status = 'human_gate' WHERE stage_attempt_id = ?").run(${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
-db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(deadLetterAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
-db.close();`,
+	const db = new DatabaseSync(${JSON.stringify(queueDb)});
+	db.prepare("UPDATE stage_attempts SET status = 'human_gate', human_gate_refs_json = '[\\"gate:review\\"]', blocked_reason = NULL WHERE stage_attempt_id = ?").run(${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
+	db.prepare("UPDATE stage_attempts SET status = 'dead_lettered', blocked_reason = 'retry_budget_exhausted' WHERE stage_attempt_id = ?").run(${JSON.stringify(deadLetterAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)});
+	db.prepare("INSERT INTO stage_attempt_signals(signal_id, stage_attempt_id, signal_kind, payload_json, source, created_at) VALUES (?, ?, ?, ?, ?, ?)").run('sig_observability_human_gate_fixture', ${JSON.stringify(gatedAttempt.family_runtime_stage_attempt.attempt.stage_attempt_id)}, 'human_gate', '{"human_gate_ref":"gate:review"}', 'test-fixture-projection', '2026-05-14T00:00:01.000Z');
+	db.close();`,
     ], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -168,7 +155,7 @@ db.close();`,
     assert.equal(observability.source_surfaces.includes('opl_runtime_authority_refs'), true);
     assert.equal(observability.source_surfaces.includes('opentelemetry_current_owner_delta_ref'), true);
     assert.equal(observability.provider.readiness.provider_ready, false);
-    assert.equal(observability.provider.readiness.diagnostic_provider_ready, true);
+    assert.equal(observability.provider.readiness.diagnostic_provider_ready, false);
     assert.equal(observability.provider.readiness.retired_local_provider_counts_as_provider_ready, false);
     assert.equal(observability.provider.proof_counts.proof_event_count, 1);
     assert.equal(observability.provider.proof_counts.proven_event_count, 1);
