@@ -75,6 +75,8 @@ function boardItems(board: JsonRecord) {
     ...recordList(board.frontier_items),
     ...recordList(board.frontier_refs),
     ...recordList(board.candidate_routes),
+    ...recordList(board.rollback_targets),
+    ...recordList(board.rollback_target_refs),
     ...recordList(board.stage_candidates).map((candidate) => ({
       ...candidate,
       ref: candidate.candidate_ref,
@@ -95,8 +97,8 @@ function projectionItem(
     item.memory_ref,
     item.route_ref,
   );
-  const status = firstString(item.status, item.candidate_status);
-  const explicitStageId = firstString(item.stage_id, item.stage);
+  const status = firstString(item.status, item.status_label, item.candidate_status);
+  const explicitStageId = firstString(item.stage_id, item.stage, item.stage_label);
   const candidateId = firstString(item.candidate_id, item.candidateId, item.id);
   const routeFamily = firstString(item.route_family, item.route_kind, item.route);
   const rollbackTargetRef = firstString(item.rollback_target_ref, item.rollback_ref, item.rollback_target);

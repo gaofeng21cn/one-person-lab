@@ -100,6 +100,54 @@ test('stage attempt generic projections expose research frontier board as refs-o
   assert.equal(projection.authority_boundary.can_write_domain_truth, false);
 });
 
+test('stage attempt generic projections expose eight-stage rollback targets as refs-only labels', () => {
+  const rollbackStages = [
+    'question',
+    'search',
+    'screen',
+    'extract',
+    'analyze',
+    'draft',
+    'review',
+    'submit',
+  ];
+  const projection = buildAttemptGenericProjections(baseAttempt({
+    research_frontier_board: {
+      surface_kind: 'domain_research_frontier_board_refs',
+      board_ref: 'domain://mas/frontier/eight-stage-board',
+      summary_ref: 'domain://mas/frontier/eight-stage-summary',
+      rollback_targets: rollbackStages.map((stage, index) => ({
+        stage_label: stage,
+        status_label: index === 7 ? 'ready_for_owner_review' : 'candidate',
+        route_family: index % 2 === 0 ? 'research-route' : 'rollback-route',
+        rollback_target_ref: `domain://mas/frontier/rollback-target/${stage}`,
+        advisory_reason_ref: `domain://mas/frontier/advisory-reason/${stage}`,
+        memory_body: `must-not-project-${stage}`,
+      })),
+    },
+  })).research_frontier_board;
+
+  assert.equal(projection.availability, 'frontier_refs_observed');
+  assert.equal(projection.summary.item_count, 8);
+  assert.equal(projection.summary.board_ref, 'domain://mas/frontier/eight-stage-board');
+  assert.equal(projection.summary.summary_ref, 'domain://mas/frontier/eight-stage-summary');
+  assert.equal(projection.summary.rollback_target_ref_count, 8);
+  assert.equal(projection.summary.advisory_reason_ref_count, 8);
+  assert.equal(projection.summary.status_counts.candidate, 7);
+  assert.equal(projection.summary.status_counts.ready_for_owner_review, 1);
+  assert.equal(projection.summary.route_family_counts['research-route'], 4);
+  assert.equal(projection.summary.route_family_counts['rollback-route'], 4);
+  assert.deepEqual(projection.items.map((item) => item.stage_id), rollbackStages);
+  assert.deepEqual(projection.items.map((item) => item.rollback_target_ref), rollbackStages.map((stage) =>
+    `domain://mas/frontier/rollback-target/${stage}`
+  ));
+  assert.equal(JSON.stringify(projection).includes('must-not-project'), false);
+  assert.equal(projection.summary.omitted_body_field_count, 8);
+  assert.equal(projection.authority_boundary.can_read_memory_body, false);
+  assert.equal(projection.authority_boundary.can_infer_route_decision, false);
+  assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+});
+
 test('runtime workbench summarizes frontier board status counts and rollback refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontier-board-state-'));
   try {
