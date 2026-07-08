@@ -157,6 +157,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     provider_id: 'capability_packages',
     adapter_id: 'capability_packages_adapter',
     component_class: 'capability_packages',
+    coordination_role: 'executable_target',
     policy_id: 'ordinary_user_non_development_silent_background',
     owner_route: route,
     owner_execution_boundary: ownerExecutionBoundary(route, {
@@ -316,8 +317,8 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
     : noReloadGuidance();
   const detail = statusDetail({
     component_state: needsReload ? 'needs_reload' : 'current',
-    auto_apply_eligible: needsReload,
-    app_background_safe: needsReload,
+    auto_apply_eligible: false,
+    app_background_safe: false,
     post_apply_status: needsReload ? 'not_run' : 'skipped',
     reload_status: needsReload ? 'recommended' : 'not_required',
   });
@@ -338,6 +339,7 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
     provider_id: 'codex_surface',
     adapter_id: 'codex_surface_status_adapter',
     component_class: 'codex_surface',
+    coordination_role: 'derived_projection',
     policy_id: 'display_visibility_and_repair_actions_without_duplicate_semantics',
     owner_route: route,
     owner_execution_boundary: ownerExecutionBoundary(route, {
@@ -426,7 +428,7 @@ function buildCodexSurfaceComponent(capabilityPackages: ManagedUpdateComponent, 
       component_id: 'codex_surface',
       sourceManifestRef: 'module_post_apply_projection',
       postApplyHooks,
-      apply_mode: needsReload ? 'auto_apply' : 'projection_only',
+      apply_mode: 'projection_only',
       status_detail: detail,
       reload_guidance: reloadGuidance,
       repair_action: needsReload ? 'sync_codex_skills' : null,
@@ -517,6 +519,7 @@ function buildCompanionToolsComponent(channel: string): ManagedUpdateComponent {
     provider_id: 'companion_tools',
     adapter_id: 'companion_tools_status_adapter',
     component_class: 'companion_tools',
+    coordination_role: 'owner_handoff',
     policy_id: 'recommended_companion_tools_observe_or_managed_install',
     owner_route: route,
     owner_execution_boundary: ownerExecutionBoundary(route, {
@@ -648,6 +651,7 @@ function buildWorkflowProfileComponent(channel: string): ManagedUpdateComponent 
     provider_id: 'workflow_profile',
     adapter_id: 'workflow_profile_adapter',
     component_class: 'workflow_profile',
+    coordination_role: 'owner_handoff',
     policy_id: 'semantic_merge_required_no_silent_overwrite',
     owner_route: route,
     owner_execution_boundary: ownerExecutionBoundary(route, {

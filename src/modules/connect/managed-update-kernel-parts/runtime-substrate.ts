@@ -61,6 +61,7 @@ export function buildRuntimeSubstrateComponent(systemEnvironment: Record<string,
     provider_id: 'runtime_substrate',
     adapter_id: 'runtime_substrate_adapter',
     component_class: 'runtime_substrate',
+    coordination_role: 'executable_target',
     policy_id: 'silent_background_verified_stage_apply_on_next_restart',
     owner_route: route,
     owner_execution_boundary: ownerExecutionBoundary(route, {

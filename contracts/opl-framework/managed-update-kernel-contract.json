@@ -33,8 +33,13 @@
     "failed_with_repair",
     "skipped_manual_required"
   ],
+  "coordination_roles": [
+    "executable_target",
+    "derived_projection",
+    "owner_handoff"
+  ],
   "update_plane_state_machine": {
-    "purpose": "single_minimal_semantics_for_runtime_fabric_environment_materializer_artifact_channel_carrier_route_workflow_profile_and_host_update",
+    "purpose": "single_coordination_plane_for_update_status_plan_and_safe_execution_without_turning_every_component_into_the_same_package_manager_target",
     "state_axis": [
       "auto_apply",
       "controlled_apply",
@@ -125,6 +130,7 @@
     "component_routes": [
       {
         "component_class": "installation_carrier",
+        "coordination_role": "owner_handoff",
         "canonical_route_state": "prompt_only",
         "readback_state": "projection_only",
         "owner": "one-person-lab-app",
@@ -138,6 +144,7 @@
       },
       {
         "component_class": "runtime_substrate",
+        "coordination_role": "executable_target",
         "canonical_route_state": "controlled_apply",
         "readback_state": "controlled_apply",
         "owner": "one-person-lab-app-and-opl-framework",
@@ -151,6 +158,7 @@
       },
       {
         "component_class": "capability_packages",
+        "coordination_role": "executable_target",
         "canonical_route_state": "auto_apply",
         "readback_state": "auto_apply",
         "owner": "one-person-lab-managed-modules",
@@ -163,6 +171,7 @@
       },
       {
         "component_class": "codex_surface",
+        "coordination_role": "derived_projection",
         "canonical_route_state": "projection_only",
         "readback_state": "projection_only",
         "owner": "one-person-lab-connect",
@@ -176,6 +185,7 @@
       },
       {
         "component_class": "companion_tools",
+        "coordination_role": "owner_handoff",
         "canonical_route_state": "prompt_only",
         "readback_state": "prompt_only",
         "owner": "one-person-lab-companion-tools",
@@ -188,6 +198,7 @@
       },
       {
         "component_class": "workflow_profile",
+        "coordination_role": "owner_handoff",
         "canonical_route_state": "prompt_only",
         "readback_state": "projection_only",
         "owner": "opl-flow",
@@ -448,6 +459,21 @@
     "companion_tools",
     "workflow_profile"
   ],
+  "app_action_consumer_policy": {
+    "purpose": "App and Settings update actions consume this managed update coordinator instead of hand-writing package, carrier, or runtime update shells.",
+    "canonical_delegated_surfaces": {
+      "module_sync": "opl update apply --component capability_packages",
+      "settings_sync_capabilities": "opl update apply --component capability_packages",
+      "settings_apply_opl_packages": "opl update apply --component capability_packages",
+      "settings_check_app_update": "opl update status --component installation_carrier",
+      "settings_rollback_runtime_substrate": "opl update rollback --component runtime_substrate"
+    },
+    "non_goals": [
+      "does_not_replace_target_bound_workspace_or_quest_skill_sync",
+      "does_not_claim_app_release_currentness",
+      "does_not_turn_codex_surface_or_workflow_profile_into_apply_targets"
+    ]
+  },
   "legacy_component_aliases": [
     {
       "legacy_component_id": "app_binary",

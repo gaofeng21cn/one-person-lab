@@ -42,6 +42,10 @@ export type {
 } from './managed-update-owner-primitives.ts';
 
 export type ManagedUpdateComponentClass = ManagedUpdateProviderId;
+export type ManagedUpdateCoordinationRole =
+  | 'executable_target'
+  | 'derived_projection'
+  | 'owner_handoff';
 export type ManagedUpdateConditionStatus = 'True' | 'False' | 'Unknown';
 export type ManagedUpdateComponentState =
   | 'current'
@@ -93,6 +97,7 @@ export type ManagedUpdateComponent = {
   provider_id: ManagedUpdateProviderId;
   adapter_id: ManagedUpdateProviderAdapterId;
   component_class: ManagedUpdateComponentClass;
+  coordination_role: ManagedUpdateCoordinationRole;
   policy_id: string;
   owner_route: ManagedUpdateOwnerRoute;
   owner_execution_boundary: ManagedUpdateOwnerExecutionBoundary;

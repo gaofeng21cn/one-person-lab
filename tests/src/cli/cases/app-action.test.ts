@@ -194,8 +194,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
         delegatedSurface.startsWith('opl ')
           || delegatedSurface.startsWith('printf <api-key> | opl ')
           || delegatedSurface.startsWith('opl flow intelligence-enhancement ')
-          || delegatedSurface.includes(' opl system startup-maintenance')
-          || delegatedSurface === 'one-person-lab-app installation_carrier.macos_app status',
+          || delegatedSurface.includes(' opl system startup-maintenance'),
         true,
       );
     }
@@ -203,7 +202,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('module_update')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('module_update')?.can_submit_to_safe_action_shell, false);
     assert.deepEqual(actions.get('module_sync')?.payload_fields, []);
-    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl connect reconcile-modules');
+    assert.equal(actions.get('module_sync')?.delegated_surface, 'opl update apply --component capability_packages');
     assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
     assert.equal(
       actions.get('scholarskills_workspace_sync')?.delegated_surface,
@@ -348,10 +347,10 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('settings_verify_workspace')?.delegated_surface, 'opl workspace health');
     assert.deepEqual(actions.get('settings_verify_workspace')?.payload_fields, ['workspace_path']);
     assert.equal(actions.get('settings_verify_workspace')?.mutates, 'none_read_only');
-    assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl connect reconcile-modules');
+    assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl update apply --component capability_packages');
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
-    assert.equal(actions.get('settings_apply_opl_packages')?.delegated_surface, 'opl connect update --module <all-default-modules>');
+    assert.equal(actions.get('settings_apply_opl_packages')?.delegated_surface, 'opl update apply --component capability_packages');
     assert.deepEqual(
       [
         'refresh_registry',
@@ -383,7 +382,7 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('settings_prune_runtime_roots_dry_run')?.mutates, 'none_read_only');
     assert.equal(
       actions.get('settings_check_app_update')?.delegated_surface,
-      'one-person-lab-app installation_carrier.macos_app status',
+      'opl update status --component installation_carrier',
     );
     assert.equal(actions.get('settings_check_app_update')?.mutates, 'none_read_only');
     assert.equal(

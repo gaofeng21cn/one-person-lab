@@ -32,6 +32,8 @@ export { readBundledCodexDefaultProfile, readLocalCodexAccessState, readLocalCod
 export type { LocalCodexDefaults } from '../../kernel/local-codex-defaults.ts';
 export { listManagedInstallUpdateReceipts } from './managed-install-update-ledger.ts';
 export { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from './managed-update-owner-boundary.ts';
+export { buildManagedUpdateKernelProjection } from './managed-update-kernel.ts';
+export { runManagedUpdateKernelOperation } from './managed-update-kernel-runner.ts';
 export { buildManagedShellCommandEnv, prepareManagedShellCommandCwd } from '../../kernel/managed-shell-command-env.ts';
 export { buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 export { resolveDefaultFamilyWorkspaceRoot, syncFamilySkillPacks } from './opl-skills.ts';

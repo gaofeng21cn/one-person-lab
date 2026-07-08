@@ -177,6 +177,7 @@ export function buildInstallationCarrierComponent(channel: string): ManagedUpdat
     provider_id: 'installation_carrier',
     adapter_id: 'installation_carrier_status_adapter',
     component_class: 'installation_carrier',
+    coordination_role: 'owner_handoff',
     policy_id: 'carrier_specific_status_with_host_update_route',
     owner_route: route,
     owner_execution_boundary: ownerExecutionBoundary(route, {

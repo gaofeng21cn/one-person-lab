@@ -15,6 +15,11 @@ function readManagedUpdateKernelContract() {
   ) as {
     components: string[];
     component_classes: string[];
+    coordination_roles: string[];
+    app_action_consumer_policy: {
+      canonical_delegated_surfaces: Record<string, string>;
+      non_goals: string[];
+    };
     providers: Array<{
       provider_id: string;
       controlled_execution_path?: string;
@@ -54,6 +59,7 @@ function readManagedUpdateKernelContract() {
       }>;
       component_routes: Array<{
         component_class: string;
+        coordination_role: string;
         canonical_route_state: string;
         readback_state: string;
         owner: string;
@@ -114,6 +120,11 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     'prompt_only',
     'projection_only',
   ]);
+  assert.deepEqual(contract.coordination_roles, [
+    'executable_target',
+    'derived_projection',
+    'owner_handoff',
+  ]);
   assert.deepEqual(
     contract.update_plane_state_machine.component_routes.map((entry) => entry.component_class),
     contract.component_classes,
@@ -154,12 +165,17 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
     contract.update_plane_state_machine.component_routes.map((entry) => [entry.component_class, entry]),
   );
   assert.equal(routeByClass.get('capability_packages')?.canonical_route_state, 'auto_apply');
+  assert.equal(routeByClass.get('capability_packages')?.coordination_role, 'executable_target');
   assert.equal(routeByClass.get('runtime_substrate')?.canonical_route_state, 'controlled_apply');
+  assert.equal(routeByClass.get('runtime_substrate')?.coordination_role, 'executable_target');
   assert.equal(routeByClass.get('installation_carrier')?.canonical_route_state, 'prompt_only');
+  assert.equal(routeByClass.get('installation_carrier')?.coordination_role, 'owner_handoff');
   assert.equal(routeByClass.get('installation_carrier')?.readback_state, 'projection_only');
   assert.equal(routeByClass.get('installation_carrier')?.not_opl_update_apply_target, true);
   assert.equal(routeByClass.get('codex_surface')?.canonical_route_state, 'projection_only');
+  assert.equal(routeByClass.get('codex_surface')?.coordination_role, 'derived_projection');
   assert.equal(routeByClass.get('workflow_profile')?.canonical_route_state, 'prompt_only');
+  assert.equal(routeByClass.get('workflow_profile')?.coordination_role, 'owner_handoff');
   assert.equal(routeByClass.get('workflow_profile')?.semantic_merge_required, true);
 
   for (const route of contract.update_plane_state_machine.component_routes) {
@@ -230,6 +246,17 @@ test('managed update kernel contract keeps runtime and agent post-apply executio
   assert.equal(workflowProfile.default_policy, 'semantic_merge_required_no_silent_overwrite');
   assert.equal(workflowProfile.mutation_scope, 'projection_only_no_opl_update_apply_component_target');
   assert.equal(workflowProfile.apply_allowed, false);
+  assert.deepEqual(contract.app_action_consumer_policy.canonical_delegated_surfaces, {
+    module_sync: 'opl update apply --component capability_packages',
+    settings_sync_capabilities: 'opl update apply --component capability_packages',
+    settings_apply_opl_packages: 'opl update apply --component capability_packages',
+    settings_check_app_update: 'opl update status --component installation_carrier',
+    settings_rollback_runtime_substrate: 'opl update rollback --component runtime_substrate',
+  });
+  assert.equal(
+    contract.app_action_consumer_policy.non_goals.includes('does_not_replace_target_bound_workspace_or_quest_skill_sync'),
+    true,
+  );
   assert.deepEqual(contract.runner_result_shape.adapter_post_apply_action_shape.required_fields, [
     'action_id',
     'command_ref',
@@ -318,6 +345,7 @@ exit 2
           component_id: string;
           provider_id: string;
           adapter_id: string;
+          coordination_role: string;
           policy_id: string;
           owner_route: {
             owner: string;
@@ -580,6 +608,7 @@ exit 2
     assert.ok(runtime);
     assert.equal(runtime.provider_id, 'runtime_substrate');
     assert.equal(runtime.adapter_id, 'runtime_substrate_adapter');
+    assert.equal(runtime.coordination_role, 'executable_target');
     assert.equal(runtime.policy_id, 'silent_background_verified_stage_apply_on_next_restart');
     assert.equal(runtime.owner_route.route_kind, 'controlled_framework_executor');
     assert.equal(runtime.owner_route.readback_ref, 'opl system startup-maintenance --json');
@@ -613,6 +642,7 @@ exit 2
     assert.ok(agents);
     assert.equal(agents.provider_id, 'capability_packages');
     assert.equal(agents.adapter_id, 'capability_packages_adapter');
+    assert.equal(agents.coordination_role, 'executable_target');
     assert.equal(agents.policy_id, 'ordinary_user_non_development_silent_background');
     assert.equal(agents.owner_route.owner, 'one-person-lab-managed-modules');
     assert.equal(agents.owner_route.route_kind, 'clean_managed_package_executor');
@@ -665,6 +695,7 @@ exit 2
     const exposure = output.managed_update.components.find((entry) => entry.component_id === 'codex_surface');
     assert.ok(exposure);
     assert.equal(exposure.adapter_id, 'codex_surface_status_adapter');
+    assert.equal(exposure.coordination_role, 'derived_projection');
     assert.equal(exposure.owner_execution_boundary.executor_kind, 'diagnostic_readback');
     assert.equal(exposure.owner_execution_boundary.runner_can_execute, false);
     assert.equal(exposure.owner_execution_boundary.diagnostic_only, true);
@@ -677,6 +708,8 @@ exit 2
       true,
     );
     assert.equal(exposure.receipt.source_manifest_ref, 'module_post_apply_projection');
+    assert.equal(exposure.receipt.apply_mode, 'projection_only');
+    assert.equal(exposure.receipt.status_detail.auto_apply_eligible, false);
     assert.equal(
       exposure.conditions.some((entry) => entry.type === 'DerivedProjection' && entry.status === 'True'),
       true,
@@ -685,6 +718,7 @@ exit 2
     const companionTools = output.managed_update.components.find((entry) => entry.component_id === 'companion_tools');
     assert.ok(companionTools);
     assert.equal(companionTools.adapter_id, 'companion_tools_status_adapter');
+    assert.equal(companionTools.coordination_role, 'owner_handoff');
     assert.equal(companionTools.owner_execution_boundary.owner_executor_id, 'companion_skill_route');
     assert.equal(companionTools.owner_execution_boundary.runner_can_execute, false);
     assert.equal(companionTools.current.source, 'opl_companion_skill_sync_tools');
@@ -692,6 +726,7 @@ exit 2
     const workflowProfile = output.managed_update.components.find((entry) => entry.component_id === 'workflow_profile');
     assert.ok(workflowProfile);
     assert.equal(workflowProfile.adapter_id, 'workflow_profile_adapter');
+    assert.equal(workflowProfile.coordination_role, 'owner_handoff');
     assert.equal(workflowProfile.policy_id, 'semantic_merge_required_no_silent_overwrite');
     assert.equal(workflowProfile.owner_execution_boundary.owner_executor_id, 'codex_semantic_merge_owner');
     assert.equal(workflowProfile.owner_execution_boundary.runner_can_execute, false);

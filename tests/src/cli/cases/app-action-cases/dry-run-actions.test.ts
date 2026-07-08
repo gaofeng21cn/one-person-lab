@@ -106,9 +106,9 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(moduleSync.delegated_surface, 'opl connect reconcile-modules');
-    assert.equal(moduleSync.result.system_action.action, 'reconcile_modules');
-    assert.equal(moduleSync.result.system_action.status, 'dry_run');
+    assert.equal(moduleSync.delegated_surface, 'opl update apply --component capability_packages');
+    assert.equal(moduleSync.result.managed_update.operation, 'plan');
+    assert.equal(moduleSync.result.managed_update.components[0].component_id, 'capability_packages');
 
     const actionReceipt = runCli([
       'app',
@@ -245,8 +245,9 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(settingsSync.delegated_surface, 'opl connect reconcile-modules');
+    assert.equal(settingsSync.delegated_surface, 'opl update apply --component capability_packages');
     assert.equal(settingsSync.result.settings_control_center_action.task_kind, 'sync');
+    assert.equal(settingsSync.result.managed_update.components[0].component_id, 'capability_packages');
 
     const settingsVerify = runCli([
       'app',
@@ -289,11 +290,12 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(appUpdate.delegated_surface, 'one-person-lab-app installation_carrier.macos_app status');
+    assert.equal(appUpdate.delegated_surface, 'opl update status --component installation_carrier');
     assert.equal(appUpdate.result.settings_control_center_action.task_kind, 'check');
     assert.equal(appUpdate.result.settings_control_center_action.mutates, 'none_read_only');
-    assert.equal(appUpdate.result.installation_carrier_status.carrier_variant, 'installation_carrier.macos_app');
-    assert.equal(appUpdate.result.installation_carrier_status.opl_update_apply_allowed, false);
+    assert.equal(appUpdate.result.managed_update.components[0].component_id, 'installation_carrier');
+    assert.equal(appUpdate.result.managed_update.components[0].coordination_role, 'owner_handoff');
+    assert.equal(appUpdate.result.managed_update.components[0].current.managed_kernel_apply_allowed, false);
 
     const cleanupPlan = runCli([
       'app',

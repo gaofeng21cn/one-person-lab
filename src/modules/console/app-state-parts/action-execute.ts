@@ -12,6 +12,8 @@ import {
   runOplFlowIntelligenceEnhancementAction,
   runOplModuleAction,
   agentPackageDelegatedSurface,
+  buildManagedUpdateKernelProjection,
+  runManagedUpdateKernelOperation,
 } from '../../connect/index.ts';
 import { runOplSystemAction } from '../../connect/index.ts';
 import { writeOplWorkspaceRootSurface } from '../../connect/index.ts';
@@ -79,6 +81,29 @@ function requireAgentPackageDelegatedSurface(actionId: string) {
     });
   }
   return delegatedSurface;
+}
+
+async function buildManagedUpdateControlCenterDryRun(
+  contracts: FrameworkContracts,
+  options: AppActionExecuteOptions,
+  componentId: string,
+  operation: 'status' | 'plan' = 'plan',
+) {
+  const projection = await buildManagedUpdateKernelProjection(contracts, {
+    operation,
+    componentId,
+  });
+  return {
+    ...buildSettingsControlCenterDryRun(options.actionId, options.payload),
+    managed_update: projection.managed_update,
+  };
+}
+
+function runManagedUpdateApply(contracts: FrameworkContracts, componentId: string) {
+  return runManagedUpdateKernelOperation(contracts, {
+    operation: 'apply',
+    componentId,
+  });
 }
 
 export function parseAppActionExecuteArgs(args: string[]): AppActionExecuteOptions {
@@ -180,15 +205,13 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'module_sync') {
     return {
-      delegatedSurface: 'opl connect reconcile-modules',
+      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
       result: options.dryRun
-        ? {
-            system_action: {
-              action: 'reconcile_modules',
-              status: 'dry_run',
-            },
-          }
-        : await runOplSystemAction(contracts, 'reconcile_modules'),
+        ? await buildManagedUpdateKernelProjection(contracts, {
+            operation: 'plan',
+            componentId: 'capability_packages',
+          })
+        : await runManagedUpdateApply(contracts, 'capability_packages'),
     };
   }
 
@@ -336,25 +359,19 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_sync_capabilities') {
     return {
-      delegatedSurface: 'opl connect reconcile-modules',
+      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
       result: options.dryRun
-        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
-        : await runOplSystemAction(contracts, 'reconcile_modules'),
+        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'capability_packages')
+        : await runManagedUpdateApply(contracts, 'capability_packages'),
     };
   }
 
   if (options.actionId === 'settings_apply_opl_packages') {
     return {
-      delegatedSurface: 'opl connect update --module <all-default-modules>',
+      delegatedSurface: managedUpdateCommand('apply', 'capability_packages', { json: false }),
       result: options.dryRun
-        ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
-        : await Promise.all([
-          runOplModuleAction('update', 'medautoscience'),
-          runOplModuleAction('update', 'medautogrant'),
-          runOplModuleAction('update', 'redcube'),
-          runOplModuleAction('update', 'oplmetaagent'),
-          runOplModuleAction('update', 'oplbookforge'),
-        ]),
+        ? await buildManagedUpdateControlCenterDryRun(contracts, options, 'capability_packages')
+        : await runManagedUpdateApply(contracts, 'capability_packages'),
     };
   }
 
@@ -455,18 +472,15 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_check_app_update') {
     const dryRun = buildSettingsControlCenterDryRun(options.actionId, options.payload);
+    const projection = await buildManagedUpdateKernelProjection(contracts, {
+      operation: 'status',
+      componentId: 'installation_carrier',
+    });
     return {
-      delegatedSurface: 'one-person-lab-app installation_carrier.macos_app status',
+      delegatedSurface: managedUpdateCommand('status', 'installation_carrier', { json: false }),
       result: {
         settings_control_center_action: dryRun.settings_control_center_action,
-        installation_carrier_status: {
-          carrier_type: 'macos_app',
-          carrier_variant: 'installation_carrier.macos_app',
-          status_source: 'one-person-lab-app',
-          update_route: 'electron_standard_updater_or_homebrew_cask',
-          framework_managed_update_kernel_owned: false,
-          opl_update_apply_allowed: false,
-        },
+        managed_update: projection.managed_update,
       },
     };
   }

@@ -492,6 +492,25 @@ exit 1
           ['agent_package_preferences_set', 'opl app action execute --action agent_package_preferences_set', 'capabilities'],
         ],
       );
+      assert.deepEqual(
+        [
+          'settings_sync_capabilities',
+          'settings_apply_opl_packages',
+          'settings_check_app_update',
+          'settings_rollback_runtime_substrate',
+        ].map((actionId) => {
+          const action = output.app_state.settings_control_center.action_catalog.find(
+            (entry: AppStateListEntry) => entry.action_id === actionId,
+          );
+          return [action?.action_id, action?.delegated_surface, action?.section_id];
+        }),
+        [
+          ['settings_sync_capabilities', 'opl update apply --component capability_packages', 'capabilities'],
+          ['settings_apply_opl_packages', 'opl update apply --component capability_packages', 'packages'],
+          ['settings_check_app_update', 'opl update status --component installation_carrier', 'updates'],
+          ['settings_rollback_runtime_substrate', 'opl update rollback --component runtime_substrate', 'updates'],
+        ],
+      );
       assert.equal(
         output.app_state.settings_control_center.action_catalog.every(
           (entry: AppStateListEntry) => entry.authority_flags.can_write_domain_truth === false,
