@@ -29,6 +29,7 @@ import {
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+  defaultCallerOwnerDecisionCloseoutReadout,
 } from './default-caller-retirement-guard.ts';
 import {
   DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS,
@@ -590,6 +591,26 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     const physicalDeleteAuthorizationStatus = physicalDeleteAuthorized
       ? 'authorized_by_domain_owner_physical_delete_ref'
       : 'not_authorized_by_opl_projection';
+    const ownerDecisionResultShapes = uniqueStringList(
+      surfaceRetirementGates
+        .map((worklist) => optionalString(worklist.owner_decision_result_shape))
+        .filter((entry): entry is string => Boolean(entry)),
+    );
+    const ownerDecisionResultShape = physicalDeleteAuthorized
+        ? 'physical_delete_authorization_ref'
+      : ownerDecisionResultShapes.includes('keep_as_authority_adapter_ref')
+        ? 'keep_as_authority_adapter_ref'
+      : ownerDecisionResultShapes.includes('typed_blocker_ref')
+        ? 'typed_blocker_ref'
+      : ownerDecisionResultShapes.includes('owner_receipt_ref')
+        ? 'owner_receipt_ref'
+      : null;
+    const ownerDecisionCloseoutReadout = defaultCallerOwnerDecisionCloseoutReadout({
+      prerequisitesObserved: deleteOrKeepPrerequisitesObserved,
+      ownerDecisionObserved: allDeletionEvidenceRequirementsObserved,
+      physicalDeleteAuthorized,
+      ownerDecisionResultShape,
+    });
     const nextRequiredOwnerAction = deleteOrKeepPrerequisitesObserved
       ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
       : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review';
@@ -627,6 +648,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         },
         default_caller_delete_ready: physicalDeleteAuthorized,
         physical_delete_authorized: physicalDeleteAuthorized,
+        owner_decision_result_shape: ownerDecisionResultShape,
+        owner_decision_result_shapes: ownerDecisionResultShapes,
+        ...ownerDecisionCloseoutReadout,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
       },
@@ -661,9 +685,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         all_deletion_evidence_requirements_observed: allDeletionEvidenceRequirementsObserved,
         delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
         default_caller_delete_ready: physicalDeleteAuthorized,
-        owner_decision_result_shape: physicalDeleteAuthorized
-          ? 'physical_delete_authorization_ref'
-          : undefined,
+        owner_decision_result_shape: ownerDecisionResultShape,
+        owner_decision_result_shapes: ownerDecisionResultShapes,
+        ...ownerDecisionCloseoutReadout,
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_blocked_by: physicalDeleteBlockedBy,
         physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
@@ -811,6 +835,14 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
   const physicalDeleteAuthorizationStatus =
     optionalString(physicalDeleteAuthorityReadModel.physical_delete_authorization_status)
     ?? 'not_authorized_by_opl_projection';
+  const ownerDecisionResultShape =
+    optionalString(physicalDeleteAuthorityReadModel.owner_decision_result_shape);
+  const ownerDecisionCloseoutStatus =
+    optionalString(physicalDeleteAuthorityReadModel.owner_decision_closeout_status);
+  const noFurtherOplDefaultCallerDeleteWork =
+    physicalDeleteAuthorityReadModel.no_further_opl_default_caller_delete_work === true;
+  const nextOplDefaultCallerDeleteAction =
+    optionalString(physicalDeleteAuthorityReadModel.next_opl_default_caller_delete_action);
   const physicalDeleteBlockedBy = physicalDeleteAuthorized
     ? []
     : [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS];
@@ -854,6 +886,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
     physical_delete_authorized: physicalDeleteAuthorized,
     physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
     owner_decision_status: ownerDecisionStatus,
+    owner_decision_result_shape: ownerDecisionResultShape,
+    owner_decision_closeout_status: ownerDecisionCloseoutStatus,
+    no_further_opl_default_caller_delete_work: noFurtherOplDefaultCallerDeleteWork,
+    next_opl_default_caller_delete_action: nextOplDefaultCallerDeleteAction,
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:
       structuralOwnerDecisionMissingCount,
     active_legacy_caller_deletion_gate:
@@ -902,6 +938,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
       generated_default_caller_readiness_can_authorize_physical_delete: false,
       physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
       owner_decision_status: ownerDecisionStatus,
+      owner_decision_result_shape: ownerDecisionResultShape,
+      owner_decision_closeout_status: ownerDecisionCloseoutStatus,
+      no_further_opl_default_caller_delete_work: noFurtherOplDefaultCallerDeleteWork,
+      next_opl_default_caller_delete_action: nextOplDefaultCallerDeleteAction,
       structural_prerequisites_observed_but_domain_owner_decision_missing_count:
         structuralOwnerDecisionMissingCount,
       active_legacy_caller_deletion_gate:
@@ -938,6 +978,10 @@ export function buildAgentDefaultCallerReadinessReport(args: string[]) {
         generated_default_caller_readiness_can_authorize_physical_delete: false,
         physical_delete_authorization_status: physicalDeleteAuthorizationStatus,
         owner_decision_status: ownerDecisionStatus,
+        owner_decision_result_shape: ownerDecisionResultShape,
+        owner_decision_closeout_status: ownerDecisionCloseoutStatus,
+        no_further_opl_default_caller_delete_work: noFurtherOplDefaultCallerDeleteWork,
+        next_opl_default_caller_delete_action: nextOplDefaultCallerDeleteAction,
         structural_prerequisites_observed_but_domain_owner_decision_missing_count:
           structuralOwnerDecisionMissingCount,
       },

@@ -51,10 +51,16 @@ test('owner evidence intake projects private-platform and lifecycle read-model r
     assert.ok(privatePlatformLane);
     assert.equal(privatePlatformLane.status, 'owner_evidence_observed_not_ready_claim');
     assert.deepEqual(privatePlatformLane.observed_ref_shapes, ['evidence_ref']);
-    assert.equal(privatePlatformLane.verified_receipt_count, 2);
+    assert.equal(privatePlatformLane.verified_receipt_count, 3);
     assert.equal(
       privatePlatformLane.observed_receipt_refs.includes(
         'refs-only-read-model:agents-default-callers/owner-decision-observed-not-delete-authorized',
+      ),
+      true,
+    );
+    assert.equal(
+      privatePlatformLane.observed_receipt_refs.includes(
+        'refs-only-read-model:agents-default-callers/no-further-opl-default-caller-delete-work',
       ),
       true,
     );
@@ -453,13 +459,13 @@ test('framework operating maturity aggregates scaleout and L5 gaps without ready
     );
     assert.equal(
       omaRoute.verification_commands.includes(
-        `opl agents conformance --agent opl-meta-agent=${workspaceRoot}/opl-meta-agent --json`,
+        `opl agents conformance --agent oma=${workspaceRoot}/opl-meta-agent --json`,
       ),
       true,
     );
     assert.equal(
       omaRoute.source_command,
-      `opl agents conformance --agent opl-meta-agent=${workspaceRoot}/opl-meta-agent --json`,
+      `opl agents conformance --agent oma=${workspaceRoot}/opl-meta-agent --json`,
     );
     assert.equal(omaRoute.forbidden_opl_claims.includes('live_domain_progress_complete'), true);
     assert.equal(omaRoute.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);

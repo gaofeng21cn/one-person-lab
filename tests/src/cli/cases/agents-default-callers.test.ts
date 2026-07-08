@@ -186,6 +186,8 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as any;
   const bridgeExitGate = {
     owner_receipt_refs: ['owner-receipt:sample/default-caller-delete-reviewed'],
+    keep_as_authority_adapter_ref: 'keep-as-authority-adapter:sample/default-caller-delete-reviewed',
+    typed_blocker_ref: 'typed-blocker:sample/default-caller-delete-reviewed:not-physical-delete',
     no_active_caller_refs: ['no-active-caller:sample/default-caller-delete'],
     no_forbidden_write_refs: ['no-forbidden-write:sample/default-caller-delete'],
     tombstone_refs: ['tombstone:sample/default-caller-delete'],
@@ -462,12 +464,17 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate.status,
-    'no_active_worklist_not_delete_authorized',
+    'owner_decision_observed_no_further_opl_delete_work',
   );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
       .executable_next_action,
-    'no_active_delete_worklist_items',
+    'no_further_opl_default_caller_delete_work',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
+      .no_further_opl_default_caller_delete_work,
+    true,
   );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.active_legacy_caller_deletion_gate
@@ -482,6 +489,22 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.delete_or_keep_prerequisites_observed,
     true,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.no_further_opl_default_caller_delete_work,
+    true,
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_result_shape,
+    'keep_as_authority_adapter_ref',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.next_opl_default_caller_delete_action,
+    'no_further_opl_default_caller_delete_work',
+  );
+  assert.equal(
+    defaultCallers.physical_delete_authority_read_model.owner_decision_closeout_status,
+    'keep_as_authority_adapter_observed_no_further_opl_delete_work',
   );
   assert.equal(
     defaultCallers.physical_delete_authority_read_model.owner_decision_required_after_prerequisites_observed,
@@ -536,6 +559,18 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].physical_delete_authorized, false);
   assert.equal(defaultCallers.repo_deletion_gate_summary[0].default_caller_delete_ready, false);
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].no_further_opl_default_caller_delete_work,
+    true,
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].owner_decision_result_shape,
+    'keep_as_authority_adapter_ref',
+  );
+  assert.equal(
+    defaultCallers.repo_deletion_gate_summary[0].next_opl_default_caller_delete_action,
+    'no_further_opl_default_caller_delete_work',
+  );
   assert.equal(
     defaultCallers.repo_deletion_gate_summary[0].next_required_owner_action,
     'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
@@ -613,6 +648,11 @@ test('agents default-callers treats fully observed deletion evidence as refs-onl
   );
   assert.equal(report.deletion_gate.all_deletion_evidence_requirements_observed, true);
   assert.equal(report.deletion_gate.default_caller_delete_ready, false);
+  assert.equal(report.deletion_gate.no_further_opl_default_caller_delete_work, true);
+  assert.equal(
+    report.deletion_gate.next_opl_default_caller_delete_action,
+    'no_further_opl_default_caller_delete_work',
+  );
   assert.deepEqual(report.deletion_gate.mandatory_gate_ids, defaultCallers.retirement_guard_mandatory_gate_ids);
   assert.equal(report.deletion_gate.physical_delete_authorization_status, 'not_authorized_by_opl_projection');
   assert.equal(

@@ -10,6 +10,7 @@ export {
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
+  defaultCallerOwnerDecisionCloseoutReadout,
 } from '../../kernel/default-caller-retirement-guard.ts';
 
 export type {

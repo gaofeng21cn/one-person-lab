@@ -90,6 +90,13 @@
       "keep_as_authority_adapter_ref",
       "typed_blocker_ref"
     ],
+    "owner_decision_closeout_readout_fields": [
+      "owner_decision_result_shape",
+      "owner_decision_closeout_status",
+      "no_further_opl_default_caller_delete_work",
+      "next_opl_default_caller_delete_action"
+    ],
+    "no_further_opl_default_caller_delete_work_is_not_physical_delete_authority": true,
     "deletion_evidence_requirements_are_completion_claims": false,
     "not_authorized_claims": [
       "domain_repo_physical_delete_authorization",

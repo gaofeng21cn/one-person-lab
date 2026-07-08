@@ -21,6 +21,13 @@
     "keep_as_authority_adapter_ref",
     "typed_blocker_ref"
   ],
+  "owner_decision_closeout_readout": {
+    "owner_decision_result_shape": "observed domain-owner decision ref shape when available",
+    "owner_decision_closeout_status": "machine-readable closeout status for OPL default-caller delete work",
+    "no_further_opl_default_caller_delete_work": "true only when OPL has no remaining default-caller deletion work for the observed gate; this does not authorize domain repo physical delete",
+    "next_opl_default_caller_delete_action": "no_further_opl_default_caller_delete_work when the OPL worklist is closed, otherwise the next OPL/operator action",
+    "physical_delete_authorized_remains_required_for_delete_ready": true
+  },
   "same_work_unit_live_evidence_scope": {
     "gate_id": "same_work_unit_live_evidence",
     "applies_to": "current_owner_answer_compensation_chain",

@@ -37,6 +37,12 @@ export function buildCleanupRetirementProjection(input: {
       deletionSummary.owner_decision_required_after_prerequisites_observed === true,
     owner_decision_required_after_all_refs_observed:
       deletionSummary.owner_decision_required_after_all_refs_observed === true,
+    owner_decision_closeout_status:
+      stringValue(deletionSummary.owner_decision_closeout_status),
+    no_further_opl_default_caller_delete_work:
+      deletionSummary.no_further_opl_default_caller_delete_work === true,
+    next_opl_default_caller_delete_action:
+      stringValue(deletionSummary.next_opl_default_caller_delete_action),
     delete_or_keep_prerequisites_observed:
       deletionSummary.delete_or_keep_prerequisites_observed === true,
     structural_prerequisites_observed_but_domain_owner_decision_missing_count:

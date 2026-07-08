@@ -28,6 +28,7 @@ import {
   DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE,
   DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS,
   DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES,
+  defaultCallerOwnerDecisionCloseoutReadout,
 } from '../../foundry-lab/index.ts';
 
 function uniqueStrings(values: string[]) {
@@ -128,6 +129,12 @@ function ownerDecisionStatus(deleteOrKeepPrerequisitesObserved: boolean, allRequ
   return 'owner_decision_observed_refs_only_not_delete_authorized';
 }
 
+function ownerDecisionShapeFromWorklist(worklist: JsonRecord) {
+  const domainDecision = record(worklist.domain_owner_receipt_or_typed_blocker);
+  return stringValue(worklist.owner_decision_result_shape)
+    ?? stringValue(domainDecision.owner_decision_result_shape);
+}
+
 function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
   const surfaceId = stringValue(worklist.surface_id) ?? 'unknown_surface';
   const missingIds = missingRequirementIds(worklist);
@@ -142,6 +149,7 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
     && missingIds.length === 0;
   const structuralOwnerDecisionMissingCount =
     deleteOrKeepPrerequisitesObserved && !allRequirementsObserved ? 1 : 0;
+  const ownerDecisionResultShape = ownerDecisionShapeFromWorklist(worklist);
   const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
     ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
     : ['typed_blocker_ref'];
@@ -189,6 +197,12 @@ function compactDeletionEvidenceWorklist(worklist: JsonRecord) {
     default_caller_delete_ready: false,
     worklist_item_is_completion_claim: false,
     physical_delete_authorization_status: 'not_authorized_by_opl_projection',
+    owner_decision_result_shape: ownerDecisionResultShape,
+    ...defaultCallerOwnerDecisionCloseoutReadout({
+      prerequisitesObserved: deleteOrKeepPrerequisitesObserved,
+      ownerDecisionObserved: allRequirementsObserved,
+      ownerDecisionResultShape,
+    }),
     owner_decision_status: ownerDecisionStatus(
       deleteOrKeepPrerequisitesObserved,
       allRequirementsObserved,
@@ -265,6 +279,22 @@ function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
       worklist.structural_prerequisites_observed_but_domain_owner_decision_missing_count || 0,
     )
   ), 0);
+  const reportSummary = record(report.summary);
+  const reportDeletionGate = record(report.deletion_gate);
+  const reportDeleteOrKeepPrerequisitesObserved =
+    reportDeletionGate.delete_or_keep_prerequisites_observed === true
+    || reportSummary.delete_or_keep_prerequisites_observed === true;
+  const reportAllRequirementsObserved =
+    reportDeletionGate.all_deletion_evidence_requirements_observed === true
+    || reportSummary.no_further_opl_default_caller_delete_work === true
+    || reportDeletionGate.no_further_opl_default_caller_delete_work === true;
+  const effectiveDeleteOrKeepPrerequisitesObserved =
+    deleteOrKeepPrerequisitesObserved || reportDeleteOrKeepPrerequisitesObserved;
+  const effectiveAllRequirementsObserved =
+    allReadyWorklistsObserved || reportAllRequirementsObserved;
+  const ownerDecisionResultShape =
+    stringValue(reportDeletionGate.owner_decision_result_shape)
+    ?? stringValue(reportSummary.owner_decision_result_shape);
   const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
     ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
     : ['typed_blocker_ref'];
@@ -314,19 +344,26 @@ function buildDomainDefaultCallerDeletionRefsFromReadinessReport(
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
+      owner_decision_result_shape: ownerDecisionResultShape,
+      ...defaultCallerOwnerDecisionCloseoutReadout({
+        prerequisitesObserved: effectiveDeleteOrKeepPrerequisitesObserved,
+        ownerDecisionObserved: effectiveAllRequirementsObserved,
+        ownerDecisionResultShape,
+      }),
       owner_decision_status: ownerDecisionStatus(
-        deleteOrKeepPrerequisitesObserved,
-        allReadyWorklistsObserved,
+        effectiveDeleteOrKeepPrerequisitesObserved,
+        effectiveAllRequirementsObserved,
       ),
       structural_prerequisites_observed_but_domain_owner_decision_missing_count:
         structuralOwnerDecisionMissingCount,
-      delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
-      owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
-      next_required_owner_action: deleteOrKeepPrerequisitesObserved
+      delete_or_keep_prerequisites_observed: effectiveDeleteOrKeepPrerequisitesObserved,
+      owner_decision_required_after_prerequisites_observed:
+        effectiveDeleteOrKeepPrerequisitesObserved,
+      next_required_owner_action: effectiveDeleteOrKeepPrerequisitesObserved
         ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
         : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
       accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
-      owner_decision_required_after_all_refs_observed: allReadyWorklistsObserved,
+      owner_decision_required_after_all_refs_observed: effectiveAllRequirementsObserved,
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -372,7 +409,29 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
       worklist.structural_prerequisites_observed_but_domain_owner_decision_missing_count || 0,
     )
   ), 0);
-  const acceptedRefsOnlyResultShapes = deleteOrKeepPrerequisitesObserved
+  const allDeletionWorklistsObserved = deletionWorklists.length > 0
+    && deletionWorklists.every((worklist) =>
+      worklist.no_further_opl_default_caller_delete_work === true
+      || Number(worklist.missing_requirement_count || 0) === 0
+    );
+  const effectiveDeleteOrKeepPrerequisitesObserved =
+    deleteOrKeepPrerequisitesObserved || allDeletionWorklistsObserved;
+  const effectiveAllRequirementsObserved =
+    allReadyWorklistsObserved || allDeletionWorklistsObserved;
+  const ownerDecisionResultShapes = uniqueStrings(
+    deletionWorklists
+      .map((worklist) => stringValue(worklist.owner_decision_result_shape))
+      .filter((entry): entry is string => Boolean(entry)),
+  );
+  const ownerDecisionResultShape =
+    ownerDecisionResultShapes.includes('keep_as_authority_adapter_ref')
+      ? 'keep_as_authority_adapter_ref'
+      : ownerDecisionResultShapes.includes('typed_blocker_ref')
+        ? 'typed_blocker_ref'
+        : ownerDecisionResultShapes.includes('owner_receipt_ref')
+          ? 'owner_receipt_ref'
+          : null;
+  const acceptedRefsOnlyResultShapes = effectiveDeleteOrKeepPrerequisitesObserved
     ? [...DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES]
     : ['typed_blocker_ref'];
   return {
@@ -420,19 +479,26 @@ function buildDomainDefaultCallerDeletionRefs(project: DomainManifestCatalogEntr
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
+      owner_decision_result_shape: ownerDecisionResultShape,
+      ...defaultCallerOwnerDecisionCloseoutReadout({
+        prerequisitesObserved: effectiveDeleteOrKeepPrerequisitesObserved,
+        ownerDecisionObserved: effectiveAllRequirementsObserved,
+        ownerDecisionResultShape,
+      }),
       owner_decision_status: ownerDecisionStatus(
-        deleteOrKeepPrerequisitesObserved,
-        allReadyWorklistsObserved,
+        effectiveDeleteOrKeepPrerequisitesObserved,
+        effectiveAllRequirementsObserved,
       ),
       structural_prerequisites_observed_but_domain_owner_decision_missing_count:
         structuralOwnerDecisionMissingCount,
-      delete_or_keep_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
-      owner_decision_required_after_prerequisites_observed: deleteOrKeepPrerequisitesObserved,
-      next_required_owner_action: deleteOrKeepPrerequisitesObserved
+      delete_or_keep_prerequisites_observed: effectiveDeleteOrKeepPrerequisitesObserved,
+      owner_decision_required_after_prerequisites_observed:
+        effectiveDeleteOrKeepPrerequisitesObserved,
+      next_required_owner_action: effectiveDeleteOrKeepPrerequisitesObserved
         ? DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION
         : 'domain_repo_owner_physical_delete_receipt_or_typed_blocker_after_surface_review',
       accepted_refs_only_result_shapes: acceptedRefsOnlyResultShapes,
-      owner_decision_required_after_all_refs_observed: allReadyWorklistsObserved,
+      owner_decision_required_after_all_refs_observed: effectiveAllRequirementsObserved,
       not_authorized_claims: [...DEFAULT_CALLER_DELETION_NOT_AUTHORIZED_CLAIMS],
     },
     authority_boundary: refsOnlyAuthorityBoundary(),
@@ -466,6 +532,23 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
         .structural_prerequisites_observed_but_domain_owner_decision_missing_count || 0,
     )
   ), 0);
+  const allDomainsNoFurtherOplDeleteWork = resolvedDomainCount > 0
+    && domains.every((domain) =>
+      record(domain.summary).no_further_opl_default_caller_delete_work === true
+    );
+  const ownerDecisionResultShapes = uniqueStrings(
+    domains
+      .map((domain) => stringValue(record(domain.summary).owner_decision_result_shape))
+      .filter((entry): entry is string => Boolean(entry)),
+  );
+  const ownerDecisionResultShape =
+    ownerDecisionResultShapes.includes('keep_as_authority_adapter_ref')
+      ? 'keep_as_authority_adapter_ref'
+      : ownerDecisionResultShapes.includes('typed_blocker_ref')
+        ? 'typed_blocker_ref'
+        : ownerDecisionResultShapes.includes('owner_receipt_ref')
+          ? 'owner_receipt_ref'
+          : null;
   return {
     surface_kind: 'opl_default_caller_deletion_evidence_refs',
     projection_policy:
@@ -498,9 +581,16 @@ export function buildDefaultCallerDeletionEvidenceRefs(projects: DomainManifestC
       physical_delete_authorized: false,
       default_caller_delete_ready: false,
       deletion_evidence_requirements_are_completion_claims: false,
+      owner_decision_result_shape: ownerDecisionResultShape,
+      owner_decision_result_shapes: ownerDecisionResultShapes,
+      ...defaultCallerOwnerDecisionCloseoutReadout({
+        prerequisitesObserved: allDomainsWithDeleteOrKeepPrerequisites,
+        ownerDecisionObserved: allDomainsReadyForOwnerDecision || allDomainsNoFurtherOplDeleteWork,
+        ownerDecisionResultShape,
+      }),
       owner_decision_status: ownerDecisionStatus(
         allDomainsWithDeleteOrKeepPrerequisites,
-        allDomainsReadyForOwnerDecision,
+        allDomainsReadyForOwnerDecision || allDomainsNoFurtherOplDeleteWork,
       ),
       structural_prerequisites_observed_but_domain_owner_decision_missing_count:
         structuralOwnerDecisionMissingCount,

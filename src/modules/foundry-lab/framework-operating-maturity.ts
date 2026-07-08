@@ -632,10 +632,12 @@ export async function buildFrameworkOperatingMaturityReadout(
       },
       cleanup_retirement: {
         source_command: 'opl agents default-callers --family-defaults --json',
-        status: stringValue(physicalDeleteAuthority.owner_decision_status)
-          ?? (cleanupOpenDecisionCount > 0
+        status: booleanValue(physicalDeleteAuthority.no_further_opl_default_caller_delete_work)
+          ? 'owner_decision_observed_no_further_opl_delete_work'
+          : (stringValue(physicalDeleteAuthority.owner_decision_status)
+            ?? (cleanupOpenDecisionCount > 0
             ? 'owner_decision_required'
-            : 'owner_decision_observed_refs_only_not_delete_authorized'),
+            : 'owner_decision_observed_refs_only_not_delete_authorized')),
         deletion_evidence_worklist_count: cleanupEvidenceWorklistCount,
         owner_decision_missing_count: cleanupOpenDecisionCount,
         structural_prerequisites_observed:
@@ -643,11 +645,20 @@ export async function buildFrameworkOperatingMaturityReadout(
         all_deletion_evidence_requirements_observed:
           physicalDeleteAuthority.all_repos_all_deletion_evidence_requirements_observed === true,
         owner_decision_status: stringValue(physicalDeleteAuthority.owner_decision_status),
+        owner_decision_closeout_status:
+          stringValue(physicalDeleteAuthority.owner_decision_closeout_status),
+        no_further_opl_default_caller_delete_work:
+          booleanValue(physicalDeleteAuthority.no_further_opl_default_caller_delete_work),
+        next_opl_default_caller_delete_action:
+          stringValue(physicalDeleteAuthority.next_opl_default_caller_delete_action),
         default_caller_delete_ready: booleanValue(defaultCallers.default_caller_delete_ready),
         physical_delete_authorized: booleanValue(defaultCallers.physical_delete_authorized),
         physical_delete_authorization_status:
           stringValue(defaultCallers.physical_delete_authorization_status),
-        next_required_owner_action: 'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
+        next_required_owner_action:
+          booleanValue(physicalDeleteAuthority.no_further_opl_default_caller_delete_work)
+            ? 'no_further_opl_default_caller_delete_work'
+            : 'domain_owner_choose_delete_authorize_keep_or_typed_blocker',
         accepted_refs_only_result_shapes: [
           'physical_delete_authorization_ref',
           'keep_as_authority_adapter_ref',

@@ -746,6 +746,8 @@ function privatePlatformRetirementProjection(
     booleanValue(physicalDeleteAuthority.all_repos_delete_or_keep_prerequisites_observed) === true
     && booleanValue(physicalDeleteAuthority.all_repos_all_deletion_evidence_requirements_observed) === true;
   const ownerDecisionObserved =
+    booleanValue(physicalDeleteAuthority.no_further_opl_default_caller_delete_work) === true
+    ||
     stringValue(physicalDeleteAuthority.owner_decision_status)
       === 'owner_decision_observed_refs_only_not_delete_authorized';
   const observedRefCount = prerequisitesObserved
@@ -756,6 +758,9 @@ function privatePlatformRetirementProjection(
       `refs-only-read-model:agents-default-callers/deletion-evidence-worklist:${observedRefCount}`,
       ownerDecisionObserved
         ? 'refs-only-read-model:agents-default-callers/owner-decision-observed-not-delete-authorized'
+        : '',
+      ownerDecisionObserved
+        ? 'refs-only-read-model:agents-default-callers/no-further-opl-default-caller-delete-work'
         : '',
     ])
     : [];

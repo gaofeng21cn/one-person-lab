@@ -79,5 +79,67 @@ export const DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS = [
 export type DefaultCallerPrivatePlatformResidueTargetKind =
   typeof DEFAULT_CALLER_PRIVATE_PLATFORM_RESIDUE_TARGET_KINDS[number];
 
+export function defaultCallerOwnerDecisionCloseoutReadout(input: {
+  prerequisitesObserved: boolean;
+  ownerDecisionObserved: boolean;
+  physicalDeleteAuthorized?: boolean;
+  ownerDecisionResultShape?: string | null;
+}) {
+  if (!input.prerequisitesObserved) {
+    return {
+      owner_decision_closeout_status: 'waiting_for_structural_prerequisites',
+      no_further_opl_default_caller_delete_work: false,
+      owner_decision_observed: false,
+      owner_decision_pending: false,
+      keep_as_authority_adapter_observed: false,
+      typed_blocker_observed: false,
+      physical_delete_authorization_request_observed: false,
+      next_opl_default_caller_delete_action:
+        'observe_structural_prerequisites_before_domain_owner_decision',
+    };
+  }
+  if (!input.ownerDecisionObserved) {
+    return {
+      owner_decision_closeout_status: 'domain_owner_decision_ref_not_observed',
+      no_further_opl_default_caller_delete_work: false,
+      owner_decision_observed: false,
+      owner_decision_pending: true,
+      keep_as_authority_adapter_observed: false,
+      typed_blocker_observed: false,
+      physical_delete_authorization_request_observed: false,
+      next_opl_default_caller_delete_action:
+        DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
+    };
+  }
+  const ownerDecisionResultShape = input.ownerDecisionResultShape ?? null;
+  const physicalDeleteAuthorizationObserved =
+    input.physicalDeleteAuthorized === true
+    || ownerDecisionResultShape === 'physical_delete_authorization_ref';
+  const keepAsAuthorityAdapterObserved =
+    ownerDecisionResultShape === 'keep_as_authority_adapter_ref';
+  const typedBlockerObserved = ownerDecisionResultShape === 'typed_blocker_ref';
+  const ownerReceiptObserved = ownerDecisionResultShape === 'owner_receipt_ref';
+  const ownerDecisionCloseoutStatus = physicalDeleteAuthorizationObserved
+      ? 'physical_delete_authorization_ref_observed_domain_owner_route_only'
+    : keepAsAuthorityAdapterObserved
+      ? 'keep_as_authority_adapter_observed_no_further_opl_delete_work'
+    : typedBlockerObserved
+      ? 'typed_blocker_observed_no_further_opl_delete_work'
+    : ownerReceiptObserved
+      ? 'owner_receipt_observed_no_further_opl_delete_work'
+    : 'owner_decision_ref_observed_no_further_opl_delete_work';
+  return {
+    owner_decision_closeout_status: ownerDecisionCloseoutStatus,
+    no_further_opl_default_caller_delete_work: true,
+    owner_decision_observed: true,
+    owner_decision_pending: false,
+    keep_as_authority_adapter_observed: keepAsAuthorityAdapterObserved,
+    typed_blocker_observed: typedBlockerObserved,
+    physical_delete_authorization_request_observed: physicalDeleteAuthorizationObserved,
+    next_opl_default_caller_delete_action:
+      'no_further_opl_default_caller_delete_work',
+  };
+}
+
 export type DefaultCallerPrivatePlatformCleanupDisposition =
   typeof DEFAULT_CALLER_PRIVATE_PLATFORM_CLEANUP_ALLOWED_DISPOSITIONS[number];
