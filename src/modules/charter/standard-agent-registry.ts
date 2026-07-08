@@ -21,7 +21,7 @@ export type StandardAgentRegistryEntry = {
   domain_authority_kernel_examples: string[];
 };
 
-export const STANDARD_AGENT_REGISTRY_REF = 'src/standard-agent-registry.ts';
+export const STANDARD_AGENT_REGISTRY_REF = 'src/modules/charter/standard-agent-registry.ts';
 export const STANDARD_AGENT_SERIES_MEMBERSHIP = 'standard_domain_agent' as const;
 export const FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP = 'framework_capability_package' as const;
 

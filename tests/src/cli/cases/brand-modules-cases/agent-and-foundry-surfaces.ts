@@ -123,9 +123,9 @@ test('Foundry Agent series exposes a shared CLI spine instead of copying OPL bra
 
     assert.equal(output.series_id, 'opl_foundry_agent_series.v1');
     assert.equal(output.series_label, 'OPL Foundry Agent');
-    assert.equal(output.standard_agent_registry.source_ref, 'src/standard-agent-registry.ts');
+    assert.equal(output.standard_agent_registry.source_ref, 'src/modules/charter/standard-agent-registry.ts');
     assert.deepEqual(output.standard_agent_registry.agent_ids, expectedStandardAgentIds);
-    assert.equal(output.refs.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
+    assert.equal(output.refs.standard_agent_registry_ref, 'src/modules/charter/standard-agent-registry.ts');
     assert.equal(output.refs.policy_release_ref, 'contracts/opl-framework/foundry-agent-series-policy-release.json');
     assert.equal(output.operation, operation);
     assert.equal(output.canonical_command_surface, 'opl agents foundry');
@@ -309,7 +309,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
 
   const mas = runCli(['foundry', 'agents', 'inspect', 'mas']).foundry_agent;
   assert.equal(mas.status, 'standard_domain_agent');
-  assert.equal(mas.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
+  assert.equal(mas.standard_agent_registry_ref, 'src/modules/charter/standard-agent-registry.ts');
   assert.equal(mas.series_membership, 'standard_domain_agent');
   assert.equal(mas.work_object.natural_alias, 'study');
   assert.equal(mas.brand_cli, 'mas');
@@ -370,7 +370,7 @@ test('OPL Foundry Agent index exposes all standard agents as one standard series
 
   const bookforge = runCli(['foundry', 'agents', 'inspect', 'opl-bookforge']).foundry_agent;
   assert.equal(bookforge.status, 'standard_domain_agent');
-  assert.equal(bookforge.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
+  assert.equal(bookforge.standard_agent_registry_ref, 'src/modules/charter/standard-agent-registry.ts');
   assert.equal(bookforge.series_membership, 'standard_domain_agent');
   assert.equal(bookforge.work_object.natural_alias, 'book');
   assert.equal(bookforge.brand_cli, 'obf');

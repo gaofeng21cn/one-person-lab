@@ -8,12 +8,12 @@
   "standard_agent_registry": {
     "surface_kind": "opl_standard_agent_registry_pointer",
     "version": "standard-agent-registry-pointer.v1",
-    "canonical_registry_ref": "src/standard-agent-registry.ts",
+    "canonical_registry_ref": "src/modules/charter/standard-agent-registry.ts",
     "membership_value": "standard_domain_agent",
     "derived_projection_surfaces": [
-      "src/foundry-agent-cli-spine.ts",
-      "src/opl-skills.ts",
-      "src/standard-domain-agent-conformance-foundry-agent-os.ts",
+      "src/modules/foundry-lab/foundry-agent-cli-spine.ts",
+      "src/modules/connect/opl-skills.ts",
+      "src/modules/foundry-lab/standard-domain-agent-conformance-foundry-agent-os.ts",
       "contracts/opl-framework/target-operating-architecture-contract.json"
     ],
     "public_agent_identity_must_derive_from_registry": true,

@@ -50,6 +50,10 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 - Console MAS current-work-unit / runtime workbench 投影 normalize 到 `opl_domain_current_work_unit_profile_projection` / `opl_domain_runtime_workbench_profile_projection`；旧 `mas_*` surface 只作为 `compatibility_surface_kind`。
 - Foundation support Skills 吸收跨 domain 失败模式，但只作为 AI review heuristics 和 no-authority route-back，不新增默认暴露。
 
+## 2026-07-08 追加收口：standard agent registry pointer hygiene
+
+本轮继续排查标准智能体边界，确认 `mas`、`mag`、`rca`、`oma`、`opl-bookforge` 是 standard domain agents，`mas-scholar-skills` 是 `framework_capability_package`。已把 Standard Agent Registry 的 canonical pointer 从旧 root-level 路径修正为 `src/modules/charter/standard-agent-registry.ts`，并同步 foundry series contract、target architecture、Foundry CLI / skill boundary tests 与默认 Skill 生态文档。详细矩阵见 [OPL 标准智能体边界调整 2026-07-08](./opl-standard-agent-boundary-adjustment-20260708.md)。
+
 ## 剩余收口清单
 
 | 优先级 | 条目 | 需要做什么 | 已经不是问题 |

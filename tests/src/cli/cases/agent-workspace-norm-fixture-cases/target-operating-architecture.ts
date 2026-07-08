@@ -392,16 +392,36 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
   foundry_agent_os_standard: {
     pattern_id: 'foundry_agent_os_standard.v1',
     source_pattern_ref: 'human_doc:mas_opl_agent_os_target_operating_architecture',
-    standard_agent_registry_ref: 'src/standard-agent-registry.ts',
+    standard_agent_registry_ref: 'src/modules/charter/standard-agent-registry.ts',
     target_shape: 'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
-    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge', 'mas-scholar-skills'],
+    applies_to_domain_agents: ['mas', 'mag', 'rca', 'oma', 'opl-bookforge'],
+    framework_capability_packages: [
+      {
+        agent_id: 'mas-scholar-skills',
+        package_scope: 'framework_capability_package',
+        capability_contract_ref: 'contracts/opl-framework/scholar-skills-capability-modules.json',
+        public_projection: 'opl_foundry_agent_series_refs_only_capability_package',
+        capability_pack_example: 'Scholar Capability Pack',
+        authority_ref_examples: ['candidate scientific capability refs', 'domain owner consumption handoff refs'],
+        authority_boundary: {
+          can_claim_domain_ready: false,
+          can_claim_runtime_ready: false,
+          can_claim_quality_verdict: false,
+          can_claim_artifact_authority: false,
+          can_claim_publication_readiness: false,
+          can_write_domain_truth: false,
+          can_sign_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_schedule_runtime: false,
+        },
+      },
+    ],
     domain_pack_examples: {
       mas: 'Medical Research Pack',
       mag: 'Grant Pack',
       rca: 'Visual Deliverable Pack',
       oma: 'Agent-Building Pack',
       'opl-bookforge': 'Book Manuscript Pack',
-      'mas-scholar-skills': 'Scholar Capability Pack',
     },
     domain_authority_kernel_examples: {
       mas: ['medical research truth', 'owner receipt signer'],
@@ -409,7 +429,6 @@ export const MINIMAL_TARGET_OPERATING_ARCHITECTURE_CONTRACT: TargetOperatingArch
       rca: ['visual truth', 'owner receipt signer'],
       oma: ['agent-building semantics', 'target-agent typed blocker signer'],
       'opl-bookforge': ['book manuscript truth', 'owner receipt signer'],
-      'mas-scholar-skills': ['candidate scientific capability refs', 'domain owner consumption handoff refs'],
     },
     new_agent_baseline_handoff_policy: {
       surface_kind: 'opl_foundry_new_agent_baseline_handoff_policy',

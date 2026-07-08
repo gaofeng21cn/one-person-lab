@@ -453,7 +453,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
   }
 
   assert.equal(contract.foundry_agent_os_standard.pattern_id, 'foundry_agent_os_standard.v1');
-  assert.equal(contract.foundry_agent_os_standard.standard_agent_registry_ref, 'src/standard-agent-registry.ts');
+  assert.equal(contract.foundry_agent_os_standard.standard_agent_registry_ref, 'src/modules/charter/standard-agent-registry.ts');
   assert.equal(
     contract.foundry_agent_os_standard.target_shape,
     'OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry',
@@ -482,6 +482,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
   );
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples.mas, 'Medical Research Pack');
   assert.equal(contract.foundry_agent_os_standard.domain_pack_examples['opl-bookforge'], 'Book Manuscript Pack');
+  assert.equal('mas-scholar-skills' in contract.foundry_agent_os_standard.domain_pack_examples, false);
   assert.equal(
     contract.foundry_agent_os_standard.domain_authority_kernel_examples.mag.includes('fundability quality/export verdict'),
     true,
@@ -490,6 +491,7 @@ test('target operating architecture contract freezes resource, authority, lane, 
     contract.foundry_agent_os_standard.domain_authority_kernel_examples['opl-bookforge'].includes('book manuscript truth'),
     true,
   );
+  assert.equal('mas-scholar-skills' in contract.foundry_agent_os_standard.domain_authority_kernel_examples, false);
   assert.equal(
     contract.foundry_agent_os_standard.framework_capability_packages?.[0]?.authority_ref_examples.includes('candidate scientific capability refs'),
     true,

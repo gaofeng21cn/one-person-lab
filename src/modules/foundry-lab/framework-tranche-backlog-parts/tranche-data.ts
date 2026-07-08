@@ -531,7 +531,7 @@ export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
     current_truth_refs: [
       'contracts/opl-framework/domain-pack-compiler-contract.json',
       'src/domain-pack-compiler.ts',
-      'src/standard-domain-agent-conformance-foundry-agent-os.ts#buildFoundryAgentOsConformance',
+      'src/modules/foundry-lab/standard-domain-agent-conformance-foundry-agent-os.ts#buildFoundryAgentOsConformance',
       'src/modules/foundry-lab/framework-tranche-backlog-parts/tranche-data.ts#FOUNDRY_STANDARD_AGENT_MEMBERSHIP_READBACK',
       'docs/active/current-state-vs-ideal-gap.md',
       'domain repos: contracts/private_functional_surface_policy.json',
@@ -645,7 +645,7 @@ export const FRAMEWORK_TRANCHE_MILESTONES: FrameworkTrancheMilestone[] = [
       'contracts/opl-framework/standard-agent-negative-conformance-samples.json',
       'src/modules/foundry-lab/framework-tranche-backlog-parts/standard-agent-landing-guard.ts',
       'src/private-platform-residue-owner-decisions.ts',
-      'src/standard-domain-agent-conformance-foundry-agent-os.ts#FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS',
+      'src/modules/foundry-lab/standard-domain-agent-conformance-foundry-agent-os.ts#FOUNDRY_AGENT_OS_SUPPORT_EXTENSIONS',
       'tests/src/standard-agent-landing-acceptance-contract.test.ts',
       'tests/src/cli/cases/agents-conformance-foundry-agent-os.test.ts',
       'tests/src/cli/cases/framework-readiness-cli-surface.test.ts',
