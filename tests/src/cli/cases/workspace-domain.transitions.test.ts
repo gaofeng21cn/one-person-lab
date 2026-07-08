@@ -1,17 +1,19 @@
 import {
   assert,
-  buildManifestCommand,
   createFamilyContractsFixtureRoot,
   fs,
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   shellSingleQuote,
   test,
 } from '../helpers.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import {
+  bindManifest,
+  findDomainManifest,
+} from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -345,21 +347,10 @@ test('domain manifests runs MAS-declared family transition matrix when actual sp
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withMasFamilyTransitionSurfaces(fixtures.medautoscience)),
-    ], env);
+    bindManifest('medautoscience', withMasFamilyTransitionSurfaces(fixtures.medautoscience), env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
+    const medautoscience = findDomainManifest(manifestOutput, 'medautoscience');
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.family_transition_spec.spec_id, 'mas-domain-transition-spec.v1');
@@ -388,21 +379,10 @@ test('domain manifests reports descriptor-only MAS family transition specs as ne
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withMasFamilyTransitionDescriptor(fixtures.medautoscience)),
-    ], env);
+    bindManifest('medautoscience', withMasFamilyTransitionDescriptor(fixtures.medautoscience), env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
+    const medautoscience = findDomainManifest(manifestOutput, 'medautoscience');
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.family_transition_spec_descriptor.surface_kind, 'family_transition_spec_descriptor');
@@ -454,23 +434,12 @@ test('domain manifests blocks MAS family transition execution on domain mismatch
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withMasFamilyTransitionSurfaces(fixtures.medautoscience, {
-        target_domain_id: 'wrong-domain',
-      })),
-    ], env);
+    bindManifest('medautoscience', withMasFamilyTransitionSurfaces(fixtures.medautoscience, {
+      target_domain_id: 'wrong-domain',
+    }), env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
+    const medautoscience = findDomainManifest(manifestOutput, 'medautoscience');
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.family_transition.status, 'blocked');
@@ -494,16 +463,7 @@ test('agents descriptor projects MAS family transition matrix readiness without 
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withMasFamilyTransitionSurfaces(fixtures.medautoscience)),
-    ], env);
+    bindManifest('medautoscience', withMasFamilyTransitionSurfaces(fixtures.medautoscience), env);
 
     const list = runCli(['agents', 'descriptors'], env);
     assert.equal(list.family_agent_descriptors.summary.transition_matrix_evaluated_count, 1);
@@ -536,16 +496,7 @@ test('agents descriptor projects descriptor-only MAS transition specs as refresh
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withMasFamilyTransitionDescriptor(fixtures.medautoscience)),
-    ], env);
+    bindManifest('medautoscience', withMasFamilyTransitionDescriptor(fixtures.medautoscience), env);
 
     const inspect = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
     const transition = inspect.family_agent_descriptor.family_transition;
@@ -637,21 +588,10 @@ test('domain manifests materializes descriptor-only MAS transition specs through
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], env);
+    bindManifest('medautoscience', manifest, env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
+    const medautoscience = findDomainManifest(manifestOutput, 'medautoscience');
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.family_transition_materialization.status, 'materialized');
@@ -720,21 +660,10 @@ test('domain manifests keeps live manifest resolved when transition materializat
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], env);
+    bindManifest('medautoscience', manifest, env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
+    const medautoscience = findDomainManifest(manifestOutput, 'medautoscience');
 
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
     assert.deepEqual(manifestOutput.domain_manifests.summary.live_failed_project_ids, []);
@@ -792,21 +721,10 @@ test('domain manifests skips MAS transition materialization when study-state-mat
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], env);
+    bindManifest('medautoscience', manifest, env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
+    const medautoscience = findDomainManifest(manifestOutput, 'medautoscience');
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.family_transition_materialization.status, 'skipped');
@@ -835,21 +753,10 @@ test('domain manifests adapts RCA visual transition specs into the family transi
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'redcube',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withRcaVisualTransitionSpec(fixtures.redcube)),
-    ], env);
+    bindManifest('redcube', withRcaVisualTransitionSpec(fixtures.redcube), env);
 
     const manifestOutput = runCli(['domain', 'manifests'], env);
-    const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'redcube'
-    );
+    const redcube = findDomainManifest(manifestOutput, 'redcube');
 
     assert.equal(redcube.status, 'resolved');
     assert.equal(redcube.manifest.visual_transition_spec.spec_id, 'rca.visual_transition_spec.v1');
@@ -877,16 +784,7 @@ test('agents descriptor projects RCA visual transition spec ingestion without ta
   };
 
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'redcube',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(withRcaVisualTransitionSpec(fixtures.redcube)),
-    ], env);
+    bindManifest('redcube', withRcaVisualTransitionSpec(fixtures.redcube), env);
 
     const list = runCli(['agents', 'descriptors'], env);
     assert.equal(list.family_agent_descriptors.summary.transition_matrix_evaluated_count, 1);
