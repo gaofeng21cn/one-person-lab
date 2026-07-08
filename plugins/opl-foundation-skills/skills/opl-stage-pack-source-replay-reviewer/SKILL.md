@@ -22,21 +22,11 @@ Use this skill to explain whether a body-free stage-pack source spec and replay 
 
 ## Cross-Domain Failure Patterns
 
-Use these MAS/MAG/RCA/BookForge-derived patterns as replay review heuristics,
-not new schema requirements:
-
-- `critique_as_repair_hint`: a replay/source-spec critique can name a repair
-  hint or owner workorder; it does not repair the pack, certify replay, or close
-  the stage.
-- `source_or_receipt_stale`: source-spec hashes, runtime events, owner receipts,
-  visual export refs, grant package refs, or book artifact refs must match the
-  current stage-pack identity before they can support replay evidence.
-- `owner_route_overclaim`: owner-routed workorders, connector receipts, and
-  replay-success refs are not domain owner acceptance, publication/grant/visual
-  readiness, or production readiness.
-- `candidate_body_reconstruction_forbidden`: body-free diffs and
-  visual-equivalent claims must not be used to reconstruct clinical data, grant
-  text, visual artifact body, manuscript body, prompt body, or candidate body.
+Use the shared pattern ids in
+`../../references/stage-cross-domain-failure-patterns.md` as replay review
+heuristics, not new schema requirements. Map them to source-spec diff
+readability, replay blocker interpretation, missing receipt workorder quality,
+and owner-route clarity.
 
 ## Inputs
 

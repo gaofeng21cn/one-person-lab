@@ -195,6 +195,15 @@
       "default_global_user": false,
       "capability_preserved": true,
       "reason": "Stage admission is covered by stage quality-gate critique and route-back review."
+    },
+    {
+      "retired_skill_id": "opl-workspace-source-readiness-auditor",
+      "covered_by_skill_id": "opl-workspace-handoff-writer",
+      "coverage_kind": "workspace_handoff_source_readiness_audit_mode",
+      "exposure_scope": "workspace_local",
+      "default_global_user": false,
+      "capability_preserved": true,
+      "reason": "Workspace source-readiness audit is a handoff readiness section covering source refs, locator ambiguity, artifact-unit gaps, freshness evidence, missing inputs, and owner-route route-back wording without a separate Codex-discoverable skill."
     }
   ],
   "skills": [
@@ -625,23 +634,6 @@
     },
     {
       "skill_id": "opl-workspace-handoff-writer",
-      "exposure_scope": "workspace_local",
-      "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
-      "default_global_user": false,
-      "kernel": false,
-      "authority_boundary": [
-        "no_owner_receipt",
-        "no_typed_blocker",
-        "no_human_gate",
-        "no_artifact_authority",
-        "no_quality_verdict",
-        "no_readiness_claim",
-        "no_runtime_mutation",
-        "no_provider_mutation"
-      ]
-    },
-    {
-      "skill_id": "opl-workspace-source-readiness-auditor",
       "exposure_scope": "workspace_local",
       "activation_gate": "workspace handoff/readiness or owner-evidence task explicitly selects this skill",
       "default_global_user": false,

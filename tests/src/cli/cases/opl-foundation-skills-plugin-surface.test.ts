@@ -5,7 +5,7 @@ const pluginManifestPath = path.join(pluginRoot, '.codex-plugin', 'plugin.json')
 const exposureManifestPath = path.join(pluginRoot, 'exposure.json');
 const skillsRoot = path.join(pluginRoot, 'skills');
 
-const expectedSkillCount = 27;
+const expectedSkillCount = 26;
 const expectedDeveloperCodexSkills = new Set([
   'opl-agent-package-lifecycle-reviewer',
   'opl-code-quality-remediation-reviewer',
@@ -35,6 +35,7 @@ const expectedNoRegressionRedirects = new Map([
   ['opl-local-data-lifecycle-reviewer', 'opl-memory-artifact-lifecycle-curator'],
   ['opl-pack-capability-reviewer', 'opl-pack-admission-reviewer'],
   ['opl-stage-admission-reviewer', 'opl-stage-quality-gate-critic'],
+  ['opl-workspace-source-readiness-auditor', 'opl-workspace-handoff-writer'],
 ]);
 const legalExposureScopes = new Set([
   'source_only',
