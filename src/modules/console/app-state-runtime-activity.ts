@@ -875,13 +875,15 @@ function decorateRuntimeItemForBinding(
       item.item_id,
       `${binding.project_id}:binding:${binding.binding_id}:runtime:${path.basename(workspaceRoot)}`,
     ) ?? `${binding.project_id}:binding:${binding.binding_id}:runtime`;
-  const projectDisplayName = firstString(
-    item.project_display_name,
-    workspaceLabel,
-    binding.label,
-    binding.project,
-    binding.project_id,
-  ) ?? binding.project_id;
+  const projectDisplayName = studyId
+    ? workspaceLabel
+    : firstString(
+      item.project_display_name,
+      workspaceLabel,
+      binding.label,
+      binding.project,
+      binding.project_id,
+    ) ?? binding.project_id;
   return {
     ...item,
     item_id: itemId,

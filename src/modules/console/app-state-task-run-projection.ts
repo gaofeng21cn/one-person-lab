@@ -187,6 +187,19 @@ function taskRunProjectionTask(task: JsonRecord) {
   const sourceRefCount = Number(task.source_ref_count ?? 0);
   const domainId = asString(task.domain_id) ?? 'opl';
   const domainLabel = asString(task.domain_label) ?? 'OPL';
+  const projectIdentityBase = asRecord(taskIdentityBase.project);
+  const projectIdentity = {
+    project_id: asString(projectIdentityBase.project_id) ?? domainId,
+    label: asString(task.project_display_name)
+      ?? asString(task.workspace_label)
+      ?? asString(projectIdentityBase.workspace_label)
+      ?? asString(projectIdentityBase.label)
+      ?? domainLabel,
+    scope_id: asString(projectIdentityBase.scope_id) ?? asString(task.project_scope_id) ?? `project:${domainId}`,
+    workspace_binding_id: asString(projectIdentityBase.workspace_binding_id) ?? asString(task.workspace_binding_id),
+    workspace_path: asString(projectIdentityBase.workspace_path) ?? asString(task.workspace_path),
+    workspace_label: asString(task.workspace_label) ?? asString(projectIdentityBase.workspace_label),
+  };
   const updatedAt = asString(task.last_progress_at);
   const actionId = asString(actionReceipt.action_id) ?? 'task_action_receipt_preview';
   const actionRoute = asString(actionReceipt.route) ?? 'opl app action execute --action task_action_receipt_preview --dry-run';
@@ -204,11 +217,10 @@ function taskRunProjectionTask(task: JsonRecord) {
     study_id: asString(task.study_id),
     task_ref: asString(taskIdentityBase.task_ref) ?? ref,
     agent_display_name: asString(task.agent_display_name),
-    project_display_name: asString(task.project_display_name),
     work_item_display_name: asString(task.work_item_display_name),
     execution_run_label: asString(task.execution_run_label),
     agent: asRecord(taskIdentityBase.agent),
-    project: asRecord(taskIdentityBase.project),
+    project: projectIdentity,
     work_item: asRecord(taskIdentityBase.work_item),
     execution_run: asRecord(taskIdentityBase.execution_run),
   };
@@ -241,9 +253,16 @@ function taskRunProjectionTask(task: JsonRecord) {
     automation_state_label: asString(task.automation_state_label),
     automation_state_reason: asString(task.automation_state_reason),
     agent_display_name: asString(task.agent_display_name),
-    project_display_name: asString(task.project_display_name),
     work_item_display_name: asString(task.work_item_display_name),
     execution_run_label: asString(task.execution_run_label),
+    workspace_label: asString(task.workspace_label) ?? projectIdentity.workspace_label,
+    workspace_binding_id: asString(task.workspace_binding_id) ?? projectIdentity.workspace_binding_id,
+    workspace_scope_id: asString(task.workspace_scope_id),
+    project_scope_id: projectIdentity.scope_id,
+    project_id: projectIdentity.project_id,
+    project_display_name: projectIdentity.label,
+    agent_scope_id: asString(task.agent_scope_id),
+    task_scope_id: asString(task.task_scope_id),
     stage_started_at: asString(task.stage_started_at),
     elapsed_seconds: asNumber(task.elapsed_seconds),
     last_heartbeat_at: asString(task.last_heartbeat_at),
@@ -580,6 +599,7 @@ function workItemProjectionItem(task: JsonRecord) {
     ?? stageId;
   const actionKind = workItemActionKind(task);
   const evidenceCards = asRecordArray(task.evidence_cards).map(workItemEvidenceCard);
+  const projectScopeId = asString(project.scope_id);
 
   return {
     item_id: taskId,
@@ -598,6 +618,10 @@ function workItemProjectionItem(task: JsonRecord) {
       kind: asString(workItem.kind) ?? (asString(task.study_id) ? 'study' : 'runtime_activity'),
       study_id: asString(task.study_id),
       project_label: asString(project.label) ?? asString(task.project_display_name),
+      project_scope_id: projectScopeId,
+      workspace_binding_id: asString(project.workspace_binding_id),
+      workspace_path: asString(project.workspace_path),
+      workspace_label: asString(project.workspace_label),
     },
     agent: {
       agent_id: asString(agent.agent_id) ?? asString(task.domain_id) ?? 'unknown',

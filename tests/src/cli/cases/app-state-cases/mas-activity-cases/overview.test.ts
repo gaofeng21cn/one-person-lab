@@ -152,7 +152,18 @@ test('app state fast keeps MAS study directories visible without runtime telemet
       OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
       PATH: '/usr/bin:/bin',
-    }) as { app_state: { operator: { workbench: { task_drilldowns: Array<Record<string, any>>; runtime_scope: { scope_options: Array<Record<string, any>> } } } } };
+    }) as {
+      app_state: {
+        operator: {
+          workbench: {
+            task_drilldowns: Array<Record<string, any>>;
+            runtime_scope: { scope_options: Array<Record<string, any>> };
+            task_run_projection_v2: { tasks: Array<Record<string, any>> };
+            work_item_projection_v1: { items: Array<Record<string, any>> };
+          };
+        };
+      };
+    };
 
     const task = output.app_state.operator.workbench.task_drilldowns.find((entry) => entry.study_id === studyId);
     assert.ok(task, 'study directory fallback should produce a visible MAS task');
@@ -312,7 +323,18 @@ test('app state fast enumerates registered MAS project workspaces beyond Tempora
       OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
       PATH: '/usr/bin:/bin',
-    }) as { app_state: { operator: { workbench: { task_drilldowns: Array<Record<string, any>>; runtime_scope: { scope_options: Array<Record<string, any>> } } } } };
+    }) as {
+      app_state: {
+        operator: {
+          workbench: {
+            task_drilldowns: Array<Record<string, any>>;
+            runtime_scope: { scope_options: Array<Record<string, any>> };
+            task_run_projection_v2: { tasks: Array<Record<string, any>> };
+            work_item_projection_v1: { items: Array<Record<string, any>> };
+          };
+        };
+      };
+    };
 
     const studyTasks = output.app_state.operator.workbench.task_drilldowns.filter((entry) => entry.domain_id === 'medautoscience' && entry.study_id);
     assert.equal(studyTasks.length, 9);
@@ -330,6 +352,25 @@ test('app state fast enumerates registered MAS project workspaces beyond Tempora
     assert.equal(
       output.app_state.operator.workbench.runtime_scope.scope_options.some((option) => option.scope_kind === 'task'),
       false,
+    );
+    assert.deepEqual(
+      new Set(output.app_state.operator.workbench.task_run_projection_v2.tasks.map((entry) =>
+        entry.task_identity.project.label
+      )),
+      new Set(['糖尿病', '肥胖', '无功能垂体瘤']),
+    );
+    assert.deepEqual(
+      new Set(output.app_state.operator.workbench.work_item_projection_v1.items.map((entry) =>
+        entry.work_item.project_label
+      )),
+      new Set(['糖尿病', '肥胖', '无功能垂体瘤']),
+    );
+    assert.equal(
+      output.app_state.operator.workbench.work_item_projection_v1.items.every((entry) =>
+        typeof entry.work_item.project_scope_id === 'string'
+        && entry.work_item.project_scope_id.startsWith('project:medautoscience:')
+      ),
+      true,
     );
     assert.equal(studyTasks.every((entry) => entry.task_total_usage.telemetry_status === 'missing'), true);
   } finally {
