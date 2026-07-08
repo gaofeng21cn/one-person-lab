@@ -6,21 +6,25 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
 import type { CodexSessionRecoveryResult } from './codex.ts';
 
+type TokenUsageTotals = {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+};
+
 export type CodexSessionUsageRef = {
   session_ref: string;
   time_window: {
     started_at: string;
     completed_at: string;
   };
-  token_delta: {
-    input_tokens: number;
-    output_tokens: number;
-    total_tokens: number;
-  };
+  token_delta: TokenUsageTotals;
   source_path: string;
   source_hash: string;
   usage_ref: string;
-  billing_boundary: 'refs_only_absolute_cumulative_total_delta';
+  billing_boundary:
+    | 'refs_only_absolute_cumulative_total_delta'
+    | 'refs_only_codex_session_last_token_usage_sum';
   ignored_usage_fields: string[];
 };
 
@@ -34,9 +38,12 @@ function tokenUsageTotals(value: unknown) {
   const outputTokens = typeof value.output_tokens === 'number' && Number.isFinite(value.output_tokens)
     ? value.output_tokens
     : null;
-  const totalTokens = typeof value.total_tokens === 'number' && Number.isFinite(value.total_tokens)
+  const explicitTotalTokens = typeof value.total_tokens === 'number' && Number.isFinite(value.total_tokens)
     ? value.total_tokens
     : null;
+  const totalTokens = explicitTotalTokens ?? (
+    inputTokens !== null && outputTokens !== null ? inputTokens + outputTokens : null
+  );
   return inputTokens !== null && outputTokens !== null && totalTokens !== null
     ? { input_tokens: inputTokens, output_tokens: outputTokens, total_tokens: totalTokens }
     : null;
@@ -55,13 +62,36 @@ function sha256Text(value: string) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 }
 
+function addTokenUsageTotals(left: TokenUsageTotals, right: TokenUsageTotals): TokenUsageTotals {
+  return {
+    input_tokens: left.input_tokens + right.input_tokens,
+    output_tokens: left.output_tokens + right.output_tokens,
+    total_tokens: left.total_tokens + right.total_tokens,
+  };
+}
+
+function sumTokenUsageTotals(values: TokenUsageTotals[]): TokenUsageTotals {
+  return values.reduce(
+    addTokenUsageTotals,
+    { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
+  );
+}
+
+function tokenCountInfoFromPayload(payload: JsonRecord) {
+  return payload.type === 'token_count' && isRecord(payload.info) ? payload.info : null;
+}
+
 export function extractCodexSessionUsageRef(recovered: CodexSessionRecoveryResult | null): CodexSessionUsageRef | null {
   if (!recovered || !path.isAbsolute(recovered.sessionPath)) {
     return null;
   }
   const observations: Array<{
     timestamp: string;
-    totals: { input_tokens: number; output_tokens: number; total_tokens: number };
+    totals: TokenUsageTotals;
+  }> = [];
+  const turnUsageObservations: Array<{
+    timestamp: string;
+    totals: TokenUsageTotals;
   }> = [];
   const ignoredUsageFields = new Set<string>();
   for (const line of recovered.output.split(/\r?\n/)) {
@@ -76,11 +106,35 @@ export function extractCodexSessionUsageRef(recovered: CodexSessionRecoveryResul
     if ('usage' in payload) {
       ignoredUsageFields.add('usage');
     }
-    const totals = tokenUsageTotals(payload.absolute_cumulative_token_usage);
     const timestamp = optionalString(record.timestamp) ?? optionalString(payload.timestamp);
+    const tokenCountInfo = tokenCountInfoFromPayload(payload);
+    const turnTotals = tokenUsageTotals(tokenCountInfo?.last_token_usage);
+    if (turnTotals && timestamp) {
+      turnUsageObservations.push({ timestamp, totals: turnTotals });
+    }
+    const totals = tokenUsageTotals(tokenCountInfo?.total_token_usage)
+      ?? tokenUsageTotals(payload.absolute_cumulative_token_usage);
     if (totals && timestamp) {
       observations.push({ timestamp, totals });
     }
+  }
+  const sourceHash = sha256Text(recovered.output);
+  if (turnUsageObservations.length > 0) {
+    const first = turnUsageObservations[0]!;
+    const last = turnUsageObservations.at(-1)!;
+    return {
+      session_ref: `codex_session:${recovered.threadId}`,
+      time_window: {
+        started_at: first.timestamp,
+        completed_at: last.timestamp,
+      },
+      token_delta: sumTokenUsageTotals(turnUsageObservations.map((entry) => entry.totals)),
+      source_path: recovered.sessionPath,
+      source_hash: sourceHash,
+      usage_ref: `codex_session_usage:${recovered.threadId}#${sourceHash}`,
+      billing_boundary: 'refs_only_codex_session_last_token_usage_sum',
+      ignored_usage_fields: [...ignoredUsageFields].sort(),
+    };
   }
   if (observations.length < 2) {
     return null;
@@ -99,7 +153,6 @@ export function extractCodexSessionUsageRef(recovered: CodexSessionRecoveryResul
   ) {
     return null;
   }
-  const sourceHash = sha256Text(recovered.output);
   return {
     session_ref: `codex_session:${recovered.threadId}`,
     time_window: {
@@ -125,19 +178,31 @@ export function codexStageRunnerCostSummaryFrom(
     .map(parseJsonLineRecord)
     .filter((entry): entry is JsonRecord => Boolean(entry));
   const tokenUsage = usageLines
-    .map((entry) => (isRecord(entry.token_usage) ? entry.token_usage : null))
+    .map((entry) => {
+      if (isRecord(entry.token_usage)) {
+        return entry.token_usage;
+      }
+      if (isRecord(entry.usage)) {
+        return entry.usage;
+      }
+      return null;
+    })
     .find((entry): entry is JsonRecord => Boolean(entry));
+  const declaredTokenUsage = tokenUsageTotals(tokenUsage);
   const sessionTokenDelta = sessionUsageRef?.token_delta;
   return {
     cost_status: runnerMode === 'codex_cli' ? 'observed_or_unreported' : 'not_measured_dry_run',
     estimated_cost_usd: typeof tokenUsage?.estimated_cost_usd === 'number' ? tokenUsage.estimated_cost_usd : 0,
     token_usage: {
       input_tokens: sessionTokenDelta?.input_tokens
-        ?? (typeof tokenUsage?.input_tokens === 'number' ? tokenUsage.input_tokens : 0),
+        ?? declaredTokenUsage?.input_tokens
+        ?? 0,
       output_tokens: sessionTokenDelta?.output_tokens
-        ?? (typeof tokenUsage?.output_tokens === 'number' ? tokenUsage.output_tokens : 0),
+        ?? declaredTokenUsage?.output_tokens
+        ?? 0,
       total_tokens: sessionTokenDelta?.total_tokens
-        ?? (typeof tokenUsage?.total_tokens === 'number' ? tokenUsage.total_tokens : 0),
+        ?? declaredTokenUsage?.total_tokens
+        ?? 0,
     },
     ...(sessionUsageRef
       ? {

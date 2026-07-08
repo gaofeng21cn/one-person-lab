@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
+import { codexStageRunnerCostSummaryFrom } from '../../src/modules/runway/family-runtime-codex-session-usage.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   validateCloseoutPacketForAttempt,
@@ -385,6 +386,134 @@ exit 64
       : process.env.CODEX_HOME = previousCodexHome;
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('Codex stage runner ingests current token_count session usage', async () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:codex-current-token-count-closeout'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const threadId = 'thread-current-token-count';
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"timestamp":"2026-07-08T14:02:14.725Z","type":"session_meta","payload":{"id":"${threadId}"}}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousCodexHome = process.env.CODEX_HOME;
+  const codexHome = path.join(fixtureRoot, 'codex-home');
+  const sessionDir = path.join(codexHome, 'sessions', '2026', '07', '08');
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const sessionPath = path.join(sessionDir, `rollout-2026-07-08T22-02-14-${threadId}.jsonl`);
+  fs.writeFileSync(sessionPath, [
+    JSON.stringify({
+      timestamp: '2026-07-08T14:02:14.725Z',
+      type: 'session_meta',
+      payload: { id: threadId },
+    }),
+    JSON.stringify({
+      timestamp: '2026-07-08T14:02:27.285Z',
+      type: 'response_item',
+      payload: {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: JSON.stringify(closeout) }],
+        phase: 'final_answer',
+      },
+    }),
+    JSON.stringify({
+      timestamp: '2026-07-08T14:02:27.287Z',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: {
+          total_token_usage: {
+            input_tokens: 27_184,
+            cached_input_tokens: 4_992,
+            output_tokens: 38,
+            reasoning_output_tokens: 31,
+            total_tokens: 27_222,
+          },
+          last_token_usage: {
+            input_tokens: 27_184,
+            cached_input_tokens: 4_992,
+            output_tokens: 38,
+            reasoning_output_tokens: 31,
+            total_tokens: 27_222,
+          },
+          model_context_window: 258_400,
+        },
+      },
+    }),
+    '',
+  ].join('\n'));
+
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    process.env.CODEX_HOME = codexHome;
+    const receipt = await runPublicCodexStageRunner({
+      attempt: {
+        stage_attempt_id: 'sat_current_token_count_test',
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
+        },
+        checkpoint_refs: ['checkpoint:current-token-count'],
+      },
+      stagePacketRef: 'packet:current-token-count',
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
+
+    assert.equal(receipt.cost_summary.token_usage.total_tokens, 27_222);
+    assert.equal(receipt.cost_summary.token_usage.input_tokens, 27_184);
+    assert.equal(receipt.cost_summary.token_usage.output_tokens, 38);
+    assert.equal(receipt.cost_summary.session_usage_refs?.session_ref, `codex_session:${threadId}`);
+    assert.equal(receipt.cost_summary.session_usage_refs?.source_path, sessionPath);
+    assert.equal(
+      receipt.cost_summary.session_usage_refs?.billing_boundary,
+      'refs_only_codex_session_last_token_usage_sum',
+    );
+    assert.deepEqual(receipt.closeout_packet?.token_usage, {
+      status: 'observed',
+      input_tokens: 27_184,
+      output_tokens: 38,
+      total_tokens: 27_222,
+      source: 'codex_session_usage_delta',
+      billing_boundary: 'refs_only_codex_session_last_token_usage_sum',
+    });
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    previousCodexHome === undefined
+      ? delete process.env.CODEX_HOME
+      : process.env.CODEX_HOME = previousCodexHome;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner cost summary reads current turn.completed usage from stdout', () => {
+  const costSummary = codexStageRunnerCostSummaryFrom(JSON.stringify({
+    type: 'turn.completed',
+    usage: {
+      input_tokens: 27_184,
+      cached_input_tokens: 4_992,
+      output_tokens: 38,
+      reasoning_output_tokens: 31,
+    },
+  }), 'codex_cli');
+
+  assert.equal(costSummary.token_usage.total_tokens, 27_222);
+  assert.equal(costSummary.token_usage.input_tokens, 27_184);
+  assert.equal(costSummary.token_usage.output_tokens, 38);
 });
 
 test('Codex stage runner waits briefly for delayed session JSONL closeout flush', async () => {
