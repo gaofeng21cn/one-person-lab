@@ -32,7 +32,9 @@ test('Evidence profile module projections expose catalog, refs-only drilldown, a
   assert.equal(atlas.capability_catalog.some((entry) => entry.object_name === 'EvidencePacket'), true);
   assert.equal(atlas.tool_card_catalog.some((entry) => entry.tool_card_id === 'tool-result-envelope'), true);
   assert.equal(atlas.eval_suite_catalog.some((entry) => entry.rule_id === 'evidence_conflict'), true);
-  assert.equal(atlas.limitation_catalog.some((entry) => entry.claim_id === 'quality_verdict'), true);
+  assert.equal(atlas.limitation_catalog.some((entry) =>
+    'claim_id' in entry && entry.claim_id === 'quality_verdict'
+  ), true);
   assert.equal(atlas.authority_boundary.catalog_can_claim_live_evidence, false);
   assert.equal(atlas.authority_boundary.catalog_can_claim_owner_verdict, false);
   assert.equal(everyAuthorityFlagFalse(atlas.authority_boundary), true);

@@ -5,6 +5,7 @@ import {
   buildEvidenceGroundedDecisionAgentProfileReadback,
   EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF,
 } from '../../src/modules/pack/index.ts';
+import { buildFoundryEvidenceProfileInspect } from '../../src/modules/foundry-lab/foundry-agent-cli-spine.ts';
 
 const requiredObjects = [
   'WorkItem',
@@ -69,6 +70,9 @@ test('Evidence-grounded decision profile exposes Pack-owned contract readback wi
   assert.equal(readback.surface_kind, 'opl_evidence_grounded_decision_agent_profile_readback');
   assert.equal(readback.profile_id, 'evidence_grounded_decision_agent_profile.v1');
   assert.equal(readback.contract_ref, EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF);
+  assert.equal(readback.consumption_status, 'non_live_module_surface_readback_available');
+  assert.equal(readback.module_surface_consumption_status, 'non_live_module_surface_readback_available');
+  assert.deepEqual(readback.module_surface_ids, requiredModules);
   assert.deepEqual(readback.first_class_object_names, requiredObjects);
   assert.deepEqual(readback.module_owner_ids, requiredModules);
   assert.deepEqual(readback.fail_closed_rule_ids, requiredFailClosedRules);
@@ -142,6 +146,67 @@ test('Evidence-grounded decision profile exposes Pack-owned contract readback wi
   assert.equal(contract.machine_boundary.concrete_domain_agent_implemented, false);
   assert.equal(contract.machine_boundary.medical_or_hematology_agent_implemented, false);
   assert.equal(contract.readback_contract.readback_is_stable_json, true);
+  assert.equal(
+    'module_surface_readback_available' in contract.readback_contract
+      && contract.readback_contract.module_surface_readback_available,
+    true,
+  );
   assert.equal(contract.readback_contract.readback_can_claim_runtime_ready, false);
   assert.equal(contract.readback_contract.readback_can_claim_domain_ready, false);
+});
+
+test('Foundry evidence profile inspect aggregates non-live module surfaces', () => {
+  const profile = buildFoundryEvidenceProfileInspect([]).foundry_evidence_profile;
+
+  assert.equal(profile.surface_kind, 'opl_foundry_evidence_grounded_decision_agent_profile_inspect');
+  assert.equal(profile.consumption_status, 'non_live_module_surface_readback_available');
+  assert.deepEqual(profile.module_surface_status.module_surface_ids, requiredModules);
+  assert.equal(profile.module_surface_status.non_live_surface_count, requiredModules.length);
+  assert.equal(profile.module_surface_status.live_evidence_performed, false);
+  assert.equal(profile.module_surface_status.can_claim_runtime_ready, false);
+  assert.equal(profile.module_surface_status.can_claim_domain_ready, false);
+  assert.equal(profile.module_surface_status.can_claim_production_ready, false);
+
+  const surfaces = profile.module_surfaces;
+  assert.equal(surfaces.pack.surface_kind, 'opl_pack_evidence_grounded_decision_agent_profile_abi_surface');
+  assert.equal(surfaces.charter.surface_kind, 'opl_charter_evidence_grounded_decision_agent_profile_boundary');
+  assert.equal(
+    surfaces.stagecraft.surface_kind,
+    'opl_evidence_grounded_stagecraft_profile_policy_readback',
+  );
+  assert.equal(surfaces.runway.surface_kind, 'opl_evidence_grounded_runway_profile_policy_readback');
+  assert.equal(
+    surfaces.ledger.surface_kind,
+    'opl_ledger_evidence_grounded_decision_agent_profile_substrate',
+  );
+  assert.equal(
+    surfaces.connect.surface_kind,
+    'opl_connect_evidence_grounded_decision_agent_profile_substrate',
+  );
+  assert.equal(
+    surfaces.workspace.surface_kind,
+    'opl_workspace_evidence_grounded_decision_agent_profile_substrate',
+  );
+  assert.equal(
+    surfaces.atlas.surface_kind,
+    'opl_atlas_evidence_grounded_decision_agent_profile_catalog',
+  );
+  assert.equal(
+    surfaces.console.surface_kind,
+    'opl_console_evidence_grounded_decision_agent_profile_drilldown_ref',
+  );
+  assert.equal(
+    surfaces['foundry-lab'].surface_kind,
+    'opl_foundry_lab_evidence_grounded_decision_agent_profile_eval_surface',
+  );
+  assert.equal(surfaces.charter.authority_boundary.can_claim_final_decision, false);
+  assert.equal(surfaces.stagecraft.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(surfaces.runway.authority_boundary.can_create_human_gate_decision, false);
+  assert.equal(surfaces.ledger.authority_boundary.can_create_domain_typed_blocker, false);
+  assert.equal(surfaces.connect.authority_boundary.can_share_unsafe_data, false);
+  assert.equal(surfaces.workspace.authority_boundary.can_read_source_body, false);
+  assert.equal(surfaces.atlas.authority_boundary.catalog_can_claim_live_evidence, false);
+  assert.equal(surfaces.console.actual_builder_invoked_by_foundry_cli, false);
+  assert.equal(surfaces.console.authority_boundary.can_read_artifact_body, false);
+  assert.equal(surfaces['foundry-lab'].promotion_gate.can_promote_to_production_ready, false);
 });

@@ -4,16 +4,24 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { parseJsonText } from '../../kernel/json-file.ts';
 import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
+  buildEvidenceGroundedConnectSubstrate,
   listDefaultOplDomainModuleSpecs,
   parseGithubRepoFromUrl,
   SCHOLARSKILLS_PACKAGE_SPEC,
 } from '../connect/index.ts';
 import {
+  buildEvidenceGroundedDecisionAgentProfileAtlasCatalog,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
 } from '../atlas/index.ts';
+import { buildEvidenceGroundedCharterProfileBoundaryReadback } from '../charter/index.ts';
+import { buildEvidenceGroundedLedgerSubstrate } from '../ledger/index.ts';
 import { buildEvidenceGroundedDecisionAgentProfileReadback } from '../pack/index.ts';
+import { buildEvidenceGroundedRunwayProfilePolicyReadback } from '../runway/index.ts';
+import { buildEvidenceGroundedStagecraftProfilePolicyReadback } from '../stagecraft/index.ts';
+import { buildEvidenceGroundedWorkspaceSubstrate } from '../workspace/index.ts';
+import { buildEvidenceGroundedDecisionAgentProfileFoundryLabEvalSurface } from './evidence-grounded-profile-eval.ts';
 
 export const FOUNDRY_AGENT_OPERATIONS = [
   'status',
@@ -603,10 +611,108 @@ export function buildFoundryAgentInspect(args: string[]) {
   };
 }
 
+function buildEvidenceProfileFixtureRefs() {
+  return {
+    evidence_ref: 'profile-shape-ref:evidence-grounded/evidence-packet',
+    source_ref: 'profile-shape-ref:evidence-grounded/source',
+    provenance_ref: 'profile-shape-ref:evidence-grounded/provenance',
+    retrieval_receipt_ref: 'profile-shape-ref:evidence-grounded/retrieval-receipt',
+    tool_receipt_ref: 'profile-shape-ref:evidence-grounded/tool-receipt',
+    freshness_ref: 'profile-shape-ref:evidence-grounded/freshness',
+    structured_input_ref: 'profile-shape-ref:evidence-grounded/structured-input',
+    source_locator_ref: 'profile-shape-ref:evidence-grounded/source-locator',
+    deidentification_policy_ref: 'profile-shape-ref:evidence-grounded/deidentification-policy',
+    access_audit_policy_ref: 'profile-shape-ref:evidence-grounded/access-audit-policy',
+    connector_ref: 'profile-shape-ref:evidence-grounded/connector',
+    tool_ref: 'profile-shape-ref:evidence-grounded/tool',
+  };
+}
+
+function buildConsoleDrilldownSurfaceRef(refs: ReturnType<typeof buildEvidenceProfileFixtureRefs>) {
+  return {
+    surface_kind: 'opl_console_evidence_grounded_decision_agent_profile_drilldown_ref',
+    version: 'evidence-grounded-decision-agent-profile-console-drilldown-ref.v1',
+    module_id: 'console',
+    brand_module: 'OPL Console',
+    source_module_ref: 'src/modules/console/evidence-grounded-profile-drilldown.ts',
+    exported_builder: 'buildEvidenceGroundedDecisionAgentProfileConsoleDrilldown',
+    projection_role: 'dependency_policy_preserving_ref_to_console_drilldown',
+    live_evidence_observed: false,
+    actual_builder_invoked_by_foundry_cli: false,
+    trace_ref_examples: Object.values(refs),
+    authority_boundary: {
+      refs_only: true,
+      can_read_source_body: false,
+      can_read_artifact_body: false,
+      can_claim_live_evidence: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+      can_claim_owner_verdict: false,
+    },
+  };
+}
+
+function buildFoundryEvidenceProfileModuleSurfaces(readback: JsonRecord) {
+  const refs = buildEvidenceProfileFixtureRefs();
+  return {
+    pack: {
+      surface_kind: 'opl_pack_evidence_grounded_decision_agent_profile_abi_surface',
+      profile_id: readback.profile_id,
+      contract_ref: readback.contract_ref,
+      source_module_ref: 'src/modules/pack/evidence-grounded-decision-agent-profile.ts',
+      exported_builder: 'buildEvidenceGroundedDecisionAgentProfileReadback',
+      consumption_status: readback.consumption_status,
+      live_evidence_observed: false,
+      can_claim_runtime_ready: false,
+      can_claim_domain_ready: false,
+    },
+    stagecraft: buildEvidenceGroundedStagecraftProfilePolicyReadback()
+      .evidence_grounded_stagecraft_profile,
+    runway: buildEvidenceGroundedRunwayProfilePolicyReadback()
+      .evidence_grounded_runway_profile,
+    ledger: buildEvidenceGroundedLedgerSubstrate({
+      evidenceRef: refs.evidence_ref,
+      sourceRef: refs.source_ref,
+      provenanceRef: refs.provenance_ref,
+      retrievalReceiptRef: refs.retrieval_receipt_ref,
+      toolReceiptRef: refs.tool_receipt_ref,
+      freshnessRef: refs.freshness_ref,
+      confidenceLabel: 'medium',
+      conflictStatus: 'none',
+    }),
+    connect: buildEvidenceGroundedConnectSubstrate({
+      retrievalReceiptRef: refs.retrieval_receipt_ref,
+      sourceRef: refs.source_ref,
+      connectorRef: refs.connector_ref,
+      toolReceiptRef: refs.tool_receipt_ref,
+      toolRef: refs.tool_ref,
+      sensitiveExternalEgressRequested: true,
+      externalEgressApprovalRef: 'profile-shape-ref:evidence-grounded/human-egress-approval',
+    }),
+    workspace: buildEvidenceGroundedWorkspaceSubstrate({
+      structuredInputRef: refs.structured_input_ref,
+      sourceRef: refs.source_ref,
+      sourceLocatorRef: refs.source_locator_ref,
+      sourceLocatorKind: 'workspace_source_ref',
+      deidentificationPolicyRef: refs.deidentification_policy_ref,
+      accessAuditPolicyRef: refs.access_audit_policy_ref,
+    }),
+    atlas: buildEvidenceGroundedDecisionAgentProfileAtlasCatalog()
+      .atlas_evidence_grounded_decision_agent_profile_catalog,
+    console: buildConsoleDrilldownSurfaceRef(refs),
+    'foundry-lab': buildEvidenceGroundedDecisionAgentProfileFoundryLabEvalSurface()
+      .foundry_lab_evidence_grounded_decision_agent_profile_eval,
+    charter: buildEvidenceGroundedCharterProfileBoundaryReadback()
+      .evidence_grounded_charter_profile_boundary,
+  };
+}
+
 export function buildFoundryEvidenceProfileInspect(args: string[]) {
   assertNoFoundryAgentArgs(args, 'opl foundry evidence-profile inspect');
   const readback = buildEvidenceGroundedDecisionAgentProfileReadback()
     .evidence_grounded_decision_agent_profile;
+  const moduleSurfaces = buildFoundryEvidenceProfileModuleSurfaces(readback);
+  const moduleSurfaceIds = Object.keys(moduleSurfaces);
   return {
     version: 'g2',
     foundry_evidence_profile: {
@@ -620,6 +726,19 @@ export function buildFoundryEvidenceProfileInspect(args: string[]) {
       module_owner_ids: readback.module_owner_ids,
       fail_closed_rule_ids: readback.fail_closed_rule_ids,
       forbidden_claim_ids: readback.forbidden_claim_ids,
+      module_surface_status: {
+        consumption_status: readback.module_surface_consumption_status,
+        module_surface_ids: moduleSurfaceIds,
+        non_live_surface_count: moduleSurfaceIds.length,
+        live_evidence_performed: false,
+        all_surfaces_non_live: true,
+        all_surfaces_refs_only_or_contract_only: true,
+        can_claim_runtime_ready: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+      module_surface_readback_refs: readback.module_surface_readback_refs,
+      module_surfaces: moduleSurfaces,
       decision_support_flow: readback.contract.decision_support_flow,
       mode_routing_policy: readback.mode_routing_policy,
       evidence_policy: readback.evidence_policy,

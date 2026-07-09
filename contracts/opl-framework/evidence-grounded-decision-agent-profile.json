@@ -42,7 +42,7 @@
     }
   ],
   "profile_role": "standard_profile_for_evidence_grounded_decision_support_agents",
-  "consumption_status": "pack_contract_source_readback_only",
+  "consumption_status": "non_live_module_surface_readback_available",
   "first_class_objects": [
     {
       "object_name": "WorkItem",
@@ -376,6 +376,7 @@
     "source_module_ref": "src/modules/pack/evidence-grounded-decision-agent-profile.ts",
     "contract_ref": "contracts/opl-framework/evidence-grounded-decision-agent-profile.json",
     "exported_builder": "buildEvidenceGroundedDecisionAgentProfileReadback",
+    "module_surface_readback_available": true,
     "readback_is_stable_json": true,
     "readback_can_claim_runtime_ready": false,
     "readback_can_claim_domain_ready": false
@@ -386,7 +387,8 @@
       "read_first_class_object_names",
       "read_module_ownership",
       "read_fail_closed_rules",
-      "read_forbidden_claims"
+      "read_forbidden_claims",
+      "read_non_live_module_surface_refs"
     ],
     "pack_consumers_must_not": [
       "treat_contract_as_domain_agent",

@@ -1,4 +1,5 @@
-import { EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF } from '../pack/index.ts';
+const EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF =
+  'contracts/opl-framework/evidence-grounded-decision-agent-profile.json';
 
 type EvidenceGroundedWorkspaceSubstrateInput = {
   structuredInputRef: string;

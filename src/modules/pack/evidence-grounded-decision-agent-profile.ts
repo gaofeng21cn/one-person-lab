@@ -72,6 +72,79 @@ const REQUIRED_FALSE_AUTHORITY_FIELDS = [
   'tool_result_envelope_can_share_unsafe_data',
 ] as const;
 
+const MODULE_SURFACE_READBACK_REFS = [
+  {
+    module_id: 'pack',
+    brand_module: 'OPL Pack',
+    source_module_ref: 'src/modules/pack/evidence-grounded-decision-agent-profile.ts',
+    exported_builder: 'buildEvidenceGroundedDecisionAgentProfileReadback',
+    readback_scope: 'profile_abi_and_contract_readback',
+  },
+  {
+    module_id: 'stagecraft',
+    brand_module: 'OPL Stagecraft',
+    source_module_ref: 'src/modules/stagecraft/evidence-grounded-decision-agent-profile.ts',
+    exported_builder: 'buildEvidenceGroundedStagecraftProfilePolicyReadback',
+    readback_scope: 'mode_routing_evidence_sufficiency_and_independent_review_policy',
+  },
+  {
+    module_id: 'runway',
+    brand_module: 'OPL Runway',
+    source_module_ref: 'src/modules/runway/evidence-grounded-decision-agent-profile.ts',
+    exported_builder: 'buildEvidenceGroundedRunwayProfilePolicyReadback',
+    readback_scope: 'fail_closed_attempt_closeout_and_human_gate_lifecycle',
+  },
+  {
+    module_id: 'ledger',
+    brand_module: 'OPL Ledger',
+    source_module_ref: 'src/modules/ledger/evidence-grounded-substrate.ts',
+    exported_builder: 'buildEvidenceGroundedLedgerSubstrate',
+    readback_scope: 'refs_only_evidence_packet_trace_and_unsupported_evidence_blocker',
+  },
+  {
+    module_id: 'connect',
+    brand_module: 'OPL Connect',
+    source_module_ref: 'src/modules/connect/evidence-grounded-substrate.ts',
+    exported_builder: 'buildEvidenceGroundedConnectSubstrate',
+    readback_scope: 'retrieval_packet_tool_result_envelope_and_sensitive_egress_gate',
+  },
+  {
+    module_id: 'workspace',
+    brand_module: 'OPL Workspace',
+    source_module_ref: 'src/modules/workspace/evidence-grounded-substrate.ts',
+    exported_builder: 'buildEvidenceGroundedWorkspaceSubstrate',
+    readback_scope: 'structured_input_sensitive_source_lifecycle',
+  },
+  {
+    module_id: 'atlas',
+    brand_module: 'OPL Atlas',
+    source_module_ref: 'src/modules/atlas/evidence-grounded-profile-catalog.ts',
+    exported_builder: 'buildEvidenceGroundedDecisionAgentProfileAtlasCatalog',
+    readback_scope: 'profile_mode_capability_tool_card_eval_and_limitation_catalog',
+  },
+  {
+    module_id: 'console',
+    brand_module: 'OPL Console',
+    source_module_ref: 'src/modules/console/evidence-grounded-profile-drilldown.ts',
+    exported_builder: 'buildEvidenceGroundedDecisionAgentProfileConsoleDrilldown',
+    readback_scope: 'refs_only_evidence_drilldown_projection',
+  },
+  {
+    module_id: 'foundry-lab',
+    brand_module: 'OPL Foundry Lab',
+    source_module_ref: 'src/modules/foundry-lab/evidence-grounded-profile-eval.ts',
+    exported_builder: 'buildEvidenceGroundedDecisionAgentProfileFoundryLabEvalSurface',
+    readback_scope: 'eval_suite_independent_review_and_promotion_gate',
+  },
+  {
+    module_id: 'charter',
+    brand_module: 'OPL Charter',
+    source_module_ref: 'src/modules/charter/evidence-grounded-decision-agent-profile.ts',
+    exported_builder: 'buildEvidenceGroundedCharterProfileBoundaryReadback',
+    readback_scope: 'forbidden_claims_and_false_authority_policy',
+  },
+] as const;
+
 const CONTRACT_JSON_FILE_BOUNDARY = {
   missingMessage: (filePath: string) => `Evidence-grounded decision agent profile contract is missing: ${filePath}.`,
   missingDetails: (filePath: string) => ({ path: filePath }),
@@ -230,6 +303,9 @@ export function buildEvidenceGroundedDecisionAgentProfileReadback() {
       fail_closed_rule_ids: valuesByField(contract, 'fail_closed_rules', 'rule_id'),
       forbidden_claim_ids: valuesByField(contract, 'forbidden_claims', 'claim_id'),
       source_of_truth_refs: contract.source_of_truth_refs,
+      module_surface_consumption_status: 'non_live_module_surface_readback_available',
+      module_surface_readback_refs: MODULE_SURFACE_READBACK_REFS,
+      module_surface_ids: MODULE_SURFACE_READBACK_REFS.map((entry) => entry.module_id),
       module_ownership: contract.module_ownership,
       fail_closed_rules: contract.fail_closed_rules,
       forbidden_claims: contract.forbidden_claims,

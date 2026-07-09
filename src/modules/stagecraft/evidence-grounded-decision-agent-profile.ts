@@ -1,9 +1,24 @@
+import { fileURLToPath } from 'node:url';
+
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import type { JsonRecord } from '../../kernel/json-file.ts';
-import {
-  EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF,
-  readEvidenceGroundedDecisionAgentProfileContract,
-} from '../pack/index.ts';
+import { readJsonRecordFile, type JsonRecord } from '../../kernel/json-file.ts';
+
+const EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF =
+  'contracts/opl-framework/evidence-grounded-decision-agent-profile.json';
+
+const CONTRACT_PATH = fileURLToPath(
+  new URL(`../../../${EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF}`, import.meta.url),
+);
+
+const CONTRACT_JSON_FILE_BOUNDARY = {
+  missingMessage: (filePath: string) => `Evidence-grounded decision agent profile contract is missing: ${filePath}.`,
+  missingDetails: (filePath: string) => ({ path: filePath }),
+  invalidJsonMessage: (filePath: string) =>
+    `Evidence-grounded decision agent profile contract contains invalid JSON: ${filePath}.`,
+  invalidJsonDetails: (filePath: string, cause: string) => ({ path: filePath, cause }),
+  invalidRootMessage: () => 'Evidence-grounded decision agent profile contract root must be an object.',
+  invalidRootDetails: (filePath: string) => ({ path: filePath }),
+};
 
 function shape(message: string, details: JsonRecord = {}) {
   return new FrameworkContractError('contract_shape_invalid', message, {
@@ -42,6 +57,10 @@ function stringArrayField(record: JsonRecord, field: string) {
     throw shape(`Evidence-grounded Stagecraft profile ${field} must be a string array.`, { field });
   }
   return value;
+}
+
+function readEvidenceGroundedDecisionAgentProfileContract() {
+  return readJsonRecordFile(CONTRACT_PATH, CONTRACT_JSON_FILE_BOUNDARY);
 }
 
 function firstClassObject(contract: JsonRecord, objectName: string) {

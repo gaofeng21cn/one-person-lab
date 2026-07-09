@@ -6,6 +6,7 @@ export const OPL_CHARTER_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
+export { buildEvidenceGroundedCharterProfileBoundaryReadback } from './evidence-grounded-decision-agent-profile.ts';
 export { buildBrandModuleL5Status } from './brand-module-l5-evidence.ts';
 export { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
 export { findDomainOrThrow, findWorkstreamOrThrow, FrameworkContractError, loadFrameworkContracts } from './contracts.ts';
