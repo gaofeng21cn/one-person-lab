@@ -49,6 +49,8 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
   const runtime = contract.runtime_state_boundary;
   const authority = contract.authority_boundary;
   const topology = contract.topology_contract;
+  const profileIds = Object.keys(contract.domain_topology_profiles).sort();
+  const supportedAgentIds = [...contract.supported_agents].sort();
 
   const blockers = [
     precondition.action_id === 'opl_workspace_ensure' ? null : 'workspace_ensure_action_id_drift',
@@ -101,18 +103,16 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
     topology.legacy_project_collection_aliases.join('/') === 'deliverables/studies'
       ? null
       : 'workspace_legacy_project_collection_aliases_drift',
-    topology.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path === 'projects'
+    profileIds.join('/') === supportedAgentIds.join('/')
       ? null
-      : 'workspace_mas_studies_physical_root_drift',
-    topology.canonical_project_unit_semantics.mas_studies_boundary.legacy_project_collection_path === 'studies'
+      : 'workspace_domain_topology_profiles_must_match_standard_agent_registry',
+    Object.entries(contract.domain_topology_profiles).every(([, profile]) =>
+      profile.project_collection_path === topology.default_project_collection_path
+      && profile.canonical_project_collection_role === topology.canonical_project_collection_role
+      && topology.workspace_modes.includes(profile.workspace_mode)
+    )
       ? null
-      : 'workspace_mas_studies_legacy_path_drift',
-    topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role === 'legacy_display_domain_alias'
-      ? null
-      : 'workspace_mas_studies_alias_role_drift',
-    topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_role === 'project_units'
-      ? null
-      : 'workspace_mas_studies_canonical_role_drift',
+      : 'workspace_domain_topology_profile_generic_contract_drift',
     topology.project_stage_outputs_root === 'artifacts/stage_outputs'
       ? null
       : 'workspace_stage_outputs_root_drift',

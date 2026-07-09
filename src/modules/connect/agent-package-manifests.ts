@@ -38,6 +38,7 @@ type FirstPartyAgentPackageManifest = {
     bundled_capability_package_ids?: readonly string[];
   };
   carrier_adapters: readonly Record<string, unknown>[];
+  dependency_profiles: readonly unknown[];
   capability_dependencies: readonly ModuleCapabilityDependency[];
 };
 
@@ -227,6 +228,9 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     carrier_adapters: Array.isArray(payload.carrier_adapters)
       ? payload.carrier_adapters.filter(isRecord)
       : [],
+    dependency_profiles: Array.isArray(payload.dependency_profiles)
+      ? payload.dependency_profiles
+      : [],
     capability_dependencies: capabilityDependencies,
   };
 }
@@ -245,4 +249,9 @@ export function getAgentPackageManifestByModuleId(moduleId: OplModuleId) {
 
 export function getCapabilityDependenciesForModule(moduleId: OplModuleId) {
   return getAgentPackageManifestByModuleId(moduleId)?.capability_dependencies ?? [];
+}
+
+export function listFirstPartyAgentPackageDependencyProfiles() {
+  return Object.values(FIRST_PARTY_AGENT_PACKAGE_MANIFESTS)
+    .flatMap((manifest) => manifest?.dependency_profiles ?? []);
 }

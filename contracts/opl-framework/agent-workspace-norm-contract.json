@@ -84,14 +84,7 @@
       "project_collection_role": "project_units",
       "project_unit_kind": "project_unit",
       "stage_artifact_unit": "stage_artifact_unit",
-      "owner_answer_unit": "owner_receipt_or_typed_blocker",
-      "mas_studies_boundary": {
-        "project_collection_path": "projects",
-        "alias_role": "legacy_display_domain_alias",
-        "canonical_role": "project_units",
-        "canonical_project_unit_kind": "project_unit",
-        "legacy_project_collection_path": "studies"
-      }
+      "owner_answer_unit": "owner_receipt_or_typed_blocker"
     },
     "project_stage_outputs_root": "artifacts/stage_outputs",
     "stage_output_root_protocol": {

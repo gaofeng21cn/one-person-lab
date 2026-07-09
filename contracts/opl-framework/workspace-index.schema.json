@@ -511,8 +511,7 @@
         "project_collection_role",
         "project_unit_kind",
         "stage_artifact_unit",
-        "owner_answer_unit",
-        "mas_studies_boundary"
+        "owner_answer_unit"
       ],
       "properties": {
         "workspace_unit": {
@@ -529,34 +528,6 @@
         },
         "owner_answer_unit": {
           "const": "owner_receipt_or_typed_blocker"
-        },
-        "mas_studies_boundary": {
-          "type": "object",
-          "additionalProperties": true,
-          "required": [
-            "project_collection_path",
-            "alias_role",
-            "canonical_role",
-            "canonical_project_unit_kind",
-            "legacy_project_collection_path"
-          ],
-          "properties": {
-            "project_collection_path": {
-              "const": "projects"
-            },
-            "alias_role": {
-              "const": "legacy_display_domain_alias"
-            },
-            "canonical_role": {
-              "const": "project_units"
-            },
-            "canonical_project_unit_kind": {
-              "const": "project_unit"
-            },
-            "legacy_project_collection_path": {
-              "const": "studies"
-            }
-          }
         }
       }
     },

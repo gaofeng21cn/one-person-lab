@@ -197,6 +197,8 @@
       "authority_boundary": {
         "can_write_domain_truth": false,
         "can_write_artifact_body": false,
+        "can_authorize_domain_readiness": false,
+        "can_authorize_artifact_or_export_readiness": false,
         "can_authorize_publication_readiness": false,
         "can_authorize_final_export": false,
         "can_issue_owner_receipt": false

@@ -227,13 +227,6 @@ export interface AgentWorkspaceNormContract {
       project_unit_kind: string;
       stage_artifact_unit: string;
       owner_answer_unit: string;
-      mas_studies_boundary: {
-        project_collection_path: string;
-        legacy_project_collection_path: string;
-        alias_role: string;
-        canonical_role: string;
-        canonical_project_unit_kind: string;
-      };
     };
     project_stage_outputs_root: string;
     stage_output_root_protocol: {

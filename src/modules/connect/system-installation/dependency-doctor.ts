@@ -2,10 +2,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import bookForgeAgentPackageManifest from '../../../../contracts/opl-framework/agent-packages/bookforge.json' with { type: 'json' };
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
-
-const DEFAULT_PROFILE_ID = 'bookforge-publication-proof';
+import { listFirstPartyAgentPackageDependencyProfiles } from '../agent-package-manifests.ts';
 
 type DependencyKind = 'executable' | 'latex_package';
 type DependencyRequiredLevel = 'required' | 'optional' | 'legacy_not_required';
@@ -28,8 +26,8 @@ type DomainDependencyProfile = {
   authority_boundary?: {
     can_write_domain_truth?: false;
     can_write_artifact_body?: false;
-    can_authorize_publication_readiness?: false;
-    can_authorize_final_export?: false;
+    can_authorize_domain_readiness?: false;
+    can_authorize_artifact_or_export_readiness?: false;
     can_issue_owner_receipt?: false;
   };
 };
@@ -89,18 +87,17 @@ type DependencyDoctor = {
   authority_boundary: {
     can_write_domain_truth: false;
     can_write_artifact_body: false;
-    can_authorize_publication_readiness: false;
-    can_authorize_final_export: false;
-    can_authorize_visual_export_readiness: false;
+    can_authorize_domain_readiness: false;
+    can_authorize_artifact_or_export_readiness: false;
     can_issue_owner_receipt: false;
-    ordinary_writing_progress_blocked_by_this_surface: false;
+    ordinary_domain_progress_blocked_by_this_surface: false;
     dependency_profile_ready_is_domain_ready: false;
     profile_required_dependencies_ready: true;
   };
   integration_refs: {
     domain_agent: string;
     domain_helper: string;
-    proof_profile: string;
+    source_profile_ref: string;
     command: string;
     maintenance_command: string;
   };
@@ -218,10 +215,7 @@ function normalizeDependencyCheckSpec(value: unknown): DependencyProfileCheckSpe
 }
 
 function dependencyProfiles() {
-  const manifest = bookForgeAgentPackageManifest as { dependency_profiles?: unknown };
-  return Array.isArray(manifest.dependency_profiles)
-    ? manifest.dependency_profiles
-    : [];
+  return listFirstPartyAgentPackageDependencyProfiles();
 }
 
 function dependencyProfileIds() {
@@ -242,6 +236,7 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
   const dependencies = Array.isArray(value.dependencies)
     ? value.dependencies.map((entry) => normalizeDependencyCheckSpec(entry))
     : [];
+  const authorityBoundary = isRecord(value.authority_boundary) ? value.authority_boundary : null;
   if (
     !profileId ||
     value.profile_kind !== 'domain_dependency_profile' ||
@@ -253,6 +248,12 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     !profileRef ||
     !helperRef ||
     value.opl_role !== 'dependency_environment_check' ||
+    !authorityBoundary ||
+    authorityBoundary.can_write_domain_truth !== false ||
+    authorityBoundary.can_write_artifact_body !== false ||
+    authorityBoundary.can_authorize_domain_readiness !== false ||
+    authorityBoundary.can_authorize_artifact_or_export_readiness !== false ||
+    authorityBoundary.can_issue_owner_receipt !== false ||
     dependencies.length === 0 ||
     dependencies.some((entry) => !entry)
   ) {
@@ -272,17 +273,13 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     opl_role: 'dependency_environment_check',
     source_descriptor_ref: asString(value.source_descriptor_ref) ?? undefined,
     dependencies: dependencies as DependencyProfileCheckSpec[],
-    authority_boundary: isRecord(value.authority_boundary)
-      ? {
-        can_write_domain_truth: value.authority_boundary.can_write_domain_truth === false ? false : undefined,
-        can_write_artifact_body: value.authority_boundary.can_write_artifact_body === false ? false : undefined,
-        can_authorize_publication_readiness: value.authority_boundary.can_authorize_publication_readiness === false
-          ? false
-          : undefined,
-        can_authorize_final_export: value.authority_boundary.can_authorize_final_export === false ? false : undefined,
-        can_issue_owner_receipt: value.authority_boundary.can_issue_owner_receipt === false ? false : undefined,
-      }
-      : undefined,
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_write_artifact_body: false,
+      can_authorize_domain_readiness: false,
+      can_authorize_artifact_or_export_readiness: false,
+      can_issue_owner_receipt: false,
+    },
   };
 }
 
@@ -385,7 +382,7 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
   version: 'g2';
   system_dependency_doctor: DependencyDoctor;
 } {
-  const profile = assertKnownProfile(input.profile ?? DEFAULT_PROFILE_ID);
+  const profile = assertKnownProfile(input.profile ?? '');
 
   const dependencies = profile.dependencies.map((entry) =>
     entry.kind === 'executable' ? checkExecutable(entry) : checkLatexPackage(entry)
@@ -420,18 +417,17 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
       authority_boundary: {
         can_write_domain_truth: false,
         can_write_artifact_body: false,
-        can_authorize_publication_readiness: false,
-        can_authorize_final_export: false,
-        can_authorize_visual_export_readiness: false,
+        can_authorize_domain_readiness: false,
+        can_authorize_artifact_or_export_readiness: false,
         can_issue_owner_receipt: false,
-        ordinary_writing_progress_blocked_by_this_surface: false,
+        ordinary_domain_progress_blocked_by_this_surface: false,
         dependency_profile_ready_is_domain_ready: false,
         profile_required_dependencies_ready: true,
       },
       integration_refs: {
         domain_agent: profile.domain_id,
         domain_helper: profile.source.helper_ref,
-        proof_profile: profile.source.profile_ref,
+        source_profile_ref: profile.source.profile_ref,
         command: `opl system dependency-doctor --profile ${profile.profile_id} --json`,
         maintenance_command: `opl system dependency-maintenance --profile ${profile.profile_id} --json`,
       },
@@ -440,7 +436,7 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
 }
 
 export async function runOplSystemDependencyMaintenance(input: MaintenanceInput = {}) {
-  const profile = assertKnownProfile(input.profile ?? DEFAULT_PROFILE_ID);
+  const profile = assertKnownProfile(input.profile ?? '');
   const before = buildOplSystemDependencyDoctor({ profile: profile.profile_id }).system_dependency_doctor;
   const repairAction = buildRepairAction(profile, before.dependencies, Boolean(input.apply));
   const after = input.apply

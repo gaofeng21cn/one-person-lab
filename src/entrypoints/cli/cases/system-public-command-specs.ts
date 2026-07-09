@@ -224,9 +224,9 @@ export function buildPublicSystemCommandSpecs(
   };
 
   const systemDependencyDoctorSpec: CommandSpec = {
-    usage: 'opl system dependency-doctor [--profile bookforge-publication-proof]',
+    usage: 'opl system dependency-doctor --profile <profile-id>',
     summary:
-      'Inspect OPL-owned local dependency readiness for domain helper profiles such as Book Forge publication proof.',
+      'Inspect OPL-owned local dependency readiness for an explicitly selected agent or package profile.',
     examples: [
       'opl system dependency-doctor --profile bookforge-publication-proof --json',
     ],
@@ -238,7 +238,7 @@ export function buildPublicSystemCommandSpecs(
   };
 
   const systemDependencyMaintenanceSpec: CommandSpec = {
-    usage: 'opl system dependency-maintenance [--profile bookforge-publication-proof] [--apply]',
+    usage: 'opl system dependency-maintenance --profile <profile-id> [--apply]',
     summary:
       'Plan or explicitly apply OPL-owned local dependency maintenance for domain helper profiles.',
     examples: [

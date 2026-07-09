@@ -380,8 +380,8 @@
             "required": [
               "can_write_domain_truth",
               "can_write_artifact_body",
-              "can_authorize_publication_readiness",
-              "can_authorize_final_export",
+              "can_authorize_domain_readiness",
+              "can_authorize_artifact_or_export_readiness",
               "can_issue_owner_receipt"
             ],
             "properties": {
@@ -391,10 +391,10 @@
               "can_write_artifact_body": {
                 "const": false
               },
-              "can_authorize_publication_readiness": {
+              "can_authorize_domain_readiness": {
                 "const": false
               },
-              "can_authorize_final_export": {
+              "can_authorize_artifact_or_export_readiness": {
                 "const": false
               },
               "can_issue_owner_receipt": {

@@ -746,7 +746,7 @@ function parseSystemDependencyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SystemDependencyCliInput {
-  const parsed: SystemDependencyCliInput = { profile: 'bookforge-publication-proof' };
+  const parsed: SystemDependencyCliInput = { profile: '' };
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -778,6 +778,11 @@ function parseSystemDependencyArgs(
     index += 1;
   }
 
+  if (!parsed.profile) {
+    throw buildUsageError('system dependency command requires an explicit --profile selected by the active agent or package.', spec, {
+      required: ['--profile'],
+    });
+  }
   return parsed;
 }
 

@@ -6,6 +6,7 @@ import {
   isRecord,
 } from '../../../kernel/contract-validation.ts';
 import type { AgentWorkspaceNormContract } from '../../../kernel/types.ts';
+import { listStandardDomainAgentIds } from '../standard-agent-registry.ts';
 
 function requireRecord(value: unknown, field: string, filePath: string) {
   if (!isRecord(value)) {
@@ -73,20 +74,12 @@ function validateDelegateSection(
 }
 
 function validateCanonicalProjectUnitSemantics(section: Record<string, unknown>, filePath: string) {
-  const masStudiesBoundary = requireSection(section, 'mas_studies_boundary', filePath);
   return {
     workspace_unit: stringField(section, 'workspace_unit', filePath),
     project_collection_role: stringField(section, 'project_collection_role', filePath),
     project_unit_kind: stringField(section, 'project_unit_kind', filePath),
     stage_artifact_unit: stringField(section, 'stage_artifact_unit', filePath),
     owner_answer_unit: stringField(section, 'owner_answer_unit', filePath),
-    mas_studies_boundary: {
-      project_collection_path: stringField(masStudiesBoundary, 'project_collection_path', filePath),
-      legacy_project_collection_path: stringField(masStudiesBoundary, 'legacy_project_collection_path', filePath),
-      alias_role: stringField(masStudiesBoundary, 'alias_role', filePath),
-      canonical_role: stringField(masStudiesBoundary, 'canonical_role', filePath),
-      canonical_project_unit_kind: stringField(masStudiesBoundary, 'canonical_project_unit_kind', filePath),
-    },
   };
 }
 
@@ -173,60 +166,6 @@ function assertExactStringArray(
   }
 }
 
-function assertDomainProfile(
-  contract: AgentWorkspaceNormContract,
-  agentId: string,
-  expected: AgentWorkspaceNormContract['domain_topology_profiles'][string],
-  filePath: string,
-) {
-  const profile = contract.domain_topology_profiles[agentId];
-  assertExactString(profile.profile, expected.profile, `${agentId}.profile`, filePath);
-  assertExactString(profile.workspace_mode, expected.workspace_mode, `${agentId}.workspace_mode`, filePath);
-  assertExactString(profile.project_kind, expected.project_kind, `${agentId}.project_kind`, filePath);
-  assertExactString(
-    profile.project_collection_path,
-    expected.project_collection_path,
-    `${agentId}.project_collection_path`,
-    filePath,
-  );
-  assertExactString(
-    profile.canonical_project_collection_role,
-    expected.canonical_project_collection_role,
-    `${agentId}.canonical_project_collection_role`,
-    filePath,
-  );
-  assertExactString(
-    profile.project_collection_alias_role,
-    expected.project_collection_alias_role,
-    `${agentId}.project_collection_alias_role`,
-    filePath,
-  );
-  assertExactString(
-    profile.project_collection_display_label,
-    expected.project_collection_display_label,
-    `${agentId}.project_collection_display_label`,
-    filePath,
-  );
-  assertExactStringArray(
-    profile.project_semantic_aliases,
-    expected.project_semantic_aliases,
-    `${agentId}.project_semantic_aliases`,
-    filePath,
-  );
-  assertExactStringArray(
-    profile.user_inspection_roots,
-    expected.user_inspection_roots,
-    `${agentId}.user_inspection_roots`,
-    filePath,
-  );
-  assertExactStringArray(
-    profile.shared_resource_roots,
-    expected.shared_resource_roots,
-    `${agentId}.shared_resource_roots`,
-    filePath,
-  );
-}
-
 function validateAgentWorkspaceNormSemantics(
   filePath: string,
   contract: AgentWorkspaceNormContract,
@@ -235,7 +174,12 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(contract.version, 'agent-workspace-norm.v1', 'version', filePath);
   assertExactString(contract.norm_id, 'opl.agent_workspace_norm.v1', 'norm_id', filePath);
   assertExactString(contract.owner, 'one-person-lab', 'owner', filePath);
-  assertExactStringArray(contract.supported_agents, ['mas', 'mag', 'rca', 'oma', 'obf'], 'supported_agents', filePath);
+  assertExactStringArray(
+    contract.supported_agents,
+    listStandardDomainAgentIds(),
+    'supported_agents',
+    filePath,
+  );
 
   const precondition = contract.default_workspace_precondition;
   assertExactString(precondition.action_id, 'opl_workspace_ensure', 'default_workspace_precondition.action_id', filePath);
@@ -310,11 +254,6 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(topology.canonical_project_unit_semantics.project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.project_unit_kind', filePath);
   assertExactString(topology.canonical_project_unit_semantics.stage_artifact_unit, 'stage_artifact_unit', 'topology_contract.canonical_project_unit_semantics.stage_artifact_unit', filePath);
   assertExactString(topology.canonical_project_unit_semantics.owner_answer_unit, 'owner_receipt_or_typed_blocker', 'topology_contract.canonical_project_unit_semantics.owner_answer_unit', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path, 'projects', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.project_collection_path', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.legacy_project_collection_path, 'studies', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.legacy_project_collection_path', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.alias_role, 'legacy_display_domain_alias', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_role, 'project_units', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_role', filePath);
-  assertExactString(topology.canonical_project_unit_semantics.mas_studies_boundary.canonical_project_unit_kind, 'project_unit', 'topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_project_unit_kind', filePath);
   assertExactString(topology.project_stage_outputs_root, 'artifacts/stage_outputs', 'topology_contract.project_stage_outputs_root', filePath);
   assertExactString(topology.stage_output_root_protocol.root, 'artifacts/stage_outputs', 'topology_contract.stage_output_root_protocol.root', filePath);
   assertExactString(topology.stage_output_root_protocol.stage_folder_unit, 'stage_artifact_unit', 'topology_contract.stage_output_root_protocol.stage_folder_unit', filePath);
@@ -347,77 +286,28 @@ function validateAgentWorkspaceNormSemantics(
   assertExactStringArray(topology.workspace_modes, ['one_off', 'series', 'portfolio'], 'topology_contract.workspace_modes', filePath);
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
 
-  assertDomainProfile(contract, 'mas', {
-    profile: 'portfolio',
-    workspace_mode: 'portfolio',
-    project_kind: 'study',
-    project_collection_path: 'projects',
-    canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'legacy_display_alias',
-    project_collection_display_label: 'studies',
-    project_semantic_aliases: ['study', 'studies'],
-    legacy_project_collection_aliases: ['studies'],
-    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
-    shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
-  }, filePath);
-  assertDomainProfile(contract, 'mag', {
-    profile: 'one_off',
-    workspace_mode: 'one_off',
-    project_kind: 'grant_project',
-    project_collection_path: 'projects',
-    canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'legacy_display_alias',
-    project_collection_display_label: 'deliverables',
-    project_semantic_aliases: ['grant_project', 'deliverable'],
-    legacy_project_collection_aliases: ['deliverables'],
-    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
-    shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
-  }, filePath);
-  assertDomainProfile(contract, 'rca', {
-    profile: 'series',
-    workspace_mode: 'series',
-    project_kind: 'slide_deck',
-    project_collection_path: 'projects',
-    canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'legacy_display_alias',
-    project_collection_display_label: 'deliverables',
-    project_semantic_aliases: ['slide_deck', 'deck', 'deliverable'],
-    legacy_project_collection_aliases: ['deliverables'],
-    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
-    shared_resource_roots: [
-      'shared/sources',
-      'shared/brand',
-      'shared/visual_memory',
-      'shared/style_system',
-      'shared/material_inventory',
-    ],
-  }, filePath);
-  assertDomainProfile(contract, 'oma', {
-    profile: 'one_off',
-    workspace_mode: 'one_off',
-    project_kind: 'agent_capability',
-    project_collection_path: 'projects',
-    canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'legacy_display_alias',
-    project_collection_display_label: 'deliverables',
-    project_semantic_aliases: ['agent_capability', 'deliverable'],
-    legacy_project_collection_aliases: ['deliverables'],
-    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
-    shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
-  }, filePath);
-  assertDomainProfile(contract, 'obf', {
-    profile: 'one_off',
-    workspace_mode: 'one_off',
-    project_kind: 'book_project',
-    project_collection_path: 'projects',
-    canonical_project_collection_role: 'project_units',
-    project_collection_alias_role: 'legacy_display_alias',
-    project_collection_display_label: 'books',
-    project_semantic_aliases: ['book_project', 'book'],
-    legacy_project_collection_aliases: ['deliverables'],
-    user_inspection_roots: ['projects/<project-id>/artifacts/stage_outputs'],
-    shared_resource_roots: ['shared/sources', 'shared/memory', 'shared/style_system'],
-  }, filePath);
+  for (const agentId of contract.supported_agents) {
+    const profile = contract.domain_topology_profiles[agentId];
+    assertExactString(
+      profile.project_collection_path,
+      topology.default_project_collection_path,
+      `${agentId}.project_collection_path`,
+      filePath,
+    );
+    assertExactString(
+      profile.canonical_project_collection_role,
+      topology.canonical_project_collection_role,
+      `${agentId}.canonical_project_collection_role`,
+      filePath,
+    );
+    if (!topology.workspace_modes.includes(profile.workspace_mode)) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        `Agent workspace profile "${agentId}" uses an unregistered workspace mode.`,
+        { file: filePath, agent_id: agentId, workspace_mode: profile.workspace_mode },
+      );
+    }
+  }
 
   const inspection = contract.user_inspection;
   assertExactString(inspection.ordinary_user_default_surface, 'workspace_local_project_stage_outputs', 'user_inspection.ordinary_user_default_surface', filePath);

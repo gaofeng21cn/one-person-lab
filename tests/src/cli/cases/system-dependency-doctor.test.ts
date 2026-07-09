@@ -4,6 +4,7 @@ import {
   os,
   path,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 
@@ -11,6 +12,16 @@ function writeExecutable(filePath: string, body: string) {
   fs.writeFileSync(filePath, body, 'utf8');
   fs.chmodSync(filePath, 0o755);
 }
+
+test('system dependency commands require an explicit active package profile', () => {
+  const doctor = runCliFailure(['system', 'dependency-doctor']);
+  assert.equal(doctor.status, 2);
+  assert.match(String(doctor.payload.error.message), /explicit --profile/);
+
+  const maintenance = runCliFailure(['system', 'dependency-maintenance']);
+  assert.equal(maintenance.status, 2);
+  assert.match(String(maintenance.payload.error.message), /explicit --profile/);
+});
 
 function createFakeDependencyBin(options: { missingLatexPackage?: string; markerPath?: string }) {
   const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dependency-doctor-bin-'));
@@ -81,10 +92,9 @@ test('system dependency-doctor blocks only the Book Forge proof profile when a r
     ]);
     assert.equal(doctor.authority_boundary.can_write_domain_truth, false);
     assert.equal(doctor.authority_boundary.can_write_artifact_body, false);
-    assert.equal(doctor.authority_boundary.can_authorize_publication_readiness, false);
-    assert.equal(doctor.authority_boundary.ordinary_writing_progress_blocked_by_this_surface, false);
-    assert.equal(doctor.authority_boundary.can_authorize_final_export, false);
-    assert.equal(doctor.authority_boundary.can_authorize_visual_export_readiness, false);
+    assert.equal(doctor.authority_boundary.can_authorize_domain_readiness, false);
+    assert.equal(doctor.authority_boundary.can_authorize_artifact_or_export_readiness, false);
+    assert.equal(doctor.authority_boundary.ordinary_domain_progress_blocked_by_this_surface, false);
     assert.equal(doctor.authority_boundary.can_issue_owner_receipt, false);
     assert.equal(doctor.authority_boundary.dependency_profile_ready_is_domain_ready, false);
     assert.equal(doctor.authority_boundary.profile_required_dependencies_ready, true);
