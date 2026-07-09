@@ -51,6 +51,14 @@ async function createFakeTemporalServer() {
   };
 }
 
+function writeTemporalWorkerState(workerRoot: string, state: Record<string, unknown>) {
+  fs.mkdirSync(workerRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(workerRoot, 'temporal-worker.json'),
+    `${JSON.stringify({ provider_kind: 'temporal', ...state }, null, 2)}\n`,
+  );
+}
+
 test('Temporal worker lifecycle re-query proves resident state and stop transition', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-worker-requery-'));
   const workerRoot = path.join(stateRoot, 'family-runtime');
@@ -71,9 +79,7 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
   try {
     assert.equal(typeof child.pid, 'number');
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: child.pid,
       address,
       namespace: 'opl-worker-requery-test',
@@ -81,7 +87,7 @@ test('Temporal worker lifecycle re-query proves resident state and stop transiti
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:worker-requery-current',
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-requery-test';
@@ -243,9 +249,7 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
   try {
     assert.equal(typeof child.pid, 'number');
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: child.pid,
       address,
       namespace: 'opl-worker-stale-source-test',
@@ -253,7 +257,7 @@ test('Temporal worker lifecycle rejects stale managed worker source version', as
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:old-worker-source',
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-stale-source-test';
@@ -346,9 +350,7 @@ test('Temporal worker lifecycle compares managed dist foreground executable sour
     });
     child.unref();
     assert.equal(typeof child.pid, 'number');
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: child.pid,
       address,
       namespace: 'opl-worker-dist-foreground-stale-test',
@@ -357,7 +359,7 @@ test('Temporal worker lifecycle compares managed dist foreground executable sour
       status: 'ready',
       source_version: `worker-runtime:${srcRoot}:${'a'.repeat(64)}`,
       workflow_bundle_source_version: `worker-runtime:${srcRoot}:${'a'.repeat(64)}`,
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-dist-foreground-stale-test';
@@ -436,9 +438,7 @@ test('Temporal worker start fails closed instead of spawning over a stale manage
   const previousSourceVersion = process.env.OPL_TEMPORAL_WORKER_SOURCE_VERSION;
   try {
     assert.equal(typeof child.pid, 'number');
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: child.pid,
       address,
       namespace: 'opl-worker-stale-start-test',
@@ -446,7 +446,7 @@ test('Temporal worker start fails closed instead of spawning over a stale manage
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:old-worker-source',
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-stale-start-test';
@@ -524,9 +524,7 @@ test('Temporal worker lifecycle accepts same runtime content hash from managed s
   const contentHash = 'c'.repeat(64);
   try {
     assert.equal(typeof child.pid, 'number');
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: child.pid,
       address,
       namespace: 'opl-worker-managed-root-current-test',
@@ -535,7 +533,7 @@ test('Temporal worker lifecycle accepts same runtime content hash from managed s
       status: 'ready',
       source_version: `worker-runtime:/Users/gaofeng/Library/Application Support/OPL/runtime/current/opl/src:${contentHash}`,
       workflow_bundle_source_version: `worker-runtime:/Users/gaofeng/Library/Application Support/OPL/runtime/current/opl/src:${contentHash}`,
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-managed-root-current-test';
@@ -617,9 +615,7 @@ test('Temporal worker stop force-cleans detached workers that ignore SIGTERM', a
   try {
     assert.equal(typeof child.pid, 'number');
     await new Promise<void>((resolve) => child.stdout.once('data', () => resolve()));
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: child.pid,
       address,
       namespace: 'opl-worker-force-stop-test',
@@ -627,7 +623,7 @@ test('Temporal worker stop force-cleans detached workers that ignore SIGTERM', a
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:force-stop-current',
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-force-stop-test';
@@ -789,9 +785,7 @@ test('Temporal worker status fails closed when duplicate foreground workers shar
   try {
     assert.equal(typeof managed.pid, 'number');
     assert.equal(typeof duplicate.pid, 'number');
-    fs.mkdirSync(workerRoot, { recursive: true });
-    fs.writeFileSync(path.join(workerRoot, 'temporal-worker.json'), `${JSON.stringify({
-      provider_kind: 'temporal',
+    writeTemporalWorkerState(workerRoot, {
       pid: managed.pid,
       address,
       namespace: 'opl-worker-duplicate-status-test',
@@ -799,7 +793,7 @@ test('Temporal worker status fails closed when duplicate foreground workers shar
       started_at: new Date().toISOString(),
       status: 'ready',
       source_version: 'git:duplicate-worker-current',
-    }, null, 2)}\n`);
+    });
 
     process.env.OPL_TEMPORAL_ADDRESS = address;
     process.env.OPL_TEMPORAL_NAMESPACE = 'opl-worker-duplicate-status-test';

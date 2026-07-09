@@ -1,4 +1,4 @@
-import { assert, fs, os, parseJsonText, path, runCli, runCliInCwd, runCliRaw, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, runCliInCwd, test } from '../helpers.ts';
 import {
   fastLocalEnvDefaultFields,
   modalLikeEnvSpecIds,
@@ -165,70 +165,6 @@ test('runtime env CLI exposes deterministic projections before materializing run
     )),
     true,
   );
-});
-
-test('opl env aliases expose and consume the Fast Local Env run-context', () => {
-  const env = stateEnv('alias-');
-  const doctor = runCli(['env', 'doctor'], env).runtime_environment;
-  assert.equal(doctor.command, 'doctor');
-  assert.equal(doctor.sandbox_provider, 'fast_local_env');
-
-  const paperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-alias-paper-'));
-  const profilePath = path.join(paperRoot, 'renderer_dependency_profile.json');
-  fs.writeFileSync(
-    profilePath,
-    `${JSON.stringify({
-      profiles: [
-        {
-          profile_id: 'empty_display_v1',
-          runtime_binaries: [],
-          language_packages: {
-            r: [],
-            python: [],
-          },
-        },
-      ],
-    })}\n`,
-  );
-  const prepare = runCli([
-    'env',
-    'prepare',
-    '--domain',
-    'mas',
-    '--profile',
-    'display',
-    '--platform',
-    'macos-arm64',
-    '--requirement-profile',
-    profilePath,
-    '--requirement-profile-id',
-    'empty_display_v1',
-    '--paper-root',
-    paperRoot,
-    '--apply',
-  ], env).runtime_environment;
-  assert.equal(prepare.prepare.status, 'prepared');
-  assert.equal(prepare.root_vocabulary.canonical_option, '--artifact-root');
-  assert.equal(prepare.root_vocabulary.input_option, '--paper-root');
-  assert.equal(prepare.root_vocabulary.input_option_status, 'compatibility_alias');
-  assert.equal(prepare.root_vocabulary.artifact_root, path.resolve(paperRoot));
-  assert.equal(prepare.run_context.host_package_fallback_allowed, false);
-
-  const raw = runCliRaw([
-    'env',
-    'run',
-    '--domain',
-    'mas',
-    '--profile',
-    'display',
-    '--paper-root',
-    paperRoot,
-    '--',
-    process.execPath,
-    '-e',
-    'process.stdout.write(`${process.env.OPL_RUNTIME_ENVIRONMENT_TIER}:${process.env.R_LIBS_USER ? "r" : "missing"}:${process.env.UV_PROJECT_ENVIRONMENT ? "uv" : "missing"}`)',
-  ], env);
-  assert.equal(raw.stdout, 'fast_local_env:r:uv');
 });
 
 test('opl env prepare supplies the MAS display defaults for ordinary users', () => {

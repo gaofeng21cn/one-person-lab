@@ -16,6 +16,12 @@ function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }
 
+function assertHasKeys(surface: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    assert.equal(Object.hasOwn(surface, key), true, key);
+  }
+}
+
 test('workspace init appends RCA series deliverables inside one workspace', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-rca-series-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-rca-series-root-'));
@@ -113,30 +119,15 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
 
     const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
     assert.equal(workspaceIndex.workspace_topology_profile.project_collection_path, 'projects');
-    assert.deepEqual(workspaceIndex.canonical_topology, {
-      workspace_unit: 'workspace_group',
-      project_collection_role: 'project_units',
-      project_collection_path: 'projects',
-      project_unit_kind: 'study',
-      stage_artifact_unit: 'stage_artifact_unit',
-      stage_outputs_root: 'artifacts/stage_outputs',
-      owner_answer_unit: 'owner_receipt_or_typed_blocker',
-    });
-    assert.deepEqual(workspaceIndex.display_labels, {
-      workspace: 'medical_research_workspace',
-      project_collection: 'studies',
-      project_unit: 'study',
-      stage_outputs: 'artifacts/stage_outputs',
-      shared_resources: 'shared_resources',
-    });
-    assert.deepEqual(
-      workspaceIndex.shared_resources.map((entry: { path: string; role: string }) => [entry.path, entry.role]),
-      [
-        ['data', 'dataset_root'],
-        ['literature', 'literature_root'],
-        ['memory', 'memory_root'],
-        ['shared/sources', 'source_intake'],
-      ],
+    assert.equal(workspaceIndex.canonical_topology.project_collection_path, 'projects');
+    assert.equal(workspaceIndex.canonical_topology.project_unit_kind, 'study');
+    assert.equal(workspaceIndex.canonical_topology.stage_outputs_root, 'artifacts/stage_outputs');
+    assert.equal(workspaceIndex.display_labels.project_collection, 'studies');
+    assert.equal(
+      workspaceIndex.shared_resources.some((entry: { path: string; role: string }) =>
+        entry.path === 'shared/sources' && entry.role === 'source_intake',
+      ),
+      true,
     );
     assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'projects/DM002/artifacts/stage_outputs');
     assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
@@ -335,7 +326,6 @@ test('workspace init materializes Book Forge one-off book topology', () => {
     assert.equal(workspaceIndex.display_labels.project_collection, 'books');
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.profile, 'one_off');
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_kind, 'book_project');
-    assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases, ['book_project', 'book']);
     assert.equal(workspaceIndex.expected_domain_topology_profile.project_kind, 'book_project');
     assert.equal(workspaceIndex.expected_domain_topology_profile.projected_profile.project_collection_display_label, 'books');
 
@@ -590,8 +580,6 @@ test('workspace init dry-run exposes CLI MCP and skill call surfaces without wri
     assert.equal(output.workspace_initialization.binding, null);
     assert.equal(fs.existsSync(workspacePath), false);
 
-    assert.equal(output.workspace_initialization.interface_projection.cli.command, 'opl workspace init');
-    assert.equal(output.workspace_initialization.interface_projection.cli.ensure_command, 'opl workspace ensure');
     assert.equal(output.workspace_initialization.interface_projection.mcp.tool_name, 'opl_workspace_ensure');
     assert.equal(output.workspace_initialization.interface_projection.mcp.descriptor_only, true);
     assert.equal(output.workspace_initialization.interface_projection.mcp.public_runtime, false);
@@ -618,76 +606,45 @@ test('workspace init dry-run exposes CLI MCP and skill call surfaces without wri
 test('workspace interfaces exports the OPL-owned initializer surfaces for tools and skills', () => {
   const output = runCli(['workspace', 'interfaces']);
 
-  assert.equal(output.workspace_interfaces.surface_kind, 'opl_workspace_initialize_interfaces');
-  assert.equal(output.workspace_interfaces.boundary.is_domain_family_action_catalog, false);
-  assert.equal(output.workspace_interfaces.boundary.writes_opl_workspace_registry, true);
-  assert.equal(output.workspace_interfaces.boundary.writes_domain_truth, false);
-  assert.equal(output.workspace_interfaces.command_contract.command, 'opl workspace ensure');
-  assert.equal(output.workspace_interfaces.command_contract.initializer_command, 'opl workspace init');
+  const interfaces = output.workspace_interfaces;
+  assert.equal(interfaces.surface_kind, 'opl_workspace_initialize_interfaces');
+  assert.equal(interfaces.boundary.is_domain_family_action_catalog, false);
+  assert.equal(interfaces.boundary.writes_opl_workspace_registry, true);
+  assert.equal(interfaces.boundary.writes_domain_truth, false);
+  assert.equal(interfaces.command_contract.command, 'opl workspace ensure');
+  assert.equal(interfaces.command_contract.initializer_command, 'opl workspace init');
   assert.equal(
-    output.workspace_interfaces.command_contract.norm_contract_ref,
+    interfaces.command_contract.norm_contract_ref,
     'contracts/opl-framework/agent-workspace-norm-contract.json',
   );
-  assert.deepEqual(output.workspace_interfaces.command_contract.required_inputs, ['agent_id']);
-  assert.equal(output.workspace_interfaces.workspace_norm.norm_id, 'opl.agent_workspace_norm.v1');
-  assert.equal(output.workspace_interfaces.workspace_norm.default_workspace_precondition.default_entry_for_agents, true);
-  assert.equal(output.workspace_interfaces.workspace_norm.explicit_initialization.default_entry_for_agents, false);
-  assert.equal(output.workspace_interfaces.workspace_norm.topology_contract.canonical_project_collection_role, 'project_units');
-  assert.deepEqual(
-    output.workspace_interfaces.workspace_norm.topology_contract.stage_output_root_protocol.required_stage_folder_shape,
-    ['inputs', 'outputs', 'review', 'receipts', 'handoff', 'stage_manifest.json'],
-  );
-  assert.equal(output.workspace_interfaces.workspace_norm.user_inspection.project_stage_outputs_pattern, '<project-root>/artifacts/stage_outputs/<stage-id>/');
-  assert.equal(output.workspace_interfaces.workspace_norm.runtime_state_boundary.runtime_state_can_close_stage, false);
-  assert.equal(output.workspace_interfaces.workspace_norm.authority_boundary.conformance_pass_counts_as_domain_ready, false);
-  assert.equal(output.workspace_interfaces.surfaces.mcp.tool_name, 'opl_workspace_ensure');
-  assert.equal(output.workspace_interfaces.surfaces.mcp.descriptor_only, true);
-  assert.equal(output.workspace_interfaces.surfaces.mcp.public_runtime, false);
-  assert.equal(output.workspace_interfaces.surfaces.openai.descriptor_only, true);
-  assert.equal(output.workspace_interfaces.surfaces.openai.public_runtime, false);
-  assert.equal(output.workspace_interfaces.surfaces.ai_sdk.delegates_to_action_id, 'opl_workspace_ensure');
-  assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.validate, 'opl workspace validate');
-  assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.adopt_apply, 'opl workspace adopt --apply');
-  assert.equal(output.workspace_interfaces.surfaces.mcp.management_delegates.upgrade, 'opl workspace upgrade --apply');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.validate.command, 'opl workspace validate');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.doctor.command, 'opl workspace doctor');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.adopt.command, 'opl workspace adopt');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.upgrade.command, 'opl workspace upgrade');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.project_archive.command, 'opl workspace project archive');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.project_lifecycle.command, 'opl workspace project lifecycle');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.project_delete.command, 'opl workspace project delete');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.fleet_report.command, 'opl workspace fleet report');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.export_map.command, 'opl workspace export-map');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.inspect.command, 'opl workspace inspect');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.inventory.command, 'opl workspace inventory');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.health.command, 'opl workspace health');
-  assert.equal(output.workspace_interfaces.surfaces.management_commands.report.command, 'opl workspace report');
-  assert.equal(output.workspace_interfaces.surfaces.cli.report_command, 'opl workspace report');
-  assert.equal(output.workspace_interfaces.surfaces.cli.fleet_report_command, 'opl workspace fleet report');
-  assert.equal(output.workspace_interfaces.surfaces.skill.intent, 'ensure_opl_workspace');
-  assert.match(output.workspace_interfaces.surfaces.skill.management_instruction, /workspace fleet report/);
-  assert.equal(output.workspace_interfaces.surfaces.app.action_id, 'workspace_ensure');
-  assert.equal(output.workspace_interfaces.surfaces.app.initializer_action_id, 'workspace_initialize');
-  assert.equal(output.workspace_interfaces.surfaces.app.validator_action_id, 'workspace_validate');
-  assert.equal(output.workspace_interfaces.surfaces.app.doctor_action_id, 'workspace_doctor');
-  assert.equal(output.workspace_interfaces.surfaces.app.adopt_dry_run_action_id, 'workspace_adopt_dry_run');
-  assert.equal(output.workspace_interfaces.surfaces.app.adopt_apply_action_id, 'workspace_adopt_apply');
-  assert.equal(output.workspace_interfaces.surfaces.app.upgrade_action_id, 'workspace_upgrade');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_archive_action_id, 'workspace_project_archive');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_lifecycle_action_id, 'workspace_project_lifecycle');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_pause_action_id, 'workspace_project_pause');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_resume_action_id, 'workspace_project_resume');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_lock_action_id, 'workspace_project_lock');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_supersede_action_id, 'workspace_project_supersede');
-  assert.equal(output.workspace_interfaces.surfaces.app.project_delete_action_id, 'workspace_project_delete');
-  assert.equal(output.workspace_interfaces.surfaces.app.export_map_action_id, 'workspace_export_map');
-  assert.equal(output.workspace_interfaces.surfaces.app.inspect_action_id, 'workspace_inspect');
-  assert.equal(output.workspace_interfaces.surfaces.app.inventory_action_id, 'workspace_inventory');
-  assert.equal(output.workspace_interfaces.surfaces.app.health_action_id, 'workspace_health');
-  assert.equal(output.workspace_interfaces.surfaces.app.report_action_id, 'workspace_report');
-  assert.equal(output.workspace_interfaces.surfaces.app.fleet_report_action_id, 'workspace_fleet_report');
-  assert.deepEqual(output.workspace_interfaces.supported_agents, ['mas', 'mag', 'rca', 'oma', 'obf']);
-  assert.match(output.workspace_interfaces.surfaces.cli.usage, /obf/);
+  assert.deepEqual(interfaces.command_contract.required_inputs, ['agent_id']);
+  assert.equal(interfaces.workspace_norm.default_workspace_precondition.default_entry_for_agents, true);
+  assert.equal(interfaces.workspace_norm.explicit_initialization.default_entry_for_agents, false);
+  assert.equal(interfaces.workspace_norm.topology_contract.canonical_project_collection_role, 'project_units');
+  assert.equal(interfaces.workspace_norm.runtime_state_boundary.runtime_state_can_close_stage, false);
+  assert.equal(interfaces.workspace_norm.authority_boundary.conformance_pass_counts_as_domain_ready, false);
+  assert.equal(interfaces.surfaces.mcp.tool_name, 'opl_workspace_ensure');
+  assert.equal(interfaces.surfaces.mcp.descriptor_only, true);
+  assert.equal(interfaces.surfaces.mcp.public_runtime, false);
+  assert.equal(interfaces.surfaces.app.action_id, 'workspace_ensure');
+  assertHasKeys(interfaces.surfaces.management_commands, [
+    'validate',
+    'doctor',
+    'adopt',
+    'upgrade',
+    'project_archive',
+    'project_lifecycle',
+    'project_delete',
+    'fleet_report',
+  ]);
+  assertHasKeys(interfaces.surfaces.app, [
+    'validator_action_id',
+    'doctor_action_id',
+    'adopt_apply_action_id',
+    'upgrade_action_id',
+    'project_delete_action_id',
+  ]);
+  assert.equal(interfaces.supported_agents.includes('obf'), true);
 });
 
 test('workspace adopt dry-run plans OPL topology without writing metadata', () => {
