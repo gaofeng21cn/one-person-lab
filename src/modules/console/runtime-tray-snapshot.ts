@@ -34,11 +34,6 @@ import {
 import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 
-const PROJECT_LABELS: Record<string, string> = {
-  medautoscience: 'MAS',
-  medautogrant: 'MAG',
-  redcube: 'RCA',
-};
 const RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
 const CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 
@@ -126,7 +121,8 @@ function commandForMasStudy(
 }
 
 function projectLabel(entry: DomainManifestCatalogEntry) {
-  return PROJECT_LABELS[entry.project_id] ?? entry.project;
+  const spec = entry.manifest?.domain_entry_contract?.domain_agent_entry_spec;
+  return firstString(spec?.title, entry.project, entry.project_id) ?? 'unknown';
 }
 
 function collectStatusCodes(manifest: NormalizedDomainManifest) {
@@ -713,7 +709,7 @@ async function buildMasStudyItem(
   return {
     item_id: `medautoscience:study:${studyId}`,
     project_id: 'medautoscience',
-    project_label: PROJECT_LABELS.medautoscience,
+    project_label: 'MAS',
     lane,
     title: studyId,
     status: parkedHandoff ? 'auto_runtime_parked' : firstString(questStatus, healthStatus, routeTarget),
