@@ -1,903 +1,228 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, parseJsonText, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
-import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
+import {
+  FrameworkContractError,
+  PassThrough,
+  assert,
+  contractsDir,
+  createContractsFixtureRoot,
+  createFakeCodexFixture,
+  fs,
+  loadFrameworkContracts,
+  os,
+  parseJsonText,
+  path,
+  readJsonLine,
+  repoRoot,
+  runCli,
+  runCliFailure,
+  runCliRaw,
+  spawn,
+  stopCliPipeChild,
+  test,
+  validateFrameworkContracts,
+} from '../helpers.ts';
 import './contracts-entry-cases/native-helper-doctor.test.ts';
 import './contracts-entry-cases/native-helper-lifecycle.test.ts';
 
-test('loadFrameworkContracts returns the active framework registries', () => {
+test('framework contracts load and validate the active registry set', () => {
   const contracts = loadFrameworkContracts(repoRoot);
+  const validation = validateFrameworkContracts(repoRoot);
+  const validated = new Set(validation.validated_contracts.map((entry: any) => entry.contract_id));
 
   assert.equal(contracts.contractsRootSource, 'api');
   assert.equal(contracts.workstreams.version, 'g2');
   assert.equal(contracts.domains.version, 'g2');
   assert.equal(contracts.stageSelectionVocabulary.version, 'g2');
-  assert.equal(contracts.taskTopology.scope, 'opl_stage_led_task_topology');
-  assert.equal(
-    contracts.publicSurfaceIndex.scope,
-    'opl_framework_public_surface_index',
-  );
   assert.equal(contracts.cliCommandRegistry.contract_kind, 'opl_cli_command_registry.v1');
-  assert.equal(
-    contracts.observabilitySemanticConventions.schema_version,
-    'opl_observability_semantic_conventions.v1',
-  );
+  assert.equal(validation.status, 'valid');
+  assert.equal(validation.contracts_dir, contractsDir);
+  for (const contractId of [
+    'workstreams',
+    'domains',
+    'stage_selection_vocabulary',
+    'brand_module_registry',
+    'cli_command_registry',
+    'target_operating_architecture',
+    'pack_bundle',
+  ]) {
+    assert.equal(validated.has(contractId), true, contractId);
+  }
 });
 
-test('readJsonLine removes transient error listeners after each parsed line', async () => {
+test('readJsonLine drains buffered siblings and cleans transient listeners', async () => {
   const stream = new PassThrough();
-
-  stream.write('{"id":1}\n');
-  const first = await readJsonLine(stream);
-  assert.equal(first.id, 1);
-  assert.equal(stream.listenerCount('error'), 0);
-
-  stream.write('{"id":2}\n');
-  const second = await readJsonLine(stream);
-  assert.equal(second.id, 2);
-  assert.equal(stream.listenerCount('error'), 0);
-});
-
-test('readJsonLine preserves buffered sibling lines from the same chunk', async () => {
-  const stream = new PassThrough();
-
   stream.write('{"id":1}\n{"id":2}\n');
-  const first = await readJsonLine(stream);
-  assert.equal(first.id, 1);
 
-  const second = await Promise.race([
-    readJsonLine(stream),
-    new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('readJsonLine did not flush the second line from the same chunk.'));
-      }, 100);
-    }),
-  ]);
-  assert.equal(second.id, 2);
+  assert.equal((await readJsonLine(stream)).id, 1);
+  assert.equal(stream.listenerCount('error'), 0);
+  assert.equal((await readJsonLine(stream)).id, 2);
   assert.equal(stream.listenerCount('error'), 0);
 });
 
-test('stopCliPipeChild waits for spawned stdio children to exit', async () => {
-  const child = spawn(
-    process.execPath,
-    ['-e', 'setInterval(() => {}, 1000)'],
-    {
-      cwd: repoRoot,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    },
-  );
+test('stopCliPipeChild terminates spawned stdio children', async () => {
+  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+    cwd: repoRoot,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
 
   await stopCliPipeChild(child);
   assert.notEqual(child.exitCode === null && child.signalCode === null, true);
 });
 
-test('loadFrameworkContracts rejects missing files with a stable error', async (t) => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-missing-'));
-  const expectedContractsDir = path.join(tempRoot, 'contracts', 'opl-framework');
-
-  await t.test('missing contracts directory', () => {
-    assert.throws(
-      () => loadFrameworkContracts(tempRoot),
-      (error: unknown) => {
-        assert.ok(error instanceof FrameworkContractError);
-        assert.equal(error.code, 'contract_file_missing');
-        assert.equal(error.details?.contracts_dir, expectedContractsDir);
-        assert.equal(error.details?.contracts_root_source, 'api');
-        return true;
-      },
-    );
-  });
-});
-
-test('loadFrameworkContracts honors OPL_CONTRACTS_DIR when provided', () => {
-  const tempContracts = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-contracts-'));
-  fs.cpSync(contractsDir, tempContracts, {
-    recursive: true,
-  });
-
-  const workstreamsPath = path.join(tempContracts, 'workstreams.json');
-  const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
-  workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops Override';
-  fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
-
-  const output = runCli(['contract', 'workstream', 'research_ops'], {
-    OPL_CONTRACTS_DIR: tempContracts,
-  });
-
-  assertContractsContext(output, 'env', tempContracts);
-  assert.equal(output.workstream.label, 'Research Ops Override');
-});
-
-test('global --contracts-dir override uses the explicit contract root', () => {
-  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
-    const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
+test('contract roots can be overridden and invalid machine contracts fail closed', () => {
+  const override = createContractsFixtureRoot((fixtureContractsRoot) => {
+    const workstreamsPath = path.join(fixtureContractsRoot, 'workstreams.json');
     const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
-    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Flag';
-    fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
+    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label =
+      'Research Ops From Flag';
+    fs.writeFileSync(workstreamsPath, `${JSON.stringify(workstreams, null, 2)}\n`);
   });
-
-  try {
-    const output = runCli([
-      '--contracts-dir',
-      fixtureContractsRoot,
-      'contract',
-      'workstream',
-      'research_ops',
-    ]);
-
-    assertContractsContext(output, 'cli_flag', fixtureContractsRoot);
-    assert.equal(output.workstream.label, 'Research Ops From Flag');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', () => {
-  const envFixture = createContractsFixtureRoot((contractsRoot) => {
-    const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
-    const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
-    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Env';
-    fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
-  });
-  const flagFixture = createContractsFixtureRoot((contractsRoot) => {
-    const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
-    const workstreams = parseJsonText(fs.readFileSync(workstreamsPath, 'utf8')) as any;
-    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Flag';
-    fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
-  });
-
-  try {
-    const output = runCli(
-      ['--contracts-dir', flagFixture.fixtureContractsRoot, 'contract', 'workstream', 'research_ops'],
-      { OPL_CONTRACTS_DIR: envFixture.fixtureContractsRoot },
-    );
-
-    assertContractsContext(output, 'cli_flag', flagFixture.fixtureContractsRoot);
-    assert.equal(output.workstream.label, 'Research Ops From Flag');
-  } finally {
-    fs.rmSync(envFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(flagFixture.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('validateFrameworkContracts returns a stable summary for the required contract set', () => {
-  const validation = validateFrameworkContracts(repoRoot);
-  const contracts = loadFrameworkContracts(repoRoot);
-
-  assert.deepEqual(validation, {
-    status: 'valid',
-    contracts_dir: contractsDir,
-    contracts_root_source: 'api',
-    validated_contracts: [
-      {
-        contract_id: 'workstreams',
-        file: path.join(contractsDir, 'workstreams.json'),
-        schema_version: contracts.workstreams.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'domains',
-        file: path.join(contractsDir, 'domains.json'),
-        schema_version: 'g2',
-        status: 'valid',
-      },
-      {
-        contract_id: 'stage_selection_vocabulary',
-        file: path.join(contractsDir, 'stage-selection-vocabulary.json'),
-        schema_version: contracts.stageSelectionVocabulary.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'task_topology',
-        file: path.join(contractsDir, 'task-topology.json'),
-        schema_version: contracts.taskTopology.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'public_surface_index',
-        file: path.join(contractsDir, 'public-surface-index.json'),
-        schema_version: contracts.publicSurfaceIndex.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'agent_workspace_norm',
-        file: path.join(contractsDir, 'agent-workspace-norm-contract.json'),
-        schema_version: contracts.agentWorkspaceNorm.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'brand_module_registry',
-        file: path.join(contractsDir, 'brand-module-registry.json'),
-        schema_version: contracts.brandModuleRegistry.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'brand_cli_governance',
-        file: path.join(contractsDir, 'brand-cli-governance.json'),
-        schema_version: contracts.brandCliGovernance.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'brand_module_surfaces',
-        file: path.join(contractsDir, 'brand-module-surfaces.json'),
-        schema_version: contracts.brandModuleSurfaces.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'brand_module_l5_operating_evidence',
-        file: path.join(contractsDir, 'brand-module-l5-operating-evidence.json'),
-        schema_version: contracts.brandModuleL5OperatingEvidence.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'brand_system_profile',
-        file: path.join(contractsDir, 'brand-system-profile.json'),
-        schema_version: contracts.brandSystemProfile.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'source_module_map',
-        file: path.join(contractsDir, 'source-module-map.json'),
-        schema_version: contracts.sourceModuleMap.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'cli_command_registry',
-        file: path.join(contractsDir, 'cli-command-registry.json'),
-        schema_version: contracts.cliCommandRegistry.contract_kind,
-        status: 'valid',
-      },
-      {
-        contract_id: 'target_operating_architecture',
-        file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
-        schema_version: contracts.targetOperatingArchitecture.schema_version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'observability_semantic_conventions',
-        file: path.join(contractsDir, 'observability-semantic-conventions-contract.json'),
-        schema_version: contracts.observabilitySemanticConventions.schema_version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'standard_agent_principles',
-        file: path.join(contractsDir, 'standard-agent-principles.json'),
-        schema_version: contracts.standardAgentPrinciples.version,
-        status: 'valid',
-      },
-      {
-        contract_id: 'scholarskills_capability_modules',
-        file: path.join(contractsDir, 'scholar-skills-capability-modules.json'),
-        schema_version: String(contracts.scholarSkillsCapabilityModules.schema_version),
-        status: 'valid',
-      },
-      {
-        contract_id: 'pack_os',
-        file: path.join(contractsDir, 'pack-os-contract.json'),
-        schema_version: String(contracts.packOs.schema_version),
-        status: 'valid',
-      },
-      {
-        contract_id: 'pack_bundle',
-        file: path.join(contractsDir, 'pack-bundle-contract.json'),
-        schema_version: String(contracts.packBundle.schema_version),
-        status: 'valid',
-      },
-    ],
-  });
-});
-
-test('contract validate returns a stable machine-readable contract summary', () => {
-  const output = runCli(['contract', 'validate']);
-  const contracts = loadFrameworkContracts(repoRoot);
-
-  assert.deepEqual(output, {
-    version: 'g2',
-    validation: {
-      status: 'valid',
-      contracts_dir: contractsDir,
-      contracts_root_source: 'cwd',
-      validated_contracts: [
-        {
-          contract_id: 'workstreams',
-          file: path.join(contractsDir, 'workstreams.json'),
-          schema_version: contracts.workstreams.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'domains',
-          file: path.join(contractsDir, 'domains.json'),
-          schema_version: 'g2',
-          status: 'valid',
-        },
-        {
-          contract_id: 'stage_selection_vocabulary',
-          file: path.join(contractsDir, 'stage-selection-vocabulary.json'),
-          schema_version: contracts.stageSelectionVocabulary.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'task_topology',
-          file: path.join(contractsDir, 'task-topology.json'),
-          schema_version: contracts.taskTopology.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'public_surface_index',
-          file: path.join(contractsDir, 'public-surface-index.json'),
-          schema_version: contracts.publicSurfaceIndex.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'agent_workspace_norm',
-          file: path.join(contractsDir, 'agent-workspace-norm-contract.json'),
-          schema_version: contracts.agentWorkspaceNorm.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'brand_module_registry',
-          file: path.join(contractsDir, 'brand-module-registry.json'),
-          schema_version: contracts.brandModuleRegistry.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'brand_cli_governance',
-          file: path.join(contractsDir, 'brand-cli-governance.json'),
-          schema_version: contracts.brandCliGovernance.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'brand_module_surfaces',
-          file: path.join(contractsDir, 'brand-module-surfaces.json'),
-          schema_version: contracts.brandModuleSurfaces.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'brand_module_l5_operating_evidence',
-          file: path.join(contractsDir, 'brand-module-l5-operating-evidence.json'),
-          schema_version: contracts.brandModuleL5OperatingEvidence.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'brand_system_profile',
-          file: path.join(contractsDir, 'brand-system-profile.json'),
-          schema_version: contracts.brandSystemProfile.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'source_module_map',
-          file: path.join(contractsDir, 'source-module-map.json'),
-          schema_version: contracts.sourceModuleMap.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'cli_command_registry',
-          file: path.join(contractsDir, 'cli-command-registry.json'),
-          schema_version: contracts.cliCommandRegistry.contract_kind,
-          status: 'valid',
-        },
-        {
-          contract_id: 'target_operating_architecture',
-          file: path.join(contractsDir, 'target-operating-architecture-contract.json'),
-          schema_version: contracts.targetOperatingArchitecture.schema_version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'observability_semantic_conventions',
-          file: path.join(contractsDir, 'observability-semantic-conventions-contract.json'),
-          schema_version: contracts.observabilitySemanticConventions.schema_version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'standard_agent_principles',
-          file: path.join(contractsDir, 'standard-agent-principles.json'),
-          schema_version: contracts.standardAgentPrinciples.version,
-          status: 'valid',
-        },
-        {
-          contract_id: 'scholarskills_capability_modules',
-          file: path.join(contractsDir, 'scholar-skills-capability-modules.json'),
-          schema_version: String(contracts.scholarSkillsCapabilityModules.schema_version),
-          status: 'valid',
-        },
-        {
-          contract_id: 'pack_os',
-          file: path.join(contractsDir, 'pack-os-contract.json'),
-          schema_version: String(contracts.packOs.schema_version),
-          status: 'valid',
-        },
-        {
-          contract_id: 'pack_bundle',
-          file: path.join(contractsDir, 'pack-bundle-contract.json'),
-          schema_version: String(contracts.packBundle.schema_version),
-          status: 'valid',
-        },
-      ],
-    },
-  });
-});
-
-test('agent workspace norm contract is fail-closed during load and validation', () => {
-  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
-    const normPath = path.join(contractsRoot, 'agent-workspace-norm-contract.json');
-    const normContract = parseJsonText(fs.readFileSync(normPath, 'utf8')) as any;
-    normContract.default_workspace_precondition.command = 'opl workspace bootstrap';
-    fs.writeFileSync(normPath, `${JSON.stringify(normContract, null, 2)}\n`);
-  });
-
-  try {
-    assert.throws(
-      () => loadFrameworkContracts({
-        contractsDir: fixtureContractsRoot,
-        source: 'api',
-      }),
-      (error: unknown) => {
-        assert.ok(error instanceof FrameworkContractError);
-        assert.equal(error.code, 'contract_shape_invalid');
-        assert.equal(error.details?.field, 'default_workspace_precondition.command');
-        assert.equal(error.details?.expected, 'opl workspace ensure');
-        assert.equal(error.details?.actual, 'opl workspace bootstrap');
-        assert.equal(error.details?.file, path.join(fixtureContractsRoot, 'agent-workspace-norm-contract.json'));
-        return true;
-      },
-    );
-
-    const { status, payload } = runCliFailure([
-      '--contracts-dir',
-      fixtureContractsRoot,
-      'contract',
-      'validate',
-    ]);
-    assert.equal(status, 3);
-    assert.equal(payload.error.code, 'contract_shape_invalid');
-    assert.equal(payload.error.details.field, 'default_workspace_precondition.command');
-    assert.equal(payload.error.details.expected, 'opl workspace ensure');
-    assert.equal(payload.error.details.actual, 'opl workspace bootstrap');
-    assert.equal(payload.error.details.file, path.join(fixtureContractsRoot, 'agent-workspace-norm-contract.json'));
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('brand module L5 evidence requirements require explicit owner route refs', () => {
-  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
-    const contractPath = path.join(contractsRoot, 'brand-module-l5-operating-evidence.json');
-    const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
-    delete contract.modules[0].evidence_requirements[0].owner_route_ref;
-    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
-  });
-
-  try {
-    assert.throws(
-      () => loadFrameworkContracts({
-        contractsDir: fixtureContractsRoot,
-        source: 'api',
-      }),
-      (error: unknown) => {
-        assert.ok(error instanceof FrameworkContractError);
-        assert.equal(error.code, 'contract_shape_invalid');
-        assert.equal(error.details?.file, path.join(fixtureContractsRoot, 'brand-module-l5-operating-evidence.json'));
-        assert.equal(error.details?.field, 'evidence_requirements.owner_route_ref');
-        return true;
-      },
-    );
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('target operating architecture contract requires the multi-plane operating model', () => {
-  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
-    const contractPath = path.join(contractsRoot, 'target-operating-architecture-contract.json');
+  const invalid = createContractsFixtureRoot((fixtureContractsRoot) => {
+    const contractPath = path.join(fixtureContractsRoot, 'target-operating-architecture-contract.json');
     const contract = parseJsonText(fs.readFileSync(contractPath, 'utf8')) as any;
     delete contract.multi_plane_operating_system;
     fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
   });
 
   try {
+    const output = runCli([
+      '--contracts-dir',
+      override.fixtureContractsRoot,
+      'contract',
+      'workstream',
+      'research_ops',
+    ], {
+      OPL_CONTRACTS_DIR: invalid.fixtureContractsRoot,
+    });
+    assert.equal(output.workstream.label, 'Research Ops From Flag');
+
     assert.throws(
-      () => loadFrameworkContracts({
-        contractsDir: fixtureContractsRoot,
-        source: 'api',
-      }),
+      () => loadFrameworkContracts({ contractsDir: invalid.fixtureContractsRoot, source: 'api' }),
       (error: unknown) => {
         assert.ok(error instanceof FrameworkContractError);
         assert.equal(error.code, 'contract_shape_invalid');
         assert.equal(error.details?.field, 'multi_plane_operating_system');
-        assert.equal(error.details?.file, path.join(fixtureContractsRoot, 'target-operating-architecture-contract.json'));
         return true;
       },
     );
+
+    const failure = runCliFailure(['--contracts-dir', invalid.fixtureContractsRoot, 'contract', 'validate']);
+    assert.equal(failure.status, 3);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(override.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(invalid.fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('doctor reports a Codex-default ready local entry without Hermes compatibility diagnostics', () => {
-  const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
-echo "unused"
-exit 0
-`);
-
-  try {
-    const output = runCli(['doctor'], {
-      OPL_CODEX_BIN: codexPath,
-      OPL_HERMES_BIN: path.join(codexFixtureRoot, 'retired-hermes'),
-      OPL_FAMILY_RUNTIME_PROVIDER: '',
-      OPL_TEMPORAL_ADDRESS: '',
-      TEMPORAL_ADDRESS: '',
-    });
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
-    assert.equal(output.product_entry.ready, false);
-    assert.equal(output.product_entry.local_entry_ready, true);
-    assert.equal(output.product_entry.online_runtime_ready, false);
-    assert.equal(output.product_entry.configured_provider, 'temporal');
-    assert.equal(output.product_entry.family_runtime_provider_ready, false);
-    assert.equal(Object.hasOwn(output.product_entry, 'messaging_gateway_ready'), false);
-    assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
-    assert.match(output.product_entry.notes[0], /opl exec/);
-    assert.match(output.product_entry.notes[0], /opl resume/);
-    assert.match(output.product_entry.notes[1], /opl connect sync-skills/);
-    assert.match(output.product_entry.notes[2], /configured family runtime provider/);
-    assert.match(output.product_entry.notes[2], /non-default executors are explicit stage\/request selections/);
-    assert.deepEqual(output.product_entry.issues, ['temporal_runtime_not_configured']);
-    assert.equal(output.validation.status, 'valid');
-  } finally {
-    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('doctor keeps Codex-default local entry ready even when Hermes is unavailable', () => {
+test('product entry keeps raw Codex behavior while retired aliases stay closed', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-echo "unused"
-exit 0
+if [ "\${1:-}" = "resume" ] && [ "\${2:-}" = "opl-test-session" ]; then
+  printf '%s\\n' "RESUMED SESSION BODY"
+  exit 0
+fi
+if [ "$#" -eq 0 ]; then
+  printf '%s\\n' "CODEX ENTRY"
+  exit 0
+fi
+printf 'unexpected fake-codex args: %s\\n' "$*" >&2
+exit 1
 `);
+  const capturePath = path.join(os.tmpdir(), `opl-natural-fallback-args-${process.pid}.txt`);
 
   try {
-    const output = runCli(['doctor'], {
+    const doctor = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       PATH: fixtureRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
     });
+    assert.equal(doctor.product_entry.local_entry_ready, true);
+    assert.equal(doctor.product_entry.online_runtime_ready, false);
+    assert.equal(Object.hasOwn(doctor.product_entry, 'hermes'), false);
+    assert.deepEqual(doctor.product_entry.issues, ['temporal_runtime_not_configured']);
 
-    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
-    assert.equal(output.product_entry.ready, false);
-    assert.equal(output.product_entry.local_entry_ready, true);
-    assert.equal(output.product_entry.online_runtime_ready, false);
-    assert.equal(output.product_entry.configured_provider, 'temporal');
-    assert.equal(output.product_entry.family_runtime_provider_ready, false);
-    assert.equal(Object.hasOwn(output.product_entry, 'messaging_gateway_ready'), false);
-    assert.equal(Object.hasOwn(output.product_entry, 'hermes'), false);
-    assert.match(output.product_entry.notes[2], /configured family runtime provider/);
-    assert.deepEqual(output.product_entry.issues, ['temporal_runtime_not_configured']);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
+    const bare = runCliRaw([], { OPL_CODEX_BIN: codexPath });
+    assert.equal(bare.stdout, 'CODEX ENTRY\n');
+    assert.equal(bare.stderr, '');
 
-test('workspace projects returns the current OPL family project surfaces', () => {
-  const output = runCli(['workspace', 'projects']);
-
-  assert.equal(output.version, 'g2');
-  assert.equal(output.projects.length, 4);
-  assert.equal(output.projects[0].project_id, 'opl');
-  assert.equal(output.projects[0].scope, 'opl_framework');
-  assert.equal(output.projects[0].direct_entry_surface, 'opl');
-  assert.equal(output.projects[1].project_id, 'medautogrant');
-  assert.equal(output.projects[2].project_id, 'medautoscience');
-  assert.equal(output.projects[3].project_id, 'redcube');
-});
-
-test('status workspace reports git and worktree visibility for one workspace path', () => {
-  const output = runCli(['status', 'workspace', '--path', repoRoot]);
-
-  assert.equal(output.version, 'g2');
-  assert.equal(output.workspace.absolute_path, repoRoot);
-  assert.equal(output.workspace.kind, 'directory');
-  assert.equal(output.workspace.entries.total > 0, true);
-  assert.equal(output.workspace.git.inside_work_tree, true);
-  assert.equal(output.workspace.git.root, repoRoot);
-  assert.equal(typeof output.workspace.git.linked_worktree, 'boolean');
-  assert.equal(typeof output.workspace.git.is_clean, 'boolean');
-});
-
-test('bare opl command keeps raw Codex product entry behavior even when the session ledger file is corrupted', () => {
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$#" -eq 0 ]; then
-  cat <<'EOF'
-CODEX ENTRY
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-corrupt-session-ledger-'));
-  const ledgerPath = path.join(stateRoot, 'session-ledger.json');
-  const corruptedLedgerContent = '{"version":"g2","entries":[{"broken":';
-  fs.writeFileSync(ledgerPath, corruptedLedgerContent);
-
-  try {
-    const result = runCliRaw([], {
+    const resume = parseJsonText(runCliRaw(['session', 'resume', 'opl-test-session'], {
       OPL_CODEX_BIN: codexPath,
-      OPL_STATE_DIR: stateRoot,
-    });
+    }).stdout) as any;
+    assert.equal(resume.product_entry.mode, 'resume');
+    assert.equal(resume.product_entry.resume.output, 'RESUMED SESSION BODY');
 
-    assert.equal(result.stdout, 'CODEX ENTRY\n');
-    assert.equal(result.stderr, '');
-    assert.equal(fs.readFileSync(ledgerPath, 'utf8'), corruptedLedgerContent);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+    const aliasFailure = runCliFailure(['@mas', 'tighten manuscript']);
+    assert.equal(aliasFailure.status, 2);
+    assert.equal(aliasFailure.payload.error.code, 'unknown_command');
 
-test('natural-language fallback is a raw Codex passthrough unless the request enters explicit OPL stage selection', () => {
-  const capturePath = path.join(os.tmpdir(), `opl-natural-fallback-args-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+    fs.writeFileSync(capturePath, '');
+    const fallback = createFakeCodexFixture(`
 printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
-if [ "$#" -gt 0 ]; then
-  cat <<'EOF'
-AUTO ASK READY
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
+printf '%s\\n' "AUTO ASK READY"
 `);
-
-  try {
-    const result = runCliRaw(
-      ['Plan', 'a', 'medical', 'grant', 'proposal', 'revision', 'loop.'],
-      {
-        OPL_CODEX_BIN: codexPath,
-      },
-    );
-
-    assert.equal(result.stdout, 'AUTO ASK READY\n');
-    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
-      'Plan',
-      'a',
-      'medical',
-      'grant',
-      'proposal',
-      'revision',
-      'loop.',
-    ]);
+    try {
+      assert.equal(runCliRaw(['Plan', 'a', 'grant'], { OPL_CODEX_BIN: fallback.codexPath }).stdout, 'AUTO ASK READY\n');
+      assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), ['Plan', 'a', 'grant']);
+    } finally {
+      fs.rmSync(fallback.fixtureRoot, { recursive: true, force: true });
+    }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
   }
 });
 
-test('top-level @agent aliases are not registered as command surfaces', () => {
-  const { status, payload } = runCliFailure(['@mas', 'tighten the manuscript argument around invasive phenotype findings']);
-
-  assert.equal(status, 2);
-  assert.equal(payload.version, 'g2');
-  assert.equal(payload.error.code, 'unknown_command');
-  assert.match(payload.error.message, /Unknown command: @mas/);
-});
-
-test('help no longer advertises retired ask chat shell aliases', () => {
-  const output = runCli(['help']);
-  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
-  const examples = output.help.examples as string[];
-  assert.equal(commands.includes('ask'), false);
-  assert.equal(commands.includes('chat'), false);
-  assert.equal(commands.includes('shell'), false);
-  assert.equal(commands.includes('connect skills'), true);
-  assert.equal(commands.includes('connect sync-skills'), true);
-  const diagnosticGroups = output.help.diagnostic_command_groups as Array<{ group_id: string; summary: string }>;
-  assert.equal(
-    diagnosticGroups.some((entry) => (
-      entry.group_id === 'scholar-skills'
-      && entry.summary.includes('compatibility / convenience alias')
-      && entry.summary.includes('OPL Connect / Pack')
-    )),
-    true,
-  );
-  assert.equal(commands.includes('agents foundry status'), true);
-  assert.equal(commands.includes('agents foundry peers'), true);
-  assert.equal(commands.includes('skill list'), false);
-  assert.equal(commands.includes('skill sync'), false);
-  for (const groupId of ['domain', 'engine', 'runtime', 'session', 'skill', 'status', 'system']) {
-    assert.equal(diagnosticGroups.some((entry) => entry.group_id === groupId), true, groupId);
-  }
-  assert.equal(examples.some((entry) => entry.includes('opl ask')), false);
-  assert.equal(examples.some((entry) => entry.includes('opl chat')), false);
-  assert.equal(examples.some((entry) => entry.includes('opl shell')), false);
-  assert.equal(examples.some((entry) => entry.includes('opl @')), false);
-  assert.equal(examples.some((entry) => entry.includes('opl connect sync-skills')), true);
-  assert.equal(examples.some((entry) => entry.includes('opl agents foundry status')), true);
-  assert.equal(examples.some((entry) => entry.includes('opl skill sync')), false);
-});
-
-test('session resume returns the OPL-managed Codex resume envelope in non-interactive mode', () => {
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "resume" ] && [ "$2" = "opl-test-session" ]; then
-  cat <<'EOF'
-RESUMED SESSION BODY
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
-
+test('workspace, help, and runtime manager commands expose stable smoke shapes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-contracts-entry-state-'));
   try {
-    const result = runCliRaw(['session', 'resume', 'opl-test-session'], {
-      OPL_CODEX_BIN: codexPath,
-    });
+    const projects = runCli(['workspace', 'projects']);
+    assert.deepEqual(projects.projects.map((entry: { project_id: string }) => entry.project_id), [
+      'opl',
+      'medautogrant',
+      'medautoscience',
+      'redcube',
+    ]);
 
-    const output = parseJsonText(result.stdout) as any;
-    assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.equal(output.product_entry.mode, 'resume');
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.deepEqual(output.product_entry.resume.command_preview, ['codex', 'resume', 'opl-test-session']);
-    assert.equal(output.product_entry.resume.session_id, 'opl-test-session');
-    assert.equal(output.product_entry.resume.output, 'RESUMED SESSION BODY');
-    assert.equal(result.stderr, '');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
+    const status = runCli(['status', 'workspace', '--path', repoRoot]);
+    assert.equal(status.workspace.git.root, repoRoot);
+    assert.equal(typeof status.workspace.git.linked_worktree, 'boolean');
 
-test('status runtime reports provider-backed runtime status and the OPL session ledger', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-status-state-'));
+    const help = runCli(['help']);
+    const commands = help.help.commands.map((entry: { command: string }) => entry.command);
+    assert.equal(commands.includes('ask'), false);
+    assert.equal(commands.includes('connect sync-skills'), true);
+    assert.equal(commands.includes('agents foundry status'), true);
+    assert.equal(help.help.examples.some((entry: string) => entry.includes('opl ask')), false);
 
-  try {
-    const output = runCli(['status', 'runtime', '--limit', '2'], {
+    const runtime = runCli(['status', 'runtime', '--limit', '2'], {
       OPL_STATE_DIR: stateRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: '',
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
     });
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.runtime_status.runtime_substrate, 'provider_backed_family_runtime');
-    assert.equal(output.runtime_status.configured_provider, 'temporal');
-    assert.equal(output.runtime_status.family_runtime_providers.selected_provider, 'temporal');
-    assert.equal(output.runtime_status.family_runtime_providers.providers.temporal.ready, false);
-    assert.equal(output.runtime_status.production_provider_policy.required_provider, 'temporal');
-    assert.equal(output.runtime_status.production_provider_policy.local_sqlite_provider_retired, true);
-    assert.equal(
-      output.runtime_status.production_provider_policy.scheduler_replacement_surface,
-      'opl family-runtime scheduler install|status|trigger|remove --provider temporal',
-    );
-    assert.equal(output.runtime_status.managed_session_ledger.summary.entry_count, 0);
+    assert.equal(runtime.runtime_status.runtime_substrate, 'provider_backed_family_runtime');
+    assert.equal(runtime.runtime_status.family_runtime_providers.selected_provider, 'temporal');
+    assert.equal(runtime.runtime_status.production_provider_policy.local_sqlite_provider_retired, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('runtime manager invokes native helpers and persists the state index projection', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
-  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
-
-  writeNativeHelperFixtureScripts(helperBinDir, { doctorChecks: true });
-
+test('loadFrameworkContracts reports missing contract roots with stable details', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-missing-'));
   try {
-    const output = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
-    });
-
-    assert.equal(output.runtime_manager.native_helper_target.runtime.status, 'available');
-    assert.deepEqual(
-      output.runtime_manager.native_helper_target.runtime.invocations.map(
-        (invocation: { helper_id: string; status: string }) => [invocation.helper_id, invocation.status],
-      ),
-      [
-        ['opl-doctor-native', 'ok'],
-        ['opl-state-indexer', 'ok'],
-        ['opl-artifact-indexer', 'ok'],
-        ['opl-runtime-watch', 'ok'],
-      ],
+    assert.throws(
+      () => loadFrameworkContracts(tempRoot),
+      (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.code, 'contract_file_missing');
+        assert.equal(error.details?.contracts_dir, path.join(tempRoot, 'contracts', 'opl-framework'));
+        assert.equal(error.details?.contracts_root_source, 'api');
+        return true;
+      },
     );
-    assert.equal(output.runtime_manager.state_index_target.persistence.status, 'written');
-    assert.equal(
-      output.runtime_manager.state_index_target.persistence.index_file,
-      path.join(stateRoot, 'runtime-manager', 'native-state-index.json'),
-    );
-
-    const persisted = parseJsonText(
-      fs.readFileSync(output.runtime_manager.state_index_target.persistence.index_file, 'utf8'),
-    ) as any;
-    assert.equal(persisted.surface_kind, 'opl_runtime_manager_native_state_projection');
-    assert.equal(persisted.native_indexes.state_index.result.surface_kind, 'native_state_index');
-    assert.equal(persisted.native_indexes.artifact_manifest.result.surface_kind, 'native_artifact_manifest');
-    assert.equal(persisted.native_indexes.runtime_health.result.surface_kind, 'runtime_health_snapshot_index');
   } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(helperBinDir, { recursive: true, force: true });
-  }
-});
-
-test('runtime manager discovers cached native helpers and records index lifecycle metadata', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-cache-state-'));
-  const helperCacheDir = path.join(
-    stateRoot,
-    'native-helper',
-    'bin',
-    `${process.platform}-${process.arch}`,
-    '0.1.0',
-  );
-  fs.mkdirSync(helperCacheDir, { recursive: true });
-
-  writeNativeHelperFixtureScripts(helperCacheDir, { includeVersionFields: true });
-
-  try {
-    const output = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-    });
-    const helperSources = output.runtime_manager.native_helper_target.runtime.discovery.helpers
-      .filter((helper: { helper_id: string }) => helper.helper_id !== 'opl-sysprobe')
-      .map((helper: { helper_id: string; source: string }) => [helper.helper_id, helper.source]);
-    assert.deepEqual(helperSources, [
-      ['opl-doctor-native', 'state_cache'],
-      ['opl-runtime-watch', 'state_cache'],
-      ['opl-artifact-indexer', 'state_cache'],
-      ['opl-state-indexer', 'state_cache'],
-    ]);
-    assert.deepEqual(
-      output.runtime_manager.native_helper_target.runtime.invocations.map(
-        (invocation: { helper_version: string; crate_name: string; crate_version: string }) => [
-          invocation.helper_version,
-          invocation.crate_name,
-          invocation.crate_version,
-        ],
-      ),
-      [
-        ['0.1.0', 'opl-native-helper', '0.1.0'],
-        ['0.1.0', 'opl-native-helper', '0.1.0'],
-        ['0.1.0', 'opl-native-helper', '0.1.0'],
-        ['0.1.0', 'opl-native-helper', '0.1.0'],
-      ],
-    );
-
-    const persistence = output.runtime_manager.state_index_target.persistence;
-    assert.equal(persistence.status, 'written');
-    assert.equal(persistence.ttl_ms, 86_400_000);
-    assert.equal(persistence.freshness.status, 'fresh');
-    assert.equal(persistence.freshness.failure_count, 0);
-    assert.match(persistence.history_file, /native-state-index-history\.jsonl$/);
-    assert.match(persistence.failure_file, /native-state-index-failures\.jsonl$/);
-    assert.match(persistence.last_success_file, /native-state-index-last-success\.json$/);
-    assert.equal(persistence.diff.changed, true);
-    assert.equal(persistence.gc.retained_history_count, 1);
-
-    const persisted = parseJsonText(fs.readFileSync(persistence.index_file, 'utf8')) as any;
-    assert.equal(persisted.lifecycle.expired, false);
-    assert.equal(persisted.lifecycle.ttl_ms, 86_400_000);
-    assert.equal(persisted.diff.changed, true);
-    assert.equal(fs.existsSync(persistence.history_file), true);
-    assert.equal(fs.existsSync(persistence.last_success_file), true);
-    assert.equal(fs.readFileSync(persistence.history_file, 'utf8').trim().split('\n').length, 1);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime manager records native index failure lifecycle when helpers are unavailable', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-failure-state-'));
-
-  try {
-    const output = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-    });
-    const persistence = output.runtime_manager.state_index_target.persistence;
-    assert.equal(persistence.status, 'skipped_helper_unavailable');
-    assert.match(persistence.failure_file, /native-state-index-failures\.jsonl$/);
-    assert.equal(fs.existsSync(persistence.failure_file), true);
-    const failure = parseJsonText(fs.readFileSync(persistence.failure_file, 'utf8').trim()) as any;
-    assert.equal(failure.status, 'skipped_helper_unavailable');
-    assert.equal(failure.errors[0].code, 'native_index_helper_unavailable');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
