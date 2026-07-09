@@ -25,7 +25,11 @@
       "production_readiness"
     ],
     "concrete_domain_agent_implemented": false,
-    "medical_or_hematology_agent_implemented": false
+    "medical_or_hematology_agent_implemented": false,
+    "profile_catalog_is_agent_design_template_source": false,
+    "profile_catalog_is_lower_bound_conformance_guardrail": true,
+    "catalog_requirements_are_refs_only_shape": true,
+    "reference_design_sources_remain_design_source": true
   },
   "source_of_truth_refs": [
     {
@@ -49,6 +53,13 @@
     "profile_ref": "opl-profile:evidence_grounded_decision_agent_profile.v1",
     "profile_label": "Evidence-Grounded Decision Agent",
     "profile_kind": "decision_support_agent_profile",
+    "catalog_role": "lower_bound_conformance_guardrail",
+    "design_source_boundary": {
+      "profile_catalog_is_agent_design_template_source": false,
+      "profile_requirements_are_lower_bound_shape": true,
+      "reference_design_sources_remain_design_source": true,
+      "target_agent_pack_requires_source_derived_design_consumption_refs": true
+    },
     "trigger_signals": [
       "evidence-grounded",
       "guideline-grounded",
@@ -450,6 +461,8 @@
     "exported_builder": "buildEvidenceGroundedDecisionAgentProfileReadback",
     "module_surface_readback_available": true,
     "readback_is_stable_json": true,
+    "profile_catalog_can_claim_target_agent_design": false,
+    "source_derived_design_refs_required_for_reference_backed_build": true,
     "readback_can_claim_runtime_ready": false,
     "readback_can_claim_domain_ready": false
   },
@@ -464,6 +477,7 @@
     ],
     "pack_consumers_must_not": [
       "treat_contract_as_domain_agent",
+      "treat_profile_catalog_as_agent_design_source",
       "treat_contract_validation_as_quality_verdict",
       "treat_source_readback_as_owner_receipt",
       "treat_focused_test_as_production_ready"

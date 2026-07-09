@@ -10,6 +10,7 @@ import {
   buildAgentProfileInspect,
   buildAgentProfileSelection,
 } from '../../src/modules/foundry-lab/agent-profile-spine.ts';
+import { buildProfileCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/profiles.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -362,6 +363,15 @@ test('profile catalog consumes contract-owned profile entry requirements', () =>
   assert.equal(profile.required_reference_pack_roles.includes('guideline_reference_pack'), true);
   assert.equal(profile.required_evidence_objects.includes('DecisionSupportArtifact'), true);
   assert.equal(profile.can_claim_domain_ready, false);
+});
+
+test('profile public command specs keep catalog as guardrail, not design source', () => {
+  const specs = buildProfileCommandSpecs();
+
+  assert.match(specs['profiles list'].summary, /lower-bound conformance guardrails/);
+  assert.match(specs['profiles list'].summary, /not target-agent design sources/);
+  assert.match(specs['profiles select'].summary, /reference sources remain the design source/);
+  assert.match(specs['profiles conformance'].summary, /does not validate design quality or readiness/);
 });
 
 test('profile conformance checks selected profile refs, stage knowledge refs, and evidence objects', () => {

@@ -197,9 +197,9 @@ function buildScaffoldConsumptionRefs(input: {
   const blockers = validation ? readStringArray(validation.blockers) : [];
   const validationStatus = validation ? readOptionalString(validation.status) : null;
   const status = validation
-    ? (validationStatus === 'passed' ? 'validated_template_consumed' : 'validation_blocked')
+    ? (validationStatus === 'passed' ? 'validated_scaffold_consumed' : 'validation_blocked')
     : input.mode === 'generate'
-      ? 'generated_template_pending_validation'
+      ? 'generated_scaffold_pending_validation'
       : 'describe_only_no_generated_repo_consumed';
   const selectedExecutorBindingObservedCount = countStagePackBindings(
     stagePackV2Validation,
@@ -267,7 +267,7 @@ function buildScaffoldConsumptionRefs(input: {
     app_operator_consumable: true,
     app_operator_projection_ref: '/app_operator_drilldown/standard_agent_template_consumption_refs',
     claim_policy:
-      'template_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim',
+      'scaffold_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim',
     authority_boundary: {
       refs_only: true,
       opl_can_write_domain_truth: false,
@@ -297,15 +297,25 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       scaffold_id: 'opl.standard_domain_agent.scaffold.v1',
       owner: 'one-person-lab',
       command: 'opl agents scaffold',
-      state: targetDir ? 'template_generated' : 'template_contract_available',
+      state: targetDir ? 'scaffold_generated' : 'scaffold_contract_available',
       contract_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
       generation_policy: {
         scaffold_command_is_read_only: targetDir === null,
         creates_files: targetDir !== null,
         default_mode: 'describe_without_target_dir',
         write_requires_explicit_target_dir: true,
-        template_source_of_truth: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+        scaffold_role: 'physical_skeleton_and_lower_bound_guardrail',
+        scaffold_is_agent_design_template_source: false,
+        scaffold_shape_source_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
         copy_existing_domain_repo_as_template: false,
+      },
+      design_source_boundary: {
+        scaffold_is_agent_design_template_source: false,
+        scaffold_can_cap_target_agent_design_ceiling: false,
+        scaffold_can_claim_target_agent_ready: false,
+        profile_catalog_is_lower_bound_guardrail: true,
+        reference_design_sources_remain_design_source: true,
+        source_derived_design_consumption_refs_required_for_reference_backed_agents: true,
       },
       mode,
       target_dir: targetDir,

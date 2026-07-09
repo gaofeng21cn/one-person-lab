@@ -115,7 +115,7 @@ function buildValidatedScaffoldConsumptionRefs(input: {
     surface_kind: 'opl_standard_agent_template_consumption_refs',
     owner: 'one-person-lab',
     evidence_role: 'refs_only_new_agent_template_consumption',
-    status: input.validation.status === 'passed' ? 'validated_template_consumed' : 'validation_blocked',
+    status: input.validation.status === 'passed' ? 'validated_scaffold_consumed' : 'validation_blocked',
     mode: 'consumption_evidence',
     domain_id: input.domainId,
     scaffold_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
@@ -145,7 +145,7 @@ function buildValidatedScaffoldConsumptionRefs(input: {
     app_operator_consumable: true,
     app_operator_projection_ref: '/app_operator_drilldown/standard_agent_template_consumption_refs',
     claim_policy:
-      'template_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim',
+      'scaffold_generation_and_validation_evidence_only_no_domain_ready_artifact_authority_or_production_ready_claim',
     authority_boundary: {
       refs_only: true,
       opl_can_write_domain_truth: false,

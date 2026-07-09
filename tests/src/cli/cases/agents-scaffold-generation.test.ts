@@ -28,11 +28,11 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'Award Foundry',
     ]).standard_domain_agent_scaffold;
 
-    assert.equal(generated.state, 'template_generated');
+    assert.equal(generated.state, 'scaffold_generated');
     assert.equal(generated.mode, 'generate');
     assert.equal(generated.generation_policy.creates_files, true);
     assert.equal(generated.write_summary.written_count, generated.template_files.length);
-    assert.equal(generated.scaffold_consumption_refs.status, 'generated_template_pending_validation');
+    assert.equal(generated.scaffold_consumption_refs.status, 'generated_scaffold_pending_validation');
     assert.equal(generated.scaffold_consumption_refs.authority_boundary.scaffold_validation_can_claim_domain_ready, false);
     assertFilesExist(targetDir, [
       'contracts/domain_descriptor.json',

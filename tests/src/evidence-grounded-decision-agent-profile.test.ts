@@ -136,16 +136,60 @@ test('Evidence-grounded decision profile exposes Pack-owned contract readback wi
     machine_boundary: {
       concrete_domain_agent_implemented: boolean;
       medical_or_hematology_agent_implemented: boolean;
+      profile_catalog_is_agent_design_template_source: boolean;
+      profile_catalog_is_lower_bound_conformance_guardrail: boolean;
+      catalog_requirements_are_refs_only_shape: boolean;
+      reference_design_sources_remain_design_source: boolean;
+    };
+    profile_catalog_entry: {
+      catalog_role: string;
+      design_source_boundary: {
+        profile_catalog_is_agent_design_template_source: boolean;
+        profile_requirements_are_lower_bound_shape: boolean;
+        reference_design_sources_remain_design_source: boolean;
+        target_agent_pack_requires_source_derived_design_consumption_refs: boolean;
+      };
     };
     readback_contract: {
       readback_is_stable_json: boolean;
+      profile_catalog_can_claim_target_agent_design: boolean;
+      source_derived_design_refs_required_for_reference_backed_build: boolean;
       readback_can_claim_runtime_ready: boolean;
       readback_can_claim_domain_ready: boolean;
+    };
+    consumption_contract: {
+      pack_consumers_must_not: string[];
     };
   };
   assert.equal(contract.machine_boundary.concrete_domain_agent_implemented, false);
   assert.equal(contract.machine_boundary.medical_or_hematology_agent_implemented, false);
+  assert.equal(contract.machine_boundary.profile_catalog_is_agent_design_template_source, false);
+  assert.equal(contract.machine_boundary.profile_catalog_is_lower_bound_conformance_guardrail, true);
+  assert.equal(contract.machine_boundary.catalog_requirements_are_refs_only_shape, true);
+  assert.equal(contract.machine_boundary.reference_design_sources_remain_design_source, true);
+  assert.equal(contract.profile_catalog_entry.catalog_role, 'lower_bound_conformance_guardrail');
+  assert.equal(
+    contract.profile_catalog_entry.design_source_boundary.profile_catalog_is_agent_design_template_source,
+    false,
+  );
+  assert.equal(
+    contract.profile_catalog_entry.design_source_boundary.profile_requirements_are_lower_bound_shape,
+    true,
+  );
+  assert.equal(
+    contract.profile_catalog_entry.design_source_boundary.reference_design_sources_remain_design_source,
+    true,
+  );
+  assert.equal(
+    contract.profile_catalog_entry.design_source_boundary.target_agent_pack_requires_source_derived_design_consumption_refs,
+    true,
+  );
   assert.equal(contract.readback_contract.readback_is_stable_json, true);
+  assert.equal(contract.readback_contract.profile_catalog_can_claim_target_agent_design, false);
+  assert.equal(
+    contract.readback_contract.source_derived_design_refs_required_for_reference_backed_build,
+    true,
+  );
   assert.equal(
     'module_surface_readback_available' in contract.readback_contract
       && contract.readback_contract.module_surface_readback_available,
@@ -153,6 +197,12 @@ test('Evidence-grounded decision profile exposes Pack-owned contract readback wi
   );
   assert.equal(contract.readback_contract.readback_can_claim_runtime_ready, false);
   assert.equal(contract.readback_contract.readback_can_claim_domain_ready, false);
+  assert.equal(
+    contract.consumption_contract.pack_consumers_must_not.includes(
+      'treat_profile_catalog_as_agent_design_source',
+    ),
+    true,
+  );
 });
 
 test('Foundry evidence profile inspect aggregates non-live module surfaces', () => {

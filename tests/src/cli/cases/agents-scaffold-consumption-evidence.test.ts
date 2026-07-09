@@ -52,7 +52,7 @@ test('agents scaffold consumption evidence generates and validates an ephemeral 
     evidence.surface_consumption_proof.app_operator_refs.status,
     'app_operator_projection_consumable',
   );
-  assert.equal(evidence.scaffold_consumption_refs.status, 'validated_template_consumed');
+  assert.equal(evidence.scaffold_consumption_refs.status, 'validated_scaffold_consumed');
   assert.equal(evidence.scaffold_consumption_refs.validation_consumed_generated_repo, true);
   assert.equal(evidence.scaffold_consumption_refs.default_codex_executor_binding_count, 1);
   assert.equal(evidence.scaffold_consumption_refs.app_operator_consumable, true);

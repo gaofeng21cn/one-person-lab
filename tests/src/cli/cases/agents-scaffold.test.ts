@@ -1,8 +1,17 @@
-import { assert, runCli, test } from '../helpers.ts';
+import { assert, fs, path, repoRoot, runCli, test } from '../helpers.ts';
 import { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from '../../../../src/modules/workspace/workspace-topology.ts';
 
 function assertIncludesAll(values: unknown[], expected: unknown[]) {
   for (const value of expected) assert.ok(values.includes(value), String(value));
+}
+
+function readSkeletonContract() {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(repoRoot, 'contracts', 'opl-framework', 'standard-domain-agent-skeleton-contract.json'),
+      'utf8',
+    ),
+  );
 }
 
 test('agents scaffold exposes the reusable agent scaffold contract without domain authority', () => {
@@ -10,10 +19,20 @@ test('agents scaffold exposes the reusable agent scaffold contract without domai
 
   assert.equal(scaffold.surface_kind, 'opl_standard_domain_agent_scaffold');
   assert.equal(scaffold.owner, 'one-person-lab');
-  assert.equal(scaffold.state, 'template_contract_available');
+  assert.equal(scaffold.state, 'scaffold_contract_available');
   assert.equal(scaffold.generation_policy.scaffold_command_is_read_only, true);
   assert.equal(scaffold.generation_policy.creates_files, false);
   assert.equal(scaffold.generation_policy.write_requires_explicit_target_dir, true);
+  assert.equal(scaffold.generation_policy.scaffold_role, 'physical_skeleton_and_lower_bound_guardrail');
+  assert.equal(scaffold.generation_policy.scaffold_is_agent_design_template_source, false);
+  assert.equal(
+    scaffold.generation_policy.scaffold_shape_source_ref,
+    'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+  );
+  assert.equal('template_source_of_truth' in scaffold.generation_policy, false);
+  assert.equal(scaffold.design_source_boundary.scaffold_is_agent_design_template_source, false);
+  assert.equal(scaffold.design_source_boundary.scaffold_can_cap_target_agent_design_ceiling, false);
+  assert.equal(scaffold.design_source_boundary.profile_catalog_is_lower_bound_guardrail, true);
   assert.deepEqual(scaffold.repo_source_boundary.required_dirs, ['agent', 'contracts', 'runtime', 'docs']);
   assert.deepEqual(scaffold.repo_source_boundary.forbidden_dirs, ['artifacts']);
   assert.equal(scaffold.repo_source_boundary.runtime_artifacts_live_in_source_repo, false);
@@ -96,4 +115,24 @@ test('agents scaffold exposes the reusable agent scaffold contract without domai
   assert.equal(scaffold.authority_boundary.opl_can_write_domain_truth, false);
   assert.equal(scaffold.authority_boundary.opl_can_authorize_domain_quality_or_export, false);
   assert.equal(scaffold.authority_boundary.domain_can_own_generic_scheduler_or_queue, false);
+});
+
+test('standard agent skeleton contract keeps scaffold as physical guardrail, not design source', () => {
+  const scaffold = readSkeletonContract().new_agent_scaffold;
+
+  assert.equal(scaffold.generation_policy.scaffold_role, 'physical_skeleton_and_lower_bound_guardrail');
+  assert.equal(scaffold.generation_policy.scaffold_is_agent_design_template_source, false);
+  assert.equal(
+    scaffold.generation_policy.scaffold_shape_source_ref,
+    'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+  );
+  assert.equal('template_source_of_truth' in scaffold.generation_policy, false);
+  assert.equal(scaffold.design_source_boundary.scaffold_is_agent_design_template_source, false);
+  assert.equal(scaffold.design_source_boundary.scaffold_can_cap_target_agent_design_ceiling, false);
+  assert.equal(scaffold.design_source_boundary.profile_catalog_is_lower_bound_guardrail, true);
+  assert.equal(scaffold.design_source_boundary.reference_design_sources_remain_design_source, true);
+  assert.equal(
+    scaffold.design_source_boundary.source_derived_design_consumption_refs_required_for_reference_backed_agents,
+    true,
+  );
 });
