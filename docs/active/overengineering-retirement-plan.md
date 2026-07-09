@@ -5,6 +5,12 @@ Purpose: `active_cleanup_plan`
 State: `active_plan`
 Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、package lock、domain-owned manifest 和 repo-native verification。
 
+## 2026-07-09 边界修复声明
+
+- `209,869` 行净删与 `10-18 万`完成口径属于历史 mixed-commit snapshot，不能继续作为严格“测试内容瘦身”完成证据；其中 RCA `0a986912` 是源码 / 脚本 / docs / tests 混合收薄，MAS `0e7b005da` 也包含 `src/`、`contracts/` 与 `Makefile` 联动。后续只能用 path-filtered `tests/**` / `*.test.*` / `*.spec.*` / 根级 `test_*.py` 重新计算。
+- `opl-aion-shell` 与 App `shells/aionui/**` 不属于本测试瘦身任务。当前 Aion checkout 存在外部 login/logo dirty diff；该写集只能由 Aion owner 线程处理，本计划不得把它修复、清理或统计为测试瘦身成果。
+- OMA 若处于非测试 rebase/conflict 状态，测试瘦身 lane 只能停在 owner handoff；不得在本任务内接管 `agent/`、`docs/`、`scripts/` 或 stage-decomposition feature 写集。
+
 ## 目标读法
 
 本轮目标不是削弱 OPL，而是把 OPL 收回到标准平台边界：Framework 持有通用 runtime、package lifecycle、generated/hosted surface、projection、receipt 和 refs-only control plane；App 负责 cockpit 与用户操作；domain agent 继续持有领域 truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate。
@@ -42,6 +48,7 @@ Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `
 当前维护规则：
 
 - 新增收薄或退役候选先回到上方落地清单和 completion audit，不在本文追加逐日流水。
+- 涉及测试内容瘦身时，完成度只接受 path-filtered 测试文件证据；mixed source/docs/scripts commit 只能作为旁路治理记录，不能支撑“测试代码已净删 N 行”。
 - 纯 line-budget、cycle、duplicate helper、wide export 或大函数自然拆分默认路由到 `refactor_patrol`；只有它们制造 docs/machine truth 冲突、第二真相源或 retired public surface 泄漏时，才进入本治理主线。
 - `done` 只表示对应结构/功能边界已经由 repo-native evidence 支撑；Live App install、Codex reload、provider long-soak、owner-chain scaleout、Brand L5、release currentness 和 production evidence 仍是后置 owner lane。
 - 需要过程细节时，从 fresh `git log --oneline -- docs/active/overengineering-retirement-plan.md`、相关提交 diff、repo-native tests 和 ops ledger 读取，不能从本文继承旧 snapshot。

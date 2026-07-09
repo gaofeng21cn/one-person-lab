@@ -54,6 +54,16 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 | OPL runtime / App shell concrete routing defaults 绑定 first-party agent | `standard_agent_registry`、domain profile、package descriptor、action catalog | default route 来自 registry/profile；MAS/MAG/RCA/OMA/OBF 是 first-party starter / admitted agents，不是框架上限 | 不能把 first-party starter 当用户不可替换的固定身份。 |
 | `paper_mission`、`paper-autonomy`、MAG manifest alias、RCA visual profile、OMA/OBF helper-materializer 等 compatibility carrier | profile / fixture / history，或 owner-gated delete/keep/typed-blocker | active caller 存在时保留；caller cutover 后按 no-active-caller、no-forbidden-write、tombstone/provenance、owner decision 退役 | 空 worklist、closed gate、docs patch 或 default-caller clean 不授权 physical delete。 |
 
+## 2026-07-09 fresh audit foldback
+
+| Agent | 本轮结论 | 已落地 / 保持边界 | 未声明 |
+| --- | --- | --- | --- |
+| `MAS` | 未发现 OPL 误持有 MAS authority；仍有 runtime / workbench / status / capability registry refs-only tail。 | MAS 保留 paper / study / publication / package / owner receipt / typed blocker authority；物理删除前需要 OPL live readback、direct/hosted parity、no-active-caller scan 或 owner decision。 | 不声明 MAS physical delete complete、paper progress、runtime ready 或 package release currentness。 |
+| `MAG` | 未发现 OPL 误持有 MAG authority；product/status/user-loop/domain-handler/control-plane/lifecycle 仍是 refs-only adapter tail。 | MAG 保留 grant truth、fundability / export / submission verdict、package authority、strategy memory、owner receipt 和 typed blocker；OPL 侧继续作为 generated/default caller 与 projection owner。 | 不声明 MAG physical delete complete、grant ready、package release currentness 或 owner acceptance。 |
+| `RCA` | 标准 package manifest 与 RCA no-false-authority 边界已落地；stage 粒度保持 RCA 现有顶层结构。 | RCA 保留 visual truth、layout/review/export verdict、canonical artifact authority、visual memory、native helper implementation、owner receipt 和 typed blocker。 | 不声明 visual delivery ready、export ready、production ready 或 owner acceptance。 |
+| `OMA` | OMA 当前没有新的未治理通用能力；本轮已把 stage-decomposition subpacket chain rebase 到远端测试瘦身提交之后并推送。 | OMA 保留 agent-building semantics、candidate package refs、proposal/materialization refs、target-agent typed blocker refs；Agent Lab runner、promotion gate、attempt ledger 和 generated surfaces 继续归 OPL。 | 不声明 OMA physical delete complete、target agent ready 或 promotion ready。 |
+| `OBF` | OBF 的 OMA 命名 stage-native authority fields 与 stale generated handler paths 已清理并推送。 | OBF 保留 manuscript truth、style/source judgment、quality/export verdict、artifact authority、memory body、owner receipt 和 typed blocker；generated/current path 只指向真实 repo file 或 OPL generated descriptor refs。 | 不声明 book ready、publication proof ready、final export ready、owner acceptance 或 production ready。 |
+
 ## 后续 Plan Completion Audit 条目
 
 后续声称“标准化智能体迁移已全部落地”时，至少逐项审计：
