@@ -777,7 +777,7 @@ export async function buildManagedUpdateKernelProjection(
   if (shouldBuildComponent(requested, 'runtime_substrate')) {
     components.push(
       buildRuntimeSubstrateComponent(buildManagedUpdateRuntimeEnvironment(), channel, {
-        allowFrameworkChannelLookup: input.operation !== 'status',
+        allowFrameworkChannelLookup: input.operation === 'check' || input.operation === 'plan',
       }),
     );
   }
