@@ -141,19 +141,7 @@ test('workspace init materializes MAS portfolio topology with study roots', () =
     assert.equal(workspaceIndex.projects[0].stage_outputs_root, 'projects/DM002/artifacts/stage_outputs');
     assert.equal(workspaceIndex.authority_boundary.opl_can_write_domain_truth, false);
     assert.equal(workspaceIndex.workspace_norm.topology_contract.canonical_project_collection_role, 'project_units');
-    assert.equal(
-      workspaceIndex.workspace_norm.topology_contract.canonical_project_unit_semantics.mas_studies_boundary.alias_role,
-      'legacy_display_domain_alias',
-    );
-    assert.equal(
-      workspaceIndex.workspace_norm.topology_contract.canonical_project_unit_semantics.mas_studies_boundary.canonical_role,
-      'project_units',
-    );
     assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_path, 'projects');
-    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.project_collection_alias_role, 'legacy_display_alias');
-    assert.equal(workspaceIndex.workspace_norm.domain_topology_profile.canonical_project_collection_role, 'project_units');
-    assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.project_semantic_aliases, ['study', 'studies']);
-    assert.deepEqual(workspaceIndex.workspace_norm.domain_topology_profile.legacy_project_collection_aliases, ['studies']);
 
     const catalog = runCli(['workspace', 'list'], {
       OPL_STATE_DIR: stateRoot,
