@@ -25,13 +25,13 @@ Live Evidence 后置：release、production、Brand L5、owner-chain scaleout、
 - `med-autoscience`、`med-autogrant`、`redcube-ai` 是标准 OPL domain agent：domain truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate 留在各自 owner repo；OPL 只承接 generic stage/runtime/control-plane substrate。
 - `opl-meta-agent` 和 `opl-bookforge` 按标准 OPL Agent / Foundry Agent 目标态维护：domain pack、generated/hosted surface、default path、accepted owner-answer shape、source morphology、retired helper provenance 和 no-forbidden-write guard 清楚。
 - `one-person-lab-app` 是普通用户与 operator 的产品入口：Docker/WebUI beginner path、Settings control plane、runtime proxy、release/operator progress、active shell policy 和 App-owned contract 归 App owner；Framework 只提供受控 read/action surface。
-- Support repos、Aion/Hermes、MAS Scholar Skills、Homebrew、OPL Doc 只按 carrier / support / capability-pack / distribution 边界读取；它们不成为默认七仓 truth owner，也不替代 domain/App/release evidence owner。
+- Support repos、Aion/Hermes、MAS Scholar Skills、Homebrew、OPL Doc 和 Native Workbench 只按 carrier / support / capability-pack / distribution / GUI candidate 边界读取；它们不成为 framework/domain/App release truth owner，也不替代对应 owner 的 evidence surface。
 
 North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/runtime-substrate/opl-family-agent-ideal-state.md)、[OPL Family 理想系统评估](../references/runtime-substrate/opl-family-ideal-system-assessment.md)、[OPL Family Ideal Operating Model Redesign](./opl-family-ideal-operating-model-redesign.md) 和核心五件套。本文不复制这些目标态细节，只维护当前 gap 与 baton。
 
-## Current Completion Progress / 当前完成进度
+## 当前功能 / 结构读法
 
-当前默认读法：默认 OPL series repo 的非 live 功能/结构基线只能从 fresh repo truth 与 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough` 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
+当前默认读法：默认 OPL family maintained repo 的非 live 功能/结构基线只能从 fresh repo truth 与 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough` 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
 
 当前没有已选中的 active 非 live 功能/结构 gap。`Evidence-Grounded Decision Agent Profile` 的非 live 功能/结构基线由 profile contract、module-owned source、CLI/readback 和 focused conformance evidence 承载：`contracts/opl-framework/evidence-grounded-decision-agent-profile.json`、`src/modules/pack/evidence-grounded-decision-agent-profile.ts`、`opl foundry evidence-profile inspect --json` 和 profile/source focused tests。本文只记录读取入口和 forbidden claims，不保存过程 proof、worktree、branch、receipt 或完成史；若后续发现这些机器面缺失或 drift，必须从 fresh code/contracts/tests/CLI/read-model/docs 审计重新开 lane。
 
@@ -117,5 +117,5 @@ rtk rg -n '^(<<<<<<<|=======|>>>>>>>)' docs
 
 - `functional_structure_baseline_landed` 不等于 release-ready、production-ready、Brand L5、domain ready、artifact ready、quality/export ready、owner acceptance 或 physical delete authorized。
 - Docs foldback、contract pass、focused tests、projection clean、doctor clean、native-check pass 或 refs-only ledger 不能替代 runtime/live/owner evidence。
-- Support repo、Aion/Hermes、MAS Scholar Skills、Homebrew 或 OPL Doc 不能反向定义默认七仓 domain/App/framework truth。
+- Support repo、Aion/Hermes、MAS Scholar Skills、Homebrew、OPL Doc 或 Native Workbench 不能反向定义 domain/App/framework truth。
 - 历史归档不能替代实现清理；旧模块、旧接口、旧测试和旧文档入口被当前 owner surface 替代后，只能按 owner decision 直接退役或 tombstone。
