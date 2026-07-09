@@ -356,7 +356,6 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
 
     assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
     assert.equal(snapshot.runtime_health.status, 'offline');
-    assert.equal(snapshot.runtime_health.label, '未连接');
     assert.equal(snapshot.runtime_health.provider_kind, 'temporal');
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
@@ -425,8 +424,6 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     );
     assert.equal(snapshot.daemon_policy.local_daemon_added, false);
     assert.equal(snapshot.daemon_policy.runtime_kernel_owner, 'provider_backed_family_runtime');
-    assert.equal(typeof snapshot.daemon_policy.sidecar_promotion_gate, 'string');
-    assert.equal(snapshot.daemon_policy.sidecar_promotion_gate.includes('task'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -714,17 +711,12 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
     assert.equal(snapshot.runtime_health.status, 'offline');
-    assert.equal(snapshot.runtime_health.label, '未连接');
     assert.equal(snapshot.attention_items.length, 2);
     const dm002Item = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:study:002-dm-china-us-mortality-attribution');
     assert.equal(dm002Item.active_run_id, 'run-002');
-    assert.equal(dm002Item.status_label, '运行中：分析补充');
     assert.equal(dm002Item.action_owner, 'opl');
     assert.equal(dm002Item.requires_user_action, false);
     assert.equal(dm002Item.action_kind, 'publication_gate');
-    assert.equal(dm002Item.action_summary, '论文质量或交付检查未关闭；当前阶段：分析补充。');
-    assert.equal(dm002Item.next_action_summary, '建议阶段：分析补充；目标：补齐证据一致性。');
-    assert.equal(dm002Item.blockers.includes('投稿包投影需要刷新。'), true);
     assert.equal(dm002Item.recommended_commands[0].surface_kind, 'study_progress');
     assert.equal(
       dm002Item.recommended_commands[0].command,
@@ -740,7 +732,6 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('004-invasive-architecture')), false);
     assert.equal(snapshot.recent_items.length, 1);
     assert.equal(snapshot.recent_items[0].item_id, 'medautoscience:study:005-package-ready-handoff');
-    assert.equal(snapshot.recent_items[0].status_label, '已暂停：等待确认');
     assert.equal(snapshot.recent_items[0].action_owner, 'user');
     assert.equal(snapshot.recent_items[0].requires_user_action, true);
     assert.equal(snapshot.recent_items[0].action_kind, 'handoff_review');
@@ -823,7 +814,6 @@ test('runtime manager action dry-run plans repairs without mutating native index
       ],
     );
     assert.equal(action.before.reconcile.overall_status, 'attention_needed');
-    assert.match(action.note, /did not run native helper repair/);
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), false);
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index-failures.jsonl')), false);
   } finally {

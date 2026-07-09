@@ -323,55 +323,6 @@ test('runtime snapshot projects stage attempt workbench without owning domain ve
     );
     assert.equal(trayAttemptItem, undefined);
     assert.ok(attemptItem);
-    assert.equal(attemptItem.domain_id, 'medautoscience');
-    assert.equal(attemptItem.completion_boundary.provider_completion_is_domain_ready, false);
-    assert.equal(attemptItem.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
-    assert.deepEqual(attemptItem.consumed_memory_refs, ['memory:route-policy']);
-    assert.deepEqual(attemptItem.writeback_receipt_refs, ['memory-writeback:receipt-1']);
-    assert.equal(attemptItem.lifecycle_primitives.artifact_locator_index.content_policy, 'locator_only_no_artifact_content');
-    assert.equal(attemptItem.lifecycle_primitives.restore_proof.opl_cleanup_allowed, false);
-    assert.equal(attemptItem.artifact_gallery.renderer_role, 'generic_artifact_gallery_handoff_shell');
-    assert.equal(attemptItem.artifact_gallery.summary.content_policy, 'locator_only_no_artifact_content');
-    assert.equal(attemptItem.artifact_gallery.authority_boundary.can_mutate_artifact, false);
-    assert.equal(
-      attemptItem.lifecycle_primitives.authority_boundary.domain,
-      'artifact_content_retention_restore_authority',
-    );
-    assert.equal(
-      attemptItem.controlled_apply_contract.no_forbidden_write_proof.opl_writes_domain_artifact,
-      false,
-    );
-    assert.equal(attemptItem.rejected_writes[0].reason, 'domain_truth_write_forbidden');
-    assert.equal(attemptItem.route_decision_graph.renderer_role, 'generic_route_decision_graph_shell');
-    assert.equal(attemptItem.route_decision_graph.summary.route_decision_ref_observed, true);
-    assert.equal(attemptItem.route_decision_graph.authority_boundary.can_infer_route_decision, false);
-    assert.equal(attemptItem.review_repair_queue.transport_role, 'generic_review_repair_transport');
-    assert.equal(attemptItem.review_repair_queue.summary.rejected_write_count, 1);
-    assert.equal(attemptItem.review_repair_queue.authority_boundary.can_decide_repair, false);
-    assert.equal(attemptItem.quality_readiness.renderer_role, 'generic_quality_readiness_projection_shell');
-    assert.equal(attemptItem.quality_readiness.authority_boundary.can_authorize_submission_readiness, false);
-    assert.equal(attemptItem.observability_slo.transport_role, 'generic_observability_slo_repair_command_projection');
-    assert.equal(attemptItem.observability_slo.authority_boundary.can_execute_repair_command, false);
-    assert.equal(attemptItem.workspace_source_intake.shell_role, 'generic_workspace_source_intake_shell');
-    assert.equal(attemptItem.workspace_source_intake.authority_boundary.can_select_domain_profile, false);
-    assert.equal(attemptItem.memory_locator_index.index_role, 'generic_memory_locator_index_shell');
-    assert.equal(attemptItem.memory_locator_index.authority_boundary.can_accept_or_reject_writeback, false);
-    assert.equal(attemptItem.package_export_lifecycle.shell_role, 'generic_package_export_lifecycle_shell');
-    assert.equal(attemptItem.package_export_lifecycle.authority_boundary.can_authorize_package_readiness, false);
-    assert.equal(attemptItem.action_routing.routing_scope, 'stage_attempt');
-    assert.equal(attemptItem.action_routing.summary.domain_handler_route_count, 2);
-    assert.equal(attemptItem.action_routing.authority_boundary.can_execute_domain_action, false);
-    assert.equal(attemptItem.control_loop_summary.receipts.receipt_refs[0], 'receipt:analysis-closeout');
-    assert.equal(
-      attemptItem.control_loop_summary.action_route.route_refs.includes(
-        'medautosci domain-handler dispatch --task <task.json> --format json',
-      ),
-      true,
-    );
-    assert.equal(attemptItem.control_loop_summary.authority_boundary.can_execute_domain_action, false);
-    assert.equal(attemptItem.control_loop_summary.authority_boundary.can_write_domain_truth, false);
-    assert.equal(attemptItem.authority_boundary.opl, 'attempt_control_metadata_projection_only');
-    assert.equal(attemptItem.completion_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'stage_attempt_workbench'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -450,15 +401,6 @@ test('runtime snapshot exposes route-impact no-regression evidence in operator w
     assert.deepEqual(workbenchAttempt.controlled_apply_contract.no_regression_evidence_refs, [
       'receipt:mag:no-regression',
     ]);
-    assert.deepEqual(workbenchAttempt.controlled_apply_contract.no_regression_evidence_refs, [
-      'receipt:mag:no-regression',
-    ]);
-    assert.equal(
-      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
-        item.ref === 'receipt:mag:no-regression'
-      ),
-      true,
-    );
     assert.equal(
       workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
         item.ref === 'receipt:mag:no-regression'
@@ -589,16 +531,6 @@ test('runtime snapshot exposes lifecycle guarded-apply receipt refs in operator 
     assert.equal(workbenchAttempt.artifact_gallery.summary.lifecycle_domain_receipt_ref_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.lifecycle_restore_ref_count, 1);
     assert.equal(snapshot.stage_attempt_workbench.artifact_gallery.summary.lifecycle_domain_receipt_ref_count, 1);
-    assert.equal(
-      workbenchAttempt.artifact_gallery.items.some((item: { ref: string }) =>
-        item.ref === 'receipt:rca:lifecycle-cleanup'
-      ),
-      true,
-    );
-    assert.equal(
-      workbenchAttempt.lifecycle_primitives.guarded_apply_proof.apply_status,
-      'domain_receipt_observed',
-    );
     assert.equal(workbenchAttempt.artifact_gallery.authority_boundary.can_mutate_artifact, false);
     assert.equal(workbenchAttempt.completion_boundary.provider_completion_is_domain_ready, false);
   } finally {

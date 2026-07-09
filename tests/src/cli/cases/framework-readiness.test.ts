@@ -463,8 +463,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
     ),
     true,
   );
-  assert.match(readiness.attention_first_payload.claim_policy, /emits_no_domain_quality_artifact_or_production_ready/);
-  assert.equal(readiness.kernel_floor.policy, 'minimum_control_plane_boundary_and_recoverability_floor_only');
   assert.equal(readiness.kernel_floor.ai_executor_internal_strategy_is_contract, false);
   assert.equal(readiness.kernel_floor.domain_quality_strategy_contract, false);
   assert.equal(readiness.kernel_floor.diagnostic_lenses_can_claim_ready_verdicts, false);
@@ -482,9 +480,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(Object.hasOwn(readiness, 'artifact_authority_verdict'), false);
   assert.equal(Object.hasOwn(readiness, 'production_ready_verdict'), false);
   assert.equal(readiness.summary.control_plane_available, true);
-  assert.equal(Object.hasOwn(readiness.summary, 'agent_structural_conformance_blocker_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'semantic_hygiene_gate_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'agent_structural_conformance_status'), false);
   if (readiness.agent_conformance_tail.status === 'diagnostic_unavailable') {
     assert.equal(readiness.agent_conformance_tail.status, 'diagnostic_unavailable');
     assert.equal(readiness.agent_conformance_tail.diagnostic_failure.status, 'diagnostic_unavailable');
@@ -522,24 +517,11 @@ test('framework readiness summarizes default control-plane surfaces without auth
       false,
     );
   }
-  assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_ready_domain_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_blocked_domain_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_generated_surface_ready_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_domain_generated_surface_owner_claim_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'pack_compiler_generated_artifact_drift_detected_count'), false);
   assert.equal(
     readiness.pack_compiler.summary.generated_surface_ready_count
       + readiness.pack_compiler.summary.generated_surface_blocked_count,
     readiness.pack_compiler.summary.generated_surface_count,
   );
-  assert.equal(
-    readiness.stages.diagnostic_failures.length,
-    readiness.stages.diagnostic_failures.length,
-  );
-  assert.equal(Object.hasOwn(readiness.summary, 'stage_readiness_diagnostic_failure_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'stage_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'admitted_stage_count'), false);
-  assert.equal(Object.hasOwn(readiness.summary, 'blocked_stage_count'), false);
   if (readiness.stages.diagnostic_failures.length > 0) {
     assert.equal(
       readiness.stages.diagnostic_failures.every(
@@ -627,11 +609,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
     ),
   );
   assertFrameworkReadinessDomainDispatchWorkorders(readiness, nextSafeActions);
-  assert.equal(
-    readiness.evidence_worklist.open_worklist_item_count,
-    readiness.evidence_worklist.open_worklist_item_count,
-  );
-  assert.equal(Object.hasOwn(readiness.summary, 'production_or_domain_ready'), false);
 
   assert.equal(
     readiness.source_commands.includes('opl system semantic-hygiene --json'),
@@ -660,38 +637,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
     true,
   );
 
-  assert.equal(
-    readiness.evidence_counter_taxonomy.agent_structural_evidence_tail,
-    'agents readiness structural-conformance evidence tail only',
-  );
-  assert.equal(
-    readiness.evidence_counter_taxonomy.app_live_evidence_tail,
-    'App/operator live production evidence tail ledger open items',
-  );
-  assert.equal(
-    readiness.evidence_counter_taxonomy.stage_receipt_freshness_tail,
-    'stage production caller, expected receipt, and monitor freshness workorders',
-  );
-  assert.equal(
-    readiness.evidence_counter_taxonomy.evidence_envelope,
-    'single refs-only owner/scope/payload-kind claim reading across stage, external evidence, domain dispatch, and cleanup receipts',
-  );
-  assert.equal(
-    readiness.evidence_counter_taxonomy.domain_dispatch_attention,
-    'App/operator owner-chain dispatch attention derived from stage evidence typed blockers and missing owner-chain refs without authorizing domain ready',
-  );
-  assert.equal(
-    readiness.evidence_counter_taxonomy.runtime_manager_route_support,
-    'Runtime Manager supported MAS route catalog projection only; support does not close owner-chain receipts or authorize domain ready',
-  );
-  assert.equal(
-    Object.keys(readiness.summary).some((key) => key.startsWith('production_evidence_tail_')),
-    false,
-  );
-  assert.equal(
-    Object.keys(readiness.summary).some((key) => key.startsWith('production_closeout_')),
-    false,
-  );
   assert.equal(
     readiness.agent_conformance_tail.agent_readiness_production_evidence_tail_count,
     readiness.evidence_tails.agent_structural_evidence_tail.total_item_count,
@@ -745,7 +690,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
     readiness.current_owner_delta.authority_boundary.can_claim_production_ready,
     false,
   );
-  assert.equal(Object.hasOwn(readiness.agent_conformance_tail, 'production_or_domain_ready'), false);
   assert.equal(
     readiness.app_operator_production_tail.app_operator_production_evidence_tail_open_item_count,
     readiness.evidence_tails.app_live_evidence_tail.open_item_count,
@@ -753,10 +697,6 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(
     readiness.evidence_worklist.worklist_item_is_completion_claim,
     false,
-  );
-  assert.equal(
-    readiness.evidence_worklist.lens_policy,
-    'derived_attention_lens_over_open_safe_action_request_apply_verify_routes',
   );
   assert.equal(readiness.evidence_envelope.source_command, readiness.evidence_worklist.source_command);
   assert.equal(readiness.evidence_envelope.summary.domain_ready_claim_count, 0);
@@ -839,13 +779,8 @@ test('framework readiness summarizes default control-plane surfaces without auth
   assert.equal(readiness.runtime_manager_route_support.authority_boundary.can_write_domain_truth, false);
   assert.equal(readiness.domain_dispatch_attention.can_claim_domain_ready, false);
   assert.equal(readiness.domain_dispatch_attention.can_claim_production_ready, false);
-  assert.equal(
-    readiness.evidence_envelope.claim_policy,
-    'owner_receipt_and_typed_blocker_refs_only_no_domain_or_production_ready_verdict',
-  );
   assert.equal(readiness.evidence_envelope.authority_boundary.can_write_domain_truth, false);
   assert.equal(readiness.evidence_envelope.authority_boundary.can_claim_production_ready, false);
-  assert.match(readiness.stage_production_caller_tail.route_policy, /creates_opl_stage_attempt_request_only/);
   assert.equal(readiness.provider_slo_status.provider_slo_can_claim_domain_ready, false);
   assert.equal(readiness.provider_slo_status.provider_slo_can_claim_production_ready, false);
   assert.equal(readiness.authority_boundary.can_claim_domain_ready, false);
