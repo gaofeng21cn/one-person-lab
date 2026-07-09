@@ -6,11 +6,8 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import {
-  buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs,
-} from '../../../../src/entrypoints/cli/cases/runtime-owner-evidence-sustained-consumption-command-spec.ts';
 
-test('runtime owner-evidence sustained-consumption is canonical while MAG command stays legacy alias', () => {
+test('runtime owner-evidence sustained-consumption records and verifies refs-only evidence', () => {
   const stateRoot = fs.mkdtempSync(path.join(
     os.tmpdir(),
     'opl-owner-evidence-sustained-consumption-state-',
@@ -23,12 +20,6 @@ test('runtime owner-evidence sustained-consumption is canonical while MAG comman
       receipt_ref: receiptRef,
       typed_blocker_refs: ['typed-blocker:app/operator/mag/open'],
     };
-
-    const commandSpecs = buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs();
-    assert.equal(
-      commandSpecs['runtime mag-manifest-sustained-consumption list'].summary,
-      'Deprecated legacy compatibility alias for runtime owner-evidence-sustained-consumption list.',
-    );
 
     const recorded = runCli([
       'runtime',
@@ -47,29 +38,15 @@ test('runtime owner-evidence sustained-consumption is canonical while MAG comman
     ));
     assert.equal(recorded.receipt_refs[0], receiptRef);
 
-    const legacyListed = runCli([
+    const canonicalVerified = runCli([
       'runtime',
-      'mag-manifest-sustained-consumption',
-      'list',
-    ], env).owner_evidence_sustained_consumption_ledger;
-
-    assert.equal(
-      legacyListed.surface_kind,
-      'opl_owner_evidence_sustained_consumption_ledger_projection',
-    );
-    assert.equal(legacyListed.receipts[0].source_surface, 'opl_owner_evidence_sustained_consumption_refs');
-    assert.equal(legacyListed.receipts[0].receipt_ref, receiptRef);
-
-    const legacyVerified = runCli([
-      'runtime',
-      'mag-manifest-sustained-consumption',
+      'owner-evidence-sustained-consumption',
       'verify',
       '--receipt-ref',
       receiptRef,
     ], env).owner_evidence_sustained_consumption_ledger_verify;
-
-    assert.equal(legacyVerified.status, 'verified');
-    assert.equal(legacyVerified.receipt.source_surface, 'opl_owner_evidence_sustained_consumption_refs');
+    assert.equal(canonicalVerified.status, 'verified');
+    assert.equal(canonicalVerified.receipt.source_surface, 'opl_owner_evidence_sustained_consumption_refs');
 
     const canonicalListed = runCli([
       'runtime',

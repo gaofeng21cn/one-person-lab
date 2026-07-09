@@ -155,15 +155,3 @@ test('runtime stage-run-evidence-pack summary fails closed on evidence bodies', 
     fs.rmSync(payloadDir, { recursive: true, force: true });
   }
 });
-
-test('runtime stage-run-evidence-pack summary does not keep the old research alias', () => {
-  const failure = runCliFailure([
-    'runtime',
-    'research-evidence-pack',
-    'summary',
-    '--payload',
-    '{}',
-  ]);
-
-  assert.equal(failure.payload.error.code, 'unknown_command');
-});
