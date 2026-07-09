@@ -36,13 +36,17 @@ printf 'native helper repair completed\\n'
   return repairScript;
 }
 
-test('runtime manager reports stale and expired native index freshness from the last successful snapshot', () => {
+function removeTempRoots(...roots: string[]) {
+  for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
+}
+
+test('runtime manager reports stale and expired native index freshness from the last successful snapshot', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-stale-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
 
   writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
+  t.after(() => removeTempRoots(stateRoot, helperBinDir));
 
-  try {
     const success = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
@@ -100,18 +104,15 @@ test('runtime manager reports stale and expired native index freshness from the 
     assert.equal(expiredFreshness.status, 'expired_last_success');
     assert.equal(expiredFreshness.last_success_expired, true);
     assert.equal(expiredFreshness.failure_count, 2);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(helperBinDir, { recursive: true, force: true });
-  }
 });
 
-test('runtime manager records structured native index diff and history GC reporting', () => {
+test('runtime manager records structured native index diff and history GC reporting', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-index-gc-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-index-gc-bin-'));
   const runtimeDir = path.join(stateRoot, 'runtime-manager');
   fs.mkdirSync(runtimeDir, { recursive: true });
   writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
+  t.after(() => removeTempRoots(stateRoot, helperBinDir));
 
   const historyFile = path.join(runtimeDir, 'native-state-index-history.jsonl');
   for (let index = 0; index < 55; index += 1) {
@@ -154,7 +155,6 @@ test('runtime manager records structured native index diff and history GC report
     }, null, 2)}\n`,
   );
 
-  try {
     const output = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
@@ -202,17 +202,14 @@ test('runtime manager records structured native index diff and history GC report
     assert.equal(historyLines.length, 50);
     const latestHistoryEntry = parseJsonText(historyLines[historyLines.length - 1]) as any;
     assert.deepEqual(latestHistoryEntry.gc, persistence.gc);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(helperBinDir, { recursive: true, force: true });
-  }
 });
 
-test('runtime snapshot projects active domain manifests into tray lanes without owning runtime truth', () => {
+test('runtime snapshot projects active domain manifests into tray lanes without owning runtime truth', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
+  t.after(() => removeTempRoots(stateRoot, workspaceRoot, fixtureRoot));
   fs.mkdirSync(path.join(workspaceRoot, 'mas'), { recursive: true });
   fs.mkdirSync(path.join(workspaceRoot, 'redcube'), { recursive: true });
   fs.mkdirSync(path.join(workspaceRoot, 'mag'), { recursive: true });
@@ -306,7 +303,6 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     },
   };
 
-  try {
     runCli([
       'workspace',
       'bind',
@@ -424,18 +420,14 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     );
     assert.equal(snapshot.daemon_policy.local_daemon_added, false);
     assert.equal(snapshot.daemon_policy.runtime_kernel_owner, 'provider_backed_family_runtime');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(workspaceRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
 });
 
-test('runtime snapshot keeps demo and descriptor-only domain manifests out of current tray lanes', () => {
+test('runtime snapshot keeps demo and descriptor-only domain manifests out of current tray lanes', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-descriptor-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-descriptor-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
+  t.after(() => removeTempRoots(stateRoot, workspaceRoot, fixtureRoot));
   fs.mkdirSync(path.join(workspaceRoot, 'mag', 'examples'), { recursive: true });
   fs.mkdirSync(path.join(workspaceRoot, 'redcube'), { recursive: true });
   const demoGrantPath = path.join(workspaceRoot, 'mag', 'examples', 'nsfc_workspace_p2c_critique.json');
@@ -469,7 +461,6 @@ test('runtime snapshot keeps demo and descriptor-only domain manifests out of cu
 
   const redcubeDescriptorManifest = structuredClone(fixtures.redcube);
 
-  try {
     runCli([
       'workspace',
       'bind',
@@ -508,17 +499,13 @@ test('runtime snapshot keeps demo and descriptor-only domain manifests out of cu
     assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'redcube'), false);
     assert.equal(snapshot.attention_items.length, 1);
     assert.equal(snapshot.attention_items[0].item_id, 'opl:provider-continuous-proof:temporal');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(workspaceRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
 });
 
-test('runtime snapshot ignores retired Hermes cron residue', () => {
+test('runtime snapshot ignores retired Hermes cron residue', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-state-'));
   const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  t.after(() => removeTempRoots(stateRoot, hermesHome, fixtureRoot));
   const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
   fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
   fs.writeFileSync(
@@ -537,7 +524,6 @@ test('runtime snapshot ignores retired Hermes cron residue', () => {
     }, null, 2)}\n`,
   );
 
-  try {
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -551,18 +537,14 @@ test('runtime snapshot ignores retired Hermes cron residue', () => {
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('hermes-cron')), false);
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), false);
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(hermesHome, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
 });
 
-test('runtime snapshot projects MAS live study artifacts from domain manifest workspace locator', () => {
+test('runtime snapshot projects MAS live study artifacts from domain manifest workspace locator', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-mas-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
+  t.after(() => removeTempRoots(stateRoot, workspaceRoot, fixtureRoot));
   const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
   const profilePath = path.join(profileDir, 'dm.workspace.toml');
   const manifest = structuredClone(fixtures.medautoscience);
@@ -688,7 +670,6 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     needsHumanIntervention: true,
   });
 
-  try {
     runCli([
       'workspace',
       'bind',
@@ -738,11 +719,6 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     assert.deepEqual(snapshot.recent_items[0].blockers, []);
     assert.deepEqual(snapshot.action_counts, { user: 1, opl: 1, infrastructure: 1 });
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-    fs.rmSync(workspaceRoot, { recursive: true, force: true });
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
 });
 
 test('runtime manager rejects retired Hermes legacy provider selection', () => {
@@ -759,10 +735,10 @@ test('runtime manager rejects retired Hermes legacy provider selection', () => {
   ]);
 });
 
-test('runtime manager reports temporal provider code landed when live runtime is not configured', () => {
+test('runtime manager reports temporal provider code landed when live runtime is not configured', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-temporal-state-'));
+  t.after(() => removeTempRoots(stateRoot));
 
-  try {
     const output = runCli(['runtime', 'manager'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
@@ -782,15 +758,12 @@ test('runtime manager reports temporal provider code landed when live runtime is
       provider.details.adapter_mode,
       'provider_code_landed_unconfigured',
     );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
 });
 
-test('runtime manager action dry-run plans repairs without mutating native index files', () => {
+test('runtime manager action dry-run plans repairs without mutating native index files', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-action-dry-state-'));
+  t.after(() => removeTempRoots(stateRoot));
 
-  try {
     const output = runCli(['runtime', 'manager', 'action', '--dry-run'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
@@ -816,18 +789,15 @@ test('runtime manager action dry-run plans repairs without mutating native index
     assert.equal(action.before.reconcile.overall_status, 'attention_needed');
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), false);
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index-failures.jsonl')), false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
 });
 
-test('runtime manager action apply repairs available native surfaces without legacy provider actions', () => {
+test('runtime manager action apply repairs available native surfaces without legacy provider actions', (t) => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-action-apply-'));
   const stateRoot = path.join(fixtureRoot, 'state');
   const helperBinDir = path.join(fixtureRoot, 'native-bin');
   const repairScript = createNativeHelperRepairScript(fixtureRoot, helperBinDir);
+  t.after(() => removeTempRoots(fixtureRoot));
 
-  try {
     const output = runCli(['runtime', 'manager', 'action', '--apply'], {
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
@@ -859,7 +829,4 @@ test('runtime manager action apply repairs available native surfaces without leg
     assert.equal(action.after.native_helper_runtime.status, 'available');
     assert.equal(action.after.native_index_persistence.status, 'written');
     assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), true);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
 });
