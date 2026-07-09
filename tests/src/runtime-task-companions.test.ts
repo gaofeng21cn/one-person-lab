@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildArtifactFileDescriptor,
   buildArtifactInventory,
+  buildExecutorAttemptDiagnostic,
   buildCheckpointSummary,
   buildFamilyLifecycleLedger,
   buildFamilyOwnerRoute,
@@ -164,6 +165,38 @@ test('runtime task companion helpers normalize MAS, MAG, and RCA style payloads'
   assert.equal(artifactInventory.surface_kind, 'artifact_inventory');
   assert.equal(artifactInventory.summary.total_files_count, 2);
   assert.equal(artifactInventory.supporting_files[0].kind, 'supporting');
+});
+
+test('executor attempt diagnostic remains diagnostic-only and validates telemetry', () => {
+  const diagnostic = buildExecutorAttemptDiagnostic({
+    contract_id: 'opl_family_runtime_attempt_contract.v1',
+    domain_id: 'redcube-ai',
+    stage_id: 'render',
+    route_ref: 'route:redcube/render',
+    executor_kind: 'codex_cli',
+    attempt_index: 1,
+    adapter: { adapter_id: 'codex_cli' },
+    error: { message: 'executor timed out', code: 'ETIMEDOUT', failure_kind: 'timeout' },
+    telemetry: { elapsed_ms: 30_000, exit_code: 124 },
+    artifact_refs: [{ ref: 'artifact:render-log' }],
+    domain_projection: { visual_validation_ref: 'visual-validation:1', typed_blocker_ref: 'blocker:1' },
+  });
+
+  assert.equal(diagnostic.surface_kind, 'opl_executor_attempt_diagnostic');
+  assert.equal(diagnostic.status, 'failed');
+  assert.equal(diagnostic.authority_boundary.typed_blocker_created, false);
+  assert.equal(diagnostic.authority_boundary.domain_truth_written, false);
+  assert.throws(() => buildExecutorAttemptDiagnostic({
+    contract_id: 'opl_family_runtime_attempt_contract.v1',
+    domain_id: 'redcube-ai',
+    stage_id: 'render',
+    route_ref: 'route:redcube/render',
+    executor_kind: 'codex_cli',
+    attempt_index: 1,
+    adapter: { adapter_id: 'codex_cli' },
+    error: { message: 'failed' },
+    telemetry: { elapsed_ms: Number.NaN },
+  }), /有限数值/);
 });
 
 test('family persistence policy separates file authority from sidecar indexes', () => {

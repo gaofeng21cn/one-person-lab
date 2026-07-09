@@ -55,6 +55,16 @@ export {
 } from './product-entry-companions/shell-surfaces.ts';
 export { buildOplProductEntryLifecycleAdapterSurface } from './product-entry-companions/lifecycle-adapter.ts';
 export {
+  buildGeneratedProductEntryDomainSurface,
+  buildGeneratedProductEntryManifestCompanions,
+  buildGeneratedProductEntrySessionSurface,
+} from './product-entry-companions/generated-adapters.ts';
+export type {
+  BuildGeneratedProductEntryDomainSurfaceInput,
+  BuildGeneratedProductEntrySessionSurfaceInput,
+  GeneratedProductEntryDescriptor,
+} from './product-entry-companions/generated-adapters.ts';
+export {
   buildFamilyProductEntryManifest,
   buildFamilyProductEntrySurface,
   buildFamilyProductEntrySurfaceFromManifest,

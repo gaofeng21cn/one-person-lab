@@ -1,5 +1,7 @@
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
+export { buildExecutorAttemptDiagnostic } from './executor-attempt-diagnostic.ts';
+export type { BuildExecutorAttemptDiagnosticInput } from './executor-attempt-diagnostic.ts';
 
 interface FamilyReference {
   ref_kind: string;

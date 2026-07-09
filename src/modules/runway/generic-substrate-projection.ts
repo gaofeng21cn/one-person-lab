@@ -8,6 +8,14 @@ import {
   runFamilyRuntimeDomainHandlerCommand,
   domainHandlerResultErrorMessage,
 } from './family-runtime-domain-handler-process.ts';
+export {
+  buildWorkspaceArtifactLocatorProjection,
+  buildWorkspaceReceiptInventory,
+} from './generic-substrate-locators.ts';
+export type {
+  BuildWorkspaceArtifactLocatorProjectionInput,
+  BuildWorkspaceReceiptInventoryInput,
+} from './generic-substrate-locators.ts';
 
 function normalizeDomainSelection(value: string) {
   const key = value.trim().toLowerCase();

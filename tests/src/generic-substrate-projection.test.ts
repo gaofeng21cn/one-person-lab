@@ -11,6 +11,10 @@ import {
   repoRoot,
   runCli,
 } from './cli/helpers.ts';
+import {
+  buildWorkspaceArtifactLocatorProjection,
+  buildWorkspaceReceiptInventory,
+} from '../../src/modules/runway/generic-substrate-projection.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -321,6 +325,58 @@ test('generic substrate projection indexes MAS-like workspace, source, artifact,
     assert.equal(projection.non_authority_flags.opl_authorizes_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('generic substrate locators scan receipt and artifact refs without returning bodies', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-locators-'));
+  const receiptRoot = path.join(root, 'receipts');
+  const artifactRoot = path.join(root, 'artifacts');
+  fs.mkdirSync(receiptRoot, { recursive: true });
+  fs.mkdirSync(artifactRoot, { recursive: true });
+  fs.writeFileSync(path.join(receiptRoot, 'owner-receipt.json'), JSON.stringify({
+    surface_kind: 'domain_owner_receipt',
+    receipt_id: 'receipt-1',
+    receipt_shape: 'domain_owner_receipt',
+    stage_id: 'render',
+    status: 'accepted',
+    owner_receipt_ref: 'receipt:1',
+  }));
+  fs.writeFileSync(path.join(artifactRoot, 'publish-bundle.json'), JSON.stringify({
+    source_html: 'output/deck.html',
+    pptx_file: 'output/deck.pptx',
+    final_delivery: {
+      pdf_file: 'output/deck.pdf',
+      presenter_notes_file: 'output/notes.md',
+    },
+    artifact_body: 'must not be returned as a locator',
+  }));
+
+  try {
+    const receiptInventory = buildWorkspaceReceiptInventory({
+      roots: [receiptRoot],
+      receipt_root_locator: { ref: receiptRoot, ref_kind: 'workspace_path' },
+      classifyReceipt: (_payload, context) => ({
+        visual_receipt_ref: `sha256:${context.source_sha256}`,
+      }),
+    });
+    assert.equal(receiptInventory.summary.receipt_ref_count, 1);
+    assert.equal(receiptInventory.summary.owner_receipt_ref_count, 1);
+    assert.equal(receiptInventory.receipts[0]?.body_included, false);
+
+    const artifacts = buildWorkspaceArtifactLocatorProjection({
+      roots: [artifactRoot],
+      artifact_root_locator: { ref: artifactRoot, ref_kind: 'workspace_path' },
+    });
+    assert.equal(artifacts.summary.artifact_ref_count, 4);
+    assert.deepEqual(
+      artifacts.refs.map((entry) => entry.ref).sort(),
+      ['output/deck.html', 'output/deck.pdf', 'output/deck.pptx', 'output/notes.md'],
+    );
+    assert.equal(artifacts.summary.artifact_body_count, 0);
+    assert.equal(artifacts.authority_boundary.can_mutate_artifact, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

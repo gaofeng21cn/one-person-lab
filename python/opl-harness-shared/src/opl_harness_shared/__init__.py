@@ -4,6 +4,10 @@ from .automation_companions import (
     build_automation_catalog,
     build_automation_descriptor,
 )
+from .artifact_lifecycle import (
+    build_refs_only_artifact_lifecycle_handoff,
+    build_refs_only_lifecycle_handoff,
+)
 from .editable_consumer_launcher import (
     ensure_repo_editable_dependency_paths,
 )
@@ -85,6 +89,11 @@ from .managed_runtime import (
     read_managed_runtime_three_layer_contract,
     validate_managed_runtime_contract,
 )
+from .owner_evidence import (
+    build_owner_evidence_observability_summary,
+    build_owner_evidence_reconciliation_inventory,
+    build_owner_evidence_reconciliation_proof,
+)
 from .product_entry_companions import (
     build_family_product_entry_surfaces,
     build_family_product_entry_surfaces,
@@ -138,6 +147,8 @@ from .runtime_task_companions import (
     build_task_lifecycle,
     build_task_surface_descriptor,
 )
+from .runtime_registration import build_stage_runtime_registration
+from .schema_validation import SchemaSubsetValidator, SchemaValidationIssue
 from .status_narration import (
     PAPER_MILESTONE_ANSWER_CHECKLIST,
     PROGRESS_ANSWER_CHECKLIST,
@@ -169,8 +180,16 @@ __all__ = [
     "DEFAULT_WORKSPACE_DOCUMENT",
     "DEFAULT_WORKSPACE_GITIGNORE_ENTRIES",
     "WorkspaceScaffoldFile",
+    "SchemaSubsetValidator",
+    "SchemaValidationIssue",
     "build_automation_catalog",
     "build_automation_descriptor",
+    "build_refs_only_artifact_lifecycle_handoff",
+    "build_refs_only_lifecycle_handoff",
+    "build_owner_evidence_observability_summary",
+    "build_owner_evidence_reconciliation_inventory",
+    "build_owner_evidence_reconciliation_proof",
+    "build_stage_runtime_registration",
     "build_checkpoint_summary",
     "build_family_lifecycle_ledger",
     "build_family_owner_route",
