@@ -7,6 +7,8 @@ import { buildEvidenceGroundedDecisionAgentProfileReadback } from '../pack/index
 
 const EVIDENCE_PROFILE_ID = 'evidence_grounded_decision_agent_profile.v1';
 const EVIDENCE_PROFILE_REF = `opl-profile:${EVIDENCE_PROFILE_ID}`;
+const SOURCE_DERIVED_PROFILE_ID = 'source_derived_design_profile_route.v1';
+const SOURCE_DERIVED_PROFILE_REF = `opl-profile-route:${SOURCE_DERIVED_PROFILE_ID}`;
 
 const REQUIRED_STAGE_ARCHETYPES = [
   'material_or_case_intake',
@@ -48,6 +50,39 @@ const EVIDENCE_TRIGGER_SIGNALS = [
   'triage',
 ];
 
+const SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES = [
+  'source_material_intake',
+  'reference_design_pattern_extraction',
+  'transferable_pattern_mapping',
+  'capability_plan_synthesis',
+  'authority_boundary_review',
+];
+
+const REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS = [
+  'source_ref',
+  'source_fingerprint_or_locator_ref',
+  'pattern_summary_ref',
+  'transferable_pattern_refs',
+  'non_transferable_constraints_ref',
+  'authority_boundary_notes_ref',
+];
+
+const TRANSFERABLE_PATTERN_REQUIREMENTS = [
+  'pattern_id',
+  'source_anchor_ref',
+  'target_stage_or_capability_slot',
+  'transfer_rationale',
+  'known_limits',
+];
+
+const SOURCE_DERIVED_CAPABILITY_PLAN_REQUIREMENTS = [
+  'capability_plan_ref',
+  'stage_archetype_candidate_refs',
+  'required_prompt_skill_knowledge_tool_refs',
+  'evaluation_or_review_gate_refs',
+  'no_domain_truth_or_runtime_import_notes',
+];
+
 type ProfileCatalogEntry = {
   profile_id: string;
   profile_ref: string;
@@ -62,6 +97,14 @@ type ProfileCatalogEntry = {
   source_readback_command: string;
   can_claim_domain_ready: false;
   can_claim_production_ready: false;
+};
+
+type ProfileSelectionMode = 'builtin_profile' | 'source_derived_design' | 'hybrid';
+
+type ParsedSelectionArgs = {
+  intent: string;
+  reference_source_refs: string[];
+  reference_design_pattern_packet_refs: string[];
 };
 
 function uniqueStrings(value: unknown): string[] {
@@ -117,19 +160,119 @@ function catalogEntries(): ProfileCatalogEntry[] {
   return [evidenceGroundedCatalogEntry()];
 }
 
+function sourceDerivedDesignProfileEntry(): ProfileCatalogEntry {
+  return {
+    profile_id: SOURCE_DERIVED_PROFILE_ID,
+    profile_ref: SOURCE_DERIVED_PROFILE_REF,
+    profile_role: 'refs_only_route_for_source_derived_agent_design',
+    contract_ref: 'opl-profile-route:source-derived-design.v1',
+    trigger_signals: [],
+    required_stage_archetypes: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
+    required_capability_kinds: REQUIRED_CAPABILITY_KINDS,
+    required_surface_roles: REQUIRED_SURFACE_ROLES,
+    required_evidence_objects: [],
+    required_reference_pack_roles: [
+      'reference_design_source',
+      'reference_design_pattern_packet',
+      'transferable_pattern_map',
+    ],
+    source_readback_command: 'opl profiles select --intent <intent> --reference-source <source-ref> --json',
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+  };
+}
+
 function matchedTriggerSignals(intent: string, profile: ProfileCatalogEntry): string[] {
   const normalized = intent.toLowerCase();
   return profile.trigger_signals.filter((signal) => normalized.includes(signal));
 }
 
-function parseIntentArgs(args: string[]) {
-  if (args.length === 0) {
-    return '';
+function takeOptionText(args: string[], index: number, option: string) {
+  const values: string[] = [];
+  let cursor = index + 1;
+  while (cursor < args.length && !args[cursor].startsWith('--')) {
+    values.push(args[cursor]);
+    cursor += 1;
   }
-  if (args[0] === '--intent') {
-    return args.slice(1).join(' ').trim();
+  if (values.length === 0) {
+    throw new Error(`opl profiles select requires a value for ${option}.`);
   }
-  return args.join(' ').trim();
+  return { value: values.join(' ').trim(), nextIndex: cursor - 1 };
+}
+
+function pushCsvRefs(target: string[], value: string) {
+  target.push(...value.split(',').map((entry) => entry.trim()).filter(Boolean));
+}
+
+function parseIntentArgs(args: string[]): ParsedSelectionArgs {
+  const intentParts: string[] = [];
+  const referenceSourceRefs: string[] = [];
+  const patternPacketRefs: string[] = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--intent') {
+      const parsed = takeOptionText(args, index, arg);
+      intentParts.push(parsed.value);
+      index = parsed.nextIndex;
+      continue;
+    }
+    if (arg.startsWith('--intent=')) {
+      intentParts.push(arg.slice('--intent='.length).trim());
+      continue;
+    }
+    if (
+      arg === '--reference-source'
+      || arg === '--reference-source-ref'
+      || arg === '--reference-design-source'
+      || arg === '--source-ref'
+      || arg === '--paper'
+      || arg === '--paper-ref'
+    ) {
+      const parsed = takeOptionText(args, index, arg);
+      pushCsvRefs(referenceSourceRefs, parsed.value);
+      index = parsed.nextIndex;
+      continue;
+    }
+    if (
+      arg.startsWith('--reference-source=')
+      || arg.startsWith('--reference-source-ref=')
+      || arg.startsWith('--reference-design-source=')
+      || arg.startsWith('--source-ref=')
+      || arg.startsWith('--paper=')
+      || arg.startsWith('--paper-ref=')
+    ) {
+      pushCsvRefs(referenceSourceRefs, arg.slice(arg.indexOf('=') + 1));
+      continue;
+    }
+    if (
+      arg === '--reference-design-pattern-packet'
+      || arg === '--reference-design-pattern-packet-ref'
+      || arg === '--pattern-packet'
+      || arg === '--pattern-packet-ref'
+    ) {
+      const parsed = takeOptionText(args, index, arg);
+      pushCsvRefs(patternPacketRefs, parsed.value);
+      index = parsed.nextIndex;
+      continue;
+    }
+    if (
+      arg.startsWith('--reference-design-pattern-packet=')
+      || arg.startsWith('--reference-design-pattern-packet-ref=')
+      || arg.startsWith('--pattern-packet=')
+      || arg.startsWith('--pattern-packet-ref=')
+    ) {
+      pushCsvRefs(patternPacketRefs, arg.slice(arg.indexOf('=') + 1));
+      continue;
+    }
+    intentParts.push(arg);
+  }
+
+  return {
+    intent: intentParts.join(' ').trim(),
+    reference_source_refs: uniqueStrings(referenceSourceRefs),
+    reference_design_pattern_packet_refs: uniqueStrings(patternPacketRefs),
+  };
 }
 
 function parseInspectArgs(args: string[]) {
@@ -176,11 +319,16 @@ function selectedProfileRefs(payload: unknown): string[] {
     ...uniqueStrings(payload.profile_conformance_refs),
     ...(typeof payload.selected_profile_ref === 'string' ? [payload.selected_profile_ref] : []),
     ...(typeof payload.profile_ref === 'string' ? [payload.profile_ref] : []),
+    ...(typeof payload.route_ref === 'string' ? [payload.route_ref] : []),
+    ...(typeof payload.route_id === 'string' ? [payload.route_id] : []),
     ...(isRecord(payload.profile_selection_receipt)
       ? selectedProfileRefs(payload.profile_selection_receipt)
       : []),
     ...(isRecord(payload.profile_selection)
       ? selectedProfileRefs(payload.profile_selection)
+      : []),
+    ...(isRecord(payload.source_derived_design_receipt)
+      ? selectedProfileRefs(payload.source_derived_design_receipt)
       : []),
   ];
 }
@@ -189,13 +337,33 @@ function profileRequirements(payload: unknown) {
   if (!isRecord(payload)) {
     return {};
   }
-  if (isRecord(payload.profile_requirements)) {
-    return payload.profile_requirements;
-  }
-  if (isRecord(payload.profile_selection_receipt) && isRecord(payload.profile_selection_receipt.profile_requirements)) {
-    return payload.profile_selection_receipt.profile_requirements;
-  }
-  return {};
+  const requirements: Record<string, unknown> = {};
+  [
+    payload.profile_requirements,
+    isRecord(payload.profile_selection_receipt)
+      ? payload.profile_selection_receipt.profile_requirements
+      : null,
+    isRecord(payload.source_derived_design_receipt)
+      ? payload.source_derived_design_receipt.profile_requirements
+      : null,
+    isRecord(payload.profile_selection_receipt)
+      && isRecord(payload.profile_selection_receipt.source_derived_design_receipt)
+      ? payload.profile_selection_receipt.source_derived_design_receipt.profile_requirements
+      : null,
+  ].forEach((candidate) => {
+    if (!isRecord(candidate)) {
+      return;
+    }
+    Object.entries(candidate).forEach(([key, value]) => {
+      requirements[key] = Array.isArray(value)
+        ? uniqueStrings([
+            ...uniqueStrings(requirements[key]),
+            ...uniqueStrings(value),
+          ])
+        : value;
+    });
+  });
+  return requirements;
 }
 
 function capabilityEntries(capabilityMap: unknown): Record<string, unknown>[] {
@@ -216,8 +384,89 @@ function includesProfileRef(refs: string[], profile: ProfileCatalogEntry) {
   return refs.includes(profile.profile_id) || refs.includes(profile.profile_ref);
 }
 
+function matchesSourceDerivedProfileId(profileId: string) {
+  return profileId === SOURCE_DERIVED_PROFILE_ID || profileId === SOURCE_DERIVED_PROFILE_REF;
+}
+
+function hasSourceDerivedRoute(payload: unknown): boolean {
+  if (!isRecord(payload)) {
+    return false;
+  }
+  return payload.profile_selection_mode === 'source_derived_design'
+    || payload.profile_selection_mode === 'hybrid'
+    || payload.route_ref === SOURCE_DERIVED_PROFILE_REF
+    || payload.route_id === SOURCE_DERIVED_PROFILE_ID
+    || isRecord(payload.source_derived_design_receipt)
+    || (
+      isRecord(payload.profile_selection_receipt)
+      && hasSourceDerivedRoute(payload.profile_selection_receipt)
+    );
+}
+
 function missingRequired(values: string[], required: string[]) {
   return required.filter((entry) => !values.includes(entry));
+}
+
+function sourceDerivedProfileRequirements() {
+  return {
+    required_stage_archetypes: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
+    required_capability_kinds: REQUIRED_CAPABILITY_KINDS,
+    required_surface_roles: REQUIRED_SURFACE_ROLES,
+    required_reference_pack_roles: sourceDerivedDesignProfileEntry().required_reference_pack_roles,
+    reference_design_pattern_packet_requirements: REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS,
+    transferable_pattern_requirements: TRANSFERABLE_PATTERN_REQUIREMENTS,
+    stage_archetype_candidates: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
+    capability_plan_requirements: SOURCE_DERIVED_CAPABILITY_PLAN_REQUIREMENTS,
+  };
+}
+
+function buildSourceDerivedDesignReceipt(parsed: ParsedSelectionArgs) {
+  return {
+    route_id: SOURCE_DERIVED_PROFILE_ID,
+    route_ref: SOURCE_DERIVED_PROFILE_REF,
+    source_refs: parsed.reference_source_refs,
+    reference_design_pattern_packet_refs: parsed.reference_design_pattern_packet_refs,
+    source_material_body_policy: 'refs_only_no_external_body_import',
+    profile_requirements: sourceDerivedProfileRequirements(),
+    reference_design_pattern_packet_requirements: REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS,
+    transferable_pattern_requirements: TRANSFERABLE_PATTERN_REQUIREMENTS,
+    stage_archetype_candidates: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
+    capability_plan_requirements: SOURCE_DERIVED_CAPABILITY_PLAN_REQUIREMENTS,
+    authority_boundary_notes: [
+      'source-derived route may extract transferable design patterns only as refs',
+      'OPL does not import external runtime truth or target domain truth',
+      'OMA or target agent owner must author and accept domain-specific pack content',
+    ],
+  };
+}
+
+function builtinProfileRequirements(profile: ProfileCatalogEntry) {
+  return {
+    required_stage_archetypes: profile.required_stage_archetypes,
+    required_capability_kinds: profile.required_capability_kinds,
+    required_surface_roles: profile.required_surface_roles,
+    required_evidence_objects: profile.required_evidence_objects,
+    required_reference_pack_roles: profile.required_reference_pack_roles,
+  };
+}
+
+function conformanceProfileFor(
+  profileId: string,
+  capabilityMap: unknown,
+  stageControlPlane: unknown,
+) {
+  const builtin = catalogEntries().find((entry) => entry.profile_id === profileId || entry.profile_ref === profileId);
+  if (builtin) {
+    return builtin;
+  }
+  if (
+    matchesSourceDerivedProfileId(profileId)
+    || hasSourceDerivedRoute(capabilityMap)
+    || hasSourceDerivedRoute(stageControlPlane)
+  ) {
+    return sourceDerivedDesignProfileEntry();
+  }
+  return null;
 }
 
 export function buildAgentProfileCatalog() {
@@ -266,7 +515,10 @@ export function buildAgentProfileInspect(args: string[]) {
 }
 
 export function buildAgentProfileSelection(args: string[]) {
-  const intent = parseIntentArgs(args);
+  const parsed = parseIntentArgs(args);
+  const intent = parsed.intent;
+  const hasReferenceDesignSignal = parsed.reference_source_refs.length > 0
+    || parsed.reference_design_pattern_packet_refs.length > 0;
   const candidates = catalogEntries()
     .map((profile) => ({
       profile,
@@ -274,27 +526,63 @@ export function buildAgentProfileSelection(args: string[]) {
     }))
     .filter((candidate) => candidate.matched_trigger_signals.length > 0);
   const selected = candidates[0] ?? null;
+  const sourceDerivedReceipt = hasReferenceDesignSignal
+    ? buildSourceDerivedDesignReceipt(parsed)
+    : null;
+  const profileSelectionMode: ProfileSelectionMode | null = selected
+    ? (sourceDerivedReceipt ? 'hybrid' : 'builtin_profile')
+    : (sourceDerivedReceipt ? 'source_derived_design' : null);
+  const selectedProfileId = selected?.profile.profile_id ?? (sourceDerivedReceipt ? SOURCE_DERIVED_PROFILE_ID : null);
+  const selectedProfileRef = selected?.profile.profile_ref ?? (sourceDerivedReceipt ? SOURCE_DERIVED_PROFILE_REF : null);
+  const selectedProfileRefs = uniqueStrings([
+    ...(selected ? [selected.profile.profile_ref] : []),
+    ...(sourceDerivedReceipt ? [SOURCE_DERIVED_PROFILE_REF] : []),
+  ]);
+  const builtinRequirements = selected ? builtinProfileRequirements(selected.profile) : null;
+  const sourceRequirements = sourceDerivedReceipt?.profile_requirements ?? null;
+  const profileRequirements = builtinRequirements && sourceRequirements
+    ? {
+        ...sourceRequirements,
+        required_stage_archetypes: uniqueStrings([
+          ...builtinRequirements.required_stage_archetypes,
+          ...sourceRequirements.required_stage_archetypes,
+        ]),
+        required_capability_kinds: uniqueStrings([
+          ...builtinRequirements.required_capability_kinds,
+          ...sourceRequirements.required_capability_kinds,
+        ]),
+        required_surface_roles: uniqueStrings([
+          ...builtinRequirements.required_surface_roles,
+          ...sourceRequirements.required_surface_roles,
+        ]),
+        required_evidence_objects: builtinRequirements.required_evidence_objects,
+        required_reference_pack_roles: uniqueStrings([
+          ...builtinRequirements.required_reference_pack_roles,
+          ...sourceRequirements.required_reference_pack_roles,
+        ]),
+      }
+    : builtinRequirements ?? sourceRequirements;
   return {
     version: 'g2',
     profile_selection_receipt: {
       surface_kind: 'opl_profile_selection_receipt',
       version: 'profile-selection-receipt.v1',
-      status: selected ? 'selected' : 'blocked',
+      status: selected || sourceDerivedReceipt ? 'selected' : 'blocked',
       intent,
-      selected_profile_id: selected?.profile.profile_id ?? null,
-      selected_profile_ref: selected?.profile.profile_ref ?? null,
+      profile_selection_mode: profileSelectionMode,
+      selected_profile_id: selectedProfileId,
+      selected_profile_ref: selectedProfileRef,
+      selected_profile_refs: selectedProfileRefs,
       matched_trigger_signals: selected?.matched_trigger_signals ?? [],
       candidate_profile_ids: candidates.map((candidate) => candidate.profile.profile_id),
-      profile_requirements: selected
-        ? {
-            required_stage_archetypes: selected.profile.required_stage_archetypes,
-            required_capability_kinds: selected.profile.required_capability_kinds,
-            required_surface_roles: selected.profile.required_surface_roles,
-            required_evidence_objects: selected.profile.required_evidence_objects,
-            required_reference_pack_roles: selected.profile.required_reference_pack_roles,
-          }
-        : null,
-      blockers: selected ? [] : ['no_profile_trigger_match'],
+      source_derived_design_receipt: sourceDerivedReceipt,
+      reference_design_pattern_packet_requirements:
+        sourceDerivedReceipt?.reference_design_pattern_packet_requirements ?? [],
+      transferable_pattern_requirements: sourceDerivedReceipt?.transferable_pattern_requirements ?? [],
+      stage_archetype_candidates: sourceDerivedReceipt?.stage_archetype_candidates ?? [],
+      capability_plan_requirements: sourceDerivedReceipt?.capability_plan_requirements ?? [],
+      profile_requirements: profileRequirements,
+      blockers: selected || sourceDerivedReceipt ? [] : ['no_profile_trigger_match'],
       authority_boundary: {
         refs_only: true,
         selector_can_write_domain_truth: false,
@@ -308,7 +596,9 @@ export function buildAgentProfileSelection(args: string[]) {
 
 export function buildAgentProfileConformance(args: string[]) {
   const { repoDir, profileId } = parseConformanceArgs(args);
-  const profile = catalogEntries().find((entry) => entry.profile_id === profileId || entry.profile_ref === profileId);
+  const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts', 'capability_map.json'));
+  const stageControlPlane = readJsonFileOrNull(path.join(repoDir, 'contracts', 'stage_control_plane.json'));
+  const profile = conformanceProfileFor(profileId, capabilityMap, stageControlPlane);
   if (!profile) {
     return {
       version: 'g2',
@@ -322,8 +612,6 @@ export function buildAgentProfileConformance(args: string[]) {
     };
   }
 
-  const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts', 'capability_map.json'));
-  const stageControlPlane = readJsonFileOrNull(path.join(repoDir, 'contracts', 'stage_control_plane.json'));
   const capabilities = capabilityEntries(capabilityMap);
   const stages = stageEntries(stageControlPlane);
   const capabilityProfileRefs = selectedProfileRefs(capabilityMap);

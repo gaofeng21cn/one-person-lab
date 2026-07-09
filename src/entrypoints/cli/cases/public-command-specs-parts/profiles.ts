@@ -25,10 +25,11 @@ export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
       handler: (args) => buildAgentProfileInspect(args),
     },
     'profiles select': {
-      usage: 'opl profiles select --intent <intent text>',
-      summary: 'Return a refs-only profile-selection receipt for a natural-language target-agent intent.',
+      usage: 'opl profiles select --intent <intent text> [--reference-source <source-ref>] [--pattern-packet <packet-ref>]',
+      summary: 'Return a refs-only profile-selection receipt for a target-agent intent; unmatched reference-backed intents route to source-derived design instead of a fixed template.',
       examples: [
         'opl profiles select --intent "colorectal surgery risk decision support with guideline evidence" --json',
+        'opl profiles select --intent "workshop scheduling agent" --reference-source paper-ref:uploaded-framework --json',
       ],
       group: 'profiles',
       handler: (args) => buildAgentProfileSelection(args),

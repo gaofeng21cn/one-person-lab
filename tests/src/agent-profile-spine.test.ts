@@ -94,6 +94,91 @@ function makeConformantAgentFixture() {
   return { repoDir, profile };
 }
 
+function makeSourceDerivedAgentFixture() {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-derived-agent-'));
+  const sourceDerivedDesignReceipt = {
+    surface_kind: 'opl_meta_agent_source_derived_design_receipt',
+    route_id: 'source_derived_design_profile_route.v1',
+    route_ref: 'opl-profile-route:source_derived_design_profile_route.v1',
+    source_refs: ['paper-ref:uploaded-colorectal-risk-framework'],
+    reference_design_pattern_packet_refs: [
+      'pattern-packet-ref:oma/reference-designs/uploaded-paper/distilled-agent-design',
+    ],
+    profile_requirements: {
+      required_stage_archetypes: [
+        'source_material_intake',
+        'reference_design_pattern_extraction',
+        'transferable_pattern_mapping',
+        'capability_plan_synthesis',
+        'authority_boundary_review',
+      ],
+      required_capability_kinds: [
+        'stage_prompt',
+        'tool_connector',
+        'reference_pack',
+        'contract_module',
+      ],
+      required_surface_roles: [
+        'stage_prompt',
+        'tool_connector',
+        'knowledge_pack',
+        'quality_gate',
+        'eval_suite',
+      ],
+    },
+  };
+  const profileRequirements = sourceDerivedDesignReceipt.profile_requirements;
+
+  writeJson(path.join(repoDir, 'contracts', 'capability_map.json'), {
+    surface_kind: 'opl_standard_agent_capability_map',
+    schema_version: 'standard-agent-capability-map.v1',
+    domain_id: 'colorectal-surgery-risk-from-paper',
+    profile_selection_mode: 'source_derived_design',
+    source_derived_design_receipt: sourceDerivedDesignReceipt,
+    profile_requirements: profileRequirements,
+    capabilities: [
+      { capability_id: 'stage', surface_role: 'stage_prompt', capability_kind: 'stage_prompt' },
+      { capability_id: 'tool', surface_role: 'tool_connector', capability_kind: 'tool_connector' },
+      { capability_id: 'knowledge', surface_role: 'knowledge_pack', capability_kind: 'reference_pack' },
+      { capability_id: 'gate', surface_role: 'quality_gate', capability_kind: 'contract_module' },
+      { capability_id: 'eval', surface_role: 'eval_suite', capability_kind: 'contract_module' },
+    ],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  });
+
+  writeJson(path.join(repoDir, 'contracts', 'stage_control_plane.json'), {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'colorectal_surgery_risk_from_paper_stage_plane',
+    target_domain_id: 'colorectal-surgery-risk-from-paper',
+    owner: 'colorectal-surgery-risk-from-paper',
+    profile_selection_mode: 'source_derived_design',
+    source_derived_design_receipt: sourceDerivedDesignReceipt,
+    profile_requirements: profileRequirements,
+    stages: [
+      {
+        stage_id: 'source-derived-design',
+        stage_kind: 'creation',
+        title: 'Source Derived Design',
+        goal: 'Map source-derived design patterns into a target agent stage pack.',
+        owner: 'colorectal-surgery-risk-from-paper',
+        knowledge_refs: [{ ref_kind: 'repo_path', ref: 'agent/knowledge/reference-design.md' }],
+        tool_refs: [{ ref_kind: 'repo_path', ref: 'agent/tools/source-intake.md' }],
+        evaluation: [{ ref_kind: 'repo_path', ref: 'agent/quality_gates/source-transfer.md' }],
+        authority_boundary: {
+          can_claim_domain_ready: false,
+        },
+      },
+    ],
+  });
+
+  return { repoDir };
+}
+
 test('profile selector chooses evidence-grounded profile for decision-support risk intent', () => {
   const inspect = buildAgentProfileInspect([
     'evidence_grounded_decision_agent_profile.v1',
@@ -115,6 +200,64 @@ test('profile selector chooses evidence-grounded profile for decision-support ri
   assert.equal(receipt.profile_requirements.required_stage_archetypes.includes('mode_routing'), true);
   assert.equal(receipt.profile_requirements.required_capability_kinds.includes('reference_pack'), true);
   assert.equal(receipt.authority_boundary.selector_can_claim_domain_ready, false);
+});
+
+test('profile selector routes unmatched paper-backed intent to source-derived design', () => {
+  const receipt = buildAgentProfileSelection([
+    '--intent',
+    'Build a poetry workshop scheduling agent',
+    '--reference-source',
+    'paper-ref:uploaded-agent-framework',
+    '--pattern-packet',
+    'pattern-packet-ref:oma/uploaded-agent-framework/design',
+  ]).profile_selection_receipt;
+
+  assert.equal(receipt.status, 'selected');
+  assert.equal(receipt.profile_selection_mode, 'source_derived_design');
+  assert.equal(receipt.selected_profile_id, 'source_derived_design_profile_route.v1');
+  assert.equal(receipt.selected_profile_ref, 'opl-profile-route:source_derived_design_profile_route.v1');
+  assert.deepEqual(receipt.blockers, []);
+  assert.ok(receipt.source_derived_design_receipt);
+  assert.deepEqual(receipt.source_derived_design_receipt.source_refs, [
+    'paper-ref:uploaded-agent-framework',
+  ]);
+  assert.deepEqual(receipt.source_derived_design_receipt.reference_design_pattern_packet_refs, [
+    'pattern-packet-ref:oma/uploaded-agent-framework/design',
+  ]);
+  const requirements = receipt.profile_requirements as Record<string, string[]>;
+  assert.ok(requirements.stage_archetype_candidates.includes('transferable_pattern_mapping'));
+  assert.ok(receipt.transferable_pattern_requirements.includes('source_anchor_ref'));
+  assert.equal(receipt.authority_boundary.selector_can_claim_domain_ready, false);
+});
+
+test('profile selector keeps builtin lower-bound and adds source-derived route for hybrid intents', () => {
+  const receipt = buildAgentProfileSelection([
+    '--intent',
+    'Build a colorectal surgery risk decision support agent with guideline evidence',
+    '--reference-source',
+    'paper-ref:uploaded-surgical-risk-agent-framework',
+  ]).profile_selection_receipt;
+
+  assert.equal(receipt.status, 'selected');
+  assert.equal(receipt.profile_selection_mode, 'hybrid');
+  assert.equal(receipt.selected_profile_id, 'evidence_grounded_decision_agent_profile.v1');
+  assert.ok(receipt.selected_profile_refs.includes('opl-profile:evidence_grounded_decision_agent_profile.v1'));
+  assert.ok(receipt.selected_profile_refs.includes('opl-profile-route:source_derived_design_profile_route.v1'));
+  const requirements = receipt.profile_requirements as Record<string, string[]>;
+  assert.ok(requirements.required_stage_archetypes.includes('mode_routing'));
+  assert.ok(requirements.required_stage_archetypes.includes('reference_design_pattern_extraction'));
+});
+
+test('profile selector remains blocked when no builtin match and no reference design source exists', () => {
+  const receipt = buildAgentProfileSelection([
+    '--intent',
+    'Build a poetry workshop scheduling agent',
+  ]).profile_selection_receipt;
+
+  assert.equal(receipt.status, 'blocked');
+  assert.equal(receipt.profile_selection_mode, null);
+  assert.deepEqual(receipt.selected_profile_refs, []);
+  assert.deepEqual(receipt.blockers, ['no_profile_trigger_match']);
 });
 
 test('profile catalog consumes contract-owned profile entry requirements', () => {
@@ -141,6 +284,23 @@ test('profile conformance checks selected profile refs, stage knowledge refs, an
   assert.equal(conformance.status, 'passed');
   assert.deepEqual(conformance.blockers, []);
   assert.equal(conformance.observed.stages_with_knowledge_refs, 1);
+  assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
+});
+
+test('profile conformance accepts source-derived design route receipts without a builtin profile', () => {
+  const { repoDir } = makeSourceDerivedAgentFixture();
+  const conformance = buildAgentProfileConformance([
+    '--repo-dir',
+    repoDir,
+    '--profile',
+    'source_derived_design_profile_route.v1',
+  ]).profile_conformance;
+
+  assert.equal(conformance.status, 'passed');
+  assert.deepEqual(conformance.blockers, []);
+  assert.equal(conformance.profile_ref, 'opl-profile-route:source_derived_design_profile_route.v1');
+  assert.ok(conformance.observed.capability_profile_refs.includes('opl-profile-route:source_derived_design_profile_route.v1'));
+  assert.ok(conformance.observed.required_stage_archetypes.includes('transferable_pattern_mapping'));
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
 });
 
