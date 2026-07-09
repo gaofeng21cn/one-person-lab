@@ -48,48 +48,15 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
   });
 }
 
+function readLines(filePath: string) {
+  return fs.readFileSync(filePath, 'utf8').trim().split('\n');
+}
+
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
-  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
-    extraFiles: {
-      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'med-autoscience',
-        skills: './skills/',
-      }, null, 2),
-      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
-        '---',
-        'name: med-autoscience',
-        'description: Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
-        '---',
-        '',
-        '# MAS App Skill',
-        '',
-        'Use this fixture as the canonical MAS family app skill entry.',
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
-cat <<'EOF'
-{"repo":"med-autoscience","sync":"ok"}
-EOF
-`,
-      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
-set -euo pipefail
-test -f ${JSON.stringify(turnkeyLogPath)}
-printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
-cat <<'EOF'
-{"status":"ok"}
-EOF
-`,
-    },
-  });
+  const medAutoScienceRemote = createBasicMasModuleRemoteFixture(turnkeyLogPath);
   const env = {
     HOME: homeRoot,
     OPL_MODULES_ROOT: modulesRoot,
@@ -144,10 +111,7 @@ EOF
       fs.existsSync(path.join(install.module_action.module.checkout_path, 'README.md')),
       true,
     );
-    assert.deepEqual(
-      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'health'],
-    );
+    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health']);
     const globalMasSkillPath = path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md');
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
@@ -191,10 +155,7 @@ EOF
     assert.equal(update.module_action.action, 'update');
     assert.equal(update.module_action.status, 'completed');
     assert.equal(update.module_action.module.git.head_sha, nextSha);
-    assert.deepEqual(
-      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'health', 'bootstrap', 'health'],
-    );
+    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health', 'bootstrap', 'health']);
     assert.equal(fs.existsSync(globalMasSkillPath), false);
 
     const remove = runCli(
@@ -310,10 +271,7 @@ test('module install is idempotent when the managed checkout already exists', ()
     assert.equal(install.module_action.module.installed, true);
     assert.equal(install.module_action.module.install_origin, 'managed_root');
     assert.equal(install.module_action.module.checkout_path, managedCheckout);
-    assert.deepEqual(
-      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'health'],
-    );
+    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health']);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -350,10 +308,7 @@ test('module install replaces a non-empty invalid managed checkout', () => {
     assert.equal(install.module_action.module.checkout_path, managedCheckout);
     assert.equal(fs.existsSync(path.join(managedCheckout, '.git')), true);
     assert.equal(fs.existsSync(path.join(managedCheckout, 'stale-partial-install.txt')), false);
-    assert.deepEqual(
-      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
-      ['bootstrap', 'health'],
-    );
+    assert.deepEqual(readLines(turnkeyLogPath), ['bootstrap', 'health']);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -654,7 +609,6 @@ printf '{"ok":true,"runner":"npm"}\\n'
     OPL_MODULE_PATH_MEDDEEPSCIENTIST: mdsFixture.sourceRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
-  const readLines = (filePath: string) => fs.readFileSync(filePath, 'utf8').trim().split('\n');
   const realpath = (filePath: string) => fs.realpathSync(filePath);
 
   try {
