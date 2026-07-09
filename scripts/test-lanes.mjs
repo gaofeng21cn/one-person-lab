@@ -34,6 +34,7 @@ const fastTestFiles = [
   'tests/src/verification-command-surfaces.test.ts',
   'tests/src/verification-package-surfaces.test.ts',
   'tests/src/target-architecture-schema-contracts.test.ts',
+  'tests/src/evidence-grounded-catalog-eval.test.ts',
   'tests/src/capability-registry-resolver.test.ts',
   'tests/src/cognitive-computation-kernel-contract.test.ts',
   'tests/src/advisory-knowledge-boundary-contract.test.ts',
@@ -147,6 +148,8 @@ const fastTestFiles = [
   'tests/src/quality-details.test.ts',
   'tests/src/cli/cases/brand-modules.test.ts',
   'tests/src/cli/cases/framework-operating-maturity.test.ts',
+  'tests/src/evidence-grounded-stagecraft-runway.test.ts',
+  'tests/src/evidence-grounded-substrate.test.ts',
   'tests/src/cli/cases/runtime-brand-module-l5-evidence-ledger.test.ts',
 ];
 
