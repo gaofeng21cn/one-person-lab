@@ -325,6 +325,7 @@ const lanes = {
     nodeTest([
       'tests/src/verification-command-surfaces.test.ts',
       'tests/src/target-architecture-schema-contracts.test.ts',
+      'tests/src/evidence-grounded-decision-agent-profile.test.ts',
       'tests/src/cognitive-computation-kernel-contract.test.ts',
       'tests/src/advisory-knowledge-boundary-contract.test.ts',
       'tests/src/opl-flow-completion-audit-contract.test.ts',

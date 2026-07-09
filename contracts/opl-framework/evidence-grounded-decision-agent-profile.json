@@ -29,7 +29,7 @@
   },
   "source_of_truth_refs": [
     {
-      "ref": "docs/project.md",
+      "ref": "human_doc:opl_project_boundary",
       "role": "framework_project_boundary"
     },
     {
