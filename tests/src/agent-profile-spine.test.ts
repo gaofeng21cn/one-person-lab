@@ -103,6 +103,8 @@ test('profile selector chooses evidence-grounded profile for decision-support ri
     'Build a colorectal surgery risk decision support agent with guideline evidence.',
   ]).profile_selection_receipt;
 
+  assert.ok(inspect.profile);
+  assert.ok(receipt.profile_requirements);
   assert.equal(
     inspect.profile.source_readback_command,
     'opl profiles inspect evidence_grounded_decision_agent_profile.v1 --json',
@@ -134,6 +136,8 @@ test('profile conformance checks selected profile refs, stage knowledge refs, an
     profile.profile_id,
   ]).profile_conformance;
 
+  assert.ok(conformance.observed);
+  assert.ok(conformance.authority_boundary);
   assert.equal(conformance.status, 'passed');
   assert.deepEqual(conformance.blockers, []);
   assert.equal(conformance.observed.stages_with_knowledge_refs, 1);

@@ -68,7 +68,13 @@ function uniqueStrings(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return [...new Set(value.filter((entry): entry is string => typeof entry === 'string' && entry.trim()).map((entry) => entry.trim()))];
+  return [
+    ...new Set(
+      value
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .map((entry) => entry.trim()),
+    ),
+  ];
 }
 
 function stringOrFallback(value: unknown, fallback: string) {
@@ -87,7 +93,7 @@ function evidenceGroundedCatalogEntry(): ProfileCatalogEntry {
     ? readback.contract.profile_catalog_entry
     : {};
   return {
-    profile_id: stringOrFallback(contractEntry.profile_id, readback.profile_id),
+    profile_id: stringOrFallback(contractEntry.profile_id, EVIDENCE_PROFILE_ID),
     profile_ref: stringOrFallback(contractEntry.profile_ref, EVIDENCE_PROFILE_REF),
     profile_role: stringOrFallback(readback.contract.profile_role, 'standard_profile_for_evidence_grounded_decision_support_agents'),
     contract_ref: readback.contract_ref,
