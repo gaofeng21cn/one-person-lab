@@ -36,6 +36,9 @@ test('runtime snapshot ingests domain-owned projection refs without claiming dom
   };
   masManifest.progress_projection = {
     ...(masManifest.progress_projection as Record<string, unknown>),
+    session_id: 'mas-runtime-session',
+    headline: 'MAS projection fixture',
+    attention_items: ['MAS projection attention'],
     domain_projection: {
       surface_kind: 'mas_progress_projection',
       research_runtime_control_projection: {
@@ -76,6 +79,12 @@ test('runtime snapshot ingests domain-owned projection refs without claiming dom
       },
     ],
   };
+  redcubeManifest.progress_projection = {
+    ...((redcubeManifest.progress_projection as Record<string, unknown> | undefined) ?? {}),
+    session_id: 'redcube-runtime-session',
+    headline: 'RedCube projection fixture',
+    attention_items: ['RedCube projection attention'],
+  };
   redcubeManifest.controlled_stage_attempt_projection = {
     surface_kind: 'rca_controlled_stage_attempt_projection',
     owner_receipt_schema_ref: 'rca://contracts/owner-receipt.schema.json',
@@ -115,6 +124,13 @@ test('runtime snapshot ingests domain-owned projection refs without claiming dom
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const projection = output.runtime_tray_snapshot.domain_projection_ingestion;
+    const trayItems = [
+      ...output.runtime_tray_snapshot.running_items,
+      ...output.runtime_tray_snapshot.attention_items,
+      ...output.runtime_tray_snapshot.recent_items,
+    ];
+    const masTrayItem = trayItems.find((item: { project_id: string }) => item.project_id === 'medautoscience');
+    const redcubeTrayItem = trayItems.find((item: { project_id: string }) => item.project_id === 'redcube');
 
     assert.equal(projection.surface_kind, 'opl_domain_projection_ingestion_projection');
     assert.equal(projection.projection_scope, 'runtime_snapshot');
@@ -123,6 +139,8 @@ test('runtime snapshot ingests domain-owned projection refs without claiming dom
     assert.equal(projection.summary.projection_ref_count >= 7, true);
     assert.equal(projection.summary.by_domain.medautoscience >= 4, true);
     assert.equal(projection.summary.by_domain.redcube >= 3, true);
+    assert.equal(masTrayItem?.project_label, 'Med Auto Science');
+    assert.equal(redcubeTrayItem?.project_label, 'RedCube AI');
     assert.equal(projection.summary.by_surface.runtime_inventory >= 2, true);
     assert.equal(projection.summary.by_surface.controlled_stage_attempt_projection, 1);
     assert.equal(projection.items.length >= 7, true);

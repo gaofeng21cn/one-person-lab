@@ -394,15 +394,6 @@ function researchLens(input: RuntimeVisualizationInput) {
 }
 
 function domainDisplayLabel(domainId: string | null) {
-  if (domainId === 'medautoscience') {
-    return 'MAS';
-  }
-  if (domainId === 'med-autogrant') {
-    return 'MAG';
-  }
-  if (domainId === 'redcube-ai') {
-    return 'RCA';
-  }
   return domainId ?? 'General';
 }
 
