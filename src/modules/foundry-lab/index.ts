@@ -8,6 +8,7 @@ export const OPL_FOUNDRY_LAB_SOURCE_MODULE = {
 // Public cross-module surface generated from existing module consumers.
 export { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from './agent-lab-control-read-models.ts';
 export { buildDeveloperModeAgentLabRepairRouteReadModel } from './agent-lab-developer-mode.ts';
+export { buildEvidenceGroundedDecisionAgentProfileFoundryLabEvalSurface } from './evidence-grounded-profile-eval.ts';
 export { buildFeedbackOpsReadModel } from './agent-lab-feedbackops.ts';
 export { buildAgentDefaultCallerReadinessForRepo } from './agent-platform-surface-ownership.ts';
 export { DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES, DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION, DEFAULT_CALLER_RETIREMENT_MANDATORY_GATE_IDS, DEFAULT_CALLER_RETIREMENT_NON_AUTHORIZING_SURFACES, DEFAULT_CALLER_RETIREMENT_TARGET_CLASSES, DEFAULT_CALLER_SAME_WORK_UNIT_LIVE_EVIDENCE_SCOPE, DEFAULT_CALLER_STATIC_RETIREMENT_PREREQUISITE_GATE_IDS, defaultCallerOwnerDecisionCloseoutReadout } from './default-caller-retirement-guard.ts';

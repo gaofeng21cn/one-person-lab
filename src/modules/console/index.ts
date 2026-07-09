@@ -4,3 +4,6 @@ export const OPL_CONSOLE_SOURCE_MODULE = {
   contractRef: 'contracts/opl-framework/source-module-map.json#modules.console',
   physicalRoot: 'src/modules/console',
 } as const;
+
+export { buildEvidenceGroundedDecisionAgentProfileConsoleDrilldown } from './evidence-grounded-profile-drilldown.ts';
+export type { EvidenceGroundedDecisionAgentProfileDrilldownInput } from './evidence-grounded-profile-drilldown.ts';

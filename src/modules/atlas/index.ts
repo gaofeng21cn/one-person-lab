@@ -14,6 +14,7 @@ export type { ManifestCommandTimeoutPolicy } from './domain-manifest/resolver.ts
 export { isRecord } from './domain-manifest/shared-utils.ts';
 export type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 export { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
+export { buildEvidenceGroundedDecisionAgentProfileAtlasCatalog } from './evidence-grounded-profile-catalog.ts';
 export { validateFamilyDomainEntryContract, validateSharedHandoff, validateSharedHandoffBuilder, validateUserInteractionContract } from './family-entry-contracts.ts';
 export type { FamilySharedHandoffSurface, SharedHandoffBuilderSurface } from './family-entry-contracts.ts';
 export { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
