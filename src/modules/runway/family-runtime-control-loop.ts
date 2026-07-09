@@ -19,6 +19,7 @@ import {
   type WorkerRestartGuard,
 } from './family-runtime-provider-worker-repair.ts';
 import type { FamilyRuntimeProviderKind } from './family-runtime-types.ts';
+import { structuredCloseoutRepairClassFor } from './structured-closeout-gate.ts';
 
 type FamilyRuntimePaths = ReturnType<typeof familyRuntimePaths>;
 type RunwayRepairAction = {
@@ -66,6 +67,27 @@ const FALSE_AUTHORITY_BOUNDARY = {
 
 const BLOCKED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status blocked --json';
 const FAILED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status failed --json';
+const CLOSEOUT_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --json';
+
+function closeoutRepairAttemptCount(attempts: StageAttemptSummary) {
+  return attempts.repair_breakdown?.by_status_reason
+    .filter((entry) =>
+      structuredCloseoutRepairClassFor({ blockedReason: entry.reason })?.startsWith('closeout_') === true
+    )
+    .reduce((total, entry) => total + entry.attempt_count, 0) ?? 0;
+}
+
+function withCloseoutRepairClasses(input: string[], closeoutAttemptCount: number) {
+  const classes = [...input];
+  for (const repairClass of closeoutAttemptCount > 0
+    ? ['closeout_materialization_repair', 'invalid_typed_closeout_redrive_decision']
+    : []) {
+    if (!classes.includes(repairClass)) {
+      classes.push(repairClass);
+    }
+  }
+  return classes;
+}
 
 function readinessStatus(input: {
   providerReady: boolean;
@@ -96,7 +118,20 @@ function schedulerNeedsRepair(status: string | null) {
 function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
   const blockedAttemptCount = countStatus(attempts, ['blocked']);
   const failedAttemptCount = countStatus(attempts, ['failed']);
+  const closeoutAttemptCount = closeoutRepairAttemptCount(attempts);
   const items = [
+    closeoutAttemptCount > 0
+      ? {
+        status: 'blocked_or_failed',
+        repair_class: 'closeout_materialization_or_invalid_typed_closeout',
+        attempt_count: closeoutAttemptCount,
+        reason: 'closeout_materialization_or_invalid_typed_closeout_requires_query_redrive_decision',
+        command: CLOSEOUT_ATTEMPT_REPAIR_COMMAND,
+        mutation: false,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      }
+      : null,
     blockedAttemptCount > 0
       ? {
         status: 'blocked',
@@ -128,6 +163,7 @@ function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
       repairable_attempt_count: blockedAttemptCount + failedAttemptCount,
       blocked_attempt_count: blockedAttemptCount,
       failed_attempt_count: failedAttemptCount,
+      closeout_repair_attempt_count: closeoutAttemptCount,
     },
     breakdown: attempts.repair_breakdown ?? {
       sample_limit: 0,
@@ -436,6 +472,8 @@ export async function buildFamilyRuntimeControlLoopStatus(
         'queue_missing_current_owner_delta',
         'receipt_invalid',
         'domain_owner_blocked',
+        'closeout_materialization_repair',
+        'invalid_typed_closeout_redrive_decision',
       ],
       default_repair_command: status === 'blocked_provider_not_ready'
         ? 'opl family-runtime repair --provider temporal'
@@ -588,7 +626,10 @@ export function buildRunwayRecoveryRepairProjection(controlLoop: FamilyRuntimeCo
       workerRestartGuard,
     }),
     repair_policy: controlLoop.recovery_repair.repair_policy,
-    repair_classes: controlLoop.recovery_repair.repair_classes,
+    repair_classes: withCloseoutRepairClasses(
+      controlLoop.recovery_repair.repair_classes,
+      attemptRepairQueue.summary.closeout_repair_attempt_count,
+    ),
     selected_repair_action: selectedRepairAction,
     default_repair_command: controlLoop.recovery_repair.default_repair_command
       ?? (selectedRepairAction?.action_id === 'retry' ? attemptRepairQueue.default_repair_command : null),

@@ -5,6 +5,20 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-09
+
+### 决策：StructuredCloseoutGate 固定为 OPL Runway typed closeout primitive
+
+原因：OPL stage attempt 的终态曾被多类信号混淆：`Codex CLI` 文字结论、provider completed、Terminal/Temporal completion、read-model refresh、测试绿和 domain owner refs。正确边界是 OPL 只消费 structured closeout packet / refs，并把格式漂移恢复或 fail closed；domain 内容完成、owner receipt、typed blocker、human gate、route-back 和 stop-loss 继续由 domain/stage owner refs 表达。
+
+影响：
+
+- `StructuredCloseoutGate` 属于 OPL Framework / Runway，不是 MAS 私有兜底，也不是 stage 外控制层。
+- `Codex CLI` prose、provider completion、file presence、tests green、docs patch、read-model refresh 或 recovery-repair projection 都不能完成 stage attempt；typed JSON closeout packet / refs 是 closeout admission 的必要输入。
+- 格式漂移流程固定为 `terminal JSON capture -> session recovery -> same-session enforcement -> domain receipt recovery if applicable -> provider-runtime closeout blocker -> recovery-repair projection`；恢复失败时必须 fail closed，不误标 completed。
+- Repair / redrive 是 query / decision surface，只能投影缺失 refs、owner route、redrive 候选、human gate、stop-loss 或 provider-runtime blocker；不得伪造 typed blocker、owner receipt 或 human gate，不写 domain truth。
+- 本决策只落 docs/contracts README 语义，不声明 runtime ready、Live Evidence ready、domain ready、App release ready 或 production ready。
+
 ## 2026-07-08
 
 ### 决策：Research Frontier Board 只作为 Runway refs-only 可视化投影

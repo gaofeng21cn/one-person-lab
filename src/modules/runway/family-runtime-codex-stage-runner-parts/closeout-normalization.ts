@@ -32,6 +32,15 @@ export type TypedStageCloseoutPacket = {
   authority_boundary: JsonRecord;
 };
 
+export type StageCloseoutPacketRejection = {
+  reason:
+    | 'stage_attempt_id_mismatch'
+    | 'idempotency_key_mismatch'
+    | 'paper_mission_stage_route_user_stage_log_missing';
+  stage_attempt_id: string | null;
+  idempotency_key: string | null;
+};
+
 function normalizedDomainId(attempt: JsonRecord) {
   const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
   const raw = optionalString(attempt.domain_id)
@@ -175,7 +184,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
 export function validateCloseoutPacketForAttempt(input: {
   closeoutPacket: TypedStageCloseoutPacket | null;
   attempt: JsonRecord;
-}) {
+}): { closeoutPacket: TypedStageCloseoutPacket | null; rejection: StageCloseoutPacketRejection | null } {
   const closeoutPacket = input.closeoutPacket;
   if (!closeoutPacket) {
     return { closeoutPacket: null, rejection: null };

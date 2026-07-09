@@ -701,6 +701,7 @@ test('Runway recovery-repair classifies blocked and failed attempts into operato
     repairable_attempt_count: 5,
     blocked_attempt_count: 3,
     failed_attempt_count: 2,
+    closeout_repair_attempt_count: 0,
   });
   assert.deepEqual(repair.attempt_repair_queue.items.map((item: Record<string, unknown>) => item.status), [
     'blocked',
@@ -739,6 +740,134 @@ test('Runway recovery-repair classifies blocked and failed attempts into operato
   assert.equal(repair.attempt_repair_queue.authority_boundary.can_write_domain_truth, false);
   assert.equal(repair.attempt_repair_queue.authority_boundary.can_create_typed_blocker, false);
   assert.equal(repair.attempt_repair_queue.authority_boundary.can_authorize_domain_ready, false);
+});
+
+test('Runway recovery-repair projects closeout materialization and invalid typed closeout as query redrive decisions', () => {
+  const repair = buildRunwayRecoveryRepairProjection({
+    recovery_repair: {
+      repair_policy: 'classify_before_repair',
+      repair_classes: [
+        'worker_not_ready',
+        'worker_source_stale',
+        'scheduler_not_installed',
+        'workflow_stale',
+        'queue_missing_current_owner_delta',
+        'receipt_invalid',
+        'domain_owner_blocked',
+      ],
+      default_repair_command: null,
+      selected_repair_action: {
+        action_id: 'retry',
+        owner: 'opl_runway',
+        reason: 'blocked_or_failed_stage_attempts_need_repair_classification',
+        command: 'opl runway recovery-repair --json',
+        mutation: false,
+        repairable_attempt_count: 6,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      },
+      worker_restart_guard: null,
+    },
+    provider_runtime: {
+      substrate: 'temporal',
+      selected_provider: 'temporal',
+      selected_ready: true,
+      selected_status: 'ready',
+      degraded_reason: null,
+      runtime_dependency: 'temporal_server_and_worker_required_for_live_workflows',
+      live_workflow_execution_ready: true,
+    },
+    scheduler_cadence: {
+      substrate: 'temporal_scheduler',
+      status: 'ok',
+      schedule_id: 'opl-family-runtime-provider-scheduler',
+      health: null,
+      repair_action: null,
+    },
+    queue: { total: 0, by_status: {} },
+    stage_attempts: {
+      total: 6,
+      by_status: {
+        blocked: 4,
+        failed: 2,
+      },
+      repair_breakdown: {
+        sample_limit: 25,
+        by_status_reason: [
+          {
+            status: 'blocked',
+            reason: 'codex_cli_typed_closeout_not_materialized',
+            attempt_count: 1,
+          },
+          {
+            status: 'blocked',
+            reason: 'typed_closeout_packet_required',
+            attempt_count: 1,
+          },
+          {
+            status: 'blocked',
+            reason: 'temporal_stage_attempt_completed_missing_typed_closeout',
+            attempt_count: 1,
+          },
+          {
+            status: 'failed',
+            reason: 'typed_closeout_stage_attempt_id_mismatch',
+            attempt_count: 1,
+          },
+          {
+            status: 'failed',
+            reason: 'typed_closeout_packet_rejection',
+            attempt_count: 1,
+          },
+          {
+            status: 'blocked',
+            reason: 'domain_owner_answer_required',
+            attempt_count: 1,
+          },
+        ],
+        by_status_stage_reason: [],
+      },
+    },
+    authority_boundary: {
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_write_domain_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_domain_ready: false,
+      can_authorize_quality_verdict: false,
+      can_authorize_export_verdict: false,
+      provider_completion_is_domain_ready: false,
+    },
+  } as unknown as Parameters<typeof buildRunwayRecoveryRepairProjection>[0]);
+
+  assert.equal(repair.default_repair_command, 'opl family-runtime attempt list --json');
+  assert.equal(repair.selected_repair_action?.command, 'opl family-runtime attempt list --json');
+  assert.equal(repair.selected_repair_action?.mutation, false);
+  assert.deepEqual(repair.attempt_repair_queue.summary, {
+    repairable_attempt_count: 6,
+    blocked_attempt_count: 4,
+    failed_attempt_count: 2,
+    closeout_repair_attempt_count: 5,
+  });
+  assert.deepEqual(repair.repair_classes.filter((repairClass: string) => repairClass.includes('closeout')), [
+    'closeout_materialization_repair',
+    'invalid_typed_closeout_redrive_decision',
+  ]);
+  assert.deepEqual(repair.attempt_repair_queue.items[0], {
+    status: 'blocked_or_failed',
+    repair_class: 'closeout_materialization_or_invalid_typed_closeout',
+    attempt_count: 5,
+    reason: 'closeout_materialization_or_invalid_typed_closeout_requires_query_redrive_decision',
+    command: 'opl family-runtime attempt list --json',
+    mutation: false,
+    blocks_runtime_execution: true,
+    blocks_domain_progress_claim: true,
+  });
+  assert.equal(repair.attempt_repair_queue.authority_boundary.can_write_domain_truth, false);
+  assert.equal(repair.attempt_repair_queue.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(repair.attempt_repair_queue.authority_boundary.provider_completion_is_domain_ready, false);
 });
 
 test('bin/opl routes Runway control-loop sibling commands into OPL CLI', () => {

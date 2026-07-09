@@ -57,6 +57,9 @@ import {
   parseCapturedCloseoutMessage,
 } from './family-runtime-codex-stage-runner-parts/stage-closeout-capture.ts';
 import {
+  buildStructuredCloseoutGate,
+} from './structured-closeout-gate.ts';
+import {
   runCodexInE2bSandbox,
   sandboxAttemptForCodex,
   type E2bCodexStageExecutionSummary,
@@ -752,6 +755,23 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
   }
   const costSummary = codexStageRunnerCostSummaryFrom(result.stdout, runnerMode, sessionUsageRef);
   closeoutPacket = withCodexTokenAccounting(closeoutPacket, costSummary);
+  const structuredOutputSchema = {
+    enabled: outputSchemaCapability.supported,
+    policy: outputSchemaCapability.policy,
+    provider: outputSchemaCapability.provider,
+  };
+  const structuredCloseoutGate = buildStructuredCloseoutGate({
+    attempt: input.attempt,
+    closeoutPacket,
+    blockedReason: primaryBlockedReason,
+    closeoutRejection,
+    outputSchema: structuredOutputSchema,
+    outputLastMessageCaptureEnabled: !runInSandbox,
+    sessionRecoveryStatus,
+    sessionRecoveryAttempts,
+    closeoutEnforcementStatus,
+    domainReceiptRecoveryStatus,
+  });
   const sandboxOutputSummary = sandboxExecution
     ? {
         sandbox_execution: sandboxExecution,
@@ -797,11 +817,10 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
         ? { captured_last_message_chars: capturedLastMessage.message.length }
         : {}),
       structured_output_schema: {
-        enabled: outputSchemaCapability.supported,
-        policy: outputSchemaCapability.policy,
-        provider: outputSchemaCapability.provider,
+        ...structuredOutputSchema,
         output_last_message_capture_enabled: true,
       },
+      structured_closeout_gate: structuredCloseoutGate,
       ...(result.activeCommand
         ? {
             active_command: {

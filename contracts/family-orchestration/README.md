@@ -35,6 +35,8 @@ The active stage-led contract rules are:
 9. Descriptor readiness, read-model availability, generated-surface proof, provider proof, or cleanup proof never equals domain ready, artifact ready, or production evidence complete.
 10. Every blocked or incomplete boundary reports a typed blocker, human gate, receipt conflict, or route-back ref instead of a fallback verdict.
 
+`StructuredCloseoutGate` is the OPL Framework / Runway primitive that enforces rule 10 at stage-attempt closeout. The selected executor may be `Codex CLI`, but `Codex CLI` prose, provider completion, tests passing, file presence, docs updates, read-model refresh, or recovery-repair projection are not closeout authority. OPL accepts only a structured closeout packet / refs, then records transport closeout, routes owner refs, or fails closed with a provider-runtime closeout blocker. Format drift follows `terminal JSON capture -> session recovery -> same-session enforcement -> domain receipt recovery if applicable -> provider-runtime closeout blocker -> recovery-repair projection`. Repair / redrive is a query and decision surface only; it must not forge typed blockers, owner receipts, human gates, domain truth, artifact bodies, memory bodies, quality verdicts, runtime readiness, domain readiness, or production readiness.
+
 ## Ownership Boundary
 
 `one-person-lab` owns:

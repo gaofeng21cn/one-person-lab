@@ -81,6 +81,59 @@ export type CodexStageRunnerProcessOutputSummary = {
     provider: string | null;
     output_last_message_capture_enabled: true;
   };
+  structured_closeout_gate?: {
+    surface_kind: 'opl_structured_closeout_gate';
+    gate_version: 'structured-closeout-gate.v1';
+    gate_owner: 'one-person-lab';
+    gate_status:
+      | 'accepted_typed_closeout'
+      | 'missing_typed_closeout'
+      | 'provider_runtime_blocker_materialized';
+    stage_attempt_id: string | null;
+    stage_id: string | null;
+    accepted_closeout: {
+      surface_kind: TypedStageCloseoutPacket['surface_kind'];
+      closeout_ref_count: number;
+      provider_runtime_blocker_ref_only: boolean;
+    } | null;
+    capture_pipeline: {
+      terminal_message_json_scan: true;
+      output_last_message_capture_enabled: boolean;
+      output_schema: {
+        enabled: boolean;
+        policy: string;
+        provider: string | null;
+      };
+      session_recovery_status: string | null;
+      session_recovery_attempts: number;
+      same_session_enforcement_status: string | null;
+      domain_receipt_recovery_status: string | null;
+    };
+    failure: {
+      repair_class: string;
+      blocked_reason: string | null;
+      closeout_rejection_reason: string | null;
+      provider_completion_is_domain_ready: false;
+    } | null;
+    repair_action: {
+      action_id: 'structured_closeout_repair_redrive_decision';
+      owner: 'opl_runway';
+      reason: string | null;
+      command: string;
+      mutation: false;
+      blocks_runtime_execution: true;
+      blocks_domain_progress_claim: true;
+    } | null;
+    authority_boundary: {
+      opl: 'structured_closeout_transport_gate_only';
+      domain: 'truth_quality_artifact_gate_owner';
+      can_write_domain_truth: false;
+      can_create_owner_receipt: false;
+      can_create_typed_blocker: false;
+      can_authorize_domain_ready: false;
+      provider_completion_is_domain_ready: false;
+    };
+  };
   active_command?: {
     tool_call_id: string;
     title: string;

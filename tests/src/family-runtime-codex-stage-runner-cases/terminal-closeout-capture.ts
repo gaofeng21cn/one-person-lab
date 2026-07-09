@@ -58,6 +58,22 @@ exit 64
       receipt.closeout_packet?.route_impact?.provider_blocker_reason,
       'codex_cli_typed_closeout_not_materialized',
     );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.gate_status,
+      'provider_runtime_blocker_materialized',
+    );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
+      'closeout_materialization',
+    );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.repair_action?.mutation,
+      false,
+    );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.authority_boundary.can_write_domain_truth,
+      false,
+    );
     assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
     assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
     const processOutputSummary = receipt.process_output_summary;
@@ -113,6 +129,15 @@ exit 64
     assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-terminal-closeout']);
     assert.deepEqual(receipt.closeout_packet?.consumed_refs, ['paper:draft.md']);
     assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.gate_status,
+      'accepted_typed_closeout',
+    );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.accepted_closeout?.closeout_ref_count,
+      1,
+    );
+    assert.equal(receipt.process_output_summary?.structured_closeout_gate?.repair_action, null);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
@@ -424,6 +449,18 @@ exit 64
     ]);
     assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat_current_attempt');
     assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.gate_status,
+      'provider_runtime_blocker_materialized',
+    );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
+      'closeout_identity_mismatch',
+    );
+    assert.equal(
+      receipt.process_output_summary?.structured_closeout_gate?.failure?.closeout_rejection_reason,
+      'stage_attempt_id_mismatch',
+    );
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
