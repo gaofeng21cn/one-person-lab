@@ -7,6 +7,24 @@ import path from 'node:path';
 import { createFakeCodexFixture } from '../cli/helpers.ts';
 import { runPublicCodexStageRunner } from '../family-runtime-codex-stage-runner-helpers.ts';
 
+async function runWithFakeCodex(
+  { fixtureRoot, codexPath }: ReturnType<typeof createFakeCodexFixture>,
+  input: Parameters<typeof runPublicCodexStageRunner>[0],
+) {
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    return await runPublicCodexStageRunner(input);
+  } finally {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 test('Codex stage runner rejects terminal prose-prefixed closeout JSON', async () => {
   const closeout = {
     surface_kind: 'domain_stage_closeout_packet',
@@ -33,76 +51,65 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_prose_prefixed_closeout_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:prose-prefixed-closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_prose_prefixed_closeout_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:prose-prefixed-closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:prose-prefixed-closeout'],
+    },
+    stagePacketRef: 'packet:prose-prefixed-closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'opl://stage-attempts/sat_prose_prefixed_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
-    ]);
-    assert.equal(
-      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-      'codex_cli_typed_closeout_not_materialized',
-    );
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.gate_status,
-      'provider_runtime_blocker_materialized',
-    );
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
-      'closeout_materialization',
-    );
-    const capturePipeline = receipt.process_output_summary?.structured_closeout_gate?.capture_pipeline as
-      | Record<string, unknown>
-      | undefined;
-    assert.equal(capturePipeline?.free_text_closeout_accepted, false);
-    assert.equal(capturePipeline?.terminal_json_exact_object_required, true);
-    assert.equal(capturePipeline?.parse_failure_is_stage_progression, false);
-    const failure = receipt.process_output_summary?.structured_closeout_gate?.failure as
-      | Record<string, unknown>
-      | undefined;
-    assert.equal(failure?.output_protocol_drift, true);
-    assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object');
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.repair_action?.mutation,
-      false,
-    );
-    const repairAction = receipt.process_output_summary?.structured_closeout_gate?.repair_action as
-      | Record<string, unknown>
-      | undefined;
-    assert.equal(repairAction?.repair_kind, 'output_protocol_drift');
-    assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object');
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.authority_boundary.can_write_domain_truth,
-      false,
-    );
-    assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
-    assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
-    const processOutputSummary = receipt.process_output_summary;
-    assert.ok(processOutputSummary, 'codex_cli runner receipt must include process_output_summary.');
-    assert.equal(processOutputSummary.final_message_chars > JSON.stringify(closeout).length, true);
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+    'opl://stage-attempts/sat_prose_prefixed_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
+  ]);
+  assert.equal(
+    receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+    'codex_cli_typed_closeout_not_materialized',
+  );
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.gate_status,
+    'provider_runtime_blocker_materialized',
+  );
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
+    'closeout_materialization',
+  );
+  const capturePipeline = receipt.process_output_summary?.structured_closeout_gate?.capture_pipeline as
+    | Record<string, unknown>
+    | undefined;
+  assert.equal(capturePipeline?.free_text_closeout_accepted, false);
+  assert.equal(capturePipeline?.terminal_json_exact_object_required, true);
+  assert.equal(capturePipeline?.parse_failure_is_stage_progression, false);
+  const failure = receipt.process_output_summary?.structured_closeout_gate?.failure as
+    | Record<string, unknown>
+    | undefined;
+  assert.equal(failure?.output_protocol_drift, true);
+  assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object');
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.repair_action?.mutation,
+    false,
+  );
+  const repairAction = receipt.process_output_summary?.structured_closeout_gate?.repair_action as
+    | Record<string, unknown>
+    | undefined;
+  assert.equal(repairAction?.repair_kind, 'output_protocol_drift');
+  assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object');
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.authority_boundary.can_write_domain_truth,
+    false,
+  );
+  assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
+  assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
+  const processOutputSummary = receipt.process_output_summary;
+  assert.ok(processOutputSummary, 'codex_cli runner receipt must include process_output_summary.');
+  assert.equal(processOutputSummary.final_message_chars > JSON.stringify(closeout).length, true);
 });
 
 test('Codex stage runner rejects terminal JSON missing typed closeout contract fields', async () => {
@@ -146,55 +153,44 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-    const previousCodexBin = process.env.OPL_CODEX_BIN;
-    try {
-      process.env.OPL_CODEX_BIN = codexPath;
-      const receipt = await runPublicCodexStageRunner({
-        attempt: {
-          stage_attempt_id: entry.attemptId,
-          stage_id: 'domain_owner/default-executor-dispatch',
-          workspace_locator: {
-            workspace_root: fixtureRoot,
-          },
-          checkpoint_refs: [`checkpoint:${entry.attemptId}`],
+    const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+      attempt: {
+        stage_attempt_id: entry.attemptId,
+        stage_id: 'domain_owner/default-executor-dispatch',
+        workspace_locator: {
+          workspace_root: fixtureRoot,
         },
-        stagePacketRef: `packet:${entry.attemptId}`,
-        runnerMode: 'codex_cli',
-        timeoutMs: 10_000,
-      });
+        checkpoint_refs: [`checkpoint:${entry.attemptId}`],
+      },
+      stagePacketRef: `packet:${entry.attemptId}`,
+      runnerMode: 'codex_cli',
+      timeoutMs: 10_000,
+    });
 
-      assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet', entry.name);
-      assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-        `opl://stage-attempts/${entry.attemptId}/runtime-blockers/codex_cli_typed_closeout_not_materialized`,
-      ], entry.name);
-      assert.equal(
-        receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-        'codex_cli_typed_closeout_not_materialized',
-        entry.name,
-      );
-      const gate = receipt.process_output_summary?.structured_closeout_gate;
-      assert.equal(gate?.gate_status, 'provider_runtime_blocker_materialized', entry.name);
-      assert.equal(gate?.accepted_closeout, null, entry.name);
-      const capturePipeline = gate?.capture_pipeline as Record<string, unknown> | undefined;
-      assert.equal(capturePipeline?.free_text_closeout_accepted, false, entry.name);
-      assert.equal(capturePipeline?.terminal_json_exact_object_required, true, entry.name);
-      assert.equal(capturePipeline?.parse_failure_is_stage_progression, false, entry.name);
-      const failure = gate?.failure as Record<string, unknown> | undefined;
-      assert.equal(failure?.output_protocol_drift, true, entry.name);
-      assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
-      assert.equal(failure?.provider_completion_is_domain_ready, false, entry.name);
-      const repairAction = gate?.repair_action as Record<string, unknown> | undefined;
-      assert.equal(repairAction?.repair_kind, 'output_protocol_drift', entry.name);
-      assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
-      assert.equal(repairAction?.blocks_domain_progress_claim, true, entry.name);
-    } finally {
-      if (previousCodexBin === undefined) {
-        delete process.env.OPL_CODEX_BIN;
-      } else {
-        process.env.OPL_CODEX_BIN = previousCodexBin;
-      }
-      fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    }
+    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet', entry.name);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+      `opl://stage-attempts/${entry.attemptId}/runtime-blockers/codex_cli_typed_closeout_not_materialized`,
+    ], entry.name);
+    assert.equal(
+      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+      'codex_cli_typed_closeout_not_materialized',
+      entry.name,
+    );
+    const gate = receipt.process_output_summary?.structured_closeout_gate;
+    assert.equal(gate?.gate_status, 'provider_runtime_blocker_materialized', entry.name);
+    assert.equal(gate?.accepted_closeout, null, entry.name);
+    const capturePipeline = gate?.capture_pipeline as Record<string, unknown> | undefined;
+    assert.equal(capturePipeline?.free_text_closeout_accepted, false, entry.name);
+    assert.equal(capturePipeline?.terminal_json_exact_object_required, true, entry.name);
+    assert.equal(capturePipeline?.parse_failure_is_stage_progression, false, entry.name);
+    const failure = gate?.failure as Record<string, unknown> | undefined;
+    assert.equal(failure?.output_protocol_drift, true, entry.name);
+    assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
+    assert.equal(failure?.provider_completion_is_domain_ready, false, entry.name);
+    const repairAction = gate?.repair_action as Record<string, unknown> | undefined;
+    assert.equal(repairAction?.repair_kind, 'output_protocol_drift', entry.name);
+    assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
+    assert.equal(repairAction?.blocks_domain_progress_claim, true, entry.name);
   }
 });
 
@@ -218,43 +214,32 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_live_closeout_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_live_closeout_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:closeout'],
+    },
+    stagePacketRef: 'packet:closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-terminal-closeout']);
-    assert.deepEqual(receipt.closeout_packet?.consumed_refs, ['paper:draft.md']);
-    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.gate_status,
-      'accepted_typed_closeout',
-    );
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.accepted_closeout?.closeout_ref_count,
-      1,
-    );
-    assert.equal(receipt.process_output_summary?.structured_closeout_gate?.repair_action, null);
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-terminal-closeout']);
+  assert.deepEqual(receipt.closeout_packet?.consumed_refs, ['paper:draft.md']);
+  assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.gate_status,
+    'accepted_typed_closeout',
+  );
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.accepted_closeout?.closeout_ref_count,
+    1,
+  );
+  assert.equal(receipt.process_output_summary?.structured_closeout_gate?.repair_action, null);
 });
 
 test('Codex stage runner rejects MAS PaperMission stage-route closeout without user stage log', async () => {
@@ -275,53 +260,42 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_paper_route_record_only_closeout_test',
-        stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
-        domain_id: 'medautoscience',
-        workspace_locator: {
-          surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
-          task_kind: 'paper_mission/stage-route',
-          runtime_request_kind: 'mas_paper_mission_stage_route',
-          workspace_root: fixtureRoot,
-          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
-          route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
-        },
-        checkpoint_refs: ['paper-mission-stage-packet:dm003-record-only'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_paper_route_record_only_closeout_test',
+      stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
+      domain_id: 'medautoscience',
+      workspace_locator: {
+        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+        task_kind: 'paper_mission/stage-route',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        workspace_root: fixtureRoot,
+        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
       },
-      stagePacketRef: 'paper-mission-stage-packet:dm003-record-only',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['paper-mission-stage-packet:dm003-record-only'],
+    },
+    stagePacketRef: 'paper-mission-stage-packet:dm003-record-only',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'opl://stage-attempts/sat_paper_route_record_only_closeout_test/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing',
-    ]);
-    assert.equal(
-      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
-    );
-    assert.equal(
-      receipt.process_output_summary?.closeout_rejection_reason,
-      'paper_mission_stage_route_user_stage_log_missing',
-    );
-    assert.equal(
-      receipt.process_output_summary?.blocked_reason,
-      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
-    );
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+    'opl://stage-attempts/sat_paper_route_record_only_closeout_test/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+  ]);
+  assert.equal(
+    receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+    'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+  );
+  assert.equal(
+    receipt.process_output_summary?.closeout_rejection_reason,
+    'paper_mission_stage_route_user_stage_log_missing',
+  );
+  assert.equal(
+    receipt.process_output_summary?.blocked_reason,
+    'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+  );
 });
 
 test('Codex stage runner accepts MAS PaperMission stage-route closeout when attempt route impact carries user stage log', async () => {
@@ -372,48 +346,37 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_paper_route_attempt_route_impact_stage_log_test',
-        stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
-        domain_id: 'medautoscience',
-        workspace_locator: {
-          surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
-          task_kind: 'paper_mission/stage-route',
-          runtime_request_kind: 'mas_paper_mission_stage_route',
-          workspace_root: fixtureRoot,
-          study_id: '002-dm-china-us-mortality-attribution',
-          route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
-        },
-        route_impact: {
-          decision: 'route_back',
-          domain_ready_verdict: 'domain_gate_pending',
-          user_stage_log: userStageLog,
-        },
-        checkpoint_refs: ['paper-mission-stage-packet:dm002-route-impact-stage-log'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_paper_route_attempt_route_impact_stage_log_test',
+      stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
+      domain_id: 'medautoscience',
+      workspace_locator: {
+        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
+        task_kind: 'paper_mission/stage-route',
+        runtime_request_kind: 'mas_paper_mission_stage_route',
+        workspace_root: fixtureRoot,
+        study_id: '002-dm-china-us-mortality-attribution',
+        route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
       },
-      stagePacketRef: 'paper-mission-stage-packet:dm002-route-impact-stage-log',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      route_impact: {
+        decision: 'route_back',
+        domain_ready_verdict: 'domain_gate_pending',
+        user_stage_log: userStageLog,
+      },
+      checkpoint_refs: ['paper-mission-stage-packet:dm002-route-impact-stage-log'],
+    },
+    stagePacketRef: 'paper-mission-stage-packet:dm002-route-impact-stage-log',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'receipt:paper-route-attempt-route-impact-stage-log',
-    ]);
-    assert.equal(receipt.closeout_packet?.route_impact, undefined);
-    assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
-    assert.equal(receipt.process_output_summary?.closeout_rejection_reason, undefined);
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+    'receipt:paper-route-attempt-route-impact-stage-log',
+  ]);
+  assert.equal(receipt.closeout_packet?.route_impact, undefined);
+  assert.equal(receipt.process_output_summary?.blocked_reason, undefined);
+  assert.equal(receipt.process_output_summary?.closeout_rejection_reason, undefined);
 });
 
 test('Codex stage runner captures terminal typed closeout from Codex output-last-message file', async () => {
@@ -466,10 +429,8 @@ printf '{"type":"thread.started","thread_id":"thread-output-last-message-closeou
 printf '{"type":"turn.completed"}\\n'
 exit 0
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
+    const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
       attempt: {
         stage_attempt_id: 'sat_output_last_message_closeout_test',
         stage_id: 'domain_owner/default-executor-dispatch',
@@ -503,12 +464,6 @@ exit 0
     const captureRoot = fs.readFileSync(captureRootLog, 'utf8').trim();
     assert.equal(fs.existsSync(captureRoot), false);
   } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(captureLogRoot, { recursive: true, force: true });
   }
 });
@@ -535,49 +490,38 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_current_attempt',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:stale-closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_current_attempt',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:stale-closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:stale-closeout'],
+    },
+    stagePacketRef: 'packet:stale-closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'opl://stage-attempts/sat_current_attempt/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
-    ]);
-    assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat_current_attempt');
-    assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.gate_status,
-      'provider_runtime_blocker_materialized',
-    );
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
-      'closeout_identity_mismatch',
-    );
-    assert.equal(
-      receipt.process_output_summary?.structured_closeout_gate?.failure?.closeout_rejection_reason,
-      'stage_attempt_id_mismatch',
-    );
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+    'opl://stage-attempts/sat_current_attempt/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
+  ]);
+  assert.equal(receipt.closeout_packet?.stage_attempt_id, 'sat_current_attempt');
+  assert.equal(receipt.process_output_summary?.closeout_rejection_reason, 'stage_attempt_id_mismatch');
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.gate_status,
+    'provider_runtime_blocker_materialized',
+  );
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
+    'closeout_identity_mismatch',
+  );
+  assert.equal(
+    receipt.process_output_summary?.structured_closeout_gate?.failure?.closeout_rejection_reason,
+    'stage_attempt_id_mismatch',
+  );
 });
 
 test('Codex stage runner captures terminal typed closeout from assistant message events', async () => {
@@ -609,35 +553,24 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_message_closeout_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:message-closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_message_closeout_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:message-closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:message-closeout'],
+    },
+    stagePacketRef: 'packet:message-closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'domain_stage_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-message-closeout']);
-    assert.deepEqual(receipt.closeout_packet?.writeback_receipt_refs, ['memory:quality-repair-closeout']);
-    assert.equal(receipt.progress_summary.thread_id, 'thread-message-closeout');
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'domain_stage_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-message-closeout']);
+  assert.deepEqual(receipt.closeout_packet?.writeback_receipt_refs, ['memory:quality-repair-closeout']);
+  assert.equal(receipt.progress_summary.thread_id, 'thread-message-closeout');
 });
 
 test('Codex stage runner captures terminal typed closeout from event_msg payload agent messages', async () => {
@@ -667,38 +600,27 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_event_message_closeout_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:event-message-closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_event_message_closeout_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:event-message-closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:event-message-closeout'],
+    },
+    stagePacketRef: 'packet:event-message-closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-event-message-closeout']);
-    assert.deepEqual(receipt.closeout_packet?.consumed_refs, [
-      'paper:draft.md',
-      'paper/build/review_manuscript.md',
-    ]);
-    assert.equal(receipt.progress_summary.thread_id, 'thread-event-message-closeout');
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-event-message-closeout']);
+  assert.deepEqual(receipt.closeout_packet?.consumed_refs, [
+    'paper:draft.md',
+    'paper/build/review_manuscript.md',
+  ]);
+  assert.equal(receipt.progress_summary.thread_id, 'thread-event-message-closeout');
 });
 
 test('Codex stage runner reconstructs a terminal closeout split across adjacent final event chunks', async () => {
@@ -752,35 +674,24 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_split_final_closeout_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:split-final-closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_split_final_closeout_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:split-final-closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:split-final-closeout'],
+    },
+    stagePacketRef: 'packet:split-final-closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'domain_stage_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-split-final-closeout']);
-    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'typed_blocker');
-    assert.equal(receipt.process_output_summary?.final_message_chars, closeoutText.length + 19);
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'domain_stage_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, ['receipt:codex-split-final-closeout']);
+  assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'typed_blocker');
+  assert.equal(receipt.process_output_summary?.final_message_chars, closeoutText.length + 19);
 });
 
 test('Codex stage runner ignores non-terminal typed closeout-shaped progress text', async () => {
@@ -800,37 +711,26 @@ fi
 echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  try {
-    process.env.OPL_CODEX_BIN = codexPath;
-    const receipt = await runPublicCodexStageRunner({
-      attempt: {
-        stage_attempt_id: 'sat_nonterminal_closeout_test',
-        stage_id: 'domain_owner/default-executor-dispatch',
-        workspace_locator: {
-          workspace_root: fixtureRoot,
-        },
-        checkpoint_refs: ['checkpoint:nonterminal-closeout'],
+  const receipt = await runWithFakeCodex({ fixtureRoot, codexPath }, {
+    attempt: {
+      stage_attempt_id: 'sat_nonterminal_closeout_test',
+      stage_id: 'domain_owner/default-executor-dispatch',
+      workspace_locator: {
+        workspace_root: fixtureRoot,
       },
-      stagePacketRef: 'packet:nonterminal-closeout',
-      runnerMode: 'codex_cli',
-      timeoutMs: 10_000,
-    });
+      checkpoint_refs: ['checkpoint:nonterminal-closeout'],
+    },
+    stagePacketRef: 'packet:nonterminal-closeout',
+    runnerMode: 'codex_cli',
+    timeoutMs: 10_000,
+  });
 
-    assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'opl://stage-attempts/sat_nonterminal_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
-    ]);
-    assert.equal(
-      receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-      'codex_cli_typed_closeout_not_materialized',
-    );
-  } finally {
-    if (previousCodexBin === undefined) {
-      delete process.env.OPL_CODEX_BIN;
-    } else {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    }
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
+  assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+    'opl://stage-attempts/sat_nonterminal_closeout_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
+  ]);
+  assert.equal(
+    receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+    'codex_cli_typed_closeout_not_materialized',
+  );
 });
