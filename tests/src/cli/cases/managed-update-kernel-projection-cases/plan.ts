@@ -77,3 +77,44 @@ exit 2
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('scoped update plan does not inspect unrelated companion tools', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-plan-scoped-'));
+  const markerFile = path.join(homeRoot, 'officecli-invoked');
+  const fakeOfficeCli = path.join(homeRoot, 'officecli');
+  fs.writeFileSync(
+    fakeOfficeCli,
+    `#!/usr/bin/env bash\necho invoked > ${JSON.stringify(markerFile)}\nexit 2\n`,
+    { mode: 0o755 },
+  );
+  const codexFixture = createFakeCodexFixture(`
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.134.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 2
+`);
+
+  try {
+    const output = runCli(['update', 'plan', '--component', 'capability_packages'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'state'),
+      OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+      OPL_FAMILY_WORKSPACE_ROOT: path.join(homeRoot, 'family'),
+      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
+      OPL_OFFICECLI_BIN: fakeOfficeCli,
+      PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+    }) as { managed_update: { components: Array<{ component_id: string }> } };
+
+    assert.deepEqual(
+      output.managed_update.components.map((entry) => entry.component_id),
+      ['capability_packages'],
+    );
+    assert.equal(fs.existsSync(markerFile), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});

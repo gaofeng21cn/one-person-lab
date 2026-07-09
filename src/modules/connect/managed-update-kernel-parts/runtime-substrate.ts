@@ -17,11 +17,21 @@ import {
 } from '../managed-update-owner-boundary.ts';
 import { asRecord, booleanValue, stringValue } from './shared.ts';
 
-export function buildRuntimeSubstrateComponent(systemEnvironment: Record<string, unknown>, channel: string): ManagedUpdateComponent {
+type RuntimeSubstrateComponentOptions = {
+  allowFrameworkChannelLookup?: boolean;
+};
+
+export function buildRuntimeSubstrateComponent(
+  systemEnvironment: Record<string, unknown>,
+  channel: string,
+  options: RuntimeSubstrateComponentOptions = {},
+): ManagedUpdateComponent {
   const coreEngines = asRecord(systemEnvironment.core_engines);
   const codex = asRecord(coreEngines?.codex);
   const runtimeSubstrate = asRecord(codex?.runtime_substrate_updater) ?? asRecord(codex?.runtime_toolchain_updater);
-  const frameworkRuntime = readOplFrameworkRuntimeUpdateStatus(resolveProjectRoot());
+  const frameworkRuntime = readOplFrameworkRuntimeUpdateStatus(resolveProjectRoot(), {
+    allowChannelLookup: options.allowFrameworkChannelLookup,
+  });
   const installed = booleanValue(codex, 'installed') === true;
   const updateAvailable = booleanValue(codex, 'update_available') === true;
   const frameworkUpdateAvailable = frameworkRuntime.update_available && !frameworkRuntime.target_is_developer_checkout;

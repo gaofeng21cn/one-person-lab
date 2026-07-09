@@ -7,7 +7,7 @@ import {
   resolveOfficeCliTool,
   type OplCompanionToolSyncItem,
 } from './install-companions-parts/tools.ts';
-import { buildOplEnvironment } from './system-installation/environment.ts';
+import { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 import { buildOplModules } from './system-installation/modules.ts';
 import { scholarSkillsStateForAgentPackageChannel } from './system-installation/scholarskills-package-channel.ts';
 import {
@@ -25,6 +25,7 @@ import {
   MANAGED_UPDATE_OWNER_ACTIONS,
   MANAGED_UPDATE_OWNER_FIELDS,
   MANAGED_UPDATE_KERNEL_ID,
+  COMPONENT_ALIASES,
   managedUpdateComponent,
   managedUpdateOperationMode,
   managedUpdateReceiptWritePolicy,
@@ -49,6 +50,23 @@ import {
 import { buildInstallationCarrierComponent } from './managed-update-kernel-parts/installation-carrier.ts';
 import { buildRuntimeSubstrateComponent } from './managed-update-kernel-parts/runtime-substrate.ts';
 import { asRecord, booleanValue, stringValue } from './managed-update-kernel-parts/shared.ts';
+
+function requestedComponentId(componentId: string | undefined) {
+  const requested = componentId?.trim();
+  return requested ? COMPONENT_ALIASES[requested] ?? requested : null;
+}
+
+function shouldBuildComponent(requested: string | null, componentId: ManagedUpdateProviderId) {
+  return !requested || requested === componentId;
+}
+
+function buildManagedUpdateRuntimeEnvironment() {
+  return {
+    core_engines: {
+      codex: resolveCodexVersion(),
+    },
+  };
+}
 
 function moduleState(module: Record<string, unknown>): ManagedUpdateComponentState {
   const installed = booleanValue(module, 'installed') === true;
@@ -750,20 +768,41 @@ export async function buildManagedUpdateKernelProjection(
   input: ManagedUpdateKernelInput,
 ) {
   const channel = readOplUpdateChannel().channel;
-  const environment = (await buildOplEnvironment(contracts)).system_environment as Record<string, unknown>;
-  const modulesPayload = buildOplModules({ profile: 'fast' }).modules;
-  const modules = [
-    ...(modulesPayload.modules as Record<string, unknown>[]),
-    scholarSkillsStateForAgentPackageChannel() as unknown as Record<string, unknown>,
-  ];
-  const runtimeSubstrate = buildRuntimeSubstrateComponent(environment, channel);
-  const capabilityPackages = buildCapabilityPackagesComponent(modules, channel);
-  const codexSurface = buildCodexSurfaceComponent(capabilityPackages, channel);
-  const companionTools = buildCompanionToolsComponent(channel);
-  const workflowProfile = buildWorkflowProfileComponent(channel);
-  const installationCarrier = buildInstallationCarrierComponent(channel);
+  const requested = requestedComponentId(input.componentId);
+  const components: ManagedUpdateComponent[] = [];
+
+  if (shouldBuildComponent(requested, 'installation_carrier')) {
+    components.push(buildInstallationCarrierComponent(channel));
+  }
+  if (shouldBuildComponent(requested, 'runtime_substrate')) {
+    components.push(
+      buildRuntimeSubstrateComponent(buildManagedUpdateRuntimeEnvironment(), channel, {
+        allowFrameworkChannelLookup: input.operation !== 'status',
+      }),
+    );
+  }
+  if (!requested || requested === 'capability_packages' || requested === 'codex_surface') {
+    const modulesPayload = buildOplModules({ profile: 'fast' }).modules;
+    const modules = [
+      ...(modulesPayload.modules as Record<string, unknown>[]),
+      scholarSkillsStateForAgentPackageChannel() as unknown as Record<string, unknown>,
+    ];
+    const capabilityPackages = buildCapabilityPackagesComponent(modules, channel);
+    if (shouldBuildComponent(requested, 'capability_packages')) {
+      components.push(capabilityPackages);
+    }
+    if (shouldBuildComponent(requested, 'codex_surface')) {
+      components.push(buildCodexSurfaceComponent(capabilityPackages, channel));
+    }
+  }
+  if (shouldBuildComponent(requested, 'companion_tools')) {
+    components.push(buildCompanionToolsComponent(channel));
+  }
+  if (shouldBuildComponent(requested, 'workflow_profile')) {
+    components.push(buildWorkflowProfileComponent(channel));
+  }
   const selectedComponents = filterManagedUpdateComponents(
-    [installationCarrier, runtimeSubstrate, capabilityPackages, codexSurface, companionTools, workflowProfile],
+    components,
     input.componentId,
   ).map(bindOwnerReceiptProjection);
 

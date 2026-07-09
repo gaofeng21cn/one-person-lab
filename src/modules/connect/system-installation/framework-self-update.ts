@@ -772,14 +772,18 @@ export function runOplFrameworkSelfRollback(input: { targetRoot: string }): OplF
   }
 }
 
-export function readOplFrameworkRuntimeUpdateStatus(defaultTargetRoot: string) {
+export function readOplFrameworkRuntimeUpdateStatus(
+  defaultTargetRoot: string,
+  options: { allowChannelLookup?: boolean } = {},
+) {
   const targetRoot = resolveFrameworkUpdateTargetRoot(defaultTargetRoot);
   const sourceArchiveRaw = resolveFrameworkUpdateArchive();
   const sourceRootRaw = resolveFrameworkUpdateSource();
   const sourceArchive = sourceArchiveRaw ? path.resolve(sourceArchiveRaw) : null;
   const sourceRoot = sourceRootRaw ? path.resolve(sourceRootRaw) : null;
   let channelEntry: ReturnType<typeof readFrameworkChannelEntry> | null = null;
-  if (!sourceArchive && !sourceRoot) {
+  const channelLookupSkipped = options.allowChannelLookup === false && !sourceArchive && !sourceRoot;
+  if (!sourceArchive && !sourceRoot && options.allowChannelLookup !== false) {
     try {
       channelEntry = readFrameworkChannelEntry();
     } catch {
@@ -800,6 +804,7 @@ export function readOplFrameworkRuntimeUpdateStatus(defaultTargetRoot: string) {
     source_root: sourceRoot,
     source_root_configured: Boolean(sourceRoot),
     source_root_exists: Boolean(sourceRoot && fs.existsSync(sourceRoot) && fs.statSync(sourceRoot).isDirectory()),
+    channel_lookup_skipped: channelLookupSkipped,
     channel_artifact: channelEntry?.artifact ?? null,
     channel_version: channelEntry?.channel_version ?? null,
     channel_source_archive_sha256: channelEntry?.source_archive_sha256 ?? null,
