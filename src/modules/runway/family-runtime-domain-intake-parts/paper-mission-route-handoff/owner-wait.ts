@@ -77,6 +77,9 @@ export function ownerWaitProjection(
     can_create_typed_blocker: false,
     can_create_human_gate: false,
     can_claim_paper_progress: false,
+    can_claim_domain_progress: false,
+    can_claim_domain_ready: false,
+    can_claim_quality_verdict: false,
   };
   const nextAction = {
     surface_kind: 'opl_mas_paper_mission_owner_route_next_action',
@@ -107,6 +110,9 @@ export function ownerWaitProjection(
     can_create_owner_receipt: false,
     can_create_typed_blocker: false,
     can_claim_paper_progress: false,
+    can_claim_domain_progress: false,
+    can_claim_domain_ready: false,
+    can_claim_quality_verdict: false,
   };
   const handoffProjection = {
     surface_kind: 'opl_mas_paper_mission_executable_owner_handoff_projection',
@@ -145,6 +151,9 @@ export function ownerWaitProjection(
       can_create_typed_blocker: false,
       can_create_human_gate: false,
       can_claim_paper_progress: false,
+      can_claim_domain_progress: false,
+      can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
     },
   };
   return { ownerRoute, nextAction, handoffProjection };

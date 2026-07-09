@@ -23,6 +23,15 @@ type ResearchFrontierBoardItem = {
   advisory_reason_ref: string | null;
 };
 
+const RESEARCH_FRONTIER_BOARD_COMPATIBILITY_PROFILE = {
+  profile_id: 'research-frontier-board',
+  profile_role: 'domain_specific_compatibility_profile',
+  source_surface: 'research_frontier_board',
+  legacy_carriers: ['research_frontier_board', 'frontier_board', 'opl_research_frontier_projection'],
+  compatibility_only: true,
+  canonical_projection: 'stage_candidate_portfolio',
+} as const;
+
 const BODY_FIELD_NAMES = new Set([
   'body',
   'content',
@@ -139,10 +148,29 @@ function frontierAuthorityBoundary() {
     can_infer_route_decision: false,
     can_authorize_owner_receipt: false,
     can_authorize_typed_blocker: false,
+    can_claim_paper_progress: false,
+    can_claim_domain_progress: false,
     can_authorize_quality_verdict: false,
     can_authorize_domain_ready: false,
     can_mutate_artifact_body: false,
     can_write_domain_truth: false,
+  };
+}
+
+function stageCandidatePortfolioProjection(input: {
+  projectionScope: 'stage_attempt' | 'stage_attempt_workbench';
+  items: ResearchFrontierBoardItem[];
+}) {
+  return {
+    surface_kind: 'stage_candidate_portfolio_refs_projection',
+    canonical_projection_kind: 'stage_candidate_portfolio',
+    projection_scope: input.projectionScope,
+    candidate_count: input.items.length,
+    candidate_status_counts: countBy(input.items.map((item) => item.status)),
+    portfolio_refs: input.items
+      .map((item) => item.ref)
+      .filter((ref): ref is string => Boolean(ref)),
+    authority_boundary: frontierAuthorityBoundary(),
   };
 }
 
@@ -193,6 +221,9 @@ export function buildAttemptResearchFrontierBoard(attempt: ResearchFrontierBoard
   const hasFrontierRefs = items.length > 0 || Boolean(summaryRef || boardRef);
   return {
     surface_kind: 'opl_research_frontier_board_projection',
+    canonical_surface_kind: 'stage_candidate_portfolio_refs_projection',
+    legacy_surface_kind: 'opl_research_frontier_board_projection',
+    compatibility_profile: RESEARCH_FRONTIER_BOARD_COMPATIBILITY_PROFILE,
     projection_scope: 'stage_attempt',
     renderer_role: 'generic_research_frontier_board_refs_shell',
     availability: hasFrontierRefs ? 'frontier_refs_observed' : 'no_frontier_refs',
@@ -206,6 +237,10 @@ export function buildAttemptResearchFrontierBoard(attempt: ResearchFrontierBoard
       boardRef,
       summaryRef,
     }),
+    stage_candidate_portfolio: stageCandidatePortfolioProjection({
+      projectionScope: 'stage_attempt',
+      items,
+    }),
     items,
     authority_boundary: frontierAuthorityBoundary(),
   };
@@ -216,6 +251,9 @@ export function buildWorkbenchResearchFrontierBoard(attempts: ResearchFrontierBo
   const items = perAttempt.flatMap((projection) => projection.items);
   return {
     surface_kind: 'opl_research_frontier_board_projection',
+    canonical_surface_kind: 'stage_candidate_portfolio_refs_projection',
+    legacy_surface_kind: 'opl_research_frontier_board_projection',
+    compatibility_profile: RESEARCH_FRONTIER_BOARD_COMPATIBILITY_PROFILE,
     projection_scope: 'stage_attempt_workbench',
     renderer_role: 'generic_research_frontier_board_refs_shell',
     availability: perAttempt.some((projection) => projection.availability === 'frontier_refs_observed')
@@ -229,6 +267,10 @@ export function buildWorkbenchResearchFrontierBoard(attempts: ResearchFrontierBo
         (count, projection) => count + projection.summary.omitted_body_field_count,
         0,
       ),
+    }),
+    stage_candidate_portfolio: stageCandidatePortfolioProjection({
+      projectionScope: 'stage_attempt_workbench',
+      items,
     }),
     items,
     authority_boundary: frontierAuthorityBoundary(),

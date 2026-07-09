@@ -4,7 +4,21 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 
-const PROFILE_ID = 'bookforge-publication-proof';
+const BOOKFORGE_PUBLICATION_PROOF_PROFILE = {
+  profile_id: 'bookforge-publication-proof',
+  profile_kind: 'domain_dependency_profile',
+  profile_owner: 'opl-bookforge',
+  domain_id: 'opl-bookforge',
+  domain_truth_owner: 'opl-bookforge',
+  source: {
+    source_kind: 'domain_profile_ref',
+    profile_ref: 'bookforge-zh-publication-proof',
+    helper_ref: 'runtime/native_helpers/bookforge_pdf_export.py',
+  },
+  opl_role: 'dependency_environment_check',
+} as const;
+
+const PROFILE_ID = BOOKFORGE_PUBLICATION_PROOF_PROFILE.profile_id;
 
 type DependencyKind = 'executable' | 'latex_package';
 type DependencyRequiredLevel = 'required' | 'optional' | 'legacy_not_required';
@@ -36,9 +50,12 @@ type RepairAction = {
 
 type DependencyDoctor = {
   surface_kind: 'opl_system_dependency_doctor';
+  envelope_kind: 'opl_generic_dependency_doctor';
   profile_id: typeof PROFILE_ID;
-  profile_owner: 'opl_system';
-  domain_scope: 'opl-bookforge';
+  profile: typeof BOOKFORGE_PUBLICATION_PROOF_PROFILE;
+  profile_owner: typeof BOOKFORGE_PUBLICATION_PROOF_PROFILE.profile_owner;
+  domain_scope: typeof BOOKFORGE_PUBLICATION_PROOF_PROFILE.domain_id;
+  opl_role: typeof BOOKFORGE_PUBLICATION_PROOF_PROFILE.opl_role;
   status: 'ready' | 'blocked';
   checked_at: string;
   dependencies: DependencyCheck[];
@@ -51,12 +68,15 @@ type DependencyDoctor = {
   };
   repair_action: RepairAction;
   authority_boundary: {
-    writes_domain_truth: false;
-    writes_manuscript: false;
-    authorizes_publication_ready: false;
-    authorizes_final_export: false;
+    can_write_domain_truth: false;
+    can_write_artifact_body: false;
+    can_authorize_publication_readiness: false;
+    can_authorize_final_export: false;
+    can_authorize_visual_export_readiness: false;
+    can_issue_owner_receipt: false;
     ordinary_writing_progress_blocked_by_this_surface: false;
-    publication_proof_claim_requires_required_dependencies_ready: true;
+    dependency_profile_ready_is_domain_ready: false;
+    profile_required_dependencies_ready: true;
   };
   integration_refs: {
     domain_agent: 'opl-bookforge';
@@ -302,9 +322,12 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
     version: 'g2',
     system_dependency_doctor: {
       surface_kind: 'opl_system_dependency_doctor',
+      envelope_kind: 'opl_generic_dependency_doctor',
       profile_id: PROFILE_ID,
-      profile_owner: 'opl_system',
-      domain_scope: 'opl-bookforge',
+      profile: BOOKFORGE_PUBLICATION_PROOF_PROFILE,
+      profile_owner: BOOKFORGE_PUBLICATION_PROOF_PROFILE.profile_owner,
+      domain_scope: BOOKFORGE_PUBLICATION_PROOF_PROFILE.domain_id,
+      opl_role: BOOKFORGE_PUBLICATION_PROOF_PROFILE.opl_role,
       status: missingRequired.length === 0 ? 'ready' : 'blocked',
       checked_at: new Date().toISOString(),
       dependencies,
@@ -317,12 +340,15 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
       },
       repair_action: buildRepairAction(dependencies, false),
       authority_boundary: {
-        writes_domain_truth: false,
-        writes_manuscript: false,
-        authorizes_publication_ready: false,
-        authorizes_final_export: false,
+        can_write_domain_truth: false,
+        can_write_artifact_body: false,
+        can_authorize_publication_readiness: false,
+        can_authorize_final_export: false,
+        can_authorize_visual_export_readiness: false,
+        can_issue_owner_receipt: false,
         ordinary_writing_progress_blocked_by_this_surface: false,
-        publication_proof_claim_requires_required_dependencies_ready: true,
+        dependency_profile_ready_is_domain_ready: false,
+        profile_required_dependencies_ready: true,
       },
       integration_refs: {
         domain_agent: 'opl-bookforge',

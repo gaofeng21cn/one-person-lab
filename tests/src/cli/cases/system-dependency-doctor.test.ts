@@ -55,7 +55,13 @@ test('system dependency-doctor blocks only the Book Forge proof profile when a r
 
     assert.equal(output.version, 'g2');
     assert.equal(doctor.surface_kind, 'opl_system_dependency_doctor');
+    assert.equal(doctor.envelope_kind, 'opl_generic_dependency_doctor');
     assert.equal(doctor.profile_id, 'bookforge-publication-proof');
+    assert.equal(doctor.profile.profile_kind, 'domain_dependency_profile');
+    assert.equal(doctor.profile.profile_owner, 'opl-bookforge');
+    assert.equal(doctor.profile.source.profile_ref, 'bookforge-zh-publication-proof');
+    assert.equal(doctor.profile.source.helper_ref, 'runtime/native_helpers/bookforge_pdf_export.py');
+    assert.equal(doctor.opl_role, 'dependency_environment_check');
     assert.equal(doctor.status, 'blocked');
     assert.equal(doctor.summary.missing_required_dependency_count, 1);
     assert.equal(doctor.repair_action.status, 'manual_required');
@@ -68,14 +74,15 @@ test('system dependency-doctor blocks only the Book Forge proof profile when a r
       '--apply',
       '--json',
     ]);
-    assert.equal(doctor.authority_boundary.writes_domain_truth, false);
-    assert.equal(doctor.authority_boundary.writes_manuscript, false);
-    assert.equal(doctor.authority_boundary.authorizes_publication_ready, false);
+    assert.equal(doctor.authority_boundary.can_write_domain_truth, false);
+    assert.equal(doctor.authority_boundary.can_write_artifact_body, false);
+    assert.equal(doctor.authority_boundary.can_authorize_publication_readiness, false);
     assert.equal(doctor.authority_boundary.ordinary_writing_progress_blocked_by_this_surface, false);
-    assert.equal(
-      doctor.authority_boundary.publication_proof_claim_requires_required_dependencies_ready,
-      true,
-    );
+    assert.equal(doctor.authority_boundary.can_authorize_final_export, false);
+    assert.equal(doctor.authority_boundary.can_authorize_visual_export_readiness, false);
+    assert.equal(doctor.authority_boundary.can_issue_owner_receipt, false);
+    assert.equal(doctor.authority_boundary.dependency_profile_ready_is_domain_ready, false);
+    assert.equal(doctor.authority_boundary.profile_required_dependencies_ready, true);
 
     const titlesec = doctor.dependencies.find((entry: { dependency_id: string }) =>
       entry.dependency_id === 'titlesec.sty'

@@ -869,10 +869,14 @@
             "required": [
               "surface_kind",
               "connector_id",
+              "connector_profile",
+              "profile_role",
+              "canonical_profile_command",
               "status",
               "request",
               "normalized_results",
               "receipt_refs",
+              "provider_receipt_role",
               "authority_boundary"
             ],
             "additionalProperties": true,
@@ -882,6 +886,15 @@
               },
               "connector_id": {
                 "const": "pubmed"
+              },
+              "connector_profile": {
+                "const": "scientific"
+              },
+              "profile_role": {
+                "const": "pubmed_compatibility_entry_for_optional_scientific_connector_profile"
+              },
+              "canonical_profile_command": {
+                "const": "connect scientific search --provider pubmed"
               },
               "status": {
                 "enum": [
@@ -927,6 +940,9 @@
                   "connector_invocation_ref",
                   "ledger_receipt_candidate_ref"
                 ]
+              },
+              "provider_receipt_role": {
+                "const": "provider_receipt_candidate_only"
               },
               "authority_boundary": {
                 "type": "object",
@@ -1029,12 +1045,14 @@
               "surface_kind",
               "connector_id",
               "connector_profile",
+              "profile_role",
               "provider_id",
               "status",
               "request",
               "normalized_results",
               "result_refs",
               "receipt_refs",
+              "provider_receipt_role",
               "authority_boundary"
             ],
             "additionalProperties": true,
@@ -1047,6 +1065,9 @@
               },
               "connector_profile": {
                 "const": "scientific"
+              },
+              "profile_role": {
+                "const": "optional_scientific_connector_profile"
               },
               "provider_id": {
                 "enum": [
@@ -1113,6 +1134,9 @@
                   "connector_invocation_ref",
                   "ledger_receipt_candidate_ref"
                 ]
+              },
+              "provider_receipt_role": {
+                "const": "provider_receipt_candidate_only"
               },
               "authority_boundary": {
                 "type": "object",
@@ -1215,6 +1239,7 @@
             "required": [
               "surface_kind",
               "connector_id",
+              "verification_role",
               "status",
               "request",
               "provider_evidence",
@@ -1230,6 +1255,9 @@
               },
               "connector_id": {
                 "const": "reference_verification"
+              },
+              "verification_role": {
+                "const": "metadata_provider_receipt_only"
               },
               "status": {
                 "enum": [
@@ -1272,10 +1300,14 @@
                     "provider_id",
                     "status",
                     "receipt_ref",
+                    "receipt_scope",
                     "authority"
                   ],
                   "additionalProperties": true,
                   "properties": {
+                    "receipt_scope": {
+                      "const": "metadata_provider_receipt_only"
+                    },
                     "authority": {
                       "const": "provider_receipt_candidate_only"
                     }
@@ -1312,6 +1344,8 @@
                   "can_create_owner_receipt",
                   "can_create_typed_blocker",
                   "can_claim_reference_truth",
+                  "can_claim_citation_quality",
+                  "can_claim_claim_support",
                   "can_claim_citation_truth",
                   "can_claim_publication_readiness",
                   "can_claim_domain_ready",
@@ -1331,6 +1365,12 @@
                     "const": false
                   },
                   "can_claim_reference_truth": {
+                    "const": false
+                  },
+                  "can_claim_citation_quality": {
+                    "const": false
+                  },
+                  "can_claim_claim_support": {
                     "const": false
                   },
                   "can_claim_citation_truth": {

@@ -76,6 +76,9 @@ export const FORBIDDEN_CLAIM_FLAGS = [
   'can_claim_opl_stage_run_created',
   'can_claim_provider_running',
   'can_claim_paper_progress',
+  'can_claim_domain_progress',
+  'can_claim_domain_ready',
+  'can_claim_quality_verdict',
   'can_claim_runtime_ready',
 ] as const;
 
@@ -155,6 +158,9 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
   can_claim_stage_run_created: false;
   can_claim_provider_running: false;
   can_claim_paper_progress: false;
+  can_claim_domain_progress: false;
+  can_claim_domain_ready: false;
+  can_claim_quality_verdict: false;
   can_claim_runtime_ready: false;
   owner_route: JsonRecord | null;
   next_action: JsonRecord | null;
@@ -196,6 +202,7 @@ export type MasPaperMissionRouteHandoffIntakeReadback = {
     can_claim_paper_progress: false;
     can_claim_domain_progress: false;
     can_claim_domain_ready: false;
+    can_claim_quality_verdict: false;
     can_claim_runtime_ready: false;
   };
   blockers: MasPaperMissionRouteHandoffIntakeBlocker[];
@@ -224,6 +231,7 @@ export type MasPaperMissionRouteHandoffExportReadback = {
     can_claim_paper_progress: false;
     can_claim_domain_progress: false;
     can_claim_domain_ready: false;
+    can_claim_quality_verdict: false;
     can_claim_runtime_ready: false;
   };
 };

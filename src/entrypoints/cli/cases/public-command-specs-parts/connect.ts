@@ -489,7 +489,7 @@ export function buildConnectCommandSpecs(
     },
     'connect pubmed search': {
       usage: 'opl connect pubmed search --query <query> [--limit <n>]',
-      summary: 'Search PubMed through the OPL Connect read-only literature connector and return normalized source refs.',
+      summary: 'Search PubMed through the OPL Connect compatibility entry for the optional scientific connector profile.',
       examples: [
         'opl connect pubmed search --query "diabetes mortality prediction" --limit 5 --json',
       ],
@@ -592,7 +592,7 @@ export function buildConnectCommandSpecs(
     },
     'connect references verify': {
       usage: 'opl connect references verify --references-file <json> [--providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher] [--cache-root <path>] [--max-retries <n>]',
-      summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts.',
+      summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts without citation judgment authority.',
       examples: [
         'opl connect references verify --references-file references.json --providers crossref,pubmed --cache-root .cache/opl-connect --max-retries 1 --json',
       ],

@@ -85,14 +85,32 @@ test('connect references verify exposes registry metadata in command help', () =
 
 test('Connect scientific connector output schemas freeze no-authority flags', () => {
   const contract = loadCliCommandRegistryContract();
+  const pubmed = contract.commands.connect_pubmed_search
+    .output_schema.properties.opl_connect_pubmed;
   const pubmedBoundary = contract.commands.connect_pubmed_search
     .output_schema.properties.opl_connect_pubmed.properties.authority_boundary;
+  const scientific = contract.commands.connect_scientific_search
+    .output_schema.properties.opl_connect_scientific;
   const scientificBoundary = contract.commands.connect_scientific_search
     .output_schema.properties.opl_connect_scientific.properties.authority_boundary;
   const referenceVerification = contract.commands.connect_references_verify
     .output_schema.properties.opl_connect_reference_verification.properties;
   const referenceBoundary = referenceVerification.no_authority_boundary;
   const providerReceiptItem = referenceVerification.provider_receipts.items;
+
+  assert.equal(pubmed.required.includes('connector_profile'), true);
+  assert.equal(pubmed.properties.connector_profile.const, 'scientific');
+  assert.equal(pubmed.required.includes('profile_role'), true);
+  assert.equal(pubmed.properties.profile_role.const, 'pubmed_compatibility_entry_for_optional_scientific_connector_profile');
+  assert.equal(pubmed.required.includes('canonical_profile_command'), true);
+  assert.equal(pubmed.properties.canonical_profile_command.const, 'connect scientific search --provider pubmed');
+  assert.equal(pubmed.required.includes('provider_receipt_role'), true);
+  assert.equal(pubmed.properties.provider_receipt_role.const, 'provider_receipt_candidate_only');
+  assert.equal(scientific.required.includes('profile_role'), true);
+  assert.equal(scientific.properties.profile_role.const, 'optional_scientific_connector_profile');
+  assert.equal(scientific.required.includes('provider_receipt_role'), true);
+  assert.equal(scientific.properties.provider_receipt_role.const, 'provider_receipt_candidate_only');
+  assert.equal(referenceVerification.verification_role.const, 'metadata_provider_receipt_only');
 
   for (const field of [
     'read_only',
@@ -122,6 +140,7 @@ test('Connect scientific connector output schemas freeze no-authority flags', ()
   assert.equal(scientificBoundary.required.includes('can_claim_citation_truth'), true);
   assert.equal(scientificBoundary.properties.can_claim_citation_truth.const, false);
 
+  assert.equal(providerReceiptItem.properties.receipt_scope.const, 'metadata_provider_receipt_only');
   assert.equal(providerReceiptItem.properties.authority.const, 'provider_receipt_candidate_only');
   for (const field of [
     'read_only',
@@ -129,6 +148,8 @@ test('Connect scientific connector output schemas freeze no-authority flags', ()
     'can_create_owner_receipt',
     'can_create_typed_blocker',
     'can_claim_reference_truth',
+    'can_claim_citation_quality',
+    'can_claim_claim_support',
     'can_claim_citation_truth',
     'can_claim_publication_readiness',
     'can_claim_domain_ready',
@@ -142,6 +163,8 @@ test('Connect scientific connector output schemas freeze no-authority flags', ()
     'can_create_owner_receipt',
     'can_create_typed_blocker',
     'can_claim_reference_truth',
+    'can_claim_citation_quality',
+    'can_claim_claim_support',
     'can_claim_citation_truth',
     'can_claim_publication_readiness',
     'can_claim_domain_ready',

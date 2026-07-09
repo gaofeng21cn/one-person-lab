@@ -235,6 +235,9 @@ export async function runOplConnectPubMedSearch(input: PubMedSearchInput) {
     opl_connect_pubmed: {
       surface_kind: 'opl_connect_pubmed_readonly_search',
       connector_id: 'pubmed',
+      connector_profile: 'scientific',
+      profile_role: 'pubmed_compatibility_entry_for_optional_scientific_connector_profile',
+      canonical_profile_command: 'connect scientific search --provider pubmed',
       connector_family: 'OPL Connect',
       status: 'completed',
       request: {
@@ -254,6 +257,7 @@ export async function runOplConnectPubMedSearch(input: PubMedSearchInput) {
         ledger_receipt_candidate_ref: `opl://ledger/connect/pubmed/search/${digest}`,
       },
       provider_receipt_candidate_refs: [`opl://ledger/connect/pubmed/search/${digest}`],
+      provider_receipt_role: 'provider_receipt_candidate_only',
       ownership_boundary: buildOwnershipBoundary(),
       authority_boundary: buildAuthorityBoundary(),
     },

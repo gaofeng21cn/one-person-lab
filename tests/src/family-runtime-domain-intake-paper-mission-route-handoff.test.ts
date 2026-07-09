@@ -193,6 +193,9 @@ test('domain route handoff accepts legacy MAS paper mission carrier as OPL runti
   assert.equal(readback.can_claim_stage_run_created, false);
   assert.equal(readback.can_claim_provider_running, false);
   assert.equal(readback.can_claim_paper_progress, false);
+  assert.equal(readback.can_claim_domain_progress, false);
+  assert.equal(readback.can_claim_domain_ready, false);
+  assert.equal(readback.can_claim_quality_verdict, false);
   assert.equal(readback.can_claim_runtime_ready, false);
   assert.equal(readback.accepted_command_packet.surface_kind, 'mas_paper_mission_opl_route_command_packet');
   assert.equal(readback.accepted_command_packet.canonical_surface_kind, 'domain_route_command_packet');
@@ -273,6 +276,9 @@ test('MAS paper mission materialized readback is normalized into provider projec
   assert.equal(readback.can_claim_runtime_enqueued, false);
   assert.equal(readback.can_claim_provider_running, false);
   assert.equal(readback.can_claim_paper_progress, false);
+  assert.equal(readback.can_claim_domain_progress, false);
+  assert.equal(readback.can_claim_domain_ready, false);
+  assert.equal(readback.can_claim_quality_verdict, false);
   assert.equal(readback.route_identity_key, 'paper-mission-transaction::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::paper-mission::002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::one-shot-migration::route');
   assert.equal(readback.attempt_idempotency_key, '002-dm-china-us-mortality-attribution::gate_clearing_claim_evidence_repair::accepted_candidate::opl-attempt');
   assert.equal(readback.runtime_request_input, null);
@@ -335,6 +341,8 @@ test('MAS paper mission materialized readback keeps typed blocker out of runtime
   assert.equal(readback.runtime_request_input, null);
   assert.equal(readback.runtime_start_requested, false);
   assert.equal(readback.can_claim_paper_progress, false);
+  assert.equal(readback.can_claim_domain_ready, false);
+  assert.equal(readback.can_claim_quality_verdict, false);
 });
 
 test('MAS paper mission materialized readback fails closed without authority boundary', () => {
@@ -460,6 +468,21 @@ test('MAS paper mission route handoff fails closed on unknown missing forbidden 
       ...readyHandoff(),
       can_claim_opl_stage_run_created: true,
     }).blockers[0].reason,
+    'forbidden_authority_claim',
+  );
+
+  assert.equal(
+    intakeMasPaperMissionRouteHandoff({
+      ...readyHandoff(),
+      can_claim_domain_ready: true,
+    }).blockers[0].reason,
+    'forbidden_authority_claim',
+  );
+
+  assert.equal(
+    intakeMasPaperMissionRouteHandoff(materializedReadback({
+      can_claim_quality_verdict: true,
+    })).blockers[0].reason,
     'forbidden_authority_claim',
   );
 

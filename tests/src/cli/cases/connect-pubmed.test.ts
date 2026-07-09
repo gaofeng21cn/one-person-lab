@@ -77,6 +77,9 @@ test('connect pubmed search returns normalized read-only literature refs', async
       opl_connect_pubmed: {
         surface_kind: string;
         connector_id: string;
+        connector_profile: string;
+        profile_role: string;
+        canonical_profile_command: string;
         status: string;
         request: { query: string; limit: number };
         normalized_results: Array<{
@@ -93,6 +96,7 @@ test('connect pubmed search returns normalized read-only literature refs', async
           ledger_receipt_candidate_ref: string;
         };
         provider_receipt_candidate_refs: string[];
+        provider_receipt_role: string;
         ownership_boundary: {
           connector_profile_owner: string;
           provider_receipt_owner: string;
@@ -115,6 +119,12 @@ test('connect pubmed search returns normalized read-only literature refs', async
 
     assert.equal(output.opl_connect_pubmed.surface_kind, 'opl_connect_pubmed_readonly_search');
     assert.equal(output.opl_connect_pubmed.connector_id, 'pubmed');
+    assert.equal(output.opl_connect_pubmed.connector_profile, 'scientific');
+    assert.equal(
+      output.opl_connect_pubmed.profile_role,
+      'pubmed_compatibility_entry_for_optional_scientific_connector_profile',
+    );
+    assert.equal(output.opl_connect_pubmed.canonical_profile_command, 'connect scientific search --provider pubmed');
     assert.equal(output.opl_connect_pubmed.status, 'completed');
     assert.deepEqual(output.opl_connect_pubmed.request, {
       query: 'clinical AI evidence',
@@ -147,6 +157,7 @@ test('connect pubmed search returns normalized read-only literature refs', async
     assert.deepEqual(output.opl_connect_pubmed.provider_receipt_candidate_refs, [
       output.opl_connect_pubmed.receipt_refs.ledger_receipt_candidate_ref,
     ]);
+    assert.equal(output.opl_connect_pubmed.provider_receipt_role, 'provider_receipt_candidate_only');
     assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_profile_owner, 'OPL Connect');
     assert.equal(output.opl_connect_pubmed.ownership_boundary.provider_receipt_owner, 'OPL Connect');
     assert.equal(output.opl_connect_pubmed.ownership_boundary.citation_judgment_owner, 'MAS / domain owner');

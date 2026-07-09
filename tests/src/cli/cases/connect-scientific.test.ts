@@ -7,6 +7,7 @@ type ScientificSearchOutput = {
     surface_kind: string;
     connector_id: string;
     connector_profile: string;
+    profile_role: string;
     provider_id: string;
     normalized_results: Array<{
       source_provider: string;
@@ -20,6 +21,7 @@ type ScientificSearchOutput = {
     receipt_refs: {
       connector_invocation_ref: string;
     };
+    provider_receipt_role: string;
     ownership_boundary: {
       connector_profile_owner: string;
       provider_receipt_owner: string;
@@ -147,11 +149,13 @@ test('connect scientific search returns normalized PubMed refs through the optio
     assert.equal(scientific.surface_kind, 'opl_connect_scientific_readonly_search');
     assert.equal(scientific.connector_id, 'scientific');
     assert.equal(scientific.connector_profile, 'scientific');
+    assert.equal(scientific.profile_role, 'optional_scientific_connector_profile');
     assert.equal(scientific.provider_id, 'pubmed');
     assert.deepEqual(scientific.result_refs, ['pubmed:12345']);
     assert.equal(scientific.normalized_results[0].source_provider, 'PubMed');
     assert.equal(scientific.normalized_results[0].doi, '10.1000/example-ai');
     assert.equal(scientific.receipt_refs.connector_invocation_ref.startsWith('opl://connect/scientific/pubmed/search/'), true);
+    assert.equal(scientific.provider_receipt_role, 'provider_receipt_candidate_only');
     assert.equal(scientific.authority_boundary.read_only, true);
     assert.equal(scientific.authority_boundary.can_write_domain_truth, false);
     assert.equal(scientific.authority_boundary.can_sign_owner_receipt, false);

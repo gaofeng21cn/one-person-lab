@@ -97,6 +97,9 @@ function baseReadback(
     can_claim_stage_run_created: false,
     can_claim_provider_running: false,
     can_claim_paper_progress: false,
+    can_claim_domain_progress: false,
+    can_claim_domain_ready: false,
+    can_claim_quality_verdict: false,
     can_claim_runtime_ready: false,
     owner_route: null,
     next_action: null,
@@ -138,6 +141,7 @@ function baseReadback(
       can_claim_paper_progress: false,
       can_claim_domain_progress: false,
       can_claim_domain_ready: false,
+      can_claim_quality_verdict: false,
       can_claim_runtime_ready: false,
     },
     blockers,
@@ -371,6 +375,7 @@ function exportAuthorityBoundary(): MasPaperMissionRouteHandoffExportReadback['a
     can_claim_paper_progress: false,
     can_claim_domain_progress: false,
     can_claim_domain_ready: false,
+    can_claim_quality_verdict: false,
     can_claim_runtime_ready: false,
   };
 }

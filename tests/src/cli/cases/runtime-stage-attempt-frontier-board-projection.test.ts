@@ -100,6 +100,16 @@ test('stage attempt generic projections expose research frontier board as refs-o
   })).research_frontier_board;
 
   assert.equal(projection.surface_kind, 'opl_research_frontier_board_projection');
+  assert.equal(projection.canonical_surface_kind, 'stage_candidate_portfolio_refs_projection');
+  assert.equal(projection.legacy_surface_kind, 'opl_research_frontier_board_projection');
+  assert.deepEqual(projection.compatibility_profile, {
+    profile_id: 'research-frontier-board',
+    profile_role: 'domain_specific_compatibility_profile',
+    source_surface: 'research_frontier_board',
+    legacy_carriers: ['research_frontier_board', 'frontier_board', 'opl_research_frontier_projection'],
+    compatibility_only: true,
+    canonical_projection: 'stage_candidate_portfolio',
+  });
   assert.equal(projection.projection_scope, 'stage_attempt');
   assert.equal(projection.renderer_role, 'generic_research_frontier_board_refs_shell');
   assert.equal(projection.availability, 'frontier_refs_observed');
@@ -114,12 +124,21 @@ test('stage attempt generic projections expose research frontier board as refs-o
     advisory_reason_ref: 'reason:frontier/a',
   }]);
   assert.equal(JSON.stringify(projection.items).includes('must-not-be-projected'), false);
+  assert.equal(projection.stage_candidate_portfolio.surface_kind, 'stage_candidate_portfolio_refs_projection');
+  assert.equal(projection.stage_candidate_portfolio.canonical_projection_kind, 'stage_candidate_portfolio');
+  assert.equal(projection.stage_candidate_portfolio.candidate_count, 1);
+  assert.deepEqual(projection.stage_candidate_portfolio.portfolio_refs, [
+    'domain://mas/frontier/candidate/a',
+  ]);
+  assert.equal(JSON.stringify(projection.stage_candidate_portfolio).includes('must-not-be-projected'), false);
   assert.equal(projection.summary.omitted_body_field_count, 4);
   assert.equal(projection.authority_boundary.can_read_memory_body, false);
   assert.equal(projection.authority_boundary.can_accept_or_reject_memory_writeback, false);
   assert.equal(projection.authority_boundary.can_infer_route_decision, false);
   assert.equal(projection.authority_boundary.can_authorize_owner_receipt, false);
   assert.equal(projection.authority_boundary.can_authorize_typed_blocker, false);
+  assert.equal(projection.authority_boundary.can_claim_paper_progress, false);
+  assert.equal(projection.authority_boundary.can_claim_domain_progress, false);
   assert.equal(projection.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(projection.authority_boundary.can_authorize_domain_ready, false);
   assert.equal(projection.authority_boundary.can_mutate_artifact_body, false);
@@ -273,8 +292,13 @@ test('runtime workbench summarizes frontier board status counts and rollback ref
     const board = snapshot.runtime_tray_snapshot.stage_attempt_workbench.research_frontier_board;
 
     assert.equal(board.surface_kind, 'opl_research_frontier_board_projection');
+    assert.equal(board.canonical_surface_kind, 'stage_candidate_portfolio_refs_projection');
+    assert.equal(board.compatibility_profile.compatibility_only, true);
     assert.equal(board.projection_scope, 'stage_attempt_workbench');
     assert.equal(board.availability, 'frontier_refs_observed');
+    assert.equal(board.stage_candidate_portfolio.canonical_projection_kind, 'stage_candidate_portfolio');
+    assert.equal(board.stage_candidate_portfolio.candidate_count, 3);
+    assert.equal(board.stage_candidate_portfolio.authority_boundary.can_claim_domain_progress, false);
     assert.equal(board.summary.item_count, 3);
     assert.equal(board.summary.status_counts.rejected, 1);
     assert.equal(board.summary.status_counts['failure_scope:endpoint'], 1);

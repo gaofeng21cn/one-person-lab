@@ -209,6 +209,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
     const output = await runCliAsync(args, env) as {
       opl_connect_reference_verification: {
         surface_kind: string;
+        verification_role: string;
         status: string;
         request: { providers: string[]; max_retries: number };
         provider_evidence: Array<{
@@ -235,6 +236,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
           status: string;
           match_status: string;
           receipt_ref: string;
+          receipt_scope: string;
           authority: string;
         }>;
         cache: { entries: Array<{ status: string; write_status: string }> };
@@ -245,6 +247,8 @@ test('connect references verify returns provider receipts, cache metadata, retri
           can_create_owner_receipt: boolean;
           can_create_typed_blocker: boolean;
           can_claim_reference_truth: boolean;
+          can_claim_citation_quality: boolean;
+          can_claim_claim_support: boolean;
           can_claim_citation_truth: boolean;
           can_claim_publication_readiness: boolean;
           can_claim_domain_ready: boolean;
@@ -255,6 +259,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
 
     const result = output.opl_connect_reference_verification;
     assert.equal(result.surface_kind, 'opl_connect_reference_verification_readonly');
+    assert.equal(result.verification_role, 'metadata_provider_receipt_only');
     assert.equal(result.status, 'completed');
     assert.deepEqual(result.request.providers, ['crossref', 'pubmed']);
     assert.equal(result.request.max_retries, 1);
@@ -292,6 +297,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
     assert.equal(result.provider_receipts.every((entry) => entry.status === 'matched'), true);
     assert.equal(result.provider_receipts.every((entry) => entry.match_status === 'identifier_matched'), true);
     assert.equal(result.provider_receipts.every((entry) => entry.receipt_ref.startsWith('opl://connect/references/verify/')), true);
+    assert.equal(result.provider_receipts.every((entry) => entry.receipt_scope === 'metadata_provider_receipt_only'), true);
     assert.equal(result.provider_receipts.every((entry) => entry.authority === 'provider_receipt_candidate_only'), true);
     assert.equal(result.cache.entries.every((entry) => entry.status === 'miss' && entry.write_status === 'written'), true);
     assert.equal(result.retry_attempts.some((entry) => entry.provider_id === 'crossref' && entry.status === 'retryable_error'), true);
@@ -302,6 +308,8 @@ test('connect references verify returns provider receipts, cache metadata, retri
       can_create_owner_receipt: false,
       can_create_typed_blocker: false,
       can_claim_reference_truth: false,
+      can_claim_citation_quality: false,
+      can_claim_claim_support: false,
       can_claim_citation_truth: false,
       can_claim_publication_readiness: false,
       can_claim_domain_ready: false,

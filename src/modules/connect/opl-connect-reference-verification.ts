@@ -903,6 +903,8 @@ function noAuthorityBoundary() {
     can_create_owner_receipt: false,
     can_create_typed_blocker: false,
     can_claim_reference_truth: false,
+    can_claim_citation_quality: false,
+    can_claim_claim_support: false,
     can_claim_citation_truth: false,
     can_claim_publication_readiness: false,
     can_claim_domain_ready: false,
@@ -936,6 +938,7 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
       match_status: entry.match_status,
       match_basis: entry.match_basis,
       receipt_ref: entry.receipt_ref,
+      receipt_scope: 'metadata_provider_receipt_only',
       authority: 'provider_receipt_candidate_only',
       verification_scope: entry.verification_scope,
     }));
@@ -955,6 +958,7 @@ export async function runOplConnectReferenceVerification(input: ReferenceVerific
     opl_connect_reference_verification: {
       surface_kind: 'opl_connect_reference_verification_readonly',
       connector_id: 'reference_verification',
+      verification_role: 'metadata_provider_receipt_only',
       connector_family: 'OPL Connect',
       status: 'completed',
       request: {

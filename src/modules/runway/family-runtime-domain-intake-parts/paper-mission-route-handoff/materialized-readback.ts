@@ -173,6 +173,12 @@ export function materializedReadbackToHandoff(payload: JsonRecord) {
       || booleanTrue(payload.can_claim_provider_running),
     can_claim_paper_progress: booleanTrue(carrier?.can_claim_paper_progress)
       || booleanTrue(payload.can_claim_paper_progress),
+    can_claim_domain_progress: booleanTrue(carrier?.can_claim_domain_progress)
+      || booleanTrue(payload.can_claim_domain_progress),
+    can_claim_domain_ready: booleanTrue(carrier?.can_claim_domain_ready)
+      || booleanTrue(payload.can_claim_domain_ready),
+    can_claim_quality_verdict: booleanTrue(carrier?.can_claim_quality_verdict)
+      || booleanTrue(payload.can_claim_quality_verdict),
     can_claim_runtime_ready: booleanTrue(carrier?.can_claim_runtime_ready)
       || booleanTrue(payload.can_claim_runtime_ready),
     authority_boundary: materializedAuthorityBoundary(payload),
