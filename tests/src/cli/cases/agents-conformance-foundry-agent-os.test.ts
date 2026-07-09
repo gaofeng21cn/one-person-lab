@@ -16,6 +16,14 @@ const STANDARD_FOUNDRY_DOMAIN_AGENT_IDS = [
   'obf',
 ] as const;
 
+const EXPECTED_STANDARD_AGENT_ORDINARY_GOLDEN_PATHS = {
+  mas: 'study -> stage -> domain owner receipt or typed blocker -> research artifact handoff',
+  mag: 'grant -> stage -> domain owner receipt or typed blocker -> grant deliverable handoff',
+  rca: 'deck -> stage -> domain owner receipt or typed blocker -> visual deliverable handoff',
+  oma: 'target agent -> stage -> target owner answer -> mechanism or work-order handoff',
+  obf: 'book -> stage -> domain owner receipt or typed blocker -> manuscript package handoff',
+} as const;
+
 const ACCEPTED_OWNER_ANSWER_SHAPES = [
   'domain_owner_receipt_ref',
   'typed_blocker_ref',
@@ -106,8 +114,32 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     [...ACCEPTED_OWNER_ANSWER_SHAPES],
   );
   assert.equal(ownerAnswerWorklist.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(ownerAnswerWorklist.authority_boundary.can_write_domain_truth, false);
   assert.equal(ownerAnswerWorklist.authority_boundary.can_sign_owner_receipt, false);
   assert.equal(ownerAnswerWorklist.authority_boundary.can_create_typed_blocker, false);
+  assert.deepEqual(
+    {
+      owner_answer_shape_identified:
+        ownerAnswerWorklist.accepted_refs_only_result_shapes.includes('domain_owner_receipt_ref'),
+      typed_blocker_shape_identified:
+        ownerAnswerWorklist.accepted_refs_only_result_shapes.includes('typed_blocker_ref'),
+      current_owner_delta_shape_identified:
+        standardOwnerAnswerWorklist.length === STANDARD_FOUNDRY_DOMAIN_AGENT_IDS.length,
+      can_ready: ownerAnswerWorklist.authority_boundary.can_claim_domain_ready,
+      can_truth: ownerAnswerWorklist.authority_boundary.can_write_domain_truth,
+      can_receipt: ownerAnswerWorklist.authority_boundary.can_sign_owner_receipt,
+      can_blocker: ownerAnswerWorklist.authority_boundary.can_create_typed_blocker,
+    },
+    {
+      owner_answer_shape_identified: true,
+      typed_blocker_shape_identified: true,
+      current_owner_delta_shape_identified: true,
+      can_ready: false,
+      can_truth: false,
+      can_receipt: false,
+      can_blocker: false,
+    },
+  );
   assert.deepEqual(foundry.capability_registry_boundary.owner_modules, [
     'atlas',
     'pack',
@@ -277,6 +309,28 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(ownerAnswer.forbidden_opl_claims.includes('owner_receipt_signed_by_opl'), true);
     assert.equal(ownerAnswer.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
     assert.equal(ownerAnswer.non_closing_inputs.includes('structural_conformance_pass'), true);
+    assert.deepEqual(
+      {
+        owner_answer_shape_identified:
+          ownerAnswer.accepted_refs_only_result_shapes.includes('domain_owner_receipt_ref'),
+        typed_blocker_shape_identified:
+          ownerAnswer.accepted_refs_only_result_shapes.includes('typed_blocker_ref'),
+        current_owner_delta_shape_identified: domain.default_read_root === 'current_owner_delta',
+        can_ready: ownerAnswer.ready_claim_authorized,
+        can_truth: domain.false_authority_flags.generated_surface_can_write_domain_truth,
+        can_receipt: ownerAnswer.can_sign_owner_receipt,
+        can_blocker: ownerAnswer.can_create_typed_blocker,
+      },
+      {
+        owner_answer_shape_identified: true,
+        typed_blocker_shape_identified: true,
+        current_owner_delta_shape_identified: true,
+        can_ready: false,
+        can_truth: false,
+        can_receipt: false,
+        can_blocker: false,
+      },
+    );
   }
 
   for (const agentId of STANDARD_FOUNDRY_DOMAIN_AGENT_IDS) {
@@ -284,7 +338,12 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(agent.agent_id, agentId);
     assert.equal(agent.status, 'standard_domain_agent');
     assert.equal(agent.series_membership, 'standard_domain_agent');
-    assert.match(agent.ordinary_golden_path, /stage/);
+    assert.equal(agent.ordinary_golden_path, EXPECTED_STANDARD_AGENT_ORDINARY_GOLDEN_PATHS[agentId]);
+    assert.match(
+      agent.ordinary_golden_path,
+      /stage -> (domain owner receipt or typed blocker|target owner answer) -> .*handoff/,
+    );
+    assert.doesNotMatch(agent.ordinary_golden_path, /opl|ready|truth/i);
     assert.equal(agent.authority_boundary.generated_surface_can_claim_domain_ready, false);
     assert.equal(agent.authority_boundary.generated_surface_can_write_domain_truth, false);
     assert.equal(agent.authority_boundary.generated_surface_can_create_owner_receipt, false);
