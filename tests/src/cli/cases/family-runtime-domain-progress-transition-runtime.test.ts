@@ -43,22 +43,65 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-test('DomainProgressTransitionRuntime normalizes MAS command into exactly-one event, outbox, StageRun identity, and projection metadata', () => {
-  const command = currentControlCommandOutboxRecord({
-    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+const DM002_STUDY_ID = '002-dm-china-us-mortality-attribution';
+const DM003_STUDY_ID = '003-dpcc-primary-care-phenotype-treatment-gap';
+const AI_REVIEWER_WORK_UNIT_ID = 'produce_ai_reviewer_publication_eval_record_against_current_inputs';
+
+function reviewerTransitionContext({
+  studyId,
+  slug,
+  workUnitFingerprint = `sha256:${slug}`,
+}: {
+  studyId: string;
+  slug: string;
+  workUnitFingerprint?: string;
+}) {
+  return {
+    studyId,
     actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:transition-runtime',
-    sourceGeneration: 'truth-event-transition-runtime',
-    idempotencyKey: 'owner-route-attempt::dm003::transition-runtime',
-  });
-  const normalized = normalizeDomainProgressTransitionCommand(command, {
-    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:transition-runtime',
+    workUnitId: AI_REVIEWER_WORK_UNIT_ID,
+    workUnitFingerprint,
     nextOwner: 'ai_reviewer',
+  };
+}
+
+function reviewerOutboxRecord(options: {
+  studyId: string;
+  slug: string;
+  workUnitFingerprint?: string;
+  sourceGeneration?: string;
+  idempotencyKey?: string;
+}) {
+  const domainSlug = options.studyId === DM002_STUDY_ID ? 'dm002' : 'dm003';
+  return currentControlCommandOutboxRecord({
+    studyId: options.studyId,
+    actionType: 'return_to_ai_reviewer_workflow',
+    workUnitId: AI_REVIEWER_WORK_UNIT_ID,
+    workUnitFingerprint: options.workUnitFingerprint ?? `sha256:${options.slug}`,
+    sourceGeneration: options.sourceGeneration ?? `truth-event-${options.slug}`,
+    idempotencyKey: options.idempotencyKey ?? `owner-route-attempt::${domainSlug}::${options.slug}`,
   });
+}
+
+function reviewerTransitionCommand(options: {
+  studyId: string;
+  slug: string;
+  workUnitFingerprint?: string;
+  sourceGeneration?: string;
+  idempotencyKey?: string;
+}) {
+  return normalizeDomainProgressTransitionCommand(
+    reviewerOutboxRecord(options),
+    reviewerTransitionContext(options),
+  ).command!;
+}
+
+test('DomainProgressTransitionRuntime normalizes MAS command into exactly-one event, outbox, StageRun identity, and projection metadata', () => {
+  const command = reviewerOutboxRecord({ studyId: DM003_STUDY_ID, slug: 'transition-runtime' });
+  const normalized = normalizeDomainProgressTransitionCommand(
+    command,
+    reviewerTransitionContext({ studyId: DM003_STUDY_ID, slug: 'transition-runtime' }),
+  );
 
   assert.equal(normalized.blocked, undefined);
   assert.equal(normalized.command?.surface_kind, 'opl_domain_progress_transition_command');
@@ -87,20 +130,7 @@ test('DomainProgressTransitionRuntime normalizes MAS command into exactly-one ev
 });
 
 test('DomainProgressTransitionRuntime appends JSONL-friendly command/event/outbox log with aggregate version and idempotency readback', () => {
-  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:append-log',
-    sourceGeneration: 'truth-event-append-log',
-    idempotencyKey: 'owner-route-attempt::dm002::append-log',
-  }), {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:append-log',
-    nextOwner: 'ai_reviewer',
-  }).command!;
+  const command = reviewerTransitionCommand({ studyId: DM002_STUDY_ID, slug: 'append-log' });
 
   const first = appendDomainProgressTransitionRuntimeResult({
     log: createDomainProgressTransitionRuntimeLog(),
@@ -144,20 +174,7 @@ test('DomainProgressTransitionRuntime appends JSONL-friendly command/event/outbo
 });
 
 test('DomainProgressTransitionRuntime enforces idempotent replay and fail-closes reused keys with different intent', () => {
-  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:idempotent-intent',
-    sourceGeneration: 'truth-event-idempotent-intent',
-    idempotencyKey: 'owner-route-attempt::dm002::idempotent-intent',
-  }), {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:idempotent-intent',
-    nextOwner: 'ai_reviewer',
-  }).command!;
+  const command = reviewerTransitionCommand({ studyId: DM002_STUDY_ID, slug: 'idempotent-intent' });
   const initial = appendDomainProgressTransitionRuntimeResult({
     log: createDomainProgressTransitionRuntimeLog(),
     result: reconcileDomainProgressTransitionFixedPoint({
@@ -201,20 +218,7 @@ test('DomainProgressTransitionRuntime enforces idempotent replay and fail-closes
 });
 
 test('DomainProgressTransitionRuntime result and read model expose stable identity causality authority and outcome readback', () => {
-  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
-    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:stable-readback-shape',
-    sourceGeneration: 'truth-event-stable-readback-shape',
-    idempotencyKey: 'owner-route-attempt::dm003::stable-readback-shape',
-  }), {
-    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:stable-readback-shape',
-    nextOwner: 'ai_reviewer',
-  }).command!;
+  const command = reviewerTransitionCommand({ studyId: DM003_STUDY_ID, slug: 'stable-readback-shape' });
   const appended = appendDomainProgressTransitionRuntimeResult({
     log: createDomainProgressTransitionRuntimeLog(),
     result: reconcileDomainProgressTransitionFixedPoint({
@@ -258,20 +262,7 @@ test('DomainProgressTransitionRuntime result and read model expose stable identi
 test('DomainProgressTransitionRuntime persists append-only JSONL log and replays idempotency readback from disk', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-progress-transition-jsonl-'));
   const logPath = path.join(root, 'domain-progress-transition.jsonl');
-  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
-    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:durable-jsonl',
-    sourceGeneration: 'truth-event-durable-jsonl',
-    idempotencyKey: 'owner-route-attempt::dm003::durable-jsonl',
-  }), {
-    studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:durable-jsonl',
-    nextOwner: 'ai_reviewer',
-  }).command!;
+  const command = reviewerTransitionCommand({ studyId: DM003_STUDY_ID, slug: 'durable-jsonl' });
 
   try {
     const first = appendDomainProgressTransitionRuntimeResultJsonl({
@@ -362,20 +353,11 @@ test('DomainProgressTransitionRuntime requires explicit command identity for OPL
 });
 
 test('DomainProgressTransitionRuntime rebuilds read model from append-only command/event/outbox log', () => {
-  const command = normalizeDomainProgressTransitionCommand(currentControlCommandOutboxRecord({
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
+  const command = reviewerTransitionCommand({
+    studyId: DM002_STUDY_ID,
+    slug: 'read-model-rebuild-1',
     workUnitFingerprint: 'sha256:read-model-rebuild',
-    sourceGeneration: 'truth-event-read-model-rebuild-1',
-    idempotencyKey: 'owner-route-attempt::dm002::read-model-rebuild-1',
-  }), {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'return_to_ai_reviewer_workflow',
-    workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-    workUnitFingerprint: 'sha256:read-model-rebuild',
-    nextOwner: 'ai_reviewer',
-  }).command!;
+  });
   const first = appendDomainProgressTransitionRuntimeResult({
     log: createDomainProgressTransitionRuntimeLog(),
     result: reconcileDomainProgressTransitionFixedPoint({
@@ -517,13 +499,14 @@ test('DomainProgressTransitionRuntime normalizes MAS PaperMissionTransaction car
     sourceGeneration: 'paper_mission_transaction_contract_v1',
     idempotencyKey: 'paper-mission-transaction::dm002::gate',
   });
-  const normalized = normalizeDomainProgressTransitionCommand(carrier, {
+  const context = {
     studyId: '002-dm-china-us-mortality-attribution',
     actionType: 'publication_gate_replay',
     workUnitId: 'gate_clearing_claim_evidence_repair',
     workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
     nextOwner: 'ai_reviewer',
-  });
+  };
+  const normalized = normalizeDomainProgressTransitionCommand(carrier, context);
 
   assert.equal(normalized.blocked, undefined);
   assert.equal(normalized.command?.surface_kind, 'opl_domain_progress_transition_command');
@@ -543,71 +526,45 @@ test('DomainProgressTransitionRuntime normalizes MAS PaperMissionTransaction car
   assert.equal(record(normalized.command?.policy_adapter_readback).can_create_owner_receipt, false);
   assert.equal(record(normalized.command?.domain_policy_result).provider_completion_is_domain_completion, false);
 
-  const outboxOverclaim = normalizeDomainProgressTransitionCommand({
-    ...carrier,
-    authority_boundary: {
-      ...record(carrier.authority_boundary),
-      mas_can_create_opl_outbox_record: true,
+  const overclaimCases = [
+    {
+      request: {
+        ...carrier,
+        authority_boundary: {
+          ...record(carrier.authority_boundary),
+          mas_can_create_opl_outbox_record: true,
+        },
+      },
+      reason: 'domain_progress_policy_adapter_boundary_missing',
     },
-  }, {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'publication_gate_replay',
-    workUnitId: 'gate_clearing_claim_evidence_repair',
-    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
-    nextOwner: 'ai_reviewer',
-  });
-
-  assert.equal(
-    outboxOverclaim.blocked?.reason,
-    'domain_progress_policy_adapter_boundary_missing',
-  );
-
-  const topLevelProviderRunningOverclaim = normalizeDomainProgressTransitionCommand({
-    ...carrier,
-    can_claim_provider_running: true,
-  }, {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'publication_gate_replay',
-    workUnitId: 'gate_clearing_claim_evidence_repair',
-    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
-    nextOwner: 'ai_reviewer',
-  });
-  const authorityStageRunOverclaim = normalizeDomainProgressTransitionCommand({
-    ...carrier,
-    authority_boundary: {
-      ...record(carrier.authority_boundary),
-      mas_can_create_opl_stage_run: true,
+    {
+      request: {
+        ...carrier,
+        can_claim_provider_running: true,
+      },
+      reason: 'domain_progress_policy_adapter_authority_overclaim',
     },
-  }, {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'publication_gate_replay',
-    workUnitId: 'gate_clearing_claim_evidence_repair',
-    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
-    nextOwner: 'ai_reviewer',
-  });
-  const providerCompletionOverclaim = normalizeDomainProgressTransitionCommand({
-    ...carrier,
-    provider_completion_is_domain_completion: true,
-  }, {
-    studyId: '002-dm-china-us-mortality-attribution',
-    actionType: 'publication_gate_replay',
-    workUnitId: 'gate_clearing_claim_evidence_repair',
-    workUnitFingerprint: 'paper-mission-transaction::dm002::gate',
-    nextOwner: 'ai_reviewer',
-  });
-
-  assert.equal(
-    topLevelProviderRunningOverclaim.blocked?.reason,
-    'domain_progress_policy_adapter_authority_overclaim',
-  );
-  assert.equal(
-    authorityStageRunOverclaim.blocked?.reason,
-    'domain_progress_policy_adapter_authority_overclaim',
-  );
-  assert.equal(
-    providerCompletionOverclaim.blocked?.reason,
-    'domain_progress_policy_adapter_authority_overclaim',
-  );
+    {
+      request: {
+        ...carrier,
+        authority_boundary: {
+          ...record(carrier.authority_boundary),
+          mas_can_create_opl_stage_run: true,
+        },
+      },
+      reason: 'domain_progress_policy_adapter_authority_overclaim',
+    },
+    {
+      request: {
+        ...carrier,
+        provider_completion_is_domain_completion: true,
+      },
+      reason: 'domain_progress_policy_adapter_authority_overclaim',
+    },
+  ];
+  for (const { request, reason } of overclaimCases) {
+    assert.equal(normalizeDomainProgressTransitionCommand(request, context).blocked?.reason, reason);
+  }
 });
 
 test('DomainProgressTransitionRuntime maps MAS PaperMission typed-blocker carrier to terminal blocker transition', () => {
@@ -768,54 +725,43 @@ test('DomainProgressTransitionRuntime fail-closes policy adapter authority overc
     nextOwner: 'ai_reviewer',
   };
 
-  const ownerReceiptBody = normalizeDomainProgressTransitionCommand({
-    ...baseRequest,
-    owner_receipt_body: { verdict: 'accepted' },
-  }, context);
-  const providerReadyOverclaim = normalizeDomainProgressTransitionCommand({
-    ...baseRequest,
-    outcome: {
-      kind: 'provider_admission_accepted',
-      provider_completion_is_domain_ready: true,
+  const overclaimCases = [
+    {
+      request: {
+        ...baseRequest,
+        owner_receipt_body: { verdict: 'accepted' },
+      },
+      reason: 'domain_progress_policy_adapter_authority_field_forbidden',
     },
-  }, context);
-  const missingBoundary = normalizeDomainProgressTransitionCommand({
-    ...baseRequest,
-    adapter_can_create_opl_outbox_record: true,
-  }, context);
-
-  assert.equal(
-    ownerReceiptBody.blocked?.reason,
-    'domain_progress_policy_adapter_authority_field_forbidden',
-  );
-  assert.equal(
-    providerReadyOverclaim.blocked?.reason,
-    'domain_progress_policy_adapter_authority_overclaim',
-  );
-  assert.equal(
-    missingBoundary.blocked?.reason,
-    'domain_progress_policy_adapter_boundary_missing',
-  );
+    {
+      request: {
+        ...baseRequest,
+        outcome: {
+          kind: 'provider_admission_accepted',
+          provider_completion_is_domain_ready: true,
+        },
+      },
+      reason: 'domain_progress_policy_adapter_authority_overclaim',
+    },
+    {
+      request: {
+        ...baseRequest,
+        adapter_can_create_opl_outbox_record: true,
+      },
+      reason: 'domain_progress_policy_adapter_boundary_missing',
+    },
+  ];
+  for (const { request, reason } of overclaimCases) {
+    assert.equal(normalizeDomainProgressTransitionCommand(request, context).blocked?.reason, reason);
+  }
 });
 
 test('DomainProgressTransitionRuntime replay accepts stable steps and records NonAdvancingApply for no-outcome history', () => {
-  const command = normalizeDomainProgressTransitionCommand(
-    currentControlCommandOutboxRecord({
-      studyId: '002-dm-china-us-mortality-attribution',
-      actionType: 'return_to_ai_reviewer_workflow',
-      workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-      workUnitFingerprint: 'sha256:dm002-replay',
-      sourceGeneration: 'truth-event-dm002-replay',
-      idempotencyKey: 'owner-route-attempt::dm002::replay',
-    }),
-    {
-      studyId: '002-dm-china-us-mortality-attribution',
-      actionType: 'return_to_ai_reviewer_workflow',
-      workUnitId: 'produce_ai_reviewer_publication_eval_record_against_current_inputs',
-      workUnitFingerprint: 'sha256:dm002-replay',
-      nextOwner: 'ai_reviewer',
-    },
-  ).command!;
+  const command = reviewerTransitionCommand({
+    studyId: DM002_STUDY_ID,
+    slug: 'dm002-replay',
+    idempotencyKey: 'owner-route-attempt::dm002::replay',
+  });
   const replay = replayDomainProgressTransitionTrace({
     traceId: 'dm002-owner-receipt-recorded-no-progress',
     steps: [
