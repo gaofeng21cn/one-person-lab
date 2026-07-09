@@ -5,10 +5,8 @@ from copy import deepcopy
 from opl_harness_shared.product_entry_companions import (
     build_operator_loop_action_catalog,
     build_family_product_entry_surfaces,
-    build_family_product_entry_surfaces,
     build_family_product_entry_surface_from_manifest,
     build_family_product_entry_surface,
-    build_family_product_entry_surface_from_manifest,
     build_family_product_entry_manifest,
     build_product_entry_shell_catalog,
     build_product_entry_shell_linked_surface,
@@ -19,7 +17,6 @@ from opl_harness_shared.product_entry_companions import (
     build_product_entry_resume_surface,
     build_product_entry_surface,
     collect_family_human_gate_ids,
-    validate_family_product_entry_surface,
     validate_family_product_entry_surface,
     validate_family_product_entry_manifest,
 )
