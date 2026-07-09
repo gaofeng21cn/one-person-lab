@@ -4,7 +4,7 @@
   "owner": "one-person-lab",
   "state": "active_evidence_status",
   "purpose": "Machine-readable evidence ledger for OPL standard-agent landing acceptance. It records which family-level gates have definition-level or current evidence and which tails still require owner evidence before any standard-agent completion claim.",
-  "machine_boundary": "This ledger only tracks OPL family-level standard-agent landing evidence state. It does not declare domain readiness, target-agent readiness, production readiness, Brand L5, App release readiness, physical delete authorization, owner receipt signing, target typed blocker creation, quality/export/review verdicts, or live MAS/MAG/RCA/OMA deliverable progress.",
+  "machine_boundary": "This ledger only tracks OPL family-level standard-agent landing evidence state. Registered domain and agent package names are sample or registry data, not base framework invariants. It does not declare domain readiness, target-agent readiness, production readiness, Brand L5, App release readiness, physical delete authorization, owner receipt signing, target typed blocker creation, quality/export/review verdicts, or live deliverable progress.",
   "source_contract_ref": "contracts/opl-framework/standard-agent-landing-acceptance-contract.json",
   "current_completion_status": "family_evidence_tail_open_not_complete",
   "completion_claim_authorized": false,
@@ -65,6 +65,8 @@
     },
     {
       "gate_id": "oma_target_agent_work_order_guard",
+      "base_gate_id": "generated_target_agent_work_order_guard",
+      "base_contract_role": "generic_guard_with_legacy_sample_gate_id",
       "required_status": "evidence_required",
       "status": "evidence_required",
       "evidence_refs": [
@@ -74,9 +76,10 @@
       ],
       "missing_evidence": [
         "target owner route closeout evidence at real target owner",
-        "production generated-surface consumption tail for OMA target-agent route",
+        "production generated-surface consumption tail for generated target-agent routes",
         "real target owner accepted-answer or typed-blocker return-shape evidence"
       ],
+      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
       "can_claim_complete": false
     },
     {
@@ -104,12 +107,15 @@
     "oma_target_agent_work_order_guard": {
       "status": "evidence_required",
       "can_claim_complete": false,
+      "base_tail_id": "generated_target_agent_work_order_guard",
+      "base_contract_role": "generic_guard_with_legacy_sample_key",
+      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
       "reason": "Guard-missing machine samples are executable; real target owner closeout and production consumption tails still require owner evidence."
     },
     "cross_agent_negative_conformance": {
       "status": "evidence_required",
       "can_claim_complete": false,
-      "reason": "Repo-backed cross-agent negative samples exist for MAS/MAG/RCA/OMA/family-default false-completion signals; production caller and long-soak tails remain open."
+      "reason": "Repo-backed cross-agent negative samples exist for registered agent and family-default false-completion signals; production caller and long-soak tails remain open."
     },
     "functional_closure_default_path_followthrough": {
       "status": "functional_structure_baseline_landed",
@@ -145,11 +151,12 @@
       "opl-bookforge",
       "one-person-lab-app"
     ],
+    "owner_repos_role": "registry_sample_owner_repos_not_base_invariants",
     "required_followthrough_items": [
       "app_docker_webui_beginner_path",
       "settings_control_plane_single_policy_source",
-      "mas_typed_blocker_executable_owner_route",
-      "mag_rca_bookforge_oma_default_path_stage_run_generated_surface_audit",
+      "registry_sample_typed_blocker_executable_owner_route",
+      "registered_agent_default_path_stage_run_generated_surface_audit",
       "source_morphology_strict_source_purity_default_caller_thinning",
       "wrapper_fallback_private_caller_retirement",
       "active_docs_foldback"
@@ -222,6 +229,9 @@
     }
   ],
   "oma_target_agent_work_order_guard": {
+    "base_guard_id": "generated_target_agent_work_order_guard",
+    "base_contract_role": "generic_guard_with_legacy_sample_key",
+    "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
     "required_fields": [
       "target_owner_route",
       "source_morphology",

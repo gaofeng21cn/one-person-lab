@@ -5,6 +5,19 @@
       "domain_id": "medautogrant",
       "label": "MedAutoGrant",
       "project": "med-autogrant",
+      "registry_entry": {
+        "registry_kind": "admitted_domain_agent_registry_entry",
+        "registry_source_ref": "contracts/opl-framework/domains.json#medautogrant",
+        "base_contract_role": "registry_data_not_base_invariant",
+        "base_contract_invariant": false,
+        "identity_fields": [
+          "domain_id",
+          "project",
+          "independent_domain_agent.agent_id",
+          "single_app_skill.skill_id"
+        ],
+        "agent_package_manifest_ref": "contracts/opl-framework/agent-packages/mag.json"
+      },
       "product_layer": "foundry_agent",
       "foundry_agent_package": {
         "package_kind": "opl_compatible_package",
@@ -55,6 +68,19 @@
       "domain_id": "medautoscience",
       "label": "MedAutoScience",
       "project": "med-autoscience",
+      "registry_entry": {
+        "registry_kind": "admitted_domain_agent_registry_entry",
+        "registry_source_ref": "contracts/opl-framework/domains.json#medautoscience",
+        "base_contract_role": "registry_data_not_base_invariant",
+        "base_contract_invariant": false,
+        "identity_fields": [
+          "domain_id",
+          "project",
+          "independent_domain_agent.agent_id",
+          "single_app_skill.skill_id"
+        ],
+        "agent_package_manifest_ref": "contracts/opl-framework/agent-packages/mas.json"
+      },
       "product_layer": "foundry_agent",
       "foundry_agent_package": {
         "package_kind": "opl_compatible_package",
@@ -113,6 +139,19 @@
       "domain_id": "redcube",
       "label": "RedCube AI",
       "project": "redcube-ai",
+      "registry_entry": {
+        "registry_kind": "admitted_domain_agent_registry_entry",
+        "registry_source_ref": "contracts/opl-framework/domains.json#redcube",
+        "base_contract_role": "registry_data_not_base_invariant",
+        "base_contract_invariant": false,
+        "identity_fields": [
+          "domain_id",
+          "project",
+          "independent_domain_agent.agent_id",
+          "single_app_skill.skill_id"
+        ],
+        "agent_package_manifest_ref": "contracts/opl-framework/agent-packages/rca.json"
+      },
       "product_layer": "foundry_agent",
       "foundry_agent_package": {
         "package_kind": "opl_compatible_package",
