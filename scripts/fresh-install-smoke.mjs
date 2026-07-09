@@ -90,8 +90,8 @@ function createCodexConfig(homeDir) {
     path.join(codexHome, 'config.toml'),
     [
       'model_provider = "gflab"',
-      'model = "gpt-5.5"',
-      'model_reasoning_effort = "xhigh"',
+      'model = "gpt-5.6-sol"',
+      'model_reasoning_effort = "ultra"',
       '',
       '[model_providers.gflab]',
       'name = "gflab"',

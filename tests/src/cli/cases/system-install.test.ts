@@ -491,6 +491,34 @@ test('install command can bootstrap Codex defaults from environment without leak
   }
 });
 
+test('install command applies bundled Codex defaults when only the API key is provided', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-bundled-codex-defaults-home-'));
+
+  try {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_CODEX_MODEL: '',
+      CODEX_MODEL: '',
+      OPL_CODEX_REASONING_EFFORT: '',
+      CODEX_REASONING_EFFORT: '',
+      OPL_CODEX_API_KEY: 'secret-test-key',
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    const bootstrap = output.install.codex_config_bootstrap;
+    assert.equal(bootstrap.model, 'gpt-5.6-sol');
+    assert.equal(bootstrap.reasoning_effort, 'ultra');
+
+    const config = fs.readFileSync(bootstrap.config_path, 'utf8');
+    assert.match(config, /model = "gpt-5\.6-sol"/);
+    assert.match(config, /model_reasoning_effort = "ultra"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system initialize blocks launch when compatible Codex CLI lacks configured API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-bin-'));
