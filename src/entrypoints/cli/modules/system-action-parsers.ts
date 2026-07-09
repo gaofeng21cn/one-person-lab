@@ -14,6 +14,7 @@ import type {
   WorkspaceAdoptCliInput,
   WorkspaceInitializeCliInput,
   WorkspaceLifecycleCliInput,
+  WorkspaceSourceIngestCliInput,
   WorkspaceArtifactLifecycleCliInput,
   WorkspaceValidationCliInput,
   WorkspaceRegistryCliInput,
@@ -343,6 +344,69 @@ function parseWorkspaceArtifactLifecycleArgs(
     throw buildUsageError('workspace artifact-lifecycle accepts either --dry-run or --apply, not both.', spec, {
       mutually_exclusive: ['--dry-run', '--apply'],
     });
+  }
+
+  return parsed;
+}
+
+function parseWorkspaceSourceIngestArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceSourceIngestCliInput {
+  const parsed: WorkspaceSourceIngestCliInput = { apply: true };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      parsed.dryRun = true;
+      parsed.apply = false;
+      continue;
+    }
+    if (token === '--apply') {
+      parsed.apply = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    switch (token) {
+      case '--workspace':
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      case '--file':
+      case '--source-file':
+        parsed.filePath = value;
+        break;
+      case '--project-id':
+      case '--deliverable-id':
+      case '--study-id':
+        parsed.projectId = value;
+        break;
+      case '--role':
+        parsed.role = value;
+        break;
+      case '--title':
+        parsed.title = value;
+        break;
+      case '--note':
+        parsed.note = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace source ingest command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
   }
 
   return parsed;
@@ -910,6 +974,7 @@ export {
   parseWorkspaceInitializeArgs,
   parseWorkspaceArtifactLifecycleArgs,
   parseWorkspaceLifecycleArgs,
+  parseWorkspaceSourceIngestArgs,
   parseWorkspaceValidationArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,

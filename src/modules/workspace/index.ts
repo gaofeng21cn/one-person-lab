@@ -18,6 +18,7 @@ export {
 } from './workspace-diagnostics.ts';
 export { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 export { archiveWorkspaceProject, deleteWorkspaceProject, exportWorkspaceMap, inspectWorkspace, updateWorkspaceProjectLifecycle, upgradeWorkspace, workspaceFleetReport, workspaceHealth, workspaceInventory, workspaceReport } from './workspace-lifecycle.ts';
+export { ingestWorkspaceSourceMaterial } from './workspace-source-material.ts';
 export { buildWorkspaceCatalog, getActiveWorkspaceBinding, listWorkspaceBindings, resolveWorkspaceLocator } from './workspace-registry.ts';
 export type { WorkspaceBinding } from './workspace-registry.ts';
 export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';

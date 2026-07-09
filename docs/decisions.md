@@ -235,6 +235,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 显式 `opl workspace init|ensure --mode series|portfolio` 使用通用 `series` / `portfolio` profile，不能把 portfolio 限定为 MAS，也不能把 series 绑定到 RCA。
 - `rca_series` / `mas_portfolio` 只作为 legacy/default profile alias 与 display compatibility 保留；它们不是新的 OPL canonical profile。
 - `opl workspace artifact-lifecycle` 默认只生成 source、output、review-repair 和 health 的 refs-only projection；project-specific memory/current refs 由 `<project-root>/control/opl/artifact_lifecycle/artifact_lifecycle_profile.json` 显式声明。
+- `opl workspace source ingest` 作为通用 source material intake：它只把用户提供的 PDF、Office、Markdown、数据文件或参考设计复制到 workspace-owned `shared/sources/source_materials/<role>/`，计算 sha256，写 `control/opl/source_materials/<sha>.json` receipt，并返回 source refs / receipt refs / stored file refs 给 Codex CLI、OMA、MAS、BookForge 等 domain stage 消费。OPL 不解析文件语义、不判断提取质量、不写 domain truth、不签 owner receipt 或 typed blocker。
 - BookForge、MAS、MAG、RCA 或其他 domain 可以声明自己的 lifecycle refs，但 OPL 只检查文件 ref、hash、缺口和 no-authority guard，不解析 domain artifact body，不写 memory body，不签 owner receipt，也不宣称 publication/domain readiness。
 
 ### 决策：Runway route handoff canonical surface 是 domain route，不是 MAS paper mission truth

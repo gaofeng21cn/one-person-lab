@@ -13,7 +13,7 @@ export function buildWorkspaceCommandSpecs(
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
-        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|artifact-lifecycle|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -25,6 +25,7 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace fleet report',
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+        'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
         'opl workspace interfaces',
       ],
       group: 'workspace',
@@ -78,6 +79,11 @@ export function buildWorkspaceCommandSpecs(
           command: 'workspace artifact-lifecycle',
           usage: 'opl workspace artifact-lifecycle --workspace <path> [--project-id <id>] [--dry-run|--apply]',
           summary: 'Materialize OPL-owned refs-only lifecycle projections for project sources, memory refs, outputs, and current refs.',
+        },
+        {
+          command: 'workspace source ingest',
+          usage: 'opl workspace source ingest --workspace <path> --file <path> [--project-id <id>] [--role <role>]',
+          summary: 'Copy source material into workspace-owned storage and emit refs-only provenance.',
         },
         {
           command: 'workspace interfaces',
@@ -171,6 +177,13 @@ export function buildWorkspaceCommandSpecs(
       examples: [
         'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --dry-run',
         'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
+      ],
+      group: 'workspace',
+    }),
+    'workspace source ingest': cloneCommandSpec(commandSpecs['workspace source ingest'], {
+      usage: 'opl workspace source ingest --workspace <path> --file <path> [--project-id <id>] [--role <role>]',
+      examples: [
+        'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
       ],
       group: 'workspace',
     }),

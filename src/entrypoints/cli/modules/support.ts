@@ -52,6 +52,7 @@ export {
   parseWorkspaceArtifactLifecycleArgs,
   parseWorkspaceInitializeArgs,
   parseWorkspaceLifecycleArgs,
+  parseWorkspaceSourceIngestArgs,
   parseWorkspaceValidationArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,

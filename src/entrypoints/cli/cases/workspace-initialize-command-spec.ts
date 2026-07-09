@@ -21,6 +21,7 @@ import {
   workspaceReport,
 } from '../../../modules/workspace/workspace-lifecycle.ts';
 import { materializeWorkspaceArtifactLifecycle } from '../../../modules/workspace/workspace-artifact-lifecycle.ts';
+import { ingestWorkspaceSourceMaterial } from '../../../modules/workspace/workspace-source-material.ts';
 import { buildBrandModuleSurfaceInspect } from '../../../modules/charter/brand-module-surfaces.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
@@ -29,6 +30,7 @@ import {
   parseWorkspaceArtifactLifecycleArgs,
   parseWorkspaceInitializeArgs,
   parseWorkspaceLifecycleArgs,
+  parseWorkspaceSourceIngestArgs,
   parseWorkspaceValidationArgs,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -237,6 +239,28 @@ export function buildWorkspaceInitializeCommandSpecs(
         return materializeWorkspaceArtifactLifecycle(getContracts(), {
           workspacePath: parsed.workspacePath,
           projectId: parsed.projectId,
+          dryRun: parsed.dryRun,
+          apply: parsed.apply,
+        });
+      },
+    },
+    'workspace source ingest': {
+      usage:
+        'opl workspace source ingest --workspace <path> --file <path> [--project-id <id>] [--role <role>] [--title <title>] [--note <text>] [--dry-run|--apply]',
+      summary:
+        'Copy a user-supplied source file into workspace-owned source material storage and emit refs-only provenance without parsing domain truth.',
+      examples: [
+        'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceSourceIngestArgs(args, specs['workspace source ingest']);
+        return ingestWorkspaceSourceMaterial(getContracts(), {
+          workspacePath: parsed.workspacePath,
+          filePath: parsed.filePath,
+          projectId: parsed.projectId,
+          role: parsed.role,
+          title: parsed.title,
+          note: parsed.note,
           dryRun: parsed.dryRun,
           apply: parsed.apply,
         });

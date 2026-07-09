@@ -10,6 +10,7 @@ import {
 
 import './workspace-domain-initializer-cases/bookforge-artifact-lifecycle.ts';
 import './workspace-domain-initializer-cases/resource-provenance.ts';
+import './workspace-domain-initializer-cases/source-material-ingest.ts';
 import './workspace-domain-initializer-cases/validation-and-doctor.ts';
 
 function readJsonFile(filePath: string) {
