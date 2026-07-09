@@ -9,6 +9,7 @@ import {
   buildManagedShellEnvWithUvCacheRecovery,
   createDomainCleanRunnerProfileRegistry,
   DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY,
+  loadDomainCleanRunnerProfilesFromAgentPackageDescriptors,
   prepareManagedShellCommandCwd,
   recordManagedShellUvCacheRecovery,
   shouldUseManagedShellScratchCwd,
@@ -114,26 +115,78 @@ test('managed shell command env derives legacy clean runner roots from domain pr
 });
 
 test('managed shell command env labels built-in domain roots as compatibility carriers', () => {
+  const profilesByDomain = new Map(
+    DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY.profiles.map((profile) => [profile.domainId, profile]),
+  );
+
   assert.deepEqual(
-    DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY.profiles.map((profile) => ({
-      domainId: profile.domainId,
-      profileRole: profile.profileRole,
-    })),
+    [...profilesByDomain.keys()].sort(),
+    ['med-autogrant', 'med-autoscience', 'redcube-ai'],
+  );
+  for (const profile of profilesByDomain.values()) {
+    assert.equal(profile.profileRole, 'domain_compatibility_clean_runner');
+  }
+  assert.deepEqual(
+    profilesByDomain.get('med-autoscience')?.legacyEnvRoots,
+    [{ envName: 'MAS_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mas' }],
+  );
+  assert.deepEqual(
+    profilesByDomain.get('med-autogrant')?.legacyEnvRoots,
     [
-      {
-        domainId: 'med-autoscience',
-        profileRole: 'domain_compatibility_clean_runner',
-      },
-      {
-        domainId: 'med-autogrant',
-        profileRole: 'domain_compatibility_clean_runner',
-      },
-      {
-        domainId: 'redcube-ai',
-        profileRole: 'domain_compatibility_clean_runner',
-      },
+      { envName: 'MAG_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mag' },
+      { envName: 'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT', fallbackSubdir: 'mag-editable-shared' },
     ],
   );
+});
+
+test('managed shell command env loads clean runner profiles from agent package descriptors', () => {
+  const descriptorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-descriptor-root-'));
+  const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-descriptor-checkout-'));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-descriptor-env-'));
+  try {
+    fs.writeFileSync(path.join(descriptorRoot, 'example.json'), `${JSON.stringify({
+      surface_kind: 'opl_agent_package_manifest.v1',
+      agent_id: 'example-domain',
+      managed_shell: {
+        clean_runner_profile: {
+          profile_role: 'domain_compatibility_clean_runner',
+          legacy_env_roots: [
+            {
+              env_name: 'EXAMPLE_CLEAN_RUNNER_TMP_ROOT',
+              fallback_subdir: 'example-domain',
+            },
+          ],
+          read_only_command_patterns: [
+            {
+              regex: String.raw`(?:^|(?:&&|\|\||[;&|])\s*)uv\s+run\s+example-domain\s+product\s+status\b`,
+            },
+          ],
+        },
+      },
+    }, null, 2)}\n`, 'utf8');
+
+    const registry = {
+      profiles: loadDomainCleanRunnerProfilesFromAgentPackageDescriptors(descriptorRoot),
+    };
+    const env: Record<string, string | undefined> = buildManagedShellCommandEnv(
+      checkoutRoot,
+      {
+        OPL_DOMAIN_COMMAND_TMP_ROOT: externalRoot,
+        EXAMPLE_CLEAN_RUNNER_TMP_ROOT: path.join(checkoutRoot, 'inside-checkout'),
+      },
+      registry,
+    );
+    const tmpRoot = path.join(externalRoot, path.basename(checkoutRoot));
+
+    assert.deepEqual(registry.profiles.map((profile) => profile.domainId), ['example-domain']);
+    assert.equal(env.EXAMPLE_CLEAN_RUNNER_TMP_ROOT, path.join(tmpRoot, 'example-domain'));
+    assert.equal(shouldUseManagedShellScratchCwd('uv run example-domain product status', registry), false);
+    assert.equal(shouldUseManagedShellScratchCwd('uv run example-domain mutate', registry), true);
+  } finally {
+    fs.rmSync(descriptorRoot, { recursive: true, force: true });
+    fs.rmSync(checkoutRoot, { recursive: true, force: true });
+    fs.rmSync(externalRoot, { recursive: true, force: true });
+  }
 });
 
 test('managed shell command env accepts injected domain clean runner profiles', () => {
@@ -253,6 +306,8 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
       false,
     );
     assert.equal(shouldUseManagedShellScratchCwd('uv run python -m random_domain product status'), true);
+    assert.equal(shouldUseManagedShellScratchCwd('uv run python -m med_autoscience.cli mutate'), true);
+    assert.equal(shouldUseManagedShellScratchCwd('uv run python -m med_autogrant mutate'), true);
     assert.equal(shouldUseManagedShellScratchCwd(`${process.execPath} -e "process.stdout.write('uv run')"`) , false);
     assert.equal(shouldUseManagedShellScratchCwd('npm run product manifest'), false);
 
