@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
-import { isRecord } from './contract-validation.ts';
-import { readJsonFileOrNull } from './json-file.ts';
+import { FrameworkContractError, isRecord } from './contract-validation.ts';
+import { optionalString, readJsonFileOrNull, readJsonPayloadFile } from './json-file.ts';
 
 const UV_CACHE_RECOVERY_MARKER = 'uv-cache-archive-missing.recovery.json';
 type ManagedShellRecoveryTrigger = 'uv_cache_archive_missing' | 'managed_python_env_missing_dependency';
@@ -11,10 +12,14 @@ const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
   'uv_cache_archive_missing',
   'managed_python_env_missing_dependency',
 ]);
+const DOMAIN_CLEAN_RUNNER_PROFILE_ROLE = 'domain_compatibility_clean_runner' as const;
+const AGENT_PACKAGE_DESCRIPTOR_DIR = fileURLToPath(
+  new URL('../../contracts/opl-framework/agent-packages/', import.meta.url),
+);
 
 export type DomainCleanRunnerProfile = {
   domainId: string;
-  profileRole: 'domain_compatibility_clean_runner';
+  profileRole: typeof DOMAIN_CLEAN_RUNNER_PROFILE_ROLE;
   legacyEnvRoots: ReadonlyArray<{
     envName: string;
     fallbackSubdir: string;
@@ -26,45 +31,119 @@ export type DomainCleanRunnerProfileRegistry = {
   profiles: ReadonlyArray<DomainCleanRunnerProfile>;
 };
 
-const SHELL_COMMAND_BOUNDARY = String.raw`(?:^|(?:&&|\|\||[;&|])\s*)`;
-const UV_PYTHON_MODULE = String.raw`uv\s+run\s+(?:python|python3)\s+-m\s+`;
-const UV_DIRECTORY_PYTHON_INLINE = String.raw`uv\s+run\s+--directory\s+\S+\s+(?:python|python3)\s+-c\s+.*`;
+function cleanRunnerDescriptorError(sourceRef: string, field: string, message: string) {
+  return new FrameworkContractError('contract_shape_invalid', message, {
+    contract_ref: sourceRef,
+    field,
+  });
+}
 
-const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> = [
-  {
-    domainId: 'med-autoscience',
-    profileRole: 'domain_compatibility_clean_runner',
-    legacyEnvRoots: [
-      { envName: 'MAS_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mas' },
-    ],
-    readOnlyCommandPatterns: [
-      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_PYTHON_MODULE}med_autoscience\\.cli\\s+product\\s+(?:manifest|status)\\b`),
-      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_PYTHON_MODULE}med_autoscience\\.cli\\s+study-state-matrix\\b`),
-      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_DIRECTORY_PYTHON_INLINE}med_autoscience\\.controllers\\.product_entry`),
-    ],
-  },
-  {
-    domainId: 'med-autogrant',
-    profileRole: 'domain_compatibility_clean_runner',
-    legacyEnvRoots: [
-      { envName: 'MAG_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mag' },
-      { envName: 'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT', fallbackSubdir: 'mag-editable-shared' },
-    ],
-    readOnlyCommandPatterns: [
-      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_PYTHON_MODULE}med_autogrant\\s+product\\s+(?:manifest|status)\\b`),
-      new RegExp(`${SHELL_COMMAND_BOUNDARY}uv\\s+run\\s+med_autogrant\\s+product\\s+(?:manifest|status)\\b`),
-      new RegExp(`${SHELL_COMMAND_BOUNDARY}${UV_DIRECTORY_PYTHON_INLINE}med_autogrant\\.product_entry`),
-    ],
-  },
-  {
-    domainId: 'redcube-ai',
-    profileRole: 'domain_compatibility_clean_runner',
-    legacyEnvRoots: [
-      { envName: 'RCA_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'rca' },
-    ],
-    readOnlyCommandPatterns: [],
-  },
-];
+function requireProfileString(value: unknown, field: string, sourceRef: string) {
+  const text = optionalString(value);
+  if (!text) {
+    throw cleanRunnerDescriptorError(
+      sourceRef,
+      field,
+      `Managed shell clean-runner profile must declare ${field}.`,
+    );
+  }
+  return text;
+}
+
+function requireProfileRecordList(value: unknown, field: string, sourceRef: string) {
+  if (!Array.isArray(value) || !value.every(isRecord)) {
+    throw cleanRunnerDescriptorError(
+      sourceRef,
+      field,
+      `Managed shell clean-runner profile ${field} must be an object array.`,
+    );
+  }
+  return value;
+}
+
+function compileReadOnlyCommandPattern(value: unknown, sourceRef: string, index: number) {
+  if (!isRecord(value)) {
+    throw cleanRunnerDescriptorError(
+      sourceRef,
+      `managed_shell.clean_runner_profile.read_only_command_patterns[${index}]`,
+      'Managed shell clean-runner read-only command pattern must be an object.',
+    );
+  }
+  const field = `managed_shell.clean_runner_profile.read_only_command_patterns[${index}].regex`;
+  const regex = requireProfileString(value.regex, field, sourceRef);
+  const flags = optionalString(value.flags);
+  return new RegExp(regex, flags ?? undefined);
+}
+
+function normalizeCleanRunnerProfileFromDescriptor(
+  descriptor: Record<string, unknown>,
+  sourceRef: string,
+): DomainCleanRunnerProfile | null {
+  const managedShell = isRecord(descriptor.managed_shell) ? descriptor.managed_shell : null;
+  const cleanRunnerProfile = managedShell && isRecord(managedShell.clean_runner_profile)
+    ? managedShell.clean_runner_profile
+    : null;
+  if (!cleanRunnerProfile) {
+    return null;
+  }
+  if (cleanRunnerProfile.profile_role !== DOMAIN_CLEAN_RUNNER_PROFILE_ROLE) {
+    throw cleanRunnerDescriptorError(
+      sourceRef,
+      'managed_shell.clean_runner_profile.profile_role',
+      `Managed shell clean-runner profile_role must be ${DOMAIN_CLEAN_RUNNER_PROFILE_ROLE}.`,
+    );
+  }
+
+  const legacyEnvRoots = requireProfileRecordList(
+    cleanRunnerProfile.legacy_env_roots,
+    'managed_shell.clean_runner_profile.legacy_env_roots',
+    sourceRef,
+  ).map((root, index) => ({
+    envName: requireProfileString(
+      root.env_name,
+      `managed_shell.clean_runner_profile.legacy_env_roots[${index}].env_name`,
+      sourceRef,
+    ),
+    fallbackSubdir: requireProfileString(
+      root.fallback_subdir,
+      `managed_shell.clean_runner_profile.legacy_env_roots[${index}].fallback_subdir`,
+      sourceRef,
+    ),
+  }));
+  const readOnlyCommandPatterns = requireProfileRecordList(
+    cleanRunnerProfile.read_only_command_patterns ?? [],
+    'managed_shell.clean_runner_profile.read_only_command_patterns',
+    sourceRef,
+  ).map((pattern, index) => compileReadOnlyCommandPattern(pattern, sourceRef, index));
+
+  return {
+    domainId: optionalString(cleanRunnerProfile.domain_id)
+      ?? requireProfileString(descriptor.agent_id, 'agent_id', sourceRef),
+    profileRole: DOMAIN_CLEAN_RUNNER_PROFILE_ROLE,
+    legacyEnvRoots,
+    readOnlyCommandPatterns,
+  };
+}
+
+export function loadDomainCleanRunnerProfilesFromAgentPackageDescriptors(
+  descriptorDir = AGENT_PACKAGE_DESCRIPTOR_DIR,
+): ReadonlyArray<DomainCleanRunnerProfile> {
+  return fs.readdirSync(descriptorDir)
+    .filter((fileName) => fileName.endsWith('.json'))
+    .sort()
+    .flatMap((fileName) => {
+      const sourceRef = `contracts/opl-framework/agent-packages/${fileName}`;
+      const descriptor = readJsonPayloadFile(path.join(descriptorDir, fileName));
+      if (!isRecord(descriptor)) {
+        throw cleanRunnerDescriptorError(sourceRef, '<root>', 'Agent package descriptor must be a JSON object.');
+      }
+      const profile = normalizeCleanRunnerProfileFromDescriptor(descriptor, sourceRef);
+      return profile ? [profile] : [];
+    });
+}
+
+const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> =
+  loadDomainCleanRunnerProfilesFromAgentPackageDescriptors();
 
 export const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY: DomainCleanRunnerProfileRegistry = {
   profiles: DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES,

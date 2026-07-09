@@ -68,5 +68,17 @@
     "dependency_update_policy": "independent_package_target",
     "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
   },
+  "managed_shell": {
+    "clean_runner_profile": {
+      "profile_role": "domain_compatibility_clean_runner",
+      "legacy_env_roots": [
+        {
+          "env_name": "RCA_CLEAN_RUNNER_TMP_ROOT",
+          "fallback_subdir": "rca"
+        }
+      ],
+      "read_only_command_patterns": []
+    }
+  },
   "capability_dependencies": []
 }
