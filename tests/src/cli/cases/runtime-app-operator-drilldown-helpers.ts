@@ -59,11 +59,11 @@ function assertFields(actual: any, expected: Record<string, unknown>) {
   }
 }
 
-function assertSome<T>(items: T[], predicate: (item: T) => boolean) {
+function assertSome(items: any[], predicate: (item: any) => boolean) {
   assert.equal(items.some(predicate), true);
 }
 
-function assertNoSome<T>(items: T[], predicate: (item: T) => boolean) {
+function assertNoSome(items: any[], predicate: (item: any) => boolean) {
   assert.equal(items.some(predicate), false);
 }
 
