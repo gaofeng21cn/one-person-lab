@@ -155,6 +155,10 @@ function shouldAllowDirtySource(input: FrameworkSelfUpdateInput) {
     || process.env.OPL_FRAMEWORK_UPDATE_ALLOW_DIRTY_SOURCE?.trim() === '1';
 }
 
+function shouldDisableRemoteFrameworkArtifact() {
+  return process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL === '1';
+}
+
 function dependencyInputsChanged(sourceRoot: string, targetRoot: string) {
   for (const fileName of ['package.json', 'package-lock.json']) {
     const sourcePath = path.join(sourceRoot, fileName);
@@ -485,7 +489,7 @@ export function runOplFrameworkSelfUpdate(
   const targetRoot = path.resolve(input.targetRoot);
   const sourceArchiveRaw = resolveFrameworkUpdateArchive(input.sourceArchive);
   const sourceRootRaw = resolveFrameworkUpdateSource(input.sourceRoot);
-  const allowChannelArtifact = input.allowChannelArtifact !== false;
+  const allowChannelArtifact = input.allowChannelArtifact !== false && !shouldDisableRemoteFrameworkArtifact();
   const archiveOrChannelApplyRequested = Boolean(sourceArchiveRaw || (!sourceRootRaw && allowChannelArtifact));
 
   if (!sourceArchiveRaw && !sourceRootRaw && !allowChannelArtifact) {

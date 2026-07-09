@@ -148,9 +148,9 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     }
 
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
-      'mas-health',
-      'mag-health',
-      'rca-health',
+      'med-autoscience-health',
+      'med-autogrant-health',
+      'redcube-ai-health',
       'opl-meta-agent-health',
       'opl-bookforge-health',
     ]);
@@ -163,9 +163,12 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       const checkoutPath = siblingCheckouts[moduleId];
       const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
       assert.equal(fs.existsSync(path.join(checkoutPath, '.agents', 'plugins', 'marketplace.json')), false);
-      assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), false);
-      assert.equal(codexConfig.includes(`[marketplaces.${marketplaceId}]`), false);
+      assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), true);
+      assert.match(codexConfig, new RegExp(`\\[marketplaces\\.${marketplaceId}\\]`));
     }
+    assert.match(codexConfig, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
+    assert.match(codexConfig, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
+    assert.match(codexConfig, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
     assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
     assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
     assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);

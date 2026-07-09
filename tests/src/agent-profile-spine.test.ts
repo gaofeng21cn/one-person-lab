@@ -97,11 +97,11 @@ function makeConformantAgentFixture() {
 
 function makeSourceDerivedAgentFixture() {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-derived-agent-'));
-	  const requiredDesignConsumptionObjects = [
-	    'ReferenceDesignPacket',
-	    'TransferMap',
-	    'AgentPackPlan',
-	  ];
+    const requiredDesignConsumptionObjects = [
+      'ReferenceDesignPacket',
+      'TransferMap',
+      'AgentPackPlan',
+    ];
   const referenceDesignSourceRefs = ['paper-ref:uploaded-colorectal-risk-framework'];
   const referenceDesignPacketRefs = [
     'pattern-packet-ref:oma/reference-designs/uploaded-paper/distilled-agent-design',
@@ -112,12 +112,12 @@ function makeSourceDerivedAgentFixture() {
   const agentPackPlanRefs = [
     'agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan',
   ];
-	  const buildReceiptRefs = [
-	    'build-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-build',
-	  ];
-	  const designAdmissionReceiptRefs = [
-	    'design-admission-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-design-admission',
-	  ];
+    const buildReceiptRefs = [
+      'build-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-build',
+    ];
+    const designAdmissionReceiptRefs = [
+      'design-admission-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-design-admission',
+    ];
   const sourceDerivedStageRef = 'stage:colorectal-surgery-risk-from-paper/source-derived-design';
   const sourceDerivedStageRefs = [
     {
@@ -134,17 +134,17 @@ function makeSourceDerivedAgentFixture() {
     'production_ready',
     'owner_accepted',
   ];
-	  const buildReceipt = {
-	    surface_kind: 'opl_meta_agent_build_receipt',
-	    receipt_kind: 'AgentBuildReceipt',
-	    version: 'opl-meta-agent.agent-build-receipt.v1',
-	    receipt_ref: buildReceiptRefs[0],
-	    build_receipt_ref: buildReceiptRefs[0],
-	    build_source_kind: 'source_derived_design',
-	    design_admission_receipt_ref: designAdmissionReceiptRefs[0],
-	    required_design_objects: requiredDesignConsumptionObjects,
-	    required_admission_receipts: ['DesignAdmissionReceipt'],
-	    source_derived_stage_refs: sourceDerivedStageRefs,
+    const buildReceipt = {
+      surface_kind: 'opl_meta_agent_build_receipt',
+      receipt_kind: 'AgentBuildReceipt',
+      version: 'opl-meta-agent.agent-build-receipt.v1',
+      receipt_ref: buildReceiptRefs[0],
+      build_receipt_ref: buildReceiptRefs[0],
+      build_source_kind: 'source_derived_design',
+      design_admission_receipt_ref: designAdmissionReceiptRefs[0],
+      required_design_objects: requiredDesignConsumptionObjects,
+      required_admission_receipts: ['DesignAdmissionReceipt'],
+      source_derived_stage_refs: sourceDerivedStageRefs,
     target_only_requirement_refs: [
       'target-only-requirement:colorectal-surgery-risk-from-paper/owner-gated-closeout',
     ],
@@ -157,35 +157,35 @@ function makeSourceDerivedAgentFixture() {
       refs_only: true,
       can_write_target_domain_truth: false,
       can_create_target_owner_receipt: false,
-	      can_promote_live_or_default_agent: false,
-	    },
-	  };
-	  const designAdmissionReceipt = {
-	    surface_kind: 'opl_meta_agent_design_admission_receipt',
-	    version: 'opl-meta-agent.design-admission-receipt.v1',
-	    receipt_ref: designAdmissionReceiptRefs[0],
-	    design_basis_kind: 'source_derived_design',
-	    source_derived_design_receipt_ref: 'source-derived-design-receipt-ref:colorectal-surgery-risk-from-paper',
-	    reference_design_packet_ref: referenceDesignPacketRefs[0],
-	    transfer_map_ref: transferMapRefs[0],
-	    agent_pack_plan_ref: agentPackPlanRefs[0],
-	    required_design_objects: requiredDesignConsumptionObjects,
-	    required_admission_receipts: ['DesignAdmissionReceipt'],
-	    design_derived_stage_refs: sourceDerivedStageRefs,
-	    source_derived_stage_refs: sourceDerivedStageRefs,
-	    target_only_requirement_refs: [
-	      'target-only-requirement:colorectal-surgery-risk-from-paper/owner-gated-closeout',
-	    ],
-	    rejected_source_pattern_refs: rejectedSourcePatternRefs,
-	    forbidden_claims: forbiddenClaims,
-	    authority_boundary: {
-	      refs_only: true,
-	      can_write_target_domain_truth: false,
-	      can_create_target_owner_receipt: false,
-	      can_promote_live_or_default_agent: false,
-	    },
-	  };
-	  const sourceDerivedDesignReceipt = {
+        can_promote_live_or_default_agent: false,
+      },
+    };
+    const designAdmissionReceipt = {
+      surface_kind: 'opl_meta_agent_design_admission_receipt',
+      version: 'opl-meta-agent.design-admission-receipt.v1',
+      receipt_ref: designAdmissionReceiptRefs[0],
+      design_basis_kind: 'source_derived_design',
+      source_derived_design_receipt_ref: 'source-derived-design-receipt-ref:colorectal-surgery-risk-from-paper',
+      reference_design_packet_ref: referenceDesignPacketRefs[0],
+      transfer_map_ref: transferMapRefs[0],
+      agent_pack_plan_ref: agentPackPlanRefs[0],
+      required_design_objects: requiredDesignConsumptionObjects,
+      required_admission_receipts: ['DesignAdmissionReceipt'],
+      design_derived_stage_refs: sourceDerivedStageRefs,
+      source_derived_stage_refs: sourceDerivedStageRefs,
+      target_only_requirement_refs: [
+        'target-only-requirement:colorectal-surgery-risk-from-paper/owner-gated-closeout',
+      ],
+      rejected_source_pattern_refs: rejectedSourcePatternRefs,
+      forbidden_claims: forbiddenClaims,
+      authority_boundary: {
+        refs_only: true,
+        can_write_target_domain_truth: false,
+        can_create_target_owner_receipt: false,
+        can_promote_live_or_default_agent: false,
+      },
+    };
+    const sourceDerivedDesignReceipt = {
     surface_kind: 'opl_meta_agent_source_derived_design_receipt',
     route_id: 'source_derived_design_profile_route.v1',
     route_ref: 'opl-profile-route:source_derived_design_profile_route.v1',
@@ -194,18 +194,18 @@ function makeSourceDerivedAgentFixture() {
     reference_design_source_refs: referenceDesignSourceRefs,
     reference_design_packet_refs: referenceDesignPacketRefs,
     reference_design_pattern_packet_refs: referenceDesignPacketRefs,
-	    transfer_map_refs: transferMapRefs,
-	    agent_pack_plan_refs: agentPackPlanRefs,
-	    design_admission_receipt_refs: designAdmissionReceiptRefs,
-	    design_admission_receipt_ref: designAdmissionReceiptRefs[0],
-	    build_receipt_refs: buildReceiptRefs,
-	    design_admission_receipt_requirements: [
-	      'DesignAdmissionReceipt',
-	    ],
-	    build_receipt_requirements: [
-	      'source_derived_stage_refs',
-	      'target_only_requirement_refs',
-	      'rejected_source_pattern_refs',
+      transfer_map_refs: transferMapRefs,
+      agent_pack_plan_refs: agentPackPlanRefs,
+      design_admission_receipt_refs: designAdmissionReceiptRefs,
+      design_admission_receipt_ref: designAdmissionReceiptRefs[0],
+      build_receipt_refs: buildReceiptRefs,
+      design_admission_receipt_requirements: [
+        'DesignAdmissionReceipt',
+      ],
+      build_receipt_requirements: [
+        'source_derived_stage_refs',
+        'target_only_requirement_refs',
+        'rejected_source_pattern_refs',
       'forbidden_claims',
     ],
     profile_requirements: {
@@ -252,12 +252,12 @@ function makeSourceDerivedAgentFixture() {
     surface_kind: 'opl_standard_agent_capability_map',
     schema_version: 'standard-agent-capability-map.v1',
     domain_id: 'colorectal-surgery-risk-from-paper',
-	    profile_selection_mode: 'source_derived_design',
-	    source_derived_design_receipt: sourceDerivedDesignReceipt,
-	    design_admission_receipt: designAdmissionReceipt,
-	    design_admission_receipt_ref: designAdmissionReceiptRefs[0],
-	    design_admission_receipt_refs: designAdmissionReceiptRefs,
-	    build_receipt: buildReceipt,
+      profile_selection_mode: 'source_derived_design',
+      source_derived_design_receipt: sourceDerivedDesignReceipt,
+      design_admission_receipt: designAdmissionReceipt,
+      design_admission_receipt_ref: designAdmissionReceiptRefs[0],
+      design_admission_receipt_refs: designAdmissionReceiptRefs,
+      build_receipt: buildReceipt,
     build_receipt_ref: buildReceiptRefs[0],
     build_receipt_refs: buildReceiptRefs,
     profile_requirements: profileRequirements,
@@ -281,12 +281,12 @@ function makeSourceDerivedAgentFixture() {
     plane_id: 'colorectal_surgery_risk_from_paper_stage_plane',
     target_domain_id: 'colorectal-surgery-risk-from-paper',
     owner: 'colorectal-surgery-risk-from-paper',
-	    profile_selection_mode: 'source_derived_design',
-	    source_derived_design_receipt: sourceDerivedDesignReceipt,
-	    design_admission_receipt: designAdmissionReceipt,
-	    design_admission_receipt_ref: designAdmissionReceiptRefs[0],
-	    design_admission_receipt_refs: designAdmissionReceiptRefs,
-	    build_receipt: buildReceipt,
+      profile_selection_mode: 'source_derived_design',
+      source_derived_design_receipt: sourceDerivedDesignReceipt,
+      design_admission_receipt: designAdmissionReceipt,
+      design_admission_receipt_ref: designAdmissionReceiptRefs[0],
+      design_admission_receipt_refs: designAdmissionReceiptRefs,
+      build_receipt: buildReceipt,
     build_receipt_ref: buildReceiptRefs[0],
     build_receipt_refs: buildReceiptRefs,
     profile_requirements: profileRequirements,
@@ -299,11 +299,11 @@ function makeSourceDerivedAgentFixture() {
         owner: 'colorectal-surgery-risk-from-paper',
         stage_pattern_source_refs: [
           'pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design',
-	        ],
-	        design_admission_receipt: designAdmissionReceipt,
-	        design_admission_receipt_ref: designAdmissionReceiptRefs[0],
-	        design_admission_receipt_refs: designAdmissionReceiptRefs,
-	        build_receipt: buildReceipt,
+          ],
+          design_admission_receipt: designAdmissionReceipt,
+          design_admission_receipt_ref: designAdmissionReceiptRefs[0],
+          design_admission_receipt_refs: designAdmissionReceiptRefs,
+          build_receipt: buildReceipt,
         build_receipt_ref: buildReceiptRefs[0],
         build_receipt_refs: buildReceiptRefs,
         knowledge_refs: [{ ref_kind: 'repo_path', ref: 'agent/knowledge/reference-design.md' }],
@@ -453,14 +453,14 @@ test('profile conformance accepts source-derived design route receipts without a
   const sourceDerivedDesign = conformance.observed.source_derived_design;
   assert.ok(sourceDerivedDesign);
   assert.ok(sourceDerivedDesign.reference_design_source_refs.includes('paper-ref:uploaded-colorectal-risk-framework'));
-	  assert.ok(sourceDerivedDesign.transfer_map_refs.includes('transfer-map-ref:oma/reference-designs/uploaded-paper/transfer-map'));
-	  assert.ok(sourceDerivedDesign.agent_pack_plan_refs.includes('agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan'));
-	  assert.ok(sourceDerivedDesign.design_admission_receipt_refs.includes('design-admission-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-design-admission'));
-	  assert.ok(sourceDerivedDesign.design_admission_receipt_stage_refs.includes('stage:colorectal-surgery-risk-from-paper/source-derived-design'));
-	  assert.ok(sourceDerivedDesign.design_admission_receipt_rejected_source_pattern_refs.includes('non-transferable:uploaded-paper/external-runtime-truth-authority'));
-	  assert.ok(sourceDerivedDesign.design_admission_receipt_forbidden_claims.includes('target_domain_ready'));
-	  assert.ok(sourceDerivedDesign.build_receipt_refs.includes('build-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-build'));
-	  assert.ok(sourceDerivedDesign.stage_pattern_source_refs.includes('pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design'));
+    assert.ok(sourceDerivedDesign.transfer_map_refs.includes('transfer-map-ref:oma/reference-designs/uploaded-paper/transfer-map'));
+    assert.ok(sourceDerivedDesign.agent_pack_plan_refs.includes('agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan'));
+    assert.ok(sourceDerivedDesign.design_admission_receipt_refs.includes('design-admission-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-design-admission'));
+    assert.ok(sourceDerivedDesign.design_admission_receipt_stage_refs.includes('stage:colorectal-surgery-risk-from-paper/source-derived-design'));
+    assert.ok(sourceDerivedDesign.design_admission_receipt_rejected_source_pattern_refs.includes('non-transferable:uploaded-paper/external-runtime-truth-authority'));
+    assert.ok(sourceDerivedDesign.design_admission_receipt_forbidden_claims.includes('target_domain_ready'));
+    assert.ok(sourceDerivedDesign.build_receipt_refs.includes('build-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-build'));
+    assert.ok(sourceDerivedDesign.stage_pattern_source_refs.includes('pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design'));
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
 });
 
@@ -474,24 +474,24 @@ test('profile conformance fails closed when source-derived route only exposes ro
     route_id: 'source_derived_design_profile_route.v1',
     route_ref: 'opl-profile-route:source_derived_design_profile_route.v1',
   };
-	  capabilityMap.source_derived_design_receipt = routeOnlyReceipt;
-	  stageControl.source_derived_design_receipt = routeOnlyReceipt;
-	  delete capabilityMap.design_admission_receipt;
-	  delete capabilityMap.design_admission_receipt_ref;
-	  delete capabilityMap.design_admission_receipt_refs;
-	  delete capabilityMap.build_receipt;
+    capabilityMap.source_derived_design_receipt = routeOnlyReceipt;
+    stageControl.source_derived_design_receipt = routeOnlyReceipt;
+    delete capabilityMap.design_admission_receipt;
+    delete capabilityMap.design_admission_receipt_ref;
+    delete capabilityMap.design_admission_receipt_refs;
+    delete capabilityMap.build_receipt;
   delete capabilityMap.build_receipt_ref;
   delete capabilityMap.build_receipt_refs;
-	  delete stageControl.design_admission_receipt;
-	  delete stageControl.design_admission_receipt_ref;
-	  delete stageControl.design_admission_receipt_refs;
-	  delete stageControl.build_receipt;
+    delete stageControl.design_admission_receipt;
+    delete stageControl.design_admission_receipt_ref;
+    delete stageControl.design_admission_receipt_refs;
+    delete stageControl.build_receipt;
   delete stageControl.build_receipt_ref;
   delete stageControl.build_receipt_refs;
-	  delete stageControl.stages[0].design_admission_receipt;
-	  delete stageControl.stages[0].design_admission_receipt_ref;
-	  delete stageControl.stages[0].design_admission_receipt_refs;
-	  delete stageControl.stages[0].build_receipt;
+    delete stageControl.stages[0].design_admission_receipt;
+    delete stageControl.stages[0].design_admission_receipt_ref;
+    delete stageControl.stages[0].design_admission_receipt_refs;
+    delete stageControl.stages[0].build_receipt;
   delete stageControl.stages[0].build_receipt_ref;
   delete stageControl.stages[0].build_receipt_refs;
   capabilityMap.profile_requirements = {
@@ -532,10 +532,10 @@ test('profile conformance fails closed when source-derived route only exposes ro
     conformance.blockers.includes('source_derived_design_missing_build_receipt_refs'),
     true,
   );
-	  assert.equal(
-	    conformance.blockers.includes('source_derived_design_missing_design_admission_receipt_refs'),
-	    true,
-	  );
+    assert.equal(
+      conformance.blockers.includes('source_derived_design_missing_design_admission_receipt_refs'),
+      true,
+    );
   assert.equal(
     conformance.blockers.includes('source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement'),
     true,
@@ -549,30 +549,30 @@ test('profile conformance fails closed when source-derived requirements exist wi
   const capabilityMap = JSON.parse(fs.readFileSync(capabilityMapPath, 'utf8'));
   const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
 
-	  delete capabilityMap.source_derived_design_receipt.transfer_map_refs;
-	  delete capabilityMap.source_derived_design_receipt.agent_pack_plan_refs;
-	  delete capabilityMap.source_derived_design_receipt.design_admission_receipt_refs;
-	  delete capabilityMap.design_admission_receipt;
-	  delete capabilityMap.design_admission_receipt_ref;
-	  delete capabilityMap.design_admission_receipt_refs;
-	  delete capabilityMap.source_derived_design_receipt.build_receipt_refs;
+    delete capabilityMap.source_derived_design_receipt.transfer_map_refs;
+    delete capabilityMap.source_derived_design_receipt.agent_pack_plan_refs;
+    delete capabilityMap.source_derived_design_receipt.design_admission_receipt_refs;
+    delete capabilityMap.design_admission_receipt;
+    delete capabilityMap.design_admission_receipt_ref;
+    delete capabilityMap.design_admission_receipt_refs;
+    delete capabilityMap.source_derived_design_receipt.build_receipt_refs;
   delete capabilityMap.build_receipt;
   delete capabilityMap.build_receipt_ref;
   delete capabilityMap.build_receipt_refs;
-	  delete stageControl.source_derived_design_receipt.transfer_map_refs;
-	  delete stageControl.source_derived_design_receipt.agent_pack_plan_refs;
-	  delete stageControl.source_derived_design_receipt.design_admission_receipt_refs;
-	  delete stageControl.design_admission_receipt;
-	  delete stageControl.design_admission_receipt_ref;
-	  delete stageControl.design_admission_receipt_refs;
-	  delete stageControl.source_derived_design_receipt.build_receipt_refs;
+    delete stageControl.source_derived_design_receipt.transfer_map_refs;
+    delete stageControl.source_derived_design_receipt.agent_pack_plan_refs;
+    delete stageControl.source_derived_design_receipt.design_admission_receipt_refs;
+    delete stageControl.design_admission_receipt;
+    delete stageControl.design_admission_receipt_ref;
+    delete stageControl.design_admission_receipt_refs;
+    delete stageControl.source_derived_design_receipt.build_receipt_refs;
   delete stageControl.build_receipt;
   delete stageControl.build_receipt_ref;
   delete stageControl.build_receipt_refs;
-	  delete stageControl.stages[0].design_admission_receipt;
-	  delete stageControl.stages[0].design_admission_receipt_ref;
-	  delete stageControl.stages[0].design_admission_receipt_refs;
-	  delete stageControl.stages[0].build_receipt;
+    delete stageControl.stages[0].design_admission_receipt;
+    delete stageControl.stages[0].design_admission_receipt_ref;
+    delete stageControl.stages[0].design_admission_receipt_refs;
+    delete stageControl.stages[0].build_receipt;
   delete stageControl.stages[0].build_receipt_ref;
   delete stageControl.stages[0].build_receipt_refs;
 
@@ -599,10 +599,10 @@ test('profile conformance fails closed when source-derived requirements exist wi
     conformance.blockers.includes('source_derived_design_missing_build_receipt_refs'),
     true,
   );
-	  assert.equal(
-	    conformance.blockers.includes('source_derived_design_missing_design_admission_receipt_refs'),
-	    true,
-	  );
+    assert.equal(
+      conformance.blockers.includes('source_derived_design_missing_design_admission_receipt_refs'),
+      true,
+    );
   assert.equal(
     conformance.blockers.includes('source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement'),
     false,
