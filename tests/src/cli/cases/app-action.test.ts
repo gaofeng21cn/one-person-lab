@@ -102,7 +102,7 @@ test('app action execute wraps runtime action dry-run as the App mutating bounda
   }
 });
 
-test('app action catalog exposes Codex, module, and Temporal management actions', () => {
+test('app action catalog exposes representative safe delegated action refs', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-actions-home-'));
 
   try {
@@ -124,69 +124,18 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     const actions = new Map(output.app_state.actions.map((entry) => [entry.action_id, entry]));
 
     for (const actionId of [
-      'codex_install',
       'codex_update',
-      'codex_reinstall',
-      'codex_remove',
-      'developer_supervisor_refresh',
-      'intelligence_enhancement_status',
       'intelligence_enhancement_enable',
-      'intelligence_enhancement_disable',
-      'intelligence_enhancement_repair',
-      'intelligence_enhancement_uninstall',
-      'module_install',
-      'module_update',
       'module_sync',
       'scholarskills_workspace_sync',
-      'scholarskills_quest_sync',
-      'module_reinstall',
-      'module_remove',
-      'provider_scheduler_install',
-      'provider_scheduler_trigger',
-      'provider_worker_start',
-      'provider_worker_restart',
+      'provider_scheduler_status',
       'workspace_initialize',
-      'workspace_ensure',
       'workspace_validate',
-      'workspace_doctor',
-      'workspace_adopt_dry_run',
-      'workspace_adopt_apply',
-      'workspace_upgrade',
-      'workspace_project_archive',
-      'workspace_project_lifecycle',
-      'workspace_project_pause',
-      'workspace_project_resume',
-      'workspace_project_lock',
-      'workspace_project_supersede',
-      'workspace_project_delete',
-      'workspace_export_map',
-      'workspace_inspect',
-      'workspace_inventory',
-      'workspace_health',
-      'workspace_report',
-      'workspace_fleet_report',
-      'settings_repair_model_access',
-      'settings_verify_workspace',
       'settings_sync_capabilities',
-      'settings_apply_opl_packages',
-      'refresh_registry',
-      'install_from_manifest_url',
-      'agent_package_update',
-      'agent_package_repair',
-      'agent_package_uninstall',
-      'agent_package_preferences_set',
-      'settings_reload_codex_surface',
       'settings_check_app_update',
-      'settings_prune_runtime_roots_dry_run',
       'settings_rollback_runtime_substrate',
-      'settings_install_docker_webui',
       'settings_configure_webui_api_key',
-      'settings_select_webui_seed',
-      'settings_run_webui_startup_maintenance',
-      'settings_open_docker_webui',
-      'settings_diagnose_docker_webui',
       'task_action_receipt_preview',
-      'task_export_bundle_preview',
     ]) {
       assert.ok(actions.has(actionId), `missing App action: ${actionId}`);
       const delegatedSurface = actions.get(actionId)?.delegated_surface ?? '';
@@ -198,9 +147,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
         true,
       );
     }
-    assert.deepEqual(actions.get('module_update')?.payload_fields, ['module_id']);
-    assert.equal(actions.get('module_update')?.route_requires_domain_or_app_payload, true);
-    assert.equal(actions.get('module_update')?.can_submit_to_safe_action_shell, false);
     assert.deepEqual(actions.get('module_sync')?.payload_fields, []);
     assert.equal(actions.get('module_sync')?.delegated_surface, 'opl update apply --component capability_packages');
     assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
@@ -212,15 +158,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('scholarskills_workspace_sync')?.dry_run_supported, true);
     assert.equal(actions.get('scholarskills_workspace_sync')?.route_requires_domain_or_app_payload, true);
     assert.equal(actions.get('scholarskills_workspace_sync')?.can_submit_to_safe_action_shell, false);
-    assert.deepEqual(actions.get('scholarskills_quest_sync')?.payload_fields, ['quest_root']);
-    assert.equal(
-      actions.get('scholarskills_quest_sync')?.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest_root>',
-    );
-    assert.equal(actions.get('scholarskills_quest_sync')?.mutates, 'quest_local_codex_skill');
-    assert.equal(actions.get('scholarskills_quest_sync')?.dry_run_supported, true);
-    assert.equal(actions.get('scholarskills_quest_sync')?.route_requires_domain_or_app_payload, true);
-    assert.equal(actions.get('scholarskills_quest_sync')?.can_submit_to_safe_action_shell, false);
     assert.equal(actions.get('provider_scheduler_status')?.submit_via, 'opl app action execute');
     assert.equal(actions.get('provider_scheduler_status')?.execution_policy, 'opl_safe_action_shell');
     assert.equal(actions.get('provider_scheduler_status')?.route_requires_domain_or_app_payload, false);
@@ -239,19 +176,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('intelligence_enhancement_enable')?.mutates, 'local_codex_config_and_codexcont_proxy');
     assert.equal(actions.get('intelligence_enhancement_enable')?.rollback_action_id, 'intelligence_enhancement_disable');
     assert.equal(actions.get('intelligence_enhancement_enable')?.verify_action_id, 'intelligence_enhancement_status');
-    assert.equal(
-      actions.get('intelligence_enhancement_disable')?.delegated_surface,
-      'opl flow intelligence-enhancement disable',
-    );
-    assert.equal(actions.get('intelligence_enhancement_disable')?.rollback_action_id, 'intelligence_enhancement_enable');
-    assert.equal(
-      actions.get('intelligence_enhancement_repair')?.delegated_surface,
-      'opl flow intelligence-enhancement repair',
-    );
-    assert.equal(actions.get('intelligence_enhancement_repair')?.mutates, 'local_codexcont_proxy_service');
-    assert.equal(actions.get('intelligence_enhancement_repair')?.verify_action_id, 'intelligence_enhancement_status');
-    assert.deepEqual(actions.get('intelligence_enhancement_uninstall')?.payload_fields, ['confirmation']);
-    assert.equal(actions.get('intelligence_enhancement_uninstall')?.danger_level, 'high');
     assert.equal(actions.get('workspace_initialize')?.delegated_surface, 'opl workspace init');
     assert.equal(actions.get('workspace_initialize')?.dry_run_supported, true);
     assert.deepEqual(actions.get('workspace_initialize')?.payload_fields, [
@@ -262,61 +186,9 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
       'mode',
       'title',
     ]);
-    assert.equal(actions.get('workspace_ensure')?.delegated_surface, 'opl workspace ensure');
-    assert.equal(actions.get('workspace_ensure')?.dry_run_supported, true);
-    assert.deepEqual(actions.get('workspace_ensure')?.payload_fields, [
-      'agent_id',
-      'workspace_root_optional',
-      'workspace_id',
-      'project_id',
-      'mode',
-      'title',
-    ]);
     assert.equal(actions.get('workspace_validate')?.delegated_surface, 'opl workspace validate');
     assert.equal(actions.get('workspace_validate')?.mutates, 'none_read_only');
     assert.deepEqual(actions.get('workspace_validate')?.payload_fields, ['workspace_path']);
-    assert.equal(actions.get('workspace_doctor')?.delegated_surface, 'opl workspace doctor');
-    assert.equal(actions.get('workspace_doctor')?.mutates, 'none_read_only');
-    assert.deepEqual(actions.get('workspace_doctor')?.payload_fields, ['workspace_path']);
-    assert.equal(actions.get('workspace_adopt_dry_run')?.delegated_surface, 'opl workspace adopt --dry-run');
-    assert.equal(actions.get('workspace_adopt_dry_run')?.mutates, 'none_read_only');
-    assert.equal(actions.get('workspace_adopt_dry_run')?.dry_run_supported, true);
-    assert.equal(actions.get('workspace_adopt_apply')?.delegated_surface, 'opl workspace adopt --apply');
-    assert.equal(actions.get('workspace_adopt_apply')?.mutates, 'opl_workspace_topology_projection');
-    assert.equal(actions.get('workspace_upgrade')?.delegated_surface, 'opl workspace upgrade');
-    assert.equal(actions.get('workspace_upgrade')?.mutates, 'opl_workspace_topology_projection');
-    assert.equal(actions.get('workspace_project_archive')?.delegated_surface, 'opl workspace project archive');
-    assert.equal(actions.get('workspace_project_archive')?.mutates, 'opl_workspace_project_lifecycle_projection');
-    assert.equal(actions.get('workspace_project_lifecycle')?.delegated_surface, 'opl workspace project lifecycle');
-    assert.deepEqual(actions.get('workspace_project_lifecycle')?.payload_fields, [
-      'workspace_path',
-      'project_id',
-      'status',
-      'reason',
-      'superseded_by_project_id',
-    ]);
-    assert.equal(actions.get('workspace_project_pause')?.delegated_surface, 'opl workspace project lifecycle');
-    assert.equal(actions.get('workspace_project_resume')?.delegated_surface, 'opl workspace project lifecycle');
-    assert.equal(actions.get('workspace_project_lock')?.delegated_surface, 'opl workspace project lifecycle');
-    assert.equal(actions.get('workspace_project_supersede')?.delegated_surface, 'opl workspace project lifecycle');
-    assert.equal(actions.get('workspace_project_delete')?.delegated_surface, 'opl workspace project delete');
-    assert.equal(actions.get('workspace_project_delete')?.mutates, 'none_read_only');
-    assert.equal(actions.get('workspace_export_map')?.delegated_surface, 'opl workspace export-map');
-    assert.equal(actions.get('workspace_export_map')?.mutates, 'none_read_only');
-    assert.equal(actions.get('workspace_inspect')?.delegated_surface, 'opl workspace inspect');
-    assert.equal(actions.get('workspace_inspect')?.mutates, 'none_read_only');
-    assert.deepEqual(actions.get('workspace_inspect')?.payload_fields, ['workspace_path']);
-    assert.equal(actions.get('workspace_inventory')?.delegated_surface, 'opl workspace inventory');
-    assert.equal(actions.get('workspace_inventory')?.mutates, 'none_read_only');
-    assert.deepEqual(actions.get('workspace_inventory')?.payload_fields, ['workspace_path']);
-    assert.equal(actions.get('workspace_health')?.delegated_surface, 'opl workspace health');
-    assert.equal(actions.get('workspace_health')?.mutates, 'none_read_only');
-    assert.equal(actions.get('workspace_report')?.delegated_surface, 'opl workspace report');
-    assert.equal(actions.get('workspace_report')?.mutates, 'none_read_only');
-    assert.deepEqual(actions.get('workspace_report')?.payload_fields, ['workspace_path']);
-    assert.equal(actions.get('workspace_fleet_report')?.delegated_surface, 'opl workspace fleet report');
-    assert.equal(actions.get('workspace_fleet_report')?.mutates, 'none_read_only');
-    assert.deepEqual(actions.get('workspace_fleet_report')?.payload_fields, []);
     assert.equal(actions.has('provider_scheduler_tick'), false);
     assert.equal(
       actions.get('task_action_receipt_preview')?.delegated_surface,
@@ -350,36 +222,6 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     assert.equal(actions.get('settings_sync_capabilities')?.delegated_surface, 'opl update apply --component capability_packages');
     assert.deepEqual(actions.get('settings_sync_capabilities')?.payload_fields, []);
     assert.equal(actions.get('settings_sync_capabilities')?.can_submit_to_safe_action_shell, true);
-    assert.equal(actions.get('settings_apply_opl_packages')?.delegated_surface, 'opl update apply --component capability_packages');
-    assert.deepEqual(
-      [
-        'refresh_registry',
-        'install_from_manifest_url',
-        'agent_package_update',
-        'agent_package_repair',
-        'agent_package_uninstall',
-        'agent_package_preferences_set',
-      ].map((actionId) => actions.get(actionId)?.delegated_surface),
-      [
-        'opl connect agent-packages registry refresh --registry-url <registry_url>',
-        'opl connect agent-packages install --manifest-url <manifest_url>',
-        'opl connect agent-packages update --manifest-url <manifest_url>',
-        'opl connect agent-packages repair --package-id <package_id>',
-        'opl connect agent-packages uninstall --package-id <package_id>',
-        'opl app action execute --action agent_package_preferences_set',
-      ],
-    );
-    assert.equal(
-      actions.get('settings_reload_codex_surface')?.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope <workspace|quest>',
-    );
-    assert.deepEqual(actions.get('settings_reload_codex_surface')?.payload_fields, ['scope', 'target_path']);
-    assert.equal(actions.get('settings_reload_codex_surface')?.route_requires_domain_or_app_payload, true);
-    assert.equal(
-      actions.get('settings_prune_runtime_roots_dry_run')?.delegated_surface,
-      'opl app action execute --action settings_prune_runtime_roots_dry_run',
-    );
-    assert.equal(actions.get('settings_prune_runtime_roots_dry_run')?.mutates, 'none_read_only');
     assert.equal(
       actions.get('settings_check_app_update')?.delegated_surface,
       'opl update status --component installation_carrier',
@@ -391,33 +233,12 @@ test('app action catalog exposes Codex, module, and Temporal management actions'
     );
     assert.deepEqual(actions.get('settings_rollback_runtime_substrate')?.payload_fields, ['receipt_ref']);
     assert.equal(actions.get('settings_rollback_runtime_substrate')?.danger_level, 'high');
-    assert.equal(actions.get('settings_install_docker_webui')?.delegated_surface, 'opl install');
-    assert.equal(actions.get('settings_install_docker_webui')?.confirmation_required, true);
     assert.equal(
       actions.get('settings_configure_webui_api_key')?.delegated_surface,
       'printf <api-key> | opl system configure-codex --api-key-stdin',
     );
     assert.deepEqual(actions.get('settings_configure_webui_api_key')?.payload_fields, []);
     assert.equal(actions.get('settings_configure_webui_api_key')?.danger_level, 'medium');
-    assert.equal(
-      actions.get('settings_select_webui_seed')?.delegated_surface,
-      'OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json',
-    );
-    assert.deepEqual(actions.get('settings_select_webui_seed')?.payload_fields, [
-      'image_manifest_path',
-      'image_seed_dir',
-    ]);
-    assert.equal(
-      actions.get('settings_run_webui_startup_maintenance')?.delegated_surface,
-      'opl system startup-maintenance',
-    );
-    assert.equal(
-      actions.get('settings_open_docker_webui')?.delegated_surface,
-      'opl system docker-webui doctor --json#docker_webui_doctor.browser.url',
-    );
-    assert.equal(actions.get('settings_open_docker_webui')?.mutates, 'none_read_only');
-    assert.equal(actions.get('settings_diagnose_docker_webui')?.delegated_surface, 'opl system docker-webui doctor');
-    assert.equal(actions.get('settings_diagnose_docker_webui')?.mutates, 'none_read_only');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

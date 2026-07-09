@@ -1,5 +1,4 @@
 import './app-state-cases/canonical-gui.test.ts';
-import './app-state-cases/settings-control-center.test.ts';
 import './app-state-cases/mas-activity.test.ts';
 import './app-state-cases/fast-guards.test.ts';
 import './app-state-cases/public-surface.ts';

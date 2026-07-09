@@ -4,30 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type {
-  FamilyProductEntryManifestSurface,
-  FamilyProductEntrySurface,
-} from '../../../src/modules/console/product-entry-companions.ts';
 import {
-  buildDeliveryIdentitySurface,
-  buildEntrySessionSurface,
-  buildOperatorLoopActionCatalog,
-  buildFamilyProductEntrySurfaces,
-  buildFamilyProductEntrySurface,
-  buildFamilyProductEntrySurfaceFromManifest,
-  buildFamilyProductEntryManifest,
-  buildProductEntryContinuationSnapshot,
-  buildProductEntryShellCatalog,
-  buildProductEntryShellLinkedSurface,
-  buildProductEntrySurface,
-  buildProductEntryOverview,
-  buildProductEntryQuickstart,
-  buildProductEntryReadiness,
-  buildProductEntryResumeSurface,
-  buildProductEntryStart,
-  buildReturnSurfaceContract,
-  buildRuntimeSessionContract,
-  collectFamilyHumanGateIds,
   validateFamilyProductEntrySurface,
   validateFamilyProductEntryManifest,
 } from '../../../src/modules/console/product-entry-companions.ts';
@@ -42,184 +19,63 @@ function readFamilyManifestFixture(fileName: string) {
   return (payload.product_entry_manifest as Record<string, unknown> | undefined) ?? payload;
 }
 
+function readValidatorManifestFixture() {
+  const manifest = structuredClone(readFamilyManifestFixture('redcube-product-entry-manifest.json')) as Record<string, any>;
+  manifest.persistence_policy ??= { surface_kind: 'family_persistence_policy' };
+  manifest.lifecycle_ledger ??= { surface_kind: 'family_lifecycle_ledger' };
+  manifest.owner_route ??= { surface_kind: 'family_owner_route' };
+  manifest.product_entry_quickstart ??= {
+    surface_kind: 'product_entry_quickstart',
+    recommended_step_id: 'open_product_entry',
+    summary: 'Open the product_entry first.',
+    steps: [{
+      step_id: 'open_product_entry',
+      title: 'Open product_entry',
+      command: 'redcube product status',
+      surface_kind: 'product_entry_surface',
+      summary: 'Open the direct product_entry.',
+      requires: [],
+    }],
+    resume_contract: manifest.family_orchestration.resume_contract,
+    human_gate_ids: manifest.product_entry_start.human_gate_ids ?? [],
+  };
+  return manifest;
+}
+
+function buildValidatorProductEntry(manifest: Record<string, any>) {
+  return {
+    surface_kind: 'product_entry_surface',
+    recommended_action: 'inspect_or_start_product_entry',
+    target_domain_id: manifest.target_domain_id,
+    workspace_locator: manifest.workspace_locator,
+    runtime: manifest.runtime,
+    product_entry_status: manifest.product_entry_status,
+    product_entry_surface: manifest.product_entry_surface,
+    operator_loop_surface: manifest.operator_loop_surface,
+    operator_loop_actions: manifest.operator_loop_actions ?? {},
+    product_entry_start: manifest.product_entry_start,
+    product_entry_overview: manifest.product_entry_overview,
+    product_entry_preflight: manifest.product_entry_preflight,
+    product_entry_readiness: manifest.product_entry_readiness,
+    product_entry_quickstart: manifest.product_entry_quickstart,
+    family_orchestration: manifest.family_orchestration,
+    product_entry_manifest: manifest,
+    entry_surfaces: {},
+    summary: {
+      product_entry_command: manifest.product_entry_overview.product_entry_command,
+      recommended_command: manifest.product_entry_overview.recommended_command,
+      operator_loop_command: manifest.product_entry_overview.operator_loop_command,
+    },
+    notes: ['Thin product_entry adapter is active.'],
+    schema_ref: 'contracts/schemas/v1/product-status.schema.json',
+    domain_entry_contract: manifest.domain_entry_contract,
+    user_interaction_contract: manifest.user_interaction_contract,
+  };
+}
+
 
 test('product entry companion validators normalize shared family payloads', () => {
-  const manifest = {
-    surface_kind: 'product_entry_manifest',
-    manifest_version: 2,
-    manifest_kind: 'redcube_product_entry_manifest',
-    target_domain_id: 'redcube_ai',
-    formal_entry: {
-      default: 'CLI',
-      supported_protocols: ['MCP'],
-      internal_surface: 'RedCubeDomainEntry',
-    },
-    workspace_locator: {
-      workspace_surface_kind: 'redcube_workspace',
-      workspace_root: '/tmp/redcube-workspace',
-    },
-    product_entry_shell: {
-      product_entry: {
-        command: 'redcube product status',
-        surface_kind: 'product_entry_surface',
-      },
-    },
-    shared_handoff: {
-      opl_return_surface: {
-        surface_kind: 'product_entry',
-        target_domain_id: 'redcube_ai',
-      },
-    },
-    product_entry_start: {
-      surface_kind: 'product_entry_start',
-      summary: 'Open the product_entry first.',
-      recommended_mode_id: 'open_product_entry',
-      modes: [
-        {
-          mode_id: 'open_product_entry',
-          title: 'Open product_entry',
-          command: 'redcube product status',
-          surface_kind: 'product_entry_surface',
-          summary: 'Open the direct product_entry.',
-          requires: [],
-        },
-      ],
-      resume_surface: {
-        surface_kind: 'product_entry_session',
-        command: 'redcube product session --entry-session-id <entry-session-id>',
-        session_locator_field: 'entry_session_contract.entry_session_id',
-      },
-      human_gate_ids: ['alpha_gate'],
-    },
-    family_orchestration: {
-      human_gates: [{ gate_id: 'alpha_gate' }],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_contract.entry_session_id',
-      },
-    },
-    schema_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
-    domain_entry_contract: {
-      entry_adapter: 'RedCubeDomainEntry',
-      service_safe_surface_kind: 'domain_entry',
-      product_entry_builder_command: 'redcube product entry',
-      supported_commands: ['product-status'],
-      command_contracts: [
-        {
-          command: 'product-status',
-          required_fields: [],
-          optional_fields: [],
-        },
-      ],
-    },
-    user_interaction_contract: {
-      surface_kind: 'user_interaction_contract',
-      entry_owner: 'opl_framework_or_domain_app',
-      user_interaction_mode: 'natural_language_entry',
-      user_commands_required: false,
-      command_surfaces_for_agent_consumption_only: true,
-      shared_downstream_entry: 'redcube_product_entry',
-      shared_handoff_envelope: ['entry_session_contract'],
-    },
-    runtime_inventory: {
-      surface_kind: 'runtime_inventory',
-    },
-    task_lifecycle: {
-      surface_kind: 'task_lifecycle',
-    },
-    runtime_loop_closure: {
-      surface_kind: 'runtime_loop_closure',
-    },
-    persistence_policy: {
-      surface_kind: 'family_persistence_policy',
-      version: 'family-persistence-policy.v1',
-    },
-    lifecycle_ledger: {
-      surface_kind: 'family_lifecycle_ledger',
-      version: 'family-lifecycle-ledger.v1',
-    },
-    owner_route: {
-      surface_kind: 'family_owner_route',
-      version: 'family-owner-route.v1',
-    },
-    session_continuity: {
-      surface_kind: 'session_continuity',
-    },
-    progress_projection: {
-      surface_kind: 'progress_projection',
-    },
-    artifact_inventory: {
-      surface_kind: 'artifact_inventory',
-    },
-    skill_catalog: {
-      surface_kind: 'skill_catalog',
-    },
-    automation: {
-      surface_kind: 'automation',
-    },
-    product_entry_overview: {
-      surface_kind: 'product_entry_overview',
-      summary: 'Current product-entry surface is usable.',
-      product_entry_command: 'redcube product status',
-      recommended_command: 'redcube product invoke',
-      operator_loop_command: 'redcube product invoke',
-      progress_surface: {
-        surface_kind: 'product_entry_session',
-        command: 'redcube product session --entry-session-id <entry-session-id>',
-      },
-      resume_surface: {
-        surface_kind: 'product_entry_session',
-        command: 'redcube product session --entry-session-id <entry-session-id>',
-        session_locator_field: 'entry_session_contract.entry_session_id',
-      },
-      recommended_step_id: 'open_product_entry',
-      next_focus: ['Keep the direct loop stable.'],
-      remaining_gaps_count: 1,
-      human_gate_ids: ['alpha_gate'],
-    },
-    product_entry_preflight: {
-      surface_kind: 'product_entry_preflight',
-      summary: 'Current preflight is green.',
-      ready_to_try_now: true,
-      recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product status',
-      blocking_check_ids: [],
-      checks: [],
-    },
-    product_entry_readiness: {
-      surface_kind: 'product_entry_readiness',
-      verdict: 'service_surface_ready_not_managed_product',
-      usable_now: true,
-      good_to_use_now: false,
-      fully_automatic: false,
-      summary: 'Usable now with operator guidance.',
-      recommended_start_surface: 'product_entry_surface',
-      recommended_start_command: 'redcube product status',
-      recommended_loop_surface: 'product_entry',
-      recommended_loop_command: 'redcube product invoke',
-      blocking_gaps: ['Managed product shell still pending.'],
-    },
-    product_entry_quickstart: {
-      surface_kind: 'product_entry_quickstart',
-      recommended_step_id: 'open_product_entry',
-      summary: 'Open the product_entry first.',
-      steps: [
-        {
-          step_id: 'open_product_entry',
-          title: 'Open product_entry',
-          command: 'redcube product status',
-          surface_kind: 'product_entry_surface',
-          summary: 'Open the direct product_entry.',
-          requires: [],
-        },
-      ],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_contract.entry_session_id',
-      },
-      human_gate_ids: ['alpha_gate'],
-    },
-  };
+  const manifest = readValidatorManifestFixture();
 
   const validatedManifest = validateFamilyProductEntryManifest(manifest, {
     requireContractBundle: true,
@@ -238,49 +94,7 @@ test('product entry companion validators normalize shared family payloads', () =
   assert.equal(validatedManifest.progress_projection?.surface_kind, 'progress_projection');
   assert.equal(validatedManifest.artifact_inventory?.surface_kind, 'artifact_inventory');
 
-  const product_entry = {
-    surface_kind: 'product_entry_surface',
-    recommended_action: 'inspect_or_start_product_entry',
-    target_domain_id: 'redcube_ai',
-    workspace_locator: {
-      workspace_surface_kind: 'redcube_workspace',
-      workspace_root: '/tmp/redcube-workspace',
-    },
-    runtime: {
-      runtime_owner: 'provider_backed_family_runtime',
-    },
-    product_entry_status: {
-      summary: 'Usable now.',
-      next_focus: ['Keep the same session contract stable.'],
-      remaining_gaps_count: 1,
-    },
-    product_entry_surface: {
-      surface_kind: 'product_entry_surface',
-      command: 'redcube product status',
-    },
-    operator_loop_surface: {
-      surface_kind: 'product_entry',
-      command: 'redcube product invoke',
-    },
-    operator_loop_actions: {},
-    product_entry_start: manifest.product_entry_start,
-    product_entry_overview: manifest.product_entry_overview,
-    product_entry_preflight: manifest.product_entry_preflight,
-    product_entry_readiness: manifest.product_entry_readiness,
-    product_entry_quickstart: manifest.product_entry_quickstart,
-    family_orchestration: manifest.family_orchestration,
-    product_entry_manifest: manifest,
-    entry_surfaces: {},
-    summary: {
-      product_entry_command: 'redcube product status',
-      recommended_command: 'redcube product invoke',
-      operator_loop_command: 'redcube product invoke',
-    },
-    notes: ['Thin product_entry adapter is active.'],
-    schema_ref: 'contracts/schemas/v1/product-status.schema.json',
-    domain_entry_contract: manifest.domain_entry_contract,
-    user_interaction_contract: manifest.user_interaction_contract,
-  };
+  const product_entry = buildValidatorProductEntry(manifest);
   const validatedProductEntry = validateFamilyProductEntrySurface(product_entry, {
     requireContractBundle: true,
   });
@@ -308,117 +122,7 @@ test('runtime continuity validation accepts MAS, MAG, and RCA manifest fixtures'
 });
 
 test('product entry companion validators fail closed on missing required shared fields', () => {
-  const manifest = {
-    surface_kind: 'product_entry_manifest',
-    manifest_version: 2,
-    manifest_kind: 'redcube_product_entry_manifest',
-    target_domain_id: 'redcube_ai',
-    formal_entry: {
-      default: 'CLI',
-      supported_protocols: ['MCP'],
-      internal_surface: 'RedCubeDomainEntry',
-    },
-    workspace_locator: {
-      workspace_surface_kind: 'redcube_workspace',
-      workspace_root: '/tmp/redcube-workspace',
-    },
-    product_entry_shell: {
-      product_entry: {
-        command: 'redcube product status',
-        surface_kind: 'product_entry_surface',
-      },
-    },
-    shared_handoff: {
-      opl_return_surface: {
-        surface_kind: 'product_entry',
-        target_domain_id: 'redcube_ai',
-      },
-    },
-    product_entry_start: {
-      surface_kind: 'product_entry_start',
-      summary: 'Open the product_entry first.',
-      recommended_mode_id: 'open_product_entry',
-      modes: [
-        {
-          mode_id: 'open_product_entry',
-          title: 'Open product_entry',
-          command: 'redcube product status',
-          surface_kind: 'product_entry_surface',
-          summary: 'Open the direct product_entry.',
-          requires: [],
-        },
-      ],
-      resume_surface: {
-        surface_kind: 'product_entry_session',
-        command: 'redcube product session --entry-session-id <entry-session-id>',
-        session_locator_field: 'entry_session_contract.entry_session_id',
-      },
-      human_gate_ids: ['alpha_gate'],
-    },
-    family_orchestration: {
-      human_gates: [{ gate_id: 'alpha_gate' }],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_contract.entry_session_id',
-      },
-    },
-    schema_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
-    domain_entry_contract: {
-      entry_adapter: 'RedCubeDomainEntry',
-      service_safe_surface_kind: 'domain_entry',
-      product_entry_builder_command: 'redcube product entry',
-      supported_commands: ['product-status'],
-      command_contracts: [
-        {
-          command: 'product-status',
-          required_fields: [],
-          optional_fields: [],
-        },
-      ],
-    },
-    user_interaction_contract: {
-      surface_kind: 'user_interaction_contract',
-      entry_owner: 'opl_framework_or_domain_app',
-      user_interaction_mode: 'natural_language_entry',
-      user_commands_required: false,
-      command_surfaces_for_agent_consumption_only: true,
-      shared_downstream_entry: 'redcube_product_entry',
-      shared_handoff_envelope: ['entry_session_contract'],
-    },
-    runtime_inventory: {
-      surface_kind: 'runtime_inventory',
-    },
-    task_lifecycle: {
-      surface_kind: 'task_lifecycle',
-    },
-    runtime_control: {
-      surface_kind: 'runtime_control',
-    },
-    persistence_policy: {
-      surface_kind: 'family_persistence_policy',
-    },
-    lifecycle_ledger: {
-      surface_kind: 'family_lifecycle_ledger',
-    },
-    owner_route: {
-      surface_kind: 'family_owner_route',
-    },
-    session_continuity: {
-      surface_kind: 'session_continuity',
-    },
-    progress_projection: {
-      surface_kind: 'progress_projection',
-    },
-    artifact_inventory: {
-      surface_kind: 'artifact_inventory',
-    },
-    skill_catalog: {
-      surface_kind: 'skill_catalog',
-    },
-    automation: {
-      surface_kind: 'automation',
-    },
-  };
+  const manifest = readValidatorManifestFixture();
 
   const missingSchemaRef = structuredClone(manifest) as Record<string, unknown>;
   delete missingSchemaRef.schema_ref;
@@ -442,7 +146,7 @@ test('product entry companion validators fail closed on missing required shared 
   );
 
   const missingRuntimeControlReference = structuredClone(manifest);
-  delete (missingRuntimeControlReference as { runtime_control?: unknown }).runtime_control;
+  delete (missingRuntimeControlReference as { runtime_loop_closure?: unknown }).runtime_loop_closure;
   assert.throws(
     () => validateFamilyProductEntryManifest(missingRuntimeControlReference, { requireRuntimeContinuity: true }),
     /runtime continuity control reference/,
@@ -455,99 +159,8 @@ test('product entry companion validators fail closed on missing required shared 
     /owner_route\.surface_kind/,
   );
 
-  const product_entry = {
-    surface_kind: 'product_entry_surface',
-    recommended_action: 'inspect_or_start_product_entry',
-    target_domain_id: 'redcube_ai',
-    workspace_locator: {
-      workspace_surface_kind: 'redcube_workspace',
-      workspace_root: '/tmp/redcube-workspace',
-    },
-    runtime: {
-      runtime_owner: 'provider_backed_family_runtime',
-    },
-    product_entry_status: {
-      summary: 'Usable now.',
-      next_focus: ['Keep the same session contract stable.'],
-      remaining_gaps_count: 1,
-    },
-    product_entry_surface: {
-      surface_kind: 'product_entry_surface',
-      command: 'redcube product status',
-    },
-    operator_loop_surface: {
-      surface_kind: 'product_entry',
-      command: 'redcube product invoke',
-    },
-    operator_loop_actions: {},
-    product_entry_start: manifest.product_entry_start,
-    product_entry_overview: {
-      surface_kind: 'product_entry_overview',
-      summary: 'Current product-entry surface is usable.',
-      product_entry_command: 'redcube product status',
-      recommended_command: 'redcube product invoke',
-      operator_loop_command: 'redcube product invoke',
-      progress_surface: {
-        surface_kind: 'product_entry_session',
-        command: 'redcube product session --entry-session-id <entry-session-id>',
-      },
-      resume_surface: manifest.product_entry_start.resume_surface,
-      recommended_step_id: 'open_product_entry',
-      next_focus: ['Keep the direct loop stable.'],
-      remaining_gaps_count: 1,
-      human_gate_ids: ['alpha_gate'],
-    },
-    product_entry_preflight: {
-      surface_kind: 'product_entry_preflight',
-      summary: 'Current preflight is green.',
-      ready_to_try_now: true,
-      recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product status',
-      blocking_check_ids: [],
-      checks: [],
-    },
-    product_entry_readiness: {
-      surface_kind: 'product_entry_readiness',
-      verdict: 'service_surface_ready_not_managed_product',
-      usable_now: true,
-      good_to_use_now: false,
-      fully_automatic: false,
-      summary: 'Usable now with operator guidance.',
-      recommended_start_surface: 'product_entry_surface',
-      recommended_start_command: 'redcube product status',
-      recommended_loop_surface: 'product_entry',
-      recommended_loop_command: 'redcube product invoke',
-      blocking_gaps: ['Managed product shell still pending.'],
-    },
-    product_entry_quickstart: {
-      surface_kind: 'product_entry_quickstart',
-      recommended_step_id: 'open_product_entry',
-      summary: 'Open the product_entry first.',
-      steps: [
-        {
-          step_id: 'open_product_entry',
-          title: 'Open product_entry',
-          command: 'redcube product status',
-          surface_kind: 'product_entry_surface',
-          summary: 'Open the direct product_entry.',
-          requires: [],
-        },
-      ],
-      resume_contract: manifest.family_orchestration.resume_contract,
-      human_gate_ids: ['alpha_gate'],
-    },
-    family_orchestration: manifest.family_orchestration,
-    product_entry_manifest: manifest,
-    entry_surfaces: {},
-    summary: {
-      product_entry_command: 'redcube product status',
-      recommended_command: 'redcube product invoke',
-      operator_loop_command: 'redcube product invoke',
-    },
-    notes: ['Thin product_entry adapter is active.'],
-    schema_ref: 'contracts/schemas/v1/product-status.schema.json',
-    domain_entry_contract: manifest.domain_entry_contract,
-  };
+  const product_entry = buildValidatorProductEntry(manifest);
+  delete product_entry.user_interaction_contract;
   assert.throws(
     () => validateFamilyProductEntrySurface(product_entry, { requireContractBundle: true }),
     /user_interaction_contract/,
