@@ -228,6 +228,102 @@
       "minItems": 1,
       "uniqueItems": true
     },
+    "dependency_profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "profile_id",
+          "profile_kind",
+          "profile_owner",
+          "domain_id",
+          "domain_truth_owner",
+          "source",
+          "opl_role",
+          "authority_boundary"
+        ],
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "profile_kind": {
+            "const": "domain_dependency_profile"
+          },
+          "profile_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain_truth_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "object",
+            "required": [
+              "source_kind",
+              "profile_ref",
+              "helper_ref"
+            ],
+            "properties": {
+              "source_kind": {
+                "const": "domain_profile_ref"
+              },
+              "profile_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "helper_ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          },
+          "opl_role": {
+            "const": "dependency_environment_check"
+          },
+          "source_descriptor_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "authority_boundary": {
+            "type": "object",
+            "required": [
+              "can_write_domain_truth",
+              "can_write_artifact_body",
+              "can_authorize_publication_readiness",
+              "can_authorize_final_export",
+              "can_issue_owner_receipt"
+            ],
+            "properties": {
+              "can_write_domain_truth": {
+                "const": false
+              },
+              "can_write_artifact_body": {
+                "const": false
+              },
+              "can_authorize_publication_readiness": {
+                "const": false
+              },
+              "can_authorize_final_export": {
+                "const": false
+              },
+              "can_issue_owner_receipt": {
+                "const": false
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "uniqueItems": true
+    },
     "capability_dependencies": {
       "type": "array",
       "items": {
