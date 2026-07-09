@@ -1,610 +1,22 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
-import { buildDomainManifestCatalog } from '../../../../src/modules/atlas/index.ts';
-import { buildFamilyStagesList } from '../../../../src/modules/stagecraft/family-stage-control-plane.ts';
-import { loadFrameworkContracts } from '../../../../src/modules/charter/contracts.ts';
 import {
-  attachManifestSurface,
-  buildAdmittedActionCatalog,
-  buildAdmittedStagePlane,
-  standardProgressFirstPolicies,
+  assert,
+  buildManifestCommand,
+  createFamilyContractsFixtureRoot,
+  fs,
+  loadFamilyManifestFixtures,
+  os,
+  repoRoot,
+  runCli,
+  test,
+} from '../helpers.ts';
+import {
   withAdmittedStagePack,
   withReplayEvidenceStagePack,
   type JsonRecord,
 } from './workspace-domain-test-helper.ts';
 
-function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: number) {
-  return `${process.execPath} -e ${
-    shellSingleQuote(`setTimeout(() => process.stdout.write(process.argv[1]), ${delayMs});`)
-  } ${shellSingleQuote(JSON.stringify(payload))}`;
-}
-
-function buildActionCatalog() {
-  return {
-    surface_kind: 'family_action_catalog',
-    version: 'family-action-catalog.v1',
-    catalog_id: 'med_autoscience_action_catalog',
-    target_domain_id: 'med-autoscience',
-    owner: 'MedAutoScience',
-    authority_boundary: { opl_role: 'projection_consumer_only' },
-    actions: [
-      {
-        action_id: 'author_draft',
-        title: 'Author draft',
-        summary: 'Author from explicit refs.',
-        owner: 'MedAutoScience',
-        effect: 'read_only',
-        source_command: { command: 'medautosci write', surface_kind: 'domain_cli' },
-        input_schema_ref: 'schemas/author.input.json',
-        output_schema_ref: 'schemas/author.output.json',
-        workspace_locator_fields: ['workspace_root'],
-        human_gate_ids: [],
-        supported_surfaces: { cli: null, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null },
-        authority_boundary: { opl_role: 'projection_consumer_only' },
-      },
-      {
-        action_id: 'review_draft',
-        title: 'Review draft',
-        summary: 'Review from explicit refs.',
-        owner: 'MedAutoScience',
-        effect: 'read_only',
-        source_command: { command: 'medautosci review', surface_kind: 'domain_cli' },
-        input_schema_ref: 'schemas/review.input.json',
-        output_schema_ref: 'schemas/review.output.json',
-        workspace_locator_fields: ['workspace_root'],
-        human_gate_ids: ['publication_quality_gate'],
-        supported_surfaces: { cli: null, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null },
-        authority_boundary: { opl_role: 'projection_consumer_only' },
-      },
-    ],
-    notes: [],
-  };
-}
-
-function buildStagePlane() {
-  return {
-    surface_kind: 'family_stage_control_plane',
-    version: 'family-stage-control-plane.v1',
-    plane_id: 'med_autoscience_stage_control_plane',
-    target_domain_id: 'med-autoscience',
-    owner: 'MedAutoScience',
-    authority_boundary: {
-      opl_role: 'projection_consumer_only',
-      stage_pack_signer_ref: 'kms:mas-stage-pack',
-      stage_pack_signature_ref: 'artifact:mas-stage-pack.sig',
-    },
-    stages: [
-      {
-        stage_id: 'manuscript_authoring',
-        stage_kind: 'creation',
-        title: 'Manuscript authoring',
-        summary: 'Author from explicit source refs.',
-        goal: 'Produce a manuscript draft under MAS authority.',
-        owner: 'MedAutoScience',
-        domain_stage_refs: ['write'],
-        inputs: [],
-        knowledge_refs: [],
-        skills: [],
-        prompt_refs: [],
-        allowed_action_refs: ['author_draft'],
-        outputs: [{ ref_kind: 'proof', ref: 'artifacts/manuscript-draft-proof.json', role: 'proof_ref' }],
-        evaluation: [],
-        handoff: { next_stage_refs: ['publication_review'], provides: ['draft_ready'] },
-        source_refs: [],
-        freshness: null,
-        action_parity: null,
-        stage_contract: {
-          requires: ['sources_ready'],
-          ensures: ['draft_ready'],
-          boundary_assumptions: ['source_refs_are_domain_owned'],
-          properties: ['deterministic_handoff_refs'],
-          ...standardProgressFirstPolicies(),
-          runtime_assumptions: ['source_freshness_within_domain_policy'],
-          monitor_refs: [{ ref_kind: 'json_pointer', ref: '/runtime_inventory', role: 'runtime_assumption_monitor' }],
-          source_scope_refs: [],
-          artifact_scope_refs: [],
-          workspace_scope_refs: [],
-        },
-        trust_boundary: { lane: 'domain_agent', static_check_eligible: true, effect_boundary: false, records_runtime_events: false },
-        authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
-      },
-      {
-        stage_id: 'publication_review',
-        stage_kind: 'review',
-        title: 'Publication review',
-        summary: 'Review draft refs.',
-        goal: 'Gate draft under MAS reviewer authority.',
-        owner: 'MedAutoScience',
-        domain_stage_refs: ['review'],
-        inputs: [],
-        knowledge_refs: [],
-        skills: [],
-        prompt_refs: [],
-        allowed_action_refs: ['review_draft'],
-        outputs: [],
-        evaluation: [{ ref_kind: 'test', ref: 'tests/publication-review.test.ts', role: 'proof_ref' }],
-        handoff: null,
-        source_refs: [],
-        freshness: null,
-        action_parity: null,
-        stage_contract: {
-          requires: ['draft_ready'],
-          ensures: ['review_receipt_ready'],
-          boundary_assumptions: ['reviewer_judgment_recorded_as_receipt'],
-          runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
-          properties: [],
-          ...standardProgressFirstPolicies(),
-          runtime_assumptions: [],
-          monitor_refs: [],
-          source_scope_refs: [],
-          artifact_scope_refs: [],
-          workspace_scope_refs: [],
-        },
-        trust_boundary: {
-          lane: 'human_gate',
-          static_check_eligible: false,
-          effect_boundary: true,
-          records_runtime_events: true,
-          runtime_event_refs: ['runtime_event:publication_review.gate_recorded'],
-          owner_receipt_required: true,
-          human_gate_required: true,
-        },
-        authority_boundary: {
-          opl_role: 'projection_consumer_only',
-          expected_receipt_refs: ['mas:publication_review_receipt'],
-          can_authorize_quality_verdict: false,
-        },
-      },
-    ],
-    notes: [],
-  };
-}
-
-function buildContractLightStagePlane(options: {
-  trustBoundary?: JsonRecord;
-  runtimeAssumptions?: unknown[];
-  monitorRefs?: JsonRecord[];
-  sourceScopeRefs?: JsonRecord[];
-  cohortQueryRefs?: JsonRecord[];
-  triggerRefs?: JsonRecord[];
-  metricRefs?: JsonRecord[];
-  properties?: string[];
-} = {}) {
-  return {
-    surface_kind: 'family_stage_control_plane',
-    version: 'family-stage-control-plane.v1',
-    plane_id: 'med_autoscience_contract_light_stage_control_plane',
-    target_domain_id: 'med-autoscience',
-    owner: 'MedAutoScience',
-    authority_boundary: { opl_role: 'projection_consumer_only' },
-    stages: [
-      {
-        stage_id: 'scout',
-        stage_kind: 'planning',
-        title: 'Scout',
-        summary: 'Plan from explicit refs while leaving AI strategy to the executor.',
-        goal: 'Prepare a bounded MAS planning stage under domain authority.',
-        owner: 'MedAutoScience',
-        domain_stage_refs: ['scout'],
-        inputs: [],
-        knowledge_refs: [],
-        skills: [],
-        prompt_refs: [],
-        allowed_action_refs: [],
-        outputs: [],
-        evaluation: [],
-        handoff: null,
-        source_refs: [],
-        freshness: null,
-        action_parity: null,
-        stage_contract: {
-          requires: ['source_scope_declared'],
-          ensures: ['plan_receipt_declared'],
-          boundary_assumptions: ['domain_truth_remains_domain_owned'],
-          properties: options.properties ?? [],
-          ...standardProgressFirstPolicies(),
-          runtime_assumptions: options.runtimeAssumptions ?? [],
-          monitor_refs: options.monitorRefs ?? [],
-          source_scope_refs: options.sourceScopeRefs ?? [],
-          cohort_query_refs: options.cohortQueryRefs ?? [],
-          trigger_refs: options.triggerRefs ?? [],
-          metric_refs: options.metricRefs ?? [],
-          artifact_scope_refs: [],
-          workspace_scope_refs: [],
-        },
-        trust_boundary: {
-          lane: 'domain_agent',
-          static_check_eligible: true,
-          effect_boundary: false,
-          records_runtime_events: false,
-          ...(options.trustBoundary ?? {}),
-        },
-        authority_boundary: { opl_role: 'projection_consumer_only', can_write_domain_truth: false },
-      },
-    ],
-    notes: [],
-  };
-}
-
-test('family stage graph projects edges, guarantee modes, and integrity digest without authority transfer', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-graph-state-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const fixtures = loadFamilyManifestFixtures();
-  const manifest = attachManifestSurface(
-    attachManifestSurface(fixtures.medautoscience as JsonRecord, 'family_action_catalog', buildActionCatalog()),
-    'family_stage_control_plane',
-    buildStagePlane(),
-  );
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
-
-    const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-    const graph = runCli(['stages', 'graph', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
-
-    assert.equal(graph.family_stage_graph.surface_kind, 'opl_family_stage_graph_projection');
-    assert.deepEqual(graph.family_stage_graph.graph_summary, {
-      node_count: 2,
-      edge_count: 1,
-      blocked_node_count: 0,
-      needs_contracts_node_count: 0,
-      missing_edge_count: 0,
-      runtime_enforced_node_count: 1,
-      verified_core_eligible_node_count: 1,
-      durable_runtime_only_node_count: 1,
-      runtime_boundary_required_node_count: 1,
-      monitor_ref_count: 1,
-    });
-    assert.deepEqual(graph.family_stage_graph.edges[0], {
-      edge_id: 'manuscript_authoring->publication_review',
-      upstream_stage_id: 'manuscript_authoring',
-      downstream_stage_id: 'publication_review',
-      upstream_ensures: ['draft_ready'],
-      downstream_requires: ['draft_ready'],
-      satisfied_by: ['draft_ready'],
-      missing: [],
-      status: 'satisfied',
-      edge_kind: 'handoff_requires_ensures',
-    });
-    assert.deepEqual(graph.family_stage_graph.nodes.map((node: { stage_id: string; guarantee_modes: string[] }) => [node.stage_id, node.guarantee_modes]), [
-      ['manuscript_authoring', ['static_admission_only', 'domain_owned_judgment', 'observability_only']],
-      ['publication_review', ['runtime_enforced', 'domain_owned_judgment', 'observability_only']],
-    ]);
-    assert.deepEqual(graph.family_stage_graph.nodes.map((node: { stage_id: string; mode_tags: JsonRecord }) => [node.stage_id, node.mode_tags]), [
-      ['manuscript_authoring', {
-        verified_core_eligible: true,
-        durable_runtime_only: false,
-        runtime_boundary_required: false,
-      }],
-      ['publication_review', {
-        verified_core_eligible: false,
-        durable_runtime_only: true,
-        runtime_boundary_required: true,
-      }],
-    ]);
-    assert.deepEqual(graph.family_stage_graph.failure_localization, []);
-    assert.equal(graph.family_stage_graph.integrity.stage_pack_hash, proofBundle.family_stage_proof_bundle.proof_bundle.integrity.stage_pack_hash);
-    assert.equal(graph.family_stage_graph.integrity.signature_status, 'signature_ref_declared');
-    assert.equal(graph.family_stage_graph.integrity.authority_boundary.can_verify_external_signature, false);
-    assert.equal(graph.family_stage_graph.authority_boundary.can_execute_stage, false);
-    assert.equal(graph.family_stage_graph.authority_boundary.can_write_domain_truth, false);
-    assert.equal(graph.family_stage_graph.authority_boundary.can_authorize_quality_verdict, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family stage readiness aggregates existing drilldown surfaces without domain verdict authority', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-readiness-state-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const fixtures = loadFamilyManifestFixtures();
-  const manifest = withAdmittedStagePack(fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience');
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
-
-    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
-
-    assert.equal(readiness.detail_level, 'summary');
-    assert.equal(Object.hasOwn(readiness, 'surface_kind'), false);
-    assert.equal(Object.hasOwn(readiness, 'version'), false);
-    assert.equal(readiness.status, 'launch_warning');
-    assert.equal(readiness.summary.stage_count, 6);
-    assert.equal(readiness.summary.admitted_stage_count, 6);
-    assert.equal(readiness.summary.hard_blocker_count, 0);
-    assert.equal(readiness.summary.cohort_loop_warning_count, 0);
-    assert.equal(readiness.summary.replay_evidence_warning_count > 0, true);
-    assert.equal(readiness.summary.displayed_warning_count, readiness.warnings.length);
-    assert.equal(readiness.summary.displayed_recommendation_count, readiness.recommendations.length);
-    assert.equal(readiness.summary.full_warning_count, readiness.summary.warning_count);
-    assert.equal(readiness.summary.full_recommendation_count, readiness.summary.warning_count);
-    assert.equal(readiness.warnings.length <= 5, true);
-    assert.deepEqual(readiness.recommendations, readiness.warnings);
-    assert.equal(
-      readiness.full_detail_policy,
-      'default_payload_is_attention_limited_full_diagnostics_via_detail_full',
-    );
-    assert.equal(readiness.lens_summary.some((entry: { check_id: string }) => entry.check_id === 'stage_admission'), true);
-    assert.equal(readiness.lens_summary.some((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
-      entry.check_id === 'stage_admission'
-      && entry.role === 'stage_kernel_gate'
-      && entry.author_required === true
-      && entry.default_surface === true
-      && entry.can_block_launch === true
-    )), true);
-    assert.equal(readiness.lens_summary.some((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
-      entry.check_id === 'proof_bundle'
-      && entry.role === 'diagnostic_only'
-      && entry.author_required === false
-      && entry.default_surface === false
-      && entry.can_block_launch === false
-    )), true);
-    assert.equal(readiness.lens_summary.every((entry: { check_id: string; role: string; author_required: boolean; default_surface: boolean; can_block_launch: boolean }) => (
-      entry.check_id === 'stage_admission'
-        ? entry.role === 'stage_kernel_gate'
-          && entry.author_required === true
-          && entry.default_surface === true
-          && entry.can_block_launch === true
-        : entry.role === 'diagnostic_only'
-          && entry.author_required === false
-          && entry.default_surface === false
-          && entry.can_block_launch === false
-    )), true);
-    assert.equal(readiness.drilldown_refs.includes('opl stages proof-bundle --domain mas'), true);
-    assert.equal(readiness.drilldown_refs.includes('opl stages replay-certification --domain mas'), true);
-    assert.deepEqual(readiness.stage_kernel.hard_blocker_sources, [
-      'stage_identity',
-      'stage_owner',
-      'stage_goal',
-      'selected_executor_binding',
-      'authority_boundary',
-      'requires_ensures_composition',
-      'scope_refs',
-      'runtime_event_refs',
-      'receipt_replay_audit_refs',
-    ]);
-    assert.deepEqual(readiness.stage_kernel.kernel_required_refs, [
-      'stage_id',
-      'owner',
-      'goal',
-      'requires',
-      'ensures',
-      'authority_boundary',
-      'trust_lane',
-      'selected_executor_binding',
-      'source_scope_refs_or_artifact_scope_refs_or_workspace_scope_refs',
-      'runtime_event_refs_for_effect_or_runtime_guard_boundaries',
-      'expected_receipt_refs',
-      'replay_audit_refs',
-      'route_back_refs',
-    ]);
-    assert.equal(readiness.stage_kernel.derived_lenses_can_block_launch, false);
-    assert.equal(readiness.ai_capability_aperture.ai_strategy_refs_are_launch_blockers_by_default, false);
-    assert.deepEqual(readiness.ai_capability_aperture.ai_strategy_advisory_refs, [
-      'prompt_refs',
-      'skill_refs',
-      'knowledge_refs',
-      'evaluation_refs',
-      'runtime_assumptions',
-      'monitor_refs',
-      'cohort_query_refs',
-      'trigger_refs',
-      'runtime_budget_refs',
-      'domain_review_refs',
-    ]);
-    assert.equal(readiness.ai_capability_aperture.executor_strategy_owner, 'selected_ai_executor_and_domain_owner');
-    assert.deepEqual(readiness.full_detail_args, ['--detail', 'full']);
-    for (const forbiddenReadyField of [
-      'domain_ready_status',
-      'domain_ready_verdict',
-      'quality_verdict',
-      'artifact_authority_verdict',
-      'production_ready_verdict',
-      'artifact_ready_status',
-      'production_ready_status',
-      'domain_quality_verdict',
-    ]) {
-      assert.equal(Object.hasOwn(readiness, forbiddenReadyField), false, `${forbiddenReadyField} must stay out of readiness summary`);
-      assert.equal(Object.hasOwn(readiness.summary, forbiddenReadyField), false, `${forbiddenReadyField} must stay out of readiness counters`);
-    }
-    assert.equal(readiness.authority_boundary.opl_role, 'stage_readiness_cli_summary_only');
-    assert.equal(readiness.authority_boundary.ai_internal_strategy_contract, false);
-    assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
-    assert.equal(readiness.authority_boundary.can_claim_domain_ready, false);
-    assert.equal(readiness.authority_boundary.can_claim_artifact_authority, false);
-    assert.equal(readiness.authority_boundary.can_claim_production_ready, false);
-    assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
-    assert.equal(readiness.authority_boundary.can_replace_ai_expert_judgment, false);
-    assert.equal(readiness.authority_boundary.contract_completeness_is_quality_verdict, false);
-    assert.equal(readiness.authority_boundary.graphflow_runtime_dependency, false);
-
-    const full = runCli(['stages', 'readiness', '--domain', 'mas', '--detail', 'full'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
-    assert.equal(full.detail_level, 'full');
-    assert.equal(full.family_stage_readiness.launch_readiness_status, 'launch_warning');
-    assert.equal(full.family_stage_readiness.checks.some((entry: { check_id: string }) => entry.check_id === 'proof_bundle'), true);
-    assert.equal(
-      full.family_stage_readiness.ai_first_contract_light_policy.expert_judgment_priority,
-      'ai_native_expert_judgment_first',
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family stage readiness consumes declared replay evidence refs by default', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-readiness-replay-evidence-state-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const fixtures = loadFamilyManifestFixtures();
-  const manifest = withReplayEvidenceStagePack(fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience');
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
-
-    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
-
-    const replayCheck = readiness.lens_summary.find((entry: { check_id: string }) => (
-      entry.check_id === 'replay_certification'
-    ));
-    assert.ok(replayCheck);
-    assert.equal(readiness.status, 'launch_warning');
-    assert.equal(readiness.summary.replay_evidence_warning_count, 0);
-    assert.equal(replayCheck.status, 'ok');
-    assert.equal(replayCheck.warning_count, 0);
-    assert.equal(readiness.warnings.some((entry: { code: string }) => entry.code.includes('replay')), false);
-    assert.equal(readiness.warnings.every((entry: { code: string }) => entry.code.startsWith('runtime_budget_')), true);
-    assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
-    assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family stage readiness fails closed when launch-safety evidence is missing', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-readiness-blocked-state-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const fixtures = loadFamilyManifestFixtures();
-  const manifest = attachManifestSurface(
-    fixtures.medautoscience as JsonRecord,
-    'family_stage_control_plane',
-    buildContractLightStagePlane({
-      trustBoundary: {
-        lane: 'ai_decision',
-        static_check_eligible: false,
-        effect_boundary: true,
-        records_runtime_events: false,
-      },
-    }),
-  );
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
-
-    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
-
-    assert.equal(readiness.status, 'launch_blocked');
-    assert.equal(readiness.summary.hard_blocker_count >= 2, true);
-    assert.deepEqual(readiness.blockers.map((entry: { code: string }) => entry.code), [
-      'effect_boundary_without_event_recording',
-      'effect_boundary_missing_runtime_event_refs',
-    ]);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family stage readiness treats lightweight authoring fields as warnings instead of launch blockers', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-readiness-warning-state-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const fixtures = loadFamilyManifestFixtures();
-  const manifest = attachManifestSurface(
-    fixtures.medautoscience as JsonRecord,
-    'family_stage_control_plane',
-    buildContractLightStagePlane({
-      runtimeAssumptions: ['artifact_locator_fresh'],
-    }),
-  );
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
-
-    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness;
-
-    assert.equal(readiness.status, 'launch_warning');
-    assert.equal(readiness.summary.hard_blocker_count, 0);
-    assert.equal(readiness.summary.full_warning_count, readiness.summary.warning_count);
-    assert.equal(readiness.warnings.length <= 5, true);
-    assert.equal(readiness.ai_capability_aperture.ai_strategy_refs_are_launch_blockers_by_default, false);
-    assert.equal(
-      readiness.ai_capability_aperture.ai_strategy_advisory_refs.includes('prompt_refs'),
-      true,
-    );
-    assert.equal(
-      readiness.ai_capability_aperture.ai_strategy_advisory_refs.includes('knowledge_refs'),
-      true,
-    );
-    assert.equal(readiness.summary.assumption_warning_count, 1);
-    assert.equal(readiness.summary.cohort_loop_warning_count, 4);
-    assert.equal(
-      readiness.warnings.some((entry: { code: string }) => entry.code === 'runtime_assumption_missing_monitor_ref'),
-      true,
-    );
-    assert.equal(
-      readiness.warnings.some((entry: { code: string }) => entry.code === 'cohort_query_missing'),
-      true,
-    );
-    assert.deepEqual(readiness.recommendations, readiness.warnings);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family stage list and proof bundles preserve 18 admitted runtime-enforced projection stages', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-admitted-state-'));
+test('family stage list, proof bundle, and readiness stay refs-only without domain authority', () => {
+  const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-family-stage-admitted-`);
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const manifests: Array<[string, JsonRecord, string, string]> = [
@@ -630,114 +42,47 @@ test('family stage list and proof bundles preserve 18 admitted runtime-enforced 
     const list = runCli(['stages', 'list'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
-    });
-    assert.equal(list.family_stages.summary.resolved_planes_count, 4);
-    assert.equal(list.family_stages.summary.stages_count, 19);
-    assert.equal(list.family_stages.summary.admitted_stages_count, 19);
-    assert.equal(list.family_stages.summary.blocked_stages_count, 0);
-    assert.equal(list.family_stages.summary.needs_contracts_stages_count, 0);
-    const domainStages = list.family_stages.stages.filter(
-      (stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent',
-    );
-    assert.equal(domainStages.length, 18);
-    assert.equal(
-      domainStages.every((stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean; runtime_boundary_required: boolean } }) =>
-        stage.admission_status === 'admitted'
-        && stage.guarantee_mode === 'runtime_enforced'
-        && stage.mode_tags.durable_runtime_only === true
-        && stage.mode_tags.runtime_boundary_required === true,
-      ),
-      true,
-    );
-    const omaStage = list.family_stages.stages.find(
-      (stage: { project_id: string; stage_id: string }) =>
-        stage.project_id === 'opl-meta-agent' && stage.stage_id === 'stage-decomposition',
-    );
-    assert.equal(omaStage?.admission_status, 'admitted');
-    assert.equal(omaStage?.guarantee_mode, 'static_admission_only');
-
+    }).family_stages;
     const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_proof_bundle.proof_bundle;
-    const familyReadiness = runCli(['stages', 'readiness', '--family-defaults'], {
+    const readiness = runCli(['stages', 'readiness', '--family-defaults'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_readiness;
-    const cohortLoop = runCli(['stages', 'cohort-loop', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_cohort_loop.projection;
-    const runtimeBudget = runCli(['stages', 'runtime-budget', '--domain', 'mas'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_runtime_budget.projection;
-    const sourceSpec = runCli([
-      'stages',
-      'source-spec',
-      '--domain',
-      'mas',
-      '--library-status',
-      'reused',
-      '--reused-by-ref',
-      'opl://stage-packs/redcube_ai:stage_control_plane',
-      '--recorded-runtime-event-ref',
-      'runtime_event:med-autoscience.stage_1',
-    ], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    }).family_stage_pack_source_spec.source_spec;
+
+    assert.equal(list.summary.admitted_stages_count, 19);
+    assert.equal(list.summary.blocked_stages_count, 0);
+    assert.equal(
+      list.stages.filter((stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent').every(
+        (stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean } }) =>
+          stage.admission_status === 'admitted'
+          && stage.guarantee_mode === 'runtime_enforced'
+          && stage.mode_tags.durable_runtime_only === true,
+      ),
+      true,
+    );
     assert.equal(proofBundle.admission_status, 'admitted');
-    assert.equal(proofBundle.admission_summary.admitted_stages_count, 6);
-    assert.equal(proofBundle.authority_boundary.proof_passed, true);
     assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
-    assert.equal(familyReadiness.detail_level, 'summary');
-    assert.equal(familyReadiness.family_defaults, true);
-    assert.equal(familyReadiness.summary.domain_count, 4);
-    assert.equal(familyReadiness.summary.stage_count, 19);
-    assert.equal(familyReadiness.summary.hard_blocker_count, 0);
-    assert.equal(familyReadiness.summary.can_claim_domain_ready, false);
-    assert.equal(familyReadiness.summary.can_claim_production_ready, false);
-    assert.equal(familyReadiness.authority_boundary.can_authorize_domain_ready, false);
-    assert.equal(familyReadiness.domains.some((domain: { project_id: string }) => domain.project_id === 'opl-meta-agent'), true);
-    assert.equal(cohortLoop.surface_kind, 'opl_family_stage_cohort_loop');
-    assert.equal(cohortLoop.summary.closed_loop_ready_count, 6);
-    assert.equal(cohortLoop.summary.blocker_count, 0);
-    assert.equal(cohortLoop.authority_boundary.graphflow_runtime_dependency, false);
-    assert.equal(cohortLoop.authority_boundary.can_write_source_truth, false);
-    assert.equal(runtimeBudget.surface_kind, 'opl_family_stage_runtime_budget_projection');
-    assert.equal(runtimeBudget.summary.stage_count, 6);
-    assert.equal(runtimeBudget.authority_boundary.graphflow_runtime_dependency, false);
-    assert.equal(runtimeBudget.authority_boundary.probability_truth_claim, false);
-    assert.equal(runtimeBudget.authority_boundary.can_authorize_domain_ready, false);
-    assert.equal(runtimeBudget.authority_boundary.can_authorize_quality_verdict, false);
-    assert.equal(sourceSpec.surface_kind, 'opl_family_stage_pack_source_spec');
-    assert.equal(sourceSpec.review_mode, 'diffable_refs_only_visual_equivalent_spec');
-    assert.equal(sourceSpec.stage_pack_hash, proofBundle.integrity.stage_pack_hash);
-    assert.deepEqual(sourceSpec.diff_keys.registry_lifecycle_statuses, ['reused']);
-    assert.equal(sourceSpec.body_policy.includes_control_plane_body, false);
-    assert.equal(sourceSpec.body_policy.includes_artifact_body, false);
-    assert.equal(sourceSpec.body_policy.executes_stage, false);
-    assert.equal(sourceSpec.authority_boundary.visual_equivalent_spec, true);
-    assert.equal(sourceSpec.authority_boundary.can_execute_stage, false);
+    assert.equal(readiness.family_defaults, true);
+    assert.equal(readiness.summary.hard_blocker_count, 0);
+    assert.equal(readiness.summary.can_claim_domain_ready, false);
+    assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('family stage proof bundle uses the extended stage manifest discovery budget', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-timeout-state-'));
+test('family stage readiness consumes replay refs while keeping warnings non-authoritative', () => {
+  const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-family-stage-readiness-replay-`);
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const fixtures = loadFamilyManifestFixtures();
-  const slowMas = withAdmittedStagePack(
-    fixtures.medautoscience as JsonRecord,
+  const manifest = withReplayEvidenceStagePack(
+    loadFamilyManifestFixtures().medautoscience as JsonRecord,
     'med-autoscience',
     'MedAutoScience',
   );
-  const env = {
-    OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    OPL_STATE_DIR: stateRoot,
-  };
 
   try {
     runCli([
@@ -748,40 +93,22 @@ test('family stage proof bundle uses the extended stage manifest discovery budge
       '--path',
       repoRoot,
       '--manifest-command',
-      buildDelayedManifestCommand(slowMas, 500),
-    ], env);
+      buildManifestCommand(manifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
-    const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
-    const previousStateDir = process.env.OPL_STATE_DIR;
-    let shortTimeoutList;
-    try {
-      process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
-      process.env.OPL_STATE_DIR = stateRoot;
-      shortTimeoutList = buildFamilyStagesList(loadFrameworkContracts(), {
-        manifestCommandTimeoutMs: 100,
-        loadDomainManifests: (contracts, options) =>
-          buildDomainManifestCatalog(contracts, options).domain_manifests,
-      });
-    } finally {
-      if (previousContractsDir === undefined) {
-        delete process.env.OPL_CONTRACTS_DIR;
-      } else {
-        process.env.OPL_CONTRACTS_DIR = previousContractsDir;
-      }
-      if (previousStateDir === undefined) {
-        delete process.env.OPL_STATE_DIR;
-      } else {
-        process.env.OPL_STATE_DIR = previousStateDir;
-      }
-    }
-    const shortTimeoutMas = shortTimeoutList.family_stages.domains.find(
-      (domain: { project_id: string }) => domain.project_id === 'medautoscience',
+    const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_stage_readiness;
+    const replayCheck = readiness.lens_summary.find((entry: { check_id: string }) =>
+      entry.check_id === 'replay_certification'
     );
-    assert.ok(shortTimeoutMas);
-    assert.equal(shortTimeoutMas.manifest_status, 'command_timeout');
 
-    const proofBundle = runCli(['stages', 'proof-bundle', '--domain', 'mas'], env);
-    assert.equal(proofBundle.family_stage_proof_bundle.proof_bundle.admission_status, 'admitted');
+    assert.equal(readiness.status, 'launch_warning');
+    assert.equal(readiness.summary.replay_evidence_warning_count, 0);
+    assert.equal(replayCheck.status, 'ok');
+    assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(readiness.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

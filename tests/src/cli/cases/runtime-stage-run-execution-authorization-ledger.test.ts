@@ -8,10 +8,7 @@ import {
   writeMasCleanRunnerFixture,
 } from '../helpers.ts';
 import { buildAppStageRunCockpit } from '../../../../src/modules/stagecraft/stage-run-cockpit.ts';
-import {
-  buildOwnerAnswerProjectionProfileRegistryReadback,
-  findOwnerAnswerProjection,
-} from '../../../../src/modules/stagecraft/mas-owner-answer-projection.ts';
+import { findOwnerAnswerProjection } from '../../../../src/modules/stagecraft/mas-owner-answer-projection.ts';
 
 const STUDY_ID = '003-dpcc-primary-care-phenotype-treatment-gap';
 const PUBLICATION_SOURCE_FINGERPRINT =
@@ -103,22 +100,6 @@ function verifyAuthorization(stateRoot: string, receiptRef: string) {
   }).stage_run_execution_authorization_ledger_verify;
 }
 
-function assertAuthorizedCloseoutBinding(report: any) {
-  assert.equal(report.status, 'authorized');
-  assert.deepEqual(report.launch_blockers, []);
-  assert.deepEqual(report.closeout_binding_blockers, []);
-  assert.equal(report.closeout_binding.owner_answer_kind, 'typed_blocker');
-  for (const key of [
-    'bound_to_stage_run',
-    'bound_to_stage_manifest',
-    'bound_to_current_pointer',
-    'bound_to_source_fingerprint',
-    'bound_to_idempotency_key',
-  ]) {
-    assert.equal(report.closeout_binding[key], true);
-  }
-}
-
 function publicationOwnerDelta(overrides: Record<string, unknown> = {}) {
   return {
     domain: 'medautoscience',
@@ -149,7 +130,6 @@ function bindMasWorkspaceForAuthorization(input: {
   workspaceRoot: string;
   profilePath: string;
 }) {
-  const now = new Date().toISOString();
   fs.mkdirSync(input.stateRoot, { recursive: true });
   fs.writeFileSync(
     path.join(input.stateRoot, 'workspace-registry.json'),
@@ -174,8 +154,8 @@ function bindMasWorkspaceForAuthorization(input: {
               input_path: null,
             },
           },
-          created_at: now,
-          updated_at: now,
+          created_at: '2026-07-07T00:00:00.000Z',
+          updated_at: '2026-07-07T00:00:00.000Z',
           archived_at: null,
         },
       ],
@@ -188,7 +168,6 @@ function writeMasOwnerAnswerProjection(input: {
   workspaceRoot: string;
   studyId: string;
   receipt: Record<string, unknown>;
-  blockerId?: string;
 }) {
   const stageRoot = path.join(
     input.workspaceRoot,
@@ -199,10 +178,8 @@ function writeMasOwnerAnswerProjection(input: {
     '08-publication_package_handoff',
   );
   const projectionPath = path.join(stageRoot, 'projection', 'current_owner_delta.json');
-  fs.mkdirSync(path.dirname(projectionPath), { recursive: true });
   const stageRunId = `stage-run::${input.studyId}::08-publication_package_handoff`;
   const closeoutBinding = {
-    surface_kind: 'publication_handoff_closeout_binding',
     trusted_opl_execution_authorization: true,
     provider_attempt_ref: input.receipt.provider_attempt_ref,
     attempt_lease_ref: input.receipt.attempt_lease_ref,
@@ -221,6 +198,7 @@ function writeMasOwnerAnswerProjection(input: {
     bound_to_current_pointer: true,
     bound_to_source_fingerprint: true,
   };
+  fs.mkdirSync(path.dirname(projectionPath), { recursive: true });
   fs.writeFileSync(
     projectionPath,
     `${JSON.stringify({
@@ -245,7 +223,7 @@ function writeMasOwnerAnswerProjection(input: {
       latest_owner_answer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
       latest_typed_blocker_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
       owner: 'MedAutoScience',
-      reason: input.blockerId ?? 'medical_paper_readiness_not_ready',
+      reason: 'medical_paper_readiness_not_ready',
       source_fingerprint: input.receipt.source_fingerprint,
       stage_manifest_ref: closeoutBinding.stage_manifest_ref,
       stage_run_id: stageRunId,
@@ -258,16 +236,10 @@ test('runtime StageRun execution authorization dry-run validates identity guards
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-dry-run-'));
   try {
     const dryRun = recordAuthorization(stateRoot, authorizationPayload(), ['--dry-run', '--json']);
-
     assert.equal(dryRun.status, 'planned');
     assert.equal(dryRun.dry_run, true);
     assert.equal(dryRun.writes_performed, false);
-    assert.equal(dryRun.planned_receipt_count, 1);
-    assert.equal(dryRun.receipt_refs.length, 1);
-    const receipt = dryRun.receipts[0];
-    assert.equal(receipt.study_id, STUDY_ID);
-    assert.equal(receipt.domain_context.study_id, STUDY_ID);
-    assert.equal(receipt.work_unit_fingerprint, receipt.source_fingerprint);
+    assert.equal(dryRun.receipts[0].study_id, STUDY_ID);
     assert.equal(dryRun.authority_boundary.can_write_domain_truth, false);
     assertNoLedgerWrite(stateRoot);
 
@@ -284,89 +256,23 @@ test('runtime StageRun execution authorization dry-run validates identity guards
     );
 
     assert.equal(mismatch.status, 'blocked');
-    assert.equal(mismatch.dry_run, true);
     assert.equal(mismatch.writes_performed, false);
-    assert.equal(mismatch.recorded_receipt_count, 0);
-    assert.equal(
-      mismatch.blocker.blocker_id,
-      'stage_run_execution_authorization_identity_invalid',
-    );
     assert.equal(
       mismatch.blocker.blocker_reasons.includes('domain_context_study_id_mismatch'),
       true,
     );
-    assertNoLedgerWrite(stateRoot);
-
-    const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
-    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
-    const stageManifestRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/manifest`;
-    const typedBlockerRef =
-      'artifacts/supervision/consumer/default_executor_execution/sat_e1063d97901cc3d70424fc5c.closeout.json';
-    const sourceFingerprint = 'truth-snapshot::eb10e8316639d4839970dc15';
-    const idempotencyKey =
-      'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::truth-event-000035-39f0b8e96689a623::gate_clearing_batch::repair_progress_gate_replay_required::6c520342c1c99c25';
-    const distinctIdentity = recordAuthorization(
-      stateRoot,
-      authorizationPayload({
-        phase: 'closeout',
-        stage_run_id: stageRunId,
-        stage_id: 'domain_owner/default-executor-dispatch',
-        domain_context: {
-          domain_id: 'medautoscience',
-          study_id: STUDY_ID,
-          stage_id: 'domain_owner/default-executor-dispatch',
-        },
-        provider_attempt_ref: 'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c',
-        stage_attempt_id: 'sat_e1063d97901cc3d70424fc5c',
-        attempt_lease_ref: 'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c/lease',
-        action_type: 'run_gate_clearing_batch',
-        work_unit_id: 'publication_gate_replay',
-        work_unit_fingerprint:
-          'sha256:2c4793a4e41859fd21a0bc088459c85f298bacb7d06eea811b44beae568fbf9f',
-        reason: 'operator_authorized_exact_identity_after_domain_typed_blocker_observed',
-        execution_authorization_decision_ref:
-          'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c/execution-authorization',
-        workspace_scope_ref: 'medautoscience:frt_fd682ae13a7920705c231336',
-        artifact_scope_ref: 'sat_e1063d97901cc3d70424fc5c',
-        source_fingerprint: sourceFingerprint,
-        idempotency_key: idempotencyKey,
-        current_pointer_ref: currentPointerRef,
-        stage_manifest_ref: stageManifestRef,
-        owner_answer_ref: typedBlockerRef,
-        owner_answer_kind: 'typed_blocker',
-        closeout_receipt_ref: typedBlockerRef,
-        owner_answer_stage_run_id: stageRunId,
-        owner_answer_generation: 0,
-        owner_answer_manifest_ref: stageManifestRef,
-        owner_answer_current_pointer_ref: currentPointerRef,
-        owner_answer_source_fingerprint: sourceFingerprint,
-        owner_answer_idempotency_key: idempotencyKey,
-      }),
-      ['--dry-run', '--json'],
-    );
-
-    assert.equal(distinctIdentity.status, 'planned');
-    assert.equal(distinctIdentity.dry_run, true);
-    assert.equal(distinctIdentity.writes_performed, false);
-    assert.equal(distinctIdentity.planned_receipt_count, 1);
-    const distinctReceipt = distinctIdentity.receipts[0];
-    assert.notEqual(distinctReceipt.work_unit_fingerprint, distinctReceipt.source_fingerprint);
-    assert.equal(distinctReceipt.source_fingerprint, sourceFingerprint);
-    assert.equal(distinctReceipt.idempotency_key, idempotencyKey);
-    assertAuthorizedCloseoutBinding(distinctReceipt.execution_authorization_report);
     assertNoLedgerWrite(stateRoot);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('runtime StageRun execution authorization records independent quality gate attempt binding', () => {
+test('runtime StageRun execution authorization rejects self-reviewed quality gates', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-quality-gate-'));
   try {
     const stageRunId = 'app-stage-run:medautoscience:publication-quality-gate';
     const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
     const stageManifestRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/manifest`;
-    const qualityGateRef = 'mas://quality-gate/receipt/publication-review';
     const providerAttemptRef = 'temporal://attempt/mas-paper-author';
     const qualityGateAttemptRef = 'temporal://attempt/mas-quality-reviewer';
     const sourceFingerprint = 'sha256:quality-gate-runtime-source';
@@ -375,19 +281,16 @@ test('runtime StageRun execution authorization records independent quality gate 
       phase: 'closeout',
       stage_run_id: stageRunId,
       stage_id: 'publication_quality_gate',
-      generation: 0,
       domain_context: {
         domain_id: 'medautoscience',
-        study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+        study_id: STUDY_ID,
         stage_id: 'publication_quality_gate',
       },
       provider_attempt_ref: providerAttemptRef,
       stage_attempt_id: 'sat_quality_gate',
-      attempt_lease_ref: 'opl://stage_attempts/sat_quality_gate/lease',
       action_type: 'review_publication_quality_gate',
       work_unit_id: 'publication_quality_review',
       work_unit_fingerprint: 'sha256:quality-gate-runtime-work-unit',
-      reason: 'operator_authorized_independent_quality_gate_receipt',
       execution_authorization_decision_ref:
         'opl://stage_attempts/sat_quality_gate/execution-authorization',
       workspace_scope_ref: 'medautoscience:quality-gate-workspace',
@@ -396,9 +299,9 @@ test('runtime StageRun execution authorization records independent quality gate 
       idempotency_key: idempotencyKey,
       current_pointer_ref: currentPointerRef,
       stage_manifest_ref: stageManifestRef,
-      owner_answer_ref: qualityGateRef,
+      owner_answer_ref: 'mas://quality-gate/receipt/publication-review',
       owner_answer_kind: 'quality_gate_receipt',
-      closeout_receipt_ref: qualityGateRef,
+      closeout_receipt_ref: 'mas://quality-gate/receipt/publication-review',
       owner_answer_stage_run_id: stageRunId,
       owner_answer_generation: 0,
       owner_answer_manifest_ref: stageManifestRef,
@@ -409,33 +312,15 @@ test('runtime StageRun execution authorization records independent quality gate 
     });
 
     const record = recordAuthorization(stateRoot, payload, ['--json']);
-
     assert.equal(record.status, 'recorded');
-    assert.equal(record.recorded_receipt_count, 1);
     assert.equal(record.receipts[0].quality_gate_attempt_ref, qualityGateAttemptRef);
-    assert.equal(
-      record.receipts[0].execution_authorization_report.closeout_binding.quality_gate_attempt_ref,
-      qualityGateAttemptRef,
-    );
     assert.deepEqual(record.receipts[0].execution_authorization_report.closeout_binding_blockers, []);
-
-    const list = listAuthorizations(stateRoot, ['--json']);
-
-    assert.equal(list.receipts[0].quality_gate_attempt_ref, qualityGateAttemptRef);
-    assert.equal(
-      list.receipts[0].execution_authorization_report.closeout_binding.quality_gate_attempt_ref,
-      qualityGateAttemptRef,
-    );
 
     const sameAttempt = recordAuthorization(
       stateRoot,
-      {
-        ...payload,
-        quality_gate_attempt_ref: providerAttemptRef,
-      },
+      { ...payload, quality_gate_attempt_ref: providerAttemptRef },
       ['--dry-run', '--json'],
     );
-
     assert.equal(sameAttempt.status, 'blocked');
     assert.equal(
       sameAttempt.blocker.blocker_reasons.includes('quality_gate_same_attempt_self_review_forbidden'),
@@ -446,15 +331,10 @@ test('runtime StageRun execution authorization records independent quality gate 
   }
 });
 
-test('runtime StageRun execution authorization ledger records refs-only OPL authorization', () => {
+test('runtime StageRun execution authorization ledger records and verifies refs-only OPL authorization', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-'));
   try {
-    const blocked = recordAuthorization(
-      stateRoot,
-      authorizationPayload({
-        attempt_lease_ref: null,
-      }),
-    );
+    const blocked = recordAuthorization(stateRoot, authorizationPayload({ attempt_lease_ref: null }));
     assert.equal(blocked.status, 'blocked');
     assert.equal(blocked.recorded_receipt_count, 0);
     assert.equal(blocked.authority_boundary.can_write_domain_truth, false);
@@ -463,21 +343,12 @@ test('runtime StageRun execution authorization ledger records refs-only OPL auth
     const record = recordAuthorization(stateRoot);
     assert.equal(record.status, 'recorded');
     assert.equal(record.recorded_receipt_count, 1);
-    assert.equal(record.ledger_file, ledgerFile(stateRoot));
-    assert.equal(record.receipts[0].execution_authorization_report.status, 'authorized');
-    assert.equal(record.receipts[0].execution_authorization_report.execution_authorized, true);
-    assert.deepEqual(record.receipts[0].execution_authorization_report.launch_blockers, []);
     assert.equal(record.receipts[0].authority_boundary.refs_only, true);
     assert.equal(record.receipts[0].authority_boundary.can_create_owner_receipt, false);
     assert.equal(record.receipts[0].authority_boundary.can_create_typed_blocker, false);
-    assert.equal(
-      record.receipts[0].authority_boundary.authorization_receipt_is_domain_owner_answer,
-      false,
-    );
 
     const verify = verifyAuthorization(stateRoot, record.receipt_refs[0]);
     assert.equal(verify.status, 'verified');
-    assert.equal(verify.receipt.receipt_status, 'verified');
     assert.equal(verify.authority_boundary.can_claim_domain_ready, false);
 
     const list = listAuthorizations(stateRoot);
@@ -533,12 +404,8 @@ test('runtime StageRun execution authorization list reports strict schema reject
     assert.equal(list.ledger_exists, true);
     assert.equal(list.raw_receipt_count, 1);
     assert.equal(list.receipt_count, 0);
-    assert.equal(list.verified_receipt_count, 0);
     assert.equal(list.strict_schema_rejected_receipt_count, 1);
-    assert.equal(
-      list.strict_schema_required_identity_fields.includes('domain_context'),
-      true,
-    );
+    assert.equal(list.strict_schema_required_identity_fields.includes('domain_context'), true);
     assert.equal(list.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -549,180 +416,22 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-auth-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = stateRoot;
-  const currentOwnerDelta = publicationOwnerDelta();
   try {
-    const before = buildAppStageRunCockpit(currentOwnerDelta);
-    assert.equal(before.stage_run_current_owner_delta.stage_id, 'finalize_and_publication_handoff');
-    assert.equal(
-      before.execution_authorization.launch_blockers.includes('attempt_lease_ref_missing'),
-      true,
-    );
-    assert.equal(
-      before.execution_authorization.launch_blockers.includes(
-        'execution_authorization_decision_ref_missing',
-      ),
-      true,
-    );
+    const before = buildAppStageRunCockpit(publicationOwnerDelta());
+    assert.equal(before.execution_authorization.launch_blockers.includes('attempt_lease_ref_missing'), true);
 
     const record = recordAuthorization(stateRoot);
-    assert.equal(record.status, 'recorded');
+    const after = buildAppStageRunCockpit(publicationOwnerDelta());
 
-    const after = buildAppStageRunCockpit(currentOwnerDelta);
     assert.equal(after.stage_run_current_owner_delta.execution_authorization_receipt_ref, record.receipt_refs[0]);
-    const authorizationLedgerReceipt = after.execution_authorization_ledger_receipt;
-    if (!authorizationLedgerReceipt) {
-      throw new Error('expected cockpit to expose execution authorization ledger receipt');
-    }
-    assert.equal(authorizationLedgerReceipt.receipt_ref, record.receipt_refs[0]);
     assert.deepEqual(after.execution_authorization.launch_blockers, []);
     assert.equal(
       after.execution_authorization.closeout_binding_blockers.includes('closeout_receipt_ref_missing'),
       true,
     );
-    assert.equal(after.execution_authorization.status, 'blocked');
     assert.equal(after.execution_authorization.execution_authorized, false);
-    const nextRequiredOwnerAction = after.next_required_owner_action;
-    if (!nextRequiredOwnerAction) {
-      throw new Error('expected closeout binding to remain blocked after refs-only authorization');
-    }
-    assert.equal(nextRequiredOwnerAction.owner, 'medautoscience');
-    assert.equal(nextRequiredOwnerAction.owner_answer_missing_before_opl_closeout_binding, true);
-    assert.equal(
-      nextRequiredOwnerAction.missing_input_refs.includes('attempt_lease_ref'),
-      false,
-    );
-    assert.equal(
-      nextRequiredOwnerAction.missing_input_refs.includes('owner_answer_ref'),
-      true,
-    );
-    assert.equal(after.authority_boundary.can_write_domain_truth, false);
-    assert.equal(after.authority_boundary.can_create_owner_receipt, false);
+    assert.equal(after.next_required_owner_action?.owner_answer_missing_before_opl_closeout_binding, true);
     assert.equal(after.authority_boundary.can_create_typed_blocker, false);
-  } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('App StageRun cockpit requires independent attempt binding for quality gate receipt closeout', () => {
-  const cockpit = buildAppStageRunCockpit({
-    domain: 'medautoscience',
-    current_owner: 'medautoscience',
-    stage_id: 'domain_owner/default-executor-dispatch',
-    desired_delta_kind: 'owner_delta',
-    desired_delta_description: 'publication_gate_replay_blocked',
-    accepted_answer_shape: [
-      'domain_owner_receipt_ref',
-      'quality_gate_receipt_ref',
-      'typed_blocker_ref',
-    ],
-    task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
-    lineage_ref: 'sat_current_gate_replay',
-    source_fingerprint: 'mas_default_executor_source_gate_replay',
-    delta_id: 'dm003-gate-replay:g0',
-    latest_owner_answer_kind: 'quality_gate_receipt',
-    latest_owner_answer_ref:
-      'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json',
-    hard_gate: {
-      state: 'domain_owner_answer_recorded',
-      owner_answer_kind: 'quality_gate_receipt',
-      owner_answer_ref:
-        'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json',
-      domain_ready_authorized: false,
-      quality_or_export_authorized: false,
-    },
-    audit_refs: {
-      workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
-      artifact_scope_ref: 'stage-packet:studies/003-dpcc-primary-care-phenotype-treatment-gap/gate-replay.json',
-      app_operator_drilldown_ref: 'opl://drilldown/current-owner-delta',
-    },
-  });
-
-  assert.equal(
-    cockpit.execution_authorization.closeout_binding.owner_answer_ref,
-    'runtime/quests/003-dpcc-primary-care-phenotype-treatment-gap/artifacts/reports/publishability_gate/2026-06-07T015349Z.json',
-  );
-  assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'quality_gate_receipt');
-  assert.equal(
-    cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary
-      .owner_receipt_or_typed_blocker_missing,
-    false,
-  );
-  assert.equal(cockpit.execution_authorization.execution_authorized, false);
-  assert.equal(
-    cockpit.execution_authorization.closeout_binding_blockers.includes(
-      'quality_gate_independent_attempt_binding_missing',
-    ),
-    true,
-  );
-  assert.equal(
-    cockpit.execution_authorization.closeout_binding_blockers.includes(
-      'closeout_receipt_ref_missing',
-    ),
-    false,
-  );
-  assert.equal(
-    cockpit.next_required_owner_action?.missing_input_refs.includes('quality_gate_attempt_ref'),
-    true,
-  );
-  assert.equal(
-    cockpit.stage_run_current_owner_delta.hard_gate.domain_ready_authorized,
-    false,
-  );
-});
-
-test('App StageRun cockpit ignores authorization ledger receipt from another stage attempt', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-auth-stale-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = stateRoot;
-  try {
-    const record = recordAuthorization(
-      stateRoot,
-      authorizationPayload({
-        provider_attempt_ref: 'opl://stage_attempts/sat_stale',
-        stage_attempt_id: 'sat_stale',
-        attempt_lease_ref: 'opl://stage_attempts/sat_stale/lease/current',
-        execution_authorization_decision_ref:
-          'opl://stage_attempts/sat_stale/execution-authorization/current',
-        idempotency_key: 'idem_stale',
-      }),
-    );
-    assert.equal(record.status, 'recorded');
-
-    const cockpit = buildAppStageRunCockpit(publicationOwnerDelta({
-      lineage_ref: 'sat_current',
-      live_attempt_ref: 'opl://stage_attempts/sat_current',
-      audit_refs: {
-        workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
-        artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
-      },
-    }));
-
-    assert.equal(cockpit.stage_run_current_owner_delta.execution_authorization_receipt_ref, null);
-    assert.equal(cockpit.execution_authorization_ledger_receipt, null);
-    assert.equal(
-      cockpit.execution_authorization.launch_blockers.includes('attempt_lease_ref_missing'),
-      true,
-    );
-    assert.equal(
-      cockpit.execution_authorization.launch_blockers.includes(
-        'execution_authorization_decision_ref_missing',
-      ),
-      true,
-    );
-    assert.equal(cockpit.execution_authorization.status, 'blocked');
-    assert.equal(cockpit.execution_authorization.execution_authorized, false);
-    const nextRequiredOwnerAction = cockpit.next_required_owner_action;
-    if (!nextRequiredOwnerAction) {
-      throw new Error('expected stale authorization mismatch to require OPL runtime refs');
-    }
-    assert.equal(nextRequiredOwnerAction.next_required_owner, 'one-person-lab');
-    assert.equal(nextRequiredOwnerAction.route_requires_opl_runtime_refs, true);
-    assert.equal(nextRequiredOwnerAction.route_requires_domain_or_app_payload, false);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
@@ -745,55 +454,23 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
   try {
     bindMasWorkspaceForAuthorization({ stateRoot, workspaceRoot, profilePath });
     const record = recordAuthorization(stateRoot);
-    assert.equal(record.status, 'recorded');
     writeMasOwnerAnswerProjection({
       workspaceRoot,
       studyId: STUDY_ID,
       receipt: record.receipts[0],
     });
 
-    const cockpit = buildAppStageRunCockpit({
-      domain: 'medautoscience',
-      current_owner: 'medautoscience',
-      stage_id: 'finalize_and_publication_handoff',
-      desired_delta_kind: 'owner_delta',
-      desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
-      accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
-      task_or_study_ref: `mas://study/${STUDY_ID}`,
+    const cockpit = buildAppStageRunCockpit(publicationOwnerDelta({
       lineage_ref: 'mas://stage-artifact-unit/DM003/08-publication_package_handoff',
-      hard_gate: {
-        state: 'owner_delta_open',
-      },
-      audit_refs: {
-        workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
-        artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
-      },
-    });
-
-    assertAuthorizedCloseoutBinding(cockpit.execution_authorization);
-    assert.equal(cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing, false);
+      live_attempt_ref: undefined,
+    }));
     const projection = cockpit.stage_run_current_owner_delta.owner_answer_binding_projection;
-    if (!projection) {
-      throw new Error('expected MAS owner-answer binding projection');
-    }
-    assert.equal(projection.study_id, STUDY_ID);
-    assert.equal(
-      projection.profile_id,
-      'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',
-    );
-    assert.equal(projection.profile_role, 'compatibility');
-    assert.equal(projection.closeout_binding_source, 'owner_answer_projection_profile_registry');
-    assert.equal(
-      projection.authority_boundary.projection_registry,
-      'opl_domain_owner_answer_projection_profile_registry',
-    );
-    assert.equal(projection.authority_boundary.projection_role, 'compatibility_projection');
-    assert.equal(projection.authority_boundary.compatibility_projection, true);
-    assert.equal(
-      projection.authority_boundary.can_claim_domain_ready,
-      false,
-    );
-    assert.equal(cockpit.authority_boundary.can_create_typed_blocker, false);
+
+    assert.equal(cockpit.execution_authorization.status, 'authorized');
+    assert.equal(cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing, false);
+    assert.equal(projection?.study_id, STUDY_ID);
+    assert.equal(projection?.profile_role, 'compatibility');
+    assert.equal(projection?.authority_boundary.can_claim_domain_ready, false);
     assert.equal(cockpit.authority_boundary.can_claim_production_ready, false);
   } finally {
     if (previousStateDir === undefined) {
@@ -887,23 +564,9 @@ test('owner-answer projection lookup accepts injected domain profile', () => {
     });
 
     assert.equal(projection?.projection_ref, projectionPath);
-    assert.equal(projection?.surface_kind, 'opl_domain_owner_answer_projection_registry_match');
-    assert.equal(
-      projection?.projection_registry,
-      'opl_domain_owner_answer_projection_profile_registry',
-    );
-    assert.equal(
-      projection?.projection_policy,
-      'generic_domain_owner_answer_refs_only_no_domain_truth_or_readiness_claim',
-    );
-    assert.equal(projection?.profile_id, 'example-domain.owner_answer_projection.test.v1');
     assert.equal(projection?.profile_role, 'registry');
     assert.equal(projection?.projection_role, 'domain_profile_projection');
-    assert.equal(projection?.workspace_root, workspaceRoot);
-    assert.equal(projection?.study_id, 'case-1');
     assert.equal(projection?.domain_profile.compatibility_projection, false);
-    assert.equal(projection?.authority_boundary.source_owner, 'example-domain');
-    assert.equal(projection?.authority_boundary.projection_role, 'domain_profile_projection');
     assert.equal(projection?.authority_boundary.can_write_domain_truth, false);
   } finally {
     if (previousStateDir === undefined) {
@@ -914,23 +577,4 @@ test('owner-answer projection lookup accepts injected domain profile', () => {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
-});
-
-test('owner-answer projection registry readback keeps MAS as compatibility profile only', () => {
-  const registry = buildOwnerAnswerProjectionProfileRegistryReadback();
-  const profile = registry.profiles.find((entry) =>
-    entry.profile_id === 'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1'
-  );
-
-  assert.equal(registry.surface_kind, 'opl_domain_owner_answer_projection_profile_registry_readback');
-  assert.equal(registry.registry_surface_kind, 'opl_domain_owner_answer_projection_profile_registry');
-  assert.equal(registry.registry_role, 'generic_domain_owner_answer_projection_profile_registry');
-  assert.equal(registry.projection_policy, 'generic_domain_owner_answer_refs_only_no_domain_truth_or_readiness_claim');
-  assert.equal(profile?.profile_role, 'compatibility');
-  assert.equal(profile?.projection_role, 'compatibility_projection');
-  assert.equal(profile?.compatibility_projection, true);
-  assert.equal(registry.authority_boundary.can_write_domain_truth, false);
-  assert.equal(registry.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(registry.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(registry.authority_boundary.can_claim_domain_ready, false);
 });

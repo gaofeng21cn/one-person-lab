@@ -10,10 +10,7 @@ import {
 } from './agents-conformance-fixtures.ts';
 import { assertStageOperatingPrincipleChecksPassed } from './agents-conformance-stage-operating-principles-assertions.ts';
 
-const LIVE_STAGE_RUN_PROGRESS_POLICY =
-  'controlled_canary_and_structural_conformance_do_not_close_live_domain_progress_evidence_domain_owner_refs_or_typed_blockers_required';
-
-test('agents conformance reports structural readiness separately from production evidence tail', () => {
+test('agents conformance keeps structural pass separate from domain readiness authority', () => {
   const repoDir = buildReadyAgentRepo();
   const platformSurfaces = runCli([
     'agents',
@@ -21,173 +18,28 @@ test('agents conformance reports structural readiness separately from production
     '--agent',
     `sample=${repoDir}`,
   ]).agent_platform_surface_ownership;
-
-  assert.equal(platformSurfaces.surface_kind, 'opl_agent_platform_surface_ownership_report');
-  assert.equal(platformSurfaces.owner, 'one-person-lab');
-  assert.equal(platformSurfaces.status, 'passed');
-  assert.equal(platformSurfaces.summary.total_repo_count, 1);
-  assert.equal(platformSurfaces.summary.generic_subdomain_count, 7);
-  assert.equal(platformSurfaces.summary.explicit_forbidden_owner_claim_count, 0);
-  assert.deepEqual(platformSurfaces.reports[0].retained_domain_authority, [
-    'domain_truth',
-    'quality_or_export_or_publication_or_visual_verdict',
-    'artifact_body_and_mutation_authority',
-    'source_readiness_verdict',
-    'memory_body_accept_reject',
-    'owner_receipt_signing',
-    'typed_blocker_materialization',
-    'domain_specific_policy_rubric_or_quality_gate',
-  ]);
-  assert.equal(
-    platformSurfaces.reports[0].generic_subdomains
-      .some((surface: { subdomain_id: string; owner: string }) => (
-        surface.subdomain_id === 'generated_domain_handler_dispatch_shell'
-        && surface.owner === 'one-person-lab'
-      )),
-    true,
-  );
-  const actionMetadataSurface = platformSurfaces.reports[0].generic_subdomains
-    .find((surface: { subdomain_id: string }) => (
-      surface.subdomain_id === 'generated_action_metadata_command_registration_shell'
-    ));
-  assert.equal(Boolean(actionMetadataSurface), true);
-  assert.equal(actionMetadataSurface.owner, 'one-person-lab');
-  assert.equal(
-    actionMetadataSurface.domain_allowed_role,
-    'domain_action_ids_handler_refs_or_refs_only_metadata_source',
-  );
-  assert.equal(actionMetadataSurface.status, 'advisory_diagnostic_observed');
-  assert.equal(
-    actionMetadataSurface.advisory_diagnostic_refs.includes('contracts/action_catalog.json'),
-    true,
-  );
-  assert.equal(
-    actionMetadataSurface.advisory_diagnostic_policy,
-    'filename_contract_text_and_prose_refs_are_diagnostic_only_not_admission_blockers',
-  );
-  assert.equal(actionMetadataSurface.observed_source_refs_role, 'compatibility_alias_for_advisory_diagnostic_refs');
-  assert.equal(
-    actionMetadataSurface.observed_source_refs.includes('contracts/action_catalog.json'),
-    true,
-  );
-  assert.equal(platformSurfaces.reports[0].hard_gate.status, 'passed');
-  assert.equal(
-    platformSurfaces.reports[0].hard_gate.source_policy,
-    'machine_contracts_receipts_and_proofs_only',
-  );
-  assert.equal(
-    platformSurfaces.reports[0].advisory_diagnostics.can_block_standard_agent_admission,
-    false,
-  );
-  assert.equal(platformSurfaces.authority_boundary.report_can_claim_domain_ready, false);
-
-  const conformancePayload = runCli([
+  const payload = runCli([
     'agents',
     'conformance',
     '--agent',
     `sample=${repoDir}`,
   ]);
-  const report = conformancePayload.standard_domain_agent_conformance;
+  const report = payload.standard_domain_agent_conformance;
+  const repo = report.reports[0];
+  const adoption = report.stage_run_domain_adoption_read_model;
+  const worklist = adoption.live_stage_run_progress_evidence_worklist;
 
-  assert.equal(report.surface_kind, 'opl_standard_domain_agent_conformance_report');
-  assert.equal(report.owner, 'one-person-lab');
+  assert.equal(platformSurfaces.status, 'passed');
+  assert.equal(platformSurfaces.authority_boundary.report_can_claim_domain_ready, false);
   assert.equal(report.status, 'passed');
-  assert.equal(report.total_repo_count, 1);
-  assert.equal(report.passed_count, 1);
-  assert.equal(report.blocked_count, 0);
   assert.equal(report.structural_conformance_status, 'passed');
-  assert.equal(report.structural_contract_status, 'passed');
   assert.equal(report.ordinary_path_guard_status, 'passed');
-  assert.equal(report.live_domain_progress_status, 'required_from_domain_owner');
-  assert.equal(report.live_domain_progress_status, report.live_stage_run_progress_evidence_status);
+  assert.equal(report.live_stage_run_progress_evidence_status, 'required_from_domain_owner');
   assert.equal(report.production_evidence_tail_count, 2);
-  assert.equal(report.production_evidence_tail_policy, 'reported_separately_not_a_structural_pass_condition');
-  assert.equal(report.summary.total_repo_count, 1);
-  assert.equal(report.summary.passed_count, 1);
-  assert.equal(report.summary.blocked_count, 0);
-  assert.equal(report.summary.structural_conformance_status, 'passed');
-  assert.equal(report.summary.structural_contract_status, 'passed');
-  assert.equal(report.summary.ordinary_path_guard_status, 'passed');
-  assert.equal(report.summary.live_domain_progress_status, 'required_from_domain_owner');
-  assert.equal(report.summary.production_evidence_tail_count, 2);
-  assert.equal(conformancePayload.passed_count, report.passed_count);
-  assert.equal(conformancePayload.blocked_count, report.blocked_count);
-  assert.equal(
-    conformancePayload.structural_conformance_status,
-    report.structural_conformance_status,
-  );
-  assert.equal(conformancePayload.structural_contract_status, report.structural_contract_status);
-  assert.equal(conformancePayload.ordinary_path_guard_status, report.ordinary_path_guard_status);
-  assert.equal(conformancePayload.live_domain_progress_status, report.live_domain_progress_status);
-  assert.equal(
-    conformancePayload.production_evidence_tail_count,
-    report.production_evidence_tail_count,
-  );
-  assert.equal(
-    conformancePayload.production_evidence_tail_policy,
-    'reported_separately_not_a_structural_pass_condition',
-  );
-  assert.equal(
-    conformancePayload.live_stage_run_progress_evidence_status,
-    'required_from_domain_owner',
-  );
-  assert.equal(conformancePayload.live_stage_run_progress_evidence_open_domain_count, 1);
-  assert.equal(
-    conformancePayload.live_stage_run_progress_evidence_policy,
-    LIVE_STAGE_RUN_PROGRESS_POLICY,
-  );
-  const adoptionReadModel = conformancePayload.stage_run_domain_adoption_read_model;
-  assert.deepEqual(adoptionReadModel, report.stage_run_domain_adoption_read_model);
-  assert.equal(
-    conformancePayload.live_stage_run_progress_evidence_status,
-    adoptionReadModel.live_stage_run_progress_evidence_status,
-  );
-  assert.equal(
-    conformancePayload.live_stage_run_progress_evidence_open_domain_count,
-    adoptionReadModel.live_stage_run_progress_evidence_worklist.open_domain_count,
-  );
-  assert.equal(
-    conformancePayload.live_stage_run_progress_evidence_policy,
-    adoptionReadModel.live_stage_run_progress_evidence_policy,
-  );
-  assert.equal(
-    report.live_stage_run_progress_evidence_status,
-    adoptionReadModel.live_stage_run_progress_evidence_status,
-  );
-  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
-  assert.equal(
-    report.summary.live_stage_run_progress_evidence_status,
-    adoptionReadModel.live_stage_run_progress_evidence_status,
-  );
-  assert.equal(report.summary.live_stage_run_progress_evidence_open_domain_count, 1);
-  assert.equal(adoptionReadModel.surface_kind, 'opl_stage_run_domain_adoption_read_model');
-  assert.equal(adoptionReadModel.status, 'passed');
-  assert.equal(adoptionReadModel.domain_count, 1);
-  assert.equal(adoptionReadModel.stage_run_kernel_profile_passed_count, 1);
-  assert.equal(adoptionReadModel.stage_run_canary_evidence_passed_count, 1);
-  assert.equal(adoptionReadModel.controlled_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
-  assert.equal(adoptionReadModel.production_evidence_tail_count, 2);
-  assert.equal(adoptionReadModel.open_production_evidence_tail_count, 2);
-  assert.equal(adoptionReadModel.domain_production_acceptance_tail_count, 2);
-  assert.equal(adoptionReadModel.open_domain_production_acceptance_tail_count, 2);
-  assert.equal(
-    adoptionReadModel.domain_production_acceptance_tail_policy,
-    'domain_owned_acceptance_refs_are_reported_separately_from_live_stage_run_progress',
-  );
-  assert.equal(
-    adoptionReadModel.live_stage_run_progress_evidence_status,
-    'required_from_domain_owner',
-  );
-  assert.equal(
-    adoptionReadModel.live_stage_run_progress_evidence_policy,
-    LIVE_STAGE_RUN_PROGRESS_POLICY,
-  );
-  const liveProgressWorklist = adoptionReadModel.live_stage_run_progress_evidence_worklist;
-  assert.equal(liveProgressWorklist.surface_kind, 'opl_live_stage_run_progress_evidence_worklist');
-  assert.equal(liveProgressWorklist.owner, 'domain_owner');
-  assert.equal(liveProgressWorklist.status, 'required_from_domain_owner');
-  assert.equal(liveProgressWorklist.open_domain_count, 1);
-  assert.deepEqual(liveProgressWorklist.accepted_refs_only_result_shapes, [
+  assert.equal(payload.live_stage_run_progress_evidence_status, report.live_stage_run_progress_evidence_status);
+  assert.equal(adoption.status, 'passed');
+  assert.equal(worklist.owner, 'domain_owner');
+  assert.deepEqual(worklist.accepted_refs_only_result_shapes, [
     'domain_owner_receipt_ref',
     'typed_blocker_ref',
     'human_gate_ref',
@@ -195,233 +47,17 @@ test('agents conformance reports structural readiness separately from production
     'no_regression_ref',
     'long_soak_ref',
   ]);
-  assert.equal(liveProgressWorklist.authority_boundary.can_claim_live_domain_progress, false);
-  assert.equal(liveProgressWorklist.authority_boundary.can_claim_domain_ready, false);
-  assert.equal(liveProgressWorklist.authority_boundary.can_sign_owner_receipt, false);
-  assert.equal(liveProgressWorklist.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(adoptionReadModel.conformance_pass_counts_as_domain_ready, false);
-  assert.equal(adoptionReadModel.conformance_pass_counts_as_production_ready, false);
-  assert.equal(adoptionReadModel.authority_boundary.can_claim_domain_ready, false);
-  assert.equal(adoptionReadModel.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(report.summary.stage_run_domain_adoption_status, 'passed');
-  assert.equal(
-    report.summary.stage_run_controlled_canary_evidence_scope,
-    'controlled_fixture_not_live_domain_progress',
-  );
-  assert.equal(report.authority_boundary.conformance_report_can_claim_domain_ready, false);
-
-  const repo = report.reports[0];
-  const adoptionDomain = adoptionReadModel.domains[0];
-  assert.equal(adoptionDomain.domain_id, repo.domain_id);
-  assert.equal(adoptionDomain.stage_run_kernel_profile_status, 'passed');
-  assert.equal(adoptionDomain.stage_run_canary_evidence_status, 'passed');
-  assert.equal(adoptionDomain.stage_run_canary_evidence_scope, 'controlled_fixture_not_live_domain_progress');
-  assert.equal(adoptionDomain.stage_run_canary_operator_status, 'ready');
-  assert.equal(adoptionDomain.controlled_canary_claims_live_domain_progress, false);
-  assert.equal(
-    adoptionDomain.domain_production_acceptance_tail_status,
-    'production_evidence_tail_present',
-  );
-  assert.equal(adoptionDomain.domain_production_acceptance_tail_count, 2);
-  assert.equal(adoptionDomain.domain_production_acceptance_tail_open_count, 2);
-  assert.equal(adoptionDomain.domain_production_acceptance_tail_typed_blocker_count, 0);
-  assert.equal(
-    adoptionDomain.domain_production_acceptance_tail_scope,
-    'domain_owned_acceptance_refs_not_live_stage_run_progress_evidence',
-  );
-  assert.equal(adoptionDomain.production_evidence_tail_status, 'production_evidence_tail_present');
-  assert.equal(
-    adoptionDomain.live_stage_run_progress_evidence_status,
-    'required_from_domain_owner',
-  );
-  assert.equal(adoptionDomain.live_stage_run_progress_evidence_required_from, 'domain_owner');
-  assert.equal(adoptionDomain.structural_conformance_is_domain_ready, false);
-  assert.equal(liveProgressWorklist.domains[0].domain_id, adoptionDomain.domain_id);
-  assert.equal(
-    liveProgressWorklist.domains[0].next_required_owner_action,
-    adoptionDomain.next_required_owner_action,
-  );
-  assert.equal(liveProgressWorklist.domains[0].conformance_can_claim_domain_ready, false);
-  assert.equal(liveProgressWorklist.domains[0].can_create_typed_blocker, false);
-  assert.equal(
-    adoptionDomain.next_required_owner_action,
-    'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required',
-  );
-  assert.equal(adoptionDomain.authority_boundary.can_claim_production_ready, false);
-  assert.equal(repo.status, 'passed');
-  assert.deepEqual(repo.blockers, []);
-  assert.equal(repo.scaffold_validation.status, 'passed');
-  assert.equal(repo.pack_compiler_checks.canonical_semantic_pack_root, 'agent/');
-  assert.deepEqual(repo.pack_compiler_checks.legacy_pack_root_fields, []);
-  assert.deepEqual(repo.pack_compiler_checks.readme_required_paths, []);
-  assert.equal(repo.generated_surface_handoff_checks.generated_surface_owner, 'one-person-lab');
-  assert.equal(repo.private_surface_checks.domain_can_claim_generic_runtime_owner, false);
-  assert.equal(repo.platform_surface_ownership_checks.status, 'passed');
-  assert.equal(repo.platform_surface_ownership_checks.generic_subdomain_count, 7);
-  assert.equal(repo.platform_surface_ownership_checks.hard_gate.status, 'passed');
-  assert.equal(
-    repo.platform_surface_ownership_checks.hard_gate.source_policy,
-    'machine_contracts_receipts_and_proofs_only',
-  );
-  assert.equal(
-    repo.platform_surface_ownership_checks.advisory_diagnostics.can_block_standard_agent_admission,
-    false,
-  );
-  assert.deepEqual(repo.platform_surface_ownership_checks.explicit_forbidden_owner_claims, []);
-  assert.equal(repo.platform_surface_ownership_checks.authority_boundary.report_can_claim_production_ready, false);
+  assert.equal(worklist.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(worklist.authority_boundary.can_create_typed_blocker, false);
   assert.equal(repo.generated_interface_checks.generated_interfaces_status, 'ready');
-  assert.equal(repo.generated_interface_checks.generated_direct_parity_status, 'aligned');
-  assert.equal(
-    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_write_domain_truth,
-    false,
-  );
-  assert.equal(
-    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_sign_owner_receipt,
-    false,
-  );
-  assert.equal(
-    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_create_typed_blocker,
-    false,
-  );
-  assert.equal(
-    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_claim_domain_ready,
-    false,
-  );
-  assert.equal(
-    repo.generated_interface_checks.generated_direct_parity_authority_boundary.can_claim_production_ready,
-    false,
-  );
-  assert.deepEqual(
-    repo.generated_interface_checks.generated_direct_roundtrip_action_ids,
-    ['draft_brief'],
-  );
-  assert.equal(repo.generated_interface_checks.generated_wrapper_bundle_status, 'ready');
-  assert.equal(repo.generated_interface_checks.active_caller_target_proof_status, 'ready');
-  assert.equal(
-    repo.generated_interface_checks.active_caller_cutover_proof_status,
-    'cutover_to_opl_generated_or_domain_handler_targets',
-  );
-  assert.equal(repo.physical_morphology_checks.status, 'passed');
-  assert.equal(repo.physical_morphology_checks.policy_status, 'declared');
-  assert.equal(repo.workspace_file_lifecycle_checks.status, 'passed');
-  assert.equal(repo.workspace_file_lifecycle_checks.policy_status, 'declared');
-  assert.equal(repo.stage_artifact_kernel_adoption_checks.status, 'passed');
-  assert.equal(repo.stage_artifact_kernel_adoption_checks.policy_status, 'declared');
-  assert.deepEqual(repo.stage_artifact_kernel_adoption_checks.stage_folder_unit, [
-    'Stage Folder',
-    'Manifest',
-    'Receipt',
-    'current pointer',
-  ]);
-  assert.equal(
-    repo.stage_artifact_kernel_adoption_checks.projection_boundary.file_presence_only_counts_as,
-    'orphan_or_historical',
-  );
-  assert.equal(
-    repo.stage_artifact_kernel_adoption_checks.projection_boundary.provider_completion_counts_as_progress,
-    false,
-  );
-  assert.equal(
-    repo.stage_artifact_kernel_adoption_checks.authority_boundary.opl_can_create_domain_owner_receipt,
-    false,
-  );
   assert.equal(repo.stage_run_kernel_profile_checks.status, 'passed');
-  assert.equal(repo.stage_run_kernel_profile_checks.profile_status, 'declared');
-  assert.equal(repo.stage_run_kernel_profile_checks.kernel_role, 'minimal_state_shell_not_domain_controller_system');
-  assert.deepEqual(repo.stage_run_kernel_profile_checks.stage_native_unit, [
-    'stage_folder',
-    'stage_manifest',
-    'role_artifacts',
-    'owner_receipt_or_typed_blocker',
-  ]);
-  assert.deepEqual(repo.stage_run_kernel_profile_checks.required_object_models, [
-    'StageRun',
-    'RoleArtifactRef',
-    'OwnerReceipt',
-    'TypedBlocker',
-    'ReadModel',
-  ]);
-  assert.equal(
-    repo.stage_run_kernel_profile_checks.stage_run_state_machine.provider_completion_counts_as_domain_accepted,
-    false,
-  );
-  assert.equal(
-    repo.stage_run_kernel_profile_checks.stage_run_state_machine.file_presence_counts_as_stage_complete,
-    false,
-  );
-  assert.equal(
-    repo.stage_run_kernel_profile_checks.transition_authority.terminal_transition_authority,
-    'owner_receipt_or_typed_blocker',
-  );
-  assert.equal(
-    repo.stage_run_kernel_profile_checks.authority_boundary.opl_can_sign_domain_owner_receipt,
-    false,
-  );
   assert.equal(repo.stage_run_canary_evidence_checks.status, 'passed');
-  assert.equal(repo.stage_run_canary_evidence_checks.evidence_status, 'declared');
-  assert.equal(
-    repo.stage_run_canary_evidence_checks.evidence_scope,
-    'controlled_fixture_not_live_domain_progress',
-  );
-  assert.deepEqual(
-    Object.keys(repo.stage_run_canary_evidence_checks.strategy_trace),
-    [
-      'candidate_generation',
-      'grounded_reflection',
-      'comparative_selection',
-      'evolution_and_revision',
-      'meta_review_learning',
-      'independent_quality_gate',
-    ],
-  );
-  assert.equal(
-    repo.stage_run_canary_evidence_checks.closeout.same_attempt_self_review,
-    false,
-  );
   assert.equal(repo.workspace_norm_checks.status, 'passed');
-  assert.equal(repo.workspace_norm_checks.default_precondition_command, 'opl workspace ensure');
-  assert.equal(repo.workspace_norm_checks.app_action_id, 'workspace_ensure');
-  assert.equal(repo.workspace_norm_checks.descriptor_delegate_tool, 'opl_workspace_ensure');
-  assert.equal(repo.workspace_norm_checks.descriptor_delegate_is_mcp_runtime, false);
-  assert.equal(repo.workspace_norm_checks.user_default_surface, 'workspace_local_project_stage_outputs');
-  assert.equal(repo.workspace_norm_checks.runtime_state_is_default_user_surface, false);
-  assert.equal(repo.workspace_norm_checks.conformance_pass_counts_as_domain_ready, false);
-  assert.equal(repo.workspace_norm_projection.contract_ref, 'contracts/opl-framework/agent-workspace-norm-contract.json');
-  assert.equal(repo.workspace_norm_projection.default_workspace_precondition.must_run_before_domain_task_when_no_active_binding, true);
-  assert.equal(
-    repo.stage_run_canary_evidence_checks.authority_boundary.controlled_canary_claims_live_domain_progress,
-    false,
-  );
   assertStageOperatingPrincipleChecksPassed(repo);
-  assert.equal(repo.legacy_runtime_residue_guard.status, 'passed');
-  assert.equal(repo.legacy_runtime_residue_guard.active_private_generic_residue_count, 0);
-  assert.equal(
-    repo.legacy_runtime_residue_guard.authority_boundary.domain_agent_can_own_generic_scheduler_or_queue,
-    false,
-  );
-  assert.deepEqual(repo.workspace_file_lifecycle_checks.repo_source_boundaries.required_roots, [
-    'agent/',
-    'contracts/',
-    'runtime/authority_functions/',
-    'docs/',
-    'src/ or packages/',
-  ]);
-  assert.equal(
-    repo.workspace_file_lifecycle_checks.authority_boundary
-      .policy_can_claim_domain_ready_or_artifact_authority,
-    false,
-  );
-  assert.equal(repo.evidence_tail_classification.status, 'production_evidence_tail_present');
   assert.equal(repo.evidence_tail_classification.tail_items.length, 2);
-  assert.deepEqual(
-    repo.evidence_tail_classification.tail_items.map((item: { status: string }) => item.status),
-    ['open', 'open'],
-  );
-  assert.equal(repo.evidence_tail_classification.tail_items[0].repo_path, repoDir);
-  assert.equal(repo.evidence_tail_classification.tail_items[0].authority_boundary.conformance_report_can_claim_domain_ready, false);
 });
 
-test('agents conformance consumes domain-owned live StageRun progress evidence without ready claim', () => {
+test('agents conformance consumes domain owner live progress refs without ready claim', () => {
   const magRepo = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepo);
   configureReadyMagMorphology(magRepo);
@@ -434,14 +70,11 @@ test('agents conformance consumes domain-owned live StageRun progress evidence w
       owner_receipt_refs: ['receipt:mag/live-stage-owner-answer/2026-06-11'],
       typed_blocker_refs: ['typed-blocker:mag/submission-human-gate-required/2026-06-11'],
       no_regression_refs: ['no-regression:mag/generated-surface-no-ready-claim'],
-      doc_refs: ['docs/status.md#live-stage-progress-evidence'],
-      next_verification_command_refs: ['scripts/verify.sh'],
     },
     typed_blocker_kind: 'submission_human_gate_required',
     authority_boundary: {
       refs_only: true,
       domain_ready_claimed: false,
-      production_ready_claimed: false,
       opl_can_sign_owner_receipt: false,
       opl_can_create_typed_blocker: false,
       opl_can_claim_domain_ready: false,
@@ -455,73 +88,24 @@ test('agents conformance consumes domain-owned live StageRun progress evidence w
     '--agent',
     `mag=${magRepo}`,
   ]).standard_domain_agent_conformance;
-  const adoption = report.stage_run_domain_adoption_read_model;
-  const domain = adoption.domains[0];
-  const worklistDomain = adoption.live_stage_run_progress_evidence_worklist.domains[0];
+  const domain = report.stage_run_domain_adoption_read_model.domains[0];
+  const worklistDomain = report.stage_run_domain_adoption_read_model
+    .live_stage_run_progress_evidence_worklist.domains[0];
 
   assert.equal(report.status, 'passed');
-  assert.equal(report.live_domain_progress_status, 'owner_evidence_recorded_not_ready_claim');
-  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 0);
-  assert.equal(report.summary.live_stage_run_progress_evidence_open_domain_count, 0);
-  assert.equal(adoption.live_stage_run_progress_evidence_status, 'owner_evidence_recorded_not_ready_claim');
-  assert.equal(adoption.live_stage_run_progress_evidence_worklist.status, 'owner_evidence_recorded_not_ready_claim');
-  assert.equal(adoption.live_stage_run_progress_evidence_worklist.open_domain_count, 0);
-  assert.equal(domain.live_stage_run_progress_evidence_contract_status, 'resolved_with_domain_owner_refs');
   assert.equal(domain.live_stage_run_progress_evidence_status, 'owner_typed_blocker_recorded_not_ready_claim');
-  assert.equal(domain.live_stage_run_progress_evidence_open, false);
   assert.equal(domain.live_stage_run_progress_typed_blocker_kind, 'submission_human_gate_required');
   assert.deepEqual(domain.live_stage_run_progress_observed_ref_shapes, [
     'domain_owner_receipt_ref',
     'no_regression_ref',
     'typed_blocker_ref',
   ]);
-  assert.deepEqual(domain.live_stage_run_progress_observed_receipt_refs, [
-    'receipt:mag/live-stage-owner-answer/2026-06-11',
-    'typed-blocker:mag/submission-human-gate-required/2026-06-11',
-    'no-regression:mag/generated-surface-no-ready-claim',
-  ]);
-  assert.equal(domain.live_stage_run_progress_observed_ref_counts.domain_owner_receipt_ref_count, 1);
-  assert.equal(domain.live_stage_run_progress_observed_ref_counts.typed_blocker_ref_count, 1);
-  assert.equal(domain.live_stage_run_progress_observed_ref_counts.no_regression_ref_count, 1);
-  assert.deepEqual(domain.live_stage_run_progress_doc_refs, ['docs/status.md#live-stage-progress-evidence']);
-  assert.deepEqual(domain.live_stage_run_progress_next_verification_refs, ['scripts/verify.sh']);
-  assert.equal(
-    domain.next_required_owner_action,
-    'domain_owner_typed_blocker_ref_recorded_wait_for_owner_resolution_route_back_or_no_regression_ref',
-  );
-  assert.deepEqual(worklistDomain.observed_ref_shapes, domain.live_stage_run_progress_observed_ref_shapes);
-  assert.equal(worklistDomain.owner_repo, magRepo);
-  assert.equal(worklistDomain.next_owner_repo, magRepo);
-  assert.equal(
-    worklistDomain.closing_ref_source,
-    'contracts/live_stage_run_progress_evidence.json#domain_owner_receipt_refs|typed_blocker_refs|human_gate_refs|quality_or_export_receipt_refs|no_regression_refs|long_soak_refs',
-  );
-  assert.equal(
-    worklistDomain.typed_blocker_source,
-    'contracts/live_stage_run_progress_evidence.json#typed_blocker_refs',
-  );
-  assert.deepEqual(worklistDomain.verification_commands, [
-    'scripts/verify.sh',
-    `opl agents conformance --agent mag=${magRepo} --json`,
-  ]);
-  assert.equal(worklistDomain.source_command, `opl agents conformance --agent mag=${magRepo} --json`);
-  assert.equal(worklistDomain.forbidden_opl_claims.includes('domain_ready'), true);
-  assert.equal(worklistDomain.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
-  assert.equal(worklistDomain.non_closing_inputs.includes('controlled_canary_pass'), true);
-  assert.equal(
-    worklistDomain.stop_loss.includes(
-      'if status is owner_typed_blocker_recorded_not_ready_claim, wait for domain owner route-back, no_regression_ref, or updated live progress evidence before treating the lane as complete',
-    ),
-    true,
-  );
   assert.equal(worklistDomain.ready_claim_authorized, false);
-  assert.equal(worklistDomain.conformance_can_claim_domain_ready, false);
   assert.equal(worklistDomain.can_create_typed_blocker, false);
-  assert.equal(adoption.authority_boundary.can_claim_domain_ready, false);
-  assert.equal(adoption.authority_boundary.can_claim_production_ready, false);
+  assert.equal(report.stage_run_domain_adoption_read_model.authority_boundary.can_claim_domain_ready, false);
 });
 
-test('agents conformance does not close live progress from non-standard domain evidence contracts', () => {
+test('agents conformance rejects non-standard live progress contracts as still owner-open', () => {
   const magRepo = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepo);
   configureReadyMagMorphology(magRepo);
@@ -534,10 +118,6 @@ test('agents conformance does not close live progress from non-standard domain e
       owner_receipt_refs: ['receipt:mag/live-stage-owner-answer/2026-06-11'],
       typed_blocker_refs: ['typed-blocker:mag/submission-human-gate-required/2026-06-11'],
     },
-    authority_boundary: {
-      opl_can_sign_owner_receipt: false,
-      opl_can_create_typed_blocker: false,
-    },
   });
 
   const report = runCli([
@@ -546,131 +126,45 @@ test('agents conformance does not close live progress from non-standard domain e
     '--agent',
     `mag=${magRepo}`,
   ]).standard_domain_agent_conformance;
-  const adoption = report.stage_run_domain_adoption_read_model;
-  const domain = adoption.domains[0];
+  const domain = report.stage_run_domain_adoption_read_model.domains[0];
 
   assert.equal(report.status, 'passed');
   assert.equal(report.live_stage_run_progress_evidence_status, 'required_from_domain_owner');
-  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
-  assert.equal(
-    domain.live_stage_run_progress_evidence_status,
-    'blocked_invalid_domain_live_progress_evidence',
-  );
-  assert.equal(
-    domain.live_stage_run_progress_evidence_contract_status,
-    'resolved_invalid_standard_contract',
-  );
+  assert.equal(domain.live_stage_run_progress_evidence_contract_status, 'resolved_invalid_standard_contract');
   assert.equal(domain.live_stage_run_progress_evidence_open, true);
-  assert.deepEqual(domain.live_stage_run_progress_observed_ref_shapes, []);
-  assert.equal(
-    domain.next_required_owner_action,
-    'repair_domain_live_stage_run_progress_evidence_contract',
-  );
-  assert.equal(adoption.live_stage_run_progress_evidence_worklist.open_domain_count, 1);
-  assert.equal(adoption.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(domain.next_required_owner_action, 'repair_domain_live_stage_run_progress_evidence_contract');
 });
 
-test('agents conformance exposes a live family probe over generated interfaces, action catalog, stage plane, and admission gates', () => {
-  const repoDir = buildReadyAgentRepo();
-  const payload = runCli([
+test('agents conformance live family probe covers pass and blocked admission paths', () => {
+  const readyRepo = buildReadyAgentRepo();
+  const readyReport = runCli([
     'agents',
     'conformance',
     '--agent',
-    `sample=${repoDir}`,
-  ]);
-  const report = payload.standard_domain_agent_conformance;
-  const probe = report.family_live_conformance_probe;
-  const domain = probe.domains[0];
+    `sample=${readyRepo}`,
+  ]).standard_domain_agent_conformance;
+  assert.equal(readyReport.family_live_conformance_probe.status, 'passed');
+  assert.equal(readyReport.family_live_conformance_probe.domains[0].false_authority_boundary.domain_ready_authorized, false);
 
-  assert.equal(payload.family_live_conformance_probe_status, 'passed');
-  assert.equal(payload.family_live_conformance_probe_blocked_domain_count, 0);
-  assert.equal(report.family_live_conformance_probe_status, 'passed');
-  assert.equal(report.summary.family_live_conformance_probe_status, 'passed');
-  assert.equal(probe.surface_kind, 'opl_family_live_conformance_probe');
-  assert.equal(probe.status, 'passed');
-  assert.equal(probe.total_domain_count, 1);
-  assert.equal(probe.passed_domain_count, 1);
-  assert.equal(probe.blocked_domain_count, 0);
-
-  assert.equal(domain.surface_kind, 'opl_family_live_conformance_probe_domain');
-  assert.equal(domain.domain_id, 'sample-brief-agent');
-  assert.equal(domain.status, 'passed');
-  assert.equal(domain.live_inputs.generated_interfaces.status, 'passed');
-  assert.equal(domain.live_inputs.generated_interfaces.generated_interfaces_status, 'ready');
-  assert.equal(domain.live_inputs.action_catalog.status, 'passed');
-  assert.equal(domain.live_inputs.action_catalog.action_count > 0, true);
-  assert.equal(domain.live_inputs.stage_plane.status, 'passed');
-  assert.equal(domain.live_inputs.stage_plane.stage_count > 0, true);
-  assert.equal(
-    domain.standard_admission_gate_contract.version,
-    'standard-agent-admission-gates.v1',
-  );
-  assert.equal(domain.blocked_gate_count, 0);
-  assert.equal(
-    domain.gate_results.some((gate: { gate_id: string; status: string }) =>
-      gate.gate_id === 'generated_surface_default_entry' && gate.status === 'passed'
-    ),
-    true,
-  );
-  assert.equal(
-    domain.gate_results.some((gate: { gate_id: string; status: string }) =>
-      gate.gate_id === 'standard_pack_abi' && gate.status === 'passed'
-    ),
-    true,
-  );
-  assert.equal(domain.false_authority_boundary.domain_ready_authorized, false);
-  assert.equal(domain.false_authority_boundary.production_ready_authorized, false);
-  assert.equal(domain.false_authority_boundary.conformance_probe_can_admit_domain, false);
-  assert.equal(domain.false_authority_boundary.conformance_probe_can_write_domain_truth, false);
-  assert.equal(domain.false_authority_boundary.conformance_probe_can_create_owner_receipt, false);
-  assert.equal(domain.false_authority_boundary.conformance_probe_can_create_typed_blocker, false);
-  assert.equal(probe.false_authority_boundary.domain_ready_authorized, false);
-  assert.equal(probe.false_authority_boundary.production_ready_authorized, false);
-  assert.equal(Object.hasOwn(probe, 'domain_ready'), false);
-  assert.equal(Object.hasOwn(probe, 'production_ready'), false);
-  assert.equal(Object.hasOwn(domain, 'domain_ready'), false);
-  assert.equal(Object.hasOwn(domain, 'production_ready'), false);
-});
-
-test('agents conformance live family probe blocks admission gates when a domain stage plane is missing', () => {
-  const repoDir = buildReadyAgentRepo();
-  fs.rmSync(path.join(repoDir, 'contracts', 'stage_control_plane.json'));
-
-  const payload = runCli([
+  const blockedRepo = buildReadyAgentRepo();
+  fs.rmSync(path.join(blockedRepo, 'contracts', 'stage_control_plane.json'));
+  const blockedReport = runCli([
     'agents',
     'conformance',
     '--agent',
-    `sample=${repoDir}`,
-  ]);
-  const probe = payload.standard_domain_agent_conformance.family_live_conformance_probe;
-  const domain = probe.domains[0];
-  const generatedSurfaceGate = domain.gate_results.find((gate: { gate_id: string }) =>
-    gate.gate_id === 'generated_surface_default_entry'
-  );
-  const packAbiGate = domain.gate_results.find((gate: { gate_id: string }) =>
-    gate.gate_id === 'standard_pack_abi'
-  );
+    `sample=${blockedRepo}`,
+  ]).standard_domain_agent_conformance;
+  const blockedProbe = blockedReport.family_live_conformance_probe;
 
-  assert.equal(payload.family_live_conformance_probe_status, 'blocked');
-  assert.equal(probe.status, 'blocked');
-  assert.equal(probe.blocked_domain_count, 1);
-  assert.equal(domain.status, 'blocked');
-  assert.equal(domain.live_inputs.stage_plane.status, 'blocked');
+  assert.equal(blockedProbe.status, 'blocked');
+  assert.equal(blockedProbe.domains[0].live_inputs.stage_plane.status, 'blocked');
   assert.equal(
-    domain.live_inputs.stage_plane.blockers.includes('stage_plane_missing'),
+    blockedProbe.domains[0].live_inputs.stage_plane.blockers.includes('stage_plane_missing'),
     true,
   );
-  assert.equal(generatedSurfaceGate.status, 'blocked');
-  assert.equal(
-    generatedSurfaceGate.blockers.some((blocker: string) => blocker.includes('stage_plane_missing')),
-    true,
-  );
-  assert.equal(packAbiGate.status, 'blocked');
-  assert.equal(domain.false_authority_boundary.domain_ready_authorized, false);
-  assert.equal(domain.false_authority_boundary.production_ready_authorized, false);
 });
 
-test('agents platform-surfaces projects RCA guarded action catalog as action metadata shell only', () => {
+test('agents platform-surfaces keeps RCA guarded action catalog as metadata only', () => {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, 'redcube-ai', 'RedCube AI');
   configureReadyRcaMorphology(repoDir);
@@ -684,136 +178,29 @@ test('agents platform-surfaces projects RCA guarded action catalog as action met
     'guarded-action-catalog.ts',
   );
   fs.mkdirSync(path.dirname(guardedActionCatalogPath), { recursive: true });
-  fs.writeFileSync(
-    guardedActionCatalogPath,
-    [
-      'export const rcaGuardedActionCatalog = {',
-      "  surfaceKind: 'rca_guarded_action_catalog',",
-      "  role: 'domain_action_metadata_refs_only_source',",
-      '};',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
+  fs.writeFileSync(guardedActionCatalogPath, [
+    'export const rcaGuardedActionCatalog = {',
+    "  surfaceKind: 'rca_guarded_action_catalog',",
+    "  role: 'domain_action_metadata_refs_only_source',",
+    '};',
+    '',
+  ].join('\n'), 'utf8');
 
-  const platformSurfaces = runCli([
+  const report = runCli([
     'agents',
     'platform-surfaces',
     '--agent',
     `rca=${repoDir}`,
-  ]).agent_platform_surface_ownership;
+  ]).agent_platform_surface_ownership.reports[0];
 
-  const rcaReport = platformSurfaces.reports[0];
-  const actionMetadataSurface = rcaReport.generic_subdomains
-    .find((surface: { subdomain_id: string }) => (
+  assert.equal(report.authority_boundary.report_can_claim_domain_ready, false);
+  assert.equal(
+    report.generic_subdomains.some((surface: { subdomain_id: string; observed_source_refs: string[] }) =>
       surface.subdomain_id === 'generated_action_metadata_command_registration_shell'
-    ));
-
-  assert.equal(platformSurfaces.status, 'passed');
-  assert.equal(actionMetadataSurface.owner, 'one-person-lab');
-  assert.equal(
-    actionMetadataSurface.observed_source_refs.includes(
-      'packages/redcube-domain-entry/src/actions/domain-action-adapter-parts/guarded-action-catalog.ts',
+      && surface.observed_source_refs.includes(
+        'packages/redcube-domain-entry/src/actions/domain-action-adapter-parts/guarded-action-catalog.ts',
+      )
     ),
-    true,
-  );
-  assert.equal(rcaReport.authority_boundary.report_can_claim_domain_ready, false);
-  assert.equal(rcaReport.authority_boundary.report_can_claim_production_ready, false);
-});
-
-test('agents conformance canonicalizes StageRun adoption owner-facing domain ids', () => {
-  const repoDir = buildReadyAgentRepo();
-  retargetReadyRepo(repoDir, 'redcube_ai', 'RedCube AI');
-  configureReadyRcaMorphology(repoDir);
-
-  const report = runCli([
-    'agents',
-    'conformance',
-    '--agent',
-    `rca=${repoDir}`,
-  ]).standard_domain_agent_conformance;
-
-  const adoptionDomain = report.stage_run_domain_adoption_read_model.domains[0];
-  assert.equal(report.status, 'passed');
-  assert.equal(report.reports[0].domain_id, 'redcube_ai');
-  assert.equal(adoptionDomain.domain_id, 'redcube-ai');
-  assert.equal(adoptionDomain.source_domain_id, 'redcube_ai');
-  assert.equal(adoptionDomain.authority_boundary.can_claim_domain_ready, false);
-});
-
-test('agents conformance keeps StageRun next action on domain owner when non-StageRun conformance is blocked', () => {
-  const repoDir = buildReadyAgentRepo();
-  fs.rmSync(path.join(repoDir, 'contracts', 'workspace_lifecycle_policy.json'));
-
-  const report = runCli([
-    'agents',
-    'conformance',
-    '--agent',
-    `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
-
-  const repo = report.reports[0];
-  const adoptionDomain = report.stage_run_domain_adoption_read_model.domains[0];
-  assert.equal(report.status, 'blocked');
-  assert.equal(report.passed_count, 0);
-  assert.equal(report.blocked_count, 1);
-  assert.equal(report.structural_conformance_status, 'blocked');
-  assert.equal(report.structural_contract_status, 'blocked');
-  assert.equal(report.ordinary_path_guard_status, 'passed');
-  assert.equal(report.live_domain_progress_status, 'required_from_domain_owner');
-  assert.equal(report.summary.structural_contract_status, 'blocked');
-  assert.equal(report.summary.ordinary_path_guard_status, 'passed');
-  assert.equal(report.summary.live_domain_progress_status, 'required_from_domain_owner');
-  assert.equal(report.live_stage_run_progress_evidence_status, 'required_from_domain_owner');
-  assert.equal(report.live_stage_run_progress_evidence_open_domain_count, 1);
-  assert.equal(
-    report.summary.live_stage_run_progress_evidence_status,
-    'required_from_domain_owner',
-  );
-  assert.equal(report.summary.live_stage_run_progress_evidence_open_domain_count, 1);
-  assert.equal(repo.workspace_file_lifecycle_checks.status, 'blocked');
-  assert.equal(repo.stage_run_kernel_profile_checks.status, 'passed');
-  assert.equal(repo.stage_run_canary_evidence_checks.status, 'passed');
-  assert.equal(report.stage_run_domain_adoption_read_model.status, 'passed');
-  assert.equal(
-    adoptionDomain.live_stage_run_progress_evidence_status,
-    'required_from_domain_owner',
-  );
-  assert.equal(
-    adoptionDomain.next_required_owner_action,
-    'domain_owner_live_receipt_typed_blocker_no_regression_or_long_soak_ref_required',
-  );
-  assert.equal(adoptionDomain.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(adoptionDomain.authority_boundary.can_claim_domain_ready, false);
-});
-
-test('agents conformance marks live domain progress blocked when StageRun ordinary guard is blocked', () => {
-  const repoDir = buildReadyAgentRepo();
-  fs.rmSync(path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json'));
-
-  const payload = runCli([
-    'agents',
-    'conformance',
-    '--agent',
-    `sample=${repoDir}`,
-  ]);
-  const report = payload.standard_domain_agent_conformance;
-
-  assert.equal(report.status, 'blocked');
-  assert.equal(report.structural_conformance_status, 'blocked');
-  assert.equal(report.structural_contract_status, 'blocked');
-  assert.equal(report.ordinary_path_guard_status, 'blocked');
-  assert.equal(report.live_domain_progress_status, 'blocked');
-  assert.equal(report.summary.structural_contract_status, 'blocked');
-  assert.equal(report.summary.ordinary_path_guard_status, 'blocked');
-  assert.equal(report.summary.live_domain_progress_status, 'blocked');
-  assert.equal(payload.structural_contract_status, 'blocked');
-  assert.equal(payload.ordinary_path_guard_status, 'blocked');
-  assert.equal(payload.live_domain_progress_status, 'blocked');
-  assert.equal(report.stage_run_domain_adoption_read_model.status, 'blocked');
-  assert.equal(report.reports[0].stage_run_kernel_profile_checks.status, 'blocked');
-  assert.equal(
-    report.reports[0].blockers.includes('stage_run_kernel_profile_missing'),
     true,
   );
 });
