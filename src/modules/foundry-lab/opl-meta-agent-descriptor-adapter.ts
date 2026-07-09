@@ -348,13 +348,13 @@ function buildSkillCatalog(actionCatalog: JsonRecord) {
   const actions = recordList(actionCatalog.actions);
   return {
     surface_kind: 'skill_catalog',
-    summary: 'OPL-generated Codex plugin skill command contracts for OMA actions.',
+    summary: 'OPL-generated skill descriptor command contracts for OMA actions.',
     skills: actions.map((action) => ({
       surface_kind: 'skill_descriptor',
       skill_id: optionalString(action.action_id) ?? 'opl-meta-agent-action',
       title: optionalString(action.title) ?? optionalString(action.action_id) ?? 'OMA Action',
       owner: 'one-person-lab',
-      distribution_mode: 'opl_generated_codex_plugin',
+      distribution_mode: 'opl_generated_skill_descriptor_surface',
       target_surface_kind: 'opl_generated_skill_contract',
       description: optionalString(action.summary) ?? 'OMA generated skill action descriptor.',
       command: optionalString(isRecord(action.source_command) ? action.source_command.command : null),

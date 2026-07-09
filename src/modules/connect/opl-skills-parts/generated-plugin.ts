@@ -5,10 +5,9 @@ import {
   buildRepoGeneratedInterfaceBundle,
 } from '../../pack/index.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
-import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../../kernel/observability-projection-vocabulary.ts';
 import {
   resolveCodexHome,
-  resolveGeneratedPluginRootForName,
+  resolveMaterializedPluginRootForName,
 } from './paths.ts';
 import type { InspectFamilySkillPack, SkillPackSpec } from './registry.ts';
 
@@ -42,366 +41,28 @@ export function inspectGeneratedSkillSurface(spec: SkillPackSpec, repoRoot: stri
   }
 }
 
-type GeneratedCodexPluginSpec = {
-  skillDescription: string;
-  heading: string;
-  intro: string;
-  authorityBoundary: string[];
-  generatedSkillSections?: Array<{
-    title: string;
-    body: string[];
-  }>;
-  displayName: string;
-  shortDescription: string;
-  defaultPrompt: string;
-  pluginDescription: string;
-  homepage: string;
-  repository: string;
-  keywords: string[];
-  category: string;
-  longDescription: string;
-  capabilities: string[];
-  defaultPrompts: string[];
-  brandColor: string;
-  icon: {
-    ariaLabel: string;
-    background: string;
-    paths: string[];
-  };
-};
-
-function generatedCodexPluginSpec(inspected: InspectFamilySkillPack): GeneratedCodexPluginSpec {
-  if (inspected.canonical_plugin_name === 'mas') {
-    return {
-      skillDescription: 'Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
-      heading: 'Med Auto Science',
-      intro: 'Use this skill for MedAutoScience paper-mission and research-delivery workflows. This surface is materialized by OPL Framework from the MAS repo-owned rich primary skill.',
-      authorityBoundary: [
-        'MAS owns medical research truth, study runtime state, paper artifact authority, publication quality verdicts, owner receipts, and typed blockers.',
-        'OPL owns the Codex carrier materialization and plugin registration surface only.',
-        'Do not treat plugin sync or generated interface readiness as study ready, paper ready, production ready, or owner accepted.',
-      ],
-      displayName: 'Med Auto Science',
-      shortDescription: 'Research Foundry Agent for paper-mission delivery.',
-      defaultPrompt: 'Use $mas to operate a MedAutoScience study, paper mission, source intake, analysis, manuscript, review, or owner handoff.',
-      pluginDescription: 'OPL materialized Codex plugin carrier for MedAutoScience.',
-      homepage: 'https://github.com/gaofeng21cn/med-autoscience',
-      repository: 'https://github.com/gaofeng21cn/med-autoscience',
-      keywords: ['opl', 'mas', 'medical-research', 'codex', 'foundry-agent'],
-      category: 'Research',
-      longDescription: 'Adds an OPL materialized Codex plugin entry for MedAutoScience while preserving MAS as the domain owner for research truth, study runtime, and paper delivery authority.',
-      capabilities: ['Interactive', 'Write'],
-      defaultPrompts: [
-        'Use MAS to inspect the current study runtime and route the next paper-mission step.',
-        'Use MAS to advance a source-grounded manuscript, analysis, review, or owner handoff without bypassing domain authority.',
-      ],
-      brandColor: '#2B6C5C',
-      icon: {
-        ariaLabel: 'Med Auto Science icon',
-        background: '#2B6C5C',
-        paths: [
-          '<path d="M18 46C28 24 36 24 46 46" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>',
-          '<path d="M23 34H41" stroke="#9AF0C8" stroke-width="5" stroke-linecap="round"/>',
-          '<path d="M32 16V44" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>',
-        ],
-      },
-    };
-  }
-
-  if (inspected.canonical_plugin_name === 'mag') {
-    return {
-      skillDescription: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',
-      heading: 'Med Auto Grant',
-      intro: 'Use this skill for Med Auto Grant funding strategy and grant-authoring workflows. This surface is materialized by OPL Framework from the MAG repo-owned rich primary skill.',
-      authorityBoundary: [
-        'MAG owns grant truth, fundability verdicts, package authority, owner receipts, and typed blockers.',
-        'OPL owns the Codex carrier materialization and plugin registration surface only.',
-        'Do not treat plugin sync or generated interface readiness as grant ready, submission ready, production ready, or owner accepted.',
-      ],
-      displayName: 'Med Auto Grant',
-      shortDescription: 'Grant Foundry Agent for funding-package delivery.',
-      defaultPrompt: 'Use $mag to operate a grant strategy, draft, review, fundability, package, or owner handoff workflow.',
-      pluginDescription: 'OPL materialized Codex plugin carrier for Med Auto Grant.',
-      homepage: 'https://github.com/gaofeng21cn/med-autogrant',
-      repository: 'https://github.com/gaofeng21cn/med-autogrant',
-      keywords: ['opl', 'mag', 'grant-writing', 'codex', 'foundry-agent'],
-      category: 'Research',
-      longDescription: 'Adds an OPL materialized Codex plugin entry for Med Auto Grant while preserving MAG as the grant-domain authority owner.',
-      capabilities: ['Interactive', 'Write'],
-      defaultPrompts: [
-        'Use MAG to shape a grant strategy, draft a grant section, or prepare owner-gated funding-package handoff.',
-        'Use MAG to audit a grant package for fundability, compliance, missing evidence, and owner-decision blockers.',
-      ],
-      brandColor: '#6C4A9B',
-      icon: {
-        ariaLabel: 'Med Auto Grant icon',
-        background: '#6C4A9B',
-        paths: [
-          '<path d="M18 17H46V47H18Z" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linejoin="round"/>',
-          '<path d="M24 27H40M24 36H36" stroke="#F3D28A" stroke-width="4.5" stroke-linecap="round"/>',
-          '<path d="M40 17V28L35 25L30 28V17" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linejoin="round"/>',
-        ],
-      },
-    };
-  }
-
-  if (inspected.canonical_plugin_name === 'rca') {
-    return {
-      skillDescription: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
-      heading: 'RedCube AI',
-      intro: 'Use this skill for RedCube AI visual-deliverable workflows. This surface is materialized by OPL Framework from the RCA repo-owned rich primary skill.',
-      authorityBoundary: [
-        'RCA owns visual truth, layout quality/export verdicts, artifact mutation authority, owner receipts, and typed blockers.',
-        'OPL owns the Codex carrier materialization and plugin registration surface only.',
-        'Do not treat plugin sync or generated interface readiness as deck ready, export ready, production ready, or owner accepted.',
-      ],
-      displayName: 'RedCube AI',
-      shortDescription: 'Visual Foundry Agent for deck and deliverable production.',
-      defaultPrompt: 'Use $rca to operate a visual deliverable, deck, layout review, export, or owner handoff workflow.',
-      pluginDescription: 'OPL materialized Codex plugin carrier for RedCube AI.',
-      homepage: 'https://github.com/gaofeng21cn/redcube-ai',
-      repository: 'https://github.com/gaofeng21cn/redcube-ai',
-      keywords: ['opl', 'rca', 'presentation', 'visual-deliverable', 'codex'],
-      category: 'Creative',
-      longDescription: 'Adds an OPL materialized Codex plugin entry for RedCube AI while preserving RCA as the visual-deliverable authority owner.',
-      capabilities: ['Interactive', 'Write'],
-      defaultPrompts: [
-        'Use RCA to prepare or repair a deck, visual package, layout review, or export handoff.',
-        'Use RCA to audit a visual deliverable for structure, design quality, missing assets, export blockers, and owner-gated decisions.',
-      ],
-      brandColor: '#A93232',
-      icon: {
-        ariaLabel: 'RedCube AI icon',
-        background: '#A93232',
-        paths: [
-          '<path d="M18 21L32 13L46 21V43L32 51L18 43Z" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linejoin="round"/>',
-          '<path d="M18 21L32 29L46 21M32 29V51" fill="none" stroke="#FFD0D0" stroke-width="4.5" stroke-linejoin="round"/>',
-        ],
-      },
-    };
-  }
-
-  if (inspected.canonical_plugin_name === 'obf') {
-    return {
-      skillDescription: 'Use when Codex should operate OPL Book Forge for book storyline architecture, manuscript materialization, figures, tables, style control, export handoff, and owner-gated publication decisions.',
-      heading: 'OPL Book Forge',
-      intro: 'Use this skill for OPL Book Forge book-authoring workflows. This surface is generated by OPL Framework from the Book Forge domain pack and packaged as an OPL-owned Codex plugin.',
-      authorityBoundary: [
-        'OPL owns the generated Skill and Codex plugin surfaces.',
-        'OPL Book Forge owns book-domain truth, manuscript quality rules, style policy, figure/table planning, export/publication verdict boundaries, artifact authority, memory body, and owner receipts.',
-        'Do not treat generated interface readiness as book delivery ready, production ready, publication approved, or owner accepted.',
-      ],
-      generatedSkillSections: [
-        {
-          title: 'Reader And Style Contract Gate',
-          body: [
-            '- Before body drafting or chapter expansion, establish a reader-style contract: primary readers, secondary readers, excluded readers, reading situation, prior knowledge, reader anxieties, natural-expression rules, forbidden voice patterns, and owner-review status.',
-            '- Keep reader priority explicit: primary readers define the writing target; secondary readers only add compatible accessibility constraints unless the owner explicitly promotes them to co-primary readers. Do not let secondary readers silently create separate chapter obligations, explanatory detours, lower-density exposition, difficulty downgrades, or voice targets.',
-            '- Record author/source stance for major cases before body drafting. If the author team designed, executed, or participated in a case, draft from an approved practice-involved design/reflection stance instead of neutral third-party public-source observation, while keeping unsupported outcomes as typed evidence gaps.',
-            '- If the owner did not specify the audience or voice and Book Forge cannot infer them with high confidence from source refs, ask the owner or return a typed blocker; do not silently choose a generic educated-reader style.',
-            '- Materialization must cite the reader-style contract in the production pipeline, chapter QC, and style consistency report so naturalness is checked against the intended readers, not a generic prose ideal.',
-          ],
-        },
-        {
-          title: 'Book Materialization Rules',
-          body: [
-            '- Keep book prose Markdown-first: per-chapter Markdown files or equivalent author-facing Markdown refs own manuscript body for book-length work.',
-            '- Use scripts only as thin assemblers, metrics checkers, validators, exporters, and report writers. Do not make Python/TypeScript/shell/JSON string literals the manuscript source of truth for substantial prose.',
-            '- Draft book-length work chapter-by-chapter: chapter brief -> chapter Markdown draft -> chapter-level QC -> merged manuscript -> whole-book pass. The merged `book.md` is an assembly/export ref, not the only creative writing surface unless the owner explicitly chooses a one-file workflow.',
-            '- Before drafting visible chapter prose, create a reader-entry plan in the chapter brief or drafting notes: opening scene/question, reader tension, concrete example/case, main claim, section movement, table/figure role, and closing transition. Keep that plan out of the manuscript body.',
-            '- Make first visible chapter drafts reader-facing by default: chapter task, core question, thesis, target budget, source refs, asset status, QC notes, and blockers belong in briefs/manifests/reports, not in manuscript prose.',
-            '- Chapter openings and major section transitions should start from a concrete scene, reader tension, practical question, or consequence before introducing concepts, unless the reader-style contract explicitly calls for a technical structure.',
-            '- Do not rely on a routine late reader-facing rewrite to make chapters natural; if a first draft reads like a memo or instruction manual, treat it as a drafting-gate failure and update the chapter-production pattern before continuing.',
-            '- For book-length nonfiction, maintain owner-inspectable book memory: working memory for the active chapter context, episodic memory for prior chapter reviews and owner decisions, and semantic memory for durable thesis, source canon, glossary, style assets, and evidence rules.',
-            `- Use chapter task cards as the chapter-runtime surface: reader promise, chapter job, thesis movement, source refs, target extent, figure/table obligations, active memory refs, style constraints, QC state, and blockers. Do not add a Book Forge-private scheduler, queue, session store, or ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}.`,
-            '- Back-propagate accepted chapter QC repairs into the chapter task card, style engine, glossary, evidence map, or semantic memory when the finding is reusable; do not only patch local prose when the defect is systemic.',
-            '- When the owner supplies a stronger reference draft, prior version, edited chapter, comparable sample, or asks which version is better, run Book Forge reference-draft absorption before further chapter drafting or major rewriting. Extract transferable strengths into reader-entry plans, chapter task cards, style-engine rules, QC gates, evidence maps, or publication-design refs; do not copy reference prose or turn secondary-reader patterns into a new primary-reader voice.',
-            '- Keep transparent prompt bundle refs for storyline shaping, chapter drafting, review, repair, style checks, publication proofing, and export handoff so owner review can inspect the instructions and source slices behind major passes.',
-            '- Convert owner/source target extent into chapter budgets and an active production queue before body drafting; a short all-chapter coverage pass is only seed material unless chapter gates are met.',
-            '- The active production queue must record each required unit\'s target minimum, current measured extent, missing extent, next production action, review-PDF eligibility, and typed blocker state; chapter drafting prompts must carry that budget before visible prose is written.',
-            '- Treat chapter target budgets as production gates: below-target chapters stay `seed_in_progress` or `draft_in_progress`, not drafted/done, and below-target whole-book assemblies must be named previews.',
-            '- Run internal-language and AI-flavor scans before chapter or whole-book handoff. Block production/status terms such as `当前版本`, `最终书稿`, `source of truth`, `QC`, `blocker`, `manifest`, `后台`, stale PDF/export commentary, and formulaic negation or generic intensifiers unless the style QC report records intentional exceptions.',
-            '- After each chapter reaches text-ready or `chapter_draft_ready`, refresh an owner-review PDF that starts at the beginning of the book and stops at the first below-target required unit; keep text-ready-but-missing-figure chapters blocked from full readiness.',
-            '- Refresh assembly metrics, hygiene reports, review-PDF receipts, image-resolution checks, and owner-handoff refs after the chapter/source/figure files they inspect change; stale reports cannot support readiness claims.',
-            '- Run the Book Forge project hygiene scan or an equivalent domain-owned style gate after repairing manuscript, planning, review, metrics, handoff, or source-boundary refs. Active refs must not retain known Red Bird outside-observer phrases such as `公开可观察`, `公开资料显示`, `教育实验观察窗口`, or `观察它如何强调` when the approved stance is practice-involved.',
-            '- Use the Book Forge PDF export helper or an equivalent Book Forge-owned backend adapter for PDF generation, backed by real publication/typesetting systems such as Pandoc with XeLaTeX/LuaLaTeX, Quarto book rendering, or Typst; do not hand-roll book PDF layout with ad-hoc raster text drawing as the normal path.',
-            '- For pre-numbered Chinese manuscripts or cumulative review PDFs, disable backend automatic section/caption numbering or otherwise prevent doubled labels such as `第七章 第五章` or `图 7.1: 图 5-1`.',
-            '- Distinguish `review_pdf`, `publication_proof`, and `final_export`. Publication proof requires an explicit publication design profile, resource-path-backed asset resolution for relative figures, Markdown image-ref checks, figure-asset-manifest readiness checks, a real typesetting backend receipt, rendered-page refs, and rendered-page inspection for hierarchy, captions, figures, tables, callouts, page numbers, overflow, and visual rhythm. For Chinese nonfiction e-book proof output, use the bundled Book Forge `bookforge-zh-publication-proof` profile or an owner-approved equivalent; unstyled Pandoc/default backend output is review-output quality, not publication-proof quality. Helper-generated machine-baseline rendered-page inspection can prove nonblank pages and asset plumbing, but it does not replace human publication-design review or owner final-export acceptance. Final export additionally requires owner/export acceptance receipts.',
-            '- Review PDFs and publication proofs must prove project-local figure resolution when figures are expected; a PDF that compiles but omits `asset_ready` figures or lacks resource-path/image-ref evidence is an export blocker.',
-            '- When an invalid compact/sample draft was created for a book-length target, retire it and rebuild from chapter packages instead of expanding the compact file in place.',
-            '- Preserve owner/source-declared target extent. Compact/sample drafts require explicit owner approval or a typed extent blocker that quantifies missing pages, words, chapters, figures, tables, or cases.',
-            '- Final manuscript figures that require new artwork should be `imagegen`-generated bitmap assets saved to project-local paths with prompt/spec, helper receipt/provenance, and review criteria, tracked through a figure asset manifest. Prefer the Book Forge native imagegen asset helper or an equivalent Book Forge-owned backend adapter that launches a child Codex executor with native imagegen enabled, copies the bitmap into the project, and synchronizes receipt state back into the figure asset manifest by figure id. Chat-preview-only, missing, or unexposed generated file paths are image-asset blockers.',
-            '- Do not make direct OpenAI Base URL/API-key provider calls the default Book Forge figure route. API fallback is an explicit operator/owner route for large batches or unavailable built-in imagegen.',
-            '- Retire invalid compact/sample drafts as tombstone refs rather than leaving full searchable obsolete prose inside the active book workspace.',
-          ],
-        },
-      ],
-      displayName: 'OPL Book Forge',
-      shortDescription: 'Book Foundry Agent for storyline-to-manuscript delivery.',
-      defaultPrompt: 'Use $obf to shape a book storyline, materialize chapters, plan figures and tables, run style/layout checks, or prepare owner-gated export handoff.',
-      pluginDescription: 'OPL-generated Codex plugin shell for OPL Book Forge.',
-      homepage: 'https://github.com/gaofeng21cn/opl-bookforge',
-      repository: 'https://github.com/gaofeng21cn/opl-bookforge',
-      keywords: [
-        'opl',
-        'bookforge',
-        'book-writing',
-        'codex',
-        'foundry-agent',
-      ],
-      category: 'Productivity',
-      longDescription: 'Adds an OPL-generated Codex plugin entry for OPL Book Forge while preserving Book Forge as a standard declarative domain pack with OPL-owned generated surfaces and owner-gated publication readiness.',
-      capabilities: [
-        'Interactive',
-        'Write',
-      ],
-      defaultPrompts: [
-        'Shape this source corpus into a book storyline with reader promise, argument arc, chapter thesis chain, and style contract.',
-        'Turn this approved storyline into a manuscript package with chapter drafts, figure and table plans, style checks, layout QC, and export handoff.',
-        'Audit this manuscript for voice drift, generated-sounding phrasing, weak transitions, missing figures or tables, and export-blocking layout issues.',
-      ],
-      brandColor: '#8B3A2B',
-      icon: {
-        ariaLabel: 'OPL Book Forge icon',
-        background: '#8B3A2B',
-        paths: [
-          '<path d="M14 17H29C33 17 36 20 36 24V47C36 43 33 41 29 41H14Z" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linejoin="round"/>',
-          '<path d="M50 17H35C31 17 28 20 28 24V47C28 43 31 41 35 41H50Z" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linejoin="round"/>',
-          '<path d="M20 25H28M20 32H28M36 25H44M36 32H44" stroke="#FFD08A" stroke-width="4" stroke-linecap="round"/>',
-        ],
-      },
-    };
-  }
-
-  return {
-    skillDescription: 'Use when Codex should operate OPL Meta Agent to design, test, improve, or take over testing for OPL-compatible Foundry Agents.',
-    heading: 'OPL Meta Agent',
-    intro: 'Use this skill for OPL Meta Agent foundry workflows. This surface is generated by OPL Framework from the OMA contract pack and packaged as an OPL-owned Codex plugin.',
-    authorityBoundary: [
-      'OPL owns the generated Skill and Codex plugin surfaces.',
-      'OPL Meta Agent owns agent-building semantics and refs-only work-order materialization.',
-      'Do not treat generated interface readiness as target domain ready, production ready, artifact ready, or quality verdict.',
-    ],
-    generatedSkillSections: [
-      {
-        title: 'New Agent Delivery Gate',
-        body: [
-          'When using OPL Meta Agent to create a new OPL-compatible target agent, do not stop at repository scaffold, contract validation, or generated interface readiness. A complete baseline handoff must include:',
-          '',
-          '1. target repo scaffold validation and generated interface projection;',
-          '2. Agent Lab baseline, takeover, or external suite evidence;',
-          '3. structured independent AI reviewer evaluation with non-empty critique, suggestions, direct evidence refs, and provenance;',
-          '4. `improve-from-external-agent-lab-suite` or an equivalent OMA self-evolution pass consuming the Agent Lab result and reviewer evidence;',
-          '5. one of: delivery receipt, no-patch coordination receipt/work order, executable developer patch work order, or typed blocker.',
-          '',
-          'If Agent Lab or reviewer evidence identifies a repairable gap, route it through the owner-gated improvement loop before claiming the target agent baseline is delivered. If no source patch is required, record the no-patch coordination evidence and re-evaluation refs. Scaffold/interface readiness alone is not an acceptable completion claim for new-agent creation.',
-        ],
-      },
-    ],
-    displayName: 'OPL Meta Agent',
-    shortDescription: 'Foundry Agent for OPL-compatible knowledge-work agents',
-    defaultPrompt: `Use $${inspected.canonical_plugin_name} to build, test, or improve an OPL-compatible Foundry Agent.`,
-    pluginDescription: 'OPL-generated Codex plugin shell for OPL Meta Agent.',
-    homepage: 'https://github.com/gaofeng21cn/opl-meta-agent',
-    repository: 'https://github.com/gaofeng21cn/opl-meta-agent',
-    keywords: [
-      'opl',
-      'meta-agent',
-      'codex',
-      'foundry-agent',
-    ],
-    category: 'Productivity',
-    longDescription: 'Adds an OPL-generated Codex plugin entry for OPL Meta Agent while preserving OMA as a standard declarative domain pack with OPL-owned generated surfaces.',
-    capabilities: [
-      'Interactive',
-      'Write',
-    ],
-    defaultPrompts: [
-      'Build an OPL-compatible agent from this natural-language request.',
-      'Take over testing for this existing OPL-compatible agent repo.',
-      'Improve this target agent from an Agent Lab suite result.',
-    ],
-    brandColor: '#3F6FB5',
-    icon: {
-      ariaLabel: 'OPL Meta Agent icon',
-      background: '#214F9A',
-      paths: [
-        '<path d="M11 44V20L21 34L31 20V44" fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>',
-        '<path d="M36 44L46 20L56 44" fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>',
-        '<path d="M40 35H52" stroke="#8AD6FF" stroke-width="5.5" stroke-linecap="round"/>',
-      ],
-    },
-  };
-}
-
-function buildOplGeneratedSkillMarkdown(
-  inspected: InspectFamilySkillPack,
-  descriptors: Array<Record<string, unknown>>,
-  primarySkillText: string,
-) {
-  const workflowLines = descriptors.map((descriptor) => [
-    `- \`${String(descriptor.action_id ?? descriptor.command_contract_id ?? 'unknown_action')}\`: ${String(descriptor.summary ?? '').trim()}`,
-    `  Command contract: \`${String(descriptor.command_contract_id ?? 'unknown_contract')}\``,
-  ].join('\n')).join('\n');
-
-  return [
-    primarySkillText.trimEnd(),
-    '',
-    '## Generated Action Contracts',
-    '',
-    workflowLines || '- No generated action contracts were exposed.',
-    '',
-  ].join('\n');
-}
-
-function buildOplGeneratedSkillAgentMetadata(inspected: InspectFamilySkillPack) {
-  const pluginSpec = generatedCodexPluginSpec(inspected);
-  return [
-    'interface:',
-    `  display_name: "${pluginSpec.displayName}"`,
-    `  short_description: "${pluginSpec.shortDescription}"`,
-    `  default_prompt: "${pluginSpec.defaultPrompt}"`,
-    '',
-  ].join('\n');
-}
-
 function writeJsonFile(filePath: string, value: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-function writeOplGeneratedPluginIcon(pluginRoot: string, inspected: InspectFamilySkillPack) {
-  const pluginSpec = generatedCodexPluginSpec(inspected);
-  const iconPath = path.join(pluginRoot, 'assets', 'icon.svg');
-  const iconSvg = [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="${pluginSpec.icon.ariaLabel}">`,
-    `<rect width="64" height="64" rx="14" fill="${pluginSpec.icon.background}"/>`,
-    ...pluginSpec.icon.paths,
-    '</svg>',
-    '',
-  ].join('\n');
-  fs.mkdirSync(path.dirname(iconPath), { recursive: true });
-  fs.writeFileSync(iconPath, iconSvg, 'utf8');
-  return './assets/icon.svg';
+function resolveMaterializedPluginRoot(inspected: InspectFamilySkillPack, home?: string) {
+  return resolveMaterializedPluginRootForName(inspected.plugin_name, home);
 }
 
-function resolveGeneratedPluginRoot(inspected: InspectFamilySkillPack, home?: string) {
-  return resolveGeneratedPluginRootForName(inspected.canonical_plugin_name, home);
-}
-
-function writeGeneratedPluginMarketplace(inspected: InspectFamilySkillPack, pluginRoot: string) {
+function writeMaterializedPluginMarketplace(inspected: InspectFamilySkillPack, pluginRoot: string) {
   const marketplacePath = path.join(path.dirname(path.dirname(pluginRoot)), '.agents', 'plugins', 'marketplace.json');
   writeJsonFile(marketplacePath, {
-    name: `${inspected.canonical_plugin_name}-local`,
+    name: `${inspected.plugin_name}-local`,
     interface: {
-      displayName: 'OPL Generated Family Plugins',
+      displayName: 'OPL Standard Agent Plugins',
     },
     plugins: [
       {
-        name: inspected.canonical_plugin_name,
+        name: inspected.plugin_name,
         source: {
           source: 'local',
-          path: `./plugins/${inspected.canonical_plugin_name}`,
+          path: `./plugins/${inspected.plugin_name}`,
         },
         policy: {
           installation: 'AVAILABLE',
@@ -414,7 +75,7 @@ function writeGeneratedPluginMarketplace(inspected: InspectFamilySkillPack, plug
   return marketplacePath;
 }
 
-function syncGeneratedPluginCache(
+function syncMaterializedPluginCache(
   inspected: InspectFamilySkillPack,
   pluginRoot: string,
   home: string,
@@ -424,8 +85,8 @@ function syncGeneratedPluginCache(
     resolveCodexHome(home),
     'plugins',
     'cache',
-    `${inspected.canonical_plugin_name}-local`,
-    inspected.canonical_plugin_name,
+    `${inspected.plugin_name}-local`,
+    inspected.plugin_name,
     version,
   );
   fs.rmSync(cacheRoot, { recursive: true, force: true });
@@ -444,7 +105,7 @@ function readActionContractDescriptors(repoRoot: string) {
   }
 }
 
-function buildOplGeneratedPluginProvenance(
+function buildOplMaterializedPluginProvenance(
   inspected: InspectFamilySkillPack,
   descriptors: Array<Record<string, unknown>>,
 ) {
@@ -456,22 +117,22 @@ function buildOplGeneratedPluginProvenance(
     carrier_role: 'codex_plugin_install_transport',
     carrier_materialization: 'materialized_full_skill_copy',
     canonical_primary_skill_source_path: inspected.skill_entry_path,
-    codex_plugin_skill_path: path.join('skills', inspected.canonical_plugin_name, 'SKILL.md'),
+    codex_plugin_skill_path: path.join('skills', inspected.plugin_name, 'SKILL.md'),
     codex_install_requires_real_skill_md: true,
     plugin_skill_may_be_stub_or_pointer: false,
     descriptor_count: descriptors.length,
     authority_boundary: {
       plugin_transport_is_membership_axis: false,
       plugin_transport_is_status_axis: false,
-      generated_surface_can_claim_domain_ready: false,
-      generated_surface_can_write_domain_truth: false,
-      generated_surface_can_sign_owner_receipt: false,
-      generated_surface_can_create_typed_blocker: false,
+      carrier_surface_can_claim_domain_ready: false,
+      carrier_surface_can_write_domain_truth: false,
+      carrier_surface_can_sign_owner_receipt: false,
+      carrier_surface_can_create_typed_blocker: false,
     },
   };
 }
 
-export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack, home?: string) {
+export function writeOplMaterializedPluginCarrier(inspected: InspectFamilySkillPack, home?: string) {
   if (inspected.source_kind !== 'opl_standard_codex_carrier' || !inspected.ready_to_sync) {
     return null;
   }
@@ -481,61 +142,26 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     return null;
   }
 
-  const pluginSpec = generatedCodexPluginSpec(inspected);
   const descriptors = readActionContractDescriptors(inspected.repo_root);
-  const primarySkillText = fs.readFileSync(inspected.skill_entry_path, 'utf8');
   const codexSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.canonical_plugin_name);
+  const codexPluginNameSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.plugin_name);
   fs.rmSync(codexSkillDir, { recursive: true, force: true });
+  fs.rmSync(codexPluginNameSkillDir, { recursive: true, force: true });
 
-  const pluginRoot = resolveGeneratedPluginRoot(inspected, resolvedHome);
-  const pluginVersion = '0.1.0';
+  const pluginRoot = resolveMaterializedPluginRoot(inspected, resolvedHome);
+  const pluginManifestPath = path.join(inspected.plugin_source_path, '.codex-plugin', 'plugin.json');
+  const pluginManifest = JSON.parse(fs.readFileSync(pluginManifestPath, 'utf8')) as { version?: string };
+  const pluginVersion = typeof pluginManifest.version === 'string' ? pluginManifest.version : '0.1.0';
   fs.rmSync(pluginRoot, { recursive: true, force: true });
-  fs.mkdirSync(path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'agents'), { recursive: true });
-  const pluginIconPath = writeOplGeneratedPluginIcon(pluginRoot, inspected);
-  writeJsonFile(path.join(pluginRoot, '.codex-plugin', 'plugin.json'), {
-    name: inspected.canonical_plugin_name,
-    version: pluginVersion,
-    description: pluginSpec.pluginDescription,
-    author: {
-      name: 'Gao Feng',
-      url: 'https://github.com/gaofeng21cn',
-    },
-    homepage: pluginSpec.homepage,
-    repository: pluginSpec.repository,
-    license: 'Apache-2.0',
-    keywords: pluginSpec.keywords,
-    skills: './skills/',
-    interface: {
-      displayName: pluginSpec.displayName,
-      shortDescription: pluginSpec.shortDescription,
-      longDescription: pluginSpec.longDescription,
-      developerName: 'Gao Feng',
-      category: pluginSpec.category,
-      capabilities: pluginSpec.capabilities,
-      websiteURL: pluginSpec.homepage,
-      composerIcon: pluginIconPath,
-      logo: pluginIconPath,
-      defaultPrompt: pluginSpec.defaultPrompts,
-      brandColor: pluginSpec.brandColor,
-    },
-  });
-  fs.writeFileSync(
-    path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'SKILL.md'),
-    buildOplGeneratedSkillMarkdown(inspected, descriptors, primarySkillText),
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'agents', 'openai.yaml'),
-    buildOplGeneratedSkillAgentMetadata(inspected),
-    'utf8',
-  );
+  fs.mkdirSync(path.dirname(pluginRoot), { recursive: true });
+  fs.cpSync(inspected.plugin_source_path, pluginRoot, { recursive: true });
   const carrierProvenancePath = path.join(pluginRoot, 'opl-carrier.json');
   writeJsonFile(
     carrierProvenancePath,
-    buildOplGeneratedPluginProvenance(inspected, descriptors),
+    buildOplMaterializedPluginProvenance(inspected, descriptors),
   );
-  const marketplacePath = writeGeneratedPluginMarketplace(inspected, pluginRoot);
-  const codexPluginCachePath = syncGeneratedPluginCache(
+  const marketplacePath = writeMaterializedPluginMarketplace(inspected, pluginRoot);
+  const codexPluginCachePath = syncMaterializedPluginCache(
     inspected,
     pluginRoot,
     resolvedHome,
@@ -546,7 +172,7 @@ export function writeOplGeneratedPluginSurface(inspected: InspectFamilySkillPack
     plugin_root: pluginRoot,
     plugin_manifest_path: path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
     marketplace_path: marketplacePath,
-    skill_entry_path: path.join(pluginRoot, 'skills', inspected.canonical_plugin_name, 'SKILL.md'),
+    skill_entry_path: path.join(pluginRoot, 'skills', inspected.plugin_name, 'SKILL.md'),
     carrier_provenance_path: carrierProvenancePath,
     codex_plugin_cache_path: codexPluginCachePath,
     removed_standalone_skill_root: codexSkillDir,

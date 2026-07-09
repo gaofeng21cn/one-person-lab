@@ -83,8 +83,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'medautoscience',
     pack_id: 'medautoscience',
-    marketplace_id: 'mas-local',
-    plugin_id: 'mas',
+    marketplace_id: 'med-autoscience-local',
+    plugin_id: 'med-autoscience',
     repo_name: 'med-autoscience',
     display_name: 'Med Auto Science Local',
     category: 'Research',
@@ -104,8 +104,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'medautogrant',
     pack_id: 'medautogrant',
-    marketplace_id: 'mag-local',
-    plugin_id: 'mag',
+    marketplace_id: 'med-autogrant-local',
+    plugin_id: 'med-autogrant',
     repo_name: 'med-autogrant',
     display_name: 'Med Auto Grant Local',
     category: 'Research',
@@ -125,8 +125,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'redcube',
     pack_id: 'redcube',
-    marketplace_id: 'rca-local',
-    plugin_id: 'rca',
+    marketplace_id: 'redcube-ai-local',
+    plugin_id: 'redcube-ai',
     repo_name: 'redcube-ai',
     display_name: 'RedCube AI Local',
     category: 'Creative',
@@ -146,8 +146,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'oplmetaagent',
     pack_id: 'oplmetaagent',
-    marketplace_id: 'oma-local',
-    plugin_id: 'oma',
+    marketplace_id: 'opl-meta-agent-local',
+    plugin_id: 'opl-meta-agent',
     repo_name: 'opl-meta-agent',
     display_name: 'OPL Meta Agent Local',
     category: 'Productivity',
@@ -167,8 +167,8 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
   {
     module_id: 'oplbookforge',
     pack_id: 'oplbookforge',
-    marketplace_id: 'obf-local',
-    plugin_id: 'obf',
+    marketplace_id: 'opl-bookforge-local',
+    plugin_id: 'opl-bookforge',
     repo_name: 'opl-bookforge',
     display_name: 'OPL Book Forge Local',
     category: 'Productivity',
@@ -183,7 +183,7 @@ const FAMILY_PLUGIN_SPECS: CodexFamilyPluginSpec[] = [
       can_create_typed_blocker: false,
       can_write_runtime_queue: false,
     },
-    legacy_standalone_mcp_server_ids: ['opl-bookforge', 'oplbookforge', 'bookforge'],
+    legacy_standalone_mcp_server_ids: ['opl-bookforge', 'oplbookforge', 'bookforge', 'obf'],
   },
   {
     module_id: null,
@@ -311,129 +311,19 @@ function readJsonRecord(filePath: string): Record<string, unknown> {
   return isRecord(parsed) ? parsed : {};
 }
 
-function copyFileIfPresent(sourcePath: string, targetPath: string) {
-  if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
-    return false;
-  }
-  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-  fs.copyFileSync(sourcePath, targetPath);
-  return true;
-}
-
-function replaceSkillFrontmatterName(content: string, name: string) {
-  if (!content.startsWith('---\n')) {
-    return `---\nname: ${name}\n---\n\n${content}`;
-  }
-  const end = content.indexOf('\n---', 4);
-  if (end === -1) {
-    return content;
-  }
-  const frontmatter = content.slice(4, end);
-  const body = content.slice(end);
-  const nextFrontmatter = /^name:\s*.*$/m.test(frontmatter)
-    ? frontmatter.replace(/^name:\s*.*$/m, `name: ${name}`)
-    : `name: ${name}\n${frontmatter}`;
-  return `---\n${nextFrontmatter}${body}`;
-}
-
-function replacePromptSkillName(content: string, oldName: string | null, newName: string) {
-  return oldName && oldName !== newName
-    ? content.split(`$${oldName}`).join(`$${newName}`)
-    : content;
-}
-
-function resolveSourceSkillEntry(pluginSourcePath: string, manifest: Record<string, any>, pluginId: string) {
-  const skillsField = typeof manifest.skills === 'string' && manifest.skills.trim()
-    ? manifest.skills.trim()
-    : './skills/';
-  const skillRoot = path.resolve(pluginSourcePath, skillsField);
-  const manifestName = typeof manifest.name === 'string' && manifest.name.trim()
-    ? manifest.name.trim()
-    : null;
-  const candidates = [
-    path.join(skillRoot, pluginId, 'SKILL.md'),
-    manifestName ? path.join(skillRoot, manifestName, 'SKILL.md') : null,
-  ].filter((candidate): candidate is string => Boolean(candidate));
-  if (fs.existsSync(skillRoot) && fs.statSync(skillRoot).isDirectory()) {
-    for (const entry of fs.readdirSync(skillRoot, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        candidates.push(path.join(skillRoot, entry.name, 'SKILL.md'));
-      }
-    }
-  }
-  return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? candidates[0];
-}
-
-function materializeCanonicalPluginWrapper(
+function materializeRepoLocalPluginCarrier(
   spec: LocalCodexPluginMarketplaceSpec,
   pluginSourcePath: string,
   linkPath: string,
 ) {
-  const sourceManifestPath = path.join(pluginSourcePath, '.codex-plugin', 'plugin.json');
-  const sourceManifest = readJsonRecord(sourceManifestPath);
-  const sourceName = typeof sourceManifest.name === 'string' && sourceManifest.name.trim()
-    ? sourceManifest.name.trim()
-    : null;
-  const sourceSkillEntryPath = resolveSourceSkillEntry(pluginSourcePath, sourceManifest, spec.plugin_id);
-  const sourceSkillText = fs.existsSync(sourceSkillEntryPath)
-    ? fs.readFileSync(sourceSkillEntryPath, 'utf8')
-    : `---\nname: ${spec.plugin_id}\ndescription: ${sourceManifest.description ?? spec.display_name}\n---\n\n# ${spec.display_name}\n`;
+  const sourceManifest = readJsonRecord(path.join(pluginSourcePath, '.codex-plugin', 'plugin.json'));
+  if (sourceManifest.name !== spec.plugin_id) {
+    throw new Error(`Plugin manifest name mismatch: expected ${spec.plugin_id}, got ${String(sourceManifest.name)}`);
+  }
 
   fs.rmSync(linkPath, { recursive: true, force: true });
-  fs.mkdirSync(path.join(linkPath, '.codex-plugin'), { recursive: true });
-  fs.mkdirSync(path.join(linkPath, 'skills', spec.plugin_id), { recursive: true });
-
-  const manifestInterface: Record<string, unknown> = isRecord(sourceManifest.interface)
-    ? { ...sourceManifest.interface }
-    : {};
-  const manifest = {
-    ...sourceManifest,
-    name: spec.plugin_id,
-    skills: './skills/',
-    interface: manifestInterface,
-  };
-  if (manifest.interface.defaultPrompt) {
-    const replacePrompt = (value: unknown) => typeof value === 'string'
-      ? replacePromptSkillName(value, sourceName, spec.plugin_id)
-      : value;
-    manifest.interface.defaultPrompt = Array.isArray(manifest.interface.defaultPrompt)
-      ? manifest.interface.defaultPrompt.map(replacePrompt)
-      : replacePrompt(manifest.interface.defaultPrompt);
-  }
-
-  for (const iconField of ['composerIcon', 'logo']) {
-    const iconRef = manifest.interface[iconField];
-    if (typeof iconRef !== 'string' || !iconRef.startsWith('./')) {
-      continue;
-    }
-    const sourceIconPath = path.resolve(pluginSourcePath, iconRef.slice(2));
-    const targetIconPath = path.join(linkPath, 'assets', path.basename(iconRef));
-    if (copyFileIfPresent(sourceIconPath, targetIconPath)) {
-      manifest.interface[iconField] = `./assets/${path.basename(iconRef)}`;
-    }
-  }
-
-  writeJsonFile(path.join(linkPath, '.codex-plugin', 'plugin.json'), manifest);
-  fs.writeFileSync(
-    path.join(linkPath, 'skills', spec.plugin_id, 'SKILL.md'),
-    replaceSkillFrontmatterName(sourceSkillText, spec.plugin_id),
-    'utf8',
-  );
-
-  const sourceAgentsDir = path.join(path.dirname(sourceSkillEntryPath), 'agents');
-  if (fs.existsSync(sourceAgentsDir) && fs.statSync(sourceAgentsDir).isDirectory()) {
-    const targetAgentsDir = path.join(linkPath, 'skills', spec.plugin_id, 'agents');
-    fs.mkdirSync(targetAgentsDir, { recursive: true });
-    for (const entry of fs.readdirSync(sourceAgentsDir, { withFileTypes: true })) {
-      if (!entry.isFile()) {
-        continue;
-      }
-      const sourceFile = path.join(sourceAgentsDir, entry.name);
-      const targetFile = path.join(targetAgentsDir, entry.name);
-      const text = fs.readFileSync(sourceFile, 'utf8');
-      fs.writeFileSync(targetFile, replacePromptSkillName(text, sourceName, spec.plugin_id), 'utf8');
-    }
-  }
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  fs.cpSync(pluginSourcePath, linkPath, { recursive: true });
 }
 
 export function materializeLocalCodexPluginMarketplace(
@@ -445,7 +335,7 @@ export function materializeLocalCodexPluginMarketplace(
   const linkPath = path.join(marketplaceRoot, 'plugins', spec.plugin_id);
   const pluginManifestPath = path.join(linkPath, '.codex-plugin', 'plugin.json');
 
-  materializeCanonicalPluginWrapper(spec, pluginSourcePath, linkPath);
+  materializeRepoLocalPluginCarrier(spec, pluginSourcePath, linkPath);
   writeJsonFile(marketplacePath, {
     name: spec.marketplace_id,
     interface: {
@@ -547,7 +437,7 @@ export function registerOplFamilyCodexPlugins(
         domain_module: spec.domain_module,
         brand_module: spec.brand_module,
         authority_boundary: spec.authority_boundary,
-        note: 'The module checkout must provide a tracked .codex-plugin/plugin.json so OPL can generate an OPL-owned marketplace wrapper without writing into the module repo.',
+        note: 'The module checkout must provide a tracked repo-local Codex plugin carrier so OPL can copy it into the local marketplace without writing into the module repo.',
       });
       continue;
     }

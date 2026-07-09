@@ -19,13 +19,13 @@ test('modules and module actions manage OPL-owned domain module installs and upd
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'mas',
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'med-autoscience',
         skills: './skills/',
       }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
         '---',
         '',
@@ -128,10 +128,10 @@ EOF
     assert.equal(syncedMas.available_actions.includes('update'), false);
 
     const nextSha = medAutoScienceRemote.advance(
-      'plugins/mas/skills/mas/SKILL.md',
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md',
       [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: Use when Codex should operate MedAutoScience through the updated global skill mirror.',
         '---',
         '',
@@ -253,13 +253,13 @@ test('module install is idempotent when the managed checkout already exists', ()
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'mas',
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'med-autoscience',
         skills: './skills/',
       }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: Use MAS runtime through its OPL-managed product entry.',
         '---',
         '',
@@ -322,13 +322,13 @@ test('module install replaces a non-empty invalid managed checkout', () => {
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'mas',
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'med-autoscience',
         skills: './skills/',
       }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: Use MAS runtime through its OPL-managed product entry.',
         '---',
         '',
@@ -473,13 +473,13 @@ test('module install materializes Full runtime payloads into standard managed mo
   );
   fs.writeFileSync(
     path.join(rcaRoot, 'plugins', 'rca', '.codex-plugin', 'plugin.json'),
-    JSON.stringify({ name: 'rca', skills: './skills/' }, null, 2),
+    JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2),
   );
   fs.writeFileSync(
     path.join(rcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md'),
     [
       '---',
-      'name: rca',
+      'name: redcube-ai',
       'description: Operate RedCube AI through its OPL-managed product entry.',
       '---',
       '',

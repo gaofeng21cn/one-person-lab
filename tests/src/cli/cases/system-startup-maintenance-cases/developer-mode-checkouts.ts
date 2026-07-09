@@ -156,9 +156,9 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
     ]);
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
     for (const [moduleId, marketplaceId] of [
-      ['medautoscience', 'mas-local'],
-      ['medautogrant', 'mag-local'],
-      ['redcube', 'rca-local'],
+      ['medautoscience', 'med-autoscience-local'],
+      ['medautogrant', 'med-autogrant-local'],
+      ['redcube', 'redcube-ai-local'],
     ] as const) {
       const checkoutPath = siblingCheckouts[moduleId];
       const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
@@ -166,10 +166,10 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       assert.equal(fs.existsSync(path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json')), false);
       assert.equal(codexConfig.includes(`[marketplaces.${marketplaceId}]`), false);
     }
-    assert.match(codexConfig, /\[plugins\."oma@oma-local"\]/);
-    assert.match(codexConfig, /codex-plugin-marketplaces\/oma-local/);
-    assert.match(codexConfig, /\[plugins\."obf@obf-local"\]/);
-    assert.match(codexConfig, /codex-plugin-marketplaces\/obf-local/);
+    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-meta-agent-local/);
+    assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
+    assert.match(codexConfig, /codex-plugin-marketplaces\/opl-bookforge-local/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);

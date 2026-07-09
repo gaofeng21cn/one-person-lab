@@ -5,7 +5,7 @@ Purpose: `new_machine_codex_opl_family_bootstrap_entry`
 State: `support_reference`
 Machine boundary: 本文是人读 bootstrap runbook。可执行真相归 `install.sh`、One Person Lab App release asset、`opl` CLI 输出、Codex plugin registry、domain repo installer、App release evidence 与 repo-native 验证命令。
 
-本文是新机器上让 Codex 一句话安装配置 OPL 智能体运行环境的 canonical GitHub 入口。它覆盖 OPL Framework、One Person Lab App、MAS/MAG/RCA/OMA 智能体可见面、OPL Flow 工作流 profile、OPL Doc 文档治理插件，以及推荐 companion skills / tools 的同步边界。Book Forge 已作为新的 OPL-standard repo 进入系列文档治理和产品线索引；默认安装/Connect/App 可见面仍等待后续 generated surface、runtime handoff 和 App 产品 owner 证据。
+本文是新机器上让 Codex 一句话安装配置 OPL 智能体运行环境的 canonical GitHub 入口。它覆盖 OPL Framework、One Person Lab App、MAS/MAG/RCA/OMA/Book Forge 智能体可见面、OPL Flow 工作流 profile、OPL Doc 文档治理插件，以及推荐 companion skills / tools 的同步边界。
 
 ## 复制给新机器 Codex
 
@@ -19,7 +19,7 @@ Source of truth:
 1. 先读取这份指南，再检查当前机器的 macOS/Linux 环境、GitHub 可访问性、Codex CLI/Codex 配置、~/.codex、~/.agents/plugins/marketplace.json、~/plugins、~/.local/bin、OPL 相关 checkout 与已有安装状态。
 2. 安装或刷新 One Person Lab Framework CLI，并验证 `opl help --text`、`opl system initialize --json` 和必要的 runtime readiness。
 3. 安装或打开 One Person Lab App；macOS Apple Silicon 首次安装优先使用最新 Full DMG，命令行路径使用 App 仓库 one-shot installer。
-4. 运行 `opl connect sync-skills`，让 MAS/MAG/RCA 作为 plugin-packaged domain skill entries 可见，让 OPL Meta Agent 作为 OPL-generated skill surface 可见。
+4. 运行 `opl connect sync-skills`，让 MAS/MAG/RCA/OMA/Book Forge 作为 repo-local full-copy Codex plugin carriers 可见。
 5. 安装并验证 OPL Flow，让 Codex 获得用户级 AGENTS.md、TASTE.md、planner/executor/debugger/verifier 角色库和 opl-flow 插件。
 6. 安装并验证 OPL Doc，让 Codex 获得 opl-doc canonical skill、opl-doc-governance 兼容 skill 和 opl-doc-doctor。
 7. 检查推荐 companion skills/tools 的状态；只按 OPL CLI/App/Full payload 的受管路径安装或同步，不手工制造第二真相源。
@@ -100,7 +100,7 @@ opl connect skills --json
 稳定边界：
 
 - MAS、MAG、RCA 走 plugin-packaged domain skill entries。
-- OPL Meta Agent 走 OPL-generated skill surface；Book Forge 默认可见面等待后续 admission evidence。
+- MAS/MAG/RCA/OMA/Book Forge 都走 repo-local full-copy Codex plugin carrier；`agent/primary_skill/SKILL.md` 是 canonical rich source，`plugins/<plugin_name>/skills/<plugin_name>/SKILL.md` 是安装 carrier。
 - `opl connect sync-skills` 是统一同步入口；旧 `opl skill sync` 已退役并 fail closed 到 Connect 替代入口。
 - MAS/MAG/RCA 不应同时作为重复裸 skill 出现在 `~/.codex/skills/{mas,mag,rca}`。
 
@@ -165,7 +165,7 @@ npm run new-machine:codex-bootstrap:docker-smoke
 
 - OPL CLI 可安装并响应 `opl help --text` / `opl system initialize --json`。
 - MAS 和 RCA 可以作为 managed domain modules 安装，并通过 `opl connect sync-skills --domain mas --domain rca` 注册为 Codex plugin。
-- `~/.codex/config.toml` 出现 `mas@mas-local` 与 `rca@rca-local` plugin 配置。
+- `~/.codex/config.toml` 出现 `med-autoscience@med-autoscience-local` 与 `redcube-ai@redcube-ai-local` plugin 配置。
 - 不生成重复的 `~/.codex/skills/{mas,rca}` 裸 skill mirror。
 - `opl-flow` 可在干净 HOME 中安装插件、`AGENTS.md`、`TASTE.md` 和 planner/executor/debugger/verifier 角色库。
 

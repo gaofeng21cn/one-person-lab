@@ -39,13 +39,13 @@ function resolveOplStateDirForHome(home?: string) {
   return resolveOplStatePaths().state_dir;
 }
 
-export function resolveGeneratedPluginRootForName(canonicalPluginName: string, home?: string) {
+export function resolveMaterializedPluginRootForName(pluginName: string, home?: string) {
   return path.join(
     resolveOplStateDirForHome(home),
-    'generated-codex-plugins',
-    `${canonicalPluginName}-local`,
+    'codex-plugin-carriers',
+    `${pluginName}-local`,
     'plugins',
-    canonicalPluginName,
+    pluginName,
   );
 }
 
@@ -106,7 +106,9 @@ export function resolveRepoRoot(spec: SkillPackSpec) {
 export function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
   if (spec.source_kind === 'opl_standard_codex_carrier') {
     return path.join(
-      resolveGeneratedPluginRootForName(spec.canonical_plugin_name),
+      repoRoot,
+      'plugins',
+      spec.plugin_name,
       '.codex-plugin',
       'plugin.json',
     );
@@ -129,6 +131,10 @@ export function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
     path.join(repoRoot, 'plugins', spec.canonical_plugin_name, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
     path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md'),
   ]);
+}
+
+export function buildStandardPluginCarrierSkillPath(spec: SkillPackSpec, repoRoot: string) {
+  return path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md');
 }
 
 export function buildInstallerPath(spec: SkillPackSpec, repoRoot: string) {

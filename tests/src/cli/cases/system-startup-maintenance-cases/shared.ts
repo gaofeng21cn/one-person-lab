@@ -42,7 +42,7 @@ export function withCliTimeout<T>(timeoutMs: string, fn: () => T): T {
 
 export function createDomainModuleRemote(input: {
   repoName: string;
-  pluginName: 'mas' | 'mag' | 'rca' | 'opl-meta-agent' | 'opl-bookforge';
+  pluginName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai' | 'opl-meta-agent' | 'opl-bookforge';
   installerKind: 'bash' | 'node';
   logPath: string;
 }) {
@@ -137,6 +137,15 @@ export function createDomainModuleRemote(input: {
         name: input.pluginName,
         skills: './skills/',
       }, null, 2),
+      'agent/primary_skill/SKILL.md': [
+        '---',
+        `name: ${input.pluginName}`,
+        `description: Use ${input.pluginName.toUpperCase()} through its OPL-managed product entry.`,
+        '---',
+        '',
+        `# ${input.pluginName.toUpperCase()} Skill`,
+        '',
+      ].join('\n'),
       [`plugins/${input.pluginName}/skills/${input.pluginName}/SKILL.md`]: [
         '---',
         `name: ${input.pluginName}`,
@@ -213,7 +222,7 @@ export function createOmaGeneratedSurfaceRemote(input: {
     ],
   });
   writeFakeOmaGeneratedSurfacePack(remote.sourceRoot);
-  runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts', 'runtime']);
+  runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts', 'runtime', 'plugins']);
   runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add OMA generated surface contract pack']);
   runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
   return remote;
@@ -247,7 +256,7 @@ export function createBookForgeGeneratedSurfaceRemote(input: {
     ],
   });
   writeFakeBookForgeGeneratedSurfacePack(remote.sourceRoot);
-  runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts']);
+  runGitFixtureCommand(remote.sourceRoot, ['add', 'agent', 'contracts', 'plugins']);
   runGitFixtureCommand(remote.sourceRoot, ['commit', '-m', 'Add Book Forge generated surface contract pack']);
   runGitFixtureCommand(remote.sourceRoot, ['push', 'origin', 'main']);
   return remote;
@@ -261,19 +270,19 @@ export function createStartupDomainModuleRemotes(input: {
   return {
     masRemote: createDomainModuleRemote({
       repoName: 'med-autoscience',
-      pluginName: 'mas',
+      pluginName: 'med-autoscience',
       installerKind: 'bash',
       logPath: input.logPath,
     }),
     magRemote: createDomainModuleRemote({
       repoName: 'med-autogrant',
-      pluginName: 'mag',
+      pluginName: 'med-autogrant',
       installerKind: 'bash',
       logPath: input.logPath,
     }),
     rcaRemote: createDomainModuleRemote({
       repoName: 'redcube-ai',
-      pluginName: 'rca',
+      pluginName: 'redcube-ai',
       installerKind: 'node',
       logPath: input.logPath,
     }),
@@ -319,7 +328,8 @@ export function writeStartupPackageChannelFixture(input: {
     const moduleSourceRoot = path.join(sourceRoot, module.repoName);
     fs.mkdirSync(moduleSourceRoot, { recursive: true });
     fs.writeFileSync(path.join(moduleSourceRoot, 'README.md'), `${module.repoName} ${input.version}\n`, 'utf8');
-    for (const [relativePath, contents] of Object.entries(module.files)) {
+    const moduleFiles = withStandardPrimarySkillCarrierFiles(module.repoName, module.files);
+    for (const [relativePath, contents] of Object.entries(moduleFiles)) {
       const targetPath = path.join(moduleSourceRoot, relativePath);
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
       fs.writeFileSync(targetPath, contents, 'utf8');
@@ -420,6 +430,27 @@ export function writeStartupPackageChannelFixture(input: {
     fakeBin,
     curlLogPath,
   };
+}
+
+function withStandardPrimarySkillCarrierFiles(repoName: string, files: Record<string, string>) {
+  const pluginNameByRepo: Record<string, string> = {
+    'med-autoscience': 'med-autoscience',
+    'med-autogrant': 'med-autogrant',
+    'redcube-ai': 'redcube-ai',
+    'opl-meta-agent': 'opl-meta-agent',
+    'opl-bookforge': 'opl-bookforge',
+  };
+  const pluginName = pluginNameByRepo[repoName];
+  if (!pluginName || files['agent/primary_skill/SKILL.md']) {
+    return files;
+  }
+  const carrierSkill = files[`plugins/${pluginName}/skills/${pluginName}/SKILL.md`];
+  return carrierSkill
+    ? {
+        'agent/primary_skill/SKILL.md': carrierSkill,
+        ...files,
+      }
+    : files;
 }
 
 export type StartupPackageChannelModuleFixture = Parameters<typeof writeStartupPackageChannelFixture>[0]['modules'][number];

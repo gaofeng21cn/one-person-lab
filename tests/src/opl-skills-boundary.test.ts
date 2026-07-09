@@ -92,7 +92,29 @@ test('OBF resolves to OPL Book Forge through the standard agent registry aliases
 });
 
 test('OPL system skill sync catalog excludes MDS stage skills while exposing ScholarSkills as a target-scoped capability pack', () => {
-  const catalog = readFamilySkillPacks().skill_catalog;
+  const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  const previousModuleSourceMode = process.env.OPL_MODULE_SOURCE_MODE;
+  let catalog!: ReturnType<typeof readFamilySkillPacks>['skill_catalog'];
+  try {
+    const repoRoot = process.cwd();
+    const workspaceRoot = path.basename(path.dirname(repoRoot)) === '.codex-worktrees'
+      ? path.resolve(repoRoot, '..', '..')
+      : path.resolve(repoRoot, '..');
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
+    process.env.OPL_MODULE_SOURCE_MODE = 'git_checkout';
+    catalog = readFamilySkillPacks().skill_catalog;
+  } finally {
+    if (previousFamilyWorkspaceRoot === undefined) {
+      delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    } else {
+      process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyWorkspaceRoot;
+    }
+    if (previousModuleSourceMode === undefined) {
+      delete process.env.OPL_MODULE_SOURCE_MODE;
+    } else {
+      process.env.OPL_MODULE_SOURCE_MODE = previousModuleSourceMode;
+    }
+  }
   const domainIds = catalog.packs.map((pack) => pack.domain_id);
   const pluginNames = catalog.packs.map((pack) => pack.canonical_plugin_name);
 
@@ -158,7 +180,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.agent_package_exposure_model?.physical_carriers_must_remain_distinct, false);
     assert.equal(
       pack.agent_package_exposure_model?.standard_physical_carrier,
-      'opl_materialized_codex_plugin_from_repo_owned_primary_skill',
+      'repo_local_materialized_codex_plugin_carrier_from_repo_owned_primary_skill',
     );
     assert.equal(pack.agent_package_exposure_model?.repo_owned_primary_skill_required, true);
     assert.equal(pack.agent_package_exposure_model?.user_story_must_not_split_by_carrier, true);
@@ -241,21 +263,45 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
   try {
     for (const [moduleId, repoPath] of repoPaths) {
       const pluginId = moduleId === 'medautoscience'
-        ? 'mas'
+        ? 'med-autoscience'
         : moduleId === 'medautogrant'
-          ? 'mag'
+          ? 'med-autogrant'
           : moduleId === 'redcube'
-            ? 'rca'
+            ? 'redcube-ai'
             : moduleId === 'oplmetaagent'
-              ? 'oma'
-              : 'obf';
+              ? 'opl-meta-agent'
+              : 'opl-bookforge';
       const pluginRoot = path.join(repoPath, 'plugins', pluginId);
+      const primarySkillPath = path.join(repoPath, 'agent', 'primary_skill', 'SKILL.md');
+      const carrierSkillPath = path.join(pluginRoot, 'skills', pluginId, 'SKILL.md');
       fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
+      fs.mkdirSync(path.dirname(primarySkillPath), { recursive: true });
+      fs.mkdirSync(path.dirname(carrierSkillPath), { recursive: true });
       fs.writeFileSync(
         path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
-        JSON.stringify({ name: pluginId, skills: './skills/' }, null, 2),
+        JSON.stringify({
+          name: pluginId,
+          version: '0.1.0',
+          skills: './skills/',
+        }, null, 2),
         'utf8',
       );
+      fs.writeFileSync(
+        primarySkillPath,
+        [
+          '---',
+          `name: ${pluginId}`,
+          `description: ${pluginId} standard agent primary skill fixture.`,
+          '---',
+          '',
+          `# ${pluginId}`,
+          '',
+          'Fixture rich primary skill body for registry materialization.',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+      fs.copyFileSync(primarySkillPath, carrierSkillPath);
     }
 
     const codexHome = path.join(homeRoot, '.codex');
@@ -291,11 +337,11 @@ test('OPL Codex plugin registry removes standalone family MCP server blocks', ()
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.med-autoscience\]/);
-    assert.match(config, /\[plugins\."mas@mas-local"\]/);
-    assert.match(config, /\[plugins\."mag@mag-local"\]/);
-    assert.match(config, /\[plugins\."rca@rca-local"\]/);
-    assert.match(config, /\[plugins\."oma@oma-local"\]/);
-    assert.match(config, /\[plugins\."obf@obf-local"\]/);
+    assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
+    assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
+    assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
+    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     for (const item of result.items) {
       assert.equal(item.status, 'registered');
       assert.equal(fs.existsSync(item.marketplace_path), true);

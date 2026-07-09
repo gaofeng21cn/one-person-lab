@@ -61,7 +61,8 @@ function writePackageChannelFixture(input: {
   fs.mkdirSync(fakeBin, { recursive: true });
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, 'README.md'), `${input.repoName} package fixture\n`, 'utf8');
-  for (const [relativePath, contents] of Object.entries(input.sourceFiles ?? {})) {
+  const sourceFiles = withStandardPrimarySkillCarrierFiles(input.repoName, input.sourceFiles ?? {});
+  for (const [relativePath, contents] of Object.entries(sourceFiles)) {
     const targetPath = path.join(sourceRoot, relativePath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, contents, 'utf8');
@@ -162,6 +163,27 @@ function writePackageChannelFixture(input: {
   };
 }
 
+function withStandardPrimarySkillCarrierFiles(repoName: string, files: Record<string, string>) {
+  const pluginNameByRepo: Record<string, string> = {
+    'med-autoscience': 'med-autoscience',
+    'med-autogrant': 'med-autogrant',
+    'redcube-ai': 'redcube-ai',
+    'opl-meta-agent': 'opl-meta-agent',
+    'opl-bookforge': 'opl-bookforge',
+  };
+  const pluginName = pluginNameByRepo[repoName];
+  if (!pluginName || files['agent/primary_skill/SKILL.md']) {
+    return files;
+  }
+  const carrierSkill = files[`plugins/${pluginName}/skills/${pluginName}/SKILL.md`];
+  return carrierSkill
+    ? {
+        'agent/primary_skill/SKILL.md': carrierSkill,
+        ...files,
+      }
+    : files;
+}
+
 test('managed module install and update consume the package channel by default', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-package-channel-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
@@ -174,10 +196,10 @@ test('managed module install and update consume the package channel by default',
     sourceHeadSha: 'package-channel-sha-v1',
     sourceFiles: {
       'README.md': 'med-autoscience package fixture v1\n',
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: MAS package channel fixture.',
         '---',
         '',
@@ -246,10 +268,10 @@ test('managed module install and update consume the package channel by default',
       sourceHeadSha: 'package-channel-sha-v2',
       sourceFiles: {
         'README.md': 'med-autoscience package fixture v2\n',
-        'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-        'plugins/mas/skills/mas/SKILL.md': [
+        'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
+        'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
           '---',
-          'name: mas',
+          'name: med-autoscience',
           'description: MAS updated package channel fixture.',
           '---',
           '',
@@ -316,10 +338,10 @@ test('managed package channel defaults to the latest GHCR manifest independent o
     version: '26.6.11-nightly',
     sourceHeadSha: 'package-channel-latest-sha',
     sourceFiles: {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: MAS latest package channel fixture.',
         '---',
         '',

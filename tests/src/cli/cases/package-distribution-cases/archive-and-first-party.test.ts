@@ -156,7 +156,7 @@ test('package archive builder writes channel manifest checksums git source and r
   );
   assert.equal(
     manifest.packages.modules.oplbookforge.codex_standalone_distribution.distribution_shape,
-    'generated_carrier_surface',
+    'repo_carrier_source',
   );
   assert.match(manifest.packages.modules.oplbookforge.source_archive.sha256, /^[0-9a-f]{64}$/);
   assert.equal(
@@ -212,21 +212,17 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.carrier_adapters[0].carrier, 'codex_plugin');
   assert.equal(manifest.carrier_adapters[0].owns_package_core, false);
   assert.equal(schema.properties.capability_dependencies.items.properties.codex_distribution.const, 'bundled');
-  assert.deepEqual(schema.properties.codex_surface.properties.standalone_distribution.enum, [
-    'repo_carrier_source',
-    'generated_carrier_surface',
-    'self_contained_fat_plugin',
-  ]);
+  assert.equal(schema.properties.codex_surface.properties.standalone_distribution.const, 'repo_carrier_source');
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
   assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
   assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
-  assert.deepEqual(manifest.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
+  assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(manifests.mag.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.equal(manifests.rca.codex_surface.standalone_distribution, 'repo_carrier_source');
-  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'generated_carrier_surface');
-  assert.equal(manifests.bookforge.codex_surface.standalone_distribution, 'generated_carrier_surface');
+  assert.equal(manifests.oma.codex_surface.standalone_distribution, 'repo_carrier_source');
+  assert.equal(manifests.bookforge.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.deepEqual(manifests.mag.capability_dependencies, []);
   assert.deepEqual(manifests.rca.capability_dependencies, []);
   assert.deepEqual(manifests.oma.distribution_payload.required_skill_pack_lock_refs, []);
@@ -277,9 +273,9 @@ test('first-party agent package manifest canonicalizes legacy package and assist
       install_truth: 'resolved_digest_lock',
     },
     codex_surface: {
-      plugin_id: 'mas',
-      standalone_distribution: 'self_contained_fat_plugin',
-      required_skill_ids: ['mas', 'mas-scholar-skills'],
+      plugin_id: 'med-autoscience',
+      standalone_distribution: 'repo_carrier_source',
+      required_skill_ids: ['med-autoscience', 'mas-scholar-skills'],
       bundled_capability_package_ids: ['mas-scholar-skills'],
     },
     capability_dependencies: [
@@ -305,8 +301,8 @@ test('first-party agent package manifest canonicalizes legacy package and assist
 
   assert.equal(normalized.package_id, 'med-autoscience');
   assert.equal(normalized.agent_id, 'med-autoscience');
-  assert.equal(normalized.codex_surface.plugin_id, 'mas');
-  assert.deepEqual(normalized.codex_surface.required_skill_ids, ['mas', 'mas-scholar-skills']);
+  assert.equal(normalized.codex_surface.plugin_id, 'med-autoscience');
+  assert.deepEqual(normalized.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
   assert.equal(normalized.package_core, null);
   assert.deepEqual(normalized.carrier_adapters, []);
   assert.equal(canonicalAgentPackageId('obf'), 'opl-bookforge');

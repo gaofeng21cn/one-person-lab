@@ -20,7 +20,7 @@ import {
 } from '../workspace/index.ts';
 import {
   inspectGeneratedSkillSurface,
-  writeOplGeneratedPluginSurface,
+  writeOplMaterializedPluginCarrier,
 } from './opl-skills-parts/generated-plugin.ts';
 import {
   buildInstallerCommandPreview,
@@ -28,6 +28,7 @@ import {
   buildPluginManifestPath,
   buildPluginSourcePath,
   buildSkillEntryPath,
+  buildStandardPluginCarrierSkillPath,
   normalizeOptionalString,
   resolveCodexHome,
   resolveRepoRoot,
@@ -359,6 +360,9 @@ function validatePluginManifest(spec: SkillPackSpec, pluginManifestPath: string,
   if (spec.distribution_role === 'domain_agent_plugin_pack' && 'mcpServers' in manifest) {
     errors.push('standard_domain_agent_manifest_must_not_expose_standalone_mcp_servers');
   }
+  if (spec.distribution_role === 'domain_agent_plugin_pack' && manifest.name !== spec.plugin_name) {
+    errors.push(`plugin_manifest_name_mismatch:${String(manifest.name ?? '<missing>')}`);
+  }
 
   return {
     valid: errors.length === 0,
@@ -396,6 +400,38 @@ function validateSkillEntry(spec: SkillPackSpec, skillEntryPath: string, skillEn
   }
   if (body.trim() === `# ${spec.canonical_plugin_name}`) {
     errors.push('legacy_test_skill_body');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+function validateStandardPluginCarrier(
+  spec: SkillPackSpec,
+  repoRoot: string,
+  skillEntryPath: string,
+  skillEntryFound: boolean,
+) {
+  const errors: string[] = [];
+  if (spec.source_kind !== 'opl_standard_codex_carrier') {
+    return { valid: true, errors };
+  }
+
+  const carrierSkillPath = buildStandardPluginCarrierSkillPath(spec, repoRoot);
+  if (!fs.existsSync(carrierSkillPath) || !fs.statSync(carrierSkillPath).isFile()) {
+    return { valid: false, errors: [`missing_plugin_carrier_skill:${carrierSkillPath}`] };
+  }
+
+  if (!skillEntryFound) {
+    return { valid: false, errors: ['missing_primary_skill_source_for_carrier_compare'] };
+  }
+
+  const sourceSkill = fs.readFileSync(skillEntryPath, 'utf8');
+  const carrierSkill = fs.readFileSync(carrierSkillPath, 'utf8');
+  if (sourceSkill !== carrierSkill) {
+    errors.push('plugin_carrier_skill_not_materialized_full_copy');
   }
 
   return {
@@ -536,6 +572,12 @@ function inspectFamilySkillPackAtRepoRoot(
   const skillEntryFound = fs.existsSync(skillEntryPath) && fs.statSync(skillEntryPath).isFile();
   const pluginManifestValidation = validatePluginManifest(spec, pluginManifestPath, pluginManifestFound);
   const skillEntryValidation = validateSkillEntry(spec, skillEntryPath, skillEntryFound);
+  const standardCarrierValidation = validateStandardPluginCarrier(
+    spec,
+    repoRoot,
+    skillEntryPath,
+    skillEntryFound,
+  );
   const installerFound = fs.existsSync(installerPath) && fs.statSync(installerPath).isFile();
   const generatedSkillSurface = inspectGeneratedSkillSurface(spec, repoRoot);
   const trackedRepoPluginReady =
@@ -543,8 +585,11 @@ function inspectFamilySkillPackAtRepoRoot(
   const standardCodexCarrierReady =
     spec.source_kind === 'opl_standard_codex_carrier'
     && repoFound
+    && pluginManifestFound
+    && pluginManifestValidation.valid
     && skillEntryFound
-    && skillEntryValidation.valid;
+    && skillEntryValidation.valid
+    && standardCarrierValidation.valid;
   const readyToSync = spec.source_kind === 'opl_standard_codex_carrier'
     ? standardCodexCarrierReady
     : trackedRepoPluginReady;
@@ -631,7 +676,7 @@ function inspectFamilySkillPackAtRepoRoot(
     skill_entry_path: skillEntryPath,
     skill_entry_found: skillEntryFound,
     skill_entry_valid: skillEntryValidation.valid,
-    skill_entry_errors: skillEntryValidation.errors,
+    skill_entry_errors: [...skillEntryValidation.errors, ...standardCarrierValidation.errors],
     installer_path: installerPath,
     installer_found: installerFound,
     source_kind: spec.source_kind,
@@ -692,7 +737,7 @@ export function syncFamilySkillPackFromRepoRoot(
       targetProject: scope === 'project' ? targetProject : null,
       targetRoot,
       resolveCodexHome,
-      writeGeneratedPluginSurface: writeOplGeneratedPluginSurface,
+      writeMaterializedPluginCarrier: writeOplMaterializedPluginCarrier,
     },
   );
   if (
@@ -879,7 +924,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
       };
     })(),
     resolveCodexHome,
-    writeGeneratedPluginSurface: writeOplGeneratedPluginSurface,
+    writeMaterializedPluginCarrier: writeOplMaterializedPluginCarrier,
   }));
   const syncedFamilyPluginPacks = packs.filter((pack): pack is SyncFamilySkillPack & { domain_id: CodexPluginRegistryPackId } => (
     pack.sync_status === 'synced'

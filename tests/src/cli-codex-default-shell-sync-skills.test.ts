@@ -38,7 +38,7 @@ test('opl connect skills discovers the family plugin packs through the configure
       output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
       ['mas', 'mag', 'rca', 'oma', 'obf', 'mas-scholar-skills'],
     );
-    assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /generated-codex-plugins\/mas-local\/plugins\/mas\/\.codex-plugin\/plugin\.json$/);
+    assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /med-autoscience\/plugins\/med-autoscience\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /med-autoscience\/agent\/primary_skill\/SKILL\.md$/);
     assert.deepEqual(
       output.skill_catalog.packs.slice(0, 5).map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
@@ -53,7 +53,7 @@ test('opl connect skills discovers the family plugin packs through the configure
       assert.equal(pack.plugin_transport.primary_skill_projection.carrier_can_claim_domain_ready, false);
     }
     const metaPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
-    assert.equal(metaPack?.plugin_manifest_found, false);
+    assert.equal(metaPack?.plugin_manifest_found, true);
     assert.equal(metaPack?.installer_found, false);
     assert.equal(metaPack?.agent_series_membership, 'standard_domain_agent');
     assert.equal(metaPack?.agent_projection_policy.plugin_transport_is_membership_axis, false);
@@ -75,7 +75,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(metaPack?.mcp_projection?.mcp_descriptor_must_delegate_to_series_spine, true);
     assert.equal('legacy_implementation_bucket_policy' in metaPack, false);
     const bookforgePack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplbookforge');
-    assert.equal(bookforgePack?.plugin_manifest_found, false);
+    assert.equal(bookforgePack?.plugin_manifest_found, true);
     assert.equal(bookforgePack?.installer_found, false);
     assert.equal(bookforgePack?.agent_series_membership, 'standard_domain_agent');
     assert.equal(bookforgePack?.agent_projection_policy.plugin_transport_is_membership_axis, false);
@@ -284,6 +284,7 @@ test('opl connect sync-skills refuses to mirror legacy test skill stubs', () => 
     assert.deepEqual(pack.skill_entry_errors, [
       'legacy_test_skill_description',
       'legacy_test_skill_body',
+      'plugin_carrier_skill_not_materialized_full_copy',
     ]);
     assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', 'mas')), false);
     assert.equal(fs.existsSync(syncLogPath), false);
@@ -326,20 +327,20 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.summary.skipped, 1);
     assert.equal(fs.existsSync(syncLogPath), false);
     for (const [project, plugin] of [
-      ['med-autoscience', 'mas'],
-      ['med-autogrant', 'mag'],
-      ['redcube-ai', 'rca'],
+      ['med-autoscience', 'med-autoscience'],
+      ['med-autogrant', 'med-autogrant'],
+      ['redcube-ai', 'redcube-ai'],
     ] as const) {
       assert.equal(fs.existsSync(path.join(workspaceRoot, project, '.agents', 'plugins', 'marketplace.json')), false);
       const pack = output.skill_sync.packs.find((entry: { project: string }) => entry.project === project);
-      assert.equal(pack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
+      assert.equal(pack.installer_result.materialized_surface, 'repo_local_codex_plugin_carrier');
       assert.equal(
-        fs.realpathSync(pack.installer_result.generated_codex_plugin.primary_skill_source_path),
+        fs.realpathSync(pack.installer_result.materialized_codex_plugin_carrier.primary_skill_source_path),
         fs.realpathSync(path.join(workspaceRoot, project, 'agent', 'primary_skill', 'SKILL.md')),
       );
       assert.match(
-        pack.installer_result.generated_codex_plugin.plugin_root,
-        new RegExp(`generated-codex-plugins/${plugin}-local/plugins/${plugin}$`),
+        pack.installer_result.materialized_codex_plugin_carrier.plugin_root,
+        new RegExp(`codex-plugin-carriers/${plugin}-local/plugins/${plugin}$`),
       );
     }
     const metaGeneratedPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'oplmetaagent');
@@ -365,26 +366,25 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
       fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       false,
     );
-    assert.equal(metaGeneratedPack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
+    assert.equal(metaGeneratedPack.installer_result.materialized_surface, 'repo_local_codex_plugin_carrier');
     assert.match(
-      metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
-      /generated-codex-plugins\/oma-local\/plugins\/oma$/,
+      metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.plugin_root,
+      /codex-plugin-carriers\/opl-meta-agent-local\/plugins\/opl-meta-agent$/,
     );
     assert.equal(
-      fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path),
+      fs.existsSync(metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.plugin_manifest_path),
       true,
     );
     assert.equal(
-      fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.marketplace_path),
+      fs.existsSync(metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.marketplace_path),
       true,
     );
     assert.equal(
-      fs.existsSync(metaGeneratedPack.installer_result.generated_codex_plugin.codex_plugin_cache_path),
+      fs.existsSync(metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.codex_plugin_cache_path),
       true,
     );
-    const generatedPluginRoot = metaGeneratedPack.installer_result.generated_codex_plugin.plugin_root;
     const generatedPluginProvenance = parseJsonText(fs.readFileSync(
-      metaGeneratedPack.installer_result.generated_codex_plugin.carrier_provenance_path,
+      metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.carrier_provenance_path,
       'utf8',
     )) as Record<string, any>;
     assert.equal(generatedPluginProvenance.surface_kind, 'opl_standard_primary_skill_carrier_projection');
@@ -392,64 +392,50 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(generatedPluginProvenance.codex_install_requires_real_skill_md, true);
     assert.equal(generatedPluginProvenance.plugin_skill_may_be_stub_or_pointer, false);
     assert.equal(generatedPluginProvenance.authority_boundary.plugin_transport_is_membership_axis, false);
-    assert.equal(generatedPluginProvenance.authority_boundary.generated_surface_can_claim_domain_ready, false);
+    assert.equal(generatedPluginProvenance.authority_boundary.carrier_surface_can_claim_domain_ready, false);
     assert.equal(
       fs.existsSync(path.join(
-        metaGeneratedPack.installer_result.generated_codex_plugin.codex_plugin_cache_path,
+        metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.codex_plugin_cache_path,
         'opl-carrier.json',
       )),
       true,
     );
     const generatedPluginManifest = parseJsonText(fs.readFileSync(
-      metaGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
+      metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.plugin_manifest_path,
       'utf8',
     )) as Record<string, any>;
-    assert.equal(generatedPluginManifest.interface.composerIcon, './assets/icon.svg');
-    assert.equal(generatedPluginManifest.interface.logo, './assets/icon.svg');
-    const generatedPluginIcon = fs.readFileSync(path.join(generatedPluginRoot, 'assets', 'icon.svg'), 'utf8');
-    assert.match(generatedPluginIcon, /aria-label="OPL Meta Agent icon"/);
-    assert.match(generatedPluginIcon, /M11 44V20L21 34L31 20V44/);
-    assert.match(generatedPluginIcon, /M36 44L46 20L56 44/);
-    const generatedOmaSkill = fs.readFileSync(metaGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
-    assert.match(generatedOmaSkill, /# OPL Meta Agent/);
-    assert.match(generatedOmaSkill, /Generated Action Contracts/);
-    assert.match(generatedOmaSkill, /build-agent-baseline/);
-    assert.equal(bookforgeGeneratedPack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
+    assert.equal(generatedPluginManifest.name, 'opl-meta-agent');
+    const generatedOmaSkill = fs.readFileSync(metaGeneratedPack.installer_result.materialized_codex_plugin_carrier.skill_entry_path, 'utf8');
+    assert.equal(generatedOmaSkill, fs.readFileSync(path.join(workspaceRoot, 'opl-meta-agent', 'agent', 'primary_skill', 'SKILL.md'), 'utf8'));
+    assert.equal(bookforgeGeneratedPack.installer_result.materialized_surface, 'repo_local_codex_plugin_carrier');
     assert.match(
-      bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_root,
-      /generated-codex-plugins\/obf-local\/plugins\/obf$/,
+      bookforgeGeneratedPack.installer_result.materialized_codex_plugin_carrier.plugin_root,
+      /codex-plugin-carriers\/opl-bookforge-local\/plugins\/opl-bookforge$/,
     );
     const generatedBookForgeManifest = parseJsonText(fs.readFileSync(
-      bookforgeGeneratedPack.installer_result.generated_codex_plugin.plugin_manifest_path,
+      bookforgeGeneratedPack.installer_result.materialized_codex_plugin_carrier.plugin_manifest_path,
       'utf8',
     )) as Record<string, any>;
-    assert.equal(generatedBookForgeManifest.name, 'obf');
-    assert.equal(generatedBookForgeManifest.interface.displayName, 'OPL Book Forge');
-    assert.equal(generatedBookForgeManifest.repository, 'https://github.com/gaofeng21cn/opl-bookforge');
-    const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.generated_codex_plugin.skill_entry_path, 'utf8');
-    assert.match(generatedBookForgeSkill, /# OPL Book Forge/);
-    assert.match(generatedBookForgeSkill, /Generated Action Contracts/);
-    assert.match(generatedBookForgeSkill, /shape-storyline/);
-    assert.match(generatedBookForgeSkill, /materialize-book/);
+    assert.equal(generatedBookForgeManifest.name, 'opl-bookforge');
+    const generatedBookForgeSkill = fs.readFileSync(bookforgeGeneratedPack.installer_result.materialized_codex_plugin_carrier.skill_entry_path, 'utf8');
+    assert.equal(generatedBookForgeSkill, fs.readFileSync(path.join(workspaceRoot, 'opl-bookforge', 'agent', 'primary_skill', 'SKILL.md'), 'utf8'));
     assert.equal(output.skill_sync.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
     assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 5);
     assert.equal(output.skill_sync.codex_plugin_registry.summary.removed_standalone_mcp_servers, 1);
     const masPlugin = output.skill_sync.codex_plugin_registry.items.find(
-      (entry: { plugin_id: string }) => entry.plugin_id === 'mas',
+      (entry: { plugin_id: string }) => entry.plugin_id === 'med-autoscience',
     );
     assert.ok(masPlugin);
-    const masWrapperPluginPath = path.join(masPlugin.marketplace_root, 'plugins', 'mas');
+    const masWrapperPluginPath = path.join(masPlugin.marketplace_root, 'plugins', 'med-autoscience');
     assert.equal(fs.lstatSync(masWrapperPluginPath).isSymbolicLink(), false);
     const masWrapperManifest = parseJsonText(fs.readFileSync(masPlugin.plugin_manifest_path, 'utf8')) as Record<string, any>;
-    assert.equal(masWrapperManifest.name, 'mas');
-    assert.deepEqual(masWrapperManifest.interface.defaultPrompt, [
-      'Use MAS to inspect the current study runtime and route the next paper-mission step.',
-      'Use MAS to advance a source-grounded manuscript, analysis, review, or owner handoff without bypassing domain authority.',
-    ]);
+    assert.equal(masWrapperManifest.name, 'med-autoscience');
+    assert.equal(Array.isArray(masWrapperManifest.interface.defaultPrompt), true);
+    assert.equal(masWrapperManifest.interface.defaultPrompt.length > 0, true);
     assert.equal(masWrapperManifest.interface.composerIcon, './assets/icon.svg');
     assert.equal(
-      fs.readFileSync(path.join(masWrapperPluginPath, 'skills', 'mas', 'SKILL.md'), 'utf8')
-        .includes('name: mas'),
+      fs.readFileSync(path.join(masWrapperPluginPath, 'skills', 'med-autoscience', 'SKILL.md'), 'utf8')
+        .includes('name: med-autoscience'),
       true,
     );
     assert.equal(fs.existsSync(path.join(masWrapperPluginPath, 'assets', 'icon.svg')), true);
@@ -467,10 +453,10 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.mode, 'observe');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
-    for (const skillName of ['mas', 'mag', 'rca', 'oma', 'obf']) {
+    for (const skillName of ['mas', 'mag', 'rca', 'oma', 'obf', 'med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge']) {
       assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md')), false);
     }
-    for (const skillName of ['mas', 'mag', 'rca', 'oma', 'obf']) {
+    for (const skillName of ['med-autoscience', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge']) {
       assert.equal(
         fs.existsSync(path.join(
           homeDir,
@@ -490,11 +476,11 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /\[mcp_servers\.sentrux\]/);
     assert.doesNotMatch(config, /\[mcp_servers\.redcube-ai\]/);
-    assert.match(config, /\[plugins\."mas@mas-local"\]/);
-    assert.match(config, /\[plugins\."mag@mag-local"\]/);
-    assert.match(config, /\[plugins\."rca@rca-local"\]/);
-    assert.match(config, /\[plugins\."oma@oma-local"\]/);
-    assert.match(config, /\[plugins\."obf@obf-local"\]/);
+    assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
+    assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
+    assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
+    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(config, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     assert.doesNotMatch(config, /\[plugins\."mas-scholar-skills@mas-scholar-skills-local"\]/);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
@@ -502,12 +488,12 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
   }
 });
 
-test('opl connect sync-skills ignores legacy plugin MCP drift when standard agents use primary-skill carriers', () => {
+test('opl connect sync-skills refuses standard agent plugin MCP drift', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-mcp-drift-'));
   const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
   const homeDir = path.join(captureDir, 'home');
   const codexHome = path.join(homeDir, '.codex');
-  const masManifestPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas', '.codex-plugin', 'plugin.json');
+  const masManifestPath = path.join(workspaceRoot, 'med-autoscience', 'plugins', 'med-autoscience', '.codex-plugin', 'plugin.json');
   const masManifest = parseJsonText(fs.readFileSync(masManifestPath, 'utf8')) as Record<string, any>;
   masManifest.mcpServers = './.mcp.json';
   fs.writeFileSync(masManifestPath, `${JSON.stringify(masManifest, null, 2)}\n`, 'utf8');
@@ -521,17 +507,12 @@ test('opl connect sync-skills ignores legacy plugin MCP drift when standard agen
     });
 
     const masPack = output.skill_sync.packs.find((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name === 'mas');
-    assert.equal(masPack.sync_status, 'synced');
-    assert.equal(masPack.ready_to_sync, true);
+    assert.equal(masPack.sync_status, 'skipped');
+    assert.equal(masPack.ready_to_sync, false);
     assert.equal(masPack.plugin_manifest_valid, false);
-    assert.equal(masPack.installer_result.generated_surface, 'opl_standard_codex_plugin_carrier');
-    const generatedManifest = parseJsonText(fs.readFileSync(
-      masPack.installer_result.generated_codex_plugin.plugin_manifest_path,
-      'utf8',
-    )) as Record<string, any>;
-    assert.equal('mcpServers' in generatedManifest, false);
-    assert.equal(output.skill_sync.codex_plugin_registry.summary.registered, 1);
-    assert.match(fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8'), /\[plugins\."mas@mas-local"\]/);
+    assert.deepEqual(masPack.plugin_manifest_errors, ['standard_domain_agent_manifest_must_not_expose_standalone_mcp_servers']);
+    assert.equal(output.skill_sync.codex_plugin_registry, null);
+    assert.equal(fs.existsSync(path.join(codexHome, 'config.toml')), false);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
@@ -563,13 +544,13 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
     });
 
     for (const [project, plugin] of [
-      ['med-autoscience', 'mas'],
-      ['med-autogrant', 'mag'],
-      ['redcube-ai', 'rca'],
+      ['med-autoscience', 'med-autoscience'],
+      ['med-autogrant', 'med-autogrant'],
+      ['redcube-ai', 'redcube-ai'],
     ] as const) {
       const pack = output.skill_sync.packs.find((entry: { project: string }) => entry.project === project);
       assert.equal(
-        fs.realpathSync(pack.installer_result.generated_codex_plugin.primary_skill_source_path),
+        fs.realpathSync(pack.installer_result.materialized_codex_plugin_carrier.primary_skill_source_path),
         fs.realpathSync(path.join(workspaceRoot, project, 'agent', 'primary_skill', 'SKILL.md')),
       );
       const registryItem = output.skill_sync.codex_plugin_registry.items.find(

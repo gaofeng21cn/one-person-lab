@@ -7,10 +7,7 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import type { ModuleCapabilityDependency, OplModuleId } from './system-installation/shared.ts';
 
-type CodexCarrierDistribution =
-  | 'repo_carrier_source'
-  | 'generated_carrier_surface'
-  | 'self_contained_fat_plugin';
+type CodexCarrierDistribution = 'repo_carrier_source';
 
 type FirstPartyAgentPackageManifest = {
   agent_id: string;
@@ -202,11 +199,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     });
   }
   const standaloneDistribution = codexSurface.standalone_distribution;
-  if (
-    standaloneDistribution !== 'repo_carrier_source'
-    && standaloneDistribution !== 'generated_carrier_surface'
-    && standaloneDistribution !== 'self_contained_fat_plugin'
-  ) {
+  if (standaloneDistribution !== 'repo_carrier_source') {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest codex_surface.standalone_distribution is invalid.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
       field: 'codex_surface.standalone_distribution',

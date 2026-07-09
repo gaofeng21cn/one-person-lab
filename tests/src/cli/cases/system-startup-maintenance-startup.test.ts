@@ -215,18 +215,18 @@ test('system startup-maintenance installs clean managed modules and returns App 
       'oplbookforge',
     ]);
     assert.deepEqual(fs.readFileSync(logPath, 'utf8').trim().split('\n'), [
-      'mas-bootstrap',
-      'mas-health',
-      'mag-bootstrap',
-      'mag-health',
-      'rca-bootstrap',
-      'rca-health',
+      'med-autoscience-bootstrap',
+      'med-autoscience-health',
+      'med-autogrant-bootstrap',
+      'med-autogrant-health',
+      'redcube-ai-bootstrap',
+      'redcube-ai-health',
       'opl-meta-agent-bootstrap',
       'opl-meta-agent-health',
       'opl-bookforge-bootstrap',
       'opl-bookforge-health',
     ]);
-    for (const skillName of ['mas', 'mag', 'rca']) {
+    for (const skillName of ['mas', 'mag', 'rca', 'med-autoscience', 'med-autogrant', 'redcube-ai']) {
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), false);
     }
     assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'oma', 'SKILL.md')), false);
@@ -235,10 +235,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
       fs.existsSync(path.join(
         homeRoot,
         'opl-state',
-        'generated-codex-plugins',
-        'oma-local',
+        'codex-plugin-carriers',
+        'opl-meta-agent-local',
         'plugins',
-        'oma',
+        'opl-meta-agent',
         '.codex-plugin',
         'plugin.json',
       )),
@@ -248,12 +248,12 @@ test('system startup-maintenance installs clean managed modules and returns App 
       fs.existsSync(path.join(
         homeRoot,
         'opl-state',
-        'generated-codex-plugins',
-        'oma-local',
+        'codex-plugin-carriers',
+        'opl-meta-agent-local',
         'plugins',
-        'oma',
+        'opl-meta-agent',
         'skills',
-        'oma',
+        'opl-meta-agent',
         'SKILL.md',
       )),
       true,
@@ -262,10 +262,10 @@ test('system startup-maintenance installs clean managed modules and returns App 
       fs.existsSync(path.join(
         homeRoot,
         'opl-state',
-        'generated-codex-plugins',
-        'obf-local',
+        'codex-plugin-carriers',
+        'opl-bookforge-local',
         'plugins',
-        'obf',
+        'opl-bookforge',
         '.codex-plugin',
         'plugin.json',
       )),
@@ -275,19 +275,19 @@ test('system startup-maintenance installs clean managed modules and returns App 
       fs.existsSync(path.join(
         homeRoot,
         'opl-state',
-        'generated-codex-plugins',
-        'obf-local',
+        'codex-plugin-carriers',
+        'opl-bookforge-local',
         'plugins',
-        'obf',
+        'opl-bookforge',
         'skills',
-        'obf',
+        'opl-bookforge',
         'SKILL.md',
       )),
       true,
     );
     const codexConfig = fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8');
-    assert.match(codexConfig, /\[plugins\."oma@oma-local"\]/);
-    assert.match(codexConfig, /\[plugins\."obf@obf-local"\]/);
+    assert.match(codexConfig, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
+    assert.match(codexConfig, /\[plugins\."opl-bookforge@opl-bookforge-local"\]/);
     const previousStateDir = process.env.OPL_STATE_DIR;
     process.env.OPL_STATE_DIR = path.join(homeRoot, 'opl-state');
     try {

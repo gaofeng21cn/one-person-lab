@@ -177,11 +177,7 @@
           "minLength": 1
         },
         "standalone_distribution": {
-          "enum": [
-            "repo_carrier_source",
-            "generated_carrier_surface",
-            "self_contained_fat_plugin"
-          ]
+          "const": "repo_carrier_source"
         },
         "required_skill_ids": {
           "type": "array",

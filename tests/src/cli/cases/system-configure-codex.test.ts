@@ -162,11 +162,11 @@ test('system configure-codex completes a plugin-only Codex config created during
     fs.writeFileSync(
       configPath,
       [
-        '[marketplaces.mas-local]',
+        '[marketplaces.med-autoscience-local]',
         'source_type = "local"',
         'source = "/Users/test/med-autoscience"',
         '',
-        '[plugins."mas@mas-local"]',
+        '[plugins."med-autoscience@med-autoscience-local"]',
         'enabled = true',
         '',
       ].join('\n'),
@@ -206,8 +206,8 @@ test('system configure-codex completes a plugin-only Codex config created during
     assert.match(config, /model_reasoning_effort = "xhigh"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-plugin-key"/);
-    assert.match(config, /\[marketplaces\.mas-local\]/);
-    assert.match(config, /\[plugins\."mas@mas-local"\]/);
+    assert.match(config, /\[marketplaces\.med-autoscience-local\]/);
+    assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -374,19 +374,19 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
     );
     const omaPack = output.codex_config.skill_sync.packs.find((pack) => pack.domain_id === 'oplmetaagent');
     assert.equal(
-      (omaPack?.installer_result?.generated_codex_plugin as { source?: string } | undefined)?.source,
+      (omaPack?.installer_result?.materialized_codex_plugin_carrier as { source?: string } | undefined)?.source,
       'opl_standard_agent_primary_skill_codex_plugin',
     );
 
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
-    assert.match(config, /\[plugins\."mas@mas-local"\]/);
-    assert.match(config, /\[plugins\."mag@mag-local"\]/);
-    assert.match(config, /\[plugins\."rca@rca-local"\]/);
-    assert.match(config, /\[plugins\."oma@oma-local"\]/);
+    assert.match(config, /\[plugins\."med-autoscience@med-autoscience-local"\]/);
+    assert.match(config, /\[plugins\."med-autogrant@med-autogrant-local"\]/);
+    assert.match(config, /\[plugins\."redcube-ai@redcube-ai-local"\]/);
+    assert.match(config, /\[plugins\."opl-meta-agent@opl-meta-agent-local"\]/);
     for (const [project, marketplaceId, pluginId] of [
-      ['med-autoscience', 'mas-local', 'mas'],
-      ['med-autogrant', 'mag-local', 'mag'],
-      ['redcube-ai', 'rca-local', 'rca'],
+      ['med-autoscience', 'med-autoscience-local', 'med-autoscience'],
+      ['med-autogrant', 'med-autogrant-local', 'med-autogrant'],
+      ['redcube-ai', 'redcube-ai-local', 'redcube-ai'],
     ] as const) {
       const checkoutPath = path.join(familyWorkspace.workspaceRoot, project);
       const marketplaceRoot = path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', marketplaceId);
@@ -402,10 +402,10 @@ test('system configure-codex syncs Full runtime family Codex plugins after API k
       fs.existsSync(path.join(
         homeRoot,
         'opl-state',
-        'generated-codex-plugins',
-        'oma-local',
+        'codex-plugin-carriers',
+        'opl-meta-agent-local',
         'plugins',
-        'oma',
+        'opl-meta-agent',
         '.codex-plugin',
         'plugin.json',
       )),

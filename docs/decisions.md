@@ -92,7 +92,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 用户叙事统一为“安装 / 管理 OPL Agent Package”；Codex Plugin、OPL App module、Capability Pack、MCP/Web/native surface 都只是 carrier / projection detail。
 - 标准 agent 公共身份继续来自 standard agent registry 和 Foundry Agent series；plugin transport、generated surface 或 OPL App shortcut 不能成为 membership/status 轴。
 - `contracts/opl-framework/foundry-agent-series-contract.json#agent_package_exposure_unification_policy` 是该规则的机器入口；`opl connect skills --json` 必须投影 `agent_package_exposure_model`。
-- 标准 domain agent 的 Codex Plugin carrier 物理路径统一：domain repo 持有 rich primary skill 源，OPL Connect / materializer 生成 self-contained Codex plugin、marketplace wrapper 和 cache；旧 repo plugin 目录只能作为兼容 carrier / provenance mirror。
+- 标准 domain agent 的 Codex Plugin carrier 物理路径统一：domain repo 持有 rich primary skill 源 `agent/primary_skill/SKILL.md`，并持有 repo-local full-copy carrier `plugins/<plugin_name>/skills/<plugin_name>/SKILL.md`；OPL Connect 只负责校验、复制到本机 marketplace/cache 并注册 Codex config，不再拼接或生成另一份 skill body。
 - OPL App 不以 Codex plugin 格式作为主接口；它使用同一 Agent Package 抽象上的 managed dependency graph、package lifecycle receipt、exposure policy、shortcut/action refs 和 Developer Mode source channel。
 - App / carrier adapter 不拥有 domain workflow、prompt body、artifact schema、quality verdict、owner receipt、typed blocker、human gate 或 runtime authority。
 

@@ -641,7 +641,7 @@ export async function runOplStartupMaintenance(
         refreshed_system_environment: refreshedEnvironment,
         notes: [
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
-          'Startup maintenance updates clean OPL-managed module checkouts and syncs generated plugin/skill surfaces.',
+          'Startup maintenance updates clean OPL-managed module checkouts and syncs repo-local plugin carriers.',
           'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
           'Startup maintenance repairs the OPL Flow intelligence enhancement CodexCont service only when the local Codex config already has that mode enabled and the service needs startup recovery.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',

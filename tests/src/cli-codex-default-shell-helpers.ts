@@ -161,6 +161,51 @@ function writeFakePrimarySkill(repoRoot: string, skillName: string, heading: str
   );
 }
 
+function writeFakeRepoLocalPluginCarrier(repoRoot: string, pluginName: string) {
+  const pluginRoot = path.join(repoRoot, 'plugins', pluginName);
+  const skillRoot = path.join(pluginRoot, 'skills', pluginName);
+  const displayName = pluginName === 'med-autoscience'
+    ? 'Med Auto Science'
+    : pluginName === 'med-autogrant'
+      ? 'Med Auto Grant'
+      : pluginName === 'redcube-ai'
+        ? 'RedCube AI'
+        : pluginName === 'opl-meta-agent'
+          ? 'OPL Meta Agent'
+          : pluginName === 'opl-bookforge'
+            ? 'OPL Book Forge'
+            : pluginName;
+  fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(pluginRoot, 'assets'), { recursive: true });
+  fs.mkdirSync(skillRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
+    JSON.stringify({
+      name: pluginName,
+      version: '0.1.0',
+      skills: './skills/',
+      interface: {
+        displayName,
+        defaultPrompt: [
+          `Use ${displayName} to inspect the current domain state.`,
+          `Use ${displayName} to advance the domain workflow without bypassing authority.`,
+        ],
+        composerIcon: './assets/icon.svg',
+        logo: './assets/icon.svg',
+      },
+    }, null, 2),
+  );
+  fs.writeFileSync(
+    path.join(pluginRoot, 'assets', 'icon.svg'),
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-label="${displayName} icon"><rect width="64" height="64" rx="8"/></svg>\n`,
+    'utf8',
+  );
+  fs.copyFileSync(
+    path.join(repoRoot, 'agent', 'primary_skill', 'SKILL.md'),
+    path.join(skillRoot, 'SKILL.md'),
+  );
+}
+
 export const retiredCliCommandMatrix: Array<{
   args: string[];
   command: string;
@@ -342,11 +387,13 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     if (spec.project === 'opl-meta-agent') {
       fs.mkdirSync(repoRoot, { recursive: true });
       writeFakeOmaGeneratedSurfacePack(repoRoot);
+      writeFakeRepoLocalPluginCarrier(repoRoot, spec.plugin);
       continue;
     }
     if (spec.project === 'opl-bookforge') {
       fs.mkdirSync(repoRoot, { recursive: true });
       writeFakeBookForgeGeneratedSurfacePack(repoRoot);
+      writeFakeRepoLocalPluginCarrier(repoRoot, spec.plugin);
       continue;
     }
     if (spec.project === 'mas-scholar-skills') {
@@ -364,26 +411,17 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       );
       continue;
     }
-    const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);
-    const skillRoot = path.join(pluginRoot, 'skills', spec.canonicalPlugin);
+    const pluginRoot = path.join(repoRoot, 'plugins', spec.plugin);
+    const skillRoot = path.join(pluginRoot, 'skills', spec.plugin);
     const installerPath = path.join(repoRoot, spec.installer!);
-    fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
-    fs.mkdirSync(skillRoot, { recursive: true });
     fs.mkdirSync(path.dirname(installerPath), { recursive: true });
     writeFakePrimarySkill(
       repoRoot,
-      spec.canonicalPlugin,
-      `${spec.canonicalPlugin.toUpperCase()} Primary Skill`,
+      spec.plugin,
+      `${spec.plugin.toUpperCase()} Primary Skill`,
       `This fixture represents the repo-owned rich primary skill for ${spec.project}. The tracked legacy plugin skill is only a compatibility mirror.`,
     );
-    fs.writeFileSync(
-      path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
-      JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
-    );
-    fs.writeFileSync(
-      path.join(skillRoot, 'SKILL.md'),
-      `---\nname: ${spec.canonicalPlugin}\ndescription: ${fakeFamilySkillDescriptions[spec.canonicalPlugin]}\n---\n\n# ${spec.canonicalPlugin.toUpperCase()} App Skill\n\nThis fixture represents a canonical family app skill with a real workflow entry, not a placeholder.\n`,
-    );
+    writeFakeRepoLocalPluginCarrier(repoRoot, spec.plugin);
     fs.mkdirSync(path.join(skillRoot, 'agents'), { recursive: true });
     fs.writeFileSync(
       path.join(skillRoot, 'agents', 'openai.yaml'),
@@ -411,6 +449,7 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
     'OPL Meta Agent',
     'Use this rich primary skill to design, test, improve, or take over testing for OPL-compatible Foundry Agents. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
   );
+  writeFakeRepoLocalPluginCarrier(repoRoot, 'opl-meta-agent');
   fs.writeFileSync(
     path.join(repoRoot, 'agent', 'skills', 'opl-meta-agent-domain-skill.md'),
     [
@@ -638,6 +677,7 @@ export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
     'OPL Book Forge',
     'Use this rich primary skill to shape book storylines, materialize chapters, plan figures and tables, run style checks, and prepare owner-gated export handoff. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
   );
+  writeFakeRepoLocalPluginCarrier(repoRoot, 'opl-bookforge');
   fs.writeFileSync(
     path.join(repoRoot, 'agent', 'skills', 'book-production.md'),
     [

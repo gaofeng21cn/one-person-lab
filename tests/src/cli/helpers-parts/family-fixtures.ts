@@ -363,7 +363,8 @@ export function createGitModuleRemoteFixture(
   runGitFixtureCommand(sourceRoot, ['init', '--initial-branch', 'main']);
 
   fs.writeFileSync(path.join(sourceRoot, 'README.md'), `# ${moduleName}\n`, 'utf8');
-  for (const [relativePath, contents] of Object.entries(options.extraFiles ?? {})) {
+  const extraFiles = withStandardPrimarySkillCarrierFiles(moduleName, options.extraFiles ?? {});
+  for (const [relativePath, contents] of Object.entries(extraFiles)) {
     const targetPath = path.join(sourceRoot, relativePath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, contents, {
@@ -411,6 +412,27 @@ export function createGitModuleRemoteFixture(
       return runGitFixtureCommand(sourceRoot, ['rev-parse', 'HEAD']).stdout.trim();
     },
   };
+}
+
+function withStandardPrimarySkillCarrierFiles(moduleName: string, files: Record<string, string>) {
+  const pluginNameByModule: Record<string, string> = {
+    'med-autoscience': 'med-autoscience',
+    'med-autogrant': 'med-autogrant',
+    'redcube-ai': 'redcube-ai',
+    'opl-meta-agent': 'opl-meta-agent',
+    'opl-bookforge': 'opl-bookforge',
+  };
+  const pluginName = pluginNameByModule[moduleName];
+  if (!pluginName || files['agent/primary_skill/SKILL.md']) {
+    return files;
+  }
+  const carrierSkill = files[`plugins/${pluginName}/skills/${pluginName}/SKILL.md`];
+  return carrierSkill
+    ? {
+        'agent/primary_skill/SKILL.md': carrierSkill,
+        ...files,
+      }
+    : files;
 }
 
 export function createFakeShellCommandFixture() {

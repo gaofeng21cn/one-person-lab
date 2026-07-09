@@ -34,10 +34,10 @@ test('install command runs selected module installs and returns one-shot setup p
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: Use MAS runtime through its OPL-managed product entry.',
         '---',
         '',
@@ -143,13 +143,13 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
     assert.equal(
       fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
-        `[marketplaces.mas-local]\nsource_type = "local"\nsource = "${path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', 'mas-local')}"`,
+        `[marketplaces.med-autoscience-local]\nsource_type = "local"\nsource = "${path.join(homeRoot, 'opl-state', 'codex-plugin-marketplaces', 'med-autoscience-local')}"`,
       ),
       true,
     );
     assert.equal(
       fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
-        '[plugins."mas@mas-local"]\nenabled = true',
+        '[plugins."med-autoscience@med-autoscience-local"]\nenabled = true',
       ),
       true,
     );

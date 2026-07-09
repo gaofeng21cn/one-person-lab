@@ -16,8 +16,8 @@ test('system startup-maintenance silently updates package-channel modules and sy
       repoName: 'med-autoscience' as const,
       sourceHeadSha: `mas-${versionLabel}-sha`,
       files: {
-        'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-        'plugins/mas/skills/mas/SKILL.md': `---\nname: mas\ndescription: MAS ${versionLabel}.\n---\n\n# MAS ${versionLabel}\n`,
+        'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
+        'plugins/med-autoscience/skills/med-autoscience/SKILL.md': `---\nname: med-autoscience\ndescription: MAS ${versionLabel}.\n---\n\n# MAS ${versionLabel}\n`,
         'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"plugin":"mas","sync":"ok"}\\n\'\n',
       },
     },
@@ -26,8 +26,8 @@ test('system startup-maintenance silently updates package-channel modules and sy
       repoName: 'med-autogrant' as const,
       sourceHeadSha: `mag-${versionLabel}-sha`,
       files: {
-        'plugins/mag/.codex-plugin/plugin.json': JSON.stringify({ name: 'mag', skills: './skills/' }, null, 2),
-        'plugins/mag/skills/mag/SKILL.md': `---\nname: mag\ndescription: MAG ${versionLabel}.\n---\n\n# MAG ${versionLabel}\n`,
+        'plugins/med-autogrant/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autogrant', skills: './skills/' }, null, 2),
+        'plugins/med-autogrant/skills/med-autogrant/SKILL.md': `---\nname: med-autogrant\ndescription: MAG ${versionLabel}.\n---\n\n# MAG ${versionLabel}\n`,
         'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"plugin":"mag","sync":"ok"}\\n\'\n',
       },
     },
@@ -36,8 +36,8 @@ test('system startup-maintenance silently updates package-channel modules and sy
       repoName: 'redcube-ai' as const,
       sourceHeadSha: `rca-${versionLabel}-sha`,
       files: {
-        'plugins/rca/.codex-plugin/plugin.json': JSON.stringify({ name: 'rca', skills: './skills/' }, null, 2),
-        'plugins/rca/skills/rca/SKILL.md': `---\nname: rca\ndescription: RCA ${versionLabel}.\n---\n\n# RCA ${versionLabel}\n`,
+        'plugins/redcube-ai/.codex-plugin/plugin.json': JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2),
+        'plugins/redcube-ai/skills/redcube-ai/SKILL.md': `---\nname: redcube-ai\ndescription: RCA ${versionLabel}.\n---\n\n# RCA ${versionLabel}\n`,
         'scripts/install-codex-plugin.mjs': 'console.log(JSON.stringify({ plugin: "rca", sync: "ok" }));\n',
       },
     },

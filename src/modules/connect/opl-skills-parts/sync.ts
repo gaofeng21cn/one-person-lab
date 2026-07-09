@@ -22,7 +22,7 @@ import type {
   SyncFamilySkillPack,
 } from './registry.ts';
 
-type GeneratedCodexPluginSurface = {
+type MaterializedCodexPluginCarrier = {
   plugin_root: string;
   [key: string]: unknown;
 };
@@ -33,10 +33,10 @@ type RunSkillPackInstallerOptions = {
   targetProject?: SkillPackTargetProject | null;
   targetRoot?: string | null;
   resolveCodexHome: (home: string) => string;
-  writeGeneratedPluginSurface: (
+  writeMaterializedPluginCarrier: (
     inspected: InspectFamilySkillPack,
     home?: string,
-  ) => GeneratedCodexPluginSurface | null;
+  ) => MaterializedCodexPluginCarrier | null;
 };
 
 type ScholarSkillsCopyPolicy = {
@@ -730,7 +730,7 @@ export function runSkillPackInstaller(
   }
 
   if (inspected.source_kind === 'opl_standard_codex_carrier') {
-    const codexPluginSurface = options.writeGeneratedPluginSurface(inspected, options.home);
+    const codexPluginCarrier = options.writeMaterializedPluginCarrier(inspected, options.home);
     return {
       ...inspected,
       sync_status: 'synced',
@@ -743,10 +743,10 @@ export function runSkillPackInstaller(
       project_mirror_deprecated_for_paper_execution: false,
       project_mirror_non_default_paper_execution_path: false,
       installer_result: {
-        generated_surface: 'opl_standard_codex_plugin_carrier',
-        generated_codex_plugin: codexPluginSurface,
+        materialized_surface: 'repo_local_codex_plugin_carrier',
+        materialized_codex_plugin_carrier: codexPluginCarrier,
       },
-      registry_repo_root: codexPluginSurface ? path.dirname(path.dirname(codexPluginSurface.plugin_root)) : null,
+      registry_repo_root: codexPluginCarrier ? path.dirname(path.dirname(codexPluginCarrier.plugin_root)) : null,
       stdout: '',
       stderr: '',
     };

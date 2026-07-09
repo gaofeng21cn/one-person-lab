@@ -9,13 +9,13 @@ test('module install retries transient managed git clone failures', () => {
   const gitAttemptsPath = path.join(homeRoot, 'git-attempts.log');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'mas',
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'med-autoscience',
         skills: './skills/',
       }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': [
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
         '---',
-        'name: mas',
+        'name: med-autoscience',
         'description: Use MAS runtime through its OPL-managed product entry.',
         '---',
         '',

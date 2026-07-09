@@ -183,13 +183,13 @@ echo "Unsupported codex fixture command: $*" >&2
 exit 1
 `);
   const moduleExtraFiles = {
-    'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
-      name: 'mas',
+    'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+      name: 'med-autoscience',
       skills: './skills/',
     }, null, 2),
-    'plugins/mas/skills/mas/SKILL.md': [
+    'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
       '---',
-      'name: mas',
+      'name: med-autoscience',
       'description: Test skill fixture.',
       '---',
       '',
@@ -515,10 +515,10 @@ EOF
 `;
     }
     if (skill === 'rca') {
-      files['plugins/rca/.codex-plugin/plugin.json'] = JSON.stringify({ name: 'rca', skills: './skills/' }, null, 2);
-      files['plugins/rca/skills/rca/SKILL.md'] = [
+      files['plugins/redcube-ai/.codex-plugin/plugin.json'] = JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2);
+      files['plugins/redcube-ai/skills/redcube-ai/SKILL.md'] = [
         '---',
-        'name: rca',
+        'name: redcube-ai',
         'description: RCA workflow entry fixture.',
         '---',
         '',
@@ -678,18 +678,18 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
   };
   const packagedModules = {
     medautoscience: buildFullSeedModule('medautoscience', 'med-autoscience', 'mas', {
-      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': '---\nname: mas\ndescription: MAS fixture.\n---\n\n# MAS\n',
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autoscience', skills: './skills/' }, null, 2),
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': '---\nname: med-autoscience\ndescription: MAS fixture.\n---\n\n# MAS\n',
       'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"sync":"ok"}\\n\'\n',
     }),
     medautogrant: buildFullSeedModule('medautogrant', 'med-autogrant', 'mag', {
-      'plugins/mag/.codex-plugin/plugin.json': JSON.stringify({ name: 'mag', skills: './skills/' }, null, 2),
-      'plugins/mag/skills/mag/SKILL.md': '---\nname: mag\ndescription: MAG fixture.\n---\n\n# MAG\n',
+      'plugins/med-autogrant/.codex-plugin/plugin.json': JSON.stringify({ name: 'med-autogrant', skills: './skills/' }, null, 2),
+      'plugins/med-autogrant/skills/med-autogrant/SKILL.md': '---\nname: med-autogrant\ndescription: MAG fixture.\n---\n\n# MAG\n',
       'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"sync":"ok"}\\n\'\n',
     }),
     redcube: buildFullSeedModule('redcube', 'redcube-ai', 'rca', {
-      'plugins/rca/.codex-plugin/plugin.json': JSON.stringify({ name: 'rca', skills: './skills/' }, null, 2),
-      'plugins/rca/skills/rca/SKILL.md': '---\nname: rca\ndescription: RCA fixture.\n---\n\n# RCA\n',
+      'plugins/redcube-ai/.codex-plugin/plugin.json': JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2),
+      'plugins/redcube-ai/skills/redcube-ai/SKILL.md': '---\nname: redcube-ai\ndescription: RCA fixture.\n---\n\n# RCA\n',
       'scripts/install-codex-plugin.ts': [
         '#!/usr/bin/env node',
         'console.log(JSON.stringify({ sync: "ok" }));',

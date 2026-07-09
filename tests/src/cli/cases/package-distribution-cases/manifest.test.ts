@@ -380,9 +380,9 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.deepEqual(
     output.packages_manifest.packages.modules.medautoscience.codex_standalone_distribution,
     {
-      distribution_shape: 'self_contained_fat_plugin',
-      plugin_id: 'mas',
-      required_skill_ids: ['mas', 'mas-scholar-skills'],
+      distribution_shape: 'repo_carrier_source',
+      plugin_id: 'med-autoscience',
+      required_skill_ids: ['med-autoscience', 'mas-scholar-skills'],
       bundled_capability_package_ids: ['mas-scholar-skills'],
       carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
       package_manifest_ref: 'contracts/opl-framework/agent-packages/mas.json',
@@ -452,7 +452,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   const omaCodexStandaloneDistribution = output.packages_manifest.packages.modules.oplmetaagent.codex_standalone_distribution;
   assert.ok(omaCodexStandaloneDistribution);
-  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'generated_carrier_surface');
+  assert.equal(omaCodexStandaloneDistribution.distribution_shape, 'repo_carrier_source');
   assert.equal(omaCodexStandaloneDistribution.package_manifest_ref, 'contracts/opl-framework/agent-packages/oma.json');
   assert.equal(
     output.packages_manifest.packages.modules.scholarskills.artifact,

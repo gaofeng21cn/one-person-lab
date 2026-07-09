@@ -46,10 +46,10 @@
     "install_truth": "resolved_digest_lock"
   },
   "codex_surface": {
-    "plugin_id": "mas",
-    "standalone_distribution": "self_contained_fat_plugin",
+    "plugin_id": "med-autoscience",
+    "standalone_distribution": "repo_carrier_source",
     "required_skill_ids": [
-      "mas",
+      "med-autoscience",
       "mas-scholar-skills"
     ],
     "bundled_capability_package_ids": [
