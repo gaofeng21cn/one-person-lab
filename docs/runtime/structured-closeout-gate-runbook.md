@@ -64,7 +64,7 @@ domain StageOutcome / typed closeout packet
 5. provider-runtime closeout blocker：仍缺合法 packet 时，attempt 进入 OPL provider-runtime blocker，例如 `typed_closeout_packet_required` / `completed_missing_typed_closeout`。
 6. recovery-repair projection：Runway / Console 投影 repair plan、候选 refs、下一 owner 和禁止 claims，供 operator 或 repair lane 查询。
 
-这条流程的停止条件是 accepted structured packet、合法 domain owner ref 被消费、typed blocker / human gate / route-back 已由 owner surface 给出，或 OPL provider-runtime blocker 被投影。任何一步都不能把格式漂移误标为 completed。
+这条流程的停止条件是 accepted structured packet、合法 domain owner ref 被消费、typed blocker / human gate / route-back 已由 owner surface 给出，或 OPL provider-runtime blocker 被投影。任何一步都不能把格式漂移误标为 completed；漂移只能落到现有 machine surface 的 typed repair / provider-runtime blocker reason，不能靠纯文本摘要、关键词或跨 session 猜测生成下一步推进。
 
 ## Repair / Redrive 边界
 

@@ -279,7 +279,7 @@ rtk ./bin/opl okf inspect --bundle <okf_dir> --json
 rtk ./bin/opl okf project-pack --pack <pack_compiler_input.json> --output <okf_dir> --json
 ```
 
-默认阅读顺序是 owner-delta-first：先从 `current_owner_delta` 看等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness。OPL provider / transport safe action 只有在没有 current owner delta 时才可成为默认下一步。raw refs-only counters、provider worker / redrive / scheduler route、evidence envelope、stage replay packet、typed blocker group、private residue inventory 和历史 receipt 计数都只作 drilldown。
+默认阅读顺序是 owner-delta-first：先从 `current_owner_delta` 看等待哪个 owner、需要什么 deliverable delta / receipt / typed blocker，以及该等待是否阻断 readiness。OPL provider / transport safe action 只有在没有 current owner delta 时才可成为默认下一步。raw refs-only counters、provider worker / redrive / scheduler route、evidence envelope、stage replay packet、typed blocker group、private residue inventory、历史 receipt 计数、attempt backlog 和 repair queue 都只作 drilldown / diagnostic，不进入普通用户默认 next action，也不改变研究、基金、视觉或 App 路线控制权。
 
 Runtime / product / policy 入口的迁移读法同样服从 owner-delta-first：新增 App Console 页面、Agent Lab control-plane view、Atlas/Ledger telemetry、route reconciler、artifact reconciler 或 generated surface 时，先证明它是否能折叠成 `current_owner_delta`、owner answer、typed blocker、hard gate、route-back 或 audit/ref drilldown。不能折叠的内容只作为 diagnostic、history、cleanup 或 support 入口，不进入默认 next action，也不改变 active gap owner。
 
