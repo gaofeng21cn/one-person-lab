@@ -9,8 +9,6 @@ _FORBIDDEN_BODY_KEY_PARTS = (
     ("artifact", "content"),
     ("artifact", "payload"),
     ("evidence", "body"),
-    ("grant", "artifact"),
-    ("grant", "body"),
     ("package", "body"),
     ("package", "content"),
     ("package", "payload"),

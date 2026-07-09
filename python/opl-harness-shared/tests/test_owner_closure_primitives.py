@@ -283,7 +283,7 @@ def test_artifact_lifecycle_builder_projects_refs_and_rejects_bodies() -> None:
     with pytest.raises(ValueError, match="artifact body"):
         build_refs_only_artifact_lifecycle_handoff(
             profile=profile,
-            package_refs={**package_refs, "grant_artifact": "secret"},
+            package_refs={**package_refs, "package_body": "secret"},
             gap_report={"gap_report_ref": "gap:1", "summary": "gap", "gap_refs": []},
             verdict_refs={"verdict_ref": "verdict:1"},
             manual_boundary={"manual_portal_boundary_ref": "manual:1"},

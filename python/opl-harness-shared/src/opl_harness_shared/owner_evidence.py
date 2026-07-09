@@ -82,8 +82,8 @@ def _authority(value: object, field: str) -> dict[str, Any]:
 
 def _ledger(value: object, field: str = "opl_ledger") -> dict[str, Any]:
     raw = _mapping(value, field)
-    writes = _bool(raw.get("domain_writes_opl_ledger", raw.get("mag_writes_opl_ledger")), f"{field}.domain_writes_opl_ledger")
-    holds_truth = _bool(raw.get("opl_holds_domain_truth", raw.get("opl_holds_grant_truth")), f"{field}.opl_holds_domain_truth")
+    writes = _bool(raw.get("domain_writes_opl_ledger"), f"{field}.domain_writes_opl_ledger")
+    holds_truth = _bool(raw.get("opl_holds_domain_truth"), f"{field}.opl_holds_domain_truth")
     if writes or holds_truth:
         raise ValueError(f"{field} must remain refs-only and cannot hold domain truth")
     return {
