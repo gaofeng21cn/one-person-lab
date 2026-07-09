@@ -61,9 +61,14 @@ test('system dependency-doctor blocks only the Book Forge proof profile when a r
     assert.equal(doctor.profile.profile_owner, 'opl-bookforge');
     assert.equal(doctor.profile.source.profile_ref, 'bookforge-zh-publication-proof');
     assert.equal(doctor.profile.source.helper_ref, 'runtime/native_helpers/bookforge_pdf_export.py');
+    assert.equal(
+      doctor.profile.source_descriptor_ref,
+      'opl-bookforge/contracts/domain_descriptor.json#/dependency_profiles/0',
+    );
     assert.equal(doctor.opl_role, 'dependency_environment_check');
     assert.equal(doctor.status, 'blocked');
     assert.equal(doctor.summary.missing_required_dependency_count, 1);
+    assert.equal(doctor.repair_action.action_id, 'repair_dependency_profile_dependencies');
     assert.equal(doctor.repair_action.status, 'manual_required');
     assert.deepEqual(doctor.repair_action.apply_command, [
       'opl',
