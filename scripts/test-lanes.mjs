@@ -76,6 +76,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/family-runtime-command-parser.test.ts',
   'tests/src/current-owner-delta-read-model-cache.test.ts',
   'tests/src/family-transition-runner.test.ts',
+  'tests/src/stagecraft-domain-profile-registry.test.ts',
   'tests/src/functional-agent-runtime-harness.test.ts',
   'tests/src/functional-privatization-audit-envelope.test.ts',
   'tests/src/domain-dispatch-evidence-payload-preflight.test.ts',
