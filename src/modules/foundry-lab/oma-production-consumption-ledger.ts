@@ -81,7 +81,7 @@ function emptyLedger(): OmaProductionConsumptionLedger {
 }
 
 function ledgerPath() {
-  return resolveOplStatePaths().oma_production_consumption_ledger_file;
+  return path.join(resolveOplStatePaths().state_dir, 'oma-production-consumption-ledger.json');
 }
 
 function allEvidenceRefs(input: OmaProductionConsumptionReceiptInput) {
@@ -143,9 +143,9 @@ export function readOmaProductionConsumptionLedger(): OmaProductionConsumptionLe
 }
 
 function writeOmaProductionConsumptionLedger(ledger: OmaProductionConsumptionLedger) {
-  const paths = ensureOplStateDir();
+  ensureOplStateDir();
   fs.writeFileSync(
-    paths.oma_production_consumption_ledger_file,
+    ledgerPath(),
     `${JSON.stringify(ledger, null, 2)}\n`,
   );
 }

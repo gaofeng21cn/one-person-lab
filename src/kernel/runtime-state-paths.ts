@@ -20,8 +20,6 @@ export type OplStatePaths = {
   managed_install_update_ledger_file: string;
   managed_update_component_receipt_ledger_file: string;
   managed_update_kernel_lock_file: string;
-  oma_app_live_path_ledger_file: string;
-  oma_production_consumption_ledger_file: string;
   app_release_user_path_evidence_ledger_file: string;
   codex_app_runtime_evidence_ledger_file: string;
   provider_long_soak_evidence_ledger_file: string;
@@ -29,7 +27,7 @@ export type OplStatePaths = {
   brand_module_l5_evidence_ledger_file: string;
   standard_agent_template_consumption_ledger_file: string;
   domain_owner_payload_summary_ledger_file: string;
-  mag_manifest_sustained_consumption_ledger_file: string;
+  owner_evidence_sustained_consumption_ledger_file: string;
   stage_replay_missing_receipt_ledger_file: string;
   stage_run_execution_authorization_ledger_file: string;
   stage_transition_authority_event_ledger_file: string;
@@ -82,11 +80,6 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
       'managed-update-component-receipts.json',
     ),
     managed_update_kernel_lock_file: path.join(stateDir, 'managed-update-kernel.lock'),
-    oma_app_live_path_ledger_file: path.join(stateDir, 'oma-app-live-path-ledger.json'),
-    oma_production_consumption_ledger_file: path.join(
-      stateDir,
-      'oma-production-consumption-ledger.json',
-    ),
     app_release_user_path_evidence_ledger_file: path.join(
       stateDir,
       'app-release-user-path-evidence-ledger.json',
@@ -115,9 +108,9 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
       stateDir,
       'domain-owner-payload-summary-ledger.json',
     ),
-    mag_manifest_sustained_consumption_ledger_file: path.join(
+    owner_evidence_sustained_consumption_ledger_file: path.join(
       stateDir,
-      'mag-manifest-sustained-consumption-followthrough-ledger.json',
+      'owner-evidence-sustained-consumption-ledger.json',
     ),
     stage_replay_missing_receipt_ledger_file: path.join(
       stateDir,

@@ -165,7 +165,7 @@ function ledgerPath() {
 }
 
 function legacyLedgerPath() {
-  return resolveOplStatePaths().mag_manifest_sustained_consumption_ledger_file;
+  return resolveOplStatePaths().owner_evidence_sustained_consumption_ledger_file;
 }
 
 function allEvidenceRefs(input: OwnerEvidenceSustainedConsumptionReceiptInput) {

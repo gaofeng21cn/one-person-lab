@@ -140,7 +140,7 @@ function buildFamilySchedulerReplacement() {
         legacy_scheduler_owner: null,
         legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
         replacement_role:
-          `OPL owns scheduler cadence, provider SLO tick, Temporal attempt ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection; MAS keeps paper-progress SLO semantics, owner receipt, typed blocker, and safe action refs.`,
+          `OPL owns scheduler cadence, provider SLO tick, Temporal attempt ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection; the selected domain owner keeps progress semantics, owner receipts, typed blockers, and safe action refs.`,
         required_domain_refs: [
           MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
           OPL_RUNTIME_OWNER_ROUTE,

@@ -4,7 +4,7 @@ import {
   uniqueStringList,
   type JsonRecord,
 } from '../../kernel/json-record.ts';
-import { OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE } from '../../kernel/observability-projection-vocabulary.ts';
+import { OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE } from '../../kernel/observability-projection-vocabulary.ts';
 
 export const MAS_DOMAIN_PROGRESS_REFS_COMPATIBILITY_PROFILE = {
   profile_id: 'medautoscience.domain_progress_refs.compatibility.v1',
@@ -28,7 +28,7 @@ export const MAS_DOMAIN_PROGRESS_REFS_COMPATIBILITY_PROFILE = {
     '/artifacts/reports/publishability_gate/',
     '/paper/draft.md',
     '/paper/build/review_manuscript.md',
-    OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE,
+    OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE,
     '/paper/claim_evidence_map.json',
     '/paper/review/review_ledger.json',
   ],

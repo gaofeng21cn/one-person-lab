@@ -44,11 +44,11 @@ test('OPL state paths default to the current state dir and ignore old UI adapter
     const paths = resolveOplStatePaths();
     assert.equal(paths.state_dir, expectedStateDir);
     assert.equal(paths.developer_supervisor_config_file, path.join(expectedStateDir, 'developer-supervisor.json'));
-    assert.equal(paths.oma_app_live_path_ledger_file, path.join(expectedStateDir, 'oma-app-live-path-ledger.json'));
     assert.equal(
-      paths.oma_production_consumption_ledger_file,
-      path.join(expectedStateDir, 'oma-production-consumption-ledger.json'),
+      paths.owner_evidence_sustained_consumption_ledger_file,
+      path.join(expectedStateDir, 'owner-evidence-sustained-consumption-ledger.json'),
     );
+    assert.equal(Object.keys(paths).some((key) => key.startsWith('oma_') || key.startsWith('mag_')), false);
     assert.equal(
       paths.app_release_user_path_evidence_ledger_file,
       path.join(expectedStateDir, 'app-release-user-path-evidence-ledger.json'),

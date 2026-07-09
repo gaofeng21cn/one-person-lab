@@ -72,7 +72,7 @@ function emptyLedger(): OmaAppLivePathLedger {
 }
 
 function ledgerPath() {
-  return resolveOplStatePaths().oma_app_live_path_ledger_file;
+  return path.join(resolveOplStatePaths().state_dir, 'oma-app-live-path-ledger.json');
 }
 
 function receiptRef(input: OmaAppLivePathReceiptInput) {
@@ -133,8 +133,8 @@ export function readOmaAppLivePathLedger(): OmaAppLivePathLedger {
 }
 
 function writeOmaAppLivePathLedger(ledger: OmaAppLivePathLedger) {
-  const paths = ensureOplStateDir();
-  fs.writeFileSync(paths.oma_app_live_path_ledger_file, `${JSON.stringify(ledger, null, 2)}\n`);
+  ensureOplStateDir();
+  fs.writeFileSync(ledgerPath(), `${JSON.stringify(ledger, null, 2)}\n`);
 }
 
 function normalizeInput(input: OmaAppLivePathReceiptInput): OmaAppLivePathReceipt {

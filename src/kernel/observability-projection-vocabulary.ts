@@ -8,4 +8,3 @@ export const OBSERVABILITY_SOURCE_LEDGER_FILE = '/source/source_ledger.json';
 
 // Compatibility alias for MAS paper-progress imports; not canonical OPL core vocabulary.
 export const OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE = '/paper/evidence_ledger.json';
-export const OBSERVABILITY_PAPER_EVIDENCE_LEDGER_FILE = OBSERVABILITY_COMPAT_PAPER_EVIDENCE_LEDGER_FILE;
