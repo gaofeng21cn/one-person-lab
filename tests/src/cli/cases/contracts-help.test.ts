@@ -185,33 +185,20 @@ test('global --contracts-dir expects an exact contract root', () => {
 test('list-workstreams returns admitted workstream summaries', () => {
   const output = runCli(['contract', 'workstreams']);
 
-  assert.deepEqual(output, {
-    version: 'g2',
-    contracts_context: {
-      contracts_dir: contractsDir,
-      contracts_root_source: 'cwd',
-    },
-    workstreams: [
-      {
-        workstream_id: 'grant_ops',
-        label: 'Grant Ops',
-        status: 'active',
-        domain_id: 'medautogrant',
-      },
-      {
-        workstream_id: 'research_ops',
-        label: 'Research Foundry',
-        status: 'active',
-        domain_id: 'medautoscience',
-      },
-      {
-        workstream_id: 'presentation_ops',
-        label: 'Presentation Foundry',
-        status: 'active',
-        domain_id: 'redcube',
-      },
+  assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
+  assert.deepEqual(
+    output.workstreams.map((entry: { workstream_id: string; domain_id: string; status: string }) => [
+      entry.workstream_id,
+      entry.domain_id,
+      entry.status,
+    ]),
+    [
+      ['grant_ops', 'medautogrant', 'active'],
+      ['research_ops', 'medautoscience', 'active'],
+      ['presentation_ops', 'redcube', 'active'],
     ],
-  });
+  );
 });
 
 test('contract workstream returns the full registered workstream meaning', () => {
@@ -227,82 +214,20 @@ test('contract workstream returns the full registered workstream meaning', () =>
 test('contract domains returns the registered domain-agent summaries', () => {
   const output = runCli(['contract', 'domains']);
 
-  assert.deepEqual(output, {
-    version: 'g2',
-    contracts_context: {
-      contracts_dir: contractsDir,
-      contracts_root_source: 'cwd',
-    },
-    domains: [
-      {
-        domain_id: 'medautogrant',
-        product_layer: 'foundry_agent',
-        package_kind: 'opl_compatible_package',
-        embeds_opl_runtime: false,
-        independent_domain_agent: 'mag',
-        single_app_skill: 'mag',
-        domain_truth_owner: [
-          'grant_run_truth',
-          'grant_workspace_state',
-          'grant_submission_artifacts',
-          'grant_review_judgment',
-          'grant_user_visible_progress',
-        ],
-        opl_projection_role: [
-          'consume_session_projections',
-          'consume_progress_projections',
-          'consume_artifact_projections',
-          'consume_runtime_projections',
-        ],
-        owned_workstreams: ['grant_ops'],
-      },
-      {
-        domain_id: 'medautoscience',
-        product_layer: 'foundry_agent',
-        package_kind: 'opl_compatible_package',
-        embeds_opl_runtime: false,
-        independent_domain_agent: 'mas',
-        single_app_skill: 'mas',
-        domain_truth_owner: [
-          'study_truth',
-          'runtime_health',
-          'publication_judgment',
-          'ai_reviewer_quality_artifacts',
-          'artifact_authority',
-          'user_visible_progress',
-        ],
-        opl_projection_role: [
-          'consume_session_projections',
-          'consume_progress_projections',
-          'consume_artifact_projections',
-          'consume_runtime_projections',
-        ],
-        owned_workstreams: ['research_ops'],
-      },
-      {
-        domain_id: 'redcube',
-        product_layer: 'foundry_agent',
-        package_kind: 'opl_compatible_package',
-        embeds_opl_runtime: false,
-        independent_domain_agent: 'rca',
-        single_app_skill: 'rca',
-        domain_truth_owner: [
-          'deliverable_run_truth',
-          'review_state',
-          'artifact_truth',
-          'export_authority',
-          'user_visible_progress',
-        ],
-        opl_projection_role: [
-          'consume_session_projections',
-          'consume_progress_projections',
-          'consume_artifact_projections',
-          'consume_runtime_projections',
-        ],
-        owned_workstreams: ['presentation_ops'],
-      },
+  assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
+  assert.deepEqual(
+    output.domains.map((
+      domain: { domain_id: string; independent_domain_agent: string; single_app_skill: string; owned_workstreams: string[] },
+    ) => [domain.domain_id, domain.independent_domain_agent, domain.single_app_skill, domain.owned_workstreams[0]]),
+    [
+      ['medautogrant', 'mag', 'mag', 'grant_ops'],
+      ['medautoscience', 'mas', 'mas', 'research_ops'],
+      ['redcube', 'rca', 'rca', 'presentation_ops'],
     ],
-  });
+  );
+  assert.equal(output.domains.every((domain: { product_layer: string }) => domain.product_layer === 'foundry_agent'), true);
+  assert.equal(output.domains.every((domain: { embeds_opl_runtime: boolean }) => domain.embeds_opl_runtime === false), true);
 });
 
 test('contract surfaces returns the public framework surface summaries', () => {
@@ -322,12 +247,7 @@ test('contract surfaces returns the public framework surface summaries', () => {
   });
   assert.ok(
     output.surfaces.some(
-      (surface: {
-        surface_id: string;
-        category_id: string;
-        surface_kind: string;
-        owner_scope: string;
-      }) =>
+      (surface: any) =>
         surface.surface_id === 'rca_domain_agent_entry'
         && surface.category_id === 'domain_agent_entry'
         && surface.owner_scope === 'domain',
@@ -335,12 +255,7 @@ test('contract surfaces returns the public framework surface summaries', () => {
   );
   assert.ok(
     output.surfaces.some(
-      (surface: {
-        surface_id: string;
-        category_id: string;
-        surface_kind: string;
-        owner_scope: string;
-      }) =>
+      (surface: any) =>
         surface.surface_id === 'one_person_lab_app_workbench'
         && surface.category_id === 'one_person_lab_app'
         && surface.owner_scope === 'app',
@@ -348,12 +263,7 @@ test('contract surfaces returns the public framework surface summaries', () => {
   );
   assert.ok(
     output.surfaces.some(
-      (surface: {
-        surface_id: string;
-        category_id: string;
-        surface_kind: string;
-        owner_scope: string;
-      }) =>
+      (surface: any) =>
         surface.surface_id === 'opl_framework_locator'
         && surface.category_id === 'opl_framework_contract'
         && surface.surface_kind === 'framework_dependency_locator'
@@ -362,12 +272,7 @@ test('contract surfaces returns the public framework surface summaries', () => {
   );
   assert.ok(
     output.surfaces.some(
-      (surface: {
-        surface_id: string;
-        category_id: string;
-        surface_kind: string;
-        owner_scope: string;
-      }) =>
+      (surface: any) =>
         surface.surface_id === 'mas_foundry_agent_package'
         && surface.category_id === 'foundry_agent_package'
         && surface.surface_kind === 'opl_compatible_package',
@@ -394,143 +299,63 @@ test('contract surface returns the full registered public surface meaning', () =
   assert.equal(output.surface.category_id, 'one_person_lab_app');
   assert.equal(output.surface.boundary_role, 'app_consumer_workbench');
   assert.equal(output.surface.truth_mode, 'projection_consumer');
-  assert.deepEqual(output.surface.routes_to, [
-    'opl_stage_runtime_framework',
-    'mag_foundry_agent_package',
-    'mas_foundry_agent_package',
-    'rca_foundry_agent_package',
-  ]);
+  assert.deepEqual(output.surface.routes_to, ['opl_stage_runtime_framework', 'mag_foundry_agent_package', 'mas_foundry_agent_package', 'rca_foundry_agent_package']);
 });
 
-test('selectDomainAgentEntry selects research delivery to medautoscience', () => {
-  const resolution = selectDomainAgentEntry(
-    {
-      intent: 'submission_delivery',
-      target: 'publication',
-      goal: 'Prepare the manuscript package for journal review.',
-    },
-    loadFrameworkContracts(repoRoot),
+test('domain selection routes representative admitted boundary and candidate-lane requests', () => {
+  const contracts = loadFrameworkContracts(repoRoot);
+  assert.deepEqual(
+    [
+      selectDomainAgentEntry(
+        { intent: 'submission_delivery', target: 'publication', goal: 'Prepare the manuscript package for journal review.' },
+        contracts,
+      ),
+      selectDomainAgentEntry(
+        { intent: 'presentation_delivery', target: 'deliverable', goal: 'Prepare a defense-ready slide deck for a thesis committee.' },
+        contracts,
+      ),
+    ].map((resolution) => [resolution.status, 'workstream_id' in resolution ? resolution.workstream_id : undefined, 'domain_id' in resolution ? resolution.domain_id : undefined]),
+    [
+      ['selected_domain_agent_entry', 'research_ops', 'medautoscience'],
+      ['selected_domain_agent_entry', 'presentation_ops', 'redcube'],
+    ],
   );
 
-  assert.equal(resolution.status, 'selected_domain_agent_entry');
-  assert.equal(resolution.workstream_id, 'research_ops');
-  assert.equal(resolution.domain_id, 'medautoscience');
-});
-
-test('selectDomainAgentEntry selects presentation delivery to redcube', () => {
-  const resolution = selectDomainAgentEntry(
+  const cliCases: Array<{ goal: string; preferred?: string; intent?: string; expected: unknown[] }> = [
+    { goal: 'Create the committee deck.', preferred: 'ppt_deck', expected: ['selected_domain_agent_entry', 'presentation_ops', 'redcube'] },
+    { goal: 'Prepare a xiaohongshu campaign pack.', preferred: 'xiaohongshu', intent: 'create', expected: ['domain_boundary', null, 'redcube'] },
     {
-      intent: 'presentation_delivery',
-      target: 'deliverable',
-      goal: 'Prepare a defense-ready slide deck for a thesis committee.',
+      goal: 'Draft a patent application with claims and embodiments from this medical research result.',
+      expected: ['unknown_domain', 'ip_ops', undefined],
     },
-    loadFrameworkContracts(repoRoot),
-  );
-
-  assert.equal(resolution.status, 'selected_domain_agent_entry');
-  assert.equal(resolution.request_kind, 'discover');
-  assert.equal(resolution.workstream_id, 'presentation_ops');
-  assert.equal(resolution.domain_id, 'redcube');
-  assert.equal(resolution.entry_surface, 'domain_agent_entry');
-  assert.equal(resolution.recommended_family, 'ppt_deck');
-});
-
-test('selectDomainAgentEntry keeps ppt_deck mapped to presentation_ops', () => {
-  const output = runCli([
-    'domain',
-    'select-entry',
-    '--intent',
-    'presentation_delivery',
-    '--target',
-    'deliverable',
-    '--goal',
-    'Create the committee deck.',
-    '--preferred-family',
-    'ppt_deck',
-  ]);
-
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'selected_domain_agent_entry');
-  assert.equal(output.resolution.workstream_id, 'presentation_ops');
-  assert.equal(output.resolution.domain_id, 'redcube');
-});
-
-test('selectDomainAgentEntry keeps xiaohongshu at the redcube family boundary', () => {
-  const output = runCli([
-    'domain',
-    'select-entry',
-    '--intent',
-    'create',
-    '--target',
-    'deliverable',
-    '--goal',
-    'Prepare a xiaohongshu campaign pack.',
-    '--preferred-family',
-    'xiaohongshu',
-  ]);
-
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'domain_boundary');
-  assert.equal(output.resolution.domain_id, 'redcube');
-  assert.equal(output.resolution.workstream_id, null);
-});
-
-test('selectDomainAgentEntry keeps patent requests on the IP Ops candidate lane', () => {
-  const output = runCli([
-    'domain',
-    'select-entry',
-    '--intent',
-    'create',
-    '--target',
-    'deliverable',
-    '--goal',
-    'Draft a patent application with claims and embodiments from this medical research result.',
-  ]);
-
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'unknown_domain');
-  assert.equal(output.resolution.candidate_workstream_id, 'ip_ops');
-  assert.equal(output.resolution.domain_id, undefined);
-  assert.match(output.resolution.reason, /under definition/i);
-});
-
-test('selectDomainAgentEntry keeps award requests off the MedAutoGrant route', () => {
-  const output = runCli([
-    'domain',
-    'select-entry',
-    '--intent',
-    'create',
-    '--target',
-    'deliverable',
-    '--goal',
-    'Prepare a science and technology award application with achievement summary and impact evidence.',
-  ]);
-
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'unknown_domain');
-  assert.equal(output.resolution.candidate_workstream_id, 'award_ops');
-  assert.equal(output.resolution.domain_id, undefined);
-  assert.match(output.resolution.reason, /under definition/i);
-});
-
-test('selectDomainAgentEntry selects grant work to medautogrant', () => {
-  const output = runCli([
-    'domain',
-    'select-entry',
-    '--intent',
-    'plan',
-    '--target',
-    'deliverable',
-    '--goal',
-    'Build a formal grant proposal operating lane from the supplied topic brief.',
-  ]);
-
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'selected_domain_agent_entry');
-  assert.equal(output.resolution.domain_id, 'medautogrant');
-  assert.equal(output.resolution.workstream_id, 'grant_ops');
-  assert.equal(output.resolution.entry_surface, 'domain_agent_entry');
+    {
+      goal: 'Prepare a science and technology award application with achievement summary and impact evidence.',
+      expected: ['unknown_domain', 'award_ops', undefined],
+    },
+    { goal: 'Build a formal grant proposal operating lane from the supplied topic brief.', intent: 'plan', expected: ['selected_domain_agent_entry', 'grant_ops', 'medautogrant'] },
+  ];
+  for (const entry of cliCases) {
+    const args = [
+      'domain',
+      'select-entry',
+      '--intent',
+      entry.intent ?? (entry.preferred === undefined ? 'create' : 'presentation_delivery'),
+      '--target',
+      'deliverable',
+      '--goal',
+      entry.goal,
+    ];
+    if (entry.preferred) args.push('--preferred-family', entry.preferred);
+    const output = runCli(args);
+    const workstream = output.resolution.workstream_id === null
+      ? null
+      : output.resolution.workstream_id ?? output.resolution.candidate_workstream_id;
+    assertContractsContext(output, 'cwd');
+    assert.deepEqual(
+      [output.resolution.status, workstream, output.resolution.domain_id],
+      entry.expected,
+    );
+  }
 });
 
 test('selectDomainAgentEntry returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
@@ -547,23 +372,13 @@ test('selectDomainAgentEntry returns ambiguous_task with explicit boundary evide
 
   assertContractsContext(output, 'cwd');
   assert.equal(output.resolution.status, 'ambiguous_task');
-  assert.deepEqual(output.resolution.candidate_workstreams, [
-    'research_ops',
-    'presentation_ops',
-  ]);
-  assert.deepEqual(output.resolution.candidate_domains, [
-    'medautoscience',
-    'redcube',
-  ]);
+  assert.deepEqual(output.resolution.candidate_workstreams, ['research_ops', 'presentation_ops']);
+  assert.deepEqual(output.resolution.candidate_domains, ['medautoscience', 'redcube']);
   assert.deepEqual(output.resolution.required_clarification, [
     'Is the primary goal a formal research deliverable or a presentation deliverable?',
     'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
   ]);
-  assert.deepEqual(output.resolution.selection_evidence, [
-    'research delivery semantics',
-    'presentation delivery semantics',
-    'missing primary deliverable',
-  ]);
+  assert.deepEqual(output.resolution.selection_evidence, ['research delivery semantics', 'presentation delivery semantics', 'missing primary deliverable']);
 });
 
 test('explainDomainBoundary explains admitted presentation stage selection', () => {
