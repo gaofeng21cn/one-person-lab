@@ -15,41 +15,6 @@ import {
   writePassingAgentLabSuite,
 } from './agent-lab-work-order-fixtures.ts';
 
-function runWorkOrderExecution(commandPrefix: string[]) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-exec-'));
-  const targetRepo = path.join(fixtureRoot, 'target-agent');
-  const outputDir = path.join(fixtureRoot, 'output');
-  const codexBin = path.join(fixtureRoot, 'codex');
-  const workOrderPath = path.join(fixtureRoot, 'developer-patch-work-order.json');
-
-  createWorkOrderTargetRepo(targetRepo);
-  createFakeCodexWorkOrderExecutor(codexBin);
-  writeExecutableWorkOrder(workOrderPath, targetRepo);
-
-  const output = runCli([
-    ...commandPrefix,
-    '--work-order',
-    workOrderPath,
-    '--target-agent-dir',
-    targetRepo,
-    '--output-dir',
-    outputDir,
-    '--verification-command',
-    'test -f docs/efficiency.md',
-    '--codex-timeout-ms',
-    '10000',
-    '--json',
-  ], {
-    OPL_CODEX_BIN: codexBin,
-  });
-
-  return {
-    fixtureRoot,
-    targetRepo,
-    output,
-  };
-}
-
 function createTargetAdvancingFakeCodexWorkOrderExecutor(filePath: string): void {
   fs.writeFileSync(filePath, `#!/usr/bin/env bash
 set -euo pipefail
@@ -84,43 +49,6 @@ printf '{"type":"thread.started","thread_id":"thread-work-order"}\\n'
 printf '{"type":"item.completed","item":{"type":"agent_message","id":"msg-1","text":"work order patch applied"}}\\n'
 `, { mode: 0o755 });
 }
-
-test('work-order execute is the canonical OPL work-order execution primitive', () => {
-  const { fixtureRoot, targetRepo, output } = runWorkOrderExecution(['work-order', 'execute']);
-  try {
-    assert.equal(output.version, 'g2');
-    assert.equal(output.work_order_execution.surface_id, 'opl_work_order_codex_execution');
-    assert.equal(output.work_order_execution.primitive_owner, 'one-person-lab/OPL');
-    assert.equal(output.work_order_execution.command_surface, 'work-order execute');
-    assert.equal(output.work_order_execution.status, 'executed_absorbed_and_cleaned');
-    assert.equal(output.work_order_execution.receipt.primitive_owner, 'one-person-lab/OPL');
-    assert.equal(output.work_order_execution.receipt.executor.executor_kind, 'codex_cli');
-    assert.equal(output.work_order_execution.receipt.absorption.absorbed, true);
-    assert.equal(output.work_order_execution.receipt.cleanup.worktree_removed, true);
-    assert.equal(fs.existsSync(path.join(targetRepo, 'docs/efficiency.md')), true);
-    assert.equal(typeof output.work_order_execution.artifacts.execution_plan_path, 'string');
-    assert.equal(typeof output.work_order_execution.artifacts.execution_report_path, 'string');
-
-    const receipt = readJson(output.work_order_execution.artifacts.execution_receipt_path);
-    assert.equal(receipt.surface_kind, 'opl_work_order_codex_execution_receipt');
-    assert.equal(receipt.primitive_owner, 'one-person-lab/OPL');
-    assert.equal(receipt.execution_plan.surface_kind, 'opl_work_order_execution_plan');
-    assert.equal(receipt.execution_plan.primitive_owner, 'one-person-lab/OPL');
-    assert.equal(receipt.execution_plan.path, output.work_order_execution.artifacts.execution_plan_path);
-    assert.equal(receipt.execution_report.surface_kind, 'opl_work_order_execution_report');
-    assert.equal(receipt.execution_report.primitive_owner, 'one-person-lab/OPL');
-    assert.equal(receipt.execution_report.path, output.work_order_execution.artifacts.execution_report_path);
-    assert.equal(receipt.execution_refs.execution_plan_ref, receipt.execution_plan.surface_ref);
-    assert.equal(receipt.execution_refs.execution_report_ref, receipt.execution_report.surface_ref);
-    assert.equal(receipt.executor.watchdogs.total_timeout_ms, 10000);
-    assert.equal(receipt.executor.watchdogs.no_output_timeout_ms, 600000);
-    assert.equal(receipt.executor.watchdogs.command_no_progress_timeout_ms, 600000);
-    assert.equal(fs.existsSync(receipt.execution_plan.path), true);
-    assert.equal(fs.existsSync(receipt.execution_report.path), true);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
 
 test('work-order execute rebases onto target checkout advances before absorption', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-currentness-'));
@@ -317,6 +245,9 @@ test('work-order execute runs Codex CLI in a target worktree then absorbs and cl
     });
 
     assert.equal(output.version, 'g2');
+    assert.equal(output.work_order_execution.surface_id, 'opl_work_order_codex_execution');
+    assert.equal(output.work_order_execution.primitive_owner, 'one-person-lab/OPL');
+    assert.equal(output.work_order_execution.command_surface, 'work-order execute');
     assert.equal(output.work_order_execution.status, 'executed_absorbed_and_cleaned');
     assert.equal(output.work_order_execution.receipt.executor.executor_kind, 'codex_cli');
     assert.equal(output.work_order_execution.receipt.absorption.absorbed, true);
@@ -330,8 +261,14 @@ test('work-order execute runs Codex CLI in a target worktree then absorbs and cl
 
     const receipt = readJson(output.work_order_execution.artifacts.execution_receipt_path);
     assert.equal(receipt.surface_kind, 'opl_work_order_codex_execution_receipt');
+    assert.equal(receipt.primitive_owner, 'one-person-lab/OPL');
     assert.equal(receipt.execution_plan.path, path.join(outputDir, 'execution-plan.md'));
     assert.equal(receipt.execution_report.path, path.join(outputDir, 'execution-report.md'));
+    assert.equal(receipt.execution_refs.execution_plan_ref, receipt.execution_plan.surface_ref);
+    assert.equal(receipt.execution_refs.execution_report_ref, receipt.execution_report.surface_ref);
+    assert.equal(receipt.executor.watchdogs.total_timeout_ms, 10000);
+    assert.equal(receipt.executor.watchdogs.no_output_timeout_ms, 600000);
+    assert.equal(receipt.executor.watchdogs.command_no_progress_timeout_ms, 600000);
     assert.ok(receipt.verification.command_results.some((entry: Record<string, any>) =>
       entry.command === 'test -f docs/efficiency.md' && entry.exit_code === 0
     ));
