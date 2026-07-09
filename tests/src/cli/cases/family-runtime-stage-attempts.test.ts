@@ -1,4 +1,3 @@
-import './family-runtime-stage-attempts-lifecycle-cases.test.ts';
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import {
   createMasScoutStage,
