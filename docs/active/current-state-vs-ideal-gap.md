@@ -33,7 +33,7 @@ North-star 参考仍归 [OPL 与 Foundry Agents 理想目标态](../references/r
 
 当前默认读法：默认 OPL series repo 的非 live 功能/结构基线只能从 fresh repo truth 与 `contracts/opl-framework/standard-agent-landing-evidence-status.json#functional_closure_followthrough` 读取。本文不冻结日期、branch、SHA、`origin/main` 状态、receipt id、worktree closeout、workflow run 或某轮 readback。
 
-当前没有已选中的 active 非 live 功能/结构 gap。后续若发现新的 gap，必须从 fresh code/contracts/tests/CLI/read-model/docs 审计重新开 lane，而不是从本文恢复已完成任务清单。
+当前没有已选中的 active 非 live 功能/结构 gap。`Evidence-Grounded Decision Agent Profile` 的非 live 功能/结构基线由 profile contract、module-owned source、CLI/readback 和 focused conformance evidence 承载：`contracts/opl-framework/evidence-grounded-decision-agent-profile.json`、`src/modules/pack/evidence-grounded-decision-agent-profile.ts`、`opl foundry evidence-profile inspect --json` 和 profile/source focused tests。本文只记录读取入口和 forbidden claims，不保存过程 proof、worktree、branch、receipt 或完成史；若后续发现这些机器面缺失或 drift，必须从 fresh code/contracts/tests/CLI/read-model/docs 审计重新开 lane。
 
 ## 八条调研建议 Current Tracker
 
