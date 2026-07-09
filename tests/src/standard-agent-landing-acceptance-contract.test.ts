@@ -11,6 +11,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const contractPath = 'contracts/opl-framework/standard-agent-landing-acceptance-contract.json';
 const evidenceStatusPath = 'contracts/opl-framework/standard-agent-landing-evidence-status.json';
 const negativeSamplesPath = 'contracts/opl-framework/standard-agent-negative-conformance-samples.json';
+const firstPartyAgentPackageIds = ['mas', 'mag', 'rca', 'oma', 'bookforge'];
 const absoluteLocalPathPattern = /(?<!workspace:)\/Users\/[^ "]+/;
 
 function readJson<T>(relativePath: string): T {
@@ -139,7 +140,11 @@ test('standard agent landing evidence status keeps evidence tails open', () => {
     'one-person-lab-app',
   ]);
   assert.ok(followthrough.required_followthrough_items.includes('app_docker_webui_beginner_path'));
-  assert.ok(followthrough.required_followthrough_items.includes('mas_typed_blocker_executable_owner_route'));
+  assert.ok(
+    followthrough.required_followthrough_items.includes(
+      'registry_sample_typed_blocker_executable_owner_route',
+    ),
+  );
   assert.ok(followthrough.accepted_closure_evidence.includes('default_path_readback_or_focused_test'));
   assert.ok(followthrough.forbidden_completion_evidence.includes('provider_long_soak'));
   assert.equal(followthrough.authority_boundary.can_claim_release_ready, false);
@@ -148,7 +153,7 @@ test('standard agent landing evidence status keeps evidence tails open', () => {
   assert.ok(gates.cross_agent_negative_conformance.evidence_refs.includes(negativeSamplesPath));
   assert.equal(
     gates.cross_agent_negative_conformance.missing_evidence.includes(
-      'cross-agent negative conformance scaleout across MAS/MAG/RCA/OMA',
+      'cross-agent negative conformance scaleout across registry samples',
     ),
     false,
   );
@@ -217,7 +222,14 @@ test('standard agent landing negative conformance has repo-backed cross-agent sa
 
   assert.deepEqual(
     [...new Set(samples.map((sample: any) => sample.target_dimension))].sort(),
-    ['MAS', 'MAG', 'OMA', 'RCA', 'family-default'].sort(),
+    ['family-default', 'registry-sample'].sort(),
+  );
+  assert.deepEqual(
+    samples
+      .filter((sample: any) => sample.target_dimension === 'registry-sample')
+      .map((sample: any) => sample.registry_sample_id)
+      .sort(),
+    ['mag', 'mas', 'oma', 'rca'],
   );
   assert.deepEqual(
     [...new Set(samples.map((sample: any) => sample.false_completion_signal))].sort(),
@@ -242,6 +254,10 @@ test('standard agent landing negative conformance has repo-backed cross-agent sa
     );
     assert.equal(sample.can_claim_standard_agent_complete, false, sample.sample_id);
     assert.equal(sample.domain_specific_kernel_written_as_opl_generic_kernel_allowed, false, sample.sample_id);
+    if (sample.target_dimension === 'registry-sample') {
+      assert.equal(sample.base_contract_invariant, false, sample.sample_id);
+      assert.match(sample.registry_sample_ref, /^contracts\/opl-framework\/agent-packages\/.+\.json$/);
+    }
   }
 });
 
@@ -277,6 +293,23 @@ test('standard agent landing acceptance forbids false completion claims and doma
 
   assert.equal(contract.domain_kernel_policy.copy_domain_kernel_into_opl_allowed, false);
   assert.ok(contract.domain_kernel_policy.generic_kernel_belongs_to_opl.includes('stage_route_currentness'));
-  assert.ok(contract.domain_kernel_policy.domain_specific_kernel_stays_domain_owned.includes('MAS paper_recovery_state'));
-  assert.ok(contract.current_open_evidence_tails.includes('OMA generated/takeover target-agent typed-blocker samples'));
+  assert.ok(contract.domain_kernel_policy.domain_specific_kernel_stays_domain_owned.includes('domain_recovery_state'));
+  assert.ok(contract.current_open_evidence_tails.includes('generated/takeover target-agent typed-blocker samples'));
+});
+
+test('first-party agent package manifests mark registry entries as data not base invariants', () => {
+  for (const packageId of firstPartyAgentPackageIds) {
+    const manifestPath = `contracts/opl-framework/agent-packages/${packageId}.json`;
+    const manifest = readJson<Record<string, any>>(manifestPath);
+
+    assert.equal(
+      manifest.registry_entry?.base_contract_role,
+      'registry_data_not_base_invariant',
+      manifestPath,
+    );
+    assert.equal(manifest.registry_entry?.base_contract_invariant, false, manifestPath);
+    assert.equal(manifest.registry_entry?.registry_source_ref, manifestPath);
+    assert.ok(manifest.registry_entry?.identity_fields.includes('package_id'), manifestPath);
+    assert.ok(manifest.registry_entry?.identity_fields.includes('agent_id'), manifestPath);
+  }
 });

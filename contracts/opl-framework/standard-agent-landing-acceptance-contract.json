@@ -3,8 +3,8 @@
   "version": "standard-agent-landing-acceptance.v1",
   "owner": "one-person-lab",
   "state": "active_contract",
-  "purpose": "Family-level acceptance definition for building, migrating, and taking over OPL-standard Foundry Agents without repeating MAS DM002/DM003 stage-route, authority, projection, and legacy-residue failure modes.",
-  "machine_boundary": "This contract defines standard-agent landing acceptance gates and false-completion rules for OPL, OMA, and domain repos. It does not declare MAS/MAG/RCA/OMA domain readiness, target-agent readiness, App release readiness, Brand L5, physical delete authorization, production readiness, owner receipt creation, typed blocker creation, quality/export/review verdicts, or live paper/grant/visual/agent deliverable progress.",
+  "purpose": "Family-level acceptance definition for building, migrating, and taking over OPL-standard Foundry Agents without repeating registry-sampled stage-route, authority, projection, and legacy-residue failure modes.",
+  "machine_boundary": "This contract defines standard-agent landing acceptance gates and false-completion rules for OPL, agent generators, and domain repos. Registered domain and agent package names are sample or registry data, not base framework invariants. This contract does not declare registered domain readiness, target-agent readiness, App release readiness, Brand L5, physical delete authorization, production readiness, owner receipt creation, typed blocker creation, quality/export/review verdicts, or live deliverable progress.",
   "source_design_refs": [
     "human_doc:opl_family_development_reference",
     "human_doc:opl_current_state_vs_ideal_gap",
@@ -13,7 +13,7 @@
     "contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard",
     "contracts/opl-framework/stage-route-scheduler-contract.json",
     "contracts/opl-framework/private-platform-residue-owner-decisions.json",
-    "external_repo:med-autoscience/contracts/standard_agent_completion_acceptance.json"
+    "contracts/opl-framework/agent-packages/mas.json#registry_entry"
   ],
   "standard_agent_definition": {
     "source_shape": "Declarative Domain Pack + OPL generated/hosted surfaces + Domain Minimal Authority Kernel",
@@ -154,13 +154,16 @@
     },
     {
       "gate_id": "oma_target_agent_work_order_guard",
-      "owner": "OPL Meta Agent / target domain owner",
+      "base_gate_id": "generated_target_agent_work_order_guard",
+      "base_contract_role": "generic_guard_with_legacy_sample_gate_id",
+      "registry_sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+      "owner": "agent generator / target domain owner",
       "required_status": "evidence_required",
       "requires": [
-        "OMA-generated or OMA-takeover work orders include target owner route, editable surface policy, source morphology proof, reviewer evidence where required, executor lease, no-forbidden-write proof, verification refs, rollback/canary refs, and expected target owner receipt or typed blocker return shape",
+        "generated or takeover target-agent work orders include target owner route, editable surface policy, source morphology proof, reviewer evidence where required, executor lease, no-forbidden-write proof, verification refs, rollback/canary refs, and expected target owner receipt or typed blocker return shape",
         "missing target owner route, source shape, generated surface, private residue decision, no-forbidden-write proof, or owner answer shape returns typed blocker or developer work order",
         "guard-missing typed blockers and error payloads include executor_launch_admission=blocked_before_executor_launch plus no_executor_launch_proof showing no Codex process, no target worktree, no absorption attempt, and no cleanup need",
-        "OMA cannot sign target owner receipt, create target typed blocker, write target truth, or promote default agent without target owner evidence"
+        "agent generator cannot sign target owner receipt, create target typed blocker, write target truth, or promote default agent without target owner evidence"
       ],
       "cannot_be_satisfied_by": [
         "Agent Lab suite pass",
@@ -179,7 +182,7 @@
         "negative conformance rejects classification-zero as physical cleanup",
         "negative conformance rejects generated-ready as production caller migration",
         "negative conformance rejects refs-only ledger as domain ready or Brand L5",
-        "negative conformance rejects domain-specific kernel copied into OPL substrate"
+        "negative conformance rejects domain-owned kernel classes copied into OPL substrate"
       ],
       "cannot_be_satisfied_by": [
         "happy-path conformance only",
@@ -236,18 +239,44 @@
       "private residue decision ledger"
     ],
     "domain_specific_kernel_stays_domain_owned": [
-      "MAS paper_recovery_state",
-      "MAG grant-native submission authority",
-      "RCA visual artifact recovery authority",
-      "OMA target work-order currentness and target owner return shape"
+      "domain_recovery_state",
+      "domain_native_submission_or_export_authority",
+      "domain_artifact_recovery_authority",
+      "target_work_order_currentness_and_owner_return_shape"
+    ],
+    "representative_domain_kernel_samples": [
+      {
+        "sample_ref": "contracts/opl-framework/agent-packages/mas.json",
+        "domain_kernel_class": "domain_recovery_state",
+        "sample_label": "paper_recovery_state",
+        "base_contract_invariant": false
+      },
+      {
+        "sample_ref": "contracts/opl-framework/agent-packages/mag.json",
+        "domain_kernel_class": "domain_native_submission_or_export_authority",
+        "sample_label": "grant-native submission authority",
+        "base_contract_invariant": false
+      },
+      {
+        "sample_ref": "contracts/opl-framework/agent-packages/rca.json",
+        "domain_kernel_class": "domain_artifact_recovery_authority",
+        "sample_label": "visual artifact recovery authority",
+        "base_contract_invariant": false
+      },
+      {
+        "sample_ref": "contracts/opl-framework/agent-packages/oma.json",
+        "domain_kernel_class": "target_work_order_currentness_and_owner_return_shape",
+        "sample_label": "target work-order currentness and target owner return shape",
+        "base_contract_invariant": false
+      }
     ],
     "copy_domain_kernel_into_opl_allowed": false
   },
   "current_open_evidence_tails": [
-    "production generated-surface caller migration across MAS/MAG/RCA/OMA",
+    "production generated-surface caller migration across registered agent packages",
     "cross-agent source morphology scan and negative conformance",
     "private residue owner-decision scaleout",
-    "OMA generated/takeover target-agent typed-blocker samples",
+    "generated/takeover target-agent typed-blocker samples",
     "representative live owner receipt / typed blocker / human gate / route-back scaleout",
     "long-soak and real App/user-path owner evidence"
   ]
