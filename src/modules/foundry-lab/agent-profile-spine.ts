@@ -62,6 +62,7 @@ const SOURCE_DERIVED_DESIGN_CONSUMPTION_OBJECTS = [
   'ReferenceDesignPacket',
   'TransferMap',
   'AgentPackPlan',
+  'BuildReceipt',
 ];
 
 const REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS = [
@@ -143,6 +144,33 @@ const AGENT_PACK_PLAN_REQUIREMENT_FIELDS = [
   'capability_plan_requirements',
 ];
 
+const BUILD_RECEIPT_REF_FIELDS = [
+  'build_receipt_refs',
+  'build_receipt_ref',
+  'source_derived_build_receipt_refs',
+  'source_derived_build_receipt_ref',
+];
+
+const BUILD_RECEIPT_REQUIREMENT_FIELDS = [
+  'build_receipt_requirements',
+  'source_derived_build_receipt_requirements',
+];
+
+const BUILD_RECEIPT_SOURCE_STAGE_FIELDS = [
+  'source_derived_stage_refs',
+  'source_pattern_stage_refs',
+];
+
+const BUILD_RECEIPT_REJECTED_PATTERN_FIELDS = [
+  'rejected_source_pattern_refs',
+  'rejected_pattern_refs',
+];
+
+const BUILD_RECEIPT_FORBIDDEN_CLAIM_FIELDS = [
+  'forbidden_claims',
+  'forbidden_claim_refs',
+];
+
 const STAGE_PATTERN_SOURCE_REF_FIELDS = [
   'stage_pattern_source_refs',
   'stage_pattern_refs',
@@ -206,6 +234,7 @@ function machineFieldStrings(value: unknown): string[] {
       value.id,
       value.source_ref,
       value.packet_ref,
+      value.stage_ref,
       value.requirement,
       value.requirement_id,
     ].flatMap(machineFieldStrings),
@@ -791,7 +820,10 @@ export function buildAgentProfileConformance(args: string[]) {
     stageControlPlane,
     isRecord(capabilityMap) ? capabilityMap.source_derived_design_receipt : null,
     isRecord(stageControlPlane) ? stageControlPlane.source_derived_design_receipt : null,
+    isRecord(capabilityMap) ? capabilityMap.build_receipt : null,
+    isRecord(stageControlPlane) ? stageControlPlane.build_receipt : null,
     ...stages,
+    ...stages.map((stage) => stage.build_receipt),
   ];
   const designConsumptionObjects = collectDirectMachineFieldStrings(sourceDerivedPayloads, [
     'required_design_consumption_objects',
@@ -821,6 +853,23 @@ export function buildAgentProfileConformance(args: string[]) {
     sourceDerivedPayloads,
     AGENT_PACK_PLAN_REQUIREMENT_FIELDS,
   );
+  const buildReceiptRefs = collectDirectMachineFieldStrings(sourceDerivedPayloads, BUILD_RECEIPT_REF_FIELDS);
+  const buildReceiptRequirements = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    BUILD_RECEIPT_REQUIREMENT_FIELDS,
+  );
+  const buildReceiptSourceStageRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    BUILD_RECEIPT_SOURCE_STAGE_FIELDS,
+  );
+  const buildReceiptRejectedPatternRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    BUILD_RECEIPT_REJECTED_PATTERN_FIELDS,
+  );
+  const buildReceiptForbiddenClaims = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    BUILD_RECEIPT_FORBIDDEN_CLAIM_FIELDS,
+  );
   const stagePatternSourceRefs = collectDirectMachineFieldStrings(
     sourceDerivedPayloads,
     STAGE_PATTERN_SOURCE_REF_FIELDS,
@@ -830,6 +879,10 @@ export function buildAgentProfileConformance(args: string[]) {
     && referenceDesignPacketRefs.length > 0;
   const hasTransferMapConsumption = transferMapRefs.length > 0;
   const hasAgentPackPlanConsumption = agentPackPlanRefs.length > 0;
+  const hasBuildReceiptConsumption = buildReceiptRefs.length > 0
+    && buildReceiptSourceStageRefs.length > 0
+    && buildReceiptRejectedPatternRefs.length > 0
+    && buildReceiptForbiddenClaims.length > 0;
 
   const blockers = [
     fs.existsSync(path.join(repoDir, 'contracts', 'capability_map.json')) ? null : 'missing_contract:contracts/capability_map.json',
@@ -860,6 +913,9 @@ export function buildAgentProfileConformance(args: string[]) {
     !sourceDerivedRoutePresent || hasAgentPackPlanConsumption
       ? null
       : 'source_derived_design_missing_design_consumption_object:AgentPackPlan',
+    !sourceDerivedRoutePresent || hasBuildReceiptConsumption
+      ? null
+      : 'source_derived_design_missing_design_consumption_object:BuildReceipt',
     !sourceDerivedRoutePresent || referenceDesignSourceRefs.length > 0
       ? null
       : 'source_derived_design_missing_reference_design_source_refs',
@@ -872,6 +928,18 @@ export function buildAgentProfileConformance(args: string[]) {
     !sourceDerivedRoutePresent || agentPackPlanRefs.length > 0
       ? null
       : 'source_derived_design_missing_agent_pack_plan_refs',
+    !sourceDerivedRoutePresent || buildReceiptRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_build_receipt_refs',
+    !sourceDerivedRoutePresent || buildReceiptSourceStageRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_build_receipt_source_stage_refs',
+    !sourceDerivedRoutePresent || buildReceiptRejectedPatternRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_build_receipt_rejected_source_pattern_refs',
+    !sourceDerivedRoutePresent || buildReceiptForbiddenClaims.length > 0
+      ? null
+      : 'source_derived_design_missing_build_receipt_forbidden_claims',
     !sourceDerivedRoutePresent || stagePatternSourceRefs.length > 0 || hasTargetOnlyRequirement
       ? null
       : 'source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement',
@@ -906,6 +974,11 @@ export function buildAgentProfileConformance(args: string[]) {
               transfer_map_requirements: transferMapRequirements,
               agent_pack_plan_refs: agentPackPlanRefs,
               agent_pack_plan_requirements: agentPackPlanRequirements,
+              build_receipt_refs: buildReceiptRefs,
+              build_receipt_requirements: buildReceiptRequirements,
+              build_receipt_source_stage_refs: buildReceiptSourceStageRefs,
+              build_receipt_rejected_source_pattern_refs: buildReceiptRejectedPatternRefs,
+              build_receipt_forbidden_claims: buildReceiptForbiddenClaims,
               stage_pattern_source_refs: stagePatternSourceRefs,
               has_target_only_requirement: hasTargetOnlyRequirement,
             }

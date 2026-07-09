@@ -100,6 +100,7 @@ function makeSourceDerivedAgentFixture() {
     'ReferenceDesignPacket',
     'TransferMap',
     'AgentPackPlan',
+    'BuildReceipt',
   ];
   const referenceDesignSourceRefs = ['paper-ref:uploaded-colorectal-risk-framework'];
   const referenceDesignPacketRefs = [
@@ -111,6 +112,47 @@ function makeSourceDerivedAgentFixture() {
   const agentPackPlanRefs = [
     'agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan',
   ];
+  const buildReceiptRefs = [
+    'build-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-build',
+  ];
+  const sourceDerivedStageRef = 'stage:colorectal-surgery-risk-from-paper/source-derived-design';
+  const sourceDerivedStageRefs = [
+    {
+      stage_id: 'source-derived-design',
+      stage_ref: sourceDerivedStageRef,
+      source_pattern_ref: 'pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design',
+    },
+  ];
+  const rejectedSourcePatternRefs = [
+    'non-transferable:uploaded-paper/external-runtime-truth-authority',
+  ];
+  const forbiddenClaims = [
+    'target_domain_ready',
+    'production_ready',
+    'owner_accepted',
+  ];
+  const buildReceipt = {
+    surface_kind: 'opl_meta_agent_build_receipt',
+    version: 'opl-meta-agent.build-receipt.v1',
+    receipt_ref: buildReceiptRefs[0],
+    build_receipt_ref: buildReceiptRefs[0],
+    build_source_kind: 'source_derived_design',
+    source_derived_stage_refs: sourceDerivedStageRefs,
+    target_only_requirement_refs: [
+      'target-only-requirement:colorectal-surgery-risk-from-paper/owner-gated-closeout',
+    ],
+    rejected_source_pattern_refs: rejectedSourcePatternRefs,
+    lower_bound_opl_profile_refs: [
+      'opl-profile-route:source_derived_design_profile_route.v1',
+    ],
+    forbidden_claims: forbiddenClaims,
+    authority_boundary: {
+      refs_only: true,
+      can_write_target_domain_truth: false,
+      can_create_target_owner_receipt: false,
+      can_promote_live_or_default_agent: false,
+    },
+  };
   const sourceDerivedDesignReceipt = {
     surface_kind: 'opl_meta_agent_source_derived_design_receipt',
     route_id: 'source_derived_design_profile_route.v1',
@@ -122,6 +164,13 @@ function makeSourceDerivedAgentFixture() {
     reference_design_pattern_packet_refs: referenceDesignPacketRefs,
     transfer_map_refs: transferMapRefs,
     agent_pack_plan_refs: agentPackPlanRefs,
+    build_receipt_refs: buildReceiptRefs,
+    build_receipt_requirements: [
+      'source_derived_stage_refs',
+      'target_only_requirement_refs',
+      'rejected_source_pattern_refs',
+      'forbidden_claims',
+    ],
     profile_requirements: {
       required_design_consumption_objects: requiredDesignConsumptionObjects,
       required_stage_archetypes: [
@@ -168,6 +217,9 @@ function makeSourceDerivedAgentFixture() {
     domain_id: 'colorectal-surgery-risk-from-paper',
     profile_selection_mode: 'source_derived_design',
     source_derived_design_receipt: sourceDerivedDesignReceipt,
+    build_receipt: buildReceipt,
+    build_receipt_ref: buildReceiptRefs[0],
+    build_receipt_refs: buildReceiptRefs,
     profile_requirements: profileRequirements,
     capabilities: [
       { capability_id: 'stage', surface_role: 'stage_prompt', capability_kind: 'stage_prompt' },
@@ -191,6 +243,9 @@ function makeSourceDerivedAgentFixture() {
     owner: 'colorectal-surgery-risk-from-paper',
     profile_selection_mode: 'source_derived_design',
     source_derived_design_receipt: sourceDerivedDesignReceipt,
+    build_receipt: buildReceipt,
+    build_receipt_ref: buildReceiptRefs[0],
+    build_receipt_refs: buildReceiptRefs,
     profile_requirements: profileRequirements,
     stages: [
       {
@@ -202,6 +257,9 @@ function makeSourceDerivedAgentFixture() {
         stage_pattern_source_refs: [
           'pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design',
         ],
+        build_receipt: buildReceipt,
+        build_receipt_ref: buildReceiptRefs[0],
+        build_receipt_refs: buildReceiptRefs,
         knowledge_refs: [{ ref_kind: 'repo_path', ref: 'agent/knowledge/reference-design.md' }],
         tool_refs: [{ ref_kind: 'repo_path', ref: 'agent/tools/source-intake.md' }],
         evaluation: [{ ref_kind: 'repo_path', ref: 'agent/quality_gates/source-transfer.md' }],
@@ -342,6 +400,10 @@ test('profile conformance accepts source-derived design route receipts without a
   assert.ok(sourceDerivedDesign.reference_design_source_refs.includes('paper-ref:uploaded-colorectal-risk-framework'));
   assert.ok(sourceDerivedDesign.transfer_map_refs.includes('transfer-map-ref:oma/reference-designs/uploaded-paper/transfer-map'));
   assert.ok(sourceDerivedDesign.agent_pack_plan_refs.includes('agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan'));
+  assert.ok(sourceDerivedDesign.build_receipt_refs.includes('build-receipt-ref:colorectal-surgery-risk-from-paper/source-derived-build'));
+  assert.ok(sourceDerivedDesign.build_receipt_source_stage_refs.includes('stage:colorectal-surgery-risk-from-paper/source-derived-design'));
+  assert.ok(sourceDerivedDesign.build_receipt_rejected_source_pattern_refs.includes('non-transferable:uploaded-paper/external-runtime-truth-authority'));
+  assert.ok(sourceDerivedDesign.build_receipt_forbidden_claims.includes('target_domain_ready'));
   assert.ok(sourceDerivedDesign.stage_pattern_source_refs.includes('pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design'));
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
 });
@@ -358,6 +420,15 @@ test('profile conformance fails closed when source-derived route only exposes ro
   };
   capabilityMap.source_derived_design_receipt = routeOnlyReceipt;
   stageControl.source_derived_design_receipt = routeOnlyReceipt;
+  delete capabilityMap.build_receipt;
+  delete capabilityMap.build_receipt_ref;
+  delete capabilityMap.build_receipt_refs;
+  delete stageControl.build_receipt;
+  delete stageControl.build_receipt_ref;
+  delete stageControl.build_receipt_refs;
+  delete stageControl.stages[0].build_receipt;
+  delete stageControl.stages[0].build_receipt_ref;
+  delete stageControl.stages[0].build_receipt_refs;
   capabilityMap.profile_requirements = {
     required_stage_archetypes: capabilityMap.profile_requirements.required_stage_archetypes,
     required_capability_kinds: capabilityMap.profile_requirements.required_capability_kinds,
@@ -393,6 +464,14 @@ test('profile conformance fails closed when source-derived route only exposes ro
     true,
   );
   assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_build_receipt_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_design_consumption_object:BuildReceipt'),
+    true,
+  );
+  assert.equal(
     conformance.blockers.includes('source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement'),
     true,
   );
@@ -407,8 +486,19 @@ test('profile conformance fails closed when source-derived requirements exist wi
 
   delete capabilityMap.source_derived_design_receipt.transfer_map_refs;
   delete capabilityMap.source_derived_design_receipt.agent_pack_plan_refs;
+  delete capabilityMap.source_derived_design_receipt.build_receipt_refs;
+  delete capabilityMap.build_receipt;
+  delete capabilityMap.build_receipt_ref;
+  delete capabilityMap.build_receipt_refs;
   delete stageControl.source_derived_design_receipt.transfer_map_refs;
   delete stageControl.source_derived_design_receipt.agent_pack_plan_refs;
+  delete stageControl.source_derived_design_receipt.build_receipt_refs;
+  delete stageControl.build_receipt;
+  delete stageControl.build_receipt_ref;
+  delete stageControl.build_receipt_refs;
+  delete stageControl.stages[0].build_receipt;
+  delete stageControl.stages[0].build_receipt_ref;
+  delete stageControl.stages[0].build_receipt_refs;
 
   writeJson(capabilityMapPath, capabilityMap);
   writeJson(stageControlPath, stageControl);
@@ -427,6 +517,14 @@ test('profile conformance fails closed when source-derived requirements exist wi
   );
   assert.equal(
     conformance.blockers.includes('source_derived_design_missing_agent_pack_plan_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_build_receipt_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_design_consumption_object:BuildReceipt'),
     true,
   );
   assert.equal(
