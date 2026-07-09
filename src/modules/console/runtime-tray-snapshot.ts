@@ -26,11 +26,13 @@ import { buildStageAttemptTrayItems } from './runtime-tray-stage-attempt-items.t
 import { buildProviderProofTrayItem } from './runtime-tray-provider-proof-items.ts';
 import { buildNativeHelperExecutionEnvelope } from './runtime-tray-native-helper-envelope.ts';
 import { buildDomainProjectionIngestion } from './runtime-tray-domain-projection-ingestion.ts';
+import { buildAppStateRuntimeActivityItems } from './app-state-runtime-activity.ts';
 import {
   buildAppOperatorDrilldown,
   type AppOperatorDrilldownDetailLevel,
 } from './runtime-tray-app-operator-drilldown.ts';
 import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
+import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',
@@ -38,6 +40,7 @@ const PROJECT_LABELS: Record<string, string> = {
   redcube: 'RCA',
 };
 const RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
+const CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 
 const RUNNING_STATUSES = new Set([
   'active',
@@ -741,13 +744,55 @@ async function buildMasStudyItem(
   };
 }
 
+async function hydratePortalCurrentWorkUnit(
+  workspace: MasWorkspaceProjectionRef,
+  item: RuntimeTrayItem,
+): Promise<RuntimeTrayItem> {
+  if (item.current_work_unit || !item.study_id) {
+    return item;
+  }
+  const readout = await readMasStudyProgressCurrentWorkUnitAsync({
+    workspace,
+    studyId: item.study_id,
+  });
+  if (!readout.projection) {
+    return item;
+  }
+  return {
+    ...item,
+    current_work_unit: readout.projection,
+    study_progress_current_work_unit_diagnostic: readout.diagnostic,
+    source_refs: uniqueByRef([
+      ...item.source_refs,
+      ...readout.source_refs,
+    ]),
+  };
+}
+
+async function buildMasPortalProjection(
+  workspace: MasWorkspaceProjectionRef,
+) {
+  const projection = buildMasPortalItems(workspace);
+  if (projection.items.length === 0) {
+    return projection;
+  }
+  return {
+    ...projection,
+    items: await Promise.all(projection.items.map((item) =>
+      hydratePortalCurrentWorkUnit(workspace, item)
+    )),
+  };
+}
+
 async function buildMasStudyProjection(
   domainManifests: { projects: DomainManifestCatalogEntry[] },
 ): Promise<{ items: RuntimeTrayItem[]; source_refs: RuntimeTraySourceRef[] }> {
   const workspaces = uniqueMasWorkspaces([
     ...masWorkspaceRefsFromDomainManifests(domainManifests.projects),
   ]);
-  const portalProjections = workspaces.map((workspace) => buildMasPortalItems(workspace));
+  const portalProjections = await Promise.all(workspaces.map((workspace) =>
+    buildMasPortalProjection(workspace)
+  ));
   const portalWorkspaceRoots = new Set(portalProjections.flatMap((projection) => [...projection.portal_workspace_roots]));
   const portalItems = portalProjections.flatMap((projection) => projection.items);
   const fallbackItems = (await Promise.all(workspaces
@@ -767,6 +812,132 @@ async function buildMasStudyProjection(
         ...workspaces.flatMap((workspace) => workspace.source_refs),
       ]
       : [],
+  };
+}
+
+function cachedCurrentOwnerDeltaWorkUnitProjection(): JsonRecord | null {
+  const readModel = readCurrentOwnerDeltaReadModelProjectionCache({
+    acceptedSourceSurfaces: ['framework_readiness'],
+    maxAgeMs: CURRENT_OWNER_DELTA_CACHE_MAX_AGE_MS,
+  });
+  const delta = nestedRecord(readModel, 'current_owner_delta');
+  if (!delta) {
+    return null;
+  }
+  const basis = nestedRecord(delta, 'owner_route_currentness_basis') ?? {};
+  const currentOwner = firstString(delta.current_owner, delta.owner, readModel?.current_owner);
+  const stageId = firstString(delta.stage_id, delta.stage_ref, readModel?.stage_id);
+  const workUnitId = firstString(delta.work_unit_id, basis.work_unit_id, delta.task_or_study_ref);
+  const domainId = firstString(delta.domain_id, delta.domain, readModel?.domain_id);
+  const studyId = firstString(delta.study_id, delta.task_or_study_ref);
+  if (!currentOwner && !stageId && !workUnitId) {
+    return null;
+  }
+  return {
+    surface_kind: 'opl_domain_current_work_unit_profile_projection',
+    compatibility_surface_kind: 'opl_current_owner_delta_read_model_projection_cache',
+    projection_registry: 'opl_domain_current_work_unit_projection_profile_registry',
+    profile_id: 'opl.current_owner_delta.cache.projection.v1',
+    profile_role: 'cache_projection',
+    projection_policy:
+      'current_owner_delta_cache_refs_only_default_projection_when_domain_current_work_unit_missing',
+    domain_id: domainId,
+    study_id: studyId,
+    status: 'owner_delta_required',
+    current_owner: currentOwner,
+    owner: firstString(delta.owner, delta.current_owner, readModel?.current_owner),
+    stage_id: stageId,
+    action_type: firstString(delta.desired_delta_kind),
+    work_unit_id: workUnitId,
+    work_unit_fingerprint: firstString(delta.work_unit_fingerprint, basis.work_unit_fingerprint),
+    currentness_basis: {
+      ...basis,
+      stage_attempt_id: firstString(delta.stage_attempt_id, basis.stage_attempt_id),
+      stage_id: stageId,
+      work_unit_id: workUnitId,
+      work_unit_fingerprint: firstString(delta.work_unit_fingerprint, basis.work_unit_fingerprint),
+    },
+    current_execution_envelope: null,
+    current_executable_owner_action: null,
+    source_refs: [
+      'opl_current_owner_delta_read_model_projection_cache',
+      'opl framework readiness --family-defaults --json',
+    ],
+    source_projection_ref: 'current_owner_delta_read_model_projection_cache/current_owner_delta',
+    compatibility_source_projection_ref:
+      'current_owner_delta_read_model_projection_cache/current_owner_delta',
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      cache_is_domain_truth: false,
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_close_owner_chain: false,
+      can_close_domain_ready: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      provider_completion_is_domain_ready: false,
+    },
+  };
+}
+
+function runtimeActivityCurrentWorkUnitProjection(): JsonRecord | null {
+  const selected = (buildAppStateRuntimeActivityItems() as JsonRecord[])
+    .filter((item) => item.lane === 'attention' || item.lane === 'running')
+    .find((item) => firstString(item.domain_owner, item.project_id));
+  if (!selected) {
+    return null;
+  }
+  const basis = {
+    stage_attempt_id: firstString(
+      selected.stage_attempt_id,
+      ...stringListFromRecords(selected.stage_attempt_ids, ''),
+    ),
+    stage_id: firstString(selected.active_stage_id, selected.stage_id, selected.stage_ref),
+    work_unit_id: firstString(selected.item_id, selected.task_id, selected.study_id),
+    runtime_activity_updated_at: firstString(selected.updated_at),
+  };
+  const sourceRefs = stringListFromRecords(selected.source_refs, 'ref', 24);
+  return {
+    surface_kind: 'opl_domain_current_work_unit_profile_projection',
+    compatibility_surface_kind: 'opl_app_runtime_activity_projection',
+    projection_registry: 'opl_domain_current_work_unit_projection_profile_registry',
+    profile_id: 'opl.app_runtime_activity.current_work_unit.projection.v1',
+    profile_role: 'runtime_activity_projection',
+    projection_policy:
+      'runtime_activity_current_item_refs_only_default_projection_when_domain_current_work_unit_missing',
+    domain_id: firstString(selected.project_id, selected.domain_id, selected.domain_owner),
+    study_id: firstString(selected.study_id),
+    status: 'owner_delta_required',
+    current_owner: firstString(selected.domain_owner, selected.project_id),
+    owner: firstString(selected.domain_owner, selected.project_id),
+    stage_id: basis.stage_id,
+    action_type: firstString(selected.action_kind),
+    work_unit_id: basis.work_unit_id,
+    work_unit_fingerprint: firstString(selected.source_fingerprint),
+    currentness_basis: basis,
+    current_execution_envelope: null,
+    current_executable_owner_action: null,
+    source_refs: sourceRefs,
+    source_projection_ref: 'app_state.operator.workbench.activity_center.current_item',
+    compatibility_source_projection_ref:
+      'app_state.operator.workbench.activity_center.current_item',
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      runtime_activity_is_domain_truth: false,
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_close_owner_chain: false,
+      can_close_domain_ready: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+      provider_completion_is_domain_ready: false,
+    },
   };
 }
 
@@ -811,6 +982,12 @@ export async function buildRuntimeTraySnapshot(
   const currentWorkUnitProjections = masStudyProjection.items
     .map((item) => item.current_work_unit)
     .filter((item): item is JsonRecord => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
+  const fallbackCurrentWorkUnitProjection = cachedCurrentOwnerDeltaWorkUnitProjection()
+    ?? runtimeActivityCurrentWorkUnitProjection();
+  const effectiveCurrentWorkUnitProjections = currentWorkUnitProjections.length > 0
+    ? currentWorkUnitProjections
+    : [fallbackCurrentWorkUnitProjection]
+      .filter((item): item is JsonRecord => Boolean(item));
   const appOperatorDrilldown = buildAppOperatorDrilldown({
     stageAttemptWorkbench,
     providerInspection: lifecycleProvider,
@@ -818,7 +995,7 @@ export async function buildRuntimeTraySnapshot(
     domainProjectionIngestion,
     domainManifestProjects: domainManifests.projects,
     functionalPrivatizationProjects: functionalPrivatizationDomainManifests.projects,
-    currentWorkUnitProjections,
+    currentWorkUnitProjections: effectiveCurrentWorkUnitProjections,
     currentControlReadbacks,
     detailLevel: options.appOperatorDrilldownDetailLevel,
   });
