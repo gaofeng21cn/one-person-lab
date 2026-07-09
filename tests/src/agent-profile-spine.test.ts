@@ -1,0 +1,168 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+
+import {
+  buildAgentProfileCatalog,
+  buildAgentProfileConformance,
+  buildAgentProfileInspect,
+  buildAgentProfileSelection,
+} from '../../src/modules/foundry-lab/agent-profile-spine.ts';
+
+function writeJson(filePath: string, payload: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function profileCatalogEntry() {
+  return buildAgentProfileCatalog()
+    .agent_profile_catalog
+    .profiles[0];
+}
+
+function makeConformantAgentFixture() {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-profile-agent-'));
+  const profile = profileCatalogEntry();
+  const profileRequirements = {
+    required_stage_archetypes: profile.required_stage_archetypes,
+    required_evidence_objects: profile.required_evidence_objects,
+  };
+
+  writeJson(path.join(repoDir, 'contracts', 'capability_map.json'), {
+    surface_kind: 'opl_standard_agent_capability_map',
+    schema_version: 'standard-agent-capability-map.v1',
+    domain_id: 'colorectal-surgery-risk',
+    selected_profile_refs: [profile.profile_ref],
+    profile_requirements: profileRequirements,
+    capability_pack: {
+      pack_id: 'colorectal-surgery-risk',
+      pack_root_ref: 'agent/',
+      map_ref: 'contracts/capability_map.json',
+      pack_role: 'declarative_domain_capability_pack',
+      capability_pack_can_claim_domain_ready: false,
+    },
+    resolver_policy: 'resolver_index_only_no_domain_truth',
+    capabilities: [
+      { capability_id: 'stage', surface_role: 'stage_prompt', capability_kind: 'stage_prompt' },
+      { capability_id: 'tool', surface_role: 'tool_connector', capability_kind: 'tool_connector' },
+      { capability_id: 'knowledge', surface_role: 'knowledge_pack', capability_kind: 'reference_pack' },
+      { capability_id: 'gate', surface_role: 'quality_gate', capability_kind: 'contract_module' },
+      { capability_id: 'eval', surface_role: 'eval_suite', capability_kind: 'contract_module' },
+    ],
+    authority_boundary: {
+      can_write_domain_truth: false,
+      can_write_memory_body: false,
+      can_mutate_artifact_body: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_authorize_quality_or_export: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  });
+
+  writeJson(path.join(repoDir, 'contracts', 'stage_control_plane.json'), {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'colorectal_surgery_risk_stage_plane',
+    target_domain_id: 'colorectal-surgery-risk',
+    owner: 'colorectal-surgery-risk',
+    selected_profile_refs: [profile.profile_ref],
+    profile_requirements: profileRequirements,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+    },
+    stages: [
+      {
+        stage_id: 'risk-support',
+        stage_kind: 'creation',
+        title: 'Risk Support',
+        goal: 'Produce an evidence-grounded risk-support artifact.',
+        owner: 'colorectal-surgery-risk',
+        knowledge_refs: [{ ref_kind: 'repo_path', ref: 'agent/knowledge/guidelines.md' }],
+        tool_refs: [{ ref_kind: 'repo_path', ref: 'agent/tools/retrieval.md' }],
+        evaluation: [{ ref_kind: 'repo_path', ref: 'agent/quality_gates/evidence.md' }],
+        authority_boundary: {
+          can_claim_domain_ready: false,
+        },
+      },
+    ],
+  });
+
+  return { repoDir, profile };
+}
+
+test('profile selector chooses evidence-grounded profile for decision-support risk intent', () => {
+  const inspect = buildAgentProfileInspect([
+    'evidence_grounded_decision_agent_profile.v1',
+  ]).agent_profile_inspect;
+  const receipt = buildAgentProfileSelection([
+    '--intent',
+    'Build a colorectal surgery risk decision support agent with guideline evidence.',
+  ]).profile_selection_receipt;
+
+  assert.equal(
+    inspect.profile.source_readback_command,
+    'opl profiles inspect evidence_grounded_decision_agent_profile.v1 --json',
+  );
+  assert.equal(receipt.status, 'selected');
+  assert.equal(receipt.selected_profile_id, 'evidence_grounded_decision_agent_profile.v1');
+  assert.equal(receipt.matched_trigger_signals.includes('risk'), true);
+  assert.equal(receipt.profile_requirements.required_stage_archetypes.includes('mode_routing'), true);
+  assert.equal(receipt.profile_requirements.required_capability_kinds.includes('reference_pack'), true);
+  assert.equal(receipt.authority_boundary.selector_can_claim_domain_ready, false);
+});
+
+test('profile catalog consumes contract-owned profile entry requirements', () => {
+  const profile = profileCatalogEntry();
+
+  assert.equal(profile.profile_ref, 'opl-profile:evidence_grounded_decision_agent_profile.v1');
+  assert.equal(profile.trigger_signals.includes('colorectal'), true);
+  assert.equal(profile.required_reference_pack_roles.includes('guideline_reference_pack'), true);
+  assert.equal(profile.required_evidence_objects.includes('DecisionSupportArtifact'), true);
+  assert.equal(profile.can_claim_domain_ready, false);
+});
+
+test('profile conformance checks selected profile refs, stage knowledge refs, and evidence objects', () => {
+  const { repoDir, profile } = makeConformantAgentFixture();
+  const conformance = buildAgentProfileConformance([
+    '--repo-dir',
+    repoDir,
+    '--profile',
+    profile.profile_id,
+  ]).profile_conformance;
+
+  assert.equal(conformance.status, 'passed');
+  assert.deepEqual(conformance.blockers, []);
+  assert.equal(conformance.observed.stages_with_knowledge_refs, 1);
+  assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
+});
+
+test('profile conformance fails closed when profile refs and knowledge refs are missing', () => {
+  const { repoDir, profile } = makeConformantAgentFixture();
+  const capabilityMapPath = path.join(repoDir, 'contracts', 'capability_map.json');
+  const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const capabilityMap = JSON.parse(fs.readFileSync(capabilityMapPath, 'utf8'));
+  const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
+  delete capabilityMap.selected_profile_refs;
+  delete stageControl.selected_profile_refs;
+  stageControl.stages[0].knowledge_refs = [];
+  writeJson(capabilityMapPath, capabilityMap);
+  writeJson(stageControlPath, stageControl);
+
+  const conformance = buildAgentProfileConformance([
+    '--repo-dir',
+    repoDir,
+    '--profile',
+    profile.profile_id,
+  ]).profile_conformance;
+
+  assert.equal(conformance.status, 'blocked');
+  assert.equal(
+    conformance.blockers.includes('capability_map_missing_selected_profile_ref:evidence_grounded_decision_agent_profile.v1'),
+    true,
+  );
+  assert.equal(conformance.blockers.includes('stage_control_plane_missing_knowledge_refs'), true);
+});

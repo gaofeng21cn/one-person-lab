@@ -73,6 +73,7 @@ import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
+import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildScholarSkillsCommandSpecs } from './public-command-specs-parts/scholar-skills.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
@@ -152,6 +153,7 @@ export function buildPublicCommandSpecs(
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
   const foundryCommandSpecs = buildFoundryCommandSpecs();
   const okfCommandSpecs = buildOkfCommandSpecs();
+  const profileCommandSpecs = buildProfileCommandSpecs();
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
   const scholarSkillsCommandSpecs = buildScholarSkillsCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
@@ -251,6 +253,7 @@ export function buildPublicCommandSpecs(
     },
     ...brandCommandSpecs,
     ...foundryCommandSpecs,
+    ...profileCommandSpecs,
     ...connectCommandSpecs,
     ...updateCommandSpecs,
     ...workOrderCommandSpecs,

@@ -43,6 +43,78 @@
   ],
   "profile_role": "standard_profile_for_evidence_grounded_decision_support_agents",
   "consumption_status": "non_live_module_surface_readback_available",
+  "profile_catalog_entry": {
+    "catalog_id": "opl_profile_catalog.v1",
+    "profile_id": "evidence_grounded_decision_agent_profile.v1",
+    "profile_ref": "opl-profile:evidence_grounded_decision_agent_profile.v1",
+    "profile_label": "Evidence-Grounded Decision Agent",
+    "profile_kind": "decision_support_agent_profile",
+    "trigger_signals": [
+      "evidence-grounded",
+      "guideline-grounded",
+      "guideline",
+      "decision support",
+      "risk",
+      "risk stratification",
+      "surgery",
+      "colorectal",
+      "clinical decision",
+      "source-grounded recommendation"
+    ],
+    "required_stage_archetypes": [
+      "material_or_case_intake",
+      "structured_extraction",
+      "enrichment",
+      "mode_routing",
+      "evidence_and_tool_execution",
+      "synthesis",
+      "independent_review_or_human_gate",
+      "decision_support_artifact_with_evidence_trace"
+    ],
+    "required_capability_kinds": [
+      "stage_prompt",
+      "tool_connector",
+      "reference_pack",
+      "contract_module"
+    ],
+    "required_surface_roles": [
+      "stage_prompt",
+      "tool_connector",
+      "knowledge_pack",
+      "quality_gate",
+      "eval_suite"
+    ],
+    "required_evidence_objects": [
+      "WorkItem",
+      "StructuredInput",
+      "ModeRoutingReceipt",
+      "RetrievalPacket",
+      "ToolResultEnvelope",
+      "EvidencePacket",
+      "SynthesisPacket",
+      "IndependentReviewReceipt",
+      "DecisionSupportArtifact",
+      "HumanGateDecision",
+      "UnsupportedEvidenceBlocker"
+    ],
+    "reference_pack_requirements": [
+      "guideline_reference_pack",
+      "source_provenance_reference_pack",
+      "quality_gate_reference_pack"
+    ],
+    "knowledge_requirements": [
+      "domain_boundary_knowledge_ref",
+      "guideline_corpus_ref",
+      "source_freshness_policy_ref"
+    ],
+    "source_readback_refs": [
+      "src/modules/pack/evidence-grounded-decision-agent-profile.ts",
+      "src/modules/atlas/evidence-grounded-profile-catalog.ts",
+      "src/modules/foundry-lab/agent-profile-spine.ts",
+      "opl profiles inspect evidence_grounded_decision_agent_profile.v1 --json",
+      "opl foundry evidence-profile inspect --json"
+    ]
+  },
   "first_class_objects": [
     {
       "object_name": "WorkItem",
