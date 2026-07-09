@@ -1,6 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 import { assert, runCliAsync, runCliFailure, test } from '../helpers.ts';
+import {
+  buildScientificConnectorProviderRegistryReadback,
+  scientificConnectorProviderIds,
+} from '../../../../src/modules/connect/opl-connect-scientific.ts';
 
 type ScientificSearchOutput = {
   opl_connect_scientific: {
@@ -39,6 +43,15 @@ type ScientificSearchOutput = {
     };
   };
 };
+
+test('scientific connector providers are explicit adapters with no core default', () => {
+  const registry = buildScientificConnectorProviderRegistryReadback();
+  assert.equal(registry.surface_kind, 'opl_scientific_connector_provider_registry');
+  assert.equal(registry.default_provider_id, null);
+  assert.deepEqual(scientificConnectorProviderIds(), ['pubmed', 'crossref', 'openalex']);
+  assert.equal(registry.providers.every((provider) => provider.adapter_role === 'optional_provider_adapter'), true);
+  assert.equal(registry.authority_boundary.can_write_domain_truth, false);
+});
 
 async function startFakeScientificServer() {
   const requests: string[] = [];
@@ -164,7 +177,7 @@ test('connect scientific search returns normalized PubMed refs through the optio
     assert.equal(scientific.authority_boundary.can_claim_citation_truth, false);
     assert.equal(scientific.ownership_boundary.connector_profile_owner, 'OPL Connect');
     assert.equal(scientific.ownership_boundary.provider_receipt_owner, 'OPL Connect');
-    assert.equal(scientific.ownership_boundary.citation_judgment_owner, 'MAS / domain owner');
+    assert.equal(scientific.ownership_boundary.citation_judgment_owner, 'selected domain owner');
     assert.equal(scientific.ownership_boundary.connector_receipt_counts_as_citation_truth, false);
     assert.equal(scientific.ownership_boundary.connector_receipt_counts_as_domain_truth, false);
   } finally {

@@ -14,6 +14,7 @@ import {
 import { buildAgentPackageCommandSpecs } from './connect-agent-packages.ts';
 import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
 import {
+  scientificConnectorProviderIds,
   runOplConnectScientificSearch,
   type ScientificConnectorProviderId,
 } from '../../../../modules/connect/opl-connect-scientific.ts';
@@ -105,11 +106,13 @@ function parseScientificSearchArgs(args: string[], spec: CommandSpec): Scientifi
   const parsed = parseRegisteredCommandOptions('connect scientific search', args, spec);
   const provider = String(parsed.provider ?? '').trim().toLowerCase();
   const query = String(parsed.query ?? '').trim();
-  const allowedProviders = new Set(['pubmed', 'crossref', 'openalex']);
+  const providerIds = scientificConnectorProviderIds();
+  const allowedProviders = new Set<string>(providerIds);
   if (!allowedProviders.has(provider)) {
-    throw buildUsageError('connect scientific search requires --provider pubmed,crossref,openalex.', spec, {
+    throw buildUsageError(`connect scientific search requires --provider ${providerIds.join(',')}.`, spec, {
       required: ['--provider'],
       provider,
+      available_providers: providerIds,
     });
   }
   if (query.length === 0) {
@@ -535,7 +538,7 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect scientific search': {
-      usage: 'opl connect scientific search --provider <pubmed|crossref|openalex> --query <query> [--limit <n>]',
+      usage: `opl connect scientific search --provider <${scientificConnectorProviderIds().join('|')}> --query <query> [--limit <n>]`,
       summary: 'Search an optional scientific provider profile through OPL Connect and return normalized read-only source refs.',
       examples: [
         'opl connect scientific search --provider pubmed --query "diabetes mortality prediction" --limit 5 --json',
@@ -552,7 +555,7 @@ export function buildConnectCommandSpecs(
             name: 'provider',
             flag: '--provider',
             value_kind: 'string',
-            summary: 'Scientific provider id: pubmed, crossref, or openalex.',
+            summary: `Scientific provider id: ${scientificConnectorProviderIds().join(', ')}.`,
             required: true,
           },
           {

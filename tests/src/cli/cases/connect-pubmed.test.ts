@@ -160,7 +160,7 @@ test('connect pubmed search returns normalized read-only literature refs', async
     assert.equal(output.opl_connect_pubmed.provider_receipt_role, 'provider_receipt_candidate_only');
     assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_profile_owner, 'OPL Connect');
     assert.equal(output.opl_connect_pubmed.ownership_boundary.provider_receipt_owner, 'OPL Connect');
-    assert.equal(output.opl_connect_pubmed.ownership_boundary.citation_judgment_owner, 'MAS / domain owner');
+    assert.equal(output.opl_connect_pubmed.ownership_boundary.citation_judgment_owner, 'selected domain owner');
     assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_receipt_counts_as_citation_truth, false);
     assert.equal(output.opl_connect_pubmed.ownership_boundary.connector_receipt_counts_as_domain_truth, false);
     assert.deepEqual(output.opl_connect_pubmed.authority_boundary, {

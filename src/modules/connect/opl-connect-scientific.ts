@@ -27,6 +27,13 @@ type NormalizedScientificSourceRef = {
   source_urls: Record<string, string | null>;
 };
 
+type ScientificConnectorProviderAdapter = {
+  provider_id: ScientificConnectorProviderId;
+  provider_owner: string;
+  source_system: string;
+  search: (input: ScientificConnectorSearchInput) => Promise<NormalizedScientificSourceRef[]>;
+};
+
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
 const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -95,9 +102,9 @@ function buildOwnershipBoundary(provider: ScientificConnectorProviderId) {
     connector_profile_owner: 'OPL Connect',
     provider_receipt_owner: 'OPL Connect',
     provider,
-    professional_skill_truth_owner: 'MAS Scholar Skills / domain agent',
-    citation_judgment_owner: 'MAS / domain owner',
-    domain_truth_owner: 'MAS / domain owner',
+    professional_skill_truth_owner: 'selected professional skill package or domain agent',
+    citation_judgment_owner: 'selected domain owner',
+    domain_truth_owner: 'selected domain owner',
     stores_literature_library: false,
     connector_receipt_counts_as_citation_truth: false,
     connector_receipt_counts_as_domain_truth: false,
@@ -262,18 +269,61 @@ async function searchPubMed(input: ScientificConnectorSearchInput) {
   }));
 }
 
-function sourceSystem(provider: ScientificConnectorProviderId) {
-  if (provider === 'pubmed') return 'NCBI PubMed E-utilities';
-  if (provider === 'crossref') return 'Crossref REST API';
-  return 'OpenAlex Works API';
+const SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY = [
+  {
+    provider_id: 'pubmed',
+    provider_owner: 'OPL Connect optional scientific provider adapter',
+    source_system: 'NCBI PubMed E-utilities',
+    search: searchPubMed,
+  },
+  {
+    provider_id: 'crossref',
+    provider_owner: 'OPL Connect optional scientific provider adapter',
+    source_system: 'Crossref REST API',
+    search: searchCrossref,
+  },
+  {
+    provider_id: 'openalex',
+    provider_owner: 'OPL Connect optional scientific provider adapter',
+    source_system: 'OpenAlex Works API',
+    search: searchOpenAlex,
+  },
+] as const satisfies readonly ScientificConnectorProviderAdapter[];
+
+export function scientificConnectorProviderIds(): ScientificConnectorProviderId[] {
+  return SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY.map((provider) => provider.provider_id);
+}
+
+export function buildScientificConnectorProviderRegistryReadback() {
+  return {
+    surface_kind: 'opl_scientific_connector_provider_registry',
+    version: 'opl-scientific-connector-provider-registry.v1',
+    owner: 'OPL Connect',
+    default_provider_id: null,
+    providers: SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY.map((provider) => ({
+      provider_id: provider.provider_id,
+      provider_owner: provider.provider_owner,
+      source_system: provider.source_system,
+      adapter_role: 'optional_provider_adapter',
+    })),
+    authority_boundary: buildAuthorityBoundary(),
+  };
+}
+
+function resolveProvider(providerId: ScientificConnectorProviderId) {
+  const provider = SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY.find((entry) => entry.provider_id === providerId);
+  if (!provider) {
+    throw new FrameworkContractError('cli_usage_error', 'Unknown scientific connector provider.', {
+      provider_id: providerId,
+      available_providers: scientificConnectorProviderIds(),
+    });
+  }
+  return provider;
 }
 
 export async function runOplConnectScientificSearch(input: ScientificConnectorSearchInput) {
-  const normalizedResults = input.provider === 'pubmed'
-    ? await searchPubMed(input)
-    : input.provider === 'crossref'
-      ? await searchCrossref(input)
-      : await searchOpenAlex(input);
+  const provider = resolveProvider(input.provider);
+  const normalizedResults = await provider.search(input);
   const digest = queryDigest(input);
   const connectorInvocationRef = `opl://connect/scientific/${input.provider}/search/${digest}`;
   const ledgerReceiptCandidateRef = `opl://ledger/connect/scientific/${input.provider}/search/${digest}`;
@@ -294,7 +344,7 @@ export async function runOplConnectScientificSearch(input: ScientificConnectorSe
         limit: input.limit,
       },
       source_boundary: {
-        source_system: sourceSystem(input.provider),
+        source_system: provider.source_system,
         source_system_authority: input.provider,
         sensitive_data_policy: 'query_and_normalized_refs_only',
         stores_article_bodies: false,
