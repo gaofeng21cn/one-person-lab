@@ -5,6 +5,7 @@ export const OPL_RUNWAY_SOURCE_MODULE = {
   physicalRoot: 'src/modules/runway',
 } as const;
 
+export { buildEvidenceGroundedRunwayProfilePolicyReadback } from './evidence-grounded-decision-agent-profile.ts';
 export { buildFamilyRuntimeControlledApplyContract } from './family-runtime-controlled-apply.ts';
 export { buildFamilyRuntimeLifecyclePrimitives } from './family-runtime-lifecycle.ts';
 export { buildModelRouteCostProjection, buildStageAttemptUsageProjection } from './family-runtime-stage-attempt-usage.ts';

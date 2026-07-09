@@ -6,6 +6,7 @@ export const OPL_STAGECRAFT_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
+export { buildEvidenceGroundedStagecraftProfilePolicyReadback } from './evidence-grounded-decision-agent-profile.ts';
 export { buildStageAttemptCloseoutRefsOnlyContract, buildStageAttemptLaunchEnvelope, cognitiveKernelBoundary } from './cognitive-kernel-boundary.ts';
 export { buildDuplicateTaskEnvelope, buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject, buildReceiptConflictEnvelope, buildStageAttemptConflictOrBlockerEnvelopes, canonicalOutcomeForStageAttempt } from './family-conflict-envelope.ts';
 export { buildAttemptHumanReviewBurdenBudget, buildFamilyHumanReviewBurdenBudget } from './family-human-review-budget.ts';
