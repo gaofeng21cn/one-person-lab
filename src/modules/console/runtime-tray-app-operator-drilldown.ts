@@ -309,6 +309,38 @@ export function buildAppOperatorDrilldown(input: {
       provider_completion_is_domain_ready: false,
     },
   };
+  const currentWorkUnitFirstDefaultPrimarySource = currentWorkUnitItems.length > 0
+    ? 'domain_current_work_unit_projection'
+    : 'owner_delta_first_projection';
+  const currentWorkUnitFirstDefaultPayloadCategory = currentWorkUnitItems.length > 0
+    ? 'current_work_unit_owner_delta'
+    : 'owner_delta_first_attention_payload';
+  const currentWorkUnitFirstDiagnosticBacklogSeparation = {
+    historical_attempt_backlog_is_default_next_step: false,
+    historical_attempt_backlog_payload_category: 'diagnostic_full_drilldown',
+    full_detail_args: ['--detail', 'full'],
+  };
+  const currentWorkUnitFirstReadModel = {
+    surface_kind: 'opl_app_current_work_unit_first_read_model',
+    projection_policy:
+      'ordinary_surface_defaults_to_current_work_unit_or_owner_delta_attempt_backlog_is_diagnostic',
+    default_primary_source: currentWorkUnitFirstDefaultPrimarySource,
+    current_work_unit_count: currentWorkUnitItems.length,
+    default_payload_category: currentWorkUnitFirstDefaultPayloadCategory,
+    diagnostic_backlog_separation: currentWorkUnitFirstDiagnosticBacklogSeparation,
+    diagnostic_attempt_backlog_count: attempts.length,
+    domain_current_work_unit_summary: record(domainCurrentWorkUnitProjection.summary),
+    authority_boundary: {
+      ...refsOnlyAuthorityBoundary(),
+      current_work_unit_first_is_projection_only: true,
+      can_write_domain_truth: false,
+      can_execute_domain_action: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_close_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  };
   const summary = {
     ...buildAppOperatorDrilldownSummary({
       attempts,
@@ -454,6 +486,14 @@ export function buildAppOperatorDrilldown(input: {
       record(workstreamOperatingLoop.summary).goal_oracle_advisory_count,
     domain_current_work_unit_projection_count:
       record(domainCurrentWorkUnitProjection.summary).current_work_unit_count,
+    current_work_unit_first_default_primary_source:
+      currentWorkUnitFirstDefaultPrimarySource,
+    current_work_unit_first_current_work_unit_count: currentWorkUnitItems.length,
+    current_work_unit_first_default_payload_category:
+      currentWorkUnitFirstDefaultPayloadCategory,
+    current_work_unit_first_historical_attempt_backlog_is_default_next_step: false,
+    current_work_unit_first_diagnostic_backlog_payload_category:
+      currentWorkUnitFirstDiagnosticBacklogSeparation.historical_attempt_backlog_payload_category,
   };
   const memoryArtifactLifecycle = buildMemoryArtifactLifecycleEvidence({
     summary,
@@ -511,6 +551,10 @@ export function buildAppOperatorDrilldown(input: {
     sourceRef(
       '/runtime_tray_snapshot/app_operator_drilldown/workstream_operating_loop',
       'workstream_operating_loop_projection',
+    ),
+    sourceRef(
+      '/runtime_tray_snapshot/app_operator_drilldown/current_work_unit_first_read_model',
+      'current_work_unit_first_read_model',
     ),
     sourceRef(
       '/standard-agent-template-consumption-ledger',
@@ -618,11 +662,13 @@ export function buildAppOperatorDrilldown(input: {
     semantic_conventions: record(record(evidenceEnvelope).semantic_conventions),
     runtime_visualization_projection: runtimeVisualizationProjection,
     workstream_operating_loop: workstreamOperatingLoop,
+    current_work_unit_first_read_model: currentWorkUnitFirstReadModel,
     domain_current_work_unit_projection: domainCurrentWorkUnitProjection,
     runtime_workbench: {
       ...record(runtimeVisualizationProjection.runtime_workbench),
       memory_trace_projection: memoryTrace,
       workstream_operating_loop: workstreamOperatingLoop,
+      current_work_unit_first_read_model: currentWorkUnitFirstReadModel,
       domain_current_work_unit_projection: domainCurrentWorkUnitProjection,
     },
     visual_ref_groups: record(runtimeVisualizationProjection.visual_ref_groups),

@@ -30,6 +30,8 @@ type RunwayRepairAction = {
   mutation: boolean;
   blocks_runtime_execution: boolean;
   blocks_domain_progress_claim: boolean;
+  queue_role?: string;
+  queue_policy?: string;
   repairable_attempt_count?: number;
   blocked_attempt_count?: number;
   failed_attempt_count?: number;
@@ -69,6 +71,8 @@ const BLOCKED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status
 const FAILED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status failed --json';
 const CLOSEOUT_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --json';
 const ATTEMPT_CLASSIFICATION_ACTION_ID = 'classify_attempts_before_redrive';
+const ATTEMPT_DIAGNOSTIC_QUEUE_ROLE = 'runtime_diagnostic_queue_not_stage_decision_authority';
+const ATTEMPT_DIAGNOSTIC_QUEUE_POLICY = 'classify_before_redrive';
 
 function closeoutRepairAttemptCount(attempts: StageAttemptSummary) {
   return attempts.repair_breakdown?.by_status_reason
@@ -120,6 +124,9 @@ function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
   const blockedAttemptCount = countStatus(attempts, ['blocked']);
   const failedAttemptCount = countStatus(attempts, ['failed']);
   const closeoutAttemptCount = closeoutRepairAttemptCount(attempts);
+  const diagnosticAttemptCount = blockedAttemptCount + failedAttemptCount;
+  const currentAttemptCount = countStatus(attempts, ['queued', 'running', 'checkpointed', 'human_gate']);
+  const retiredAttemptCount = countStatus(attempts, ['completed', 'dead_lettered']);
   const items = [
     closeoutAttemptCount > 0
       ? {
@@ -129,8 +136,10 @@ function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
         reason: 'closeout_materialization_or_invalid_typed_closeout_requires_query_redrive_decision',
         command: CLOSEOUT_ATTEMPT_REPAIR_COMMAND,
         mutation: false,
-        blocks_runtime_execution: true,
-        blocks_domain_progress_claim: true,
+        queue_role: ATTEMPT_DIAGNOSTIC_QUEUE_ROLE,
+        diagnostic_layer: 'diagnostic',
+        blocks_runtime_execution: false,
+        blocks_domain_progress_claim: false,
       }
       : null,
     blockedAttemptCount > 0
@@ -140,8 +149,10 @@ function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
         reason: 'blocked_stage_attempts_require_owner_answer_typed_blocker_or_route_back_review',
         command: BLOCKED_ATTEMPT_REPAIR_COMMAND,
         mutation: false,
-        blocks_runtime_execution: true,
-        blocks_domain_progress_claim: true,
+        queue_role: ATTEMPT_DIAGNOSTIC_QUEUE_ROLE,
+        diagnostic_layer: 'stale',
+        blocks_runtime_execution: false,
+        blocks_domain_progress_claim: false,
       }
       : null,
     failedAttemptCount > 0
@@ -151,20 +162,53 @@ function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
         reason: 'failed_stage_attempts_require_failure_review_before_redrive_or_owner_escalation',
         command: FAILED_ATTEMPT_REPAIR_COMMAND,
         mutation: false,
-        blocks_runtime_execution: true,
-        blocks_domain_progress_claim: true,
+        queue_role: ATTEMPT_DIAGNOSTIC_QUEUE_ROLE,
+        diagnostic_layer: 'stale',
+        blocks_runtime_execution: false,
+        blocks_domain_progress_claim: false,
       }
       : null,
   ].filter((item): item is NonNullable<typeof item> => item !== null);
 
   return {
-    surface_kind: 'opl_runway_attempt_repair_queue',
-    repair_policy: 'query_attempts_before_redrive_or_owner_escalation',
+    surface_kind: 'opl_runway_runtime_diagnostic_queue',
+    queue_role: ATTEMPT_DIAGNOSTIC_QUEUE_ROLE,
+    queue_policy: ATTEMPT_DIAGNOSTIC_QUEUE_POLICY,
+    repair_policy: 'classify_before_redrive_runtime_diagnostic_only',
     summary: {
-      repairable_attempt_count: blockedAttemptCount + failedAttemptCount,
+      total_attempt_count: attempts.total,
+      current_attempt_count: currentAttemptCount,
+      stale_attempt_count: diagnosticAttemptCount,
+      retired_attempt_count: retiredAttemptCount,
+      diagnostic_attempt_count: diagnosticAttemptCount,
+      repairable_attempt_count: diagnosticAttemptCount,
       blocked_attempt_count: blockedAttemptCount,
       failed_attempt_count: failedAttemptCount,
       closeout_repair_attempt_count: closeoutAttemptCount,
+      next_stage_decision_authority: false,
+      runtime_control_authority: false,
+    },
+    layers: {
+      current: {
+        attempt_count: currentAttemptCount,
+        status_set: ['queued', 'running', 'checkpointed', 'human_gate'],
+        role: 'runtime_observation_only',
+      },
+      stale: {
+        attempt_count: diagnosticAttemptCount,
+        status_set: ['blocked', 'failed'],
+        role: 'historical_backlog_classify_before_redrive',
+      },
+      retired: {
+        attempt_count: retiredAttemptCount,
+        status_set: ['completed', 'dead_lettered'],
+        role: 'terminal_attempt_projection_only',
+      },
+      diagnostic: {
+        attempt_count: diagnosticAttemptCount,
+        status_set: ['blocked', 'failed'],
+        role: ATTEMPT_DIAGNOSTIC_QUEUE_ROLE,
+      },
     },
     breakdown: attempts.repair_breakdown ?? {
       sample_limit: 0,
@@ -274,8 +318,10 @@ function buildNextSafeAction(input: {
       repairable_attempt_count: repairableAttemptCount,
       blocked_attempt_count: blockedAttemptCount,
       failed_attempt_count: failedAttemptCount,
-      blocks_runtime_execution: true,
-      blocks_domain_progress_claim: true,
+      queue_role: ATTEMPT_DIAGNOSTIC_QUEUE_ROLE,
+      queue_policy: ATTEMPT_DIAGNOSTIC_QUEUE_POLICY,
+      blocks_runtime_execution: false,
+      blocks_domain_progress_claim: false,
     };
   }
 
@@ -498,6 +544,7 @@ function selectedRepairActionWithAttemptQueue(input: {
   if (!input.selectedRepairAction) {
     return null;
   }
+  const selectedRepairRecord = recordValue(input.selectedRepairAction);
   const repairAction: RunwayRepairAction = {
     action_id: input.selectedRepairAction.action_id,
     owner: input.selectedRepairAction.owner,
@@ -507,6 +554,18 @@ function selectedRepairActionWithAttemptQueue(input: {
     blocks_runtime_execution: input.selectedRepairAction.blocks_runtime_execution,
     blocks_domain_progress_claim: input.selectedRepairAction.blocks_domain_progress_claim,
   };
+  const queueRole = stringValue(selectedRepairRecord?.queue_role);
+  if (queueRole) {
+    repairAction.queue_role = queueRole;
+  }
+  const queuePolicy = stringValue(selectedRepairRecord?.queue_policy);
+  if (queuePolicy) {
+    repairAction.queue_policy = queuePolicy;
+  }
+  if (repairAction.action_id === ATTEMPT_CLASSIFICATION_ACTION_ID) {
+    repairAction.queue_role = input.attemptRepairQueue.queue_role;
+    repairAction.queue_policy = input.attemptRepairQueue.queue_policy;
+  }
   if (typeof input.selectedRepairAction.repairable_attempt_count === 'number') {
     repairAction.repairable_attempt_count = input.selectedRepairAction.repairable_attempt_count;
   }
@@ -534,6 +593,9 @@ function recoveryRepairStatus(input: {
 }) {
   if (input.workerRestartGuard?.guard_status === 'blocked') {
     return 'repair_blocked_by_worker_restart_guard';
+  }
+  if (input.selectedRepairAction?.action_id === ATTEMPT_CLASSIFICATION_ACTION_ID) {
+    return 'runtime_diagnostic_queue';
   }
   if (input.selectedRepairAction) {
     return 'repair_action_available';

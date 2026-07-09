@@ -44,7 +44,7 @@ test('Temporal-first runtime contract keeps false-ready and lifecycle boundaries
   assert.equal(contract.authority_boundary.can_sign_owner_receipt, false);
 });
 
-test('Runway read-only repair action classifies attempts before redrive', () => {
+test('Runway blocked and failed backlog is a runtime diagnostic queue before redrive', () => {
   const recoveryRepair = buildRunwayRecoveryRepairProjection({
     recovery_repair: {
       repair_policy: 'classify_before_repair',
@@ -59,14 +59,14 @@ test('Runway read-only repair action classifies attempts before redrive', () => 
         repairable_attempt_count: 1,
         blocked_attempt_count: 1,
         failed_attempt_count: 0,
-        blocks_runtime_execution: true,
-        blocks_domain_progress_claim: true,
+        blocks_runtime_execution: false,
+        blocks_domain_progress_claim: false,
       },
       worker_restart_guard: null,
     },
     stage_attempts: {
-      total: 1,
-      by_status: { blocked: 1 },
+      total: 2,
+      by_status: { blocked: 1, completed: 1 },
       repair_breakdown: {
         sample_limit: 1,
         by_status_reason: [],
@@ -85,6 +85,35 @@ test('Runway read-only repair action classifies attempts before redrive', () => 
 
   assert.equal(selectedRepairAction.action_id, 'classify_attempts_before_redrive');
   assert.equal(selectedRepairAction.mutation, false);
+  assert.equal(selectedRepairAction.blocks_runtime_execution, false);
+  assert.equal(selectedRepairAction.blocks_domain_progress_claim, false);
+  assert.equal(selectedRepairAction.queue_role, 'runtime_diagnostic_queue_not_stage_decision_authority');
+  assert.equal(selectedRepairAction.queue_policy, 'classify_before_redrive');
   assert.equal(selectedRepairAction.command, 'opl family-runtime attempt list --status blocked --json');
+  assert.equal(recoveryRepair.repair_status, 'runtime_diagnostic_queue');
   assert.equal(recoveryRepair.default_repair_command, 'opl family-runtime attempt list --status blocked --json');
+
+  const diagnosticQueue = recoveryRepair.attempt_repair_queue;
+  assert.equal(diagnosticQueue.surface_kind, 'opl_runway_runtime_diagnostic_queue');
+  assert.equal(diagnosticQueue.queue_role, 'runtime_diagnostic_queue_not_stage_decision_authority');
+  assert.equal(diagnosticQueue.queue_policy, 'classify_before_redrive');
+  assert.equal(diagnosticQueue.repair_policy, 'classify_before_redrive_runtime_diagnostic_only');
+  assert.equal(diagnosticQueue.default_repair_command, 'opl family-runtime attempt list --status blocked --json');
+  assert.equal(diagnosticQueue.summary.current_attempt_count, 0);
+  assert.equal(diagnosticQueue.summary.stale_attempt_count, 1);
+  assert.equal(diagnosticQueue.summary.retired_attempt_count, 1);
+  assert.equal(diagnosticQueue.summary.diagnostic_attempt_count, 1);
+  assert.equal(diagnosticQueue.summary.next_stage_decision_authority, false);
+  assert.equal(diagnosticQueue.summary.runtime_control_authority, false);
+  assert.equal(diagnosticQueue.layers.current.role, 'runtime_observation_only');
+  assert.equal(diagnosticQueue.layers.stale.role, 'historical_backlog_classify_before_redrive');
+  assert.equal(diagnosticQueue.layers.retired.role, 'terminal_attempt_projection_only');
+  assert.equal(diagnosticQueue.layers.diagnostic.role, 'runtime_diagnostic_queue_not_stage_decision_authority');
+  assert.equal(diagnosticQueue.items[0].mutation, false);
+  assert.equal(diagnosticQueue.items[0].blocks_runtime_execution, false);
+  assert.equal(diagnosticQueue.items[0].blocks_domain_progress_claim, false);
+  assert.equal(diagnosticQueue.authority_boundary.can_execute_domain_action, false);
+  assert.equal(diagnosticQueue.authority_boundary.can_write_domain_truth, false);
+  assert.equal(diagnosticQueue.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(diagnosticQueue.authority_boundary.provider_completion_is_domain_ready, false);
 });

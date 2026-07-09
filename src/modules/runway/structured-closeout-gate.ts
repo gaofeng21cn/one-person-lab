@@ -93,6 +93,7 @@ export function buildStructuredCloseoutGate(input: {
     blockedReason: input.blockedReason,
     rejectionReason: input.closeoutRejection?.reason ?? null,
   });
+  const closeoutMaterializationRequired = repairClass === 'closeout_materialization';
   const stageAttemptId = optionalString(input.attempt.stage_attempt_id) ?? null;
   const stageId = optionalString(input.attempt.stage_id) ?? null;
   const gateStatus: 'accepted_typed_closeout' | 'missing_typed_closeout' | 'provider_runtime_blocker_materialized' = repairClass
@@ -108,7 +109,7 @@ export function buildStructuredCloseoutGate(input: {
     gate_status: gateStatus,
     stage_attempt_id: stageAttemptId,
     stage_id: stageId,
-    accepted_closeout: input.closeoutPacket
+    accepted_closeout: !repairClass && input.closeoutPacket
       ? {
           surface_kind: input.closeoutPacket.surface_kind,
           closeout_ref_count: input.closeoutPacket.closeout_refs.length,
@@ -119,6 +120,9 @@ export function buildStructuredCloseoutGate(input: {
       : null,
     capture_pipeline: {
       terminal_message_json_scan: true as const,
+      free_text_closeout_accepted: false as const,
+      terminal_json_exact_object_required: true as const,
+      parse_failure_is_stage_progression: false as const,
       output_last_message_capture_enabled: input.outputLastMessageCaptureEnabled,
       output_schema: input.outputSchema,
       session_recovery_status: input.sessionRecoveryStatus,
@@ -133,11 +137,21 @@ export function buildStructuredCloseoutGate(input: {
             blocked_reason: input.blockedReason,
             closeout_rejection_reason: input.closeoutRejection?.reason ?? null,
             provider_completion_is_domain_ready: false as const,
+            output_protocol_drift: closeoutMaterializationRequired,
+            materialization_required: closeoutMaterializationRequired
+              ? 'terminal_typed_closeout_json_object' as const
+              : null,
           },
           repair_action: {
             action_id: 'structured_closeout_repair_redrive_decision' as const,
             owner: 'opl_runway' as const,
+            repair_kind: closeoutMaterializationRequired
+              ? 'output_protocol_drift' as const
+              : 'typed_closeout_repair' as const,
             reason: input.blockedReason ?? `typed_closeout_${input.closeoutRejection?.reason}`,
+            materialization_required: closeoutMaterializationRequired
+              ? 'terminal_typed_closeout_json_object' as const
+              : null,
             command: stageAttemptId
               ? `opl family-runtime attempt query ${stageAttemptId} --json`
               : 'opl family-runtime attempt list --status blocked --json',

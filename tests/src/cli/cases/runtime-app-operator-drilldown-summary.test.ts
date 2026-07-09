@@ -282,6 +282,33 @@ test('runtime app operator defaults to summary refs and exposes full drilldown e
     for (const section of HIDDEN_FULL_DETAIL_SECTIONS) {
       assert.equal(summaryDrilldown[section], undefined, section);
     }
+    assert.equal(
+      summaryDrilldown.current_work_unit_first_read_model.surface_kind,
+      'opl_app_current_work_unit_first_read_model',
+    );
+    assert.equal(
+      summaryDrilldown.current_work_unit_first_read_model
+        .diagnostic_backlog_separation.historical_attempt_backlog_is_default_next_step,
+      false,
+    );
+    assert.equal(
+      summaryDrilldown.summary
+        .current_work_unit_first_historical_attempt_backlog_is_default_next_step,
+      false,
+    );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_diagnostic_backlog_payload_category,
+      'diagnostic_full_drilldown',
+    );
+    assert.deepEqual(
+      summaryDrilldown.current_work_unit_first_read_model
+        .diagnostic_backlog_separation.full_detail_args,
+      ['--detail', 'full'],
+    );
+    assert.equal(
+      summaryDrilldown.current_work_unit_first_read_model.authority_boundary.can_write_domain_truth,
+      false,
+    );
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_domain_ready, false);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_quality_verdict, false);
     assert.equal(summaryDrilldown.summary.opl_meta_agent_claims_default_promotion, false);
@@ -371,6 +398,22 @@ test('runtime app operator summary uses current-owner cache before workstream ba
       summaryDrilldown.operator_next_action.payload_requirement,
       'domain_current_work_unit_owner_action_or_typed_blocker_required',
     );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_default_primary_source,
+      'domain_current_work_unit_projection',
+    );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_current_work_unit_count,
+      1,
+    );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_default_payload_category,
+      'current_work_unit_owner_delta',
+    );
+    assert.equal(
+      summaryDrilldown.current_work_unit_first_read_model.default_primary_source,
+      'domain_current_work_unit_projection',
+    );
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
@@ -433,6 +476,23 @@ test('runtime app operator summary prefers current work-unit over historical saf
     assert.notEqual(
       summaryDrilldown.attention_first_payload.owner_delta_first.primary_item.source,
       'selected_safe_action',
+    );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_default_primary_source,
+      'domain_current_work_unit_projection',
+    );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_current_work_unit_count,
+      1,
+    );
+    assert.equal(
+      summaryDrilldown.summary.current_work_unit_first_default_payload_category,
+      'current_work_unit_owner_delta',
+    );
+    assert.equal(
+      summaryDrilldown.current_work_unit_first_read_model
+        .diagnostic_backlog_separation.historical_attempt_backlog_is_default_next_step,
+      false,
     );
   } finally {
     if (previousStateDir === undefined) {

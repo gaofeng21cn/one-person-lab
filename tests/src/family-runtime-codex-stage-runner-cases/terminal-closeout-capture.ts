@@ -66,10 +66,26 @@ exit 64
       receipt.process_output_summary?.structured_closeout_gate?.failure?.repair_class,
       'closeout_materialization',
     );
+    const capturePipeline = receipt.process_output_summary?.structured_closeout_gate?.capture_pipeline as
+      | Record<string, unknown>
+      | undefined;
+    assert.equal(capturePipeline?.free_text_closeout_accepted, false);
+    assert.equal(capturePipeline?.terminal_json_exact_object_required, true);
+    assert.equal(capturePipeline?.parse_failure_is_stage_progression, false);
+    const failure = receipt.process_output_summary?.structured_closeout_gate?.failure as
+      | Record<string, unknown>
+      | undefined;
+    assert.equal(failure?.output_protocol_drift, true);
+    assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object');
     assert.equal(
       receipt.process_output_summary?.structured_closeout_gate?.repair_action?.mutation,
       false,
     );
+    const repairAction = receipt.process_output_summary?.structured_closeout_gate?.repair_action as
+      | Record<string, unknown>
+      | undefined;
+    assert.equal(repairAction?.repair_kind, 'output_protocol_drift');
+    assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object');
     assert.equal(
       receipt.process_output_summary?.structured_closeout_gate?.authority_boundary.can_write_domain_truth,
       false,
@@ -86,6 +102,99 @@ exit 64
       process.env.OPL_CODEX_BIN = previousCodexBin;
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Codex stage runner rejects terminal JSON missing typed closeout contract fields', async () => {
+  const cases = [
+    {
+      name: 'missing surface_kind',
+      attemptId: 'sat_missing_surface_kind_closeout_test',
+      closeout: {
+        closeout_refs: ['receipt:missing-surface-kind-closeout'],
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+    },
+    {
+      name: 'missing closeout_refs',
+      attemptId: 'sat_missing_closeout_refs_closeout_test',
+      closeout: {
+        surface_kind: 'stage_attempt_closeout_packet',
+        next_owner: 'med-autoscience',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+    },
+  ];
+
+  for (const entry of cases) {
+    const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-${entry.attemptId}"}\\n'
+  printf '{"type":"turn.started"}\\n'
+  printf '%s\\n' '${JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'agent_message',
+      id: 'msg-1',
+      text: JSON.stringify(entry.closeout),
+    },
+  })}'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`);
+    const previousCodexBin = process.env.OPL_CODEX_BIN;
+    try {
+      process.env.OPL_CODEX_BIN = codexPath;
+      const receipt = await runPublicCodexStageRunner({
+        attempt: {
+          stage_attempt_id: entry.attemptId,
+          stage_id: 'domain_owner/default-executor-dispatch',
+          workspace_locator: {
+            workspace_root: fixtureRoot,
+          },
+          checkpoint_refs: [`checkpoint:${entry.attemptId}`],
+        },
+        stagePacketRef: `packet:${entry.attemptId}`,
+        runnerMode: 'codex_cli',
+        timeoutMs: 10_000,
+      });
+
+      assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet', entry.name);
+      assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+        `opl://stage-attempts/${entry.attemptId}/runtime-blockers/codex_cli_typed_closeout_not_materialized`,
+      ], entry.name);
+      assert.equal(
+        receipt.closeout_packet?.route_impact?.provider_blocker_reason,
+        'codex_cli_typed_closeout_not_materialized',
+        entry.name,
+      );
+      const gate = receipt.process_output_summary?.structured_closeout_gate;
+      assert.equal(gate?.gate_status, 'provider_runtime_blocker_materialized', entry.name);
+      assert.equal(gate?.accepted_closeout, null, entry.name);
+      const capturePipeline = gate?.capture_pipeline as Record<string, unknown> | undefined;
+      assert.equal(capturePipeline?.free_text_closeout_accepted, false, entry.name);
+      assert.equal(capturePipeline?.terminal_json_exact_object_required, true, entry.name);
+      assert.equal(capturePipeline?.parse_failure_is_stage_progression, false, entry.name);
+      const failure = gate?.failure as Record<string, unknown> | undefined;
+      assert.equal(failure?.output_protocol_drift, true, entry.name);
+      assert.equal(failure?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
+      assert.equal(failure?.provider_completion_is_domain_ready, false, entry.name);
+      const repairAction = gate?.repair_action as Record<string, unknown> | undefined;
+      assert.equal(repairAction?.repair_kind, 'output_protocol_drift', entry.name);
+      assert.equal(repairAction?.materialization_required, 'terminal_typed_closeout_json_object', entry.name);
+      assert.equal(repairAction?.blocks_domain_progress_claim, true, entry.name);
+    } finally {
+      if (previousCodexBin === undefined) {
+        delete process.env.OPL_CODEX_BIN;
+      } else {
+        process.env.OPL_CODEX_BIN = previousCodexBin;
+      }
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   }
 });
 

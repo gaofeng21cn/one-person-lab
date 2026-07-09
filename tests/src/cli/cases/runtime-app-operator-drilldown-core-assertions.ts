@@ -77,6 +77,7 @@ export function assertCoreAppOperatorDrilldownProjection(
       ...projection.runtime_visualization_projection.runtime_workbench,
       memory_trace_projection: projection.memory_trace_projection,
       workstream_operating_loop: projection.workstream_operating_loop,
+      current_work_unit_first_read_model: projection.current_work_unit_first_read_model,
       domain_current_work_unit_projection: projection.domain_current_work_unit_projection,
     },
   );
