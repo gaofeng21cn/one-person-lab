@@ -226,6 +226,7 @@ test('default help advertises Connect canonical installation surfaces while reti
   assert.equal(commands.includes('agents foundry status'), true);
   assert.equal(commands.includes('agents foundry interfaces'), true);
   assert.equal(commands.includes('agents foundry peers'), true);
+  assert.equal(commands.includes('foundry evidence-profile inspect'), true);
   assert.equal(commands.includes('modules'), false);
   assert.equal(commands.includes('module install'), false);
   assert.equal(commands.includes('skill sync'), false);

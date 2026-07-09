@@ -3,6 +3,7 @@ import {
   buildFoundryAgentCliSpine,
   buildFoundryAgentInspect,
   buildFoundryAgentsList,
+  buildFoundryEvidenceProfileInspect,
 } from '../../../../modules/foundry-lab/foundry-agent-cli-spine.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
@@ -31,7 +32,7 @@ export function buildFoundryCommandSpecs(): Record<string, CommandSpec> {
       handler: (args) => buildFoundryAgentsList(args),
     },
     'foundry agents inspect': {
-    usage: 'opl foundry agents inspect <mas|mag|rca|oma|obf>',
+      usage: 'opl foundry agents inspect <mas|mag|rca|oma|obf>',
       summary: 'Inspect one standard Foundry Agent series member and its direct CLI foundry spine, ordinary work alias, Skill/MCP projection, and authority boundary.',
       examples: [
         'opl foundry agents inspect mas --json',
@@ -40,6 +41,13 @@ export function buildFoundryCommandSpecs(): Record<string, CommandSpec> {
       ],
       group: 'foundry',
       handler: (args) => buildFoundryAgentInspect(args),
+    },
+    'foundry evidence-profile inspect': {
+      usage: 'opl foundry evidence-profile inspect',
+      summary: 'Inspect the cross-cutting Evidence-Grounded Decision Agent Profile for standard Foundry Agent decision-support agents without creating a domain agent or a new brand module.',
+      examples: ['opl foundry evidence-profile inspect --json'],
+      group: 'foundry',
+      handler: (args) => buildFoundryEvidenceProfileInspect(args),
     },
   };
 }

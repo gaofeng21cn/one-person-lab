@@ -13,6 +13,7 @@ import {
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
 } from '../atlas/index.ts';
+import { buildEvidenceGroundedDecisionAgentProfileReadback } from '../pack/index.ts';
 
 export const FOUNDRY_AGENT_OPERATIONS = [
   'status',
@@ -598,6 +599,38 @@ export function buildFoundryAgentInspect(args: string[]) {
       feedback_self_evolution_trigger: buildFeedbackSelfEvolutionTrigger(peer, contract),
       developer_mode_target_hint: buildFoundryAgentDeveloperModeTargetHint(peer),
       authority_boundary: buildAuthorityBoundary(contract),
+    },
+  };
+}
+
+export function buildFoundryEvidenceProfileInspect(args: string[]) {
+  assertNoFoundryAgentArgs(args, 'opl foundry evidence-profile inspect');
+  const readback = buildEvidenceGroundedDecisionAgentProfileReadback()
+    .evidence_grounded_decision_agent_profile;
+  return {
+    version: 'g2',
+    foundry_evidence_profile: {
+      surface_kind: 'opl_foundry_evidence_grounded_decision_agent_profile_inspect',
+      series_id: 'opl_foundry_agent_series.v1',
+      profile_id: readback.profile_id,
+      contract_ref: readback.contract_ref,
+      profile_role: readback.contract.profile_role,
+      consumption_status: readback.consumption_status,
+      first_class_object_names: readback.first_class_object_names,
+      module_owner_ids: readback.module_owner_ids,
+      fail_closed_rule_ids: readback.fail_closed_rule_ids,
+      forbidden_claim_ids: readback.forbidden_claim_ids,
+      decision_support_flow: readback.contract.decision_support_flow,
+      mode_routing_policy: readback.mode_routing_policy,
+      evidence_policy: readback.evidence_policy,
+      human_gate_policy: readback.human_gate_policy,
+      unsupported_evidence_blocker_policy: readback.unsupported_evidence_blocker_policy,
+      module_ownership: readback.module_ownership,
+      authority_boundary: readback.authority_boundary,
+      contract_readback_ref: 'src/modules/pack/evidence-grounded-decision-agent-profile.ts',
+      no_new_brand_module: true,
+      implements_concrete_domain_agent: false,
+      implements_medical_or_hematology_agent: false,
     },
   };
 }

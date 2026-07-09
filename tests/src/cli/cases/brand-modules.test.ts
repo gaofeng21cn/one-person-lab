@@ -754,3 +754,37 @@ test('bin/opl routes Foundry Agent series commands into the OPL CLI instead of C
   assert.equal('domain_native_foundry_command_surface' in output.foundry_agent, false);
   assert.equal('direct_domain_cli' in output.foundry_agent, false);
 });
+
+test('Foundry exposes the evidence-grounded decision agent profile as a cross-cutting profile readback', () => {
+  const output = runCli(['foundry', 'evidence-profile', 'inspect']);
+  const profile = output.foundry_evidence_profile;
+
+  assert.equal(
+    profile.surface_kind,
+    'opl_foundry_evidence_grounded_decision_agent_profile_inspect',
+  );
+  assert.equal(profile.profile_id, 'evidence_grounded_decision_agent_profile.v1');
+  assert.equal(profile.no_new_brand_module, true);
+  assert.equal(profile.implements_concrete_domain_agent, false);
+  assert.equal(profile.implements_medical_or_hematology_agent, false);
+  assert.equal(profile.module_owner_ids.includes('pack'), true);
+  assert.equal(profile.module_owner_ids.includes('stagecraft'), true);
+  assert.equal(profile.module_owner_ids.includes('runway'), true);
+  assert.equal(profile.module_owner_ids.includes('ledger'), true);
+  assert.equal(profile.first_class_object_names.includes('ModeRoutingReceipt'), true);
+  assert.equal(profile.first_class_object_names.includes('EvidencePacket'), true);
+  assert.equal(profile.first_class_object_names.includes('DecisionSupportArtifact'), true);
+  assert.equal(profile.fail_closed_rule_ids.includes('no_evidence'), true);
+  assert.equal(profile.fail_closed_rule_ids.includes('unsafe_tool_data_sharing'), true);
+  assert.equal(profile.forbidden_claim_ids.includes('final_decision'), true);
+  assert.equal(profile.authority_boundary.profile_can_claim_domain_ready, false);
+  assert.equal(profile.authority_boundary.profile_can_claim_final_decision, false);
+  assert.equal(profile.authority_boundary.pack_can_create_owner_receipt, false);
+  assert.equal(profile.evidence_policy.body_storage_policy, 'refs_only_no_source_body_in_profile_contract');
+  assert.equal(
+    profile.unsupported_evidence_blocker_policy.required_blocker_reasons.includes(
+      'required_provider_receipt_missing',
+    ),
+    true,
+  );
+});
