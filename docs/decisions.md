@@ -1247,13 +1247,14 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：One Person Lab App 采用 clean 产品仓，AionUI shell 独立保留为 `opl-aion-shell`
 
-原因：OPL Framework 已经形成完整的 stage-led 智能体开发与运行框架边界；继续把 App 打包、页面状态、截图教程、Electron 更新、AionUI upstream intake 和 framework runtime/contracts 混在同一层，会让维护者难以判断 owner，也会把当前 GUI 基座误读成 OPL 顶层身份。更清晰的维护形态是：`one-person-lab` 保持 Framework repo，`opl-aion-shell` 保留 AionUI 历史与 upstream-following shell overlay，`one-person-lab-app` 成为 clean App 产品仓并通过外部 `shells/aionui` checkout 消费 shell。
+原因：OPL Framework 已经形成完整的 stage-led 智能体开发与运行框架边界；继续把 App 打包、页面状态、截图教程、Electron 更新、AionUI upstream intake 和 framework runtime/contracts 混在同一层，会让维护者难以判断 owner，也会把当前 GUI 基座误读成 OPL 顶层身份。更清晰的维护形态是：`one-person-lab` 保持 Framework repo，`opl-aion-shell` 保留 AionUI 历史与 upstream-following fork / OPL overlay carrier，`one-person-lab-app` 成为 clean App 产品仓并通过外部 `shells/aionui` checkout 消费 shell。
 
 影响：
 
 - 不再采用“把 history-rich `opl-aion-shell` 直接改名为 `one-person-lab-app`”作为最终路径；该路径会把 AionUI contributors 带入 App repo，且后续 upstream intake 会持续污染 App contributor 图。
 - `one-person-lab` 继续持有 OPL Framework：CLI、runtime、Temporal provider、contracts、module/skill sync、domain discovery、runtime snapshot 和 framework-level verification。
-- `opl-aion-shell` 继续持有 AionUI shell 源码、contributors、upstream remote、shell-local build/test/packaging 和 OPL overlay 退役审计。
+- `opl-aion-shell` 保留 AionUI shell 源码、contributors、upstream remote、shell-local build/test/packaging 和 OPL overlay 退役审计，但 upstream AionUI fork body 不是 OPL 自主设计面。
+- OPL 对 `opl-aion-shell` / App `shells/aionui/**` 的写入只限 App adapter、OPL overlay、packaging/readback hooks 和明确 owner 的最小验证；非 OPL-owned upstream fork body 不做测试瘦身、结构重写、实现清理、样式/交互重构或依赖升级，误动必须回退。
 - App 产品文档、打包、更新、Full first-install 包、页面状态测试、首启测试、截图和用户教程迁入 App repo。
 - AionUI 不进入 App repo 默认分支历史；App repo 的 `shells/aionui` 是外部 checkout / symlink / CI checkout，来源为 `gaofeng21cn/opl-aion-shell`。
 - 当前 GUI 主线是 OPL-branded AionUI shell；Hermes Desktop / `hermes-codex` 是唯一 foreground alternative。AionUI 大版本迁移可以在 `shells/aionui-next/` 这类主线升级路径中适配；非 Hermes 的新 GUI 候选必须先经 App owner 明确重新打开 candidate policy。
