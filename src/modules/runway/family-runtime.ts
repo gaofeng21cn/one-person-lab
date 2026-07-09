@@ -574,6 +574,7 @@ export async function runFamilyRuntime(
         version: 'g2',
         family_runtime_stage_attempts: {
           surface_id: 'opl_family_runtime_stage_attempts',
+          provider_runtime_metadata: projection.provider_runtime_metadata,
           summary: projection.summary,
           filters: projection.filters,
           view_mode: projection.compact_timeline ? 'compact_timeline' : 'full',

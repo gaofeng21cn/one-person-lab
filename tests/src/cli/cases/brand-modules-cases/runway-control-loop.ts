@@ -1,4 +1,5 @@
 import { assert, fs, os, path, runCli, test } from '../../helpers.ts';
+import { buildRunwayRecoveryRepairProjection } from '../../../../../src/modules/runway/family-runtime-control-loop.ts';
 import { parseRegisteredFamilyRuntimeCommand } from '../../../../../src/modules/runway/family-runtime-command-parts/registry.ts';
 import { buildTemporalFirstRuntimeContract } from '../../../../../src/modules/runway/family-runtime-temporal.ts';
 
@@ -41,4 +42,49 @@ test('Temporal-first runtime contract keeps false-ready and lifecycle boundaries
   assert.equal(contract.event_history_mapping.sqlite_sidecar_role, 'projection_and_readback_index_only_not_runtime_provider');
   assert.equal(contract.false_ready_boundary.not_proven_by.includes('focused_tests_pass'), true);
   assert.equal(contract.authority_boundary.can_sign_owner_receipt, false);
+});
+
+test('Runway read-only repair action classifies attempts before redrive', () => {
+  const recoveryRepair = buildRunwayRecoveryRepairProjection({
+    recovery_repair: {
+      repair_policy: 'classify_before_repair',
+      repair_classes: [],
+      default_repair_command: null,
+      selected_repair_action: {
+        action_id: 'classify_attempts_before_redrive',
+        owner: 'opl_runway',
+        reason: 'blocked_or_failed_stage_attempts_need_repair_classification',
+        command: 'opl family-runtime attempt list --status blocked --json',
+        mutation: false,
+        repairable_attempt_count: 1,
+        blocked_attempt_count: 1,
+        failed_attempt_count: 0,
+        blocks_runtime_execution: true,
+        blocks_domain_progress_claim: true,
+      },
+      worker_restart_guard: null,
+    },
+    stage_attempts: {
+      total: 1,
+      by_status: { blocked: 1 },
+      repair_breakdown: {
+        sample_limit: 1,
+        by_status_reason: [],
+        by_status_stage_reason: [],
+      },
+    },
+    provider_runtime: {},
+    scheduler_cadence: {},
+    queue: {},
+    authority_boundary: {},
+  } as any);
+  const selectedRepairAction = recoveryRepair.selected_repair_action;
+  if (!selectedRepairAction) {
+    assert.fail('expected a selected repair action');
+  }
+
+  assert.equal(selectedRepairAction.action_id, 'classify_attempts_before_redrive');
+  assert.equal(selectedRepairAction.mutation, false);
+  assert.equal(selectedRepairAction.command, 'opl family-runtime attempt list --status blocked --json');
+  assert.equal(recoveryRepair.default_repair_command, 'opl family-runtime attempt list --status blocked --json');
 });

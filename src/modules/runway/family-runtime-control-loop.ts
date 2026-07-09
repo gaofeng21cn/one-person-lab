@@ -68,6 +68,7 @@ const FALSE_AUTHORITY_BOUNDARY = {
 const BLOCKED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status blocked --json';
 const FAILED_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --status failed --json';
 const CLOSEOUT_ATTEMPT_REPAIR_COMMAND = 'opl family-runtime attempt list --json';
+const ATTEMPT_CLASSIFICATION_ACTION_ID = 'classify_attempts_before_redrive';
 
 function closeoutRepairAttemptCount(attempts: StageAttemptSummary) {
   return attempts.repair_breakdown?.by_status_reason
@@ -158,7 +159,7 @@ function buildAttemptRepairQueue(attempts: StageAttemptSummary) {
 
   return {
     surface_kind: 'opl_runway_attempt_repair_queue',
-    repair_policy: 'query_attempts_before_retry_redrive_or_owner_escalation',
+    repair_policy: 'query_attempts_before_redrive_or_owner_escalation',
     summary: {
       repairable_attempt_count: blockedAttemptCount + failedAttemptCount,
       blocked_attempt_count: blockedAttemptCount,
@@ -263,7 +264,7 @@ function buildNextSafeAction(input: {
     const blockedAttemptCount = countStatus(input.attempts, ['blocked']);
     const failedAttemptCount = countStatus(input.attempts, ['failed']);
     return {
-      action_id: 'retry',
+      action_id: ATTEMPT_CLASSIFICATION_ACTION_ID,
       owner: 'opl_runway',
       reason: 'blocked_or_failed_stage_attempts_need_repair_classification',
       command: blockedAttemptCount > 0
@@ -384,7 +385,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
       ],
       allowed_next_actions: [
         'resume',
-        'retry',
+        ATTEMPT_CLASSIFICATION_ACTION_ID,
         'repair_provider_liveness',
         'escalate_typed_blocker',
         'wait_for_owner_answer',
@@ -479,7 +480,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
         ? 'opl family-runtime repair --provider temporal'
         : null,
       selected_repair_action: nextSafeAction.action_id === 'repair_provider_liveness'
-        || nextSafeAction.action_id === 'retry'
+        || nextSafeAction.action_id === ATTEMPT_CLASSIFICATION_ACTION_ID
         ? nextSafeAction
         : null,
       worker_restart_guard: workerRestartGuard,
@@ -515,7 +516,7 @@ function selectedRepairActionWithAttemptQueue(input: {
   if (typeof input.selectedRepairAction.failed_attempt_count === 'number') {
     repairAction.failed_attempt_count = input.selectedRepairAction.failed_attempt_count;
   }
-  if (repairAction.action_id !== 'retry' || !input.attemptRepairQueue.default_repair_command) {
+  if (repairAction.action_id !== ATTEMPT_CLASSIFICATION_ACTION_ID || !input.attemptRepairQueue.default_repair_command) {
     return repairAction;
   }
   return {
@@ -632,7 +633,7 @@ export function buildRunwayRecoveryRepairProjection(controlLoop: FamilyRuntimeCo
     ),
     selected_repair_action: selectedRepairAction,
     default_repair_command: controlLoop.recovery_repair.default_repair_command
-      ?? (selectedRepairAction?.action_id === 'retry' ? attemptRepairQueue.default_repair_command : null),
+      ?? (selectedRepairAction?.action_id === ATTEMPT_CLASSIFICATION_ACTION_ID ? attemptRepairQueue.default_repair_command : null),
     attempt_repair_queue: attemptRepairQueue,
     worker_restart_guard: workerRestartGuard,
     repair_blocker_ids: workerRestartGuard?.blocker_ids ?? [],

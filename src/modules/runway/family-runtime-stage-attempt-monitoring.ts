@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
+  isFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
 import {
   buildStageAttemptCurrentProviderReadinessPayload,
@@ -35,7 +36,9 @@ type ProviderReadinessOptions = {
 };
 
 type StageAttemptPayload = ReturnType<typeof stageAttemptToPayload>;
-type CurrentProviderReadiness = ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>;
+type CurrentProviderReadiness =
+  | ReturnType<typeof buildStageAttemptCurrentProviderReadinessPayload>
+  | ReturnType<typeof retiredLocalSqliteProviderReadiness>;
 type ProviderReadinessCurrentness = ReturnType<typeof providerReadinessCurrentness>;
 type StageProgressLog = ReturnType<typeof buildStageProgressLog>;
 
@@ -65,17 +68,63 @@ async function providerReadinessByKind(
   paths: ProviderReadinessPaths,
   options: ProviderReadinessOptions,
 ) {
-  const providerKinds = [...new Set(attempts.map((attempt) => attempt.provider_kind))];
-  const entries = await Promise.all(providerKinds.map(async (providerKind) => {
+  const providerKinds = [...new Set(attempts.map((attempt) => String(attempt.provider_kind)))];
+  const entries: Array<[string, CurrentProviderReadiness]> = await Promise.all(providerKinds.map(async (providerKind) => {
+    if (providerKind === 'local_sqlite') {
+      return [providerKind, retiredLocalSqliteProviderReadiness()];
+    }
+    if (!isFamilyRuntimeProviderKind(providerKind)) {
+      const provider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind as never, paths, options);
+      return [providerKind, buildStageAttemptCurrentProviderReadinessPayload(provider, providerKind as never)];
+    }
     const provider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, paths, options);
-    return [providerKind, buildStageAttemptCurrentProviderReadinessPayload(provider, providerKind)] as const;
+    return [providerKind, buildStageAttemptCurrentProviderReadinessPayload(provider, providerKind)];
   }));
-  return new Map(entries);
+  return new Map<string, CurrentProviderReadiness>(entries);
+}
+
+function retiredLocalSqliteProviderReadiness() {
+  return {
+    surface_kind: 'stage_attempt_retired_provider_readiness_diagnostic',
+    provider_kind: 'local_sqlite',
+    provider_ready: false,
+    status: 'retired_runtime_provider',
+    degraded_reason: 'local_sqlite_retired_runtime_provider',
+    capabilities: [],
+    details: {
+      provider_role: 'retired_runtime_provider',
+      selected_runtime_provider: 'temporal',
+      production_required_provider: 'temporal',
+      local_sqlite_role: 'projection_and_readback_index_only',
+      diagnostic: 'retired_attempt_provider_kind_observed',
+      remediation: 'query_attempts_through_temporal_backed_projection_before_redrive_or_owner_escalation',
+    },
+    provider_receipt_is_creation_time_snapshot: true,
+    authority_boundary: {
+      opl: 'retired_provider_projection_diagnostic_only',
+      domain: 'truth_quality_artifact_gate_owner',
+    },
+  };
+}
+
+function retiredProviderEnvDiagnostic() {
+  const configured = process.env.OPL_FAMILY_RUNTIME_PROVIDER?.trim();
+  if (configured !== 'local_sqlite') {
+    return null;
+  }
+  return {
+    env: 'OPL_FAMILY_RUNTIME_PROVIDER',
+    configured_provider: configured,
+    selected_runtime_provider: 'temporal',
+    diagnostic_status: 'retired_env_provider_ignored_for_attempt_projection',
+    reason: 'local_sqlite_retired_runtime_provider',
+    local_sqlite_role: 'projection_and_readback_index_only',
+  };
 }
 
 function attachCurrentProviderReadiness(
   attempt: StageAttemptPayload,
-  readinessByKind: Map<FamilyRuntimeProviderKind, CurrentProviderReadiness>,
+  readinessByKind: Map<string, CurrentProviderReadiness>,
 ) {
   const currentProviderReadiness = readinessByKind.get(attempt.provider_kind) ?? null;
   const runtimeCurrentness = buildStageAttemptRuntimeCurrentness({
@@ -782,6 +831,12 @@ export async function listStageAttemptsWithMonitoringProjection(
         compactTimelineForAttempt(db, attempt, readinessByKind.get(attempt.provider_kind) ?? null)
       );
   return {
+    provider_runtime_metadata: {
+      selected_runtime_provider: 'temporal',
+      production_required_provider: 'temporal',
+      sqlite_sidecar_role: 'projection_and_readback_index_only',
+      retired_env_diagnostic: retiredProviderEnvDiagnostic(),
+    },
     filters: {
       domain_id: filters.domainId ?? null,
       status: filters.status ?? null,
