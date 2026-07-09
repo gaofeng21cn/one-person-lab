@@ -4,6 +4,84 @@ import net from 'node:net';
 import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
 
+type RuntimeEventRow = {
+  eventId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
+function insertRuntimeEvents(queueDb: string, rows: RuntimeEventRow[]) {
+  const result = spawnSync(process.execPath, [
+    '--experimental-strip-types',
+    '-e',
+    `import { DatabaseSync } from 'node:sqlite';
+const db = new DatabaseSync(process.argv[1]);
+const rows = JSON.parse(process.argv[2]);
+const stmt = db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)");
+for (const row of rows) {
+  stmt.run(row.eventId, row.eventType, 'test', JSON.stringify(row.payload), row.createdAt);
+}
+db.close();`,
+    queueDb,
+    JSON.stringify(rows),
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NODE_NO_WARNINGS: '1',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr);
+}
+
+function providerProofPayload(input: {
+  closeoutStatus?: string;
+  receiptKind?: string;
+  receiptStatus?: string;
+} = {}) {
+  return {
+    provider_kind: 'temporal',
+    proof_mode: 'external_temporal_service_worker',
+    closeout_status: input.closeoutStatus ?? 'production_residency_proven',
+    proof_receipt: {
+      receipt_kind: input.receiptKind ?? 'temporal_production_residency_proof',
+      receipt_status: input.receiptStatus ?? 'proven',
+      provider_kind: 'temporal',
+    },
+  };
+}
+
+function sloExecutionReceiptPayload(input: {
+  command?: string;
+  executionStatus?: string;
+  receiptStatus?: string;
+  repairStatus?: string;
+  skipReason?: string;
+  productionCapabilityReceipt?: Record<string, unknown>;
+} = {}) {
+  return {
+    surface_kind: 'opl_temporal_provider_slo_execution_receipt',
+    provider_kind: 'temporal',
+    ...(input.command ? { command: input.command } : {}),
+    execution_status: input.executionStatus ?? 'executed',
+    receipt_status: input.receiptStatus ?? 'proven',
+    receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
+    ...(input.skipReason ? { skip_reason: input.skipReason } : {}),
+    ...(input.productionCapabilityReceipt
+      ? { production_capability_receipt: input.productionCapabilityReceipt }
+      : {}),
+    repair_receipt: {
+      repair_status: input.repairStatus ?? 'executed',
+      can_execute_domain_repair: false,
+    },
+    authority_boundary: {
+      can_authorize_domain_ready: false,
+    },
+  };
+}
+
 test('runtime snapshot projects provider continuous proof receipt without domain readiness authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-provider-proof-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -216,38 +294,12 @@ test('runtime snapshot keeps fresh proven provider proof in the provider read mo
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      '-e',
-      `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_proof_proven',
-    'temporal_residency_proof',
-    'test',
-    JSON.stringify({
-      provider_kind: 'temporal',
-      proof_mode: 'external_temporal_service_worker',
-      closeout_status: 'production_residency_proven',
-      proof_receipt: {
-        receipt_kind: 'temporal_production_residency_proof',
-        receipt_status: 'proven',
-        provider_kind: 'temporal'
-      }
-    }),
-    ${JSON.stringify(proofCreatedAt)}
-  );
-db.close();`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-      },
-    });
-    assert.equal(result.status, 0, result.stderr);
+    insertRuntimeEvents(queueDb, [{
+      eventId: 'evt_provider_proof_proven',
+      eventType: 'temporal_residency_proof',
+      payload: providerProofPayload(),
+      createdAt: proofCreatedAt,
+    }]);
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
@@ -305,107 +357,58 @@ test('runtime snapshot and App drilldown project Temporal restart requery signal
     });
     const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
     const createdAt = new Date().toISOString();
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      '-e',
-      `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-const checks = {
-  external_temporal_server_reachable: true,
-  managed_worker_ready: true,
-  worker_completed_attempt: true,
-  worker_restart_requery: true,
-  signal_history_preserved: true,
-  typed_closeout_required_for_completed: true,
-  missing_closeout_blocks_completion: true,
-  retry_or_dead_letter_boundary_observed: true,
-  domain_truth_boundary_preserved: true
-};
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_capability_slo_proof',
-    'temporal_residency_proof',
-    'test',
-    JSON.stringify({
-      provider_kind: 'temporal',
-      proof_mode: 'external_temporal_service_worker',
-      closeout_status: 'production_residency_proven',
-      proof_receipt: {
-        receipt_kind: 'temporal_production_residency_proof',
-        receipt_status: 'proven',
-        provider_kind: 'temporal'
-      }
-    }),
-    ${JSON.stringify(createdAt)}
-  );
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_capability_slo_execution',
-    'temporal_provider_slo_execution_receipt',
-    'test',
-    JSON.stringify({
-      surface_kind: 'opl_temporal_provider_slo_execution_receipt',
-      provider_kind: 'temporal',
-      command: 'opl family-runtime residency proof --provider temporal --production',
-      execution_status: 'executed',
-      receipt_status: 'proven',
-      receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
-      production_capability_receipt: {
-        surface_kind: 'opl_temporal_provider_production_capability_receipt',
-        provider_kind: 'temporal',
-        receipt_status: 'proven',
-        capability_status: 'capability_proven',
-        checks,
-        failed_check_ids: [],
-        proven_check_count: Object.keys(checks).length,
-        required_check_count: Object.keys(checks).length,
-        completed_workflow_id: 'wf-capability-completed',
-        blocked_workflow_id: 'wf-capability-blocked',
-        restarted_worker_requery_status: 'stage_attempt_query_available_after_worker_restart'
+    const checks = {
+      external_temporal_server_reachable: true,
+      managed_worker_ready: true,
+      worker_completed_attempt: true,
+      worker_restart_requery: true,
+      signal_history_preserved: true,
+      typed_closeout_required_for_completed: true,
+      missing_closeout_blocks_completion: true,
+      retry_or_dead_letter_boundary_observed: true,
+      domain_truth_boundary_preserved: true,
+    };
+    insertRuntimeEvents(queueDb, [
+      {
+        eventId: 'evt_provider_capability_slo_proof',
+        eventType: 'temporal_residency_proof',
+        payload: providerProofPayload(),
+        createdAt,
       },
-      repair_receipt: {
-        repair_status: 'executed',
-        can_execute_domain_repair: false
+      {
+        eventId: 'evt_provider_capability_slo_execution',
+        eventType: 'temporal_provider_slo_execution_receipt',
+        payload: sloExecutionReceiptPayload({
+          command: 'opl family-runtime residency proof --provider temporal --production',
+          productionCapabilityReceipt: {
+            surface_kind: 'opl_temporal_provider_production_capability_receipt',
+            provider_kind: 'temporal',
+            receipt_status: 'proven',
+            capability_status: 'capability_proven',
+            checks,
+            failed_check_ids: [],
+            proven_check_count: Object.keys(checks).length,
+            required_check_count: Object.keys(checks).length,
+            completed_workflow_id: 'wf-capability-completed',
+            blocked_workflow_id: 'wf-capability-blocked',
+            restarted_worker_requery_status: 'stage_attempt_query_available_after_worker_restart',
+          },
+        }),
+        createdAt,
       },
-      authority_boundary: {
-        can_authorize_domain_ready: false
-      }
-    }),
-    ${JSON.stringify(createdAt)}
-  );
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_capability_slo_skipped_after_proof',
-    'temporal_provider_slo_execution_receipt',
-    'test',
-    JSON.stringify({
-      surface_kind: 'opl_temporal_provider_slo_execution_receipt',
-      provider_kind: 'temporal',
-      command: 'opl family-runtime residency proof --provider temporal --production',
-      execution_status: 'skipped',
-      receipt_status: 'skipped',
-      receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
-      skip_reason: 'cadence_current',
-      repair_receipt: {
-        repair_status: 'skipped',
-        can_execute_domain_repair: false
+      {
+        eventId: 'evt_provider_capability_slo_skipped_after_proof',
+        eventType: 'temporal_provider_slo_execution_receipt',
+        payload: sloExecutionReceiptPayload({
+          command: 'opl family-runtime residency proof --provider temporal --production',
+          executionStatus: 'skipped',
+          receiptStatus: 'skipped',
+          repairStatus: 'skipped',
+          skipReason: 'cadence_current',
+        }),
+        createdAt: new Date(Date.parse(createdAt) + 1000).toISOString(),
       },
-      authority_boundary: {
-        can_authorize_domain_ready: false
-      }
-    }),
-    ${JSON.stringify(new Date(Date.parse(createdAt) + 1000).toISOString())}
-  );
-db.close();`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-      },
-    });
-    assert.equal(result.status, 0, result.stderr);
+    ]);
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
@@ -449,55 +452,24 @@ test('runtime snapshot treats a newer proven provider proof as current after an 
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      '-e',
-      `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_proof_blocked',
-    'temporal_residency_proof',
-    'test',
-    JSON.stringify({
-      provider_kind: 'temporal',
-      proof_mode: 'external_temporal_service_worker',
-      closeout_status: 'production_residency_needs_live_evidence',
-      proof_receipt: {
-        receipt_kind: 'temporal_production_residency_blocker',
-        receipt_status: 'blocked',
-        provider_kind: 'temporal'
-      }
-    }),
-    '2026-05-15T00:00:00.000Z'
-  );
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_proof_recovered',
-    'temporal_residency_proof',
-    'test',
-    JSON.stringify({
-      provider_kind: 'temporal',
-      proof_mode: 'external_temporal_service_worker',
-      closeout_status: 'production_residency_proven',
-      proof_receipt: {
-        receipt_kind: 'temporal_production_residency_proof',
-        receipt_status: 'proven',
-        provider_kind: 'temporal'
-      }
-    }),
-    ${JSON.stringify(new Date().toISOString())}
-  );
-db.close();`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
+    insertRuntimeEvents(queueDb, [
+      {
+        eventId: 'evt_provider_proof_blocked',
+        eventType: 'temporal_residency_proof',
+        payload: providerProofPayload({
+          closeoutStatus: 'production_residency_needs_live_evidence',
+          receiptKind: 'temporal_production_residency_blocker',
+          receiptStatus: 'blocked',
+        }),
+        createdAt: '2026-05-15T00:00:00.000Z',
       },
-    });
-    assert.equal(result.status, 0, result.stderr);
+      {
+        eventId: 'evt_provider_proof_recovered',
+        eventType: 'temporal_residency_proof',
+        payload: providerProofPayload(),
+        createdAt: new Date().toISOString(),
+      },
+    ]);
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
@@ -535,38 +507,12 @@ test('runtime snapshot routes stale proven provider proof to operator attention'
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
     const queueDb = path.join(stateRoot, 'family-runtime', 'queue.sqlite');
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      '-e',
-      `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-  .run(
-    'evt_provider_proof_stale',
-    'temporal_residency_proof',
-    'test',
-    JSON.stringify({
-      provider_kind: 'temporal',
-      proof_mode: 'external_temporal_service_worker',
-      closeout_status: 'production_residency_proven',
-      proof_receipt: {
-        receipt_kind: 'temporal_production_residency_proof',
-        receipt_status: 'proven',
-        provider_kind: 'temporal'
-      }
-    }),
-    ${JSON.stringify(staleProofCreatedAt)}
-  );
-db.close();`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
-      },
-    });
-    assert.equal(result.status, 0, result.stderr);
+    insertRuntimeEvents(queueDb, [{
+      eventId: 'evt_provider_proof_stale',
+      eventType: 'temporal_residency_proof',
+      payload: providerProofPayload(),
+      createdAt: staleProofCreatedAt,
+    }]);
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
@@ -625,62 +571,20 @@ test('runtime snapshot marks Temporal provider cadence window ready only after s
         createdAt,
       };
     });
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      '-e',
-      `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-const rows = ${JSON.stringify(eventRows)};
-for (const row of rows) {
-  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-    .run(
-      row.proofEventId,
-      'temporal_residency_proof',
-      'test',
-      JSON.stringify({
-        provider_kind: 'temporal',
-        proof_mode: 'external_temporal_service_worker',
-        closeout_status: 'production_residency_proven',
-        proof_receipt: {
-          receipt_kind: 'temporal_production_residency_proof',
-          receipt_status: 'proven',
-          provider_kind: 'temporal'
-        }
-      }),
-      row.createdAt
-    );
-  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-    .run(
-      row.receiptEventId,
-      'temporal_provider_slo_execution_receipt',
-      'test',
-      JSON.stringify({
-        surface_kind: 'opl_temporal_provider_slo_execution_receipt',
-        provider_kind: 'temporal',
-        execution_status: 'executed',
-        receipt_status: 'proven',
-        receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
-        repair_receipt: {
-          repair_status: 'executed',
-          can_execute_domain_repair: false
-        },
-        authority_boundary: {
-          can_authorize_domain_ready: false
-        }
-      }),
-      row.createdAt
-    );
-}
-db.close();`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
+    insertRuntimeEvents(queueDb, eventRows.flatMap((row) => [
+      {
+        eventId: row.proofEventId,
+        eventType: 'temporal_residency_proof',
+        payload: providerProofPayload(),
+        createdAt: row.createdAt,
       },
-    });
-    assert.equal(result.status, 0, result.stderr);
+      {
+        eventId: row.receiptEventId,
+        eventType: 'temporal_provider_slo_execution_receipt',
+        payload: sloExecutionReceiptPayload(),
+        createdAt: row.createdAt,
+      },
+    ]));
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
@@ -727,62 +631,29 @@ test('runtime snapshot treats historical provider blockers as repaired after a f
         blocked: index === 0,
       };
     });
-    const result = spawnSync(process.execPath, [
-      '--experimental-strip-types',
-      '-e',
-      `import { DatabaseSync } from 'node:sqlite';
-const db = new DatabaseSync(${JSON.stringify(queueDb)});
-const rows = ${JSON.stringify(eventRows)};
-for (const row of rows) {
-  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-    .run(
-      row.proofEventId,
-      'temporal_residency_proof',
-      'test',
-      JSON.stringify({
-        provider_kind: 'temporal',
-        proof_mode: 'external_temporal_service_worker',
-        closeout_status: row.blocked ? 'production_residency_needs_live_evidence' : 'production_residency_proven',
-        proof_receipt: {
-          receipt_kind: row.blocked ? 'temporal_production_residency_blocker' : 'temporal_production_residency_proof',
-          receipt_status: row.blocked ? 'blocked' : 'proven',
-          provider_kind: 'temporal'
-        }
-      }),
-      row.createdAt
-    );
-  db.prepare("INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at) VALUES (?, NULL, NULL, ?, ?, ?, ?)")
-    .run(
-      row.receiptEventId,
-      'temporal_provider_slo_execution_receipt',
-      'test',
-      JSON.stringify({
-        surface_kind: 'opl_temporal_provider_slo_execution_receipt',
-        provider_kind: 'temporal',
-        execution_status: 'executed',
-        receipt_status: row.blocked ? 'blocked' : 'proven',
-        receipt_kind: 'opl_temporal_provider_slo_execution_receipt',
-        repair_receipt: {
-          repair_status: row.blocked ? 'blocked' : 'executed',
-          can_execute_domain_repair: false
-        },
-        authority_boundary: {
-          can_authorize_domain_ready: false
-        }
-      }),
-      row.createdAt
-    );
-}
-db.close();`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        NODE_NO_WARNINGS: '1',
+    insertRuntimeEvents(queueDb, eventRows.flatMap((row) => [
+      {
+        eventId: row.proofEventId,
+        eventType: 'temporal_residency_proof',
+        payload: providerProofPayload(row.blocked
+          ? {
+              closeoutStatus: 'production_residency_needs_live_evidence',
+              receiptKind: 'temporal_production_residency_blocker',
+              receiptStatus: 'blocked',
+            }
+          : {}),
+        createdAt: row.createdAt,
       },
-    });
-    assert.equal(result.status, 0, result.stderr);
+      {
+        eventId: row.receiptEventId,
+        eventType: 'temporal_provider_slo_execution_receipt',
+        payload: sloExecutionReceiptPayload({
+          receiptStatus: row.blocked ? 'blocked' : 'proven',
+          repairStatus: row.blocked ? 'blocked' : 'executed',
+        }),
+        createdAt: row.createdAt,
+      },
+    ]));
 
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
