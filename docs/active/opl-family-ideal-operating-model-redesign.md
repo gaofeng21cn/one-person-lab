@@ -270,7 +270,7 @@ App 理想形态是 `Codex App wrapper + Foundry Agent cockpit`：
 - Settings：App profile、access、agents/capabilities、local environment、appearance、advanced、about/update，不暴露 ordinary backend/provider selector。
 - Release：cohort-bound evidence，不外推到 family production ready。
 
-优化方向：App 普通路径只展示 `purpose -> task -> current_owner_delta -> owner action`。Shell candidate、AionUI upstream detail、provider trace、release proof、full drilldown 都下沉为 diagnostics / release / developer detail。GUI 路线按 App owner policy 固定为 AionUI 主线、Hermes Desktop / `hermes-codex` 唯一 foreground alternative、AGUI / `agui-codex` archived technical proof；除非用户明确要求 AGUI，AGUI 不再进入默认优化、验证、polish、release 或 adoption 路线。后续按本文推进功能面缺口时，任何来自 AGUI proof 的 UI、WebUI、adapter 或 smoke 待办都只能作为历史 replay 输入读取，不能转化为 OPL App 的默认开发 lane。
+优化方向：App 普通路径只展示 `purpose -> task -> current_owner_delta -> owner action`。Shell candidate、AionUI upstream detail、provider trace、release proof、full drilldown 都下沉为 diagnostics / release / developer detail。GUI 路线按 App owner policy 固定为 AionUI 主线、`opl-native-workbench` foreground alternative、Hermes Desktop / `hermes-codex` retained explicit reference candidate、AGUI / `agui-codex` archived technical proof；除非用户明确要求 AGUI，AGUI 不再进入默认优化、验证、polish、release 或 adoption 路线。后续按本文推进功能面缺口时，任何来自 AGUI proof 的 UI、WebUI、adapter 或 smoke 待办都只能作为历史 replay 输入读取，不能转化为 OPL App 的默认开发 lane。
 
 ### 3. MAS / MAG / RCA / OMA
 
@@ -314,7 +314,7 @@ OPL 对 MAS 的进一步优化重点不是再补 MAS 私有推进器，而是把
 
 `opl-aion-shell`、`opl-agui-codex-shell` 和 `opl-doc` 不进入 Foundry Agent core truth set。
 
-- Shell：AionUI shell 是当前 App GUI 主线，只实现 App contract；Hermes Desktop 是唯一 foreground alternative；AGUI shell 只保留为 archived technical proof / explicit replay provenance，不做默认更新或完善。上游 AionUI detail 是 implementation material。
+- Shell：AionUI shell 是当前 App GUI 主线，只实现 App contract；`opl-native-workbench` 是 foreground alternative；Hermes Desktop 是 retained explicit reference candidate；AGUI shell 只保留为 archived technical proof / explicit replay provenance，不做默认更新或完善。上游 AionUI detail 是 implementation material。
 - OPL Doc：只做 workflow steward / doctor / profile sync；doctor clean 不是 truth clean。
 
 ## Redesign Support Index
