@@ -84,4 +84,3 @@ test('Evidence profile Stagecraft and Runway expose non-live refs-only policy re
   assert.equal(runway.authority_boundary.can_create_human_gate_decision, false);
   assert.equal(runway.authority_boundary.can_closeout_fail_closed_rule_as_success, false);
 });
-
