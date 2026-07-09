@@ -256,6 +256,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/workspace-domain.agent-skeleton.test.ts',
   'tests/src/cli/cases/workspace-domain.external-evidence.test.ts',
   'tests/src/cli/cases/runtime-tray-domain-projection-ingestion.test.ts',
+  'tests/src/cli/cases/runtime-tray-app-operator-drilldown-visualization-projection.test.ts',
   'tests/src/runtime-app-operator-selected-safe-action.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown.test.ts',
   'tests/src/cli/cases/runtime-app-operator-drilldown-visualization-projection.test.ts',
