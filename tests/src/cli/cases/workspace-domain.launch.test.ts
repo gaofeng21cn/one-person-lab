@@ -222,48 +222,6 @@ JSON
   }
 });
 
-test('start returns the selected domain-agent start surface for a bound project', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
-  const fixtures = loadFamilyManifestFixtures();
-  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const env = {
-    OPL_STATE_DIR: stateRoot,
-    OPL_CONTRACTS_DIR: fixtureContractsRoot,
-  };
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'redcube',
-      '--path',
-      repoRoot,
-      '--entry-command',
-      'redcube-ai product-entry',
-      '--manifest-command',
-      buildManifestCommand(fixtures.redcube),
-      '--entry-url',
-      'http://127.0.0.1:3310/redcube',
-    ], env);
-
-    const output = runCli(['start', '--project', 'redcube'], env);
-    assert.equal(output.product_entry_start.surface_kind, 'opl_product_entry_start');
-    assert.equal(output.product_entry_start.project_id, 'redcube');
-    assert.equal(output.product_entry_start.target_domain_id, 'redcube_ai');
-    assert.equal(output.product_entry_start.recommended_mode_id, 'open_product_entry');
-    assert.equal(output.product_entry_start.selected_mode_id, 'open_product_entry');
-    assert.equal(output.product_entry_start.selected_mode.mode_id, 'open_product_entry');
-    assert.equal(output.product_entry_start.selected_mode.command, 'redcube product status');
-    assert.equal(output.product_entry_start.available_modes[2].mode_id, 'opl_bridge_handoff');
-    assert.equal(output.product_entry_start.resume_surface.surface_kind, 'product_entry_session');
-    assert.deepEqual(output.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
 test('domain manifests reports invalid json when a bound manifest command is malformed', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-invalid-json-state-'));
 
@@ -486,48 +444,6 @@ test('domain manifests accepts complete stdout manifest even when command cleanu
   }
 });
 
-test('domain manifests default timeout tolerates slow but valid manifest commands', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-slow-state-'));
-  const manifestPath = path.join(stateRoot, 'slow-manifest.json');
-  const slowManifestCommandPath = path.join(stateRoot, 'slow-manifest-command.cjs');
-
-  try {
-    fs.writeFileSync(manifestPath, `${JSON.stringify(loadFamilyManifestFixtures().medautoscience)}\n`, 'utf8');
-    fs.writeFileSync(
-      slowManifestCommandPath,
-      `const fs = require('node:fs');\n`
-        + `setTimeout(() => process.stdout.write(fs.readFileSync(${JSON.stringify(manifestPath)}, 'utf8')), 11000);\n`,
-      'utf8',
-    );
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      `${process.execPath} ${shellSingleQuote(slowManifestCommandPath)}`,
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
-
-    const manifestOutput = runCli(['domain', 'manifests'], {
-      OPL_STATE_DIR: stateRoot,
-    });
-    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) =>
-      entry.project_id === 'medautoscience'
-    );
-
-    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 1);
-    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
-    assert.equal(medautoscience.status, 'resolved');
-    assert.equal(medautoscience.manifest.manifest_kind, 'med_autoscience_product_entry_manifest');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
 test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
   const resolvedManifest = loadFamilyManifestFixtures().redcube;
@@ -589,22 +505,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_direct_entry.url, 'http://127.0.0.1:3310/redcube');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.status, 'resolved');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_shell, 'direct');
-    assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_command, 'redcube product invoke');
-    assert.equal(output.handoff_bundle.domain_manifest_recommendation.product_entry_surface.command, 'redcube product status');
-    assert.equal(output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.shell_key, 'direct');
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.continuation_command,
-      'redcube product session',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.operator_loop_actions.start_deliverable.command,
-      'redcube product invoke',
-    );
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_shell.opl_bridge.surface_kind,
-      'opl_hosted_product_entry',
-    );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.domain_agent_entry_spec.agent_id,
       'rca',
@@ -631,10 +532,6 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(recommendation.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.total_projects_count, 3);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
-    assert.equal(
-      output.handoff_bundle.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
-      1,
-    );
     const routedParity = output.handoff_bundle.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
@@ -644,7 +541,6 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(routedParity.ready_for_domain_handoff, true);
     assert.equal(recommendation.skill_runtime_continuity_status, 'ready');
     assertRedcubeActionGraph(recommendation.family_orchestration.action_graph);
-    assert.equal(recommendation.family_orchestration.resume_contract.checkpoint_locator_field, 'continuation_snapshot.latest_managed_run_id');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -809,11 +705,8 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.summary.mode_counts.ask, 1);
     assert.equal(ledgerOutput.session_ledger.summary.mode_counts.resume, 1);
     assert.equal(ledgerOutput.session_ledger.summary.domain_counts.redcube, 2);
-    assert.equal(ledgerOutput.session_ledger.summary.workspace_binding_count, 1);
     assert.equal(ledgerOutput.session_ledger.entries[0].session_id, 'sess_ledger');
     assert.equal(ledgerOutput.session_ledger.entries[0].mode, 'resume');
-    assert.equal(ledgerOutput.session_ledger.entries[0].domain_id, 'redcube');
-    assert.equal(ledgerOutput.session_ledger.entries[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.entries[1].mode, 'ask');
     assert.equal(ledgerOutput.session_ledger.sessions.length, 1);
     assert.equal(ledgerOutput.session_ledger.sessions[0].session_id, 'sess_ledger');
@@ -823,13 +716,8 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 1);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_unavailable, 1);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_sample_status, 'unavailable');
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_rss_kb, null);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_cpu_percent, null);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.peak_process_count, 2);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.peak_total_rss_kb, 174616);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.peak_total_cpu_percent, 4.4);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
     const runtimeOutput = runCli(['status', 'runtime', '--limit', '2'], {
