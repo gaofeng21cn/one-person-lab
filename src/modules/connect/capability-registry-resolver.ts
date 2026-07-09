@@ -50,6 +50,9 @@ export interface CurrentOwnerDeltaCapabilityBinding {
   default_planning_root?: string;
   delta_ref?: string;
   delta_id?: string;
+  domain?: string;
+  task_or_study_ref?: string | null;
+  stage_ref?: string | null;
   domain_id?: string;
   work_unit_ref?: string;
   current_owner?: string;
@@ -59,7 +62,9 @@ export interface CurrentOwnerDeltaCapabilityBinding {
 export interface DomainPackExternalLearningCapabilityRef {
   capability_ref: string;
   source_family: CapabilityRegistrySourceFamily;
-  work_unit_ref: string;
+  task_or_study_ref?: string | null;
+  stage_ref?: string | null;
+  work_unit_ref?: string;
   binding_kind?: CapabilityBindingKind;
   surface_ref?: string | null;
 }
@@ -68,7 +73,9 @@ export interface CapabilityResolutionRequest {
   registry: CapabilityRegistryCatalog;
   currentOwnerDelta: CurrentOwnerDeltaCapabilityBinding;
   capabilityRef: string;
-  workUnitRef: string;
+  taskOrStudyRef?: string | null;
+  stageRef?: string | null;
+  workUnitRef?: string;
   bindingKind?: CapabilityBindingKind;
   declaredSourceFamily?: CapabilityRegistrySourceFamily | null;
   declaredSurfaceRef?: string | null;
@@ -129,12 +136,17 @@ export interface CapabilityRegistryResolution {
   schema_version: 'capability-registry-resolver.v1';
   resolver_policy: 'current_delta_bound_jit_or_fail_open';
   capability_ref: string;
+  task_or_study_ref: string | null;
+  stage_ref: string | null;
   work_unit_ref: string;
   resolution_status: 'resolved' | 'fail_open' | 'route_required_blocker_candidate';
   current_owner_delta_binding: {
     bound: boolean;
     default_planning_root: 'current_owner_delta' | 'missing';
     current_owner_delta_ref: string | null;
+    domain: string | null;
+    task_or_study_ref: string | null;
+    stage_ref: string | null;
     domain_id: string | null;
     current_owner: string | null;
   };
@@ -159,7 +171,9 @@ export interface CapabilityRegistryReadoutRequest {
   currentOwnerDelta: CurrentOwnerDeltaCapabilityBinding;
   requestedCapabilities: Array<{
     capabilityRef: string;
-    workUnitRef: string;
+    taskOrStudyRef?: string | null;
+    stageRef?: string | null;
+    workUnitRef?: string;
     bindingKind?: CapabilityBindingKind;
   }>;
   domainPackExternalLearningRefs?: DomainPackExternalLearningCapabilityRef[];
@@ -290,14 +304,44 @@ const HARD_BOUNDARIES = new Set<CapabilityHardBoundary>([
 ]);
 
 function currentOwnerDeltaRef(delta: CurrentOwnerDeltaCapabilityBinding) {
-  return delta.delta_ref ?? delta.delta_id ?? null;
+  return nonEmptyString(delta.delta_ref) ?? nonEmptyString(delta.delta_id);
+}
+
+function nonEmptyString(value: string | null | undefined) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function currentOwnerDeltaIdentity(delta: CurrentOwnerDeltaCapabilityBinding) {
+  return {
+    domain: nonEmptyString(delta.domain) ?? nonEmptyString(delta.domain_id),
+    taskOrStudyRef: nonEmptyString(delta.task_or_study_ref) ?? nonEmptyString(delta.work_unit_ref),
+    stageRef: nonEmptyString(delta.stage_ref),
+    legacyWorkUnitRef: nonEmptyString(delta.work_unit_ref),
+  };
+}
+
+function requestIdentity(request: Pick<
+  CapabilityResolutionRequest,
+  'taskOrStudyRef' | 'stageRef' | 'workUnitRef'
+>) {
+  const taskOrStudyRef = nonEmptyString(request.taskOrStudyRef) ?? nonEmptyString(request.workUnitRef);
+  const stageRef = nonEmptyString(request.stageRef);
+  const workUnitRef = taskOrStudyRef ?? stageRef;
+  if (!workUnitRef) {
+    throw new TypeError('Capability resolution requires taskOrStudyRef, stageRef, or legacy workUnitRef.');
+  }
+  return { taskOrStudyRef, stageRef, workUnitRef };
 }
 
 function matchingRequirement(
   delta: CurrentOwnerDeltaCapabilityBinding,
   capabilityRef: string,
 ): CurrentOwnerDeltaCapabilityRequirement | null {
-  return (delta.required_capability_refs ?? []).find((entry) => entry.capability_ref === capabilityRef) ?? null;
+  const deltaRef = currentOwnerDeltaRef(delta);
+  return (delta.required_capability_refs ?? []).find((entry) => (
+    entry.capability_ref === capabilityRef
+    && (!nonEmptyString(entry.required_by_delta_ref) || nonEmptyString(entry.required_by_delta_ref) === deltaRef)
+  )) ?? null;
 }
 
 function routeRequiredRequirement(
@@ -325,10 +369,25 @@ function hardBoundaryOf(requirement: CurrentOwnerDeltaCapabilityRequirement | nu
   return hardBoundary && HARD_BOUNDARIES.has(hardBoundary) ? hardBoundary : null;
 }
 
-function isCurrentOwnerDeltaBound(delta: CurrentOwnerDeltaCapabilityBinding, workUnitRef: string) {
-  return delta.default_planning_root === 'current_owner_delta'
-    && Boolean(currentOwnerDeltaRef(delta))
-    && (!delta.work_unit_ref || delta.work_unit_ref === workUnitRef);
+function isCurrentOwnerDeltaBound(
+  delta: CurrentOwnerDeltaCapabilityBinding,
+  identity: ReturnType<typeof requestIdentity>,
+) {
+  if (delta.default_planning_root !== 'current_owner_delta' || !currentOwnerDeltaRef(delta)) {
+    return false;
+  }
+  const deltaIdentity = currentOwnerDeltaIdentity(delta);
+  const hasCanonicalBinding = nonEmptyString(delta.task_or_study_ref) !== null
+    || nonEmptyString(delta.stage_ref) !== null;
+  if (!hasCanonicalBinding) {
+    return !deltaIdentity.legacyWorkUnitRef || deltaIdentity.legacyWorkUnitRef === identity.workUnitRef;
+  }
+  const taskBound = !deltaIdentity.taskOrStudyRef
+    || deltaIdentity.taskOrStudyRef === identity.taskOrStudyRef;
+  const stageBound = !deltaIdentity.stageRef
+    || deltaIdentity.stageRef === identity.stageRef
+    || (!identity.stageRef && deltaIdentity.stageRef === identity.workUnitRef);
+  return taskBound && stageBound;
 }
 
 function uniqSorted(values: Array<string | null | undefined>) {
@@ -367,11 +426,13 @@ function blockerCandidate(input: {
 export function resolveCapabilityForCurrentDelta(
   request: CapabilityResolutionRequest,
 ): CapabilityRegistryResolution {
+  const identity = requestIdentity(request);
+  const deltaIdentity = currentOwnerDeltaIdentity(request.currentOwnerDelta);
   const bindingKind = request.bindingKind ?? 'optional';
   const found = request.registry.capabilities.find((entry) => entry.capability_ref === request.capabilityRef) ?? null;
   const routeRequirement = routeRequiredRequirement(request.currentOwnerDelta, request.capabilityRef, bindingKind);
   const hardBoundary = hardBoundaryOf(routeRequirement);
-  const bound = isCurrentOwnerDeltaBound(request.currentOwnerDelta, request.workUnitRef);
+  const bound = isCurrentOwnerDeltaBound(request.currentOwnerDelta, identity);
   const missingRouteRequired = !found && bound && Boolean(routeRequirement) && Boolean(hardBoundary);
   const status = found
     ? 'resolved'
@@ -389,7 +450,9 @@ export function resolveCapabilityForCurrentDelta(
     schema_version: 'capability-registry-resolver.v1',
     resolver_policy: 'current_delta_bound_jit_or_fail_open',
     capability_ref: request.capabilityRef,
-    work_unit_ref: request.workUnitRef,
+    task_or_study_ref: identity.taskOrStudyRef,
+    stage_ref: identity.stageRef,
+    work_unit_ref: identity.workUnitRef,
     resolution_status: status,
     current_owner_delta_binding: {
       bound,
@@ -397,7 +460,10 @@ export function resolveCapabilityForCurrentDelta(
         ? 'current_owner_delta'
         : 'missing',
       current_owner_delta_ref: currentOwnerDeltaRef(request.currentOwnerDelta),
-      domain_id: request.currentOwnerDelta.domain_id ?? null,
+      domain: deltaIdentity.domain,
+      task_or_study_ref: deltaIdentity.taskOrStudyRef,
+      stage_ref: deltaIdentity.stageRef,
+      domain_id: deltaIdentity.domain,
       current_owner: request.currentOwnerDelta.current_owner ?? null,
     },
     selection: {
@@ -420,7 +486,7 @@ export function resolveCapabilityForCurrentDelta(
       ? blockerCandidate({
         capabilityRef: request.capabilityRef,
         currentOwnerDelta: request.currentOwnerDelta,
-        workUnitRef: request.workUnitRef,
+        workUnitRef: identity.workUnitRef,
       })
       : null,
     authority_boundary: AUTHORITY_BOUNDARY,
@@ -435,6 +501,8 @@ export function buildCapabilityRegistryReadout(
       registry: request.registry,
       currentOwnerDelta: request.currentOwnerDelta,
       capabilityRef: entry.capabilityRef,
+      taskOrStudyRef: entry.taskOrStudyRef,
+      stageRef: entry.stageRef,
       workUnitRef: entry.workUnitRef,
       bindingKind: entry.bindingKind,
     })
@@ -444,6 +512,8 @@ export function buildCapabilityRegistryReadout(
       registry: request.registry,
       currentOwnerDelta: request.currentOwnerDelta,
       capabilityRef: entry.capability_ref,
+      taskOrStudyRef: entry.task_or_study_ref,
+      stageRef: entry.stage_ref,
       workUnitRef: entry.work_unit_ref,
       bindingKind: entry.binding_kind,
       declaredSourceFamily: entry.source_family,

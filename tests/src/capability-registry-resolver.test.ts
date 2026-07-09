@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
+import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import {
   buildCapabilityRegistryReadout,
   type CapabilityRegistryCatalog,
@@ -48,6 +50,81 @@ const registry: CapabilityRegistryCatalog = {
     },
   ],
 };
+
+test('capability registry resolver binds canonical current-owner-delta identity and normalizes output', () => {
+  const canonicalDelta: CurrentOwnerDeltaCapabilityBinding = {
+    surface_kind: 'opl_current_owner_delta',
+    schema_version: 'current-owner-delta.v1',
+    default_planning_root: 'current_owner_delta',
+    delta_id: 'current-owner-delta:mas:source-readiness',
+    domain: 'mas',
+    task_or_study_ref: 'mas://study/dm002',
+    stage_ref: 'source-readiness',
+    current_owner: 'med-autoscience',
+    required_capability_refs: [],
+  };
+
+  const result = resolveCapabilityForCurrentDelta({
+    registry,
+    currentOwnerDelta: canonicalDelta,
+    capabilityRef: 'capability:co-scientist-claim-support',
+    taskOrStudyRef: 'mas://study/dm002',
+    stageRef: 'source-readiness',
+  });
+
+  assert.equal(result.current_owner_delta_binding.bound, true);
+  assert.equal(result.current_owner_delta_binding.domain, 'mas');
+  assert.equal(result.current_owner_delta_binding.domain_id, 'mas');
+  assert.equal(result.current_owner_delta_binding.task_or_study_ref, 'mas://study/dm002');
+  assert.equal(result.current_owner_delta_binding.stage_ref, 'source-readiness');
+  assert.equal(result.task_or_study_ref, 'mas://study/dm002');
+  assert.equal(result.stage_ref, 'source-readiness');
+  assert.equal(result.work_unit_ref, 'mas://study/dm002');
+});
+
+test('current-owner-delta schema types capability requirements and requires hard boundaries for route-required refs', () => {
+  const schema = JSON.parse(fs.readFileSync(
+    new URL('../../contracts/opl-framework/current-owner-delta.schema.json', import.meta.url),
+    'utf8',
+  ));
+  const requirements = schema.properties.required_capability_refs;
+  const requirement = schema.$defs.current_owner_delta_capability_requirement;
+
+  assert.equal(requirements.type, 'array');
+  assert.equal(requirements.items.$ref, '#/$defs/current_owner_delta_capability_requirement');
+  assert.equal(requirement.additionalProperties, false);
+  assert.deepEqual(requirement.required, ['capability_ref', 'binding_kind']);
+  assert.deepEqual(requirement.properties.binding_kind.enum, ['optional', 'route_required']);
+  assert.ok(requirement.allOf.some((entry: any) => (
+    entry.if?.properties?.binding_kind?.const === 'route_required'
+      && entry.then?.required?.includes('hard_boundary')
+  )));
+
+  const schemaEntry = {
+    schemaId: 'opl.current_owner_delta.capability_requirement.v1',
+    sourceRef: 'contracts/opl-framework/current-owner-delta.schema.json#/$defs/current_owner_delta_capability_requirement',
+    schema: {
+      ...requirement,
+      $defs: {
+        nullable_ref: schema.$defs.nullable_ref,
+      },
+    },
+  };
+  assert.equal(validateJsonSchemaPayload(schemaEntry, {
+    capability_ref: 'capability:source-readiness-route',
+    binding_kind: 'route_required',
+    hard_boundary: 'source_data_evidence',
+  }).ok, true);
+  assert.equal(validateJsonSchemaPayload(schemaEntry, {
+    capability_ref: 'capability:source-readiness-route',
+    binding_kind: 'route_required',
+  }).ok, false);
+  assert.equal(validateJsonSchemaPayload(schemaEntry, {
+    capability_ref: 'capability:optional-review-aid',
+    binding_kind: 'optional',
+    unexpected: true,
+  }).ok, false);
+});
 
 test('capability registry resolver fails open for missing optional capability refs', () => {
   const result = resolveCapabilityForCurrentDelta({

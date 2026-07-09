@@ -30,7 +30,10 @@ import {
   sameStageRunRouteCurrentnessIdentity,
 } from './family-runtime-stage-run-currentness-identity.ts';
 import { providerAdmissionCurrentnessIdentity } from './family-runtime-mas-current-control-admission-currentness.ts';
-import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-gate.ts';
+import {
+  buildStageAdmissionLaunchGate,
+  capabilityRegistryLaunchGateInputFromPayload,
+} from './family-runtime-stage-admission-gate.ts';
 import {
   combineStageAdmissionGateWithCheckoutCurrentness,
   providerHostedCheckoutCurrentnessPreflight,
@@ -933,6 +936,11 @@ export function ensureProviderHostedStageAttempt(
     sourceFingerprint: expectedSourceFingerprint,
     idempotencyKey: expectedSourceFingerprint,
     requireAdmission: stageAdmissionRequired(payload),
+    capabilityRegistryGate: capabilityRegistryLaunchGateInputFromPayload(payload, {
+      domainId: row.domain_id,
+      stageId,
+      taskId: row.task_id,
+    }),
   });
   const stageLaunchAdmissionGate = combineStageAdmissionGateWithCheckoutCurrentness(
     admissionGate,

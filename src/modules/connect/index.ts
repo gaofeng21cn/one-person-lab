@@ -8,6 +8,17 @@ export const OPL_CONNECT_SOURCE_MODULE = {
 // Public cross-module surface generated from existing module consumers.
 export { buildEvidenceGroundedConnectSubstrate } from './evidence-grounded-substrate.ts';
 export {
+  buildCapabilityRegistryReadout,
+  resolveCapabilityForCurrentDelta,
+} from './capability-registry-resolver.ts';
+export type {
+  CapabilityHardBoundary,
+  CapabilityRegistryReadout,
+  CapabilityRegistryResolution,
+  CurrentOwnerDeltaCapabilityBinding,
+  CurrentOwnerDeltaCapabilityRequirement,
+} from './capability-registry-resolver.ts';
+export {
   listOplAgentPackages,
   runOplAgentPackageExposureAction,
   runOplAgentPackageHomeShortcutPreferencesSet,

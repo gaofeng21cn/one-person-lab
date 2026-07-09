@@ -218,6 +218,13 @@
     "stage_ref": {
       "$ref": "#/$defs/nullable_ref"
     },
+    "required_capability_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/current_owner_delta_capability_requirement"
+      },
+      "uniqueItems": true
+    },
     "lineage_ref": {
       "$ref": "#/$defs/nullable_ref"
     },
@@ -411,6 +418,68 @@
     }
   },
   "$defs": {
+    "current_owner_delta_capability_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_ref",
+        "binding_kind"
+      ],
+      "properties": {
+        "capability_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "binding_kind": {
+          "type": "string",
+          "enum": [
+            "optional",
+            "route_required"
+          ]
+        },
+        "hard_boundary": {
+          "enum": [
+            "source_data_evidence",
+            "owner_route_identity",
+            "forbidden_write",
+            "irreversible_mutation",
+            "reviewer_publication_hard_gate",
+            null
+          ]
+        },
+        "required_by_delta_ref": {
+          "$ref": "#/$defs/nullable_ref"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "binding_kind": {
+                "const": "route_required"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "hard_boundary"
+            ],
+            "properties": {
+              "hard_boundary": {
+                "type": "string",
+                "enum": [
+                  "source_data_evidence",
+                  "owner_route_identity",
+                  "forbidden_write",
+                  "irreversible_mutation",
+                  "reviewer_publication_hard_gate"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
     "nullable_ref": {
       "anyOf": [
         {
