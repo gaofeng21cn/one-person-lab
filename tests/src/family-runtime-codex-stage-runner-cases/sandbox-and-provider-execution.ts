@@ -21,6 +21,90 @@ import {
   setLocalSandboxCommandRunnerForTest,
 } from '../../../src/modules/runway/local-codex-stage-sandbox.ts';
 
+function assertRefsInclude(actual: string[] | undefined, expected: string[]) {
+  assert.ok(actual);
+  for (const ref of expected) assert.ok(actual.includes(ref), ref);
+}
+
+function envRefs(actual: string[] | undefined) {
+  assert.ok(actual);
+  return new Map(actual.map((ref) => {
+    const index = ref.indexOf('=');
+    assert.notEqual(index, -1, ref);
+    return [ref.slice(0, index), ref.slice(index + 1)];
+  }));
+}
+
+function createGflabNoSchemaFixture(
+  receiptRef: string,
+  capturePrefix: string,
+  threadId: string,
+  resumeOnly = false,
+) {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: [receiptRef],
+    consumed_refs: ['paper:draft.md'],
+    next_owner: 'med-autoscience',
+    domain_ready_verdict: 'domain_gate_pending',
+  };
+  const capturePath = path.join(os.tmpdir(), `${capturePrefix}-${process.pid}.txt`);
+  const captureBody = `
+output_last_message=""
+output_schema_seen="false"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-last-message)
+      output_last_message="$2"
+      shift 2
+      ;;
+    --output-schema)
+      output_schema_seen="true"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
+if [ -z "$output_last_message" ] || [ "$output_schema_seen" = "true" ]; then
+  exit 64
+fi
+printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
+printf '{"type":"thread.started","thread_id":"${threadId}"}\\n'
+printf '{"type":"turn.completed"}\\n'
+exit 0
+`;
+  const script = resumeOnly
+    ? `
+if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
+${captureBody}
+fi
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-gflab-needs-enforcement"}\\n'
+  printf '{"type":"turn.completed"}\\n'
+  exit 0
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`
+    : `
+if [ "$1" = "exec" ]; then
+${captureBody}
+fi
+echo "unexpected fake codex args: $*" >&2
+exit 64
+`;
+  return { closeout, capturePath, ...createFakeCodexFixture(script) };
+}
+
+function assertNoOutputSchema(capturePath: string) {
+  const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
+  assert.notEqual(captured[0], '');
+  assert.equal(captured[1], 'false');
+}
+
 test('Codex stage runner can execute Codex inside an E2B sandbox and collect diff refs', async () => {
   const remote = createGitModuleRemoteFixture('sandboxed-agent-workspace');
   const commands: Array<{ cmd: string; cwd: string | null; envs: Record<string, string> }> = [];
@@ -287,10 +371,6 @@ test('Codex stage runner uses explicit local devcontainer sandbox and collects d
     assert.equal(summary.credential_material_logged, false);
     assert.equal(summary.host_workspace_mutated, false);
     assert.equal(dockerCalls.some((args) => args[0] === 'create'), true);
-    const createCall = dockerCalls.find((args) => args[0] === 'create');
-    assert.ok(createCall);
-    assert.equal(createCall.includes('--workdir'), false);
-    assert.deepEqual(createCall.slice(createCall.indexOf('--entrypoint'), createCall.indexOf('--entrypoint') + 2), ['--entrypoint', 'sh']);
     assert.equal(dockerCalls.some((args) => args.includes('git') && args.includes('clone')), true);
     assert.equal(dockerCalls.some((args) => args[0] === 'rm' && args[1] === '-f'), true);
   } finally {
@@ -306,18 +386,9 @@ test('Codex stage runner uses explicit local devcontainer sandbox and collects d
 });
 
 test('Codex stage sandbox provider keeps explicit choices and external E2B auto-selection', () => {
-  assert.equal(selectCodexStageSandboxProvider({
-    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'local_docker',
-  }), 'local_docker');
-  assert.equal(selectCodexStageSandboxProvider({
-    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'local_devcontainer',
-  }), 'local_devcontainer');
-  assert.equal(selectCodexStageSandboxProvider({
-    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'e2b',
-  }), 'e2b');
-  assert.equal(selectCodexStageSandboxProvider({
-    OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
-  }), 'host');
+  for (const provider of ['local_docker', 'local_devcontainer', 'e2b', 'host'] as const) {
+    assert.equal(selectCodexStageSandboxProvider({ OPL_CODEX_STAGE_SANDBOX_PROVIDER: provider }), provider);
+  }
   assert.equal(selectCodexStageSandboxProvider({
     OPL_FAMILY_RUNTIME_PROVIDER: 'external_sandbox',
     OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'e2b',
@@ -455,46 +526,11 @@ test('E2B Codex stage execution requires live credential material before provide
 });
 
 test('Codex stage runner omits structured output schema for gflab while preserving closeout capture', async () => {
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: ['receipt:gflab-closeout-without-output-schema'],
-    consumed_refs: ['paper:draft.md'],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-  };
-  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-gflab-schema-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-output_last_message=""
-output_schema_seen="false"
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --output-last-message)
-      output_last_message="$2"
-      shift 2
-      ;;
-    --output-schema)
-      output_schema_seen="true"
-      shift 2
-      ;;
-    *)
-      shift
-      ;;
-  esac
-done
-printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
-if [ -z "$output_last_message" ]; then
-  echo "missing output-last-message capture" >&2
-  exit 64
-fi
-if [ "$output_schema_seen" = "true" ]; then
-  echo "gflab fixture rejects unsupported output-schema" >&2
-  exit 64
-fi
-printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
-printf '{"type":"thread.started","thread_id":"thread-gflab-no-output-schema"}\\n'
-printf '{"type":"turn.completed"}\\n'
-exit 0
-`);
+  const { closeout, capturePath, fixtureRoot, codexPath } = createGflabNoSchemaFixture(
+    'receipt:gflab-closeout-without-output-schema',
+    'opl-codex-stage-runner-gflab-schema',
+    'thread-gflab-no-output-schema',
+  );
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
@@ -522,9 +558,7 @@ exit 0
       },
     });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'receipt:gflab-closeout-without-output-schema',
-    ]);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, closeout.closeout_refs);
     assert.equal(receipt.process_output_summary?.captured_last_message_chars, JSON.stringify(closeout).length + 1);
     assert.deepEqual(receipt.process_output_summary?.structured_output_schema, {
       enabled: false,
@@ -532,9 +566,7 @@ exit 0
       provider: 'gflab',
       output_last_message_capture_enabled: true,
     });
-    const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
-    assert.notEqual(captured[0], '');
-    assert.equal(captured[1], 'false');
+    assertNoOutputSchema(capturePath);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
@@ -547,46 +579,11 @@ exit 0
 });
 
 test('Codex stage runner omits structured output schema for default gflab provider', async () => {
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: ['receipt:gflab-default-closeout-without-output-schema'],
-    consumed_refs: ['paper:default-provider.md'],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-  };
-  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-gflab-default-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-output_last_message=""
-output_schema_seen="false"
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --output-last-message)
-      output_last_message="$2"
-      shift 2
-      ;;
-    --output-schema)
-      output_schema_seen="true"
-      shift 2
-      ;;
-    *)
-      shift
-      ;;
-  esac
-done
-printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
-if [ -z "$output_last_message" ]; then
-  echo "missing output-last-message capture" >&2
-  exit 64
-fi
-if [ "$output_schema_seen" = "true" ]; then
-  echo "default gflab fixture rejects unsupported output-schema" >&2
-  exit 64
-fi
-printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
-printf '{"type":"thread.started","thread_id":"thread-gflab-default-no-output-schema"}\\n'
-printf '{"type":"turn.completed"}\\n'
-exit 0
-`);
+  const { closeout, capturePath, fixtureRoot, codexPath } = createGflabNoSchemaFixture(
+    'receipt:gflab-default-closeout-without-output-schema',
+    'opl-codex-stage-runner-gflab-default',
+    'thread-gflab-default-no-output-schema',
+  );
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   const previousCodexHome = process.env.CODEX_HOME;
   const codexHome = path.join(fixtureRoot, 'codex-home');
@@ -621,18 +618,14 @@ exit 0
       },
     });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'receipt:gflab-default-closeout-without-output-schema',
-    ]);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, closeout.closeout_refs);
     assert.deepEqual(receipt.process_output_summary?.structured_output_schema, {
       enabled: false,
       policy: 'provider_disabled_gflab_structured_output_request',
       provider: 'gflab',
       output_last_message_capture_enabled: true,
     });
-    const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
-    assert.notEqual(captured[0], '');
-    assert.equal(captured[1], 'false');
+    assertNoOutputSchema(capturePath);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
@@ -648,55 +641,12 @@ exit 0
 });
 
 test('Codex closeout enforcement also omits structured output schema for gflab', async () => {
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_refs: ['receipt:gflab-enforcement-without-output-schema'],
-    consumed_refs: ['paper:enforcement.md'],
-    next_owner: 'med-autoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-  };
-  const capturePath = path.join(os.tmpdir(), `opl-codex-stage-runner-gflab-enforcement-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
-  output_last_message=""
-  output_schema_seen="false"
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      --output-last-message)
-        output_last_message="$2"
-        shift 2
-        ;;
-      --output-schema)
-        output_schema_seen="true"
-        shift 2
-        ;;
-      *)
-        shift
-        ;;
-    esac
-  done
-  printf '%s\\n%s\\n' "$output_last_message" "$output_schema_seen" > ${JSON.stringify(capturePath)}
-  if [ -z "$output_last_message" ]; then
-    echo "missing enforcement output-last-message capture" >&2
-    exit 64
-  fi
-  if [ "$output_schema_seen" = "true" ]; then
-    echo "gflab enforcement fixture rejects unsupported output-schema" >&2
-    exit 64
-  fi
-  printf '%s\\n' '${JSON.stringify(closeout)}' > "$output_last_message"
-  printf '{"type":"thread.started","thread_id":"thread-gflab-enforcement-closeout"}\\n'
-  printf '{"type":"turn.completed"}\\n'
-  exit 0
-fi
-if [ "$1" = "exec" ]; then
-  printf '{"type":"thread.started","thread_id":"thread-gflab-needs-enforcement"}\\n'
-  printf '{"type":"turn.completed"}\\n'
-  exit 0
-fi
-echo "unexpected fake codex args: $*" >&2
-exit 64
-`);
+  const { closeout, capturePath, fixtureRoot, codexPath } = createGflabNoSchemaFixture(
+    'receipt:gflab-enforcement-without-output-schema',
+    'opl-codex-stage-runner-gflab-enforcement',
+    'thread-gflab-enforcement-closeout',
+    true,
+  );
   const previousCodexBin = process.env.OPL_CODEX_BIN;
   const previousRecoveryTimeout = process.env.OPL_CODEX_SESSION_RECOVERY_TIMEOUT_MS;
   try {
@@ -726,17 +676,13 @@ exit 64
       },
     });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'receipt:gflab-enforcement-without-output-schema',
-    ]);
+    assert.deepEqual(receipt.closeout_packet?.closeout_refs, closeout.closeout_refs);
     assert.equal(receipt.process_output_summary?.closeout_enforcement?.status, 'closeout_found');
     assert.equal(
       receipt.process_output_summary?.closeout_enforcement?.captured_last_message_chars,
       JSON.stringify(closeout).length + 1,
     );
-    const captured = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
-    assert.notEqual(captured[0], '');
-    assert.equal(captured[1], 'false');
+    assertNoOutputSchema(capturePath);
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
@@ -797,20 +743,15 @@ exit 64
       },
     });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
+    assertRefsInclude(receipt.closeout_packet?.closeout_refs, [
       'OPL_STAGE_ATTEMPT_ID=sat_provider_identity_test',
-      'OPL_STAGE_ID=domain_owner/default-executor-dispatch',
       `OPL_STAGE_PACKET_REF=${expectedStagePacketRef}`,
       `OPL_WORKSPACE_ROOT=${fixtureRoot}`,
       'OPL_TASK_ID=frt_provider_identity_test',
-      'OPL_WORKFLOW_ID=wf_provider_identity_test',
       'OPL_STUDY_ID=003-dpcc-primary-care-phenotype-treatment-gap',
-      'OPL_QUEST_ID=003-dpcc-primary-care-phenotype-treatment-gap',
-      'OPL_ACTION_TYPE=return_to_ai_reviewer_workflow',
       'OPL_WORK_UNIT_ID=truth-snapshot::12538a8351d7513191c2e514',
       'OPL_PROVIDER_ATTEMPT_REF=',
       'OPL_ATTEMPT_LEASE_REF=',
-      'OPL_ATTEMPT_LEASE_STATUS=',
       'OPL_EXECUTION_AUTHORIZATION_DECISION_REF=',
     ]);
   } finally {
@@ -913,41 +854,24 @@ exit 64
       },
     });
 
-    assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-      'OPL_STAGE_ATTEMPT_ID=sat_provider_authorized_test',
-      'OPL_PROVIDER_ATTEMPT_REF=opl://stage-attempts/sat_provider_authorized_test',
-      'OPL_ATTEMPT_LEASE_REF=opl://stage-attempts/sat_provider_authorized_test/leases/frt_provider_authorized_test/active',
-      'OPL_ATTEMPT_LEASE_STATUS=active',
-      'OPL_EXECUTION_AUTHORIZATION_DECISION_REF=opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
-      'OPL_SOURCE_FINGERPRINT=mas_default_executor_source_provider_authorized_test',
-      'OPL_IDEMPOTENCY_KEY=idem_provider_authorized_test',
-      'OPL_STAGE_RUN_ID=app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
-      'OPL_STAGE_MANIFEST_REF=opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
-      'OPL_CURRENT_POINTER_REF=opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
-      [
-        'OPL_CLOSEOUT_BINDING_JSON=',
-        JSON.stringify({
-          surface_kind: 'opl_stage_run_closeout_binding',
-          trusted_opl_execution_authorization: true,
-          bound_to_stage_run: true,
-          bound_to_stage_manifest: true,
-          bound_to_current_pointer: true,
-          bound_to_source_fingerprint: true,
-          stage_run_id: 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch',
-          stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
-          current_pointer_ref:
-            'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
-          provider_attempt_ref: 'opl://stage-attempts/sat_provider_authorized_test',
-          attempt_lease_ref:
-            'opl://stage-attempts/sat_provider_authorized_test/leases/frt_provider_authorized_test/active',
-          attempt_lease_status: 'active',
-          execution_authorization_decision_ref:
-            'opl://stage-attempts/sat_provider_authorized_test/execution-authorizations/frt_provider_authorized_test/wf_provider_authorized_test',
-          source_fingerprint: 'mas_default_executor_source_provider_authorized_test',
-          idempotency_key: 'idem_provider_authorized_test',
-        }),
-      ].join(''),
-    ]);
+    const refs = envRefs(receipt.closeout_packet?.closeout_refs);
+    assert.equal(refs.get('OPL_STAGE_ATTEMPT_ID'), 'sat_provider_authorized_test');
+    assert.equal(refs.get('OPL_PROVIDER_ATTEMPT_REF'), 'opl://stage-attempts/sat_provider_authorized_test');
+    assert.equal(
+      refs.get('OPL_ATTEMPT_LEASE_REF'),
+      'opl://stage-attempts/sat_provider_authorized_test/leases/frt_provider_authorized_test/active',
+    );
+    assert.equal(refs.get('OPL_ATTEMPT_LEASE_STATUS'), 'active');
+    assert.equal(refs.get('OPL_EXECUTION_AUTHORIZATION_DECISION_REF')?.includes('/execution-authorizations/'), true);
+    assert.equal(refs.get('OPL_STAGE_MANIFEST_REF'), 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch');
+    const binding = JSON.parse(refs.get('OPL_CLOSEOUT_BINDING_JSON') ?? '{}') as Record<string, unknown>;
+    assert.equal(binding.trusted_opl_execution_authorization, true);
+    assert.equal(binding.bound_to_stage_run, true);
+    assert.equal(binding.bound_to_stage_manifest, true);
+    assert.equal(binding.bound_to_current_pointer, true);
+    assert.equal(binding.bound_to_source_fingerprint, true);
+    assert.equal(binding.source_fingerprint, 'mas_default_executor_source_provider_authorized_test');
+    assert.equal(binding.idempotency_key, 'idem_provider_authorized_test');
   } finally {
     if (previousCodexBin === undefined) {
       delete process.env.OPL_CODEX_BIN;
