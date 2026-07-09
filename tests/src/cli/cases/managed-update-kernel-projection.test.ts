@@ -663,3 +663,54 @@ exit 2
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('update status prefers the npm cache while update check retains a normal online lookup', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-update-fast-status-'));
+  const codexFixture = createFakeCodexFixture(`
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.130.0"
+  exit 0
+fi
+exit 2
+`);
+  const npmLookupLog = path.join(homeRoot, 'npm-latest-lookup.log');
+  fs.writeFileSync(
+    path.join(codexFixture.fixtureRoot, 'npm'),
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> ${JSON.stringify(npmLookupLog)}
+printf '9.9.9\n'
+`,
+    { mode: 0o755 },
+  );
+  const env = {
+    HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, 'codex-home'),
+    OPL_STATE_DIR: path.join(homeRoot, 'state'),
+    OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+    OPL_FAMILY_WORKSPACE_ROOT: path.join(homeRoot, 'family'),
+    OPL_FRAMEWORK_UPDATE_SOURCE: repoRoot,
+    PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+  };
+
+  try {
+    const status = runCli(['update', 'status', '--component', 'runtime_substrate'], env) as any;
+    const statusRuntime = status.managed_update.components[0];
+    assert.equal(statusRuntime.current.latest_version, '9.9.9');
+    assert.equal(
+      fs.readFileSync(npmLookupLog, 'utf8').trim(),
+      'view @openai/codex version --silent --prefer-offline',
+    );
+
+    const check = runCli(['update', 'check', '--component', 'runtime_substrate'], env) as any;
+    const checkRuntime = check.managed_update.components[0];
+    assert.equal(checkRuntime.current.latest_version, '9.9.9');
+    assert.deepEqual(fs.readFileSync(npmLookupLog, 'utf8').trim().split('\n'), [
+      'view @openai/codex version --silent --prefer-offline',
+      'view @openai/codex version --silent',
+    ]);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});

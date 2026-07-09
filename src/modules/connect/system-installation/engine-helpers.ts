@@ -197,17 +197,26 @@ function resolveLatestVersionStatus(
   };
 }
 
-function resolveLatestCodexCliVersion() {
+function resolveConfiguredLatestCodexCliVersion() {
   const envVersion = normalizeOptionalString(process.env.OPL_CODEX_CLI_LATEST_VERSION);
-  if (envVersion) {
-    return parseCliVersion(envVersion)?.version ?? envVersion;
-  }
+  return envVersion ? parseCliVersion(envVersion)?.version ?? envVersion : null;
+}
+
+function resolveLatestCodexCliVersion(options: { preferOffline?: boolean } = {}) {
+  const configuredVersion = resolveConfiguredLatestCodexCliVersion();
+  if (configuredVersion) return configuredVersion;
 
   let result;
   try {
     result = runCommand(
       'npm',
-      ['view', '@openai/codex', 'version', '--silent'],
+      [
+        'view',
+        '@openai/codex',
+        'version',
+        '--silent',
+        ...(options.preferOffline ? ['--prefer-offline'] : []),
+      ],
       undefined,
       { timeoutMs: resolveCodexLatestTimeoutMs() },
     );
@@ -407,7 +416,10 @@ function normalizeCodexCandidates(candidates: CodexCandidateSnapshot[]) {
   return [normalizedSelected, ...visible];
 }
 
-export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}) {
+export function resolveCodexVersion(options: {
+  skipLatestLookup?: boolean;
+  preferOfflineLatestLookup?: boolean;
+} = {}) {
   const minimumVersion = resolveMinimumCodexCliVersion();
   const binary = resolveCodexBinary();
   if (!binary) {
@@ -432,7 +444,9 @@ export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}
   const versionResult = runCommand(binary.path, ['--version']);
   const version = normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr));
   const policy = resolveVersionStatus(version, minimumVersion);
-  const latestVersion = options.skipLatestLookup ? null : resolveLatestCodexCliVersion();
+  const latestVersion = options.skipLatestLookup
+    ? null
+    : resolveLatestCodexCliVersion({ preferOffline: options.preferOfflineLatestLookup });
   const latestPolicy = resolveLatestVersionStatus(policy.parsed_version, latestVersion);
   const rawCandidates = enumerateCodexCandidates(binary.path)
     .map((candidate) => inspectCodexCandidate(candidate, binary.path, minimumVersion));
@@ -450,6 +464,7 @@ export function resolveCodexVersion(options: { skipLatestLookup?: boolean } = {}
     ...(candidateVersions.size > 1 ? ['codex_cli_path_version_conflict_nonblocking'] : []),
     ...(latestPolicy.latest_version_status === 'outdated' ? ['codex_cli_latest_update_available'] : []),
     ...(options.skipLatestLookup ? ['codex_cli_latest_lookup_skipped_fast_profile'] : []),
+    ...(options.preferOfflineLatestLookup ? ['codex_cli_latest_lookup_prefers_cache_status_projection'] : []),
   ];
 
   return {

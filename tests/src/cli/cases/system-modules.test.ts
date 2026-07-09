@@ -11,7 +11,47 @@ import {
 } from '../helpers.ts';
 import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
+import { parseGitStatusPorcelainV2 } from '../../../../src/modules/connect/system-installation/module-git.ts';
 import './system-modules-cases/mds-skill-boundary.ts';
+
+test('git status porcelain v2 parser preserves sync and dirty state', () => {
+  assert.deepEqual(
+    parseGitStatusPorcelainV2([
+      '# branch.oid 0123456789abcdef0123456789abcdef01234567',
+      '# branch.head main',
+      '# branch.upstream origin/main',
+      '# branch.ab +2 -3',
+      '1 .M N... 100644 100644 100644 0123456 0123456 tracked.txt',
+      '',
+    ].join('\n')),
+    {
+      branch: 'main',
+      head_sha: '0123456789abcdef0123456789abcdef01234567',
+      upstream_ref: 'origin/main',
+      ahead_count: 2,
+      behind_count: 3,
+      sync_status: 'diverged',
+      dirty: true,
+    },
+  );
+
+  assert.deepEqual(
+    parseGitStatusPorcelainV2([
+      '# branch.oid fedcba9876543210fedcba9876543210fedcba98',
+      '# branch.head (detached)',
+      '',
+    ].join('\n')),
+    {
+      branch: null,
+      head_sha: 'fedcba9876543210fedcba9876543210fedcba98',
+      upstream_ref: null,
+      ahead_count: null,
+      behind_count: null,
+      sync_status: 'no_upstream',
+      dirty: false,
+    },
+  );
+});
 
 function createBasicMasModuleRemoteFixture(turnkeyLogPath: string) {
   return createGitModuleRemoteFixture('med-autoscience', {

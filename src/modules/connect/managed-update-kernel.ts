@@ -60,10 +60,12 @@ function shouldBuildComponent(requested: string | null, componentId: ManagedUpda
   return !requested || requested === componentId;
 }
 
-function buildManagedUpdateRuntimeEnvironment() {
+function buildManagedUpdateRuntimeEnvironment(operation: ManagedUpdateKernelInput['operation']) {
   return {
     core_engines: {
-      codex: resolveCodexVersion(),
+      codex: resolveCodexVersion({
+        preferOfflineLatestLookup: operation === 'status',
+      }),
     },
   };
 }
@@ -776,7 +778,7 @@ export async function buildManagedUpdateKernelProjection(
   }
   if (shouldBuildComponent(requested, 'runtime_substrate')) {
     components.push(
-      buildRuntimeSubstrateComponent(buildManagedUpdateRuntimeEnvironment(), channel, {
+      buildRuntimeSubstrateComponent(buildManagedUpdateRuntimeEnvironment(input.operation), channel, {
         allowFrameworkChannelLookup: input.operation === 'check' || input.operation === 'plan',
       }),
     );

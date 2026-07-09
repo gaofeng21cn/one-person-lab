@@ -73,55 +73,95 @@ export function isGitRepo(repoPath: string) {
   return result.exitCode === 0 && result.stdout.trim() === 'true';
 }
 
-export function inspectGitRepo(repoPath: string, refreshRemote = false): GitRepoSnapshot {
-  const branch = normalizeOptionalString(runGit(['branch', '--show-current'], repoPath).stdout);
-  const headSha = normalizeOptionalString(runGit(['rev-parse', 'HEAD'], repoPath).stdout);
-  const shortSha = normalizeOptionalString(runGit(['rev-parse', '--short', 'HEAD'], repoPath).stdout);
-  const originResult = runGit(['remote', 'get-url', 'origin'], repoPath);
-  const statusPorcelain = runGit(['status', '--porcelain'], repoPath);
-  const upstreamResult = runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], repoPath);
-  const upstreamRef = upstreamResult.exitCode === 0 ? normalizeOptionalString(upstreamResult.stdout) : null;
-  if (refreshRemote && originResult.exitCode === 0 && branch && upstreamRef) {
-    runRemoteGitWithRetry(['fetch', '--quiet', '--prune', 'origin'], repoPath);
-  }
-
-  const upstreamHeadResult = upstreamRef ? runGit(['rev-parse', '@{u}'], repoPath) : null;
-  const upstreamHeadSha =
-    upstreamHeadResult?.exitCode === 0 ? normalizeOptionalString(upstreamHeadResult.stdout) : null;
-  const aheadBehindResult = upstreamRef ? runGit(['rev-list', '--left-right', '--count', 'HEAD...@{u}'], repoPath) : null;
+export function parseGitStatusPorcelainV2(output: string): Pick<
+  GitRepoSnapshot,
+  'branch' | 'head_sha' | 'upstream_ref' | 'ahead_count' | 'behind_count' | 'sync_status' | 'dirty'
+> {
+  let branch: string | null = null;
+  let headSha: string | null = null;
+  let upstreamRef: string | null = null;
   let aheadCount: number | null = null;
   let behindCount: number | null = null;
-  let syncStatus: GitRepoSnapshot['sync_status'] = upstreamRef ? 'unknown' : 'no_upstream';
+  let dirty = false;
 
-  if (aheadBehindResult?.exitCode === 0) {
-    const [aheadRaw, behindRaw] = aheadBehindResult.stdout.trim().split(/\s+/);
-    const ahead = Number(aheadRaw);
-    const behind = Number(behindRaw);
-    if (Number.isSafeInteger(ahead) && Number.isSafeInteger(behind)) {
-      aheadCount = ahead;
-      behindCount = behind;
-      if (ahead === 0 && behind === 0) {
-        syncStatus = 'synced';
-      } else if (ahead > 0 && behind === 0) {
-        syncStatus = 'ahead';
-      } else if (ahead === 0 && behind > 0) {
-        syncStatus = 'behind';
-      } else {
-        syncStatus = 'diverged';
+  for (const line of output.split(/\r?\n/)) {
+    if (!line) {
+      continue;
+    }
+    if (!line.startsWith('# ')) {
+      dirty = true;
+      continue;
+    }
+
+    const [key, ...valueParts] = line.slice(2).split(' ');
+    const value = valueParts.join(' ').trim();
+    if (key === 'branch.oid') {
+      headSha = value && value !== '(initial)' ? value : null;
+    } else if (key === 'branch.head') {
+      branch = value && value !== '(detached)' ? value : null;
+    } else if (key === 'branch.upstream') {
+      upstreamRef = normalizeOptionalString(value);
+    } else if (key === 'branch.ab') {
+      const match = value.match(/^\+(\d+) -(\d+)$/);
+      if (match) {
+        const ahead = Number(match[1]);
+        const behind = Number(match[2]);
+        if (Number.isSafeInteger(ahead) && Number.isSafeInteger(behind)) {
+          aheadCount = ahead;
+          behindCount = behind;
+        }
       }
     }
+  }
+
+  let syncStatus: GitRepoSnapshot['sync_status'] = upstreamRef ? 'unknown' : 'no_upstream';
+  if (upstreamRef && aheadCount !== null && behindCount !== null) {
+    syncStatus = aheadCount === 0 && behindCount === 0
+      ? 'synced'
+      : aheadCount > 0 && behindCount === 0
+        ? 'ahead'
+        : aheadCount === 0 && behindCount > 0
+          ? 'behind'
+          : 'diverged';
   }
 
   return {
     branch,
     head_sha: headSha,
-    short_sha: shortSha,
-    origin_url: originResult.exitCode === 0 ? normalizeOptionalString(originResult.stdout) : null,
     upstream_ref: upstreamRef,
-    upstream_head_sha: upstreamHeadSha,
     ahead_count: aheadCount,
     behind_count: behindCount,
     sync_status: syncStatus,
-    dirty: statusPorcelain.stdout.trim().length > 0,
+    dirty,
+  };
+}
+
+export function inspectGitRepo(repoPath: string, refreshRemote = false): GitRepoSnapshot {
+  const readStatus = () => parseGitStatusPorcelainV2(
+    runGit(['status', '--porcelain=v2', '--branch', '--ahead-behind'], repoPath).stdout,
+  );
+  let status = readStatus();
+  const originResult = runGit(['remote', 'get-url', 'origin'], repoPath);
+  if (refreshRemote && originResult.exitCode === 0 && status.branch && status.upstream_ref) {
+    runRemoteGitWithRetry(['fetch', '--quiet', '--prune', 'origin'], repoPath);
+    status = readStatus();
+  }
+
+  const shortShaResult = status.head_sha ? runGit(['rev-parse', '--short', 'HEAD'], repoPath) : null;
+  const upstreamHeadResult = status.upstream_ref ? runGit(['rev-parse', '@{u}'], repoPath) : null;
+  const upstreamHeadSha =
+    upstreamHeadResult?.exitCode === 0 ? normalizeOptionalString(upstreamHeadResult.stdout) : null;
+
+  return {
+    branch: status.branch,
+    head_sha: status.head_sha,
+    short_sha: shortShaResult?.exitCode === 0 ? normalizeOptionalString(shortShaResult.stdout) : null,
+    origin_url: originResult.exitCode === 0 ? normalizeOptionalString(originResult.stdout) : null,
+    upstream_ref: status.upstream_ref,
+    upstream_head_sha: upstreamHeadSha,
+    ahead_count: status.ahead_count,
+    behind_count: status.behind_count,
+    sync_status: status.sync_status,
+    dirty: status.dirty,
   };
 }
