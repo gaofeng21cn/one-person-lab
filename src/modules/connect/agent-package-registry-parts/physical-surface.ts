@@ -243,6 +243,7 @@ export function materializePhysicalCodexSurface(
       removed_paths: [],
       writes_performed: false,
       reload_required: false,
+      failure_reason: null,
       note: 'Manifest did not request Codex plugin materialization with codex_surface.plugin_source_path and codex_surface.plugin_ids.',
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
@@ -299,6 +300,7 @@ export function materializePhysicalCodexSurface(
     removed_paths: [],
     writes_performed: !dryRun,
     reload_required: !dryRun,
+    failure_reason: null,
     note: null,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -346,6 +348,7 @@ export function removePhysicalCodexSurface(
     removed_paths: removedPaths,
     writes_performed: !dryRun,
     reload_required: !dryRun && removedPaths.length > 0,
+    failure_reason: null,
     note: surface ? null : 'Installed package lock did not contain a physical Codex surface.',
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
@@ -378,6 +381,7 @@ export function rematerializePhysicalCodexSurfaceFromLock(
       removed_paths: [],
       writes_performed: false,
       reload_required: false,
+      failure_reason: null,
       note: 'Installed package lock did not request physical Codex surface repair.',
       authority_boundary: refsOnlyAuthorityBoundary(),
     };

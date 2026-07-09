@@ -9,12 +9,27 @@ import {
 } from '../managed-update-owner-boundary.ts';
 import { refsOnlyAuthorityBoundary, uniqueStrings } from './shared.ts';
 import type {
+  AgentPackageLifecycleAction,
+  AgentPackageLifecycleCondition,
   AgentPackageLifecycleReceipt,
+  AgentPackageLifecycleUxReadback,
   AgentPackageLock,
   AgentPackageOwnerRouteReadback,
   AgentPackageOwnerRouteReadbackItem,
   AgentPackageSourceKind,
 } from './types.ts';
+
+const PACKAGE_LIFECYCLE_ACTION_REFS: AgentPackageLifecycleAction[] = [
+  'install',
+  'update',
+  'repair',
+  'uninstall',
+  'hide',
+  'unhide',
+  'enable',
+  'disable',
+  'home_shortcut_preferences_set',
+];
 
 function ownerRouteReadbackCommands() {
   return {
@@ -22,6 +37,123 @@ function ownerRouteReadbackCommands() {
     status: CAPABILITY_PACKAGE_STATUS_READBACK_REF,
     apply: CAPABILITY_PACKAGE_APPLY_COMMAND,
     repair: CAPABILITY_PACKAGE_REPAIR_COMMAND,
+  };
+}
+
+function lifecycleCondition(input: AgentPackageLifecycleCondition) {
+  return input;
+}
+
+export function agentPackageLifecycleUxReadback(input: {
+  packageId: string | null;
+  lock?: AgentPackageLock | null;
+  receipt?: AgentPackageLifecycleReceipt | null;
+}): AgentPackageLifecycleUxReadback {
+  const surface = input.lock?.physical_surface ?? input.receipt?.physical_surface;
+  if (!input.lock) {
+    return {
+      status: 'not_installed',
+      conditions: [lifecycleCondition({
+        condition_id: 'package_not_installed',
+        package_id: input.packageId,
+        status: 'attention_needed',
+        reason: 'No package lock is installed for this package.',
+        action_ref: 'install_from_manifest_url',
+      })],
+      recommended_action: 'install_from_manifest_url',
+      lifecycle_action_refs: ['install'],
+    };
+  }
+
+  const conditions = [
+    lifecycleCondition({
+      condition_id: 'package_lock_present',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: 'Package lock is present in the Framework package lock index.',
+      action_ref: null,
+    }),
+  ];
+
+  if (!surface || surface.status === 'not_requested') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'physical_surface_not_requested',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: surface?.note ?? 'This package does not request Codex plugin materialization.',
+      action_ref: null,
+    }));
+  } else if (surface.status === 'removed') {
+    conditions.push(lifecycleCondition({
+      condition_id: 'physical_surface_removed',
+      package_id: input.lock.package_id,
+      status: 'attention_needed',
+      reason: 'The package physical Codex surface was removed.',
+      action_ref: 'install_from_manifest_url',
+    }));
+  } else {
+    conditions.push(lifecycleCondition({
+      condition_id: 'physical_surface_materialized',
+      package_id: input.lock.package_id,
+      status: 'ok',
+      reason: surface.status === 'validated_no_write'
+        ? 'Physical Codex surface validation passed without writing files.'
+        : 'Physical Codex surface is materialized.',
+      action_ref: null,
+    }));
+  }
+
+  if (surface?.reload_required) {
+    conditions.push(lifecycleCondition({
+      condition_id: 'codex_reload_required',
+      package_id: input.lock.package_id,
+      status: 'attention_needed',
+      reason: 'Codex must reload before the materialized plugin surface is active.',
+      action_ref: 'settings_reload_codex_surface',
+    }));
+  }
+
+  const recommendedAction = conditions.find((condition) => condition.status === 'attention_needed')?.action_ref ?? null;
+  return {
+    status: recommendedAction
+      ? 'attention_needed'
+      : surface?.status === 'validated_no_write'
+        ? 'validated_no_write'
+        : 'installed',
+    conditions,
+    recommended_action: recommendedAction,
+    lifecycle_action_refs: [...PACKAGE_LIFECYCLE_ACTION_REFS],
+  };
+}
+
+export function agentPackageLifecycleSummaryReadback(input: {
+  selectedPackageId?: string | null;
+  packages: AgentPackageLock[];
+}): AgentPackageLifecycleUxReadback {
+  if (input.selectedPackageId && input.packages.length === 0) {
+    return agentPackageLifecycleUxReadback({ packageId: input.selectedPackageId });
+  }
+  if (input.packages.length === 0) {
+    return {
+      status: 'available',
+      conditions: [lifecycleCondition({
+        condition_id: 'package_not_installed',
+        package_id: null,
+        status: 'attention_needed',
+        reason: 'No agent packages are installed yet.',
+        action_ref: 'install_from_manifest_url',
+      })],
+      recommended_action: 'install_from_manifest_url',
+      lifecycle_action_refs: ['install'],
+    };
+  }
+  const packageReadbacks = input.packages.map((lock) => agentPackageLifecycleUxReadback({ packageId: lock.package_id, lock }));
+  const recommendedAction = packageReadbacks.find((entry) => entry.recommended_action)?.recommended_action ?? null;
+  return {
+    status: recommendedAction ? 'attention_needed' : 'available',
+    conditions: packageReadbacks.flatMap((entry) => entry.conditions),
+    recommended_action: recommendedAction,
+    lifecycle_action_refs: [...PACKAGE_LIFECYCLE_ACTION_REFS],
   };
 }
 
@@ -80,13 +212,20 @@ function ownerRouteReadbackItem(input: {
     materialized_required_skill_paths: surface?.materialized_required_skill_paths ?? [],
     writes_performed: surface?.writes_performed ?? false,
     reload_required: surface?.reload_required ?? false,
+    failure_reason: surface?.failure_reason ?? null,
   };
+  const lifecycleUx = agentPackageLifecycleUxReadback({
+    packageId: input.packageId,
+    lock: input.lock,
+    receipt: input.receipt,
+  });
   return {
     package_id: input.packageId,
     descriptor,
     digest,
     lock,
     materializer,
+    lifecycle_ux: lifecycleUx,
     package_core: {
       core_kind: 'opl_agent_package_core',
       package_id: input.packageId,
@@ -103,6 +242,10 @@ function ownerRouteReadbackItem(input: {
       lifecycle: {
         latest_receipt_ref: lock.lifecycle_receipt_ref,
         latest_action: input.receipt?.action ?? null,
+        status: lifecycleUx.status,
+        conditions: lifecycleUx.conditions,
+        recommended_action: lifecycleUx.recommended_action,
+        action_refs: lifecycleUx.lifecycle_action_refs,
       },
       exposure: {
         state: input.lock?.exposure_state ?? null,

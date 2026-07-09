@@ -33,7 +33,10 @@ import {
   rematerializePhysicalCodexSurfaceFromLock,
   resolveManifestPhysicalSource,
 } from './agent-package-registry-parts/physical-surface.ts';
-import { ownerRouteReadback } from './agent-package-registry-parts/readback.ts';
+import {
+  agentPackageLifecycleSummaryReadback,
+  ownerRouteReadback,
+} from './agent-package-registry-parts/readback.ts';
 import {
   fetchJsonSource,
   normalizeSourceKind,
@@ -174,6 +177,7 @@ export async function runOplAgentPackageRegistryRefresh(input: AgentPackageRegis
   }
   const { fetched, cache } = await fetchAndValidateRegistry(registryUrl);
   writeRegistryCache(cache);
+  const lifecycleUx = agentPackageLifecycleSummaryReadback({ packages: [] });
   const receipt = lifecycleReceipt({
     action: 'registry_refresh',
     actionStatus: 'completed',
@@ -193,6 +197,10 @@ export async function runOplAgentPackageRegistryRefresh(input: AgentPackageRegis
       registry_source_kind: fetched.source_kind,
       entry_count: cache.entry_count,
       entries: cache.entries,
+      conditions: lifecycleUx.conditions,
+      recommended_action: lifecycleUx.recommended_action,
+      lifecycle_action_refs: lifecycleUx.lifecycle_action_refs,
+      lifecycle_ux: lifecycleUx,
       cache_file: resolveOplStatePaths().agent_package_registry_cache_file,
       lifecycle_receipt: receipt,
       authority_boundary: refsOnlyAuthorityBoundary(),
@@ -533,6 +541,10 @@ export function runOplAgentPackageStatus(input: { packageId?: string | null } = 
       latestReceipts.set(receipt.package_id, receipt);
     }
   }
+  const lifecycleUx = agentPackageLifecycleSummaryReadback({
+    selectedPackageId: packageId ?? null,
+    packages: installedPackages,
+  });
   return {
     version: 'g2',
     opl_agent_package_status: {
@@ -541,6 +553,10 @@ export function runOplAgentPackageStatus(input: { packageId?: string | null } = 
       package_id: packageId ?? null,
       installed_package_count: installedPackages.length,
       installed_packages: installedPackages,
+      conditions: lifecycleUx.conditions,
+      recommended_action: lifecycleUx.recommended_action,
+      lifecycle_action_refs: lifecycleUx.lifecycle_action_refs,
+      lifecycle_ux: lifecycleUx,
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipts: lifecycleLedger.receipts.filter((receipt) => !packageId || receipt.package_id === packageId),
       owner_route_readback: ownerRouteReadback({
@@ -571,6 +587,7 @@ export function listOplAgentPackages() {
       latestReceipts.set(receipt.package_id, receipt);
     }
   }
+  const lifecycleUx = agentPackageLifecycleSummaryReadback({ packages: lockIndex.packages });
   return {
     version: 'g2',
     opl_agent_packages: {
@@ -579,6 +596,10 @@ export function listOplAgentPackages() {
       registry_cache: registryCache,
       installed_package_count: lockIndex.packages.length,
       installed_packages: lockIndex.packages,
+      conditions: lifecycleUx.conditions,
+      recommended_action: lifecycleUx.recommended_action,
+      lifecycle_action_refs: lifecycleUx.lifecycle_action_refs,
+      lifecycle_ux: lifecycleUx,
       home_shortcut_preferences: homeShortcutPreferences,
       lifecycle_receipt_count: lifecycleLedger.receipts.length,
       lifecycle_receipts: lifecycleLedger.receipts,

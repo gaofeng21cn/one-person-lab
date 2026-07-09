@@ -33,6 +33,27 @@ export type AgentPackageLifecycleAction =
   | 'disable'
   | 'home_shortcut_preferences_set';
 
+export type AgentPackageLifecycleCondition = {
+  condition_id:
+    | 'package_lock_present'
+    | 'package_not_installed'
+    | 'physical_surface_materialized'
+    | 'physical_surface_not_requested'
+    | 'physical_surface_removed'
+    | 'codex_reload_required';
+  package_id: string | null;
+  status: 'ok' | 'attention_needed';
+  reason: string;
+  action_ref: string | null;
+};
+
+export type AgentPackageLifecycleUxReadback = {
+  status: 'available' | 'installed' | 'not_installed' | 'validated_no_write' | 'attention_needed';
+  conditions: AgentPackageLifecycleCondition[];
+  recommended_action: string | null;
+  lifecycle_action_refs: AgentPackageLifecycleAction[];
+};
+
 export type AgentPackageRegistryRefreshInput = {
   registryUrl: string;
 };
@@ -166,6 +187,7 @@ export type AgentPackagePhysicalSurface = {
   removed_paths: string[];
   writes_performed: boolean;
   reload_required: boolean;
+  failure_reason: string | null;
   note: string | null;
   authority_boundary: AgentPackageAuthorityBoundary;
 };
@@ -215,6 +237,7 @@ export type AgentPackageCarrierAdapterReadback = {
   materialized_required_skill_paths: string[];
   writes_performed: boolean;
   reload_required: boolean;
+  failure_reason: string | null;
 };
 
 export type AgentPackageLock = {
@@ -264,6 +287,10 @@ export type AgentPackageCoreReadback = {
   lifecycle: {
     latest_receipt_ref: string | null;
     latest_action: AgentPackageLifecycleAction | null;
+    status: AgentPackageLifecycleUxReadback['status'];
+    conditions: AgentPackageLifecycleCondition[];
+    recommended_action: string | null;
+    action_refs: AgentPackageLifecycleAction[];
   };
   exposure: {
     state: AgentPackageLock['exposure_state'] | null;
@@ -348,7 +375,9 @@ export type AgentPackageOwnerRouteReadbackItem = {
     materialized_required_skill_paths: string[];
     writes_performed: boolean;
     reload_required: boolean;
+    failure_reason: string | null;
   };
+  lifecycle_ux: AgentPackageLifecycleUxReadback;
   package_core: AgentPackageCoreReadback;
   carrier_adapters: AgentPackageCarrierAdapterReadback[];
   authority_boundary: AgentPackageAuthorityBoundary;
