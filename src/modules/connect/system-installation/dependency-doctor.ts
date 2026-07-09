@@ -24,6 +24,7 @@ type DomainDependencyProfile = {
   };
   opl_role: 'dependency_environment_check';
   source_descriptor_ref?: string;
+  dependencies: DependencyProfileCheckSpec[];
   authority_boundary?: {
     can_write_domain_truth?: false;
     can_write_artifact_body?: false;
@@ -31,6 +32,14 @@ type DomainDependencyProfile = {
     can_authorize_final_export?: false;
     can_issue_owner_receipt?: false;
   };
+};
+
+type DependencyProfileCheckSpec = {
+  dependency_id: string;
+  kind: DependencyKind;
+  required_level: DependencyRequiredLevel;
+  purpose: string;
+  install_target?: string;
 };
 
 type DependencyCheck = {
@@ -42,6 +51,7 @@ type DependencyCheck = {
   resolved_path: string | null;
   purpose: string;
   blocker_when_missing: boolean;
+  install_target?: string;
 };
 
 type RepairAction = {
@@ -101,54 +111,6 @@ type MaintenanceInput = {
   apply?: boolean;
 };
 
-const REQUIRED_EXECUTABLES = [
-  {
-    dependency_id: 'pandoc',
-    purpose: 'Markdown to standalone TeX/PDF conversion for Book Forge proof exports.',
-  },
-  {
-    dependency_id: 'xelatex',
-    purpose: 'XeLaTeX engine used by the bundled Chinese publication proof profile.',
-  },
-  {
-    dependency_id: 'pdftoppm',
-    purpose: 'Poppler page rendering for proof page inspection and nonblank checks.',
-  },
-] as const;
-
-const OPTIONAL_EXECUTABLES = [
-  {
-    dependency_id: 'quarto',
-    purpose: 'Optional future book-rendering backend for richer projects.',
-  },
-  {
-    dependency_id: 'typst',
-    purpose: 'Optional future typesetting backend for proof/export experiments.',
-  },
-] as const;
-
-const REQUIRED_LATEX_PACKAGES = [
-  { dependency_id: 'xcolor.sty', install_target: 'xcolor', purpose: 'Book Forge color palette.' },
-  { dependency_id: 'fancyhdr.sty', install_target: 'fancyhdr', purpose: 'Running headers and page numbers.' },
-  { dependency_id: 'titlesec.sty', install_target: 'titlesec', purpose: 'Chapter and section hierarchy.' },
-  { dependency_id: 'caption.sty', install_target: 'caption', purpose: 'Caption style and spacing.' },
-  { dependency_id: 'booktabs.sty', install_target: 'booktabs', purpose: 'Publication-grade table rules.' },
-  { dependency_id: 'colortbl.sty', install_target: 'colortbl', purpose: 'Table rule color support.' },
-  { dependency_id: 'etoolbox.sty', install_target: 'etoolbox', purpose: 'Environment hooks used by the proof profile.' },
-  { dependency_id: 'ctexbook.cls', install_target: 'ctex', purpose: 'Chinese book document class.' },
-] as const;
-
-const LEGACY_LATEX_PACKAGES = [
-  {
-    dependency_id: 'titling.sty',
-    purpose: 'Previously used title-page helper; no longer required by the Book Forge proof profile.',
-  },
-  {
-    dependency_id: 'tocloft.sty',
-    purpose: 'Previously used TOC style helper; no longer required by the Book Forge proof profile.',
-  },
-] as const;
-
 function findCommand(command: string) {
   if (command.includes(path.sep)) {
     const resolved = path.resolve(command);
@@ -189,37 +151,36 @@ function kpsewhich(target: string) {
 }
 
 function checkExecutable(
-  dependency: { dependency_id: string; purpose: string },
-  requiredLevel: DependencyRequiredLevel,
+  dependency: DependencyProfileCheckSpec,
 ): DependencyCheck {
   const resolvedPath = findCommand(dependency.dependency_id);
   return {
     dependency_id: dependency.dependency_id,
     kind: 'executable',
-    required_level: requiredLevel,
+    required_level: dependency.required_level,
     status: resolvedPath ? 'available' : 'missing',
     check_command: ['command', '-v', dependency.dependency_id],
     resolved_path: resolvedPath,
     purpose: dependency.purpose,
-    blocker_when_missing: requiredLevel === 'required',
+    blocker_when_missing: dependency.required_level === 'required',
   };
 }
 
 function checkLatexPackage(
-  dependency: { dependency_id: string; purpose: string },
-  requiredLevel: DependencyRequiredLevel,
+  dependency: DependencyProfileCheckSpec,
 ): DependencyCheck {
   const kpsewhichPath = findCommand('kpsewhich');
   const resolvedPath = kpsewhichPath ? kpsewhich(dependency.dependency_id) : null;
   return {
     dependency_id: dependency.dependency_id,
     kind: 'latex_package',
-    required_level: requiredLevel,
+    required_level: dependency.required_level,
     status: kpsewhichPath ? (resolvedPath ? 'available' : 'missing') : 'not_checked',
     check_command: ['kpsewhich', dependency.dependency_id],
     resolved_path: resolvedPath,
     purpose: dependency.purpose,
-    blocker_when_missing: requiredLevel === 'required',
+    blocker_when_missing: dependency.required_level === 'required',
+    install_target: dependency.install_target,
   };
 }
 
@@ -229,6 +190,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function asString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function normalizeDependencyCheckSpec(value: unknown): DependencyProfileCheckSpec | null {
+  if (!isRecord(value)) return null;
+  const dependencyId = asString(value.dependency_id);
+  const purpose = asString(value.purpose);
+  if (
+    !dependencyId ||
+    !purpose ||
+    (value.kind !== 'executable' && value.kind !== 'latex_package') ||
+    (
+      value.required_level !== 'required' &&
+      value.required_level !== 'optional' &&
+      value.required_level !== 'legacy_not_required'
+    )
+  ) {
+    return null;
+  }
+  return {
+    dependency_id: dependencyId,
+    kind: value.kind,
+    required_level: value.required_level,
+    purpose,
+    install_target: asString(value.install_target) ?? undefined,
+  };
 }
 
 function dependencyProfiles() {
@@ -253,6 +239,9 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
   const domainTruthOwner = asString(value.domain_truth_owner);
   const profileRef = source ? asString(source.profile_ref) : null;
   const helperRef = source ? asString(source.helper_ref) : null;
+  const dependencies = Array.isArray(value.dependencies)
+    ? value.dependencies.map((entry) => normalizeDependencyCheckSpec(entry))
+    : [];
   if (
     !profileId ||
     value.profile_kind !== 'domain_dependency_profile' ||
@@ -263,7 +252,9 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     source.source_kind !== 'domain_profile_ref' ||
     !profileRef ||
     !helperRef ||
-    value.opl_role !== 'dependency_environment_check'
+    value.opl_role !== 'dependency_environment_check' ||
+    dependencies.length === 0 ||
+    dependencies.some((entry) => !entry)
   ) {
     return null;
   }
@@ -280,6 +271,7 @@ function normalizeDependencyProfile(value: unknown): DomainDependencyProfile | n
     },
     opl_role: 'dependency_environment_check',
     source_descriptor_ref: asString(value.source_descriptor_ref) ?? undefined,
+    dependencies: dependencies as DependencyProfileCheckSpec[],
     authority_boundary: isRecord(value.authority_boundary)
       ? {
         can_write_domain_truth: value.authority_boundary.can_write_domain_truth === false ? false : undefined,
@@ -343,11 +335,9 @@ function buildRepairAction(
     };
   }
 
-  const missingLatexTargets = REQUIRED_LATEX_PACKAGES
-    .filter((entry) =>
-      missingRequired.some((dependency) => dependency.dependency_id === entry.dependency_id)
-    )
-    .map((entry) => entry.install_target);
+  const missingLatexTargets = missingRequired
+    .filter((entry) => entry.kind === 'latex_package' && entry.install_target)
+    .map((entry) => entry.install_target as string);
   const tlmgr = findCommand('tlmgr');
   const commandPreview = tlmgr && missingLatexTargets.length > 0
     ? ['tlmgr', 'install', ...missingLatexTargets]
@@ -397,12 +387,9 @@ export function buildOplSystemDependencyDoctor(input: { profile?: string } = {})
 } {
   const profile = assertKnownProfile(input.profile ?? DEFAULT_PROFILE_ID);
 
-  const dependencies: DependencyCheck[] = [
-    ...REQUIRED_EXECUTABLES.map((entry) => checkExecutable(entry, 'required')),
-    ...OPTIONAL_EXECUTABLES.map((entry) => checkExecutable(entry, 'optional')),
-    ...REQUIRED_LATEX_PACKAGES.map((entry) => checkLatexPackage(entry, 'required')),
-    ...LEGACY_LATEX_PACKAGES.map((entry) => checkLatexPackage(entry, 'legacy_not_required')),
-  ];
+  const dependencies = profile.dependencies.map((entry) =>
+    entry.kind === 'executable' ? checkExecutable(entry) : checkLatexPackage(entry)
+  );
   const requiredDependencies = dependencies.filter((entry) => entry.required_level === 'required');
   const optionalDependencies = dependencies.filter((entry) => entry.required_level === 'optional');
   const legacyDependencies = dependencies.filter((entry) => entry.required_level === 'legacy_not_required');

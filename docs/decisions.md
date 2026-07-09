@@ -513,7 +513,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl system dependency-doctor --profile bookforge-publication-proof --json` 是 OPL-owned 本机依赖诊断面，读取 Pandoc、XeLaTeX、Poppler 和 proof profile 所需 LaTeX package 的 discoverability。
+- `opl system dependency-doctor --profile bookforge-publication-proof --json` 是 OPL-owned 本机依赖诊断面，但 profile 与依赖清单来自 BookForge package / descriptor 声明；OPL 只按 `domain_dependency_profile` 执行 executable / LaTeX package discoverability 检查。
 - `opl system dependency-maintenance --profile bookforge-publication-proof --json` 默认只输出维护计划；只有显式 `--apply` 才尝试通过检测到的 TeX Live package manager 执行修复。doctor 路径不得突变系统环境。
 - Book Forge 仍拥有 manuscript、proof profile、helper behavior、书稿质量、出版 proof / final export owner gate；OPL 只拥有本机依赖诊断、维护 route 和 no-domain-authority readback。
 - 该 surface 的 hard blocker 只适用于 Book Forge publication proof / final export 相关 claim。普通 storyline、chapter drafting、context compile、claim integrity、style calibration、review PDF 以外的写作进度不得因为该 doctor blocked 而停摆。
