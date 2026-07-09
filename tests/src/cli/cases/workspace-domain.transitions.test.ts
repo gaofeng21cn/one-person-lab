@@ -195,6 +195,19 @@ function withMasFamilyTransitionSurfaces(payload: JsonRecord, overrides: JsonRec
   };
 }
 
+const fallbackMasActionCatalog = {
+  surface_kind: 'family_action_catalog',
+  version: 'family-action-catalog.v1',
+  catalog_id: 'medautoscience.action-catalog.v1',
+  target_domain_id: 'medautoscience',
+  owner: 'med-autoscience',
+  authority_boundary: {
+    opl_role: 'generated_action_transport_only',
+    domain_role: 'medical_research_action_authority',
+  },
+  notes: [],
+};
+
 function buildStudyStateMatrixAction(input: {
   title: string;
   summary: string;
@@ -244,6 +257,21 @@ function buildStudyStateMatrixAction(input: {
       domain_transition_owner: 'MedAutoScience',
       can_write_domain_truth: false,
       can_execute_domain_action: false,
+    },
+  };
+}
+
+function existingFamilyActionCatalogActions(payload: JsonRecord): unknown[] {
+  return ((payload.family_action_catalog as JsonRecord | undefined)?.actions as unknown[] | undefined) ?? [];
+}
+
+function withFamilyActionCatalogActions(payload: JsonRecord, actions: unknown[]) {
+  const familyActionCatalog = (payload.family_action_catalog as JsonRecord | undefined) ?? fallbackMasActionCatalog;
+  return {
+    ...payload,
+    family_action_catalog: {
+      ...familyActionCatalog,
+      actions,
     },
   };
 }
@@ -393,32 +421,16 @@ test('domain manifests reports descriptor-only MAS family transition specs as ne
     assert.equal(medautoscience.manifest.family_transition.matrix_result, null);
     assert.deepEqual(
       medautoscience.manifest.family_transition.descriptor.materialized_surfaces,
-      {
-        study_state_matrix: [
-          'domain_transition_table.family_transition_spec',
-          'domain_transition_table.family_transition_matrix_cases',
-        ],
-        sidecar_export: ['family_transition_spec_descriptor'],
-        product_entry_manifest: ['family_transition_spec_descriptor'],
-      },
+      masFamilyTransitionSpecDescriptor.materialized_surfaces,
     );
-    assert.equal(
-      medautoscience.manifest.family_transition.locator_refs.study_state_matrix_spec,
-      '/study_state_matrix/domain_transition_table/family_transition_spec',
+    assert.deepEqual(
+      medautoscience.manifest.family_transition.locator_refs,
+      masFamilyTransitionSpecDescriptor.locator_refs,
     );
-    assert.equal(
-      medautoscience.manifest.family_transition.locator_refs.study_state_matrix_cases,
-      '/study_state_matrix/domain_transition_table/family_transition_matrix_cases',
+    assert.deepEqual(
+      medautoscience.manifest.family_transition.descriptor.source_refs,
+      masFamilyTransitionSpecDescriptor.source_refs,
     );
-    assert.equal(
-      medautoscience.manifest.family_transition.locator_refs.sidecar_export_descriptor,
-      '/mas_family_sidecar_export/family_transition_spec_descriptor',
-    );
-    assert.equal(
-      medautoscience.manifest.family_transition.descriptor.source_refs.study_state_matrix_domain_transition_table,
-      '/study_state_matrix/domain_transition_table',
-    );
-    assert.equal('sidecar_export_spec' in medautoscience.manifest.family_transition.locator_refs, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -506,28 +518,9 @@ test('agents descriptor projects descriptor-only MAS transition specs as refresh
     assert.equal(transition.matrix_summary, null);
     assert.deepEqual(
       transition.descriptor.materialized_surfaces,
-      {
-        study_state_matrix: [
-          'domain_transition_table.family_transition_spec',
-          'domain_transition_table.family_transition_matrix_cases',
-        ],
-        sidecar_export: ['family_transition_spec_descriptor'],
-        product_entry_manifest: ['family_transition_spec_descriptor'],
-      },
+      masFamilyTransitionSpecDescriptor.materialized_surfaces,
     );
-    assert.equal(
-      transition.locator_refs.study_state_matrix_spec,
-      '/study_state_matrix/domain_transition_table/family_transition_spec',
-    );
-    assert.equal(
-      transition.locator_refs.study_state_matrix_cases,
-      '/study_state_matrix/domain_transition_table/family_transition_matrix_cases',
-    );
-    assert.equal(
-      transition.locator_refs.sidecar_export_descriptor,
-      '/mas_family_sidecar_export/family_transition_spec_descriptor',
-    );
-    assert.equal('sidecar_export_spec' in transition.locator_refs, false);
+    assert.deepEqual(transition.locator_refs, masFamilyTransitionSpecDescriptor.locator_refs);
     assert.equal(inspect.family_agent_descriptor.descriptor_refs.family_transition.status, 'descriptor_only');
     assert.equal(transition.non_authority_flags.opl_writes_domain_truth, false);
   } finally {
@@ -542,31 +535,14 @@ test('domain manifests materializes descriptor-only MAS transition specs through
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const command = `${process.execPath} ${shellSingleQuote(materializerPath)}`;
-  const manifest = {
-    ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
-    family_action_catalog: {
-      ...((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined) ?? {
-        surface_kind: 'family_action_catalog',
-        version: 'family-action-catalog.v1',
-        catalog_id: 'medautoscience.action-catalog.v1',
-        target_domain_id: 'medautoscience',
-        owner: 'med-autoscience',
-        authority_boundary: {
-          opl_role: 'generated_action_transport_only',
-          domain_role: 'medical_research_action_authority',
-        },
-        notes: [],
-      }),
-      actions: [
-        ...(((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined)?.actions as JsonRecord[] | undefined) ?? []),
-        buildStudyStateMatrixAction({
-          title: 'Materialize MAS study state matrix',
-          summary: 'Read-only study-state-matrix materialization for OPL transition runner.',
-          command,
-        }),
-      ],
-    },
-  };
+  const manifest = withFamilyActionCatalogActions(withMasFamilyTransitionDescriptor(fixtures.medautoscience), [
+    ...existingFamilyActionCatalogActions(fixtures.medautoscience),
+    buildStudyStateMatrixAction({
+      title: 'Materialize MAS study state matrix',
+      summary: 'Read-only study-state-matrix materialization for OPL transition runner.',
+      command,
+    }),
+  ]);
   fs.mkdirSync(materializerRoot, { recursive: true });
   fs.writeFileSync(
     materializerPath,
@@ -623,30 +599,13 @@ test('domain manifests keeps live manifest resolved when transition materializat
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const command = `${process.execPath} ${shellSingleQuote(materializerPath)}`;
-  const manifest = {
-    ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
-    family_action_catalog: {
-      ...((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined) ?? {
-        surface_kind: 'family_action_catalog',
-        version: 'family-action-catalog.v1',
-        catalog_id: 'medautoscience.action-catalog.v1',
-        target_domain_id: 'medautoscience',
-        owner: 'med-autoscience',
-        authority_boundary: {
-          opl_role: 'generated_action_transport_only',
-          domain_role: 'medical_research_action_authority',
-        },
-        notes: [],
-      }),
-      actions: [
-        buildStudyStateMatrixAction({
-          title: 'Slow MAS study state matrix',
-          summary: 'Read-only study-state-matrix materialization that exceeds the OPL projection budget.',
-          command,
-        }),
-      ],
-    },
-  };
+  const manifest = withFamilyActionCatalogActions(withMasFamilyTransitionDescriptor(fixtures.medautoscience), [
+    buildStudyStateMatrixAction({
+      title: 'Slow MAS study state matrix',
+      summary: 'Read-only study-state-matrix materialization that exceeds the OPL projection budget.',
+      command,
+    }),
+  ]);
   fs.mkdirSync(materializerRoot, { recursive: true });
   fs.writeFileSync(
     materializerPath,
@@ -689,32 +648,15 @@ test('domain manifests skips MAS transition materialization when study-state-mat
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const command = `${process.execPath} -e "process.exit(1)"`;
-  const manifest = {
-    ...withMasFamilyTransitionDescriptor(fixtures.medautoscience),
-    family_action_catalog: {
-      ...((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined) ?? {
-        surface_kind: 'family_action_catalog',
-        version: 'family-action-catalog.v1',
-        catalog_id: 'medautoscience.action-catalog.v1',
-        target_domain_id: 'medautoscience',
-        owner: 'med-autoscience',
-        authority_boundary: {
-          opl_role: 'generated_action_transport_only',
-          domain_role: 'medical_research_action_authority',
-        },
-        notes: [],
-      }),
-      actions: [
-        ...(((fixtures.medautoscience.family_action_catalog as JsonRecord | undefined)?.actions as JsonRecord[] | undefined) ?? []),
-        buildStudyStateMatrixAction({
-          title: 'Unsafe MAS study state matrix',
-          summary: 'Non-read-only action must not be executed by OPL materialization.',
-          effect: 'mutating',
-          command,
-        }),
-      ],
-    },
-  };
+  const manifest = withFamilyActionCatalogActions(withMasFamilyTransitionDescriptor(fixtures.medautoscience), [
+    ...existingFamilyActionCatalogActions(fixtures.medautoscience),
+    buildStudyStateMatrixAction({
+      title: 'Unsafe MAS study state matrix',
+      summary: 'Non-read-only action must not be executed by OPL materialization.',
+      effect: 'mutating',
+      command,
+    }),
+  ]);
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
