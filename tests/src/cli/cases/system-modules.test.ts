@@ -13,6 +13,41 @@ import { runGitFixtureCommand } from '../helpers-parts/family-fixtures.ts';
 import { writeFakeOmaGeneratedSurfacePack } from '../../cli-codex-default-shell-helpers.ts';
 import './system-modules-cases/mds-skill-boundary.ts';
 
+function createBasicMasModuleRemoteFixture(turnkeyLogPath: string) {
+  return createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'med-autoscience',
+        skills: './skills/',
+      }, null, 2),
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
+        '---',
+        'name: med-autoscience',
+        'description: Use MAS runtime through its OPL-managed product entry.',
+        '---',
+        '',
+        '# MAS App Skill',
+        '',
+      ].join('\n'),
+      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"repo":"med-autoscience","sync":"ok"}
+EOF
+`,
+      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+    },
+  });
+}
+
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
@@ -251,38 +286,7 @@ test('module install is idempotent when the managed checkout already exists', ()
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-existing-managed-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
-  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
-    extraFiles: {
-      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'med-autoscience',
-        skills: './skills/',
-      }, null, 2),
-      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
-        '---',
-        'name: med-autoscience',
-        'description: Use MAS runtime through its OPL-managed product entry.',
-        '---',
-        '',
-        '# MAS App Skill',
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
-cat <<'EOF'
-{"repo":"med-autoscience","sync":"ok"}
-EOF
-`,
-      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-    },
-  });
+  const medAutoScienceRemote = createBasicMasModuleRemoteFixture(turnkeyLogPath);
   const managedCheckout = path.join(modulesRoot, 'med-autoscience');
 
   try {
@@ -320,38 +324,7 @@ test('module install replaces a non-empty invalid managed checkout', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-invalid-managed-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
-  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
-    extraFiles: {
-      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'med-autoscience',
-        skills: './skills/',
-      }, null, 2),
-      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': [
-        '---',
-        'name: med-autoscience',
-        'description: Use MAS runtime through its OPL-managed product entry.',
-        '---',
-        '',
-        '# MAS App Skill',
-        '',
-      ].join('\n'),
-      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
-cat <<'EOF'
-{"repo":"med-autoscience","sync":"ok"}
-EOF
-`,
-      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
-set -euo pipefail
-printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
-`,
-    },
-  });
+  const medAutoScienceRemote = createBasicMasModuleRemoteFixture(turnkeyLogPath);
   const managedCheckout = path.join(modulesRoot, 'med-autoscience');
 
   try {
