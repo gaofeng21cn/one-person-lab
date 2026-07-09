@@ -40,6 +40,71 @@ function removeTempRoots(...roots: string[]) {
   for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
 }
 
+type ActionWithId = { action_id: string };
+
+function writeJsonFile(filePath: string, value: unknown) {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function actionIds(actions: ActionWithId[]) {
+  return actions.map((action) => action.action_id);
+}
+
+function actionPairs<T extends string>(actions: Array<ActionWithId & Record<T, string>>, statusKey: T) {
+  return actions.map((action) => [action.action_id, action[statusKey]]);
+}
+
+function assertPathValues(root: unknown, values: Array<[string, unknown]>) {
+  for (const [selector, expected] of values) {
+    const actual = selector.split('.').reduce<unknown>((current, key) => {
+      assert.ok(current !== null && typeof current === 'object', `${selector} missing ${key}`);
+      return (current as Record<string, unknown>)[key];
+    }, root);
+    assert.deepEqual(actual, expected, selector);
+  }
+}
+
+function findItem<T extends Record<string, any>>(items: T[], key: string, value: string) {
+  const item = items.find((candidate) => candidate[key] === value);
+  assert.ok(item, `${key}=${value}`);
+  return item;
+}
+
+function bindWorkspaceProject(
+  project: string,
+  projectPath: string,
+  manifest: Record<string, unknown>,
+  stateRoot: string,
+  contractsRoot: string,
+) {
+  runCli([
+    'workspace',
+    'bind',
+    '--project',
+    project,
+    '--path',
+    projectPath,
+    '--manifest-command',
+    buildManifestCommand(manifest),
+  ], {
+    OPL_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: contractsRoot,
+  });
+}
+
+function runTemporalRuntimeManager(
+  stateRoot: string,
+  helperBinDir: string,
+  envOverrides: Record<string, string> = {},
+) {
+  return runCli(['runtime', 'manager'], {
+    OPL_STATE_DIR: stateRoot,
+    OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+    OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    ...envOverrides,
+  });
+}
+
 test('runtime manager reports stale and expired native index freshness from the last successful snapshot', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-stale-state-'));
   const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
@@ -47,26 +112,19 @@ test('runtime manager reports stale and expired native index freshness from the 
   writeNativeHelperFixtureScripts(helperBinDir, { includeVersionFields: true });
   t.after(() => removeTempRoots(stateRoot, helperBinDir));
 
-    const success = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-    });
+    const success = runTemporalRuntimeManager(stateRoot, helperBinDir);
     const successPersistence = success.runtime_manager.state_index_target.persistence;
     assert.equal(successPersistence.status, 'written');
     assert.equal(successPersistence.freshness.status, 'fresh');
     assert.equal(success.runtime_manager.reconcile.surface_kind, 'opl_runtime_manager_reconcile');
     assert.equal(success.runtime_manager.reconcile.overall_status, 'attention_needed');
     assert.deepEqual(
-      success.runtime_manager.reconcile.recommended_actions.map((action: { action_id: string }) => action.action_id),
+      actionIds(success.runtime_manager.reconcile.recommended_actions),
       ['configure_temporal_provider'],
     );
 
-    const stale = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-    });
+    const missingNativeBinDir = path.join(stateRoot, 'missing-native-bin');
+    const stale = runTemporalRuntimeManager(stateRoot, missingNativeBinDir);
     const staleFreshness = stale.runtime_manager.state_index_target.persistence.freshness;
     assert.equal(stale.runtime_manager.state_index_target.persistence.status, 'skipped_helper_unavailable');
     assert.equal(staleFreshness.status, 'stale_last_success_available');
@@ -87,7 +145,7 @@ test('runtime manager reports stale and expired native index freshness from the 
     assert.equal(typeof staleFreshness.last_success_generated_at, 'string');
     assert.equal(stale.runtime_manager.reconcile.overall_status, 'attention_needed');
     assert.deepEqual(
-      stale.runtime_manager.reconcile.recommended_actions.map((action: { action_id: string }) => action.action_id),
+      actionIds(stale.runtime_manager.reconcile.recommended_actions),
       ['configure_temporal_provider', 'repair_native_helpers', 'refresh_native_indexes'],
     );
 
@@ -95,11 +153,7 @@ test('runtime manager reports stale and expired native index freshness from the 
     lastSuccess.lifecycle.expires_at = '2000-01-01T00:00:00.000Z';
     fs.writeFileSync(successPersistence.last_success_file, `${JSON.stringify(lastSuccess, null, 2)}\n`);
 
-    const expired = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-    });
+    const expired = runTemporalRuntimeManager(stateRoot, missingNativeBinDir);
     const expiredFreshness = expired.runtime_manager.state_index_target.persistence.freshness;
     assert.equal(expiredFreshness.status, 'expired_last_success');
     assert.equal(expiredFreshness.last_success_expired, true);
@@ -124,9 +178,9 @@ test('runtime manager records structured native index diff and history GC report
       })}\n`,
     );
   }
-  fs.writeFileSync(
+  writeJsonFile(
     path.join(runtimeDir, 'native-state-index.json'),
-    `${JSON.stringify({
+    {
       surface_kind: 'opl_runtime_manager_native_state_projection',
       generated_at: '2026-04-25T00:00:00.000Z',
       lifecycle: {
@@ -152,7 +206,7 @@ test('runtime manager records structured native index diff and history GC report
           errors: [],
         },
       },
-    }, null, 2)}\n`,
+    },
   );
 
     const output = runCli(['runtime', 'manager'], {
@@ -303,45 +357,9 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     },
   };
 
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      path.join(workspaceRoot, 'mas'),
-      '--manifest-command',
-      buildManifestCommand(runningManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'redcube',
-      '--path',
-      path.join(workspaceRoot, 'redcube'),
-      '--manifest-command',
-      buildManifestCommand(attentionManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautogrant',
-      '--path',
-      path.join(workspaceRoot, 'mag'),
-      '--manifest-command',
-      buildManifestCommand(recentManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    bindWorkspaceProject('medautoscience', path.join(workspaceRoot, 'mas'), runningManifest, stateRoot, fixtureContractsRoot);
+    bindWorkspaceProject('redcube', path.join(workspaceRoot, 'redcube'), attentionManifest, stateRoot, fixtureContractsRoot);
+    bindWorkspaceProject('medautogrant', path.join(workspaceRoot, 'mag'), recentManifest, stateRoot, fixtureContractsRoot);
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -350,76 +368,52 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
 
-    assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
-    assert.equal(snapshot.runtime_health.status, 'offline');
-    assert.equal(snapshot.runtime_health.provider_kind, 'temporal');
-    assert.equal(snapshot.running_items.length, 1);
-    assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
-    assert.equal(snapshot.running_items[0].runtime_owner, 'provider_backed_family_runtime');
-    assert.equal(snapshot.running_items[0].action_owner, 'none');
-    assert.equal(snapshot.running_items[0].requires_user_action, false);
-    assert.equal(snapshot.running_items[0].action_kind, 'running');
-    assert.equal(snapshot.attention_items.length, 2);
-    const redcubeAttentionItem = snapshot.attention_items.find((item: { project_id: string }) => item.project_id === 'redcube');
-    assert.equal(redcubeAttentionItem.action_owner, 'user');
-    assert.equal(redcubeAttentionItem.requires_user_action, true);
-    assert.equal(redcubeAttentionItem.action_kind, 'human_gate');
+    assertPathValues(snapshot, [
+      ['schema_version', 'runtime_tray_snapshot.v1'],
+      ['runtime_health.status', 'offline'],
+      ['runtime_health.provider_kind', 'temporal'],
+      ['running_items.length', 1],
+      ['running_items.0.project_id', 'medautoscience'],
+      ['running_items.0.runtime_owner', 'provider_backed_family_runtime'],
+      ['running_items.0.action_owner', 'none'],
+      ['running_items.0.requires_user_action', false],
+      ['running_items.0.action_kind', 'running'],
+      ['attention_items.length', 2],
+      ['recent_items.length', 0],
+      ['action_counts', { user: 1, opl: 0, infrastructure: 1 }],
+      ['managed_domain_provider_states.surface_kind', 'opl_runtime_tray_managed_domain_provider_states'],
+      ['managed_domain_provider_states.role', 'app_status_read_model_only'],
+      ['managed_domain_provider_states.medautoscience.role', 'read_only_status_projection'],
+      ['managed_domain_provider_states.medautoscience.managed_temporal_state_consistency.address', 'mas-managed-temporal.example.test:7233'],
+      ['managed_domain_provider_states.medautoscience.legacy_retirement_tombstone_proof.status', 'no_active_default_caller_proven'],
+      ['managed_domain_provider_states.managed_domain_projection_summary.managed_temporal_state_consistency_declared', true],
+      ['managed_domain_provider_states.managed_domain_projection_summary.family_stage_control_plane_declared', true],
+      ['managed_domain_provider_states.managed_domain_projection_summary.domain_memory_descriptor_declared', false],
+      ['managed_domain_provider_states.managed_domain_projection_summary.owner_receipt_contract_declared', false],
+      ['managed_domain_provider_states.managed_domain_projection_summary.legacy_retirement_tombstone_declared', true],
+      ['managed_domain_provider_states.medautoscience.authority_boundary.can_write_domain_truth', false],
+      ['managed_domain_provider_states.medautoscience.authority_boundary.can_authorize_publication_quality', false],
+      ['managed_domain_provider_states.authority_boundary.can_authorize_submission_readiness', false],
+      ['daemon_policy.local_daemon_added', false],
+      ['daemon_policy.runtime_kernel_owner', 'provider_backed_family_runtime'],
+    ]);
+    const redcubeAttentionItem = findItem(snapshot.attention_items, 'project_id', 'redcube');
+    assertPathValues(redcubeAttentionItem, [
+      ['action_owner', 'user'],
+      ['requires_user_action', true],
+      ['action_kind', 'human_gate'],
+    ]);
     assert.equal(redcubeAttentionItem.source_refs.some((ref: { ref: string }) => ref.ref === '/progress_projection/attention_items'), true);
-    const providerProofItem = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal');
-    assert.equal(providerProofItem.action_owner, 'infrastructure');
-    assert.equal(providerProofItem.provider_continuous_proof.continuous_proof_status, 'no_proof_observed');
-    assert.equal(snapshot.recent_items.length, 0);
+    const providerProofItem = findItem(snapshot.attention_items, 'item_id', 'opl:provider-continuous-proof:temporal');
+    assertPathValues(providerProofItem, [
+      ['action_owner', 'infrastructure'],
+      ['provider_continuous_proof.continuous_proof_status', 'no_proof_observed'],
+    ]);
     assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'medautogrant'), false);
-    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 0, infrastructure: 1 });
-    assert.equal(
-      snapshot.managed_domain_provider_states.surface_kind,
-      'opl_runtime_tray_managed_domain_provider_states',
-    );
-    assert.equal(snapshot.managed_domain_provider_states.role, 'app_status_read_model_only');
-    assert.equal(snapshot.managed_domain_provider_states.medautoscience.role, 'read_only_status_projection');
-    assert.equal(
-      snapshot.managed_domain_provider_states.medautoscience.managed_temporal_state_consistency.address,
-      'mas-managed-temporal.example.test:7233',
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.medautoscience.legacy_retirement_tombstone_proof.status,
-      'no_active_default_caller_proven',
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.managed_domain_projection_summary.managed_temporal_state_consistency_declared,
-      true,
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.managed_domain_projection_summary.family_stage_control_plane_declared,
-      true,
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.managed_domain_projection_summary.domain_memory_descriptor_declared,
-      false,
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.managed_domain_projection_summary.owner_receipt_contract_declared,
-      false,
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.managed_domain_projection_summary.legacy_retirement_tombstone_declared,
-      true,
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.medautoscience.authority_boundary.can_write_domain_truth,
-      false,
-    );
-    assert.equal(
-      snapshot.managed_domain_provider_states.medautoscience.authority_boundary.can_authorize_publication_quality,
-      false,
-    );
-    assert.equal(snapshot.managed_domain_provider_states.authority_boundary.can_authorize_submission_readiness, false);
     assert.equal(
       snapshot.source_refs.some((ref: { role: string }) => ref.role === 'managed_domain_provider_projection'),
       true,
     );
-    assert.equal(snapshot.daemon_policy.local_daemon_added, false);
-    assert.equal(snapshot.daemon_policy.runtime_kernel_owner, 'provider_backed_family_runtime');
 });
 
 test('runtime snapshot keeps demo and descriptor-only domain manifests out of current tray lanes', (t) => {
@@ -461,32 +455,8 @@ test('runtime snapshot keeps demo and descriptor-only domain manifests out of cu
 
   const redcubeDescriptorManifest = structuredClone(fixtures.redcube);
 
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautogrant',
-      '--path',
-      path.join(workspaceRoot, 'mag'),
-      '--manifest-command',
-      buildManifestCommand(magDemoManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'redcube',
-      '--path',
-      path.join(workspaceRoot, 'redcube'),
-      '--manifest-command',
-      buildManifestCommand(redcubeDescriptorManifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    bindWorkspaceProject('medautogrant', path.join(workspaceRoot, 'mag'), magDemoManifest, stateRoot, fixtureContractsRoot);
+    bindWorkspaceProject('redcube', path.join(workspaceRoot, 'redcube'), redcubeDescriptorManifest, stateRoot, fixtureContractsRoot);
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -497,8 +467,10 @@ test('runtime snapshot keeps demo and descriptor-only domain manifests out of cu
 
     assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'medautogrant'), false);
     assert.equal(allItems.some((item: { project_id: string }) => item.project_id === 'redcube'), false);
-    assert.equal(snapshot.attention_items.length, 1);
-    assert.equal(snapshot.attention_items[0].item_id, 'opl:provider-continuous-proof:temporal');
+    assertPathValues(snapshot, [
+      ['attention_items.length', 1],
+      ['attention_items.0.item_id', 'opl:provider-continuous-proof:temporal'],
+    ]);
 });
 
 test('runtime snapshot ignores retired Hermes cron residue', (t) => {
@@ -508,9 +480,9 @@ test('runtime snapshot ignores retired Hermes cron residue', (t) => {
   t.after(() => removeTempRoots(stateRoot, hermesHome, fixtureRoot));
   const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
   fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
-  fs.writeFileSync(
+  writeJsonFile(
     jobsPath,
-    `${JSON.stringify({
+    {
       jobs: [
         {
           id: 'cron-attention',
@@ -521,7 +493,7 @@ test('runtime snapshot ignores retired Hermes cron residue', (t) => {
           last_status: 'error',
         },
       ],
-    }, null, 2)}\n`,
+    },
   );
 
     const output = runCli(['runtime', 'snapshot'], {
@@ -576,9 +548,9 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     fs.mkdirSync(path.join(runtimeDir, 'runtime_supervision'), { recursive: true });
     fs.mkdirSync(path.join(studyRoot, 'artifacts', 'controller_decisions'), { recursive: true });
     fs.mkdirSync(path.join(studyRoot, 'artifacts', 'publication_eval'), { recursive: true });
-    fs.writeFileSync(
+    writeJsonFile(
       path.join(runtimeDir, 'runtime_status_summary.json'),
-      `${JSON.stringify({
+      {
         study_id: studyId,
         generated_at: '2026-04-29T12:00:00+00:00',
         health_status: input.healthStatus,
@@ -589,11 +561,11 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
         next_action_summary: 'Continue supervision.',
         needs_human_intervention: input.needsHumanIntervention ?? false,
         supervisor_tick_status: 'fresh',
-      }, null, 2)}\n`,
+      },
     );
-    fs.writeFileSync(
+    writeJsonFile(
       path.join(runtimeDir, 'runtime_supervision', 'latest.json'),
-      `${JSON.stringify({
+      {
         study_id: studyId,
         recorded_at: '2026-04-29T12:00:00+00:00',
         quest_status: input.questStatus,
@@ -603,11 +575,11 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
         next_action_summary: 'Continue supervision.',
         needs_human_intervention: input.needsHumanIntervention ?? false,
         worker_running: Boolean(input.activeRunId),
-      }, null, 2)}\n`,
+      },
     );
-    fs.writeFileSync(
+    writeJsonFile(
       path.join(studyRoot, 'artifacts', 'controller_decisions', 'latest.json'),
-      `${JSON.stringify({
+      {
         study_id: studyId,
         emitted_at: '2026-04-29T12:00:00+00:00',
         decision_type: 'bounded_analysis',
@@ -615,11 +587,11 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
         route_key_question: 'close current evidence gaps',
         reason: 'Continue same-line quality repair.',
         requires_human_confirmation: false,
-      }, null, 2)}\n`,
+      },
     );
-    fs.writeFileSync(
+    writeJsonFile(
       path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json'),
-      `${JSON.stringify({
+      {
         study_id: studyId,
         emitted_at: '2026-04-29T12:00:00+00:00',
         verdict: {
@@ -628,7 +600,7 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
         },
         gaps: [{ summary: 'stale_submission_minimal_authority' }],
         recommended_actions: [{ reason: 'refresh the current delivery bundle' }],
-      }, null, 2)}\n`,
+      },
     );
   };
 
@@ -670,19 +642,7 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     needsHumanIntervention: true,
   });
 
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      workspaceRoot,
-      '--manifest-command',
-      buildManifestCommand(manifest),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    bindWorkspaceProject('medautoscience', workspaceRoot, manifest, stateRoot, fixtureContractsRoot);
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -691,33 +651,34 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
-    assert.equal(snapshot.runtime_health.status, 'offline');
-    assert.equal(snapshot.attention_items.length, 2);
-    const dm002Item = snapshot.attention_items.find((item: { item_id: string }) => item.item_id === 'medautoscience:study:002-dm-china-us-mortality-attribution');
-    assert.equal(dm002Item.active_run_id, 'run-002');
-    assert.equal(dm002Item.action_owner, 'opl');
-    assert.equal(dm002Item.requires_user_action, false);
-    assert.equal(dm002Item.action_kind, 'publication_gate');
-    assert.equal(dm002Item.recommended_commands[0].surface_kind, 'study_progress');
-    assert.equal(
-      dm002Item.recommended_commands[0].command,
-      `uv run python -m med_autoscience.cli study progress --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`,
-    );
-    assert.equal(dm002Item.recommended_commands.length, 1);
+    assertPathValues(snapshot, [
+      ['runtime_health.status', 'offline'],
+      ['attention_items.length', 2],
+      ['running_items.length', 1],
+      ['running_items.0.item_id', 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap'],
+      ['running_items.0.action_owner', 'none'],
+      ['running_items.0.action_kind', 'running'],
+      ['recent_items.length', 1],
+      ['recent_items.0.item_id', 'medautoscience:study:005-package-ready-handoff'],
+      ['recent_items.0.action_owner', 'user'],
+      ['recent_items.0.requires_user_action', true],
+      ['recent_items.0.action_kind', 'handoff_review'],
+      ['recent_items.0.blockers', []],
+      ['action_counts', { user: 1, opl: 1, infrastructure: 1 }],
+    ]);
+    const dm002Item = findItem(snapshot.attention_items, 'item_id', 'medautoscience:study:002-dm-china-us-mortality-attribution');
+    assertPathValues(dm002Item, [
+      ['active_run_id', 'run-002'],
+      ['action_owner', 'opl'],
+      ['requires_user_action', false],
+      ['action_kind', 'publication_gate'],
+      ['recommended_commands.0.surface_kind', 'study_progress'],
+      ['recommended_commands.0.command', `uv run python -m med_autoscience.cli study progress --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`],
+      ['recommended_commands.length', 1],
+    ]);
     assert.doesNotMatch(JSON.stringify(dm002Item.recommended_commands), /progress-projection/);
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
-    assert.equal(snapshot.running_items.length, 1);
-    assert.equal(snapshot.running_items[0].item_id, 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap');
-    assert.equal(snapshot.running_items[0].action_owner, 'none');
-    assert.equal(snapshot.running_items[0].action_kind, 'running');
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('004-invasive-architecture')), false);
-    assert.equal(snapshot.recent_items.length, 1);
-    assert.equal(snapshot.recent_items[0].item_id, 'medautoscience:study:005-package-ready-handoff');
-    assert.equal(snapshot.recent_items[0].action_owner, 'user');
-    assert.equal(snapshot.recent_items[0].requires_user_action, true);
-    assert.equal(snapshot.recent_items[0].action_kind, 'handoff_review');
-    assert.deepEqual(snapshot.recent_items[0].blockers, []);
-    assert.deepEqual(snapshot.action_counts, { user: 1, opl: 1, infrastructure: 1 });
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
 });
 
@@ -739,10 +700,7 @@ test('runtime manager reports temporal provider code landed when live runtime is
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-temporal-state-'));
   t.after(() => removeTempRoots(stateRoot));
 
-    const output = runCli(['runtime', 'manager'], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+    const output = runTemporalRuntimeManager(stateRoot, path.join(stateRoot, 'missing-native-bin'), {
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
       PATH: '',
