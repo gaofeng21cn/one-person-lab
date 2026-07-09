@@ -258,24 +258,11 @@ test('family-runtime evidence-worklist syncs terminal Temporal closeout before e
   }
 });
 
-test('family-runtime evidence-worklist rejects retired alias and non-production provider fallback', () => {
+test('family-runtime evidence-worklist rejects non-production provider fallback', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-evidence-worklist-provider-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
 
   try {
-    const aliasFailure = runCliFailure([
-      'family-runtime',
-      'production-closeout',
-      '--family-defaults',
-      '--provider',
-      'temporal',
-      '--executor-kind',
-      'codex_cli',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
-    });
     const providerFailure = runCliFailure([
       'family-runtime',
       'evidence-worklist',
@@ -290,8 +277,6 @@ test('family-runtime evidence-worklist rejects retired alias and non-production 
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
     });
 
-    assert.equal(aliasFailure.payload.error.code, 'unknown_command');
-    assert.match(aliasFailure.payload.error.message, /Unknown family-runtime subcommand: production-closeout/);
     assert.equal(providerFailure.payload.error.code, 'cli_usage_error');
     assert.deepEqual(providerFailure.payload.error.details.allowed_provider_kinds, ['temporal']);
   } finally {

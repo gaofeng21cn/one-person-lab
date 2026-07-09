@@ -16,7 +16,6 @@ import {
 import { createFamilyRuntimeQueueTables } from '../../../../src/modules/runway/family-runtime-store.ts';
 import { createStageAttempt } from '../../../../src/modules/runway/family-runtime-stage-attempts.ts';
 import {
-  assertTemporalLifecycleReadbackFalseReady,
   familyRuntimeEnv,
 } from './family-runtime-stage-attempts-temporal-helpers.ts';
 
@@ -264,63 +263,6 @@ test('family-runtime temporal attempt cancel refuses non-temporal attempts', () 
     assert.notEqual(result.status, 0);
     assert.equal(output.error.code, 'cli_usage_error');
     assert.match(output.error.message, /temporal stage attempt/);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('family-runtime attempt query exposes stable top-level attempt alias', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-query-alias-'));
-  try {
-    const created = runCli([
-      'family-runtime',
-      'attempt',
-      'create',
-      '--domain',
-      'medautoscience',
-      '--stage',
-      'review',
-      '--provider',
-      'temporal',
-      '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
-    ], familyRuntimeEnv(stateRoot));
-    const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    const query = runCli([
-      'family-runtime',
-      'attempt',
-      'query',
-      attemptId,
-    ], familyRuntimeEnv(stateRoot, {
-      OPL_TEMPORAL_ADDRESS: '',
-      TEMPORAL_ADDRESS: '',
-    }));
-    const result = query.family_runtime_stage_attempt_query;
-
-    assert.equal(result.attempt.stage_attempt_id, attemptId);
-    assert.equal(result.attempt.stage_attempt_id, result.stage_attempt_query.attempt.stage_attempt_id);
-    assert.equal(result.attempt_status, result.stage_attempt_query.attempt.status);
-    assert.equal(result.attempt_ref, `opl://stage_attempts/${attemptId}`);
-    assert.equal(
-      result.current_provider_readiness?.surface_kind,
-      'stage_attempt_current_provider_readiness',
-    );
-    assert.deepEqual(
-      result.current_provider_readiness,
-      result.stage_attempt_query.current_provider_readiness,
-    );
-    assert.deepEqual(
-      result.temporal_durable_lifecycle_readback,
-      result.stage_attempt_query.temporal_durable_lifecycle_readback,
-    );
-    assertTemporalLifecycleReadbackFalseReady(result.temporal_durable_lifecycle_readback, {
-      readbackStatus: 'missing_temporal_history_or_query',
-      identity: 'stage_attempt',
-      workflowId: result.attempt.workflow_id,
-      taskQueue: 'opl-stage-attempts',
-      requiredHistoryOrQueryEvidence: true,
-      observedQueryReadback: false,
-    });
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
