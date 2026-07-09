@@ -436,473 +436,349 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
   };
 }
 
-export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
-  const buildAgentBaselineCommand =
-    'npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>';
+type GeneratedSurfaceActionFixture = {
+  actionId: string;
+  title: string;
+  summary: string;
+  command: string;
+  inputSchemaRef: string;
+  outputSchemaRef: string;
+  workspaceLocatorFields: string[];
+  humanGateIds: string[];
+  toolName: string;
+  commandContractId: string;
+  intentMapping?: string;
+};
 
+type GeneratedSurfaceStageFixture = {
+  stageId: string;
+  stageKind: string;
+  title: string;
+  summary: string;
+  goal: string;
+  domainStageRefs: string[];
+  allowedActionRefs: string[];
+};
+
+type GeneratedSurfacePackFixture = {
+  domainId: string;
+  domainLabel: string;
+  primarySkillBody: string;
+  skillPath: string;
+  skillTitle: string;
+  skillDescription: string;
+  catalogId: string;
+  planeId: string;
+  actions: GeneratedSurfaceActionFixture[];
+  stage: GeneratedSurfaceStageFixture;
+  modules: Array<Record<string, unknown>>;
+  authorityFile?: {
+    fileName: string;
+    payload: Record<string, unknown>;
+  };
+};
+
+const generatedSurfaceRefs = [
+  { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
+  { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
+  { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
+  { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
+];
+
+const targetActionAuthorityBoundary = {
+  can_write_target_domain_truth: false,
+  can_write_target_domain_memory_body: false,
+  can_mutate_target_domain_artifact_body: false,
+  can_authorize_target_domain_quality_or_export: false,
+  can_promote_default_agent_without_gate: false,
+  can_train_or_deploy_model_weights: false,
+};
+
+function writeJsonFixture(filePath: string, payload: unknown) {
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+}
+
+function writeGeneratedSkillFixture(filePath: string, title: string, description: string) {
+  fs.writeFileSync(filePath, ['# Skill: ' + title, '', description, ''].join('\n'), 'utf8');
+}
+
+function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: GeneratedSurfaceActionFixture) {
+  const skillSurface: Record<string, string> = {
+    command_contract_id: action.commandContractId,
+    surface_kind: 'opl_generated_skill_contract',
+  };
+  if (action.intentMapping) {
+    skillSurface.intent_mapping = action.intentMapping;
+  }
+  return {
+    action_id: action.actionId,
+    title: action.title,
+    summary: action.summary,
+    owner: pack.domainId,
+    effect: 'mutating',
+    source_command: {
+      command: action.command,
+      surface_kind: 'domain_smoke_cli',
+    },
+    input_schema_ref: action.inputSchemaRef,
+    output_schema_ref: action.outputSchemaRef,
+    workspace_locator_fields: action.workspaceLocatorFields,
+    human_gate_ids: action.humanGateIds,
+    supported_surfaces: {
+      cli: {
+        command: action.command,
+        surface_kind: 'domain_smoke_cli',
+      },
+      mcp: {
+        tool_name: action.toolName,
+        surface_kind: 'opl_generated_mcp_descriptor',
+        descriptor_only: true,
+        public_runtime: false,
+      },
+      skill: skillSurface,
+      product_entry: {
+        action_key: action.actionId,
+        command: action.command,
+        surface_kind: 'domain_product_entry_action',
+      },
+      openai: { tool_name: action.toolName },
+      ai_sdk: { tool_name: action.toolName },
+    },
+    authority_boundary: targetActionAuthorityBoundary,
+  };
+}
+
+function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfacePackFixture) {
   fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
   fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
-  fs.mkdirSync(path.join(repoRoot, 'runtime', 'authority_functions'), { recursive: true });
-  writeFakePrimarySkill(
-    repoRoot,
-    'opl-meta-agent',
-    'OPL Meta Agent',
-    'Use this rich primary skill to design, test, improve, or take over testing for OPL-compatible Foundry Agents. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
-  );
-  writeFakeRepoLocalPluginCarrier(repoRoot, 'opl-meta-agent');
-  fs.writeFileSync(
-    path.join(repoRoot, 'agent', 'skills', 'opl-meta-agent-domain-skill.md'),
-    [
-      '# Skill: OPL Meta Agent Domain Skill',
-      '',
-      'Use this generated-surface fixture to build, test, and improve OPL-compatible Foundry Agents.',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'domain_descriptor.json'),
-    JSON.stringify({
-      surface_kind: 'domain_agent_descriptor',
-      schema_version: 1,
-      domain_id: 'opl-meta-agent',
-      domain_label: 'OPL Meta Agent',
-      authority_boundary: {
-        opl_can_write_domain_truth: false,
-        opl_can_write_memory_body: false,
-        opl_can_authorize_quality_or_export: false,
+  if (pack.authorityFile) {
+    fs.mkdirSync(path.join(repoRoot, 'runtime', 'authority_functions'), { recursive: true });
+  }
+  writeFakePrimarySkill(repoRoot, pack.domainId, pack.domainLabel, pack.primarySkillBody);
+  writeFakeRepoLocalPluginCarrier(repoRoot, pack.domainId);
+  writeGeneratedSkillFixture(path.join(repoRoot, pack.skillPath), pack.skillTitle, pack.skillDescription);
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'domain_descriptor.json'), {
+    surface_kind: 'domain_agent_descriptor',
+    schema_version: 1,
+    domain_id: pack.domainId,
+    domain_label: pack.domainLabel,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  });
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'action_catalog.json'), {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v1',
+    catalog_id: pack.catalogId,
+    target_domain_id: pack.domainId,
+    owner: pack.domainId,
+    authority_boundary: {
+      opl_role: 'generated_interface_projection_only',
+      domain_truth_owner: pack.domainId,
+    },
+    actions: pack.actions.map((action) => toGeneratedSurfaceAction(pack, action)),
+    notes: [],
+  });
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'stage_control_plane.json'), {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: pack.planeId,
+    target_domain_id: pack.domainId,
+    owner: pack.domainId,
+    authority_boundary: {
+      domain_truth_owner: pack.domainId,
+      opl_role: 'projection_consumer_only',
+    },
+    stages: [
+      {
+        stage_id: pack.stage.stageId,
+        stage_kind: pack.stage.stageKind,
+        title: pack.stage.title,
+        summary: pack.stage.summary,
+        goal: pack.stage.goal,
+        owner: pack.domainId,
+        domain_stage_refs: pack.stage.domainStageRefs,
+        inputs: [],
+        knowledge_refs: [],
+        skills: [{ ref_kind: 'domain_skill_ref', ref: pack.skillPath }],
+        prompt_refs: [],
+        allowed_action_refs: pack.stage.allowedActionRefs,
+        outputs: [],
+        evaluation: [],
+        handoff: null,
+        source_refs: [],
+        authority_boundary: { domain_truth_owner: pack.domainId },
       },
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'action_catalog.json'),
-    JSON.stringify({
-      surface_kind: 'family_action_catalog',
-      version: 'family-action-catalog.v1',
-      catalog_id: 'opl_meta_agent_action_catalog',
-      target_domain_id: 'opl-meta-agent',
-      owner: 'opl-meta-agent',
-      authority_boundary: {
-        opl_role: 'generated_interface_projection_only',
-        domain_truth_owner: 'opl-meta-agent',
+    ],
+    notes: [],
+  });
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'generated_surface_handoff.json'), {
+    surface_kind: 'opl_generated_surface_handoff',
+    schema_version: 1,
+    domain_id: pack.domainId,
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    generated_surfaces: generatedSurfaceRefs,
+    handoff_surfaces: [
+      {
+        surface_id: 'skill',
+        current_paths: [pack.skillPath],
+        current_role: 'domain_handler_target',
+        target_role: 'opl_generated_skill_descriptor_surface',
       },
-      actions: [
-        {
-          action_id: 'build-agent-baseline',
-          title: 'Build Agent Baseline',
-          summary: 'Generate an OPL-compatible candidate agent package from a user natural-language target-agent request, validate its standard scaffold, run an Agent Lab baseline suite, consume a structured AI reviewer evaluation, and emit baseline delivery and learning refs.',
-          owner: 'opl-meta-agent',
-          effect: 'mutating',
-          source_command: {
-            command: buildAgentBaselineCommand,
-            surface_kind: 'domain_smoke_cli',
-          },
-          input_schema_ref: 'contracts/schemas/build-agent-baseline.input.schema.json',
-          output_schema_ref: 'contracts/schemas/build-agent-baseline.output.schema.json',
-          workspace_locator_fields: [
-            'output_dir',
-            'opl_bin',
-            'ai_reviewer_evaluation',
-            'domain_id',
-            'domain_label',
-            'delivery_domain',
-            'target_brief',
-          ],
-          human_gate_ids: ['baseline_delivery_owner_review'],
-          supported_surfaces: {
-            cli: {
-              command: buildAgentBaselineCommand,
-              surface_kind: 'domain_smoke_cli',
-            },
-            mcp: {
-              tool_name: 'opl_meta_agent_build_agent_baseline',
-              surface_kind: 'opl_generated_mcp_descriptor',
-              descriptor_only: true,
-              public_runtime: false,
-            },
-            skill: {
-              command_contract_id: 'opl-meta-agent.build-agent-baseline',
-              surface_kind: 'opl_generated_skill_contract',
-              intent_mapping: 'Codex extracts domain_id, domain_label, delivery_domain, target_brief, output_dir, opl_bin, and ai_reviewer_evaluation from the user natural-language request before invoking this action.',
-            },
-            product_entry: {
-              action_key: 'build-agent-baseline',
-              command: buildAgentBaselineCommand,
-              surface_kind: 'domain_product_entry_action',
-            },
-            openai: { tool_name: 'opl_meta_agent_build_agent_baseline' },
-            ai_sdk: { tool_name: 'opl_meta_agent_build_agent_baseline' },
-          },
-          authority_boundary: {
-            can_write_target_domain_truth: false,
-            can_write_target_domain_memory_body: false,
-            can_mutate_target_domain_artifact_body: false,
-            can_authorize_target_domain_quality_or_export: false,
-            can_promote_default_agent_without_gate: false,
-            can_train_or_deploy_model_weights: false,
-          },
-        },
-      ],
-      notes: [],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'stage_control_plane.json'),
-    JSON.stringify({
-      surface_kind: 'family_stage_control_plane',
-      version: 'family-stage-control-plane.v1',
-      plane_id: 'opl_meta_agent_stage_plane',
-      target_domain_id: 'opl-meta-agent',
-      owner: 'opl-meta-agent',
-      authority_boundary: {
-        domain_truth_owner: 'opl-meta-agent',
-        opl_role: 'projection_consumer_only',
+    ],
+  });
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'functional_privatization_audit.json'), {
+    surface_kind: 'functional_privatization_audit',
+    target_domain_id: pack.domainId,
+    modules: pack.modules,
+  });
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'pack_compiler_input.json'), {
+    surface_kind: 'opl_domain_pack_compiler_input',
+    schema_version: 1,
+    domain_id: pack.domainId,
+    domain_pack_owner: pack.domainId,
+    canonical_semantic_pack_root: 'agent/',
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    required_domain_pack_paths: [pack.skillPath],
+  });
+  if (pack.authorityFile) {
+    writeJsonFixture(
+      path.join(repoRoot, 'runtime', 'authority_functions', pack.authorityFile.fileName),
+      pack.authorityFile.payload,
+    );
+  }
+}
+
+export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
+  const command =
+    'npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>';
+
+  writeGeneratedSurfacePackFixture(repoRoot, {
+    domainId: 'opl-meta-agent',
+    domainLabel: 'OPL Meta Agent',
+    primarySkillBody: 'Use this rich primary skill to design, test, improve, or take over testing for OPL-compatible Foundry Agents. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
+    skillPath: 'agent/skills/opl-meta-agent-domain-skill.md',
+    skillTitle: 'OPL Meta Agent Domain Skill',
+    skillDescription: 'Use this generated-surface fixture to build, test, and improve OPL-compatible Foundry Agents.',
+    catalogId: 'opl_meta_agent_action_catalog',
+    planeId: 'opl_meta_agent_stage_plane',
+    actions: [
+      {
+        actionId: 'build-agent-baseline',
+        title: 'Build Agent Baseline',
+        summary: 'Generate an OPL-compatible candidate agent package from a user natural-language target-agent request, validate its standard scaffold, run an Agent Lab baseline suite, consume a structured AI reviewer evaluation, and emit baseline delivery and learning refs.',
+        command,
+        inputSchemaRef: 'contracts/schemas/build-agent-baseline.input.schema.json',
+        outputSchemaRef: 'contracts/schemas/build-agent-baseline.output.schema.json',
+        workspaceLocatorFields: [
+          'output_dir',
+          'opl_bin',
+          'ai_reviewer_evaluation',
+          'domain_id',
+          'domain_label',
+          'delivery_domain',
+          'target_brief',
+        ],
+        humanGateIds: ['baseline_delivery_owner_review'],
+        toolName: 'opl_meta_agent_build_agent_baseline',
+        commandContractId: 'opl-meta-agent.build-agent-baseline',
+        intentMapping: 'Codex extracts domain_id, domain_label, delivery_domain, target_brief, output_dir, opl_bin, and ai_reviewer_evaluation from the user natural-language request before invoking this action.',
       },
-      stages: [
-        {
-          stage_id: 'agent-skeleton-build',
-          stage_kind: 'creation',
-          title: 'Agent Skeleton Build',
-          summary: 'Generate a candidate agent skeleton.',
-          goal: 'Generate an OPL-compatible candidate agent skeleton.',
-          owner: 'opl-meta-agent',
-          domain_stage_refs: ['agent-skeleton-build'],
-          inputs: [],
-          knowledge_refs: [],
-          skills: [
-            {
-              ref_kind: 'domain_skill_ref',
-              ref: 'agent/skills/opl-meta-agent-domain-skill.md',
-            },
-          ],
-          prompt_refs: [],
-          allowed_action_refs: ['build-agent-baseline'],
-          outputs: [],
-          evaluation: [],
-          handoff: null,
-          source_refs: [],
-          authority_boundary: {
-            domain_truth_owner: 'opl-meta-agent',
-          },
-        },
-      ],
-      notes: [],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'generated_surface_handoff.json'),
-    JSON.stringify({
-      surface_kind: 'opl_generated_surface_handoff',
-      schema_version: 1,
-      domain_id: 'opl-meta-agent',
-      generated_surface_owner: 'one-person-lab',
-      domain_repo_can_own_generated_surface: false,
-      generated_surfaces: [
-        { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      ],
-      handoff_surfaces: [
-        {
-          surface_id: 'skill',
-          current_paths: ['agent/skills/opl-meta-agent-domain-skill.md'],
-          current_role: 'domain_handler_target',
-          target_role: 'opl_generated_skill_descriptor_surface',
-        },
-      ],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'functional_privatization_audit.json'),
-    JSON.stringify({
-      surface_kind: 'functional_privatization_audit',
-      target_domain_id: 'opl-meta-agent',
-      modules: [
-        {
-          module_id: 'opl_meta_agent_domain_pack',
-          classification: 'declarative_pack',
-          owner: 'opl-meta-agent',
-          code_paths: ['agent/'],
-        },
-        {
-          module_id: 'opl_meta_agent_generated_skill',
-          classification: 'declarative_pack_generated_surface',
-          owner: 'opl-meta-agent',
-          code_paths: ['agent/skills/opl-meta-agent-domain-skill.md'],
-          active_callers: ['OPL generated Skill'],
-          active_caller_status: 'domain_pack_metadata_consumed_by_opl_generated_skill',
-          migration_action: 'derive_skill_metadata_from_declarative_pack_and_opl_generated_surfaces',
-        },
-      ],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'pack_compiler_input.json'),
-    JSON.stringify({
-      surface_kind: 'opl_domain_pack_compiler_input',
-      schema_version: 1,
-      domain_id: 'opl-meta-agent',
-      domain_pack_owner: 'opl-meta-agent',
-      canonical_semantic_pack_root: 'agent/',
-      generated_surface_owner: 'one-person-lab',
-      domain_repo_can_own_generated_surface: false,
-      required_domain_pack_paths: ['agent/skills/opl-meta-agent-domain-skill.md'],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'runtime', 'authority_functions', 'meta-agent-authority-functions.json'),
-    JSON.stringify({
-      script_morphology_policy: {
-        allowed_classes: ['authority_function_implementation_ref'],
-        forbidden_roles: ['generic_cli_mcp_product_wrapper_owner'],
+    ],
+    stage: {
+      stageId: 'agent-skeleton-build',
+      stageKind: 'creation',
+      title: 'Agent Skeleton Build',
+      summary: 'Generate a candidate agent skeleton.',
+      goal: 'Generate an OPL-compatible candidate agent skeleton.',
+      domainStageRefs: ['agent-skeleton-build'],
+      allowedActionRefs: ['build-agent-baseline'],
+    },
+    modules: [
+      {
+        module_id: 'opl_meta_agent_domain_pack',
+        classification: 'declarative_pack',
+        owner: 'opl-meta-agent',
+        code_paths: ['agent/'],
       },
-    }, null, 2) + '\n',
-    'utf8',
-  );
+      {
+        module_id: 'opl_meta_agent_generated_skill',
+        classification: 'declarative_pack_generated_surface',
+        owner: 'opl-meta-agent',
+        code_paths: ['agent/skills/opl-meta-agent-domain-skill.md'],
+        active_callers: ['OPL generated Skill'],
+        active_caller_status: 'domain_pack_metadata_consumed_by_opl_generated_skill',
+        migration_action: 'derive_skill_metadata_from_declarative_pack_and_opl_generated_surfaces',
+      },
+    ],
+    authorityFile: {
+      fileName: 'meta-agent-authority-functions.json',
+      payload: {
+        script_morphology_policy: {
+          allowed_classes: ['authority_function_implementation_ref'],
+          forbidden_roles: ['generic_cli_mcp_product_wrapper_owner'],
+        },
+      },
+    },
+  });
 }
 
 export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
-  fs.mkdirSync(path.join(repoRoot, 'agent', 'skills'), { recursive: true });
-  fs.mkdirSync(path.join(repoRoot, 'contracts'), { recursive: true });
-  writeFakePrimarySkill(
-    repoRoot,
-    'opl-bookforge',
-    'OPL Book Forge',
-    'Use this rich primary skill to shape book storylines, materialize chapters, plan figures and tables, run style checks, and prepare owner-gated export handoff. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
-  );
-  writeFakeRepoLocalPluginCarrier(repoRoot, 'opl-bookforge');
-  fs.writeFileSync(
-    path.join(repoRoot, 'agent', 'skills', 'book-production.md'),
-    [
-      '# Skill: Book Production',
-      '',
-      'Use this generated-surface fixture to shape book storylines, materialize chapters, plan figures and tables, and prepare owner-gated export handoff.',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'domain_descriptor.json'),
-    JSON.stringify({
-      surface_kind: 'domain_agent_descriptor',
-      schema_version: 1,
-      domain_id: 'opl-bookforge',
-      domain_label: 'OPL Book Forge',
-      authority_boundary: {
-        opl_can_write_domain_truth: false,
-        opl_can_write_memory_body: false,
-        opl_can_authorize_quality_or_export: false,
+  writeGeneratedSurfacePackFixture(repoRoot, {
+    domainId: 'opl-bookforge',
+    domainLabel: 'OPL Book Forge',
+    primarySkillBody: 'Use this rich primary skill to shape book storylines, materialize chapters, plan figures and tables, run style checks, and prepare owner-gated export handoff. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
+    skillPath: 'agent/skills/book-production.md',
+    skillTitle: 'Book Production',
+    skillDescription: 'Use this generated-surface fixture to shape book storylines, materialize chapters, plan figures and tables, and prepare owner-gated export handoff.',
+    catalogId: 'opl_bookforge_action_catalog',
+    planeId: 'opl_bookforge_stage_plane',
+    actions: [
+      {
+        actionId: 'shape-storyline',
+        title: 'Shape Storyline',
+        summary: 'Shape a book premise, reader promise, argument arc, source map, chapter thesis chain, style contract, and owner handoff.',
+        command: 'npm run shape-storyline -- --book-brief <book_brief> --source-corpus <source_corpus>',
+        inputSchemaRef: 'contracts/schemas/shape-storyline.input.schema.json',
+        outputSchemaRef: 'contracts/schemas/shape-storyline.output.schema.json',
+        workspaceLocatorFields: ['book_brief', 'source_corpus'],
+        humanGateIds: ['storyline_owner_review'],
+        toolName: 'opl_bookforge_shape_storyline',
+        commandContractId: 'opl-bookforge.shape-storyline',
       },
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'action_catalog.json'),
-    JSON.stringify({
-      surface_kind: 'family_action_catalog',
-      version: 'family-action-catalog.v1',
-      catalog_id: 'opl_bookforge_action_catalog',
-      target_domain_id: 'opl-bookforge',
-      owner: 'opl-bookforge',
-      authority_boundary: {
-        opl_role: 'generated_interface_projection_only',
-        domain_truth_owner: 'opl-bookforge',
+      {
+        actionId: 'materialize-book',
+        title: 'Materialize Book',
+        summary: 'Materialize chapters, manuscript body, figure and table plans, style checks, layout QC, exports, and owner-gated handoff refs.',
+        command: 'npm run materialize-book -- --storyline <storyline> --output-dir <output_dir>',
+        inputSchemaRef: 'contracts/schemas/materialize-book.input.schema.json',
+        outputSchemaRef: 'contracts/schemas/materialize-book.output.schema.json',
+        workspaceLocatorFields: ['storyline', 'output_dir'],
+        humanGateIds: ['book_owner_review'],
+        toolName: 'opl_bookforge_materialize_book',
+        commandContractId: 'opl-bookforge.materialize-book',
       },
-      actions: [
-        {
-          action_id: 'shape-storyline',
-          title: 'Shape Storyline',
-          summary: 'Shape a book premise, reader promise, argument arc, source map, chapter thesis chain, style contract, and owner handoff.',
-          owner: 'opl-bookforge',
-          effect: 'mutating',
-          source_command: {
-            command: 'npm run shape-storyline -- --book-brief <book_brief> --source-corpus <source_corpus>',
-            surface_kind: 'domain_smoke_cli',
-          },
-          input_schema_ref: 'contracts/schemas/shape-storyline.input.schema.json',
-          output_schema_ref: 'contracts/schemas/shape-storyline.output.schema.json',
-          workspace_locator_fields: ['book_brief', 'source_corpus'],
-          human_gate_ids: ['storyline_owner_review'],
-          supported_surfaces: {
-            cli: {
-              command: 'npm run shape-storyline -- --book-brief <book_brief> --source-corpus <source_corpus>',
-              surface_kind: 'domain_smoke_cli',
-            },
-            mcp: {
-              tool_name: 'opl_bookforge_shape_storyline',
-              surface_kind: 'opl_generated_mcp_descriptor',
-              descriptor_only: true,
-              public_runtime: false,
-            },
-            skill: {
-              command_contract_id: 'opl-bookforge.shape-storyline',
-              surface_kind: 'opl_generated_skill_contract',
-            },
-            product_entry: {
-              action_key: 'shape-storyline',
-              command: 'npm run shape-storyline -- --book-brief <book_brief> --source-corpus <source_corpus>',
-              surface_kind: 'domain_product_entry_action',
-            },
-            openai: { tool_name: 'opl_bookforge_shape_storyline' },
-            ai_sdk: { tool_name: 'opl_bookforge_shape_storyline' },
-          },
-          authority_boundary: {
-            can_write_target_domain_truth: false,
-            can_write_target_domain_memory_body: false,
-            can_mutate_target_domain_artifact_body: false,
-            can_authorize_target_domain_quality_or_export: false,
-            can_promote_default_agent_without_gate: false,
-            can_train_or_deploy_model_weights: false,
-          },
-        },
-        {
-          action_id: 'materialize-book',
-          title: 'Materialize Book',
-          summary: 'Materialize chapters, manuscript body, figure and table plans, style checks, layout QC, exports, and owner-gated handoff refs.',
-          owner: 'opl-bookforge',
-          effect: 'mutating',
-          source_command: {
-            command: 'npm run materialize-book -- --storyline <storyline> --output-dir <output_dir>',
-            surface_kind: 'domain_smoke_cli',
-          },
-          input_schema_ref: 'contracts/schemas/materialize-book.input.schema.json',
-          output_schema_ref: 'contracts/schemas/materialize-book.output.schema.json',
-          workspace_locator_fields: ['storyline', 'output_dir'],
-          human_gate_ids: ['book_owner_review'],
-          supported_surfaces: {
-            cli: {
-              command: 'npm run materialize-book -- --storyline <storyline> --output-dir <output_dir>',
-              surface_kind: 'domain_smoke_cli',
-            },
-            mcp: {
-              tool_name: 'opl_bookforge_materialize_book',
-              surface_kind: 'opl_generated_mcp_descriptor',
-              descriptor_only: true,
-              public_runtime: false,
-            },
-            skill: {
-              command_contract_id: 'opl-bookforge.materialize-book',
-              surface_kind: 'opl_generated_skill_contract',
-            },
-            product_entry: {
-              action_key: 'materialize-book',
-              command: 'npm run materialize-book -- --storyline <storyline> --output-dir <output_dir>',
-              surface_kind: 'domain_product_entry_action',
-            },
-            openai: { tool_name: 'opl_bookforge_materialize_book' },
-            ai_sdk: { tool_name: 'opl_bookforge_materialize_book' },
-          },
-          authority_boundary: {
-            can_write_target_domain_truth: false,
-            can_write_target_domain_memory_body: false,
-            can_mutate_target_domain_artifact_body: false,
-            can_authorize_target_domain_quality_or_export: false,
-            can_promote_default_agent_without_gate: false,
-            can_train_or_deploy_model_weights: false,
-          },
-        },
-      ],
-      notes: [],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'stage_control_plane.json'),
-    JSON.stringify({
-      surface_kind: 'family_stage_control_plane',
-      version: 'family-stage-control-plane.v1',
-      plane_id: 'opl_bookforge_stage_plane',
-      target_domain_id: 'opl-bookforge',
-      owner: 'opl-bookforge',
-      authority_boundary: {
-        domain_truth_owner: 'opl-bookforge',
-        opl_role: 'projection_consumer_only',
+    ],
+    stage: {
+      stageId: 'storyline-architecture',
+      stageKind: 'creation',
+      title: 'Storyline Architecture',
+      summary: 'Shape a book storyline.',
+      goal: 'Create a reader promise, argument arc, chapter thesis chain, and style contract.',
+      domainStageRefs: ['storyline-architecture'],
+      allowedActionRefs: ['shape-storyline'],
+    },
+    modules: [
+      {
+        module_id: 'opl_bookforge_domain_pack',
+        classification: 'declarative_pack',
+        owner: 'opl-bookforge',
+        code_paths: ['agent/'],
       },
-      stages: [
-        {
-          stage_id: 'storyline-architecture',
-          stage_kind: 'creation',
-          title: 'Storyline Architecture',
-          summary: 'Shape a book storyline.',
-          goal: 'Create a reader promise, argument arc, chapter thesis chain, and style contract.',
-          owner: 'opl-bookforge',
-          domain_stage_refs: ['storyline-architecture'],
-          inputs: [],
-          knowledge_refs: [],
-          skills: [{ ref_kind: 'domain_skill_ref', ref: 'agent/skills/book-production.md' }],
-          prompt_refs: [],
-          allowed_action_refs: ['shape-storyline'],
-          outputs: [],
-          evaluation: [],
-          handoff: null,
-          source_refs: [],
-          authority_boundary: { domain_truth_owner: 'opl-bookforge' },
-        },
-      ],
-      notes: [],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'generated_surface_handoff.json'),
-    JSON.stringify({
-      surface_kind: 'opl_generated_surface_handoff',
-      schema_version: 1,
-      domain_id: 'opl-bookforge',
-      generated_surface_owner: 'one-person-lab',
-      domain_repo_can_own_generated_surface: false,
-      generated_surfaces: [
-        { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      ],
-      handoff_surfaces: [
-        {
-          surface_id: 'skill',
-          current_paths: ['agent/skills/book-production.md'],
-          current_role: 'domain_handler_target',
-          target_role: 'opl_generated_skill_descriptor_surface',
-        },
-      ],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'functional_privatization_audit.json'),
-    JSON.stringify({
-      surface_kind: 'functional_privatization_audit',
-      target_domain_id: 'opl-bookforge',
-      modules: [
-        {
-          module_id: 'opl_bookforge_domain_pack',
-          classification: 'declarative_pack',
-          owner: 'opl-bookforge',
-          code_paths: ['agent/'],
-        },
-      ],
-    }, null, 2) + '\n',
-    'utf8',
-  );
-  fs.writeFileSync(
-    path.join(repoRoot, 'contracts', 'pack_compiler_input.json'),
-    JSON.stringify({
-      surface_kind: 'opl_domain_pack_compiler_input',
-      schema_version: 1,
-      domain_id: 'opl-bookforge',
-      domain_pack_owner: 'opl-bookforge',
-      canonical_semantic_pack_root: 'agent/',
-      generated_surface_owner: 'one-person-lab',
-      domain_repo_can_own_generated_surface: false,
-      required_domain_pack_paths: ['agent/skills/book-production.md'],
-    }, null, 2) + '\n',
-    'utf8',
-  );
+    ],
+  });
 }
