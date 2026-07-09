@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/reference-design-pattern-packet.schema.json",
+  "schema_id": "opl.reference_design_pattern_packet.v1",
+  "surface_kind": "opl_reference_design_pattern_packet_schema",
+  "owner": "OPL Workspace",
+  "purpose": "Define the refs-only handoff returned by source extraction before OMA materializes its ReferenceDesignPacket.",
+  "state": "active_contract",
+  "machine_boundary": "OPL owns only the typed refs envelope. Source or domain stages read source bodies and supply extraction refs; OMA owns ReferenceDesignPacket, TransferMap, and AgentPackPlan semantics.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "schema_version",
+    "packet_id",
+    "packet_ref",
+    "source_material_ref",
+    "source_material_receipt_ref",
+    "source_fingerprint_ref",
+    "extraction_attempt_refs",
+    "extraction_receipt_refs",
+    "source_anchor_refs",
+    "pattern_summary_ref",
+    "transferable_pattern_refs",
+    "non_transferable_constraint_refs",
+    "authority_boundary_notes_ref",
+    "consumer_route",
+    "authority_boundary",
+    "non_claims"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_reference_design_pattern_packet"
+    },
+    "schema_version": {
+      "const": "reference-design-pattern-packet.v1"
+    },
+    "packet_id": {
+      "$ref": "#/$defs/ref"
+    },
+    "packet_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "source_material_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "source_material_receipt_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "source_fingerprint_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "extraction_attempt_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "extraction_receipt_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "source_anchor_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "pattern_summary_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "transferable_pattern_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "non_transferable_constraint_refs": {
+      "$ref": "#/$defs/ref_list"
+    },
+    "authority_boundary_notes_ref": {
+      "$ref": "#/$defs/ref"
+    },
+    "consumer_route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consumer",
+        "next_owner",
+        "next_owner_action",
+        "required_return_shape",
+        "required_return_contract_ref",
+        "required_return_fields_ref"
+      ],
+      "properties": {
+        "consumer": {
+          "const": "oma"
+        },
+        "next_owner": {
+          "$ref": "#/$defs/ref"
+        },
+        "next_owner_action": {
+          "$ref": "#/$defs/ref"
+        },
+        "required_return_shape": {
+          "const": "ReferenceDesignPacket"
+        },
+        "required_return_contract_ref": {
+          "const": "oma-contract:reference-design-packet.v1"
+        },
+        "required_return_fields_ref": {
+          "const": "oma-contract:reference-design-packet.v1#/required_fields"
+        }
+      }
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "refs_only",
+        "body_free",
+        "opl_can_write_domain_truth",
+        "opl_can_copy_source_body_into_contract",
+        "opl_can_sign_owner_receipt",
+        "opl_can_create_typed_blocker",
+        "opl_can_claim_pattern_quality_ready",
+        "opl_can_claim_target_ready",
+        "opl_can_claim_domain_ready",
+        "opl_can_claim_production_ready"
+      ],
+      "properties": {
+        "refs_only": {
+          "const": true
+        },
+        "body_free": {
+          "const": true
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        },
+        "opl_can_copy_source_body_into_contract": {
+          "const": false
+        },
+        "opl_can_sign_owner_receipt": {
+          "const": false
+        },
+        "opl_can_create_typed_blocker": {
+          "const": false
+        },
+        "opl_can_claim_pattern_quality_ready": {
+          "const": false
+        },
+        "opl_can_claim_target_ready": {
+          "const": false
+        },
+        "opl_can_claim_domain_ready": {
+          "const": false
+        },
+        "opl_can_claim_production_ready": {
+          "const": false
+        }
+      }
+    },
+    "non_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern_quality_ready",
+        "target_ready",
+        "domain_ready",
+        "production_ready"
+      ],
+      "properties": {
+        "pattern_quality_ready": {
+          "const": false
+        },
+        "target_ready": {
+          "const": false
+        },
+        "domain_ready": {
+          "const": false
+        },
+        "production_ready": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "ref_list": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/ref"
+      }
+    }
+  }
+}

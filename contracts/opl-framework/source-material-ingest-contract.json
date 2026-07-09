@@ -1,6 +1,6 @@
 {
   "surface_kind": "opl_source_material_ingest_contract",
-  "version": "source-material-ingest.v1",
+  "version": "source-material-ingest.v2",
   "owner": "OPL Workspace",
   "purpose": "Provide a domain-neutral source material intake surface for user-supplied files such as PDFs, documents, datasets, and reference designs.",
   "cli_surface": {
@@ -15,6 +15,12 @@
     "content_address": "sha256"
   },
   "handoff_policy": {
+    "canonical_reference_design_path": [
+      "SourceMaterialReceipt",
+      "extraction_receipt_refs",
+      "ReferenceDesignPatternPacket",
+      "OMA ReferenceDesignPacket"
+    ],
     "consumers": [
       "domain_stage",
       "Codex CLI attempt",
@@ -23,10 +29,51 @@
     ],
     "handoff_refs": [
       "source_material_ref",
+      "source_fingerprint_ref",
       "receipt_ref",
       "stored_file.ref"
     ],
-    "body_reader": "stage_or_domain_agent"
+    "body_reader": "stage_or_domain_agent",
+    "reference_design_pattern_handoff": {
+      "applicable_role": "reference_design",
+      "receipt_field": "reference_design_pattern_handoff",
+      "contract_ref": "contracts/opl-framework/source-material-ingest-contract.json#/handoff_policy/reference_design_pattern_handoff",
+      "schema_ref": "contracts/opl-framework/reference-design-pattern-packet.schema.json",
+      "input_ref_fields": [
+        "source_material_ref",
+        "source_material_receipt_ref",
+        "source_fingerprint_ref",
+        "stored_file_ref"
+      ],
+      "required_return_shape": "ReferenceDesignPatternPacket",
+      "required_return_fields": [
+        "surface_kind",
+        "schema_version",
+        "packet_id",
+        "packet_ref",
+        "source_material_ref",
+        "source_material_receipt_ref",
+        "source_fingerprint_ref",
+        "extraction_attempt_refs",
+        "extraction_receipt_refs",
+        "source_anchor_refs",
+        "pattern_summary_ref",
+        "transferable_pattern_refs",
+        "non_transferable_constraint_refs",
+        "authority_boundary_notes_ref",
+        "consumer_route",
+        "authority_boundary",
+        "non_claims"
+      ],
+      "next_owner": "stage_or_domain_agent",
+      "next_owner_action": "extract_reference_design_patterns_and_return_typed_packet",
+      "packet_consumer": "oma",
+      "consumer_return_shape": "ReferenceDesignPacket",
+      "consumer_return_contract_ref": "oma-contract:reference-design-packet.v1",
+      "consumer_return_fields_ref": "oma-contract:reference-design-packet.v1#/required_fields",
+      "semantic_extraction_executed_by_ingest": false,
+      "pattern_packet_created_by_ingest": false
+    }
   },
   "authority_boundary": {
     "source_ingest_is_refs_only": true,
@@ -34,9 +81,16 @@
     "opl_can_hash_source_file": true,
     "opl_can_extract_source_semantics": false,
     "opl_can_write_domain_truth": false,
+    "opl_can_copy_source_body_into_contract": false,
+    "opl_can_write_pattern_body": false,
     "opl_can_mutate_artifact_body": false,
     "opl_can_create_owner_receipt": false,
+    "opl_can_sign_owner_receipt": false,
     "opl_can_create_typed_blocker": false,
+    "opl_can_claim_pattern_quality_ready": false,
+    "opl_can_claim_target_ready": false,
+    "opl_can_claim_domain_ready": false,
+    "opl_can_claim_production_ready": false,
     "receipt_is_not_domain_acceptance": true,
     "receipt_is_not_extraction_quality_verdict": true
   }

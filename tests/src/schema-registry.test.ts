@@ -15,7 +15,9 @@ import { FrameworkContractError } from '../../src/kernel/contract-validation.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const schemaRef = 'contracts/opl-framework/progress-delta-receipt.schema.json';
+const progressDeltaReceiptSchemaRef = 'contracts/opl-framework/progress-delta-receipt.schema.json';
+const referenceDesignPatternPacketSchemaRef =
+  'contracts/opl-framework/reference-design-pattern-packet.schema.json';
 
 function readJson(relativePath: string): Record<string, unknown> {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
@@ -24,8 +26,8 @@ function readJson(relativePath: string): Record<string, unknown> {
 function progressDeltaReceiptSchema(): JsonSchemaRegistryEntry {
   return {
     schemaId: 'opl.progress_delta_receipt.v1',
-    schema: readJson(schemaRef),
-    sourceRef: schemaRef,
+    schema: readJson(progressDeltaReceiptSchemaRef),
+    sourceRef: progressDeltaReceiptSchemaRef,
   };
 }
 
@@ -41,7 +43,7 @@ function validProgressDeltaReceipt() {
     delta_classification: 'platform_repair_delta',
     changed_surfaces: ['src/kernel/schema-registry.ts'],
     produced_refs: ['tests/src/schema-registry.test.ts'],
-    consumed_refs: [schemaRef],
+    consumed_refs: [progressDeltaReceiptSchemaRef],
     next_owner: 'main-session-review',
     next_required_delta: 'absorb-or-reject-worktree',
     authority_boundary: {
@@ -54,6 +56,59 @@ function validProgressDeltaReceipt() {
       can_sign_owner_receipt: false,
       can_create_typed_blocker: false,
       platform_repair_counts_as_deliverable_progress: false,
+    },
+  };
+}
+
+function referenceDesignPatternPacketSchema(): JsonSchemaRegistryEntry {
+  return {
+    schemaId: 'opl.reference_design_pattern_packet.v1',
+    schema: readJson(referenceDesignPatternPacketSchemaRef),
+    sourceRef: referenceDesignPatternPacketSchemaRef,
+  };
+}
+
+function validReferenceDesignPatternPacket() {
+  return {
+    surface_kind: 'opl_reference_design_pattern_packet',
+    schema_version: 'reference-design-pattern-packet.v1',
+    packet_id: 'reference-design-pattern-packet:hemaguide:v1',
+    packet_ref: 'packet:reference-design-pattern/hemaguide/v1',
+    source_material_ref: 'source-material:sha256:abc123',
+    source_material_receipt_ref: 'control/opl/source_materials/abc123.json',
+    source_fingerprint_ref: 'sha256:abc123',
+    extraction_attempt_refs: ['attempt:reference-design-extraction/hemaguide/1'],
+    extraction_receipt_refs: ['receipt:reference-design-extraction/hemaguide/1'],
+    source_anchor_refs: ['source-anchor:hemaguide/page-4'],
+    pattern_summary_ref: 'pattern-summary:hemaguide/v1',
+    transferable_pattern_refs: ['transferable-pattern:hemaguide/decision-flow'],
+    non_transferable_constraint_refs: ['constraint:hemaguide/domain-specific-thresholds'],
+    authority_boundary_notes_ref: 'authority-notes:hemaguide/v1',
+    consumer_route: {
+      consumer: 'oma',
+      next_owner: 'oma:reference-design-distillation',
+      next_owner_action: 'materialize_reference_design_packet',
+      required_return_shape: 'ReferenceDesignPacket',
+      required_return_contract_ref: 'oma-contract:reference-design-packet.v1',
+      required_return_fields_ref: 'oma-contract:reference-design-packet.v1#/required_fields',
+    },
+    authority_boundary: {
+      refs_only: true,
+      body_free: true,
+      opl_can_write_domain_truth: false,
+      opl_can_copy_source_body_into_contract: false,
+      opl_can_sign_owner_receipt: false,
+      opl_can_create_typed_blocker: false,
+      opl_can_claim_pattern_quality_ready: false,
+      opl_can_claim_target_ready: false,
+      opl_can_claim_domain_ready: false,
+      opl_can_claim_production_ready: false,
+    },
+    non_claims: {
+      pattern_quality_ready: false,
+      target_ready: false,
+      domain_ready: false,
+      production_ready: false,
     },
   };
 }
@@ -87,5 +142,40 @@ test('Ajv schema registry rejects invalid payloads through the contract schema',
   assert.throws(
     () => assertJsonSchemaPayload(progressDeltaReceiptSchema(), invalidReceipt),
     FrameworkContractError,
+  );
+});
+
+test('Ajv schema registry validates refs-only ReferenceDesignPatternPacket authority', () => {
+  const packet = validReferenceDesignPatternPacket();
+  const result = validateJsonSchemaPayload(referenceDesignPatternPacketSchema(), packet);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.schema_id, 'opl.reference_design_pattern_packet.v1');
+  assert.equal(
+    packet.consumer_route.required_return_contract_ref,
+    'oma-contract:reference-design-packet.v1',
+  );
+
+  const authorityOverclaim = {
+    ...packet,
+    authority_boundary: {
+      ...packet.authority_boundary,
+      opl_can_claim_pattern_quality_ready: true,
+    },
+  };
+  const invalidResult = validateJsonSchemaPayload(
+    referenceDesignPatternPacketSchema(),
+    authorityOverclaim,
+  );
+  assert.equal(invalidResult.ok, false);
+  if (invalidResult.ok) {
+    assert.fail('authority-overclaiming packet unexpectedly passed JSON Schema validation');
+  }
+  assert.equal(
+    invalidResult.errors.some((error) =>
+      error.instance_path === '/authority_boundary/opl_can_claim_pattern_quality_ready'
+      && error.keyword === 'const'
+    ),
+    true,
   );
 });
