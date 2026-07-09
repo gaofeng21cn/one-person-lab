@@ -8,6 +8,23 @@ import {
   retargetReadyRepoToMag,
 } from './agents-conformance-fixtures.ts';
 
+const STANDARD_FOUNDRY_DOMAIN_AGENT_IDS = [
+  'mas',
+  'mag',
+  'rca',
+  'oma',
+  'obf',
+] as const;
+
+const ACCEPTED_OWNER_ANSWER_SHAPES = [
+  'domain_owner_receipt_ref',
+  'typed_blocker_ref',
+  'human_gate_ref',
+  'quality_or_export_receipt_ref',
+  'no_regression_ref',
+  'long_soak_ref',
+] as const;
+
 test('agents conformance exposes Foundry Agent OS family standard without authorizing domain readiness', () => {
   const masRepo = buildReadyAgentRepo();
   retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
@@ -48,6 +65,14 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   ]);
   const report = payload.standard_domain_agent_conformance;
   const foundry = report.foundry_agent_os_conformance;
+  const adoption = report.stage_run_domain_adoption_read_model;
+  const ownerAnswerWorklist = adoption.live_stage_run_progress_evidence_worklist;
+  const standardOwnerAnswerWorklist = ownerAnswerWorklist.domains.filter(
+    (entry: { requested_agent_id: string }) => {
+      const requestedAgentId = entry.requested_agent_id as typeof STANDARD_FOUNDRY_DOMAIN_AGENT_IDS[number];
+      return STANDARD_FOUNDRY_DOMAIN_AGENT_IDS.includes(requestedAgentId);
+    },
+  );
 
   assert.deepEqual(payload.foundry_agent_os_conformance, foundry);
   assert.equal(foundry.surface_kind, 'opl_foundry_agent_os_conformance');
@@ -74,6 +99,15 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.deepEqual(foundry.unknown_non_standard_agent_ids, []);
   assert.deepEqual(foundry.missing_domain_agent_ids, []);
   assert.deepEqual(foundry.missing_framework_capability_package_ids, []);
+  assert.equal(adoption.status, 'passed');
+  assert.equal(standardOwnerAnswerWorklist.length, STANDARD_FOUNDRY_DOMAIN_AGENT_IDS.length);
+  assert.deepEqual(
+    ownerAnswerWorklist.accepted_refs_only_result_shapes,
+    [...ACCEPTED_OWNER_ANSWER_SHAPES],
+  );
+  assert.equal(ownerAnswerWorklist.authority_boundary.can_claim_domain_ready, false);
+  assert.equal(ownerAnswerWorklist.authority_boundary.can_sign_owner_receipt, false);
+  assert.equal(ownerAnswerWorklist.authority_boundary.can_create_typed_blocker, false);
   assert.deepEqual(foundry.capability_registry_boundary.owner_modules, [
     'atlas',
     'pack',
@@ -155,6 +189,7 @@ test('agents conformance exposes Foundry Agent OS family standard without author
   assert.equal(foundry.authority_boundary.generated_surface_can_write_domain_truth, false);
   assert.equal(foundry.authority_boundary.capability_registry_can_create_typed_blocker, false);
   assert.equal(foundry.authority_boundary.capability_registry_can_sign_owner_receipt, false);
+  assert.equal(foundry.authority_boundary.ledger_console_runway_can_sign_owner_answer, false);
   assert.equal(foundry.authority_boundary.provider_completion_can_claim_domain_completion, false);
   assert.equal(
     foundry.flagship_experience_mapping.mapping_id,
@@ -229,6 +264,37 @@ test('agents conformance exposes Foundry Agent OS family standard without author
     assert.equal(domain.false_authority_flags.generated_surface_can_write_domain_truth, false);
     assert.equal(domain.false_authority_flags.capability_registry_can_create_typed_blocker, false);
     assert.equal(domain.false_authority_flags.capability_registry_can_sign_owner_receipt, false);
+
+    const ownerAnswer = ownerAnswerWorklist.domains.find((entry: { requested_agent_id: string }) =>
+      entry.requested_agent_id === domain.canonical_agent_id
+    );
+    assert.ok(ownerAnswer);
+    assert.deepEqual(ownerAnswer.accepted_refs_only_result_shapes, [...ACCEPTED_OWNER_ANSWER_SHAPES]);
+    assert.equal(ownerAnswer.ready_claim_authorized, false);
+    assert.equal(ownerAnswer.conformance_can_claim_domain_ready, false);
+    assert.equal(ownerAnswer.can_sign_owner_receipt, false);
+    assert.equal(ownerAnswer.can_create_typed_blocker, false);
+    assert.equal(ownerAnswer.forbidden_opl_claims.includes('owner_receipt_signed_by_opl'), true);
+    assert.equal(ownerAnswer.forbidden_opl_claims.includes('typed_blocker_created_by_opl'), true);
+    assert.equal(ownerAnswer.non_closing_inputs.includes('structural_conformance_pass'), true);
+  }
+
+  for (const agentId of STANDARD_FOUNDRY_DOMAIN_AGENT_IDS) {
+    const agent = runCli(['foundry', 'agents', 'inspect', agentId]).foundry_agent;
+    assert.equal(agent.agent_id, agentId);
+    assert.equal(agent.status, 'standard_domain_agent');
+    assert.equal(agent.series_membership, 'standard_domain_agent');
+    assert.match(agent.ordinary_golden_path, /stage/);
+    assert.equal(agent.authority_boundary.generated_surface_can_claim_domain_ready, false);
+    assert.equal(agent.authority_boundary.generated_surface_can_write_domain_truth, false);
+    assert.equal(agent.authority_boundary.generated_surface_can_create_owner_receipt, false);
+    assert.equal(agent.authority_boundary.generated_surface_can_create_typed_blocker, false);
+    assert.equal(
+      agent.feedback_self_evolution_trigger.owner_closeout_readback_refs.includes(
+        'target_owner_acceptance_or_typed_blocker_ref',
+      ),
+      true,
+    );
   }
 
   const scholarSkills = foundry.domains.find((domain: { canonical_agent_id: string }) =>

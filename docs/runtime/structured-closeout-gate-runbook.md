@@ -38,6 +38,21 @@ selected executor terminal output
 
 这个路径只说明 OPL transport 已收到可消费的结构化 packet。下一 stage 是否启动、是否 route back、是否等待 human、是否 stop-loss，继续由 domain/stage outcome 与 owner answer refs 表达。OPL 不能把 packet accepted 写成 domain owner receipt accepted，也不能把 provider completed 写成 stage content completed。
 
+## 5-Agent Smooth Progression Structural Smoke
+
+本 smoke 的稳定读法是结构链路检查，不是 live/domain ready 检查。`opl agents conformance --family-defaults --json` 应证明 MAS、MAG、RCA、OMA 和 BookForge 都在 Foundry Agent OS 中作为 `standard_domain_agent` 暴露，并且 stage-run adoption worklist 接受同一组 owner answer ref shape：`domain_owner_receipt_ref`、`typed_blocker_ref`、`human_gate_ref`、`quality_or_export_receipt_ref`、`no_regression_ref` 和 `long_soak_ref`。`opl foundry agents inspect <agent_id> --json` 应证明每个 agent 仍有 ordinary golden path 和 generated / hosted surface 的 false-authority flags。
+
+交付即推进的最小结构是：
+
+```text
+domain StageOutcome / typed closeout packet
+  -> accepted owner answer ref shape
+  -> OPL closeout transport / stage-run adoption read model
+  -> next current_owner_delta, next stage, route-back, stop, or human gate
+```
+
+这条链路只说明 OPL 能接住并路由交付信号。`ready_claim_authorized=false` 或等价 authority false 字段必须保持为 false：OPL 不判断 domain 内容是否 ready，不签 owner receipt，不创建 domain typed blocker，不把历史 backlog、retired local residue 或 private wrapper 诊断当作 ordinary next action。
+
 ## 格式漂移处理流程
 
 当 executor 结束但 closeout 格式漂移、字段过大、refs 形态变化或 provider result 缺 packet 时，OPL 按固定顺序处理：
