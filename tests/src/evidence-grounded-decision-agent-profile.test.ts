@@ -50,9 +50,21 @@ const requiredForbiddenClaims = [
   'production_ready',
 ];
 
+type PolicyRecord = {
+  policy_id: string;
+  body_storage_policy?: string;
+  human_gate_decision_can_be_fabricated_by_opl?: boolean;
+  required_blocker_reasons?: string[];
+};
+
 test('Evidence-grounded decision profile exposes Pack-owned contract readback without authority claims', () => {
   const readback = buildEvidenceGroundedDecisionAgentProfileReadback()
     .evidence_grounded_decision_agent_profile;
+  const modeRoutingPolicy = readback.mode_routing_policy as PolicyRecord;
+  const evidencePolicy = readback.evidence_policy as PolicyRecord;
+  const humanGatePolicy = readback.human_gate_policy as PolicyRecord;
+  const unsupportedEvidenceBlockerPolicy =
+    readback.unsupported_evidence_blocker_policy as PolicyRecord;
 
   assert.equal(readback.surface_kind, 'opl_evidence_grounded_decision_agent_profile_readback');
   assert.equal(readback.profile_id, 'evidence_grounded_decision_agent_profile.v1');
@@ -61,17 +73,17 @@ test('Evidence-grounded decision profile exposes Pack-owned contract readback wi
   assert.deepEqual(readback.module_owner_ids, requiredModules);
   assert.deepEqual(readback.fail_closed_rule_ids, requiredFailClosedRules);
   assert.deepEqual(readback.forbidden_claim_ids, requiredForbiddenClaims);
-  assert.equal(readback.mode_routing_policy.policy_id, 'evidence_grounded_mode_routing.v1');
-  assert.equal(readback.evidence_policy.policy_id, 'refs_only_evidence_grounding.v1');
-  assert.equal(readback.human_gate_policy.policy_id, 'decision_support_human_gate.v1');
+  assert.equal(modeRoutingPolicy.policy_id, 'evidence_grounded_mode_routing.v1');
+  assert.equal(evidencePolicy.policy_id, 'refs_only_evidence_grounding.v1');
+  assert.equal(humanGatePolicy.policy_id, 'decision_support_human_gate.v1');
   assert.equal(
-    readback.unsupported_evidence_blocker_policy.policy_id,
+    unsupportedEvidenceBlockerPolicy.policy_id,
     'unsupported_evidence_blocker.v1',
   );
-  assert.equal(readback.evidence_policy.body_storage_policy, 'refs_only_no_source_body_in_profile_contract');
-  assert.equal(readback.human_gate_policy.human_gate_decision_can_be_fabricated_by_opl, false);
+  assert.equal(evidencePolicy.body_storage_policy, 'refs_only_no_source_body_in_profile_contract');
+  assert.equal(humanGatePolicy.human_gate_decision_can_be_fabricated_by_opl, false);
   assert.equal(
-    readback.unsupported_evidence_blocker_policy.required_blocker_reasons.includes(
+    unsupportedEvidenceBlockerPolicy.required_blocker_reasons?.includes(
       'sensitive_external_egress_unapproved',
     ),
     true,
