@@ -8,7 +8,10 @@ import {
   writeMasCleanRunnerFixture,
 } from '../helpers.ts';
 import { buildAppStageRunCockpit } from '../../../../src/modules/stagecraft/stage-run-cockpit.ts';
-import { findOwnerAnswerProjection } from '../../../../src/modules/stagecraft/mas-owner-answer-projection.ts';
+import {
+  buildOwnerAnswerProjectionProfileRegistryReadback,
+  findOwnerAnswerProjection,
+} from '../../../../src/modules/stagecraft/mas-owner-answer-projection.ts';
 
 const STUDY_ID = '003-dpcc-primary-care-phenotype-treatment-gap';
 const PUBLICATION_SOURCE_FINGERPRINT =
@@ -911,4 +914,23 @@ test('owner-answer projection lookup accepts injected domain profile', () => {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
+});
+
+test('owner-answer projection registry readback keeps MAS as compatibility profile only', () => {
+  const registry = buildOwnerAnswerProjectionProfileRegistryReadback();
+  const profile = registry.profiles.find((entry) =>
+    entry.profile_id === 'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1'
+  );
+
+  assert.equal(registry.surface_kind, 'opl_domain_owner_answer_projection_profile_registry_readback');
+  assert.equal(registry.registry_surface_kind, 'opl_domain_owner_answer_projection_profile_registry');
+  assert.equal(registry.registry_role, 'generic_domain_owner_answer_projection_profile_registry');
+  assert.equal(registry.projection_policy, 'generic_domain_owner_answer_refs_only_no_domain_truth_or_readiness_claim');
+  assert.equal(profile?.profile_role, 'compatibility');
+  assert.equal(profile?.projection_role, 'compatibility_projection');
+  assert.equal(profile?.compatibility_projection, true);
+  assert.equal(registry.authority_boundary.can_write_domain_truth, false);
+  assert.equal(registry.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(registry.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(registry.authority_boundary.can_claim_domain_ready, false);
 });

@@ -24,8 +24,9 @@ export { adaptDomainTransitionOracleToFamilyTransitionSpec, adaptGrantTransition
 export type { DomainTransitionOracle, DomainTransitionOracleSurfaceKind, GrantTransitionOracle } from './family-transition-oracle-ingestion.ts';
 export { runFamilyTransitionMatrix } from './family-transition-runner.ts';
 export type { FamilyTransitionInput, FamilyTransitionMatrixCase, FamilyTransitionMatrixResult, FamilyTransitionResult, FamilyTransitionSpec } from './family-transition-runner.ts';
-export { adaptVisualTransitionSpecToFamilyTransitionSpec, buildVisualTransitionMatrixCases, defaultVisualTransitionAdapterProfile, normalizeVisualTransitionSpec } from './family-transition-visual-ingestion.ts';
-export type { VisualTransitionAdapterProfile, VisualTransitionSpec } from './family-transition-visual-ingestion.ts';
+export { buildStagecraftDomainProfileRegistryReadback } from './domain-profile-registry.ts';
+export { adaptVisualTransitionSpecToFamilyTransitionSpec, buildVisualTransitionAdapterProfileRegistryReadback, buildVisualTransitionMatrixCases, defaultVisualTransitionAdapterProfile, normalizeVisualTransitionSpec, REDCUBE_VISUAL_TRANSITION_COMPATIBILITY_PROFILE, resolveVisualTransitionAdapterProfile, VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY } from './family-transition-visual-ingestion.ts';
+export type { VisualTransitionAdapterProfile, VisualTransitionAdapterProfileRegistryEntry, VisualTransitionSpec } from './family-transition-visual-ingestion.ts';
 export { commitStageArtifactAttemptRuntime, conformanceStageArtifactRuntime, explainStageArtifactRuntime, gcStageArtifactRuntime, openStageArtifactAttemptRuntime, promoteStageArtifactRuntime, rebuildStageArtifactRuntime, restoreStageArtifactRuntime, statusStageArtifactRuntime, validateStageArtifactRuntime, workbenchStageArtifactRuntime } from './stage-artifact-runtime.ts';
 export { assertStageProductionEvidencePayloadReady, buildStageProductionEvidencePayloadWorkorder, preflightStageProductionEvidencePayload, STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS } from './stage-production-evidence-payload-preflight.ts';
 export { stageReplayMissingReceiptTargetKey } from './stage-replay-missing-receipt-ledger.ts';
@@ -33,7 +34,7 @@ export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-re
 export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
 export { listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
-export { findOwnerAnswerProjection, MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE, OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY } from './mas-owner-answer-projection.ts';
+export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection, MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE, OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY } from './mas-owner-answer-projection.ts';
 export type { OwnerAnswerProjectionProfile } from './mas-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './standard-typed-blocker-lineage-policy.ts';
