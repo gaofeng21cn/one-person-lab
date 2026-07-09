@@ -87,6 +87,40 @@ test('agents conformance exposes Foundry Agent OS membership without readiness a
   assert.equal(foundry.authority_boundary.capability_registry_can_create_typed_blocker, false);
 });
 
+test('foundry agents inspect exposes stage profile and owner-answer shape without OPL domain authority', () => {
+  for (const agentId of STANDARD_FOUNDRY_DOMAIN_AGENT_IDS) {
+    const inspect = runCli([
+      'foundry',
+      'agents',
+      'inspect',
+      agentId,
+    ]).foundry_agent;
+
+    assert.equal(inspect.series_membership, 'standard_domain_agent');
+    assert.equal(inspect.status, 'standard_domain_agent');
+    assert.match(inspect.ordinary_golden_path, /stage/);
+    assert.equal(inspect.stage_profile.profile_id, 'opl_foundry_agent_series_design_profile.v1');
+    assert.equal(inspect.stage_profile.applies_to_agent_id, agentId);
+    assert.equal(inspect.stage_profile.default_read_root, 'current_owner_delta');
+    assert.equal(inspect.stage_profile.provider_completion_is_closeout, false);
+    assert.equal(
+      inspect.stage_profile.stage_delivery_progress_marker,
+      'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
+    );
+    assert.equal(inspect.owner_answer_shape.applies_to_agent_id, agentId);
+    assert.equal(inspect.owner_answer_shape.success_shape, 'domain_owner_receipt_ref');
+    assert.equal(inspect.owner_answer_shape.blocked_shape, 'domain_owned_typed_blocker_ref');
+    assert.equal(inspect.owner_answer_shape.route_back_shape, 'route_back_or_human_gate_ref');
+    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_ready, false);
+    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_truth, false);
+    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_receipt, false);
+    assert.equal(inspect.owner_answer_shape.opl_base_authority.can_blocker, false);
+    assert.equal(inspect.opl_base_domain_authority.can_write_domain_truth, false);
+    assert.equal(inspect.opl_base_domain_authority.can_sign_owner_receipt, false);
+    assert.equal(inspect.opl_base_domain_authority.can_create_typed_blocker, false);
+  }
+});
+
 test('Foundry Agent OS canonicalizes OPL Meta Agent as OMA without renaming domain truth', () => {
   const omaRepo = buildReadyAgentRepo();
   retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');

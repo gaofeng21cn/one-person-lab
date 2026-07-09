@@ -201,6 +201,98 @@ function buildAuthorityBoundary(contract: JsonRecord) {
   };
 }
 
+function buildOplBaseDomainAuthorityBoundary() {
+  return {
+    can_ready: false,
+    can_truth: false,
+    can_receipt: false,
+    can_blocker: false,
+    can_write_domain_truth: false,
+    can_authorize_quality_or_export: false,
+    can_sign_owner_receipt: false,
+    can_create_typed_blocker: false,
+  };
+}
+
+function buildFoundryAgentStageProfile(peer: FoundryAgentPeer, contract: JsonRecord) {
+  const profile = readRecord(contract.series_design_profile, 'series_design_profile');
+  const domainIoProfile = readRecord(profile.domain_io_profile, 'series_design_profile.domain_io_profile');
+  const closeout = readRecord(profile.shared_closeout_contract, 'series_design_profile.shared_closeout_contract');
+  const authority = readRecord(profile.authority_invariants, 'series_design_profile.authority_invariants');
+
+  return {
+    surface_kind: 'opl_foundry_agent_stage_profile',
+    profile_id: readString(profile.profile_id, 'series_design_profile.profile_id'),
+    applies_to_agent_id: peer.agent_id,
+    series_membership: peer.series_membership,
+    ordinary_golden_path: peer.ordinary_golden_path,
+    domain_pack_example: peer.domain_pack_example,
+    stage_delivery_progress_marker: 'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
+    lifecycle_pipeline: readStringList(
+      profile.shared_lifecycle_pipeline,
+      'series_design_profile.shared_lifecycle_pipeline',
+    ),
+    stage_pack_sections: readStringList(profile.stage_pack_sections, 'series_design_profile.stage_pack_sections'),
+    input_slot: readString(domainIoProfile.input_slot, 'series_design_profile.domain_io_profile.input_slot'),
+    output_slot: readString(domainIoProfile.output_slot, 'series_design_profile.domain_io_profile.output_slot'),
+    default_read_root: 'current_owner_delta',
+    completion_judgment_owner: readString(
+      closeout.completion_judgment_owner,
+      'series_design_profile.shared_closeout_contract.completion_judgment_owner',
+    ),
+    provider_completion_is_closeout: readBoolean(
+      closeout.provider_completion_is_closeout,
+      'series_design_profile.shared_closeout_contract.provider_completion_is_closeout',
+    ),
+    authority_boundary: {
+      opl_can_infer_domain_output: readBoolean(
+        authority.opl_can_infer_domain_output,
+        'series_design_profile.authority_invariants.opl_can_infer_domain_output',
+      ),
+      opl_can_read_domain_body: readBoolean(
+        authority.opl_can_read_domain_body,
+        'series_design_profile.authority_invariants.opl_can_read_domain_body',
+      ),
+      opl_can_write_domain_truth: readBoolean(
+        authority.opl_can_write_domain_truth,
+        'series_design_profile.authority_invariants.opl_can_write_domain_truth',
+      ),
+      opl_can_authorize_quality_or_export: readBoolean(
+        authority.opl_can_authorize_quality_or_export,
+        'series_design_profile.authority_invariants.opl_can_authorize_quality_or_export',
+      ),
+    },
+  };
+}
+
+function buildFoundryAgentOwnerAnswerShape(peer: FoundryAgentPeer, contract: JsonRecord) {
+  const profile = readRecord(contract.series_design_profile, 'series_design_profile');
+  const closeout = readRecord(profile.shared_closeout_contract, 'series_design_profile.shared_closeout_contract');
+
+  return {
+    surface_kind: 'opl_foundry_agent_owner_answer_shape',
+    applies_to_agent_id: peer.agent_id,
+    series_membership: peer.series_membership,
+    domain_authority_owner: peer.agent_id,
+    accepted_shape_ref:
+      'contracts/opl-framework/target-operating-architecture-contract.json#surface_budget_compiler_policy.accepted_owner_answer_shapes',
+    success_shape: readString(
+      closeout.success_shape,
+      'series_design_profile.shared_closeout_contract.success_shape',
+    ),
+    blocked_shape: readString(
+      closeout.blocked_shape,
+      'series_design_profile.shared_closeout_contract.blocked_shape',
+    ),
+    route_back_shape: readString(
+      closeout.route_back_shape,
+      'series_design_profile.shared_closeout_contract.route_back_shape',
+    ),
+    domain_authority_kernel_examples: peer.domain_authority_kernel_examples,
+    opl_base_authority: buildOplBaseDomainAuthorityBoundary(),
+  };
+}
+
 function buildFeedbackSelfEvolutionTrigger(peer: FoundryAgentPeer, contract: JsonRecord) {
   const policy = readRecord(
     contract.standard_feedback_self_evolution_trigger_policy,
@@ -604,6 +696,9 @@ export function buildFoundryAgentInspect(args: string[]) {
         first_screen_must_identify_series: true,
         old_implementation_buckets_are_diagnostic_only: true,
       },
+      stage_profile: buildFoundryAgentStageProfile(peer, contract),
+      owner_answer_shape: buildFoundryAgentOwnerAnswerShape(peer, contract),
+      opl_base_domain_authority: buildOplBaseDomainAuthorityBoundary(),
       feedback_self_evolution_trigger: buildFeedbackSelfEvolutionTrigger(peer, contract),
       developer_mode_target_hint: buildFoundryAgentDeveloperModeTargetHint(peer),
       authority_boundary: buildAuthorityBoundary(contract),
