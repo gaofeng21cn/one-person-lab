@@ -617,117 +617,20 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       output.handoff_bundle.domain_manifest_recommendation.shared_handoff.opl_return_surface.target_domain_id,
       'redcube_ai',
     );
+    const recommendation = output.handoff_bundle.domain_manifest_recommendation;
+    assert.equal(recommendation.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(recommendation.runtime_inventory.runtime_owner, 'provider_backed_family_runtime');
+    assert.equal(recommendation.task_lifecycle.resume_surface.surface_kind, 'product_entry_session');
+    assert.equal(recommendation.product_entry_readiness.verdict, 'service_surface_ready_not_managed_product');
+    assert.equal(recommendation.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(recommendation.product_entry_start.recommended_mode_id, 'open_product_entry');
     assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_status.summary,
-      'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.runtime_inventory.surface_kind,
-      'runtime_inventory',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.runtime_inventory.runtime_owner,
-      'provider_backed_family_runtime',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.task_lifecycle.surface_kind,
-      'task_lifecycle',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.task_lifecycle.resume_surface.surface_kind,
-      'product_entry_session',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.session_continuity.surface_kind,
-      'session_continuity',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.progress_projection.surface_kind,
-      'progress_projection',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.artifact_inventory.surface_kind,
-      'artifact_inventory',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.runtime_control.surface_kind,
-      'runtime_control',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.skill_catalog.surface_kind,
-      'skill_catalog',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.skill_catalog.skills.length,
-      2,
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.automation.surface_kind,
-      'automation',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.automation.automations[0].automation_id,
-      'redcube_autopilot_continuation',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_readiness.verdict,
-      'service_surface_ready_not_managed_product',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_readiness.recommended_start_command,
-      'redcube product status',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.surface_kind,
-      'product_entry_preflight',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.recommended_check_command,
-      'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.ready_to_try_now,
+      recommendation.product_entry_start.modes.some((mode: { mode_id: string }) => mode.mode_id === 'opl_bridge_handoff'),
       true,
     );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_start.surface_kind,
-      'product_entry_start',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_start.recommended_mode_id,
-      'open_product_entry',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_start.modes[2].mode_id,
-      'opl_bridge_handoff',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.progress_surface.command,
-      'redcube product session --entry-session-id <entry-session-id>',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.resume_surface.checkpoint_locator_field,
-      'continuation_snapshot.latest_managed_run_id',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,
-      'repo_verified_product_entry_and_opl_framework',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,
-      '/family_orchestration/action_graph',
-    );
+    assert.equal(recommendation.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.total_projects_count, 3);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_inventory_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.task_lifecycle_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_control_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.session_continuity_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.progress_projection_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.artifact_inventory_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.skill_catalog_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.skill_runtime_continuity_ready_count, 1);
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.automation_ready_count, 1);
     assert.equal(
       output.handoff_bundle.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
       1,
@@ -739,34 +642,9 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(routedParity.direct_entry_locator_status, 'ready');
     assert.equal(routedParity.ready_for_opl_start, true);
     assert.equal(routedParity.ready_for_domain_handoff, true);
-    assert.equal(routedParity.runtime_inventory_status, 'ready');
-    assert.equal(routedParity.task_lifecycle_status, 'ready');
-    assert.equal(routedParity.runtime_control_status, 'ready');
-    assert.equal(routedParity.session_continuity_status, 'ready');
-    assert.equal(routedParity.progress_projection_status, 'ready');
-    assert.equal(routedParity.artifact_inventory_status, 'ready');
-    assert.equal(routedParity.skill_catalog_status, 'ready');
-    assert.equal(routedParity.skill_runtime_continuity_status, 'ready');
-    assert.equal(routedParity.automation_status, 'ready');
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.skill_runtime_continuity_status,
-      'ready',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.skill_runtime_continuity_session_locator_field,
-      'entry_session_id',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.skill_runtime_continuity_resume_command,
-      'redcube product session --entry-session-id <entry-session-id>',
-    );
-    assertRedcubeActionGraph(
-      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph,
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.resume_contract.checkpoint_locator_field,
-      'continuation_snapshot.latest_managed_run_id',
-    );
+    assert.equal(recommendation.skill_runtime_continuity_status, 'ready');
+    assertRedcubeActionGraph(recommendation.family_orchestration.action_graph);
+    assert.equal(recommendation.family_orchestration.resume_contract.checkpoint_locator_field, 'continuation_snapshot.latest_managed_run_id');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

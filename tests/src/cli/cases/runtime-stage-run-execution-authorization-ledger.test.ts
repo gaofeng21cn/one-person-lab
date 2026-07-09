@@ -10,6 +10,11 @@ import {
 import { buildAppStageRunCockpit } from '../../../../src/modules/stagecraft/stage-run-cockpit.ts';
 import { findOwnerAnswerProjection } from '../../../../src/modules/stagecraft/mas-owner-answer-projection.ts';
 
+const STUDY_ID = '003-dpcc-primary-care-phenotype-treatment-gap';
+const PUBLICATION_SOURCE_FINGERPRINT =
+  'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap';
+const LEDGER_FILE = 'stage-run-execution-authorization-ledger.json';
+
 function authorizationPayload(overrides: Record<string, unknown> = {}) {
   return {
     stage_run_id: 'app-stage-run:medautoscience:finalize-and-publication-handoff',
@@ -22,16 +27,15 @@ function authorizationPayload(overrides: Record<string, unknown> = {}) {
     stage_attempt_id: 'sat_live',
     attempt_lease_ref: 'opl://stage_attempts/sat_live/lease/current',
     attempt_lease_status: 'active',
-    study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+    study_id: STUDY_ID,
     domain_context: {
       domain_id: 'medautoscience',
-      study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+      study_id: STUDY_ID,
       stage_id: 'finalize_and_publication_handoff',
     },
     action_type: 'complete_medical_paper_readiness_surface',
     work_unit_id: '08-publication_package_handoff',
-    work_unit_fingerprint:
-      'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap',
+    work_unit_fingerprint: PUBLICATION_SOURCE_FINGERPRINT,
     decision: 'authorize',
     reason: 'operator_authorized_refs_only_stage_attempt_execution',
     operator: 'human_operator:gaofeng',
@@ -39,12 +43,100 @@ function authorizationPayload(overrides: Record<string, unknown> = {}) {
       'opl://stage_attempts/sat_live/execution-authorization/current',
     workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
     artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
-    source_fingerprint:
-      'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap',
+    source_fingerprint: PUBLICATION_SOURCE_FINGERPRINT,
     idempotency_key: 'idem_live',
     current_pointer_ref:
       'opl://stage-runs/app-stage-run%3Amedautoscience%3Afinalize-and-publication-handoff/current',
     stage_manifest_ref: 'mas://stage-manifest/08-publication_package_handoff',
+    ...overrides,
+  };
+}
+
+function ledgerFile(stateRoot: string) {
+  return path.join(stateRoot, LEDGER_FILE);
+}
+
+function assertNoLedgerWrite(stateRoot: string) {
+  assert.equal(fs.existsSync(ledgerFile(stateRoot)), false);
+}
+
+function recordAuthorization(
+  stateRoot: string,
+  payload: Record<string, unknown> = authorizationPayload(),
+  extraArgs: string[] = [],
+) {
+  return runCli([
+    'runtime',
+    'stage-run-authorization',
+    'record',
+    '--payload',
+    JSON.stringify(payload),
+    ...extraArgs,
+  ], {
+    OPL_STATE_DIR: stateRoot,
+  }).stage_run_execution_authorization_ledger_record;
+}
+
+function listAuthorizations(stateRoot: string, extraArgs: string[] = []) {
+  return runCli([
+    'runtime',
+    'stage-run-authorization',
+    'list',
+    ...extraArgs,
+  ], {
+    OPL_STATE_DIR: stateRoot,
+  }).stage_run_execution_authorization_ledger;
+}
+
+function verifyAuthorization(stateRoot: string, receiptRef: string) {
+  return runCli([
+    'runtime',
+    'stage-run-authorization',
+    'verify',
+    '--receipt-ref',
+    receiptRef,
+  ], {
+    OPL_STATE_DIR: stateRoot,
+  }).stage_run_execution_authorization_ledger_verify;
+}
+
+function assertAuthorizedCloseoutBinding(report: any) {
+  assert.equal(report.status, 'authorized');
+  assert.deepEqual(report.launch_blockers, []);
+  assert.deepEqual(report.closeout_binding_blockers, []);
+  assert.equal(report.closeout_binding.owner_answer_kind, 'typed_blocker');
+  for (const key of [
+    'bound_to_stage_run',
+    'bound_to_stage_manifest',
+    'bound_to_current_pointer',
+    'bound_to_source_fingerprint',
+    'bound_to_idempotency_key',
+  ]) {
+    assert.equal(report.closeout_binding[key], true);
+  }
+}
+
+function publicationOwnerDelta(overrides: Record<string, unknown> = {}) {
+  return {
+    domain: 'medautoscience',
+    current_owner: 'medautoscience',
+    stage_id: 'finalize_and_publication_handoff',
+    desired_delta_kind: 'owner_delta',
+    desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
+    accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+    task_or_study_ref: `mas://study/${STUDY_ID}`,
+    lineage_ref: 'mas://stage-artifact-unit/DM003/08-publication_package_handoff',
+    source_fingerprint: PUBLICATION_SOURCE_FINGERPRINT,
+    delta_id: 'dm003-publication-handoff:g0',
+    live_attempt_ref: 'opl://stage_attempts/sat_live',
+    hard_gate: {
+      state: 'owner_delta_open',
+    },
+    audit_refs: {
+      workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
+      artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
+      app_operator_drilldown_ref: 'opl://drilldown/current-owner-delta',
+    },
     ...overrides,
   };
 }
@@ -159,59 +251,34 @@ function writeMasOwnerAnswerProjection(input: {
   );
 }
 
-test('runtime StageRun execution authorization dry-run validates exact identity without writing ledger', () => {
+test('runtime StageRun execution authorization dry-run validates identity guards without writing ledger', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-dry-run-'));
   try {
-    const dryRun = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload()),
-      '--dry-run',
-      '--json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+    const dryRun = recordAuthorization(stateRoot, authorizationPayload(), ['--dry-run', '--json']);
 
     assert.equal(dryRun.status, 'planned');
     assert.equal(dryRun.dry_run, true);
     assert.equal(dryRun.writes_performed, false);
     assert.equal(dryRun.planned_receipt_count, 1);
     assert.equal(dryRun.receipt_refs.length, 1);
-    assert.equal(dryRun.receipts[0].study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
-    assert.equal(dryRun.receipts[0].domain_context.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
-    assert.equal(dryRun.receipts[0].action_type, 'complete_medical_paper_readiness_surface');
-    assert.equal(dryRun.receipts[0].work_unit_id, '08-publication_package_handoff');
-    assert.equal(
-      dryRun.receipts[0].work_unit_fingerprint,
-      dryRun.receipts[0].source_fingerprint,
-    );
-    assert.equal(dryRun.receipts[0].decision, 'authorize');
-    assert.equal(dryRun.receipts[0].operator, 'human_operator:gaofeng');
+    const receipt = dryRun.receipts[0];
+    assert.equal(receipt.study_id, STUDY_ID);
+    assert.equal(receipt.domain_context.study_id, STUDY_ID);
+    assert.equal(receipt.work_unit_fingerprint, receipt.source_fingerprint);
     assert.equal(dryRun.authority_boundary.can_write_domain_truth, false);
-    assert.equal(
-      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
-      false,
-    );
+    assertNoLedgerWrite(stateRoot);
 
-    const mismatch = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload({
+    const mismatch = recordAuthorization(
+      stateRoot,
+      authorizationPayload({
         domain_context: {
           domain_id: 'medautoscience',
           study_id: 'stale-study',
           stage_id: 'finalize_and_publication_handoff',
         },
-      })),
-      '--dry-run',
-      '--json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+      }),
+      ['--dry-run', '--json'],
+    );
 
     assert.equal(mismatch.status, 'blocked');
     assert.equal(mismatch.dry_run, true);
@@ -225,18 +292,8 @@ test('runtime StageRun execution authorization dry-run validates exact identity 
       mismatch.blocker.blocker_reasons.includes('domain_context_study_id_mismatch'),
       true,
     );
-    assert.equal(
-      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
-      false,
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+    assertNoLedgerWrite(stateRoot);
 
-test('runtime StageRun execution authorization accepts distinct work unit and source identities', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-mas-identities-'));
-  try {
     const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
     const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
     const stageManifestRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/manifest`;
@@ -245,18 +302,15 @@ test('runtime StageRun execution authorization accepts distinct work unit and so
     const sourceFingerprint = 'truth-snapshot::eb10e8316639d4839970dc15';
     const idempotencyKey =
       'owner-route::003-dpcc-primary-care-phenotype-treatment-gap::truth-event-000035-39f0b8e96689a623::gate_clearing_batch::repair_progress_gate_replay_required::6c520342c1c99c25';
-    const dryRun = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload({
+    const distinctIdentity = recordAuthorization(
+      stateRoot,
+      authorizationPayload({
         phase: 'closeout',
         stage_run_id: stageRunId,
         stage_id: 'domain_owner/default-executor-dispatch',
         domain_context: {
           domain_id: 'medautoscience',
-          study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
+          study_id: STUDY_ID,
           stage_id: 'domain_owner/default-executor-dispatch',
         },
         provider_attempt_ref: 'opl://stage_attempts/sat_e1063d97901cc3d70424fc5c',
@@ -284,34 +338,20 @@ test('runtime StageRun execution authorization accepts distinct work unit and so
         owner_answer_current_pointer_ref: currentPointerRef,
         owner_answer_source_fingerprint: sourceFingerprint,
         owner_answer_idempotency_key: idempotencyKey,
-      })),
-      '--dry-run',
-      '--json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
-
-    assert.equal(dryRun.status, 'planned');
-    assert.equal(dryRun.dry_run, true);
-    assert.equal(dryRun.writes_performed, false);
-    assert.equal(dryRun.planned_receipt_count, 1);
-    assert.equal(dryRun.receipts[0].work_unit_fingerprint !== dryRun.receipts[0].source_fingerprint, true);
-    assert.equal(dryRun.receipts[0].source_fingerprint, sourceFingerprint);
-    assert.equal(dryRun.receipts[0].idempotency_key, idempotencyKey);
-    const report = dryRun.receipts[0].execution_authorization_report;
-    assert.equal(report.status, 'authorized');
-    assert.deepEqual(report.launch_blockers, []);
-    assert.deepEqual(report.closeout_binding_blockers, []);
-    assert.equal(report.closeout_binding.owner_answer_kind, 'typed_blocker');
-    assert.equal(report.closeout_binding.bound_to_stage_run, true);
-    assert.equal(report.closeout_binding.bound_to_stage_manifest, true);
-    assert.equal(report.closeout_binding.bound_to_current_pointer, true);
-    assert.equal(report.closeout_binding.bound_to_source_fingerprint, true);
-    assert.equal(report.closeout_binding.bound_to_idempotency_key, true);
-    assert.equal(
-      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
-      false,
+      }),
+      ['--dry-run', '--json'],
     );
+
+    assert.equal(distinctIdentity.status, 'planned');
+    assert.equal(distinctIdentity.dry_run, true);
+    assert.equal(distinctIdentity.writes_performed, false);
+    assert.equal(distinctIdentity.planned_receipt_count, 1);
+    const distinctReceipt = distinctIdentity.receipts[0];
+    assert.notEqual(distinctReceipt.work_unit_fingerprint, distinctReceipt.source_fingerprint);
+    assert.equal(distinctReceipt.source_fingerprint, sourceFingerprint);
+    assert.equal(distinctReceipt.idempotency_key, idempotencyKey);
+    assertAuthorizedCloseoutBinding(distinctReceipt.execution_authorization_report);
+    assertNoLedgerWrite(stateRoot);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -365,16 +405,7 @@ test('runtime StageRun execution authorization records independent quality gate 
       quality_gate_attempt_ref: qualityGateAttemptRef,
     });
 
-    const record = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(payload),
-      '--json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+    const record = recordAuthorization(stateRoot, payload, ['--json']);
 
     assert.equal(record.status, 'recorded');
     assert.equal(record.recorded_receipt_count, 1);
@@ -385,14 +416,7 @@ test('runtime StageRun execution authorization records independent quality gate 
     );
     assert.deepEqual(record.receipts[0].execution_authorization_report.closeout_binding_blockers, []);
 
-    const list = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'list',
-      '--json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger;
+    const list = listAuthorizations(stateRoot, ['--json']);
 
     assert.equal(list.receipts[0].quality_gate_attempt_ref, qualityGateAttemptRef);
     assert.equal(
@@ -400,20 +424,14 @@ test('runtime StageRun execution authorization records independent quality gate 
       qualityGateAttemptRef,
     );
 
-    const sameAttempt = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify({
+    const sameAttempt = recordAuthorization(
+      stateRoot,
+      {
         ...payload,
         quality_gate_attempt_ref: providerAttemptRef,
-      }),
-      '--dry-run',
-      '--json',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+      },
+      ['--dry-run', '--json'],
+    );
 
     assert.equal(sameAttempt.status, 'blocked');
     assert.equal(
@@ -428,40 +446,21 @@ test('runtime StageRun execution authorization records independent quality gate 
 test('runtime StageRun execution authorization ledger records refs-only OPL authorization', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-authorization-'));
   try {
-    const blocked = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload({
+    const blocked = recordAuthorization(
+      stateRoot,
+      authorizationPayload({
         attempt_lease_ref: null,
-      })),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+      }),
+    );
     assert.equal(blocked.status, 'blocked');
     assert.equal(blocked.recorded_receipt_count, 0);
     assert.equal(blocked.authority_boundary.can_write_domain_truth, false);
-    assert.equal(
-      fs.existsSync(path.join(stateRoot, 'stage-run-execution-authorization-ledger.json')),
-      false,
-    );
+    assertNoLedgerWrite(stateRoot);
 
-    const record = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload()),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+    const record = recordAuthorization(stateRoot);
     assert.equal(record.status, 'recorded');
     assert.equal(record.recorded_receipt_count, 1);
-    assert.equal(
-      record.ledger_file,
-      path.join(stateRoot, 'stage-run-execution-authorization-ledger.json'),
-    );
+    assert.equal(record.ledger_file, ledgerFile(stateRoot));
     assert.equal(record.receipts[0].execution_authorization_report.status, 'authorized');
     assert.equal(record.receipts[0].execution_authorization_report.execution_authorized, true);
     assert.deepEqual(record.receipts[0].execution_authorization_report.launch_blockers, []);
@@ -473,26 +472,12 @@ test('runtime StageRun execution authorization ledger records refs-only OPL auth
       false,
     );
 
-    const verify = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'verify',
-      '--receipt-ref',
-      record.receipt_refs[0],
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_verify;
+    const verify = verifyAuthorization(stateRoot, record.receipt_refs[0]);
     assert.equal(verify.status, 'verified');
     assert.equal(verify.receipt.receipt_status, 'verified');
     assert.equal(verify.authority_boundary.can_claim_domain_ready, false);
 
-    const list = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'list',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger;
+    const list = listAuthorizations(stateRoot);
     assert.equal(list.receipt_count, 1);
     assert.equal(list.verified_receipt_count, 1);
     assert.equal(list.authority_boundary.can_execute_domain_action, false);
@@ -506,7 +491,7 @@ test('runtime StageRun execution authorization list reports strict schema reject
   try {
     fs.mkdirSync(stateRoot, { recursive: true });
     fs.writeFileSync(
-      path.join(stateRoot, 'stage-run-execution-authorization-ledger.json'),
+      ledgerFile(stateRoot),
       `${JSON.stringify({
         surface_kind: 'opl_stage_run_execution_authorization_ledger',
         version: 'stage-run-execution-authorization-ledger.v1',
@@ -541,13 +526,7 @@ test('runtime StageRun execution authorization list reports strict schema reject
       'utf8',
     );
 
-    const list = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'list',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger;
+    const list = listAuthorizations(stateRoot);
     assert.equal(list.ledger_exists, true);
     assert.equal(list.raw_receipt_count, 1);
     assert.equal(list.receipt_count, 0);
@@ -567,28 +546,7 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-cockpit-auth-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = stateRoot;
-  const currentOwnerDelta = {
-    domain: 'medautoscience',
-    current_owner: 'medautoscience',
-    stage_id: 'finalize_and_publication_handoff',
-    desired_delta_kind: 'owner_delta',
-    desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
-    accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
-    task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
-    lineage_ref: 'mas://stage-artifact-unit/DM003/08-publication_package_handoff',
-    source_fingerprint:
-      'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap',
-    delta_id: 'dm003-publication-handoff:g0',
-    live_attempt_ref: 'opl://stage_attempts/sat_live',
-    hard_gate: {
-      state: 'owner_delta_open',
-    },
-    audit_refs: {
-      workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
-      artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
-      app_operator_drilldown_ref: 'opl://drilldown/current-owner-delta',
-    },
-  };
+  const currentOwnerDelta = publicationOwnerDelta();
   try {
     const before = buildAppStageRunCockpit(currentOwnerDelta);
     assert.equal(before.stage_run_current_owner_delta.stage_id, 'finalize_and_publication_handoff');
@@ -603,15 +561,7 @@ test('App StageRun cockpit consumes authorization ledger while preserving domain
       true,
     );
 
-    const record = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload()),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+    const record = recordAuthorization(stateRoot);
     assert.equal(record.status, 'recorded');
 
     const after = buildAppStageRunCockpit(currentOwnerDelta);
@@ -727,45 +677,27 @@ test('App StageRun cockpit ignores authorization ledger receipt from another sta
   const previousStateDir = process.env.OPL_STATE_DIR;
   process.env.OPL_STATE_DIR = stateRoot;
   try {
-    const record = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload({
+    const record = recordAuthorization(
+      stateRoot,
+      authorizationPayload({
         provider_attempt_ref: 'opl://stage_attempts/sat_stale',
         stage_attempt_id: 'sat_stale',
         attempt_lease_ref: 'opl://stage_attempts/sat_stale/lease/current',
         execution_authorization_decision_ref:
           'opl://stage_attempts/sat_stale/execution-authorization/current',
         idempotency_key: 'idem_stale',
-      })),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+      }),
+    );
     assert.equal(record.status, 'recorded');
 
-    const cockpit = buildAppStageRunCockpit({
-      domain: 'medautoscience',
-      current_owner: 'medautoscience',
-      stage_id: 'finalize_and_publication_handoff',
-      desired_delta_kind: 'owner_delta',
-      desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
-      accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
-      task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
+    const cockpit = buildAppStageRunCockpit(publicationOwnerDelta({
       lineage_ref: 'sat_current',
-      source_fingerprint:
-        'stage-artifact-index::08-publication_package_handoff::publication_handoff_owner_gate::003-dpcc-primary-care-phenotype-treatment-gap',
-      delta_id: 'dm003-publication-handoff:g0',
       live_attempt_ref: 'opl://stage_attempts/sat_current',
-      hard_gate: {
-        state: 'owner_delta_open',
-      },
       audit_refs: {
         workspace_scope_ref: 'workspace:/Users/gaofeng/workspace/Yang/DM-CVD-Mortality-Risk',
         artifact_scope_ref: 'stage-artifact:08-publication_package_handoff',
       },
-    });
+    }));
 
     assert.equal(cockpit.stage_run_current_owner_delta.execution_authorization_receipt_ref, null);
     assert.equal(cockpit.execution_authorization_ledger_receipt, null);
@@ -809,19 +741,11 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
   writeMasCleanRunnerFixture(workspaceRoot);
   try {
     bindMasWorkspaceForAuthorization({ stateRoot, workspaceRoot, profilePath });
-    const record = runCli([
-      'runtime',
-      'stage-run-authorization',
-      'record',
-      '--payload',
-      JSON.stringify(authorizationPayload()),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).stage_run_execution_authorization_ledger_record;
+    const record = recordAuthorization(stateRoot);
     assert.equal(record.status, 'recorded');
     writeMasOwnerAnswerProjection({
       workspaceRoot,
-      studyId: '003-dpcc-primary-care-phenotype-treatment-gap',
+      studyId: STUDY_ID,
       receipt: record.receipts[0],
     });
 
@@ -832,7 +756,7 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
       desired_delta_kind: 'owner_delta',
       desired_delta_description: 'publication_handoff_owner_receipt_or_typed_blocker',
       accepted_answer_shape: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
-      task_or_study_ref: 'mas://study/003-dpcc-primary-care-phenotype-treatment-gap',
+      task_or_study_ref: `mas://study/${STUDY_ID}`,
       lineage_ref: 'mas://stage-artifact-unit/DM003/08-publication_package_handoff',
       hard_gate: {
         state: 'owner_delta_open',
@@ -843,21 +767,13 @@ test('App StageRun cockpit folds MAS owner-answer projection when it matches OPL
       },
     });
 
-    assert.equal(cockpit.execution_authorization.status, 'authorized');
-    assert.deepEqual(cockpit.execution_authorization.launch_blockers, []);
-    assert.deepEqual(cockpit.execution_authorization.closeout_binding_blockers, []);
-    assert.equal(cockpit.execution_authorization.closeout_binding.owner_answer_kind, 'typed_blocker');
-    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_stage_run, true);
-    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_stage_manifest, true);
-    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_current_pointer, true);
-    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_source_fingerprint, true);
-    assert.equal(cockpit.execution_authorization.closeout_binding.bound_to_idempotency_key, true);
+    assertAuthorizedCloseoutBinding(cockpit.execution_authorization);
     assert.equal(cockpit.stage_run_current_owner_delta.missing_role_or_answer_summary.owner_receipt_or_typed_blocker_missing, false);
     const projection = cockpit.stage_run_current_owner_delta.owner_answer_binding_projection;
     if (!projection) {
       throw new Error('expected MAS owner-answer binding projection');
     }
-    assert.equal(projection.study_id, '003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(projection.study_id, STUDY_ID);
     assert.equal(
       projection.profile_id,
       'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',

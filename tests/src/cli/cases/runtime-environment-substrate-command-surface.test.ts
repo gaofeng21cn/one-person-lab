@@ -7,6 +7,54 @@ import {
   writeFakeRscript,
 } from './runtime-environment-substrate-helpers.ts';
 
+type Projection = Record<string, any>;
+
+function assertFields(surface: Projection, expected: Projection) {
+  for (const [field, value] of Object.entries(expected)) {
+    assert.deepEqual(surface[field], value);
+  }
+}
+
+function assertFalseFields(surface: Projection, fields: string[]) {
+  assertFields(surface, Object.fromEntries(fields.map((field) => [field, false])));
+}
+
+function assertRuntimeReadinessGuards(readback: Projection) {
+  assertFalseFields(readback, [
+    'can_claim_runtime_ready',
+    'can_claim_domain_ready',
+    'can_claim_app_release_ready',
+  ]);
+}
+
+function assertFastLocalDefaultProjection(readback: Projection) {
+  assertFields(fastLocalEnvDefaultFields(readback), {
+    sandbox_provider: 'fast_local_env',
+    default_strategy: 'fast_local_env',
+    default_path: 'default_current_path',
+    renv_handoff: 'renv',
+    uv_handoff: 'uv',
+    host_environment_fallback_allowed: false,
+  });
+  assertFields(readback.sandbox_provider_plan, {
+    selected_provider: 'fast_local_env',
+    provider_role: 'fast_local_env_default_current_path',
+    later_sandbox_provider_kinds: ['local_docker', 'external_sandbox'],
+    later_external_sandbox_substrates: ['e2b', 'daytona', 'modal'],
+    materialization_root_provider: 'local_managed_root',
+    can_claim_provider_ready: false,
+  });
+}
+
+function assertProviderPlanHasNoSideEffects(plan: Projection) {
+  assertFalseFields(plan, [
+    'credential_material_read',
+    'external_api_called',
+    'provider_lifecycle_managed',
+    'creates_cloud_resource',
+  ]);
+}
+
 test('runtime env CLI exposes deterministic projections before materializing runtime roots', () => {
   const env = stateEnv('dry-run-');
   const inspect = runCli([
@@ -21,33 +69,20 @@ test('runtime env CLI exposes deterministic projections before materializing run
     'macos-arm64',
   ], env).runtime_environment;
 
-  assert.equal(inspect.surface_kind, 'opl_runtime_environment_readback');
-  assert.equal(inspect.command, 'inspect');
-  assert.equal(inspect.domain_id, 'mas');
-  assert.equal(inspect.profile_id, 'analysis');
-  assert.equal(inspect.platform_id, 'macos-arm64');
-  assert.equal(inspect.implementation_status, 'runtime_lock_materializer_cache_prune_run_context_guard_available');
-  assert.equal(inspect.target_planned, true);
-  assert.equal(inspect.dry_run, true);
-  assert.equal(inspect.can_claim_runtime_ready, false);
-  assert.equal(inspect.can_claim_domain_ready, false);
-  assert.equal(inspect.can_claim_app_release_ready, false);
-  assert.deepEqual(fastLocalEnvDefaultFields(inspect), {
-    sandbox_provider: 'fast_local_env',
-    default_strategy: 'fast_local_env',
-    default_path: 'default_current_path',
-    renv_handoff: 'renv',
-    uv_handoff: 'uv',
-    host_environment_fallback_allowed: false,
+  assertFields(inspect, {
+    surface_kind: 'opl_runtime_environment_readback',
+    command: 'inspect',
+    domain_id: 'mas',
+    profile_id: 'analysis',
+    platform_id: 'macos-arm64',
+    implementation_status: 'runtime_lock_materializer_cache_prune_run_context_guard_available',
+    target_planned: true,
+    dry_run: true,
   });
-  assert.equal(inspect.sandbox_provider_plan.selected_provider, 'fast_local_env');
-  assert.equal(inspect.sandbox_provider_plan.provider_role, 'fast_local_env_default_current_path');
-  assert.deepEqual(inspect.sandbox_provider_plan.later_sandbox_provider_kinds, ['local_docker', 'external_sandbox']);
-  assert.deepEqual(inspect.sandbox_provider_plan.later_external_sandbox_substrates, ['e2b', 'daytona', 'modal']);
-  assert.equal(inspect.sandbox_provider_plan.materialization_root_provider, 'local_managed_root');
-  assert.equal(inspect.sandbox_provider_plan.can_claim_provider_ready, false);
-  assert.equal(inspect.authority_boundary.can_claim_runtime_materialized_ready, false);
-  assert.equal(inspect.materialization_status.status, 'not_materialized');
+  assertRuntimeReadinessGuards(inspect);
+  assertFastLocalDefaultProjection(inspect);
+  assertFields(inspect.authority_boundary, { can_claim_runtime_materialized_ready: false });
+  assertFields(inspect.materialization_status, { status: 'not_materialized' });
   assert.match(inspect.runtime_lock_ref, /^runtime-lock:mas\/analysis\/macos-arm64:sha256:/);
   assert.match(inspect.bundle_manifest_ref, /^runtime-bundle:mas\/analysis\/macos-arm64:sha256:/);
 
@@ -65,20 +100,21 @@ test('runtime env CLI exposes deterministic projections before materializing run
     'local_docker',
   ], env).runtime_environment;
   assert.equal(localDocker.sandbox_provider, 'local_docker');
-  assert.equal(localDocker.sandbox_provider_plan.status, 'local_docker_preflight_required');
-  assert.equal(localDocker.sandbox_provider_plan.provider_role, 'local_agent_sandbox_execution_substrate');
-  assert.equal(
-    localDocker.sandbox_provider_plan.template_ref,
-    'local-sandbox-template:local_docker:mas/analysis/macos-arm64',
-  );
-  assert.equal(localDocker.sandbox_provider_plan.required_receipt_kind, 'sandbox_execution_receipt');
-  assert.equal(localDocker.sandbox_provider_plan.live_provider_receipt_required, true);
-  assert.equal(localDocker.sandbox_provider_plan.false_ready_guard, 'local_sandbox_preflight_is_not_provider_ready');
-  assert.equal(localDocker.sandbox_provider_plan.can_claim_provider_ready, false);
-  assert.equal(localDocker.sandbox_provider_plan.can_claim_runtime_ready, false);
-  assert.equal(localDocker.sandbox_provider_plan.local_sandbox_preflight.required_cli, 'docker');
-  assert.equal(localDocker.sandbox_provider_plan.local_sandbox_preflight.external_api_called, false);
-  assert.equal(localDocker.sandbox_provider_plan.local_sandbox_preflight.credential_material_read, false);
+  assertFields(localDocker.sandbox_provider_plan, {
+    status: 'local_docker_preflight_required',
+    provider_role: 'local_agent_sandbox_execution_substrate',
+    template_ref: 'local-sandbox-template:local_docker:mas/analysis/macos-arm64',
+    required_receipt_kind: 'sandbox_execution_receipt',
+    live_provider_receipt_required: true,
+    false_ready_guard: 'local_sandbox_preflight_is_not_provider_ready',
+    can_claim_provider_ready: false,
+    can_claim_runtime_ready: false,
+  });
+  assertFields(localDocker.sandbox_provider_plan.local_sandbox_preflight, {
+    required_cli: 'docker',
+    external_api_called: false,
+    credential_material_read: false,
+  });
 
   const lock = runCli([
     'runtime',
@@ -112,13 +148,20 @@ test('runtime env CLI exposes deterministic projections before materializing run
 
   const doctor = runCli(['runtime', 'env', 'doctor'], env).runtime_environment;
   assert.equal(doctor.command, 'doctor');
-  assert.equal(
-    doctor.doctor.status,
-    'runtime_lock_materializer_verify_cache_prune_run_context_guard_available',
-  );
+  assertFields(doctor.doctor, {
+    status: 'runtime_lock_materializer_verify_cache_prune_run_context_guard_available',
+  });
+  assertFields(doctor.doctor.findings[0], { severity: 'info', can_block_domain_progress: false });
   assert.equal(
     doctor.doctor.findings.some((finding: { code: string }) => (
       finding.code === 'runtime_environment_materializer_verify_prune_available'
+    )),
+    true,
+  );
+  assert.equal(
+    doctor.doctor.findings.some((finding: { code: string; host_environment_fallback_allowed?: boolean }) => (
+      finding.code === 'runtime_environment_run_context_consumer_preflight_available'
+        && finding.host_environment_fallback_allowed === false
     )),
     true,
   );
@@ -226,29 +269,22 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     'macos-arm64',
   ], env).runtime_environment;
 
-  assert.equal(build.command, 'build');
-  assert.equal(build.build_plan.status, 'bundle_manifest_projected');
-  assert.equal(build.build_plan.writes_runtime_root, false);
-  assert.equal(build.build_plan.creates_archive, false);
-  assert.equal(build.build_plan.can_claim_runtime_ready, false);
-  assert.deepEqual(fastLocalEnvDefaultFields(build), {
-    sandbox_provider: 'fast_local_env',
-    default_strategy: 'fast_local_env',
-    default_path: 'default_current_path',
-    renv_handoff: 'renv',
-    uv_handoff: 'uv',
-    host_environment_fallback_allowed: false,
+  assertFields(build, { command: 'build' });
+  assertFields(build.build_plan, {
+    status: 'bundle_manifest_projected',
+    writes_runtime_root: false,
+    creates_archive: false,
+    can_claim_runtime_ready: false,
   });
-  assert.equal(build.sandbox_provider_plan.selected_provider, 'fast_local_env');
-  assert.deepEqual(build.sandbox_provider_plan.later_sandbox_provider_kinds, ['local_docker', 'external_sandbox']);
-  assert.deepEqual(build.sandbox_provider_plan.later_external_sandbox_substrates, ['e2b', 'daytona', 'modal']);
-  assert.equal(build.sandbox_provider_plan.materialization_root_provider, 'local_managed_root');
-  assert.equal(build.sandbox_provider_plan.temporal_replacement, false);
-  assert.equal(build.bundle_manifest.status, 'dry_run_bundle_manifest_projected');
+  assertFastLocalDefaultProjection(build);
+  assertFields(build.sandbox_provider_plan, { temporal_replacement: false });
+  assertFields(build.bundle_manifest, {
+    status: 'dry_run_bundle_manifest_projected',
+    layer_count: 6,
+    all_layer_archives_present: false,
+    can_claim_runtime_ready: false,
+  });
   assert.match(build.bundle_manifest.bundle_ref, /^runtime-bundle:mas\/analysis\/macos-arm64:sha256:/);
-  assert.equal(build.bundle_manifest.layer_count, 6);
-  assert.equal(build.bundle_manifest.all_layer_archives_present, false);
-  assert.equal(build.bundle_manifest.can_claim_runtime_ready, false);
 
   const dryRun = runCli([
     'runtime',
@@ -262,13 +298,15 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     'macos-arm64',
     '--dry-run',
   ], env).runtime_environment;
-  assert.equal(dryRun.command, 'materialize');
-  assert.equal(dryRun.materialization_plan.status, 'dry_run_materialization_plan_projected');
-  assert.equal(dryRun.materialization_plan.target_pointer, 'current');
-  assert.equal(dryRun.materialization_plan.applied, false);
-  assert.equal(dryRun.materialization_plan.can_apply, true);
-  assert.equal(dryRun.materialization_plan.writes_runtime_root, false);
-  assert.equal(dryRun.materialization_plan.apply_blocker_ref, null);
+  assertFields(dryRun, { command: 'materialize' });
+  assertFields(dryRun.materialization_plan, {
+    status: 'dry_run_materialization_plan_projected',
+    target_pointer: 'current',
+    applied: false,
+    can_apply: true,
+    writes_runtime_root: false,
+    apply_blocker_ref: null,
+  });
 
   const externalSandbox = runCli([
     'runtime',
@@ -284,65 +322,63 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     'external_sandbox',
     '--apply',
   ], env).runtime_environment;
-  assert.equal(externalSandbox.sandbox_provider, 'external_sandbox');
-  assert.equal(externalSandbox.sandbox_provider_plan.status, 'external_sandbox_provider_adapter_unconfigured');
-  assert.equal(externalSandbox.sandbox_provider_plan.provider_role, 'agent_sandbox_execution_substrate');
-  assert.equal(externalSandbox.sandbox_provider_plan.e2b_default_dependency, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.e2b_package_dependency_class, 'optional_dependency');
-  assert.equal(externalSandbox.sandbox_provider_plan.e2b_connect_configuration_assist_only, true);
-  assert.deepEqual(externalSandbox.sandbox_provider_plan.required_external_sandbox_refs, [
+  const externalPlan = externalSandbox.sandbox_provider_plan;
+  const requiredExternalSandboxRefs = [
     'OPL_EXTERNAL_SANDBOX_ENDPOINT',
     'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
     'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
-  ]);
+  ];
+  assertFields(externalSandbox, { sandbox_provider: 'external_sandbox' });
+  assertFields(externalPlan, {
+    status: 'external_sandbox_provider_adapter_unconfigured',
+    provider_role: 'agent_sandbox_execution_substrate',
+    e2b_default_dependency: false,
+    e2b_package_dependency_class: 'optional_dependency',
+    e2b_connect_configuration_assist_only: true,
+    required_external_sandbox_refs: requiredExternalSandboxRefs,
+    can_claim_provider_ready: false,
+  });
   assert.deepEqual(
-    externalSandbox.sandbox_provider_plan.provider_family_catalog.map(
+    externalPlan.provider_family_catalog.map(
       (entry: { substrate: string }) => entry.substrate,
     ),
     ['e2b', 'daytona', 'modal'],
   );
-  assert.deepEqual(externalSandbox.sandbox_provider_plan.modal_like_env_spec_catalog.env_ids, modalLikeEnvSpecIds);
-  assert.equal(externalSandbox.sandbox_provider_plan.modal_like_env_spec_catalog.env_id_counts_as_provider_ready, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.adapter.adapter_id, 'opl.external_sandbox_provider_adapter.v1');
-  assert.equal(externalSandbox.sandbox_provider_plan.adapter.external_api_called, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.adapter.credential_material_read, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.adapter.provider_lifecycle_managed, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.adapter.creates_cloud_resource, false);
-  assert.deepEqual(externalSandbox.sandbox_provider_plan.adapter.missing_required_env, [
-    'OPL_EXTERNAL_SANDBOX_ENDPOINT',
-    'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
-    'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
+  assertFields(externalPlan.modal_like_env_spec_catalog, {
+    env_ids: modalLikeEnvSpecIds,
+    env_id_counts_as_provider_ready: false,
+  });
+  assertFields(externalPlan.adapter, {
+    adapter_id: 'opl.external_sandbox_provider_adapter.v1',
+    missing_required_env: requiredExternalSandboxRefs,
+  });
+  assertProviderPlanHasNoSideEffects(externalPlan);
+  assertProviderPlanHasNoSideEffects(externalPlan.adapter);
+  assertFields(externalPlan.model_endpoint_provider_family, {
+    required_endpoint_refs: [
+      'OPL_MODEL_ENDPOINT_URL_REF',
+      'OPL_MODEL_ENDPOINT_CREDENTIAL_REF',
+      'OPL_MODEL_ENDPOINT_PROVIDER_RECEIPT_REF',
+    ],
+  });
+  assertFalseFields(externalPlan.model_endpoint_provider_family, [
+    'endpoint_lifecycle_managed',
+    'creates_endpoint',
+    'updates_endpoint',
+    'deletes_endpoint',
+    'submit_job_supported',
+    'harvest_job_supported',
+    'credential_material_read',
+    'endpoint_api_called_by_readback',
   ]);
-  assert.deepEqual(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.required_endpoint_refs, [
-    'OPL_MODEL_ENDPOINT_URL_REF',
-    'OPL_MODEL_ENDPOINT_CREDENTIAL_REF',
-    'OPL_MODEL_ENDPOINT_PROVIDER_RECEIPT_REF',
-  ]);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.endpoint_lifecycle_managed, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.creates_endpoint, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.updates_endpoint, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.deletes_endpoint, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.submit_job_supported, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.harvest_job_supported, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.credential_material_read, false);
-  assert.equal(
-    externalSandbox.sandbox_provider_plan.model_endpoint_provider_family.endpoint_api_called_by_readback,
-    false,
-  );
-  assert.equal(externalSandbox.sandbox_provider_plan.can_claim_provider_ready, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.credential_material_read, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.external_api_called, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.provider_lifecycle_managed, false);
-  assert.equal(externalSandbox.sandbox_provider_plan.creates_cloud_resource, false);
-  assert.equal(externalSandbox.materialization_plan.status, 'external_sandbox_provider_apply_blocked');
-  assert.equal(externalSandbox.materialization_plan.can_apply, false);
-  assert.equal(externalSandbox.materialization_plan.applied, false);
-  assert.equal(externalSandbox.materialization_plan.writes_runtime_root, false);
-  assert.equal(
-    externalSandbox.materialization_plan.apply_blocker_ref,
-    'external_sandbox_provider_adapter_unconfigured',
-  );
-  assert.equal(externalSandbox.materialization_plan.can_claim_runtime_ready, false);
+  assertFields(externalSandbox.materialization_plan, {
+    status: 'external_sandbox_provider_apply_blocked',
+    can_apply: false,
+    applied: false,
+    writes_runtime_root: false,
+    apply_blocker_ref: 'external_sandbox_provider_adapter_unconfigured',
+    can_claim_runtime_ready: false,
+  });
 
   const configuredExternalSandbox = runCli([
     'runtime',
@@ -364,26 +400,25 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF: 'opl://provider/e2b/test-receipt',
     OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'e2b',
   }).runtime_environment;
-  assert.equal(
-    configuredExternalSandbox.sandbox_provider_plan.status,
-    'external_sandbox_provider_adapter_configured',
-  );
-  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.selected_external_substrate, 'e2b');
-  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.external_api_called, false);
-  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.credential_material_read, false);
-  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.provider_lifecycle_managed, false);
-  assert.equal(configuredExternalSandbox.sandbox_provider_plan.adapter.creates_cloud_resource, false);
-  assert.equal(configuredExternalSandbox.materialization_plan.status, 'external_sandbox_provider_binding_receipt_written');
-  assert.equal(configuredExternalSandbox.materialization_plan.applied, true);
-  assert.equal(configuredExternalSandbox.materialization_plan.can_apply, true);
-  assert.equal(configuredExternalSandbox.materialization_plan.writes_runtime_root, false);
-  assert.equal(configuredExternalSandbox.materialization_plan.apply_blocker_ref, null);
-  assert.equal(configuredExternalSandbox.materialization_plan.receipt.provider_receipt_ref, 'opl://provider/e2b/test-receipt');
-  assert.equal(configuredExternalSandbox.materialization_plan.receipt.external_api_called, false);
-  assert.equal(configuredExternalSandbox.materialization_plan.receipt.credential_material_read, false);
-  assert.equal(configuredExternalSandbox.materialization_plan.receipt.provider_lifecycle_managed, false);
-  assert.equal(configuredExternalSandbox.materialization_plan.receipt.creates_cloud_resource, false);
-  assert.equal(configuredExternalSandbox.materialization_plan.can_claim_runtime_ready, false);
+  assertFields(configuredExternalSandbox.sandbox_provider_plan, {
+    status: 'external_sandbox_provider_adapter_configured',
+  });
+  assertFields(configuredExternalSandbox.sandbox_provider_plan.adapter, {
+    selected_external_substrate: 'e2b',
+  });
+  assertProviderPlanHasNoSideEffects(configuredExternalSandbox.sandbox_provider_plan.adapter);
+  assertFields(configuredExternalSandbox.materialization_plan, {
+    status: 'external_sandbox_provider_binding_receipt_written',
+    applied: true,
+    can_apply: true,
+    writes_runtime_root: false,
+    apply_blocker_ref: null,
+    can_claim_runtime_ready: false,
+  });
+  assertFields(configuredExternalSandbox.materialization_plan.receipt, {
+    provider_receipt_ref: 'opl://provider/e2b/test-receipt',
+  });
+  assertProviderPlanHasNoSideEffects(configuredExternalSandbox.materialization_plan.receipt);
 
   const apply = runCli([
     'runtime',
@@ -399,13 +434,15 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     'staged',
     '--apply',
   ], env).runtime_environment;
-  assert.equal(apply.materialization_plan.status, 'materialized_receipt_written');
-  assert.equal(apply.materialization_plan.target_pointer, 'staged');
-  assert.equal(apply.materialization_plan.requested_apply, true);
-  assert.equal(apply.materialization_plan.applied, true);
-  assert.equal(apply.materialization_plan.can_apply, true);
-  assert.equal(apply.materialization_plan.writes_runtime_root, true);
-  assert.equal(apply.materialization_plan.apply_blocker_ref, null);
+  assertFields(apply.materialization_plan, {
+    status: 'materialized_receipt_written',
+    target_pointer: 'staged',
+    requested_apply: true,
+    applied: true,
+    can_apply: true,
+    writes_runtime_root: true,
+    apply_blocker_ref: null,
+  });
   assert.equal(fs.existsSync(apply.materialization_plan.runtime_root), true);
   assert.equal(
     fs.existsSync(path.join(apply.materialization_plan.runtime_root, 'materialization-receipt.json')),
@@ -424,13 +461,15 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     '--platform',
     'macos-arm64',
   ], env).runtime_environment;
-  assert.equal(inspectMaterialized.materialization_status.status, 'materialized_runtime_root_observed');
-  assert.equal(inspectMaterialized.materialization_status.reason, 'materialization_receipt_observed');
-  assert.equal(inspectMaterialized.materialization_status.runtime_root, apply.materialization_plan.runtime_root);
-  assert.equal(inspectMaterialized.materialization_status.receipt_ref, apply.materialization_plan.receipt_ref);
-  assert.equal(inspectMaterialized.materialization_status.can_claim_runtime_ready, true);
-  assert.equal(inspectMaterialized.materialization_status.can_claim_domain_ready, false);
-  assert.equal(inspectMaterialized.materialization_status.can_claim_app_release_ready, false);
+  assertFields(inspectMaterialized.materialization_status, {
+    status: 'materialized_runtime_root_observed',
+    reason: 'materialization_receipt_observed',
+    runtime_root: apply.materialization_plan.runtime_root,
+    receipt_ref: apply.materialization_plan.receipt_ref,
+    can_claim_runtime_ready: true,
+    can_claim_domain_ready: false,
+    can_claim_app_release_ready: false,
+  });
 
   const verified = runCli([
     'runtime',
@@ -440,30 +479,38 @@ test('runtime env build materialize verify and cache prune operate on OPL-manage
     apply.materialization_plan.runtime_root,
   ], env).runtime_environment;
   assert.equal(verified.command, 'verify');
-  assert.equal(verified.verification.status, 'verified');
-  assert.equal(verified.verification.can_claim_runtime_ready, true);
-  assert.equal(verified.verification.can_claim_domain_ready, false);
+  assertFields(verified.verification, {
+    status: 'verified',
+    can_claim_runtime_ready: true,
+    can_claim_domain_ready: false,
+  });
 
   const inventory = runCli(['runtime', 'env', 'cache', 'inventory'], env).runtime_environment;
   assert.equal(inventory.command, 'cache inventory');
-  assert.equal(inventory.cache_inventory.status, 'scanned');
-  assert.equal(inventory.cache_inventory.scanned_filesystem, true);
-  assert.equal(inventory.cache_inventory.cache_hit_counts_as_ready, false);
-  assert.equal(inventory.cache_inventory.materialized_runtime_root_count, 1);
+  assertFields(inventory.cache_inventory, {
+    status: 'scanned',
+    scanned_filesystem: true,
+    cache_hit_counts_as_ready: false,
+    materialized_runtime_root_count: 1,
+  });
 
   const pruneDryRun = runCli(['runtime', 'env', 'cache', 'prune', '--dry-run'], env).runtime_environment;
   assert.equal(pruneDryRun.command, 'cache prune');
-  assert.equal(pruneDryRun.cleanup_plan.status, 'dry_run_prune_plan_projected');
-  assert.equal(pruneDryRun.cleanup_plan.protects_current_pointer, true);
-  assert.equal(pruneDryRun.cleanup_plan.protects_rollback_pointer, true);
-  assert.equal(pruneDryRun.cleanup_plan.deletes_domain_artifacts, false);
-  assert.equal(pruneDryRun.cleanup_plan.applied, false);
+  assertFields(pruneDryRun.cleanup_plan, {
+    status: 'dry_run_prune_plan_projected',
+    protects_current_pointer: true,
+    protects_rollback_pointer: true,
+    deletes_domain_artifacts: false,
+    applied: false,
+  });
 
   const pruneApply = runCli(['runtime', 'env', 'cache', 'prune', '--apply'], env).runtime_environment;
-  assert.equal(pruneApply.cleanup_plan.status, 'applied_prune_receipt_written');
-  assert.equal(pruneApply.cleanup_plan.requested_apply, true);
-  assert.equal(pruneApply.cleanup_plan.can_apply, true);
-  assert.equal(pruneApply.cleanup_plan.apply_blocker_ref, null);
+  assertFields(pruneApply.cleanup_plan, {
+    status: 'applied_prune_receipt_written',
+    requested_apply: true,
+    can_apply: true,
+    apply_blocker_ref: null,
+  });
   assert.equal(pruneApply.cleanup_plan.deleted_runtime_roots.length, 1);
   assert.equal(fs.existsSync(apply.materialization_plan.runtime_root), false);
 });
@@ -535,6 +582,7 @@ test('runtime env prepare writes a dependency failure receipt without installing
   assert.equal(prepared.prepare.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
   assert.equal(prepared.prepare.receipt_ref, 'artifact-root/build/dependency_environment_receipt.json');
   assert.equal(prepared.prepare.run_context_ref, null);
+  assert.equal(prepared.prepare.route_hint, 'opl_runtime_env_doctor');
   assert.equal(prepared.prepare.binary_paths.Rscript, rscriptPath);
 
   const lock = parseJsonText(
@@ -876,96 +924,7 @@ test('runtime env prepare --apply verifies packages in the OPL-managed R library
   assert.equal(mismatchReadback.run_context.consumer_preflight.route_hint, 'opl_runtime_env_prepare');
 });
 
-test('runtime env prepare returns a dependency failure without installing missing R packages', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-missing-'));
-  const stateRoot = path.join(root, 'opl-state');
-  const paperRoot = path.join(root, 'paper');
-  const profilePath = path.join(root, 'renderer_dependency_profile.json');
-  const binDir = path.join(root, 'bin');
-  writeFakeRscript(binDir);
-  fs.mkdirSync(paperRoot, { recursive: true });
-  fs.writeFileSync(
-    profilePath,
-    JSON.stringify({
-      surface_kind: 'opl_dependency_requirement_profile',
-      profiles: [
-        {
-          profile_id: 'r_ggplot2_evidence_subprocess_v1',
-          execution_mode: 'subprocess',
-          renderer_family: 'r_ggplot2',
-          runtime_binaries: [{ name: 'Rscript', required: true }],
-          language_packages: {
-            r: [{ name: 'oplDefinitelyMissingPackageForRuntimeEnvTest', required: true }],
-          },
-        },
-      ],
-    }),
-  );
-
-  const result = runCli([
-    'runtime',
-    'env',
-    'prepare',
-    '--domain',
-    'mas',
-    '--profile',
-    'display',
-    '--platform',
-    'macos-arm64',
-    '--requirement-profile',
-    profilePath,
-    '--artifact-root',
-    paperRoot,
-  ], {
-    OPL_STATE_DIR: stateRoot,
-    PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
-  }).runtime_environment;
-
-  assert.equal(result.prepare.status, 'missing_language_package');
-  assert.equal(result.prepare.failure_class, 'missing_language_package');
-  assert.equal(result.prepare.installed_packages, false);
-  assert.equal(result.prepare.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
-  assert.equal(result.prepare.missing_r_packages[0], 'oplDefinitelyMissingPackageForRuntimeEnvTest');
-  assert.equal(result.prepare.route_hint, 'opl_runtime_env_doctor');
-
-  const lock = parseJsonText(
-    fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_lock.json'), 'utf8'),
-  ) as Record<string, any>;
-  const receipt = parseJsonText(
-    fs.readFileSync(path.join(paperRoot, 'build', 'dependency_environment_receipt.json'), 'utf8'),
-  ) as Record<string, any>;
-  assert.equal(lock.status, 'missing_language_package');
-  assert.equal(lock.required_r_packages[0], 'oplDefinitelyMissingPackageForRuntimeEnvTest');
-  assert.equal(receipt.status, 'missing_language_package');
-  assert.equal(receipt.failure_class, 'missing_language_package');
-  assert.equal(receipt.installed_packages, false);
-  assert.equal(receipt.lock_ref, 'artifact-root/build/dependency_environment_lock.json');
-  assert.equal(fs.existsSync(path.join(paperRoot, 'build', 'dependency_run_context.json')), false);
-});
-
 test('runtime env doctor and run-context preserve no-authority boundary', () => {
-  const doctor = runCli(['runtime', 'env', 'doctor']).runtime_environment;
-  assert.equal(doctor.command, 'doctor');
-  assert.equal(
-    doctor.doctor.status,
-    'runtime_lock_materializer_verify_cache_prune_run_context_guard_available',
-  );
-  assert.equal(doctor.doctor.findings[0].severity, 'info');
-  assert.equal(doctor.doctor.findings[0].can_block_domain_progress, false);
-  assert.equal(
-    doctor.doctor.findings.some((finding: { code: string }) => (
-      finding.code === 'runtime_environment_materializer_verify_prune_available'
-    )),
-    true,
-  );
-  assert.equal(
-    doctor.doctor.findings.some((finding: { code: string; host_environment_fallback_allowed?: boolean }) => (
-      finding.code === 'runtime_environment_run_context_consumer_preflight_available'
-        && finding.host_environment_fallback_allowed === false
-    )),
-    true,
-  );
-
   const runContext = runCli([
     'runtime',
     'env',
