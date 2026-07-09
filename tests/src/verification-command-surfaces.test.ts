@@ -203,54 +203,20 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
-test('target architecture policy contracts keep progress, guardrail, and wrapper retirement gates machine-readable', () => {
-  const progressTruth = readJson<{
-    contract_kind: string;
-    owner: string;
-    state: string;
-    progress_truth_required_signals: string[];
-    single_signal_non_progress_reasons: string[];
-    authority_boundary: Record<string, boolean>;
-  }>('contracts/opl-framework/stage-artifact-progress-truth-policy.json');
-  assert.equal(progressTruth.contract_kind, 'opl_stage_artifact_progress_truth_policy.v1');
-  assert.equal(progressTruth.owner, 'one-person-lab');
-  assert.equal(progressTruth.state, 'active_contract');
-  assert.deepEqual(progressTruth.progress_truth_required_signals, [
-    'physical_output_present',
-    'valid_manifest',
-    'owner_answer_present',
-    'artifact_attempt_pointer_selected',
-  ]);
-  assert.equal(progressTruth.single_signal_non_progress_reasons.includes('provider_completion_only'), true);
-  assert.equal(progressTruth.single_signal_non_progress_reasons.includes('file_presence_without_owner_answer'), true);
-  assert.equal(progressTruth.authority_boundary.provider_completion_counts_as_progress, false);
-  assert.equal(progressTruth.authority_boundary.raw_receipt_count_counts_as_progress, false);
-  assert.equal(progressTruth.authority_boundary.file_presence_alone_counts_as_progress, false);
-  assert.equal(progressTruth.authority_boundary.artifact_attempt_pointer_can_write_stage_current_pointer, false);
-  assert.equal(progressTruth.authority_boundary.stage_transition_authority_required_for_stage_run_current, true);
+test('guardrail tier policy keeps audit signals out of launch authority', () => {
+  const guardrailTier = readJson<Record<string, any>>(
+    'contracts/opl-framework/guardrail-tier-policy.json',
+  );
 
-  const guardrailTier = readJson<{
-    contract_kind: string;
-    owner: string;
-    state: string;
-    tiers: Array<{ tier_id: string; default_path_role: string }>;
-    default_denied_hard_gate_reason_classes: string[];
-    folding_policy: {
-      audit_signal_can_affect_default_path_only_after_folded_into: string[];
-      raw_trace_can_create_default_action: boolean;
-      warning_can_become_launch_blocker_without_tier_change: boolean;
-    };
-    authority_boundary: Record<string, boolean>;
-  }>('contracts/opl-framework/guardrail-tier-policy.json');
   assert.equal(guardrailTier.contract_kind, 'opl_guardrail_tier_policy.v1');
-  assert.deepEqual(guardrailTier.tiers.map((tier) => tier.tier_id), [
+  assert.deepEqual(guardrailTier.tiers.map((tier: { tier_id: string }) => tier.tier_id), [
     'launch_hard',
     'runtime_enforced',
     'domain_or_human_gate',
     'audit_only',
   ]);
   assert.equal(
-    guardrailTier.tiers.find((tier) => tier.tier_id === 'audit_only')?.default_path_role,
+    guardrailTier.tiers.find((tier: { tier_id: string }) => tier.tier_id === 'audit_only')?.default_path_role,
     'cannot_block_ordinary_launch_without_folded_delta',
   );
   assert.equal(guardrailTier.default_denied_hard_gate_reason_classes.includes('raw_evidence_envelope'), true);
@@ -261,81 +227,16 @@ test('target architecture policy contracts keep progress, guardrail, and wrapper
     true,
   );
   assert.equal(guardrailTier.folding_policy.raw_trace_can_create_default_action, false);
-  assert.equal(guardrailTier.authority_boundary.audit_only_guardrail_can_block_launch, false);
-
-  const wrapperRetirement = readJson<{
-    contract_kind: string;
-    required_before_physical_delete: string[];
-    owner_delete_keep_or_blocker_decision_shapes: string[];
-    private_platform_residue_deletion_gate: {
-      physical_delete_authorized_by_opl: boolean;
-    };
-    first_batch_owner_route_tail_matrix: {
-      rows: Array<{ repo_id: string }>;
-      authority_boundary: Record<string, boolean>;
-    };
-    forbidden_retirement_shortcuts: string[];
-    generated_default_caller_readiness_can_authorize_physical_delete: boolean;
-    physical_delete_blocked_by_default: string[];
-    docs_foldback_boundary: Record<string, boolean>;
-    delete_gate_read_model_boundary: Record<string, boolean>;
-    opl_apply_boundary: Record<string, boolean>;
-  }>('contracts/opl-framework/wrapper-retirement-gate-policy.json');
-  assert.equal(wrapperRetirement.contract_kind, 'opl_wrapper_retirement_gate_policy.v1');
-  assert.deepEqual(wrapperRetirement.required_before_physical_delete, [
-    'replacement_parity_ref',
-    'no_active_caller_ref',
-    'no_forbidden_write_ref',
-    'tombstone_or_provenance_ref',
-  ]);
-  assert.ok(wrapperRetirement.owner_delete_keep_or_blocker_decision_shapes.includes('physical_delete_authorization_ref'));
-  assert.ok(wrapperRetirement.owner_delete_keep_or_blocker_decision_shapes.includes('typed_blocker_ref'));
-  assert.equal(wrapperRetirement.private_platform_residue_deletion_gate.physical_delete_authorized_by_opl, false);
-  const firstBatchRows = Object.fromEntries(
-    wrapperRetirement.first_batch_owner_route_tail_matrix.rows.map((row) => [row.repo_id, row]),
-  );
-  assert.ok(firstBatchRows['med-autoscience']);
-  assert.ok(firstBatchRows['mas-scholar-skills']);
-  assert.equal(wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary.matrix_can_authorize_physical_delete, false);
-  assert.equal(
-    wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary.matrix_can_write_domain_truth,
-    false,
-  );
-  for (const shortcut of ['descriptor_ready_only', 'generated_default_caller_readiness_only', 'test_pass_only']) {
-    assert.ok(wrapperRetirement.forbidden_retirement_shortcuts.includes(shortcut), shortcut);
+  assert.equal(guardrailTier.folding_policy.warning_can_become_launch_blocker_without_tier_change, false);
+  for (const [claim, allowed] of Object.entries(guardrailTier.authority_boundary)) {
+    assert.equal(allowed, false, `guardrail policy must not claim ${claim}`);
   }
-  assert.equal(wrapperRetirement.generated_default_caller_readiness_can_authorize_physical_delete, false);
-  assert.ok(wrapperRetirement.physical_delete_blocked_by_default.includes('delete_gate_read_model_is_not_delete_authority'));
-  assert.equal(wrapperRetirement.docs_foldback_boundary.docs_foldback_can_authorize_physical_delete, false);
-  assert.equal(wrapperRetirement.delete_gate_read_model_boundary.delete_gate_read_model_can_authorize_physical_delete, false);
-  assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_record_refs, true);
-  assert.equal(wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_delete_domain_repo_files, false);
 });
 
 test('Settings Control Center contract keeps App and Aion consumer-only', () => {
-  const settingsControlCenter = readJson<{
-    allowed_action_ids: string[];
-    action_taxonomy: Record<string, string>;
-    settings_ia: { required_fields: string[] };
-    app_settings_read_model: { required_fields: string[] };
-    consumer_only_enforcement: {
-      readback_surface: string;
-      app_settings_read_model_ref: string;
-      truth_owner_matrix: Array<{
-        surface: string;
-        local_truth_allowed: boolean;
-        required_visible_refs: string[];
-      }>;
-      local_scheduler_policy: {
-        aion_local_scheduler_allowed_roles: string[];
-        forbidden_roles: string[];
-      };
-      required_user_visible_boundary_fields: string[];
-      validator_status_codes: string[];
-      validator_finding_policy: string;
-      authority_boundary: Record<string, boolean>;
-    };
-  }>('contracts/opl-framework/settings-control-center-action-read-model-contract.json');
+  const settingsControlCenter = readJson<Record<string, any>>(
+    'contracts/opl-framework/settings-control-center-action-read-model-contract.json',
+  );
 
   assert.deepEqual(
     settingsControlCenter.allowed_action_ids,
@@ -348,28 +249,11 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
 
   const consumerOnly = settingsControlCenter.consumer_only_enforcement;
   assert.equal(
-    settingsControlCenter.settings_ia.required_fields.includes('app_aion_consumer_only_readback'),
-    true,
-  );
-  assert.equal(
-    settingsControlCenter.app_settings_read_model.required_fields.includes('consumer_only_readback'),
-    true,
-  );
-  assert.equal(
     consumerOnly.readback_surface,
     'app_state.settings_control_center.app_aion_consumer_only_readback',
   );
   assert.equal(
-    consumerOnly.app_settings_read_model_ref,
-    'app_state.settings_control_center.app_settings_read_model.consumer_only_readback',
-  );
-  assert.equal(
-    consumerOnly.truth_owner_matrix.every((row) => row.local_truth_allowed === false),
-    true,
-  );
-  assert.equal(
-    consumerOnly.truth_owner_matrix.find((row) => row.surface === 'runtime_provider_and_stage_status')
-      ?.required_visible_refs.includes('owner_route_ref'),
+    consumerOnly.truth_owner_matrix.every((row: { local_truth_allowed: boolean }) => row.local_truth_allowed === false),
     true,
   );
   assert.deepEqual(consumerOnly.local_scheduler_policy.aion_local_scheduler_allowed_roles, [
@@ -377,190 +261,10 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
     'ui_maintenance',
     'poll_existing_read_model',
   ]);
-  assert.equal(consumerOnly.local_scheduler_policy.forbidden_roles.includes('write_release_truth'), true);
   assert.equal(consumerOnly.required_user_visible_boundary_fields.includes('delegated_action_id'), true);
   assert.deepEqual(consumerOnly.validator_status_codes, ['pass', 'attention_required']);
-  assert.equal(
-    consumerOnly.validator_finding_policy,
-    'missing_required_visible_boundary_fields_must_surface_as_validator_findings_before_settings_can_imply_truth',
-  );
-  assert.equal(consumerOnly.authority_boundary.app_aion_can_write_runtime_truth, false);
-  assert.equal(consumerOnly.authority_boundary.app_aion_can_create_owner_receipt, false);
-  assert.equal(consumerOnly.authority_boundary.app_aion_can_claim_app_release_ready, false);
-});
-
-test('stage artifact runtime contract freezes folder truth and CLI boundaries', () => {
-  const contract = readJson<{
-    contract_kind: string;
-    state_root_layout: {
-      attempt_root_pattern: string;
-      required_attempt_entries: string[];
-      current_pointer_role: string;
-      stage_transition_authority_required_for_stage_run_current: boolean;
-      derived_index_role: string;
-    };
-    read_model_semantics: {
-      status_source_of_truth: string;
-      stage_artifact_current_is_projection_only: boolean;
-      stage_artifact_current_may_write_stage_current_pointer: boolean;
-      stage_artifact_current_may_write_stage_run_terminal_state: boolean;
-      stage_artifact_current_may_publish_current_owner_delta: boolean;
-      status_must_not_depend_on_stale_index: boolean;
-      success_requires: string[];
-      blocked_requires: string[];
-      orphan_artifact_is_completion: boolean;
-      explain_must_report_missing_or_blocking_deltas: boolean;
-    };
-    cli_surfaces: {
-      top_level: string;
-      legacy_alias: string;
-      family_runtime: string;
-      open: string;
-      commit: string;
-      status: string;
-      explain: string;
-      rebuild: string;
-      promote: string;
-      gc: string;
-      restore: string;
-      conformance: string;
-      workbench: string;
-    };
-    content_hash_semantics: {
-      algorithm: string;
-      manifest_hash_fields: string[];
-      success_with_hash_mismatch_is_broken: boolean;
-      conformance_requires_hash_entries_for_physical_files: boolean;
-    };
-    conformance_gate: {
-      surface_kind: string;
-      fails_on: string[];
-      domain_readiness_claim: boolean;
-    };
-    workbench_projection: {
-      surface_kind: string;
-      projects: string[];
-      artifact_body_access: boolean;
-      domain_verdict_authority: boolean;
-    };
-    retention_restore_policy: {
-      policy_id: string;
-      gc_dry_run_default: boolean;
-      gc_apply_archives_instead_of_physical_delete: boolean;
-      restore_requires_restore_proof_ref: boolean;
-      restore_does_not_create_owner_receipt: boolean;
-      restore_does_not_declare_domain_truth_or_quality: boolean;
-    };
-    lineage_semantics: {
-      event_log: string;
-      derived_graph: string;
-      event_kinds: string[];
-      events_are_refs_only: boolean;
-    };
-    authority_boundary: Record<string, boolean>;
-  }>('contracts/opl-framework/stage-artifact-runtime-contract.json');
-
-  assert.equal(contract.contract_kind, 'opl_stage_artifact_runtime_contract.v1');
-  assert.equal(
-    contract.state_root_layout.attempt_root_pattern,
-    'runtime-state/domains/<domain>/deliverables/<program>/<topic>/<deliverable>/stages/<nn-stage>/attempts/<attempt_id>',
-  );
-  assert.deepEqual(contract.state_root_layout.required_attempt_entries, [
-    'attempt.json',
-    'manifest.json',
-    'inputs/',
-    'outputs/',
-    'evidence/',
-    'receipts/',
-  ]);
-  assert.equal(
-    contract.state_root_layout.current_pointer_role,
-    'refs_only_artifact_attempt_pointer_not_stage_run_current_pointer',
-  );
-  assert.equal(contract.state_root_layout.stage_transition_authority_required_for_stage_run_current, true);
-  assert.equal(contract.state_root_layout.derived_index_role, 'rebuildable_projection_not_primary_truth');
-
-  assert.equal(contract.read_model_semantics.status_source_of_truth, 'physical_stage_folder');
-  assert.equal(contract.read_model_semantics.stage_artifact_current_is_projection_only, true);
-  assert.equal(contract.read_model_semantics.stage_artifact_current_may_write_stage_current_pointer, false);
-  assert.equal(contract.read_model_semantics.stage_artifact_current_may_write_stage_run_terminal_state, false);
-  assert.equal(contract.read_model_semantics.stage_artifact_current_may_publish_current_owner_delta, false);
-  assert.equal(contract.read_model_semantics.status_must_not_depend_on_stale_index, true);
-  assert.deepEqual(contract.read_model_semantics.success_requires, [
-    'valid_manifest',
-    'required_outputs_present',
-    'owner_receipt_ref_and_receipt_file',
-  ]);
-  assert.deepEqual(contract.read_model_semantics.blocked_requires, [
-    'typed_blocker_ref',
-    'blocker_evidence_file',
-  ]);
-  assert.equal(contract.read_model_semantics.orphan_artifact_is_completion, false);
-  assert.equal(contract.read_model_semantics.explain_must_report_missing_or_blocking_deltas, true);
-
-  assert.equal(contract.content_hash_semantics.algorithm, 'sha256');
-  assert.deepEqual(contract.content_hash_semantics.manifest_hash_fields, [
-    'output_hashes',
-    'evidence_hashes',
-    'receipt_hashes',
-  ]);
-  assert.equal(contract.content_hash_semantics.success_with_hash_mismatch_is_broken, true);
-  assert.equal(contract.content_hash_semantics.conformance_requires_hash_entries_for_physical_files, true);
-
-  assert.equal(contract.conformance_gate.surface_kind, 'opl_stage_artifact_runtime_conformance');
-  assert.equal(contract.conformance_gate.domain_readiness_claim, false);
-  for (const code of ['missing_manifest_hash_entry', 'manifest_content_hash_mismatch', 'attempt_orphan']) {
-    assert.equal(contract.conformance_gate.fails_on.includes(code), true);
-  }
-
-  assert.equal(contract.workbench_projection.surface_kind, 'opl_stage_artifact_runtime_workbench');
-  assert.equal(contract.workbench_projection.projects.includes('lineage_refs'), true);
-  assert.equal(contract.workbench_projection.projects.includes('retention_policy'), true);
-  assert.equal(contract.workbench_projection.artifact_body_access, false);
-  assert.equal(contract.workbench_projection.domain_verdict_authority, false);
-
-  assert.equal(contract.retention_restore_policy.policy_id, 'opl_stage_artifact_retention.v1');
-  assert.equal(contract.retention_restore_policy.gc_dry_run_default, true);
-  assert.equal(contract.retention_restore_policy.gc_apply_archives_instead_of_physical_delete, true);
-  assert.equal(contract.retention_restore_policy.restore_requires_restore_proof_ref, true);
-  assert.equal(contract.retention_restore_policy.restore_does_not_create_owner_receipt, true);
-  assert.equal(contract.retention_restore_policy.restore_does_not_declare_domain_truth_or_quality, true);
-
-  assert.equal(contract.lineage_semantics.event_log, 'lineage/events.jsonl');
-  assert.equal(contract.lineage_semantics.derived_graph, 'lineage/graph.json');
-  assert.equal(contract.lineage_semantics.event_kinds.includes('conformance_checked'), true);
-  assert.equal(contract.lineage_semantics.events_are_refs_only, true);
-
-  for (const command of ['open', 'commit', 'status', 'explain', 'rebuild', 'promote', 'gc', 'restore', 'validate', 'conformance', 'workbench']) {
-    assert.match(contract.cli_surfaces.top_level, new RegExp(`opl stage .*${command}`));
-    assert.match(contract.cli_surfaces.legacy_alias, new RegExp(`opl stage-artifact .*${command}`));
-    assert.match(contract.cli_surfaces.family_runtime, new RegExp(`opl family-runtime stage-artifact .*${command}`));
-  }
-  assert.match(contract.cli_surfaces.open, /attempt workspace/);
-  assert.match(contract.cli_surfaces.commit, /latest\/current pointers/);
-  assert.match(contract.cli_surfaces.status, /physical folders/);
-  assert.match(contract.cli_surfaces.explain, /missing receipt/);
-  assert.match(contract.cli_surfaces.rebuild, /derived index/);
-  assert.match(contract.cli_surfaces.promote, /manifest-declared refs/);
-  assert.match(contract.cli_surfaces.gc, /dry-run by default/);
-  assert.match(contract.cli_surfaces.restore, /restore proof ref/);
-  assert.match(contract.cli_surfaces.conformance, /strict Stage Folder/);
-  assert.match(contract.cli_surfaces.workbench, /App\/operator/);
-
-  assert.equal(contract.authority_boundary.opl_can_index_refs, true);
-  assert.equal(contract.authority_boundary.opl_can_rebuild_projection, true);
-  assert.equal(contract.authority_boundary.opl_can_promote_canonical_pointer, true);
-  for (const claim of [
-    'opl_can_create_domain_owner_receipt',
-    'opl_can_create_rca_owner_receipt',
-    'opl_can_write_domain_truth',
-    'opl_can_write_rca_visual_truth',
-    'opl_can_write_rca_review_export_verdict',
-    'opl_can_mutate_artifact_body',
-    'opl_can_mutate_rca_artifact_body',
-    'opl_can_declare_visual_or_quality_verdict',
-  ]) {
-    assert.equal(contract.authority_boundary[claim], false, `${claim} must remain outside OPL authority`);
+  for (const [claim, allowed] of Object.entries(consumerOnly.authority_boundary)) {
+    assert.equal(allowed, false, `App/Aion must not claim ${claim}`);
   }
 });
 

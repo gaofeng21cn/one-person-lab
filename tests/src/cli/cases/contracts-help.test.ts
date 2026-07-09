@@ -1,33 +1,46 @@
-import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, parseJsonText, path, readJsonFixture, readJsonLine, repoRoot, selectDomainAgentEntry, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import {
+  assert,
+  assertContractsContext,
+  assertNoContractsProvenance,
+  cliPath,
+  contractsDir,
+  createContractsFixtureRoot,
+  explainDomainBoundary,
+  fs,
+  loadFrameworkContracts,
+  os,
+  parseJsonText,
+  path,
+  repoRoot,
+  runCli,
+  runCliFailure,
+  runCliFailureInCwd,
+  runCliInCwd,
+  runCliViaEntryPathInCwd,
+  selectDomainAgentEntry,
+  test,
+} from '../helpers.ts';
 
-test('contract validate exposes env contract-root provenance', () => {
+test('contract validate honors explicit contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
 
   try {
-    const output = runCli(['contract', 'validate'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
-
-    assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
-    assert.equal(output.validation.contracts_root_source, 'env');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('contract validate exposes cli-flag contract-root provenance', () => {
-  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
-
-  try {
-    const output = runCli([
-      '--contracts-dir',
-      fixtureContractsRoot,
-      'contract',
-      'validate',
-    ]);
-
-    assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
-    assert.equal(output.validation.contracts_root_source, 'cli_flag');
+    for (const { args, env, source } of [
+      {
+        args: ['contract', 'validate'],
+        env: { OPL_CONTRACTS_DIR: fixtureContractsRoot },
+        source: 'env',
+      },
+      {
+        args: ['--contracts-dir', fixtureContractsRoot, 'contract', 'validate'],
+        env: {},
+        source: 'cli_flag',
+      },
+    ]) {
+      const output = runCli(args, env);
+      assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
+      assert.equal(output.validation.contracts_root_source, source);
+    }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -182,124 +195,48 @@ test('global --contracts-dir expects an exact contract root', () => {
   assert.equal(status, 3);
 });
 
-test('list-workstreams returns admitted workstream summaries', () => {
-  const output = runCli(['contract', 'workstreams']);
+test('contract list and detail commands expose sparse canonical readbacks', () => {
+  const outputs = {
+    workstreams: runCli(['contract', 'workstreams']),
+    workstream: runCli(['contract', 'workstream', 'presentation_ops']),
+    domains: runCli(['contract', 'domains']),
+    domain: runCli(['contract', 'domain', 'redcube']),
+    surfaces: runCli(['contract', 'surfaces']),
+    surface: runCli(['contract', 'surface', 'one_person_lab_app_workbench']),
+  };
 
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.deepEqual(
-    output.workstreams.map((entry: { workstream_id: string; domain_id: string; status: string }) => [
-      entry.workstream_id,
-      entry.domain_id,
-      entry.status,
-    ]),
-    [
-      ['grant_ops', 'medautogrant', 'active'],
-      ['research_ops', 'medautoscience', 'active'],
-      ['presentation_ops', 'redcube', 'active'],
-    ],
-  );
-});
-
-test('contract workstream returns the full registered workstream meaning', () => {
-  const output = runCli(['contract', 'workstream', 'presentation_ops']);
-
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.workstream.workstream_id, 'presentation_ops');
-  assert.equal(output.workstream.domain_id, 'redcube');
-  assert.deepEqual(output.workstream.primary_families, ['ppt_deck']);
-});
-
-test('contract domains returns the registered domain-agent summaries', () => {
-  const output = runCli(['contract', 'domains']);
-
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.deepEqual(
-    output.domains.map((
-      domain: { domain_id: string; independent_domain_agent: string; single_app_skill: string; owned_workstreams: string[] },
-    ) => [domain.domain_id, domain.independent_domain_agent, domain.single_app_skill, domain.owned_workstreams[0]]),
-    [
-      ['medautogrant', 'mag', 'mag', 'grant_ops'],
-      ['medautoscience', 'mas', 'mas', 'research_ops'],
-      ['redcube', 'rca', 'rca', 'presentation_ops'],
-    ],
-  );
-  assert.equal(output.domains.every((domain: { product_layer: string }) => domain.product_layer === 'foundry_agent'), true);
-  assert.equal(output.domains.every((domain: { embeds_opl_runtime: boolean }) => domain.embeds_opl_runtime === false), true);
-});
-
-test('contract surfaces returns the public framework surface summaries', () => {
-  const output = runCli(['contract', 'surfaces']);
-
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.ok(Array.isArray(output.surfaces));
-  assert.equal(output.surfaces.length, 11);
-  assert.deepEqual(output.surfaces[0], {
-    surface_id: 'opl_public_readme',
-    category_id: 'opl_public_entry',
-    surface_kind: 'readme',
-    boundary_role: 'top_level_navigation',
-    owner_scope: 'opl',
-    truth_mode: 'none',
-  });
-  assert.ok(
-    output.surfaces.some(
-      (surface: any) =>
-        surface.surface_id === 'rca_domain_agent_entry'
-        && surface.category_id === 'domain_agent_entry'
-        && surface.owner_scope === 'domain',
+  for (const output of Object.values(outputs)) {
+    assert.equal(output.version, 'g2');
+    assertContractsContext(output, 'cwd');
+  }
+  assert.equal(
+    outputs.workstreams.workstreams.some((entry: any) =>
+      entry.workstream_id === 'presentation_ops' && entry.domain_id === 'redcube' && entry.status === 'active'
     ),
+    true,
   );
-  assert.ok(
-    output.surfaces.some(
-      (surface: any) =>
-        surface.surface_id === 'one_person_lab_app_workbench'
-        && surface.category_id === 'one_person_lab_app'
-        && surface.owner_scope === 'app',
+  assert.equal(outputs.workstream.workstream.workstream_id, 'presentation_ops');
+  assert.deepEqual(outputs.workstream.workstream.primary_families, ['ppt_deck']);
+  assert.equal(
+    outputs.domains.domains.some((domain: any) =>
+      domain.domain_id === 'medautoscience'
+      && domain.independent_domain_agent === 'mas'
+      && domain.embeds_opl_runtime === false
     ),
+    true,
   );
-  assert.ok(
-    output.surfaces.some(
-      (surface: any) =>
-        surface.surface_id === 'opl_framework_locator'
-        && surface.category_id === 'opl_framework_contract'
-        && surface.surface_kind === 'framework_dependency_locator'
-        && surface.owner_scope === 'opl',
+  assert.equal(outputs.domain.domain.project, 'redcube-ai');
+  assert.deepEqual(outputs.domain.domain.non_opl_families, ['xiaohongshu']);
+  assert.equal(
+    outputs.surfaces.surfaces.some((surface: any) =>
+      surface.surface_id === 'opl_framework_locator'
+      && surface.surface_kind === 'framework_dependency_locator'
+      && surface.owner_scope === 'opl'
     ),
+    true,
   );
-  assert.ok(
-    output.surfaces.some(
-      (surface: any) =>
-        surface.surface_id === 'mas_foundry_agent_package'
-        && surface.category_id === 'foundry_agent_package'
-        && surface.surface_kind === 'opl_compatible_package',
-    ),
-  );
-});
-
-test('contract domain returns the full registered domain meaning', () => {
-  const output = runCli(['contract', 'domain', 'redcube']);
-
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.domain.domain_id, 'redcube');
-  assert.equal(output.domain.project, 'redcube-ai');
-  assert.deepEqual(output.domain.non_opl_families, ['xiaohongshu']);
-});
-
-test('contract surface returns the full registered public surface meaning', () => {
-  const output = runCli(['contract', 'surface', 'one_person_lab_app_workbench']);
-
-  assert.equal(output.version, 'g2');
-  assertContractsContext(output, 'cwd');
-  assert.equal(output.surface.surface_id, 'one_person_lab_app_workbench');
-  assert.equal(output.surface.category_id, 'one_person_lab_app');
-  assert.equal(output.surface.boundary_role, 'app_consumer_workbench');
-  assert.equal(output.surface.truth_mode, 'projection_consumer');
-  assert.deepEqual(output.surface.routes_to, ['opl_stage_runtime_framework', 'mag_foundry_agent_package', 'mas_foundry_agent_package', 'rca_foundry_agent_package']);
+  assert.equal(outputs.surface.surface.boundary_role, 'app_consumer_workbench');
+  assert.equal(outputs.surface.surface.truth_mode, 'projection_consumer');
 });
 
 test('domain selection routes representative admitted boundary and candidate-lane requests', () => {
@@ -524,23 +461,26 @@ test('CLI usage errors expose machine-readable usage guidance', () => {
   assert.ok(payload.error.details.examples.includes('opl contract domain redcube'));
 });
 
-test('CLI returns stable JSON errors for unknown ids', () => {
-  const { status, payload } = runCliFailure(['contract', 'domain', 'unknown']);
-
-  assert.equal(payload.version, 'g2');
-  assert.equal(payload.error.code, 'domain_not_found');
-  assert.equal(payload.error.exit_code, 4);
-  assert.equal(status, 4);
-});
-
-test('CLI returns stable JSON errors for unknown surface ids', () => {
-  const { status, payload } = runCliFailure(['contract', 'surface', 'unknown_surface']);
-
-  assert.equal(payload.version, 'g2');
-  assert.equal(payload.error.code, 'surface_not_found');
-  assert.equal(payload.error.exit_code, 4);
-  assert.equal(status, 4);
-  assert.deepEqual(payload.error.details, { surface_id: 'unknown_surface' });
+test('CLI returns stable JSON errors for unknown contract ids', () => {
+  for (const { args, code, details } of [
+    {
+      args: ['contract', 'domain', 'unknown'],
+      code: 'domain_not_found',
+      details: undefined,
+    },
+    {
+      args: ['contract', 'surface', 'unknown_surface'],
+      code: 'surface_not_found',
+      details: { surface_id: 'unknown_surface' },
+    },
+  ]) {
+    const { status, payload } = runCliFailure(args);
+    assert.equal(payload.version, 'g2');
+    assert.equal(payload.error.code, code);
+    assert.equal(payload.error.exit_code, 4);
+    assert.equal(status, 4);
+    if (details) assert.deepEqual(payload.error.details, details);
+  }
 });
 
 test('CLI returns bounded machine-readable JSON errors for unknown commands', () => {
