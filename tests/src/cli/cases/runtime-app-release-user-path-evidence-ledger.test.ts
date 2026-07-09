@@ -11,12 +11,18 @@ import {
 const appOperatorSummaryCommand = ['runtime', 'app-operator-drilldown'];
 const appOperatorFullCommand = [...appOperatorSummaryCommand, '--detail', 'full'];
 
-test('runtime App release evidence CLI records refs-only user-path evidence without readiness claims', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-state-'));
+function withStateRoot(prefix: string, run: (stateRoot: string) => void): void {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   try {
-    const initial = runCli(appOperatorFullCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    run(stateRoot);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+}
+
+test('runtime App release evidence CLI records refs-only user-path evidence without readiness claims', () => withStateRoot('opl-app-release-evidence-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
+    const initial = runCli(appOperatorFullCommand, env).app_operator_drilldown;
     assert.equal(initial.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(initial.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 0);
     assert.equal(
@@ -190,9 +196,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       '--action',
       'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
       '--dry-run',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).runtime_operator_action_execution;
+    ], env).runtime_operator_action_execution;
     assert.equal(dryRun.execution.execution_kind, 'opl_cli_app_release_user_path_evidence_apply');
     assert.equal(dryRun.execution.execution_status, 'dry_run');
     assert.equal(
@@ -216,9 +220,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
         release_package_refs: ['release:package/app-v0.1.0.dmg'],
         typed_blocker_refs: ['typed-blocker:app-release/screenshot-missing'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], env);
     assert.equal(mixedPayloadExecution.payload.error.code, 'cli_usage_error');
     assert.equal(
       mixedPayloadExecution.payload.error.details.error_kind,
@@ -243,9 +245,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
         release_owner_receipt_refs: ['release-owner:app/release-verdict'],
         typed_blocker_refs: ['typed-blocker:app-release/screenshot-missing'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], env);
     assert.equal(directMixedPayloadExecution.payload.error.code, 'cli_usage_error');
     assert.equal(
       directMixedPayloadExecution.payload.error.details.error_kind,
@@ -270,9 +270,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
         owner_acceptance_refs: ['owner-acceptance:app-release/26.5.19/operator-accepted'],
         release_owner_receipt_refs: ['release-owner:app/release-verdict'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], env);
     assert.equal(ownerAcceptanceMixedPayloadExecution.payload.error.code, 'cli_usage_error');
     assert.equal(
       ownerAcceptanceMixedPayloadExecution.payload.error.details.error_kind,
@@ -300,9 +298,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
       '--payload',
       JSON.stringify(payload),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).runtime_operator_action_execution;
+    ], env).runtime_operator_action_execution;
 
     assert.equal(recordExecution.execution.execution_kind, 'opl_cli_app_release_user_path_evidence_apply');
     assert.equal(recordExecution.execution.execution_status, 'executed');
@@ -325,16 +321,12 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_close_app_release_user_path, false);
 
-    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger;
+    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], env).app_release_user_path_evidence_ledger;
     assert.equal(listOutput.receipt_count, 1);
     assert.equal(listOutput.authority_boundary.refs_only, true);
     assert.equal(listOutput.authority_boundary.can_claim_production_ready, false);
 
-    const summary = runCli(appOperatorFullCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const summary = runCli(appOperatorFullCommand, env).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
@@ -415,9 +407,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       'execute',
       '--action',
       'app_release_user_path_evidence:one_person_lab_app_release_user_path:verify',
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).runtime_operator_action_execution;
+    ], env).runtime_operator_action_execution;
     assert.equal(verifyExecution.execution.execution_kind, 'opl_cli_app_release_user_path_evidence_apply');
     assert.equal(
       verifyExecution.execution.result.app_release_user_path_evidence_ledger_verify.status,
@@ -429,9 +419,7 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       false,
     );
 
-    const verifiedSummary = runCli(appOperatorFullCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const verifiedSummary = runCli(appOperatorFullCommand, env).app_operator_drilldown;
     assert.equal(verifiedSummary.summary.app_release_user_path_evidence_action_route_count, 0);
     assert.equal(
       verifiedSummary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count,
@@ -478,14 +466,10 @@ test('runtime App release evidence CLI records refs-only user-path evidence with
       false,
     );
     assert.equal(verifiedSummary.summary.app_release_user_path_production_ready_claimed, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
 
-test('runtime App release evidence CLI records release-owner acceptance refs without release-ready claims', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-owner-acceptance-state-'));
-  try {
+test('runtime App release evidence CLI records release-owner acceptance refs without release-ready claims', () => withStateRoot('opl-app-release-owner-acceptance-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
     const ownerAcceptanceRef = 'owner-acceptance:app-release/26.5.19/operator-accepted';
     const recordOutput = runCli([
       'runtime',
@@ -495,9 +479,7 @@ test('runtime App release evidence CLI records release-owner acceptance refs wit
       JSON.stringify({
         owner_acceptance_refs: [ownerAcceptanceRef],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
 
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.receipts[0].receipt_path, 'release_owner_acceptance_path');
@@ -513,22 +495,16 @@ test('runtime App release evidence CLI records release-owner acceptance refs wit
       'verify',
       '--receipt-ref',
       recordOutput.receipt_refs[0],
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], env);
 
-    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger;
+    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], env).app_release_user_path_evidence_ledger;
     assert.equal(listOutput.receipt_count, 1);
     assert.equal(listOutput.receipts[0].receipt_status, 'verified');
     assert.equal(listOutput.receipts[0].receipt_path, 'release_owner_acceptance_path');
     assert.deepEqual(listOutput.receipts[0].owner_acceptance_refs, [ownerAcceptanceRef]);
     assert.equal(listOutput.authority_boundary.can_claim_release_ready, false);
 
-    const summary = runCli(appOperatorFullCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const summary = runCli(appOperatorFullCommand, env).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_owner_acceptance_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_release_ready_claimed, false);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
@@ -553,14 +529,10 @@ test('runtime App release evidence CLI records release-owner acceptance refs wit
     assert.equal(evidence.release_owner_verdict_handoff.release_ready_authorized, false);
     assert.equal(evidence.release_owner_verdict_handoff.production_ready_authorized, false);
     assert.equal(evidence.authority_boundary.can_claim_production_ready, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
 
-test('runtime App release evidence CLI keeps typed blockers as open operator attention', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-blocker-state-'));
-  try {
+test('runtime App release evidence CLI keeps typed blockers as open operator attention', () => withStateRoot('opl-app-release-evidence-blocker-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
     const recordOutput = runCli([
       'runtime',
       'app-release-evidence',
@@ -569,14 +541,10 @@ test('runtime App release evidence CLI keeps typed blockers as open operator att
       JSON.stringify({
         typed_blocker_refs: ['typed-blocker:app-release/reload-prompt-not-run'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
     assert.equal(recordOutput.status, 'recorded');
 
-    const summary = runCli(appOperatorSummaryCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const summary = runCli(appOperatorSummaryCommand, env).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_ledger_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
@@ -590,14 +558,10 @@ test('runtime App release evidence CLI keeps typed blockers as open operator att
     assert.equal(evidence.refs_observed_for_all_gates, false);
     assert.equal(evidence.production_user_path_ready, false);
     assert.equal(evidence.authority_boundary.can_close_app_release_user_path, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
 
-test('runtime App release evidence CLI records release-owner verdict refs without release-ready claims', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-owner-verdict-state-'));
-  try {
+test('runtime App release evidence CLI records release-owner verdict refs without release-ready claims', () => withStateRoot('opl-app-release-owner-verdict-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
     const recordOutput = runCli([
       'runtime',
       'app-release-evidence',
@@ -606,9 +570,7 @@ test('runtime App release evidence CLI records release-owner verdict refs withou
       JSON.stringify({
         release_owner_receipt_refs: ['release_owner_receipt_ref://one-person-lab-app/26.5.19/verdict'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
 
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
@@ -624,20 +586,14 @@ test('runtime App release evidence CLI records release-owner verdict refs withou
       'verify',
       '--receipt-ref',
       recordOutput.receipt_refs[0],
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], env);
 
-    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger;
+    const listOutput = runCli(['runtime', 'app-release-evidence', 'list'], env).app_release_user_path_evidence_ledger;
     assert.equal(listOutput.receipts[0].receipt_status, 'verified');
     assert.equal(listOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
     assert.equal(listOutput.authority_boundary.can_claim_release_ready, false);
 
-    const summary = runCli(appOperatorSummaryCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const summary = runCli(appOperatorSummaryCommand, env).app_operator_drilldown;
     const evidence = summary.attention_first_payload.evidence_after_contract
       .app_release_user_path_evidence;
     assert.equal(evidence.open_gate_count, 5);
@@ -657,14 +613,10 @@ test('runtime App release evidence CLI records release-owner verdict refs withou
       evidence.release_owner_verdict_handoff.authority_boundary.can_claim_release_ready,
       false,
     );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
 
-test('runtime App release evidence CLI records install evidence as release-owner verdict path', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-install-evidence-state-'));
-  try {
+test('runtime App release evidence CLI records install evidence as release-owner verdict path', () => withStateRoot('opl-app-release-install-evidence-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
     const recordOutput = runCli([
       'runtime',
       'app-release-evidence',
@@ -673,9 +625,7 @@ test('runtime App release evidence CLI records install evidence as release-owner
       JSON.stringify({
         install_evidence_refs: ['install-evidence-ref://one-person-lab-app/26.5.19/clean-install'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
 
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.receipts[0].receipt_path, 'release_owner_verdict_path');
@@ -692,23 +642,17 @@ test('runtime App release evidence CLI records install evidence as release-owner
         release_owner_receipt_refs: ['release-owner:app/verdict'],
         install_evidence_refs: ['install-evidence-ref://one-person-lab-app/26.5.19/clean-install'],
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
     assert.equal(mixedOwnerVerdictRecord.status, 'recorded');
     assert.equal(mixedOwnerVerdictRecord.receipts[0].receipt_path, 'release_owner_verdict_path');
     assert.equal(
       mixedOwnerVerdictRecord.receipts[0].authority_boundary.can_claim_release_ready,
       false,
     );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
 
-test('runtime App release evidence CLI accepts singular ref fields for operator payloads', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-singular-state-'));
-  try {
+test('runtime App release evidence CLI accepts singular ref fields for operator payloads', () => withStateRoot('opl-app-release-evidence-singular-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
     const recordOutput = runCli([
       'runtime',
       'app-release-evidence',
@@ -721,9 +665,7 @@ test('runtime App release evidence CLI accepts singular ref fields for operator 
         provider_state_linkage_ref: 'provider-state:temporal/cadence-linked',
         long_operator_evidence_ref: 'long-operator:app/soak-4h',
       }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
     assert.equal(recordOutput.status, 'recorded');
     assert.deepEqual(recordOutput.receipts[0].release_package_refs, [
       'release:package/app-v0.1.0.dmg',
@@ -732,20 +674,14 @@ test('runtime App release evidence CLI accepts singular ref fields for operator 
       'screenshot:app/first-run.png',
     ]);
 
-    const summary = runCli(appOperatorSummaryCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const summary = runCli(appOperatorSummaryCommand, env).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_open_gate_count, 5);
     assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
 
-test('runtime App release evidence CLI records refs-only payload files', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-release-evidence-file-state-'));
-  try {
+test('runtime App release evidence CLI records refs-only payload files', () => withStateRoot('opl-app-release-evidence-file-state-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
     const payloadFile = path.join(stateRoot, 'app-release-evidence-payload.json');
     fs.writeFileSync(
       payloadFile,
@@ -764,9 +700,7 @@ test('runtime App release evidence CLI records refs-only payload files', () => {
       'record',
       '--payload-file',
       payloadFile,
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).app_release_user_path_evidence_ledger_record;
+    ], env).app_release_user_path_evidence_ledger_record;
 
     assert.equal(recordOutput.status, 'recorded');
     assert.equal(recordOutput.recorded_receipt_count, 1);
@@ -775,12 +709,7 @@ test('runtime App release evidence CLI records refs-only payload files', () => {
     assert.equal(recordOutput.receipts[0].authority_boundary.can_claim_production_ready, false);
     assert.equal(recordOutput.receipts[0].authority_boundary.can_close_app_release_user_path, false);
 
-    const summary = runCli(appOperatorSummaryCommand, {
-      OPL_STATE_DIR: stateRoot,
-    }).app_operator_drilldown;
+    const summary = runCli(appOperatorSummaryCommand, env).app_operator_drilldown;
     assert.equal(summary.summary.app_release_user_path_evidence_pending_verify_receipt_ref_count, 1);
     assert.equal(summary.summary.app_release_user_path_production_ready_claimed, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
+}));
