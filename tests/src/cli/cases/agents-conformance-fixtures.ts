@@ -23,6 +23,109 @@ const FORBIDDEN_GENERIC_OWNER_ROLES = [
   'generated_surface_owner_in_domain_repo',
 ];
 
+const OPL_DOMAIN_READONLY_AUTHORITY = {
+  opl_can_write_domain_truth: false,
+  opl_can_write_memory_body: false,
+  opl_can_authorize_quality_or_export: false,
+};
+
+const OPL_ARTIFACT_READONLY_AUTHORITY = {
+  ...OPL_DOMAIN_READONLY_AUTHORITY,
+  opl_can_mutate_domain_artifact_body: false,
+};
+
+const DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY = {
+  domain_can_claim_generic_runtime_owner: false,
+  domain_repo_can_own_generated_surface: false,
+};
+
+const GENERATED_SURFACE_HANDOFFS = [
+  {
+    surface_id: 'cli',
+    current_paths: ['agent/cli.ts'],
+    current_role: 'domain_handler_target',
+    target_role: 'opl_generated_command_surface',
+  },
+  {
+    surface_id: 'mcp',
+    current_paths: ['agent/mcp.ts'],
+    current_role: 'domain_handler_target',
+    target_role: 'opl_generated_mcp_descriptor_surface',
+  },
+  {
+    surface_id: 'skill',
+    current_paths: ['agent/skills/domain_execution.md'],
+    current_role: 'domain_handler_target',
+    target_role: 'opl_generated_skill_descriptor_surface',
+  },
+  {
+    surface_id: 'product_entry_manifest',
+    current_paths: ['agent/product-entry.ts'],
+    current_role: 'domain_handler_target',
+    target_role: 'opl_generated_product_entry_surface',
+  },
+  {
+    surface_id: 'status_read_model',
+    current_paths: ['agent/status.ts'],
+    current_role: 'domain_projection_refs',
+    target_role: 'opl_generated_status_read_model_surface',
+  },
+  {
+    surface_id: 'domain_handler',
+    current_paths: ['runtime/domain-handler.ts'],
+    current_role: 'domain_handler_target',
+    target_role: 'domain_handler_target',
+  },
+  {
+    surface_id: 'workbench_drilldown',
+    current_paths: ['runtime/workbench.ts'],
+    current_role: 'projection_refs',
+    target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
+  },
+  {
+    surface_id: 'functional_harness_cases',
+    current_paths: ['runtime/harness.ts'],
+    current_role: 'oracle_fixture_refs',
+    target_role: 'opl_generated_functional_harness_cases',
+  },
+] as const;
+
+const SAMPLE_SOURCE_CLASSIFICATIONS = [
+  {
+    surface_id: 'agent_semantic_pack',
+    classification: 'declarative_domain_pack',
+    source_refs: ['agent/'],
+  },
+  {
+    surface_id: 'domain_handler_targets',
+    classification: 'domain_handler_target',
+    source_refs: ['agent/cli.ts', 'agent/mcp.ts', 'agent/product-entry.ts'],
+  },
+  {
+    surface_id: 'refs_only_adapters',
+    classification: 'refs_only_adapter',
+    source_refs: ['agent/status.ts', 'runtime/domain-handler.ts', 'runtime/workbench.ts'],
+  },
+  {
+    surface_id: 'minimal_authority_functions',
+    classification: 'minimal_authority_function',
+    source_refs: ['runtime/authority_functions/owner-receipt.json'],
+  },
+  {
+    surface_id: 'legacy_runtime_residue',
+    classification: 'legacy_proof_tombstone',
+    source_refs: ['docs/history/runtime-tombstone.md'],
+  },
+] as const;
+
+function contractPath(repoDir: string, fileName: string) {
+  return path.join(repoDir, 'contracts', fileName);
+}
+
+function readJson(filePath: string) {
+  return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
+}
+
 export function writeJson(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
@@ -40,7 +143,7 @@ export function buildReadyAgentRepo() {
     'Sample Brief Agent',
   ]);
 
-  writeJson(path.join(targetDir, 'contracts', 'action_catalog.json'), {
+  writeJson(contractPath(targetDir, 'action_catalog.json'), {
     surface_kind: 'family_action_catalog',
     version: 'family-action-catalog.v1',
     catalog_id: 'sample_brief_agent_action_catalog',
@@ -98,72 +201,18 @@ export function buildReadyAgentRepo() {
     notes: [],
   });
 
-  writeJson(path.join(targetDir, 'contracts', 'generated_surface_handoff.json'), {
+  writeJson(contractPath(targetDir, 'generated_surface_handoff.json'), {
     surface_kind: 'opl_generated_surface_handoff',
     schema_version: 1,
     domain_id: 'sample-brief-agent',
     generated_surface_owner: 'one-person-lab',
     domain_repo_can_own_generated_surface: false,
-    generated_surfaces: [
-      { surface_id: 'cli', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'domain_handler', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'status_read_model', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'workbench_drilldown', owner: 'one-person-lab', status: 'descriptor_source_available' },
-      { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
-    ],
-    handoff_surfaces: [
-      {
-        surface_id: 'cli',
-        current_paths: ['agent/cli.ts'],
-        current_role: 'domain_handler_target',
-        target_role: 'opl_generated_command_surface',
-      },
-      {
-        surface_id: 'mcp',
-        current_paths: ['agent/mcp.ts'],
-        current_role: 'domain_handler_target',
-        target_role: 'opl_generated_mcp_descriptor_surface',
-      },
-      {
-        surface_id: 'skill',
-        current_paths: ['agent/skills/domain_execution.md'],
-        current_role: 'domain_handler_target',
-        target_role: 'opl_generated_skill_descriptor_surface',
-      },
-      {
-        surface_id: 'product_entry_manifest',
-        current_paths: ['agent/product-entry.ts'],
-        current_role: 'domain_handler_target',
-        target_role: 'opl_generated_product_entry_surface',
-      },
-      {
-        surface_id: 'status_read_model',
-        current_paths: ['agent/status.ts'],
-        current_role: 'domain_projection_refs',
-        target_role: 'opl_generated_status_read_model_surface',
-      },
-      {
-        surface_id: 'domain_handler',
-        current_paths: ['runtime/domain-handler.ts'],
-        current_role: 'domain_handler_target',
-        target_role: 'domain_handler_target',
-      },
-      {
-        surface_id: 'workbench_drilldown',
-        current_paths: ['runtime/workbench.ts'],
-        current_role: 'projection_refs',
-        target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
-      },
-      {
-        surface_id: 'functional_harness_cases',
-        current_paths: ['runtime/harness.ts'],
-        current_role: 'oracle_fixture_refs',
-        target_role: 'opl_generated_functional_harness_cases',
-      },
-    ],
+    generated_surfaces: GENERATED_SURFACE_HANDOFFS.map(({ surface_id }) => ({
+      surface_id,
+      owner: 'one-person-lab',
+      status: 'descriptor_source_available',
+    })),
+    handoff_surfaces: GENERATED_SURFACE_HANDOFFS,
     required_domain_handoff: [
       'owner_receipt_schema',
       'typed_blocker_schema',
@@ -172,15 +221,12 @@ export function buildReadyAgentRepo() {
     ],
   });
 
-  writeJson(path.join(targetDir, 'contracts', 'functional_privatization_audit.json'), {
+  writeJson(contractPath(targetDir, 'functional_privatization_audit.json'), {
     surface_kind: 'functional_privatization_audit',
     target_domain_id: 'sample-brief-agent',
     authority_boundary: {
-      opl_can_write_domain_truth: false,
-      opl_can_write_memory_body: false,
-      opl_can_authorize_quality_or_export: false,
-      domain_can_claim_generic_runtime_owner: false,
-      domain_repo_can_own_generated_surface: false,
+      ...OPL_DOMAIN_READONLY_AUTHORITY,
+      ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,
     },
     modules: [
       {
@@ -232,18 +278,12 @@ export function buildReadyAgentRepo() {
     ],
   });
 
-  const privateSurfacePolicyPath = path.join(targetDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
+  const privateSurfacePolicyPath = contractPath(targetDir, 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = readJson(privateSurfacePolicyPath);
   privateSurfacePolicy.physical_source_morphology_policy = {
     policy_id: 'sample_brief_agent.physical_source_morphology.v1',
     state: 'classified_no_generic_runtime_reflow',
-    required_surface_ids: [
-      'agent_semantic_pack',
-      'domain_handler_targets',
-      'refs_only_adapters',
-      'minimal_authority_functions',
-      'legacy_runtime_residue',
-    ],
+    required_surface_ids: SAMPLE_SOURCE_CLASSIFICATIONS.map(({ surface_id }) => surface_id),
     classification_buckets: [
       'declarative_domain_pack',
       'domain_handler_target',
@@ -252,40 +292,13 @@ export function buildReadyAgentRepo() {
       'legacy_proof_tombstone',
     ],
     authority_boundary: {
-      domain_can_claim_generic_runtime_owner: false,
-      domain_repo_can_own_generated_surface: false,
+      ...DOMAIN_GENERATED_SURFACE_READONLY_AUTHORITY,
     },
-    surface_classifications: [
-      {
-        surface_id: 'agent_semantic_pack',
-        classification: 'declarative_domain_pack',
-        source_refs: ['agent/'],
-      },
-      {
-        surface_id: 'domain_handler_targets',
-        classification: 'domain_handler_target',
-        source_refs: ['agent/cli.ts', 'agent/mcp.ts', 'agent/product-entry.ts'],
-      },
-      {
-        surface_id: 'refs_only_adapters',
-        classification: 'refs_only_adapter',
-        source_refs: ['agent/status.ts', 'runtime/domain-handler.ts', 'runtime/workbench.ts'],
-      },
-      {
-        surface_id: 'minimal_authority_functions',
-        classification: 'minimal_authority_function',
-        source_refs: ['runtime/authority_functions/owner-receipt.json'],
-      },
-      {
-        surface_id: 'legacy_runtime_residue',
-        classification: 'legacy_proof_tombstone',
-        source_refs: ['docs/history/runtime-tombstone.md'],
-      },
-    ],
+    surface_classifications: SAMPLE_SOURCE_CLASSIFICATIONS,
   };
   writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
 
-  writeJson(path.join(targetDir, 'contracts', 'workspace_lifecycle_policy.json'), {
+  writeJson(contractPath(targetDir, 'workspace_lifecycle_policy.json'), {
     surface_kind: 'opl_domain_workspace_file_lifecycle_policy',
     version: 'opl-domain-workspace-file-lifecycle.v1',
     policy_owner: 'one-person-lab',
@@ -357,14 +370,11 @@ export function buildReadyAgentRepo() {
     },
     authority_boundary: {
       policy_can_claim_domain_ready_or_artifact_authority: false,
-      opl_can_write_domain_truth: false,
-      opl_can_write_memory_body: false,
-      opl_can_mutate_domain_artifact_body: false,
-      opl_can_authorize_quality_or_export: false,
+      ...OPL_ARTIFACT_READONLY_AUTHORITY,
     },
   });
 
-  writeJson(path.join(targetDir, 'contracts', 'stage_artifact_kernel_adoption.json'), {
+  writeJson(contractPath(targetDir, 'stage_artifact_kernel_adoption.json'), {
     surface_kind: 'opl_stage_artifact_kernel_adoption',
     version: 'opl-stage-artifact-kernel-adoption.v1',
     owner: 'SampleBriefAgent',
@@ -417,14 +427,11 @@ export function buildReadyAgentRepo() {
     },
     authority_boundary: {
       opl_can_create_domain_owner_receipt: false,
-      opl_can_write_domain_truth: false,
-      opl_can_write_memory_body: false,
-      opl_can_mutate_domain_artifact_body: false,
-      opl_can_authorize_quality_or_export: false,
+      ...OPL_ARTIFACT_READONLY_AUTHORITY,
     },
   });
 
-  writeJson(path.join(targetDir, 'contracts', 'state_index_kernel_adoption.json'), {
+  writeJson(contractPath(targetDir, 'state_index_kernel_adoption.json'), {
     surface_kind: 'opl_state_index_kernel_adoption',
     version: 'opl-state-index-kernel-adoption.v1',
     owner: 'SampleBriefAgent',
@@ -475,12 +482,10 @@ export function buildReadyAgentRepo() {
     authority_boundary: {
       sqlite_sidecar_source_of_truth: false,
       sqlite_record_counts_as_stage_complete: false,
-      opl_can_write_domain_truth: false,
-      opl_can_write_memory_body: false,
+      ...OPL_DOMAIN_READONLY_AUTHORITY,
       opl_can_write_artifact_body: false,
-      opl_can_store_large_artifact_blob_in_sqlite: false,
       opl_can_create_domain_owner_receipt: false,
-      opl_can_authorize_quality_or_export: false,
+      opl_can_store_large_artifact_blob_in_sqlite: false,
       domain_repo_can_own_generic_sqlite_persistence_engine: false,
     },
   });
@@ -489,34 +494,34 @@ export function buildReadyAgentRepo() {
 }
 
 export function retargetReadyRepoToMag(repoDir: string) {
-  const domainDescriptorPath = path.join(repoDir, 'contracts', 'domain_descriptor.json');
-  const domainDescriptor = parseJsonText(fs.readFileSync(domainDescriptorPath, 'utf8')) as any;
+  const domainDescriptorPath = contractPath(repoDir, 'domain_descriptor.json');
+  const domainDescriptor = readJson(domainDescriptorPath);
   domainDescriptor.domain_id = 'med-autogrant';
   domainDescriptor.domain_label = 'Med Auto Grant';
   writeJson(domainDescriptorPath, domainDescriptor);
 
-  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
+  const actionCatalogPath = contractPath(repoDir, 'action_catalog.json');
+  const actionCatalog = readJson(actionCatalogPath);
   actionCatalog.target_domain_id = 'med-autogrant';
   writeJson(actionCatalogPath, actionCatalog);
 }
 
 export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel: string) {
-  const domainDescriptorPath = path.join(repoDir, 'contracts', 'domain_descriptor.json');
-  const domainDescriptor = parseJsonText(fs.readFileSync(domainDescriptorPath, 'utf8')) as any;
+  const domainDescriptorPath = contractPath(repoDir, 'domain_descriptor.json');
+  const domainDescriptor = readJson(domainDescriptorPath);
   domainDescriptor.domain_id = domainId;
   domainDescriptor.domain_label = domainLabel;
   writeJson(domainDescriptorPath, domainDescriptor);
 
-  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
-  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
+  const actionCatalogPath = contractPath(repoDir, 'action_catalog.json');
+  const actionCatalog = readJson(actionCatalogPath);
   actionCatalog.target_domain_id = domainId;
   writeJson(actionCatalogPath, actionCatalog);
 }
 
 function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
-  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
+  const stageControlPlanePath = contractPath(repoDir, 'stage_control_plane.json');
+  const stageControlPlane = readJson(stageControlPlanePath);
   stageControlPlane.target_domain_id = domainId;
   stageControlPlane.owner = owner;
   stageControlPlane.domain_id = domainId;
@@ -585,8 +590,8 @@ function stageFromBase(baseStage: Record<string, any>, input: {
 }
 
 export function configureReadyMagMorphology(repoDir: string) {
-  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
+  const privateSurfacePolicyPath = contractPath(repoDir, 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = readJson(privateSurfacePolicyPath);
   privateSurfacePolicy.physical_source_morphology_policy.required_surface_ids = [
     'domain_runtime',
     'product_entry',
@@ -627,89 +632,80 @@ export function configureReadyRcaMorphology(repoDir: string) {
   const { stageControlPlanePath, stageControlPlane } = setStagePlaneTarget(repoDir, 'redcube-ai', 'redcube-ai');
   const baseStage = stageControlPlane.stages[0];
   stageControlPlane.stages = [
-    stageFromBase(baseStage, {
+    {
       stageId: 'source_intake',
       stageKind: 'intake',
       title: 'Source Intake',
       summary: 'Ingest visual brief, source refs, and artifact authority boundaries.',
       goal: 'Produce RCA source-intake refs for the visual golden path without authorizing artifact success.',
-      owner: 'redcube-ai',
       defaultExecutor: true,
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'communication_strategy',
       stageKind: 'planning',
       title: 'Communication Strategy',
       summary: 'Turn the brief into a communication strategy for the visual artifact.',
       goal: 'Produce strategy refs and route the next visual stage to RCA owner review.',
-      owner: 'redcube-ai',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'visual_direction',
       stageKind: 'planning',
       title: 'Visual Direction',
       summary: 'Select the visual direction and acceptance criteria.',
       goal: 'Produce visual direction refs and independent gate inputs.',
-      owner: 'redcube-ai',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'artifact_creation',
       stageKind: 'creation',
       title: 'Artifact Creation',
       summary: 'Create the visual artifact stage unit.',
       goal: 'Produce artifact refs, manifest refs, and owner closeout refs.',
-      owner: 'redcube-ai',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'review_and_revision',
       stageKind: 'review',
       title: 'Review And Revision',
       summary: 'Run RCA-owned visual review and revision.',
       goal: 'Produce review/export verdict refs or typed blocker refs.',
-      owner: 'redcube-ai',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'package_and_handoff',
       stageKind: 'packaging',
       title: 'Package And Handoff',
       summary: 'Package the final visual artifact for handoff.',
       goal: 'Produce package refs, export refs, and owner receipt refs.',
-      owner: 'redcube-ai',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'render_preview_lane',
       stageKind: 'domain_specific',
       laneKind: 'variant',
       title: 'Render Preview Lane',
       summary: 'Explicit non-default render preview helper lane.',
       goal: 'Produce render preview refs as affordance evidence only.',
-      owner: 'redcube-ai',
       executorKind: 'rca_helper_affordance',
       executorBindingRef: 'rca_render_preview_affordance',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'screenshot_review_lane',
       stageKind: 'domain_specific',
       laneKind: 'variant',
       title: 'Screenshot Review Lane',
       summary: 'Explicit non-default screenshot inspection helper lane.',
       goal: 'Produce screenshot refs for review without becoming the default route.',
-      owner: 'redcube-ai',
       executorKind: 'rca_helper_affordance',
       executorBindingRef: 'rca_screenshot_review_affordance',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'native_pptx_export_lane',
       stageKind: 'domain_specific',
       laneKind: 'variant',
       title: 'Native PPTX Export Lane',
       summary: 'Explicit non-default native PPTX export helper lane.',
       goal: 'Produce native PPTX/export refs as route variant evidence only.',
-      owner: 'redcube-ai',
       executorKind: 'rca_helper_affordance',
       executorBindingRef: 'rca_native_pptx_export_affordance',
-    }),
-  ];
+    },
+  ].map((stage) => stageFromBase(baseStage, { owner: 'redcube-ai', ...stage }));
   writeJson(stageControlPlanePath, stageControlPlane);
 
   writeJson(path.join(repoDir, 'contracts', 'physical_source_morphology_policy.json'), {
@@ -746,37 +742,34 @@ export function configureReadyMetaMorphology(repoDir: string) {
   const { stageControlPlanePath, stageControlPlane } = setStagePlaneTarget(repoDir, 'opl-meta-agent', 'opl-meta-agent');
   const baseStage = stageControlPlane.stages[0];
   stageControlPlane.stages = [
-    stageFromBase(baseStage, {
+    {
       stageId: 'intent-intake',
       stageKind: 'intake',
       title: 'Intent Intake',
       summary: 'Normalize a target-agent request into a bounded OMA work order.',
       goal: 'Produce work-order refs and route target authority to the target owner.',
-      owner: 'opl-meta-agent',
       defaultExecutor: true,
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'stage-decomposition',
       stageKind: 'planning',
       title: 'Stage Decomposition',
       summary: 'Materialize a target stage-pack proposal without becoming a second OPL framework.',
       goal: 'Produce proposal/materializer refs plus target-owner handoff refs.',
-      owner: 'opl-meta-agent',
-    }),
-    stageFromBase(baseStage, {
+    },
+    {
       stageId: 'target-agent-takeover',
       stageKind: 'domain_specific',
       title: 'Target Agent Takeover',
       summary: 'Execute a bounded target-agent takeover work order without owning the target domain.',
       goal: 'Produce target-agent work-order output refs, no-forbidden-write proof, and target-owner handoff refs.',
-      owner: 'opl-meta-agent',
-    }),
-  ];
+    },
+  ].map((stage) => stageFromBase(baseStage, { owner: 'opl-meta-agent', ...stage }));
   writeJson(stageControlPlanePath, stageControlPlane);
 
   fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
-  const privateSurfacePolicyPath = path.join(repoDir, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
+  const privateSurfacePolicyPath = contractPath(repoDir, 'private_functional_surface_policy.json');
+  const privateSurfacePolicy = readJson(privateSurfacePolicyPath);
   privateSurfacePolicy.forbidden_script_roles = [
     'generic_runtime_owner',
     'generic_registry_owner',
