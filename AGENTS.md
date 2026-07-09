@@ -12,6 +12,7 @@
 - `OPL` 是以 Agent executor 为最小执行单位的 stage-led 完整智能体运行框架：当前第一公民 executor 是 `Codex CLI`，`Hermes-Agent`、Claude Code 等其他 executor 可以按显式 adapter 接入；OPL 只保证接入、生命周期、回执与投影边界可审计，不保证非默认 executor 的行为或效果与 `Codex CLI` 等价。
 - 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。这些仓持有各自的 domain truth、quality verdict、runtime owner、artifact authority 与直接 app skill 路径；OPL 持有 framework-level runtime / activation / discovery / projection。
 - `MDS` 已随 MAS monolith closeout 降为 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference。
+- `opl-aion-shell` 是用户 fork 的上游 AionUI implementation carrier，App 内 `shells/aionui/**` 同样按上游 AionUI body 处理。除非用户明确指定 OPL-owned overlay / adapter 的写集、验证命令和回滚点，否则默认只读；不得做测试瘦身、结构重写、样式/交互重构、依赖升级或实现清理。误动这些路径时优先回退误动，不把它们纳入 OPL family 常规落地范围。
 
 ## 开发原则
 
