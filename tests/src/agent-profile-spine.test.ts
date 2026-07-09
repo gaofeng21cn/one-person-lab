@@ -96,15 +96,34 @@ function makeConformantAgentFixture() {
 
 function makeSourceDerivedAgentFixture() {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-derived-agent-'));
+  const requiredDesignConsumptionObjects = [
+    'ReferenceDesignPacket',
+    'TransferMap',
+    'AgentPackPlan',
+  ];
+  const referenceDesignSourceRefs = ['paper-ref:uploaded-colorectal-risk-framework'];
+  const referenceDesignPacketRefs = [
+    'pattern-packet-ref:oma/reference-designs/uploaded-paper/distilled-agent-design',
+  ];
+  const transferMapRefs = [
+    'transfer-map-ref:oma/reference-designs/uploaded-paper/transfer-map',
+  ];
+  const agentPackPlanRefs = [
+    'agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan',
+  ];
   const sourceDerivedDesignReceipt = {
     surface_kind: 'opl_meta_agent_source_derived_design_receipt',
     route_id: 'source_derived_design_profile_route.v1',
     route_ref: 'opl-profile-route:source_derived_design_profile_route.v1',
-    source_refs: ['paper-ref:uploaded-colorectal-risk-framework'],
-    reference_design_pattern_packet_refs: [
-      'pattern-packet-ref:oma/reference-designs/uploaded-paper/distilled-agent-design',
-    ],
+    required_design_consumption_objects: requiredDesignConsumptionObjects,
+    source_refs: referenceDesignSourceRefs,
+    reference_design_source_refs: referenceDesignSourceRefs,
+    reference_design_packet_refs: referenceDesignPacketRefs,
+    reference_design_pattern_packet_refs: referenceDesignPacketRefs,
+    transfer_map_refs: transferMapRefs,
+    agent_pack_plan_refs: agentPackPlanRefs,
     profile_requirements: {
+      required_design_consumption_objects: requiredDesignConsumptionObjects,
       required_stage_archetypes: [
         'source_material_intake',
         'reference_design_pattern_extraction',
@@ -124,6 +143,20 @@ function makeSourceDerivedAgentFixture() {
         'knowledge_pack',
         'quality_gate',
         'eval_suite',
+      ],
+      transfer_map_requirements: [
+        'pattern_id',
+        'source_anchor_ref',
+        'target_stage_or_capability_slot',
+        'transfer_rationale',
+        'known_limits',
+      ],
+      agent_pack_plan_requirements: [
+        'agent_pack_plan_ref',
+        'stage_archetype_candidate_refs',
+        'required_prompt_skill_knowledge_tool_refs',
+        'evaluation_or_review_gate_refs',
+        'no_domain_truth_or_runtime_import_notes',
       ],
     },
   };
@@ -166,6 +199,9 @@ function makeSourceDerivedAgentFixture() {
         title: 'Source Derived Design',
         goal: 'Map source-derived design patterns into a target agent stage pack.',
         owner: 'colorectal-surgery-risk-from-paper',
+        stage_pattern_source_refs: [
+          'pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design',
+        ],
         knowledge_refs: [{ ref_kind: 'repo_path', ref: 'agent/knowledge/reference-design.md' }],
         tool_refs: [{ ref_kind: 'repo_path', ref: 'agent/tools/source-intake.md' }],
         evaluation: [{ ref_kind: 'repo_path', ref: 'agent/quality_gates/source-transfer.md' }],
@@ -301,7 +337,102 @@ test('profile conformance accepts source-derived design route receipts without a
   assert.equal(conformance.profile_ref, 'opl-profile-route:source_derived_design_profile_route.v1');
   assert.ok(conformance.observed.capability_profile_refs.includes('opl-profile-route:source_derived_design_profile_route.v1'));
   assert.ok(conformance.observed.required_stage_archetypes.includes('transferable_pattern_mapping'));
+  const sourceDerivedDesign = conformance.observed.source_derived_design;
+  assert.ok(sourceDerivedDesign);
+  assert.ok(sourceDerivedDesign.reference_design_source_refs.includes('paper-ref:uploaded-colorectal-risk-framework'));
+  assert.ok(sourceDerivedDesign.transfer_map_refs.includes('transfer-map-ref:oma/reference-designs/uploaded-paper/transfer-map'));
+  assert.ok(sourceDerivedDesign.agent_pack_plan_refs.includes('agent-pack-plan-ref:colorectal-surgery-risk-from-paper/pack-plan'));
+  assert.ok(sourceDerivedDesign.stage_pattern_source_refs.includes('pattern-packet-ref:oma/reference-designs/uploaded-paper/stage-patterns/source-derived-design'));
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
+});
+
+test('profile conformance fails closed when source-derived route only exposes route ref', () => {
+  const { repoDir } = makeSourceDerivedAgentFixture();
+  const capabilityMapPath = path.join(repoDir, 'contracts', 'capability_map.json');
+  const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const capabilityMap = JSON.parse(fs.readFileSync(capabilityMapPath, 'utf8'));
+  const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
+  const routeOnlyReceipt = {
+    route_id: 'source_derived_design_profile_route.v1',
+    route_ref: 'opl-profile-route:source_derived_design_profile_route.v1',
+  };
+  capabilityMap.source_derived_design_receipt = routeOnlyReceipt;
+  stageControl.source_derived_design_receipt = routeOnlyReceipt;
+  capabilityMap.profile_requirements = {
+    required_stage_archetypes: capabilityMap.profile_requirements.required_stage_archetypes,
+    required_capability_kinds: capabilityMap.profile_requirements.required_capability_kinds,
+    required_surface_roles: capabilityMap.profile_requirements.required_surface_roles,
+  };
+  stageControl.profile_requirements = capabilityMap.profile_requirements;
+  delete stageControl.stages[0].stage_pattern_source_refs;
+  writeJson(capabilityMapPath, capabilityMap);
+  writeJson(stageControlPath, stageControl);
+
+  const conformance = buildAgentProfileConformance([
+    '--repo-dir',
+    repoDir,
+    '--profile',
+    'source_derived_design_profile_route.v1',
+  ]).profile_conformance;
+
+  assert.equal(conformance.status, 'blocked');
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_reference_design_source_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_reference_design_packet_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_transfer_map_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_agent_pack_plan_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement'),
+    true,
+  );
+});
+
+test('profile conformance fails closed when source-derived requirements exist without transfer objects', () => {
+  const { repoDir } = makeSourceDerivedAgentFixture();
+  const capabilityMapPath = path.join(repoDir, 'contracts', 'capability_map.json');
+  const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const capabilityMap = JSON.parse(fs.readFileSync(capabilityMapPath, 'utf8'));
+  const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
+
+  delete capabilityMap.source_derived_design_receipt.transfer_map_refs;
+  delete capabilityMap.source_derived_design_receipt.agent_pack_plan_refs;
+  delete stageControl.source_derived_design_receipt.transfer_map_refs;
+  delete stageControl.source_derived_design_receipt.agent_pack_plan_refs;
+
+  writeJson(capabilityMapPath, capabilityMap);
+  writeJson(stageControlPath, stageControl);
+
+  const conformance = buildAgentProfileConformance([
+    '--repo-dir',
+    repoDir,
+    '--profile',
+    'source_derived_design_profile_route.v1',
+  ]).profile_conformance;
+
+  assert.equal(conformance.status, 'blocked');
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_transfer_map_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_agent_pack_plan_refs'),
+    true,
+  );
+  assert.equal(
+    conformance.blockers.includes('source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement'),
+    false,
+  );
 });
 
 test('profile conformance fails closed when profile refs and knowledge refs are missing', () => {

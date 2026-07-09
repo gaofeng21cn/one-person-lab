@@ -58,6 +58,12 @@ const SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES = [
   'authority_boundary_review',
 ];
 
+const SOURCE_DERIVED_DESIGN_CONSUMPTION_OBJECTS = [
+  'ReferenceDesignPacket',
+  'TransferMap',
+  'AgentPackPlan',
+];
+
 const REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS = [
   'source_ref',
   'source_fingerprint_or_locator_ref',
@@ -67,6 +73,8 @@ const REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS = [
   'authority_boundary_notes_ref',
 ];
 
+const REFERENCE_DESIGN_PACKET_REQUIREMENTS = REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS;
+
 const TRANSFERABLE_PATTERN_REQUIREMENTS = [
   'pattern_id',
   'source_anchor_ref',
@@ -75,12 +83,74 @@ const TRANSFERABLE_PATTERN_REQUIREMENTS = [
   'known_limits',
 ];
 
+const TRANSFER_MAP_REQUIREMENTS = TRANSFERABLE_PATTERN_REQUIREMENTS;
+
 const SOURCE_DERIVED_CAPABILITY_PLAN_REQUIREMENTS = [
   'capability_plan_ref',
   'stage_archetype_candidate_refs',
   'required_prompt_skill_knowledge_tool_refs',
   'evaluation_or_review_gate_refs',
   'no_domain_truth_or_runtime_import_notes',
+];
+
+const AGENT_PACK_PLAN_REQUIREMENTS = [
+  'agent_pack_plan_ref',
+  'stage_archetype_candidate_refs',
+  'required_prompt_skill_knowledge_tool_refs',
+  'evaluation_or_review_gate_refs',
+  'no_domain_truth_or_runtime_import_notes',
+];
+
+const REFERENCE_DESIGN_SOURCE_REF_FIELDS = [
+  'reference_design_source_refs',
+  'reference_source_refs',
+  'source_refs',
+];
+
+const REFERENCE_DESIGN_PACKET_REF_FIELDS = [
+  'reference_design_packet_ref',
+  'reference_design_packet_refs',
+  'reference_design_pattern_packet_refs',
+  'pattern_packet_refs',
+];
+
+const REFERENCE_DESIGN_PACKET_REQUIREMENT_FIELDS = [
+  'reference_design_packet_requirements',
+  'reference_design_pattern_packet_requirements',
+];
+
+const TRANSFER_MAP_REF_FIELDS = [
+  'transfer_map_ref',
+  'transfer_map_refs',
+  'transferable_pattern_map_refs',
+  'transferable_pattern_refs',
+];
+
+const TRANSFER_MAP_REQUIREMENT_FIELDS = [
+  'transfer_map_requirements',
+  'transferable_pattern_requirements',
+];
+
+const AGENT_PACK_PLAN_REF_FIELDS = [
+  'agent_pack_plan_refs',
+  'agent_pack_plan_ref',
+  'capability_plan_refs',
+  'capability_plan_ref',
+];
+
+const AGENT_PACK_PLAN_REQUIREMENT_FIELDS = [
+  'agent_pack_plan_requirements',
+  'capability_plan_requirements',
+];
+
+const STAGE_PATTERN_SOURCE_REF_FIELDS = [
+  'stage_pattern_source_refs',
+  'stage_pattern_refs',
+];
+
+const TARGET_ONLY_REQUIREMENT_FIELDS = [
+  'target_only_requirement',
+  'target_only_requirements',
 ];
 
 type ProfileCatalogEntry = {
@@ -118,6 +188,68 @@ function uniqueStrings(value: unknown): string[] {
         .map((entry) => entry.trim()),
     ),
   ];
+}
+
+function machineFieldStrings(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return [value.trim()];
+  }
+  if (Array.isArray(value)) {
+    return uniqueStrings(value.flatMap(machineFieldStrings));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+  return uniqueStrings([
+    ...[
+      value.ref,
+      value.id,
+      value.source_ref,
+      value.packet_ref,
+      value.requirement,
+      value.requirement_id,
+    ].flatMap(machineFieldStrings),
+  ]);
+}
+
+function hasMachineValue(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return isRecord(value) && Object.keys(value).length > 0;
+}
+
+function collectDirectMachineFieldStrings(
+  payloads: unknown[],
+  fieldNames: string[],
+): string[] {
+  return uniqueStrings(
+    payloads.flatMap((payload) => {
+      if (!isRecord(payload)) {
+        return [];
+      }
+      return Object.entries(payload).flatMap(([key, value]) =>
+        fieldNames.includes(key) ? machineFieldStrings(value) : []
+      );
+    }),
+  );
+}
+
+function hasDirectMachineField(payloads: unknown[], fieldNames: string[]): boolean {
+  return payloads.some((payload) => {
+    if (!isRecord(payload)) {
+      return false;
+    }
+    return Object.entries(payload).some(([key, value]) =>
+      fieldNames.includes(key) && hasMachineValue(value)
+    );
+  });
 }
 
 function stringOrFallback(value: unknown, fallback: string) {
@@ -409,13 +541,17 @@ function missingRequired(values: string[], required: string[]) {
 
 function sourceDerivedProfileRequirements() {
   return {
+    required_design_consumption_objects: SOURCE_DERIVED_DESIGN_CONSUMPTION_OBJECTS,
     required_stage_archetypes: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
     required_capability_kinds: REQUIRED_CAPABILITY_KINDS,
     required_surface_roles: REQUIRED_SURFACE_ROLES,
     required_reference_pack_roles: sourceDerivedDesignProfileEntry().required_reference_pack_roles,
+    reference_design_packet_requirements: REFERENCE_DESIGN_PACKET_REQUIREMENTS,
     reference_design_pattern_packet_requirements: REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS,
+    transfer_map_requirements: TRANSFER_MAP_REQUIREMENTS,
     transferable_pattern_requirements: TRANSFERABLE_PATTERN_REQUIREMENTS,
     stage_archetype_candidates: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
+    agent_pack_plan_requirements: AGENT_PACK_PLAN_REQUIREMENTS,
     capability_plan_requirements: SOURCE_DERIVED_CAPABILITY_PLAN_REQUIREMENTS,
   };
 }
@@ -424,14 +560,34 @@ function buildSourceDerivedDesignReceipt(parsed: ParsedSelectionArgs) {
   return {
     route_id: SOURCE_DERIVED_PROFILE_ID,
     route_ref: SOURCE_DERIVED_PROFILE_REF,
+    required_design_consumption_objects: SOURCE_DERIVED_DESIGN_CONSUMPTION_OBJECTS,
     source_refs: parsed.reference_source_refs,
+    reference_design_source_refs: parsed.reference_source_refs,
+    reference_design_packet_refs: parsed.reference_design_pattern_packet_refs,
     reference_design_pattern_packet_refs: parsed.reference_design_pattern_packet_refs,
     source_material_body_policy: 'refs_only_no_external_body_import',
     profile_requirements: sourceDerivedProfileRequirements(),
+    reference_design_packet_requirements: REFERENCE_DESIGN_PACKET_REQUIREMENTS,
     reference_design_pattern_packet_requirements: REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS,
+    transfer_map_requirements: TRANSFER_MAP_REQUIREMENTS,
     transferable_pattern_requirements: TRANSFERABLE_PATTERN_REQUIREMENTS,
     stage_archetype_candidates: SOURCE_DERIVED_STAGE_ARCHETYPE_CANDIDATES,
+    agent_pack_plan_requirements: AGENT_PACK_PLAN_REQUIREMENTS,
     capability_plan_requirements: SOURCE_DERIVED_CAPABILITY_PLAN_REQUIREMENTS,
+    design_consumption_objects: {
+      ReferenceDesignPacket: {
+        source_refs: parsed.reference_source_refs,
+        packet_refs: parsed.reference_design_pattern_packet_refs,
+        requirements: REFERENCE_DESIGN_PACKET_REQUIREMENTS,
+      },
+      TransferMap: {
+        requirements: TRANSFER_MAP_REQUIREMENTS,
+      },
+      AgentPackPlan: {
+        requirements: AGENT_PACK_PLAN_REQUIREMENTS,
+      },
+    },
+    stage_pattern_source_policy: 'stage_pattern_source_refs_or_target_only_requirement_required',
     authority_boundary_notes: [
       'source-derived route may extract transferable design patterns only as refs',
       'OPL does not import external runtime truth or target domain truth',
@@ -620,6 +776,9 @@ export function buildAgentProfileConformance(args: string[]) {
     ...profileRequirements(capabilityMap),
     ...profileRequirements(stageControlPlane),
   };
+  const sourceDerivedRoutePresent = matchesSourceDerivedProfileId(profileId)
+    || hasSourceDerivedRoute(capabilityMap)
+    || hasSourceDerivedRoute(stageControlPlane);
   const observedCapabilityKinds = uniqueStrings(capabilities.map((entry) => entry.capability_kind));
   const observedSurfaceRoles = uniqueStrings(capabilities.map((entry) => entry.surface_role));
   const requiredStageArchetypes = uniqueStrings((requirements as Record<string, unknown>).required_stage_archetypes);
@@ -627,6 +786,50 @@ export function buildAgentProfileConformance(args: string[]) {
   const stagesWithKnowledgeRefs = stages.filter((stage) => Array.isArray(stage.knowledge_refs) && stage.knowledge_refs.length > 0).length;
   const stagesWithToolRefs = stages.filter((stage) => Array.isArray(stage.tool_refs) && stage.tool_refs.length > 0).length;
   const stagesWithEvaluationRefs = stages.filter((stage) => Array.isArray(stage.evaluation) && stage.evaluation.length > 0).length;
+  const sourceDerivedPayloads = [
+    capabilityMap,
+    stageControlPlane,
+    isRecord(capabilityMap) ? capabilityMap.source_derived_design_receipt : null,
+    isRecord(stageControlPlane) ? stageControlPlane.source_derived_design_receipt : null,
+    ...stages,
+  ];
+  const designConsumptionObjects = collectDirectMachineFieldStrings(sourceDerivedPayloads, [
+    'required_design_consumption_objects',
+    'design_consumption_objects',
+    'source_derived_design_consumption_objects',
+    'required_machine_objects',
+  ]);
+  const referenceDesignSourceRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    REFERENCE_DESIGN_SOURCE_REF_FIELDS,
+  );
+  const referenceDesignPacketRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    REFERENCE_DESIGN_PACKET_REF_FIELDS,
+  );
+  const referenceDesignPacketRequirements = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    REFERENCE_DESIGN_PACKET_REQUIREMENT_FIELDS,
+  );
+  const transferMapRefs = collectDirectMachineFieldStrings(sourceDerivedPayloads, TRANSFER_MAP_REF_FIELDS);
+  const transferMapRequirements = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    TRANSFER_MAP_REQUIREMENT_FIELDS,
+  );
+  const agentPackPlanRefs = collectDirectMachineFieldStrings(sourceDerivedPayloads, AGENT_PACK_PLAN_REF_FIELDS);
+  const agentPackPlanRequirements = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    AGENT_PACK_PLAN_REQUIREMENT_FIELDS,
+  );
+  const stagePatternSourceRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    STAGE_PATTERN_SOURCE_REF_FIELDS,
+  );
+  const hasTargetOnlyRequirement = hasDirectMachineField(sourceDerivedPayloads, TARGET_ONLY_REQUIREMENT_FIELDS);
+  const hasReferenceDesignPacketConsumption = referenceDesignSourceRefs.length > 0
+    && referenceDesignPacketRefs.length > 0;
+  const hasTransferMapConsumption = transferMapRefs.length > 0;
+  const hasAgentPackPlanConsumption = agentPackPlanRefs.length > 0;
 
   const blockers = [
     fs.existsSync(path.join(repoDir, 'contracts', 'capability_map.json')) ? null : 'missing_contract:contracts/capability_map.json',
@@ -648,6 +851,30 @@ export function buildAgentProfileConformance(args: string[]) {
     stagesWithKnowledgeRefs > 0 ? null : 'stage_control_plane_missing_knowledge_refs',
     stagesWithToolRefs > 0 ? null : 'stage_control_plane_missing_tool_refs',
     stagesWithEvaluationRefs > 0 ? null : 'stage_control_plane_missing_evaluation_refs',
+    !sourceDerivedRoutePresent || hasReferenceDesignPacketConsumption
+      ? null
+      : 'source_derived_design_missing_design_consumption_object:ReferenceDesignPacket',
+    !sourceDerivedRoutePresent || hasTransferMapConsumption
+      ? null
+      : 'source_derived_design_missing_design_consumption_object:TransferMap',
+    !sourceDerivedRoutePresent || hasAgentPackPlanConsumption
+      ? null
+      : 'source_derived_design_missing_design_consumption_object:AgentPackPlan',
+    !sourceDerivedRoutePresent || referenceDesignSourceRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_reference_design_source_refs',
+    !sourceDerivedRoutePresent || referenceDesignPacketRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_reference_design_packet_refs',
+    !sourceDerivedRoutePresent || transferMapRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_transfer_map_refs',
+    !sourceDerivedRoutePresent || agentPackPlanRefs.length > 0
+      ? null
+      : 'source_derived_design_missing_agent_pack_plan_refs',
+    !sourceDerivedRoutePresent || stagePatternSourceRefs.length > 0 || hasTargetOnlyRequirement
+      ? null
+      : 'source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement',
   ].filter((blocker): blocker is string => Boolean(blocker));
 
   return {
@@ -669,6 +896,20 @@ export function buildAgentProfileConformance(args: string[]) {
         stages_with_knowledge_refs: stagesWithKnowledgeRefs,
         stages_with_tool_refs: stagesWithToolRefs,
         stages_with_evaluation_refs: stagesWithEvaluationRefs,
+        source_derived_design: sourceDerivedRoutePresent
+          ? {
+              required_design_consumption_objects: designConsumptionObjects,
+              reference_design_source_refs: referenceDesignSourceRefs,
+              reference_design_packet_refs: referenceDesignPacketRefs,
+              reference_design_packet_requirements: referenceDesignPacketRequirements,
+              transfer_map_refs: transferMapRefs,
+              transfer_map_requirements: transferMapRequirements,
+              agent_pack_plan_refs: agentPackPlanRefs,
+              agent_pack_plan_requirements: agentPackPlanRequirements,
+              stage_pattern_source_refs: stagePatternSourceRefs,
+              has_target_only_requirement: hasTargetOnlyRequirement,
+            }
+          : null,
       },
       blockers,
       authority_boundary: {
