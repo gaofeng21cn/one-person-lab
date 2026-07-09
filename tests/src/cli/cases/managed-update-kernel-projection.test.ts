@@ -6,6 +6,20 @@ import './managed-update-kernel-projection-cases/companion-tools.ts';
 import './managed-update-kernel-projection-cases/workflow-profile.ts';
 import './managed-update-kernel-projection-cases/selector-alias-scenarios.ts';
 
+type ManagedUpdateCondition = {
+  type: string;
+  status: string;
+  reason: string;
+  message: string;
+  observed_generation: number;
+};
+
+type ManagedUpdateComponent = {
+  component_id: string;
+  conditions: ManagedUpdateCondition[];
+  [key: string]: any;
+};
+
 function readManagedUpdateKernelContract() {
   return parseJsonText(
     fs.readFileSync(
@@ -325,6 +339,7 @@ exit 2
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
     }) as any;
+    const components = output.managed_update.components as ManagedUpdateComponent[];
 
     assert.equal(output.managed_update.operation, 'status');
     assert.equal(output.managed_update.surface_id, 'opl_managed_updater_kernel');
@@ -373,11 +388,11 @@ exit 2
     assert.equal(output.managed_update.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.managed_update.authority_boundary.can_claim_quality_or_export_verdict, false);
     assert.deepEqual(
-      output.managed_update.components.map((entry) => entry.component_id),
+      components.map((entry) => entry.component_id),
       ['installation_carrier', 'runtime_substrate', 'capability_packages', 'codex_surface', 'companion_tools', 'workflow_profile'],
     );
     assert.equal(
-      output.managed_update.components.every((component) =>
+      components.every((component) =>
         component.conditions.every((entry) =>
           typeof entry.type === 'string'
           && ['True', 'False', 'Unknown'].includes(entry.status)
@@ -389,7 +404,7 @@ exit 2
       true,
     );
 
-    const installationCarrier = output.managed_update.components.find((entry) =>
+    const installationCarrier = components.find((entry) =>
       entry.component_id === 'installation_carrier'
     );
     assert.ok(installationCarrier);
@@ -488,7 +503,7 @@ exit 2
       true,
     );
 
-    const runtime = output.managed_update.components.find((entry) => entry.component_id === 'runtime_substrate');
+    const runtime = components.find((entry) => entry.component_id === 'runtime_substrate');
     assert.ok(runtime);
     assert.equal(runtime.provider_id, 'runtime_substrate');
     assert.equal(runtime.adapter_id, 'runtime_substrate_adapter');
@@ -510,7 +525,10 @@ exit 2
     assert.equal(frameworkRuntime.command_ref, 'opl update apply --component runtime_substrate --json');
     assert.equal(frameworkRuntime.rollback_command_ref, 'opl update rollback --component runtime_substrate --json');
     assert.equal(typeof runtime.target?.staged_root, 'string');
-    assert.equal(runtime.plan.command_refs.some((entry) => entry.command === 'opl system startup-maintenance --json'), true);
+    assert.equal(
+      runtime.plan.command_refs.some((entry: { command: string }) => entry.command === 'opl system startup-maintenance --json'),
+      true,
+    );
     assert.equal(runtime.receipt.schema_version, 'opl_managed_update_component_receipt.v1');
     assert.equal(runtime.receipt.source_manifest_ref, 'app-runtime-update-channel.json');
     assert.equal(runtime.receipt.verify_result, 'not_run_projection_only');
@@ -522,7 +540,7 @@ exit 2
     assert.equal(runtime.authority_boundary.can_mutate_homebrew, false);
     assert.equal(runtime.authority_boundary.can_mutate_global_npm, false);
 
-    const agents = output.managed_update.components.find((entry) => entry.component_id === 'capability_packages');
+    const agents = components.find((entry) => entry.component_id === 'capability_packages');
     assert.ok(agents);
     assert.equal(agents.provider_id, 'capability_packages');
     assert.equal(agents.adapter_id, 'capability_packages_adapter');
@@ -576,7 +594,7 @@ exit 2
     assert.equal(agents.authority_boundary.can_overwrite_dirty_checkout, false);
     assert.equal(agents.authority_boundary.can_write_domain_truth, false);
 
-    const exposure = output.managed_update.components.find((entry) => entry.component_id === 'codex_surface');
+    const exposure = components.find((entry) => entry.component_id === 'codex_surface');
     assert.ok(exposure);
     assert.equal(exposure.adapter_id, 'codex_surface_status_adapter');
     assert.equal(exposure.coordination_role, 'derived_projection');
@@ -599,7 +617,7 @@ exit 2
       true,
     );
 
-    const companionTools = output.managed_update.components.find((entry) => entry.component_id === 'companion_tools');
+    const companionTools = components.find((entry) => entry.component_id === 'companion_tools');
     assert.ok(companionTools);
     assert.equal(companionTools.adapter_id, 'companion_tools_status_adapter');
     assert.equal(companionTools.coordination_role, 'owner_handoff');
@@ -607,7 +625,7 @@ exit 2
     assert.equal(companionTools.owner_execution_boundary.runner_can_execute, false);
     assert.equal(companionTools.current.source, 'opl_companion_skill_sync_tools');
 
-    const workflowProfile = output.managed_update.components.find((entry) => entry.component_id === 'workflow_profile');
+    const workflowProfile = components.find((entry) => entry.component_id === 'workflow_profile');
     assert.ok(workflowProfile);
     assert.equal(workflowProfile.adapter_id, 'workflow_profile_adapter');
     assert.equal(workflowProfile.coordination_role, 'owner_handoff');
