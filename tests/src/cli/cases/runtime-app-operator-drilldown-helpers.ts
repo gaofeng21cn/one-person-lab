@@ -53,6 +53,101 @@ function writeJson(file: string, payload: unknown) {
   fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function assertFields(actual: any, expected: Record<string, unknown>) {
+  for (const [key, value] of Object.entries(expected)) {
+    assert.deepEqual(actual[key], value);
+  }
+}
+
+function assertSome<T>(items: T[], predicate: (item: T) => boolean) {
+  assert.equal(items.some(predicate), true);
+}
+
+function assertNoSome<T>(items: T[], predicate: (item: T) => boolean) {
+  assert.equal(items.some(predicate), false);
+}
+
+function scopedRef(ref_kind: string, ref: string, role: string) {
+  return { ref_kind, ref, role };
+}
+
+function buildMasFixtureStage(spec: Record<string, any>) {
+  const runtimeEventRefs = [spec.runtimeEventRef];
+  return {
+    stage_id: spec.stageId,
+    stage_kind: spec.stageKind,
+    title: spec.title,
+    summary: spec.summary,
+    goal: spec.goal,
+    owner: 'med-autoscience',
+    domain_stage_refs: [spec.stageId],
+    inputs: [],
+    knowledge_refs: [],
+    skills: [],
+    prompt_refs: [],
+    allowed_action_refs: [],
+    outputs: [],
+    evaluation: [],
+    handoff: null,
+    source_refs: [],
+    freshness: null,
+    action_parity: null,
+    stage_contract: {
+      requires: spec.requires,
+      ensures: spec.ensures,
+      progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+      typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
+      boundary_assumptions: spec.boundaryAssumptions,
+      properties: [],
+      runtime_event_refs: runtimeEventRefs,
+      runtime_assumptions: [],
+      monitor_refs: [scopedRef('metric_ref', spec.monitorRef, 'monitor')],
+      source_scope_refs: [scopedRef('source_ref', spec.sourceScopeRef, 'source_scope')],
+      cohort_query_refs: [scopedRef('query_ref', spec.cohortQueryRef, 'cohort_query')],
+      trigger_refs: [scopedRef('queue_ref', spec.triggerRef, 'trigger')],
+      metric_refs: [scopedRef('metric_ref', spec.metricRef, 'metric')],
+      dashboard_metric_refs: [],
+      artifact_scope_refs: spec.artifactScopeRefs ?? [],
+      workspace_scope_refs: spec.workspaceScopeRefs ?? [],
+    },
+    trust_boundary: {
+      lane: spec.trustLane,
+      static_check_eligible: false,
+      effect_boundary: true,
+      records_runtime_events: true,
+      runtime_event_refs: runtimeEventRefs,
+      owner_receipt_required: true,
+      ...(spec.humanGateRequired ? { human_gate_required: true } : {}),
+    },
+    authority_boundary: {
+      opl_role: 'projection_consumer_only',
+      expected_receipt_refs: spec.expectedReceiptRefs,
+      ...(spec.canWriteDomainTruth === undefined ? {} : { can_write_domain_truth: spec.canWriteDomainTruth }),
+      can_authorize_quality_verdict: false,
+    },
+  };
+}
+
+function buildOmaScaleoutTarget(domainId: string, receiptKind: 'owner_receipt' | 'typed_blocker') {
+  return {
+    domain_id: domainId,
+    target_agent_owner_receipt_refs: receiptKind === 'owner_receipt'
+      ? [`owner-receipt:oma-fixture/${domainId}`]
+      : [],
+    typed_blocker_refs: receiptKind === 'typed_blocker'
+      ? [`typed-blocker:oma-fixture/${domainId}`]
+      : [],
+    agent_lab_result_refs: [`agent-lab:oma-fixture/${domainId}`],
+    no_forbidden_write_proof_refs: [`no-forbidden-write:oma-fixture/${domainId}`],
+    cleanup_closeout_refs: [`cleanup:oma-fixture/${domainId}`],
+    failure_evidence_refs: [`failure-evidence:oma-fixture/${domainId}`],
+    root_cause_refs: [`root-cause:oma-fixture/${domainId}`],
+    targeted_fix_refs: [`targeted-fix:oma-fixture/${domainId}`],
+    predicted_impact_refs: [`predicted-impact:oma-fixture/${domainId}`],
+    next_run_falsification_refs: [`next-run-falsification:oma-fixture/${domainId}`],
+  };
+}
+
 export function createOmaContractFixture(
   fixtureRoot: string,
   options: { productionAcceptance?: boolean } = {},
@@ -129,36 +224,8 @@ export function createOmaContractFixture(
     multi_target_scaleout_closeout: {
       status: 'closed_by_two_real_target_refs_only_receipts',
       target_agents: [
-        {
-          domain_id: 'med-autoscience',
-          target_agent_owner_receipt_refs: [
-            'owner-receipt:oma-fixture/med-autoscience',
-          ],
-          typed_blocker_refs: [],
-          agent_lab_result_refs: ['agent-lab:oma-fixture/med-autoscience'],
-          no_forbidden_write_proof_refs: ['no-forbidden-write:oma-fixture/med-autoscience'],
-          cleanup_closeout_refs: ['cleanup:oma-fixture/med-autoscience'],
-          failure_evidence_refs: ['failure-evidence:oma-fixture/med-autoscience'],
-          root_cause_refs: ['root-cause:oma-fixture/med-autoscience'],
-          targeted_fix_refs: ['targeted-fix:oma-fixture/med-autoscience'],
-          predicted_impact_refs: ['predicted-impact:oma-fixture/med-autoscience'],
-          next_run_falsification_refs: ['next-run-falsification:oma-fixture/med-autoscience'],
-        },
-        {
-          domain_id: 'med-autogrant',
-          target_agent_owner_receipt_refs: [],
-          typed_blocker_refs: [
-            'typed-blocker:oma-fixture/med-autogrant',
-          ],
-          agent_lab_result_refs: ['agent-lab:oma-fixture/med-autogrant'],
-          no_forbidden_write_proof_refs: ['no-forbidden-write:oma-fixture/med-autogrant'],
-          cleanup_closeout_refs: ['cleanup:oma-fixture/med-autogrant'],
-          failure_evidence_refs: ['failure-evidence:oma-fixture/med-autogrant'],
-          root_cause_refs: ['root-cause:oma-fixture/med-autogrant'],
-          targeted_fix_refs: ['targeted-fix:oma-fixture/med-autogrant'],
-          predicted_impact_refs: ['predicted-impact:oma-fixture/med-autogrant'],
-          next_run_falsification_refs: ['next-run-falsification:oma-fixture/med-autogrant'],
-        },
+        buildOmaScaleoutTarget('med-autoscience', 'owner_receipt'),
+        buildOmaScaleoutTarget('med-autogrant', 'typed_blocker'),
       ],
     },
   });
@@ -172,15 +239,9 @@ export function createOmaContractFixture(
       evidence_status: 'closed_by_domain_owned_acceptance_receipt',
       receipt_ref: 'production-acceptance-receipt:opl-meta-agent/fixture',
       refs: {
-        production_consumption_receipt_refs: [
-          'opl://oma-production-consumption/fixture-long-soak',
-        ],
-        long_soak_refs: [
-          'long_soak_ref://opl-meta-agent/production-consumption/fixture-window',
-        ],
-        historical_typed_blocker_refs: [
-          'typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending-fixture',
-        ],
+        production_consumption_receipt_refs: ['opl://oma-production-consumption/fixture-long-soak'],
+        long_soak_refs: ['long_soak_ref://opl-meta-agent/production-consumption/fixture-window'],
+        historical_typed_blocker_refs: ['typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending-fixture'],
       },
       stage_replay_human_gate_blocker_summary: {
         surface_kind: 'opl_meta_agent_stage_replay_human_gate_blocker_summary',
@@ -217,15 +278,9 @@ export function createOmaContractFixture(
         production_consumption_ready_semantics:
           'refs_only_current_cohort_consumption_gate_ready_not_production_readiness_verdict',
         production_readiness_verdict_claimed: false,
-        long_soak_refs: [
-          'long_soak_ref://opl-meta-agent/production-consumption/fixture-window',
-        ],
-        verified_receipt_refs: [
-          'opl://oma-production-consumption/fixture-long-soak',
-        ],
-        historical_typed_blocker_refs: [
-          'typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending-fixture',
-        ],
+        long_soak_refs: ['long_soak_ref://opl-meta-agent/production-consumption/fixture-window'],
+        verified_receipt_refs: ['opl://oma-production-consumption/fixture-long-soak'],
+        historical_typed_blocker_refs: ['typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending-fixture'],
         authority_boundary: {
           refs_only: true,
           can_claim_domain_ready: false,
@@ -244,31 +299,18 @@ export function createFamilyWorkspaceFixture(
   fixtureRoot: string,
   options: { omaProductionAcceptance?: boolean } = {},
 ) {
-  const domainDescriptors = [
-    {
-      project: 'med-autoscience',
-      domain_id: 'med-autoscience',
-      domain_label: 'MedAutoScience',
-    },
-    {
-      project: 'med-autogrant',
-      domain_id: 'med-autogrant',
-      domain_label: 'MedAutoGrant',
-    },
-    {
-      project: 'redcube-ai',
-      domain_id: 'redcube_ai',
-      domain_label: 'RedCube AI',
-    },
-  ];
-  for (const descriptor of domainDescriptors) {
-    fs.mkdirSync(path.join(fixtureRoot, descriptor.project, 'contracts'), { recursive: true });
+  for (const [project, domain_id, domain_label] of [
+    ['med-autoscience', 'med-autoscience', 'MedAutoScience'],
+    ['med-autogrant', 'med-autogrant', 'MedAutoGrant'],
+    ['redcube-ai', 'redcube_ai', 'RedCube AI'],
+  ]) {
+    fs.mkdirSync(path.join(fixtureRoot, project, 'contracts'), { recursive: true });
     writeJson(
-      path.join(fixtureRoot, descriptor.project, 'contracts', 'domain_descriptor.json'),
+      path.join(fixtureRoot, project, 'contracts', 'domain_descriptor.json'),
       {
         surface_kind: 'family_domain_descriptor',
-        domain_id: descriptor.domain_id,
-        domain_label: descriptor.domain_label,
+        domain_id,
+        domain_label,
       },
     );
   }
@@ -282,55 +324,44 @@ export function createFamilyWorkspaceFixture(
 }
 
 export function assertMasLifecycleDrilldownProjection(projection: any) {
-  assert.equal(projection.authority_boundary.can_write_domain_truth, false);
-  assert.equal(projection.authority_boundary.can_read_memory_body, false);
-  assert.equal(projection.authority_boundary.can_read_artifact_body, false);
-  assert.equal(projection.summary.owner_receipt_ref_count, 4);
-  assert.equal(projection.summary.typed_blocker_count, 3);
-  assert.equal(projection.summary.domain_dispatch_evidence_domain_count, 1);
-  assert.equal(projection.summary.domain_dispatch_evidence_attempt_count, 1);
-  assert.equal(projection.summary.domain_dispatch_evidence_owner_receipt_ref_count, 3);
-  assert.equal(projection.summary.domain_dispatch_evidence_typed_blocker_ref_count, 2);
-  assert.equal(projection.summary.domain_dispatch_evidence_no_regression_ref_count, 1);
-  assert.equal(projection.summary.domain_dispatch_evidence_memory_writeback_ref_count, 1);
-  assert.equal(projection.summary.domain_dispatch_evidence_domain_ready_claim_count, 0);
-  assert.equal(projection.summary.lifecycle_index_ref_count, 2);
-  assert.equal(projection.summary.lifecycle_restore_proof_ref_count, 2);
-  assert.equal(projection.summary.lifecycle_reconcile_missing_ref_count, 0);
-  assert.equal(projection.summary.lifecycle_reconcile_extra_ref_count, 0);
-  assert.equal(projection.summary.lifecycle_reconcile_stale_ref_count, 0);
-  assert.equal(projection.summary.lifecycle_domain_physical_delete_requires_owner_receipt, true);
-  assert.equal(projection.summary.lifecycle_domain_physical_delete_can_execute, false);
-  assert.equal(projection.summary.lifecycle_opl_cleanup_apply_can_execute, true);
+  assertFields(projection.authority_boundary, {
+    can_write_domain_truth: false,
+    can_read_memory_body: false,
+    can_read_artifact_body: false,
+  });
+  assertFields(projection.summary, {
+    owner_receipt_ref_count: 4,
+    typed_blocker_count: 3,
+    domain_dispatch_evidence_domain_count: 1,
+    domain_dispatch_evidence_attempt_count: 1,
+    domain_dispatch_evidence_owner_receipt_ref_count: 3,
+    domain_dispatch_evidence_typed_blocker_ref_count: 2,
+    domain_dispatch_evidence_no_regression_ref_count: 1,
+    domain_dispatch_evidence_memory_writeback_ref_count: 1,
+    domain_dispatch_evidence_domain_ready_claim_count: 0,
+    lifecycle_index_ref_count: 2,
+    lifecycle_restore_proof_ref_count: 2,
+    lifecycle_reconcile_missing_ref_count: 0,
+    lifecycle_reconcile_extra_ref_count: 0,
+    lifecycle_reconcile_stale_ref_count: 0,
+    lifecycle_domain_physical_delete_requires_owner_receipt: true,
+    lifecycle_domain_physical_delete_can_execute: false,
+    lifecycle_opl_cleanup_apply_can_execute: true,
+  });
   assert.equal(projection.summary.safe_action_ref_count >= 2, true);
   assert.equal(projection.summary.freshness_signal_count >= 1, true);
-  assert.equal(
-    projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
-      ref.ref === 'mas-owner-receipt:guarded-apply'
-    ),
-    true,
+  assertSome(projection.owner_receipt_refs.refs, (ref) => ref.ref === 'mas-owner-receipt:guarded-apply');
+  assertSome(projection.owner_receipt_refs.refs, (ref) => ref.ref === 'mas-owner-receipt:transition');
+  assertSome(projection.typed_blocker_refs.refs, (ref) => ref.ref === 'mas-blocker:publication-currentness');
+  assertSome(
+    projection.typed_blocker_refs.blockers,
+    (blocker) => blocker.blocker_id === 'domain_owned_lifecycle_receipt_required',
   );
-  assert.equal(
-    projection.owner_receipt_refs.refs.some((ref: { ref: string }) =>
-      ref.ref === 'mas-owner-receipt:transition'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.typed_blocker_refs.refs.some((ref: { ref: string }) =>
-      ref.ref === 'mas-blocker:publication-currentness'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.typed_blocker_refs.blockers.some((blocker: { blocker_id: string }) =>
-      blocker.blocker_id === 'domain_owned_lifecycle_receipt_required'
-    ),
-    true,
-  );
-  assert.equal(projection.domain_dispatch_evidence.summary.domain_count, 1);
-  assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.attempt_count, 1);
-  assert.equal(projection.domain_dispatch_evidence.by_domain.medautoscience.domain_ready_claim_count, 0);
+  assertFields(projection.domain_dispatch_evidence.summary, { domain_count: 1 });
+  assertFields(projection.domain_dispatch_evidence.by_domain.medautoscience, {
+    attempt_count: 1,
+    domain_ready_claim_count: 0,
+  });
   assert.equal(
     projection.domain_dispatch_evidence.attempts[0].authority_boundary.provider_completion_is_domain_ready,
     false,
@@ -341,51 +372,25 @@ export function assertMasLifecycleDrilldownProjection(projection: any) {
   assert.deepEqual(projection.domain_dispatch_evidence.attempts[0].writeback_receipt_refs, [
     'memory-writeback:receipt-1',
   ]);
-  assert.equal(
-    projection.freshness_refs.refs.some((ref: { source_fingerprint: string }) =>
-      ref.source_fingerprint === 'sha256:mas-drilldown-source'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.ref_family_refs.source_refs.refs.some((ref: { ref: string }) =>
-      ref.ref === 'source:dataset'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.ref_family_refs.artifact_refs.refs.some((ref: { ref: string }) =>
-      ref.ref === 'artifact:table'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.ref_family_refs.memory_refs.refs.some((ref: { ref: string }) =>
-      ref.ref === 'memory:route-policy'
-    ),
-    true,
-  );
-  assert.equal(
-    projection.safe_action_refs.refs.some((ref: { role: string; ref: string }) =>
-      ref.role === 'lifecycle_cleanup_receipt_ref'
-        && ref.ref.startsWith('opl://family-runtime/lifecycle-apply/medautoscience')
-    ),
-    true,
+  assertSome(projection.freshness_refs.refs, (ref) => ref.source_fingerprint === 'sha256:mas-drilldown-source');
+  assertSome(projection.ref_family_refs.source_refs.refs, (ref) => ref.ref === 'source:dataset');
+  assertSome(projection.ref_family_refs.artifact_refs.refs, (ref) => ref.ref === 'artifact:table');
+  assertSome(projection.ref_family_refs.memory_refs.refs, (ref) => ref.ref === 'memory:route-policy');
+  assertSome(
+    projection.safe_action_refs.refs,
+    (ref) => ref.role === 'lifecycle_cleanup_receipt_ref'
+      && ref.ref.startsWith('opl://family-runtime/lifecycle-apply/medautoscience'),
   );
   assert.deepEqual(projection.lifecycle_ledger_refs.restore_proof_refs, [
     'restore-proof:mas-index',
     'restore-proof:mas-package',
   ]);
-  assert.equal(projection.lifecycle_ledger_refs.reconcile_projection.status, 'reconciled');
-  assert.equal(
-    projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.can_execute_delete,
-    false,
-  );
-  assert.equal(
-    projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof.opl_cleanup_apply_ready,
-    true,
-  );
-  assert.equal(projection.lifecycle_ledger_refs.authority_boundary.can_write_domain_truth, false);
+  assertFields(projection.lifecycle_ledger_refs.reconcile_projection, { status: 'reconciled' });
+  assertFields(projection.lifecycle_ledger_refs.reconcile_projection.delete_ready_proof, {
+    can_execute_delete: false,
+    opl_cleanup_apply_ready: true,
+  });
+  assertFields(projection.lifecycle_ledger_refs.authority_boundary, { can_write_domain_truth: false });
 }
 
 export function assertEvidenceTailAndDomainRefs(projection: any, snapshot: any) {
@@ -394,83 +399,71 @@ export function assertEvidenceTailAndDomainRefs(projection: any, snapshot: any) 
       item.claim_scope === 'stage_production_caller_executor_receipt_monitor'
       && item.tail_id.includes(':review:'),
   );
-  assert.equal(stageTailItem.status, 'open');
-  assert.equal(stageTailItem.owner_group, 'medautoscience');
-  assert.equal(stageTailItem.receipt_ref, null);
-  assert.equal(stageTailItem.typed_blocker_ref, null);
+  assertFields(stageTailItem, {
+    status: 'open',
+    owner_group: 'medautoscience',
+    receipt_ref: null,
+    typed_blocker_ref: null,
+  });
   assert.equal(stageTailItem.not_authorized_claims.includes('domain_ready'), true);
-  assert.equal(stageTailItem.authority_boundary.can_claim_domain_ready, false);
-  assert.equal(
-    stageTailItem.next_verification_command,
-    'opl runtime app-operator-drilldown --detail full --json',
-  );
+  assertFields(stageTailItem.authority_boundary, { can_claim_domain_ready: false });
+  assertFields(stageTailItem, {
+    next_verification_command: 'opl runtime app-operator-drilldown --detail full --json',
+  });
 
   const nextActionLedger = projection.production_evidence_tail_ledger.next_action_ledger;
   assert.equal(
     nextActionLedger.summary.open_tail_item_count,
     projection.production_evidence_tail_ledger.summary.open_tail_item_count,
   );
-  assert.equal(nextActionLedger.authority_boundary.reads_declared_refs_only, true);
-  assert.equal(nextActionLedger.authority_boundary.can_read_memory_body, false);
-  assert.equal(nextActionLedger.authority_boundary.can_read_artifact_body, false);
-  assert.equal(nextActionLedger.authority_boundary.can_claim_receipt_closure, false);
+  assertFields(nextActionLedger.authority_boundary, {
+    reads_declared_refs_only: true,
+    can_read_memory_body: false,
+    can_read_artifact_body: false,
+    can_claim_receipt_closure: false,
+  });
   const stageNextAction = nextActionLedger.next_action_items.find(
     (item: { stage_id: string | null; domain: string }) =>
       item.domain === 'medautoscience' && item.stage_id === 'review',
   );
-  assert.equal(stageNextAction.owner, 'medautoscience');
-  assert.equal(
-    stageNextAction.required_receipt_type,
-    'stage_production_caller_owner_receipt_or_domain_typed_blocker',
-  );
-  assert.equal(stageNextAction.current_ref, stageTailItem.replay_ref);
-  assert.equal(
-    stageNextAction.next_safe_action_route,
-    'opl runtime app-operator-drilldown --detail full --json',
-  );
-  assert.equal(stageNextAction.authority_boundary.can_read_memory_body, false);
-  assert.equal(stageNextAction.authority_boundary.can_claim_domain_ready, false);
+  assertFields(stageNextAction, {
+    owner: 'medautoscience',
+    required_receipt_type: 'stage_production_caller_owner_receipt_or_domain_typed_blocker',
+    current_ref: stageTailItem.replay_ref,
+    next_safe_action_route: 'opl runtime app-operator-drilldown --detail full --json',
+  });
+  assertFields(stageNextAction.authority_boundary, {
+    can_read_memory_body: false,
+    can_claim_domain_ready: false,
+  });
 
-  assert.equal(projection.app_execution_bridge.authority_boundary.can_write_domain_truth, false);
-  assert.equal(
-    projection.operator_action_routing_refs.refs.some(
-      (ref: { owner: string; route_target_kind: string }) =>
-        ref.owner === 'opl' && ref.route_target_kind === 'app_surface',
-    ),
-    true,
+  assertFields(projection.app_execution_bridge.authority_boundary, { can_write_domain_truth: false });
+  assertSome(
+    projection.operator_action_routing_refs.refs,
+    (ref) => ref.owner === 'opl' && ref.route_target_kind === 'app_surface',
   );
   assert.equal(projection.functional_privatization_audit_summary.total_module_count >= 0, true);
   assert.equal(typeof projection.functional_privatization_audit_summary.by_migration_class, 'object');
-  assert.equal(
-    projection.functional_privatization_audit_summary.by_migration_class.temporary_migration_bridge_count >= 0,
-    true,
-  );
-  assert.equal(
-    projection.functional_privatization_audit_summary.by_migration_class.domain_authority_count >= 0,
-    true,
-  );
-  assert.equal(
-    projection.functional_privatization_audit_summary.by_migration_class.refs_only_domain_adapter_count >= 0,
-    true,
-  );
-  assert.equal(projection.functional_privatization_audit_summary.default_watchlist_count, 0);
-  assert.equal(projection.summary.functional_privatization_action_required_count, 0);
+  assert.equal(projection.functional_privatization_audit_summary.by_migration_class.temporary_migration_bridge_count >= 0, true);
+  assert.equal(projection.functional_privatization_audit_summary.by_migration_class.domain_authority_count >= 0, true);
+  assert.equal(projection.functional_privatization_audit_summary.by_migration_class.refs_only_domain_adapter_count >= 0, true);
+  assertFields(projection.functional_privatization_audit_summary, {
+    default_watchlist_count: 0,
+    semantic_equivalence_review_count: 0,
+  });
+  assertFields(projection.summary, { functional_privatization_action_required_count: 0 });
   assert.equal(
     projection.summary.functional_privatization_hidden_cleared_count,
     projection.functional_privatization_audit_summary.default_hidden_cleared_count,
   );
-  assert.equal(projection.functional_privatization_audit_summary.semantic_equivalence_review_count, 0);
   assert.equal(
     projection.functional_privatization_audit_refs.summary.active_private_generic_residue_count,
     projection.functional_privatization_audit_summary.active_private_generic_residue_count,
   );
-  assert.equal(
-    projection.functional_privatization_audit_refs.domains.some(
-      (domain: { domain_id: string; module_refs: { module_id: string }[] }) =>
-        domain.domain_id === 'medautoscience'
-        && domain.module_refs.some((module) => module.module_id === 'package_lifecycle_adapter'),
-    ),
-    true,
+  assertSome(
+    projection.functional_privatization_audit_refs.domains,
+    (domain) => domain.domain_id === 'medautoscience'
+      && domain.module_refs.some((module: { module_id: string }) => module.module_id === 'package_lifecycle_adapter'),
   );
   assert.equal(
     projection.functional_privatization_audit_refs.domains.every(
@@ -479,85 +472,47 @@ export function assertEvidenceTailAndDomainRefs(projection: any, snapshot: any) 
     ),
     true,
   );
-  assert.equal(
-    projection.domain_projection_refs.refs.some(
-      (ref: { ref: string }) => ref.ref === 'mas://runtime/control/latest.json',
-    ),
-    true,
-  );
+  assertSome(projection.domain_projection_refs.refs, (ref) => ref.ref === 'mas://runtime/control/latest.json');
 
-  assert.equal(
-    projection.domain_evidence_request_refs.external_requests.some(
-      (ref: {
-        request_id: string;
-        required_return_shapes: string[];
-        external_receipt_status: string;
-      }) =>
-        ref.request_id === 'app_workbench_package_ref_consumption'
-        && ref.external_receipt_status === 'verified'
-        && ref.required_return_shapes.includes('domain_owner_receipt'),
-    ),
-    true,
+  assertSome(
+    projection.domain_evidence_request_refs.external_requests,
+    (ref) => ref.request_id === 'app_workbench_package_ref_consumption'
+      && ref.external_receipt_status === 'verified'
+      && ref.required_return_shapes.includes('domain_owner_receipt'),
   );
-  assert.equal(
-    projection.domain_evidence_request_refs.evidence_gates.some(
-      (ref: { ref: string }) => ref.ref === 'real_package_lifecycle_receipt',
-    ),
-    false,
+  assertNoSome(
+    projection.domain_evidence_request_refs.evidence_gates,
+    (ref) => ref.ref === 'real_package_lifecycle_receipt',
   );
-  assert.equal(
-    projection.domain_evidence_request_refs.evidence_gate_receipts.some(
-      (ref: {
-        ref: string;
-        gate_id: string;
-        request_id: string;
-        request_pack_id: string;
-        receipt_status: string;
-        domain_receipt_refs: string[];
-      }) =>
-        ref.ref === 'opl://external-evidence/medautoscience/real_package_lifecycle_receipt'
-        && ref.gate_id === 'real_package_lifecycle_receipt'
-        && ref.request_id === 'real_package_lifecycle_receipt'
-        && ref.request_pack_id === 'medautoscience.evidence_gate_projection'
-        && ref.receipt_status === 'verified'
-        && ref.domain_receipt_refs.includes('mas://receipts/package-lifecycle/latest.json'),
-    ),
-    true,
+  assertSome(
+    projection.domain_evidence_request_refs.evidence_gate_receipts,
+    (ref) => ref.ref === 'opl://external-evidence/medautoscience/real_package_lifecycle_receipt'
+      && ref.gate_id === 'real_package_lifecycle_receipt'
+      && ref.request_id === 'real_package_lifecycle_receipt'
+      && ref.request_pack_id === 'medautoscience.evidence_gate_projection'
+      && ref.receipt_status === 'verified'
+      && ref.domain_receipt_refs.includes('mas://receipts/package-lifecycle/latest.json'),
   );
-  assert.equal(
-    projection.domain_evidence_request_refs.remaining_bridge_modules.some(
-      (ref: {
-        ref: string;
-        module_id: string;
-        replacement_owner: string;
-        replacement_surface: string;
-        classification: string;
-        migration_class: string;
-        retained_domain_authority: string[];
-        required_before_retire: string[];
-        domain_can_own_replacement_runtime: boolean;
-        declares_replacement_complete: boolean;
-        forbidden_generic_owner_flags: {
-          mas_owns_generic_artifact_lifecycle_shell: boolean;
-        };
-      }) =>
-        ref.ref === 'package_lifecycle_adapter'
-        && ref.module_id === 'package_lifecycle_adapter'
-        && ref.classification === 'refs_only_domain_adapter'
-        && ref.replacement_owner === 'one-person-lab'
-        && ref.retained_domain_authority.includes('package_owner_receipt_refs')
-        && ref.required_before_retire.includes('no_regression_proof_recorded')
-        && ref.domain_can_own_replacement_runtime === false
-        && ref.declares_replacement_complete === false
-        && ref.forbidden_generic_owner_flags.mas_owns_generic_artifact_lifecycle_shell === false,
-    ),
-    true,
+  assertSome(
+    projection.domain_evidence_request_refs.remaining_bridge_modules,
+    (ref) => ref.ref === 'package_lifecycle_adapter'
+      && ref.module_id === 'package_lifecycle_adapter'
+      && ref.classification === 'refs_only_domain_adapter'
+      && ref.replacement_owner === 'one-person-lab'
+      && ref.retained_domain_authority.includes('package_owner_receipt_refs')
+      && ref.required_before_retire.includes('no_regression_proof_recorded')
+      && ref.domain_can_own_replacement_runtime === false
+      && ref.declares_replacement_complete === false
+      && ref.forbidden_generic_owner_flags.mas_owns_generic_artifact_lifecycle_shell === false,
   );
-  assert.deepEqual(
-    ['app_operator_drilldown', 'domain_evidence_request_refs', 'domain_legacy_cleanup_plan_refs', 'runtime_visualization_projection']
-      .every((role) => snapshot.source_refs.some((ref: { role: string }) => ref.role === role)),
-    true,
-  );
+  for (const role of [
+    'app_operator_drilldown',
+    'domain_evidence_request_refs',
+    'domain_legacy_cleanup_plan_refs',
+    'runtime_visualization_projection',
+  ]) {
+    assertSome(snapshot.source_refs, (ref) => ref.role === role);
+  }
 }
 
 export function buildMasAppOperatorDrilldownFixtureManifest() {
@@ -570,110 +525,46 @@ export function buildMasAppOperatorDrilldownFixtureManifest() {
     owner: 'med-autoscience',
     authority_boundary: { opl_role: 'projection_consumer_only' },
     stages: [
-      {
-        stage_id: 'write',
-        stage_kind: 'creation',
+      buildMasFixtureStage({
+        stageId: 'write',
+        stageKind: 'creation',
         title: 'Write',
         summary: 'Write from explicit refs.',
         goal: 'Produce draft refs under MAS authority.',
-        owner: 'med-autoscience',
-        domain_stage_refs: ['write'],
-        inputs: [],
-        knowledge_refs: [],
-        skills: [],
-        prompt_refs: [],
-        allowed_action_refs: [],
-        outputs: [],
-        evaluation: [],
-        handoff: null,
-        source_refs: [],
-        freshness: null,
-        action_parity: null,
-        stage_contract: {
-          requires: ['sources_ready'],
-          ensures: ['draft_ready'],
-          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-          boundary_assumptions: ['domain_truth_remains_domain_owned'],
-          properties: [],
-          runtime_event_refs: ['runtime_event:write.owner_receipt_recorded'],
-          runtime_assumptions: [],
-          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:write/currentness', role: 'monitor' }],
-          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:dataset', role: 'source_scope' }],
-          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:write/current', role: 'cohort_query' }],
-          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:write/current', role: 'trigger' }],
-          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:write/currentness', role: 'metric' }],
-          dashboard_metric_refs: [],
-          artifact_scope_refs: [{ ref_kind: 'artifact_ref', ref: 'artifact:table', role: 'artifact_scope' }],
-          workspace_scope_refs: [{ ref_kind: 'workspace_ref', ref: 'workspace:/tmp/mas', role: 'workspace_scope' }],
-        },
-        trust_boundary: {
-          lane: 'domain_agent',
-          static_check_eligible: false,
-          effect_boundary: true,
-          records_runtime_events: true,
-          runtime_event_refs: ['runtime_event:write.owner_receipt_recorded'],
-          owner_receipt_required: true,
-        },
-        authority_boundary: {
-          opl_role: 'projection_consumer_only',
-          expected_receipt_refs: ['receipt:write-closeout'],
-          can_write_domain_truth: false,
-          can_authorize_quality_verdict: false,
-        },
-      },
-      {
-        stage_id: 'review',
-        stage_kind: 'review',
+        requires: ['sources_ready'],
+        ensures: ['draft_ready'],
+        boundaryAssumptions: ['domain_truth_remains_domain_owned'],
+        runtimeEventRef: 'runtime_event:write.owner_receipt_recorded',
+        monitorRef: 'metric:write/currentness',
+        sourceScopeRef: 'source:dataset',
+        cohortQueryRef: 'cohort:write/current',
+        triggerRef: 'queue:write/current',
+        metricRef: 'metric:write/currentness',
+        artifactScopeRefs: [scopedRef('artifact_ref', 'artifact:table', 'artifact_scope')],
+        workspaceScopeRefs: [scopedRef('workspace_ref', 'workspace:/tmp/mas', 'workspace_scope')],
+        trustLane: 'domain_agent',
+        expectedReceiptRefs: ['receipt:write-closeout'],
+        canWriteDomainTruth: false,
+      }),
+      buildMasFixtureStage({
+        stageId: 'review',
+        stageKind: 'review',
         title: 'Review',
         summary: 'Review from draft refs.',
         goal: 'Return review refs under MAS authority.',
-        owner: 'med-autoscience',
-        domain_stage_refs: ['review'],
-        inputs: [],
-        knowledge_refs: [],
-        skills: [],
-        prompt_refs: [],
-        allowed_action_refs: [],
-        outputs: [],
-        evaluation: [],
-        handoff: null,
-        source_refs: [],
-        freshness: null,
-        action_parity: null,
-        stage_contract: {
-          requires: ['draft_ready'],
-          ensures: ['review_ready'],
-          progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-          typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-          boundary_assumptions: ['reviewer_judgment_is_domain_owned'],
-          properties: [],
-          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
-          runtime_assumptions: [],
-          monitor_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'monitor' }],
-          source_scope_refs: [{ ref_kind: 'source_ref', ref: 'source:review', role: 'source_scope' }],
-          cohort_query_refs: [{ ref_kind: 'query_ref', ref: 'cohort:review/current', role: 'cohort_query' }],
-          trigger_refs: [{ ref_kind: 'queue_ref', ref: 'queue:review/current', role: 'trigger' }],
-          metric_refs: [{ ref_kind: 'metric_ref', ref: 'metric:review/currentness', role: 'metric' }],
-          dashboard_metric_refs: [],
-          artifact_scope_refs: [],
-          workspace_scope_refs: [],
-        },
-        trust_boundary: {
-          lane: 'human_gate',
-          static_check_eligible: false,
-          effect_boundary: true,
-          records_runtime_events: true,
-          runtime_event_refs: ['runtime_event:review.receipt_recorded'],
-          owner_receipt_required: true,
-          human_gate_required: true,
-        },
-        authority_boundary: {
-          opl_role: 'projection_consumer_only',
-          expected_receipt_refs: ['mas:review-receipt'],
-          can_authorize_quality_verdict: false,
-        },
-      },
+        requires: ['draft_ready'],
+        ensures: ['review_ready'],
+        boundaryAssumptions: ['reviewer_judgment_is_domain_owned'],
+        runtimeEventRef: 'runtime_event:review.receipt_recorded',
+        monitorRef: 'metric:review/currentness',
+        sourceScopeRef: 'source:review',
+        cohortQueryRef: 'cohort:review/current',
+        triggerRef: 'queue:review/current',
+        metricRef: 'metric:review/currentness',
+        trustLane: 'human_gate',
+        expectedReceiptRefs: ['mas:review-receipt'],
+        humanGateRequired: true,
+      }),
     ],
     notes: [],
   };
