@@ -34,6 +34,48 @@
       "type": "string",
       "minLength": 1
     },
+    "registry_entry": {
+      "type": "object",
+      "required": [
+        "registry_kind",
+        "registry_source_ref",
+        "base_contract_role",
+        "base_contract_invariant",
+        "identity_fields"
+      ],
+      "properties": {
+        "registry_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "registry_source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_contract_role": {
+          "const": "registry_data_not_base_invariant"
+        },
+        "base_contract_invariant": {
+          "const": false
+        },
+        "identity_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "admitted_domain_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
     "carrier_source_role": {
       "const": "codex_plugin_default_carrier_not_package_truth"
     },

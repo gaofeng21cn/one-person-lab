@@ -29,7 +29,7 @@ function nonAdvancingApplyStateFromReadback(readback: JsonRecord) {
     surface_kind: 'opl_app_drilldown_current_control_state',
     projection_source: 'opl_current_control_state_latest_readback',
     source_ref: stringValue(readback.source_ref),
-    domain_id: stringValue(readback.domain_id) ?? 'medautoscience',
+    domain_id: stringValue(readback.domain_id) ?? 'unknown',
     study_id:
       stringValue(readback.study_id)
       ?? stringValue(recordList(readback.studies)[0]?.study_id)

@@ -62,7 +62,6 @@ const SOURCE_DERIVED_DESIGN_CONSUMPTION_OBJECTS = [
   'ReferenceDesignPacket',
   'TransferMap',
   'AgentPackPlan',
-  'BuildReceipt',
 ];
 
 const REFERENCE_DESIGN_PATTERN_PACKET_REQUIREMENTS = [
@@ -142,6 +141,33 @@ const AGENT_PACK_PLAN_REF_FIELDS = [
 const AGENT_PACK_PLAN_REQUIREMENT_FIELDS = [
   'agent_pack_plan_requirements',
   'capability_plan_requirements',
+];
+
+const DESIGN_ADMISSION_RECEIPT_REF_FIELDS = [
+  'design_admission_receipt_refs',
+  'design_admission_receipt_ref',
+];
+
+const DESIGN_ADMISSION_RECEIPT_REQUIREMENT_FIELDS = [
+  'design_admission_receipt_requirements',
+  'required_admission_receipts',
+];
+
+const DESIGN_ADMISSION_RECEIPT_SOURCE_STAGE_FIELDS = [
+  'design_derived_stage_refs',
+  'design_admission_stage_refs',
+  'source_derived_stage_refs',
+  'source_pattern_stage_refs',
+];
+
+const DESIGN_ADMISSION_RECEIPT_REJECTED_PATTERN_FIELDS = [
+  'rejected_source_pattern_refs',
+  'rejected_pattern_refs',
+];
+
+const DESIGN_ADMISSION_RECEIPT_FORBIDDEN_CLAIM_FIELDS = [
+  'forbidden_claims',
+  'forbidden_claim_refs',
 ];
 
 const BUILD_RECEIPT_REF_FIELDS = [
@@ -820,9 +846,12 @@ export function buildAgentProfileConformance(args: string[]) {
     stageControlPlane,
     isRecord(capabilityMap) ? capabilityMap.source_derived_design_receipt : null,
     isRecord(stageControlPlane) ? stageControlPlane.source_derived_design_receipt : null,
+    isRecord(capabilityMap) ? capabilityMap.design_admission_receipt : null,
+    isRecord(stageControlPlane) ? stageControlPlane.design_admission_receipt : null,
     isRecord(capabilityMap) ? capabilityMap.build_receipt : null,
     isRecord(stageControlPlane) ? stageControlPlane.build_receipt : null,
     ...stages,
+    ...stages.map((stage) => stage.design_admission_receipt),
     ...stages.map((stage) => stage.build_receipt),
   ];
   const designConsumptionObjects = collectDirectMachineFieldStrings(sourceDerivedPayloads, [
@@ -853,6 +882,26 @@ export function buildAgentProfileConformance(args: string[]) {
     sourceDerivedPayloads,
     AGENT_PACK_PLAN_REQUIREMENT_FIELDS,
   );
+  const designAdmissionReceiptRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    DESIGN_ADMISSION_RECEIPT_REF_FIELDS,
+  );
+  const designAdmissionReceiptRequirements = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    DESIGN_ADMISSION_RECEIPT_REQUIREMENT_FIELDS,
+  );
+  const designAdmissionReceiptSourceStageRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    DESIGN_ADMISSION_RECEIPT_SOURCE_STAGE_FIELDS,
+  );
+  const designAdmissionReceiptRejectedPatternRefs = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    DESIGN_ADMISSION_RECEIPT_REJECTED_PATTERN_FIELDS,
+  );
+  const designAdmissionReceiptForbiddenClaims = collectDirectMachineFieldStrings(
+    sourceDerivedPayloads,
+    DESIGN_ADMISSION_RECEIPT_FORBIDDEN_CLAIM_FIELDS,
+  );
   const buildReceiptRefs = collectDirectMachineFieldStrings(sourceDerivedPayloads, BUILD_RECEIPT_REF_FIELDS);
   const buildReceiptRequirements = collectDirectMachineFieldStrings(
     sourceDerivedPayloads,
@@ -879,10 +928,10 @@ export function buildAgentProfileConformance(args: string[]) {
     && referenceDesignPacketRefs.length > 0;
   const hasTransferMapConsumption = transferMapRefs.length > 0;
   const hasAgentPackPlanConsumption = agentPackPlanRefs.length > 0;
-  const hasBuildReceiptConsumption = buildReceiptRefs.length > 0
-    && buildReceiptSourceStageRefs.length > 0
-    && buildReceiptRejectedPatternRefs.length > 0
-    && buildReceiptForbiddenClaims.length > 0;
+  const hasDesignAdmissionReceiptConsumption = designAdmissionReceiptRefs.length > 0
+    && designAdmissionReceiptSourceStageRefs.length > 0
+    && designAdmissionReceiptRejectedPatternRefs.length > 0
+    && designAdmissionReceiptForbiddenClaims.length > 0;
 
   const blockers = [
     fs.existsSync(path.join(repoDir, 'contracts', 'capability_map.json')) ? null : 'missing_contract:contracts/capability_map.json',
@@ -913,9 +962,9 @@ export function buildAgentProfileConformance(args: string[]) {
     !sourceDerivedRoutePresent || hasAgentPackPlanConsumption
       ? null
       : 'source_derived_design_missing_design_consumption_object:AgentPackPlan',
-    !sourceDerivedRoutePresent || hasBuildReceiptConsumption
+    !sourceDerivedRoutePresent || hasDesignAdmissionReceiptConsumption
       ? null
-      : 'source_derived_design_missing_design_consumption_object:BuildReceipt',
+      : 'source_derived_design_missing_design_admission_receipt_refs',
     !sourceDerivedRoutePresent || referenceDesignSourceRefs.length > 0
       ? null
       : 'source_derived_design_missing_reference_design_source_refs',
@@ -931,15 +980,15 @@ export function buildAgentProfileConformance(args: string[]) {
     !sourceDerivedRoutePresent || buildReceiptRefs.length > 0
       ? null
       : 'source_derived_design_missing_build_receipt_refs',
-    !sourceDerivedRoutePresent || buildReceiptSourceStageRefs.length > 0
+    !sourceDerivedRoutePresent || designAdmissionReceiptSourceStageRefs.length > 0
       ? null
-      : 'source_derived_design_missing_build_receipt_source_stage_refs',
-    !sourceDerivedRoutePresent || buildReceiptRejectedPatternRefs.length > 0
+      : 'source_derived_design_missing_design_admission_stage_refs',
+    !sourceDerivedRoutePresent || designAdmissionReceiptRejectedPatternRefs.length > 0
       ? null
-      : 'source_derived_design_missing_build_receipt_rejected_source_pattern_refs',
-    !sourceDerivedRoutePresent || buildReceiptForbiddenClaims.length > 0
+      : 'source_derived_design_missing_design_admission_rejected_source_pattern_refs',
+    !sourceDerivedRoutePresent || designAdmissionReceiptForbiddenClaims.length > 0
       ? null
-      : 'source_derived_design_missing_build_receipt_forbidden_claims',
+      : 'source_derived_design_missing_design_admission_forbidden_claims',
     !sourceDerivedRoutePresent || stagePatternSourceRefs.length > 0 || hasTargetOnlyRequirement
       ? null
       : 'source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement',
@@ -974,6 +1023,11 @@ export function buildAgentProfileConformance(args: string[]) {
               transfer_map_requirements: transferMapRequirements,
               agent_pack_plan_refs: agentPackPlanRefs,
               agent_pack_plan_requirements: agentPackPlanRequirements,
+              design_admission_receipt_refs: designAdmissionReceiptRefs,
+              design_admission_receipt_requirements: designAdmissionReceiptRequirements,
+              design_admission_receipt_stage_refs: designAdmissionReceiptSourceStageRefs,
+              design_admission_receipt_rejected_source_pattern_refs: designAdmissionReceiptRejectedPatternRefs,
+              design_admission_receipt_forbidden_claims: designAdmissionReceiptForbiddenClaims,
               build_receipt_refs: buildReceiptRefs,
               build_receipt_requirements: buildReceiptRequirements,
               build_receipt_source_stage_refs: buildReceiptSourceStageRefs,

@@ -20,6 +20,14 @@ const retiredBoundaryTermsField = ['legacy', 'boundary', 'terms'].join('_');
 
 type DomainDefinition = {
   domain_id: string;
+  registry_entry?: {
+    registry_kind?: string;
+    registry_source_ref?: string;
+    base_contract_role?: string;
+    base_contract_invariant?: boolean;
+    identity_fields?: string[];
+    agent_package_manifest_ref?: string;
+  };
   product_layer?: string;
   foundry_agent_package?: {
     package_kind?: string;
@@ -116,6 +124,11 @@ test('domains.json g2 keeps retired boundary terms out of active domain fields',
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'canonical_truth_owner'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'role'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(domain, retiredBoundaryTermsField), false);
+    assert.equal(domain.registry_entry?.registry_kind, 'admitted_domain_agent_registry_entry');
+    assert.equal(domain.registry_entry?.base_contract_role, 'registry_data_not_base_invariant');
+    assert.equal(domain.registry_entry?.base_contract_invariant, false);
+    assert.equal(domain.registry_entry?.registry_source_ref, `contracts/opl-framework/domains.json#${domain.domain_id}`);
+    assert.equal(domain.registry_entry?.identity_fields?.includes('domain_id'), true);
     assert.equal(domain.product_layer, 'foundry_agent');
     assert.deepEqual(domain.foundry_agent_package, {
       package_kind: 'opl_compatible_package',
