@@ -6,6 +6,7 @@ export const OPL_CONNECT_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
+export { buildEvidenceGroundedConnectSubstrate } from './evidence-grounded-substrate.ts';
 export {
   listOplAgentPackages,
   runOplAgentPackageExposureAction,

@@ -6,6 +6,7 @@ export const OPL_WORKSPACE_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
+export { buildEvidenceGroundedWorkspaceSubstrate } from './evidence-grounded-substrate.ts';
 export { buildAgentWorkspaceNormChecks, buildAgentWorkspaceNormProjection } from './agent-workspace-norm.ts';
 export { resolveDefaultFamilyWorkspaceRoot, resolveFamilyWorkspaceRootFromRepoRoot } from '../../kernel/family-workspace-root.ts';
 export {

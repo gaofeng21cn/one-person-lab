@@ -6,6 +6,7 @@ export const OPL_LEDGER_SOURCE_MODULE = {
 } as const;
 
 // Public cross-module surface generated from existing module consumers.
+export { buildEvidenceGroundedLedgerSubstrate } from './evidence-grounded-substrate.ts';
 export { doctorArtifactProvenanceBundle, exportArtifactProvenanceBundle, inspectArtifactProvenanceBundle, recordArtifactProvenanceBundle, validateArtifactProvenanceBundle } from './artifact-provenance-bundle.ts';
 export { buildSubstrateProvenanceSurface } from './substrate-provenance-surface.ts';
 export type { SubstrateProvenanceSurfaceInput } from './substrate-provenance-surface.ts';
