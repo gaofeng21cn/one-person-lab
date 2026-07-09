@@ -62,7 +62,16 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 | `MAG` | 未发现 OPL 误持有 MAG authority；product/status/user-loop/domain-handler/control-plane/lifecycle 仍是 refs-only adapter tail。 | MAG 保留 grant truth、fundability / export / submission verdict、package authority、strategy memory、owner receipt 和 typed blocker；OPL 侧继续作为 generated/default caller 与 projection owner。 | 不声明 MAG physical delete complete、grant ready、package release currentness 或 owner acceptance。 |
 | `RCA` | 标准 package manifest 与 RCA no-false-authority 边界已落地；stage 粒度保持 RCA 现有顶层结构。 | RCA 保留 visual truth、layout/review/export verdict、canonical artifact authority、visual memory、native helper implementation、owner receipt 和 typed blocker。 | 不声明 visual delivery ready、export ready、production ready 或 owner acceptance。 |
 | `OMA` | OMA 当前没有新的未治理通用能力；本轮已把 stage-decomposition subpacket chain rebase 到远端测试瘦身提交之后并推送。 | OMA 保留 agent-building semantics、candidate package refs、proposal/materialization refs、target-agent typed blocker refs；Agent Lab runner、promotion gate、attempt ledger 和 generated surfaces 继续归 OPL。 | 不声明 OMA physical delete complete、target agent ready 或 promotion ready。 |
-| `OBF` | OBF 的 OMA 命名 stage-native authority fields 与 stale generated handler paths 已清理并推送。 | OBF 保留 manuscript truth、style/source judgment、quality/export verdict、artifact authority、memory body、owner receipt 和 typed blocker；generated/current path 只指向真实 repo file 或 OPL generated descriptor refs。 | 不声明 book ready、publication proof ready、final export ready、owner acceptance 或 production ready。 |
+| `OBF` | OBF 的 OMA 命名 stage-native authority fields、stale generated handler paths 与 diagnostic helper default-watchlist 字段错配已清理并推送；family conformance 结构态 readback 已降到 `blocked_count=0`。 | OBF 保留 manuscript truth、style/source judgment、quality/export verdict、artifact authority、memory body、owner receipt 和 typed blocker；generated/current path 只指向真实 repo file 或 OPL generated descriptor refs；publication proof gate 只阻断 publication-proof / final-export claims，不阻断普通 drafting / review-PDF 刷新。 | 不声明 book ready、publication proof ready、final export ready、owner acceptance 或 production ready。 |
+
+## 2026-07-09 final structural readback
+
+本轮最终 OPL readback：
+
+- `opl agents default-callers --family-defaults --json`：`blocked_count=0`、`active_deletion_evidence_worklist_count=0`、`closed_surface_retirement_gate_count=40`、`physical_delete_authorized=false`、`no_further_opl_default_caller_delete_work=true`。
+- `opl agents conformance --family-defaults --json`：`passed_count=6`、`blocked_count=0`、`structural_conformance_status=passed`、`structural_contract_status=passed`、`family_live_conformance_probe_status=passed`；`live_domain_progress_status=owner_evidence_recorded_not_ready_claim`，`production_evidence_tail_policy=reported_separately_not_a_structural_pass_condition`。
+
+这证明结构 / contract / generated surface / default caller / conformance readback 已完成本轮迁移闭环；它不授权 domain repo physical delete，不声明 live domain progress complete、domain ready、production ready、owner acceptance、App release ready 或 Brand L5。
 
 ## 后续 Plan Completion Audit 条目
 
