@@ -330,6 +330,7 @@ const lanes = {
       'tests/src/verification-command-surfaces.test.ts',
       'tests/src/target-architecture-schema-contracts.test.ts',
       'tests/src/evidence-grounded-decision-agent-profile.test.ts',
+      'tests/src/agent-profile-spine.test.ts',
       'tests/src/evidence-grounded-stagecraft-runway.test.ts',
       'tests/src/evidence-grounded-substrate.test.ts',
       'tests/src/evidence-grounded-catalog-eval.test.ts',
