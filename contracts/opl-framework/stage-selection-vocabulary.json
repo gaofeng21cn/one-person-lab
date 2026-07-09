@@ -1,25 +1,30 @@
 {
   "version": "g2",
+  "vocabulary_scope": "Canonical OPL stage-selection values are domain-neutral. Domain-specific strings belong only to compatibility_aliases or profile_examples.",
   "intent_id": [
-    "grant_direction_assessment",
-    "proposal_authoring",
-    "proposal_revision",
-    "research_progression",
-    "submission_delivery",
-    "data_asset_governance",
-    "presentation_delivery",
-    "lecture_materials",
-    "defense_materials"
+    "domain_route",
+    "domain_workstream",
+    "domain_artifact",
+    "stage_candidate_refs",
+    "stage_run_evidence_refs",
+    "owner_evidence_refs",
+    "connector_receipt",
+    "workspace_locator",
+    "source_locator",
+    "artifact_locator",
+    "profile_extension"
   ],
   "workstream_id": [
-    "grant_ops",
-    "research_ops",
-    "presentation_ops"
+    "domain_workstream",
+    "stage_workstream",
+    "artifact_workstream",
+    "operator_projection_workstream",
+    "profile_extension_workstream"
   ],
   "domain_id": [
-    "medautogrant",
-    "medautoscience",
-    "redcube"
+    "domain_profile",
+    "domain_agent",
+    "external_specialist_profile"
   ],
   "request_kind": [
     "discover",
@@ -31,46 +36,258 @@
   ],
   "target_kind": [
     "workspace",
-    "study",
-    "deliverable",
-    "topic",
-    "publication"
+    "source",
+    "domain_artifact",
+    "stage",
+    "owner_evidence",
+    "connector_receipt",
+    "profile_extension"
   ],
   "delivery_kind": [
-    "research_delivery",
-    "presentation_delivery",
-    "social_visual_delivery"
+    "domain_artifact_delivery",
+    "stage_evidence_delivery",
+    "operator_projection_delivery",
+    "connector_receipt_delivery"
   ],
   "review_kind": [
     "human_review",
     "baseline_review",
-    "publish_gate",
-    "quality_regression"
+    "owner_gate",
+    "quality_gate",
+    "regression_review"
   ],
   "entry_mode": [
     "domain_agent_entry",
     "stage_runtime_projection",
-    "direct_domain_skill"
+    "profile_extension_entry",
+    "external_specialist_entry"
   ],
   "selection_rules": [
-    "select by explicit domain-agent handle first",
-    "select by workstream semantics second",
+    "select by explicit domain profile or domain-agent handle first",
+    "select by domain_workstream semantics second",
     "select by family/profile preference third",
     "OPL opens a stage-led framework handoff and does not become domain truth owner",
-    "the selected domain agent owns quality, artifact, and publication or export authority"
+    "the selected domain profile or domain agent owns profile-declared truth, quality, artifact, and delivery authority"
   ],
-  "special_cases": [
+  "compatibility_aliases": {
+    "intent_id": [
+      {
+        "alias": "grant_direction_assessment",
+        "canonical": "domain_route",
+        "profile_id": "medautogrant_grant_profile"
+      },
+      {
+        "alias": "proposal_authoring",
+        "canonical": "domain_artifact",
+        "profile_id": "medautogrant_grant_profile"
+      },
+      {
+        "alias": "proposal_revision",
+        "canonical": "domain_artifact",
+        "profile_id": "medautogrant_grant_profile"
+      },
+      {
+        "alias": "research_progression",
+        "canonical": "domain_workstream",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "submission_delivery",
+        "canonical": "domain_artifact",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "data_asset_governance",
+        "canonical": "domain_artifact",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "presentation_delivery",
+        "canonical": "domain_artifact",
+        "profile_id": "redcube_visual_profile"
+      },
+      {
+        "alias": "lecture_materials",
+        "canonical": "domain_artifact",
+        "profile_id": "redcube_visual_profile"
+      },
+      {
+        "alias": "defense_materials",
+        "canonical": "domain_artifact",
+        "profile_id": "redcube_visual_profile"
+      }
+    ],
+    "workstream_id": [
+      {
+        "alias": "grant_ops",
+        "canonical": "domain_workstream",
+        "profile_id": "medautogrant_grant_profile"
+      },
+      {
+        "alias": "research_ops",
+        "canonical": "domain_workstream",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "presentation_ops",
+        "canonical": "domain_workstream",
+        "profile_id": "redcube_visual_profile"
+      }
+    ],
+    "domain_id": [
+      {
+        "alias": "medautogrant",
+        "canonical": "domain_profile",
+        "profile_id": "medautogrant_grant_profile"
+      },
+      {
+        "alias": "medautoscience",
+        "canonical": "domain_profile",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "redcube",
+        "canonical": "domain_profile",
+        "profile_id": "redcube_visual_profile"
+      }
+    ],
+    "target_kind": [
+      {
+        "alias": "study",
+        "canonical": "domain_artifact",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "deliverable",
+        "canonical": "domain_artifact",
+        "profile_id": "domain_artifact_profile"
+      },
+      {
+        "alias": "topic",
+        "canonical": "domain_route",
+        "profile_id": "domain_route_profile"
+      },
+      {
+        "alias": "publication",
+        "canonical": "domain_artifact",
+        "profile_id": "medautoscience_research_profile"
+      }
+    ],
+    "delivery_kind": [
+      {
+        "alias": "research_delivery",
+        "canonical": "domain_artifact_delivery",
+        "profile_id": "medautoscience_research_profile"
+      },
+      {
+        "alias": "presentation_delivery",
+        "canonical": "domain_artifact_delivery",
+        "profile_id": "redcube_visual_profile"
+      },
+      {
+        "alias": "social_visual_delivery",
+        "canonical": "domain_artifact_delivery",
+        "profile_id": "redcube_visual_profile"
+      }
+    ],
+    "review_kind": [
+      {
+        "alias": "publish_gate",
+        "canonical": "owner_gate",
+        "profile_id": "domain_artifact_profile"
+      },
+      {
+        "alias": "quality_regression",
+        "canonical": "regression_review",
+        "profile_id": "domain_artifact_profile"
+      }
+    ]
+  },
+  "profile_examples": [
     {
-      "family": "ppt_deck",
-      "direct_workstream": "presentation_ops",
-      "domain_id": "redcube",
-      "notes": "ppt_deck maps directly to Presentation Foundry through RedCube AI."
+      "profile_id": "medautogrant_grant_profile",
+      "canonical_values": {
+        "domain_id": "domain_profile",
+        "workstream_id": "domain_workstream",
+        "intent_id": "domain_artifact",
+        "target_kind": "domain_artifact"
+      },
+      "compatibility_aliases": [
+        "medautogrant",
+        "grant_ops",
+        "grant_direction_assessment",
+        "proposal_authoring",
+        "proposal_revision"
+      ],
+      "profile_example_is_core_ontology": false
     },
     {
+      "profile_id": "medautoscience_research_profile",
+      "canonical_values": {
+        "domain_id": "domain_profile",
+        "workstream_id": "domain_workstream",
+        "intent_id": "domain_artifact",
+        "target_kind": "domain_artifact"
+      },
+      "compatibility_aliases": [
+        "medautoscience",
+        "research_ops",
+        "research_progression",
+        "submission_delivery",
+        "data_asset_governance",
+        "publication"
+      ],
+      "profile_example_is_core_ontology": false
+    },
+    {
+      "profile_id": "redcube_visual_profile",
+      "canonical_values": {
+        "domain_id": "domain_profile",
+        "workstream_id": "domain_workstream",
+        "intent_id": "domain_artifact",
+        "target_kind": "domain_artifact"
+      },
+      "compatibility_aliases": [
+        "redcube",
+        "presentation_ops",
+        "presentation_delivery",
+        "lecture_materials",
+        "defense_materials",
+        "social_visual_delivery"
+      ],
+      "profile_example_is_core_ontology": false
+    },
+    {
+      "profile_id": "redcube_ppt_deck_profile_example",
+      "family": "ppt_deck",
+      "canonical_values": {
+        "domain_id": "domain_profile",
+        "workstream_id": "domain_workstream",
+        "intent_id": "domain_artifact",
+        "target_kind": "domain_artifact"
+      },
+      "compatibility_aliases": [
+        "redcube",
+        "presentation_ops"
+      ],
+      "notes": "ppt_deck is a profile example for a presentation-capable domain profile, not a canonical OPL core value.",
+      "profile_example_is_core_ontology": false
+    },
+    {
+      "profile_id": "redcube_xiaohongshu_profile_example",
       "family": "xiaohongshu",
-      "domain_id": "redcube",
-      "auto_workstream": null,
-      "notes": "xiaohongshu may select RedCube AI without automatically becoming Presentation Foundry."
+      "canonical_values": {
+        "domain_id": "domain_profile",
+        "workstream_id": "domain_workstream",
+        "intent_id": "domain_artifact",
+        "target_kind": "domain_artifact"
+      },
+      "compatibility_aliases": [
+        "redcube"
+      ],
+      "notes": "xiaohongshu may select a RedCube-compatible profile without automatically becoming Presentation Foundry.",
+      "profile_example_is_core_ontology": false
     }
-  ]
+  ],
+  "special_cases": []
 }

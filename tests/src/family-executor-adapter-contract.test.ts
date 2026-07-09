@@ -16,6 +16,15 @@ function readJson(relativePath: string): JsonObject {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonObject;
 }
 
+function vocabularyAliasValues(vocabulary: JsonObject): Set<string> {
+  const aliases = vocabulary.compatibility_aliases as JsonObject;
+  return new Set(
+    Object.values(aliases).flatMap((entries) => (
+      entries as JsonObject[]
+    ).map((entry) => entry.alias as string)),
+  );
+}
+
 function assertLayeredExecutorPolicy(surface: JsonObject) {
   const layered = surface.layered_executor_semantics as JsonObject;
   const userShell = layered.user_interaction_shell as JsonObject;
@@ -183,12 +192,56 @@ test('active framework contracts carry executor semantics through stage selectio
     opl: 'framework_transport_and_projection_only',
     domain_agent: 'truth_quality_artifact_owner',
   });
-  assert.ok(stageRules.includes('select by explicit domain-agent handle first'));
+  assert.ok(stageRules.includes('select by explicit domain profile or domain-agent handle first'));
   assert.ok(stageRules.includes('OPL opens a stage-led framework handoff and does not become domain truth owner'));
-  assert.ok(stageRules.includes('the selected domain agent owns quality, artifact, and publication or export authority'));
+  assert.ok(stageRules.includes('the selected domain profile or domain agent owns profile-declared truth, quality, artifact, and delivery authority'));
   assert.ok(verificationRefs.includes('contracts/opl-framework/standard-domain-agent-skeleton-contract.json'));
   assert.ok(verificationRefs.includes('contracts/opl-framework/stage-selection-vocabulary.json'));
   assert.ok(!verificationRefs.includes('contracts/opl-framework/domain-onboarding-readiness.schema.json'));
+});
+
+test('stage-selection vocabulary keeps domain-specific values as compatibility aliases', () => {
+  const vocabulary = readJson('contracts/opl-framework/stage-selection-vocabulary.json');
+  const canonicalFields = [
+    'intent_id',
+    'workstream_id',
+    'domain_id',
+    'target_kind',
+    'delivery_kind',
+    'review_kind',
+  ];
+  const canonicalValues = new Set(
+    canonicalFields.flatMap((field) => vocabulary[field] as string[]),
+  );
+  const retiredCanonicalValues = [
+    'grant_direction_assessment',
+    'grant_ops',
+    'medautogrant',
+    'redcube',
+    'publication',
+  ];
+  const aliasValues = vocabularyAliasValues(vocabulary);
+  const profileExamples = vocabulary.profile_examples as JsonObject[];
+
+  assert.deepEqual(vocabulary.special_cases, []);
+  for (const value of [
+    'domain_route',
+    'domain_workstream',
+    'domain_artifact',
+    'profile_extension',
+  ]) {
+    assert.equal(canonicalValues.has(value), true, value);
+  }
+  for (const value of retiredCanonicalValues) {
+    assert.equal(canonicalValues.has(value), false, value);
+    assert.equal(aliasValues.has(value), true, value);
+  }
+  assert.equal(
+    profileExamples.every((entry) => entry.profile_example_is_core_ontology === false),
+    true,
+  );
+  assert.ok(profileExamples.some((entry) => entry.profile_id === 'redcube_ppt_deck_profile_example'));
+  assert.ok(profileExamples.some((entry) => entry.profile_id === 'redcube_xiaohongshu_profile_example'));
 });
 
 test('family manifests use the same split executor declaration', () => {
