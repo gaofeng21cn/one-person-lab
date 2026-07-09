@@ -1,0 +1,398 @@
+{
+  "surface_kind": "opl_evidence_grounded_decision_agent_profile_contract",
+  "version": "evidence-grounded-decision-agent-profile.v1",
+  "profile_id": "evidence_grounded_decision_agent_profile.v1",
+  "owner": "one-person-lab",
+  "state": "active_contract",
+  "owning_module": "pack",
+  "product_layer": "foundry_agent_profile",
+  "purpose": "Define the Pack-owned machine profile and ABI for OPL-compatible agents that provide evidence-grounded decision support without becoming domain authority.",
+  "machine_boundary": {
+    "opl_owns": [
+      "profile_identity",
+      "profile_abi",
+      "first_class_object_names",
+      "cross_module_ownership_map",
+      "fail_closed_policy",
+      "forbidden_claims"
+    ],
+    "opl_does_not_own": [
+      "domain_truth",
+      "domain_quality_verdict",
+      "domain_artifact_body",
+      "domain_owner_receipt",
+      "domain_typed_blocker_instance",
+      "production_readiness"
+    ],
+    "concrete_domain_agent_implemented": false,
+    "medical_or_hematology_agent_implemented": false
+  },
+  "source_of_truth_refs": [
+    {
+      "ref": "docs/project.md",
+      "role": "framework_project_boundary"
+    },
+    {
+      "ref": "contracts/opl-framework/foundry-agent-series-contract.json",
+      "role": "foundry_agent_series_boundary"
+    },
+    {
+      "ref": "contracts/opl-framework/standard-agent-principles.json",
+      "role": "standard_agent_principles_boundary"
+    }
+  ],
+  "profile_role": "standard_profile_for_evidence_grounded_decision_support_agents",
+  "consumption_status": "pack_contract_source_readback_only",
+  "first_class_objects": [
+    {
+      "object_name": "WorkItem",
+      "object_id": "work_item",
+      "owner_module": "runway",
+      "role": "Durable attempt unit that carries the requested decision-support task and refs."
+    },
+    {
+      "object_name": "StructuredInput",
+      "object_id": "structured_input",
+      "owner_module": "workspace",
+      "role": "Normalized sensitive input refs and metadata without moving source bodies into Pack."
+    },
+    {
+      "object_name": "ModeRoutingReceipt",
+      "object_id": "mode_routing_receipt",
+      "owner_module": "stagecraft",
+      "role": "Mode selection, evidence policy, and route-back reason for the attempt."
+    },
+    {
+      "object_name": "RetrievalPacket",
+      "object_id": "retrieval_packet",
+      "owner_module": "connect",
+      "role": "Connector/resource retrieval refs, trust labels, and freshness metadata."
+    },
+    {
+      "object_name": "ToolResultEnvelope",
+      "object_id": "tool_result_envelope",
+      "owner_module": "connect",
+      "role": "Tool output envelope with permissions, side-effect, and data-sharing boundaries."
+    },
+    {
+      "object_name": "EvidencePacket",
+      "object_id": "evidence_packet",
+      "owner_module": "ledger",
+      "role": "Refs-only evidence, provenance, confidence, and conflict metadata."
+    },
+    {
+      "object_name": "SynthesisPacket",
+      "object_id": "synthesis_packet",
+      "owner_module": "stagecraft",
+      "role": "Evidence-grounded synthesis that stays advisory and does not finalize the decision."
+    },
+    {
+      "object_name": "IndependentReviewReceipt",
+      "object_id": "independent_review_receipt",
+      "owner_module": "foundry-lab",
+      "role": "Evaluation or independent review receipt ref for promotion and regression review."
+    },
+    {
+      "object_name": "DecisionSupportArtifact",
+      "object_id": "decision_support_artifact",
+      "owner_module": "pack",
+      "role": "Pack-shaped advisory artifact; it is not a final decision or artifact authority."
+    },
+    {
+      "object_name": "HumanGateDecision",
+      "object_id": "human_gate_decision",
+      "owner_module": "runway",
+      "role": "Human gate decision ref when evidence or safety boundaries require owner judgment."
+    },
+    {
+      "object_name": "UnsupportedEvidenceBlocker",
+      "object_id": "unsupported_evidence_blocker",
+      "owner_module": "ledger",
+      "role": "Typed blocker ref shape for unsupported, conflicting, stale, or unsafe evidence conditions."
+    }
+  ],
+  "object_flow": [
+    "WorkItem",
+    "StructuredInput",
+    "ModeRoutingReceipt",
+    "RetrievalPacket",
+    "ToolResultEnvelope",
+    "EvidencePacket",
+    "SynthesisPacket",
+    "IndependentReviewReceipt",
+    "DecisionSupportArtifact",
+    "HumanGateDecision",
+    "UnsupportedEvidenceBlocker"
+  ],
+  "decision_support_flow": {
+    "flow_id": "evidence_grounded_decision_support_flow.v1",
+    "steps": [
+      "material_or_case_intake",
+      "structured_extraction",
+      "enrichment",
+      "mode_routing",
+      "evidence_and_tool_execution",
+      "synthesis",
+      "independent_review_or_human_gate",
+      "decision_support_artifact_with_evidence_trace"
+    ],
+    "flow_can_claim_final_decision": false,
+    "flow_can_claim_domain_ready": false
+  },
+  "mode_routing_policy": {
+    "policy_id": "evidence_grounded_mode_routing.v1",
+    "owner_module": "stagecraft",
+    "routing_receipt_object": "ModeRoutingReceipt",
+    "required_receipt_fields": [
+      "mode_id",
+      "evidence_threshold_ref",
+      "tool_affordance_boundary_ref",
+      "source_freshness_window_ref",
+      "selected_executor_binding_ref",
+      "route_back_or_human_gate_policy_ref"
+    ],
+    "allowed_mode_classes": [
+      "evidence_lookup",
+      "comparison",
+      "differential_reasoning",
+      "risk_or_priority_stratification",
+      "recommendation_options",
+      "insufficient_evidence_route_back"
+    ],
+    "routing_receipt_can_replace_domain_policy": false
+  },
+  "evidence_policy": {
+    "policy_id": "refs_only_evidence_grounding.v1",
+    "owner_module": "ledger",
+    "evidence_object": "EvidencePacket",
+    "retrieval_object": "RetrievalPacket",
+    "tool_result_object": "ToolResultEnvelope",
+    "required_evidence_fields": [
+      "evidence_ref",
+      "source_ref",
+      "provenance_ref",
+      "retrieval_receipt_ref",
+      "tool_receipt_ref",
+      "freshness_ref",
+      "confidence_label",
+      "conflict_status"
+    ],
+    "accepted_conflict_statuses": [
+      "none",
+      "explained_by_owner_policy",
+      "routes_to_human_gate",
+      "routes_to_typed_blocker"
+    ],
+    "body_storage_policy": "refs_only_no_source_body_in_profile_contract",
+    "evidence_packet_can_claim_quality_verdict": false
+  },
+  "human_gate_policy": {
+    "policy_id": "decision_support_human_gate.v1",
+    "owner_module": "runway",
+    "human_gate_object": "HumanGateDecision",
+    "required_when": [
+      "sensitive_external_egress_requires_approval",
+      "evidence_conflict_without_owner_resolution",
+      "low_confidence_after_required_retrieval",
+      "irreversible_or_high_risk_action_requested",
+      "domain_owner_policy_requires_human_review"
+    ],
+    "allowed_closeout_refs": [
+      "human_gate_ref",
+      "route_back_ref",
+      "typed_blocker_ref"
+    ],
+    "human_gate_decision_can_be_fabricated_by_opl": false
+  },
+  "unsupported_evidence_blocker_policy": {
+    "policy_id": "unsupported_evidence_blocker.v1",
+    "owner_module": "ledger",
+    "blocker_object": "UnsupportedEvidenceBlocker",
+    "required_blocker_reasons": [
+      "no_evidence",
+      "low_confidence",
+      "evidence_conflict",
+      "stale_source",
+      "required_tool_receipt_missing",
+      "required_provider_receipt_missing",
+      "sensitive_external_egress_unapproved"
+    ],
+    "blocker_shape": "typed_blocker_ref_or_route_back_ref",
+    "profile_can_create_domain_typed_blocker_instance": false
+  },
+  "module_ownership": [
+    {
+      "module_id": "pack",
+      "brand_module": "OPL Pack",
+      "owns": "profile_and_abi"
+    },
+    {
+      "module_id": "stagecraft",
+      "brand_module": "OPL Stagecraft",
+      "owns": "mode_routing_and_evidence_policy"
+    },
+    {
+      "module_id": "runway",
+      "brand_module": "OPL Runway",
+      "owns": "durable_attempt_and_human_gate"
+    },
+    {
+      "module_id": "ledger",
+      "brand_module": "OPL Ledger",
+      "owns": "evidence_and_provenance_refs"
+    },
+    {
+      "module_id": "connect",
+      "brand_module": "OPL Connect",
+      "owns": "tool_and_resource_connector_trust"
+    },
+    {
+      "module_id": "workspace",
+      "brand_module": "OPL Workspace",
+      "owns": "sensitive_source_lifecycle"
+    },
+    {
+      "module_id": "atlas",
+      "brand_module": "OPL Atlas",
+      "owns": "catalog_and_discovery"
+    },
+    {
+      "module_id": "console",
+      "brand_module": "OPL Console",
+      "owns": "drilldown_projection"
+    },
+    {
+      "module_id": "foundry-lab",
+      "brand_module": "OPL Foundry Lab",
+      "owns": "evaluation_and_promotion"
+    },
+    {
+      "module_id": "charter",
+      "brand_module": "OPL Charter",
+      "owns": "forbidden_claims_and_false_authority_policy"
+    }
+  ],
+  "fail_closed_rules": [
+    {
+      "rule_id": "no_evidence",
+      "when": "No admissible EvidencePacket ref is present.",
+      "success_closeout_allowed": false,
+      "allowed_outcomes": [
+        "route_back_ref",
+        "human_gate_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "rule_id": "low_confidence",
+      "when": "Evidence confidence is below the declared mode threshold.",
+      "success_closeout_allowed": false,
+      "allowed_outcomes": [
+        "route_back_ref",
+        "human_gate_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "rule_id": "evidence_conflict",
+      "when": "Evidence packets materially conflict and no owner-approved resolution exists.",
+      "success_closeout_allowed": false,
+      "allowed_outcomes": [
+        "route_back_ref",
+        "human_gate_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "rule_id": "stale_source",
+      "when": "The source freshness window or provenance check is stale.",
+      "success_closeout_allowed": false,
+      "allowed_outcomes": [
+        "route_back_ref",
+        "human_gate_ref",
+        "typed_blocker_ref"
+      ]
+    },
+    {
+      "rule_id": "unsafe_tool_data_sharing",
+      "when": "A tool result would expose sensitive source data outside the declared trust boundary.",
+      "success_closeout_allowed": false,
+      "allowed_outcomes": [
+        "human_gate_ref",
+        "typed_blocker_ref"
+      ]
+    }
+  ],
+  "forbidden_claims": [
+    {
+      "claim_id": "domain_ready",
+      "forbidden": true,
+      "owner": "domain_agent"
+    },
+    {
+      "claim_id": "quality_verdict",
+      "forbidden": true,
+      "owner": "domain_agent"
+    },
+    {
+      "claim_id": "final_decision",
+      "forbidden": true,
+      "owner": "human_or_domain_owner"
+    },
+    {
+      "claim_id": "artifact_authority",
+      "forbidden": true,
+      "owner": "domain_agent"
+    },
+    {
+      "claim_id": "owner_receipt",
+      "forbidden": true,
+      "owner": "domain_agent"
+    },
+    {
+      "claim_id": "production_ready",
+      "forbidden": true,
+      "owner": "release_or_runtime_authority"
+    }
+  ],
+  "authority_boundary": {
+    "profile_can_claim_domain_ready": false,
+    "profile_can_claim_quality_verdict": false,
+    "profile_can_claim_final_decision": false,
+    "profile_can_claim_artifact_authority": false,
+    "profile_can_claim_owner_receipt": false,
+    "profile_can_claim_production_ready": false,
+    "pack_can_write_domain_truth": false,
+    "pack_can_write_memory_body": false,
+    "pack_can_mutate_artifact_body": false,
+    "pack_can_create_owner_receipt": false,
+    "pack_can_create_domain_typed_blocker": false,
+    "pack_can_closeout_fail_closed_rule_as_success": false,
+    "tool_result_envelope_can_share_unsafe_data": false
+  },
+  "readback_contract": {
+    "surface_kind": "opl_evidence_grounded_decision_agent_profile_source_readback_contract",
+    "version": "evidence-grounded-decision-agent-profile-source-readback.v1",
+    "source_module_ref": "src/modules/pack/evidence-grounded-decision-agent-profile.ts",
+    "contract_ref": "contracts/opl-framework/evidence-grounded-decision-agent-profile.json",
+    "exported_builder": "buildEvidenceGroundedDecisionAgentProfileReadback",
+    "readback_is_stable_json": true,
+    "readback_can_claim_runtime_ready": false,
+    "readback_can_claim_domain_ready": false
+  },
+  "consumption_contract": {
+    "pack_consumers_may": [
+      "inspect_profile_identity",
+      "read_first_class_object_names",
+      "read_module_ownership",
+      "read_fail_closed_rules",
+      "read_forbidden_claims"
+    ],
+    "pack_consumers_must_not": [
+      "treat_contract_as_domain_agent",
+      "treat_contract_validation_as_quality_verdict",
+      "treat_source_readback_as_owner_receipt",
+      "treat_focused_test_as_production_ready"
+    ]
+  }
+}

@@ -1,0 +1,135 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+  buildEvidenceGroundedDecisionAgentProfileReadback,
+  EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF,
+} from '../../src/modules/pack/index.ts';
+
+const requiredObjects = [
+  'WorkItem',
+  'StructuredInput',
+  'ModeRoutingReceipt',
+  'RetrievalPacket',
+  'ToolResultEnvelope',
+  'EvidencePacket',
+  'SynthesisPacket',
+  'IndependentReviewReceipt',
+  'DecisionSupportArtifact',
+  'HumanGateDecision',
+  'UnsupportedEvidenceBlocker',
+];
+
+const requiredModules = [
+  'pack',
+  'stagecraft',
+  'runway',
+  'ledger',
+  'connect',
+  'workspace',
+  'atlas',
+  'console',
+  'foundry-lab',
+  'charter',
+];
+
+const requiredFailClosedRules = [
+  'no_evidence',
+  'low_confidence',
+  'evidence_conflict',
+  'stale_source',
+  'unsafe_tool_data_sharing',
+];
+
+const requiredForbiddenClaims = [
+  'domain_ready',
+  'quality_verdict',
+  'final_decision',
+  'artifact_authority',
+  'owner_receipt',
+  'production_ready',
+];
+
+test('Evidence-grounded decision profile exposes Pack-owned contract readback without authority claims', () => {
+  const readback = buildEvidenceGroundedDecisionAgentProfileReadback()
+    .evidence_grounded_decision_agent_profile;
+
+  assert.equal(readback.surface_kind, 'opl_evidence_grounded_decision_agent_profile_readback');
+  assert.equal(readback.profile_id, 'evidence_grounded_decision_agent_profile.v1');
+  assert.equal(readback.contract_ref, EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF);
+  assert.deepEqual(readback.first_class_object_names, requiredObjects);
+  assert.deepEqual(readback.module_owner_ids, requiredModules);
+  assert.deepEqual(readback.fail_closed_rule_ids, requiredFailClosedRules);
+  assert.deepEqual(readback.forbidden_claim_ids, requiredForbiddenClaims);
+  assert.equal(readback.mode_routing_policy.policy_id, 'evidence_grounded_mode_routing.v1');
+  assert.equal(readback.evidence_policy.policy_id, 'refs_only_evidence_grounding.v1');
+  assert.equal(readback.human_gate_policy.policy_id, 'decision_support_human_gate.v1');
+  assert.equal(
+    readback.unsupported_evidence_blocker_policy.policy_id,
+    'unsupported_evidence_blocker.v1',
+  );
+  assert.equal(readback.evidence_policy.body_storage_policy, 'refs_only_no_source_body_in_profile_contract');
+  assert.equal(readback.human_gate_policy.human_gate_decision_can_be_fabricated_by_opl, false);
+  assert.equal(
+    readback.unsupported_evidence_blocker_policy.required_blocker_reasons.includes(
+      'sensitive_external_egress_unapproved',
+    ),
+    true,
+  );
+
+  const authority = readback.authority_boundary as Record<string, unknown>;
+  assert.equal(authority.profile_can_claim_domain_ready, false);
+  assert.equal(authority.profile_can_claim_quality_verdict, false);
+  assert.equal(authority.profile_can_claim_final_decision, false);
+  assert.equal(authority.profile_can_claim_artifact_authority, false);
+  assert.equal(authority.profile_can_claim_owner_receipt, false);
+  assert.equal(authority.profile_can_claim_production_ready, false);
+  assert.equal(authority.pack_can_create_owner_receipt, false);
+  assert.equal(authority.pack_can_create_domain_typed_blocker, false);
+
+  const failClosedRules = readback.fail_closed_rules as Array<{
+    rule_id: string;
+    success_closeout_allowed: boolean;
+    allowed_outcomes: string[];
+  }>;
+  assert.equal(failClosedRules.every((rule) => rule.success_closeout_allowed === false), true);
+  assert.equal(failClosedRules.some((rule) => rule.allowed_outcomes.includes('success')), false);
+  assert.deepEqual(
+    failClosedRules.find((rule) => rule.rule_id === 'unsafe_tool_data_sharing')?.allowed_outcomes,
+    ['human_gate_ref', 'typed_blocker_ref'],
+  );
+
+  const ownership = new Map(
+    (readback.module_ownership as Array<{ module_id: string; owns: string }>).map((entry) => [
+      entry.module_id,
+      entry.owns,
+    ]),
+  );
+  assert.equal(ownership.get('pack'), 'profile_and_abi');
+  assert.equal(ownership.get('stagecraft'), 'mode_routing_and_evidence_policy');
+  assert.equal(ownership.get('runway'), 'durable_attempt_and_human_gate');
+  assert.equal(ownership.get('ledger'), 'evidence_and_provenance_refs');
+  assert.equal(ownership.get('connect'), 'tool_and_resource_connector_trust');
+  assert.equal(ownership.get('workspace'), 'sensitive_source_lifecycle');
+  assert.equal(ownership.get('atlas'), 'catalog_and_discovery');
+  assert.equal(ownership.get('console'), 'drilldown_projection');
+  assert.equal(ownership.get('foundry-lab'), 'evaluation_and_promotion');
+  assert.equal(ownership.get('charter'), 'forbidden_claims_and_false_authority_policy');
+
+  const contract = readback.contract as {
+    machine_boundary: {
+      concrete_domain_agent_implemented: boolean;
+      medical_or_hematology_agent_implemented: boolean;
+    };
+    readback_contract: {
+      readback_is_stable_json: boolean;
+      readback_can_claim_runtime_ready: boolean;
+      readback_can_claim_domain_ready: boolean;
+    };
+  };
+  assert.equal(contract.machine_boundary.concrete_domain_agent_implemented, false);
+  assert.equal(contract.machine_boundary.medical_or_hematology_agent_implemented, false);
+  assert.equal(contract.readback_contract.readback_is_stable_json, true);
+  assert.equal(contract.readback_contract.readback_can_claim_runtime_ready, false);
+  assert.equal(contract.readback_contract.readback_can_claim_domain_ready, false);
+});

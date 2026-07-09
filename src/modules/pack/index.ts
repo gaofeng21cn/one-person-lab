@@ -7,6 +7,11 @@ export const OPL_PACK_SOURCE_MODULE = {
 
 // Public cross-module surface generated from existing module consumers.
 export {
+  buildEvidenceGroundedDecisionAgentProfileReadback,
+  EVIDENCE_GROUNDED_DECISION_AGENT_PROFILE_CONTRACT_REF,
+  readEvidenceGroundedDecisionAgentProfileContract,
+} from './evidence-grounded-decision-agent-profile.ts';
+export {
   buildDomainPackCompilerList,
   buildGeneratedAgentInterfaces,
   buildRepoGeneratedInterfaceBundle,
