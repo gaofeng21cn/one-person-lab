@@ -518,86 +518,54 @@ test('MAS current standard-agent evidence closes cleanup ledger without resurrec
   );
 });
 
-test('MAS current standard-agent evidence survives manifest normalization for public cleanup routes', () => {
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-mas-cleanup-normalized-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(fullMasManifestWithCurrentStandardAgentEvidence()),
-    ], env);
-
-    const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
-    const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
-      .physical_skeleton_follow_through_gate;
-    const plan = gate.executable_cleanup_plan;
-
-    assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
-    assert.equal(gate.checklist.no_active_caller.source_surface, 'functional_consumer_boundary.standard_agent_purity');
-    assert.equal(gate.checklist.replacement_parity.status, 'observed');
-    assert.equal(gate.checklist.history_or_tombstone.status, 'observed');
-    assert.equal(plan.plan_status, 'ready');
-    assert.deepEqual(plan.actions, []);
-    assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
-    assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('MAS cutover-pending standard-agent evidence closes cleanup ledger without authorizing physical delete', () => {
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-mas-cutover-cleanup-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
-
-  try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(fullMasManifestWithCutoverPendingStandardAgentEvidence()),
-    ], env);
-
-    const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
-    const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
-      .physical_skeleton_follow_through_gate;
-    const plan = gate.executable_cleanup_plan;
-
-    assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
-    assert.equal(gate.checklist.no_active_caller.source_surface, 'functional_consumer_boundary.standard_agent_purity');
-    assert.equal(gate.checklist.no_active_caller.status, 'observed');
-    assert.equal(gate.checklist.replacement_parity.status, 'observed');
-    assert.equal(gate.checklist.history_or_tombstone.status, 'observed');
-    assert.equal(plan.plan_status, 'ready');
-    assert.deepEqual(plan.actions, []);
-    assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
-    assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
-    assert.equal(
-      gate.evidence_refs.includes(
+test('MAS standard-agent evidence survives manifest normalization without authorizing physical delete', () => {
+  for (const scenario of [
+    {
+      prefix: 'opl-agent-mas-cleanup-normalized-',
+      manifest: fullMasManifestWithCurrentStandardAgentEvidence(),
+      evidenceRefs: [],
+    },
+    {
+      prefix: 'opl-agent-mas-cutover-cleanup-',
+      manifest: fullMasManifestWithCutoverPendingStandardAgentEvidence(),
+      evidenceRefs: [
         '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity.default_caller_readiness_status=opl_generated_default_caller_ready',
-      ),
-      true,
-    );
-    assert.equal(
-      gate.evidence_refs.includes(
         '/product_entry_manifest/functional_consumer_boundary/standard_agent_purity.source_purity_cutover_status=physical_wrapper_retirement_pending',
-      ),
-      true,
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+      ],
+    },
+  ]) {
+    const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+    const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), scenario.prefix));
+    const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+
+    try {
+      runCli([
+        'workspace',
+        'bind',
+        '--project',
+        'medautoscience',
+        '--path',
+        repoRoot,
+        '--manifest-command',
+        buildManifestCommand(scenario.manifest),
+      ], env);
+
+      const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env);
+      const gate = descriptor.family_agent_descriptor.standard_domain_agent_skeleton
+        .physical_skeleton_follow_through_gate;
+      const plan = gate.executable_cleanup_plan;
+
+      assert.equal(gate.status, 'ready_for_supervised_physical_delete_or_history_tombstone');
+      assert.equal(plan.plan_status, 'ready');
+      assert.deepEqual(plan.actions, []);
+      assert.equal(gate.delete_gate.opl_cleanup_apply_can_execute, true);
+      assert.equal(gate.delete_gate.can_execute_domain_physical_delete, false);
+      for (const evidenceRef of scenario.evidenceRefs) {
+        assert.equal(gate.evidence_refs.includes(evidenceRef), true);
+      }
+    } finally {
+      fs.rmSync(stateRoot, { recursive: true, force: true });
+    }
   }
 });
 
