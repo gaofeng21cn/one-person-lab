@@ -37,7 +37,7 @@ Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机
 | 8 | receipt ledgers 复用 JSON ledger helper | done | 通用 ledger 已复用 `readJsonReceiptLedger` / `writeJsonReceiptLedger` / `upsertJsonReceipts`；`external-evidence-ledger` 保留独有的 lock + atomic rename，不为统一外观删除并发保护。 |
 | 9 | 合并 Console operator action route 构造 | done | 10 组 route 共用现有 builder/value helper，相关 Console + Ledger 提交净删 260 行；authority boundary 仍逐 route 显式保留。 |
 | 10 | 收薄 `test-lanes.mjs` | done | stable test groups 使用原生 glob；当前 821 行中的显式路径是 lane ownership/成本分层，不再按“估算应删 300-500 行”强行改变 suite 语义。全文件统计的 46 次重复出现包含同一测试被不同成本 lane复用，不能直接按重复代码删除。 |
-| 11 | CLI parser 回归 `node:util.parseArgs` | done | safe pure-options parser 已迁移，最后两条 lane 的CLI source为`+392/-1,180`，净删788行；含新增回归测试后总净删655行。手写arg loop从105降到20。保留的20个loop均承担positionals、alias出现顺序、跨flag累积、`--`分隔或dry-run/apply状态机。共享adapter对unknown/positional/missing/空字符串fail-closed，保留raw whitespace。 |
+| 11 | CLI parser 回归 `node:util.parseArgs` | done | safe pure-options parser 已迁移，最后两条 lane 的CLI source为`+392/-1,180`，净删788行；含新增回归测试后总净删655行。残余手写arg loop只保留positionals、alias出现顺序、跨flag累积、`--`分隔或dry-run/apply状态机。共享adapter对unknown/positional/missing/空字符串fail-closed，保留raw whitespace。 |
 | 12 | CLI 测试按语义合并 | done | `tests/src/cli/**` 净删 12,947 行；authority/currentness/no-authority/replay/admission owner coverage保留。删除收益按 path-filtered 统计，不再引用旧 mixed-commit `8,008` 下界。 |
 
 ## 明确拒绝与外部 blocker
