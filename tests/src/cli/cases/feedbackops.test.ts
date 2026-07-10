@@ -75,7 +75,7 @@ test('feedback submit rejects unknown options before consuming values', () => {
   ]);
 
   assert.notEqual(failure.status, 0);
-  assert.match(failure.payload.error.message, /Unknown option for feedback submit: --unknown/);
+  assert.match(failure.payload.error.message, /Unknown option '--unknown'/);
 });
 
 test('bin/opl routes feedback commands into the OPL CLI instead of Codex passthrough', () => {
