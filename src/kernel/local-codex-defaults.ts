@@ -63,7 +63,20 @@ export type BootstrapLocalCodexDefaultsInput = Partial<{
 
 export type CodexDefaultProfile = {
   surface_id: 'opl_codex_default_profile';
-  version: string;
+  version: 'g2';
+  owner: 'one-person-lab';
+  purpose: 'app_owned_codex_install_default_projection';
+  state: 'generated_projection';
+  machine_boundary: string;
+  generated_projection: {
+    source_owner: 'one-person-lab-app';
+    source_repo: 'gaofeng21cn/one-person-lab-app';
+    source_ref: string;
+    source_field_refs: Record<string, string>;
+    generator: 'scripts/export-codex-default-profile.mjs';
+    generation_stage: 'development_or_release_sync';
+    runtime_source_checkout_required: false;
+  };
   model_provider: string;
   model: string;
   model_reasoning_effort: string | null;
@@ -71,7 +84,6 @@ export type CodexDefaultProfile = {
   base_url: string;
   base_url_role: string;
   model_profile_role: string;
-  profile_generated_at: string;
 };
 
 export const OPL_GATEWAY_BASE_URL = 'https://gflabtoken.cn/v1';
@@ -191,6 +203,115 @@ function readRequiredProfileString(
   return value;
 }
 
+function readRequiredExactProfileString<const Expected extends string>(
+  profile: Record<string, unknown>,
+  key: keyof CodexDefaultProfile,
+  expected: Expected,
+): Expected {
+  const value = readRequiredProfileString(profile, key);
+  if (value !== expected) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `Bundled Codex default profile has invalid ${key}.`,
+      {
+        profile_path: resolveBundledCodexDefaultProfilePath(),
+        key,
+        expected,
+        actual: value,
+      },
+    );
+  }
+  return expected;
+}
+
+function readGeneratedProjection(profile: Record<string, unknown>): CodexDefaultProfile['generated_projection'] {
+  const projection = profile.generated_projection;
+  if (!projection || typeof projection !== 'object' || Array.isArray(projection)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Bundled Codex default profile is missing generated_projection.',
+      { profile_path: resolveBundledCodexDefaultProfilePath() },
+    );
+  }
+  const values = projection as Record<string, unknown>;
+  const exact = <Expected extends string>(key: string, expected: Expected): Expected => {
+    const actual = normalizeOptionalString(typeof values[key] === 'string' ? values[key] : undefined);
+    if (actual !== expected) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        `Bundled Codex default profile has invalid generated_projection.${key}.`,
+        { profile_path: resolveBundledCodexDefaultProfilePath(), key, expected, actual },
+      );
+    }
+    return expected;
+  };
+  const sourceFieldRefs = values.source_field_refs;
+  if (!sourceFieldRefs || typeof sourceFieldRefs !== 'object' || Array.isArray(sourceFieldRefs)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Bundled Codex default profile is missing generated_projection.source_field_refs.',
+      { profile_path: resolveBundledCodexDefaultProfilePath() },
+    );
+  }
+  const normalizedSourceFieldRefs = Object.fromEntries(
+    Object.entries(sourceFieldRefs).map(([key, value]) => [
+      key,
+      normalizeOptionalString(typeof value === 'string' ? value : undefined),
+    ]),
+  );
+  if (Object.values(normalizedSourceFieldRefs).some((value) => !value)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Bundled Codex default profile contains an invalid generated projection source field ref.',
+      { profile_path: resolveBundledCodexDefaultProfilePath() },
+    );
+  }
+  const sourcePrefix = 'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json';
+  const expectedSourceFieldRefs = {
+    model: `${sourcePrefix}#codex.auto_model_policy.catalog_unavailable_fallback.model`,
+    model_consistency: `${sourcePrefix}#codex.default_model`,
+    reasoning_effort: `${sourcePrefix}#codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort`,
+    reasoning_effort_consistency: `${sourcePrefix}#codex.default_reasoning_effort`,
+    session_model_consistency: `${sourcePrefix}#default_session_profile.model`,
+    session_reasoning_effort_consistency: `${sourcePrefix}#default_session_profile.reasoning_effort`,
+    provider: `${sourcePrefix}#default_session_profile.provider`,
+    base_url: `${sourcePrefix}#default_session_profile.base_url`,
+  };
+  for (const [key, expected] of Object.entries(expectedSourceFieldRefs)) {
+    if (normalizedSourceFieldRefs[key] !== expected) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        `Bundled Codex default profile has invalid generated projection source field ref ${key}.`,
+        {
+          profile_path: resolveBundledCodexDefaultProfilePath(),
+          key,
+          expected,
+          actual: normalizedSourceFieldRefs[key] ?? null,
+        },
+      );
+    }
+  }
+  if (values.runtime_source_checkout_required !== false) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Bundled Codex default profile must not require the App checkout at runtime.',
+      { profile_path: resolveBundledCodexDefaultProfilePath() },
+    );
+  }
+  return {
+    source_owner: exact('source_owner', 'one-person-lab-app'),
+    source_repo: exact('source_repo', 'gaofeng21cn/one-person-lab-app'),
+    source_ref: exact(
+      'source_ref',
+      'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy',
+    ),
+    source_field_refs: normalizedSourceFieldRefs as Record<string, string>,
+    generator: exact('generator', 'scripts/export-codex-default-profile.mjs'),
+    generation_stage: exact('generation_stage', 'development_or_release_sync'),
+    runtime_source_checkout_required: false,
+  };
+}
+
 export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
   const profilePath = resolveBundledCodexDefaultProfilePath();
   const parsed = readJsonPayloadFile(profilePath) as Record<string, unknown>;
@@ -207,7 +328,16 @@ export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
 
   return {
     surface_id: 'opl_codex_default_profile',
-    version: readRequiredProfileString(parsed, 'version'),
+    version: readRequiredExactProfileString(parsed, 'version', 'g2'),
+    owner: readRequiredExactProfileString(parsed, 'owner', 'one-person-lab'),
+    purpose: readRequiredExactProfileString(
+      parsed,
+      'purpose',
+      'app_owned_codex_install_default_projection',
+    ),
+    state: readRequiredExactProfileString(parsed, 'state', 'generated_projection'),
+    machine_boundary: readRequiredProfileString(parsed, 'machine_boundary'),
+    generated_projection: readGeneratedProjection(parsed),
     model_provider: readRequiredProfileString(parsed, 'model_provider'),
     model: readRequiredProfileString(parsed, 'model'),
     model_reasoning_effort: normalizeOptionalString(
@@ -217,7 +347,6 @@ export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
     base_url: readRequiredProfileString(parsed, 'base_url'),
     base_url_role: readRequiredProfileString(parsed, 'base_url_role'),
     model_profile_role: readRequiredProfileString(parsed, 'model_profile_role'),
-    profile_generated_at: readRequiredProfileString(parsed, 'profile_generated_at'),
   };
 }
 
@@ -462,34 +591,6 @@ function selectInactiveProviderId(
     if (!providerValues.has(candidate)) return candidate;
     suffix += 1;
   }
-}
-
-export function buildCodexDefaultProfileFromLocalConfig(
-  generatedAt = new Date().toISOString(),
-): CodexDefaultProfile {
-  const defaults = readLocalCodexDefaults();
-  if (!defaults.model_provider || !defaults.provider_base_url) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Local Codex config cannot be exported as an OPL default profile without model_provider and base_url.',
-      {
-        config_path: defaults.config_path,
-      },
-    );
-  }
-
-  return {
-    surface_id: 'opl_codex_default_profile',
-    version: 'g1',
-    model_provider: defaults.model_provider,
-    model: defaults.model,
-    model_reasoning_effort: defaults.reasoning_effort,
-    provider_name: defaults.provider_name ?? defaults.model_provider,
-    base_url: defaults.provider_base_url,
-    base_url_role: 'product_default_provider_endpoint',
-    model_profile_role: 'maintainer_current_initial_profile',
-    profile_generated_at: generatedAt,
-  };
 }
 
 function readBootstrapInputFromEnv(): BootstrapLocalCodexDefaultsInput {

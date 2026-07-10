@@ -69,6 +69,17 @@ npm install
 npm link
 ```
 
+#### Codex 安装默认值的 App 投影
+
+`contracts/opl-framework/codex-default-profile.json` 是 App-owned product profile 的仓内生成投影，不再从维护者本机 `~/.codex/config.toml` 导出，也不允许在 Framework 内单独手改模型、推理档位或 provider endpoint。开发或发布同步阶段使用显式 App profile path 生成：
+
+```bash
+npm run codex:export-default-profile -- \
+  --app-product-profile /absolute/path/to/one-person-lab-app/contracts/app-product-profile.json
+```
+
+生成器优先读取 `codex.auto_model_policy.catalog_unavailable_fallback`，并校验它与 `codex.default_*`、`default_session_profile` 一致；provider 与 base URL 继续来自 `default_session_profile`。生成结果携带 App owner/source/ref 与字段 refs，且声明 runtime 不需要 App checkout。`bootstrapLocalCodexDefaults` 只消费仓内结果，继续尊重显式环境输入、用户固定模型/推理档位和已有非 OPL Codex 配置。
+
 ### 2. 安装 One Person Lab App
 
 macOS Apple Silicon 首次安装优先使用最新 Full first-install DMG：

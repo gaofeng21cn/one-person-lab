@@ -183,7 +183,7 @@ export function buildPublicSystemCommandSpecs(
 
   const systemConfigureCodexSpec: CommandSpec = {
     usage: 'opl system configure-codex --api-key-stdin',
-    summary: 'Write the local Codex provider config from the OPL default endpoint, current initial model profile, and an API key read from stdin.',
+    summary: 'Write the local Codex provider config from the OPL default endpoint, App-owned install fallback, and an API key read from stdin.',
     examples: ['printf "%s" "$OPL_CODEX_API_KEY" | opl system configure-codex --api-key-stdin'],
     group: 'system',
     handler: async (args) => {

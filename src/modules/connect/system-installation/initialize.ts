@@ -198,7 +198,7 @@ export async function buildOplInitialize(
   const configureCodexAction = buildInitializeActionDescriptor({
     action_id: 'configure_codex_api_key',
     label: 'Configure OPL Gateway',
-    description: 'Write the local Codex provider config from the OPL Gateway endpoint, current initial model profile, and the user-provided access key.',
+    description: 'Write the local Codex provider config from the OPL Gateway endpoint, App-owned install fallback, and the user-provided access key.',
     section_id: 'environment',
     endpoint: endpoints.system_action,
     method: 'POST',
@@ -335,7 +335,7 @@ export async function buildOplInitialize(
         ? codex.opl_gateway_configured === true
           ? `OPL Gateway is configured for ${codex.default_model ?? 'the local default model'}.`
           : 'Using existing Codex model access; this skips OPL Gateway setup for first launch only.'
-        : 'Enter your OPL Gateway access key; OPL will use the product default provider endpoint and the current maintainer initial model profile.',
+        : 'Enter your OPL Gateway access key; OPL will use the product endpoint and App-owned install fallback.',
       endpoint: endpoints.system_environment,
       action_endpoint: endpoints.system_action,
       action: codexConfigReady ? openEnvironmentAction : configureCodexAction,

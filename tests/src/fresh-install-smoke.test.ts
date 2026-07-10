@@ -12,6 +12,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const smokeScript = path.join(repoRoot, 'scripts', 'fresh-install-smoke.mjs');
 const matrixContractPath = path.join(repoRoot, 'contracts', 'opl-framework', 'fresh-install-test-matrix.json');
 const codexDefaultProfilePath = path.join(repoRoot, 'contracts', 'opl-framework', 'codex-default-profile.json');
+const codexDefaultProfileExporterPath = path.join(repoRoot, 'scripts', 'export-codex-default-profile.mjs');
 const installScript = path.join(repoRoot, 'install.sh');
 
 test('install bootstrap-only handles no forwarded args under nounset bash', () => {
@@ -591,9 +592,21 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.match(matrix.ci_policy.docker, /Do not use Docker/);
 });
 
-test('bundled Codex profile separates the product endpoint default from the maintainer initial model profile', () => {
+test('bundled Codex profile carries the App-owned install fallback without runtime App checkout dependency', () => {
   const profile = parseJsonText(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
     surface_id: string;
+    version: string;
+    owner: string;
+    purpose: string;
+    state: string;
+    generated_projection: {
+      source_owner: string;
+      source_ref: string;
+      source_field_refs: Record<string, string>;
+      generator: string;
+      generation_stage: string;
+      runtime_source_checkout_required: boolean;
+    };
     model_provider: string;
     model: string;
     model_reasoning_effort: string;
@@ -601,19 +614,94 @@ test('bundled Codex profile separates the product endpoint default from the main
     base_url_role: string;
     model_profile_role: string;
     provider_name: string;
-    profile_generated_at: string;
   };
   const serialized = JSON.stringify(profile);
 
   assert.equal(profile.surface_id, 'opl_codex_default_profile');
+  assert.equal(profile.version, 'g2');
+  assert.equal(profile.owner, 'one-person-lab');
+  assert.equal(profile.purpose, 'app_owned_codex_install_default_projection');
+  assert.equal(profile.state, 'generated_projection');
+  assert.equal(profile.generated_projection.source_owner, 'one-person-lab-app');
+  assert.equal(
+    profile.generated_projection.source_ref,
+    'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy',
+  );
+  assert.equal(
+    profile.generated_projection.source_field_refs.model,
+    'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.catalog_unavailable_fallback.model',
+  );
+  assert.equal(profile.generated_projection.generator, 'scripts/export-codex-default-profile.mjs');
+  assert.equal(profile.generated_projection.generation_stage, 'development_or_release_sync');
+  assert.equal(profile.generated_projection.runtime_source_checkout_required, false);
   assert.equal(profile.model_provider, 'gflab');
   assert.equal(profile.model, 'gpt-5.6-sol');
-  assert.equal(profile.model_reasoning_effort, 'max');
+  assert.equal(profile.model_reasoning_effort, 'xhigh');
   assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(profile.base_url_role, 'product_default_provider_endpoint');
-  assert.equal(profile.model_profile_role, 'maintainer_current_initial_profile');
+  assert.equal(profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
   assert.equal(profile.provider_name.length > 0, true);
-  assert.equal(Number.isNaN(Date.parse(profile.profile_generated_at)), false);
   assert.equal(serialized.includes('experimental_bearer_token'), false);
   assert.equal(serialized.toLowerCase().includes('api_key'), false);
+});
+
+test('Codex default profile exporter deterministically projects the App-owned fallback', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-default-profile-projection-'));
+  const sourcePath = path.join(tempRoot, 'app-product-profile.json');
+  const firstOutputPath = path.join(tempRoot, 'first.json');
+  const secondOutputPath = path.join(tempRoot, 'second.json');
+  const appProfile = {
+    owner: 'one-person-lab-app',
+    purpose: 'app_owned_product_profile',
+    default_session_profile: {
+      provider: 'gflab',
+      base_url: 'https://gflabtoken.cn/v1',
+      model: 'gpt-5.6-sol',
+      reasoning_effort: 'xhigh',
+    },
+    codex: {
+      default_model: 'gpt-5.6-sol',
+      default_reasoning_effort: 'xhigh',
+      auto_model_policy: {
+        catalog_unavailable_fallback: {
+          model: 'gpt-5.6-sol',
+          reasoning_effort: 'xhigh',
+        },
+      },
+    },
+  };
+
+  try {
+    fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
+    for (const out of [firstOutputPath, secondOutputPath]) {
+      const result = spawnSync(process.execPath, [
+        codexDefaultProfileExporterPath,
+        '--app-product-profile', sourcePath,
+        '--out', out,
+      ], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+    }
+
+    const first = fs.readFileSync(firstOutputPath, 'utf8');
+    assert.equal(first, fs.readFileSync(secondOutputPath, 'utf8'));
+    assert.equal(first, fs.readFileSync(codexDefaultProfilePath, 'utf8'));
+
+    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = 'high';
+    fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
+    const mismatch = spawnSync(process.execPath, [
+      codexDefaultProfileExporterPath,
+      '--app-product-profile', sourcePath,
+      '--out', firstOutputPath,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.notEqual(mismatch.status, 0);
+    assert.match(mismatch.stderr, /fallback reasoning effort must match codex\.default_reasoning_effort/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });

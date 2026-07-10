@@ -90,7 +90,7 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(channelManifest.packages.codex_default_profile.model_provider, 'gflab');
   assert.equal(channelManifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(channelManifest.packages.codex_default_profile.base_url_role, 'product_default_provider_endpoint');
-  assert.equal(channelManifest.packages.codex_default_profile.model_profile_role, 'maintainer_current_initial_profile');
+  assert.equal(channelManifest.packages.codex_default_profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
   assert.equal(JSON.stringify(channelManifest.packages.codex_default_profile).includes('experimental_bearer_token'), false);
   assert.equal(manifest.release_automation.rollback.previous_version, '26.4.30');
   assert.equal(manifest.release_automation.cleanup.retain_versions, 4);
