@@ -199,6 +199,8 @@ export function queryStageAttempt(
   const consumedMemoryRefs = stringListFrom(latestCloseout?.consumed_memory_refs);
   const writebackReceiptRefs = stringListFrom(latestCloseout?.writeback_receipt_refs);
   const rejectedWrites = recordListFrom(latestCloseout?.rejected_writes);
+  const domainOutput = recordFrom(latestCloseout?.domain_output);
+  const domainOutputRef = stringValue(domainOutput?.output_ref);
   const subject = buildFamilyConflictSubject({
     domain: attempt.domain_id,
     stageId: attempt.stage_id,
@@ -403,6 +405,7 @@ export function queryStageAttempt(
       model_route_cost_projection: modelRouteCostProjection,
       stage_progress_log: stageProgressLog,
       attempt_true_path_proof: attemptTruePathProof,
+      domain_output: domainOutput,
       temporal_visibility: stageProgressLog.temporal_visibility,
       temporal_webui_ref: stageProgressLog.temporal_webui_ref,
       human_review_burden_budget: humanReviewBurdenBudget,
@@ -431,6 +434,7 @@ export function queryStageAttempt(
         writeback_receipt_refs: writebackReceiptRefs,
         closeout_refs: attempt.closeout_refs,
         closeout_receipt_status: attempt.closeout_receipt_status,
+        domain_output_ref: domainOutputRef,
         route_impact: attempt.route_impact,
         rejected_writes: rejectedWrites,
         next_owner: nextOwner,

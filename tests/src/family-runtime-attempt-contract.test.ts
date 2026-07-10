@@ -51,6 +51,12 @@ test('family runtime attempt contract keeps Temporal attempt, typed closeout, an
   assert.deepEqual(contract.allowed_providers, ['temporal']);
   assert.equal(contract.typed_closeout_contract.required_for_completed_status, true);
   assert.equal(contract.typed_closeout_contract.free_text_closeout_accepted, false);
+  assert.ok(contract.typed_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
+  assert.equal(
+    contract.typed_closeout_contract.domain_output_contract.transport_policy,
+    'refs_only_no_domain_output_body_in_temporal_or_opl_ledger',
+  );
+  assert.ok(contract.operator_visibility_fields.includes('domain_output_ref'));
   assert.equal(
     contract.provider_lifecycle_contract.temporal.workflow_name,
     'StageAttemptWorkflow',

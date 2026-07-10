@@ -24,6 +24,13 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
     writeback_receipt_refs: ['memory-writeback:receipt-1'],
     rejected_writes: [{ reason: 'domain_truth_write_forbidden', body: 'small ref-only reason' }],
     domain_ready_verdict: 'domain_gate_pending',
+    domain_output: {
+      surface_kind: 'domain_owned_stage_output_ref',
+      version: 'domain-owned-stage-output-ref.v1',
+      domain_id: 'redcube',
+      output_ref: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+      payload: { forbidden_body: 'q'.repeat(2_000_000) },
+    },
     paper_stage_log: {
       stage_work_done: ['x'.repeat(2_000_000)],
       paper_work_done: ['y'.repeat(2_000_000)],
@@ -40,6 +47,12 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
     'receipt:large-closeout',
     'file:///tmp/redcube-runtime/artifacts/closeout.json',
   ]);
+  assert.deepEqual(compacted.domain_output, {
+    surface_kind: 'domain_owned_stage_output_ref',
+    version: 'domain-owned-stage-output-ref.v1',
+    domain_id: 'redcube',
+    output_ref: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+  });
   assert.equal((compacted.route_impact as Record<string, { stage_work_done: string[] }>).user_stage_log.stage_work_done[0].endsWith('[omitted:2000000 chars]'), true);
   const compactedRecord = compacted as Record<string, unknown>;
   assert.equal(compactedRecord.paper_stage_log, undefined);
@@ -47,5 +60,7 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(compactedRecord.full_transcript, undefined);
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
+  assert.equal(JSON.stringify(compacted).includes('forbidden_body'), false);
+  assert.ok(compacted.temporal_payload_policy.retained_fields.includes('domain_output'));
   assert.ok(Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000);
 });

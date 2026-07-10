@@ -229,8 +229,22 @@
       "cost_summary",
       "route_impact",
       "next_owner",
-      "domain_ready_verdict"
-    ]
+      "domain_ready_verdict",
+      "domain_output.output_ref"
+    ],
+    "domain_output_contract": {
+      "surface_kind": "domain_owned_stage_output_ref",
+      "version": "domain-owned-stage-output-ref.v1",
+      "transport_policy": "refs_only_no_domain_output_body_in_temporal_or_opl_ledger",
+      "required_fields": [
+        "domain_id",
+        "output_ref"
+      ],
+      "binding_rules": [
+        "domain_id_matches_stage_attempt_domain_id",
+        "output_ref_is_present_in_closeout_refs"
+      ]
+    }
   },
   "operator_visibility_fields": [
     "provider_kind",
@@ -249,6 +263,7 @@
     "writeback_receipt_refs",
     "closeout_refs",
     "closeout_receipt_status",
+    "domain_output_ref",
     "route_impact",
     "usage_projection",
     "memory_trace_projection",

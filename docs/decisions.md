@@ -5,6 +5,18 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-11
+
+### 决策：Stage attempt domain output 只运输 domain-owned ref
+
+原因：domain stage 的可消费构建结果属于 domain workspace；若把结果 body 放入 Temporal activity result、workflow state 或 OPL ledger，会让 Framework 持有第二份 domain truth。只保留普通 `closeout_refs` 又无法标识哪个 ref 是 stage 的主输出。
+
+影响：
+
+- typed closeout 可携带 `domain_output={surface_kind,version,domain_id,output_ref}`；`domain_id` 必须绑定 attempt domain，`output_ref` 必须同时出现在 `closeout_refs`。
+- normalizer、Temporal compaction、ledger 与 attempt query 只保留该 refs-only envelope；operator visibility 只暴露 `domain_output_ref`，不复制或读取 output body。
+- domain consumer 通过 ref 读取 domain-owned output；payload 内的 owner verdict、domain-ready 字段或 artifact 内容不改变 OPL completion boundary，也不授权 OPL 写 domain truth、owner receipt 或 quality verdict。
+
 ## 2026-07-10
 
 ### 决策：family action 参数与 domain handler binding 必须结构化

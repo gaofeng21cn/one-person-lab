@@ -160,6 +160,17 @@ export function ingestStageAttemptCloseout(
 ) {
   const attempt = inspectStageAttempt(db, input.stageAttemptId);
   const packet = normalizeTypedStageCloseoutPacket(input.packet);
+  if (packet.domain_output && packet.domain_output.domain_id !== attempt.domain_id) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'domain_output.domain_id must match the stage attempt domain.',
+      {
+        stage_attempt_id: input.stageAttemptId,
+        attempt_domain_id: attempt.domain_id,
+        domain_output_domain_id: packet.domain_output.domain_id,
+      },
+    );
+  }
   const costSummary = optionalRecord(input.costSummary);
   const createdAt = nowIso();
   const closeoutId = packet.closeout_id

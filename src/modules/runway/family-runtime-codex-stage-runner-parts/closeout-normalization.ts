@@ -18,6 +18,12 @@ export type TypedStageCloseoutPacket = {
   consumed_memory_refs: string[];
   writeback_receipt_refs: string[];
   rejected_writes: JsonRecord[];
+  domain_output?: {
+    surface_kind: 'domain_owned_stage_output_ref';
+    version: 'domain-owned-stage-output-ref.v1';
+    domain_id: string;
+    output_ref: string;
+  };
   next_owner: string | null;
   domain_ready_verdict: string | null;
   token_usage?: JsonRecord;
@@ -30,6 +36,50 @@ export type TypedStageCloseoutPacket = {
   route_impact?: JsonRecord;
   authority_boundary: JsonRecord;
 };
+
+function normalizeDomainOutput(value: unknown, closeoutRefs: string[]): TypedStageCloseoutPacket['domain_output'] {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'domain_output must be a refs-only JSON object.', {
+      field: 'domain_output',
+    });
+  }
+  const surfaceKind = optionalString(value.surface_kind);
+  const version = optionalString(value.version);
+  const domainId = optionalString(value.domain_id);
+  const outputRef = optionalString(value.output_ref);
+  if (
+    surfaceKind !== 'domain_owned_stage_output_ref'
+    || version !== 'domain-owned-stage-output-ref.v1'
+    || !domainId
+    || !outputRef
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'domain_output must declare the canonical refs-only output shape.', {
+      field: 'domain_output',
+      required: [
+        'surface_kind=domain_owned_stage_output_ref',
+        'version=domain-owned-stage-output-ref.v1',
+        'domain_id',
+        'output_ref',
+      ],
+    });
+  }
+  if (!closeoutRefs.includes(outputRef)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'domain_output.output_ref must be present in closeout_refs.',
+      { output_ref: outputRef },
+    );
+  }
+  return {
+    surface_kind: surfaceKind,
+    version,
+    domain_id: domainId,
+    output_ref: outputRef,
+  };
+}
 
 export type StageCloseoutPacketRejection = {
   reason:
@@ -133,13 +183,15 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
       required: ['closeout_refs|closeout_ref|receipt_ref|packet_ref'],
     });
   }
+  const uniqueCloseoutRefs = [...new Set(closeoutRefs)];
+  const domainOutput = normalizeDomainOutput(value.domain_output, uniqueCloseoutRefs);
 
   return {
     surface_kind: surfaceKind,
     ...(optionalString(value.stage_attempt_id) ? { stage_attempt_id: optionalString(value.stage_attempt_id)! } : {}),
     ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
-    closeout_refs: [...new Set(closeoutRefs)],
+    closeout_refs: uniqueCloseoutRefs,
     ...(closeoutRefEntries.metadata.length > 0
       ? { closeout_ref_metadata: closeoutRefEntries.metadata }
       : {}),
@@ -147,6 +199,7 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     consumed_memory_refs: readStringList(value.consumed_memory_refs),
     writeback_receipt_refs: readStringList(value.writeback_receipt_refs),
     rejected_writes: readRecordList(value.rejected_writes),
+    ...(domainOutput ? { domain_output: domainOutput } : {}),
     next_owner: optionalString(value.next_owner),
     domain_ready_verdict: optionalString(value.domain_ready_verdict),
     ...(isRecord(value.token_usage) ? { token_usage: value.token_usage } : {}),
