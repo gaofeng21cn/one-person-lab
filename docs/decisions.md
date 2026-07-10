@@ -964,7 +964,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `contracts/opl-framework/foundry-agent-series-policy-release.json` 成为 OPL-owned policy release surface，记录 Progress-First policy bundle、`sha256:stable-json` fingerprint、domain pin contract ref 和 authority boundary。
 - `contracts/opl-framework/foundry-agent-series-contract.json`、standard scaffold 和 generated `contracts/foundry_agent_series.json` 都必须带 `shared_policy_release`，并要求 exact release ref、exact policy bundle fingerprint、`foundry:policy-release` alignment check。
 - Domain repo 只能 pin release ref/fingerprint 和映射 domain alias；不能把 OPL policy body 复制成 domain truth、quality/export verdict、artifact authority、memory authority 或 owner receipt authority。
-- `family:shared-release` 继续负责 package/owner commit pin；`foundry:policy-release` 负责 Progress-First policy bundle pin。任一对齐都不授权 domain ready、production ready、App release ready 或 quality/export verdict。
+- `family:shared-release` 由 OPL owner 管理 `latest-stable` channel：consumer manifest 跟随 channel，lockfile 仅记录本次解析的精确 commit 以供复现，不再把 consumer 与 owner commit 的逐日相等作为门禁；`foundry:policy-release` 继续负责 Progress-First policy bundle pin。任一对齐都不授权 domain ready、production ready、App release ready 或 quality/export verdict。
 
 ### 决策：Progress-First 成为 OPL family shared stage contract
 

@@ -165,12 +165,15 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
       === 'contracts/family-release/shared-owner-release.json'
       ? null
       : 'foundry_agent_series_owner_release_contract_ref_invalid',
-    sharedReleasePinStrategy?.owner_commit_pin_required === true
+    sharedReleasePinStrategy?.owner_managed_latest_stable_channel_required === true
       ? null
-      : 'foundry_agent_series_owner_commit_pin_required',
-    sharedReleasePinStrategy?.domain_dependency_pin_required === true
+      : 'foundry_agent_series_owner_managed_latest_stable_channel_required',
+    sharedReleasePinStrategy?.lockfile_resolved_commit_receipt_required === true
       ? null
-      : 'foundry_agent_series_domain_dependency_pin_required',
+      : 'foundry_agent_series_lockfile_resolved_commit_receipt_required',
+    sharedReleasePinStrategy?.consumer_exact_commit_equality_gate === false
+      ? null
+      : 'foundry_agent_series_consumer_exact_commit_equality_gate_must_be_false',
     readOptionalString(sharedReleasePinStrategy?.consumer_alignment_check) === 'family:shared-release'
       ? null
       : 'foundry_agent_series_consumer_alignment_check_invalid',

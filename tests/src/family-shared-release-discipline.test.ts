@@ -7,6 +7,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
+  assertPublishedOwnerCommitReachable,
   collectSharedOwnerReleaseRemotes,
   extractTrackedPins,
   inspectConsumerRepo,
@@ -71,11 +72,46 @@ function createPublishedOwnerRemoteFixture() {
   const unpublishedCommit = git(['rev-parse', 'HEAD'], sourceRoot);
   return {
     fixtureRoot,
+    sourceRoot,
     remoteUrl: pathToFileURL(remoteRoot).href,
     publishedCommit,
     unpublishedCommit,
   };
 }
+
+test('latest-stable promotion rejects a remote channel that does not point to its recorded commit', () => {
+  const publishedRemote = createPublishedOwnerRemoteFixture();
+  git(['push', 'origin', 'HEAD:main'], publishedRemote.sourceRoot);
+  git(['push', 'origin', `${publishedRemote.publishedCommit}:refs/heads/latest-stable`], publishedRemote.sourceRoot);
+  const contract = {
+    contract_kind: 'family_shared_owner_release.v2',
+    owner_repo: 'one-person-lab',
+    owner_commit: publishedRemote.unpublishedCommit,
+    latest_stable: {
+      ref: 'latest-stable',
+      commit: publishedRemote.unpublishedCommit,
+    },
+    consumer_policy: {
+      manifest_channel: 'latest-stable',
+      lockfile_exact_commit_receipt_required: true,
+      consumer_exact_commit_equality_gate: false,
+    },
+    packages: {
+      python: {
+        git_locator: `git+${publishedRemote.remoteUrl}@latest-stable#subdirectory=python/opl-harness-shared`,
+      },
+      js: {
+        git_locator: `git+${publishedRemote.remoteUrl}#latest-stable`,
+      },
+    },
+    consumers: [],
+  };
+
+  assert.throws(
+    () => assertPublishedOwnerCommitReachable({ contract }),
+    /latest-stable.*does not resolve/i,
+  );
+});
 
 function loadFamilyManifestFixture(fileName: string) {
   const payload = parseJsonText(
@@ -90,21 +126,30 @@ function recordValue(value: unknown): Record<string, unknown> {
     : {};
 }
 
-test('shared owner release contract freezes a full owner commit and four consumer repos', () => {
+test('shared owner release contract owns the latest-stable channel and four consumer repos', () => {
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   const pythonPackage = recordValue(contract.packages.python);
   const jsPackage = recordValue(contract.packages.js);
 
-  assert.equal(contract.contract_kind, 'family_shared_owner_release.v1');
+  assert.equal(contract.contract_kind, 'family_shared_owner_release.v2');
   assert.match(contract.owner_commit, /^[0-9a-f]{40}$/);
   assert.equal(contract.owner_commit, RELEASED_OWNER_COMMIT);
+  assert.deepEqual(contract.latest_stable, {
+    ref: 'latest-stable',
+    commit: RELEASED_OWNER_COMMIT,
+  });
+  assert.deepEqual(contract.consumer_policy, {
+    manifest_channel: 'latest-stable',
+    lockfile_exact_commit_receipt_required: true,
+    consumer_exact_commit_equality_gate: false,
+  });
   assert.equal(
     pythonPackage.git_locator,
-    `git+https://github.com/gaofeng21cn/one-person-lab.git@${RELEASED_OWNER_COMMIT}#subdirectory=python/opl-harness-shared`,
+    'git+https://github.com/gaofeng21cn/one-person-lab.git@latest-stable#subdirectory=python/opl-harness-shared',
   );
   assert.equal(
     jsPackage.git_locator,
-    `git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}`,
+    'git+https://github.com/gaofeng21cn/one-person-lab.git#latest-stable',
   );
   assert.equal(contract.consumers.length, 4);
   assert.equal(contract.consumers[0].verify_command, 'scripts/verify.sh family');
@@ -112,7 +157,8 @@ test('shared owner release contract freezes a full owner commit and four consume
   assert.equal(contract.consumers[2].verify_command, 'scripts/verify.sh family');
   assert.equal(contract.consumers[3].verify_command, 'scripts/verify.sh smoke');
   assert.equal(contract.consumers[0].targets[0].kind, 'python_dependency');
-  assert.equal(contract.consumers[2].targets[1].kind, 'js_lock');
+  assert.equal(contract.consumers[2].targets[0].file, 'package.json');
+  assert.equal(contract.consumers[2].targets[2].kind, 'js_lock');
   assert.equal(contract.consumers[3].repo_id, 'opl-meta-agent');
   assert.equal(contract.consumers[3].targets[0].file, 'package.json');
   assert.equal(contract.consumers[3].targets[1].kind, 'js_lock');
@@ -154,7 +200,7 @@ test('rewriteTrackedPins rewrites python and js shared locators to the released 
   assert.deepEqual(extractTrackedPins(rewrittenJs.text, 'js_dependency'), [RELEASED_OWNER_COMMIT]);
 });
 
-test('inspectConsumerRepo detects stale pins and syncConsumerRepo rewrites them in place', () => {
+test('inspectConsumerRepo reports legacy pins and syncConsumerRepo moves only the manifest', () => {
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   const familyRoot = createConsumerFixtureRoot();
   const consumer = contract.consumers[0];
@@ -174,15 +220,58 @@ test('inspectConsumerRepo detects stale pins and syncConsumerRepo rewrites them 
 
   const before = inspectConsumerRepo({ consumer, repoPath, contract });
   assert.equal(before.status, 'stale');
-  assert.equal(before.findings[0].status, 'stale_pin');
+  assert.equal(before.findings[0].status, 'legacy_pin');
 
   const syncResult = syncConsumerRepo({ consumer, repoPath, contract });
   const after = inspectConsumerRepo({ consumer, repoPath, contract });
 
-  assert.deepEqual(syncResult.changed_files, ['pyproject.toml', 'uv.lock']);
-  assert.equal(after.status, 'aligned');
-  assert.deepEqual(after.findings[0].pins, [RELEASED_OWNER_COMMIT]);
-  assert.deepEqual(after.findings[1].pins, [RELEASED_OWNER_COMMIT]);
+  assert.deepEqual(syncResult.changed_files, ['pyproject.toml']);
+  assert.deepEqual(syncResult.lock_refresh_commands, ['uv lock']);
+  assert.equal(after.status, 'update_available');
+  assert.deepEqual(after.findings[0].pins, ['latest-stable']);
+  assert.deepEqual(after.findings[1].pins, [STALE_OWNER_COMMIT]);
+});
+
+test('v2 sync switches manifests to latest-stable without rewriting lock receipts', () => {
+  const familyRoot = createConsumerFixtureRoot();
+  const consumer = {
+    repo_id: 'medautoscience',
+    repo_dir: 'med-autoscience',
+    verify_command: 'scripts/verify.sh family',
+    targets: [
+      { file: 'pyproject.toml', kind: 'python_dependency' as const },
+      { file: 'uv.lock', kind: 'python_lock' as const },
+    ],
+  };
+  const contract = {
+    contract_kind: 'family_shared_owner_release.v2',
+    owner_repo: 'one-person-lab',
+    owner_commit: RELEASED_OWNER_COMMIT,
+    latest_stable: { ref: 'latest-stable', commit: RELEASED_OWNER_COMMIT },
+    consumer_policy: {
+      manifest_channel: 'latest-stable',
+      lockfile_exact_commit_receipt_required: true,
+      consumer_exact_commit_equality_gate: false,
+    },
+    packages: {},
+    consumers: [consumer],
+  };
+  const repoPath = path.join(familyRoot, consumer.repo_dir);
+  write(
+    path.join(repoPath, 'pyproject.toml'),
+    `[project]\ndependencies = ["opl-harness-shared @ git+https://github.com/gaofeng21cn/one-person-lab.git@${STALE_OWNER_COMMIT}#subdirectory=python/opl-harness-shared"]\n`,
+  );
+  write(
+    path.join(repoPath, 'uv.lock'),
+    `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
+  );
+
+  const result = syncConsumerRepo({ consumer, repoPath, contract });
+
+  assert.deepEqual(result.changed_files, ['pyproject.toml']);
+  assert.deepEqual(result.lock_refresh_commands, ['uv lock']);
+  assert.match(fs.readFileSync(path.join(repoPath, 'pyproject.toml'), 'utf8'), /@latest-stable#/);
+  assert.match(fs.readFileSync(path.join(repoPath, 'uv.lock'), 'utf8'), new RegExp(STALE_OWNER_COMMIT));
 });
 
 test('family shared release CLI can sync explicit repo overrides and report aligned status', () => {
@@ -210,12 +299,22 @@ test('family shared release CLI can sync explicit repo overrides and report alig
     `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
   );
   write(
+    path.join(redcubeRepo, 'package.json'),
+    `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
+  );
+  write(
     path.join(redcubeRepo, 'packages/redcube-domain-entry/package.json'),
     `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
   );
   write(
     path.join(redcubeRepo, 'package-lock.json'),
-    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+    JSON.stringify({
+      packages: {
+        'node_modules/opl-framework-shared': {
+          resolved: `git+ssh://git@github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}`,
+        },
+      },
+    }),
   );
   write(
     path.join(omaRepo, 'package.json'),
@@ -223,18 +322,31 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   );
   write(
     path.join(omaRepo, 'package-lock.json'),
-    `{"packages":{"":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+    JSON.stringify({
+      packages: {
+        'node_modules/opl-framework-shared': {
+          resolved: `git+ssh://git@github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}`,
+        },
+      },
+    }),
   );
 
-  const result = runFamilySharedReleaseCli([
+  const cliArgs = [
     'sync',
     '--family-root', familyRoot,
     '--repo', `medautoscience=${scienceRepo}`,
     '--repo', `medautogrant=${grantRepo}`,
     '--repo', `redcube=${redcubeRepo}`,
     '--repo', `opl-meta-agent=${omaRepo}`,
-  ]);
+  ];
+  const checkBeforeSync = runFamilySharedReleaseCli([
+    'check',
+    ...cliArgs.slice(1),
+  ], { validatePublishedOwnerCommit: () => {} });
+  const result = runFamilySharedReleaseCli(cliArgs, { validatePublishedOwnerCommit: () => {} });
 
+  assert.equal(checkBeforeSync.exit_code, 1);
+  assert.match(checkBeforeSync.stdout, /legacy_pin/);
   assert.equal(result.exit_code, 0);
   assert.match(result.stdout, /\[medautoscience\] synced/);
   assert.match(result.stdout, /\[medautogrant\] synced/);
@@ -242,7 +354,54 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   assert.match(result.stdout, /\[opl-meta-agent\] synced/);
   assert.match(result.stdout, /verify: scripts\/verify\.sh family/);
   assert.match(result.stdout, /verify: scripts\/verify\.sh smoke/);
+  assert.match(result.stdout, /refresh lock receipt: .*uv lock/);
+  assert.match(result.stdout, /refresh lock receipt: .*npm update opl-framework-shared/);
   assert.match(result.stdout, new RegExp(RELEASED_OWNER_COMMIT));
+});
+
+test('family shared release sync validates the remote channel before changing consumers', () => {
+  const familyRoot = createConsumerFixtureRoot();
+  const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');
+  const consumerRepo = path.join(familyRoot, 'redcube-ai');
+  write(
+    path.join(ownerRepoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH),
+    JSON.stringify({
+      contract_kind: 'family_shared_owner_release.v2',
+      owner_repo: 'one-person-lab',
+      owner_commit: RELEASED_OWNER_COMMIT,
+      latest_stable: { ref: 'latest-stable', commit: RELEASED_OWNER_COMMIT },
+      consumer_policy: {
+        manifest_channel: 'latest-stable',
+        lockfile_exact_commit_receipt_required: true,
+        consumer_exact_commit_equality_gate: false,
+      },
+      packages: {},
+      consumers: [{
+        repo_id: 'redcube',
+        repo_dir: 'redcube-ai',
+        verify_command: 'scripts/verify.sh family',
+        targets: [{ file: 'package.json', kind: 'js_dependency' }],
+      }],
+    }),
+  );
+  const manifestPath = path.join(consumerRepo, 'package.json');
+  const original = `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`;
+  write(manifestPath, original);
+
+  assert.throws(
+    () => runFamilySharedReleaseCli([
+      'sync',
+      '--family-root', familyRoot,
+      '--repo', `redcube=${consumerRepo}`,
+    ], {
+      repoRoot: ownerRepoRoot,
+      validatePublishedOwnerCommit: () => {
+        throw new Error('latest-stable remote ref missing');
+      },
+    }),
+    /latest-stable remote ref missing/,
+  );
+  assert.equal(fs.readFileSync(manifestPath, 'utf8'), original);
 });
 
 test('family shared release CLI check refuses owner commits that are not reachable from package remotes', () => {
@@ -288,7 +447,7 @@ test('family shared release CLI check refuses owner commits that are not reachab
   );
 });
 
-test('family shared release CLI can rewrite the owner contract and propagate a new owner commit in one step', () => {
+test('family shared release promotion updates the owner contract without rewriting consumers', () => {
   const familyRoot = createConsumerFixtureRoot();
   const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');
   const nextOwnerCommit = '7f84d0ad4cc6da5cfd094e2838425d44b4f3812a';
@@ -360,12 +519,22 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
     `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
   );
   write(
+    path.join(redcubeRepo, 'package.json'),
+    `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
+  );
+  write(
     path.join(redcubeRepo, 'packages/redcube-domain-entry/package.json'),
     `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
   );
   write(
     path.join(redcubeRepo, 'package-lock.json'),
-    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+    JSON.stringify({
+      packages: {
+        'node_modules/opl-framework-shared': {
+          resolved: `git+ssh://git@github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}`,
+        },
+      },
+    }),
   );
 
   const result = runFamilySharedReleaseCli([
@@ -382,21 +551,22 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
 
   const releasedContract = loadSharedOwnerReleaseContract({ repoRoot: ownerRepoRoot });
 
-  assert.equal(result.exit_code, 0);
-  assert.match(result.stdout, new RegExp(`released owner commit: ${nextOwnerCommit}`));
+  assert.equal(result.exit_code, 1);
+  assert.match(result.stdout, /legacy_pin/);
+  assert.match(result.stdout, new RegExp(`promoted latest-stable commit: ${nextOwnerCommit}`));
   assert.equal(releasedContract.owner_commit, nextOwnerCommit);
-  assert.equal(
-    releasedContract.packages?.python?.git_locator,
-    `git+https://github.com/gaofeng21cn/one-person-lab.git@${nextOwnerCommit}#subdirectory=python/opl-harness-shared`,
+  assert.match(
+    fs.readFileSync(path.join(scienceRepo, 'pyproject.toml'), 'utf8'),
+    new RegExp(STALE_OWNER_COMMIT),
   );
-  assert.equal(
-    releasedContract.packages?.js?.git_locator,
-    `git+https://github.com/gaofeng21cn/one-person-lab.git#${nextOwnerCommit}`,
+  assert.match(
+    fs.readFileSync(path.join(grantRepo, 'pyproject.toml'), 'utf8'),
+    new RegExp(STALE_OWNER_COMMIT),
   );
-  assert.match(result.stdout, /\[medautoscience\] synced/);
-  assert.match(result.stdout, /\[medautogrant\] synced/);
-  assert.match(result.stdout, /\[redcube\] synced/);
-  assert.match(result.stdout, new RegExp(nextOwnerCommit));
+  assert.match(
+    fs.readFileSync(path.join(redcubeRepo, 'package-lock.json'), 'utf8'),
+    new RegExp(STALE_OWNER_COMMIT),
+  );
 });
 
 test('family shared release refuses unpublished owner commits before rewriting contract or consumer pins', () => {

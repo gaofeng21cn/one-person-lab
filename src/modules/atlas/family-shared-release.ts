@@ -5,12 +5,13 @@ import { execFileSync } from 'node:child_process';
 import { readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
 
 export const SHARED_OWNER_RELEASE_CONTRACT_PATH = 'contracts/family-release/shared-owner-release.json';
+export const LATEST_STABLE_CHANNEL = 'latest-stable';
 
-const PYTHON_DEPENDENCY_PATTERN = /opl-harness-shared @ git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git@([0-9a-f]{40})#subdirectory=python\/opl-harness-shared/g;
+const PYTHON_DEPENDENCY_PATTERN = /opl-harness-shared @ git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git@([A-Za-z0-9._/-]+)#subdirectory=python\/opl-harness-shared/g;
 const PYTHON_LOCK_PATTERN = /https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git\?subdirectory=python%2Fopl-harness-shared&rev=([0-9a-f]{40})(#[0-9a-f]{40})?/g;
-const JS_GIT_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git#([0-9a-f]{40})/g;
-const SHARED_PYTHON_GIT_LOCATOR_PATTERN = /^git\+(.+)@([0-9a-f]{40})#subdirectory=python\/opl-harness-shared$/;
-const SHARED_JS_GIT_LOCATOR_PATTERN = /^git\+(.+)#([0-9a-f]{40})$/;
+const JS_GIT_PATTERN = /(?:git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git|github:gaofeng21cn\/one-person-lab)#([A-Za-z0-9._/-]+)/g;
+const SHARED_PYTHON_GIT_LOCATOR_PATTERN = /^git\+(.+)@([A-Za-z0-9._/-]+)#subdirectory=python\/opl-harness-shared$/;
+const SHARED_JS_GIT_LOCATOR_PATTERN = /^git\+(.+)#([A-Za-z0-9._/-]+)$/;
 
 export type FamilySharedPinKind = 'python_dependency' | 'python_lock' | 'js_dependency' | 'js_lock';
 
@@ -30,6 +31,15 @@ export interface FamilySharedOwnerReleaseContract {
   contract_kind: string;
   owner_repo: string;
   owner_commit: string;
+  latest_stable?: {
+    ref?: string;
+    commit?: string;
+  };
+  consumer_policy?: {
+    manifest_channel?: string;
+    lockfile_exact_commit_receipt_required?: boolean;
+    consumer_exact_commit_equality_gate?: boolean;
+  };
   consumers: FamilySharedReleaseConsumer[];
   packages: {
     python?: { git_locator?: string; [key: string]: unknown };
@@ -41,7 +51,7 @@ export interface FamilySharedOwnerReleaseContract {
 export interface FamilySharedReleaseFinding {
   file: string | null;
   kind: FamilySharedPinKind | 'repo';
-  status: 'aligned' | 'missing_file' | 'missing_repo' | 'pin_not_found' | 'stale_pin';
+  status: 'aligned' | 'legacy_pin' | 'missing_file' | 'missing_repo' | 'pin_not_found' | 'stale_pin' | 'update_available';
   pins: string[];
 }
 
@@ -50,7 +60,7 @@ export interface FamilySharedReleaseInspection {
   repo_root: string;
   owner_commit: string;
   verify_command: string | null;
-  status: 'aligned' | 'missing_consumer' | 'missing_repo' | 'stale';
+  status: 'aligned' | 'legacy' | 'missing_consumer' | 'missing_repo' | 'stale' | 'update_available';
   findings: FamilySharedReleaseFinding[];
 }
 
@@ -124,6 +134,25 @@ export function loadSharedOwnerReleaseContract({
   if (!Array.isArray(contract.consumers) || contract.consumers.length === 0) {
     throw new Error('shared owner release contract must declare at least one consumer');
   }
+  if (contract.contract_kind === 'family_shared_owner_release.v2') {
+    const latestStable = contract.latest_stable;
+    if (!latestStable || !/^[A-Za-z0-9._/-]+$/.test(String(latestStable.ref ?? ''))) {
+      throw new Error('shared owner release contract v2 must declare latest_stable.ref');
+    }
+    if (requireOwnerCommit(latestStable.commit, 'latest_stable.commit') !== contract.owner_commit) {
+      throw new Error('shared owner release contract latest_stable.commit must equal owner_commit');
+    }
+    const consumerPolicy = contract.consumer_policy;
+    if (consumerPolicy?.manifest_channel !== latestStable.ref) {
+      throw new Error('shared owner release contract v2 must bind consumer_policy.manifest_channel');
+    }
+    if (consumerPolicy?.lockfile_exact_commit_receipt_required !== true) {
+      throw new Error('shared owner release contract v2 must retain lockfile receipts');
+    }
+    if (consumerPolicy?.consumer_exact_commit_equality_gate !== false) {
+      throw new Error('shared owner release contract v2 must not require consumer exact commit equality');
+    }
+  }
   for (const consumer of contract.consumers) {
     if (typeof consumer.verify_command !== 'string' || consumer.verify_command.trim() === '') {
       throw new Error(`shared owner release contract consumer is missing verify_command: ${consumer.repo_id}`);
@@ -146,7 +175,7 @@ export function parseSharedPackageLocator(locator: unknown, context = 'shared pa
   if (match) {
     return {
       remote_url: match[1],
-      owner_commit: requireOwnerCommit(match[2], `${context} owner commit`),
+      ref: match[2],
       package_kind: 'python' as const,
     };
   }
@@ -154,7 +183,7 @@ export function parseSharedPackageLocator(locator: unknown, context = 'shared pa
   if (match) {
     return {
       remote_url: match[1],
-      owner_commit: requireOwnerCommit(match[2], `${context} owner commit`),
+      ref: match[2],
       package_kind: 'js' as const,
     };
   }
@@ -175,6 +204,7 @@ export function collectSharedOwnerReleaseRemotes({
   ownerCommit?: string;
 } = {}) {
   const expectedOwnerCommit = requireOwnerCommit(ownerCommit, 'owner_commit');
+  const expectedReleaseRef = contract?.latest_stable?.ref ?? expectedOwnerCommit;
   const packages = contract?.packages ?? {};
   const locators = [
     packageRecord(packages.python).git_locator,
@@ -185,9 +215,9 @@ export function collectSharedOwnerReleaseRemotes({
   }
   return unique(locators.map((locator, index) => {
     const parsed = parseSharedPackageLocator(locator, `contract.packages[${index}]`);
-    if (parsed.owner_commit !== expectedOwnerCommit) {
+    if (parsed.ref !== expectedReleaseRef) {
       throw new Error(
-        `shared owner release contract package locator is not pinned to owner_commit ${expectedOwnerCommit}: ${locator}`,
+        `shared owner release contract package locator is not pinned to release ref ${expectedReleaseRef}: ${locator}`,
       );
     }
     return parsed.remote_url;
@@ -240,6 +270,27 @@ function assertRemoteOwnerCommitReachable({
   }
 }
 
+function assertRemoteReleaseRefMatches({
+  remoteUrl,
+  releaseRef,
+  ownerCommit,
+}: {
+  remoteUrl: string;
+  releaseRef: string;
+  ownerCommit: string;
+}) {
+  const output = execFileSync('git', ['ls-remote', remoteUrl, `refs/heads/${releaseRef}`], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+  const remoteCommit = output.split(/\s+/)[0] ?? '';
+  if (remoteCommit !== ownerCommit) {
+    throw new Error(
+      `latest-stable ref ${releaseRef} does not resolve to owner commit ${ownerCommit} on ${remoteUrl}`,
+    );
+  }
+}
+
 export function assertPublishedOwnerCommitReachable({
   contract,
   ownerCommit = contract?.owner_commit,
@@ -248,21 +299,25 @@ export function assertPublishedOwnerCommitReachable({
   ownerCommit?: string;
 } = {}) {
   const expectedOwnerCommit = requireOwnerCommit(ownerCommit, 'owner_commit');
+  const releaseRef = contract?.latest_stable?.ref;
   for (const remoteUrl of collectSharedOwnerReleaseRemotes({ contract, ownerCommit: expectedOwnerCommit })) {
     assertRemoteOwnerCommitReachable({ remoteUrl, ownerCommit: expectedOwnerCommit });
+    if (releaseRef) {
+      assertRemoteReleaseRefMatches({ remoteUrl, releaseRef, ownerCommit: expectedOwnerCommit });
+    }
   }
 }
 
-function rewriteContractPackageLocator(locator: unknown, ownerCommit: string) {
+function rewriteContractPackageLocator(locator: unknown, releaseRef: string) {
   if (typeof locator !== 'string') {
     return locator;
   }
   const parsed = parseSharedPackageLocator(locator);
   if (parsed.package_kind === 'python') {
-    return `git+${parsed.remote_url}@${ownerCommit}#subdirectory=python/opl-harness-shared`;
+    return `git+${parsed.remote_url}@${releaseRef}#subdirectory=python/opl-harness-shared`;
   }
   if (parsed.package_kind === 'js') {
-    return `git+${parsed.remote_url}#${ownerCommit}`;
+    return `git+${parsed.remote_url}#${releaseRef}`;
   }
   return locator;
 }
@@ -270,13 +325,23 @@ function rewriteContractPackageLocator(locator: unknown, ownerCommit: string) {
 export function rewriteSharedOwnerReleaseContract(contract: FamilySharedOwnerReleaseContract, ownerCommit: string) {
   const nextOwnerCommit = requireOwnerCommit(ownerCommit);
   const nextContract = cloneJsonPayload(contract);
+  nextContract.contract_kind = 'family_shared_owner_release.v2';
   nextContract.owner_commit = nextOwnerCommit;
+  nextContract.latest_stable = {
+    ref: LATEST_STABLE_CHANNEL,
+    commit: nextOwnerCommit,
+  };
+  nextContract.consumer_policy = {
+    manifest_channel: LATEST_STABLE_CHANNEL,
+    lockfile_exact_commit_receipt_required: true,
+    consumer_exact_commit_equality_gate: false,
+  };
   const packages = nextContract.packages as Record<string, { git_locator?: unknown } | undefined> | undefined;
   if (packages?.python?.git_locator) {
-    packages.python.git_locator = rewriteContractPackageLocator(packages.python.git_locator, nextOwnerCommit);
+    packages.python.git_locator = rewriteContractPackageLocator(packages.python.git_locator, LATEST_STABLE_CHANNEL);
   }
   if (packages?.js?.git_locator) {
-    packages.js.git_locator = rewriteContractPackageLocator(packages.js.git_locator, nextOwnerCommit);
+    packages.js.git_locator = rewriteContractPackageLocator(packages.js.git_locator, LATEST_STABLE_CHANNEL);
   }
   return nextContract;
 }
@@ -290,10 +355,40 @@ export function extractTrackedPins(text: string, kind: FamilySharedPinKind) {
       [...text.matchAll(PYTHON_LOCK_PATTERN)].flatMap((match) => [match[1], match[2]?.slice(1)].filter(Boolean) as string[]),
     );
   }
-  if (kind === 'js_dependency' || kind === 'js_lock') {
+  if (kind === 'js_dependency') {
     return unique([...text.matchAll(JS_GIT_PATTERN)].map((match) => match[1] ?? ''));
   }
+  if (kind === 'js_lock') {
+    let payload: Record<string, any>;
+    try {
+      payload = JSON.parse(text) as Record<string, any>;
+    } catch {
+      return [];
+    }
+    const lockEntries = [
+      ...Object.entries(payload.packages ?? {})
+        .filter(([key]) => key.endsWith('node_modules/opl-framework-shared'))
+        .map(([, value]) => value),
+      payload.dependencies?.['opl-framework-shared'],
+    ];
+    return unique(lockEntries.flatMap((entry) => {
+      const resolved = typeof entry?.resolved === 'string' ? entry.resolved : '';
+      const match = resolved.match(/#([0-9a-f]{40})$/);
+      return match?.[1] ? [match[1]] : [];
+    }));
+  }
   return [];
+}
+
+function isLockTarget(kind: FamilySharedPinKind) {
+  return kind === 'python_lock' || kind === 'js_lock';
+}
+
+function expectedConsumerReference(contract: FamilySharedOwnerReleaseContract, kind: FamilySharedPinKind) {
+  if (isLockTarget(kind)) {
+    return null;
+  }
+  return contract.latest_stable?.ref ?? contract.owner_commit;
 }
 
 export function rewriteTrackedPins(text: string, kind: FamilySharedPinKind, ownerCommit: string) {
@@ -383,11 +478,31 @@ export function inspectFamilySharedConsumerAlignment({
         pins,
       };
     }
-    if (pins.some((entry) => entry !== contract.owner_commit)) {
+    const expectedReference = expectedConsumerReference(contract, target.kind);
+    const exactLockReceipt = expectedReference === null
+      && pins.every((entry) => /^[0-9a-f]{40}$/.test(entry));
+    const lockUpdateAvailable = exactLockReceipt
+      && Boolean(contract.latest_stable?.commit)
+      && pins.some((entry) => entry !== contract.latest_stable?.commit);
+    const aligned = expectedReference === null
+      ? exactLockReceipt && !lockUpdateAvailable
+      : pins.every((entry) => entry === expectedReference);
+    if (!aligned) {
+      if (lockUpdateAvailable) {
+        return {
+          file: target.file,
+          kind: target.kind,
+          status: 'update_available' as const,
+          pins,
+        };
+      }
+      const legacyPin = contract.latest_stable
+        && expectedReference !== null
+        && pins.every((entry) => /^[0-9a-f]{40}$/.test(entry));
       return {
         file: target.file,
         kind: target.kind,
-        status: 'stale_pin' as const,
+        status: legacyPin ? 'legacy_pin' as const : 'stale_pin' as const,
         pins,
       };
     }
@@ -399,7 +514,16 @@ export function inspectFamilySharedConsumerAlignment({
     };
   });
 
-  const status = findings.every((entry) => entry.status === 'aligned') ? 'aligned' : 'stale';
+  const nonblocking = findings.every((entry) => (
+    entry.status === 'aligned' || entry.status === 'update_available'
+  ));
+  const status = findings.every((entry) => entry.status === 'aligned')
+    ? 'aligned'
+    : nonblocking && findings.some((entry) => entry.status === 'update_available')
+      ? 'update_available'
+      : nonblocking
+        ? 'legacy'
+        : 'stale';
   return {
     repo_id: consumerRepoId,
     repo_root: resolvedRepoRoot,
@@ -474,8 +598,9 @@ export function inspectFamilySharedPins({
   }));
   return {
     owner_commit: contract.owner_commit,
+    latest_stable: contract.latest_stable,
     repos,
-    ok: repos.every((repo) => repo.status === 'aligned'),
+    ok: repos.every((repo) => repo.status === 'aligned' || repo.status === 'update_available'),
   };
 }
 
@@ -489,10 +614,14 @@ export function syncConsumerRepo({
   contract: FamilySharedOwnerReleaseContract;
 }) {
   const changedFiles: string[] = [];
+  const releaseRef = contract.latest_stable?.ref ?? contract.owner_commit;
   for (const target of consumer.targets) {
+    if (contract.latest_stable && isLockTarget(target.kind)) {
+      continue;
+    }
     const filePath = path.join(repoPath, target.file);
     const originalText = fs.readFileSync(filePath, 'utf8');
-    const rewritten = rewriteTrackedPins(originalText, target.kind, contract.owner_commit);
+    const rewritten = rewriteTrackedPins(originalText, target.kind, releaseRef);
     if (rewritten.replacement_count === 0) {
       throw new Error(`${consumer.repo_id}:${target.file} does not contain a tracked shared pin`);
     }
@@ -505,6 +634,11 @@ export function syncConsumerRepo({
     repo_id: consumer.repo_id,
     repo_path: repoPath,
     changed_files: changedFiles,
+    lock_refresh_commands: unique(consumer.targets.flatMap((target) => {
+      if (target.kind === 'python_lock') return ['uv lock'];
+      if (target.kind === 'js_lock') return ['npm update opl-framework-shared'];
+      return [];
+    })),
   };
 }
 
@@ -576,11 +710,6 @@ export function releaseFamilySharedPins({
   });
   fs.mkdirSync(path.dirname(contractPath), { recursive: true });
   writeJsonPayloadFile(contractPath, nextContract);
-  const syncResults = syncFamilySharedPins({
-    contract: nextContract,
-    familyRoot,
-    repoOverrides,
-  });
   const summary = inspectFamilySharedPins({
     contract: nextContract,
     familyRoot,
@@ -588,8 +717,9 @@ export function releaseFamilySharedPins({
   });
   return {
     owner_commit: nextOwnerCommit,
+    latest_stable: nextContract.latest_stable,
     contract_path: contractPath,
-    sync_results: syncResults,
+    sync_results: [],
     summary,
   };
 }

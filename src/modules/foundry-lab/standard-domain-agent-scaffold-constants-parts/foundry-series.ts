@@ -311,8 +311,9 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
   },
   shared_release_pin_strategy: {
     owner_release_contract_ref: 'contracts/family-release/shared-owner-release.json',
-    owner_commit_pin_required: true,
-    domain_dependency_pin_required: true,
+    owner_managed_latest_stable_channel_required: true,
+    lockfile_resolved_commit_receipt_required: true,
+    consumer_exact_commit_equality_gate: false,
     supported_pin_sources: [
       'pyproject.toml',
       'uv.lock',

@@ -36,8 +36,11 @@ function repoRootFromImportMeta() {
 }
 
 function formatInspection(summary) {
+  const latestStable = summary.latest_stable;
   const lines = [
-    `family shared owner commit: ${summary.owner_commit}`,
+    latestStable
+      ? `family shared latest-stable: ${latestStable.ref} -> ${latestStable.commit}`
+      : `family shared owner commit: ${summary.owner_commit}`,
   ];
   for (const repo of summary.repos) {
     lines.push(`[${repo.repo_id}] ${repo.status} ${repo.repo_path}`);
@@ -59,10 +62,13 @@ function formatSync(results) {
     lines.push(`[${result.repo_id}] synced ${result.repo_path}`);
     if (result.changed_files.length === 0) {
       lines.push('  - no file content changed');
-      continue;
+    } else {
+      for (const relativePath of result.changed_files) {
+        lines.push(`  - ${relativePath}`);
+      }
     }
-    for (const relativePath of result.changed_files) {
-      lines.push(`  - ${relativePath}`);
+    for (const command of result.lock_refresh_commands ?? []) {
+      lines.push(`  - refresh lock receipt: (cd ${result.repo_path} && ${command})`);
     }
   }
   return lines.join('\n');
@@ -70,7 +76,7 @@ function formatSync(results) {
 
 function formatRelease(result) {
   return [
-    `released owner commit: ${result.owner_commit}`,
+    `promoted latest-stable commit: ${result.owner_commit}`,
     `updated contract: ${result.contract_path}`,
   ].join('\n');
 }
@@ -121,6 +127,10 @@ export function runFamilySharedReleaseCli(
     };
   }
   if (parsed.command === 'sync') {
+    validatePublishedOwnerCommit({
+      contract,
+      ownerCommit: contract.owner_commit,
+    });
     const syncResults = syncFamilySharedPins({
       contract,
       familyRoot: parsed.familyRoot,

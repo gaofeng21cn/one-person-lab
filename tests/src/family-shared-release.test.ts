@@ -155,7 +155,13 @@ test('inspectCurrentRepoFamilySharedAlignment resolves the owner repo from the c
   );
   write(
     path.join(repoRoot, 'package-lock.json'),
-    `{"packages":{"packages/redcube-domain-entry":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}}}\n`,
+    JSON.stringify({
+      packages: {
+        'node_modules/opl-framework-shared': {
+          resolved: `git+ssh://git@github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}`,
+        },
+      },
+    }),
   );
 
   const inspection = inspectCurrentRepoFamilySharedAlignment({
@@ -167,4 +173,64 @@ test('inspectCurrentRepoFamilySharedAlignment resolves the owner repo from the c
   assert.equal(inspection.status, 'aligned');
   assert.equal(inspection.owner_commit, RELEASED_OWNER_COMMIT);
   assert.equal(inspection.findings[0]?.status, 'aligned');
+});
+
+test('owner-managed latest-stable reports a stale exact lock receipt as update available', () => {
+  const familyRoot = createFamilyFixtureRoot();
+  const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');
+  const repoRoot = path.join(familyRoot, 'redcube-ai');
+  write(
+    path.join(ownerRepoRoot, 'contracts/family-release/shared-owner-release.json'),
+    JSON.stringify({
+      contract_kind: 'family_shared_owner_release.v2',
+      owner_repo: 'one-person-lab',
+      owner_commit: RELEASED_OWNER_COMMIT,
+      latest_stable: {
+        ref: 'latest-stable',
+        commit: RELEASED_OWNER_COMMIT,
+      },
+      consumer_policy: {
+        manifest_channel: 'latest-stable',
+        lockfile_exact_commit_receipt_required: true,
+        consumer_exact_commit_equality_gate: false,
+      },
+      consumers: [
+        {
+          repo_id: 'redcube',
+          repo_dir: 'redcube-ai',
+          verify_command: 'scripts/verify.sh family',
+          targets: [
+            { file: 'packages/redcube-domain-entry/package.json', kind: 'js_dependency' },
+            { file: 'package-lock.json', kind: 'js_lock' },
+          ],
+        },
+      ],
+    }),
+  );
+  write(
+    path.join(repoRoot, 'packages/redcube-domain-entry/package.json'),
+    '{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#latest-stable"}}\n',
+  );
+  write(
+    path.join(repoRoot, 'package-lock.json'),
+    JSON.stringify({
+      packages: {
+        'node_modules/opl-framework-shared': {
+          resolved: `git+ssh://git@github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}`,
+        },
+      },
+    }),
+  );
+
+  const inspection = inspectCurrentRepoFamilySharedAlignment({
+    repoRoot,
+    consumerRepoId: 'redcube',
+    ownerRepoRoot,
+  });
+
+  assert.equal(inspection.status, 'update_available');
+  assert.equal(inspection.findings[0]?.status, 'aligned');
+  assert.equal(inspection.findings[1]?.status, 'update_available');
+  assert.deepEqual(inspection.findings[0]?.pins, ['latest-stable']);
+  assert.deepEqual(inspection.findings[1]?.pins, [STALE_OWNER_COMMIT]);
 });
