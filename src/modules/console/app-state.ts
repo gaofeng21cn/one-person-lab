@@ -13,7 +13,7 @@ import {
   buildOplEndpoints,
   familyRuntimePaths,
   inspectFamilyRuntimeProviderWithLifecycle,
-  readMasManagedProviderProjection,
+  readManagedProviderProjectionSummary,
   resolveFamilyRuntimeProviderKind,
 } from '../runway/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
@@ -144,8 +144,8 @@ async function buildProviderState(profile: AppStateProfile) {
     {
       detail: profile,
       managedProviderProjection: profile === 'fast'
-        ? readMasManagedProviderProjection({ includeManifest: false })
-        : readMasManagedProviderProjection(),
+        ? readManagedProviderProjectionSummary({ includeManifest: false })
+        : readManagedProviderProjectionSummary(),
     },
   );
   return {

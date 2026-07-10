@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
-  readMasManagedProviderProjection,
+  readManagedProviderProjectionSummary,
   buildProviderContinuousProof,
   openFamilyRuntimeSqlite,
   familyRuntimePaths,
@@ -554,7 +554,7 @@ export async function buildRuntimeTraySnapshot(
   }).domain_manifests;
   const functionalPrivatizationDomainManifests =
     withOplMetaAgentDescriptorEntry(withOplMetaAgentRegistryExtension(domainManifests));
-  const managedProviderProjection = readMasManagedProviderProjection({ domainManifests });
+  const managedProviderProjection = readManagedProviderProjectionSummary({ domainManifests });
   const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyProviderPaths, {
     managedProviderProjection,
   });

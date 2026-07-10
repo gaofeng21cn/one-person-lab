@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { inspectSelectedFamilyRuntimeProvidersWithLifecycle } from '../../runway/index.ts';
-import { readMasManagedProviderProjection } from '../../runway/index.ts';
+import { readManagedProviderProjectionSummary } from '../../runway/index.ts';
 import { familyRuntimePaths } from '../../runway/index.ts';
 import { buildSessionLedger } from '../../runway/index.ts';
 
@@ -44,7 +44,7 @@ export async function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
     await inspectSelectedFamilyRuntimeProvidersWithLifecycle({
       paths: familyRuntimePaths(),
       options: {
-        managedProviderProjection: readMasManagedProviderProjection(),
+        managedProviderProjection: readManagedProviderProjectionSummary(),
       },
     });
   const ledger = buildSessionLedger(options.ledgerLimit ?? options.sessionsLimit ?? 5).session_ledger;

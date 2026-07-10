@@ -1,7 +1,7 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../../../kernel/runtime-state-paths.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { familyRuntimePaths } from '../../runway/index.ts';
-import { readMasManagedProviderProjection } from '../../runway/index.ts';
+import { readManagedProviderProjectionSummary } from '../../runway/index.ts';
 import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
@@ -66,7 +66,7 @@ export async function buildOplEnvironment(
     () => inspectFamilyRuntimeProviderWithLifecycle(
       providerKind,
       familyRuntimePaths(),
-      { managedProviderProjection: readMasManagedProviderProjection() },
+      { managedProviderProjection: readManagedProviderProjectionSummary() },
     ),
     (provider) => ({
       status: provider.status,

@@ -21,7 +21,10 @@ export { resolveOplStatePaths } from './runtime-state-paths.ts';
 export { deriveCurrentControlStateForAttempt, deriveCurrentControlStateForTask } from './family-runtime-current-control-state.ts';
 export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stageAttemptSignalsByAttempt } from './family-runtime-stage-attempt-ledger.ts';
 export type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
-export { readMasManagedProviderProjection, projectionFromMasManifestEntry } from './family-runtime-mas-managed-provider-projection.ts';
+export {
+  projectionFromDomainManifestEntry,
+  readManagedProviderProjectionSummary,
+} from './family-runtime-managed-provider-projection.ts';
 export { readFamilyDomainMemoryRuntimeReceiptEvidenceByDomain } from './family-domain-memory-runtime-receipts.ts';
 export { buildOplEndpoints } from '../../kernel/opl-runtime-endpoints.ts';
 export { buildProviderContinuousProof } from './family-runtime-provider-continuous-proof.ts';
