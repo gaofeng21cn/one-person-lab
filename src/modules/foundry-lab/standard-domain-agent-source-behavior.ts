@@ -278,12 +278,20 @@ function auditCoverageForPath(items: FunctionalPrivatizationAuditItem[], relativ
   );
 }
 
+function diagnosticCleanupHasActiveCaller(item: FunctionalPrivatizationAuditItem) {
+  const status = item.active_caller_status?.toLowerCase() ?? '';
+  if (/no[_\s-]+active[_\s-]+caller/.test(status)) {
+    return false;
+  }
+  return item.active_caller_allowed || item.active_callers.length > 0;
+}
+
 function isActivePrivateAuditItem(item: FunctionalPrivatizationAuditItem) {
   if (item.blocker || ACTIVE_PRIVATE_MIGRATION_CLASSES.has(item.migration_class)) {
     return true;
   }
   if (item.migration_class === 'diagnostic_cleanup_path') {
-    return item.active_caller_allowed;
+    return diagnosticCleanupHasActiveCaller(item);
   }
   return !LEGAL_DECLARED_MIGRATION_CLASSES.has(item.migration_class);
 }
@@ -306,6 +314,7 @@ function evaluateMatch(
       migration_class: item.migration_class,
       active_caller_status: item.active_caller_status,
       active_caller_allowed: item.active_caller_allowed,
+      active_callers: item.active_callers,
       code_paths: item.code_paths,
     })),
   };

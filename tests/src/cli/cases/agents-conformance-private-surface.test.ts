@@ -152,6 +152,39 @@ test('agents conformance source behavior gate records legal audit declarations a
   assert.deepEqual(checks.blockers, []);
 });
 
+test('agents conformance blocks diagnostic cleanup source that still has an active caller', () => {
+  const repoDir = buildReadyAgentRepo();
+  const hygienePath = path.join(repoDir, 'src', 'project-hygiene.py');
+  fs.mkdirSync(path.dirname(hygienePath), { recursive: true });
+  fs.writeFileSync(hygienePath, 'def scan():\n    return None\n');
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
+  functionalAudit.modules.push({
+    module_id: 'sample_project_hygiene_diagnostic',
+    classification: 'diagnostic_cleanup_path',
+    code_paths: ['src/project-hygiene.py'],
+    active_caller_allowed: false,
+    active_callers: ['scripts/verify.sh'],
+    active_caller_status: 'explicit_diagnostic_helper_still_called_by_default_verify',
+    migration_action: 'move_generic_source_byproduct_guard_to_opl_workspace',
+  });
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].source_behavior_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.status, 'blocked');
+  assert.equal(checks.active_private_generic_residue_count, 1);
+  assert.equal(checks.matches[0].audit_disposition, 'active_private_generic_residue');
+  assert.deepEqual(checks.matches[0].audit_coverage[0].active_callers, ['scripts/verify.sh']);
+});
+
 test('agents conformance blocks retired route aliases from re-entering active caller inventory', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
