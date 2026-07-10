@@ -6,6 +6,104 @@
   "brand_family": "MAS Scholar Skills",
   "purpose": "Canonical capability-module catalog for OPL-hosted scholarly skills that can be discovered by OPL Atlas, packaged by OPL Pack, prepared through OPL runtime env, invoked by OPL Runway, and consumed by domain agents as refs-only candidate outputs.",
   "machine_boundary": "This contract describes independent capability modules and their descriptor, dependency, run-context, artifact, receipt, and quality-evidence refs. It does not add an eleventh OPL brand module, execute domain stages, write domain truth, mutate artifact bodies, schedule runtime attempts, sign owner receipts, create typed blockers, or claim runtime, domain, quality, artifact, publication, App, or production readiness.",
+  "source_projection_contract": {
+    "contract_id": "opl_scholarskills_source_projection",
+    "schema_version": "scholar-skills-source-projection.v1",
+    "canonical_source": {
+      "owner_repo": "mas-scholar-skills",
+      "ref": "main",
+      "commit": "6b5146a74af95a570973e1d272871174f376f7a8",
+      "contract_path": "contracts/scholar-skills-capability-modules.json",
+      "fingerprint_algorithm": "sha256",
+      "fingerprint": "4efa4795120c5fcec8296133c05650800c63bd949f13a9a085ebd0d0763151c9"
+    },
+    "projected_fields": {
+      "identity_fields": [
+        "contract_id",
+        "schema_version",
+        "brand_family",
+        "modules[].module_id",
+        "modules[].legacy_module_ids"
+      ],
+      "executable_fields": [
+        "runtime_environment_bridge",
+        "modules[].stage_fit",
+        "modules[].dependency_profile_refs",
+        "modules[].run_context_refs",
+        "modules[].invocation_entries"
+      ],
+      "expanded_false_authority_fields": [
+        "can_claim_publication_readiness",
+        "can_claim_owner_acceptance",
+        "can_claim_current_package_authority"
+      ]
+    },
+    "intentional_transformations": [
+      {
+        "transform_id": "opl_executable_root_vocabulary",
+        "source_vocabulary": "--paper-root",
+        "projected_vocabulary": "--artifact-root",
+        "applies_to": [
+          "runtime_environment_bridge.*_commands",
+          "modules[].dependency_profile_refs",
+          "modules[].invocation_entries"
+        ],
+        "reason": "OPL executable commands use the generic artifact-root vocabulary; paper-root remains a CLI compatibility alias."
+      }
+    ],
+    "owner_only_metadata_refs": {
+      "canonical_contract_ref": "mas-scholar-skills@6b5146a74af95a570973e1d272871174f376f7a8:contracts/scholar-skills-capability-modules.json",
+      "projection_policy": "refs_only_owner_metadata_not_materialized_in_opl",
+      "omitted_fields": [
+        "modules[].learned_pattern_policy",
+        "modules[].display_quality_floor_policy"
+      ],
+      "learned_pattern_policy_refs": {
+        "mas-scholar-skills.display": "#/modules/0/learned_pattern_policy",
+        "mas-scholar-skills.tables": "#/modules/1/learned_pattern_policy",
+        "mas-scholar-skills.stats": "#/modules/2/learned_pattern_policy",
+        "mas-scholar-skills.lit": "#/modules/3/learned_pattern_policy",
+        "mas-scholar-skills.write": "#/modules/4/learned_pattern_policy",
+        "mas-scholar-skills.review": "#/modules/5/learned_pattern_policy",
+        "mas-scholar-skills.submit": "#/modules/6/learned_pattern_policy"
+      },
+      "display_quality_floor_policy_refs": {
+        "mas-scholar-skills.display": "#/modules/0/display_quality_floor_policy"
+      },
+      "omission_reason": "Professional learning and display-quality policy bodies remain canonical in MAS Scholar Skills; OPL keeps owner JSON-pointer refs and executable planning fields only."
+    },
+    "currentness_boundary": {
+      "snapshot_kind": "pinned_source_commit",
+      "canonical_ref_may_advance": true,
+      "projection_current_only_for_recorded_commit_and_fingerprint": true,
+      "projection_claims_live_owner_currentness": false,
+      "sibling_repo_required_in_ci": false,
+      "refresh_requires_new_owner_commit_and_fingerprint": true
+    },
+    "projection_fingerprint_policy": {
+      "algorithm": "sha256",
+      "canonicalization": "stable_json",
+      "readback_field": "projection_fingerprint",
+      "covered_fields": [
+        "contract_id",
+        "schema_version",
+        "brand_family",
+        "runtime_environment_bridge",
+        "authority_boundary.can_claim_publication_readiness",
+        "authority_boundary.can_claim_owner_acceptance",
+        "authority_boundary.can_claim_current_package_authority",
+        "modules[].module_id",
+        "modules[].legacy_module_ids",
+        "modules[].stage_fit",
+        "modules[].dependency_profile_refs",
+        "modules[].run_context_refs",
+        "modules[].invocation_entries",
+        "modules[].authority_boundary.can_claim_publication_readiness",
+        "modules[].authority_boundary.can_claim_owner_acceptance",
+        "modules[].authority_boundary.can_claim_current_package_authority"
+      ]
+    }
+  },
   "ownership_boundary": {
     "opl_owned_surfaces": [
       "package_descriptor",
@@ -61,11 +159,17 @@
       "can_claim_runtime_ready": false,
       "can_mutate_artifact_body": false,
       "can_sign_owner_receipt": false,
-      "can_create_typed_blocker": false
+      "can_create_typed_blocker": false,
+      "can_claim_publication_readiness": false,
+      "can_claim_owner_acceptance": false,
+      "can_claim_current_package_authority": false
     },
     "can_write_runtime_state": false,
     "can_claim_runtime_ready": false,
-    "can_claim_domain_ready": false
+    "can_claim_domain_ready": false,
+    "can_claim_publication_readiness": false,
+    "can_claim_owner_acceptance": false,
+    "can_claim_current_package_authority": false
   },
   "authority_boundary": {
     "can_claim_domain_ready": false,
@@ -73,6 +177,9 @@
     "can_claim_artifact_authority": false,
     "can_claim_production_ready": false,
     "can_claim_runtime_ready": false,
+    "can_claim_publication_readiness": false,
+    "can_claim_owner_acceptance": false,
+    "can_claim_current_package_authority": false,
     "can_schedule_runtime": false,
     "can_write_domain_truth": false,
     "can_write_runtime_state": false,
@@ -88,6 +195,9 @@
       "module_id": "mas-scholar-skills.display",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Display",
+      "legacy_module_ids": [
+        "opl.scholarskills.display"
+      ],
       "stage_fit": [
         "figure_plan",
         "visual_template_selection",
@@ -152,6 +262,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -175,6 +288,9 @@
       "module_id": "mas-scholar-skills.tables",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Tables",
+      "legacy_module_ids": [
+        "opl.scholarskills.tables"
+      ],
       "stage_fit": [
         "table_shell",
         "statistical_summary_table",
@@ -232,6 +348,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -255,6 +374,9 @@
       "module_id": "mas-scholar-skills.stats",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Stats",
+      "legacy_module_ids": [
+        "opl.scholarskills.stats"
+      ],
       "stage_fit": [
         "analysis_plan",
         "statistical_check",
@@ -312,6 +434,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -335,6 +460,9 @@
       "module_id": "mas-scholar-skills.lit",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Lit",
+      "legacy_module_ids": [
+        "opl.scholarskills.lit"
+      ],
       "stage_fit": [
         "literature_map",
         "citation_support",
@@ -359,6 +487,23 @@
           "command": "opl scholar-skills inspect --module mas-scholar-skills.lit --json",
           "mutation": false,
           "descriptor_only": true
+        },
+        {
+          "entry_id": "connect_scientific_source_search",
+          "legacy_entry_ids": [
+            "connect_pubmed_search"
+          ],
+          "entry_kind": "external_source_connector",
+          "command": "opl connect pubmed search --query <query> --limit <n> --json",
+          "mutation": false,
+          "descriptor_only": false,
+          "provider_priority": [
+            "pubmed_pmc_first",
+            "crossref_metadata_fallback",
+            "openalex_coverage_or_citation_graph_fallback"
+          ],
+          "authority_boundary": "read_only_scientific_connector_refs_not_citation_acceptance_literature_verdict_or_domain_truth",
+          "legacy_authority_boundary_alias": "read_only_normalized_source_refs_not_literature_verdict_or_domain_truth"
         }
       ],
       "artifact_refs": [
@@ -392,6 +537,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -415,6 +563,9 @@
       "module_id": "mas-scholar-skills.write",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Write",
+      "legacy_module_ids": [
+        "opl.scholarskills.write"
+      ],
       "stage_fit": [
         "section_draft",
         "claim_trace",
@@ -473,6 +624,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -496,6 +650,9 @@
       "module_id": "mas-scholar-skills.review",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Review",
+      "legacy_module_ids": [
+        "opl.scholarskills.review"
+      ],
       "stage_fit": [
         "reviewer_comment_map",
         "quality_gate_feedback",
@@ -554,6 +711,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -577,6 +737,9 @@
       "module_id": "mas-scholar-skills.submit",
       "brand_family": "MAS Scholar Skills",
       "display_name": "Scholar Submit",
+      "legacy_module_ids": [
+        "opl.scholarskills.submit"
+      ],
       "stage_fit": [
         "submission_checklist",
         "package_export_refs",
@@ -634,6 +797,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,
@@ -667,10 +833,8 @@
         "source_data_profile",
         "data_dictionary",
         "analysis_dataset_handoff",
-        "data_asset_manifest_review",
         "data_asset_contract_review",
-        "cleaning_normalization_readiness_review",
-        "version_diff_impact_review",
+        "data_lifecycle_classification_review",
         "semantic_readiness_review",
         "study_data_binding_review",
         "privacy_access_tier_review",
@@ -680,7 +844,15 @@
         "derived_copy_inventory_review",
         "analytical_format_strategy_review",
         "cold_restore_proof_review",
-        "read_model_boundary_review"
+        "lifecycle_catalog_review",
+        "completed_project_closeout_review",
+        "prune_dry_run_review",
+        "post_cleanup_readback_review",
+        "read_model_boundary_review",
+        "metadata_scrape_review",
+        "source_lineage_review",
+        "agent_log_aggregation_review",
+        "artifact_bundle_manifest_review"
       ],
       "input_schema_refs": [
         "scholarskills_data_input.v1"
@@ -698,7 +870,7 @@
       ],
       "invocation_entries": [
         {
-          "entry_id": "medical_data_governance_descriptor",
+          "entry_id": "scholar_data_descriptor",
           "entry_kind": "descriptor_readback",
           "command": "opl scholar-skills inspect --module mas-scholar-skills.data --json",
           "mutation": false,
@@ -754,6 +926,9 @@
         "can_claim_artifact_authority": false,
         "can_claim_production_ready": false,
         "can_claim_runtime_ready": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false,
         "can_schedule_runtime": false,
         "can_write_domain_truth": false,
         "can_write_runtime_state": false,

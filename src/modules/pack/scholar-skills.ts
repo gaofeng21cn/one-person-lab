@@ -23,6 +23,7 @@ import type {
   FrameworkContracts,
   ScholarSkillAuthorityBoundary,
   ScholarSkillCapabilityModuleDescriptor,
+  ScholarSkillExpandedAuthorityField,
   ScholarSkillModuleId,
   ScholarSkillsCapabilityModulesContract,
 } from '../../kernel/types.ts';
@@ -32,6 +33,12 @@ type ValidationCheck = {
   status: 'pass' | 'fail';
   detail: string;
 };
+
+const EXPANDED_AUTHORITY_FALSE_FIELDS = [
+  'can_claim_publication_readiness',
+  'can_claim_owner_acceptance',
+  'can_claim_current_package_authority',
+] as const satisfies readonly ScholarSkillExpandedAuthorityField[];
 
 type PrepareInput = {
   moduleId: string;
@@ -184,9 +191,17 @@ function authorityBoundaryViolations(
   boundary: ScholarSkillAuthorityBoundary,
   prefix: string,
 ) {
-  return AUTHORITY_FALSE_FIELDS
+  return [...AUTHORITY_FALSE_FIELDS, ...EXPANDED_AUTHORITY_FALSE_FIELDS]
     .filter((field) => boundary[field] !== false)
     .map((field) => `${prefix}.${field}`);
+}
+
+function expandedAuthorityProjection(boundary: ScholarSkillAuthorityBoundary) {
+  return {
+    can_claim_publication_readiness: boundary.can_claim_publication_readiness,
+    can_claim_owner_acceptance: boundary.can_claim_owner_acceptance,
+    can_claim_current_package_authority: boundary.can_claim_current_package_authority,
+  };
 }
 
 function runtimePrepareCommand(input: PrepareInput) {
@@ -244,6 +259,31 @@ function scholarSkillMaterializeCommands(contractRoot: ScholarSkillsCapabilityMo
   ];
 }
 
+function buildProjectionReadback(contractRoot: ScholarSkillsCapabilityModulesContract) {
+  const source = contractRoot.source_projection_contract.canonical_source;
+  const projectedSnapshot = {
+    contract_id: contractRoot.contract_id,
+    schema_version: contractRoot.schema_version,
+    brand_family: contractRoot.brand_family,
+    runtime_environment_bridge: contractRoot.runtime_environment_bridge,
+    authority_boundary: expandedAuthorityProjection(contractRoot.authority_boundary),
+    modules: contractRoot.modules.map((module) => ({
+      module_id: module.module_id,
+      legacy_module_ids: module.legacy_module_ids,
+      stage_fit: module.stage_fit,
+      dependency_profile_refs: module.dependency_profile_refs,
+      run_context_refs: module.run_context_refs,
+      invocation_entries: module.invocation_entries,
+      authority_boundary: expandedAuthorityProjection(module.authority_boundary),
+    })),
+  };
+  return {
+    source_projection_contract: contractRoot.source_projection_contract,
+    source_fingerprint: `${source.fingerprint_algorithm}:${source.fingerprint}`,
+    projection_fingerprint: `sha256:${sha256Hex(stableJson(projectedSnapshot))}`,
+  };
+}
+
 function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
   const seen = new Set<string>();
   const duplicateIds: string[] = [];
@@ -253,6 +293,15 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
   const writeViolations: string[] = [];
   const capabilitySurfaceViolations: string[] = [];
   const ownershipBoundaryViolations: string[] = [];
+
+  for (const field of EXPANDED_AUTHORITY_FALSE_FIELDS) {
+    if (contractRoot.runtime_environment_bridge[field] !== false) {
+      authorityViolations.push(`runtime_environment_bridge.${field}`);
+    }
+    if (contractRoot.runtime_environment_bridge.bridge_envelope_policy?.[field] !== false) {
+      authorityViolations.push(`runtime_environment_bridge.bridge_envelope_policy.${field}`);
+    }
+  }
 
   if (
     contractRoot.ownership_boundary.pack_or_bridge_receipt_counts_as_domain_truth !== false
@@ -366,6 +415,7 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
 
 export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
   const contractRoot = contract(contracts);
+  const projectionReadback = buildProjectionReadback(contractRoot);
   return {
     version: 'g2',
     scholar_skills: {
@@ -376,6 +426,7 @@ export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
       brand_family: contractRoot.brand_family,
       purpose: contractRoot.purpose,
       machine_boundary: contractRoot.machine_boundary,
+      ...projectionReadback,
       ownership_boundary: contractRoot.ownership_boundary,
       module_count: contractRoot.modules.length,
       modules: contractRoot.modules.map(moduleSummary),
@@ -387,6 +438,9 @@ export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
         'quality_verdict',
         'artifact_authority',
         'production_ready',
+        'publication_readiness',
+        'owner_acceptance',
+        'current_package_authority',
         'owner_receipt',
         'typed_blocker',
       ],

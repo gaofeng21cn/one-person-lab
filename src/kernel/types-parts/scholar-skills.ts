@@ -8,12 +8,67 @@ export type ScholarSkillModuleId =
   | 'mas-scholar-skills.submit'
   | 'mas-scholar-skills.data';
 
+export type ScholarSkillExpandedAuthorityField =
+  | 'can_claim_publication_readiness'
+  | 'can_claim_owner_acceptance'
+  | 'can_claim_current_package_authority';
+
+export interface ScholarSkillsSourceProjectionContract {
+  contract_id: 'opl_scholarskills_source_projection';
+  schema_version: string;
+  canonical_source: {
+    owner_repo: 'mas-scholar-skills';
+    ref: string;
+    commit: string;
+    contract_path: 'contracts/scholar-skills-capability-modules.json';
+    fingerprint_algorithm: 'sha256';
+    fingerprint: string;
+  };
+  projected_fields: {
+    identity_fields: string[];
+    executable_fields: string[];
+    expanded_false_authority_fields: ScholarSkillExpandedAuthorityField[];
+  };
+  intentional_transformations: Array<{
+    transform_id: string;
+    source_vocabulary: '--paper-root';
+    projected_vocabulary: '--artifact-root';
+    applies_to: string[];
+    reason: string;
+  }>;
+  owner_only_metadata_refs: {
+    canonical_contract_ref: string;
+    projection_policy: string;
+    omitted_fields: string[];
+    learned_pattern_policy_refs: Partial<Record<ScholarSkillModuleId, string>>;
+    display_quality_floor_policy_refs: Partial<Record<ScholarSkillModuleId, string>>;
+    omission_reason: string;
+  };
+  currentness_boundary: {
+    snapshot_kind: string;
+    canonical_ref_may_advance: true;
+    projection_current_only_for_recorded_commit_and_fingerprint: true;
+    projection_claims_live_owner_currentness: false;
+    sibling_repo_required_in_ci: false;
+    refresh_requires_new_owner_commit_and_fingerprint: true;
+  };
+  projection_fingerprint_policy: {
+    algorithm: 'sha256';
+    canonicalization: 'stable_json';
+    readback_field: 'projection_fingerprint';
+    covered_fields: string[];
+  };
+}
+
 export interface ScholarSkillAuthorityBoundary {
   can_claim_domain_ready: false;
   can_claim_quality_verdict: false;
   can_claim_artifact_authority: false;
   can_claim_production_ready: false;
   can_claim_runtime_ready: false;
+  can_claim_publication_readiness: false;
+  can_claim_owner_acceptance: false;
+  can_claim_current_package_authority: false;
   can_schedule_runtime: false;
   can_write_domain_truth: false;
   can_write_runtime_state: false;
@@ -27,10 +82,14 @@ export interface ScholarSkillAuthorityBoundary {
 
 export interface ScholarSkillInvocationEntry {
   entry_id: string;
+  legacy_entry_ids?: string[];
   entry_kind: string;
   command: string;
   mutation: false;
-  descriptor_only: true;
+  descriptor_only: boolean;
+  provider_priority?: string[];
+  authority_boundary?: string;
+  legacy_authority_boundary_alias?: string;
 }
 
 export interface ScholarSkillArtifactRef {
@@ -74,6 +133,9 @@ export interface ScholarSkillRuntimeBridgeEnvelopePolicy {
   can_mutate_artifact_body: false;
   can_sign_owner_receipt: false;
   can_create_typed_blocker: false;
+  can_claim_publication_readiness: false;
+  can_claim_owner_acceptance: false;
+  can_claim_current_package_authority: false;
 }
 
 export interface ScholarSkillsOwnershipBoundary {
@@ -94,7 +156,7 @@ export interface ScholarSkillCapabilityModuleDescriptor {
   brand_family: 'MAS Scholar Skills';
   display_name: string;
   specialist_skill_id?: string;
-  legacy_module_ids?: string[];
+  legacy_module_ids: string[];
   legacy_module_id_policy?: string;
   stage_fit: string[];
   input_schema_refs: string[];
@@ -123,6 +185,7 @@ export interface ScholarSkillsCapabilityModulesContract {
   brand_family: 'MAS Scholar Skills';
   purpose: string;
   machine_boundary: string;
+  source_projection_contract: ScholarSkillsSourceProjectionContract;
   ownership_boundary: ScholarSkillsOwnershipBoundary;
   runtime_environment_bridge: {
     mode: 'refs_only';
@@ -140,6 +203,9 @@ export interface ScholarSkillsCapabilityModulesContract {
     can_write_runtime_state: false;
     can_claim_runtime_ready: false;
     can_claim_domain_ready: false;
+    can_claim_publication_readiness: false;
+    can_claim_owner_acceptance: false;
+    can_claim_current_package_authority: false;
   };
   authority_boundary: ScholarSkillAuthorityBoundary;
   modules: ScholarSkillCapabilityModuleDescriptor[];

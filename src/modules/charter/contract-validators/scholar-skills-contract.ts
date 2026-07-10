@@ -2,7 +2,9 @@ import type {
   ScholarSkillAuthorityBoundary,
   ScholarSkillCapabilityModuleDescriptor,
   ScholarSkillDataGovernanceAssessmentPolicy,
+  ScholarSkillExpandedAuthorityField,
   ScholarSkillModuleId,
+  ScholarSkillsSourceProjectionContract,
   ScholarSkillsOwnershipBoundary,
   ScholarSkillsCapabilityModulesContract,
 } from '../../../kernel/types.ts';
@@ -21,6 +23,9 @@ const SCHOLAR_SKILL_AUTHORITY_FIELDS = [
   'can_claim_artifact_authority',
   'can_claim_production_ready',
   'can_claim_runtime_ready',
+  'can_claim_publication_readiness',
+  'can_claim_owner_acceptance',
+  'can_claim_current_package_authority',
   'can_schedule_runtime',
   'can_write_domain_truth',
   'can_write_runtime_state',
@@ -40,7 +45,16 @@ const RUNTIME_BRIDGE_ENVELOPE_POLICY_FALSE_FIELDS = [
   'can_mutate_artifact_body',
   'can_sign_owner_receipt',
   'can_create_typed_blocker',
+  'can_claim_publication_readiness',
+  'can_claim_owner_acceptance',
+  'can_claim_current_package_authority',
 ] as const;
+
+const EXPANDED_AUTHORITY_FALSE_FIELDS = [
+  'can_claim_publication_readiness',
+  'can_claim_owner_acceptance',
+  'can_claim_current_package_authority',
+] as const satisfies readonly ScholarSkillExpandedAuthorityField[];
 
 function expectFalse(value: unknown, field: string, filePath: string) {
   if (value !== false) {
@@ -60,6 +74,16 @@ function expectBooleanLiteralTrue(value: unknown, field: string, filePath: strin
     });
   }
   return true as const;
+}
+
+function expectBoolean(value: unknown, field: string, filePath: string) {
+  if (typeof value !== 'boolean') {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be a boolean.`, {
+      file: filePath,
+      field,
+    });
+  }
+  return value;
 }
 
 function expectNonEmptyStringArray(value: unknown, field: string, filePath: string) {
@@ -85,6 +109,21 @@ function expectOptionalNonEmptyStringArray(value: unknown, field: string, filePa
     return undefined;
   }
   return expectNonEmptyStringArray(value, field, filePath);
+}
+
+function expectStringRecord(value: unknown, field: string, filePath: string) {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must be an object.`, {
+      file: filePath,
+      field,
+    });
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      expectString(entry, `${field}.${key}`, filePath),
+    ]),
+  );
 }
 
 function validateDataGovernanceAssessmentPolicy(
@@ -289,6 +328,21 @@ function validateRuntimeBridgeEnvelopePolicy(filePath: string, value: unknown) {
       'runtime_environment_bridge.bridge_envelope_policy.can_create_typed_blocker',
       filePath,
     ),
+    can_claim_publication_readiness: expectFalse(
+      value.can_claim_publication_readiness,
+      'runtime_environment_bridge.bridge_envelope_policy.can_claim_publication_readiness',
+      filePath,
+    ),
+    can_claim_owner_acceptance: expectFalse(
+      value.can_claim_owner_acceptance,
+      'runtime_environment_bridge.bridge_envelope_policy.can_claim_owner_acceptance',
+      filePath,
+    ),
+    can_claim_current_package_authority: expectFalse(
+      value.can_claim_current_package_authority,
+      'runtime_environment_bridge.bridge_envelope_policy.can_claim_current_package_authority',
+      filePath,
+    ),
   };
   for (const field of RUNTIME_BRIDGE_ENVELOPE_POLICY_FALSE_FIELDS) {
     if (policy[field] !== false) {
@@ -312,6 +366,231 @@ function expectScholarSkillModuleId(value: unknown, field: string, filePath: str
     });
   }
   return moduleId as ScholarSkillModuleId;
+}
+
+function validateSourceProjectionContract(
+  filePath: string,
+  value: unknown,
+): ScholarSkillsSourceProjectionContract {
+  if (!isRecord(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract must be an object.', {
+      file: filePath,
+      field: 'source_projection_contract',
+    });
+  }
+  if (value.contract_id !== 'opl_scholarskills_source_projection') {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract.contract_id is invalid.', {
+      file: filePath,
+      field: 'source_projection_contract.contract_id',
+    });
+  }
+  if (!isRecord(value.canonical_source)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract.canonical_source must be an object.', {
+      file: filePath,
+      field: 'source_projection_contract.canonical_source',
+    });
+  }
+  const canonicalSource = value.canonical_source;
+  const ownerRepo = expectString(
+    canonicalSource.owner_repo,
+    'source_projection_contract.canonical_source.owner_repo',
+    filePath,
+  );
+  const contractPath = expectString(
+    canonicalSource.contract_path,
+    'source_projection_contract.canonical_source.contract_path',
+    filePath,
+  );
+  const fingerprintAlgorithm = expectString(
+    canonicalSource.fingerprint_algorithm,
+    'source_projection_contract.canonical_source.fingerprint_algorithm',
+    filePath,
+  );
+  const fingerprint = expectString(
+    canonicalSource.fingerprint,
+    'source_projection_contract.canonical_source.fingerprint',
+    filePath,
+  );
+  if (ownerRepo !== 'mas-scholar-skills' || contractPath !== 'contracts/scholar-skills-capability-modules.json') {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract canonical owner is invalid.', {
+      file: filePath,
+      field: 'source_projection_contract.canonical_source',
+    });
+  }
+  if (fingerprintAlgorithm !== 'sha256' || !/^[a-f0-9]{64}$/.test(fingerprint)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract fingerprint must be sha256 hex.', {
+      file: filePath,
+      field: 'source_projection_contract.canonical_source.fingerprint',
+    });
+  }
+
+  if (!isRecord(value.projected_fields)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract.projected_fields must be an object.', {
+      file: filePath,
+      field: 'source_projection_contract.projected_fields',
+    });
+  }
+  const expandedFalseAuthorityFields = expectNonEmptyStringArray(
+    value.projected_fields.expanded_false_authority_fields,
+    'source_projection_contract.projected_fields.expanded_false_authority_fields',
+    filePath,
+  );
+  if (
+    expandedFalseAuthorityFields.length !== EXPANDED_AUTHORITY_FALSE_FIELDS.length
+    || EXPANDED_AUTHORITY_FALSE_FIELDS.some((field) => !expandedFalseAuthorityFields.includes(field))
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Expanded ScholarSkills authority fields are invalid.', {
+      file: filePath,
+      field: 'source_projection_contract.projected_fields.expanded_false_authority_fields',
+    });
+  }
+
+  if (!Array.isArray(value.intentional_transformations) || value.intentional_transformations.length !== 1) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract must declare one intentional transformation.', {
+      file: filePath,
+      field: 'source_projection_contract.intentional_transformations',
+    });
+  }
+  value.intentional_transformations.forEach((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Each intentional transformation must be an object.', {
+        file: filePath,
+        field: 'source_projection_contract.intentional_transformations',
+        index,
+      });
+    }
+    if (entry.source_vocabulary !== '--paper-root' || entry.projected_vocabulary !== '--artifact-root') {
+      throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills root vocabulary transform is invalid.', {
+        file: filePath,
+        field: 'source_projection_contract.intentional_transformations',
+        index,
+      });
+    }
+    expectString(entry.transform_id, 'intentional_transformations.transform_id', filePath);
+    expectNonEmptyStringArray(entry.applies_to, 'intentional_transformations.applies_to', filePath);
+    expectString(entry.reason, 'intentional_transformations.reason', filePath);
+  });
+
+  if (!isRecord(value.owner_only_metadata_refs)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract.owner_only_metadata_refs must be an object.', {
+      file: filePath,
+      field: 'source_projection_contract.owner_only_metadata_refs',
+    });
+  }
+  const ownerOnlyMetadataRefs = value.owner_only_metadata_refs;
+  expectStringRecord(
+    ownerOnlyMetadataRefs.learned_pattern_policy_refs,
+    'source_projection_contract.owner_only_metadata_refs.learned_pattern_policy_refs',
+    filePath,
+  );
+  expectStringRecord(
+    ownerOnlyMetadataRefs.display_quality_floor_policy_refs,
+    'source_projection_contract.owner_only_metadata_refs.display_quality_floor_policy_refs',
+    filePath,
+  );
+
+  if (!isRecord(value.currentness_boundary)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract.currentness_boundary must be an object.', {
+      file: filePath,
+      field: 'source_projection_contract.currentness_boundary',
+    });
+  }
+  const currentness = value.currentness_boundary;
+
+  if (!isRecord(value.projection_fingerprint_policy)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'source_projection_contract.projection_fingerprint_policy must be an object.', {
+      file: filePath,
+      field: 'source_projection_contract.projection_fingerprint_policy',
+    });
+  }
+  const projectionFingerprintPolicy = value.projection_fingerprint_policy;
+  const coveredFields = expectNonEmptyStringArray(
+    projectionFingerprintPolicy.covered_fields,
+    'source_projection_contract.projection_fingerprint_policy.covered_fields',
+    filePath,
+  );
+  if (coveredFields.some((field) => field.includes('learned_pattern_policy') || field.includes('display_quality_floor_policy'))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Projection fingerprint cannot cover owner-only narrative fields.', {
+      file: filePath,
+      field: 'source_projection_contract.projection_fingerprint_policy.covered_fields',
+    });
+  }
+  const projectionAlgorithm = expectString(
+    projectionFingerprintPolicy.algorithm,
+    'source_projection_contract.projection_fingerprint_policy.algorithm',
+    filePath,
+  );
+  const projectionCanonicalization = expectString(
+    projectionFingerprintPolicy.canonicalization,
+    'source_projection_contract.projection_fingerprint_policy.canonicalization',
+    filePath,
+  );
+  const projectionReadbackField = expectString(
+    projectionFingerprintPolicy.readback_field,
+    'source_projection_contract.projection_fingerprint_policy.readback_field',
+    filePath,
+  );
+  if (
+    projectionAlgorithm !== 'sha256'
+    || projectionCanonicalization !== 'stable_json'
+    || projectionReadbackField !== 'projection_fingerprint'
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Projection fingerprint policy is invalid.', {
+      file: filePath,
+      field: 'source_projection_contract.projection_fingerprint_policy',
+    });
+  }
+
+  expectString(value.schema_version, 'source_projection_contract.schema_version', filePath);
+  expectString(canonicalSource.ref, 'source_projection_contract.canonical_source.ref', filePath);
+  expectString(canonicalSource.commit, 'source_projection_contract.canonical_source.commit', filePath);
+  expectNonEmptyStringArray(
+    value.projected_fields.identity_fields,
+    'source_projection_contract.projected_fields.identity_fields',
+    filePath,
+  );
+  expectNonEmptyStringArray(
+    value.projected_fields.executable_fields,
+    'source_projection_contract.projected_fields.executable_fields',
+    filePath,
+  );
+  expectString(
+    ownerOnlyMetadataRefs.canonical_contract_ref,
+    'source_projection_contract.owner_only_metadata_refs.canonical_contract_ref',
+    filePath,
+  );
+  expectString(
+    ownerOnlyMetadataRefs.projection_policy,
+    'source_projection_contract.owner_only_metadata_refs.projection_policy',
+    filePath,
+  );
+  expectNonEmptyStringArray(
+    ownerOnlyMetadataRefs.omitted_fields,
+    'source_projection_contract.owner_only_metadata_refs.omitted_fields',
+    filePath,
+  );
+  expectString(
+    ownerOnlyMetadataRefs.omission_reason,
+    'source_projection_contract.owner_only_metadata_refs.omission_reason',
+    filePath,
+  );
+  expectString(
+    currentness.snapshot_kind,
+    'source_projection_contract.currentness_boundary.snapshot_kind',
+    filePath,
+  );
+  for (const field of [
+    'canonical_ref_may_advance',
+    'projection_current_only_for_recorded_commit_and_fingerprint',
+    'refresh_requires_new_owner_commit_and_fingerprint',
+  ] as const) {
+    expectBooleanLiteralTrue(currentness[field], `source_projection_contract.currentness_boundary.${field}`, filePath);
+  }
+  for (const field of ['projection_claims_live_owner_currentness', 'sibling_repo_required_in_ci'] as const) {
+    expectFalse(currentness[field], `source_projection_contract.currentness_boundary.${field}`, filePath);
+  }
+
+  return value as unknown as ScholarSkillsSourceProjectionContract;
 }
 
 export function validateScholarSkillAuthorityBoundary(filePath: string, value: unknown): ScholarSkillAuthorityBoundary {
@@ -354,10 +633,30 @@ function validateInvocationEntries(filePath: string, value: unknown, moduleId: S
     }
     return {
       entry_id: expectString(entry.entry_id, 'invocation_entries.entry_id', filePath),
+      legacy_entry_ids: expectOptionalNonEmptyStringArray(
+        entry.legacy_entry_ids,
+        'invocation_entries.legacy_entry_ids',
+        filePath,
+      ),
       entry_kind: expectString(entry.entry_kind, 'invocation_entries.entry_kind', filePath),
       command: expectString(entry.command, 'invocation_entries.command', filePath),
       mutation: expectFalse(entry.mutation, 'invocation_entries.mutation', filePath),
-      descriptor_only: expectBooleanLiteralTrue(entry.descriptor_only, 'invocation_entries.descriptor_only', filePath),
+      descriptor_only: expectBoolean(entry.descriptor_only, 'invocation_entries.descriptor_only', filePath),
+      provider_priority: expectOptionalNonEmptyStringArray(
+        entry.provider_priority,
+        'invocation_entries.provider_priority',
+        filePath,
+      ),
+      authority_boundary: expectOptionalString(
+        entry.authority_boundary,
+        'invocation_entries.authority_boundary',
+        filePath,
+      ),
+      legacy_authority_boundary_alias: expectOptionalString(
+        entry.legacy_authority_boundary_alias,
+        'invocation_entries.legacy_authority_boundary_alias',
+        filePath,
+      ),
     };
   });
 }
@@ -395,6 +694,16 @@ function validateModule(filePath: string, entry: unknown, index: number): Schola
     });
   }
   const moduleId = expectScholarSkillModuleId(entry.module_id, 'module_id', filePath);
+  for (const ownerOnlyField of ['learned_pattern_policy', 'display_quality_floor_policy']) {
+    if (Object.hasOwn(entry, ownerOnlyField)) {
+      throw new FrameworkContractError('contract_shape_invalid', `${ownerOnlyField} must remain owner-only metadata.`, {
+        file: filePath,
+        index,
+        module_id: moduleId,
+        field: ownerOnlyField,
+      });
+    }
+  }
   if (entry.brand_family !== 'MAS Scholar Skills') {
     throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills module brand_family must be MAS Scholar Skills.', {
       file: filePath,
@@ -416,7 +725,7 @@ function validateModule(filePath: string, entry: unknown, index: number): Schola
     brand_family: 'MAS Scholar Skills',
     display_name: expectString(entry.display_name, 'display_name', filePath),
     specialist_skill_id: expectOptionalString(entry.specialist_skill_id, 'specialist_skill_id', filePath),
-    legacy_module_ids: expectOptionalNonEmptyStringArray(entry.legacy_module_ids, 'legacy_module_ids', filePath),
+    legacy_module_ids: expectNonEmptyStringArray(entry.legacy_module_ids, 'legacy_module_ids', filePath),
     legacy_module_id_policy: expectOptionalString(entry.legacy_module_id_policy, 'legacy_module_id_policy', filePath),
     stage_fit: expectNonEmptyStringArray(entry.stage_fit, 'stage_fit', filePath),
     input_schema_refs: expectNonEmptyStringArray(entry.input_schema_refs, 'input_schema_refs', filePath),
@@ -534,6 +843,7 @@ export function validateScholarSkillsCapabilityModules(
     brand_family: 'MAS Scholar Skills',
     purpose: expectString(value.purpose, 'purpose', filePath),
     machine_boundary: expectString(value.machine_boundary, 'machine_boundary', filePath),
+    source_projection_contract: validateSourceProjectionContract(filePath, value.source_projection_contract),
     ownership_boundary: validateOwnershipBoundary(filePath, value.ownership_boundary),
     runtime_environment_bridge: {
       mode: 'refs_only',
@@ -600,6 +910,21 @@ export function validateScholarSkillsCapabilityModules(
       can_claim_domain_ready: expectFalse(
         bridge.can_claim_domain_ready,
         'runtime_environment_bridge.can_claim_domain_ready',
+        filePath,
+      ),
+      can_claim_publication_readiness: expectFalse(
+        bridge.can_claim_publication_readiness,
+        'runtime_environment_bridge.can_claim_publication_readiness',
+        filePath,
+      ),
+      can_claim_owner_acceptance: expectFalse(
+        bridge.can_claim_owner_acceptance,
+        'runtime_environment_bridge.can_claim_owner_acceptance',
+        filePath,
+      ),
+      can_claim_current_package_authority: expectFalse(
+        bridge.can_claim_current_package_authority,
+        'runtime_environment_bridge.can_claim_current_package_authority',
         filePath,
       ),
     },
