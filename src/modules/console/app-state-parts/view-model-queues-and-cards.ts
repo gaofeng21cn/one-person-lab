@@ -180,7 +180,6 @@ function feedbackWorkOrderQueueItems(input: OplAppOperatorViewModelInput) {
           : 'queued',
       safe_action_ref_count: runnable ? 1 : 0,
       blocker_ref_count: blockerRef ? 1 : 0,
-      paper_route_lens_ref_count: 0,
       trigger_ref: asString(item.trigger_ref),
       external_suite_ref: asString(item.external_suite_ref),
       developer_work_order_candidate_ref: asString(item.developer_work_order_candidate_ref),
@@ -216,7 +215,6 @@ function feedbackOpsQueueItems(input: OplAppOperatorViewModelInput) {
             : 'suite_ready',
       safe_action_ref_count: runnable ? 1 : 0,
       blocker_ref_count: blockerRef ? 1 : 0,
-      paper_route_lens_ref_count: 0,
       trigger_ref: asString(item.trigger_ref),
       external_suite_ref: asString(item.external_suite_ref),
       developer_work_order_candidate_ref: asString(item.developer_work_order_candidate_ref),
@@ -252,7 +250,6 @@ export function buildActionQueue(input: OplAppOperatorViewModelInput) {
           priority_bucket: payloadFree ? 'can_dry_run' : 'needs_payload',
           safe_action_ref_count: payloadFree ? 1 : 0,
           blocker_ref_count: payloadFree ? 0 : 1,
-          paper_route_lens_ref_count: 0,
         };
       }),
       ...feedbackItems,
