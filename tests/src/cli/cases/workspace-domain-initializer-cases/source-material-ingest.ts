@@ -87,9 +87,11 @@ test('workspace source ingest stores source material refs without domain authori
       stored_file_ref: ingest.stored_file.ref,
     });
     assert.equal(handoff.required_return_shape, 'ReferenceDesignPatternPacket');
-    assert.equal(handoff.required_return_fields.includes('extraction_attempt_refs'), true);
-    assert.equal(handoff.required_return_fields.includes('extraction_receipt_refs'), true);
-    assert.equal(handoff.required_return_fields.includes('source_anchor_refs'), true);
+    assert.equal(
+      handoff.required_return_fields_ref,
+      'contracts/opl-framework/reference-design-pattern-packet.schema.json#/required',
+    );
+    assert.equal(Object.hasOwn(handoff, 'required_return_fields'), false);
     assert.equal(handoff.next_owner, 'stage_or_domain_agent');
     assert.equal(handoff.consumer_after_return, 'oma');
     assert.equal(handoff.semantic_extraction_executed, false);
@@ -154,7 +156,11 @@ test('workspace source ingest dry-run does not copy source material', () => {
     assert.equal(ingest.write_allowed, false);
     assert.equal(ingest.reference_design_pattern_handoff.applicability, 'not_applicable');
     assert.equal(ingest.reference_design_pattern_handoff.required_return_shape, null);
-    assert.deepEqual(ingest.reference_design_pattern_handoff.required_return_fields, []);
+    assert.equal(ingest.reference_design_pattern_handoff.required_return_fields_ref, null);
+    assert.equal(
+      Object.hasOwn(ingest.reference_design_pattern_handoff, 'required_return_fields'),
+      false,
+    );
     assert.equal(ingest.reference_design_pattern_handoff.next_owner, null);
     assert.equal(ingest.reference_design_pattern_handoff.semantic_extraction_executed, false);
     assert.equal(ingest.reference_design_pattern_handoff.pattern_packet_created, false);

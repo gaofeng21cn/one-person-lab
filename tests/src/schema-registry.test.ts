@@ -18,6 +18,8 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const progressDeltaReceiptSchemaRef = 'contracts/opl-framework/progress-delta-receipt.schema.json';
 const referenceDesignPatternPacketSchemaRef =
   'contracts/opl-framework/reference-design-pattern-packet.schema.json';
+const sourceMaterialIngestContractRef =
+  'contracts/opl-framework/source-material-ingest-contract.json';
 
 function readJson(relativePath: string): Record<string, unknown> {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
@@ -177,5 +179,24 @@ test('Ajv schema registry validates refs-only ReferenceDesignPatternPacket autho
       && error.keyword === 'const'
     ),
     true,
+  );
+});
+
+test('ReferenceDesignPatternPacket schema is the only OPL required-fields authority', () => {
+  const schema = readJson(referenceDesignPatternPacketSchemaRef) as any;
+  const ingestContract = readJson(sourceMaterialIngestContractRef) as any;
+  const handoff = ingestContract.handoff_policy.reference_design_pattern_handoff;
+
+  assert.equal(Array.isArray(schema.required), true);
+  assert.equal(schema.required.length > 0, true);
+  assert.equal(handoff.schema_ref, referenceDesignPatternPacketSchemaRef);
+  assert.equal(
+    handoff.required_return_fields_ref,
+    `${referenceDesignPatternPacketSchemaRef}#/required`,
+  );
+  assert.equal(Object.hasOwn(handoff, 'required_return_fields'), false);
+  assert.equal(
+    schema.properties.consumer_route.properties.required_return_fields_ref.const,
+    'oma-contract:reference-design-packet.v1#/required_fields',
   );
 });

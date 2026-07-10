@@ -1,6 +1,6 @@
 {
   "surface_kind": "opl_source_material_ingest_contract",
-  "version": "source-material-ingest.v2",
+  "version": "source-material-ingest.v3",
   "owner": "OPL Workspace",
   "purpose": "Provide a domain-neutral source material intake surface for user-supplied files such as PDFs, documents, datasets, and reference designs.",
   "cli_surface": {
@@ -46,25 +46,7 @@
         "stored_file_ref"
       ],
       "required_return_shape": "ReferenceDesignPatternPacket",
-      "required_return_fields": [
-        "surface_kind",
-        "schema_version",
-        "packet_id",
-        "packet_ref",
-        "source_material_ref",
-        "source_material_receipt_ref",
-        "source_fingerprint_ref",
-        "extraction_attempt_refs",
-        "extraction_receipt_refs",
-        "source_anchor_refs",
-        "pattern_summary_ref",
-        "transferable_pattern_refs",
-        "non_transferable_constraint_refs",
-        "authority_boundary_notes_ref",
-        "consumer_route",
-        "authority_boundary",
-        "non_claims"
-      ],
+      "required_return_fields_ref": "contracts/opl-framework/reference-design-pattern-packet.schema.json#/required",
       "next_owner": "stage_or_domain_agent",
       "next_owner_action": "extract_reference_design_patterns_and_return_typed_packet",
       "packet_consumer": "oma",

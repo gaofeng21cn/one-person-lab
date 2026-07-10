@@ -22,25 +22,6 @@ const SOURCE_MATERIAL_INGEST_CONTRACT_REF =
   'contracts/opl-framework/source-material-ingest-contract.json#/handoff_policy/reference_design_pattern_handoff';
 const REFERENCE_DESIGN_PATTERN_PACKET_SCHEMA_REF =
   'contracts/opl-framework/reference-design-pattern-packet.schema.json';
-const REFERENCE_DESIGN_PATTERN_PACKET_REQUIRED_FIELDS = [
-  'surface_kind',
-  'schema_version',
-  'packet_id',
-  'packet_ref',
-  'source_material_ref',
-  'source_material_receipt_ref',
-  'source_fingerprint_ref',
-  'extraction_attempt_refs',
-  'extraction_receipt_refs',
-  'source_anchor_refs',
-  'pattern_summary_ref',
-  'transferable_pattern_refs',
-  'non_transferable_constraint_refs',
-  'authority_boundary_notes_ref',
-  'consumer_route',
-  'authority_boundary',
-  'non_claims',
-] as const;
 
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
@@ -123,9 +104,9 @@ export function ingestWorkspaceSourceMaterial(
       stored_file_ref: sourceCopyRef,
     },
     required_return_shape: referenceDesignApplicable ? 'ReferenceDesignPatternPacket' : null,
-    required_return_fields: referenceDesignApplicable
-      ? [...REFERENCE_DESIGN_PATTERN_PACKET_REQUIRED_FIELDS]
-      : [],
+    required_return_fields_ref: referenceDesignApplicable
+      ? `${REFERENCE_DESIGN_PATTERN_PACKET_SCHEMA_REF}#/required`
+      : null,
     next_owner: referenceDesignApplicable ? 'stage_or_domain_agent' : null,
     next_owner_action: referenceDesignApplicable
       ? 'extract_reference_design_patterns_and_return_typed_packet'
@@ -150,7 +131,7 @@ export function ingestWorkspaceSourceMaterial(
   };
   const payload = {
     surface_kind: 'opl_workspace_source_material_receipt',
-    version: 'workspace-source-material.v2',
+    version: 'workspace-source-material.v3',
     source_material_ref: sourceMaterialRef,
     source_fingerprint_ref: sourceFingerprintRef,
     source_material_role: role,
