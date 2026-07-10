@@ -869,6 +869,20 @@
       "bindings_included_in_stable_identity": true,
       "empty_bundle_omitted_from_non_evaluation_suite_result": true
     },
+    "evaluation_target_identity": {
+      "suite_field": "evaluation_target_agent",
+      "fields": [
+        "domain_id",
+        "target_agent_ref",
+        "descriptor_ref"
+      ],
+      "included_in_suite_result_readback": true,
+      "included_in_suite_result_stable_identity": true,
+      "included_in_execution_receipt_stable_identity": true,
+      "included_in_missing_observation_blocker_identity": true,
+      "ordinary_suite_without_target_identity_preserves_existing_result_identity": true,
+      "authority_boundary": "refs_only_no_target_authority"
+    },
     "blocked_suite_result": {
       "platform_blocker_policy": "missing_observations_or_consumer_platform_gap_only",
       "domain_evaluation_outcome_policy": "target_owner_pending_without_platform_or_target_blocker"

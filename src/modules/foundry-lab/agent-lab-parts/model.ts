@@ -172,6 +172,12 @@ export type AgentLabEvaluationProvenanceBinding = {
   probe_ref?: string;
 };
 
+export type AgentLabEvaluationTargetAgent = {
+  domain_id: string;
+  target_agent_ref: string;
+  descriptor_ref: string;
+};
+
 export type AgentLabSuite = {
   suite_id: string;
   suite_kind?: 'agent_lab_sample_suite' | 'agent_lab_longline_suite' | 'agent_production_evidence_suite' | string;
@@ -181,6 +187,7 @@ export type AgentLabSuite = {
   production_evidence_gate?: JsonRecord;
   evaluation_provenance_refs?: string[];
   evaluation_provenance_bindings?: AgentLabEvaluationProvenanceBinding[];
+  evaluation_target_agent?: AgentLabEvaluationTargetAgent;
   authority_boundary?: JsonRecord;
 };
 

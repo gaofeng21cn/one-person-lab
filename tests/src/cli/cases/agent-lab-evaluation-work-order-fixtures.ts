@@ -255,3 +255,31 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
     outputDir,
   };
 }
+
+export function retargetOmaTakeoverEvaluationFixture(
+  fixture: ReturnType<typeof buildOmaTakeoverEvaluationFixture>,
+  domainId: string,
+) {
+  const target = {
+    domain_id: domainId,
+    target_agent_ref: `domain-agent:${domainId}`,
+    descriptor_ref: `/tmp/${domainId}/contracts/domain_descriptor.json`,
+  };
+  const workOrder = fixture.workOrder as Record<string, any>;
+  Object.assign(workOrder.target_agent, target);
+  const suiteSeed = fixture.suiteSeed as Record<string, any>;
+  suiteSeed.target_agent_ref = target.target_agent_ref;
+  suiteSeed.target_agent_descriptor_ref = target.descriptor_ref;
+  for (const task of suiteSeed.tasks) {
+    task.target_agent_ref = target.target_agent_ref;
+    task.target_agent_descriptor_ref = target.descriptor_ref;
+  }
+  const observations = fixture.observations as Record<string, any>;
+  observations.target_agent_ref = target.target_agent_ref;
+  observations.target_agent_descriptor_ref = target.descriptor_ref;
+  for (const task of observations.tasks) {
+    task.target_agent_ref = target.target_agent_ref;
+    task.target_agent_descriptor_ref = target.descriptor_ref;
+  }
+  return target;
+}

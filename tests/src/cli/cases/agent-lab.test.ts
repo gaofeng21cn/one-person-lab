@@ -5,6 +5,7 @@ import './agent-lab-cases/export-and-cost.ts';
 import './agent-lab-loop-risk.test.ts';
 import {
   buildOmaTakeoverEvaluationFixture,
+  retargetOmaTakeoverEvaluationFixture,
   writeEvaluationJson,
 } from './agent-lab-evaluation-work-order-fixtures.ts';
 
@@ -558,6 +559,62 @@ test('agent-lab evaluation provenance role swap changes identities without chang
       second.receipt.evaluation_provenance_bindings,
     );
     assert.notEqual(first.suite_result.result_id, second.suite_result.result_id);
+    assert.notEqual(first.receipt.receipt_id, second.receipt.receipt_id);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab consistent evaluation target swap changes compiled result and receipt identities', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-target-identity-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    const execute = (outputDir: string) => runCli([
+      'agent-lab', 'evaluation-work-order', 'execute',
+      '--work-order', fixture.workOrderPath,
+      '--observations', fixture.observationsPath,
+      '--output', outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+    const first = execute(path.join(tmpDir, 'first'));
+    const target = retargetOmaTakeoverEvaluationFixture(fixture, 'other-target-agent');
+    writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
+    writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+    writeEvaluationJson(fixture.observationsPath, fixture.observations);
+    const second = execute(path.join(tmpDir, 'second'));
+    const compiledSuite = JSON.parse(fs.readFileSync(second.artifacts.compiled_suite_path, 'utf8'));
+
+    assert.deepEqual(compiledSuite.evaluation_target_agent, target);
+    assert.deepEqual(second.suite_result.evaluation_target_agent, target);
+    assert.deepEqual(second.receipt.evaluation_target_agent, target);
+    assert.deepEqual(first.receipt.evaluation_provenance_refs, second.receipt.evaluation_provenance_refs);
+    assert.notEqual(first.suite_result.result_id, second.suite_result.result_id);
+    assert.notEqual(first.receipt.receipt_id, second.receipt.receipt_id);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab blocked evaluation target swap changes platform blocker and receipt identities', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-blocked-target-identity-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    const execute = (outputDir: string) => runCli([
+      'agent-lab', 'evaluation-work-order', 'execute',
+      '--work-order', fixture.workOrderPath,
+      '--output', outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+    const first = execute(path.join(tmpDir, 'first'));
+    const target = retargetOmaTakeoverEvaluationFixture(fixture, 'other-target-agent');
+    writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
+    writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+    const second = execute(path.join(tmpDir, 'second'));
+
+    assert.deepEqual(second.evaluation_result.evaluation_target_agent, target);
+    assert.deepEqual(second.typed_blocker.evaluation_target_agent, target);
+    assert.deepEqual(second.receipt.evaluation_target_agent, target);
+    assert.notEqual(first.typed_blocker.blocker_id, second.typed_blocker.blocker_id);
     assert.notEqual(first.receipt.receipt_id, second.receipt.receipt_id);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

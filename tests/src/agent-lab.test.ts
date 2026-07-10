@@ -189,6 +189,7 @@ test('Agent Lab keeps empty evaluation provenance out of ordinary suite identity
   assert.equal(Object.hasOwn(baseline.refs, 'evaluation_provenance_refs'), false);
   assert.equal(Object.hasOwn(explicitEmpty.refs, 'evaluation_provenance_refs'), false);
   assert.equal(Object.hasOwn(explicitEmpty, 'evaluation_provenance_bindings'), false);
+  assert.equal(Object.hasOwn(explicitEmpty, 'evaluation_target_agent'), false);
 });
 
 test('Agent Lab separates fixture scorecard pass from independent AI review and promotion safety approval', () => {
@@ -563,6 +564,10 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(
     contract.evaluation_work_order_consumer_surface.evaluation_provenance_bundle.binding_field,
     'evaluation_provenance_bindings',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.evaluation_target_identity.suite_field,
+    'evaluation_target_agent',
   );
   assert.equal(
     contract.evaluation_work_order_consumer_surface.blocked_suite_result.platform_blocker_policy,

@@ -66,6 +66,7 @@ export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
 export { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
 export type {
   AgentLabEvaluationProvenanceBinding,
+  AgentLabEvaluationTargetAgent,
   AgentLabIndependentAiReviewAssessment,
   AgentLabImprovementCandidate,
   AgentLabLonglineSummaryInput,
@@ -670,6 +671,7 @@ export function runAgentLabSuite(input: AgentLabSuite) {
   const promotionGatePassedCount = input.tasks.filter((task) => task.promotion_gate.gate_status === 'passed').length;
   const productionEvidenceGateBlocked = productionEvidenceGateResult?.status === 'blocked';
   const evaluationProvenanceBindings = input.evaluation_provenance_bindings ?? [];
+  const evaluationTargetAgent = input.evaluation_target_agent;
   const status: AgentLabStatus = missingObservations.length === 0 && blockedRuns.length === 0 && !productionEvidenceGateBlocked
     ? 'passed'
     : 'blocked';
@@ -684,12 +686,14 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       runs.map((run) => run.run_id),
       observationResult.observations,
       observationResult.refs,
+      ...(evaluationTargetAgent ? [evaluationTargetAgent] : []),
       ...(evaluationProvenanceBindings.length > 0 ? [evaluationProvenanceBindings] : []),
     ]),
     status,
     required_observations: requiredObservations,
     missing_observations: missingObservations,
     observations: observationResult.observations,
+    ...(evaluationTargetAgent ? { evaluation_target_agent: evaluationTargetAgent } : {}),
     ...(evaluationProvenanceBindings.length > 0
       ? { evaluation_provenance_bindings: evaluationProvenanceBindings }
       : {}),

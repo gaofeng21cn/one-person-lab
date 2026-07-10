@@ -22,6 +22,7 @@ import {
 import type {
   AgentLabImprovementCandidate,
   AgentLabEvaluationProvenanceBinding,
+  AgentLabEvaluationTargetAgent,
   AgentLabPromotionGate,
   AgentLabRecoveryProbe,
   AgentLabScorecard,
@@ -122,6 +123,15 @@ function canonicalTargetAgent(workOrder: JsonRecord) {
     domainId: requiredString(targetAgent.domain_id, 'work_order.target_agent.domain_id'),
     targetAgentRef: requiredString(targetAgent.target_agent_ref, 'work_order.target_agent.target_agent_ref'),
     descriptorRef: requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref'),
+  };
+}
+
+function evaluationTargetAgent(workOrder: JsonRecord): AgentLabEvaluationTargetAgent {
+  const target = canonicalTargetAgent(workOrder);
+  return {
+    domain_id: target.domainId,
+    target_agent_ref: target.targetAgentRef,
+    descriptor_ref: target.descriptorRef,
   };
 }
 
@@ -355,17 +365,15 @@ function observationTaskById(observationPacket: JsonRecord, taskId: string) {
 
 function targetAgentProjection(workOrder: JsonRecord) {
   const targetAgent = record(workOrder.target_agent);
-  const canonical = canonicalTargetAgent(workOrder);
+  const canonical = evaluationTargetAgent(workOrder);
   const optional = (field: string) => {
     const value = stringValue(targetAgent[field]);
     return value ? { [field]: value } : {};
   };
   return {
-    domain_id: canonical.domainId,
-    target_agent_ref: canonical.targetAgentRef,
+    ...canonical,
     ...optional('domain_label'),
     ...optional('repo_dir'),
-    descriptor_ref: canonical.descriptorRef,
   };
 }
 
@@ -782,7 +790,11 @@ function evaluationProvenance(suiteSeed: JsonRecord, observationPacket: JsonReco
   };
 }
 
-function compileObservedSuite(suiteSeed: JsonRecord, observationPacket: JsonRecord): AgentLabSuite {
+function compileObservedSuite(
+  workOrder: JsonRecord,
+  suiteSeed: JsonRecord,
+  observationPacket: JsonRecord,
+): AgentLabSuite {
   assertEvaluationOwner(observationPacket.evaluation_owner, 'observations.evaluation_owner');
   const evaluationOwner = EVALUATION_OWNER;
   const tasks = recordList(suiteSeed.tasks).map((seedTask) => {
@@ -804,6 +816,7 @@ function compileObservedSuite(suiteSeed: JsonRecord, observationPacket: JsonReco
     suite_id: requiredString(suiteSeed.suite_id, 'suite_seed.suite_id'),
     suite_kind: requiredString(suiteSeed.suite_kind, 'suite_seed.suite_kind'),
     tasks,
+    evaluation_target_agent: evaluationTargetAgent(workOrder),
     evaluation_provenance_refs: provenance.refs,
     evaluation_provenance_bindings: provenance.bindings,
     ...(productionEvidenceGate ? { production_evidence_gate: productionEvidenceGate } : {}),
@@ -819,6 +832,7 @@ function buildBlockedEvaluation(input: {
   outputDir: string;
 }) {
   const workOrderId = requiredString(input.workOrder.work_order_id, 'work_order.work_order_id');
+  const targetAgent = evaluationTargetAgent(input.workOrder);
   const candidateRefs = candidateRefProjection(input.workOrder, input.suiteSeed);
   const executionReceiptPath = path.join(input.outputDir, 'foundry-lab-execution-receipt.json');
   const typedBlockerPath = path.join(input.outputDir, 'foundry-lab-evaluation-typed-blocker.json');
@@ -827,6 +841,7 @@ function buildBlockedEvaluation(input: {
     version: 'opl.foundry-lab-evaluation-work-order-result.v1',
     status: 'blocked_missing_evaluation_observations',
     work_order_id: workOrderId,
+    evaluation_target_agent: targetAgent,
     suite_id: requiredString(input.suiteSeed.suite_id, 'suite_seed.suite_id'),
     missing_observations: ['evaluation_observation_packet'],
     suite_result_ref: null,
@@ -835,10 +850,11 @@ function buildBlockedEvaluation(input: {
   const typedBlocker = {
     surface_kind: 'opl_foundry_lab_evaluation_platform_typed_blocker',
     version: 'opl.foundry-lab-evaluation-blocker.v1',
-    blocker_id: stableId('ofleb', [workOrderId, evaluationResult.missing_observations]),
+    blocker_id: stableId('ofleb', [workOrderId, targetAgent, evaluationResult.missing_observations]),
     blocker_kind: 'foundry_lab_evaluation_observations_missing',
     status: 'blocked',
     work_order_id: workOrderId,
+    evaluation_target_agent: targetAgent,
     suite_id: evaluationResult.suite_id,
     missing_observations: evaluationResult.missing_observations,
     required_owner: EVALUATION_OWNER,
@@ -848,11 +864,12 @@ function buildBlockedEvaluation(input: {
   const receipt = {
     surface_kind: 'opl_foundry_lab_evaluation_work_order_execution_receipt',
     version: 'opl.foundry-lab-evaluation-work-order-execution.v1',
-    receipt_id: stableId('oflewr', [workOrderId, typedBlocker.blocker_id]),
+    receipt_id: stableId('oflewr', [workOrderId, targetAgent, typedBlocker.blocker_id]),
     status: evaluationResult.status,
     work_order_id: workOrderId,
     work_order_kind: requiredString(input.workOrder.work_order_kind, 'work_order.work_order_kind'),
     target_agent: targetAgentProjection(input.workOrder),
+    evaluation_target_agent: targetAgent,
     consumer_dependency: {
       status: 'satisfied',
       consumer_role: CONSUMER_ROLE,
@@ -936,13 +953,15 @@ function buildObservedEvaluation(input: {
   const suiteResultPath = path.join(input.outputDir, 'agent-lab-suite-result.json');
   const executionReceiptPath = path.join(input.outputDir, 'foundry-lab-execution-receipt.json');
   const typedBlockerPath = path.join(input.outputDir, 'foundry-lab-evaluation-typed-blocker.json');
-  const compiledSuite = compileObservedSuite(input.suiteSeed, input.observationPacket);
+  const compiledSuite = compileObservedSuite(input.workOrder, input.suiteSeed, input.observationPacket);
   const suiteResult = runAgentLabSuite(compiledSuite);
   const platformMissing = platformMissingObservations(suiteResult);
   const productionPlatformMissing = suiteResult.production_evidence_gate_result?.missing_required_refs ?? [];
   const platformBlocked = platformMissing.length > 0 || productionPlatformMissing.length > 0;
   const evaluationProvenance = compiledSuite.evaluation_provenance_refs ?? [];
   const evaluationProvenanceBindings = compiledSuite.evaluation_provenance_bindings ?? [];
+  const targetAgent = compiledSuite.evaluation_target_agent
+    ?? invalid('Foundry Lab compiled evaluation suite requires evaluation_target_agent.');
   const typedBlocker = platformBlocked
     ? {
         surface_kind: 'opl_foundry_lab_evaluation_platform_typed_blocker',
@@ -951,6 +970,7 @@ function buildObservedEvaluation(input: {
         blocker_kind: 'foundry_lab_evaluation_suite_blocked',
         status: 'blocked',
         work_order_id: workOrderId,
+        evaluation_target_agent: targetAgent,
         suite_id: compiledSuite.suite_id,
         missing_observations: platformMissing,
         missing_required_refs: productionPlatformMissing,
@@ -968,12 +988,14 @@ function buildObservedEvaluation(input: {
     receipt_id: stableId('oflewr', [
       workOrderId,
       suiteResult.result_id,
+      targetAgent,
       evaluationProvenanceBindings,
     ]),
     status: suiteResult.status,
     work_order_id: workOrderId,
     work_order_kind: requiredString(input.workOrder.work_order_kind, 'work_order.work_order_kind'),
     target_agent: targetAgentProjection(input.workOrder),
+    evaluation_target_agent: targetAgent,
     consumer_dependency: {
       status: 'satisfied',
       consumer_role: CONSUMER_ROLE,
@@ -1018,6 +1040,7 @@ function buildObservedEvaluation(input: {
     version: 'opl.foundry-lab-evaluation-work-order-result.v1',
     status: suiteResult.status,
     work_order_id: workOrderId,
+    evaluation_target_agent: targetAgent,
     suite_id: compiledSuite.suite_id,
     missing_observations: suiteResult.missing_observations,
     suite_result_ref: suiteResultPath,
