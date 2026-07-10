@@ -51,6 +51,9 @@ test('OPL State Index Kernel declares bounded refs-only SQLite databases and req
   assert.equal(databases.get('lifecycle_index')?.path, '${OPL_STATE_DIR}/family-runtime/lifecycle-index.sqlite');
   assert.ok(databases.get('artifact_index')?.owned_tables.includes('artifact_refs'));
   assert.ok(databases.get('operator_read_model')?.owned_tables.includes('owner_route_index'));
+  assert.equal(databases.get('workspace_cloud_sync')?.path, '${OPL_STATE_DIR}/cloud-sync/sync.sqlite');
+  assert.ok(databases.get('workspace_cloud_sync')?.owned_tables.includes('outbox'));
+  assert.ok(databases.get('workspace_cloud_sync')?.owned_tables.includes('inbox'));
 
   for (const field of [
     'domain_id',
@@ -86,6 +89,7 @@ test('OPL State Index Kernel forbids SQLite truth-body and verdict authority sto
   }
 
   assert.equal(boundary.opl_can_index_refs, true);
+  assert.equal(boundary.opl_can_store_bounded_sync_coordination_state, true);
   assert.equal(boundary.opl_can_rebuild_from_file_truth, true);
   assert.equal(boundary.opl_can_write_domain_truth, false);
   assert.equal(boundary.opl_can_write_memory_body, false);

@@ -77,6 +77,8 @@ const fastTestFiles = [
   'tests/src/schema-registry.test.ts',
   'tests/src/domain-tail-default-caller-matrix.test.ts',
   'tests/src/workspace-diagnostics-policy.test.ts',
+  'tests/src/workspace-cloud-sync.test.ts',
+  'tests/src/cli/cases/workspace-cloud-sync-command.test.ts',
   'tests/src/observability-semantic-conventions.test.ts',
   ...expandTestFiles(['tests/src/state-index-kernel-contract.test.ts', 'tests/src/stage-run-kernel-contract.test.ts', 'tests/src/progress-delta-receipt-contract.test.ts']),
   'tests/src/json-file-boundary.test.ts',

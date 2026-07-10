@@ -13,9 +13,9 @@ export function buildWorkspaceCommandSpecs(
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
-        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|sync|bind|activate|archive [options]',
       summary:
-        'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
+        'Manage OPL workspace bindings, local/cloud sync, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
         'opl workspace projects',
         'opl workspace ensure --agent rca --project-id deck-001',
@@ -28,9 +28,35 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
         'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
         'opl workspace interfaces',
+        'opl workspace sync status --workspace workspace-alpha',
       ],
       group: 'workspace',
       subcommands: [
+        {
+          command: 'workspace sync status',
+          usage: 'opl workspace sync status --workspace <id>',
+          summary: 'Read durable local/cloud metadata sync state.',
+        },
+        {
+          command: 'workspace sync queue',
+          usage: 'opl workspace sync queue --operation-id <id> --workspace <id> --entity <project|task> --local-id <id> --base-version <n> --operation <append|replace> --payload <json>',
+          summary: 'Queue a local Project or Task metadata mutation for Cloud sync.',
+        },
+        {
+          command: 'workspace sync push',
+          usage: 'opl workspace sync push --origin <url> --workspace <id> --session-cookie-env <name> --csrf-env <name>',
+          summary: 'Push pending metadata mutations to Cloud.',
+        },
+        {
+          command: 'workspace sync pull',
+          usage: 'opl workspace sync pull --origin <url> --workspace <id> --session-cookie-env <name>',
+          summary: 'Pull Cloud metadata changes after the durable local cursor.',
+        },
+        {
+          command: 'workspace sync conflicts',
+          usage: 'opl workspace sync conflicts --workspace <id>',
+          summary: 'List durable local/cloud metadata conflicts.',
+        },
         {
           command: 'workspace projects',
           usage: 'opl workspace projects',
@@ -112,6 +138,11 @@ export function buildWorkspaceCommandSpecs(
       examples: ['opl workspace list'],
       group: 'workspace',
     }),
+    'workspace sync status': cloneCommandSpec(commandSpecs['workspace sync status'], { group: 'workspace' }),
+    'workspace sync queue': cloneCommandSpec(commandSpecs['workspace sync queue'], { group: 'workspace' }),
+    'workspace sync push': cloneCommandSpec(commandSpecs['workspace sync push'], { group: 'workspace' }),
+    'workspace sync pull': cloneCommandSpec(commandSpecs['workspace sync pull'], { group: 'workspace' }),
+    'workspace sync conflicts': cloneCommandSpec(commandSpecs['workspace sync conflicts'], { group: 'workspace' }),
     'workspace root': cloneCommandSpec(commandSpecs['workspace root'], {
       usage: 'opl workspace root',
       examples: ['opl workspace root'],

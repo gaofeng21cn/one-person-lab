@@ -31,6 +31,16 @@
         "Temporal/provider visibility refs"
       ]
     },
+    "sqlite_sync_coordination": {
+      "role": "bounded_durable_operation_coordination",
+      "source_of_domain_truth": false,
+      "owns_stable_operation_identity": true,
+      "forbidden_payloads": [
+        "credential body",
+        "artifact body",
+        "domain truth body"
+      ]
+    },
     "temporal_provider": {
       "role": "production_durable_execution",
       "production_required": true,
@@ -92,6 +102,22 @@
         ],
         "storage_role": "projection_cache",
         "implementation_status": "landed_rebuildable_stage_folder_read_model"
+      },
+      {
+        "database_id": "workspace_cloud_sync",
+        "path": "${OPL_STATE_DIR}/cloud-sync/sync.sqlite",
+        "owned_tables": [
+          "outbox",
+          "aliases",
+          "cursors",
+          "conflicts",
+          "inbox"
+        ],
+        "storage_role": "bounded_sync_coordination",
+        "stores_domain_truth": false,
+        "stores_credentials": false,
+        "stores_artifact_body": false,
+        "implementation_status": "landed_workspace_metadata_sync_coordination"
       }
     ]
   },
@@ -216,6 +242,7 @@
   },
   "authority_boundary": {
     "opl_can_index_refs": true,
+    "opl_can_store_bounded_sync_coordination_state": true,
     "opl_can_cache_projection": true,
     "opl_can_rebuild_from_file_truth": true,
     "opl_can_compact_observability_payloads": true,
