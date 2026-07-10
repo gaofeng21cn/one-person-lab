@@ -1,6 +1,9 @@
-import fs from 'node:fs';
-
-import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import {
+  optionalString,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
+} from '../../kernel/json-file.ts';
 import { record, stringList } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -360,31 +363,14 @@ function dedupeCurrentReceipts(receipts: DomainOwnerPayloadSummaryReceipt[]) {
 }
 
 function readDomainOwnerPayloadSummaryLedger(): DomainOwnerPayloadSummaryLedger {
-  const file = ledgerPath();
-  if (!fs.existsSync(file)) {
-    return emptyLedger();
-  }
-  try {
-    const parsed = record(readJsonPayloadFile(file));
-    if (!Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: dedupeCurrentReceipts(
-        parsed.receipts
-          .map(normalizeReceipt)
-          .filter((receipt): receipt is DomainOwnerPayloadSummaryReceipt => Boolean(receipt)),
-      ),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  const ledger = readJsonReceiptLedger(ledgerPath(), emptyLedger, normalizeReceipt);
+  ledger.receipts = dedupeCurrentReceipts(ledger.receipts);
+  return ledger;
 }
 
 function writeDomainOwnerPayloadSummaryLedger(ledger: DomainOwnerPayloadSummaryLedger) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.domain_owner_payload_summary_ledger_file, ledger);
+  writeJsonReceiptLedger(paths.domain_owner_payload_summary_ledger_file, ledger);
 }
 
 export function preflightDomainOwnerPayloadSummaryReceiptInput(
@@ -534,21 +520,14 @@ export function recordDomainOwnerPayloadSummaryReceipts(
     normalizeInput(input, options.rawPayloads?.[index] ?? {})
   );
   const ledger = readDomainOwnerPayloadSummaryLedger();
-  for (const receipt of receipts) {
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, receipt) => {
     const receiptTargetKey = domainOwnerPayloadSummaryTargetKey(receipt.target_identity);
-    const existingIndex = ledger.receipts.findIndex((entry) =>
-      entry.receipt_ref === receipt.receipt_ref
+    return entry.receipt_ref === receipt.receipt_ref
       || (
         Boolean(receiptTargetKey)
         && domainOwnerPayloadSummaryTargetKey(entry.target_identity) === receiptTargetKey
-      )
-    );
-    if (existingIndex >= 0) {
-      ledger.receipts[existingIndex] = receipt;
-    } else {
-      ledger.receipts.unshift(receipt);
-    }
-  }
+      );
+  });
   ledger.receipts = dedupeCurrentReceipts(ledger.receipts);
   writeDomainOwnerPayloadSummaryLedger(ledger);
   return {

@@ -1,5 +1,9 @@
-import fs from 'node:fs';
-import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import {
+  optionalString,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
+} from '../../kernel/json-file.ts';
 import { record, stringList } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
@@ -144,29 +148,12 @@ function normalizeReceipt(value: unknown): ProviderLongSoakEvidenceReceipt | nul
 }
 
 function readProviderLongSoakEvidenceLedger(): ProviderLongSoakEvidenceLedger {
-  const file = ledgerPath();
-  if (!fs.existsSync(file)) {
-    return emptyLedger();
-  }
-  try {
-    const parsed = record(readJsonPayloadFile(file));
-    if (!Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is ProviderLongSoakEvidenceReceipt => Boolean(receipt)),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  return readJsonReceiptLedger(ledgerPath(), emptyLedger, normalizeReceipt);
 }
 
 function writeProviderLongSoakEvidenceLedger(ledger: ProviderLongSoakEvidenceLedger) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.provider_long_soak_evidence_ledger_file, ledger);
+  writeJsonReceiptLedger(paths.provider_long_soak_evidence_ledger_file, ledger);
 }
 
 function normalizeInput(
@@ -209,16 +196,9 @@ export function recordProviderLongSoakEvidenceReceipts(
   }
 
   const ledger = readProviderLongSoakEvidenceLedger();
-  for (const receipt of receipts) {
-    const existingIndex = ledger.receipts.findIndex((entry) =>
-      entry.receipt_ref === receipt.receipt_ref
-    );
-    if (existingIndex >= 0) {
-      ledger.receipts[existingIndex] = receipt;
-    } else {
-      ledger.receipts.unshift(receipt);
-    }
-  }
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+  );
   writeProviderLongSoakEvidenceLedger(ledger);
   return {
     surface_kind: 'opl_provider_long_soak_evidence_ledger_record',

@@ -7,18 +7,7 @@ import {
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
+import { buildOperatorActionRoute, uniqueRefs } from './value-utils.ts';
 
 function refsOnlyAuthorityBoundary() {
   return {
@@ -64,97 +53,45 @@ function baseApplyArgs(input: {
   ];
 }
 
-function commandRef(args: string[]) {
-  return `opl ${args.map((arg) => (
-    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
-  )).join(' ')}`;
-}
-
-function recordRoute(input: {
+function actionRoute(input: {
   domainId: string;
   requestId: string;
   requestPackId?: string | null;
   sourceRef?: string | null;
   routeKind: 'external_evidence_request' | 'remaining_evidence_gate';
   routeRef: string;
+  mode: 'record' | 'verify';
   requiredEvidenceRefs?: string[];
   requiredReturnShapes?: string[];
   requiredReceiptShapes?: string[];
 }) {
+  const recordMode = input.mode === 'record';
   const actionKind = input.routeKind === 'remaining_evidence_gate'
-    ? 'evidence_gate_receipt_record'
-    : 'external_evidence_receipt_record';
+    ? `evidence_gate_receipt_${input.mode}`
+    : `external_evidence_receipt_${input.mode}`;
   const args = baseApplyArgs({
     domainId: input.domainId,
     requestId: input.requestId,
     requestPackId: input.requestPackId,
     sourceRef: input.sourceRef ?? input.routeRef,
+    mode: recordMode ? undefined : 'verify',
   });
-  return {
-    ref: commandRef(args),
-    opl_cli_args: args,
-    role: 'operator_action_route',
-    action_id: `${input.routeKind}:${input.domainId}:${input.requestId}:record`,
+  return buildOperatorActionRoute(args, {
+    action_id: `${input.routeKind}:${input.domainId}:${input.requestId}:${input.mode}`,
     action_kind: actionKind,
-    owner: 'opl',
-    route_target_kind: 'opl_cli',
-    execution_policy: 'opl_safe_action_shell',
-    execution_surface: 'opl runtime action execute',
-    stage_attempt_id: null,
     domain_id: input.domainId,
-    stage_id: null,
     request_id: input.requestId,
     request_pack_id: input.requestPackId ?? null,
     evidence_route_kind: input.routeKind,
     evidence_source_ref: input.sourceRef ?? input.routeRef,
-    required_operator_payload_refs: EXTERNAL_EVIDENCE_RECORD_PAYLOAD_REFS,
-    required_evidence_refs: input.requiredEvidenceRefs ?? [],
-    required_return_shapes: input.requiredReturnShapes ?? [],
-    required_receipt_shapes: input.requiredReceiptShapes ?? [],
-    can_execute: false as const,
+    required_operator_payload_refs: recordMode ? EXTERNAL_EVIDENCE_RECORD_PAYLOAD_REFS : [],
+    ...(recordMode ? {
+      required_evidence_refs: input.requiredEvidenceRefs ?? [],
+      required_return_shapes: input.requiredReturnShapes ?? [],
+      required_receipt_shapes: input.requiredReceiptShapes ?? [],
+    } : {}),
     authority_boundary: refsOnlyAuthorityBoundary(),
-  };
-}
-
-function verifyRoute(input: {
-  domainId: string;
-  requestId: string;
-  requestPackId?: string | null;
-  sourceRef?: string | null;
-  routeKind: 'external_evidence_request' | 'remaining_evidence_gate';
-  routeRef: string;
-}) {
-  const actionKind = input.routeKind === 'remaining_evidence_gate'
-    ? 'evidence_gate_receipt_verify'
-    : 'external_evidence_receipt_verify';
-  const args = baseApplyArgs({
-    domainId: input.domainId,
-    requestId: input.requestId,
-    requestPackId: input.requestPackId,
-    sourceRef: input.sourceRef ?? input.routeRef,
-    mode: 'verify',
   });
-  return {
-    ref: commandRef(args),
-    opl_cli_args: args,
-    role: 'operator_action_route',
-    action_id: `${input.routeKind}:${input.domainId}:${input.requestId}:verify`,
-    action_kind: actionKind,
-    owner: 'opl',
-    route_target_kind: 'opl_cli',
-    execution_policy: 'opl_safe_action_shell',
-    execution_surface: 'opl runtime action execute',
-    stage_attempt_id: null,
-    domain_id: input.domainId,
-    stage_id: null,
-    request_id: input.requestId,
-    request_pack_id: input.requestPackId ?? null,
-    evidence_route_kind: input.routeKind,
-    evidence_source_ref: input.sourceRef ?? input.routeRef,
-    required_operator_payload_refs: [],
-    can_execute: false as const,
-    authority_boundary: refsOnlyAuthorityBoundary(),
-  };
 }
 
 function routeForStatus(input: {
@@ -181,10 +118,11 @@ function routeForStatus(input: {
     routeRef: input.routeRef ?? `${input.domainId}:${input.requestId}`,
   };
   if (input.receiptStatus === 'recorded') {
-    return verifyRoute(routeInput);
+    return actionRoute({ ...routeInput, mode: 'verify' });
   }
-  return recordRoute({
+  return actionRoute({
     ...routeInput,
+    mode: 'record',
     requiredEvidenceRefs: input.requiredEvidenceRefs,
     requiredReturnShapes: input.requiredReturnShapes,
     requiredReceiptShapes: input.requiredReceiptShapes,

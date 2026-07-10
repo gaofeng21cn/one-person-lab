@@ -17,24 +17,7 @@ import {
   DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
   DOMAIN_DISPATCH_SUPPLEMENTAL_PAYLOAD_REFS,
 } from './domain-dispatch-payload-artifacts.ts';
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
-function commandRef(args: string[]) {
-  return `opl ${args.map((arg) => (
-    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
-  )).join(' ')}`;
-}
+import { buildOperatorActionRoute, uniqueRefs } from './value-utils.ts';
 
 function shellSingleQuotedJson(value: unknown) {
   return `'${JSON.stringify(value).replaceAll("'", "'\\''")}'`;
@@ -164,23 +147,16 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
     sourceRef,
     ...(mode === 'verify' && recordedReceiptRef ? ['--receipt-ref', recordedReceiptRef] : []),
   ];
-  return {
-    ref: commandRef(args),
-    opl_cli_args: args,
-    role: 'operator_action_route',
+  return buildOperatorActionRoute(args, {
     action_id: actionId,
     action_kind: mode === 'verify'
       ? 'domain_dispatch_evidence_receipt_verify'
       : 'domain_dispatch_evidence_receipt_record',
-    owner: 'opl',
-    route_target_kind: 'opl_cli',
     route_status: mode === 'verify' ? 'verify_route_available' : 'record_route_available',
     route_status_detail: recordMode
       ? 'record_route_available_waiting_for_domain_owner_receipt_or_typed_blocker_payload'
       : 'verify_route_available_for_recorded_refs_only_domain_dispatch_receipt',
     request_scope: 'opl_owned_domain_dispatch_refs_only_receipt',
-    execution_policy: 'opl_safe_action_shell',
-    execution_surface: 'opl runtime action execute',
     route_closure_policy:
       'records_or_verifies_refs_only_domain_dispatch_owner_receipt_or_typed_blocker_without_domain_action_or_ready_claim',
     open_reason: recordMode
@@ -277,7 +253,6 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
       `domain_dispatch:${domainId}:${stageAttemptId}:owner_receipt_or_typed_blocker`,
     ],
     required_return_shapes: DOMAIN_DISPATCH_REQUIRED_RETURN_SHAPES,
-    can_execute: false as const,
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),
       can_record_domain_dispatch_owner_receipt_refs: true,
@@ -287,7 +262,7 @@ function domainDispatchRoute(attempt: JsonRecord, mode: 'record' | 'verify') {
       closes_domain_ready: false,
       closes_production_ready: false,
     },
-  };
+  });
 }
 
 export function buildDomainDispatchEvidenceReceiptRoutes(domainDispatchEvidence: JsonRecord) {

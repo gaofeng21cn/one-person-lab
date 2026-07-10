@@ -2,7 +2,13 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
-import { record, recordList, stringValue, uniqueRefs } from './value-utils.ts';
+import {
+  buildOperatorActionRoute,
+  record,
+  recordList,
+  stringValue,
+  uniqueRefs,
+} from './value-utils.ts';
 
 function refsOnlyAuthorityBoundary() {
   return {
@@ -84,19 +90,10 @@ export function buildProviderWorkerActionRoutes(input: {
   const repairActionId = stringValue(repairAction.action_id);
   const routeBlock = mutationGuardRouteBlock(readiness);
   if (lifecycleStatus === 'worker_not_ready' && repairActionId === 'start_temporal_worker') {
-    return uniqueRefs([{
-      ref: 'opl family-runtime worker start --provider temporal',
-      opl_cli_args: ['worker', 'start', '--provider', 'temporal'],
-      role: 'operator_action_route',
+    const args = ['worker', 'start', '--provider', 'temporal'];
+    return uniqueRefs([buildOperatorActionRoute(args, {
       action_id: 'provider-worker:temporal:start',
       action_kind: 'provider_worker_start',
-      owner: 'opl',
-      route_target_kind: 'opl_cli',
-      execution_policy: 'opl_safe_action_shell',
-      execution_surface: 'opl runtime action execute',
-      stage_attempt_id: null,
-      domain_id: null,
-      stage_id: null,
       provider_kind: 'temporal',
       provider_worker_lifecycle_status: lifecycleStatus,
       provider_worker_repair_action_id: repairActionId,
@@ -104,10 +101,9 @@ export function buildProviderWorkerActionRoutes(input: {
       provider_worker_required_next_action:
         'Start Temporal worker before rerunning provider proof or provider-backed Codex stages.',
       expected_surface_kind: 'temporal_worker_lifecycle_start',
-      can_execute: false as const,
       ...routeBlock,
       authority_boundary: refsOnlyAuthorityBoundary(),
-    }]);
+    }, 'opl family-runtime worker start --provider temporal')]);
   }
   if (
     (lifecycleStatus !== 'worker_source_stale' && lifecycleStatus !== 'duplicate_worker')
@@ -115,19 +111,10 @@ export function buildProviderWorkerActionRoutes(input: {
   ) {
     return [];
   }
-  return uniqueRefs([{
-    ref: 'opl family-runtime repair --provider temporal',
-    opl_cli_args: ['repair', '--provider', 'temporal'],
-    role: 'operator_action_route',
+  const args = ['repair', '--provider', 'temporal'];
+  return uniqueRefs([buildOperatorActionRoute(args, {
     action_id: 'provider-worker:temporal:restart',
     action_kind: 'provider_worker_restart',
-    owner: 'opl',
-    route_target_kind: 'opl_cli',
-    execution_policy: 'opl_safe_action_shell',
-    execution_surface: 'opl runtime action execute',
-    stage_attempt_id: null,
-    domain_id: null,
-    stage_id: null,
     provider_kind: 'temporal',
     provider_worker_lifecycle_status: lifecycleStatus,
     provider_worker_repair_action_id: repairActionId,
@@ -137,8 +124,7 @@ export function buildProviderWorkerActionRoutes(input: {
         ? 'Run supervisor-aware Temporal worker repair to collapse duplicate foreground workers before rerunning provider proof or provider-backed Codex stages.'
         : 'Run supervisor-aware Temporal worker repair before rerunning provider proof or provider-backed Codex stages.',
     expected_surface_kind: 'temporal_worker_lifecycle_start',
-    can_execute: false as const,
     ...routeBlock,
     authority_boundary: refsOnlyAuthorityBoundary(),
-  }]);
+  }, 'opl family-runtime repair --provider temporal')]);
 }

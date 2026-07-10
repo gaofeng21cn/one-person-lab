@@ -2,7 +2,14 @@ import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
-import { record, recordList, stringList, stringValue, uniqueRefs } from './value-utils.ts';
+import {
+  buildOperatorActionRoute,
+  record,
+  recordList,
+  stringList,
+  stringValue,
+  uniqueRefs,
+} from './value-utils.ts';
 
 const ACTIVE_ATTEMPT_STATUSES = new Set([
   'queued',
@@ -179,10 +186,6 @@ function typedBlockerRequirement(missingSignals: string[]) {
   };
 }
 
-function attemptCommand(stageAttemptId: string) {
-  return `opl family-runtime attempt query ${stageAttemptId}`;
-}
-
 function progressFirstRouteRef(stageAttemptId: string) {
   return `/stage_attempt_workbench/attempts/${stageAttemptId}/progress_first_supervision`;
 }
@@ -204,17 +207,11 @@ export function buildProgressFirstSupervisionActionRoutes(input: {
       if (missingSignals.length === 0) {
         return [];
       }
-      const command = attemptCommand(stageAttemptId);
-      return [{
-        ref: progressFirstRouteRef(stageAttemptId),
-        role: 'operator_action_route',
+      const args = ['attempt', 'query', stageAttemptId];
+      return [buildOperatorActionRoute(args, {
         action_id: `progress-first-supervision:${stageAttemptId}`,
         action_kind: 'progress_first_attempt_supervision',
-        owner: 'opl',
-        route_target_kind: 'opl_cli',
         execution_policy: 'diagnostic_query_only',
-        execution_surface: 'opl runtime action execute',
-        can_execute: false as const,
         submit_via: 'opl runtime action execute',
         can_submit_to_safe_action_shell: false,
         default_actionable: false,
@@ -241,9 +238,8 @@ export function buildProgressFirstSupervisionActionRoutes(input: {
           `/stage_attempt_workbench/attempts/${stageAttemptId}/stage_progress_log`,
           `/stage_attempt_workbench/attempts/${stageAttemptId}/current_control_state`,
         ],
-        opl_cli_args: ['attempt', 'query', stageAttemptId],
         dry_run_supported: true,
         authority_boundary: refsOnlyAuthorityBoundary(),
-      }];
+      }, progressFirstRouteRef(stageAttemptId))];
     }));
 }

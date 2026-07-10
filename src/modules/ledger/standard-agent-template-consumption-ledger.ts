@@ -1,7 +1,11 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
-import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import {
+  optionalString,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
+} from '../../kernel/json-file.ts';
 import { record, stringList, type JsonRecord } from '../../kernel/json-record.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
@@ -221,33 +225,14 @@ function normalizeReceipt(value: unknown): StandardAgentTemplateConsumptionRecei
 }
 
 export function readStandardAgentTemplateConsumptionLedger(): StandardAgentTemplateConsumptionLedger {
-  const file = ledgerPath();
-  if (!fs.existsSync(file)) {
-    return emptyLedger();
-  }
-  try {
-    const parsed = record(readJsonPayloadFile(file));
-    if (!Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: parsed.receipts
-        .map(normalizeReceipt)
-        .filter((receipt): receipt is StandardAgentTemplateConsumptionReceipt =>
-          Boolean(receipt)
-        ),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  return readJsonReceiptLedger(ledgerPath(), emptyLedger, normalizeReceipt);
 }
 
 function writeStandardAgentTemplateConsumptionLedger(
   ledger: StandardAgentTemplateConsumptionLedger,
 ) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(paths.standard_agent_template_consumption_ledger_file, ledger);
+  writeJsonReceiptLedger(paths.standard_agent_template_consumption_ledger_file, ledger);
 }
 
 function normalizeInput(
@@ -313,16 +298,9 @@ export function recordStandardAgentTemplateConsumptionReceipts(
   }
 
   const ledger = readStandardAgentTemplateConsumptionLedger();
-  for (const receipt of receipts) {
-    const existingIndex = ledger.receipts.findIndex((entry) =>
-      entry.receipt_ref === receipt.receipt_ref
-    );
-    if (existingIndex >= 0) {
-      ledger.receipts[existingIndex] = receipt;
-    } else {
-      ledger.receipts.unshift(receipt);
-    }
-  }
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+  );
   writeStandardAgentTemplateConsumptionLedger(ledger);
   return {
     surface_kind: 'opl_standard_agent_template_consumption_ledger_record',

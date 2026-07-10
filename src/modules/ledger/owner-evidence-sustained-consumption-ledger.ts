@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { optionalString, readJsonPayloadFile, writeJsonPayloadFile } from '../../kernel/json-file.ts';
+import {
+  optionalString,
+  readJsonReceiptLedger,
+  upsertJsonReceipts,
+  writeJsonReceiptLedger,
+} from '../../kernel/json-file.ts';
 import { record, stringList } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
@@ -323,34 +328,19 @@ function dedupeCurrentReceipts(receipts: OwnerEvidenceSustainedConsumptionReceip
 
 function readOwnerEvidenceSustainedConsumptionLedger(): OwnerEvidenceSustainedConsumptionLedger {
   const file = fs.existsSync(ledgerPath()) ? ledgerPath() : legacyLedgerPath();
-  if (!fs.existsSync(file)) {
-    return emptyLedger();
-  }
-  try {
-    const parsed = record(readJsonPayloadFile(file));
-    if (!Array.isArray(parsed.receipts)) {
-      return emptyLedger();
-    }
-    return {
-      ...emptyLedger(),
-      receipts: dedupeCurrentReceipts(
-        parsed.receipts
-          .map(normalizeReceipt)
-          .filter((receipt): receipt is OwnerEvidenceSustainedConsumptionReceipt =>
-            Boolean(receipt)
-          ),
-      ),
-    };
-  } catch {
-    return emptyLedger();
-  }
+  const ledger = readJsonReceiptLedger(file, emptyLedger, normalizeReceipt);
+  ledger.receipts = dedupeCurrentReceipts(ledger.receipts);
+  return ledger;
 }
 
 function writeOwnerEvidenceSustainedConsumptionLedger(
   ledger: OwnerEvidenceSustainedConsumptionLedger,
 ) {
   const paths = ensureOplStateDir();
-  writeJsonPayloadFile(path.join(paths.state_dir, 'owner-evidence-sustained-consumption-ledger.json'), ledger);
+  writeJsonReceiptLedger(
+    path.join(paths.state_dir, 'owner-evidence-sustained-consumption-ledger.json'),
+    ledger,
+  );
 }
 
 export function preflightOwnerEvidenceSustainedConsumptionReceiptInput(
@@ -513,21 +503,14 @@ export function recordOwnerEvidenceSustainedConsumptionReceipts(
     normalizeInput(input, options.rawPayloads?.[index] ?? {})
   );
   const ledger = readOwnerEvidenceSustainedConsumptionLedger();
-  for (const receipt of receipts) {
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, receipt) => {
     const receiptTargetKey = ownerEvidenceSustainedConsumptionTargetKey(receipt.target_identity);
-    const existingIndex = ledger.receipts.findIndex((entry) =>
-      entry.receipt_ref === receipt.receipt_ref
+    return entry.receipt_ref === receipt.receipt_ref
       || (
         Boolean(receiptTargetKey)
         && ownerEvidenceSustainedConsumptionTargetKey(entry.target_identity) === receiptTargetKey
-      )
-    );
-    if (existingIndex >= 0) {
-      ledger.receipts[existingIndex] = receipt;
-    } else {
-      ledger.receipts.unshift(receipt);
-    }
-  }
+      );
+  });
   ledger.receipts = dedupeCurrentReceipts(ledger.receipts);
   writeOwnerEvidenceSustainedConsumptionLedger(ledger);
   return {

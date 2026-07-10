@@ -6,14 +6,11 @@ import {
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
 import {
+  buildOperatorActionRoute,
+} from './value-utils.ts';
+import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
-
-function commandRef(args: string[]) {
-  return `opl ${args.map((arg) => (
-    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
-  )).join(' ')}`;
-}
 
 function refsOnlyAuthorityBoundary() {
   return {
@@ -73,20 +70,11 @@ function actionRoute(domain: JsonRecord, module: JsonRecord) {
     '--source-ref',
     `/functional_privatization_audit/private_platform_residue_inventory/${moduleId}`,
   ];
-  return {
-    ref: commandRef(args),
-    opl_cli_args: args,
-    role: 'operator_action_route',
+  return buildOperatorActionRoute(args, {
     action_id: `${requestId}:record`,
     action_kind: 'functional_privatization_semantic_equivalence_receipt_record',
-    owner: 'opl',
-    route_target_kind: 'opl_cli',
-    execution_policy: 'opl_safe_action_shell',
-    execution_surface: 'opl runtime action execute',
     domain_id: domainId,
     target_domain_id: stringValue(domain.target_domain_id),
-    stage_id: null,
-    stage_attempt_id: null,
     request_id: requestId,
     request_pack_id: `${domainId}.functional_privatization_semantic_equivalence`,
     module_id: moduleId,
@@ -119,9 +107,8 @@ function actionRoute(domain: JsonRecord, module: JsonRecord) {
     creates_domain_action: false as const,
     creates_owner_receipt: false as const,
     closes_private_residue: false as const,
-    can_execute: false as const,
     authority_boundary: refsOnlyAuthorityBoundary(),
-  };
+  });
 }
 
 export function buildFunctionalPrivatizationSemanticEquivalenceActionRoutes(auditRefs: JsonRecord) {

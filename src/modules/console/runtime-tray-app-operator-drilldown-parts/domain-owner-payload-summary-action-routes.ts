@@ -4,7 +4,15 @@ import {
   type DomainOwnerPayloadSummaryReceipt,
 } from '../../ledger/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
-import { record, recordList, stringList, stringValue } from './value-utils.ts';
+import {
+  buildOperatorActionRoute,
+  commandRef,
+  record,
+  recordList,
+  runtimeActionExecuteCommand,
+  stringList,
+  stringValue,
+} from './value-utils.ts';
 
 type DomainOwnerPayloadSummaryActionRoute = JsonRecord & {
   ref: string;
@@ -22,34 +30,6 @@ type DomainOwnerPayloadSummaryActionRoute = JsonRecord & {
   stage_id: string | null;
   can_execute: false;
 };
-
-function commandRef(args: string[]) {
-  return `opl ${args.map((arg) => (
-    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
-  )).join(' ')}`;
-}
-
-function runtimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-    '--payload-file',
-    '<payload.json>',
-  ];
-}
-
-function verifyRuntimeActionExecuteCommand(actionId: string) {
-  return [
-    'runtime',
-    'action',
-    'execute',
-    '--action',
-    actionId,
-  ];
-}
 
 function routeAuthorityBoundary() {
   return {
@@ -292,12 +272,6 @@ export function buildDomainOwnerPayloadSummaryActionRoutes(
     const targetIdentity = record(entry.target_identity);
     const existingReceipt = receiptsByTarget.get(targetKey);
     const common = {
-      role: 'operator_action_route' as const,
-      owner: 'opl' as const,
-      route_target_kind: 'opl_cli' as const,
-      execution_policy: 'opl_safe_action_shell' as const,
-      execution_surface: 'opl runtime action execute' as const,
-      stage_attempt_id: null,
       domain_id: stringValue(targetIdentity.domain_id),
       target_domain_id: stringValue(targetIdentity.target_domain_id),
       project_id: stringValue(targetIdentity.project),
@@ -313,7 +287,6 @@ export function buildDomainOwnerPayloadSummaryActionRoutes(
       creates_domain_action: false,
       creates_owner_receipt: false,
       owner_receipt_refs: [],
-      can_execute: false as const,
       can_write_domain_truth: false,
       can_create_owner_receipt: false,
       can_generate_typed_blocker: false,
@@ -335,10 +308,8 @@ export function buildDomainOwnerPayloadSummaryActionRoutes(
         existingReceipt.receipt_ref,
       ];
       const actionId = `domain_owner_payload_summary:${safeActionIdPart(targetKey)}:verify`;
-      routes.push({
+      routes.push(buildOperatorActionRoute(args, {
         ...common,
-        ref: commandRef(verifyRuntimeActionExecuteCommand(actionId)),
-        opl_cli_args: args,
         action_id: actionId,
         action_kind: 'domain_owner_payload_summary_receipt_verify',
         route_status: 'verify_route_available',
@@ -358,17 +329,15 @@ export function buildDomainOwnerPayloadSummaryActionRoutes(
         payload_workorder: null,
         payload_template_policy: null,
         copyable_runtime_action_execute_commands: {
-          verify: verifyRuntimeActionExecuteCommand(actionId),
+          verify: runtimeActionExecuteCommand(actionId, false),
         },
-      });
+      }, commandRef(runtimeActionExecuteCommand(actionId, false))));
       continue;
     }
     const args = ['runtime', 'domain-owner-payload-summary', 'record'];
     const actionId = `domain_owner_payload_summary:${safeActionIdPart(targetKey)}:record`;
-    routes.push({
+    routes.push(buildOperatorActionRoute(args, {
       ...common,
-      ref: commandRef(runtimeActionExecuteCommand(actionId)),
-      opl_cli_args: args,
       action_id: actionId,
       action_kind: 'domain_owner_payload_summary_receipt_record',
       route_status: 'record_route_available',
@@ -393,7 +362,7 @@ export function buildDomainOwnerPayloadSummaryActionRoutes(
       copyable_runtime_action_execute_commands: {
         record_with_payload: runtimeActionExecuteCommand(actionId),
       },
-    });
+    }, commandRef(runtimeActionExecuteCommand(actionId))));
   }
   return routes;
 }

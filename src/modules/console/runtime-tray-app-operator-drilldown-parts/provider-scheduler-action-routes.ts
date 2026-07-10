@@ -7,18 +7,7 @@ import {
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
+import { buildOperatorActionRoute, uniqueRefs } from './value-utils.ts';
 
 function schedulerAction(role: string | null) {
   if (role === 'scheduler_cadence_status') {
@@ -90,19 +79,9 @@ export function buildProviderSchedulerActionRoutes(
     }
     const sloAction = providerSloAction(role);
     if (sloAction) {
-      return [{
-        ref: `opl family-runtime ${sloAction.args.join(' ')}`,
-        opl_cli_args: sloAction.args,
-        role: 'operator_action_route',
+      return [buildOperatorActionRoute(sloAction.args, {
         action_id: `provider-slo:${providerKind}:${sloAction.action}`,
         action_kind: sloAction.actionKind,
-        owner: 'opl',
-        route_target_kind: 'opl_cli',
-        execution_policy: 'opl_safe_action_shell',
-        execution_surface: 'opl runtime action execute',
-        stage_attempt_id: null,
-        domain_id: null,
-        stage_id: null,
         provider_kind: providerKind,
         schedule_id: stringValue(ref.schedule_id),
         provider_slo_dispatch_status: stringValue(ref.dispatch_status),
@@ -110,12 +89,11 @@ export function buildProviderSchedulerActionRoutes(
         provider_repair_command: stringValue(ref.repair_command),
         provider_required_next_action: stringValue(ref.required_next_action),
         expected_surface_kind: 'opl_temporal_provider_slo_execution_receipt',
-        can_execute: false as const,
         ...(stringValue(ref.dispatch_status) === 'execution_due_or_repair_required'
           ? workerMutationGuardBlock
           : {}),
         authority_boundary: refsOnlyAuthorityBoundary(),
-      }];
+      }, `opl family-runtime ${sloAction.args.join(' ')}`)];
     }
     return [];
   });
@@ -130,23 +108,12 @@ export function buildProviderSchedulerActionRoutes(
         return null;
       }
       const args = ['scheduler', action.action, '--provider', providerKind];
-      return {
-        ref: `opl family-runtime ${args.join(' ')}`,
-        opl_cli_args: args,
-        role: 'operator_action_route',
+      return buildOperatorActionRoute(args, {
         action_id: `provider-scheduler:${providerKind}:${action.action}`,
         action_kind: action.actionKind,
-        owner: 'opl',
-        route_target_kind: 'opl_cli',
-        execution_policy: 'opl_safe_action_shell',
-        execution_surface: 'opl runtime action execute',
-        stage_attempt_id: null,
-        domain_id: null,
-        stage_id: null,
         provider_kind: providerKind,
         schedule_id: stringValue(ref.schedule_id),
         expected_surface_kind: stringValue(ref.expected_surface_kind),
-        can_execute: false as const,
         ...(action.diagnostic
           ? {
               route_status: 'diagnostic_only',
@@ -159,7 +126,7 @@ export function buildProviderSchedulerActionRoutes(
           : {}),
         ...(action.mutation ? workerMutationGuardBlock : {}),
         authority_boundary: refsOnlyAuthorityBoundary(),
-      };
+      }, `opl family-runtime ${args.join(' ')}`);
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
   ]);

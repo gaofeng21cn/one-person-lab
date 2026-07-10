@@ -1,23 +1,13 @@
 import {
+  buildOperatorActionRoute,
   recordList,
   stringValue,
-  type JsonRecord,
-} from '../../../kernel/json-record.ts';
+  uniqueRefs,
+} from './value-utils.ts';
+import type { JsonRecord } from '../../../kernel/json-record.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundaryCore,
 } from './authority-boundary.ts';
-
-function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = `${value.role ?? ''}:${value.ref}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
 
 function refsOnlyAuthorityBoundary() {
   return {
@@ -48,24 +38,15 @@ function buildRoute(plan: JsonRecord, mode: 'apply' | 'verify') {
     '--source-ref',
     sourceRef,
   ];
-  return {
-    ref: `opl ${args.join(' ')}`,
-    opl_cli_args: args,
-    role: 'operator_action_route',
+  return buildOperatorActionRoute(args, {
     action_id: `legacy-cleanup:${commandDomainId}:${mode}`,
     action_kind: `legacy_cleanup_${mode}`,
-    owner: 'opl',
-    route_target_kind: 'opl_cli',
-    execution_policy: 'opl_safe_action_shell',
-    execution_surface: 'opl runtime action execute',
     worklist_attention_class: 'audit_cleanup_lane',
     ordinary_open_safe_action_attention: false,
     default_selected_action_eligible: false,
     default_planning_root_allowed: false,
-    stage_attempt_id: null,
     domain_id: commandDomainId,
     target_domain_id: stringValue(plan.domain_id),
-    stage_id: null,
     source_ref: sourceRef,
     plan_status: stringValue(plan.plan_status),
     gate_status: stringValue(plan.gate_status),
@@ -74,9 +55,8 @@ function buildRoute(plan: JsonRecord, mode: 'apply' | 'verify') {
       plan.domain_physical_delete_requires_owner_receipt !== false,
     domain_physical_delete_can_execute: plan.domain_physical_delete_can_execute === true,
     action_count: typeof plan.action_count === 'number' ? plan.action_count : 0,
-    can_execute: false as const,
     authority_boundary: refsOnlyAuthorityBoundary(),
-  };
+  }, `opl ${args.join(' ')}`);
 }
 
 export function buildLegacyCleanupActionRoutes(legacyCleanupPlanRefs: JsonRecord) {

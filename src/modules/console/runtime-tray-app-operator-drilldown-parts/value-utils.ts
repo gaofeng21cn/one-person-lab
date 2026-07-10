@@ -47,6 +47,48 @@ export function uniqueRefsByValue<T extends { ref: string }>(values: T[]) {
   });
 }
 
+export function commandRef(args: string[]) {
+  return `opl ${args.map((arg) => (
+    arg.includes(' ') || arg.includes('"') ? JSON.stringify(arg) : arg
+  )).join(' ')}`;
+}
+
+export function runtimeActionExecuteCommand(actionId: string, payloadFile = true) {
+  return [
+    'runtime',
+    'action',
+    'execute',
+    '--action',
+    actionId,
+    ...(payloadFile ? ['--payload-file', '<payload.json>'] : []),
+  ];
+}
+
+export function buildOperatorActionRoute<const Details extends JsonRecord & {
+  action_id: string;
+  action_kind: string;
+  authority_boundary: JsonRecord;
+}>(
+  oplCliArgs: string[],
+  details: Details,
+  ref = commandRef(oplCliArgs),
+) {
+  return {
+    ref,
+    opl_cli_args: oplCliArgs,
+    role: 'operator_action_route' as const,
+    owner: 'opl' as const,
+    route_target_kind: 'opl_cli' as const,
+    execution_policy: 'opl_safe_action_shell' as const,
+    execution_surface: 'opl runtime action execute' as const,
+    stage_attempt_id: null,
+    domain_id: null,
+    stage_id: null,
+    can_execute: false as const,
+    ...details,
+  };
+}
+
 export function cleanupCommandDomainId(project: DomainManifestCatalogEntry, fallbackDomainId: string) {
   return stringValue(project.project_id)
     ?? stringValue(project.project)
