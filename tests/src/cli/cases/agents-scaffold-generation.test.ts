@@ -138,6 +138,14 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       owner_receipt_ref: 'receipt://owner',
       typed_blocker_ref: 'blocker://typed',
     }).ok, false);
+    assert.equal(validateJsonSchemaPayload(outputSchemaEntry, {
+      owner_receipt_ref: '',
+      typed_blocker_ref: 'blocker://typed',
+    }).ok, false);
+    assert.equal(validateJsonSchemaPayload(outputSchemaEntry, {
+      owner_receipt_ref: 'receipt://owner',
+      typed_blocker_ref: '',
+    }).ok, false);
 
     const capabilityMap = readJsonFile(path.join(targetDir, 'contracts/capability_map.json'));
     const capabilityMapSchema = readJsonFile(path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'));

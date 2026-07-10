@@ -563,15 +563,13 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       content: json({
         $schema: 'https://json-schema.org/draft/2020-12/schema',
         type: 'object',
+        properties: {
+          owner_receipt_ref: { type: 'string', minLength: 1 },
+          typed_blocker_ref: { type: 'string', minLength: 1 },
+        },
         oneOf: [
-          {
-            required: ['owner_receipt_ref'],
-            properties: { owner_receipt_ref: { type: 'string', minLength: 1 } },
-          },
-          {
-            required: ['typed_blocker_ref'],
-            properties: { typed_blocker_ref: { type: 'string', minLength: 1 } },
-          },
+          { required: ['owner_receipt_ref'] },
+          { required: ['typed_blocker_ref'] },
         ],
         additionalProperties: true,
       }),
