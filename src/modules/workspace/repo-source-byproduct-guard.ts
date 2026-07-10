@@ -12,6 +12,21 @@ const BYPRODUCT_DIRECTORY_NAMES = new Set([
   'coverage',
   'node_modules',
 ]);
+const GLOB_EXCLUDES = [
+  ...[...EXCLUDED_DIRECTORY_NAMES].flatMap((name) => [name, `${name}/**`, `**/${name}`, `**/${name}/**`]),
+  ...[...BYPRODUCT_DIRECTORY_NAMES].flatMap((name) => [`${name}/**`, `**/${name}/**`]),
+  '**/*.egg-info/**',
+  '**/.*.egg-info/**',
+  '**/.egg-info/**',
+];
+const BYPRODUCT_GLOB_PATTERNS = [
+  ...[...BYPRODUCT_DIRECTORY_NAMES].map((name) => `**/${name}`),
+  '**/*.egg-info',
+  '**/.*.egg-info',
+  '**/.egg-info',
+  '**/*.{pyc,pyo}',
+  '**/.*.{pyc,pyo}',
+];
 
 export type RepoSourceByproductIssue = {
   kind: 'repo_source_byproduct_scan_failed' | 'repo_source_generated_byproduct';
@@ -20,41 +35,29 @@ export type RepoSourceByproductIssue = {
   reason: string;
 };
 
-function scanDirectory(root: string, current: string, issues: RepoSourceByproductIssue[]) {
-  for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-    const absolutePath = path.join(current, entry.name);
-    const relativePath = path.relative(root, absolutePath);
-    if (BYPRODUCT_DIRECTORY_NAMES.has(entry.name) || entry.name.endsWith('.egg-info')) {
-      issues.push({
-        kind: 'repo_source_generated_byproduct',
-        path: relativePath,
-        byproduct_type: BYPRODUCT_DIRECTORY_NAMES.has(entry.name) || entry.isDirectory()
-          ? 'directory'
-          : 'file',
-        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
-      });
-      continue;
-    }
-    if (entry.name.endsWith('.pyc') || entry.name.endsWith('.pyo')) {
-      issues.push({
-        kind: 'repo_source_generated_byproduct',
-        path: relativePath,
-        byproduct_type: 'file',
-        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
-      });
-      continue;
-    }
-    if (entry.isSymbolicLink()) {
-      continue;
-    }
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRECTORY_NAMES.has(entry.name)) {
-        continue;
-      }
-      scanDirectory(root, absolutePath, issues);
-      continue;
+function isByproductDirectoryName(name: string) {
+  return BYPRODUCT_DIRECTORY_NAMES.has(name) || name.endsWith('.egg-info');
+}
+
+function scanDirectory(root: string, issues: RepoSourceByproductIssue[]) {
+  fs.accessSync(root, fs.constants.R_OK | fs.constants.X_OK);
+
+  for (const relativePath of fs.globSync('**/{*,.*}/', { cwd: root, exclude: GLOB_EXCLUDES })) {
+    if (relativePath !== '.' && !isByproductDirectoryName(path.basename(relativePath))) {
+      fs.accessSync(path.join(root, relativePath), fs.constants.R_OK | fs.constants.X_OK);
     }
   }
+
+  issues.push(...fs.globSync(BYPRODUCT_GLOB_PATTERNS, { cwd: root, exclude: GLOB_EXCLUDES })
+    .map((relativePath) => ({
+      kind: 'repo_source_generated_byproduct' as const,
+      path: relativePath,
+      byproduct_type: BYPRODUCT_DIRECTORY_NAMES.has(path.basename(relativePath))
+        || fs.lstatSync(path.join(root, relativePath)).isDirectory()
+        ? 'directory' as const
+        : 'file' as const,
+      reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
+    })));
 }
 
 export function inspectRepoSourceByproducts(sourceRoot: string) {
@@ -70,7 +73,7 @@ export function inspectRepoSourceByproducts(sourceRoot: string) {
         reason: 'source_root_missing_or_not_a_directory',
       });
     } else {
-      scanDirectory(root, root, issues);
+      scanDirectory(root, issues);
       issues.sort((left, right) => left.path.localeCompare(right.path));
     }
   } catch (error) {

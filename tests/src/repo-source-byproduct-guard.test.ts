@@ -15,18 +15,28 @@ test('repo source byproduct guard fails closed and excludes worktree internals',
   try {
     fs.mkdirSync(path.join(root, 'src', '__pycache__'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src', '__pycache__', 'module.pyc'), 'cache');
+    fs.writeFileSync(path.join(root, '.hidden.pyc'), 'hidden cache');
+    fs.writeFileSync(path.join(root, '.egg-info'), 'hidden install metadata');
     fs.writeFileSync(path.join(root, 'legacy.egg-info'), 'install metadata');
     fs.mkdirSync(path.join(root, '.worktrees', 'candidate', 'node_modules'), { recursive: true });
     fs.symlinkSync(path.join(root, 'missing-node-modules'), path.join(root, 'node_modules'));
 
     const report = inspectRepoSourceByproducts(root);
     assert.equal(report.status, 'blocked');
-    assert.deepEqual(report.issues.map((issue) => issue.path), ['legacy.egg-info', 'node_modules', 'src/__pycache__']);
+    assert.deepEqual(report.issues.map((issue) => issue.path), [
+      '.egg-info',
+      '.hidden.pyc',
+      'legacy.egg-info',
+      'node_modules',
+      'src/__pycache__',
+    ]);
     assert.equal(report.issues[0]?.byproduct_type, 'file');
     assert.equal(report.authority_boundary.source_clean_counts_as_domain_ready, false);
     assert.throws(() => assertRepoSourceByproductsClean(root), /cache or install byproducts/);
 
     fs.rmSync(path.join(root, 'src', '__pycache__'), { recursive: true });
+    fs.rmSync(path.join(root, '.hidden.pyc'));
+    fs.rmSync(path.join(root, '.egg-info'));
     fs.rmSync(path.join(root, 'legacy.egg-info'));
     fs.rmSync(path.join(root, 'node_modules'));
     assert.equal(assertRepoSourceByproductsClean(root).status, 'passed');
