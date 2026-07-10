@@ -8,8 +8,7 @@ import {
   runCli,
 } from '../helpers.ts';
 import { STANDARD_AGENT_PACK_ABI } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
-import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
-import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import { buildReadyAgentRepo, retargetReadyRepo } from './agents-conformance-fixtures.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -673,11 +672,15 @@ export function withPackCompilerReadySurfaces(payload: JsonRecord, options: {
   );
 }
 
+function createPackCompilerOmaContractFixture() {
+  const repoDir = buildReadyAgentRepo();
+  retargetReadyRepo(repoDir, 'opl-meta-agent', 'OPL Meta Agent');
+  return repoDir;
+}
+
 export function bindFamilyManifests(env: Record<string, string>) {
   const fixtures = loadFamilyManifestFixtures();
-  env.OPL_META_AGENT_REPO_DIR ??= createOmaContractFixture(
-    env.OPL_STATE_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-oma-state-')),
-  );
+  env.OPL_META_AGENT_REPO_DIR ??= createPackCompilerOmaContractFixture();
   const manifests = {
     medautoscience: withPackCompilerReadySurfaces(fixtures.medautoscience, {
       agentId: 'mas',

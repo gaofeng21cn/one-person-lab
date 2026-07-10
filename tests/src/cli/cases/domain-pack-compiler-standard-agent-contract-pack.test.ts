@@ -92,13 +92,13 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   fs.writeFileSync(path.join(targetDir, 'runtime', 'authority_functions', 'README.md'), '# Authority functions\n');
   fs.writeFileSync(
     path.join(targetDir, 'contracts', 'owner_receipt_contract.json'),
-    `${JSON.stringify({ surface_kind: 'domain_owner_receipt_contract' })}\n`,
+    `${JSON.stringify({ surface_kind: 'owner_receipt_contract' })}\n`,
   );
   fs.writeFileSync(
     path.join(targetDir, 'agent', 'stages', 'manifest.json'),
     `${JSON.stringify({
-      surface_kind: 'sample_brief_agent_declarative_stage_manifest',
-      version: 'sample-brief-agent-declarative-stage-manifest.v1',
+      surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+      version: 'opl-standard-agent-declarative-stage-manifest.v1',
       target_domain_id: 'sample-brief-agent',
       owner: 'sample-brief-agent',
       authority_boundary: {

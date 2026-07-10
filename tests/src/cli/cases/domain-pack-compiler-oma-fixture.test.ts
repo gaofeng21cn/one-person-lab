@@ -31,10 +31,24 @@ test('domain pack compiler fixture binding does not depend on sibling domain rep
     assert.equal(oma.compiler_status, 'ready');
     assert.ok(env.OPL_META_AGENT_REPO_DIR);
     assert.equal(
-      fs.existsSync(path.join(env.OPL_META_AGENT_REPO_DIR, 'contracts', 'opl_domain_manifest_registration.json')),
-      true,
+      JSON.parse(fs.readFileSync(
+        path.join(env.OPL_META_AGENT_REPO_DIR, 'contracts', 'owner_receipt_contract.json'),
+        'utf8',
+      )).surface_kind,
+      'owner_receipt_contract',
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(
+        path.join(env.OPL_META_AGENT_REPO_DIR, 'agent', 'stages', 'manifest.json'),
+        'utf8',
+      )).surface_kind,
+      'opl_standard_agent_declarative_stage_manifest',
     );
     assert.equal(oma.generated_interface_bundle.owner, 'one-person-lab');
+    assert.equal(
+      oma.generated_interface_bundle.stage_routes[0].tool_refs[0].role,
+      'stage_tool_affordance_catalog',
+    );
     assert.deepEqual(oma.blocker_reasons, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
