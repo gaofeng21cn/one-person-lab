@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
+import { resolveCapabilityForCurrentDelta } from '../../src/modules/connect/capability-registry-resolver.ts';
 
 import './target-architecture-schema-contracts-cases/target-operating-architecture.ts';
 
@@ -113,7 +114,7 @@ test('target architecture schemas retain sparse identity, required-field, and au
     [surfaceBudget.$defs.authority_boundary.properties, ['default_surface_can_claim_production_ready', 'default_surface_can_replace_domain_owner']],
     [workspaceTopology.$defs.authority_boundary.properties, ['opl_can_write_domain_truth', 'runtime_state_counts_as_user_default_surface']],
     [workspaceIndex.$defs.authority_boundary.properties, ['opl_can_write_domain_truth', 'runtime_state_counts_as_user_default_surface']],
-    [capabilityResolver.$defs.authority_boundary.properties, ['can_execute_capability', 'can_create_domain_typed_blocker']],
+    [capabilityResolver.$defs.authority_boundary.properties, ['can_execute_capability', 'can_write_domain_truth', 'can_create_domain_typed_blocker']],
   ] as const) {
     for (const field of falseFields) {
       assert.equal(boundary[field].const, false, `${field} must remain false`);
@@ -122,9 +123,90 @@ test('target architecture schemas retain sparse identity, required-field, and au
 
   assert.equal(goldenPath.$defs.explicit_variant.properties.explicit_selection_required.const, true);
   assert.equal(stopLoss.properties.successor_policy.properties.same_work_unit_redrive_allowed.const, false);
+  const ownerDeltaStopLoss = ownerDelta.properties.stop_loss_state.properties.successor_admission.properties;
+  const targetArchitecture = readJson<Record<string, any>>(
+    'contracts/opl-framework/target-operating-architecture-contract.json',
+  );
+  const targetCapability = targetArchitecture.foundry_agent_os_standard.capability_registry_boundary;
+  assert.deepEqual(
+    [
+      stopLoss.properties.successor_policy.properties.same_work_unit_redrive_allowed.const,
+      stopLoss.properties.successor_policy.properties.default_successor_action_type.const,
+      targetCapability.resolver_abi_ref,
+      targetCapability.default_behavior,
+      ownerDelta.properties.capability_invocation_hard_gate_policy.properties.runway_can_write_domain_truth.const,
+    ],
+    [
+      ownerDeltaStopLoss.same_work_unit_redrive_allowed.const,
+      ownerDeltaStopLoss.preferred_successor.properties.action_type.const,
+      'contracts/opl-framework/capability-registry-resolver.schema.json',
+      capabilityResolver.$defs.capability_registry_readout.properties.default_behavior.const,
+      capabilityResolver.$defs.authority_boundary.properties.can_write_domain_truth.const,
+    ],
+  );
   assert.equal(
     workspaceIndex.$defs.current_stage_pointer.properties.authority_boundary.properties
       .pointer_can_publish_current_owner_delta.const,
     false,
   );
+
+  const capabilityPayload = resolveCapabilityForCurrentDelta({
+    registry: { registry_id: 'schema-sentinel', owner_modules: [], capabilities: [] },
+    currentOwnerDelta: {
+      default_planning_root: 'current_owner_delta',
+      delta_ref: 'delta:schema-sentinel',
+      domain_id: 'mas',
+      work_unit_ref: 'work:schema-sentinel',
+      current_owner: 'med-autoscience',
+    },
+    capabilityRef: 'capability:missing',
+    workUnitRef: 'work:schema-sentinel',
+  });
+  const stopLossPayload = {
+    surface_kind: 'opl_stop_loss_policy',
+    schema_version: 'stop-loss-policy.v1',
+    policy_id: 'stop-loss:schema-sentinel',
+    lineage_ref: 'lineage:schema-sentinel',
+    freeze_state: 'frozen',
+    release_conditions: ['fresh_owner_delta'],
+    repeat_budget: { policy_id: 'repeat:schema-sentinel', repeat_threshold: 1, matched_on: 'default' },
+    successor_policy: {
+      same_work_unit_redrive_allowed: false,
+      identity_different_successor_allowed: true,
+      default_successor_action_type: 'publishability_repair_sprint',
+      default_successor_work_unit_id: 'publishability_repair_sprint_after_anti_loop_budget_exhausted',
+      stable_operator_gate_allowed: true,
+      required_identity_difference_any_of: ['source_fingerprint'],
+    },
+    authority_boundary: {
+      opl_can_freeze_default_launch: true,
+      opl_can_delete_domain_attempts: false,
+      opl_can_ignore_fresh_owner_delta: false,
+      opl_can_ignore_stable_typed_blocker: false,
+      opl_can_synthesize_fallback_verdict: false,
+      opl_can_authorize_domain_ready: false,
+      opl_can_authorize_quality_verdict: false,
+    },
+  };
+  for (const [schemaPath, payload, group, field] of [
+    ['contracts/opl-framework/capability-registry-resolver.schema.json', capabilityPayload, 'authority_boundary', 'can_write_domain_truth'],
+    ['contracts/opl-framework/stop-loss-policy.schema.json', stopLossPayload, 'successor_policy', 'same_work_unit_redrive_allowed'],
+  ] as const) {
+    const schema = schemas[schemaPath];
+    const entry = { schemaId: schema.$id, schema, sourceRef: schemaPath };
+    assert.equal(validateJsonSchemaPayload(entry, payload).ok, true, `${schemaPath} fixture must stay valid`);
+
+    const invalidPath = `/${group}/${field}`;
+    const invalidPayload: any = structuredClone(payload);
+    invalidPayload[group][field] = true;
+    const result = validateJsonSchemaPayload(entry, invalidPayload);
+    assert.equal(result.ok, false, `${schemaPath} must reject ${invalidPath}=true`);
+    if (!result.ok) {
+      assert.equal(
+        result.errors.some((error) => error.instance_path === invalidPath && error.keyword === 'const'),
+        true,
+        `${schemaPath} must fail at ${invalidPath}`,
+      );
+    }
+  }
 });

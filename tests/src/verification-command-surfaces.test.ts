@@ -203,7 +203,7 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
-test('guardrail tier policy keeps audit signals out of launch authority', () => {
+test('policy contract sentinels keep audit, progress, and physical-delete authority closed', () => {
   const guardrailTier = readJson<Record<string, any>>(
     'contracts/opl-framework/guardrail-tier-policy.json',
   );
@@ -230,6 +230,39 @@ test('guardrail tier policy keeps audit signals out of launch authority', () => 
   assert.equal(guardrailTier.folding_policy.warning_can_become_launch_blocker_without_tier_change, false);
   for (const [claim, allowed] of Object.entries(guardrailTier.authority_boundary)) {
     assert.equal(allowed, false, `guardrail policy must not claim ${claim}`);
+  }
+
+  const progressTruth = readJson<Record<string, any>>(
+    'contracts/opl-framework/stage-artifact-progress-truth-policy.json',
+  );
+  assert.equal(progressTruth.contract_kind, 'opl_stage_artifact_progress_truth_policy.v1');
+  for (const claim of [
+    'opl_can_mutate_artifact_body',
+    'opl_can_create_domain_owner_answer',
+    'opl_can_authorize_quality_or_export',
+    'provider_completion_counts_as_progress',
+    'raw_receipt_count_counts_as_progress',
+    'file_presence_alone_counts_as_progress',
+    'artifact_attempt_pointer_can_write_stage_current_pointer',
+  ]) {
+    assert.equal(progressTruth.authority_boundary[claim], false, `progress truth must not claim ${claim}`);
+  }
+  assert.equal(progressTruth.authority_boundary.stage_transition_authority_required_for_stage_run_current, true);
+
+  const wrapperRetirement = readJson<Record<string, any>>(
+    'contracts/opl-framework/wrapper-retirement-gate-policy.json',
+  );
+  assert.equal(wrapperRetirement.contract_kind, 'opl_wrapper_retirement_gate_policy.v1');
+  for (const [owner, physicalDeleteAuthorized] of [
+    ['OPL', wrapperRetirement.private_platform_residue_deletion_gate.physical_delete_authorized_by_opl],
+    ['owner work order', wrapperRetirement.private_platform_residue_deletion_gate.owner_decision_work_order.work_order_can_authorize_domain_repo_physical_delete],
+    ['owner route matrix', wrapperRetirement.first_batch_owner_route_tail_matrix.authority_boundary.matrix_can_authorize_physical_delete],
+    ['generated readiness', wrapperRetirement.generated_default_caller_readiness_can_authorize_physical_delete],
+    ['docs foldback', wrapperRetirement.docs_foldback_boundary.docs_foldback_can_authorize_physical_delete],
+    ['delete read model', wrapperRetirement.delete_gate_read_model_boundary.delete_gate_read_model_can_authorize_physical_delete],
+    ['lifecycle apply', wrapperRetirement.opl_apply_boundary.family_runtime_lifecycle_apply_can_delete_domain_repo_files],
+  ] as const) {
+    assert.equal(physicalDeleteAuthorized, false, `${owner} must not authorize physical delete`);
   }
 });
 
