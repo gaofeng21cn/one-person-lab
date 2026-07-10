@@ -499,6 +499,48 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
       events: [dispatch, effectEvent(manifest, effect)],
     }), /fields do not match its effect status/);
   }
+  const invalidRefsEvents = [
+    {
+      field: 'typed_blocker_refs',
+      event: routeEvent(manifest, {
+        decision: 'blocked',
+        decision_refs: ['mag://routes/blocked'],
+        typed_blocker_refs: 5,
+        human_gate_refs: ['mag://human-gates/review'],
+      }),
+    },
+    {
+      field: 'output_refs',
+      event: effectEvent(manifest, {
+        effect_status: 'domain_result',
+        stage_ref: 'proposal_authoring',
+        domain_result_ref: 'mag://results/invalid-output-refs',
+        output_refs: 5,
+      }),
+    },
+    {
+      field: 'closeout_refs',
+      event: effectEvent(manifest, {
+        effect_status: 'domain_result',
+        stage_ref: 'proposal_authoring',
+        domain_result_ref: 'mag://results/invalid-closeout-refs',
+        closeout_refs: 'mag://closeouts/forged',
+      }),
+    },
+  ];
+  const acceptedInvalidRefs = invalidRefsEvents.flatMap(({ field, event }) => {
+    try {
+      module.reduceStageRunCycleState({
+        manifest_input: cycle.manifest_input,
+        events: event.event_kind === 'route_decision' ? [event] : [dispatch, event],
+      });
+      return [field];
+    } catch (error) {
+      assert.match(String(error), /StageRun orchestration requires .*refs/);
+      return [];
+    }
+  });
+  assert.deepEqual(acceptedInvalidRefs, []);
   assert.throws(() => module.reduceStageRunCycleState({
     manifest_input: cycle.manifest_input,
     events: [dispatch, effectEvent(manifest, {

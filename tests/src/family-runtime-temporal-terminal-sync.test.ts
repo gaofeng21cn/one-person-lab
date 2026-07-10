@@ -1,12 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { fileURLToPath } from 'node:url';
+import { TestWorkflowEnvironment } from '@temporalio/testing';
+import { Worker } from '@temporalio/worker';
 
 import './family-runtime-temporal-terminal-sync-cases/attempt-precedence.ts';
 import {
   createStageAttempt,
+  createStageAttemptTable,
   inspectStageAttempt,
+  queryStageAttempt,
   syncStageAttemptFromTemporalTerminalObservation,
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import * as activities from '../../src/modules/runway/family-runtime-temporal-activities.ts';
+import { StageAttemptWorkflow } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import {
   blockedTemporalObservation,
   canceledTemporalObservation,
@@ -16,6 +25,8 @@ import {
   missingWorkflowObservation,
   withStageAttemptDb,
 } from './family-runtime-temporal-terminal-sync-cases/helpers.ts';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const genericObservationIdentity = { domainId: 'redcube', stageId: 'domain_route/stage-route', checkpointRef: 'checkpoint:generic-domain-route', nextOwner: 'redcube' } as const;
 
@@ -77,6 +88,82 @@ for (const [name, observation, expectedStatus, expectedTaskReason] of [
     });
   });
 }
+
+test('Temporal activity terminal sync preserves refs-only domain output through query', async () => {
+  const db = new DatabaseSync(':memory:');
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-temporal-domain-output-${Date.now()}`;
+  try {
+    createStageAttemptTable(db);
+    const attempt = createStageAttempt(db, {
+      domainId: 'redcube',
+      stageId: 'domain_route/stage-route',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
+      sourceFingerprint: 'sha256:temporal-domain-output',
+      executorKind: 'domain_handler',
+    }).attempt;
+    const outputRef = 'file:///tmp/redcube-runtime/domain-output.json';
+    const domainOutput = {
+      surface_kind: 'domain_owned_stage_output_ref',
+      version: 'domain-owned-stage-output-ref.v1',
+      domain_id: 'redcube',
+      output_ref: outputRef,
+    };
+    const closeoutRef = {
+      ref: outputRef,
+      kind: 'redcube_stage_closeout_payload',
+      sha256: 'sha256:temporal-domain-output',
+    };
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
+      activities,
+    });
+    const temporalQuery = await worker.runUntil(async () => {
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [{
+          stage_attempt_id: attempt.stage_attempt_id,
+          workflow_id: attempt.workflow_id,
+          domain_id: 'redcube',
+          stage_id: attempt.stage_id,
+          workspace_locator: { workspace_root: '/tmp/redcube-runtime' },
+          source_fingerprint: attempt.source_fingerprint,
+          executor_kind: 'domain_handler',
+          retry_budget: { max_attempts: 1 },
+          codex_stage_runner: { runner_mode: 'dry_run' },
+          closeout_packet: {
+            surface_kind: 'domain_stage_closeout_packet',
+            closeout_refs: [closeoutRef],
+            domain_output: domainOutput,
+          },
+        }],
+        taskQueue,
+        workflowId: attempt.workflow_id,
+      });
+      return await handle.result();
+    });
+    assert.deepEqual(temporalQuery.closeout_packet?.domain_output, domainOutput);
+    assert.deepEqual(temporalQuery.closeout_packet?.closeout_ref_metadata, [closeoutRef]);
+    syncStageAttemptFromTemporalTerminalObservation(db, {
+      surface_kind: 'temporal_stage_attempt_query_receipt',
+      provider_kind: 'temporal',
+      stage_attempt_id: attempt.stage_attempt_id,
+      workflow_id: attempt.workflow_id,
+      workflow_status: 'COMPLETED',
+      query: temporalQuery,
+    });
+
+    const query = queryStageAttempt(db, attempt.stage_attempt_id).stage_attempt_query;
+    assert.deepEqual(query.domain_output, domainOutput);
+    assert.deepEqual(query.closeouts[0].packet.closeout_ref_metadata, [closeoutRef]);
+  } finally {
+    db.close();
+    await testEnv.teardown();
+  }
+});
 
 test('Temporal cancellation remains provider-only for a generic domain route', () => {
   withStageAttemptDb((db) => {

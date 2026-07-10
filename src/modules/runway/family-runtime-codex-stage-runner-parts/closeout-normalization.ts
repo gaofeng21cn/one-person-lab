@@ -213,8 +213,16 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
   }
 
   const closeoutRefEntries = readCloseoutRefEntries(value.closeout_refs);
+  if (value.closeout_ref_metadata != null && !Array.isArray(value.closeout_ref_metadata)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'closeout_ref_metadata must be an array of refs-only metadata.',
+    );
+  }
+  const explicitCloseoutRefMetadata = readCloseoutRefEntries(value.closeout_ref_metadata);
   const closeoutRefs = [
     ...closeoutRefEntries.refs,
+    ...explicitCloseoutRefMetadata.refs,
     optionalString(value.closeout_ref),
     optionalString(value.receipt_ref),
     optionalString(value.packet_ref),
@@ -233,8 +241,13 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(optionalString(value.idempotency_key) ? { idempotency_key: optionalString(value.idempotency_key)! } : {}),
     ...(optionalString(value.closeout_id) ? { closeout_id: optionalString(value.closeout_id)! } : {}),
     closeout_refs: uniqueCloseoutRefs,
-    ...(closeoutRefEntries.metadata.length > 0
-      ? { closeout_ref_metadata: closeoutRefEntries.metadata }
+    ...(closeoutRefEntries.metadata.length + explicitCloseoutRefMetadata.metadata.length > 0
+      ? {
+          closeout_ref_metadata: [
+            ...closeoutRefEntries.metadata,
+            ...explicitCloseoutRefMetadata.metadata,
+          ],
+        }
       : {}),
     consumed_refs: readStringList(value.consumed_refs),
     consumed_memory_refs: readStringList(value.consumed_memory_refs),

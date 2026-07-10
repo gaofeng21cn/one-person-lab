@@ -70,9 +70,12 @@ function positiveInteger(value: unknown, field: string) {
 }
 
 function uniqueRefs(value: unknown, field: string, required = false) {
-  if (!Array.isArray(value)) {
+  if (value === undefined || value === null) {
     if (required) contractError(`StageRun orchestration requires ${field}.`, { field });
     return [];
+  }
+  if (!Array.isArray(value)) {
+    contractError(`StageRun orchestration requires ${field} to be an array.`, { field });
   }
   const refs = [...new Set(value.map((entry) => requiredRef(entry, field)))];
   if (required && refs.length === 0) {

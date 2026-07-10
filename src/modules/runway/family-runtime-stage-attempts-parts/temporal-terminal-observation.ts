@@ -329,6 +329,8 @@ function closeoutPacketFromTemporalCompletedObservation(
     next_owner: observation.query.next_owner,
     domain_ready_verdict: observation.query.completion_boundary.domain_ready_verdict,
     route_impact: observation.query.route_impact,
+    closeout_ref_metadata: receiptRecord?.closeout_ref_metadata,
+    domain_output: receiptRecord?.domain_output,
     authority_boundary: {
       opl: 'temporal_closeout_transport_projection_only',
       domain: 'truth_quality_artifact_gate_owner',

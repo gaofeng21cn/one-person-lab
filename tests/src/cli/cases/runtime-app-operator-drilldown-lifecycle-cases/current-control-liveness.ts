@@ -191,7 +191,7 @@ test('runtime operator projection does not count stale MAS work-unit live attemp
       payload: {
         study_id: 'DM002',
         action_type: 'run_quality_repair_batch',
-        work_unit_id: 'run_current_quality_repair_batch',
+        work_unit_id: 'produce_ai_reviewer_publication_eval_record_against_old_inputs',
         dispatch_ref: 'studies/DM002/default-executor-dispatch/current-writer.json',
         next_executable_owner: 'write',
         executor_kind: 'codex_cli_default',
