@@ -442,6 +442,18 @@ test('core option parsers reuse node parseArgs without changing their value sema
       && error.code === 'cli_usage_error'
       && error.message.includes('require --module'),
   );
+  for (const parse of [
+    () => parseLaunchDomainArgs(['--strategy', ''], spec),
+    () => parseSkillPackArgs(['--domain', ''], spec),
+    () => parseStartArgs(['--mode', ''], spec),
+  ]) {
+    assert.throws(
+      parse,
+      (error) => error instanceof FrameworkContractError
+        && error.code === 'cli_usage_error'
+        && error.message.includes('requires a non-empty value'),
+    );
+  }
 });
 
 test('command registry rejects incomplete options, duplicates, and inline authority fallback', () => {

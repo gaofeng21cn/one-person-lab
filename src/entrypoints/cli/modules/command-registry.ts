@@ -251,12 +251,18 @@ function parseCommandOptions(
   options: ParseArgsOptionsConfig,
 ) {
   try {
-    return parseArgs({
+    const values = parseArgs({
       args: args.filter((arg) => arg !== '--json'),
       allowPositionals: false,
       options,
       strict: true,
     }).values;
+    for (const [name, value] of Object.entries(values)) {
+      if (value === '' || (Array.isArray(value) && value.includes(''))) {
+        throw new TypeError(`Option '--${name}' requires a non-empty value.`);
+      }
+    }
+    return values;
   } catch (error) {
     throw buildUsageError(
       error instanceof Error ? error.message : 'Command options could not be parsed.',
