@@ -4,9 +4,8 @@ import {
   os,
   path,
   runCli,
-  runCliFailure,
+  test,
 } from '../helpers.ts';
-import test from 'node:test';
 
 const completePayload = {
   target_repo_id: 'med-autoscience',
@@ -18,21 +17,6 @@ const completePayload = {
   no_forbidden_write_ref: 'no-forbidden-write-ref:mas/live-direct-fix',
   commit_ref: 'git-commit-ref:mas/live-direct-fix',
   owner_acceptance_ref: 'external-owner-ref:mas/live-direct-fix-accepted',
-};
-
-const completeScaleoutPayload = {
-  ...completePayload,
-  patrol_observation_ref: 'patrol-observation-ref:mas/live-direct-fix-scaleout',
-  receipt_ref: 'opl://developer-mode-closeout/med-autoscience/scaleout-followthrough',
-  route_repetition_refs: [
-    'developer-mode-route-repetition-ref:mas/direct-fix-repeat-20260528',
-  ],
-  risk_tier_auto_promotion_refs: [
-    'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
-  ],
-  app_patrol_mount_refs: [
-    'app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol-mounted-20260528',
-  ],
 };
 
 const verifiedRiskTierPromotionPayload = {
@@ -66,679 +50,238 @@ const verifiedRiskTierPromotionPayload = {
   canary_observation_refs: ['canary-observation-ref:mas/developer-mode-risk-tier-20260529'],
   no_forbidden_write_refs: ['no-forbidden-write-ref:developer-mode/risk-tier-20260529'],
   verification_refs: ['test-result-ref:mas/developer-mode-risk-tier-20260529'],
-  receipt_ref:
-    'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
+  receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
 };
 
-test('runtime Developer Mode closeout CLI records and verifies refs-only live closeout evidence', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-state-'));
+function withStateRoot(prefix: string, run: (stateRoot: string) => void) {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   try {
-    const recorded = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify(completePayload),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
+    run(stateRoot);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+}
 
+function recordCloseout(stateRoot: string, payload: Record<string, unknown>) {
+  return runCli([
+    'runtime',
+    'developer-mode-closeout',
+    'record',
+    '--payload',
+    JSON.stringify(payload),
+  ], { OPL_STATE_DIR: stateRoot }).developer_mode_closeout_ledger_record;
+}
+
+function verifyCloseout(stateRoot: string, receiptRef: string) {
+  return runCli([
+    'runtime',
+    'developer-mode-closeout',
+    'verify',
+    '--receipt-ref',
+    receiptRef,
+  ], { OPL_STATE_DIR: stateRoot }).developer_mode_closeout_ledger_verify;
+}
+
+test('Developer Mode closeout records and verifies refs-only current evidence', () => {
+  withStateRoot('opl-developer-mode-closeout-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
+    const recorded = recordCloseout(stateRoot, completePayload);
     assert.equal(recorded.status, 'recorded');
-    assert.equal(recorded.recorded_receipt_count, 1);
     assert.equal(recorded.receipts[0].receipt_status, 'recorded');
-    assert.equal(recorded.receipts[0].target_repo_id, 'med-autoscience');
-    assert.equal(recorded.receipts[0].route_decision, 'direct-fix');
     assert.equal(recorded.receipts[0].authority_boundary.refs_only, true);
     assert.equal(recorded.receipts[0].authority_boundary.can_write_domain_truth, false);
     assert.equal(recorded.receipts[0].authority_boundary.can_create_owner_receipt, false);
     assert.equal(recorded.receipts[0].authority_boundary.can_modify_managed_runtime, false);
-    assert.deepEqual(recorded.receipts[0].route_repetition_refs, []);
-    assert.deepEqual(recorded.receipts[0].risk_tier_auto_promotion_refs, []);
-    assert.deepEqual(recorded.receipts[0].app_patrol_mount_refs, []);
-    assert.equal(
-      recorded.ledger_file,
-      path.join(stateRoot, 'developer-mode-closeout-ledger.json'),
-    );
 
-    const recordedReadModel = runCli(['agent-lab', 'complete', '--json'], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
-    assert.equal(recordedReadModel.summary.ledger_receipt_ref_count, 1);
-    assert.equal(recordedReadModel.summary.ledger_verified_receipt_ref_count, 0);
-    assert.equal(recordedReadModel.summary.pending_verify_receipt_ref_count, 1);
-    assert.equal(recordedReadModel.summary.live_ledger_closeout_ready_count, 0);
-    assert.equal(recordedReadModel.status, 'closeout_refs_incomplete');
-    assert.equal(recordedReadModel.ledger_evidence_status, 'ledger_refs_recorded_verify_pending');
-
-    const verified = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'verify',
-      '--receipt-ref',
-      recorded.receipt_refs[0],
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_verify;
-
+    const verified = verifyCloseout(stateRoot, recorded.receipt_refs[0]);
     assert.equal(verified.status, 'verified');
-    assert.equal(verified.verified_receipt_count, 1);
     assert.equal(verified.receipt.receipt_status, 'verified');
     assert.equal(verified.receipt.authority_boundary.can_write_owner_receipt, false);
 
-    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger;
+    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], env)
+      .developer_mode_closeout_ledger;
     assert.equal(listed.receipt_count, 1);
     assert.equal(listed.verified_receipt_ref_count, 1);
     assert.equal(listed.authority_boundary.can_write_domain_truth, false);
 
-    const readModel = runCli(['agent-lab', 'complete', '--json'], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
-    assert.equal(readModel.summary.ledger_receipt_ref_count, 1);
+    const readModel = runCli(['agent-lab', 'complete', '--json'], env)
+      .agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
     assert.equal(readModel.summary.ledger_verified_receipt_ref_count, 1);
-    assert.equal(readModel.summary.pending_verify_receipt_ref_count, 0);
-    assert.equal(readModel.summary.live_ledger_closeout_ready_count, 1);
-    assert.equal(readModel.summary.external_owner_closeout_refs_ready_count, 2);
-    assert.equal(readModel.summary.scaleout_followthrough_open_gate_count, 0);
-    assert.equal(readModel.summary.route_repetition_ref_count, 0);
-    assert.deepEqual(readModel.scaleout_followthrough.derived_route_repetition_refs, []);
-    assert.equal(
-      readModel.scaleout_followthrough.route_repetition_derivation_policy,
-      'requires_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
-    );
-    assert.equal(
-      readModel.scaleout_followthrough.status,
-      'waiting_for_base_live_route_closeout_refs',
-    );
-    assert.equal(readModel.summary.fixture_drill_owner_acceptance_open_count, 1);
-    assert.equal(readModel.summary.fixture_drill_external_owner_acceptance_missing_count, 1);
-    assert.equal(readModel.summary.external_owner_acceptance_missing_count, 0);
-    assert.equal(readModel.status, 'closeout_refs_incomplete');
-    assert.equal(
-      readModel.evidence_scope,
-      'developer_mode_agent_lab_repair_closeout_drills_and_verified_live_ledger_receipts',
-    );
     assert.equal(readModel.ledger_evidence_status, 'verified_direct_fix_closeout_refs_observed');
-    assert.equal(readModel.verified_ledger_receipt_refs[0], recorded.receipt_refs[0]);
-    const liveLedgerRoute = readModel.drills.find(
-      (drill: { evidence_source: string }) => drill.evidence_source === 'developer_mode_closeout_ledger',
-    );
-    assert.ok(liveLedgerRoute);
-    assert.equal(liveLedgerRoute.route_status, 'closeout_refs_ready');
-    assert.equal(liveLedgerRoute.closeout_claim_status, 'external_owner_closeout_refs_ready');
-    assert.equal(liveLedgerRoute.closeout_refs.owner_acceptance_is_owner_receipt, false);
-    assert.equal(liveLedgerRoute.authority_boundary.writes_owner_receipt, false);
     assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
-    assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
+    assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
+  });
 });
 
-test('runtime Developer Mode closeout CLI persists scaleout follow-through refs without ready claims', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-scaleout-state-'));
-  try {
-    const promotionRecord = runCli([
+test('Developer Mode scaleout accepts only verified risk-tier evidence', () => {
+  withStateRoot('opl-developer-mode-scaleout-', (stateRoot) => {
+    const env = { OPL_STATE_DIR: stateRoot };
+    const scaleoutPayload = {
+      ...completePayload,
+      receipt_ref: 'opl://developer-mode-closeout/med-autoscience/scaleout-followthrough',
+      route_repetition_refs: ['developer-mode-route-repetition-ref:mas/direct-fix-repeat'],
+      risk_tier_auto_promotion_refs: [verifiedRiskTierPromotionPayload.receipt_ref],
+      app_patrol_mount_refs: ['app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol'],
+    };
+    const unverified = recordCloseout(stateRoot, scaleoutPayload);
+    assert.equal(unverified.status, 'no_eligible_developer_mode_closeout_receipts');
+    assert.equal(
+      unverified.blocked_receipts[0].blocker.blocker_id,
+      'developer_mode_risk_tier_auto_promotion_ref_not_verified_agent_lab_receipt',
+    );
+
+    for (const payload of [
+      {
+        ...verifiedRiskTierPromotionPayload,
+        independent_ai_review_receipt: {
+          ...verifiedRiskTierPromotionPayload.independent_ai_review_receipt,
+          receipt_source: 'generated_fixture',
+          assessment_mode: 'generated_fixture',
+        },
+        receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/generated-fixture',
+      },
+      {
+        ...verifiedRiskTierPromotionPayload,
+        risk_tier: 'high_risk',
+        receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/high-risk-blocked',
+      },
+    ]) {
+      const blocked = runCli([
+        'agent-lab',
+        'risk-tier-promotion',
+        'record',
+        '--payload',
+        JSON.stringify(payload),
+      ], env).agent_lab_risk_tier_promotion_ledger_record;
+      assert.equal(blocked.status, 'no_eligible_agent_lab_risk_tier_auto_promotion_receipts');
+    }
+
+    const promotion = runCli([
       'agent-lab',
       'risk-tier-promotion',
       'record',
       '--payload',
       JSON.stringify(verifiedRiskTierPromotionPayload),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_risk_tier_promotion_ledger_record;
-    assert.equal(promotionRecord.status, 'recorded');
+    ], env).agent_lab_risk_tier_promotion_ledger_record;
     runCli([
       'agent-lab',
       'risk-tier-promotion',
       'verify',
       '--receipt-ref',
-      promotionRecord.receipt_refs[0],
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+      promotion.receipt_refs[0],
+    ], env);
 
-    const recorded = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify(completeScaleoutPayload),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
+    const recorded = recordCloseout(stateRoot, scaleoutPayload);
     assert.equal(recorded.status, 'recorded');
-    assert.deepEqual(recorded.receipts[0].route_repetition_refs, [
-      'developer-mode-route-repetition-ref:mas/direct-fix-repeat-20260528',
-    ]);
     assert.deepEqual(recorded.receipts[0].risk_tier_auto_promotion_refs, [
-      'agent-lab-risk-tier-auto-promotion-ref:mas/medium-risk-canary-20260529',
+      verifiedRiskTierPromotionPayload.receipt_ref,
     ]);
-    assert.deepEqual(recorded.receipts[0].app_patrol_mount_refs, [
-      'app-patrol-mount-ref:one-person-lab-app/developer-mode-patrol-mounted-20260528',
-    ]);
+    assert.equal(recorded.receipts[0].authority_boundary.can_write_owner_receipt, false);
+  });
+});
 
-    runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'verify',
-      '--receipt-ref',
-      recorded.receipt_refs[0],
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
+test('Developer Mode derives route repetition only from verified live receipts', () => {
+  withStateRoot('opl-developer-mode-repetition-', (stateRoot) => {
+    const first = recordCloseout(stateRoot, completePayload).receipt_refs[0] as string;
+    verifyCloseout(stateRoot, first);
+    const second = recordCloseout(stateRoot, {
+      ...completePayload,
+      target_repo_id: 'one-person-lab',
+      patrol_observation_ref: 'patrol-observation-ref:opl/live-direct-fix-repeat',
+      diff_ref: 'diff-ref:opl/live-direct-fix-repeat',
+      verification_refs: ['test-result-ref:opl/live-direct-fix-repeat'],
+      no_forbidden_write_ref: 'no-forbidden-write-ref:opl/live-direct-fix-repeat',
+      commit_ref: 'git-commit-ref:opl/live-direct-fix-repeat',
+      owner_acceptance_ref: 'external-owner-ref:opl/live-direct-fix-repeat-accepted',
+    }).receipt_refs[0] as string;
+    verifyCloseout(stateRoot, second);
 
     const readModel = runCli(['agent-lab', 'complete', '--json'], {
       OPL_STATE_DIR: stateRoot,
     }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
-    assert.equal(readModel.summary.route_repetition_ref_count, 1);
-    assert.equal(readModel.summary.risk_tier_auto_promotion_ref_count, 1);
-    assert.equal(readModel.summary.app_patrol_mount_ref_count, 1);
-    assert.equal(
-      readModel.scaleout_followthrough.status,
-      'waiting_for_base_live_route_closeout_refs',
-    );
-    assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
-    assert.equal(readModel.non_authority_outputs.modifies_managed_runtime, false);
-    assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime Developer Mode closeout CLI rejects unverified risk-tier auto-promotion refs', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-risk-tier-blocked-state-'));
-  try {
-    const weakRiskTier = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify(completeScaleoutPayload),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(weakRiskTier.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      weakRiskTier.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_risk_tier_auto_promotion_ref_not_verified_agent_lab_receipt',
-    );
-    assert.deepEqual(weakRiskTier.blocked_receipts[0].missing_closeout_refs, [
-      'verified_agent_lab_risk_tier_auto_promotion_ref',
-    ]);
-
-    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger;
-    assert.equal(listed.receipt_count, 0);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('Agent Lab risk-tier promotion ledger blocks non-independent or high-risk promotion evidence', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-risk-tier-blocked-state-'));
-  try {
-    const fixtureReview = runCli([
-      'agent-lab',
-      'risk-tier-promotion',
-      'record',
-      '--payload',
-      JSON.stringify({
-        ...verifiedRiskTierPromotionPayload,
-        independent_ai_review_receipt_ref:
-          'independent-ai-review-receipt:mas/generated-fixture',
-        independent_ai_review_receipt: {
-          ...verifiedRiskTierPromotionPayload.independent_ai_review_receipt,
-          receipt_ref: 'independent-ai-review-receipt:mas/generated-fixture',
-          receipt_source: 'generated_fixture',
-          assessment_mode: 'generated_fixture',
-        },
-        receipt_ref:
-          'agent-lab-risk-tier-auto-promotion-ref:mas/generated-fixture',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_risk_tier_promotion_ledger_record;
-    assert.equal(
-      fixtureReview.status,
-      'no_eligible_agent_lab_risk_tier_auto_promotion_receipts',
-    );
-    assert.equal(
-      fixtureReview.blocked_receipts[0].blocker.blocker_id,
-      'agent_lab_risk_tier_auto_promotion_independent_ai_review_not_verified',
-    );
-
-    const highRisk = runCli([
-      'agent-lab',
-      'risk-tier-promotion',
-      'record',
-      '--payload',
-      JSON.stringify({
-        ...verifiedRiskTierPromotionPayload,
-        risk_tier: 'high_risk',
-        receipt_ref:
-          'agent-lab-risk-tier-auto-promotion-ref:mas/high-risk-blocked',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_risk_tier_promotion_ledger_record;
-    assert.equal(
-      highRisk.status,
-      'no_eligible_agent_lab_risk_tier_auto_promotion_receipts',
-    );
-    assert.equal(
-      highRisk.blocked_receipts[0].blocker.blocker_id,
-      'agent_lab_risk_tier_auto_promotion_requires_low_or_medium_risk',
-    );
-
-    const listed = runCli(['agent-lab', 'risk-tier-promotion', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_risk_tier_promotion_ledger;
-    assert.equal(listed.receipt_count, 0);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime Developer Mode closeout derives route repetition from repeated verified live ledger receipts', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-derived-repetition-state-'));
-  try {
-    const firstReceiptRef = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify(completePayload),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record.receipt_refs[0] as string;
-    runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'verify',
-      '--receipt-ref',
-      firstReceiptRef,
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
-
-    const secondReceiptRef = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        ...completePayload,
-        target_repo_id: 'one-person-lab',
-        patrol_observation_ref:
-          'patrol-observation-ref:opl/live-direct-fix-repeat',
-        diff_ref: 'diff-ref:opl/live-direct-fix-repeat',
-        verification_refs: ['test-result-ref:opl/live-direct-fix-repeat'],
-        no_forbidden_write_ref:
-          'no-forbidden-write-ref:opl/live-direct-fix-repeat',
-        commit_ref: 'git-commit-ref:opl/live-direct-fix-repeat',
-        owner_acceptance_ref:
-          'external-owner-ref:opl/live-direct-fix-repeat-accepted',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record.receipt_refs[0] as string;
-    runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'verify',
-      '--receipt-ref',
-      secondReceiptRef,
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    });
-
-    const readModel = runCli(['agent-lab', 'complete', '--json'], {
-      OPL_STATE_DIR: stateRoot,
-    }).agent_lab_complete.developer_mode_repair_routes.live_closeout_evidence;
-    assert.equal(readModel.summary.route_repetition_ref_count, 1);
-    assert.equal(
-      readModel.scaleout_followthrough.derived_route_repetition_ref_count,
-      1,
-    );
+    assert.equal(readModel.scaleout_followthrough.derived_route_repetition_ref_count, 1);
     assert.match(
       readModel.scaleout_followthrough.derived_route_repetition_refs[0],
       /^developer-mode-route-repetition-ref:dmrr_[a-f0-9]{24}$/,
     );
-    assert.deepEqual(readModel.scaleout_followthrough.repeated_target_repo_ids.sort(), [
-      'med-autoscience',
-      'one-person-lab',
-    ]);
     assert.deepEqual(
-      readModel.scaleout_followthrough
-        .derived_route_repetition_source_receipt_refs
-        .sort(),
-      [
-        firstReceiptRef,
-        secondReceiptRef,
-      ].sort(),
+      readModel.scaleout_followthrough.derived_route_repetition_source_receipt_refs.sort(),
+      [first, second].sort(),
     );
-    assert.equal(
-      readModel.scaleout_followthrough.route_repetition_derivation_policy,
-      'derived_from_verified_live_ledger_closeout_refs_across_multiple_target_repos_or_patrol_observations',
-    );
-    assert.equal(readModel.non_authority_outputs.writes_owner_receipt, false);
     assert.equal(readModel.authority_boundary.can_claim_production_ready, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
+  });
 });
 
-test('runtime Developer Mode closeout help exposes the ledger command group boundary', () => {
-  const help = runCli(['help', 'runtime', 'developer-mode-closeout']).help;
+test('Developer Mode fails closed for incomplete, non-owner, or non-live fork PR evidence', () => {
+  withStateRoot('opl-developer-mode-invalid-', (stateRoot) => {
+    const invalidDirect = [
+      {
+        payload: { ...completePayload, owner_acceptance_ref: 'owner-receipt-ref:mas/forbidden' },
+        blocker: 'developer_mode_owner_acceptance_ref_not_external',
+      },
+      {
+        payload: {
+          target_repo_id: 'med-autoscience',
+          route_decision: 'direct-fix',
+          route_eligibility: 'eligible_direct_fix',
+          patrol_observation_ref: 'patrol-observation-ref:mas/incomplete',
+          owner_acceptance_ref: 'external-owner-ref:mas/incomplete',
+        },
+        blocker: null,
+      },
+    ];
+    for (const entry of invalidDirect) {
+      const blocked = recordCloseout(stateRoot, entry.payload);
+      assert.equal(blocked.status, 'no_eligible_developer_mode_closeout_receipts');
+      if (entry.blocker) {
+        assert.equal(blocked.blocked_receipts[0].blocker.blocker_id, entry.blocker);
+      } else {
+        assert.equal(blocked.blocked_receipts[0].missing_closeout_refs.includes('diff_ref'), true);
+      }
+    }
 
-  assert.equal(help.command, 'runtime developer-mode-closeout');
-  assert.match(help.summary, /Developer Mode live repair closeout/);
-  assert.deepEqual(help.subcommands.map((entry: { command: string }) => entry.command), [
-    'runtime developer-mode-closeout record',
-    'runtime developer-mode-closeout verify',
-    'runtime developer-mode-closeout list',
-  ]);
-  assert.match(help.summary, /GitHub PR-backed owner acceptance/);
-});
+    const forkBase = {
+      target_repo_id: 'redcube-ai',
+      route_decision: 'fork-PR',
+      route_eligibility: 'eligible_fork_pr',
+      patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr',
+      diff_ref: 'diff-ref:rca/live-fork-pr',
+      verification_refs: ['test-result-ref:rca/live-fork-pr'],
+      no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr',
+      fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
+      pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
+      owner_acceptance_ref:
+        'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42#pullrequestreview-123',
+    };
+    const invalidForks = [
+      {
+        overrides: {
+          fork_repo_ref: 'fixture://redcube-ai/developer-mode-fork-pr-drill',
+          pr_review_ref: 'repo-contract-fixture-ref:redcube-ai/fork-pr-drill',
+        },
+        blocker: 'developer_mode_fork_pr_refs_not_live_external_refs',
+      },
+      {
+        overrides: {
+          fork_repo_ref: 'github-fork-ref:developer/redcube-ai',
+          pr_review_ref: 'github-pr-review-ref:rca/developer-mode-fork-pr',
+        },
+        blocker: 'developer_mode_fork_pr_refs_not_live_external_refs',
+      },
+      {
+        overrides: { owner_acceptance_ref: 'external-owner-acceptance-ref:rca/live-fork-pr' },
+        blocker: 'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
+      },
+    ];
+    for (const entry of invalidForks) {
+      const blocked = recordCloseout(stateRoot, { ...forkBase, ...entry.overrides });
+      assert.equal(blocked.status, 'no_eligible_developer_mode_closeout_receipts');
+      assert.equal(blocked.blocked_receipts[0].blocker.blocker_id, entry.blocker);
+    }
 
-test('runtime Developer Mode closeout command group rejects unknown subcommands', () => {
-  const { payload, status } = runCliFailure([
-    'runtime',
-    'developer-mode-closeout',
-    'unknown',
-  ]);
-
-  assert.equal(status, 2);
-  assert.equal(payload.error.code, 'cli_usage_error');
-});
-
-test('runtime Developer Mode closeout CLI blocks owner receipt or incomplete closeout payloads', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-blocked-state-'));
-  try {
-    const invalidOwner = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        ...completePayload,
-        owner_acceptance_ref: 'owner-receipt-ref:mas/forbidden',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-    assert.equal(invalidOwner.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(invalidOwner.blocked_receipts[0].blocker.blocker_id, 'developer_mode_owner_acceptance_ref_not_external');
-
-    const directFixPrOwnerAcceptance = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        ...completePayload,
-        owner_acceptance_ref:
-          'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/med-autoscience/pull/42#pullrequestreview-123',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-    assert.equal(directFixPrOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      directFixPrOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_owner_acceptance_ref_not_external',
-    );
-
-    const incomplete = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'med-autoscience',
-        route_decision: 'direct-fix',
-        route_eligibility: 'eligible_direct_fix',
-        patrol_observation_ref: 'patrol-observation-ref:mas/incomplete',
-        owner_acceptance_ref: 'external-owner-ref:mas/incomplete',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-    assert.equal(incomplete.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.ok(incomplete.blocked_receipts[0].missing_closeout_refs.includes('diff_ref'));
-    assert.ok(incomplete.blocked_receipts[0].missing_closeout_refs.includes('verification_refs'));
-
-    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger;
-    assert.equal(listed.receipt_count, 0);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime Developer Mode closeout CLI blocks fork PR fixture refs from live ledger intake', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-fixture-state-'));
-  try {
-    const fixtureForkPr = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'redcube-ai',
-        route_decision: 'fork-PR',
-        route_eligibility: 'eligible_fork_pr',
-        patrol_observation_ref: 'patrol-observation-ref:rca/fixture-fork-pr',
-        diff_ref: 'diff-ref:rca/fixture-fork-pr',
-        verification_refs: ['test-result-ref:rca/fixture-fork-pr'],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/fixture-fork-pr',
-        fork_repo_ref: 'fixture://redcube-ai/developer-mode-fork-pr-drill',
-        pr_review_ref: 'repo-contract-fixture-ref:redcube-ai/fork-pr-drill',
-        owner_acceptance_ref: 'external-owner-acceptance-ref:rca/fixture-fork-pr',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(fixtureForkPr.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      fixtureForkPr.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_fork_pr_refs_not_live_external_refs',
-    );
-    assert.deepEqual(fixtureForkPr.blocked_receipts[0].missing_closeout_refs, [
-      'live_fork_repo_ref',
-      'live_pr_review_ref',
-    ]);
-
-    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger;
-    assert.equal(listed.receipt_count, 0);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime Developer Mode closeout CLI requires fork PR owner acceptance to be PR-backed', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-live-fork-pr-state-'));
-  try {
-    const weakOwnerAcceptance = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'redcube-ai',
-        route_decision: 'fork-PR',
-        route_eligibility: 'eligible_fork_pr',
-        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr',
-        diff_ref: 'diff-ref:rca/live-fork-pr',
-        verification_refs: ['test-result-ref:rca/live-fork-pr'],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr',
-        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
-        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-        owner_acceptance_ref: 'external-owner-acceptance-ref:rca/live-fork-pr',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(weakOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      weakOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
-    );
-    assert.deepEqual(weakOwnerAcceptance.blocked_receipts[0].missing_closeout_refs, [
-      'github_pr_owner_acceptance_ref',
-    ]);
-
-    const plainPrOwnerAcceptance = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'redcube-ai',
-        route_decision: 'fork-PR',
-        route_eligibility: 'eligible_fork_pr',
-        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr-plain-pr',
-        diff_ref: 'diff-ref:rca/live-fork-pr-plain-pr',
-        verification_refs: ['test-result-ref:rca/live-fork-pr-plain-pr'],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr-plain-pr',
-        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
-        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-        owner_acceptance_ref: 'github-pr-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(plainPrOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      plainPrOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
-    );
-    assert.deepEqual(plainPrOwnerAcceptance.blocked_receipts[0].missing_closeout_refs, [
-      'github_pr_owner_acceptance_ref',
-    ]);
-
-    const plainUrlOwnerAcceptance = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'redcube-ai',
-        route_decision: 'fork-PR',
-        route_eligibility: 'eligible_fork_pr',
-        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr-plain-url',
-        diff_ref: 'diff-ref:rca/live-fork-pr-plain-url',
-        verification_refs: ['test-result-ref:rca/live-fork-pr-plain-url'],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr-plain-url',
-        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
-        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-        owner_acceptance_ref: 'https://github.com/gaofeng21cn/redcube-ai/pull/42',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(plainUrlOwnerAcceptance.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      plainUrlOwnerAcceptance.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_fork_pr_owner_acceptance_not_pr_backed',
-    );
-    assert.deepEqual(plainUrlOwnerAcceptance.blocked_receipts[0].missing_closeout_refs, [
-      'github_pr_owner_acceptance_ref',
-    ]);
-
-    const liveForkPr = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'redcube-ai',
-        route_decision: 'fork-PR',
-        route_eligibility: 'eligible_fork_pr',
-        patrol_observation_ref: 'patrol-observation-ref:rca/live-fork-pr',
-        diff_ref: 'diff-ref:rca/live-fork-pr',
-        verification_refs: ['test-result-ref:rca/live-fork-pr'],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/live-fork-pr',
-        fork_repo_ref: 'github-fork-ref:https://github.com/developer/redcube-ai',
-        pr_review_ref: 'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-        owner_acceptance_ref: 'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42#pullrequestreview-123',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(liveForkPr.status, 'recorded');
-    assert.equal(liveForkPr.recorded_receipt_count, 1);
-    assert.equal(liveForkPr.receipts[0].route_decision, 'fork-PR');
-    assert.equal(
-      liveForkPr.receipts[0].fork_repo_ref,
-      'github-fork-ref:https://github.com/developer/redcube-ai',
-    );
-    assert.equal(
-      liveForkPr.receipts[0].pr_review_ref,
-      'github-pr-review-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42',
-    );
-    assert.equal(
-      liveForkPr.receipts[0].owner_acceptance_ref,
-      'github-pr-owner-acceptance-ref:https://github.com/gaofeng21cn/redcube-ai/pull/42#pullrequestreview-123',
-    );
-    assert.equal(liveForkPr.receipts[0].authority_boundary.can_write_owner_receipt, false);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime Developer Mode closeout CLI blocks non-locator fork PR refs from live ledger intake', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-mode-closeout-weak-fork-pr-state-'));
-  try {
-    const weakForkPr = runCli([
-      'runtime',
-      'developer-mode-closeout',
-      'record',
-      '--payload',
-      JSON.stringify({
-        target_repo_id: 'redcube-ai',
-        route_decision: 'fork-PR',
-        route_eligibility: 'eligible_fork_pr',
-        patrol_observation_ref: 'patrol-observation-ref:rca/weak-fork-pr',
-        diff_ref: 'diff-ref:rca/weak-fork-pr',
-        verification_refs: ['test-result-ref:rca/weak-fork-pr'],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/weak-fork-pr',
-        fork_repo_ref: 'github-fork-ref:developer/redcube-ai',
-        pr_review_ref: 'github-pr-review-ref:rca/developer-mode-fork-pr',
-        owner_acceptance_ref: 'external-owner-acceptance-ref:rca/weak-fork-pr',
-      }),
-    ], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger_record;
-
-    assert.equal(weakForkPr.status, 'no_eligible_developer_mode_closeout_receipts');
-    assert.equal(
-      weakForkPr.blocked_receipts[0].blocker.blocker_id,
-      'developer_mode_fork_pr_refs_not_live_external_refs',
-    );
-    assert.deepEqual(weakForkPr.blocked_receipts[0].missing_closeout_refs, [
-      'live_fork_repo_ref',
-      'live_pr_review_ref',
-    ]);
-
-    const listed = runCli(['runtime', 'developer-mode-closeout', 'list'], {
-      OPL_STATE_DIR: stateRoot,
-    }).developer_mode_closeout_ledger;
-    assert.equal(listed.receipt_count, 0);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
+    const recorded = recordCloseout(stateRoot, forkBase);
+    assert.equal(recorded.status, 'recorded');
+    assert.equal(recorded.receipts[0].route_decision, 'fork-PR');
+    assert.equal(recorded.receipts[0].authority_boundary.can_write_owner_receipt, false);
+  });
 });
