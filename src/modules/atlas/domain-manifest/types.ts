@@ -15,7 +15,10 @@ import type {
   FunctionalPrivatizationAudit,
 } from '../../pack/index.ts';
 import type { GrantTransitionOracle } from '../../stagecraft/index.ts';
-import type { VisualTransitionSpec } from '../../stagecraft/index.ts';
+import type {
+  VisualTransitionAdapterProfileRegistryEntry,
+  VisualTransitionSpec,
+} from '../../stagecraft/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -502,6 +505,7 @@ export interface NormalizedDomainManifest {
   family_transition_materialization: JsonRecord | null;
   family_transition: NormalizedFamilyTransitionProjection;
   grant_transition_oracle: GrantTransitionOracle | null;
+  visual_transition_adapter_profile_registry: VisualTransitionAdapterProfileRegistryEntry[];
   visual_transition_spec: VisualTransitionSpec | null;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;

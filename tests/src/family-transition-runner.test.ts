@@ -15,7 +15,7 @@ import {
   adaptVisualTransitionSpecToFamilyTransitionSpec,
   buildVisualTransitionAdapterProfileRegistryReadback,
   buildVisualTransitionMatrixCases,
-  defaultVisualTransitionAdapterProfile,
+  normalizeVisualTransitionAdapterProfileRegistry,
   resolveVisualTransitionAdapterProfile,
   type VisualTransitionSpec,
 } from '../../src/modules/stagecraft/family-transition-visual-ingestion.ts';
@@ -265,6 +265,51 @@ const visualTransitionSpec = {
     domain_truth_owner: 'example-visual-domain',
   },
 } satisfies VisualTransitionSpec;
+
+function visualAdapterRegistryFixture(input: {
+  profileId: string;
+  targetDomainId: string;
+  targetDomainIds: string[];
+  profileRole: 'domain_transition_profile_extension' | 'compatibility_projection';
+  guardOwnerLabel: string;
+  refPrefix: string;
+}) {
+  return normalizeVisualTransitionAdapterProfileRegistry({
+    surface_kind: 'opl_domain_transition_adapter_profile_registry',
+    version: 'visual-transition-adapter-profile-registry.v1',
+    owner: input.targetDomainId,
+    registry_role: 'domain_owned_transition_adapter_profile_registry',
+    registry_entries: [{
+      profile_id: input.profileId,
+      target_domain_ids: input.targetDomainIds,
+      adapter_profile: {
+        profile_id: input.profileId,
+        profile_surface_kind: 'opl_domain_transition_adapter_profile',
+        profile_role: input.profileRole,
+        profile_registry_role: 'registry_entry',
+        profile_extension_kind: 'visual_transition',
+        compatibility_surface_kind: 'visual_transition_spec',
+        target_domain_id: input.targetDomainId,
+        guard_owner_label: input.guardOwnerLabel,
+        work_unit_ref_prefix: `${input.refPrefix}-work-unit`,
+        owner_route_ref_prefix: `${input.refPrefix}-visual-transition`,
+        owner_receipt_ref_prefix: `${input.refPrefix}-domain-owner-receipt`,
+        oracle_fixture_ref_prefix: `${input.refPrefix}-oracle-fixture`,
+        stage_ref_prefix: `${input.refPrefix}-stage`,
+      },
+    }],
+    authority_boundary: {
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_visual_ready: false,
+      can_claim_exportable: false,
+      can_mutate_artifacts: false,
+    },
+  });
+}
 
 test('family transition runner advances bundle_stage_ready through domain-declared owner route without domain verdict ownership', () => {
   const result = runFamilyTransition({
@@ -646,20 +691,32 @@ test('domain transition oracle adapts non-MAG domain tables through the same gen
 });
 
 test('visual transition ingestion uses generic adapter profile instead of RCA-only refs', () => {
-  const adapterProfile = defaultVisualTransitionAdapterProfile('example-visual-domain');
+  const registry = visualAdapterRegistryFixture({
+    profileId: 'example-visual-domain.visual-transition.v1',
+    targetDomainId: 'example-visual-domain',
+    targetDomainIds: ['example-visual-domain'],
+    profileRole: 'domain_transition_profile_extension',
+    guardOwnerLabel: 'example-visual-domain',
+    refPrefix: 'example-visual-domain',
+  });
+  const adapterProfile = resolveVisualTransitionAdapterProfile('example-visual-domain', registry);
   const spec = adaptVisualTransitionSpecToFamilyTransitionSpec(
     visualTransitionSpec,
     'example-visual-domain',
     adapterProfile,
   );
-  const cases = buildVisualTransitionMatrixCases(visualTransitionSpec, 'example-visual-domain');
+  const cases = buildVisualTransitionMatrixCases(
+    visualTransitionSpec,
+    'example-visual-domain',
+    adapterProfile,
+  );
   const matrix = runFamilyTransitionMatrix({ spec, cases });
 
   assert.equal(spec.target_domain_id, 'example-visual-domain');
   assert.equal(spec.owner, 'example-visual-domain');
   assert.equal(spec.authority_boundary.profile_surface_kind, 'opl_domain_transition_adapter_profile');
   assert.equal(spec.authority_boundary.profile_registry_surface_kind, 'opl_domain_transition_adapter_profile_registry');
-  assert.equal(spec.authority_boundary.profile_registry_role, 'generated_domain_default');
+  assert.equal(spec.authority_boundary.profile_registry_role, 'registry_entry');
   assert.equal(spec.authority_boundary.profile_role, 'domain_transition_profile_extension');
   assert.equal(spec.authority_boundary.profile_extension_kind, 'visual_transition');
   assert.equal(spec.authority_boundary.domain_transition_profile_extension_is_core_ontology, false);
@@ -692,14 +749,23 @@ test('visual transition ingestion uses generic adapter profile instead of RCA-on
   assert.equal(matrix.results[0].result.authority_boundary.opl_can_mutate_artifacts, false);
 });
 
-test('visual transition legacy RCA adapter keeps existing ref compatibility', () => {
-  const adapterProfile = resolveVisualTransitionAdapterProfile('redcube-ai');
+test('visual transition consumes a domain-owned RCA compatibility profile', () => {
+  const registry = visualAdapterRegistryFixture({
+    profileId: 'redcube-ai.visual_transition.compatibility.v1',
+    targetDomainId: 'rca',
+    targetDomainIds: ['rca', 'redcube_ai', 'redcube-ai', 'redcube'],
+    profileRole: 'compatibility_projection',
+    guardOwnerLabel: 'RCA',
+    refPrefix: 'rca',
+  });
+  const adapterProfile = resolveVisualTransitionAdapterProfile('redcube-ai', registry);
   const spec = adaptVisualTransitionSpecToFamilyTransitionSpec(
     {
       ...visualTransitionSpec,
       owner: 'redcube-ai',
     },
     'redcube-ai',
+    adapterProfile,
   );
 
   assert.equal(adapterProfile.profileId, 'redcube-ai.visual_transition.compatibility.v1');
@@ -721,18 +787,42 @@ test('visual transition legacy RCA adapter keeps existing ref compatibility', ()
 });
 
 test('visual transition adapter registry readback exposes compatibility without authority', () => {
-  const registry = buildVisualTransitionAdapterProfileRegistryReadback();
+  const domainRegistry = visualAdapterRegistryFixture({
+    profileId: 'redcube-ai.visual_transition.compatibility.v1',
+    targetDomainId: 'rca',
+    targetDomainIds: ['rca', 'redcube_ai', 'redcube-ai', 'redcube'],
+    profileRole: 'compatibility_projection',
+    guardOwnerLabel: 'RCA',
+    refPrefix: 'rca',
+  });
+  const registry = buildVisualTransitionAdapterProfileRegistryReadback(domainRegistry);
   const entry = registry.registry_entries[0];
 
   assert.equal(registry.surface_kind, 'opl_domain_transition_adapter_profile_registry_readback');
   assert.equal(registry.registry_surface_kind, 'opl_domain_transition_adapter_profile_registry');
   assert.equal(registry.registry_role, 'generic_domain_transition_adapter_profile_registry');
   assert.equal(entry.profile_id, 'redcube-ai.visual_transition.compatibility.v1');
-  assert.deepEqual(entry.target_domain_ids, ['redcube-ai', 'redcube', 'rca']);
+  assert.deepEqual(entry.target_domain_ids, ['rca', 'redcube_ai', 'redcube-ai', 'redcube']);
   assert.equal(entry.adapter_profile.profile_role, 'compatibility_projection');
   assert.equal(entry.adapter_profile.compatibility_projection, true);
   assert.equal(registry.authority_boundary.can_write_domain_truth, false);
   assert.equal(registry.authority_boundary.can_create_owner_receipt, false);
   assert.equal(registry.authority_boundary.can_create_typed_blocker, false);
   assert.equal(registry.authority_boundary.can_claim_visual_ready, false);
+});
+
+test('visual transition ingestion has no built-in RCA profile and rejects authority overclaim', () => {
+  assert.throws(
+    () => resolveVisualTransitionAdapterProfile('redcube-ai', []),
+    /No visual transition adapter profile is registered/,
+  );
+  assert.equal(buildVisualTransitionAdapterProfileRegistryReadback().profile_count, 0);
+  assert.throws(
+    () => normalizeVisualTransitionAdapterProfileRegistry({
+      surface_kind: 'opl_domain_transition_adapter_profile_registry',
+      registry_entries: [],
+      authority_boundary: { can_claim_visual_ready: true },
+    }),
+    /grants forbidden authority/,
+  );
 });

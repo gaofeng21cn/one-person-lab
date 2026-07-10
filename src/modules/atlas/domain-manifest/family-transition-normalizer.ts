@@ -6,7 +6,9 @@ import {
 import {
   adaptVisualTransitionSpecToFamilyTransitionSpec,
   buildVisualTransitionMatrixCases,
+  normalizeVisualTransitionAdapterProfileRegistry,
   normalizeVisualTransitionSpec,
+  resolveVisualTransitionAdapterProfile,
 } from '../../stagecraft/index.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import type { NormalizedFamilyTransitionProjection } from './types.ts';
@@ -190,20 +192,36 @@ export function normalizeFamilyTransitionSurfaces(
 ) {
   const descriptor = normalizeDescriptor(manifest.family_transition_spec_descriptor);
   const visualTransitionSpec = normalizeVisualSpec(manifest.visual_transition_spec);
-  const spec = normalizeFamilyTransitionSpec(manifest.family_transition_spec)
-    ?? (visualTransitionSpec
-      ? adaptVisualTransitionSpecToFamilyTransitionSpec(visualTransitionSpec, manifestTargetDomainId)
-      : null);
+  const visualTransitionAdapterRegistry = manifest.visual_transition_adapter_profile_registry
+    ? normalizeVisualTransitionAdapterProfileRegistry(manifest.visual_transition_adapter_profile_registry)
+    : [];
+  const explicitSpec = normalizeFamilyTransitionSpec(manifest.family_transition_spec);
   const explicitCases = normalizeFamilyTransitionMatrixCases(manifest.family_transition_matrix_cases);
+  const visualTransitionAdapterProfile = visualTransitionSpec && (!explicitSpec || explicitCases.length === 0)
+    ? resolveVisualTransitionAdapterProfile(manifestTargetDomainId, visualTransitionAdapterRegistry)
+    : null;
+  const spec = explicitSpec
+    ?? (visualTransitionSpec && visualTransitionAdapterProfile
+      ? adaptVisualTransitionSpecToFamilyTransitionSpec(
+        visualTransitionSpec,
+        manifestTargetDomainId,
+        visualTransitionAdapterProfile,
+      )
+      : null);
   const cases = explicitCases.length > 0
     ? explicitCases
-    : visualTransitionSpec
-      ? buildVisualTransitionMatrixCases(visualTransitionSpec, manifestTargetDomainId)
+    : visualTransitionSpec && visualTransitionAdapterProfile
+      ? buildVisualTransitionMatrixCases(
+        visualTransitionSpec,
+        manifestTargetDomainId,
+        visualTransitionAdapterProfile,
+      )
       : [];
   return {
     family_transition_spec_descriptor: descriptor,
     family_transition_spec: spec,
     family_transition_matrix_cases: cases,
+    visual_transition_adapter_profile_registry: visualTransitionAdapterRegistry,
     visual_transition_spec: visualTransitionSpec,
     family_transition: normalizeFamilyTransitionProjection({
       manifestTargetDomainId,
