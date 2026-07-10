@@ -176,10 +176,13 @@ function runModuleSkillSync(spec: DomainModuleRuntimeSpec, checkoutPath: string)
     checkoutPath,
     { home: readHomeDir() },
   );
+  const status = syncResult.sync_status === 'skipped' ? 'skipped' : 'completed';
 
   return {
-    status: 'completed',
-    summary: 'Synced the matching Codex skill pack into the current home.',
+    status,
+    summary: status === 'completed'
+      ? 'Synced the matching Codex skill pack into the current home.'
+      : 'Codex skill sync requires an explicit target scope.',
     command_preview: syncResult.command_preview,
     stdout: syncResult.stdout,
     stderr: syncResult.stderr,

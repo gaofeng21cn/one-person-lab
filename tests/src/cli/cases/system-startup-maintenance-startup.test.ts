@@ -75,7 +75,11 @@ test('system startup-maintenance installs clean managed modules and returns App 
                 source_policy: { configured_by: string; package_channel_auto_update: boolean };
               };
               turnkey: {
-                skill_sync: { command_preview: string[] };
+                skill_sync: {
+                  status: string;
+                  command_preview: string[];
+                  result: { sync_status: string };
+                };
               };
             };
           }>;
@@ -138,6 +142,14 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.deepEqual(
       output.system_action.details.capability_targets[0].result.turnkey.skill_sync.command_preview,
       ['opl', 'connect', 'sync-skills', '--domain', 'mas-scholar-skills', '--scope', 'workspace', '--target-workspace', '<workspace-root>'],
+    );
+    assert.equal(
+      output.system_action.details.capability_targets[0].result.turnkey.skill_sync.status,
+      'skipped',
+    );
+    assert.equal(
+      output.system_action.details.capability_targets[0].result.turnkey.skill_sync.result.sync_status,
+      'skipped',
     );
     assert.equal(
       output.system_action.details.capability_targets[0].result.module.managed_checkout_path,

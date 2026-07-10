@@ -19,6 +19,7 @@ export type WorkspaceAgentProfile = {
   label: string;
   workspace_kind: string;
   project_kind: string;
+  project_collection_label: string;
   default_workspace_id: string;
   default_project_id: string;
   default_profile_id: 'one_off' | 'series' | 'portfolio';
@@ -32,6 +33,7 @@ function workspaceProfile(entry: WorkspaceAgentRegistryEntry): WorkspaceAgentPro
     label: entry.label,
     workspace_kind: entry.workspace_profile.workspace_kind,
     project_kind: entry.workspace_profile.project_kind,
+    project_collection_label: entry.workspace_profile.project_collection_label,
     default_workspace_id: entry.workspace_profile.default_workspace_id,
     default_project_id: entry.workspace_profile.default_project_id,
     default_profile_id: entry.workspace_profile.default_profile_id,

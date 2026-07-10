@@ -402,7 +402,7 @@ export function buildWorkspaceDisplayLabels(
 ): WorkspaceDisplayLabels {
   return {
     workspace: agent.workspace_kind,
-    project_collection: 'projects',
+    project_collection: agent.project_collection_label,
     project_unit: agent.project_kind,
     stage_outputs: profile.project_stage_outputs_root,
     shared_resources: 'shared_resources',

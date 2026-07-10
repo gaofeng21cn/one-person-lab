@@ -4,6 +4,7 @@ export type StandardAgentWorkspaceProfile = {
   default_profile_id: 'one_off' | 'series' | 'portfolio';
   workspace_kind: string;
   project_kind: string;
+  project_collection_label: string;
   default_workspace_id: string;
   default_project_id: string;
 };
@@ -66,6 +67,7 @@ export const STANDARD_AGENT_REGISTRY = [
       default_profile_id: 'portfolio',
       workspace_kind: 'medical_research_workspace',
       project_kind: 'study',
+      project_collection_label: 'studies',
       default_workspace_id: 'research-workspace',
       default_project_id: 'study-001',
     },
@@ -101,6 +103,7 @@ export const STANDARD_AGENT_REGISTRY = [
       default_profile_id: 'one_off',
       workspace_kind: 'grant_authoring_workspace',
       project_kind: 'grant_project',
+      project_collection_label: 'deliverables',
       default_workspace_id: 'grant-workspace',
       default_project_id: 'grant-001',
     },
@@ -139,6 +142,7 @@ export const STANDARD_AGENT_REGISTRY = [
       default_profile_id: 'series',
       workspace_kind: 'visual_theme_workspace',
       project_kind: 'slide_deck',
+      project_collection_label: 'deliverables',
       default_workspace_id: 'visual-workspace',
       default_project_id: 'deck-001',
     },
@@ -181,6 +185,7 @@ export const STANDARD_AGENT_REGISTRY = [
       default_profile_id: 'one_off',
       workspace_kind: 'agent_foundry_workspace',
       project_kind: 'agent_capability',
+      project_collection_label: 'deliverables',
       default_workspace_id: 'agent-foundry-workspace',
       default_project_id: 'agent-001',
     },
@@ -225,6 +230,7 @@ export const STANDARD_AGENT_REGISTRY = [
       default_profile_id: 'one_off',
       workspace_kind: 'book_authoring_workspace',
       project_kind: 'book_project',
+      project_collection_label: 'books',
       default_workspace_id: 'bookforge-workspace',
       default_project_id: 'book-001',
     },
