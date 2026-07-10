@@ -22,7 +22,7 @@ Date: `2026-06-08`
 | Theme | Single Source of Truth | Decision |
 | --- | --- | --- |
 | Current completion / gaps / next baton | `docs/active/current-state-vs-ideal-gap.md` | 历史 audit 中的 `next`、priority order 和 dynamic owner/counter 不再作为当前执行计划。 |
-| Purpose-first stable audit standard | `docs/active/opl-family-purpose-first-current-design-audit.md` | 历史逐仓长表只保 provenance；稳定判断回 active support。 |
+| Purpose-first stable audit standard | `docs/active/opl-foundry-agent-target-operating-architecture.md` | 历史逐仓长表只保 provenance；稳定判断回目标操作架构。 |
 | Production closure evidence gates | `docs/active/production-framework-closure-gap-matrix.md` | 历史 provider/read-model/App evidence 只能作为当时 snapshot，不替代当前 closure gate。 |
 | Current topology and boundary | `docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md` | 当前公开角色、runtime boundary、false authority 和 no-resurrection 规则回核心 docs。 |
 | Docs lifecycle / compression policy | `docs/docs_portfolio_consolidation.md` | 历史长清单只保 compact provenance；dated proof、command transcript 和 worktree state 不回 active docs。 |
@@ -45,7 +45,7 @@ Reviewed peer refs before compression:
 
 - `docs/docs_portfolio_consolidation.md`
 - `docs/active/current-state-vs-ideal-gap.md`
-- `docs/active/opl-family-purpose-first-current-design-audit.md`
+- `docs/active/opl-foundry-agent-target-operating-architecture.md`
 - `docs/active/production-framework-closure-gap-matrix.md`
 - `docs/status.md`
 - `docs/architecture.md`

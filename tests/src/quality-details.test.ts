@@ -9,13 +9,24 @@ import { cliPath, repoRoot, runCli, runCliInCwd, runCliRaw, runCliRawInCwd } fro
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { listRepoFiles } from '../../src/modules/stagecraft/quality-details/filesystem.ts';
 
-test('quality details non-git fallback includes dot paths and skips ignored directories', () => {
+test('quality details non-git fallback includes dot paths and ignores directories and symlinks', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-files-'));
   try {
     fs.mkdirSync(path.join(root, '.hidden'), { recursive: true });
     fs.mkdirSync(path.join(root, 'nested', 'node_modules', 'package'), { recursive: true });
     fs.writeFileSync(path.join(root, '.hidden', 'visible.ts'), 'export const visible = true;\n');
     fs.writeFileSync(path.join(root, 'nested', 'node_modules', 'package', 'ignored.ts'), 'ignored\n');
+    try {
+      fs.symlinkSync('.hidden/visible.ts', path.join(root, 'linked.ts'));
+      fs.symlinkSync('missing.ts', path.join(root, 'dangling.ts'));
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error
+        && ['EACCES', 'ENOSYS', 'EPERM'].includes(String(error.code))) {
+        t.skip(`symlinks are unavailable: ${error.code}`);
+        return;
+      }
+      throw error;
+    }
 
     assert.deepEqual(listRepoFiles(root), ['.hidden/visible.ts']);
   } finally {

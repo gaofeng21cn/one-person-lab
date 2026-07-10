@@ -14,7 +14,7 @@ Compressed: `2026-06-08`
 当前 owner 回到：
 
 - 当前目标、差距、完成口径和下一轮 baton：[OPL Family 当前状态与理想目标差距](../../../active/current-state-vs-ideal-gap.md)
-- 目的优先稳定审计标准：[OPL Family Purpose-First Current Design Audit](../../../active/opl-family-purpose-first-current-design-audit.md)
+- 目的优先稳定审计标准：[OPL Foundry Agent Target Operating Architecture](../../../active/opl-foundry-agent-target-operating-architecture.md)
 - production closure 证据门：[OPL 生产闭环差距矩阵支撑](../../../active/production-framework-closure-gap-matrix.md)
 - 当前角色与架构：`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
 - 文档生命周期与历史压缩规则：[OPL 文档组合治理](../../../docs_portfolio_consolidation.md)
