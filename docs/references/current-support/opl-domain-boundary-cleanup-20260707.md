@@ -26,7 +26,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 | Stagecraft transition ingestion | Visual transition refs 曾是 RCA-only。 | Visual transition adapter profile 控制 ref prefix；RCA 只是默认 compatibility profile。 |
 | Kernel managed shell | Domain clean-runner roots 和 readonly commands 曾是固定内部数组。 | Domain clean-runner profiles 可注入 / 可扩展，同时保留当前 defaults。 |
 | Runway runtime env root | dependency runtime bridge 曾把 `paper_root` / `--paper-root` 写成 substrate 主词汇。 | `artifact_root` / `--artifact-root` 是 canonical root；`paper_root` / `--paper-root` 只作为 compatibility alias 暂留，并由 `root_vocabulary` 明确标注。 |
-| Connect scientific connectors | Provider receipt 容易被误读成 citation truth。 | Scientific / PubMed readback 暴露 ownership boundary 和 no citation / domain truth flags。 |
+| Connect scientific connectors | Provider receipt 容易被误读成 citation truth。 | Crossref / OpenAlex search readback 与 metadata-only reference verifier 暴露 ownership boundary 和 no citation / domain truth flags；PubMed search 归 MAS。 |
 | ScholarSkills Pack bridge | OPL contract 容易被误读成 professional Skill source truth。 | Contract、pack readback 和 docs 区分 OPL descriptor / sync / env bridge 与 MAS Scholar Skills professional truth。 |
 | Family orchestration schema examples | 通用 schema 的 `examples[0]` 曾把 MAS / RCA sample 暴露成默认示例，容易被误读为 OPL canonical ontology。 | Stage admission / replay / graph / proof / registry / source-spec / cohort-loop / runtime-budget / event / checkpoint / conflict examples 已改成 `example-domain` 与 generic stage vocabulary，并由 focused guard 阻止回归。 |
 | Stage selection vocabulary | Stage selection contract 曾把 grant / publication / redcube 等 domain words 放进 canonical vocabulary。 | Canonical vocabulary 只保留 generic / profile-driven stage words；旧 domain values 只作为 compatibility alias 或 profile example。 |
@@ -70,7 +70,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 | 优先级 | 条目 | 需要做什么 | 已经不是问题 |
 | --- | --- | --- | --- |
 | P0 | 新 OPL surface 的 canonical vocabulary | 新增 Framework API、contract、readback、docs、tests 和 generic schema examples 继续使用 `domain_*`、`stage_*`、`owner_evidence_*`、`artifact_*`；domain-named carrier 只当 compatibility 或 fixture。 | `domain_route`、`stage-candidate-portfolio`、`owner_evidence_sustained_consumption_*`、generic family-orchestration examples 已提供 generic vocabulary；MAS paper mission、hypothesis、MAG manifest 名字不是缺 OPL primitive。 |
-| P0 | Scientific connector boundary | PubMed、Crossref、OpenAlex、Semantic Scholar、Crossmark、Publisher 留在 `OPL Connect`，作为 provider receipt / normalized ref connector，不持有 citation-truth authority。 | PubMed / Crossref / OpenAlex 不是 domain truth gap，不迁出 Connect，也不复制成第二套 literature Skill。 |
+| P0 | Scientific connector boundary | Crossref、OpenAlex search 与通用 reference metadata verifier 留在 `OPL Connect`，作为 provider receipt / normalized ref connector；PubMed search / metadata client 与医学 search normalization 归 MAS。 | Connect 不保留 PubMed EUtils verifier，也不复制 MAS `adapters/literature/pubmed.py`。 |
 | P0 | ScholarSkills source truth | `one-person-lab/plugins/mas-scholar-skills` 保持 thin pointer / packaging mirror；professional Skill body 留在外部 MAS Scholar Skills source，经 OPL package / Connect surface 同步。 | OPL mirror 缺目录不代表 MAS Scholar Skills capability 缺失。 |
 | P0 | Stage candidate portfolio | `stage-candidate-portfolio` 保持 refs-only stage candidate / assumption / provenance / negative-path / advisory-metric / human-review projection。 | 它不是 hypothesis store、scientific truth reducer、quality gate、artifact authority 或 owner receipt signer。 |
 | P0 | Owner-evidence sustained consumption | sustained consumption 保持 generic owner-evidence receipt transport 和 readback。 | 它只证明 owner-evidence intake 结构，不代表 MAS paper progress、grant acceptance、visual readiness 或 owner acceptance。 |
@@ -127,7 +127,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 - domain ready、paper progress、publication ready、grant ready、visual/export ready；
 - OPL 创建 owner receipt、typed blocker、human gate 或 quality verdict；
 - runtime ready、App release ready、Brand L5 或 production ready；
-- 从 PubMed / Crossref / OpenAlex provider metadata 推导 citation truth；
+- 从 MAS PubMed refs 或 Connect Crossref / OpenAlex provider metadata 推导 citation truth；
 - 从 OPL plugin mirror 内容推导 MAS Scholar Skills source completeness；
 - 把 stage-candidate portfolio completeness 当作 scientific novelty、evidence strength、candidate ranking、quality verdict 或 owner acceptance；
 - 把 owner-evidence sustained-consumption receipt 当作 live owner consumption、paper/grant/visual progress 或 domain readiness。

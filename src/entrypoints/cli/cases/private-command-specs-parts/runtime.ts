@@ -77,28 +77,6 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl status workspace',
         'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
       ],
-      registry: {
-        command_id: 'status workspace',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'path',
-            flag: '--path',
-            value_kind: 'string',
-            summary: 'Workspace path to inspect.',
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/status_workspace/output_schema',
-        authority_boundary: {
-          owner: 'OPL Console',
-          surface: 'workspace_status_readback',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: (args) => {
         const parsed = parseRegisteredCommandOptions('status workspace', args, getCommandSpecs()['status workspace']);
         return buildWorkspaceStatus({ workspacePath: parsed.path as string | undefined });
@@ -108,32 +86,6 @@ export function buildPrivateRuntimeCommandSpecs({
       usage: 'opl status runtime [--limit <n>]',
       summary: 'Show configured family runtime provider status and the OPL-managed session ledger.',
       examples: ['opl status runtime', 'opl status runtime --limit 10'],
-      registry: {
-        command_id: 'status runtime',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'limit',
-            flag: '--limit',
-            value_kind: 'integer',
-            summary: 'Maximum managed session ledger entries to include.',
-            allowed_range: {
-              min: 1,
-              max: 500,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/status_runtime/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_status_readback',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: (args) => {
         const parsed = parseRegisteredCommandOptions('status runtime', args, getCommandSpecs()['status runtime']);
         return buildRuntimeStatus({ sessionsLimit: parsed.limit as number | undefined });
@@ -144,21 +96,6 @@ export function buildPrivateRuntimeCommandSpecs({
       summary:
         'Show the OPL Runtime Manager boundary for the configured provider-backed family runtime.',
       examples: ['opl runtime manager'],
-      registry: {
-        command_id: 'runtime manager',
-        parser_adapter: 'node_util_parse_args',
-        options: [],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_manager/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_manager_readback',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) => {
         parseRegisteredCommandOptions('runtime manager', args, getCommandSpecs()['runtime manager']);
         return await buildRuntimeManager({}, { buildStandardDomainAgentScaffold });
@@ -169,34 +106,6 @@ export function buildPrivateRuntimeCommandSpecs({
       summary:
         'Plan or apply Runtime Manager adapter actions without making OPL a scheduler or domain truth owner.',
       examples: ['opl runtime manager action --dry-run', 'opl runtime manager action --apply'],
-      registry: {
-        command_id: 'runtime manager action',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'dry-run',
-            flag: '--dry-run',
-            value_kind: 'boolean',
-            summary: 'Plan Runtime Manager adapter actions without mutating native helper state.',
-          },
-          {
-            name: 'apply',
-            flag: '--apply',
-            value_kind: 'boolean',
-            summary: 'Apply Runtime Manager adapter repair actions.',
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_manager_action/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_manager_action_projection',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: (args) => {
         const spec = getCommandSpecs()['runtime manager action'];
         const parsed = parseRegisteredCommandOptions('runtime manager action', args, spec);
@@ -232,34 +141,6 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl runtime app-operator-drilldown --json', // reuse-first: allow diagnostic drilldown command projection.
         'opl runtime app-operator-drilldown --detail full --json', // reuse-first: allow diagnostic drilldown command projection.
       ],
-      registry: {
-        command_id: 'runtime app-operator-drilldown',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'detail',
-            flag: '--detail',
-            value_kind: 'string',
-            summary: 'Detail level: summary or full.',
-          },
-          {
-            name: 'full',
-            flag: '--full',
-            value_kind: 'boolean',
-            summary: 'Alias for --detail full.',
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_app_operator_drilldown/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_app_operator_drilldown_readback',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) => {
         const spec = getCommandSpecs()['runtime app-operator-drilldown']; // reuse-first: allow diagnostic drilldown command projection.
         const parsed = parseRegisteredCommandOptions(
@@ -401,28 +282,6 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl runtime observability-export --format openmetrics',
         'opl runtime observability-export --format collector-config-json',
       ],
-      registry: {
-        command_id: 'runtime observability-export',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'format',
-            flag: '--format',
-            value_kind: 'string',
-            summary: 'Output format: json, openmetrics, or collector-config-json.',
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_observability_export/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_observability_export_readback',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) => {
         const parsed = parseRegisteredCommandOptions(
           'runtime observability-export',
@@ -474,56 +333,6 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl runtime observability-endpoint --port 9464 --metrics-path /metrics',
         'opl runtime observability-endpoint --port 0 --once --ready-file /tmp/opl-observability-endpoint.json',
       ],
-      registry: {
-        command_id: 'runtime observability-endpoint',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'host',
-            flag: '--host',
-            value_kind: 'string',
-            summary: 'HTTP host to bind.',
-          },
-          {
-            name: 'port',
-            flag: '--port',
-            value_kind: 'integer',
-            summary: 'HTTP port to bind; 0 lets the OS choose an ephemeral port.',
-            allowed_range: {
-              min: 0,
-              max: 65535,
-            },
-          },
-          {
-            name: 'metrics-path',
-            flag: '--metrics-path',
-            value_kind: 'string',
-            summary: 'HTTP path that serves OpenMetrics text.',
-          },
-          {
-            name: 'once',
-            flag: '--once',
-            value_kind: 'boolean',
-            summary: 'Close the endpoint after the first request; useful for tests and one-shot readback.',
-          },
-          {
-            name: 'ready-file',
-            flag: '--ready-file',
-            value_kind: 'string',
-            summary: 'Optional JSON file written after the endpoint is listening.',
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_observability_endpoint/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_observability_metrics_endpoint',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) => {
         const parsed = parseRegisteredCommandOptions(
           'runtime observability-endpoint',
@@ -552,66 +361,6 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl runtime observability-collector-smoke --collector-command /usr/local/bin/otelcol-contrib',
         'opl runtime observability-collector-smoke --endpoint http://127.0.0.1:9464/metrics',
       ],
-      registry: {
-        command_id: 'runtime observability-collector-smoke',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'collector-command',
-            flag: '--collector-command',
-            value_kind: 'string',
-            summary: 'OpenTelemetry Collector binary path or command name.',
-          },
-          {
-            name: 'endpoint',
-            flag: '--endpoint',
-            value_kind: 'string',
-            summary: 'Existing OpenMetrics endpoint URL to scrape instead of starting a temporary local endpoint.',
-          },
-          {
-            name: 'host',
-            flag: '--host',
-            value_kind: 'string',
-            summary: 'Temporary endpoint host when --endpoint is omitted.',
-          },
-          {
-            name: 'port',
-            flag: '--port',
-            value_kind: 'integer',
-            summary: 'Temporary endpoint port when --endpoint is omitted; default 0 lets the OS choose.',
-            allowed_range: {
-              min: 0,
-              max: 65535,
-            },
-          },
-          {
-            name: 'metrics-path',
-            flag: '--metrics-path',
-            value_kind: 'string',
-            summary: 'Temporary endpoint metrics path when --endpoint is omitted.',
-          },
-          {
-            name: 'timeout-ms',
-            flag: '--timeout-ms',
-            value_kind: 'integer',
-            summary: 'Maximum time to wait for Collector debug output containing an OPL metric.',
-            allowed_range: {
-              min: 1,
-              max: 120000,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/runtime_observability_collector_smoke/output_schema',
-        authority_boundary: {
-          owner: 'OPL Runway',
-          surface: 'runtime_observability_collector_smoke',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) => {
         const parsed = parseRegisteredCommandOptions(
           'runtime observability-collector-smoke',

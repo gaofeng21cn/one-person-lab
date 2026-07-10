@@ -27,34 +27,6 @@ async function startFakeReferenceProviderServer() {
       return;
     }
 
-    if (url.pathname.endsWith('/esearch.fcgi')) {
-      response.end(JSON.stringify({
-        esearchresult: {
-          idlist: ['987654'],
-        },
-      }));
-      return;
-    }
-
-    if (url.pathname.endsWith('/esummary.fcgi')) {
-      response.end(JSON.stringify({
-        result: {
-          uids: ['987654'],
-          '987654': {
-            uid: '987654',
-            title: 'Provider receipt cache and retry evidence',
-            fulljournalname: 'Journal of Connector Evidence',
-            pubdate: '2026',
-            articleids: [
-              { idtype: 'pubmed', value: '987654' },
-              { idtype: 'doi', value: '10.1234/example' },
-            ],
-          },
-        },
-      }));
-      return;
-    }
-
     if (url.pathname.startsWith('/openalex/works/')) {
       response.end(JSON.stringify({
         id: 'https://openalex.org/W123',
@@ -66,9 +38,7 @@ async function startFakeReferenceProviderServer() {
             display_name: 'Journal of Connector Evidence',
           },
         },
-        ids: {
-          pmid: 'https://pubmed.ncbi.nlm.nih.gov/987654',
-        },
+        ids: {},
       }));
       return;
     }
@@ -98,7 +68,6 @@ async function startFakeReferenceProviderServer() {
         paperId: 'S2-987654',
         externalIds: {
           DOI: '10.1234/example',
-          PubMed: '987654',
         },
         title: 'Provider receipt cache and retry evidence',
         year: 2026,
@@ -190,7 +159,6 @@ test('connect references verify returns provider receipts, cache metadata, retri
 
     const env = {
       OPL_CONNECT_CROSSREF_API_BASE: `${fakeProviders.baseUrl}/crossref`,
-      OPL_CONNECT_PUBMED_API_BASE: `${fakeProviders.baseUrl}/pubmed`,
     };
     const args = [
       'connect',
@@ -199,7 +167,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
       '--references-file',
       referencesFile,
       '--providers',
-      'crossref,pubmed',
+      'crossref',
       '--cache-root',
       cacheRoot,
       '--max-retries',
@@ -261,14 +229,12 @@ test('connect references verify returns provider receipts, cache metadata, retri
     assert.equal(result.surface_kind, 'opl_connect_reference_verification_readonly');
     assert.equal(result.verification_role, 'metadata_provider_receipt_only');
     assert.equal(result.status, 'completed');
-    assert.deepEqual(result.request.providers, ['crossref', 'pubmed']);
+    assert.deepEqual(result.request.providers, ['crossref']);
     assert.equal(result.request.max_retries, 1);
-    assert.equal(result.provider_evidence.length, 2);
+    assert.equal(result.provider_evidence.length, 1);
 
     const crossref = result.provider_evidence.find((entry) => entry.provider_id === 'crossref');
-    const pubmed = result.provider_evidence.find((entry) => entry.provider_id === 'pubmed');
     assert.ok(crossref);
-    assert.ok(pubmed);
     assert.equal(crossref.status, 'matched');
     assert.equal(crossref.match_status, 'identifier_matched');
     assert.equal(crossref.provider, 'crossref');
@@ -284,16 +250,7 @@ test('connect references verify returns provider receipts, cache metadata, retri
     assert.equal(crossref.retry_attempts.length, 2);
     assert.deepEqual(crossref.retry_attempts.map((entry) => entry.status), ['retryable_error', 'success']);
     assert.equal(crossref.receipt_ref.startsWith('opl://connect/references/verify/'), true);
-    assert.equal(pubmed.status, 'matched');
-    assert.equal(pubmed.match_status, 'identifier_matched');
-    assert.equal(pubmed.provider, 'pubmed');
-    assert.equal(pubmed.lookup_status, 'found');
-    assert.equal(pubmed.match_basis, 'pmid');
-    assert.equal(pubmed.normalized.pmid, '987654');
-    assert.equal(pubmed.cache.status, 'miss');
-    assert.equal(pubmed.cache.write_status, 'written');
-    assert.equal(pubmed.receipt_ref.startsWith('opl://connect/references/verify/'), true);
-    assert.equal(result.provider_receipts.length, 2);
+    assert.equal(result.provider_receipts.length, 1);
     assert.equal(result.provider_receipts.every((entry) => entry.status === 'matched'), true);
     assert.equal(result.provider_receipts.every((entry) => entry.match_status === 'identifier_matched'), true);
     assert.equal(result.provider_receipts.every((entry) => entry.receipt_ref.startsWith('opl://connect/references/verify/')), true);
@@ -517,11 +474,11 @@ test('connect references verify defers one failed provider while matched provide
       '--references-file',
       referencesFile,
       '--providers',
-      'pubmed,openalex',
+      'semantic-scholar,openalex',
       '--max-retries',
       '0',
     ], {
-      OPL_CONNECT_PUBMED_API_BASE: `${fakeProviders.baseUrl}/pubmed`,
+      OPL_CONNECT_SEMANTIC_SCHOLAR_API_BASE: `${fakeProviders.baseUrl}/semantic`,
       OPL_CONNECT_OPENALEX_API_BASE: `${fakeProviders.baseUrl}/rate-limited-openalex`,
     }) as {
       opl_connect_reference_verification: {
@@ -543,19 +500,19 @@ test('connect references verify defers one failed provider while matched provide
     const result = output.opl_connect_reference_verification;
     assert.equal(result.status, 'completed');
 
-    const pubmed = result.provider_evidence.find((entry) => entry.provider_id === 'pubmed');
+    const semanticScholar = result.provider_evidence.find((entry) => entry.provider_id === 'semantic-scholar');
     const openalex = result.provider_evidence.find((entry) => entry.provider_id === 'openalex');
-    assert.ok(pubmed);
+    assert.ok(semanticScholar);
     assert.ok(openalex);
-    assert.equal(pubmed.status, 'matched');
+    assert.equal(semanticScholar.status, 'matched');
     assert.equal(openalex.status, 'deferred');
     assert.equal(openalex.lookup_status, 'error');
     assert.equal(openalex.error?.details?.status, 429);
     assert.deepEqual(openalex.retry_attempts, [{ attempt: 0, status: 'failed', http_status: 429 }]);
     assert.deepEqual(result.provider_receipts.map((entry) => [entry.provider_id, entry.status]), [
-      ['pubmed', 'matched'],
+      ['semantic-scholar', 'matched'],
     ]);
-    assert.equal(result.provider_receipts[0].receipt_ref, pubmed.receipt_ref);
+    assert.equal(result.provider_receipts[0].receipt_ref, semanticScholar.receipt_ref);
     assert.deepEqual(result.deferred_provider_receipt_requirements.map((entry) => [entry.provider_id, entry.status]), [
       ['openalex', 'deferred'],
     ]);

@@ -35,7 +35,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | `release_channel` | Homebrew、DMG、Full bundle、Docker/WebUI、GHCR 等分发入口。 |
 | `agent_package_core` | OPL/App 管理智能体 package 的核心：registry、manifest、digest lock、dependency graph、trust tier、lifecycle receipt、exposure、shortcut refs 和 owner-route readback。 |
 | `agent_package_carrier_adapter` | Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release、MCP/Web/native 等 carrier 投影；只提供可见面、route、readback、reload guidance 或 owner-specific action refs。 |
-| `external_source_connector` | PubMed 等外部资源的只读连接器，返回 normalized source refs、request/read receipt 和 no-authority boundary。 |
+| `external_source_connector` | Crossref、OpenAlex 等通用外部资源的只读连接器，返回 normalized source refs、request/read receipt 和 no-authority boundary；领域专用 client 留在 domain owner。 |
 | `generated_drift_manifest` | source input 与 generated artifact 的对齐状态。 |
 | `profile_driven_skill_sync_manifest` | 对 MAS Scholar Skills 等 profile/overlay 驱动的 skill pack，同步输出 required/default pack、安装落点、source status 与 false-authority boundary。 |
 
@@ -82,8 +82,7 @@ opl connect doctor --json
 opl agents foundry interfaces --json
 opl agents interfaces --family-defaults --json
 opl actions export --domain <id> --json
-opl connect pubmed search --query <query> --limit <n> --json
-opl connect scientific search --provider pubmed|crossref|openalex --query <query> --limit <n> --json
+opl connect scientific search --provider crossref|openalex --query <query> --limit <n> --json
 opl connect skills --json
 opl connect sync-skills --json
 opl connect install --module <agent> --json
@@ -96,7 +95,7 @@ Connect 暴露 Skill/MCP/plugin/install transport 时，必须能指回 Foundry 
 
 Connect 暴露 OPL Agent Packages 时，必须把 Agent Package Core 和 carrier adapters 分开读：`opl connect agent-packages list|status --json` 输出 package core、descriptor/digest/lock/lifecycle/exposure、carrier readback 和 no-package-manager boundary；`install|update|repair|rollback|uninstall` 只写 Framework package lock、lifecycle receipt 与受控 carrier 物理面。Codex Plugin/local marketplace 只是 `codex_plugin_carrier`，OPL App shortcuts 只是 Home / cockpit 可见性 carrier，workflow profile 只是 Codex profile / instruction block carrier，runtime/app release 只是安装与更新 carrier。carrier 可以触发 reload guidance、semantic-merge guidance 或 owner route，但不得成为 package dependency graph、domain truth、runtime authority、release currentness 或 owner receipt 的真相源。
 
-Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider pubmed|crossref|openalex` 是 optional scientific connector profile 的统一只读入口；`opl connect pubmed search` 继续作为 PubMed 兼容入口。它们只调用 provider API，返回 source refs、标题、期刊、作者、DOI/PMID/OpenAlex id、URL、connector invocation ref 和 ledger receipt candidate ref；不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。MAS 的 scout/write/review/figure 等 Skill 可以把 PubMed refs 作为医学文献优先入口，并在 metadata、coverage 或 citation graph 缺口时消费 Crossref/OpenAlex fallback refs，再由 MAS 自己完成 citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
+Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider crossref|openalex` 是 provider-neutral optional scientific connector profile 的统一只读入口，只返回通用 source refs、metadata、URL、connector invocation ref 和 ledger receipt candidate ref。PubMed search / metadata client、医学 search normalization 与检索 truth 由 MAS `adapters/literature/pubmed.py` 持有；Connect `references verify` 不保留第二套 EUtils verifier，只承载通用 provider receipt metadata，不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。
 
 MAS Scholar Skills 同步模型：
 

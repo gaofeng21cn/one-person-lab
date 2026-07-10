@@ -1,16 +1,17 @@
 import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/modules/charter/contracts.ts';
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
-import { validateCommandRegistryCoverage } from '../../../../src/entrypoints/cli/modules/command-registry.ts';
+import {
+  bindCommandRegistryMetadata,
+  validateCommandRegistryCoverage,
+} from '../../../../src/entrypoints/cli/modules/command-registry.ts';
 
 type CliCommandRegistryContract = {
   protected_command_prefixes: string[];
-  required_command_ids: string[];
   commands: Record<string, any>;
 };
 
 const registryCases = [
-  ['connect pubmed search', 'connect_pubmed_search', ['query', 'limit'], undefined],
   ['connect scientific search', 'connect_scientific_search', ['provider', 'query', 'limit'], undefined],
   ['connect references verify', 'connect_references_verify', ['references-file', 'providers', 'cache-root', 'max-retries'], undefined],
   ['connect install', 'connect_install', ['module'], undefined],
@@ -95,8 +96,9 @@ test('registered command help mirrors the canonical command registry', () => {
   for (const prefix of ['status', 'runtime manager', 'stages', 'runtime observability', 'update']) {
     assert.equal(contract.protected_command_prefixes.includes(prefix), true, prefix);
   }
+  assert.equal(contract.protected_command_prefixes.includes('connect pubmed'), false);
+  assert.equal(Object.hasOwn(contract, 'required_command_ids'), false);
   for (const [command, contractKey, optionNames, owner] of registryCases) {
-    assert.equal(contract.required_command_ids.includes(command), true, command);
     const help = runCli(['help', ...command.split(' ')]).help;
     const contractCommand = contract.commands[contractKey];
 
@@ -125,27 +127,32 @@ test('registered command help mirrors the canonical command registry', () => {
 
 test('Connect output schemas freeze provider receipts behind no-authority flags', () => {
   const contract = loadCliCommandRegistryContract();
-  const pubmed = contract.commands.connect_pubmed_search.output_schema.properties.opl_connect_pubmed;
-  const pubmedBoundary = pubmed.properties.authority_boundary;
+  const scientificProvider = contract.commands.connect_scientific_search.options.find(
+    (option: { name: string }) => option.name === 'provider',
+  );
   const scientific = contract.commands.connect_scientific_search.output_schema.properties.opl_connect_scientific;
   const scientificBoundary = scientific.properties.authority_boundary;
   const referenceVerification = contract.commands.connect_references_verify.output_schema
     .properties.opl_connect_reference_verification.properties;
   const referenceBoundary = referenceVerification.no_authority_boundary;
 
-  for (const key of ['connect_pubmed_search', 'connect_scientific_search', 'connect_references_verify']) {
+  for (const key of ['connect_scientific_search', 'connect_references_verify']) {
     assert.equal(contract.commands[key].output_schema.properties.version.const, 'g2');
   }
-  assert.equal(pubmed.properties.connector_profile.const, 'scientific');
-  assert.equal(pubmed.properties.canonical_profile_command.const, 'connect scientific search --provider pubmed');
-  assert.equal(pubmed.properties.provider_receipt_role.const, 'provider_receipt_candidate_only');
   assert.equal(scientific.properties.profile_role.const, 'optional_scientific_connector_profile');
+  assert.deepEqual(scientificProvider.allowed_values, ['crossref', 'openalex']);
+  assert.equal(scientificProvider.summary, 'Scientific provider id: crossref, openalex.');
+  assert.equal(
+    contract.commands.connect_references_verify.options.find(
+      (option: { name: string }) => option.name === 'providers',
+    ).default,
+    'crossref,openalex,semantic-scholar,crossmark,publisher',
+  );
   assert.equal(scientific.properties.provider_receipt_role.const, 'provider_receipt_candidate_only');
   assert.equal(referenceVerification.verification_role.const, 'metadata_provider_receipt_only');
   assert.equal(referenceVerification.provider_receipts.items.properties.receipt_scope.const, 'metadata_provider_receipt_only');
   assert.equal(referenceVerification.provider_receipts.items.properties.authority.const, 'provider_receipt_candidate_only');
 
-  assert.equal(pubmedBoundary.properties.read_only.const, true);
   for (const field of [
     'can_write_domain_truth',
     'can_sign_owner_receipt',
@@ -155,8 +162,8 @@ test('Connect output schemas freeze provider receipts behind no-authority flags'
     'can_claim_domain_ready',
     'can_claim_production_ready',
   ]) {
-    assert.equal(pubmedBoundary.required.includes(field), true, field);
-    assert.equal(pubmedBoundary.properties[field].const, false, field);
+    assert.equal(scientificBoundary.required.includes(field), true, field);
+    assert.equal(scientificBoundary.properties[field].const, false, field);
   }
   assert.equal(scientificBoundary.properties.can_claim_citation_truth.const, false);
   assert.equal(referenceBoundary.properties.read_only.const, true);
@@ -174,6 +181,21 @@ test('Connect output schemas freeze provider receipts behind no-authority flags'
   ]) {
     assert.equal(referenceBoundary.required.includes(field), true, field);
     assert.equal(referenceBoundary.properties[field].const, false, field);
+  }
+});
+
+test('migrated registry entries own their authority metadata', () => {
+  const contract = loadCliCommandRegistryContract();
+  const owners = new Map([
+    ['connect ', 'OPL Connect'],
+    ['update ', 'OPL Managed Update / Pack owners'],
+  ]);
+  for (const command of Object.values(contract.commands) as Array<Record<string, any>>) {
+    const owner = [...owners].find(([prefix]) => String(command.command_id).startsWith(prefix))?.[1];
+    if (!owner) continue;
+    assert.equal(command.authority_boundary.owner, owner, command.command_id);
+    assert.equal(typeof command.authority_boundary.surface, 'string', command.command_id);
+    assert.notEqual(command.authority_boundary.surface.length, 0, command.command_id);
   }
 });
 
@@ -250,24 +272,156 @@ test('update commands parse registered options and reject cross-command options'
 
 test('protected command prefixes cannot bypass registry metadata', () => {
   const specs: Record<string, CommandSpec> = {
-    'connect pubmed search': {
-      usage: 'opl connect pubmed search --query <query>',
-      summary: 'Search PubMed.',
-      examples: ['opl connect pubmed search --query diabetes'],
+    'example inspect': {
+      usage: 'opl example inspect --target <target>',
+      summary: 'Inspect one example.',
+      examples: ['opl example inspect --target demo'],
       handler: () => ({}),
     },
   };
 
   assert.throws(
     () => validateCommandRegistryCoverage(specs, {
-      protectedCommandPrefixes: ['connect pubmed'],
-      requiredCommandIds: ['connect pubmed search'],
+      protectedCommandPrefixes: ['example'],
     }),
     (error) => {
       assert.equal(error instanceof FrameworkContractError, true);
       assert.equal((error as FrameworkContractError).code, 'contract_shape_invalid');
-      assert.equal((error as FrameworkContractError).details?.command, 'connect pubmed search');
+      assert.equal((error as FrameworkContractError).details?.command, 'example inspect');
       return true;
     },
   );
+});
+
+test('command specs bind parser metadata from the machine registry', () => {
+  const spec: CommandSpec = {
+    usage: 'opl example inspect --target <target>',
+    summary: 'Inspect one example.',
+    examples: ['opl example inspect --target demo'],
+    handler: () => ({}),
+  };
+  const specs = { 'example inspect': spec };
+
+  assert.equal(bindCommandRegistryMetadata(specs, {
+    example_inspect: {
+      command_id: 'example inspect',
+      parser_adapter: 'node_util_parse_args',
+      options: [{
+        name: 'target',
+        flag: '--target',
+        value_kind: 'string',
+        summary: 'Example target.',
+        required: true,
+      }],
+      authority_boundary: {
+        owner: 'OPL Connect',
+        surface: 'example_inspect',
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+      output_schema: { type: 'object' },
+    },
+  }), specs);
+  assert.deepEqual(spec.registry, {
+    command_id: 'example inspect',
+    parser_adapter: 'node_util_parse_args',
+    options: [{
+      name: 'target',
+      flag: '--target',
+      value_kind: 'string',
+      summary: 'Example target.',
+      required: true,
+    }],
+    authority_boundary: {
+      owner: 'OPL Connect',
+      surface: 'example_inspect',
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+    json_output_schema_ref:
+      'contracts/opl-framework/cli-command-registry.json#/commands/example_inspect/output_schema',
+  });
+});
+
+test('command registry rejects incomplete options, duplicates, and inline authority fallback', () => {
+  const validOption = {
+    name: 'target',
+    flag: '--target',
+    value_kind: 'string',
+    summary: 'Example target.',
+    required: true,
+  } as const;
+  const validAuthorityBoundary = {
+    owner: 'OPL Connect',
+    surface: 'example_inspect',
+    can_write_domain_truth: false,
+    can_create_owner_receipt: false,
+    can_claim_domain_ready: false,
+    can_claim_production_ready: false,
+  } as const;
+  const validEntry = {
+    command_id: 'example inspect',
+    parser_adapter: 'node_util_parse_args',
+    options: [validOption],
+    authority_boundary: validAuthorityBoundary,
+    output_schema: { type: 'object' },
+  };
+  const specWithInlineFallback = (): CommandSpec => ({
+    usage: 'opl example inspect --target <target>',
+    summary: 'Inspect one example.',
+    examples: ['opl example inspect --target demo'],
+    handler: () => ({}),
+    registry: {
+      command_id: 'example inspect',
+      parser_adapter: 'node_util_parse_args',
+      options: validEntry.options,
+      json_output_schema_ref: 'inline-fallback-must-not-be-used',
+      authority_boundary: validEntry.authority_boundary,
+    },
+  });
+  const cases = [
+    ['missing option summary', {
+      ...validEntry,
+      options: [{ ...validEntry.options[0], summary: undefined }],
+    }, 'registry.option.summary'],
+    ['duplicate option name', {
+      ...validEntry,
+      options: [validEntry.options[0], { ...validEntry.options[0], flag: '--other' }],
+    }, 'registry.option.name_duplicate'],
+    ['duplicate option flag', {
+      ...validEntry,
+      options: [validEntry.options[0], { ...validEntry.options[0], name: 'other' }],
+    }, 'registry.option.flag_duplicate'],
+    ['missing authority owner', {
+      ...validEntry,
+      authority_boundary: { ...validEntry.authority_boundary, owner: undefined },
+    }, 'registry.authority_boundary.owner'],
+    ['missing authority surface', {
+      ...validEntry,
+      authority_boundary: { ...validEntry.authority_boundary, surface: undefined },
+    }, 'registry.authority_boundary.surface'],
+  ] as const;
+
+  for (const [label, entry, violation] of cases) {
+    assert.throws(
+      () => bindCommandRegistryMetadata(
+        { 'example inspect': specWithInlineFallback() },
+        { example_inspect: entry },
+      ),
+      (error) => {
+        assert.equal(error instanceof FrameworkContractError, true, label);
+        assert.equal((error as FrameworkContractError).code, 'contract_shape_invalid', label);
+        assert.equal(
+          ((error as FrameworkContractError).details?.violations as string[]).includes(violation),
+          true,
+          label,
+        );
+        return true;
+      },
+    );
+  }
 });

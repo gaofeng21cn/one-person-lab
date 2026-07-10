@@ -6,9 +6,55 @@ import type { CommandRegistryMetadata, CommandSpec } from './types.ts';
 
 type CommandRegistryCoverageOptions = {
   protectedCommandPrefixes?: string[];
-  requiredCommandIds?: string[];
 };
 type CommandOptionValue = string | number | boolean;
+
+function commandRegistryMetadataFromContract(
+  registryKey: string,
+  value: unknown,
+): CommandRegistryMetadata {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw registryShapeError(registryKey, ['registry.contract_entry_invalid']);
+  }
+  const entry = value as Record<string, unknown>;
+  const command = typeof entry.command_id === 'string' ? entry.command_id : registryKey;
+  const metadata = {
+    command_id: entry.command_id,
+    parser_adapter: entry.parser_adapter,
+    options: entry.options,
+    authority_boundary: entry.authority_boundary,
+    json_output_schema_ref:
+      `contracts/opl-framework/cli-command-registry.json#/commands/${registryKey}/output_schema`,
+  } as CommandRegistryMetadata;
+  const violations = registryShapeViolations(command, metadata);
+  if (!Object.hasOwn(entry, 'output_schema')) {
+    violations.push('registry.output_schema_missing');
+  }
+  if (violations.length > 0) {
+    throw registryShapeError(command, violations);
+  }
+  return metadata;
+}
+
+function bindCommandRegistryMetadata(
+  specs: Record<string, CommandSpec>,
+  commands: Record<string, unknown>,
+) {
+  const boundCommands = new Set<string>();
+  for (const [registryKey, value] of Object.entries(commands)) {
+    const metadata = commandRegistryMetadataFromContract(registryKey, value);
+    if (boundCommands.has(metadata.command_id)) {
+      throw registryShapeError(metadata.command_id, ['registry.command_id_duplicate']);
+    }
+    const spec = specs[metadata.command_id];
+    if (!spec) {
+      throw registryShapeError(metadata.command_id, ['command_spec_missing']);
+    }
+    spec.registry = metadata;
+    boundCommands.add(metadata.command_id);
+  }
+  return specs;
+}
 
 function matchesProtectedPrefix(command: string, prefixes: string[]) {
   return prefixes.some((prefix) => command === prefix || command.startsWith(`${prefix} `));
@@ -27,11 +73,46 @@ function registryShapeViolations(command: string, registry: CommandRegistryMetad
   }
   if (!Array.isArray(registry.options)) {
     violations.push('registry.options_missing');
+  } else {
+    const names = new Set<string>();
+    const flags = new Set<string>();
+    for (const [index, option] of registry.options.entries()) {
+      if (!option || typeof option !== 'object' || Array.isArray(option)) {
+        violations.push(`registry.option[${index}]`);
+        continue;
+      }
+      if (typeof option.name !== 'string' || option.name.length === 0) {
+        violations.push('registry.option.name');
+      } else if (names.has(option.name)) {
+        violations.push('registry.option.name_duplicate');
+      } else {
+        names.add(option.name);
+      }
+      if (typeof option.flag !== 'string' || !option.flag.startsWith('--')) {
+        violations.push('registry.option.flag');
+      } else if (flags.has(option.flag)) {
+        violations.push('registry.option.flag_duplicate');
+      } else {
+        flags.add(option.flag);
+      }
+      if (!['string', 'integer', 'boolean'].includes(option.value_kind)) {
+        violations.push('registry.option.value_kind');
+      }
+      if (typeof option.summary !== 'string' || option.summary.length === 0) {
+        violations.push('registry.option.summary');
+      }
+    }
   }
   if (!registry.json_output_schema_ref) {
     violations.push('registry.json_output_schema_ref_missing');
   }
   const boundary = registry.authority_boundary;
+  if (!boundary || typeof boundary.owner !== 'string' || boundary.owner.length === 0) {
+    violations.push('registry.authority_boundary.owner');
+  }
+  if (!boundary || typeof boundary.surface !== 'string' || boundary.surface.length === 0) {
+    violations.push('registry.authority_boundary.surface');
+  }
   if (!boundary || boundary.can_write_domain_truth !== false) {
     violations.push('registry.authority_boundary.can_write_domain_truth');
   }
@@ -59,9 +140,8 @@ function validateCommandRegistryCoverage(
   options: CommandRegistryCoverageOptions = {},
 ) {
   const protectedCommandPrefixes = options.protectedCommandPrefixes ?? [];
-  const requiredCommandIds = new Set(options.requiredCommandIds ?? []);
   const commands = Object.keys(specs).filter((command) =>
-    requiredCommandIds.has(command) || matchesProtectedPrefix(command, protectedCommandPrefixes)
+    matchesProtectedPrefix(command, protectedCommandPrefixes)
   );
 
   for (const command of commands) {
@@ -76,7 +156,6 @@ function validateCommandRegistryCoverage(
     status: 'valid',
     protected_command_count: commands.length,
     protected_command_prefixes: protectedCommandPrefixes,
-    required_command_ids: [...requiredCommandIds],
   };
 }
 
@@ -149,6 +228,27 @@ function coerceOptionValue(
   return value;
 }
 
+function parseCommandOptions(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+  options: ParseArgsOptionsConfig,
+) {
+  try {
+    return parseArgs({
+      args: args.filter((arg) => arg !== '--json'),
+      allowPositionals: false,
+      options,
+      strict: true,
+    }).values;
+  } catch (error) {
+    throw buildUsageError(
+      error instanceof Error ? error.message : 'Command options could not be parsed.',
+      spec,
+      { parser_adapter: 'node_util_parse_args' },
+    );
+  }
+}
+
 function parseRegisteredCommandOptions(command: string, args: string[], spec: CommandSpec) {
   const registry = spec.registry;
   const violations = registryShapeViolations(command, registry);
@@ -166,23 +266,7 @@ function parseRegisteredCommandOptions(command: string, args: string[], spec: Co
     ]),
   );
 
-  let values: Record<string, unknown>;
-  try {
-    values = parseArgs({
-      args: args.filter((arg) => arg !== '--json'),
-      allowPositionals: false,
-      options,
-      strict: true,
-    }).values;
-  } catch (error) {
-    throw buildUsageError(
-      error instanceof Error ? error.message : `${command} options could not be parsed.`,
-      spec,
-      {
-        parser_adapter: metadata.parser_adapter,
-      },
-    );
-  }
+  const values = parseCommandOptions(args, spec, options);
 
   return Object.fromEntries(
     metadata.options.flatMap((option) => {
@@ -192,4 +276,9 @@ function parseRegisteredCommandOptions(command: string, args: string[], spec: Co
   ) as Record<string, string | number | boolean | Array<string | number | boolean>>;
 }
 
-export { parseRegisteredCommandOptions, validateCommandRegistryCoverage };
+export {
+  bindCommandRegistryMetadata,
+  parseCommandOptions,
+  parseRegisteredCommandOptions,
+  validateCommandRegistryCoverage,
+};

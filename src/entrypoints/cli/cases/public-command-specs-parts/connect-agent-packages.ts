@@ -18,7 +18,6 @@ import { readOptionalString } from '../../modules/json-boundary.ts';
 import {
   buildUsageError,
   parseRegisteredCommandOptions,
-  type CommandAuthorityBoundary,
   type CommandSpec,
 } from '../../modules/support.ts';
 
@@ -101,67 +100,9 @@ function parseAgentPackageHomeShortcutPreferencesSetArgs(
   };
 }
 
-function agentPackagePackageActionOptions(summary: string) {
-  return [
-    {
-      name: 'package-id',
-      flag: '--package-id',
-      value_kind: 'string' as const,
-      summary,
-      required: true,
-    },
-    {
-      name: 'dry-run',
-      flag: '--dry-run',
-      value_kind: 'boolean' as const,
-      summary: 'Validate and preview receipt output without writing state.',
-      required: false,
-    },
-  ];
-}
-
 export function buildAgentPackageCommandSpecs(
   getCommandSpec: (command: string) => CommandSpec,
-  agentPackageAuthorityBoundary: CommandAuthorityBoundary,
 ): Record<string, CommandSpec> {
-  const agentPackageSelectionOptions = [
-    {
-      name: 'manifest-url',
-      flag: '--manifest-url',
-      value_kind: 'string' as const,
-      summary: 'Direct OPL Agent Package manifest URL or local file path.',
-      required: false,
-    },
-    {
-      name: 'registry-url',
-      flag: '--registry-url',
-      value_kind: 'string' as const,
-      summary: 'Registry URL used to select a package manifest.',
-      required: false,
-    },
-    {
-      name: 'package-id',
-      flag: '--package-id',
-      value_kind: 'string' as const,
-      summary: 'Package id to select from --registry-url.',
-      required: false,
-    },
-    {
-      name: 'trust-tier',
-      flag: '--trust-tier',
-      value_kind: 'string' as const,
-      summary: 'Explicit user/organization trust tier assigned before install.',
-      required: false,
-    },
-    {
-      name: 'source-kind',
-      flag: '--source-kind',
-      value_kind: 'string' as const,
-      summary: 'Package source kind for the package lock receipt.',
-      required: false,
-    },
-  ];
-
   return {
     'connect agent-packages registry refresh': {
       usage: 'opl connect agent-packages registry refresh --registry-url <url>',
@@ -171,22 +112,6 @@ export function buildAgentPackageCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages registry refresh',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'registry-url',
-            flag: '--registry-url',
-            value_kind: 'string',
-            summary: 'HTTP(S), file://, or absolute path to an OPL Agent Package registry JSON document.',
-            required: true,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_registry_refresh/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageRegistryRefresh(
           parseAgentPackageRegistryRefreshArgs(args, getCommandSpec('connect agent-packages registry refresh')),
@@ -200,14 +125,6 @@ export function buildAgentPackageCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages validate-manifest',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackageSelectionOptions,
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_validate_manifest/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageManifestValidate(
           parseAgentPackageSelectionArgs(
@@ -226,23 +143,6 @@ export function buildAgentPackageCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages install',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...agentPackageSelectionOptions,
-          {
-            name: 'dry-run',
-            flag: '--dry-run',
-            value_kind: 'boolean',
-            summary: 'Validate and preview lock/receipt output without writing state.',
-            required: false,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_install/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageInstall(
           parseAgentPackageInstallArgs(
@@ -260,23 +160,6 @@ export function buildAgentPackageCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages update',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...agentPackageSelectionOptions,
-          {
-            name: 'dry-run',
-            flag: '--dry-run',
-            value_kind: 'boolean',
-            summary: 'Validate and preview lock/receipt output without writing state.',
-            required: false,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_update/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageUpdate(
           parseAgentPackageInstallArgs(
@@ -292,14 +175,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages repair --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages repair',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to repair.'),
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_repair/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageRepair(
           parseAgentPackagePackageActionArgs(
@@ -315,14 +190,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages uninstall --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages uninstall',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to uninstall.'),
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_uninstall/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageUninstall(
           parseAgentPackagePackageActionArgs(
@@ -338,14 +205,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages hide --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages hide',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to hide.'),
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_hide/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageExposureAction(
           'hide',
@@ -362,14 +221,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages unhide --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages unhide',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to unhide.'),
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_unhide/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageExposureAction(
           'unhide',
@@ -386,14 +237,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages enable --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages enable',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to enable.'),
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_enable/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageExposureAction(
           'enable',
@@ -410,14 +253,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages disable --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages disable',
-        parser_adapter: 'node_util_parse_args',
-        options: agentPackagePackageActionOptions('Installed OPL Agent Package id to disable.'),
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_disable/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageExposureAction(
           'disable',
@@ -436,50 +271,6 @@ export function buildAgentPackageCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages home-shortcut-preferences set',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'package-id',
-            flag: '--package-id',
-            value_kind: 'string',
-            summary: 'Installed OPL Agent Package id.',
-            required: true,
-          },
-          {
-            name: 'shortcut-id',
-            flag: '--shortcut-id',
-            value_kind: 'string',
-            summary: 'Home shortcut id to prefer for this package.',
-            required: true,
-          },
-          {
-            name: 'visible',
-            flag: '--visible',
-            value_kind: 'boolean',
-            summary: 'Mark the shortcut preference visible.',
-            required: false,
-          },
-          {
-            name: 'sort-order',
-            flag: '--sort-order',
-            value_kind: 'integer',
-            summary: 'Optional user-visible ordering value.',
-            required: false,
-          },
-          {
-            name: 'dry-run',
-            flag: '--dry-run',
-            value_kind: 'boolean',
-            summary: 'Validate and preview preference output without writing state.',
-            required: false,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_home_shortcut_preferences_set/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) =>
         runOplAgentPackageHomeShortcutPreferencesSet(
           parseAgentPackageHomeShortcutPreferencesSetArgs(
@@ -494,22 +285,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages status --package-id mas --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages status',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'package-id',
-            flag: '--package-id',
-            value_kind: 'string',
-            summary: 'Optional installed OPL Agent Package id to inspect.',
-            required: false,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_status/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: (args) => {
         const parsed = parseRegisteredCommandOptions(
           'connect agent-packages status',
@@ -525,14 +300,6 @@ export function buildAgentPackageCommandSpecs(
       examples: ['opl connect agent-packages list --json'],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect agent-packages list',
-        parser_adapter: 'node_util_parse_args',
-        options: [],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_agent_packages_list/output_schema',
-        authority_boundary: agentPackageAuthorityBoundary,
-      },
       handler: () => listOplAgentPackages(),
     },
   };

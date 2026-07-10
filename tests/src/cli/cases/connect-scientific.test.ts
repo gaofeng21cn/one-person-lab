@@ -48,7 +48,7 @@ test('scientific connector providers are explicit adapters with no core default'
   const registry = buildScientificConnectorProviderRegistryReadback();
   assert.equal(registry.surface_kind, 'opl_scientific_connector_provider_registry');
   assert.equal(registry.default_provider_id, null);
-  assert.deepEqual(scientificConnectorProviderIds(), ['pubmed', 'crossref', 'openalex']);
+  assert.deepEqual(scientificConnectorProviderIds(), ['crossref', 'openalex']);
   assert.equal(registry.providers.every((provider) => provider.adapter_role === 'optional_provider_adapter'), true);
   assert.equal(registry.authority_boundary.can_write_domain_truth, false);
 });
@@ -59,35 +59,6 @@ async function startFakeScientificServer() {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     requests.push(`${url.pathname}?${url.searchParams.toString()}`);
     response.setHeader('content-type', 'application/json');
-
-    if (url.pathname.endsWith('/entrez/eutils/esearch.fcgi')) {
-      response.end(JSON.stringify({
-        esearchresult: {
-          idlist: ['12345'],
-        },
-      }));
-      return;
-    }
-
-    if (url.pathname.endsWith('/entrez/eutils/esummary.fcgi')) {
-      response.end(JSON.stringify({
-        result: {
-          uids: ['12345'],
-          '12345': {
-            uid: '12345',
-            title: 'Clinical AI evidence workflows',
-            fulljournalname: 'Journal of Medical AI',
-            pubdate: '2026 Jun',
-            authors: [{ name: 'Jane Doe' }],
-            articleids: [
-              { idtype: 'pubmed', value: '12345' },
-              { idtype: 'doi', value: '10.1000/example-ai' },
-            ],
-          },
-        },
-      }));
-      return;
-    }
 
     if (url.pathname.endsWith('/crossref/works')) {
       response.end(JSON.stringify({
@@ -140,7 +111,6 @@ async function startFakeScientificServer() {
   }
   const baseUrl = `http://127.0.0.1:${address.port}`;
   return {
-    pubmedBaseUrl: `${baseUrl}/entrez/eutils`,
     crossrefBaseUrl: `${baseUrl}/crossref`,
     openalexBaseUrl: `${baseUrl}/openalex`,
     requests,
@@ -149,41 +119,6 @@ async function startFakeScientificServer() {
     }),
   };
 }
-
-test('connect scientific search returns normalized PubMed refs through the optional scientific profile', async () => {
-  const fakeServer = await startFakeScientificServer();
-  try {
-    const output = await runCliAsync(
-      ['connect', 'scientific', 'search', '--provider', 'pubmed', '--query', 'clinical AI evidence', '--limit', '1'],
-      { OPL_CONNECT_PUBMED_API_BASE: fakeServer.pubmedBaseUrl },
-    ) as ScientificSearchOutput;
-    const scientific = output.opl_connect_scientific;
-
-    assert.equal(scientific.surface_kind, 'opl_connect_scientific_readonly_search');
-    assert.equal(scientific.connector_id, 'scientific');
-    assert.equal(scientific.connector_profile, 'scientific');
-    assert.equal(scientific.profile_role, 'optional_scientific_connector_profile');
-    assert.equal(scientific.provider_id, 'pubmed');
-    assert.deepEqual(scientific.result_refs, ['pubmed:12345']);
-    assert.equal(scientific.normalized_results[0].source_provider, 'PubMed');
-    assert.equal(scientific.normalized_results[0].doi, '10.1000/example-ai');
-    assert.equal(scientific.receipt_refs.connector_invocation_ref.startsWith('opl://connect/scientific/pubmed/search/'), true);
-    assert.equal(scientific.provider_receipt_role, 'provider_receipt_candidate_only');
-    assert.equal(scientific.authority_boundary.read_only, true);
-    assert.equal(scientific.authority_boundary.can_write_domain_truth, false);
-    assert.equal(scientific.authority_boundary.can_sign_owner_receipt, false);
-    assert.equal(scientific.authority_boundary.can_create_typed_blocker, false);
-    assert.equal(scientific.authority_boundary.can_claim_publication_readiness, false);
-    assert.equal(scientific.authority_boundary.can_claim_citation_truth, false);
-    assert.equal(scientific.ownership_boundary.connector_profile_owner, 'OPL Connect');
-    assert.equal(scientific.ownership_boundary.provider_receipt_owner, 'OPL Connect');
-    assert.equal(scientific.ownership_boundary.citation_judgment_owner, 'selected domain owner');
-    assert.equal(scientific.ownership_boundary.connector_receipt_counts_as_citation_truth, false);
-    assert.equal(scientific.ownership_boundary.connector_receipt_counts_as_domain_truth, false);
-  } finally {
-    await fakeServer.close();
-  }
-});
 
 test('connect scientific search returns normalized Crossref refs', async () => {
   const fakeServer = await startFakeScientificServer();
@@ -231,8 +166,36 @@ test('connect scientific search requires provider and query', () => {
   assert.equal(missingProvider.payload.error.code, 'cli_usage_error');
   assert.match(missingProvider.payload.error.message, /requires --provider/);
 
-  const missingQuery = runCliFailure(['connect', 'scientific', 'search', '--provider', 'pubmed']);
+  const missingQuery = runCliFailure(['connect', 'scientific', 'search', '--provider', 'crossref']);
   assert.equal(missingQuery.status, 2);
   assert.equal(missingQuery.payload.error.code, 'cli_usage_error');
   assert.match(missingQuery.payload.error.message, /requires --query/);
+
+  const retiredProvider = runCliFailure([
+    'connect',
+    'scientific',
+    'search',
+    '--provider',
+    'pubmed',
+    '--query',
+    'clinical AI',
+  ]);
+  assert.equal(retiredProvider.status, 2);
+  assert.equal(retiredProvider.payload.error.code, 'cli_usage_error');
+
+  const compatibility = runCliFailure(['connect', 'pubmed', 'search', '--query', 'clinical AI']);
+  assert.equal(compatibility.status, 2);
+  assert.equal(compatibility.payload.error.code, 'unknown_command');
+
+  const retiredVerifier = runCliFailure([
+    'connect',
+    'references',
+    'verify',
+    '--references-file',
+    'unused.json',
+    '--providers',
+    'pubmed',
+  ]);
+  assert.equal(retiredVerifier.status, 2);
+  assert.equal(retiredVerifier.payload.error.code, 'cli_usage_error');
 });

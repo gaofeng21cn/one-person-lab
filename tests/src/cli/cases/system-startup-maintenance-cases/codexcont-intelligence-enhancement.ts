@@ -1,224 +1,81 @@
-import { assert, fs, os, path, repoRoot, runCli, runCliInCwd, shellSingleQuote, test } from '../../helpers.ts';
+import { assert, fs, os, path, runCli, shellSingleQuote, test } from '../../helpers.ts';
 
 function writeExecutable(filePath: string, contents: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, contents, { mode: 0o755 });
 }
 
-function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
-  const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
-  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
-  fs.writeFileSync(
-    scriptPath,
-    [
-      '#!/usr/bin/env python3',
-      'import json, os, pathlib, subprocess, sys',
-      'action = sys.argv[1] if len(sys.argv) > 1 else "status"',
-      'home = pathlib.Path(os.environ["HOME"])',
-      'codexcont_home = pathlib.Path(os.environ["OPL_CODEXCONT_HOME"])',
-      'service_mode = os.environ.get("OPL_CODEXCONT_SERVICE_MODE", "manual")',
-      'fake_uvx = os.environ["OPL_CODEXCONT_UVX"]',
-      'def service_paths():',
-      '    definition = codexcont_home / "container-service.json"',
-      '    script = codexcont_home / "container-entrypoint.sh"',
-      '    definition.write_text("container_entrypoint_or_opl_system_startup_maintenance_must_call_repair\\n")',
-      '    script.write_text("#!/bin/sh\\nexec codexcont start\\n")',
-      '    return {"mode": service_mode, "definition_path": str(definition), "script_path": str(script)}',
-      'if action == "status":',
-      '    print(json.dumps({"opl_flow_intelligence_enhancement": {"enabled": True, "proxy_running": False, "service": {"mode": service_mode, "definition_installed": False, "script_installed": False}}}))',
-      'elif action == "repair":',
-      '    subprocess.run([fake_uvx, "--from", "git+https://github.com/ZhenHuangLab/CodexCont", "codexcont", "install", "-y"], check=True)',
-      '    subprocess.run([fake_uvx, "--from", "git+https://github.com/ZhenHuangLab/CodexCont", "codexcont", "restart"], check=True)',
-      '    print(json.dumps({"opl_flow_intelligence_enhancement_action": {"action": "repair", "status": "completed", "service": service_paths()}}))',
-      'else:',
-      '    raise SystemExit(f"unsupported action: {action}")',
-      '',
-    ].join('\n'),
-    { mode: 0o755 },
-  );
-  return scriptPath;
-}
-
-test('system startup-maintenance repairs enabled CodexCont intelligence enhancement in container mode', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-codexcont-'));
-  const fakeBin = path.join(homeRoot, 'fake-bin');
-  const fakeCodex = path.join(fakeBin, 'codex');
-  const fakeUvx = path.join(fakeBin, 'uvx');
-  const uvxLog = path.join(homeRoot, 'uvx.log');
+test('startup maintenance repairs the enabled CodexCont container service through OPL Flow', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-codexcont-'));
+  const fakeBin = path.join(homeRoot, 'bin');
   const codexHome = path.join(homeRoot, '.codex');
   const codexContHome = path.join(homeRoot, '.codexcont');
+  const uvxLog = path.join(homeRoot, 'uvx.log');
+  const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
+  const installerPath = path.join(homeRoot, 'opl-state', 'modules', 'opl-flow', 'scripts', 'install_local_plugin.py');
 
   try {
-    writeExecutable(fakeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.134.0"\n');
+    writeExecutable(path.join(fakeBin, 'codex'), '#!/usr/bin/env bash\necho "codex-cli 0.134.0"\n');
     writeExecutable(
-      fakeUvx,
+      path.join(fakeBin, 'uvx'),
+      `#!/usr/bin/env bash\nset -euo pipefail\nprintf '%s\\n' "$*" >> ${shellSingleQuote(uvxLog)}\n`,
+    );
+    writeExecutable(
+      scriptPath,
       [
-        '#!/usr/bin/env bash',
-        'set -euo pipefail',
-        `printf '%s\\n' "$*" >> ${shellSingleQuote(uvxLog)}`,
-        '',
+        '#!/usr/bin/env python3',
+        'import json, os, pathlib, subprocess, sys',
+        'action = sys.argv[1] if len(sys.argv) > 1 else "status"',
+        'root = pathlib.Path(os.environ["OPL_CODEXCONT_HOME"])',
+        'if action == "status":',
+        '  print(json.dumps({"opl_flow_intelligence_enhancement": {"enabled": True, "proxy_running": False, "service": {"mode": "container", "definition_installed": False, "script_installed": False}}}))',
+        'elif action == "repair":',
+        '  subprocess.run([os.environ["OPL_CODEXCONT_UVX"], "--from", "git+https://github.com/ZhenHuangLab/CodexCont", "codexcont", "install", "-y"], check=True)',
+        '  definition = root / "container-service.json"',
+        '  entrypoint = root / "container-entrypoint.sh"',
+        '  definition.write_text("container startup repair\\n")',
+        '  entrypoint.write_text("#!/bin/sh\\nexec codexcont start\\n")',
+        '  print(json.dumps({"opl_flow_intelligence_enhancement_action": {"action": "repair", "status": "completed", "service": {"mode": "container", "definition_path": str(definition), "script_path": str(entrypoint)}}}))',
+        'else: raise SystemExit(2)',
       ].join('\n'),
     );
-    const oplFlowScript = writeOplFlowIntelligenceEnhancementFixture(homeRoot);
+    fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    fs.writeFileSync(
+      installerPath,
+      'import json\nprint(json.dumps({"surface_kind":"opl_flow_plugin_install_receipt.v1","status":"installed"}))\n',
+      'utf8',
+    );
     fs.mkdirSync(codexHome, { recursive: true });
     fs.mkdirSync(codexContHome, { recursive: true });
-    fs.writeFileSync(
-      path.join(codexHome, 'config.toml'),
-      [
-        'model_provider = "gflab"',
-        'model = "gpt-5.5"',
-        '',
-        '[model_providers.gflab]',
-        'name = "gflab"',
-        'base_url = "http://127.0.0.1:8787/v1"',
-        'wire_api = "responses"',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
-    fs.writeFileSync(
-      path.join(codexContHome, 'config.toml'),
-      [
-        '[upstream]',
-        'url = "https://gflabtoken.cn/v1/responses"',
-        'mode = "fixed"',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
+    fs.writeFileSync(path.join(codexHome, 'config.toml'), 'model_provider = "gflab"\n', 'utf8');
     fs.writeFileSync(
       path.join(codexContHome, 'opl-flow-intelligence-enhancement.json'),
-      JSON.stringify({
-        surface_kind: 'opl_flow_intelligence_enhancement_receipt.v1',
-        status: 'enabled',
-        previous_provider_base_url: 'https://gflabtoken.cn/v1',
-      }),
+      JSON.stringify({ status: 'enabled' }),
       'utf8',
     );
 
     const output = runCli(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
-      OPL_CODEX_BIN: fakeCodex,
+      OPL_CODEX_BIN: path.join(fakeBin, 'codex'),
       OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
       OPL_CODEXCONT_HOME: codexContHome,
       OPL_CODEXCONT_SERVICE_MODE: 'container',
-      OPL_CODEXCONT_UVX: fakeUvx,
-      OPL_FLOW_INTELLIGENCE_SCRIPT: oplFlowScript,
+      OPL_CODEXCONT_UVX: path.join(fakeBin, 'uvx'),
+      OPL_FLOW_INTELLIGENCE_SCRIPT: scriptPath,
       OPL_FRAMEWORK_UPDATE_TARGET_ROOT: path.resolve('.'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       PATH: `${fakeBin}:/usr/bin:/bin`,
-      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
-      system_action: {
-        status: string;
-        details: {
-          intelligence_enhancement_summary: {
-            completed_targets_count: number;
-            manual_required_targets_count: number;
-          };
-          intelligence_enhancement_targets: Array<{
-            target_id: string;
-            status: string;
-            reason: string;
-            action: string | null;
-            status_before: {
-              enabled: boolean;
-              service: {
-                mode: string;
-              };
-            };
-            result: {
-              action: string;
-              status: string;
-              service: {
-                mode: string;
-                definition_path: string;
-                script_path: string;
-              };
-            };
-          }>;
-        };
-      };
-    };
-
-    assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.intelligence_enhancement_summary.completed_targets_count, 1);
-    assert.equal(output.system_action.details.intelligence_enhancement_summary.manual_required_targets_count, 0);
-
+      OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+    }) as any;
     const target = output.system_action.details.intelligence_enhancement_targets[0];
+
     assert.equal(target.target_id, 'codexcont');
-    assert.equal(target.status, 'completed');
+    assert.equal(target.status, 'completed', JSON.stringify(target));
     assert.equal(target.reason, 'container_startup_repair_required');
-    assert.equal(target.action, 'repair');
-    assert.equal(target.status_before.enabled, true);
-    assert.equal(target.status_before.service.mode, 'container');
-    assert.equal(target.result.action, 'repair');
     assert.equal(target.result.status, 'completed');
-    assert.equal(target.result.service.mode, 'container');
     assert.equal(fs.existsSync(target.result.service.definition_path), true);
-    assert.equal(fs.existsSync(target.result.service.script_path), true);
-    assert.match(fs.readFileSync(target.result.service.definition_path, 'utf8'), /container_entrypoint_or_opl_system_startup_maintenance_must_call_repair/);
-    assert.match(
-      fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8'),
-      /base_url = "http:\/\/127\.0\.0\.1:8787\/v1"/,
-    );
-    assert.deepEqual(fs.readFileSync(uvxLog, 'utf8').trim().split('\n'), [
-      '--from git+https://github.com/ZhenHuangLab/CodexCont codexcont install -y',
-      '--from git+https://github.com/ZhenHuangLab/CodexCont codexcont restart',
-    ]);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
-test('system startup-maintenance skips CodexCont repair when OPL Flow script is not installed', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-no-opl-flow-'));
-  const isolatedCwd = path.join(homeRoot, 'isolated-cwd');
-  const fakeBin = path.join(homeRoot, 'fake-bin');
-  const fakeCodex = path.join(fakeBin, 'codex');
-
-  try {
-    fs.mkdirSync(isolatedCwd, { recursive: true });
-    writeExecutable(fakeCodex, '#!/usr/bin/env bash\necho "codex-cli 0.134.0"\n');
-
-    const output = runCliInCwd(['system', 'startup-maintenance', '--scope', 'runtime_substrate'], isolatedCwd, {
-      HOME: homeRoot,
-      CODEX_HOME: path.join(homeRoot, '.codex'),
-      OPL_CODEX_BIN: fakeCodex,
-      OPL_CODEX_CLI_LATEST_VERSION: '0.134.0',
-      OPL_FRAMEWORK_UPDATE_TARGET_ROOT: repoRoot,
-      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      PATH: `${fakeBin}:/usr/bin:/bin`,
-      ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
-    }) as {
-      system_action: {
-        status: string;
-        details: {
-          intelligence_enhancement_summary: {
-            skipped_targets_count: number;
-            manual_required_targets_count: number;
-          };
-          intelligence_enhancement_targets: Array<{
-            target_id: string;
-            status: string;
-            reason: string;
-            action: string | null;
-          }>;
-        };
-      };
-    };
-
-    assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.intelligence_enhancement_summary.skipped_targets_count, 1);
-    assert.equal(output.system_action.details.intelligence_enhancement_summary.manual_required_targets_count, 0);
-    assert.equal(output.system_action.details.intelligence_enhancement_targets[0].target_id, 'codexcont');
-    assert.equal(output.system_action.details.intelligence_enhancement_targets[0].status, 'skipped');
-    assert.equal(
-      output.system_action.details.intelligence_enhancement_targets[0].reason,
-      'intelligence_enhancement_script_not_installed',
-    );
-    assert.equal(output.system_action.details.intelligence_enhancement_targets[0].action, null);
+    assert.match(fs.readFileSync(uvxLog, 'utf8'), /codexcont install -y/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

@@ -1,9 +1,8 @@
 import crypto from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { runOplConnectPubMedSearch } from './opl-connect-pubmed.ts';
 
-export type ScientificConnectorProviderId = 'pubmed' | 'crossref' | 'openalex';
+export type ScientificConnectorProviderId = 'crossref' | 'openalex';
 
 export type ScientificConnectorSearchInput = {
   provider: ScientificConnectorProviderId;
@@ -15,7 +14,7 @@ export type ScientificConnectorSearchInput = {
 type NormalizedScientificSourceRef = {
   source_ref: string;
   source_kind: 'literature_article';
-  source_provider: 'PubMed' | 'Crossref' | 'OpenAlex';
+  source_provider: 'Crossref' | 'OpenAlex';
   provider_id: ScientificConnectorProviderId;
   doi: string | null;
   pmid: string | null;
@@ -247,35 +246,7 @@ async function searchOpenAlex(input: ScientificConnectorSearchInput) {
     .filter((entry): entry is NormalizedScientificSourceRef => Boolean(entry));
 }
 
-async function searchPubMed(input: ScientificConnectorSearchInput) {
-  const output = await runOplConnectPubMedSearch({
-    query: input.query,
-    limit: input.limit,
-    timeoutMs: input.timeoutMs,
-  });
-  return output.opl_connect_pubmed.normalized_results.map((entry): NormalizedScientificSourceRef => ({
-    source_ref: entry.source_ref,
-    source_kind: 'literature_article',
-    source_provider: 'PubMed',
-    provider_id: 'pubmed',
-    doi: entry.doi,
-    pmid: entry.pmid,
-    openalex_id: null,
-    title: entry.title,
-    journal: entry.journal,
-    publication_year: entry.publication_date?.match(/\b\d{4}\b/)?.[0] ?? null,
-    authors: entry.authors,
-    source_urls: entry.source_urls,
-  }));
-}
-
 const SCIENTIFIC_CONNECTOR_PROVIDER_REGISTRY = [
-  {
-    provider_id: 'pubmed',
-    provider_owner: 'OPL Connect optional scientific provider adapter',
-    source_system: 'NCBI PubMed E-utilities',
-    search: searchPubMed,
-  },
   {
     provider_id: 'crossref',
     provider_owner: 'OPL Connect optional scientific provider adapter',

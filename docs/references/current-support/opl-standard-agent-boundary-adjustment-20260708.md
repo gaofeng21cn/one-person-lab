@@ -15,7 +15,7 @@ Machine boundary: 本文是人读排查与调整说明。机器真相继续归 s
 - `contracts/opl-framework/domain-private-platform-tail-matrix.json`
 - `opl agents conformance --family-defaults --json`
 - `opl agents default-callers --family-defaults --json`
-- 五个标准 domain repo 的 `contracts/domain_descriptor.json`、`contracts/pack_compiler_input.json`、`contracts/stage_control_plane.json`、`contracts/capability_map.json`、`agent/primary_skill/SKILL.md`
+- 五个标准 domain repo 的 `contracts/domain_descriptor.json`、`contracts/pack_compiler_input.json`、`agent/stages/manifest.json`、`contracts/capability_map.json`、`agent/primary_skill/SKILL.md`；family stage control plane 由 OPL 从 stage manifest 生成，不再把 domain repo tracked `contracts/stage_control_plane.json` 当作标准 source
 
 当前标准 domain agent 是 `mas`、`mag`、`rca`、`oma`、`obf`。`opl-meta-agent` 与 `opl-bookforge` 只保留为 OMA / BookForge 的 repo、package、plugin、alias 或 carrier 名，不再作为 standard-agent canonical id。`mas-scholar-skills` 是 `framework_capability_package`，不是 standard domain agent，不进入 default-caller deletion gate 或 domain physical-delete 判断。
 
@@ -48,7 +48,7 @@ Machine boundary: 本文是人读排查与调整说明。机器真相继续归 s
 | --- | --- | --- | --- |
 | `paper_mission/*` route handoff | MAS compatibility carrier | `domain_route` canonical fields 已存在；legacy task / surface kind 只服务 active MAS caller。 | 暂不迁出 / 不删除；等 active caller cutover 与 domain owner decision。 |
 | `paper-autonomy supervisor` CLI alias | MAS compatibility CLI | `autonomy-supervisor` generic parser 已存在；旧命令只作 compatibility。 | 暂不删；禁止新增 canonical docs/tests 继续围绕旧名扩展。 |
-| PubMed / Crossref / OpenAlex connector | Connect scientific connector profile | Connect 只输出 provider receipt / normalized refs / no citation truth；literature judgment 归 MAS Scholar Skills。 | 不迁出 OPL；这是通用 connector ABI 的 provider profile。 |
+| Crossref / OpenAlex connector | Connect scientific connector profile | Connect 只输出 provider receipt / normalized refs / no citation truth；PubMed client、医学 normalization 与 literature judgment 归 MAS。 | 保留通用 connector ABI；不复制 MAS `adapters/literature/pubmed.py`。 |
 | `workstreams.json` / `domains.json` 中的 grant/research/presentation 词汇 | public task routing catalog | 用于当前 active public workstream / admitted domain catalog，不是 standard agent membership source。 | 不迁出；后续若扩 OMA/BookForge public workstream，必须走 admission，不从此文件推断标准 agent 集合。 |
 | family-orchestration 中 publication/fundability/visual forbidden-claim wording | no-authority boundary / compatibility example | 明确说明 OPL 不持有这些 verdict。 | 不迁出；保留为防误用 guard。 |
 | MAS / RCA profile-specific source refs | domain profile / fixture | 仅在 profile 或 fixture 中出现。 | 不迁出；不得升格为 OPL canonical ontology。 |

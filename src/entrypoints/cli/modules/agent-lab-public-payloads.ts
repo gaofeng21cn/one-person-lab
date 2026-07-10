@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { parseJsonText } from '../../../kernel/json-file.ts';
+import { parseJsonText, readJsonRecordFile } from '../../../kernel/json-file.ts';
 import {
   buildAgentLabExportEnvelope,
   buildAgentLabEvolutionResult,
@@ -27,12 +27,12 @@ import {
   buildAgentLabEfficiencyNonRegressionReadModel,
   buildSampleAgentLabResult,
   runAgentLabSuite,
-  type AgentLabCostEstimatePreset,
   type AgentLabSuite,
 } from '../../../modules/foundry-lab/agent-lab.ts';
 import { executeAgentLabEvaluationWorkOrder } from '../../../modules/foundry-lab/agent-lab-evaluation-work-order.ts';
 import { buildLonglineAgentLabResult } from '../../../modules/foundry-lab/agent-lab-longline.ts';
 import { FrameworkContractError } from '../../../modules/charter/contracts.ts';
+import { parseCommandOptions } from './command-registry.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
 
@@ -164,51 +164,22 @@ function isJsonRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseAgentLabCostEstimateArgs(args: string[], spec: CommandSpec) {
-  let preset: AgentLabCostEstimatePreset | null = null;
-  const allowedPresets = new Set(['rca-ppt-40']);
+  const profilePath = parseCommandOptions(args, spec, {
+    profile: { type: 'string' },
+  }).profile as string | undefined;
 
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--preset') {
-      throw buildUsageError(`Unknown option for agent-lab cost-estimate: ${token}.`, spec, { option: token });
-    }
-
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError('Missing value for option: --preset.', spec, { option: '--preset' });
-    }
-    if (!allowedPresets.has(value)) {
-      throw buildUsageError(`Unsupported agent-lab cost estimate preset: ${value}.`, spec, { option: '--preset' });
-    }
-    preset = value as AgentLabCostEstimatePreset;
-    index += 1;
-  }
-
-  if (!preset) {
-    throw buildUsageError('agent-lab cost-estimate requires --preset <rca-ppt-40>.', spec, {
-      option: '--preset',
+  if (!profilePath) {
+    throw buildUsageError('agent-lab cost-estimate requires --profile <domain-owned-profile.json>.', spec, {
+      option: '--profile',
     });
   }
-
-  return { preset };
+  return { profilePath };
 }
 
 function parseAgentLabSuiteArgs(args: string[], spec: CommandSpec, commandName: string) {
-  let suitePath: string | null = null;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--suite') {
-      throw buildUsageError(`Unknown option for agent-lab ${commandName}: ${token}.`, spec, { option: token });
-    }
-
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError('Missing value for option: --suite.', spec, { option: '--suite' });
-    }
-    suitePath = value;
-    index += 1;
-  }
+  const suitePath = parseCommandOptions(args, spec, {
+    suite: { type: 'string' },
+  }).suite as string | undefined;
 
   if (!suitePath) {
     throw buildUsageError(`agent-lab ${commandName} requires --suite <suite.json>.`, spec, { option: '--suite' });
@@ -222,29 +193,14 @@ function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
 }
 
 function parseAgentLabEvaluationWorkOrderArgs(args: string[], spec: CommandSpec) {
-  let workOrderPath: string | null = null;
-  let observationPacketPath: string | null = null;
-  let outputDir: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--work-order' && token !== '--observations' && token !== '--output') {
-      throw buildUsageError(`Unknown option for agent-lab evaluation-work-order execute: ${token}.`, spec, {
-        option: token,
-      });
-    }
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-    if (token === '--work-order') {
-      workOrderPath = value;
-    } else if (token === '--observations') {
-      observationPacketPath = value;
-    } else {
-      outputDir = value;
-    }
-    index += 1;
-  }
+  const parsed = parseCommandOptions(args, spec, {
+    'work-order': { type: 'string' },
+    observations: { type: 'string' },
+    output: { type: 'string' },
+  });
+  const workOrderPath = parsed['work-order'] as string | undefined;
+  const observationPacketPath = parsed.observations as string | undefined;
+  const outputDir = parsed.output as string | undefined;
   if (!workOrderPath || !outputDir) {
     throw buildUsageError(
       'agent-lab evaluation-work-order execute requires --work-order <work-order.json> and --output <dir>.',
@@ -256,32 +212,14 @@ function parseAgentLabEvaluationWorkOrderArgs(args: string[], spec: CommandSpec)
 }
 
 function parseAgentLabWorkflowTemplateRunArgs(args: string[], spec: CommandSpec) {
-  let templateId: string | null = null;
-  let projectDir: string | null = null;
-  let outputDir: string | null = null;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--template' && token !== '--project' && token !== '--output') {
-      throw buildUsageError(`Unknown option for agent-lab workflow-template run: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-
-    if (token === '--template') {
-      templateId = value;
-    } else if (token === '--project') {
-      projectDir = value;
-    } else {
-      outputDir = value;
-    }
-    index += 1;
-  }
+  const parsed = parseCommandOptions(args, spec, {
+    template: { type: 'string' },
+    project: { type: 'string' },
+    output: { type: 'string' },
+  });
+  const templateId = parsed.template as string | undefined;
+  const projectDir = parsed.project as string | undefined;
+  const outputDir = parsed.output as string | undefined;
 
   if (!templateId) {
     throw buildUsageError('agent-lab workflow-template run requires --template <id>.', spec, {
@@ -304,21 +242,9 @@ function parseAgentLabWorkflowTemplateRunArgs(args: string[], spec: CommandSpec)
 }
 
 function parseAgentLabRhoArgs(args: string[], spec: CommandSpec) {
-  let projectDir: string | null = null;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--project') {
-      throw buildUsageError(`Unknown option for agent-lab rho: ${token}.`, spec, { option: token });
-    }
-
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError('Missing value for option: --project.', spec, { option: '--project' });
-    }
-    projectDir = value;
-    index += 1;
-  }
+  const projectDir = parseCommandOptions(args, spec, {
+    project: { type: 'string' },
+  }).project as string | undefined;
 
   if (!projectDir) {
     throw buildUsageError('agent-lab rho requires --project <dir>.', spec, { option: '--project' });
@@ -336,38 +262,18 @@ function parsePositiveIntegerOption(value: string, option: string, spec: Command
 }
 
 function parseAgentLabRhoRunArgs(args: string[], spec: CommandSpec) {
-  let projectDir: string | null = null;
-  let sessionsDir: string | null = null;
-  let outputDir: string | null = null;
-  let maxTrajectories: number | null = null;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (
-      token !== '--project'
-      && token !== '--sessions'
-      && token !== '--output'
-      && token !== '--max-trajectories'
-    ) {
-      throw buildUsageError(`Unknown option for agent-lab rho run: ${token}.`, spec, { option: token });
-    }
-
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-
-    if (token === '--project') {
-      projectDir = value;
-    } else if (token === '--sessions') {
-      sessionsDir = value;
-    } else if (token === '--output') {
-      outputDir = value;
-    } else {
-      maxTrajectories = parsePositiveIntegerOption(value, token, spec);
-    }
-    index += 1;
-  }
+  const parsed = parseCommandOptions(args, spec, {
+    project: { type: 'string' },
+    sessions: { type: 'string' },
+    output: { type: 'string' },
+    'max-trajectories': { type: 'string' },
+  });
+  const projectDir = parsed.project as string | undefined;
+  const sessionsDir = parsed.sessions as string | undefined;
+  const outputDir = parsed.output as string | undefined;
+  const maxTrajectories = typeof parsed['max-trajectories'] === 'string'
+    ? parsePositiveIntegerOption(parsed['max-trajectories'], '--max-trajectories', spec)
+    : null;
 
   if (!projectDir) {
     throw buildUsageError('agent-lab rho run requires --project <dir>.', spec, { option: '--project' });
@@ -377,33 +283,21 @@ function parseAgentLabRhoRunArgs(args: string[], spec: CommandSpec) {
 }
 
 function parseAgentLabExportArgs(args: string[], spec: CommandSpec) {
-  let target: AgentLabExportTarget | null = null;
   const allowedTargets = new Set(['inspect-ai', 'openinference', 'langfuse', 'phoenix', 'json']);
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--target') {
-      throw buildUsageError(`Unknown option for agent-lab export: ${token}.`, spec, { option: token });
-    }
-
-    const value = args[index + 1];
-    if (!value) {
-      throw buildUsageError('Missing value for option: --target.', spec, { option: '--target' });
-    }
-    if (!allowedTargets.has(value)) {
-      throw buildUsageError(`Unsupported agent-lab export target: ${value}.`, spec, { option: '--target' });
-    }
-    target = value as AgentLabExportTarget;
-    index += 1;
-  }
+  const target = parseCommandOptions(args, spec, {
+    target: { type: 'string' },
+  }).target as string | undefined;
 
   if (!target) {
     throw buildUsageError('agent-lab export requires --target <inspect-ai|openinference|langfuse|phoenix|json>.', spec, {
       option: '--target',
     });
   }
+  if (!allowedTargets.has(target)) {
+    throw buildUsageError(`Unsupported agent-lab export target: ${target}.`, spec, { option: '--target' });
+  }
 
-  return { target };
+  return { target: target as AgentLabExportTarget };
 }
 
 function readAgentLabSuiteFile(suitePath: string): AgentLabSuite {
@@ -504,8 +398,18 @@ function buildAgentLabEvolvePayload(args: string[], spec: CommandSpec) {
 }
 
 function buildAgentLabCostEstimatePayload(args: string[], spec: CommandSpec) {
-  const { preset } = parseAgentLabCostEstimateArgs(args, spec);
-  const costEstimate = buildAgentLabCostEstimate({ preset });
+  const { profilePath } = parseAgentLabCostEstimateArgs(args, spec);
+  const costEstimate = buildAgentLabCostEstimate({
+    profile: readJsonRecordFile(profilePath, {
+      missingMessage: () => 'Agent Lab cost estimate profile file was not found.',
+      missingDetails: (file) => ({ file }),
+      invalidJsonMessage: () => 'Agent Lab cost estimate profile file is not valid JSON.',
+      invalidJsonDetails: (file, cause) => ({ file, cause }),
+      invalidRootMessage: () => 'Agent Lab cost estimate profile must contain an object root.',
+      invalidRootDetails: (file) => ({ file }),
+    }),
+    profile_ref: profilePath,
+  });
   return {
     version: 'g2',
     agent_lab_cost_estimate: {

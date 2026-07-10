@@ -6,7 +6,6 @@
   "state": "active_contract",
   "machine_boundary": "This registry describes command metadata and output schemas. It does not execute commands, write domain truth, create owner receipts, create typed blockers, or claim domain, artifact, App, production, release, or L5 readiness.",
   "protected_command_prefixes": [
-    "connect pubmed",
     "connect scientific",
     "connect references",
     "connect external-skills",
@@ -18,55 +17,6 @@
     "runtime manager",
     "runtime app-operator-drilldown",
     "runtime observability"
-  ],
-  "required_command_ids": [
-    "connect pubmed search",
-    "connect scientific search",
-    "connect references verify",
-    "connect install",
-    "connect update",
-    "connect reinstall",
-    "connect remove",
-    "connect foundation-skills inspect",
-    "connect foundation-skills sync",
-    "connect agent-packages registry refresh",
-    "connect agent-packages validate-manifest",
-    "connect agent-packages install",
-    "connect agent-packages update",
-    "connect agent-packages repair",
-    "connect agent-packages uninstall",
-    "connect agent-packages hide",
-    "connect agent-packages unhide",
-    "connect agent-packages enable",
-    "connect agent-packages disable",
-    "connect agent-packages status",
-    "connect agent-packages list",
-    "update status",
-    "update check",
-    "update plan",
-    "update apply",
-    "update repair",
-    "update rollback",
-    "status workspace",
-    "status runtime",
-    "status dashboard",
-    "stages list",
-    "stages inspect",
-    "stages readiness",
-    "stages proof-bundle",
-    "stages graph",
-    "stages assumptions",
-    "stages cohort-loop",
-    "stages runtime-budget",
-    "stages registry",
-    "stages source-spec",
-    "stages replay-certification",
-    "runtime manager",
-    "runtime manager action",
-    "runtime app-operator-drilldown",
-    "runtime observability-export",
-    "runtime observability-endpoint",
-    "runtime observability-collector-smoke"
   ],
   "commands": {
     "stages_list": {
@@ -86,7 +36,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_inspect": {
@@ -98,13 +50,15 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         },
         {
           "name": "stage",
           "flag": "--stage",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Stage identifier to inspect."
         }
       ],
       "output_schema": {
@@ -119,7 +73,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_readiness": {
@@ -131,19 +87,22 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Domain identifier or alias to inspect."
         },
         {
           "name": "family-defaults",
           "flag": "--family-defaults",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Summarize the family-default stage readiness projection."
         },
         {
           "name": "detail",
           "flag": "--detail",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Detail level: summary or full."
         }
       ],
       "output_schema": {
@@ -158,7 +117,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_proof_bundle": {
@@ -170,7 +131,8 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         }
       ],
       "output_schema": {
@@ -185,7 +147,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_graph": {
@@ -197,7 +161,8 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         }
       ],
       "output_schema": {
@@ -212,7 +177,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_assumptions": {
@@ -224,7 +191,8 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         }
       ],
       "output_schema": {
@@ -239,7 +207,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_cohort_loop": {
@@ -251,7 +221,8 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         }
       ],
       "output_schema": {
@@ -266,7 +237,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_runtime_budget": {
@@ -278,7 +251,8 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         }
       ],
       "output_schema": {
@@ -293,7 +267,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_registry": {
@@ -305,86 +281,100 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         },
         {
           "name": "library-status",
           "flag": "--library-status",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "promotion-ref",
           "flag": "--promotion-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "deprecation-ref",
           "flag": "--deprecation-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "supersession-ref",
           "flag": "--supersession-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "superseded-by-stage-pack-ref",
           "flag": "--superseded-by-stage-pack-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "previous-stage-pack-hash",
           "flag": "--previous-stage-pack-hash",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "migration-policy",
           "flag": "--migration-policy",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "migration-policy-ref",
           "flag": "--migration-policy-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "reused-by-ref",
           "flag": "--reused-by-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only stage-pack reuse projection input."
         },
         {
           "name": "attempt-id",
           "flag": "--attempt-id",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage attempt identifier for registry projection binding."
         },
         {
           "name": "attempt-stage-pack-hash",
           "flag": "--attempt-stage-pack-hash",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack hash for attempt projection binding."
         },
         {
           "name": "attempt-stage",
           "flag": "--attempt-stage",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage id for attempt projection binding."
         },
         {
           "name": "attempt-created-at-ref",
           "flag": "--attempt-created-at-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Creation ref for attempt projection binding."
         }
       ],
       "output_schema": {
@@ -399,7 +389,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_source_spec": {
@@ -411,90 +403,104 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         },
         {
           "name": "library-status",
           "flag": "--library-status",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "promotion-ref",
           "flag": "--promotion-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "deprecation-ref",
           "flag": "--deprecation-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "supersession-ref",
           "flag": "--supersession-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "superseded-by-stage-pack-ref",
           "flag": "--superseded-by-stage-pack-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "previous-stage-pack-hash",
           "flag": "--previous-stage-pack-hash",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "migration-policy",
           "flag": "--migration-policy",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "migration-policy-ref",
           "flag": "--migration-policy-ref",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Stage-pack lifecycle projection input."
         },
         {
           "name": "reused-by-ref",
           "flag": "--reused-by-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only stage-pack reuse projection input."
         },
         {
           "name": "append-only-event-log-ref",
           "flag": "--append-only-event-log-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         },
         {
           "name": "attempt-ledger-ref",
           "flag": "--attempt-ledger-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         },
         {
           "name": "recorded-runtime-event-ref",
           "flag": "--recorded-runtime-event-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         },
         {
           "name": "closeout-receipt-ref",
           "flag": "--closeout-receipt-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         }
       ],
       "output_schema": {
@@ -509,7 +515,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "stages_replay_certification": {
@@ -521,35 +529,40 @@
           "name": "domain",
           "flag": "--domain",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Domain identifier or alias to inspect."
         },
         {
           "name": "append-only-event-log-ref",
           "flag": "--append-only-event-log-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         },
         {
           "name": "attempt-ledger-ref",
           "flag": "--attempt-ledger-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         },
         {
           "name": "recorded-runtime-event-ref",
           "flag": "--recorded-runtime-event-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         },
         {
           "name": "closeout-receipt-ref",
           "flag": "--closeout-receipt-ref",
           "value_kind": "string",
           "required": false,
-          "multiple": true
+          "multiple": true,
+          "summary": "Refs-only evidence input folded into the stage diagnostic projection."
         }
       ],
       "output_schema": {
@@ -564,7 +577,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Stagecraft",
+        "surface": "family_stage_projection_readback"
       }
     },
     "connect_install": {
@@ -576,7 +591,8 @@
           "name": "module",
           "flag": "--module",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "OPL-managed domain module id."
         }
       ],
       "output_schema": {
@@ -630,7 +646,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "managed_module_action"
       }
     },
     "connect_update": {
@@ -642,7 +660,8 @@
           "name": "module",
           "flag": "--module",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "OPL-managed domain module id."
         }
       ],
       "output_schema": {
@@ -696,7 +715,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "managed_module_action"
       }
     },
     "connect_reinstall": {
@@ -708,7 +729,8 @@
           "name": "module",
           "flag": "--module",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "OPL-managed domain module id."
         }
       ],
       "output_schema": {
@@ -762,7 +784,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "managed_module_action"
       }
     },
     "connect_remove": {
@@ -774,7 +798,8 @@
           "name": "module",
           "flag": "--module",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "OPL-managed domain module id."
         }
       ],
       "output_schema": {
@@ -828,171 +853,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
-      }
-    },
-    "connect_pubmed_search": {
-      "command_id": "connect pubmed search",
-      "owner": "OPL Connect",
-      "parser_adapter": "node_util_parse_args",
-      "options": [
-        {
-          "name": "query",
-          "flag": "--query",
-          "value_kind": "string",
-          "required": true
-        },
-        {
-          "name": "limit",
-          "flag": "--limit",
-          "value_kind": "integer",
-          "default": 10,
-          "allowed_range": {
-            "min": 1,
-            "max": 50
-          }
-        }
-      ],
-      "output_schema": {
-        "type": "object",
-        "required": [
-          "version",
-          "opl_connect_pubmed"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "version": {
-            "const": "g2"
-          },
-          "opl_connect_pubmed": {
-            "type": "object",
-            "required": [
-              "surface_kind",
-              "connector_id",
-              "connector_profile",
-              "profile_role",
-              "canonical_profile_command",
-              "status",
-              "request",
-              "normalized_results",
-              "receipt_refs",
-              "provider_receipt_role",
-              "authority_boundary"
-            ],
-            "additionalProperties": true,
-            "properties": {
-              "surface_kind": {
-                "const": "opl_connect_pubmed_readonly_search"
-              },
-              "connector_id": {
-                "const": "pubmed"
-              },
-              "connector_profile": {
-                "const": "scientific"
-              },
-              "profile_role": {
-                "const": "pubmed_compatibility_entry_for_optional_scientific_connector_profile"
-              },
-              "canonical_profile_command": {
-                "const": "connect scientific search --provider pubmed"
-              },
-              "status": {
-                "enum": [
-                  "completed"
-                ]
-              },
-              "request": {
-                "type": "object",
-                "required": [
-                  "query",
-                  "limit"
-                ],
-                "properties": {
-                  "query": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "limit": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 50
-                  }
-                }
-              },
-              "normalized_results": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "source_ref",
-                    "source_kind",
-                    "source_provider",
-                    "pmid",
-                    "title",
-                    "source_urls"
-                  ],
-                  "additionalProperties": true
-                }
-              },
-              "receipt_refs": {
-                "type": "object",
-                "required": [
-                  "connector_invocation_ref",
-                  "ledger_receipt_candidate_ref"
-                ]
-              },
-              "provider_receipt_role": {
-                "const": "provider_receipt_candidate_only"
-              },
-              "authority_boundary": {
-                "type": "object",
-                "required": [
-                  "read_only",
-                  "can_write_domain_truth",
-                  "can_sign_owner_receipt",
-                  "can_create_typed_blocker",
-                  "can_claim_publication_readiness",
-                  "can_claim_citation_truth",
-                  "can_claim_domain_ready",
-                  "can_claim_production_ready"
-                ],
-                "properties": {
-                  "read_only": {
-                    "const": true
-                  },
-                  "can_write_domain_truth": {
-                    "const": false
-                  },
-                  "can_sign_owner_receipt": {
-                    "const": false
-                  },
-                  "can_create_typed_blocker": {
-                    "const": false
-                  },
-                  "can_claim_publication_readiness": {
-                    "const": false
-                  },
-                  "can_claim_citation_truth": {
-                    "const": false
-                  },
-                  "can_claim_domain_ready": {
-                    "const": false
-                  },
-                  "can_claim_production_ready": {
-                    "const": false
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "authority_boundary": {
-        "can_write_domain_truth": false,
-        "can_create_owner_receipt": false,
-        "can_create_typed_blocker": false,
-        "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "managed_module_action"
       }
     },
     "connect_scientific_search": {
@@ -1006,16 +869,17 @@
           "value_kind": "string",
           "required": true,
           "allowed_values": [
-            "pubmed",
             "crossref",
             "openalex"
-          ]
+          ],
+          "summary": "Scientific provider id: crossref, openalex."
         },
         {
           "name": "query",
           "flag": "--query",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Provider search query."
         },
         {
           "name": "limit",
@@ -1025,7 +889,8 @@
           "allowed_range": {
             "min": 1,
             "max": 50
-          }
+          },
+          "summary": "Maximum number of normalized source refs to return."
         }
       ],
       "output_schema": {
@@ -1071,7 +936,6 @@
               },
               "provider_id": {
                 "enum": [
-                  "pubmed",
                   "crossref",
                   "openalex"
                 ]
@@ -1091,7 +955,6 @@
                 "properties": {
                   "provider": {
                     "enum": [
-                      "pubmed",
                       "crossref",
                       "openalex"
                     ]
@@ -1186,7 +1049,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "read_only_optional_scientific_connector_profile"
       }
     },
     "connect_references_verify": {
@@ -1198,19 +1063,22 @@
           "name": "references-file",
           "flag": "--references-file",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "JSON file containing references as an array or { references: [...] }."
         },
         {
           "name": "providers",
           "flag": "--providers",
           "value_kind": "string",
-          "default": "crossref,pubmed,openalex,semantic-scholar,crossmark,publisher"
+          "default": "crossref,openalex,semantic-scholar,crossmark,publisher",
+          "summary": "Comma-separated provider ids: crossref,openalex,semantic-scholar,crossmark,publisher."
         },
         {
           "name": "cache-root",
           "flag": "--cache-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Optional cache root for provider evidence receipts."
         },
         {
           "name": "max-retries",
@@ -1220,7 +1088,8 @@
           "allowed_range": {
             "min": 0,
             "max": 5
-          }
+          },
+          "summary": "Retry count for retryable provider failures."
         }
       ],
       "output_schema": {
@@ -1396,7 +1265,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "read_only_reference_verification_connector"
       }
     },
     "connect_external_skills_list": {
@@ -1408,19 +1279,22 @@
           "name": "source",
           "flag": "--source",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility."
         },
         {
           "name": "source-root",
           "flag": "--source-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Local checkout path for the external specialist source."
         },
         {
           "name": "registry-root",
           "flag": "--registry-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Root containing the OPL Connect external specialist source registry."
         }
       ],
       "output_schema": {
@@ -1452,7 +1326,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "external_skill_library_connector"
       }
     },
     "connect_external_skills_sources_add": {
@@ -1464,31 +1340,36 @@
           "name": "source",
           "flag": "--source",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility."
         },
         {
           "name": "source-root",
           "flag": "--source-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Local checkout path for the external specialist source."
         },
         {
           "name": "registry-root",
           "flag": "--registry-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Root containing the OPL Connect external specialist source registry."
         },
         {
           "name": "repo",
           "flag": "--repo",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Pinned external skill library repository URL."
         },
         {
           "name": "pin",
           "flag": "--pin",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Pinned external skill library commit, tag, or immutable ref."
         }
       ],
       "output_schema": {
@@ -1520,7 +1401,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "external_skill_library_connector"
       }
     },
     "connect_external_skills_search": {
@@ -1532,25 +1415,29 @@
           "name": "source",
           "flag": "--source",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility."
         },
         {
           "name": "source-root",
           "flag": "--source-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Local checkout path for the external specialist source."
         },
         {
           "name": "registry-root",
           "flag": "--registry-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Root containing the OPL Connect external specialist source registry."
         },
         {
           "name": "query",
           "flag": "--query",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Capability, package, database, or tool need."
         },
         {
           "name": "limit",
@@ -1560,7 +1447,8 @@
           "allowed_range": {
             "min": 1,
             "max": 50
-          }
+          },
+          "summary": "Maximum matching external skill cards to return."
         }
       ],
       "output_schema": {
@@ -1594,7 +1482,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "external_skill_library_connector"
       }
     },
     "connect_external_skills_inspect": {
@@ -1606,25 +1496,29 @@
           "name": "source",
           "flag": "--source",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility."
         },
         {
           "name": "source-root",
           "flag": "--source-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Local checkout path for the external specialist source."
         },
         {
           "name": "registry-root",
           "flag": "--registry-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Root containing the OPL Connect external specialist source registry."
         },
         {
           "name": "skill",
           "flag": "--skill",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "External skill directory id, or source_id/skill_id selector."
         }
       ],
       "output_schema": {
@@ -1657,7 +1551,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "external_skill_library_connector"
       }
     },
     "connect_external_skills_sync": {
@@ -1669,49 +1565,57 @@
           "name": "source",
           "flag": "--source",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility."
         },
         {
           "name": "source-root",
           "flag": "--source-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Local checkout path for the external specialist source."
         },
         {
           "name": "registry-root",
           "flag": "--registry-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Root containing the OPL Connect external specialist source registry."
         },
         {
           "name": "skill",
           "flag": "--skill",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "External skill directory id, or source_id/skill_id selector."
         },
         {
           "name": "scope",
           "flag": "--scope",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Target Codex discovery scope."
         },
         {
           "name": "target-workspace",
           "flag": "--target-workspace",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Workspace root for workspace-scoped sync."
         },
         {
           "name": "target-quest",
           "flag": "--target-quest",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Quest root for quest-scoped sync."
         },
         {
           "name": "target-root",
           "flag": "--target-root",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Explicit target root override."
         }
       ],
       "output_schema": {
@@ -1747,7 +1651,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "external_skill_library_connector"
       }
     },
     "connect_foundation_skills_inspect": {
@@ -1784,7 +1690,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "foundation_support_skill_connector"
       }
     },
     "connect_foundation_skills_sync": {
@@ -1796,19 +1704,22 @@
           "name": "skill",
           "flag": "--skill",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Foundation skill directory id."
         },
         {
           "name": "scope",
           "flag": "--scope",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Target Codex discovery scope: project, workspace, or quest."
         },
         {
           "name": "target-root",
           "flag": "--target-root",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Project, workspace, or quest root that receives .codex/skills/<skill-id>."
         }
       ],
       "output_schema": {
@@ -1844,7 +1755,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "foundation_support_skill_connector"
       }
     },
     "connect_agent_packages_registry_refresh": {
@@ -1856,7 +1769,8 @@
           "name": "registry-url",
           "flag": "--registry-url",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "HTTP(S), file://, or absolute path to an OPL Agent Package registry JSON document."
         }
       ],
       "output_schema": {
@@ -1890,7 +1804,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_validate_manifest": {
@@ -1902,31 +1818,36 @@
           "name": "manifest-url",
           "flag": "--manifest-url",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Direct OPL Agent Package manifest URL or local file path."
         },
         {
           "name": "registry-url",
           "flag": "--registry-url",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Registry URL used to select a package manifest."
         },
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Package id to select from --registry-url."
         },
         {
           "name": "trust-tier",
           "flag": "--trust-tier",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Explicit user/organization trust tier assigned before install."
         },
         {
           "name": "source-kind",
           "flag": "--source-kind",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Package source kind for the package lock receipt."
         }
       ],
       "output_schema": {
@@ -1964,7 +1885,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_install": {
@@ -1976,37 +1899,43 @@
           "name": "manifest-url",
           "flag": "--manifest-url",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Direct OPL Agent Package manifest URL or local file path."
         },
         {
           "name": "registry-url",
           "flag": "--registry-url",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Registry URL used to select a package manifest."
         },
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Package id to select from --registry-url."
         },
         {
           "name": "trust-tier",
           "flag": "--trust-tier",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Explicit user/organization trust tier assigned before install."
         },
         {
           "name": "source-kind",
           "flag": "--source-kind",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Package source kind for the package lock receipt."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview lock/receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -2041,7 +1970,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_list": {
@@ -2080,7 +2011,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "update_status": {
@@ -2092,7 +2025,8 @@
           "name": "component",
           "flag": "--component",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update component id to project."
         }
       ],
       "output_schema": {
@@ -2117,7 +2051,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Managed Update / Pack owners",
+        "surface": "managed_update_command_projection"
       }
     },
     "update_check": {
@@ -2129,7 +2065,8 @@
           "name": "component",
           "flag": "--component",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update component id to project."
         }
       ],
       "output_schema": {
@@ -2154,7 +2091,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Managed Update / Pack owners",
+        "surface": "managed_update_command_projection"
       }
     },
     "update_plan": {
@@ -2166,7 +2105,8 @@
           "name": "component",
           "flag": "--component",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update component id to project."
         }
       ],
       "output_schema": {
@@ -2191,7 +2131,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Managed Update / Pack owners",
+        "surface": "managed_update_command_projection"
       }
     },
     "update_apply": {
@@ -2203,7 +2145,8 @@
           "name": "component",
           "flag": "--component",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update component id to project."
         }
       ],
       "output_schema": {
@@ -2228,7 +2171,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Managed Update / Pack owners",
+        "surface": "managed_update_command_projection"
       }
     },
     "update_repair": {
@@ -2240,13 +2185,15 @@
           "name": "component",
           "flag": "--component",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update component id to project."
         },
         {
           "name": "receipt",
           "flag": "--receipt",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update receipt id to repair."
         }
       ],
       "output_schema": {
@@ -2271,7 +2218,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Managed Update / Pack owners",
+        "surface": "managed_update_command_projection"
       }
     },
     "update_rollback": {
@@ -2283,7 +2232,8 @@
           "name": "component",
           "flag": "--component",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Managed update component id to project."
         }
       ],
       "output_schema": {
@@ -2308,7 +2258,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Managed Update / Pack owners",
+        "surface": "managed_update_command_projection"
       }
     },
     "status_workspace": {
@@ -2320,7 +2272,8 @@
           "name": "path",
           "flag": "--path",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Workspace path to inspect."
         }
       ],
       "output_schema": {
@@ -2366,7 +2319,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Console",
+        "surface": "workspace_status_readback"
       }
     },
     "status_runtime": {
@@ -2382,7 +2337,8 @@
           "allowed_range": {
             "min": 1,
             "max": 500
-          }
+          },
+          "summary": "Maximum managed session ledger entries to include."
         }
       ],
       "output_schema": {
@@ -2412,7 +2368,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_status_readback"
       }
     },
     "status_dashboard": {
@@ -2424,7 +2382,8 @@
           "name": "path",
           "flag": "--path",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Workspace path to project into the dashboard readback."
         },
         {
           "name": "sessions-limit",
@@ -2434,7 +2393,8 @@
           "allowed_range": {
             "min": 1,
             "max": 500
-          }
+          },
+          "summary": "Maximum managed session ledger entries to include."
         }
       ],
       "output_schema": {
@@ -2463,7 +2423,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Console",
+        "surface": "product_runtime_dashboard_readback"
       }
     },
     "runtime_manager": {
@@ -2498,7 +2460,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_manager_readback"
       }
     },
     "runtime_manager_action": {
@@ -2510,13 +2474,15 @@
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Plan Runtime Manager adapter actions without mutating native helper state."
         },
         {
           "name": "apply",
           "flag": "--apply",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Apply Runtime Manager adapter repair actions."
         }
       ],
       "output_schema": {
@@ -2553,7 +2519,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_manager_action_projection"
       }
     },
     "runtime_app_operator_drilldown": {
@@ -2565,13 +2533,15 @@
           "name": "detail",
           "flag": "--detail",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Detail level: summary or full."
         },
         {
           "name": "full",
           "flag": "--full",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Alias for --detail full."
         }
       ],
       "output_schema": {
@@ -2619,7 +2589,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_app_operator_drilldown_readback"
       }
     },
     "runtime_observability_export": {
@@ -2631,7 +2603,8 @@
           "name": "format",
           "flag": "--format",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Output format: json, openmetrics, or collector-config-json."
         }
       ],
       "output_schema": {
@@ -2678,7 +2651,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_observability_export_readback"
       }
     },
     "runtime_observability_endpoint": {
@@ -2690,7 +2665,8 @@
           "name": "host",
           "flag": "--host",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "HTTP host to bind."
         },
         {
           "name": "port",
@@ -2700,25 +2676,29 @@
           "allowed_range": {
             "min": 0,
             "max": 65535
-          }
+          },
+          "summary": "HTTP port to bind; 0 lets the OS choose an ephemeral port."
         },
         {
           "name": "metrics-path",
           "flag": "--metrics-path",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "HTTP path that serves OpenMetrics text."
         },
         {
           "name": "once",
           "flag": "--once",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Close the endpoint after the first request; useful for tests and one-shot readback."
         },
         {
           "name": "ready-file",
           "flag": "--ready-file",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Optional JSON file written after the endpoint is listening."
         }
       ],
       "output_schema": {
@@ -2772,7 +2752,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_observability_metrics_endpoint"
       }
     },
     "runtime_observability_collector_smoke": {
@@ -2784,19 +2766,22 @@
           "name": "collector-command",
           "flag": "--collector-command",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "OpenTelemetry Collector binary path or command name."
         },
         {
           "name": "endpoint",
           "flag": "--endpoint",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Existing OpenMetrics endpoint URL to scrape instead of starting a temporary local endpoint."
         },
         {
           "name": "host",
           "flag": "--host",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Temporary endpoint host when --endpoint is omitted."
         },
         {
           "name": "port",
@@ -2806,13 +2791,15 @@
           "allowed_range": {
             "min": 0,
             "max": 65535
-          }
+          },
+          "summary": "Temporary endpoint port when --endpoint is omitted; default 0 lets the OS choose."
         },
         {
           "name": "metrics-path",
           "flag": "--metrics-path",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Temporary endpoint metrics path when --endpoint is omitted."
         },
         {
           "name": "timeout-ms",
@@ -2822,7 +2809,8 @@
           "allowed_range": {
             "min": 1,
             "max": 120000
-          }
+          },
+          "summary": "Maximum time to wait for Collector debug output containing an OPL metric."
         }
       ],
       "output_schema": {
@@ -2887,7 +2875,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Runway",
+        "surface": "runtime_observability_collector_smoke"
       }
     },
     "connect_agent_packages_update": {
@@ -2899,37 +2889,43 @@
           "name": "manifest-url",
           "flag": "--manifest-url",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Direct OPL Agent Package manifest URL or local file path."
         },
         {
           "name": "registry-url",
           "flag": "--registry-url",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Registry URL used to select a package manifest."
         },
         {
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Package id to select from --registry-url."
         },
         {
           "name": "trust-tier",
           "flag": "--trust-tier",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Explicit user/organization trust tier assigned before install."
         },
         {
           "name": "source-kind",
           "flag": "--source-kind",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Package source kind for the package lock receipt."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview lock/receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -2964,7 +2960,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_repair": {
@@ -2976,13 +2974,15 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id to repair."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -3017,7 +3017,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_uninstall": {
@@ -3029,13 +3031,15 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id to uninstall."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -3070,7 +3074,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_hide": {
@@ -3082,13 +3088,15 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id to hide."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -3120,7 +3128,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_unhide": {
@@ -3132,13 +3142,15 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id to unhide."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -3170,7 +3182,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_enable": {
@@ -3182,13 +3196,15 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id to enable."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -3220,7 +3236,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_disable": {
@@ -3232,13 +3250,15 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id to disable."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview receipt output without writing state."
         }
       ],
       "output_schema": {
@@ -3270,7 +3290,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_home_shortcut_preferences_set": {
@@ -3282,31 +3304,36 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Installed OPL Agent Package id."
         },
         {
           "name": "shortcut-id",
           "flag": "--shortcut-id",
           "value_kind": "string",
-          "required": true
+          "required": true,
+          "summary": "Home shortcut id to prefer for this package."
         },
         {
           "name": "visible",
           "flag": "--visible",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Mark the shortcut preference visible."
         },
         {
           "name": "sort-order",
           "flag": "--sort-order",
           "value_kind": "integer",
-          "required": false
+          "required": false,
+          "summary": "Optional user-visible ordering value."
         },
         {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
-          "required": false
+          "required": false,
+          "summary": "Validate and preview preference output without writing state."
         }
       ],
       "output_schema": {
@@ -3340,7 +3367,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     },
     "connect_agent_packages_status": {
@@ -3352,7 +3381,8 @@
           "name": "package-id",
           "flag": "--package-id",
           "value_kind": "string",
-          "required": false
+          "required": false,
+          "summary": "Optional installed OPL Agent Package id to inspect."
         }
       ],
       "output_schema": {
@@ -3386,7 +3416,9 @@
         "can_create_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_claim_domain_ready": false,
-        "can_claim_production_ready": false
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "agent_package_registry_and_manifest_lifecycle"
       }
     }
   }

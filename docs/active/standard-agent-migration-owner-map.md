@@ -52,11 +52,11 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 3. `ScholarSkills 医学 catalog`：医学 module IDs、validator 规则、artifact engines 与 profile 内容由 `mas-scholar-skills` 持有；OPL 只保留 capability-pack validation、安装、同步与 provenance。
 4. `MAS Display Pack v2 转换`：迁至 MAS / ScholarSkills display adapter；OPL Pack 只接受通用 descriptor。
 5. `RCA visual transition schema`：visual ontology 与 compatibility registry 归 RCA adapter；Stagecraft 只保留通用 transition runner。
-6. `RCA cost preset`：`rca-ppt-40` 归 RCA / registry-owned profile；Foundry Lab 只保留通用 estimator。
+6. `RCA cost profile`：`rca-ppt-40` 归 RCA / registry-owned profile；Foundry Lab 只通过 `agent-lab cost-estimate --profile <domain-owned-profile.json>` 运行通用 estimator，不再内建或默认选择 RCA workload。
 7. `MAG sustained-consumption shell`：MAG 专用 command / projection 折叠到 generic owner-evidence ledger；grant 语义归 MAG adapter。
 8. `Workspace norm 硬编码`：supported agents 与 topology 全部从 standard-agent registry / profile 派生，不内置 MAS `studies` 语义。
 9. `BookForge dependency 默认值`：dependency doctor 不再默认 `bookforge-publication-proof`；profile 由 active agent / package 显式选择。
-10. `PubMed provider implementation`：Connect 保留 provider-neutral connector；科学 provider 列表由显式 provider registry / package profile 提供。
+10. `PubMed provider implementation`：OPL 已退役 PubMed search / metadata client、医学 normalization、EUtils verifier 与兼容命令；PubMed provider 由 MAS `adapters/literature/pubmed.py` 持有。Connect 只保留 provider-neutral metadata receipt transport，不承担检索 truth 或 citation judgment。
 11. `kernel first-party hardcode`：repo、evidence path 与 runtime state path 从 registry / profile 派生；paper 语义归 MAS。
 12. `conformance 行为盲点`：hard gate 同时验证合同声明与 source behavior，不再把源码通用能力残留降为 advisory。
 
