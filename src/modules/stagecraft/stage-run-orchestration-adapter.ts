@@ -12,7 +12,7 @@ export type StageRunControlPlaneManifestInput = {
   descriptor_ref: string;
   run_ref: string;
   input_refs: string[];
-  handler_id: string;
+  runner_ref: string;
   max_cycles: number;
   max_attempts_per_cycle: number;
   no_progress_limit: number;
@@ -58,7 +58,7 @@ export function buildStageRunCycleManifestFromControlPlane(
     });
   }
   if (!plane) contractError('StageRun control-plane adapter requires a generated stage control plane.');
-  const handlerId = requiredRef(input.handler_id, 'handler_id');
+  const runnerRef = requiredRef(input.runner_ref, 'runner_ref');
   const targetAgentRef = requiredRef(input.target_agent_ref, 'target_agent_ref');
   const descriptorRef = requiredRef(input.descriptor_ref, 'descriptor_ref');
   const runRef = requiredRef(input.run_ref, 'run_ref');
@@ -77,7 +77,7 @@ export function buildStageRunCycleManifestFromControlPlane(
     input_refs: uniqueRefs(input.input_refs, 'input_refs'),
     stage_bindings: plane.stages.map((stage) => ({
       stage_ref: stage.stage_id,
-      handler_id: handlerId,
+      runner_ref: runnerRef,
     })),
     max_cycles: positiveInteger(input.max_cycles, 'max_cycles'),
     max_attempts_per_cycle: positiveInteger(
