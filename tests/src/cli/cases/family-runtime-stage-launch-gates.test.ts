@@ -4,6 +4,11 @@ import {
   createMedAutoScienceStageManifest,
   masScoutCohortLoopStageContractRefs,
 } from './family-runtime-stage-fixtures.ts';
+import { normalizeFamilyActionCatalog } from '../../../../src/kernel/family-action-catalog-contract.ts';
+import {
+  buildFamilyStageAdmissionReview,
+  normalizeFamilyStageControlPlane,
+} from '../../../../src/modules/stagecraft/index.ts';
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
   return {
@@ -30,6 +35,73 @@ function bindMedAutoScienceManifest(
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_STATE_DIR: stateRoot,
   });
+}
+
+function routedAction(actionId: string, requiredStageRefs: string[], optionalStageRefs: string[] = []) {
+  return {
+    action_id: actionId,
+    title: actionId,
+    summary: actionId,
+    owner: 'med-autoscience',
+    effect: 'mutating',
+    source_command: { command: `mas ${actionId}`, surface_kind: 'domain_cli' },
+    input_schema_ref: 'contracts/action.input.schema.json',
+    output_schema_ref: 'contracts/action.output.schema.json',
+    required_fields: [], optional_fields: [], workspace_locator_fields: [], human_gate_ids: [],
+    supported_surfaces: { cli: {}, mcp: {}, skill: {}, product_entry: {}, openai: {}, ai_sdk: {} },
+    authority_boundary: {},
+    stage_route: {
+      entry_stage_ref: requiredStageRefs[0],
+      required_stage_refs: requiredStageRefs,
+      optional_stage_refs: optionalStageRefs,
+      terminal_stage_refs: [requiredStageRefs.at(-1)],
+      route_policy: 'ordered_stage_attempts_no_skip',
+    },
+  };
+}
+
+function omaShapedRouteManifest(baseManifest: Record<string, unknown>) {
+  const stage = (
+    stageId: string,
+    allowedActionRefs: string[],
+    nextStageRefs: string[],
+    requires: string,
+    ensures: string,
+  ) => createMasScoutStage({
+    stage_id: stageId,
+    allowed_action_refs: allowedActionRefs,
+    handoff: { next_stage_refs: nextStageRefs },
+    stage_contract: { requires: [requires], ensures: [ensures] },
+    trust_boundary: { owner_receipt_required: true },
+  });
+  return {
+    ...createMedAutoScienceStageManifest(baseManifest, [
+      stage('intent-intake', ['build-agent-baseline', 'takeover-target-agent-test', 'materialize-learning'],
+        ['web-research', 'stage-decomposition', 'target-agent-takeover', 'learning-intake'],
+        'target_agent_request', 'route_selected'),
+      stage('web-research', ['build-agent-baseline'], ['stage-decomposition'], 'research_route_selected', 'research_ready'),
+      stage('stage-decomposition', ['build-agent-baseline'], [], 'design_ready', 'plan_ready'),
+      stage('target-agent-takeover', ['takeover-target-agent-test'], [], 'takeover_ready', 'takeover_done'),
+      stage('learning-intake', ['materialize-learning'], [], 'learning_refs_ready', 'learning_ready'),
+      stage('optimizer', ['optimize'], [], 'result_ready', 'optimization_ready'),
+    ]),
+    family_action_catalog: {
+      surface_kind: 'family_action_catalog',
+      version: 'family-action-catalog.v1',
+      catalog_id: 'oma_shaped_actions',
+      target_domain_id: 'med-autoscience',
+      owner: 'med-autoscience',
+      authority_boundary: {},
+      actions: [
+        routedAction('build-agent-baseline', ['intent-intake', 'stage-decomposition'], ['web-research']),
+        routedAction('takeover-target-agent-test', ['intent-intake', 'target-agent-takeover']),
+        routedAction('materialize-learning', ['intent-intake', 'learning-intake']),
+        routedAction('optimize', ['optimizer']),
+        { ...routedAction('inspect', ['intent-intake']), effect: 'read_only', stage_route: undefined },
+      ],
+      notes: [],
+    },
+  };
 }
 
 test('family-runtime attempt create projects launch invocation and gates non-default executor binding', () => {
@@ -156,6 +228,66 @@ test('family-runtime attempt create projects launch invocation and gates non-def
     assert.equal(boundedEditInvocation.invocation_mode, 'authoring');
     assert.equal(boundedEditInvocation.bounded_edit_ref, 'bounded-edit:gfl/proposed-stage-pack-1');
     assert.equal(boundedEditInvocation.launch_refs.bounded_edit_ref, 'bounded-edit:gfl/proposed-stage-pack-1');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime launch gate selects one declared action route without treating future branches as entry blockers', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-selected-action-route-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const manifest = omaShapedRouteManifest(loadFamilyManifestFixtures().medautoscience);
+  const env = familyRuntimeEnv(stateRoot, { OPL_CONTRACTS_DIR: fixtureContractsRoot });
+  const createArgs = (actionId?: string, stageId = 'intent-intake') => [
+    'family-runtime', 'attempt', 'create', '--domain', 'medautoscience', '--stage', stageId,
+    ...(actionId ? ['--action', actionId] : []),
+    '--provider', 'temporal', '--workspace-locator', '{"workspace_root":"/tmp/oma"}',
+    '--source-fingerprint', 'sha256:oma-selected-route',
+  ];
+  try {
+    const staticPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane)!;
+    const staticCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog)!;
+    const staticReview = buildFamilyStageAdmissionReview(staticPlane, { family_action_catalog: staticCatalog });
+    assert.equal(staticReview.findings.filter((finding) =>
+      finding.code === 'composition_obligation_not_satisfied'
+      && finding.stage_id === 'intent-intake'
+    ).length, 4);
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifest);
+
+    const missing = runCli(createArgs(), env).family_runtime_stage_attempt;
+    assert.equal(missing.attempt.status, 'blocked');
+    assert.equal(missing.stage_launch_admission_gate.block_reason, 'stage_route_action_required');
+
+    const unknown = runCli([...createArgs('missing-action'), '--new-attempt'], env).family_runtime_stage_attempt;
+    assert.equal(unknown.attempt.status, 'blocked');
+    assert.equal(unknown.stage_launch_admission_gate.block_reason, 'stage_route_action_unknown');
+
+    const noRoute = runCli([...createArgs('inspect'), '--new-attempt'], env).family_runtime_stage_attempt;
+    assert.equal(noRoute.attempt.status, 'blocked');
+    assert.equal(noRoute.stage_launch_admission_gate.block_reason, 'stage_route_action_has_no_route');
+
+    const offRoute = runCli([...createArgs('optimize'), '--new-attempt'], env).family_runtime_stage_attempt;
+    assert.equal(offRoute.attempt.status, 'blocked');
+    assert.equal(offRoute.stage_launch_admission_gate.block_reason, 'stage_route_stage_not_selected');
+
+    const build = runCli([...createArgs('build-agent-baseline'), '--new-attempt'], env).family_runtime_stage_attempt;
+    const takeover = runCli([...createArgs('takeover-target-agent-test'), '--new-attempt'], env).family_runtime_stage_attempt;
+    assert.equal(build.attempt.status, 'queued');
+    assert.equal(build.stage_launch_admission_gate.status, 'admitted');
+    assert.equal(build.stage_launch_admission_gate.gate_action, 'allow_stage_launch');
+    assert.equal(build.stage_launch_admission_gate.selected_action_id, 'build-agent-baseline');
+    assert.equal(build.stage_launch_admission_gate.selected_stage_route.entry_stage_ref, 'intent-intake');
+    assert.equal(build.stage_launch_admission_gate.blocker_findings.length, 0);
+    assert.equal(build.attempt.route_impact.selected_action_id, 'build-agent-baseline');
+    assert.deepEqual(build.attempt.route_impact.selected_stage_route, build.stage_launch_admission_gate.selected_stage_route);
+    assert.notEqual(build.attempt.idempotency_key, takeover.attempt.idempotency_key);
+    assert.notEqual(build.attempt.stage_attempt_id, takeover.attempt.stage_attempt_id);
+
+    const downstream = runCli([
+      ...createArgs('build-agent-baseline', 'stage-decomposition'), '--new-attempt',
+    ], env).family_runtime_stage_attempt;
+    assert.equal(downstream.attempt.status, 'blocked');
+    assert.match(downstream.stage_launch_admission_gate.block_reason, /composition_obligation_not_satisfied/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

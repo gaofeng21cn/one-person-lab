@@ -16,11 +16,13 @@ Action 不能再只声明“哪些 Stage 允许它”，还可以声明一条可
 - `terminal_stage_refs` 是该 Action 可以合法结束或交棒的位置；
 - `route_policy=ordered_stage_attempts_no_skip` 要求 executor 按已有 StageRun/attempt/closeout primitive 推进。
 
-`standard-stage-pack.v2` 的 declarative manifest 编译时必须为每个 mutating Action 声明 route。read-only Action 只观察当前 Stage，不伪装成要执行的多 Stage workflow，其可观察范围继续由 Stage `allowed_action_refs` 表达。旧的 direct control plane 可以渐进声明；一旦声明 route，OPL 会校验 Stage 存在性、action allow-list 双向一致、required 顺序可达性和 optional 分支的 entry-to-terminal 可达性，并把 route 投影到 generated interfaces。
+declarative manifest 可以从 route-free Pack 渐进迁移：没有 mutating Action 声明 route 时维持既有 launch；一旦任一 mutating Action 声明 route，全部 mutating Action 都必须声明。read-only Action 只观察当前 Stage，不伪装成要执行的多 Stage workflow，其可观察范围继续由 Stage `allowed_action_refs` 表达。OPL 会校验 Stage 存在性、action allow-list 双向一致、required 顺序可达性和 optional 分支的 entry-to-terminal 可达性，并把 route 投影到 generated interfaces。
 
 ## Progress-first 边界
 
 route 合同不是第二套 scheduler，也不引入独立 reviewer、人工审批或新的运行时状态机。普通 Stage closeout 满足原有 receipt/typed output 合同后直接进入下一个 required Stage；只有原 Stage 自身已经声明的 human gate、authority mutation 或 quality/export closeout 才能形成合法 gate。
+
+route-controlled Stage launch 必须通过 `family-runtime attempt create --action <action_id>` 显式选择 Action。entry admission 只证明 selected route 适用于当前 entry Stage，并检查当前 Stage 自身的 blocker；它不会把未选择 Action 的互斥未来分支当作 entry blocker，也不证明整条 route 已经 no-skip 完成。selected Action 和 route 进入 attempt identity，并通过现有 `route_impact.selected_action_id` / `selected_stage_route` 回读；后续顺序仍由 StageRun、Stage attempt 与 receipt 序列执行和证明。
 
 因此，防跳流程依赖“route + Stage attempt receipt 顺序”而不是额外控制面：缺失或逆序 receipt 必须继续同一 Action 的下一 Stage 或返回 typed continuation；不能用泛化 Stage ref、provider completion、测试通过或单个大 Stage closeout 冒充整条 Action 完成。
 

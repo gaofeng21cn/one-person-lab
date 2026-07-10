@@ -51,6 +51,42 @@ test('family-runtime registry parser reuses shared option walking without changi
   });
 
   assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
+    'attempt',
+    'create',
+    '--domain',
+    'opl-meta-agent',
+    '--stage',
+    'intent-intake',
+    '--action',
+    'build-agent-baseline',
+    '--workspace-locator',
+    '{"workspace_root":"/tmp/oma"}',
+  ]), {
+    mode: 'attempt_create',
+    input: {
+      domainId: 'opl-meta-agent',
+      stageId: 'intent-intake',
+      actionId: 'build-agent-baseline',
+      providerKind: undefined,
+      workspaceLocator: { workspace_root: '/tmp/oma' },
+      sourceFingerprint: undefined,
+      executorKind: undefined,
+      executorBindingRef: undefined,
+      invocationMode: undefined,
+      boundedEditRef: undefined,
+      taskId: undefined,
+      retryBudget: undefined,
+      checkpointRefs: [],
+      closeoutRefs: [],
+      humanGateRefs: [],
+      blockedReason: undefined,
+      requireStageAdmission: false,
+      newAttempt: false,
+      start: false,
+    },
+  });
+
+  assert.deepEqual(parseRegisteredFamilyRuntimeCommand([
     'provider-slo',
     'tick',
     '--provider',

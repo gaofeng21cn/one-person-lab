@@ -652,7 +652,7 @@ export function buildPrivateRuntimeCommandSpecs({
         'opl family-runtime status',
         'opl family-runtime status --provider temporal',
         'opl family-runtime lifecycle apply --mode dry-run --domain medautogrant --source-ref mag://cleanup/plan --action \'{"action_id":"mark-opl-tombstone","owner_scope":"opl_owned_tombstone_ref","target_ref":"opl://history/mag/tombstone"}\'',
-        'opl family-runtime attempt create --domain medautoscience --stage scout --provider temporal --workspace-locator \'{"workspace_root":"/tmp/mas"}\' --start',
+        'opl family-runtime attempt create --domain opl-meta-agent --stage intent-intake --action build-agent-baseline --provider temporal --workspace-locator \'{"workspace_root":"/tmp/oma"}\' --start',
         'opl family-runtime attempt start <stage_attempt_id>',
         'opl family-runtime attempt cancel <stage_attempt_id> --reason operator_superseded',
         'opl family-runtime attempt list',

@@ -778,6 +778,28 @@ test('stage manifest compiler honors an explicit v2 version with canonical Frame
   assert.equal(l5EntryGate.conformance_pass_counts_as_l5, false);
 });
 
+test('stage manifest compiler requires every mutating action route after route adoption starts', () => {
+  const root = fixture('target-partial-action-route');
+  const catalogRef = path.join(root, 'contracts/action_catalog.json');
+  const catalog = JSON.parse(fs.readFileSync(catalogRef, 'utf8')) as JsonRecord;
+  catalog.actions[0].stage_route = {
+    entry_stage_ref: 'intake',
+    required_stage_refs: ['intake'],
+    optional_stage_refs: [],
+    terminal_stage_refs: ['intake'],
+    route_policy: 'ordered_stage_attempts_no_skip',
+  };
+  writeJson(root, 'contracts/action_catalog.json', catalog);
+
+  assert.throws(
+    () => compileStandardAgentStageManifest(root),
+    (error: unknown) => error instanceof FrameworkContractError
+      && error.details?.blocker === 'standard_agent_action_stage_route_contract_drift'
+      && Array.isArray(error.details.issues)
+      && error.details.issues.includes('deliver: missing required stage_route'),
+  );
+});
+
 test('stage manifest compiler fails closed on every Framework stage-contract floor mismatch', async (t) => {
   const cases: Array<[string, unknown]> = [
     ['expected_receipt_refs', []],

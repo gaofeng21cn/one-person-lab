@@ -631,7 +631,9 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     fail('Stage manifest did not compile to a family stage control plane.', { repo_dir: repoDir });
   }
   const actionStageRouteParity = buildFamilyActionStageRouteParity(actionCatalog, stageControlPlane, {
-    require_declared_routes: stagePackV2Required,
+    require_declared_routes: actionCatalog.actions.some(
+      (action) => action.effect === 'mutating' && Boolean(action.stage_route),
+    ),
   });
   if (actionStageRouteParity.status !== 'aligned') {
     fail('Action-to-stage route contract is not aligned with the compiled stage manifest.', {

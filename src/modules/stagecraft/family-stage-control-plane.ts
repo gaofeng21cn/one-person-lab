@@ -54,8 +54,10 @@ import {
 } from './family-stage-guarantee-projection.ts';
 import type {
   FamilyStageAdmissionReview,
+  FamilyStageAdmissionFinding,
   FamilyStageAdmissionStageResult,
 } from './family-stage-admission.ts';
+import type { FamilyActionStageRoute } from '../../kernel/family-action-catalog-contract.ts';
 import {
   buildFamilyStageModeTags,
 } from './family-stage-admission.ts';
@@ -143,6 +145,8 @@ export interface FamilyStageLaunchAdmissionGate {
   domain_id: string;
   normalized_domain_id: string;
   stage_id: string;
+  selected_action_id: string | null;
+  selected_stage_route: FamilyActionStageRoute | null;
   plane_id: string | null;
   target_domain_id: string | null;
   status: 'admitted' | 'needs_contracts' | 'blocked' | 'not_in_declared_control_plane' | 'missing_control_plane';
@@ -401,16 +405,114 @@ function findingsForStage(
   admission: FamilyStageAdmissionReview,
   stageId: string,
   severity: 'blocker' | 'warning',
+  selectedRoute: FamilyActionStageRoute | null = null,
 ) {
   return admission.findings.filter((finding) => (
     finding.severity === severity
-    && (finding.stage_id === stageId || finding.target_stage_id === stageId)
+    && findingAppliesToLaunch(finding, stageId, selectedRoute)
   ));
+}
+
+function findingAppliesToLaunch(
+  finding: FamilyStageAdmissionFinding,
+  stageId: string,
+  selectedRoute: FamilyActionStageRoute | null,
+) {
+  if (finding.code !== 'composition_obligation_not_satisfied' || !selectedRoute) {
+    return finding.stage_id === stageId || finding.target_stage_id === stageId;
+  }
+  if (stageId === selectedRoute.entry_stage_ref) {
+    return false;
+  }
+  const routeStageIds = new Set([
+    ...selectedRoute.required_stage_refs,
+    ...selectedRoute.optional_stage_refs,
+  ]);
+  return finding.target_stage_id === stageId
+    && Boolean(finding.stage_id && routeStageIds.has(finding.stage_id))
+    && routeStageIds.has(stageId);
+}
+
+function stageRouteSelection(
+  manifest: FamilyStageDomainManifest,
+  stageId: string,
+  actionId: string | undefined,
+) {
+  const actions = manifest.family_action_catalog?.actions ?? [];
+  const routedActions = actions.filter((action) => action.stage_route);
+  const stageParticipates = routedActions.some((action) => {
+    const route = action.stage_route!;
+    return [...route.required_stage_refs, ...route.optional_stage_refs].includes(stageId);
+  });
+  if (!stageParticipates) {
+    return { actionId: null, route: null, blockReason: null, finding: null };
+  }
+  if (!actionId) {
+    return {
+      actionId: null,
+      route: null,
+      blockReason: 'stage_route_action_required',
+      finding: {
+        severity: 'blocker' as const,
+        code: 'stage_route_action_required',
+        message: 'Stage participates in declared action routes; launch requires an explicit selected action.',
+        stage_id: stageId,
+      },
+    };
+  }
+  const action = actions.find((candidate) => candidate.action_id === actionId);
+  if (!action) {
+    return {
+      actionId,
+      route: null,
+      blockReason: 'stage_route_action_unknown',
+      finding: {
+        severity: 'blocker' as const,
+        code: 'stage_route_action_unknown',
+        message: 'Selected action is not declared in the family action catalog.',
+        stage_id: stageId,
+        action_id: actionId,
+      },
+    };
+  }
+  if (!action.stage_route) {
+    return {
+      actionId,
+      route: null,
+      blockReason: 'stage_route_action_has_no_route',
+      finding: {
+        severity: 'blocker' as const,
+        code: 'stage_route_action_has_no_route',
+        message: 'Selected action does not declare a stage route for a route-controlled stage.',
+        stage_id: stageId,
+        action_id: actionId,
+      },
+    };
+  }
+  const selectedStageIds = [
+    ...action.stage_route.required_stage_refs,
+    ...action.stage_route.optional_stage_refs,
+  ];
+  if (!selectedStageIds.includes(stageId)) {
+    return {
+      actionId,
+      route: action.stage_route,
+      blockReason: 'stage_route_stage_not_selected',
+      finding: {
+        severity: 'blocker' as const,
+        code: 'stage_route_stage_not_selected',
+        message: 'Stage is not part of the selected action route.',
+        stage_id: stageId,
+        action_id: actionId,
+      },
+    };
+  }
+  return { actionId, route: action.stage_route, blockReason: null, finding: null };
 }
 
 export function buildFamilyStageLaunchAdmissionGate(
   contracts: FrameworkContracts,
-  input: { domainId: string; stageId: string },
+  input: { domainId: string; stageId: string; actionId?: string },
   options: ManifestCatalogOptions = {},
 ): FamilyStageLaunchAdmissionGate {
   const normalized = normalizeDomainSelection(input.domainId);
@@ -440,6 +542,8 @@ export function buildFamilyStageLaunchAdmissionGate(
       domain_id: input.domainId,
       normalized_domain_id: normalized,
       stage_id: input.stageId,
+      selected_action_id: null,
+      selected_stage_route: null,
       plane_id: plane?.plane_id ?? null,
       target_domain_id: plane?.target_domain_id ?? null,
       status: 'missing_control_plane',
@@ -466,6 +570,8 @@ export function buildFamilyStageLaunchAdmissionGate(
       domain_id: input.domainId,
       normalized_domain_id: normalized,
       stage_id: input.stageId,
+      selected_action_id: null,
+      selected_stage_route: null,
       plane_id: plane.plane_id,
       target_domain_id: plane.target_domain_id,
       status: 'not_in_declared_control_plane',
@@ -485,11 +591,14 @@ export function buildFamilyStageLaunchAdmissionGate(
   }
 
   const admission = buildFamilyStageAdmissionReview(plane, entry.manifest);
+  const selection = stageRouteSelection(entry.manifest!, stage.stage_id, input.actionId);
   const inspectedStage =
     admission.stage_results.find((result) => result.stage_id === stage.stage_id) ?? null;
-  const blockerFindings = findingsForStage(admission, stage.stage_id, 'blocker');
-  const warningFindings = findingsForStage(admission, stage.stage_id, 'warning');
-  const blocked = inspectedStage?.status === 'blocked' || blockerFindings.length > 0;
+  const blockerFindings = selection.finding
+    ? [selection.finding]
+    : findingsForStage(admission, stage.stage_id, 'blocker', selection.route);
+  const warningFindings = findingsForStage(admission, stage.stage_id, 'warning', selection.route);
+  const blocked = selection.blockReason !== null || blockerFindings.length > 0;
 
   return {
     surface_kind: 'opl_family_stage_launch_admission_gate',
@@ -497,11 +606,14 @@ export function buildFamilyStageLaunchAdmissionGate(
     domain_id: input.domainId,
     normalized_domain_id: normalized,
     stage_id: input.stageId,
+    selected_action_id: selection.actionId,
+    selected_stage_route: selection.route,
     plane_id: plane.plane_id,
     target_domain_id: plane.target_domain_id,
-    status: inspectedStage?.status ?? 'blocked',
+    status: blocked ? 'blocked' : warningFindings.length > 0 ? 'needs_contracts' : 'admitted',
     gate_action: blocked ? 'block_stage_launch' : 'allow_stage_launch',
-    block_reason: blocked ? `stage_launch_admission_blocked:${blockerFindings[0]?.code ?? 'blocked'}` : null,
+    block_reason: selection.blockReason
+      ?? (blocked ? `stage_launch_admission_blocked:${blockerFindings[0]?.code ?? 'blocked'}` : null),
     inspected_stage: inspectedStage,
     blocker_findings: blockerFindings,
     warning_findings: warningFindings,

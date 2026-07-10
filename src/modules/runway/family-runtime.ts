@@ -346,6 +346,7 @@ export async function runFamilyRuntime(
       const baseIdempotencyKey = stableId('idem', [
         parsed.input.domainId,
         parsed.input.stageId,
+        parsed.input.actionId?.trim() || null,
         providerKind,
         parsed.input.workspaceLocator,
         sourceFingerprint,
@@ -357,6 +358,7 @@ export async function runFamilyRuntime(
       const defaultStageLaunchAdmissionGate = buildFamilyStageLaunchAdmissionGate(loadFrameworkContracts(), {
         domainId: parsed.input.domainId,
         stageId: parsed.input.stageId,
+        actionId: parsed.input.actionId,
       }, {
         loadDomainManifests: (contracts, options) =>
           withOplMetaAgentDescriptorEntry(
@@ -409,6 +411,12 @@ export async function runFamilyRuntime(
       const result = createStageAttempt(db, {
         ...parsed.input,
         blockedReason,
+        routeImpact: defaultStageLaunchAdmissionGate.selected_action_id
+          ? {
+              selected_action_id: defaultStageLaunchAdmissionGate.selected_action_id,
+              selected_stage_route: defaultStageLaunchAdmissionGate.selected_stage_route,
+            }
+          : undefined,
         launchAdmissionGate: stageLaunchAdmissionGate,
         launchInvocation,
       });

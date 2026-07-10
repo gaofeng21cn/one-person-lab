@@ -150,6 +150,7 @@ export type FamilyRuntimeCommandInput =
     input: {
       domainId: FamilyRuntimeDomainId;
       stageId: string;
+      actionId?: string;
       providerKind?: FamilyRuntimeProviderKind;
       workspaceLocator: Record<string, unknown>;
       sourceFingerprint?: string;

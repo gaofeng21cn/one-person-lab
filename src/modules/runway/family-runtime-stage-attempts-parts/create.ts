@@ -30,6 +30,7 @@ import { taskRetryBudgetProjection } from '../family-runtime-queue-projection-bo
 export type StageAttemptCreateInput = {
   domainId: FamilyRuntimeDomainId;
   stageId: string;
+  actionId?: string;
   providerKind?: FamilyRuntimeProviderKind;
   workspaceLocator: Record<string, unknown>;
   sourceFingerprint?: string;
@@ -91,6 +92,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const baseIdempotencyKey = stableId('idem', [
     input.domainId,
     stageId,
+    input.actionId?.trim() || null,
     providerKind,
     input.workspaceLocator,
     sourceFingerprint,
@@ -138,6 +140,7 @@ export function createStageAttempt(db: DatabaseSync, input: StageAttemptCreateIn
   const stageAttemptId = stableId('sat', [
     input.domainId,
     stageId,
+    input.actionId?.trim() || null,
     providerKind,
     input.workspaceLocator,
     sourceFingerprint,

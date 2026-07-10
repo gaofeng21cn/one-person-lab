@@ -235,6 +235,7 @@ function parseAttemptFixtureRunArgs(rest: string[]): FamilyRuntimeCommandInput {
 function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
   let domainId: FamilyRuntimeDomainId | undefined;
   let stageId = '';
+  let actionId: string | undefined;
   let providerKind: FamilyRuntimeProviderKind | undefined;
   let workspaceLocator: string | undefined;
   let workspaceLocatorFile: string | undefined;
@@ -268,6 +269,9 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
       return true;
     } else if (token === '--stage' && value) {
       stageId = value;
+      return true;
+    } else if (token === '--action' && value) {
+      actionId = value;
       return true;
     } else if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
@@ -344,6 +348,7 @@ function parseAttemptCreateArgs(rest: string[]): FamilyRuntimeCommandInput {
     input: {
       domainId,
       stageId,
+      actionId,
       providerKind,
       workspaceLocator: parsePayloadArg(workspaceLocator, workspaceLocatorFile),
       sourceFingerprint,
