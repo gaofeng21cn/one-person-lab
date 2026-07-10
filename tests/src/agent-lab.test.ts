@@ -279,8 +279,9 @@ test('Agent Lab canonicalizes evaluation provenance before stable identity and r
   const packetRef = 'evaluation-receipt:public-runner/packet';
   const probeARef = 'evaluation-receipt:public-runner/probe-a';
   const probeBRef = 'evaluation-receipt:public-runner/probe-b';
+  const packetBinding = { receipt_role: 'evaluation_packet' as const, receipt_ref: packetRef };
   const canonicalBindings = [
-    { receipt_role: 'evaluation_packet' as const, receipt_ref: packetRef },
+    packetBinding,
     {
       receipt_role: 'recovery_probe_observation' as const,
       receipt_ref: probeARef,
@@ -311,6 +312,22 @@ test('Agent Lab canonicalizes evaluation provenance before stable identity and r
   assert.deepEqual(first.refs.evaluation_provenance_refs, [packetRef, probeARef, probeBRef]);
   assert.deepEqual(first.evaluation_provenance_bindings, canonicalBindings);
   assert.deepEqual(reordered.evaluation_provenance_bindings, canonicalBindings);
+
+  const singleBinding = runAgentLabSuite({
+    ...suite,
+    evaluation_target_agent: evaluationTarget,
+    evaluation_provenance_refs: [packetRef],
+    evaluation_provenance_bindings: [packetBinding],
+  });
+  const duplicateBinding = runAgentLabSuite({
+    ...suite,
+    evaluation_target_agent: evaluationTarget,
+    evaluation_provenance_refs: [packetRef, packetRef],
+    evaluation_provenance_bindings: [packetBinding, packetBinding],
+  });
+  assert.equal(duplicateBinding.result_id, singleBinding.result_id);
+  assert.deepEqual(duplicateBinding.refs.evaluation_provenance_refs, [packetRef]);
+  assert.deepEqual(duplicateBinding.evaluation_provenance_bindings, [packetBinding]);
 });
 
 test('Agent Lab separates fixture scorecard pass from independent AI review and promotion safety approval', () => {
@@ -637,6 +654,10 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.deepEqual(
     contract.external_suite_runner_surface.evaluation_target_guard.binding_canonical_sort_keys,
     ['receipt_role', 'task_id', 'probe_ref', 'receipt_ref'],
+  );
+  assert.equal(
+    contract.external_suite_runner_surface.evaluation_target_guard.duplicate_binding_tuple_policy,
+    'deduplicate_before_sort',
   );
   assert.equal(
     contract.external_suite_runner_surface.evaluation_target_guard.reordered_semantics_preserve_result_identity,

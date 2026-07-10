@@ -146,6 +146,7 @@ function validateEvaluationIdentity(input: AgentLabSuite) {
   if (bindingsInput !== undefined && !Array.isArray(bindingsInput)) {
     invalidEvaluationSuite('Agent Lab evaluation_provenance_bindings must be an array.');
   }
+  const bindingKeys = new Set<string>();
   const provenanceBindings = (bindingsInput ?? [])
     .map((value, index): AgentLabEvaluationProvenanceBinding => {
       if (!isRecord(value)) {
@@ -181,6 +182,17 @@ function validateEvaluationIdentity(input: AgentLabSuite) {
         binding[field] = contextRef;
       }
       return binding;
+    })
+    .filter((binding) => {
+      const key = JSON.stringify([
+        binding.receipt_role,
+        binding.task_id ?? '',
+        binding.probe_ref ?? '',
+        binding.receipt_ref,
+      ]);
+      if (bindingKeys.has(key)) return false;
+      bindingKeys.add(key);
+      return true;
     })
     .sort((left, right) => {
       const leftKey = [left.receipt_role, left.task_id ?? '', left.probe_ref ?? '', left.receipt_ref].join('\0');

@@ -729,6 +729,7 @@
         "probe_ref",
         "receipt_ref"
       ],
+      "duplicate_binding_tuple_policy": "deduplicate_before_sort",
       "reordered_semantics_preserve_result_identity": true,
       "ordinary_suite_without_evaluation_fields_preserves_result_identity": true,
       "invalid_policy": "contract_shape_invalid"
