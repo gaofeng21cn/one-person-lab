@@ -1,17 +1,17 @@
-export const EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES = ['e2b', 'daytona', 'modal'] as const;
+export const EXTERNAL_SANDBOX_IMPLEMENTED_SUBSTRATES = ['e2b'] as const;
 export const EXTERNAL_SANDBOX_REQUIRED_REFS = [
   'OPL_EXTERNAL_SANDBOX_ENDPOINT',
   'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
   'OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF',
 ] as const;
 
-export type ExternalSandboxSupportedSubstrate = typeof EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES[number];
+export type ExternalSandboxImplementedSubstrate = typeof EXTERNAL_SANDBOX_IMPLEMENTED_SUBSTRATES[number];
 
 export type ExternalSandboxProviderAdapterConfig = {
   endpoint: string | null;
   credentialRef: string | null;
   providerReceiptRef: string | null;
-  substrate: ExternalSandboxSupportedSubstrate | 'generic_external_sandbox';
+  substrate: ExternalSandboxImplementedSubstrate | 'generic_external_sandbox';
   missingRequiredEnv: string[];
   configured: boolean;
 };
@@ -25,8 +25,8 @@ export function inspectExternalSandboxProviderAdapterEnv(
   const credentialRef = env.OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF?.trim() || null;
   const providerReceiptRef = env.OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF?.trim() || null;
   const rawSubstrate = env.OPL_EXTERNAL_SANDBOX_SUBSTRATE?.trim().toLowerCase();
-  const substrate = EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES.includes(rawSubstrate as ExternalSandboxSupportedSubstrate)
-    ? rawSubstrate as ExternalSandboxSupportedSubstrate
+  const substrate = EXTERNAL_SANDBOX_IMPLEMENTED_SUBSTRATES.includes(rawSubstrate as ExternalSandboxImplementedSubstrate)
+    ? rawSubstrate as ExternalSandboxImplementedSubstrate
     : 'generic_external_sandbox';
   const missingRequiredEnv = [
     ...(endpoint ? [] : [EXTERNAL_SANDBOX_REQUIRED_REFS[0]]),
@@ -54,7 +54,7 @@ export function buildExternalSandboxProviderAdapterPlan(targetRef: string) {
     status,
     provider_role: 'agent_sandbox_execution_substrate',
     substrate_boundary: 'external_agent_sandbox_not_temporal_durable_workflow_substrate',
-    supported_external_substrates: [...EXTERNAL_SANDBOX_SUPPORTED_SUBSTRATES],
+    implemented_external_substrates: [...EXTERNAL_SANDBOX_IMPLEMENTED_SUBSTRATES],
     required_external_sandbox_refs: [...EXTERNAL_SANDBOX_REQUIRED_REFS],
     selected_external_substrate: config.substrate,
     endpoint: config.endpoint,

@@ -230,11 +230,15 @@
       "daytona",
       "modal"
     ],
+    "implemented_external_substrates": [
+      "e2b"
+    ],
     "provider_family_catalog": [
       {
         "family_id": "e2b_style_adapter",
         "substrate": "e2b",
         "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs",
+        "implementation_status": "implemented",
         "default_dependency": false,
         "package_dependency_class": "optional_dependency",
         "connect_role": "external_provider_configuration_assist"
@@ -242,12 +246,14 @@
       {
         "family_id": "daytona_style_adapter",
         "substrate": "daytona",
-        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
+        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs",
+        "implementation_status": "reference_candidate_no_runner"
       },
       {
         "family_id": "modal_style_adapter",
         "substrate": "modal",
-        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
+        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs",
+        "implementation_status": "reference_candidate_no_runner"
       }
     ],
     "required_external_sandbox_refs": [

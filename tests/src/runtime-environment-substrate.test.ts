@@ -12,6 +12,9 @@ import {
   buildRuntimeEnvironmentRunContextReadback,
 } from '../../src/modules/runway/runtime-environment-substrate.ts';
 import { installRPackagesIntoManagedLibrary } from '../../src/modules/runway/runtime-environment-substrate-parts/package-profile.ts';
+import {
+  inspectExternalSandboxProviderAdapterEnv,
+} from '../../src/modules/runway/external-sandbox-provider-adapter.ts';
 
 type Json = Record<string, unknown>;
 
@@ -495,6 +498,7 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal((plan.model_endpoint_provider_family as Json).can_claim_endpoint_ready, false);
   assert.equal(plan.template_ref, 'sandbox-template:mas/analysis/linux-x64');
   assert.equal((plan.adapter as Json).adapter_id, 'opl.external_sandbox_provider_adapter.v1');
+  assert.deepEqual((plan.adapter as Json).implemented_external_substrates, ['e2b']);
   assert.deepEqual((plan.adapter as Json).required_external_sandbox_refs, [
     'OPL_EXTERNAL_SANDBOX_ENDPOINT',
     'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
@@ -519,6 +523,27 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(flags.modal_env_spec_id_counts_as_image_built, false);
   assert.equal(flags.modal_env_spec_id_counts_as_provider_ready, false);
   assert.equal(flags.model_endpoint_provider_receipt_counts_as_domain_ready, false);
+});
+
+test('external sandbox adapter only recognizes implemented E2B execution', () => {
+  const common = {
+    OPL_EXTERNAL_SANDBOX_ENDPOINT: 'https://sandbox.example.test',
+    OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF: 'secret-ref:test',
+    OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF: 'receipt-ref:test',
+  };
+
+  assert.equal(inspectExternalSandboxProviderAdapterEnv({
+    ...common,
+    OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'e2b',
+  }).substrate, 'e2b');
+  assert.equal(inspectExternalSandboxProviderAdapterEnv({
+    ...common,
+    OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'daytona',
+  }).substrate, 'generic_external_sandbox');
+  assert.equal(inspectExternalSandboxProviderAdapterEnv({
+    ...common,
+    OPL_EXTERNAL_SANDBOX_SUBSTRATE: 'modal',
+  }).substrate, 'generic_external_sandbox');
 });
 
 test('runtime env prepare carries renv and uv lock refs into output, run-context, and identity', () => {
