@@ -64,6 +64,33 @@ function recordAuthorization(
   ], { OPL_STATE_DIR: stateRoot }).stage_run_execution_authorization_ledger_record;
 }
 
+test('single-source runtime payload commands reject repeated payload flags', () => {
+  const commands = [
+    ['runtime', 'oma-app-live-path', 'record'],
+    ['runtime', 'oma-production-consumption', 'record'],
+    ['runtime', 'stage-candidate-portfolio', 'summary'],
+    ['runtime', 'stage-replay-missing-receipt', 'record'],
+    ['runtime', 'stage-run-authorization', 'record'],
+    ['runtime', 'stage-run-evidence-pack', 'summary'],
+    ['runtime', 'stage-transition-authority', 'record'],
+    ['runtime', 'standard-agent-template-consumption', 'record'],
+  ];
+
+  const duplicateSources = [
+    ['--payload', '{}', '--payload', '{}'],
+    ['--payload-file', 'unused.json', '--payload-file', 'unused.json'],
+    ['--payload', '{}', '--payload-file', 'unused.json'],
+  ];
+  for (const command of commands) {
+    for (const duplicateSource of duplicateSources) {
+      assert.throws(
+        () => runCli([...command, ...duplicateSource]),
+        /Use either --payload or --payload-file, not both/,
+      );
+    }
+  }
+});
+
 test('StageRun authorization dry-run validates current identity without writing ledger', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-auth-dry-'));
   try {

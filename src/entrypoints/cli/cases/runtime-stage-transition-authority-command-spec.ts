@@ -33,22 +33,22 @@ function parsePayloadArg(
   commandName: string,
 ) {
   const values = parseCommandOptions(args, spec, {
-    payload: { type: 'string' },
-    'payload-file': { type: 'string' },
+    payload: { type: 'string', multiple: true },
+    'payload-file': { type: 'string', multiple: true },
   });
-  const payload = values.payload as string | undefined;
-  const payloadFile = values['payload-file'] as string | undefined;
-  const hasPayload = payload !== undefined;
-  const hasPayloadFile = payloadFile !== undefined;
-  assertSinglePayloadSource(hasPayload && hasPayloadFile, spec);
-  if (!hasPayload && !hasPayloadFile) {
+  const payloads = values.payload as string[] | undefined;
+  const payloadFiles = values['payload-file'] as string[] | undefined;
+  assertSinglePayloadSource((payloads?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
+  const payload = payloads?.[0];
+  const payloadFile = payloadFiles?.[0];
+  if (!payload && !payloadFile) {
     throw buildUsageError(`${commandName} requires --payload or --payload-file.`, spec, {
       required_any: ['--payload', '--payload-file'],
     });
   }
   return parseJsonValue(
-    hasPayload ? payload as string : readPayloadFileText(payloadFile as string, spec),
-    hasPayload
+    payload ?? readPayloadFileText(payloadFile as string, spec),
+    payload
       ? `${commandName} payload must be valid JSON.`
       : `${commandName} payload file must contain valid JSON.`,
     spec,

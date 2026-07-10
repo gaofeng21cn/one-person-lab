@@ -101,16 +101,16 @@ function payloadInput(payload: Record<string, unknown>): StageRunExecutionAuthor
 
 function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
   const values = parseCommandOptions(args, spec, {
-    payload: { type: 'string' },
-    'payload-file': { type: 'string' },
+    payload: { type: 'string', multiple: true },
+    'payload-file': { type: 'string', multiple: true },
     'dry-run': { type: 'boolean' },
   });
-  const payloadValue = values.payload as string | undefined;
-  const payloadFile = values['payload-file'] as string | undefined;
-  const hasPayload = payloadValue !== undefined;
-  const hasPayloadFile = payloadFile !== undefined;
-  assertSinglePayloadSource(hasPayload && hasPayloadFile, spec);
-  if (!hasPayload && !hasPayloadFile) {
+  const payloadValues = values.payload as string[] | undefined;
+  const payloadFiles = values['payload-file'] as string[] | undefined;
+  assertSinglePayloadSource((payloadValues?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
+  const payloadValue = payloadValues?.[0];
+  const payloadFile = payloadFiles?.[0];
+  if (!payloadValue && !payloadFile) {
     throw buildUsageError(
       'runtime stage-run-authorization record requires --payload or --payload-file.',
       spec,
@@ -118,7 +118,7 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     );
   }
   const payload = parseJsonObject(
-    hasPayload ? payloadValue as string : readPayloadFileText(payloadFile as string, spec),
+    payloadValue ?? readPayloadFileText(payloadFile as string, spec),
     'runtime stage-run-authorization record payload must be a JSON object.',
     spec,
   );
