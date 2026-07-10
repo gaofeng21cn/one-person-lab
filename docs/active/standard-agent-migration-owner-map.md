@@ -24,6 +24,42 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 - Domain repo 继续持有 domain truth、quality / export / review verdict、artifact authority、memory accept/reject、owner receipt、typed blocker、human gate 和 direct domain skill path。
 - 任何 repo-local generic scheduler、queue、session store、progress shell、workbench shell、sidecar/status wrapper、currentness tracker、artifact lifecycle shell、delivery export shell 或 conformance scaffold 都是迁移输入，不是长期设计。
 
+## 原始 26 项验收表
+
+以下编号固定本轮源码审计的原始范围。后续实现、提交、验证和 Plan Completion Audit 必须逐项回指这些编号，不能用实际完成的切片替代原始规划。
+
+### List 1：Agent 仓内应上收到 OPL 的通用能力
+
+1. `MAS workspace cockpit`：并发、health、attention queue、operator brief 与 commands 由 Console 托管；MAS 只保留 paper / study progress truth。
+2. `MAS execution admission`：developer supervisor、GitHub identity、repo-write policy 与 provider admission 由 Runway 托管；MAS 保留 domain action 与 human / owner gate。
+3. `MAS artifact lifecycle`：递归扫描、restore / cleanup readiness 与 lifecycle registry 由 Workspace / Ledger 托管；artifact body、package / export authority 与删除决定留 MAS。
+4. `MAS source / memory transport`：文献 registry、BibTeX、coverage、文件物化与 publication-memory locator / writeback 由 Connect / Workspace / Ledger 承担；医学相关性、证据评价和 memory accept / reject 留 MAS。
+5. `MAG receipt observability`：receipt 校验、计数、SLO / operator projection 由 Ledger / Console 托管；fundability、quality / export verdict 与 receipt body 留 MAG。
+6. `MAG workspace / schema engine`：scaffold、schema subset validation 与 workspace validation 由 Workspace 通用实现加 MAG declarative profile 承担。
+7. `MAG product / runtime shell`：preflight、runtime registration、receipt reconciliation 与 package lifecycle envelope 由 Pack / Runway / Console 托管；grant stage policy 与 submission authority 留 MAG。
+8. `RCA entry / status / session shell`：quickstart、start、readiness、resume、status 与 session response 改由 Pack / Console generated surface 承担。
+9. `RCA executor envelope`：Codex timeout、attempt、telemetry 与 blocker envelope 由 Runway 托管；PPT invocation 与视觉失败解释留 RCA。
+10. `RCA lifecycle / operator transport`：memory / artifact lifecycle、review-repair transport、operator evidence 与 native-helper receipt shell 分别由 Workspace / Ledger / Stagecraft / Pack 托管；visual memory judgment、artifact mutation 与 renderer 留 RCA。
+11. `OMA Agent Lab ledger`：suite、owner receipt、learning candidate、promotion / mechanism / scaleout ledger 由 Foundry Lab 托管；OMA 保留 agent-building judgment 与 candidate refs。
+12. `OMA takeover materializer`：suite 写入、Agent Lab 调用与 delivery gate 组装由 Foundry Lab execution 承担；OMA 只提交 declarative work order。
+13. `OBF project hygiene`：通用目录遍历、source byproduct、cache 与 lifecycle 检查由 Workspace / Charter 承担；书稿长度、章节、图表与 review-PDF 判断留 OBF。
+14. `OBF native-helper shell`：PDF / imagegen 执行、工具探测与 receipt envelope 由 Pack 承担；renderer、publication proof、版式质量与 export authority 留 OBF。
+
+### List 2：OPL 基座中应迁出或通用化的能力
+
+1. `MAS paper-mission runtime stack`：改为通用 `domain_route` implementation；MAS 名称只存在于 MAS-owned adapter / profile。
+2. `MAS Console portal / current-work-unit`：改为 registry-driven domain projection；paper display adapter 回 MAS / profile。
+3. `ScholarSkills 医学 catalog`：医学 module IDs、validator 规则、artifact engines 与 profile 内容由 `mas-scholar-skills` 持有；OPL 只保留 capability-pack validation、安装、同步与 provenance。
+4. `MAS Display Pack v2 转换`：迁至 MAS / ScholarSkills display adapter；OPL Pack 只接受通用 descriptor。
+5. `RCA visual transition schema`：visual ontology 与 compatibility registry 归 RCA adapter；Stagecraft 只保留通用 transition runner。
+6. `RCA cost preset`：`rca-ppt-40` 归 RCA / registry-owned profile；Foundry Lab 只保留通用 estimator。
+7. `MAG sustained-consumption shell`：MAG 专用 command / projection 折叠到 generic owner-evidence ledger；grant 语义归 MAG adapter。
+8. `Workspace norm 硬编码`：supported agents 与 topology 全部从 standard-agent registry / profile 派生，不内置 MAS `studies` 语义。
+9. `BookForge dependency 默认值`：dependency doctor 不再默认 `bookforge-publication-proof`；profile 由 active agent / package 显式选择。
+10. `PubMed provider implementation`：Connect 保留 provider-neutral connector；科学 provider 列表由显式 provider registry / package profile 提供。
+11. `kernel first-party hardcode`：repo、evidence path 与 runtime state path 从 registry / profile 派生；paper 语义归 MAS。
+12. `conformance 行为盲点`：hard gate 同时验证合同声明与 source behavior，不再把源码通用能力残留降为 advisory。
+
 ## Domain -> OPL 上收 owner map
 
 | 通用功能面 | OPL owner surface | Domain repo 保留 | 迁移 / 退役 gate |

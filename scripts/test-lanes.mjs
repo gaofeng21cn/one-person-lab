@@ -47,6 +47,7 @@ const fastTestFiles = [
   'tests/src/stale-compat-retirement-guard.test.ts',
   'tests/src/managed-shell-command-env.test.ts',
   'tests/src/observability-projection-vocabulary.test.ts',
+  'tests/src/agent-workspace-norm.test.ts',
   'tests/src/domain-manifest-resolver.test.ts',
   'tests/src/family-structure-advisory.test.ts',
   'tests/src/family-shared-release-discipline.test.ts',
