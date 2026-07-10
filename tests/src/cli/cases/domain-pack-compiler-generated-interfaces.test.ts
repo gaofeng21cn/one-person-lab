@@ -136,6 +136,7 @@ test('generated interfaces block default cutover without handoff proof but keep 
   const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
 
   assert.equal(bundle.surface_kind, 'opl_generated_agent_interface_bundle');
+  assert.equal(bundle.status, 'blocked');
   assert.equal(bundle.owner, 'one-person-lab');
   assert.equal(bundle.domain_repo_can_own_generated_surface, false);
   assert.equal(bundle.active_caller_cutover_proof.status, 'blocked');
@@ -162,7 +163,14 @@ test('generated interfaces block default cutover without handoff proof but keep 
   assert.equal(mcpOnly.selected_format, 'mcp');
   assert.equal('cli' in mcpOnly, false);
   assert.equal('skill' in mcpOnly, false);
-  assert.ok(mcpOnly.generated_direct_parity.checked_surface_ids.includes('mcp'));
+  assert.deepEqual(mcpOnly.generated_direct_parity.checked_surface_ids, [
+    'cli',
+    'mcp',
+    'skill',
+    'product_entry',
+    'openai_tool',
+    'ai_sdk',
+  ]);
   assert.ok(mcpOnly.generated_surface_consumption_bundle.consumer_surface_ids.includes('app_action'));
 });
 

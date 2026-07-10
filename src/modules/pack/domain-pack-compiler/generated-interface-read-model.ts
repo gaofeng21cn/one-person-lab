@@ -823,10 +823,8 @@ export function buildGeneratedInterfaceBundle(
     format,
     stageControlPlane,
   );
-  const blocks = Object.fromEntries(
-    formats
-      .filter(include)
-      .map((format) => [
+  const allBlocks = Object.fromEntries(
+    formats.map((format) => [
         format === 'product-entry'
           ? 'product_entry'
           : format === 'openai'
@@ -837,9 +835,17 @@ export function buildGeneratedInterfaceBundle(
         block(format),
       ])
   );
-  const generatedBlockKeys = Object.keys(blocks);
-  const generatedBlocksReady = generatedBlockKeys.every((key) => {
-    const value = blocks[key];
+  const selectedBlocks = Object.fromEntries(
+    Object.entries(allBlocks).filter(([, value]) => include(value.format as GeneratedInterfaceFormat)),
+  );
+  const allGeneratedBlockKeys = Object.keys(allBlocks);
+  const allGeneratedBlocksReady = allGeneratedBlockKeys.every((key) => {
+    const value = allBlocks[key];
+    return isRecord(value) && optionalString(value.status) === 'ready';
+  });
+  const selectedGeneratedBlockKeys = Object.keys(selectedBlocks);
+  const selectedGeneratedBlocksReady = selectedGeneratedBlockKeys.every((key) => {
+    const value = selectedBlocks[key];
     return isRecord(value) && optionalString(value.status) === 'ready';
   });
   const activeCallerTargetProof = buildActiveCallerTargetProof(descriptor, GENERATED_SURFACES);
@@ -868,27 +874,31 @@ export function buildGeneratedInterfaceBundle(
   );
   const sourceOfWorkLineage = buildSourceOfWorkLineage(catalog, stageControlPlane);
   const wrapperBlocks = {
-    ...blocks,
+    ...allBlocks,
     product_status: productStatus,
     product_session: productSession,
     domain_handler: domainHandler,
     workbench,
   };
-  const generatedDirectParity = buildGeneratedDirectParityProof(catalog, blocks, activeCallerTargetProof);
+  const generatedDirectParity = buildGeneratedDirectParityProof(catalog, allBlocks, activeCallerTargetProof);
   const activeCallerCutoverProof = buildActiveCallerCutoverProof(
     descriptor,
     compilerStatus,
-    generatedBlocksReady,
-    generatedBlockKeys,
+    allGeneratedBlocksReady,
+    allGeneratedBlockKeys,
     activeCallerTargetProof,
   );
-  const generatedWrapperBundle = buildGeneratedWrapperBundle(wrapperBlocks, generatedBlocksReady, activeCallerTargetProof);
+  const generatedWrapperBundle = buildGeneratedWrapperBundle(
+    wrapperBlocks,
+    allGeneratedBlocksReady,
+    activeCallerTargetProof,
+  );
   const generatedSurfaceConsumptionBundle = buildGeneratedSurfaceConsumptionBundle({
     supportedDerivedSurfaces: SUPPORTED_DERIVED_SURFACES,
     blocks: wrapperBlocks,
     compilerStatus,
-    generatedBlocksReady,
-    generatedBlockKeys,
+    generatedBlocksReady: selectedGeneratedBlocksReady,
+    generatedBlockKeys: selectedGeneratedBlockKeys,
     selectedFormat,
     sourceOfWorkLineage,
     activeCallerCutoverProof,
@@ -901,7 +911,13 @@ export function buildGeneratedInterfaceBundle(
     owner: 'one-person-lab',
     generated_surface_owner: 'one-person-lab',
     domain_repo_can_own_generated_surface: false,
-    status: compilerStatus,
+    status:
+      compilerStatus === 'ready'
+      && selectedGeneratedBlocksReady
+      && generatedWrapperBundle.status === 'ready'
+      && generatedDirectParity.status === 'aligned'
+        ? 'ready'
+        : 'blocked',
     selected_format: selectedFormat,
     project_id: optionalString(descriptor.project_id),
     target_domain_id: optionalString(descriptor.target_domain_id),
@@ -911,7 +927,7 @@ export function buildGeneratedInterfaceBundle(
     supported_derived_surfaces: buildSupportedDerivedSurfaces(),
     source_of_work_lineage: sourceOfWorkLineage,
     generated_default_entry_no_resurrection_gate: generatedDefaultEntryNoResurrectionGate,
-    ...blocks,
+    ...selectedBlocks,
     active_caller_cutover_proof: activeCallerCutoverProof,
     generated_wrapper_bundle: generatedWrapperBundle,
     generated_surface_consumption_bundle: generatedSurfaceConsumptionBundle,
