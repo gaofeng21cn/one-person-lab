@@ -3,6 +3,7 @@ import { FrameworkContractError } from '../../../../src/modules/charter/contract
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
 import {
   bindCommandRegistryMetadata,
+  parseRegisteredCommandOptions,
   validateCommandRegistryCoverage,
 } from '../../../../src/entrypoints/cli/modules/command-registry.ts';
 
@@ -142,12 +143,9 @@ test('Connect output schemas freeze provider receipts behind no-authority flags'
   assert.equal(scientific.properties.profile_role.const, 'optional_scientific_connector_profile');
   assert.deepEqual(scientificProvider.allowed_values, ['crossref', 'openalex']);
   assert.equal(scientificProvider.summary, 'Scientific provider id: crossref, openalex.');
-  assert.equal(
-    contract.commands.connect_references_verify.options.find(
-      (option: { name: string }) => option.name === 'providers',
-    ).default,
-    'crossref,openalex,semantic-scholar,crossmark,publisher',
-  );
+  assert.equal('default' in contract.commands.connect_references_verify.options.find(
+    (option: { name: string }) => option.name === 'providers',
+  ), false);
   assert.equal(scientific.properties.provider_receipt_role.const, 'provider_receipt_candidate_only');
   assert.equal(referenceVerification.verification_role.const, 'metadata_provider_receipt_only');
   assert.equal(referenceVerification.provider_receipts.items.properties.receipt_scope.const, 'metadata_provider_receipt_only');
@@ -345,6 +343,46 @@ test('command specs bind parser metadata from the machine registry', () => {
     json_output_schema_ref:
       'contracts/opl-framework/cli-command-registry.json#/commands/example_inspect/output_schema',
   });
+});
+
+test('registered command parser rejects values outside registry allowed_values', () => {
+  const spec = {
+    usage: 'opl example inspect --provider <provider>',
+    summary: 'Inspect one example.',
+    examples: ['opl example inspect --provider crossref'],
+    handler: () => ({}),
+    registry: {
+      command_id: 'example inspect',
+      parser_adapter: 'node_util_parse_args',
+      options: [{
+        name: 'provider',
+        flag: '--provider',
+        value_kind: 'string',
+        summary: 'Provider id.',
+        required: true,
+        allowed_values: ['crossref'],
+      }],
+      authority_boundary: {
+        owner: 'OPL Connect',
+        surface: 'example_inspect',
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+      json_output_schema_ref: 'example-schema-ref',
+    },
+  } as unknown as CommandSpec;
+
+  assert.throws(
+    () => parseRegisteredCommandOptions('example inspect', ['--provider', 'openalex'], spec),
+    (error) => {
+      assert.equal(error instanceof FrameworkContractError, true);
+      assert.equal((error as FrameworkContractError).code, 'cli_usage_error');
+      assert.deepEqual((error as FrameworkContractError).details?.allowed_values, ['crossref']);
+      return true;
+    },
+  );
 });
 
 test('command registry rejects incomplete options, duplicates, and inline authority fallback', () => {

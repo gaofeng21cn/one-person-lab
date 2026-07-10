@@ -1070,8 +1070,7 @@
           "name": "providers",
           "flag": "--providers",
           "value_kind": "string",
-          "default": "crossref,openalex,semantic-scholar,crossmark,publisher",
-          "summary": "Comma-separated provider ids: crossref,openalex,semantic-scholar,crossmark,publisher."
+          "summary": "Comma-separated reference verification provider ids."
         },
         {
           "name": "cache-root",

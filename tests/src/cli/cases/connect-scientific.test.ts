@@ -5,6 +5,10 @@ import {
   buildScientificConnectorProviderRegistryReadback,
   scientificConnectorProviderIds,
 } from '../../../../src/modules/connect/opl-connect-scientific.ts';
+import {
+  normalizeReferenceVerificationProviders,
+  referenceVerificationProviderIds,
+} from '../../../../src/modules/connect/opl-connect-reference-verification.ts';
 
 type ScientificSearchOutput = {
   opl_connect_scientific: {
@@ -51,6 +55,32 @@ test('scientific connector providers are explicit adapters with no core default'
   assert.deepEqual(scientificConnectorProviderIds(), ['crossref', 'openalex']);
   assert.equal(registry.providers.every((provider) => provider.adapter_role === 'optional_provider_adapter'), true);
   assert.equal(registry.authority_boundary.can_write_domain_truth, false);
+});
+
+test('reference verification provider registry owns defaults and aliases', () => {
+  assert.deepEqual(referenceVerificationProviderIds(), [
+    'crossref',
+    'openalex',
+    'semantic-scholar',
+    'crossmark',
+    'publisher',
+  ]);
+  assert.deepEqual(normalizeReferenceVerificationProviders([]), referenceVerificationProviderIds());
+  assert.deepEqual(
+    normalizeReferenceVerificationProviders(['openalex,semantic_scholar', 'openalex']),
+    ['openalex', 'semantic-scholar'],
+  );
+  assert.throws(
+    () => normalizeReferenceVerificationProviders(['pubmed']),
+    (error: unknown) => {
+      assert.equal((error as { code?: string }).code, 'codex_command_failed');
+      assert.deepEqual(
+        (error as { details?: { supported?: string[] } }).details?.supported,
+        referenceVerificationProviderIds(),
+      );
+      return true;
+    },
+  );
 });
 
 async function startFakeScientificServer() {

@@ -12,6 +12,7 @@ type CommandOptionMetadata = {
   required?: boolean;
   multiple?: boolean;
   default?: string | number | boolean;
+  allowed_values?: string[];
   allowed_range?: {
     min: number;
     max: number;

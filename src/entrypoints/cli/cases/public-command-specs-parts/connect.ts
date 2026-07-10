@@ -18,9 +18,12 @@ import {
   type ScientificConnectorProviderId,
 } from '../../../../modules/connect/opl-connect-scientific.ts';
 import {
+  normalizeReferenceVerificationProviders,
+  referenceVerificationProviderIds,
   runOplConnectReferenceVerification,
   type ReferenceVerificationInput,
 } from '../../../../modules/connect/opl-connect-reference-verification.ts';
+import { FrameworkContractError } from '../../../../modules/charter/contracts.ts';
 import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../../../modules/connect/system-installation/modules.ts';
 import {
   buildPublicModuleActionPayload,
@@ -102,19 +105,16 @@ function parseScientificSearchArgs(args: string[], spec: CommandSpec): Scientifi
 }
 
 function parseReferenceProviders(raw: string, spec: CommandSpec): ReferenceVerificationInput['providers'] {
-  const providers = raw.split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
-  const allowed = new Set(['crossref', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
-  const invalid = providers.filter((provider) => !allowed.has(provider));
-  if (providers.length === 0 || invalid.length > 0) {
-    throw buildUsageError('connect references verify requires --providers crossref,openalex,semantic-scholar,crossmark,publisher.', spec, {
-      providers,
-      invalid,
-    });
+  try {
+    return normalizeReferenceVerificationProviders([raw]);
+  } catch (error) {
+    if (!(error instanceof FrameworkContractError)) throw error;
+    throw buildUsageError(
+      `connect references verify --providers must contain only ${referenceVerificationProviderIds().join(',')}.`,
+      spec,
+      error.details,
+    );
   }
-  return providers as ReferenceVerificationInput['providers'];
 }
 
 function parseReferenceVerificationArgs(args: string[], spec: CommandSpec): ReferenceVerificationArgs {
@@ -127,10 +127,7 @@ function parseReferenceVerificationArgs(args: string[], spec: CommandSpec): Refe
   }
   return {
     referencesFile,
-    providers: parseReferenceProviders(
-      String(parsed.providers ?? 'crossref,openalex,semantic-scholar,crossmark,publisher'),
-      spec,
-    ),
+    providers: parseReferenceProviders(String(parsed.providers ?? ''), spec),
     cacheRoot: readOptionalString(parsed['cache-root']) ?? undefined,
     maxRetries: Number(parsed['max-retries']),
   };
@@ -410,7 +407,7 @@ export function buildConnectCommandSpecs(
         ),
     },
     'connect references verify': {
-      usage: 'opl connect references verify --references-file <json> [--providers crossref,openalex,semantic-scholar,crossmark,publisher] [--cache-root <path>] [--max-retries <n>]',
+      usage: `opl connect references verify --references-file <json> [--providers ${referenceVerificationProviderIds().join(',')}] [--cache-root <path>] [--max-retries <n>]`,
       summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts without citation judgment authority.',
       examples: [
         'opl connect references verify --references-file references.json --providers crossref,openalex --cache-root .cache/opl-connect --max-retries 1 --json',

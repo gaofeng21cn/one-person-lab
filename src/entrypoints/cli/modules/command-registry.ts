@@ -101,6 +101,16 @@ function registryShapeViolations(command: string, registry: CommandRegistryMetad
       if (typeof option.summary !== 'string' || option.summary.length === 0) {
         violations.push('registry.option.summary');
       }
+      if (
+        option.allowed_values !== undefined
+        && (
+          !Array.isArray(option.allowed_values)
+          || option.allowed_values.length === 0
+          || option.allowed_values.some((entry) => typeof entry !== 'string' || entry.length === 0)
+        )
+      ) {
+        violations.push('registry.option.allowed_values');
+      }
     }
   }
   if (!registry.json_output_schema_ref) {
@@ -223,6 +233,13 @@ function coerceOptionValue(
     throw buildUsageError(`${command} ${option.flag} must be a string.`, spec, {
       option: option.flag,
       value,
+    });
+  }
+  if (option.allowed_values && !option.allowed_values.includes(value)) {
+    throw buildUsageError(`${command} ${option.flag} must be one of ${option.allowed_values.join(', ')}.`, spec, {
+      option: option.flag,
+      value,
+      allowed_values: option.allowed_values,
     });
   }
   return value;

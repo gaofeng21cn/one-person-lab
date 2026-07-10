@@ -13,6 +13,16 @@ export type ReferenceVerificationInput = {
   timeoutMs?: number;
 };
 
+const REFERENCE_VERIFICATION_PROVIDER_IDS = [
+  'crossref',
+  'openalex',
+  'semantic-scholar',
+  'crossmark',
+  'publisher',
+] as const;
+
+export type ReferenceVerificationProviderId = typeof REFERENCE_VERIFICATION_PROVIDER_IDS[number];
+
 type ReferenceRecord = {
   id: string;
   doi: string | null;
@@ -20,7 +30,7 @@ type ReferenceRecord = {
   title: string | null;
 };
 
-type ProviderId = 'crossref' | 'openalex' | 'semantic-scholar' | 'crossmark' | 'publisher';
+type ProviderId = ReferenceVerificationProviderId;
 type RetryAttempt = { attempt: number; status: string; http_status: number | null };
 type ProviderMatchStatus = 'identifier_matched' | 'metadata_conflict' | 'provider_found' | 'deferred' | 'error';
 type MismatchDetail = {
@@ -95,21 +105,28 @@ function normalizeDoi(value: string | null) {
     .toLowerCase() || null;
 }
 
-function normalizeProviders(providers: string[]) {
+export function referenceVerificationProviderIds(): ReferenceVerificationProviderId[] {
+  return [...REFERENCE_VERIFICATION_PROVIDER_IDS];
+}
+
+export function normalizeReferenceVerificationProviders(
+  providers: string[],
+): ReferenceVerificationProviderId[] {
   const entries = providers.flatMap((entry) => entry.split(','))
     .map((entry) => entry.trim().toLowerCase())
+    .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry)
     .filter(Boolean);
-  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'openalex', 'semantic-scholar', 'crossmark', 'publisher'])]
-    .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
-  const allowed = new Set(['crossref', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
+  const defaults = referenceVerificationProviderIds();
+  const unique = [...new Set(entries.length > 0 ? entries : defaults)];
+  const allowed = new Set<string>(defaults);
   const unsupported = unique.filter((entry) => !allowed.has(entry));
   if (unsupported.length > 0) {
     throw new FrameworkContractError('codex_command_failed', 'Unsupported OPL Connect reference verification provider.', {
       unsupported,
-      supported: [...allowed],
+      supported: defaults,
     });
   }
-  return unique as ProviderId[];
+  return unique as ReferenceVerificationProviderId[];
 }
 
 function loadReferences(filePath: string) {
@@ -835,7 +852,7 @@ function noAuthorityBoundary() {
 
 export async function runOplConnectReferenceVerification(input: ReferenceVerificationInput) {
   const references = loadReferences(input.referencesFile);
-  const providers = normalizeProviders(input.providers);
+  const providers = normalizeReferenceVerificationProviders(input.providers);
   const providerEvidence: ProviderEvidence[] = [];
   for (const reference of references) {
     for (const providerId of providers) {
