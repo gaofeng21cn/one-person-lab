@@ -29,7 +29,6 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
       version: 'domain-owned-stage-output-ref.v1',
       domain_id: 'redcube',
       output_ref: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
-      payload: { forbidden_body: 'q'.repeat(2_000_000) },
     },
     paper_stage_log: {
       stage_work_done: ['x'.repeat(2_000_000)],
@@ -67,7 +66,6 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(compactedRecord.full_transcript, undefined);
   assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
   assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
-  assert.equal(JSON.stringify(compacted).includes('forbidden_body'), false);
   assert.ok(compacted.temporal_payload_policy.retained_fields.includes('domain_output'));
   assert.ok(Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000);
 });
@@ -80,5 +78,20 @@ test('Temporal Codex activity rejects object closeout refs carrying nested body 
       uri: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
       payload: { artifact_body: 'must-not-enter-temporal' },
     }],
+  }), null);
+});
+
+test('Temporal Codex activity rejects inline domain output payloads', () => {
+  const outputRef = 'file:///tmp/redcube-runtime/artifacts/closeout.json';
+  assert.equal(compactCloseoutPacketForTemporalResult({
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: [outputRef],
+    domain_output: {
+      surface_kind: 'domain_owned_stage_output_ref',
+      version: 'domain-owned-stage-output-ref.v1',
+      domain_id: 'redcube',
+      output_ref: outputRef,
+      payload: { artifact_body: 'must-not-enter-temporal' },
+    },
   }), null);
 });

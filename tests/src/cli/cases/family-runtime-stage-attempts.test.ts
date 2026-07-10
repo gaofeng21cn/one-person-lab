@@ -190,6 +190,18 @@ test('family-runtime attempt rejects domain output refs that cross the attempt b
         closeoutRefs: ['receipt:oma-domain-output'],
         expected: /domain_output\.output_ref must be present in closeout_refs/,
       },
+      {
+        name: 'inline output payload',
+        domainOutput: {
+          surface_kind: 'domain_owned_stage_output_ref',
+          version: 'domain-owned-stage-output-ref.v1',
+          domain_id: 'opl-meta-agent',
+          output_ref: 'file:///tmp/oma-domain-output.json',
+          payload: { stage_decomposition_pack_draft: { forbidden: true } },
+        },
+        closeoutRefs: ['receipt:oma-domain-output', 'file:///tmp/oma-domain-output.json'],
+        expected: /domain_output contains unsupported fields/,
+      },
     ]) {
       const stageAttemptId = createFixtureAttempt(stateRoot, `sha256:${testCase.name.replaceAll(' ', '-')}`);
       const failure = runCliFailure([
@@ -207,6 +219,13 @@ test('family-runtime attempt rejects domain output refs that cross the attempt b
 
       assert.equal(failure.payload.error.code, 'contract_shape_invalid', testCase.name);
       assert.match(failure.payload.error.message, testCase.expected, testCase.name);
+      const query = runCli([
+        'family-runtime',
+        'attempt',
+        'query',
+        stageAttemptId,
+      ], familyRuntimeEnv(stateRoot)).family_runtime_stage_attempt_query.stage_attempt_query;
+      assert.deepEqual(query.closeouts, [], testCase.name);
     }
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

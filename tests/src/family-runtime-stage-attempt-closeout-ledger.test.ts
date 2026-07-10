@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 
 import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
+import { normalizeTypedStageCloseoutPacket } from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
 import {
   createStageAttempt,
   createStageAttemptTable,
@@ -193,5 +194,37 @@ test('stage attempt closeout preserves canonical object-ref metadata through que
       queryStageAttempt(db, attemptId).stage_attempt_query.closeouts[0].packet.closeout_ref_metadata,
       [{ ...ref, ref: ref.uri }],
     );
+  });
+});
+
+test('stage attempt closeout rejects inline domain output bodies before ledger writes', () => {
+  withAttempt((db, attemptId) => {
+    const outputRef = 'file:///tmp/redcube-runtime/artifacts/closeout.json';
+    const packet = {
+      ...closeoutPacket(),
+      closeout_refs: ['receipt:artifact-handoff', outputRef],
+      domain_output: {
+        surface_kind: 'domain_owned_stage_output_ref',
+        version: 'domain-owned-stage-output-ref.v1',
+        domain_id: 'redcube',
+        output_ref: outputRef,
+        owner_verdict: 'forged-ready',
+        payload: { artifact_body: 'must-not-enter-ledger' },
+      },
+    };
+
+    for (const run of [
+      () => normalizeTypedStageCloseoutPacket(packet),
+      () => ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet }),
+    ]) {
+      assert.throws(
+        run,
+        (error) => error instanceof FrameworkContractError
+          && /domain_output contains unsupported fields/.test(error.message),
+      );
+    }
+    const query = queryStageAttempt(db, attemptId).stage_attempt_query;
+    assert.deepEqual(query.closeouts, []);
+    assert.deepEqual(query.attempt.closeout_refs, []);
   });
 });

@@ -240,6 +240,13 @@
         "domain_id",
         "output_ref"
       ],
+      "allowed_fields": [
+        "surface_kind",
+        "version",
+        "domain_id",
+        "output_ref"
+      ],
+      "unknown_fields_allowed": false,
       "binding_rules": [
         "domain_id_matches_stage_attempt_domain_id",
         "output_ref_is_present_in_closeout_refs"

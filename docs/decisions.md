@@ -13,7 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- typed closeout 可携带 `domain_output={surface_kind,version,domain_id,output_ref}`；`domain_id` 必须绑定 attempt domain，`output_ref` 必须同时出现在 `closeout_refs`。
+- typed closeout 可携带 `domain_output={surface_kind,version,domain_id,output_ref}`；该 envelope 只允许这四个字段，inline payload、owner verdict 或其他未知字段必须 fail closed。`domain_id` 必须绑定 attempt domain，`output_ref` 必须同时出现在 `closeout_refs`。
 - normalizer、Temporal compaction、ledger 与 attempt query 只保留该 refs-only envelope；operator visibility 只暴露 `domain_output_ref`，不复制或读取 output body。
 - domain consumer 通过 ref 读取 domain-owned output；payload 内的 owner verdict、domain-ready 字段或 artifact 内容不改变 OPL completion boundary，也不授权 OPL 写 domain truth、owner receipt 或 quality verdict。
 

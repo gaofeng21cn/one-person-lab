@@ -46,6 +46,14 @@ function normalizeDomainOutput(value: unknown, closeoutRefs: string[]): TypedSta
       field: 'domain_output',
     });
   }
+  const allowedFields = new Set(['surface_kind', 'version', 'domain_id', 'output_ref']);
+  if (Object.keys(value).some((field) => !allowedFields.has(field))) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'domain_output contains unsupported fields; only refs-only output identity is allowed.',
+      { allowed_fields: [...allowedFields] },
+    );
+  }
   const surfaceKind = optionalString(value.surface_kind);
   const version = optionalString(value.version);
   const domainId = optionalString(value.domain_id);
