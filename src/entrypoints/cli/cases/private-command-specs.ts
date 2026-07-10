@@ -193,47 +193,15 @@ export function buildInternalCommandSpecs(
     },
     ...buildPrivateRuntimeCommandSpecs({ getCommandSpecs, getContracts }),
     ...buildPrivateAgentCommandSpecs({ getCommandSpecs }),
-    dashboard: {
+    'status dashboard': {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       summary: 'Aggregate the current OPL product-runtime view across projects, workspace, and runtime.',
       examples: [
         'opl status dashboard',
         'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
-      registry: {
-        command_id: 'status dashboard',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'path',
-            flag: '--path',
-            value_kind: 'string',
-            summary: 'Workspace path to project into the dashboard readback.',
-          },
-          {
-            name: 'sessions-limit',
-            flag: '--sessions-limit',
-            value_kind: 'integer',
-            summary: 'Maximum managed session ledger entries to include.',
-            allowed_range: {
-              min: 1,
-              max: 500,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/status_dashboard/output_schema',
-        authority_boundary: {
-          owner: 'OPL Console',
-          surface: 'product_runtime_dashboard_readback',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: (args) => {
-        const parsed = parseRegisteredCommandOptions('status dashboard', args, commandSpecs.dashboard);
+        const parsed = parseRegisteredCommandOptions('status dashboard', args, commandSpecs['status dashboard']);
         return buildOplDashboard(getContracts(), {
           workspacePath: parsed.path as string | undefined,
           sessionsLimit: parsed['sessions-limit'] as number | undefined,

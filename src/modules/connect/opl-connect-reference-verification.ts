@@ -20,7 +20,7 @@ type ReferenceRecord = {
   title: string | null;
 };
 
-type ProviderId = 'crossref' | 'pubmed' | 'openalex' | 'semantic-scholar' | 'crossmark' | 'publisher';
+type ProviderId = 'crossref' | 'openalex' | 'semantic-scholar' | 'crossmark' | 'publisher';
 type RetryAttempt = { attempt: number; status: string; http_status: number | null };
 type ProviderMatchStatus = 'identifier_matched' | 'metadata_conflict' | 'provider_found' | 'deferred' | 'error';
 type MismatchDetail = {
@@ -32,7 +32,7 @@ type MismatchDetail = {
 };
 type ProviderEvidence = {
   reference_id: string;
-  provider: 'crossref' | 'pubmed' | 'openalex' | 'semantic_scholar' | 'crossmark' | 'publisher';
+  provider: 'crossref' | 'openalex' | 'semantic_scholar' | 'crossmark' | 'publisher';
   provider_id: ProviderId;
   lookup_status: 'found' | 'not_found' | 'deferred' | 'error';
   status: 'matched' | 'deferred';
@@ -72,7 +72,6 @@ type ProviderEvidenceError = NonNullable<ProviderEvidence['error']>;
 type ProviderEvidenceDraft = Omit<ProviderEvidence, 'receipt_ref'>;
 
 const DEFAULT_CROSSREF_API_BASE = 'https://api.crossref.org';
-const DEFAULT_PUBMED_API_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 const DEFAULT_OPENALEX_API_BASE = 'https://api.openalex.org';
 const DEFAULT_SEMANTIC_SCHOLAR_API_BASE = 'https://api.semanticscholar.org/graph/v1';
 const DEFAULT_PUBLISHER_DOI_BASE = 'https://doi.org';
@@ -100,9 +99,9 @@ function normalizeProviders(providers: string[]) {
   const entries = providers.flatMap((entry) => entry.split(','))
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
-  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher'])]
+  const unique = [...new Set(entries.length > 0 ? entries : ['crossref', 'openalex', 'semantic-scholar', 'crossmark', 'publisher'])]
     .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
-  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
+  const allowed = new Set(['crossref', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
   const unsupported = unique.filter((entry) => !allowed.has(entry));
   if (unsupported.length > 0) {
     throw new FrameworkContractError('codex_command_failed', 'Unsupported OPL Connect reference verification provider.', {
@@ -133,7 +132,7 @@ function loadReferences(filePath: string) {
 function normalizeReference(value: unknown, index: number): ReferenceRecord {
   const record = asRecord(value);
   const doi = normalizeDoi(asString(record.doi) ?? asString(record.DOI));
-  const pmid = asString(record.pmid) ?? asString(record.pubmed_id);
+  const pmid = asString(record.pmid);
   const title = asString(record.title);
   const fallbackId = crypto.createHash('sha256').update(JSON.stringify({ doi, pmid, title, index })).digest('hex').slice(0, 12);
   return {
@@ -515,69 +514,6 @@ async function verifyCrossmark(reference: ReferenceRecord, maxRetries: number, t
   };
 }
 
-function pubmedUrl(endpoint: 'esearch.fcgi' | 'esummary.fcgi', params: Record<string, string>) {
-  const baseUrl = apiBase('OPL_CONNECT_PUBMED_API_BASE', DEFAULT_PUBMED_API_BASE);
-  const url = new URL(`${baseUrl}/${endpoint}`);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return url;
-}
-
-async function verifyPubMed(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
-  let pmid = reference.pmid;
-  let matchBasis: ProviderEvidence['match_basis'] = pmid ? 'pmid' : 'none';
-  let retryAttempts: RetryAttempt[] = [];
-  if (!pmid && (reference.doi || reference.title)) {
-    matchBasis = reference.doi ? 'doi' : 'title';
-    const searchUrl = pubmedUrl('esearch.fcgi', {
-      db: 'pubmed',
-      term: reference.doi ? `${reference.doi}[doi]` : reference.title!,
-      retmode: 'json',
-      retmax: '1',
-    });
-    const search = await fetchJsonWithRetry(searchUrl, maxRetries, 'pubmed', timeout);
-    retryAttempts = retryAttempts.concat(search.retryAttempts);
-    const idList = asRecord(asRecord(search.json).esearchresult).idlist;
-    pmid = Array.isArray(idList) ? idList.map(asString).find(Boolean) ?? null : null;
-  }
-  if (!pmid) {
-    return deferredEvidence(reference, 'pubmed', 'pubmed provider receipt requirement needs a PMID, DOI, or searchable title');
-  }
-  const summaryUrl = pubmedUrl('esummary.fcgi', {
-    db: 'pubmed',
-    id: pmid,
-    retmode: 'json',
-  });
-  const summary = await fetchJsonWithRetry(summaryUrl, maxRetries, 'pubmed', timeout);
-  retryAttempts = retryAttempts.concat(summary.retryAttempts);
-  const result = asRecord(asRecord(summary.json).result);
-  const item = asRecord(result[pmid]);
-  const articleIds = Array.isArray(item.articleids) ? item.articleids.map(asRecord) : [];
-  const doi = normalizeDoi(articleIds
-    .map((entry) => ({ idtype: asString(entry.idtype)?.toLowerCase(), value: asString(entry.value) }))
-    .find((entry) => entry.idtype === 'doi')?.value ?? null);
-  const title = asString(item.title);
-  return foundEvidence(reference, {
-    provider: 'pubmed',
-    provider_id: 'pubmed',
-    match_basis: matchBasis === 'none' ? 'pmid' : matchBasis,
-    provider_identifiers: { doi, pmid },
-    metadata: compactMetadata({
-      title,
-      year: yearFromText(asString(item.pubdate) ?? asString(item.sortpubdate)),
-      journal: asString(item.fulljournalname) ?? asString(item.source),
-    }),
-    retraction_or_update_flags: pubmedFlags(item),
-    normalized: {
-      doi,
-      pmid,
-      title,
-    },
-    retry_attempts: retryAttempts,
-  });
-}
-
 async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (!reference.doi && !reference.title) {
     return deferredEvidence(reference, 'openalex', 'openalex provider receipt requirement needs a DOI or title');
@@ -600,7 +536,9 @@ async function verifyOpenAlex(reference: ReferenceRecord, maxRetries: number, ti
   const primaryLocation = asRecord(item.primary_location);
   const source = asRecord(primaryLocation.source);
   const doi = normalizeDoi(asString(item.doi) ?? asString(ids.doi));
-  const pmid = pubmedIdFromUrl(asString(ids.pmid));
+  const pmid = asString(ids.pmid)
+    ?.replace(/^https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//i, '')
+    .replace(/\/$/, '') || null;
   const title = asString(item.title) ?? asString(item.display_name);
   return foundEvidence(reference, {
     provider: 'openalex',
@@ -645,7 +583,7 @@ async function verifySemanticScholar(reference: ReferenceRecord, maxRetries: num
   const externalIds = asRecord(item.externalIds);
   const venue = asRecord(item.publicationVenue);
   const doi = normalizeDoi(asString(externalIds.DOI) ?? asString(externalIds.doi));
-  const pmid = asString(externalIds.PubMed) ?? asString(externalIds.PMID);
+  const pmid = asString(externalIds.PMID) ?? asString(externalIds.PubMed);
   const title = asString(item.title);
   return foundEvidence(reference, {
     provider: 'semantic_scholar',
@@ -714,7 +652,6 @@ async function verifyPublisher(reference: ReferenceRecord, maxRetries: number, t
 
 async function verifyProvider(reference: ReferenceRecord, providerId: ProviderId, maxRetries: number, timeout: number): Promise<ProviderEvidenceDraft> {
   if (providerId === 'crossref') return verifyCrossref(reference, maxRetries, timeout);
-  if (providerId === 'pubmed') return verifyPubMed(reference, maxRetries, timeout);
   if (providerId === 'openalex') return verifyOpenAlex(reference, maxRetries, timeout);
   if (providerId === 'semantic-scholar') return verifySemanticScholar(reference, maxRetries, timeout);
   if (providerId === 'crossmark') return verifyCrossmark(reference, maxRetries, timeout);
@@ -846,22 +783,6 @@ function crossrefFlags(item: Record<string, unknown>): Record<string, unknown> {
   if (Array.isArray(item['update-to']) && item['update-to'].length > 0) flags.has_update = true;
   if (asString(item['update-policy'])) flags.crossmark_update_policy = true;
   return flags;
-}
-
-function pubmedFlags(item: Record<string, unknown>): Record<string, unknown> {
-  const publicationTypes = Array.isArray(item.pubtype)
-    ? item.pubtype.map((entry) => String(entry).toLowerCase()).join(' ')
-    : '';
-  if (publicationTypes.includes('retracted publication')) return { retracted: true };
-  if (publicationTypes.includes('published erratum') || publicationTypes.includes('corrected and republished article')) {
-    return { correction: true };
-  }
-  return {};
-}
-
-function pubmedIdFromUrl(value: string | null): string | null {
-  if (!value) return null;
-  return value.replace(/^https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//, '').replace(/\/$/, '') || null;
 }
 
 function htmlMeta(html: string, ...names: string[]): string | null {

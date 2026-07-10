@@ -14,7 +14,7 @@ metadata / identifier 校验，并返回 provider receipt candidate、cache meta
 ## 命令面
 
 ```bash
-opl connect references verify --references-file references.json --providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher --cache-root .cache/opl-connect --max-retries 1 --json
+opl connect references verify --references-file references.json --providers crossref,openalex,semantic-scholar,crossmark,publisher --cache-root .cache/opl-connect --max-retries 1 --json
 ```
 
 输入文件可以是数组，也可以是：
@@ -32,8 +32,9 @@ opl connect references verify --references-file references.json --providers cros
 }
 ```
 
-当前可执行 provider 是 Crossref、PubMed、OpenAlex、Semantic Scholar、
-Crossmark 和 Publisher。Crossmark provider 当前只消费 Crossref REST metadata
+当前可执行 provider 是 Crossref、OpenAlex、Semantic Scholar、Crossmark 和
+Publisher。PubMed search 与 metadata provider 由 MAS `adapters/literature/pubmed.py`
+持有，不在 OPL Connect 维护第二套 EUtils client。Crossmark provider 当前只消费 Crossref REST metadata
 中的 Crossmark / update signal，不代表已调用独立 Crossmark API 做完整核验。
 Publisher provider 通过 DOI resolver 读取 publisher landing page metadata；
 它不下载全文、不验证 paywalled full-text body，也不把 landing page 命中写成

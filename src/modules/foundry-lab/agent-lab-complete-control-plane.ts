@@ -1,7 +1,6 @@
 import {
   agentLabRefSummary,
   assessIndependentAiReviewReceipt,
-  buildAgentLabCostEstimate,
   buildSampleAgentLabResult,
   REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS,
   runAgentLabSuite,
@@ -83,7 +82,6 @@ export function buildCompleteAgentLabControlPlane() {
     sampleResult.result_id,
     longlineResult.result_id,
   ]);
-  const tokenCostEstimate = buildAgentLabCostEstimate({ preset: 'rca-ppt-40' });
   const efficiencyNonRegression = buildAgentLabEfficiencyNonRegressionReadModel({
     suiteResults: [sampleResult, longlineResult],
     explicitRefs: DEFAULT_EFFICIENCY_NONREGRESSION_REFS,
@@ -234,7 +232,8 @@ export function buildCompleteAgentLabControlPlane() {
     ready_to_emit_codex_attempt_trace_flywheel: true,
     ready_to_emit_variant_comparison_read_model: true,
     ready_to_emit_stage_executor_policy_read_model: true,
-    ready_to_emit_token_cost_estimates: true,
+    ready_to_emit_token_cost_estimates: false,
+    token_cost_estimate_profile_required: true,
     ready_to_emit_efficiency_nonregression_read_model: true,
     ai_review_approved_count: 0,
     automatic_mechanism_promotion_ready: false,
@@ -267,7 +266,6 @@ export function buildCompleteAgentLabControlPlane() {
     replay_fork_variant_cockpit: replayForkVariantCockpit,
     variant_comparison: variantComparison,
     stage_executor_policy: stageExecutorPolicy,
-    token_cost_estimates: [tokenCostEstimate],
     efficiency_nonregression: efficiencyNonRegression,
     developer_mode_repair_routes: developerModeRepairRoutes,
     readiness,
@@ -351,7 +349,6 @@ export function buildAgentLabWorkbenchReadModel() {
       complete.codex_attempt_trace_flywheel.read_model_id,
       complete.variant_comparison.read_model_id,
       complete.stage_executor_policy.read_model_id,
-      complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
       complete.efficiency_nonregression.read_model_id,
       developerModeRepairRoutes.read_model_id,
     ]),
@@ -373,7 +370,6 @@ export function buildAgentLabWorkbenchReadModel() {
       replay_fork_variant_cockpit_ref: complete.replay_fork_variant_cockpit.cockpit_id,
       variant_comparison_read_model_ref: complete.variant_comparison.read_model_id,
       stage_executor_policy_read_model_ref: complete.stage_executor_policy.read_model_id,
-      token_cost_estimate_refs: complete.token_cost_estimates.map((estimate) => estimate.estimate_id),
       efficiency_nonregression_read_model_ref: complete.efficiency_nonregression.read_model_id,
       sample_ref_summary: agentLabRefSummary(sample),
       longline_ref_summary: agentLabRefSummary(longline),
@@ -399,7 +395,6 @@ export function buildAgentLabWorkbenchReadModel() {
     replay_fork_variant_cockpit: complete.replay_fork_variant_cockpit,
     variant_comparison: variantComparison,
     stage_executor_policy: complete.stage_executor_policy,
-    token_cost_estimates: complete.token_cost_estimates,
     efficiency_nonregression: complete.efficiency_nonregression,
     promotion_gates: promotionGates(results),
     developer_mode_repair_routes: developerModeRepairRoutes,

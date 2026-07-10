@@ -55,8 +55,7 @@ export {
 } from './agent-lab-loop-risk.ts';
 export {
   buildAgentLabCostEstimate,
-  buildAgentLabCostEstimateReadModel,
-  type AgentLabCostEstimatePreset,
+  type AgentLabCostEstimateProfile,
 } from './agent-lab-token-cost-estimate.ts';
 export {
   buildAgentLabEfficiencyNonRegressionReadModel,

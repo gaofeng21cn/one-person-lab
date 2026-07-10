@@ -12,7 +12,6 @@ import {
   type FoundationSkillsSyncInput,
 } from '../../../../modules/connect/opl-foundation-skills.ts';
 import { buildAgentPackageCommandSpecs } from './connect-agent-packages.ts';
-import { runOplConnectPubMedSearch } from '../../../../modules/connect/opl-connect-pubmed.ts';
 import {
   scientificConnectorProviderIds,
   runOplConnectScientificSearch,
@@ -33,18 +32,12 @@ import {
   cloneCommandSpec,
   parseRegisteredCommandOptions,
   parseOplModuleExecArgs,
-  validateCommandRegistryCoverage,
 } from '../../modules/support.ts';
 import { readOptionalString } from '../../modules/json-boundary.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 import { buildNoArgSpec, commandActionSummary } from './shared.ts';
 
 type ModuleAction = 'install' | 'update' | 'reinstall' | 'remove';
-
-type PubMedSearchArgs = {
-  query: string;
-  limit: number;
-};
 
 type ScientificSearchArgs = {
   provider: ScientificConnectorProviderId;
@@ -83,25 +76,6 @@ type ExternalSkillsSyncArgs = ExternalSkillsInspectArgs & {
 
 type FoundationSkillsSyncArgs = FoundationSkillsSyncInput;
 
-const MODULE_ACTION_COMMANDS = [
-  'connect install',
-  'connect update',
-  'connect reinstall',
-  'connect remove',
-];
-
-function parsePubMedSearchArgs(args: string[], spec: CommandSpec): PubMedSearchArgs {
-  const parsed = parseRegisteredCommandOptions('connect pubmed search', args, spec);
-  const query = String(parsed.query ?? '').trim();
-  if (query.length === 0) {
-    throw buildUsageError('connect pubmed search requires --query.', spec, {
-      required: ['--query'],
-    });
-  }
-
-  return { query, limit: Number(parsed.limit) };
-}
-
 function parseScientificSearchArgs(args: string[], spec: CommandSpec): ScientificSearchArgs {
   const parsed = parseRegisteredCommandOptions('connect scientific search', args, spec);
   const provider = String(parsed.provider ?? '').trim().toLowerCase();
@@ -132,10 +106,10 @@ function parseReferenceProviders(raw: string, spec: CommandSpec): ReferenceVerif
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => entry === 'semantic_scholar' ? 'semantic-scholar' : entry);
-  const allowed = new Set(['crossref', 'pubmed', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
+  const allowed = new Set(['crossref', 'openalex', 'semantic-scholar', 'crossmark', 'publisher']);
   const invalid = providers.filter((provider) => !allowed.has(provider));
   if (providers.length === 0 || invalid.length > 0) {
-    throw buildUsageError('connect references verify requires --providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher.', spec, {
+    throw buildUsageError('connect references verify requires --providers crossref,openalex,semantic-scholar,crossmark,publisher.', spec, {
       providers,
       invalid,
     });
@@ -154,7 +128,7 @@ function parseReferenceVerificationArgs(args: string[], spec: CommandSpec): Refe
   return {
     referencesFile,
     providers: parseReferenceProviders(
-      String(parsed.providers ?? 'crossref,pubmed,openalex,semantic-scholar,crossmark,publisher'),
+      String(parsed.providers ?? 'crossref,openalex,semantic-scholar,crossmark,publisher'),
       spec,
     ),
     cacheRoot: readOptionalString(parsed['cache-root']) ?? undefined,
@@ -323,6 +297,7 @@ function buildModuleActionSpec(
   action: ModuleAction,
   usage: string,
   example: string,
+  getSpec: () => CommandSpec,
 ): CommandSpec {
   const command = `connect ${action}`;
   const spec: CommandSpec = {
@@ -330,32 +305,9 @@ function buildModuleActionSpec(
     summary: commandActionSummary(action, 'one OPL-managed domain module'),
     examples: [example],
     group: 'module',
-    registry: {
-      command_id: command,
-      parser_adapter: 'node_util_parse_args',
-      options: [
-        {
-          name: 'module',
-          flag: '--module',
-          value_kind: 'string',
-          summary: 'OPL-managed domain module id.',
-          required: true,
-        },
-      ],
-      json_output_schema_ref:
-        `contracts/opl-framework/cli-command-registry.json#/commands/connect_${action}/output_schema`,
-      authority_boundary: {
-        owner: 'OPL Connect',
-        surface: 'managed_module_action',
-        can_write_domain_truth: false,
-        can_create_owner_receipt: false,
-        can_claim_domain_ready: false,
-        can_claim_production_ready: false,
-      },
-    },
     handler: (args) =>
       buildPublicModuleActionPayload(
-        runOplModuleAction(action, parseModuleActionArgs(command, args, spec)),
+        runOplModuleAction(action, parseModuleActionArgs(command, args, getSpec())),
       ),
   };
   return spec;
@@ -378,57 +330,6 @@ export function buildConnectCommandSpecs(
     }),
   );
 
-  const externalSkillsBaseOptions = [
-    {
-      name: 'source',
-      flag: '--source',
-      value_kind: 'string' as const,
-      summary: 'External specialist source id. Defaults to kdense-scientific-agent-skills for compatibility.',
-      required: false,
-    },
-    {
-      name: 'source-root',
-      flag: '--source-root',
-      value_kind: 'string' as const,
-      summary: 'Local checkout path for the external specialist source.',
-      required: false,
-    },
-    {
-      name: 'registry-root',
-      flag: '--registry-root',
-      value_kind: 'string' as const,
-      summary: 'Root containing the OPL Connect external specialist source registry.',
-      required: false,
-    },
-  ];
-
-  const externalSkillsAuthorityBoundary = {
-    owner: 'OPL Connect',
-    surface: 'external_skill_library_connector',
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_claim_domain_ready: false,
-    can_claim_production_ready: false,
-  } as const;
-
-  const foundationSkillsAuthorityBoundary = {
-    owner: 'OPL Connect',
-    surface: 'foundation_support_skill_connector',
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_claim_domain_ready: false,
-    can_claim_production_ready: false,
-  } as const;
-
-  const agentPackageAuthorityBoundary = {
-    owner: 'OPL Connect',
-    surface: 'agent_package_registry_and_manifest_lifecycle',
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_claim_domain_ready: false,
-    can_claim_production_ready: false,
-  } as const;
-
   const connectCommandSpecs: Record<string, CommandSpec> = {
     'connect modules': buildNoArgSpec(
       {
@@ -444,6 +345,7 @@ export function buildConnectCommandSpecs(
         'install',
         'opl connect install --module <module_id>',
         'opl connect install --module medautoscience',
+        () => connectCommandSpecs['connect install'],
       ),
       group: 'connect',
       summary: 'Install one OPL-managed domain module through the canonical Connect command surface.',
@@ -453,6 +355,7 @@ export function buildConnectCommandSpecs(
         'update',
         'opl connect update --module <module_id>',
         'opl connect update --module medautoscience',
+        () => connectCommandSpecs['connect update'],
       ),
       group: 'connect',
       summary: 'Update one OPL-managed domain module through the canonical Connect command surface.',
@@ -462,6 +365,7 @@ export function buildConnectCommandSpecs(
         'reinstall',
         'opl connect reinstall --module <module_id>',
         'opl connect reinstall --module medautoscience',
+        () => connectCommandSpecs['connect reinstall'],
       ),
       group: 'connect',
       summary: 'Reinstall one OPL-managed domain module through the canonical Connect command surface.',
@@ -471,6 +375,7 @@ export function buildConnectCommandSpecs(
         'remove',
         'opl connect remove --module <module_id>',
         'opl connect remove --module medautoscience',
+        () => connectCommandSpecs['connect remove'],
       ),
       group: 'connect',
       summary: 'Remove one OPL-managed domain module through the canonical Connect command surface.',
@@ -490,165 +395,28 @@ export function buildConnectCommandSpecs(
         );
       },
     },
-    'connect pubmed search': {
-      usage: 'opl connect pubmed search --query <query> [--limit <n>]',
-      summary: 'Search PubMed through the OPL Connect compatibility entry for the optional scientific connector profile.',
-      examples: [
-        'opl connect pubmed search --query "diabetes mortality prediction" --limit 5 --json',
-      ],
-      group: 'connect',
-      help_surface: 'default',
-      registry: {
-        command_id: 'connect pubmed search',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'query',
-            flag: '--query',
-            value_kind: 'string',
-            summary: 'PubMed search query.',
-            required: true,
-          },
-          {
-            name: 'limit',
-            flag: '--limit',
-            value_kind: 'integer',
-            summary: 'Maximum number of normalized literature refs to return.',
-            default: 10,
-            allowed_range: {
-              min: 1,
-              max: 50,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_pubmed_search/output_schema',
-        authority_boundary: {
-          owner: 'OPL Connect',
-          surface: 'read_only_literature_connector',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
-      handler: async (args) =>
-        runOplConnectPubMedSearch(
-          parsePubMedSearchArgs(args, connectCommandSpecs['connect pubmed search']),
-        ),
-    },
     'connect scientific search': {
       usage: `opl connect scientific search --provider <${scientificConnectorProviderIds().join('|')}> --query <query> [--limit <n>]`,
       summary: 'Search an optional scientific provider profile through OPL Connect and return normalized read-only source refs.',
       examples: [
-        'opl connect scientific search --provider pubmed --query "diabetes mortality prediction" --limit 5 --json',
         'opl connect scientific search --provider crossref --query "clinical prediction model" --json',
         'opl connect scientific search --provider openalex --query "causal inference EHR" --json',
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect scientific search',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'provider',
-            flag: '--provider',
-            value_kind: 'string',
-            summary: `Scientific provider id: ${scientificConnectorProviderIds().join(', ')}.`,
-            required: true,
-          },
-          {
-            name: 'query',
-            flag: '--query',
-            value_kind: 'string',
-            summary: 'Provider search query.',
-            required: true,
-          },
-          {
-            name: 'limit',
-            flag: '--limit',
-            value_kind: 'integer',
-            summary: 'Maximum number of normalized source refs to return.',
-            default: 10,
-            allowed_range: {
-              min: 1,
-              max: 50,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_scientific_search/output_schema',
-        authority_boundary: {
-          owner: 'OPL Connect',
-          surface: 'read_only_optional_scientific_connector_profile',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) =>
         runOplConnectScientificSearch(
           parseScientificSearchArgs(args, connectCommandSpecs['connect scientific search']),
         ),
     },
     'connect references verify': {
-      usage: 'opl connect references verify --references-file <json> [--providers crossref,pubmed,openalex,semantic-scholar,crossmark,publisher] [--cache-root <path>] [--max-retries <n>]',
+      usage: 'opl connect references verify --references-file <json> [--providers crossref,openalex,semantic-scholar,crossmark,publisher] [--cache-root <path>] [--max-retries <n>]',
       summary: 'Verify literature reference metadata through read-only OPL Connect provider receipts without citation judgment authority.',
       examples: [
-        'opl connect references verify --references-file references.json --providers crossref,pubmed --cache-root .cache/opl-connect --max-retries 1 --json',
+        'opl connect references verify --references-file references.json --providers crossref,openalex --cache-root .cache/opl-connect --max-retries 1 --json',
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect references verify',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'references-file',
-            flag: '--references-file',
-            value_kind: 'string',
-            summary: 'JSON file containing references as an array or { references: [...] }.',
-            required: true,
-          },
-          {
-            name: 'providers',
-            flag: '--providers',
-            value_kind: 'string',
-            summary: 'Comma-separated provider ids: crossref,pubmed,openalex,semantic-scholar,crossmark,publisher.',
-            default: 'crossref,pubmed,openalex,semantic-scholar,crossmark,publisher',
-          },
-          {
-            name: 'cache-root',
-            flag: '--cache-root',
-            value_kind: 'string',
-            summary: 'Optional cache root for provider evidence receipts.',
-            required: false,
-          },
-          {
-            name: 'max-retries',
-            flag: '--max-retries',
-            value_kind: 'integer',
-            summary: 'Retry count for retryable provider failures.',
-            default: 1,
-            allowed_range: {
-              min: 0,
-              max: 5,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_references_verify/output_schema',
-        authority_boundary: {
-          owner: 'OPL Connect',
-          surface: 'read_only_reference_verification_connector',
-          can_write_domain_truth: false,
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-        },
-      },
       handler: async (args) =>
         runOplConnectReferenceVerification(
           parseReferenceVerificationArgs(args, connectCommandSpecs['connect references verify']),
@@ -663,14 +431,6 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect external-skills list',
-        parser_adapter: 'node_util_parse_args',
-        options: externalSkillsBaseOptions,
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_external_skills_list/output_schema',
-        authority_boundary: externalSkillsAuthorityBoundary,
-      },
       handler: (args) =>
         runOplConnectExternalSkillsList(
           parseExternalSkillsBase('connect external-skills list', args, connectCommandSpecs['connect external-skills list']),
@@ -684,30 +444,6 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect external-skills sources add',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...externalSkillsBaseOptions,
-          {
-            name: 'repo',
-            flag: '--repo',
-            value_kind: 'string',
-            summary: 'Pinned external skill library repository URL.',
-            required: true,
-          },
-          {
-            name: 'pin',
-            flag: '--pin',
-            value_kind: 'string',
-            summary: 'Pinned external skill library commit, tag, or immutable ref.',
-            required: true,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_external_skills_sources_add/output_schema',
-        authority_boundary: externalSkillsAuthorityBoundary,
-      },
       handler: (args) =>
         runOplConnectExternalSkillsSourceAdd(
           parseExternalSkillsSourceAddArgs(args, connectCommandSpecs['connect external-skills sources add']),
@@ -721,34 +457,6 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect external-skills search',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...externalSkillsBaseOptions,
-          {
-            name: 'query',
-            flag: '--query',
-            value_kind: 'string',
-            summary: 'Capability, package, database, or tool need.',
-            required: true,
-          },
-          {
-            name: 'limit',
-            flag: '--limit',
-            value_kind: 'integer',
-            summary: 'Maximum matching external skill cards to return.',
-            default: 10,
-            allowed_range: {
-              min: 1,
-              max: 50,
-            },
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_external_skills_search/output_schema',
-        authority_boundary: externalSkillsAuthorityBoundary,
-      },
       handler: (args) =>
         runOplConnectExternalSkillsSearch(
           parseExternalSkillsSearchArgs(args, connectCommandSpecs['connect external-skills search']),
@@ -763,23 +471,6 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect external-skills inspect',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...externalSkillsBaseOptions,
-          {
-            name: 'skill',
-            flag: '--skill',
-            value_kind: 'string',
-            summary: 'External skill directory id, or source_id/skill_id selector.',
-            required: true,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_external_skills_inspect/output_schema',
-        authority_boundary: externalSkillsAuthorityBoundary,
-      },
       handler: (args) =>
         runOplConnectExternalSkillsInspect(
           parseExternalSkillsInspectArgs(args, connectCommandSpecs['connect external-skills inspect']),
@@ -794,51 +485,6 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect external-skills sync',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          ...externalSkillsBaseOptions,
-          {
-            name: 'skill',
-            flag: '--skill',
-            value_kind: 'string',
-            summary: 'External skill directory id, or source_id/skill_id selector.',
-            required: true,
-          },
-          {
-            name: 'scope',
-            flag: '--scope',
-            value_kind: 'string',
-            summary: 'Target Codex discovery scope.',
-            required: true,
-          },
-          {
-            name: 'target-workspace',
-            flag: '--target-workspace',
-            value_kind: 'string',
-            summary: 'Workspace root for workspace-scoped sync.',
-            required: false,
-          },
-          {
-            name: 'target-quest',
-            flag: '--target-quest',
-            value_kind: 'string',
-            summary: 'Quest root for quest-scoped sync.',
-            required: false,
-          },
-          {
-            name: 'target-root',
-            flag: '--target-root',
-            value_kind: 'string',
-            summary: 'Explicit target root override.',
-            required: false,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_external_skills_sync/output_schema',
-        authority_boundary: externalSkillsAuthorityBoundary,
-      },
       handler: (args) =>
         runOplConnectExternalSkillsSync(
           parseExternalSkillsSyncArgs(args, connectCommandSpecs['connect external-skills sync']),
@@ -852,14 +498,6 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect foundation-skills inspect',
-        parser_adapter: 'node_util_parse_args',
-        options: [],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_foundation_skills_inspect/output_schema',
-        authority_boundary: foundationSkillsAuthorityBoundary,
-      },
       handler: () => runOplConnectFoundationSkillsInspect(),
     },
     'connect foundation-skills sync': {
@@ -870,42 +508,12 @@ export function buildConnectCommandSpecs(
       ],
       group: 'connect',
       help_surface: 'default',
-      registry: {
-        command_id: 'connect foundation-skills sync',
-        parser_adapter: 'node_util_parse_args',
-        options: [
-          {
-            name: 'skill',
-            flag: '--skill',
-            value_kind: 'string',
-            summary: 'Foundation skill directory id.',
-            required: true,
-          },
-          {
-            name: 'scope',
-            flag: '--scope',
-            value_kind: 'string',
-            summary: 'Target Codex discovery scope: project, workspace, or quest.',
-            required: true,
-          },
-          {
-            name: 'target-root',
-            flag: '--target-root',
-            value_kind: 'string',
-            summary: 'Project, workspace, or quest root that receives .codex/skills/<skill-id>.',
-            required: true,
-          },
-        ],
-        json_output_schema_ref:
-          'contracts/opl-framework/cli-command-registry.json#/commands/connect_foundation_skills_sync/output_schema',
-        authority_boundary: foundationSkillsAuthorityBoundary,
-      },
       handler: (args) =>
         runOplConnectFoundationSkillsSync(
           parseFoundationSkillsSyncArgs(args, connectCommandSpecs['connect foundation-skills sync']),
         ),
     },
-    ...buildAgentPackageCommandSpecs((command) => connectCommandSpecs[command], agentPackageAuthorityBoundary),
+    ...buildAgentPackageCommandSpecs((command) => connectCommandSpecs[command]),
     'connect skills': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl connect skills [--domain <domain_id>]',
       summary: 'Inspect family domain plugin packs through the canonical Connect command surface.',
@@ -938,11 +546,6 @@ export function buildConnectCommandSpecs(
       group: 'connect',
     }),
   };
-
-  validateCommandRegistryCoverage(connectCommandSpecs, {
-    protectedCommandPrefixes: ['connect pubmed', 'connect scientific', 'connect references', 'connect external-skills', 'connect foundation-skills', 'connect agent-packages'],
-    requiredCommandIds: ['connect pubmed search', 'connect scientific search', 'connect references verify', ...MODULE_ACTION_COMMANDS],
-  });
 
   return connectCommandSpecs;
 }

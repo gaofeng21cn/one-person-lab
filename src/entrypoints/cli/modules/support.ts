@@ -12,6 +12,8 @@ export {
   withContractsContext,
 } from './help-output.ts';
 export {
+  bindCommandRegistryMetadata,
+  parseCommandOptions,
   parseRegisteredCommandOptions,
   validateCommandRegistryCoverage,
 } from './command-registry.ts';

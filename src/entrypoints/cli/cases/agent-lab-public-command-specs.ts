@@ -29,7 +29,7 @@ import {
   readOptionalString,
   readStringList,
 } from '../modules/json-boundary.ts';
-import { assertNoArgs, buildUsageError } from '../modules/support.ts';
+import { assertNoArgs, buildUsageError, parseCommandOptions } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function parseRiskTierPromotionPayload(
@@ -65,52 +65,25 @@ function parseRiskTierPromotionRecordArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: AgentLabRiskTierAutoPromotionReceiptInput | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('agent-lab risk-tier-promotion record requires --payload.', spec, {
-          required: ['--payload'],
-        });
-      }
-      payload = parseRiskTierPromotionPayload(value, spec);
-      continue;
-    }
-    throw buildUsageError(`Unknown option for agent-lab risk-tier-promotion record: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const payload = parseCommandOptions(args, spec, {
+    payload: { type: 'string' },
+  }).payload as string | undefined;
   if (!payload) {
     throw buildUsageError('agent-lab risk-tier-promotion record requires --payload.', spec, {
       required: ['--payload'],
     });
   }
-  return payload;
+  return parseRiskTierPromotionPayload(payload, spec);
 }
 
 function parseRiskTierPromotionVerifyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let receiptRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--receipt-ref') {
-      throw buildUsageError(`Unknown option for agent-lab risk-tier-promotion verify: ${token}.`, spec, {
-        option: token,
-      });
-    }
-    const value = args[++index];
-    if (!value) {
-      throw buildUsageError('agent-lab risk-tier-promotion verify requires --receipt-ref value.', spec, {
-        option: '--receipt-ref',
-      });
-    }
-    receiptRef = value;
-  }
-  return { receipt_ref: receiptRef };
+  const receiptRef = parseCommandOptions(args, spec, {
+    'receipt-ref': { type: 'string' },
+  })['receipt-ref'] as string | undefined;
+  return { receipt_ref: receiptRef ?? null };
 }
 
 export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
@@ -267,10 +240,10 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       },
     },
     'agent-lab cost-estimate': {
-      usage: 'opl agent-lab cost-estimate --preset <rca-ppt-40>',
+      usage: 'opl agent-lab cost-estimate --profile <domain-owned-profile.json>',
       summary:
-        'Emit a refs-only Agent Lab token and cost estimate for a known task shape without claiming billing truth.',
-      examples: ['opl agent-lab cost-estimate --preset rca-ppt-40 --json'],
+        'Estimate a domain-owned workload profile without embedding domain task assumptions or claiming billing truth.',
+      examples: ['opl agent-lab cost-estimate --profile ./contracts/agent_lab_cost_profile.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabCostEstimatePayload(args, specs['agent-lab cost-estimate']),
     },

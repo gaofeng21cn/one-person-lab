@@ -5,46 +5,6 @@ import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { parseRegisteredCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
-const UPDATE_COMMAND_AUTHORITY_BOUNDARY = {
-  owner: 'OPL Managed Update / Pack owners',
-  surface: 'managed_update_command_projection',
-  can_write_domain_truth: false,
-  can_create_owner_receipt: false,
-  can_claim_domain_ready: false,
-  can_claim_production_ready: false,
-} as const;
-
-function buildUpdateRegistry(
-  commandId: string,
-  operation: ManagedUpdateOperation, // reuse-first: allow owner-routed update command registry metadata.
-): NonNullable<CommandSpec['registry']> {
-  const options: NonNullable<CommandSpec['registry']>['options'] = [
-    {
-      name: 'component',
-      flag: '--component',
-      value_kind: 'string',
-      summary: 'Managed update component id to project.',
-    },
-  ];
-  if (operation === 'repair') {
-    options.push({
-      name: 'receipt',
-      flag: '--receipt',
-      value_kind: 'string',
-      summary: 'Managed update receipt id to repair.',
-    });
-  }
-
-  return {
-    command_id: commandId,
-    parser_adapter: 'node_util_parse_args',
-    options,
-    json_output_schema_ref:
-      `contracts/opl-framework/cli-command-registry.json#/commands/update_${operation}/output_schema`,
-    authority_boundary: UPDATE_COMMAND_AUTHORITY_BOUNDARY,
-  };
-}
-
 function buildUpdateSpec(
   operation: ManagedUpdateOperation, // reuse-first: allow owner-routed update command registry metadata.
   usage: string,
@@ -58,7 +18,6 @@ function buildUpdateSpec(
     summary,
     examples,
     group: 'update',
-    registry: buildUpdateRegistry(commandId, operation),
     handler: async (args) => {
       const parsed = parseRegisteredCommandOptions(commandId, args, spec);
       const input = {

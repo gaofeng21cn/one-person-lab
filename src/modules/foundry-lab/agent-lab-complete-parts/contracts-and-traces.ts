@@ -16,7 +16,7 @@ export const DEFAULT_EFFICIENCY_NONREGRESSION_REFS = {
     'duration-ref:agent-lab/longline-suite/wall-clock',
   ],
   cost_refs: [
-    'cost-ref:agent-lab/token-cost-estimate/rca-ppt-40',
+    'cost-ref:agent-lab/domain-owned-profile-estimate',
     'cost-ref:agent-lab/provider-budget-envelope',
   ],
   cache_hit_refs: [

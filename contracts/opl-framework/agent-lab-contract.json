@@ -1405,16 +1405,8 @@
     "scenario_kinds": [
       "stage_attempt_budget_estimate",
       "artifact_plan_budget_estimate",
-      "rca_ppt_deck_budget_estimate"
+      "domain_owned_profile_budget_estimate"
     ],
-    "canonical_rca_example": {
-      "domain_id": "redcube-ai",
-      "artifact_kind": "ppt_deck",
-      "page_count": 40,
-      "text_model_profile_ref": "model-profile:gpt-5.5/reasoning-xhigh",
-      "image_model_profile_ref": "model-profile:gpt-image-2/default",
-      "estimate_policy_ref": "estimate-policy:agent-lab/refs-only-budget-range"
-    },
     "input_ref_groups": [
       "scenario_ref",
       "task_shape_ref",
@@ -1459,7 +1451,7 @@
       "export_readiness_verdict",
       "owner_receipt"
     ],
-    "authority_boundary": "Token/cost estimation is a refs-only planning projection. It may estimate token ranges, image unit ranges, and cost ranges for scenarios such as an RCA 40-page PPT using gpt-5.5 xhigh plus gpt-image-2, but it is not a provider bill, not a final payable amount, not a domain quality verdict, and not an artifact or export readiness verdict."
+    "authority_boundary": "Token/cost estimation is a refs-only planning projection over a domain-owned workload profile. The profile owns workload assumptions while OPL owns generic pricing calculation; the result is not a provider bill, final payable amount, domain quality verdict, or artifact/export readiness verdict."
   },
   "mechanism_surface": {
     "surface_kind": "opl_agent_lab_mechanism_read_model",
@@ -1876,7 +1868,7 @@
     "OPL can record independent AI reviewer, web research, and mechanism patch trace refs with request, response, evidence, diff, contract, test result, reviewer agent, and no-shared-context refs",
     "OPL can mine usage logs, failure modes, user interrupts, convergence iterations, tool failures, and blockers into refs-only prompt, skill, rubric, and workflow-default mechanism candidate refs",
     "OPL can project ARIS v0.4.11 effort/assurance axes, helper inventory drift reports, permission/current-date fail-closed invariants, and MCP/stream reliability policies as refs-only maturity controls",
-    "OPL can project refs-only token, image unit, and cost estimate ranges for operator planning, including an RCA 40-page PPT budget estimate using gpt-5.5 xhigh plus gpt-image-2 model profile refs",
+    "OPL can project refs-only token, image unit, and cost estimate ranges for operator planning from a validated domain-owned workload profile without embedding a domain preset",
     "OPL can project refs-only stage executor policy candidates, including non-default adapter trial gates such as antigravity_cli with gemini-3.5-flash high for RCA HTML routes, without executing the adapter or changing the default executor",
     "OPL can emit refs-only export envelopes for optional Inspect AI, OpenInference, Langfuse, Phoenix, and JSON consumers without uploading data",
     "OPL can run an external suite into gated optimizer candidate refs and RL transition refs without training weights or promoting a default agent",

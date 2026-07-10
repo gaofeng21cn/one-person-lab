@@ -82,8 +82,7 @@ opl connect doctor --json
 opl agents foundry interfaces --json
 opl agents interfaces --family-defaults --json
 opl actions export --domain <id> --json
-opl connect pubmed search --query <query> --limit <n> --json
-opl connect scientific search --provider pubmed|crossref|openalex --query <query> --limit <n> --json
+opl connect scientific search --provider crossref|openalex --query <query> --limit <n> --json
 opl connect skills --json
 opl connect sync-skills --json
 opl connect install --module <agent> --json
@@ -96,7 +95,7 @@ Connect 暴露 Skill/MCP/plugin/install transport 时，必须能指回 Foundry 
 
 Connect 暴露 OPL Agent Packages 时，必须把 Agent Package Core 和 carrier adapters 分开读：`opl connect agent-packages list|status --json` 输出 package core、descriptor/digest/lock/lifecycle/exposure、carrier readback 和 no-package-manager boundary；`install|update|repair|rollback|uninstall` 只写 Framework package lock、lifecycle receipt 与受控 carrier 物理面。Codex Plugin/local marketplace 只是 `codex_plugin_carrier`，OPL App shortcuts 只是 Home / cockpit 可见性 carrier，workflow profile 只是 Codex profile / instruction block carrier，runtime/app release 只是安装与更新 carrier。carrier 可以触发 reload guidance、semantic-merge guidance 或 owner route，但不得成为 package dependency graph、domain truth、runtime authority、release currentness 或 owner receipt 的真相源。
 
-Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider pubmed|crossref|openalex` 是 optional scientific connector profile 的统一只读入口；`opl connect pubmed search` 继续作为 PubMed 兼容入口。它们只调用 provider API，返回 source refs、标题、期刊、作者、DOI/PMID/OpenAlex id、URL、connector invocation ref 和 ledger receipt candidate ref；不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。MAS 的 scout/write/review/figure 等 Skill 可以把 PubMed refs 作为医学文献优先入口，并在 metadata、coverage 或 citation graph 缺口时消费 Crossref/OpenAlex fallback refs，再由 MAS 自己完成 citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
+Connect 暴露外部资源连接器时，必须保持“平台接入”和“领域判断”分离。`opl connect scientific search --provider crossref|openalex` 是 optional scientific connector profile 的统一只读入口；引用校验另可消费 Semantic Scholar、Crossmark 与 Publisher metadata。它们只返回 source refs、metadata、URL、connector invocation ref 和 ledger receipt candidate ref；不保存全文、不建立第二文献库、不判断引用质量、不写 MAS paper truth，也不签 owner receipt。PubMed client 与医学 normalization 归 MAS adapter；MAS 的 scout/write/review/figure 等 Skill 负责医学检索策略、citation judgment、claim-evidence map、review ledger、论文质量判断和 owner route。
 
 MAS Scholar Skills 同步模型：
 

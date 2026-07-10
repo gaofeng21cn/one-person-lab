@@ -1,9 +1,8 @@
-import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
+import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 
 type JsonRecord = Record<string, unknown>;
-
-export type AgentLabCostEstimatePreset = 'rca-ppt-40';
 
 type TextTokenEstimate = {
   input_tokens: number;
@@ -19,19 +18,52 @@ type ImageTokenEstimate = {
   image_output_tokens: number;
 };
 
-type AgentLabCostEstimateStageInput = {
+export type AgentLabCostEstimateStageInput = {
   stage_id: string;
   stage_ref: string;
   stage_kind: string;
-  owner: 'opl' | 'redcube-ai';
+  owner: string;
   model_ref: string;
-  reasoning_effort?: 'xhigh' | string;
+  reasoning_effort?: string;
   slide_count?: number;
   operation_count?: number;
   text_tokens?: TextTokenEstimate;
   image_tokens?: ImageTokenEstimate;
   assumption_refs: string[];
   calibration_refs: string[];
+};
+
+export type AgentLabCostEstimateProfile = {
+  surface_kind: 'opl_agent_lab_cost_estimate_profile';
+  version: 'opl-agent-lab-cost-estimate-profile.v1';
+  profile_id: string;
+  owner: string;
+  domain_id: string;
+  task_family: string;
+  estimate_ref: string;
+  artifact_profile: JsonRecord;
+  stages: AgentLabCostEstimateStageInput[];
+  calibration_policy: {
+    status: 'estimate_profile_requires_provider_usage_receipts';
+    required_runtime_receipt_refs: string[];
+    variance_policy: string;
+  };
+  pricing_boundary: {
+    pricing_snapshot_owned_by_profile: false;
+    pricing_calculation_owned_by_profile: false;
+    generic_estimator_owner: 'one-person-lab';
+    profile_supplies_workload_assumptions_only: true;
+  };
+  authority_boundary: {
+    refs_only: true;
+    can_authorize_budget_spend: false;
+    can_claim_actual_invoice_cost: false;
+    can_claim_visual_ready: false;
+    can_claim_exportable: false;
+    can_write_domain_truth: false;
+    can_write_artifact_body: false;
+    can_write_owner_receipt: false;
+  };
 };
 
 const USD_PER_MILLION = 1_000_000;
@@ -67,138 +99,158 @@ const OPENAI_PRICING_SNAPSHOT = {
     'official_price_snapshot_for_estimation_only_actual_invoice_must_come_from_provider_usage_dashboard',
 };
 
-const RCA_PPT_40_STAGES: AgentLabCostEstimateStageInput[] = [
-  {
-    stage_id: 'intake',
-    stage_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/intake',
-    stage_kind: 'source_intake_and_brief_normalization',
-    owner: 'redcube-ai',
-    model_ref: 'openai:gpt-5.5',
-    reasoning_effort: 'xhigh',
-    slide_count: 40,
-    text_tokens: {
-      input_tokens: 180_000,
-      cached_input_tokens: 40_000,
-      output_tokens: 35_000,
-    },
-    assumption_refs: [
-      'assumption:rca-ppt-40/source-pack-under-80-pages-or-equivalent',
-      'assumption:rca-ppt-40/no-large-video-transcription',
+function invalidProfile(field: string, value?: unknown): never {
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    `Agent Lab cost estimate profile has an invalid ${field}.`,
+    { field, value },
+  );
+}
+
+function validateTokenRecord(value: unknown, fields: string[], field: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    invalidProfile(field, value);
+  }
+  for (const tokenField of fields) {
+    const tokenValue = value[tokenField];
+    if (typeof tokenValue !== 'number' || !Number.isFinite(tokenValue) || tokenValue < 0) {
+      invalidProfile(`${field}.${tokenField}`, tokenValue);
+    }
+  }
+  return value;
+}
+
+function validateStringList(value: unknown, field: string, allowEmpty = true) {
+  if (
+    !Array.isArray(value)
+    || (!allowEmpty && value.length === 0)
+    || value.some((entry) => typeof entry !== 'string' || entry.length === 0)
+  ) {
+    invalidProfile(field, value);
+  }
+  return value as string[];
+}
+
+function normalizedOwner(value: string) {
+  return value.replaceAll('_', '-').toLowerCase();
+}
+
+function validateStage(value: unknown, index: number, profileOwner: string): AgentLabCostEstimateStageInput {
+  if (!isRecord(value)) {
+    invalidProfile(`stages[${index}]`, value);
+  }
+  for (const field of ['stage_id', 'stage_ref', 'stage_kind', 'owner', 'model_ref']) {
+    if (typeof value[field] !== 'string' || value[field].length === 0) {
+      invalidProfile(`stages[${index}].${field}`, value[field]);
+    }
+  }
+  for (const field of ['assumption_refs', 'calibration_refs']) {
+    validateStringList(value[field], `stages[${index}].${field}`);
+  }
+  if (normalizedOwner(value.owner as string) !== normalizedOwner(profileOwner)) {
+    invalidProfile(`stages[${index}].owner`, value.owner);
+  }
+  for (const field of ['slide_count', 'operation_count']) {
+    const count = value[field];
+    if (count !== undefined && (typeof count !== 'number' || !Number.isFinite(count) || count < 0)) {
+      invalidProfile(`stages[${index}].${field}`, count);
+    }
+  }
+  validateTokenRecord(
+    value.text_tokens,
+    ['input_tokens', 'cached_input_tokens', 'output_tokens'],
+    `stages[${index}].text_tokens`,
+  );
+  validateTokenRecord(
+    value.image_tokens,
+    [
+      'text_input_tokens',
+      'text_cached_input_tokens',
+      'image_input_tokens',
+      'image_cached_input_tokens',
+      'image_output_tokens',
     ],
-    calibration_refs: [
-      'calibration-ref:agent-lab/rca-source-intake-history-needed',
-    ],
-  },
-  {
-    stage_id: 'outline',
-    stage_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/outline',
-    stage_kind: 'storyline_and_slide_architecture',
-    owner: 'redcube-ai',
-    model_ref: 'openai:gpt-5.5',
-    reasoning_effort: 'xhigh',
-    slide_count: 40,
-    text_tokens: {
-      input_tokens: 260_000,
-      cached_input_tokens: 90_000,
-      output_tokens: 75_000,
-    },
-    assumption_refs: [
-      'assumption:rca-ppt-40/one-major-storyline-pass',
-      'assumption:rca-ppt-40/limited-human-direction-churn',
-    ],
-    calibration_refs: [
-      'calibration-ref:agent-lab/rca-storyline-token-ledger-needed',
-    ],
-  },
-  {
-    stage_id: 'slide_generation',
-    stage_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/slide-generation',
-    stage_kind: 'slide_copy_and_speaker_notes',
-    owner: 'redcube-ai',
-    model_ref: 'openai:gpt-5.5',
-    reasoning_effort: 'xhigh',
-    slide_count: 40,
-    text_tokens: {
-      input_tokens: 580_000,
-      cached_input_tokens: 200_000,
-      output_tokens: 175_000,
-    },
-    assumption_refs: [
-      'assumption:rca-ppt-40/forty-slide-native-ppt-deck',
-      'assumption:rca-ppt-40/speaker-notes-or-copy-dense-slide-drafting',
-    ],
-    calibration_refs: [
-      'calibration-ref:agent-lab/rca-copy-generation-token-ledger-needed',
-      'calibration-ref:agent-lab/rca-visual-direction-token-ledger-needed',
-    ],
-  },
-  {
-    stage_id: 'image_generation',
-    stage_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/image-generation',
-    stage_kind: 'image_generation_and_edits',
-    owner: 'redcube-ai',
-    model_ref: 'openai:gpt-image-2',
-    slide_count: 40,
-    operation_count: 40,
-    image_tokens: {
-      text_input_tokens: 80_000,
-      text_cached_input_tokens: 20_000,
-      image_input_tokens: 120_000,
-      image_cached_input_tokens: 20_000,
-      image_output_tokens: 320_000,
-    },
-    assumption_refs: [
-      'assumption:rca-ppt-40/one-image-operation-per-slide-average',
-      'assumption:rca-ppt-40/no-bulk-high-variation-image-search-loop',
-      'assumption:rca-ppt-40/image-token-count-depends-on-size-quality-and-edits',
-    ],
-    calibration_refs: [
-      'calibration-ref:agent-lab/rca-gpt-image-2-usage-ledger-needed',
-    ],
-  },
-  {
-    stage_id: 'render_review',
-    stage_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/render-review',
-    stage_kind: 'deck_render_review_iteration',
-    owner: 'redcube-ai',
-    model_ref: 'openai:gpt-5.5',
-    reasoning_effort: 'xhigh',
-    slide_count: 40,
-    text_tokens: {
-      input_tokens: 300_000,
-      cached_input_tokens: 100_000,
-      output_tokens: 80_000,
-    },
-    assumption_refs: [
-      'assumption:rca-ppt-40/two-render-review-passes',
-      'assumption:rca-ppt-40/screenshots-tokenized-as-model-input',
-    ],
-    calibration_refs: [
-      'calibration-ref:agent-lab/rca-render-review-token-ledger-needed',
-    ],
-  },
-  {
-    stage_id: 'revision',
-    stage_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/revision',
-    stage_kind: 'final_packaging_and_handoff',
-    owner: 'redcube-ai',
-    model_ref: 'openai:gpt-5.5',
-    reasoning_effort: 'xhigh',
-    slide_count: 40,
-    text_tokens: {
-      input_tokens: 120_000,
-      cached_input_tokens: 50_000,
-      output_tokens: 35_000,
-    },
-    assumption_refs: [
-      'assumption:rca-ppt-40/native-ppt-and-export-package',
-      'assumption:rca-ppt-40/one-final-review-closeout',
-    ],
-    calibration_refs: [
-      'calibration-ref:agent-lab/rca-handoff-token-ledger-needed',
-    ],
-  },
-];
+    `stages[${index}].image_tokens`,
+  );
+  if (!value.text_tokens && !value.image_tokens) {
+    invalidProfile(`stages[${index}].token_assumptions`);
+  }
+  return value as unknown as AgentLabCostEstimateStageInput;
+}
+
+export function validateAgentLabCostEstimateProfile(value: unknown): AgentLabCostEstimateProfile {
+  if (!isRecord(value)) {
+    invalidProfile('profile', value);
+  }
+  if (value.surface_kind !== 'opl_agent_lab_cost_estimate_profile') {
+    invalidProfile('surface_kind', value.surface_kind);
+  }
+  if (value.version !== 'opl-agent-lab-cost-estimate-profile.v1') {
+    invalidProfile('version', value.version);
+  }
+  const pricingBoundary = value.pricing_boundary;
+  if (
+    !isRecord(pricingBoundary)
+    || pricingBoundary.pricing_snapshot_owned_by_profile !== false
+    || pricingBoundary.pricing_calculation_owned_by_profile !== false
+    || pricingBoundary['generic_estimator_owner'] !== 'one-person-lab'
+    || pricingBoundary.profile_supplies_workload_assumptions_only !== true
+  ) {
+    invalidProfile(
+      isRecord(pricingBoundary) && pricingBoundary.generic_estimator_owner !== 'one-person-lab'
+        ? 'pricing_boundary.generic_estimator_owner'
+        : 'pricing_boundary',
+      pricingBoundary,
+    );
+  }
+  const stages = value.stages;
+  if (!Array.isArray(stages) || stages.length === 0) {
+    invalidProfile('stages', stages);
+  }
+  for (const field of ['profile_id', 'owner', 'domain_id', 'task_family', 'estimate_ref']) {
+    if (typeof value[field] !== 'string' || value[field].length === 0) {
+      invalidProfile(field, value[field]);
+    }
+  }
+  if (!isRecord(value.artifact_profile)) {
+    invalidProfile('artifact_profile', value.artifact_profile);
+  }
+  const calibrationPolicy = value.calibration_policy;
+  if (
+    !isRecord(calibrationPolicy)
+    || calibrationPolicy.status !== 'estimate_profile_requires_provider_usage_receipts'
+    || typeof calibrationPolicy.variance_policy !== 'string'
+    || calibrationPolicy.variance_policy.length === 0
+  ) {
+    invalidProfile('calibration_policy', calibrationPolicy);
+  }
+  validateStringList(
+    calibrationPolicy.required_runtime_receipt_refs,
+    'calibration_policy.required_runtime_receipt_refs',
+    false,
+  );
+  const authorityBoundary = value.authority_boundary;
+  if (
+    !isRecord(authorityBoundary)
+    || authorityBoundary.refs_only !== true
+    || authorityBoundary.can_authorize_budget_spend !== false
+    || authorityBoundary.can_claim_actual_invoice_cost !== false
+    || authorityBoundary.can_claim_visual_ready !== false
+    || authorityBoundary.can_claim_exportable !== false
+    || authorityBoundary.can_write_domain_truth !== false
+    || authorityBoundary.can_write_artifact_body !== false
+    || authorityBoundary.can_write_owner_receipt !== false
+  ) {
+    invalidProfile('authority_boundary', authorityBoundary);
+  }
+  return {
+    ...value,
+    stages: stages.map((stage, index) => validateStage(stage, index, value.owner as string)),
+  } as unknown as AgentLabCostEstimateProfile;
+}
 
 function roundCurrency(value: number) {
   return Math.round(value * 1000) / 1000;
@@ -208,45 +260,53 @@ function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
 }
 
-function textCost(tokens: TextTokenEstimate) {
-  const prices = OPENAI_PRICING_SNAPSHOT.models['gpt-5.5'];
-  const longContextMultiplier = tokens.input_tokens > prices.long_context_input_threshold_tokens
-    ? {
-      input: prices.long_context_input_multiplier,
-      output: prices.long_context_output_multiplier,
-    }
-    : {
-      input: 1,
-      output: 1,
-    };
+function modelId(modelRef: string) {
+  return modelRef.startsWith('openai:') ? modelRef.slice('openai:'.length) : modelRef;
+}
+
+function textCost(stage: AgentLabCostEstimateStageInput) {
+  if (!stage.text_tokens) {
+    return null;
+  }
+  const id = modelId(stage.model_ref);
+  if (id !== 'gpt-5.5') {
+    invalidProfile('text_tokens.model_ref', stage.model_ref);
+  }
+  const prices = OPENAI_PRICING_SNAPSHOT.models[id];
+  const multiplier = stage.text_tokens.input_tokens > prices.long_context_input_threshold_tokens
+    ? { input: prices.long_context_input_multiplier, output: prices.long_context_output_multiplier }
+    : { input: 1, output: 1 };
   return {
-    input_usd: tokens.input_tokens * prices.input_usd_per_1m_tokens * longContextMultiplier.input / USD_PER_MILLION,
+    input_usd: stage.text_tokens.input_tokens * prices.input_usd_per_1m_tokens * multiplier.input / USD_PER_MILLION,
     cached_input_usd:
-      tokens.cached_input_tokens * prices.cached_input_usd_per_1m_tokens * longContextMultiplier.input / USD_PER_MILLION,
-    output_usd: tokens.output_tokens * prices.output_usd_per_1m_tokens * longContextMultiplier.output / USD_PER_MILLION,
+      stage.text_tokens.cached_input_tokens * prices.cached_input_usd_per_1m_tokens * multiplier.input / USD_PER_MILLION,
+    output_usd: stage.text_tokens.output_tokens * prices.output_usd_per_1m_tokens * multiplier.output / USD_PER_MILLION,
   };
 }
 
-function imageCost(tokens: ImageTokenEstimate) {
-  const prices = OPENAI_PRICING_SNAPSHOT.models['gpt-image-2'];
+function imageCost(stage: AgentLabCostEstimateStageInput) {
+  if (!stage.image_tokens) {
+    return null;
+  }
+  const id = modelId(stage.model_ref);
+  if (id !== 'gpt-image-2') {
+    invalidProfile('image_tokens.model_ref', stage.model_ref);
+  }
+  const prices = OPENAI_PRICING_SNAPSHOT.models[id];
   return {
-    text_input_usd: tokens.text_input_tokens * prices.text_input_usd_per_1m_tokens / USD_PER_MILLION,
+    text_input_usd: stage.image_tokens.text_input_tokens * prices.text_input_usd_per_1m_tokens / USD_PER_MILLION,
     text_cached_input_usd:
-      tokens.text_cached_input_tokens * prices.text_cached_input_usd_per_1m_tokens / USD_PER_MILLION,
-    image_input_usd: tokens.image_input_tokens * prices.image_input_usd_per_1m_tokens / USD_PER_MILLION,
+      stage.image_tokens.text_cached_input_tokens * prices.text_cached_input_usd_per_1m_tokens / USD_PER_MILLION,
+    image_input_usd: stage.image_tokens.image_input_tokens * prices.image_input_usd_per_1m_tokens / USD_PER_MILLION,
     image_cached_input_usd:
-      tokens.image_cached_input_tokens * prices.image_cached_input_usd_per_1m_tokens / USD_PER_MILLION,
-    image_output_usd: tokens.image_output_tokens * prices.image_output_usd_per_1m_tokens / USD_PER_MILLION,
+      stage.image_tokens.image_cached_input_tokens * prices.image_cached_input_usd_per_1m_tokens / USD_PER_MILLION,
+    image_output_usd: stage.image_tokens.image_output_tokens * prices.image_output_usd_per_1m_tokens / USD_PER_MILLION,
   };
 }
 
 function stageEstimate(stage: AgentLabCostEstimateStageInput) {
-  const textBreakdown = stage.text_tokens ? textCost(stage.text_tokens) : null;
-  const imageBreakdown = stage.image_tokens ? imageCost(stage.image_tokens) : null;
-  const estimatedCostUsd = roundCurrency(sum([
-    ...Object.values(textBreakdown ?? {}),
-    ...Object.values(imageBreakdown ?? {}),
-  ]));
+  const textBreakdown = textCost(stage);
+  const imageBreakdown = imageCost(stage);
   const estimatedInputTokens = sum([
     stage.text_tokens?.input_tokens ?? 0,
     stage.text_tokens?.cached_input_tokens ?? 0,
@@ -259,6 +319,10 @@ function stageEstimate(stage: AgentLabCostEstimateStageInput) {
     stage.text_tokens?.output_tokens ?? 0,
     stage.image_tokens?.image_output_tokens ?? 0,
   ]);
+  const estimatedCostUsd = roundCurrency(sum([
+    ...Object.values(textBreakdown ?? {}),
+    ...Object.values(imageBreakdown ?? {}),
+  ]));
   return {
     ...stage,
     estimate_ref: stage.stage_ref,
@@ -273,7 +337,6 @@ function stageEstimate(stage: AgentLabCostEstimateStageInput) {
       currency: OPENAI_PRICING_SNAPSHOT.currency,
       pricing_snapshot_ref: OPENAI_PRICING_SNAPSHOT.pricing_snapshot_ref,
     },
-    estimated_cost_usd: estimatedCostUsd,
     cost_breakdown_usd: {
       ...(textBreakdown ?? {}),
       ...(imageBreakdown ?? {}),
@@ -281,73 +344,26 @@ function stageEstimate(stage: AgentLabCostEstimateStageInput) {
   };
 }
 
-function tokenTotals(stages: ReturnType<typeof stageEstimate>[]) {
-  return stages.reduce((totals, stage) => ({
-    gpt_5_5_input_tokens: totals.gpt_5_5_input_tokens + (stage.text_tokens?.input_tokens ?? 0),
-    gpt_5_5_cached_input_tokens:
-      totals.gpt_5_5_cached_input_tokens + (stage.text_tokens?.cached_input_tokens ?? 0),
-    gpt_5_5_output_tokens: totals.gpt_5_5_output_tokens + (stage.text_tokens?.output_tokens ?? 0),
-    gpt_image_2_text_input_tokens:
-      totals.gpt_image_2_text_input_tokens + (stage.image_tokens?.text_input_tokens ?? 0),
-    gpt_image_2_text_cached_input_tokens:
-      totals.gpt_image_2_text_cached_input_tokens + (stage.image_tokens?.text_cached_input_tokens ?? 0),
-    gpt_image_2_image_input_tokens:
-      totals.gpt_image_2_image_input_tokens + (stage.image_tokens?.image_input_tokens ?? 0),
-    gpt_image_2_image_cached_input_tokens:
-      totals.gpt_image_2_image_cached_input_tokens + (stage.image_tokens?.image_cached_input_tokens ?? 0),
-    gpt_image_2_image_output_tokens:
-      totals.gpt_image_2_image_output_tokens + (stage.image_tokens?.image_output_tokens ?? 0),
-  }), {
-    gpt_5_5_input_tokens: 0,
-    gpt_5_5_cached_input_tokens: 0,
-    gpt_5_5_output_tokens: 0,
-    gpt_image_2_text_input_tokens: 0,
-    gpt_image_2_text_cached_input_tokens: 0,
-    gpt_image_2_image_input_tokens: 0,
-    gpt_image_2_image_cached_input_tokens: 0,
-    gpt_image_2_image_output_tokens: 0,
-  });
-}
-
-function buildPresetInput(preset: AgentLabCostEstimatePreset) {
-  if (preset !== 'rca-ppt-40') {
-    throw new Error(`Unsupported Agent Lab cost estimate preset: ${preset}.`);
-  }
-  return {
-    preset,
-    estimate_ref: 'cost-estimate:agent-lab/redcube-ai/ppt-40/gpt-5.5-xhigh',
-    task_family: 'presentation_foundry_visual_delivery',
-    domain_id: 'redcube-ai',
-    artifact_profile: {
-      artifact_kind: 'presentation_deck',
-      slide_count: 40,
-      route_artifact_kind: 'ppt_deck',
-      expected_route_ref: 'domain-agent-entry:redcube-ai',
-      text_model_ref: 'openai:gpt-5.5',
-      reasoning_effort: 'xhigh',
-      image_model_ref: 'openai:gpt-image-2',
-    },
-    stages: RCA_PPT_40_STAGES,
-  };
-}
-
-export function buildAgentLabCostEstimateReadModel(
-  input: { preset?: AgentLabCostEstimatePreset; source_refs?: string[]; observed_usage_refs?: string[] } = {},
-) {
-  const presetInput = buildPresetInput(input.preset ?? 'rca-ppt-40');
-  const stages = presetInput.stages.map(stageEstimate);
-  const totalEstimatedCostUsd = roundCurrency(sum(stages.map((stage) => stage.estimated_cost_usd)));
-  const totals = tokenTotals(stages);
-  const totalTokens = sum(Object.values(totals));
-  const uncertaintyMultiplier = {
-    low: 0.65,
-    base: 1,
-    high: 1.7,
-  };
+export function buildAgentLabCostEstimate(input: {
+  profile: unknown;
+  profile_ref?: string;
+  source_refs?: string[];
+  observed_usage_refs?: string[];
+}) {
+  const profile = validateAgentLabCostEstimateProfile(input.profile);
+  const stages = profile.stages.map(stageEstimate);
+  const estimatedInputTokens = sum(stages.map((stage) => stage.token_estimate.estimated_input_tokens));
+  const estimatedOutputTokens = sum(stages.map((stage) => stage.token_estimate.estimated_output_tokens));
+  const estimatedCostUsd = roundCurrency(sum(
+    stages.map((stage) => stage.cost_estimate.estimated_cost_usd),
+  ));
+  const unitCount = typeof profile.artifact_profile.slide_count === 'number'
+    ? profile.artifact_profile.slide_count
+    : null;
   const sourceRefs = [
     'contract:opl-framework/agent-lab-contract',
-    'human_doc:docs/runtime/opl-agent-lab-control-plane',
     OPENAI_PRICING_SNAPSHOT.pricing_snapshot_ref,
+    ...(input.profile_ref ? [input.profile_ref] : []),
     ...(input.source_refs ?? []),
   ];
 
@@ -356,45 +372,38 @@ export function buildAgentLabCostEstimateReadModel(
     contract_surface_kind: 'opl_agent_lab_token_cost_estimate',
     version: 'opl-agent-lab.v1.cost-estimate',
     estimate_id: stableId('oaltce', [
-      presetInput.estimate_ref,
-      presetInput.artifact_profile,
+      profile,
       stages,
       OPENAI_PRICING_SNAPSHOT,
       input.observed_usage_refs ?? [],
     ]),
-    estimate_ref: presetInput.estimate_ref,
-    preset_id: presetInput.preset,
-    status: 'estimate_ready_calibration_required',
+    estimate_ref: profile.estimate_ref,
+    profile_id: profile.profile_id,
+    profile_owner: profile.owner,
+    profile_ref: input.profile_ref ?? null,
+    status: 'estimate_resolved_calibration_required',
     refs_only: true,
-    preset: presetInput.preset,
-    domain_id: presetInput.domain_id,
-    task_family: presetInput.task_family,
-    artifact_profile: presetInput.artifact_profile,
-    models: {
-      text_model: 'gpt-5.5',
-      reasoning_effort: 'xhigh',
-      image_model: 'gpt-image-2',
-    },
+    domain_id: profile.domain_id,
+    task_family: profile.task_family,
+    artifact_profile: profile.artifact_profile,
+    model_refs: [...new Set(profile.stages.map((stage) => stage.model_ref))],
     pricing_snapshot: OPENAI_PRICING_SNAPSHOT,
     per_stage_estimates: stages,
-    stages,
     total_estimate: {
-      estimate_ref: 'cost-estimate-ref:agent-lab/rca-ppt-40/total',
-      estimated_input_tokens: sum([
-        totals.gpt_5_5_input_tokens,
-        totals.gpt_5_5_cached_input_tokens,
-        totals.gpt_image_2_text_input_tokens,
-        totals.gpt_image_2_text_cached_input_tokens,
-        totals.gpt_image_2_image_input_tokens,
-        totals.gpt_image_2_image_cached_input_tokens,
-      ]),
-      estimated_output_tokens: sum([
-        totals.gpt_5_5_output_tokens,
-        totals.gpt_image_2_image_output_tokens,
-      ]),
-      estimated_total_tokens: totalTokens,
-      estimated_cost_usd: totalEstimatedCostUsd,
+      estimate_ref: `${profile.estimate_ref}/total`,
+      estimated_input_tokens: estimatedInputTokens,
+      estimated_output_tokens: estimatedOutputTokens,
+      estimated_total_tokens: estimatedInputTokens + estimatedOutputTokens,
+      estimated_cost_usd: estimatedCostUsd,
       currency: OPENAI_PRICING_SNAPSHOT.currency,
+      declared_unit_count: unitCount,
+      estimated_cost_per_declared_unit_usd:
+        unitCount && unitCount > 0 ? roundCurrency(estimatedCostUsd / unitCount) : null,
+      uncertainty_range_usd: {
+        low: roundCurrency(estimatedCostUsd * 0.65),
+        base: estimatedCostUsd,
+        high: roundCurrency(estimatedCostUsd * 1.7),
+      },
     },
     uncertainty: {
       status: 'estimate_only',
@@ -403,51 +412,25 @@ export function buildAgentLabCostEstimateReadModel(
         'model_pricing_may_change',
         'actual_context_reuse_may_differ',
         'image_generation_size_quality_and_edit_count_may_differ',
-        'RCA_revision_depth_may_differ',
+        'domain_revision_depth_may_differ',
       ],
-    },
-    totals: {
-      ...totals,
-      total_estimated_tokens: totalTokens,
-      total_estimated_cost_usd: totalEstimatedCostUsd,
-      estimated_cost_per_slide_usd:
-        roundCurrency(totalEstimatedCostUsd / presetInput.artifact_profile.slide_count),
-      uncertainty_range_usd: {
-        low: roundCurrency(totalEstimatedCostUsd * uncertaintyMultiplier.low),
-        base: totalEstimatedCostUsd,
-        high: roundCurrency(totalEstimatedCostUsd * uncertaintyMultiplier.high),
-      },
-    },
-    pricing_adjustments: {
-      long_context_surcharge_policy_ref: 'pricing-policy-ref:openai/gpt-5.5/long-context-threshold-2026-05-20',
-      threshold_tokens: OPENAI_PRICING_SNAPSHOT.models['gpt-5.5'].long_context_input_threshold_tokens,
-      applied_stage_refs: stages
-        .filter((stage) =>
-          (stage.text_tokens?.input_tokens ?? 0)
-          > OPENAI_PRICING_SNAPSHOT.models['gpt-5.5'].long_context_input_threshold_tokens)
-        .map((stage) => stage.stage_ref),
-      split_prompt_note:
-        'If RCA splits a stage into requests below the threshold, actual GPT-5.5 cost can be closer to the lower range.',
     },
     calibration: {
+      calibration_status: input.observed_usage_refs?.length
+        ? 'observed_usage_refs_attached_review_required'
+        : 'provider_usage_receipts_required',
       observed_usage_refs: input.observed_usage_refs ?? [],
-      calibration_status: (input.observed_usage_refs?.length ?? 0) > 0
-        ? 'observed_usage_refs_available'
-        : 'estimated_from_stage_profile_without_provider_usage_receipt',
-      required_runtime_receipt_refs: [
-        'usage-receipt-ref:provider/openai/responses-token-usage',
-        'usage-receipt-ref:provider/openai/image-token-usage',
-        'artifact-ref:rca/ppt-deck-slide-count',
-      ],
-      variance_policy:
-        'compare_estimate_to_provider_usage_after_run_without_rewriting_domain_quality_or_artifact_verdict',
+      required_runtime_receipt_refs: profile.calibration_policy.required_runtime_receipt_refs,
+      variance_policy: profile.calibration_policy.variance_policy,
+      actual_cost_authority: 'provider_usage_receipt_or_billing_dashboard_only',
     },
-    source_refs: sourceRefs,
-    forbidden_payloads: [
-      'provider_invoice_body',
-      'domain_truth',
-      'visual_quality_verdict',
-      'artifact_body',
+    source_refs: [...new Set(sourceRefs)],
+    forbidden_inputs: [
+      'provider_billing_ledger_body',
+      'invoice_body',
+      'payment_account_body',
+      'domain_artifact_body',
+      'domain_quality_verdict',
       'owner_receipt_body',
       'memory_body',
     ],
@@ -459,5 +442,3 @@ export function buildAgentLabCostEstimateReadModel(
     },
   } satisfies JsonRecord;
 }
-
-export const buildAgentLabCostEstimate = buildAgentLabCostEstimateReadModel;

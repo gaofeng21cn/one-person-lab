@@ -145,12 +145,9 @@ test('Agent Lab complete control plane exposes eval adapters, observability expo
     result.codex_attempt_trace_flywheel.read_model_id);
   assert.equal(result.optimizer_loop.stage_executor_policy_read_model.read_model_id,
     result.stage_executor_policy.read_model_id);
-  assert.equal(result.token_cost_estimates.length, 1);
-  assert.equal(result.token_cost_estimates[0].surface_kind, 'opl_agent_lab_cost_estimate');
-  assert.equal(result.token_cost_estimates[0].preset_id, 'rca-ppt-40');
-  assert.equal(result.token_cost_estimates[0].domain_id, 'redcube-ai');
-  assert.equal(result.token_cost_estimates[0].total_estimate.estimated_cost_usd, 38.84);
-  assertBlockedAuthority(result.token_cost_estimates[0].authority_boundary);
+  assert.equal(result.readiness.ready_to_emit_token_cost_estimates, false);
+  assert.equal(result.readiness.token_cost_estimate_profile_required, true);
+  assert.equal(Object.hasOwn(result, 'token_cost_estimates'), false);
   assert.equal(result.executor_capability_aperture.surface_kind,
     'opl_agent_lab_executor_capability_lease_read_model');
   assert.equal(result.executor_capability_aperture.lease_kind, 'executor_capability_lease');
@@ -231,10 +228,7 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.stage_executor_policy.surface_kind, 'opl_agent_lab_stage_executor_policy_read_model');
   assert.equal(result.stage_executor_policy.default_executor_kind, 'codex_cli');
   assertBlockedAuthority(result.stage_executor_policy.authority_boundary);
-  assert.equal(result.token_cost_estimates.length, 1);
-  assert.equal(result.token_cost_estimates[0].totals.estimated_cost_per_slide_usd, 0.971);
-  assert.equal(result.token_cost_estimates[0].calibration.calibration_status,
-    'estimated_from_stage_profile_without_provider_usage_receipt');
+  assert.equal(Object.hasOwn(result, 'token_cost_estimates'), false);
   assert.equal(result.optimizer_candidates.length, 6);
   assert.equal(result.promotion_gates.length, 6);
   assert.equal(result.developer_mode_repair_routes.status, 'ready_for_developer_mode_patrol_consumption');

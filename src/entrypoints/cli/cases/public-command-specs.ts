@@ -72,7 +72,7 @@ import {
   buildPublicEngineActionPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, validateCommandRegistryCoverage, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, bindCommandRegistryMetadata, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseResumeArgs, parseTurnkeyInstallArgs, printJson, validateCommandRegistryCoverage, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
@@ -153,6 +153,19 @@ export function buildPublicCommandSpecs(
     });
   };
 
+  const commandRegistry = getContracts().cliCommandRegistry;
+  bindCommandRegistryMetadata(
+    commandSpecs,
+    Object.fromEntries(
+      Object.entries(commandRegistry.commands).filter(([, entry]) => (
+        typeof entry === 'object'
+        && entry !== null
+        && !Array.isArray(entry)
+        && typeof (entry as Record<string, unknown>).command_id === 'string'
+        && Boolean(commandSpecs[(entry as Record<string, unknown>).command_id as string])
+      )),
+    ),
+  );
   const systemCommandSpecs = buildPublicSystemCommandSpecs(getContracts);
   const agentLabCommandSpecs = buildPublicAgentLabCommandSpecs();
   const workOrderCommandSpecs = buildPublicWorkOrderCommandSpecs();
@@ -487,7 +500,7 @@ export function buildPublicCommandSpecs(
       ],
       group: 'runtime',
     }),
-    'status dashboard': cloneCommandSpec(commandSpecs.dashboard, {
+    'status dashboard': cloneCommandSpec(commandSpecs['status dashboard'], {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       examples: [
         'opl status dashboard',
@@ -874,24 +887,9 @@ export function buildPublicCommandSpecs(
   };
 
   validateStageDerivedLensCommandSpecs(publicCommandSpecs);
+  bindCommandRegistryMetadata(publicCommandSpecs, commandRegistry.commands);
   validateCommandRegistryCoverage(publicCommandSpecs, {
-    protectedCommandPrefixes: ['status', 'update', 'runtime manager', 'runtime observability'],
-    requiredCommandIds: [
-      'status workspace',
-      'status runtime',
-      'status dashboard',
-      'update status',
-      'update check',
-      'update plan',
-      'update apply',
-      'update repair',
-      'update rollback', // reuse-first: allow owner-routed update command registry metadata.
-      'runtime manager',
-      'runtime manager action',
-      'runtime observability-export',
-      'runtime observability-endpoint',
-      'runtime observability-collector-smoke',
-    ],
+    protectedCommandPrefixes: commandRegistry.protected_command_prefixes,
   });
 
   return publicCommandSpecs;
