@@ -2,7 +2,7 @@
   "contract_kind": "opl_stage_run_kernel_contract.v1",
   "surface_kind": "opl_stage_run_kernel_contract",
   "owner": "one-person-lab",
-  "purpose": "Freeze the OPL-owned refs-only StageRun substrate for spec/status/event-log/projection rebuild, observed_generation, retry-budget keying, hold scope, and domain-agent adoption boundaries.",
+  "purpose": "Freeze the OPL-owned refs-only StageRun substrate for spec/status/event-log/projection rebuild, deterministic cycle identity, single-pass dispatch, rollback/exhaustion, output refs, retry-budget keying, hold scope, and domain-agent adoption boundaries.",
   "state": "active_contract",
   "machine_boundary": {
     "opl_owns": {
@@ -50,6 +50,192 @@
     ],
     "provider_completion_status": "terminalizing",
     "domain_acceptance_status": "domain_accepted"
+  },
+  "cycle_orchestration": {
+    "surface_kind": "opl_stage_run_cycle_orchestration_contract",
+    "version": "stage-run-cycle.v1",
+    "contract_ref": "contracts/opl-framework/stage-run-kernel-contract.json",
+    "module_ref": "src/modules/stagecraft/stage-run-orchestration.ts",
+    "package_export": "opl-framework-shared/stage-run-orchestration",
+    "brand_modules": {
+      "primary": "stagecraft",
+      "collaborating": [
+        "runway"
+      ]
+    },
+    "declarative_manifest": {
+      "required_fields": [
+        "manifest_id",
+        "target_agent_ref",
+        "descriptor_ref",
+        "run_ref",
+        "input_refs",
+        "stage_bindings",
+        "max_cycles",
+        "max_attempts_per_cycle",
+        "no_progress_limit"
+      ],
+      "stage_binding_fields": [
+        "stage_ref",
+        "handler_id"
+      ],
+      "domain_body_allowed": false,
+      "generated_control_plane_adapter": {
+        "module_ref": "src/modules/stagecraft/stage-run-orchestration-adapter.ts",
+        "source_surface": "family-stage-control-plane.v1",
+        "stage_binding_source": "stage_control_plane.stages[].stage_id",
+        "manifest_id_source_fields": [
+          "stage_control_plane.plane_id",
+          "target_agent_ref",
+          "descriptor_ref",
+          "run_ref"
+        ],
+        "target_agent_ref_source": "explicit_canonical_agent_identity",
+        "target_agent_ref_may_be_inferred_from_target_domain_id": false
+      }
+    },
+    "domain_route_oracle": {
+      "owner": "target_domain_agent",
+      "decision_values": [
+        "dispatch",
+        "accepted",
+        "rollback",
+        "blocked"
+      ],
+      "decision_payload_role": "refs_only_route_decision",
+      "opl_can_choose_domain_route": false,
+      "accepted_requires_observed_checkpoint_ref": true,
+      "rollback_requires_observed_checkpoint_ref": true
+    },
+    "single_pass_handler_binding": {
+      "owner": "one-person-lab",
+      "binding_key": "handler_id",
+      "handler_role": "one_stage_pass_only",
+      "idempotency_boundary": {
+        "arbitrary_handler_callback_replayed_by_opl": false,
+        "effectful_handler_requirement": "use_typed_runner_dispatch_or_domain_owned_idempotency",
+        "typed_runner_receipt_replay_owned_by_opl": true
+      },
+      "allowed_result_fields": [
+        "status",
+        "output_refs",
+        "checkpoint_ref",
+        "closeout_refs",
+        "runtime_blocker_refs"
+      ],
+      "body_fields_allowed": false
+    },
+    "identity": {
+      "stage_run_id_fields": [
+        "target_agent_ref",
+        "descriptor_ref",
+        "run_ref"
+      ],
+      "stage_step_id_fields": [
+        "target_agent_ref",
+        "descriptor_ref",
+        "stage_ref",
+        "run_ref",
+        "cycle_index",
+        "attempt_index"
+      ],
+      "cross_target_same_id_allowed": false,
+      "idempotency_key_required": true
+    },
+    "runner_dispatch": {
+      "typed_fields": [
+        "executor.kind",
+        "executor.executor_ref",
+        "argv",
+        "env",
+        "input_refs",
+        "declared_output_refs",
+        "timeout_ms"
+      ],
+      "supported_executor_kinds": [
+        "codex_cli",
+        "agent_cli",
+        "domain_cli",
+        "native_helper"
+      ],
+      "env_values_persisted": false,
+      "env_fingerprint_persisted": true,
+      "argv_persisted": false,
+      "argv_fingerprint_persisted": true,
+      "raw_stdout_persisted": false,
+      "raw_stderr_persisted": false,
+      "process_log_evidence": [
+        "sha256",
+        "byte_count"
+      ],
+      "process_exit_is_domain_result": false,
+      "idempotent_receipt_replay": true,
+      "stored_receipt_validation": "fail_closed_envelope_identity_dispatch_refs_and_metadata"
+    },
+    "output_directory": {
+      "stable_path_shape": "<output_root>/<stage_run_id>/cycle-<cycle_index>/attempt-<attempt_index>",
+      "required_step_files": [
+        "output-manifest.json",
+        "single-pass-receipt.json_or_runner-receipt.json"
+      ],
+      "run_closeout_file": "stage-run-closeout.json",
+      "path_escape_allowed": false,
+      "manifest_role": "refs_recorded_not_domain_validated"
+    },
+    "termination": {
+      "statuses": [
+        "checkpoint_accepted",
+        "rollback_required",
+        "blocked",
+        "exhausted"
+      ],
+      "exhaustion_reasons": [
+        "max_cycles_exhausted",
+        "max_attempts_exhausted",
+        "no_progress_budget_exhausted"
+      ],
+      "exhaustion_creates_domain_typed_blocker": false,
+      "handler_or_process_completion_closes_domain_stage": false
+    },
+    "refs_only_closeout": {
+      "records": [
+        "target_agent_ref",
+        "descriptor_ref",
+        "run_ref",
+        "accepted_checkpoint_ref",
+        "rollback_to_checkpoint_ref",
+        "latest_output_refs",
+        "step_receipt_refs",
+        "closeout_refs",
+        "output_manifest_refs",
+        "route_decision_refs",
+        "typed_blocker_refs",
+        "human_gate_refs",
+        "runtime_blocker_refs"
+      ],
+      "forbidden": [
+        "domain_result_body",
+        "quality_verdict_body",
+        "owner_receipt_body",
+        "typed_blocker_body",
+        "artifact_body"
+      ]
+    },
+    "second_scheduler_created": false,
+    "second_schema_created": false,
+    "authority_boundary": {
+      "opl_can_orchestrate_stage_cycles": true,
+      "opl_can_dispatch_typed_runner": true,
+      "opl_can_manage_output_directories": true,
+      "opl_can_record_refs_only_closeout": true,
+      "opl_can_choose_domain_route": false,
+      "opl_can_write_domain_truth": false,
+      "opl_can_mutate_artifact_body": false,
+      "opl_can_create_owner_receipt": false,
+      "opl_can_create_typed_blocker": false,
+      "opl_can_authorize_quality_verdict": false,
+      "opl_can_claim_domain_ready": false
+    }
   },
   "contract_writing_rules": {
     "required_for_launch": [

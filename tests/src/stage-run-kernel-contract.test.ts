@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 import './stage-run-kernel-contract-cases/read-model-identity-binding.ts';
+import './stage-run-kernel-contract-cases/orchestration.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
