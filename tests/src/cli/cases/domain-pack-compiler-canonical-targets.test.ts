@@ -11,28 +11,34 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
 
   assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
   assert.equal(report.owner, 'one-person-lab');
+  assert.equal(report.status, 'blocked');
   assert.equal(report.summary.total_domain_count, report.reports.length);
-  assert.equal(
-    report.summary.ready_domain_count + report.summary.blocked_domain_count,
-    report.summary.total_domain_count,
-  );
-  assert.equal(
-    report.status,
-    report.summary.blocked_domain_count > 0 ? 'blocked' : 'ready',
-  );
-  for (const [agentId, targetDomainId] of [
-    ['mas', 'med-autoscience'],
-    ['mag', 'med-autogrant'],
-    ['rca', 'redcube_ai'],
-    ['oma', 'opl-meta-agent'],
-    ['obf', 'opl-bookforge'],
-  ]) {
+  assert.equal(report.summary.ready_domain_count, 2);
+  assert.equal(report.summary.blocked_domain_count, 3);
+  for (const agentId of ['mas', 'mag', 'rca', 'oma', 'obf']) {
     assert.equal(
-      report.reports.some((entry: { agent_id: string; target_domain_id: string }) => (
-        entry.agent_id === agentId && entry.target_domain_id === targetDomainId
-      )),
+      report.reports.some((entry: { requested_agent_id: string }) => entry.requested_agent_id === agentId),
       true,
     );
+  }
+  for (const [agentId, targetDomainId] of [
+    ['mag', 'med-autogrant'],
+    ['oma', 'opl-meta-agent'],
+  ]) {
+    const entry = report.reports.find(
+      (candidate: { requested_agent_id: string }) => candidate.requested_agent_id === agentId,
+    );
+    assert.equal(entry.agent_id, agentId);
+    assert.equal(entry.target_domain_id, targetDomainId);
+    assert.equal(entry.compiler_status, 'ready');
+  }
+  for (const agentId of ['mas', 'rca', 'obf']) {
+    const entry = report.reports.find(
+      (candidate: { requested_agent_id: string }) => candidate.requested_agent_id === agentId,
+    );
+    assert.equal(entry.agent_id, null);
+    assert.equal(entry.target_domain_id, null);
+    assert.equal(entry.compiler_status, 'blocked');
   }
   assert.equal(
     report.reports.some((entry: { agent_id: string; repo_dir: string }) => (
@@ -42,14 +48,21 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     true,
   );
   assert.equal(
-    report.reports.some((entry: { agent_id: string }) => entry.agent_id === 'mas-scholar-skills'),
+    report.reports.some(
+      (entry: { requested_agent_id: string }) => entry.requested_agent_id === 'mas-scholar-skills',
+    ),
     false,
   );
   assert.equal(report.authority_boundary.report_can_claim_domain_ready, false);
   assert.equal(report.authority_boundary.report_can_claim_production_ready, false);
   assert.equal(
-    report.reports.every((entry: { generated_agent_interfaces: { owner: string } }) => (
-      entry.generated_agent_interfaces.owner === 'one-person-lab'
+    report.reports.every((entry: {
+      compiler_status: string;
+      generated_agent_interfaces: { owner: string | null };
+    }) => (
+      (entry.generated_agent_interfaces.owner ?? null) === (
+        entry.compiler_status === 'ready' ? 'one-person-lab' : null
+      )
     )),
     true,
   );
@@ -175,7 +188,7 @@ test('generated interfaces project stage pack v2 tool affordance boundaries into
   const stageRoute = bundle.stage_routes[0];
 
   assert.equal(stageRoute.tool_refs[0].ref, 'agent/tools/domain_affordances.md');
-  assert.equal(stageRoute.tool_refs[0].role, 'tool_affordance_catalog');
+  assert.equal(stageRoute.tool_refs[0].role, 'stage_tool_affordance_catalog');
   assert.equal(
     stageRoute.tool_affordance_boundary.catalog_role,
     'available_affordance_catalog_not_workflow_script',

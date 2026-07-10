@@ -6,6 +6,7 @@ import currentOwnerDeltaSchema from '../../../contracts/opl-framework/current-ow
 import standardAgentCapabilityMapSchema from '../../../contracts/opl-framework/standard-agent-capability-map.schema.json' with { type: 'json' };
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { resolveContainedRepoJsonFile } from '../../kernel/repo-contained-json-file.ts';
 import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 import {
   buildCapabilityRegistryReadout,
@@ -289,30 +290,6 @@ function normalizedRepoRoot(repoRef: string) {
   }
 }
 
-function containedRepoJsonFile(repoDir: string, ref: string, label: string) {
-  if (!ref.trim() || path.isAbsolute(ref) || ref.includes('\0') || /^[a-z][a-z0-9+.-]*:/i.test(ref)) {
-    throw new Error(`${label} must be a repo-relative local JSON path: ${ref}`);
-  }
-  const resolved = path.resolve(repoDir, ref);
-  let realPath: string;
-  try {
-    realPath = fs.realpathSync.native(resolved);
-  } catch {
-    throw new Error(`${label} does not exist: ${ref}`);
-  }
-  const relative = path.relative(repoDir, realPath);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new Error(`${label} escapes its catalog repo: ${ref}`);
-  }
-  if (path.extname(realPath).toLowerCase() !== '.json') {
-    throw new Error(`${label} must reference a repo-local JSON file: ${ref}`);
-  }
-  return {
-    real_path: realPath,
-    repo_relative_ref: relative.split(path.sep).join('/'),
-  };
-}
-
 function explicitPackOsDescriptorRefs(
   entry: JsonRecord,
   repoDir: string,
@@ -338,10 +315,11 @@ function explicitPackOsDescriptorRefs(
       || typeof value.descriptor_ref !== 'string') {
       throw new Error(`${label}.pack_os_descriptor_refs[${index}] is not a typed Pack OS descriptor ref.`);
     }
-    const descriptor = containedRepoJsonFile(
+    const descriptor = resolveContainedRepoJsonFile(
       repoDir,
       value.descriptor_ref,
       `${label}.pack_os_descriptor_refs[${index}]`,
+      'catalog repo',
     );
     let descriptorSourceFingerprint = descriptorFingerprintCache.get(descriptor.real_path);
     if (!descriptorSourceFingerprint) {
@@ -544,7 +522,12 @@ function loadCatalogRepo(repoRef: string): LoadedCatalog[] {
   if (!fs.existsSync(logicalPath)) {
     throw new Error(`--catalog-repo has no supported capability contract: ${repoDir}`);
   }
-  const contract = containedRepoJsonFile(repoDir, contractRef, 'Capability catalog');
+  const contract = resolveContainedRepoJsonFile(
+    repoDir,
+    contractRef,
+    'Capability catalog',
+    'catalog repo',
+  );
   return [standardAgentCatalog(
     repoDir,
     contractRef,

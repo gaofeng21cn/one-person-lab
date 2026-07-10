@@ -132,3 +132,21 @@ export function assertJsonSchemaPayload(
     },
   );
 }
+
+export function assertJsonSchemaCompiles(entry: JsonSchemaRegistryEntry): void {
+  const compiler = new Ajv2020({
+    allErrors: true,
+    strict: false,
+  });
+  if (!compiler.validateSchema(entry.schema)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'JSON Schema contract failed meta-schema validation.',
+      {
+        schema_id: entry.schemaId,
+        source_ref: entry.sourceRef,
+        validation_errors: compiler.errors ?? [],
+      },
+    );
+  }
+}
