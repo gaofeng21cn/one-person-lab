@@ -158,6 +158,20 @@ export type AgentLabPromotionGate = {
   authority_boundary?: JsonRecord;
 };
 
+export type AgentLabEvaluationProvenanceBinding = {
+  receipt_role:
+    | 'evaluation_packet'
+    | 'recovery_probe_observation'
+    | 'trajectory_observation'
+    | 'scorecard_observation'
+    | 'promotion_gate_observation'
+    | 'stage_completion_policy'
+    | 'production_evidence_gate_observation';
+  receipt_ref: string;
+  task_id?: string;
+  probe_ref?: string;
+};
+
 export type AgentLabSuite = {
   suite_id: string;
   suite_kind?: 'agent_lab_sample_suite' | 'agent_lab_longline_suite' | 'agent_production_evidence_suite' | string;
@@ -165,6 +179,8 @@ export type AgentLabSuite = {
   required_observations?: AgentLabObservationKey[];
   longline_summary?: AgentLabLonglineSummaryInput;
   production_evidence_gate?: JsonRecord;
+  evaluation_provenance_refs?: string[];
+  evaluation_provenance_bindings?: AgentLabEvaluationProvenanceBinding[];
   authority_boundary?: JsonRecord;
 };
 

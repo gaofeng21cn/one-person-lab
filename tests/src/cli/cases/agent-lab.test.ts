@@ -346,6 +346,7 @@ test('agent-lab evaluation-work-order accepts OMA-owned takeover identity and ke
     assert.equal(result.suite_result, null);
     assert.deepEqual(result.receipt.improvement_candidate_refs, [fixture.ids.improvementCandidateRef]);
     assert.deepEqual(result.receipt.input_candidate_refs, fixture.workOrder.candidate_refs);
+    assert.equal(result.receipt.target_agent.target_agent_ref, fixture.ids.targetAgentRef);
     assert.equal(result.receipt.target_agent.authority_boundary, undefined);
     assert.deepEqual(result.receipt.downstream_pending_outputs.mechanism_candidate_refs, [
       fixture.ids.mechanismCandidateRef,
@@ -397,6 +398,13 @@ test('agent-lab evaluation-work-order binds observed identity and ignores seed-s
 
     assert.equal(result.status, 'passed');
     assert.equal(compiledSuite.tasks[0].domain_id, fixture.ids.taskDomainId);
+    assert.deepEqual(compiledSuite.evaluation_provenance_refs, fixture.evaluationProvenanceRefs);
+    assert.deepEqual(compiledSuite.evaluation_provenance_bindings, fixture.evaluationProvenanceBindings);
+    assert.deepEqual(result.suite_result.refs.evaluation_provenance_refs, fixture.evaluationProvenanceRefs);
+    assert.deepEqual(result.suite_result.evaluation_provenance_bindings, fixture.evaluationProvenanceBindings);
+    assert.deepEqual(result.receipt.evaluation_provenance_refs, fixture.evaluationProvenanceRefs);
+    assert.deepEqual(result.receipt.evaluation_provenance_bindings, fixture.evaluationProvenanceBindings);
+    fixture.evaluationProvenanceRefs.forEach((ref) => assert.ok(result.receipt.source_refs.includes(ref)));
     assert.equal(compiledSuite.required_observations, undefined);
     assert.equal(compiledSuite.production_evidence_gate, undefined);
     assert.equal(
@@ -406,6 +414,218 @@ test('agent-lab evaluation-work-order binds observed identity and ignores seed-s
     assert.equal(
       compiledSuite.tasks[0].stage_completion_policy.authority_boundary.can_write_owner_receipt,
       false,
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects canonical target identity and framework owner drift', async (t) => {
+  const otherOwner = 'other/Foundry Lab';
+  const cases: Array<[
+    string,
+    (fixture: ReturnType<typeof buildOmaTakeoverEvaluationFixture>) => void,
+    RegExp,
+  ]> = [
+    ['work-order target ref mismatch', (fixture) => {
+      (fixture.workOrder.target_agent as Record<string, any>).target_agent_ref = 'domain-agent:other';
+    }, /target_agent_ref/],
+    ['work-order descriptor mismatch', (fixture) => {
+      (fixture.workOrder.target_agent as Record<string, any>).descriptor_ref = '/tmp/other/descriptor.json';
+    }, /descriptor_ref/],
+    ['suite top-level target ref mismatch', (fixture) => {
+      (fixture.suiteSeed as Record<string, any>).target_agent_ref = 'domain-agent:other';
+    }, /suite_seed.*target_agent_ref/],
+    ['task descriptor mismatch', (fixture) => {
+      (fixture.suiteSeed.tasks[0] as Record<string, any>).target_agent_descriptor_ref = '/tmp/other/descriptor.json';
+    }, /target_agent_descriptor_ref/],
+    ['packet target ref mismatch', (fixture) => {
+      (fixture.observations as Record<string, any>).target_agent_ref = 'domain-agent:other';
+    }, /observations.*target_agent_ref/],
+    ['observation descriptor mismatch', (fixture) => {
+      (fixture.observations.tasks[0] as Record<string, any>).target_agent_descriptor_ref = '/tmp/other/descriptor.json';
+    }, /observations.*target_agent_descriptor_ref/],
+    ['all evaluation owners drift together', (fixture) => {
+      const workOrder = fixture.workOrder as Record<string, any>;
+      const suiteSeed = fixture.suiteSeed as Record<string, any>;
+      const observations = fixture.observations as Record<string, any>;
+      workOrder.execution_owner = otherOwner;
+      workOrder.consumer_dependency.owner = otherOwner;
+      workOrder.execution_aperture.work_order_lifecycle_owner = otherOwner;
+      workOrder.execution_aperture.result_ledger_owner = otherOwner;
+      suiteSeed.execution_owner = otherOwner;
+      suiteSeed.tasks[0].promotion_gate_request.evaluation_owner = otherOwner;
+      observations.evaluation_owner = otherOwner;
+      observations.tasks[0].recovery_probe_observations[0].observation_owner = otherOwner;
+      observations.tasks[0].trajectory_observation.observation_owner = otherOwner;
+      observations.tasks[0].promotion_gate_observation.evaluation_owner = otherOwner;
+    }, /canonical evaluation owner/],
+    ['consumer owner mismatch', (fixture) => {
+      (fixture.workOrder.consumer_dependency as Record<string, any>).owner = otherOwner;
+    }, /consumer_dependency.owner/],
+    ['suite execution owner mismatch', (fixture) => {
+      (fixture.suiteSeed as Record<string, any>).execution_owner = otherOwner;
+    }, /suite_seed.execution_owner/],
+    ['lifecycle owner mismatch', (fixture) => {
+      (fixture.workOrder.execution_aperture as Record<string, any>).work_order_lifecycle_owner = otherOwner;
+    }, /work_order_lifecycle_owner/],
+    ['result ledger owner mismatch', (fixture) => {
+      (fixture.workOrder.execution_aperture as Record<string, any>).result_ledger_owner = otherOwner;
+    }, /result_ledger_owner/],
+    ['target closeout owner mismatch', (fixture) => {
+      (fixture.workOrder.execution_aperture as Record<string, any>).target_owner_closeout_owner = otherOwner;
+    }, /target_owner_closeout_owner/],
+    ['promotion evaluator pair drifts together', (fixture) => {
+      (fixture.suiteSeed.tasks[0].promotion_gate_request as Record<string, any>).evaluation_owner = otherOwner;
+      (fixture.observations.tasks[0].promotion_gate_observation as Record<string, any>).evaluation_owner = otherOwner;
+    }, /promotion_gate_request.evaluation_owner/],
+  ];
+
+  for (const [name, mutate, expected] of cases) {
+    await t.test(name, () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-owner-identity-'));
+      try {
+        const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+        mutate(fixture);
+        writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+        writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
+        writeEvaluationJson(fixture.observationsPath, fixture.observations);
+        assert.throws(
+          () => runCli([
+            'agent-lab', 'evaluation-work-order', 'execute',
+            '--work-order', fixture.workOrderPath,
+            '--observations', fixture.observationsPath,
+            '--output', fixture.outputDir,
+            '--json',
+          ]),
+          expected,
+        );
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
+test('agent-lab evaluation provenance changes suite-result and execution-receipt identity', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-provenance-identity-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    const execute = (outputDir: string) => runCli([
+      'agent-lab', 'evaluation-work-order', 'execute',
+      '--work-order', fixture.workOrderPath,
+      '--observations', fixture.observationsPath,
+      '--output', outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+    const first = execute(path.join(tmpDir, 'first'));
+    (fixture.observations as Record<string, any>).evaluation_receipt_ref =
+      'evaluation-receipt:opl-foundry-lab/target-agent/takeover/revised';
+    writeEvaluationJson(fixture.observationsPath, fixture.observations);
+    const second = execute(path.join(tmpDir, 'second'));
+
+    assert.notEqual(first.suite_result.result_id, second.suite_result.result_id);
+    assert.notEqual(first.receipt.receipt_id, second.receipt.receipt_id);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation provenance role swap changes identities without changing raw refs', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-provenance-role-identity-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    const execute = (outputDir: string) => runCli([
+      'agent-lab', 'evaluation-work-order', 'execute',
+      '--work-order', fixture.workOrderPath,
+      '--observations', fixture.observationsPath,
+      '--output', outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+    const first = execute(path.join(tmpDir, 'first'));
+    const observations = fixture.observations as Record<string, any>;
+    const policy = observations.tasks[0].stage_completion_policy;
+    [observations.evaluation_receipt_ref, policy.policy_receipt_ref] = [
+      policy.policy_receipt_ref,
+      observations.evaluation_receipt_ref,
+    ];
+    writeEvaluationJson(fixture.observationsPath, observations);
+    const second = execute(path.join(tmpDir, 'second'));
+
+    assert.deepEqual(first.receipt.evaluation_provenance_refs, second.receipt.evaluation_provenance_refs);
+    assert.notDeepEqual(
+      first.receipt.evaluation_provenance_bindings,
+      second.receipt.evaluation_provenance_bindings,
+    );
+    assert.notEqual(first.suite_result.result_id, second.suite_result.result_id);
+    assert.notEqual(first.receipt.receipt_id, second.receipt.receipt_id);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab domain evaluation outcomes remain target-owner pending without platform blockers', async (t) => {
+  const cases: Array<[string, (observations: Record<string, any>) => void]> = [
+    ['domain scorecard blocked', (observations) => {
+      observations.tasks[0].scorecard_observation.passed = false;
+    }],
+    ['promotion gate blocked', (observations) => {
+      observations.tasks[0].promotion_gate_observation.gate_status = 'blocked';
+    }],
+    ['recovery outcome blocked', (observations) => {
+      observations.tasks[0].recovery_probe_observations[0].observed_status = 'blocked';
+    }],
+    ['domain stage policy blocked', (observations) => {
+      observations.tasks[0].stage_completion_policy.closeout_packet_required = false;
+    }],
+  ];
+
+  for (const [name, mutate] of cases) {
+    await t.test(name, () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-domain-blocked-'));
+      try {
+        const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+        const observations = fixture.observations as Record<string, any>;
+        mutate(observations);
+        writeEvaluationJson(fixture.observationsPath, observations);
+        const result = runCli([
+          'agent-lab', 'evaluation-work-order', 'execute',
+          '--work-order', fixture.workOrderPath,
+          '--observations', fixture.observationsPath,
+          '--output', fixture.outputDir,
+          '--json',
+        ]).agent_lab_evaluation_work_order_execution;
+
+        assert.equal(result.status, 'blocked');
+        assert.equal(result.typed_blocker, null);
+        assert.equal(result.artifacts.typed_blocker_path, null);
+        assert.equal(result.receipt.platform_blocker_ref, null);
+        assert.equal(
+          result.receipt.downstream_pending_outputs.reason,
+          'target_owner_closeout_required_for_blocked_domain_evaluation',
+        );
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects unknown improvement allowed_change_scope', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-invalid-change-scope-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    (fixture.suiteSeed.tasks[0].improvement_candidate_seed as Record<string, any>).allowed_change_scope =
+      'future_automatic_scope';
+    writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+    assert.throws(
+      () => runCli([
+        'agent-lab', 'evaluation-work-order', 'execute',
+        '--work-order', fixture.workOrderPath,
+        '--output', fixture.outputDir,
+        '--json',
+      ]),
+      /allowed_change_scope/,
     );
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -532,10 +752,16 @@ test('agent-lab production evaluation materializes gate evidence only from the o
       '--json',
     ]).agent_lab_evaluation_work_order_execution;
     const compiledSuite = JSON.parse(fs.readFileSync(result.artifacts.compiled_suite_path, 'utf8'));
+    const expectedProvenanceRefs = [
+      ...fixture.evaluationProvenanceRefs,
+      observations.production_evidence_gate_observation.evaluation_receipt_ref,
+    ].sort();
 
     assert.deepEqual(compiledSuite.production_evidence_gate.no_forbidden_write_proof_refs, [
       'observed-no-forbidden-write-proof:target-agent',
     ]);
+    assert.deepEqual(compiledSuite.evaluation_provenance_refs, expectedProvenanceRefs);
+    assert.deepEqual(result.suite_result.refs.evaluation_provenance_refs, expectedProvenanceRefs);
     assert.equal(
       compiledSuite.production_evidence_gate.no_forbidden_write_proof_refs.includes(
         'seed-only-proof-must-not-be-observed',

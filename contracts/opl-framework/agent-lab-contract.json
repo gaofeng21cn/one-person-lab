@@ -720,8 +720,15 @@
       "version": "opl-meta-agent.foundry-lab-work-order-candidate.v1",
       "status": "ready_for_opl_foundry_lab_evaluation",
       "required_consumer_role": "compile_evaluation_work_order_to_agent_lab_suite_and_execute",
-      "action_ref": "opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>"
+      "action_ref": "opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>",
+      "canonical_target_agent_fields": [
+        "domain_id",
+        "target_agent_ref",
+        "descriptor_ref"
+      ]
     },
+    "canonical_evaluation_owner": "one-person-lab/OPL Foundry Lab",
+    "canonical_target_owner_closeout_owner": "target-domain",
     "accepted_suite_seed": {
       "surface_kind": "opl_meta_agent_agent_lab_suite_seed",
       "version": "opl-meta-agent.agent-lab-suite-seed.v1",
@@ -730,7 +737,8 @@
         "task_domain_owner_may_differ_from_target_agent": true,
         "required_task_fields": [
           "domain_id",
-          "target_agent_ref"
+          "target_agent_ref",
+          "target_agent_descriptor_ref"
         ],
         "oma_takeover_identity": "domain_id=opl-meta-agent with target_agent_ref bound to the target agent"
       },
@@ -777,6 +785,7 @@
         "domain_id",
         "task_id",
         "target_agent_ref",
+        "target_agent_descriptor_ref",
         "probe_ref",
         "trajectory_ref",
         "scorecard_ref",
@@ -835,6 +844,42 @@
       "writes_agent_lab_suite_result": false,
       "writes_owner_receipt": false,
       "writes_target_typed_blocker": false
+    },
+    "evaluation_provenance_bundle": {
+      "suite_field": "evaluation_provenance_refs",
+      "binding_field": "evaluation_provenance_bindings",
+      "binding_identity_fields": [
+        "receipt_role",
+        "receipt_ref",
+        "task_id",
+        "probe_ref"
+      ],
+      "receipt_sources": [
+        "evaluation_receipt_ref",
+        "recovery_probe_observations[].observation_receipt_ref",
+        "trajectory_observation.observation_receipt_ref",
+        "scorecard_observation.scorecard_receipt_ref",
+        "promotion_gate_observation.evaluation_receipt_ref",
+        "stage_completion_policy.policy_receipt_ref",
+        "production_evidence_gate_observation.evaluation_receipt_ref"
+      ],
+      "included_in_suite_result_refs": true,
+      "included_in_execution_receipt_source_refs": true,
+      "raw_refs_remain_original_receipt_refs": true,
+      "bindings_included_in_stable_identity": true,
+      "empty_bundle_omitted_from_non_evaluation_suite_result": true
+    },
+    "blocked_suite_result": {
+      "platform_blocker_policy": "missing_observations_or_consumer_platform_gap_only",
+      "domain_evaluation_outcome_policy": "target_owner_pending_without_platform_or_target_blocker"
+    },
+    "improvement_candidate_scope": {
+      "accepted_values": [
+        "candidate_config_only",
+        "branch_only",
+        "manual_review_required"
+      ],
+      "unknown_scope_policy": "contract_shape_invalid"
     },
     "immediate_output_fields": [
       "agent_lab_suite_result_ref",

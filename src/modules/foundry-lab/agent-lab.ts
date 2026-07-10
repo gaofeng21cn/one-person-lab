@@ -65,6 +65,7 @@ export { REQUIRED_INDEPENDENT_AI_REVIEW_PROVENANCE_FIELDS } from './agent-lab-in
 export { agentLabRefSummary } from './agent-lab-ref-summary.ts';
 export { buildAgentLabExecutorCapabilityApertureReadModel } from './agent-lab-executor-capability-aperture.ts';
 export type {
+  AgentLabEvaluationProvenanceBinding,
   AgentLabIndependentAiReviewAssessment,
   AgentLabImprovementCandidate,
   AgentLabLonglineSummaryInput,
@@ -499,6 +500,7 @@ function buildRun(task: AgentLabTaskManifest) {
 }
 
 function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRun>[]) {
+  const evaluationProvenanceRefs = optionalRefs(input.evaluation_provenance_refs);
   const promotionSafetyAssessments = runs.map((run) => run.promotion_safety_assessment);
   const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
   const recoveryProbeRefs = unique(input.tasks.flatMap((task) =>
@@ -538,6 +540,9 @@ function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRu
       forbidden_authority_flags_all_false: forbiddenAuthorityFlags.length === 0,
     } satisfies Record<AgentLabObservationKey, boolean>,
     refs: {
+      ...(evaluationProvenanceRefs.length > 0
+        ? { evaluation_provenance_refs: evaluationProvenanceRefs }
+        : {}),
       task_refs: unique(input.tasks.map((task) => task.task_id)),
       trajectory_refs: unique(input.tasks.map((task) => task.trajectory.trajectory_ref)),
       recovery_probe_refs: recoveryProbeRefs,
@@ -664,6 +669,7 @@ export function runAgentLabSuite(input: AgentLabSuite) {
     run.independent_ai_review_assessment.ai_review_approved).length;
   const promotionGatePassedCount = input.tasks.filter((task) => task.promotion_gate.gate_status === 'passed').length;
   const productionEvidenceGateBlocked = productionEvidenceGateResult?.status === 'blocked';
+  const evaluationProvenanceBindings = input.evaluation_provenance_bindings ?? [];
   const status: AgentLabStatus = missingObservations.length === 0 && blockedRuns.length === 0 && !productionEvidenceGateBlocked
     ? 'passed'
     : 'blocked';
@@ -678,11 +684,15 @@ export function runAgentLabSuite(input: AgentLabSuite) {
       runs.map((run) => run.run_id),
       observationResult.observations,
       observationResult.refs,
+      ...(evaluationProvenanceBindings.length > 0 ? [evaluationProvenanceBindings] : []),
     ]),
     status,
     required_observations: requiredObservations,
     missing_observations: missingObservations,
     observations: observationResult.observations,
+    ...(evaluationProvenanceBindings.length > 0
+      ? { evaluation_provenance_bindings: evaluationProvenanceBindings }
+      : {}),
     summary: {
       task_count: input.tasks.length,
       run_count: runs.length,

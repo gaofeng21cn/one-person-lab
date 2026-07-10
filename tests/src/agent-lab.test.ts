@@ -176,6 +176,21 @@ test('Agent Lab runs MAS, MAG, and RCA task manifests through recovery, scoring,
   assert.equal(masRun.promotion_safety_assessment.automatic_mechanism_promotion_ready, false);
 });
 
+test('Agent Lab keeps empty evaluation provenance out of ordinary suite identity and refs', () => {
+  const suite = buildSampleAgentLabSuite();
+  const baseline = runAgentLabSuite(suite);
+  const explicitEmpty = runAgentLabSuite({
+    ...suite,
+    evaluation_provenance_refs: [],
+    evaluation_provenance_bindings: [],
+  });
+
+  assert.equal(explicitEmpty.result_id, baseline.result_id);
+  assert.equal(Object.hasOwn(baseline.refs, 'evaluation_provenance_refs'), false);
+  assert.equal(Object.hasOwn(explicitEmpty.refs, 'evaluation_provenance_refs'), false);
+  assert.equal(Object.hasOwn(explicitEmpty, 'evaluation_provenance_bindings'), false);
+});
+
 test('Agent Lab separates fixture scorecard pass from independent AI review and promotion safety approval', () => {
   const result = runAgentLabSuite(buildSampleAgentLabSuite());
 
@@ -502,6 +517,18 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'ready_for_opl_foundry_lab_evaluation',
   );
   assert.equal(
+    contract.evaluation_work_order_consumer_surface.canonical_evaluation_owner,
+    'one-person-lab/OPL Foundry Lab',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.canonical_target_owner_closeout_owner,
+    'target-domain',
+  );
+  assertIncludesAll(
+    contract.evaluation_work_order_consumer_surface.accepted_work_order.canonical_target_agent_fields,
+    ['domain_id', 'target_agent_ref', 'descriptor_ref'],
+  );
+  assert.equal(
     contract.evaluation_work_order_consumer_surface.observation_packet.required_for_agent_lab_suite_materialization,
     true,
   );
@@ -528,6 +555,22 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   assert.equal(
     contract.evaluation_work_order_consumer_surface.output_reuse_policy,
     'fail_closed_when_known_evaluation_artifacts_exist',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.evaluation_provenance_bundle.suite_field,
+    'evaluation_provenance_refs',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.evaluation_provenance_bundle.binding_field,
+    'evaluation_provenance_bindings',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.blocked_suite_result.platform_blocker_policy,
+    'missing_observations_or_consumer_platform_gap_only',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.improvement_candidate_scope.unknown_scope_policy,
+    'contract_shape_invalid',
   );
   assert.equal(
     contract.evaluation_work_order_consumer_surface.candidate_ref_projection.immediate_improvement_source,

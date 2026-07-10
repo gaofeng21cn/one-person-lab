@@ -21,6 +21,7 @@ import {
 } from './agent-lab-authority.ts';
 import type {
   AgentLabImprovementCandidate,
+  AgentLabEvaluationProvenanceBinding,
   AgentLabPromotionGate,
   AgentLabRecoveryProbe,
   AgentLabScorecard,
@@ -40,6 +41,8 @@ const OBSERVATION_PACKET_SURFACE = 'opl_foundry_lab_evaluation_observation_packe
 const OBSERVATION_PACKET_VERSION = 'opl.foundry-lab-evaluation-observation-packet.v1';
 const CONSUMER_ROLE = 'compile_evaluation_work_order_to_agent_lab_suite_and_execute';
 const ACTION_REF = 'opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>';
+const EVALUATION_OWNER = 'one-person-lab/OPL Foundry Lab';
+const TARGET_OWNER_CLOSEOUT_ROLE = 'target-domain';
 const OUTPUT_ARTIFACT_NAMES = [
   'agent-lab-suite.json',
   'agent-lab-suite-result.json',
@@ -103,6 +106,25 @@ function assertValue(actual: unknown, expected: string, field: string) {
   }
 }
 
+function assertEvaluationOwner(actual: unknown, field: string) {
+  if (actual !== EVALUATION_OWNER) {
+    invalid(`Foundry Lab evaluation work order requires canonical evaluation owner at ${field}.`, {
+      field,
+      expected: EVALUATION_OWNER,
+      actual: actual ?? null,
+    });
+  }
+}
+
+function canonicalTargetAgent(workOrder: JsonRecord) {
+  const targetAgent = record(workOrder.target_agent);
+  return {
+    domainId: requiredString(targetAgent.domain_id, 'work_order.target_agent.domain_id'),
+    targetAgentRef: requiredString(targetAgent.target_agent_ref, 'work_order.target_agent.target_agent_ref'),
+    descriptorRef: requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref'),
+  };
+}
+
 function validateWorkOrder(workOrder: JsonRecord) {
   assertValue(workOrder.surface_kind, WORK_ORDER_SURFACE, 'surface_kind');
   assertValue(workOrder.version, WORK_ORDER_VERSION, 'version');
@@ -114,7 +136,22 @@ function validateWorkOrder(workOrder: JsonRecord) {
     'consumer_dependency.required_consumer_role',
   );
   assertValue(record(workOrder.execution_aperture).action_ref, ACTION_REF, 'execution_aperture.action_ref');
-  requiredString(workOrder.execution_owner, 'work_order.execution_owner');
+  assertEvaluationOwner(workOrder.execution_owner, 'work_order.execution_owner');
+  assertEvaluationOwner(record(workOrder.consumer_dependency).owner, 'consumer_dependency.owner');
+  assertEvaluationOwner(
+    record(workOrder.execution_aperture).work_order_lifecycle_owner,
+    'execution_aperture.work_order_lifecycle_owner',
+  );
+  assertEvaluationOwner(
+    record(workOrder.execution_aperture).result_ledger_owner,
+    'execution_aperture.result_ledger_owner',
+  );
+  assertValue(
+    record(workOrder.execution_aperture).target_owner_closeout_owner,
+    TARGET_OWNER_CLOSEOUT_ROLE,
+    'execution_aperture.target_owner_closeout_owner',
+  );
+  canonicalTargetAgent(workOrder);
   assertNoForbiddenAuthorityClaims(workOrder, 'Foundry Lab evaluation work order');
 }
 
@@ -128,15 +165,36 @@ function validateSuiteSeed(workOrder: JsonRecord, suiteSeed: JsonRecord) {
     requiredString(suiteRef.suite_kind, 'work_order.suite_seed.suite_kind'),
     'suite_seed.suite_kind',
   );
+  assertEvaluationOwner(suiteSeed.execution_owner, 'suite_seed.execution_owner');
+  const targetAgent = canonicalTargetAgent(workOrder);
+  if (suiteSeed.target_agent_ref !== undefined) {
+    assertValue(suiteSeed.target_agent_ref, targetAgent.targetAgentRef, 'suite_seed.target_agent_ref');
+  }
+  if (suiteSeed.target_agent_descriptor_ref !== undefined) {
+    assertValue(
+      suiteSeed.target_agent_descriptor_ref,
+      targetAgent.descriptorRef,
+      'suite_seed.target_agent_descriptor_ref',
+    );
+  }
   const tasks = recordList(suiteSeed.tasks);
   if (tasks.length === 0) {
     invalid('Foundry Lab evaluation suite seed requires at least one task.');
   }
-  requiredString(record(workOrder.target_agent).domain_id, 'work_order.target_agent.domain_id');
   const taskIds = tasks.map((task) => requiredString(task.task_id, 'suite_seed.tasks[].task_id'));
   tasks.forEach((task) => {
     requiredString(task.domain_id, 'suite_seed.tasks[].domain_id');
-    requiredString(task.target_agent_ref, 'suite_seed.tasks[].target_agent_ref');
+    assertValue(task.target_agent_ref, targetAgent.targetAgentRef, 'suite_seed.tasks[].target_agent_ref');
+    assertValue(
+      task.target_agent_descriptor_ref,
+      targetAgent.descriptorRef,
+      'suite_seed.tasks[].target_agent_descriptor_ref',
+    );
+    assertEvaluationOwner(
+      record(task.promotion_gate_request).evaluation_owner,
+      'suite_seed.tasks[].promotion_gate_request.evaluation_owner',
+    );
+    allowedChangeScope(record(task.improvement_candidate_seed).allowed_change_scope);
   });
   if (new Set(taskIds).size !== taskIds.length) {
     invalid('Foundry Lab evaluation suite seed task ids must be unique.', { task_ids: taskIds });
@@ -246,8 +304,14 @@ function validateObservationPacket(
     requiredString(suiteSeed.suite_id, 'suite_seed.suite_id'),
     'observations.suite_id',
   );
-  const evaluationOwner = requiredString(workOrder.execution_owner, 'work_order.execution_owner');
-  assertValue(observationPacket.evaluation_owner, evaluationOwner, 'observations.evaluation_owner');
+  const targetAgent = canonicalTargetAgent(workOrder);
+  assertValue(observationPacket.target_agent_ref, targetAgent.targetAgentRef, 'observations.target_agent_ref');
+  assertValue(
+    observationPacket.target_agent_descriptor_ref,
+    targetAgent.descriptorRef,
+    'observations.target_agent_descriptor_ref',
+  );
+  assertEvaluationOwner(observationPacket.evaluation_owner, 'observations.evaluation_owner');
   requiredString(observationPacket.evaluation_receipt_ref, 'observations.evaluation_receipt_ref');
   assertNoForbiddenAuthorityClaims(observationPacket, 'Foundry Lab evaluation observation packet');
   const seedTasks = recordList(suiteSeed.tasks);
@@ -261,8 +325,13 @@ function validateObservationPacket(
     );
     assertValue(
       observationTask.target_agent_ref,
-      requiredString(seedTask.target_agent_ref, 'suite_seed.tasks[].target_agent_ref'),
+      targetAgent.targetAgentRef,
       'observations.tasks[].target_agent_ref',
+    );
+    assertValue(
+      observationTask.target_agent_descriptor_ref,
+      targetAgent.descriptorRef,
+      'observations.tasks[].target_agent_descriptor_ref',
     );
   }
   if (recordList(observationPacket.tasks).length !== seedTasks.length) {
@@ -286,15 +355,17 @@ function observationTaskById(observationPacket: JsonRecord, taskId: string) {
 
 function targetAgentProjection(workOrder: JsonRecord) {
   const targetAgent = record(workOrder.target_agent);
+  const canonical = canonicalTargetAgent(workOrder);
   const optional = (field: string) => {
     const value = stringValue(targetAgent[field]);
     return value ? { [field]: value } : {};
   };
   return {
-    domain_id: requiredString(targetAgent.domain_id, 'work_order.target_agent.domain_id'),
+    domain_id: canonical.domainId,
+    target_agent_ref: canonical.targetAgentRef,
     ...optional('domain_label'),
     ...optional('repo_dir'),
-    ...optional('descriptor_ref'),
+    descriptor_ref: canonical.descriptorRef,
   };
 }
 
@@ -433,7 +504,10 @@ function allowedChangeScope(value: unknown): AgentLabImprovementCandidate['allow
   if (value === 'candidate_config_only' || value === 'branch_only' || value === 'manual_review_required') {
     return value;
   }
-  return 'manual_review_required';
+  return invalid('Foundry Lab evaluation suite seed has unsupported allowed_change_scope.', {
+    field: 'suite_seed.tasks[].improvement_candidate_seed.allowed_change_scope',
+    value: value ?? null,
+  });
 }
 
 function compileImprovementCandidate(
@@ -462,12 +536,9 @@ function compilePromotionGate(seedTask: JsonRecord, observationTask: JsonRecord)
   const observation = record(observationTask.promotion_gate_observation);
   const gateRef = requiredString(request.gate_ref, 'suite_seed.tasks[].promotion_gate_request.gate_ref');
   assertMatchingRef(observation.gate_ref, gateRef, 'observations.tasks[].promotion_gate_observation.gate_ref');
-  assertValue(
+  assertEvaluationOwner(request.evaluation_owner, 'suite_seed.tasks[].promotion_gate_request.evaluation_owner');
+  assertEvaluationOwner(
     observation.evaluation_owner,
-    requiredString(
-      request.evaluation_owner,
-      'suite_seed.tasks[].promotion_gate_request.evaluation_owner',
-    ),
     'observations.tasks[].promotion_gate_observation.evaluation_owner',
   );
   requiredString(
@@ -576,7 +647,6 @@ function compileObservedTask(
 function compileProductionEvidenceGate(
   suiteSeed: JsonRecord,
   observationPacket: JsonRecord,
-  evaluationOwner: string,
 ) {
   if (suiteSeed.suite_kind !== 'agent_production_evidence_suite') {
     return undefined;
@@ -600,7 +670,7 @@ function compileProductionEvidenceGate(
   }
   assertValue(
     observation.evaluation_owner,
-    evaluationOwner,
+    EVALUATION_OWNER,
     'observations.production_evidence_gate_observation.evaluation_owner',
   );
   requiredString(
@@ -634,8 +704,87 @@ function compileProductionEvidenceGate(
   };
 }
 
+function evaluationProvenance(suiteSeed: JsonRecord, observationPacket: JsonRecord) {
+  const bindings: AgentLabEvaluationProvenanceBinding[] = [{
+    receipt_role: 'evaluation_packet',
+    receipt_ref: requiredString(observationPacket.evaluation_receipt_ref, 'observations.evaluation_receipt_ref'),
+  }];
+  for (const seedTask of recordList(suiteSeed.tasks)) {
+    const taskId = requiredString(seedTask.task_id, 'suite_seed.tasks[].task_id');
+    const observationTask = observationTaskById(
+      observationPacket,
+      taskId,
+    );
+    bindings.push(...recordList(observationTask.recovery_probe_observations).map((observation) => ({
+      receipt_role: 'recovery_probe_observation' as const,
+      receipt_ref: requiredString(
+        observation.observation_receipt_ref,
+        'observations.tasks[].recovery_probe_observations[].observation_receipt_ref',
+      ),
+      task_id: taskId,
+      probe_ref: requiredString(
+        observation.probe_ref,
+        'observations.tasks[].recovery_probe_observations[].probe_ref',
+      ),
+    })));
+    bindings.push(
+      {
+        receipt_role: 'trajectory_observation',
+        receipt_ref: requiredString(
+          record(observationTask.trajectory_observation).observation_receipt_ref,
+          'observations.tasks[].trajectory_observation.observation_receipt_ref',
+        ),
+        task_id: taskId,
+      },
+      {
+        receipt_role: 'scorecard_observation',
+        receipt_ref: requiredString(
+          record(observationTask.scorecard_observation).scorecard_receipt_ref,
+          'observations.tasks[].scorecard_observation.scorecard_receipt_ref',
+        ),
+        task_id: taskId,
+      },
+      {
+        receipt_role: 'promotion_gate_observation',
+        receipt_ref: requiredString(
+          record(observationTask.promotion_gate_observation).evaluation_receipt_ref,
+          'observations.tasks[].promotion_gate_observation.evaluation_receipt_ref',
+        ),
+        task_id: taskId,
+      },
+      {
+        receipt_role: 'stage_completion_policy',
+        receipt_ref: requiredString(
+          record(observationTask.stage_completion_policy).policy_receipt_ref,
+          'observations.tasks[].stage_completion_policy.policy_receipt_ref',
+        ),
+        task_id: taskId,
+      },
+    );
+  }
+  if (suiteSeed.suite_kind === 'agent_production_evidence_suite') {
+    bindings.push({
+      receipt_role: 'production_evidence_gate_observation',
+      receipt_ref: requiredString(
+        record(observationPacket.production_evidence_gate_observation).evaluation_receipt_ref,
+        'observations.production_evidence_gate_observation.evaluation_receipt_ref',
+      ),
+    });
+  }
+  bindings.sort((left, right) =>
+    left.receipt_role.localeCompare(right.receipt_role)
+    || (left.task_id ?? '').localeCompare(right.task_id ?? '')
+    || (left.probe_ref ?? '').localeCompare(right.probe_ref ?? '')
+    || left.receipt_ref.localeCompare(right.receipt_ref));
+  return {
+    refs: uniqueStringList(bindings.map((binding) => binding.receipt_ref)).sort(),
+    bindings,
+  };
+}
+
 function compileObservedSuite(suiteSeed: JsonRecord, observationPacket: JsonRecord): AgentLabSuite {
-  const evaluationOwner = requiredString(observationPacket.evaluation_owner, 'observations.evaluation_owner');
+  assertEvaluationOwner(observationPacket.evaluation_owner, 'observations.evaluation_owner');
+  const evaluationOwner = EVALUATION_OWNER;
   const tasks = recordList(suiteSeed.tasks).map((seedTask) => {
     const taskId = requiredString(seedTask.task_id, 'suite_seed.tasks[].task_id');
     return compileObservedTask(seedTask, observationTaskById(observationPacket, taskId), evaluationOwner);
@@ -649,12 +798,14 @@ function compileObservedSuite(suiteSeed: JsonRecord, observationPacket: JsonReco
   const productionEvidenceGate = compileProductionEvidenceGate(
     suiteSeed,
     observationPacket,
-    evaluationOwner,
   );
+  const provenance = evaluationProvenance(suiteSeed, observationPacket);
   return {
     suite_id: requiredString(suiteSeed.suite_id, 'suite_seed.suite_id'),
     suite_kind: requiredString(suiteSeed.suite_kind, 'suite_seed.suite_kind'),
     tasks,
+    evaluation_provenance_refs: provenance.refs,
+    evaluation_provenance_bindings: provenance.bindings,
     ...(productionEvidenceGate ? { production_evidence_gate: productionEvidenceGate } : {}),
     authority_boundary: AGENT_LAB_AUTHORITY_BOUNDARY,
   };
@@ -690,7 +841,7 @@ function buildBlockedEvaluation(input: {
     work_order_id: workOrderId,
     suite_id: evaluationResult.suite_id,
     missing_observations: evaluationResult.missing_observations,
-    required_owner: 'one-person-lab/OPL Foundry Lab',
+    required_owner: EVALUATION_OWNER,
     target_owner_closeout_still_required: true,
     authority_boundary: EVALUATION_AUTHORITY_BOUNDARY,
   };
@@ -757,6 +908,19 @@ function buildBlockedEvaluation(input: {
   };
 }
 
+function platformMissingObservations(suiteResult: ReturnType<typeof runAgentLabSuite>) {
+  return suiteResult.missing_observations.filter((observation) => {
+    if (observation === 'domain_stage_completion_policies_observed') {
+      return false;
+    }
+    if (observation === 'promotion_gates_observed') {
+      return suiteResult.runs.some((run) =>
+        run.promotion_safety_assessment.missing_required_refs.some((ref) => ref !== 'promotion_gate_blocked'));
+    }
+    return true;
+  });
+}
+
 function buildObservedEvaluation(input: {
   workOrder: JsonRecord;
   workOrderPath: string;
@@ -774,20 +938,26 @@ function buildObservedEvaluation(input: {
   const typedBlockerPath = path.join(input.outputDir, 'foundry-lab-evaluation-typed-blocker.json');
   const compiledSuite = compileObservedSuite(input.suiteSeed, input.observationPacket);
   const suiteResult = runAgentLabSuite(compiledSuite);
-  const typedBlocker = suiteResult.status === 'blocked'
+  const platformMissing = platformMissingObservations(suiteResult);
+  const productionPlatformMissing = suiteResult.production_evidence_gate_result?.missing_required_refs ?? [];
+  const platformBlocked = platformMissing.length > 0 || productionPlatformMissing.length > 0;
+  const evaluationProvenance = compiledSuite.evaluation_provenance_refs ?? [];
+  const evaluationProvenanceBindings = compiledSuite.evaluation_provenance_bindings ?? [];
+  const typedBlocker = platformBlocked
     ? {
         surface_kind: 'opl_foundry_lab_evaluation_platform_typed_blocker',
         version: 'opl.foundry-lab-evaluation-blocker.v1',
-        blocker_id: stableId('ofleb', [workOrderId, suiteResult.result_id, suiteResult.missing_observations]),
+        blocker_id: stableId('ofleb', [workOrderId, suiteResult.result_id, platformMissing, productionPlatformMissing]),
         blocker_kind: 'foundry_lab_evaluation_suite_blocked',
         status: 'blocked',
         work_order_id: workOrderId,
         suite_id: compiledSuite.suite_id,
-        missing_observations: suiteResult.missing_observations,
+        missing_observations: platformMissing,
+        missing_required_refs: productionPlatformMissing,
         blocked_runs: suiteResult.runs
           .filter((run) => run.status === 'blocked')
           .map((run) => ({ run_id: run.run_id, failure_taxonomy: run.failure_taxonomy })),
-        required_owner: 'one-person-lab/OPL Foundry Lab',
+        required_owner: EVALUATION_OWNER,
         target_owner_closeout_still_required: true,
         authority_boundary: EVALUATION_AUTHORITY_BOUNDARY,
       }
@@ -795,7 +965,11 @@ function buildObservedEvaluation(input: {
   const receipt = {
     surface_kind: 'opl_foundry_lab_evaluation_work_order_execution_receipt',
     version: 'opl.foundry-lab-evaluation-work-order-execution.v1',
-    receipt_id: stableId('oflewr', [workOrderId, suiteResult.result_id]),
+    receipt_id: stableId('oflewr', [
+      workOrderId,
+      suiteResult.result_id,
+      evaluationProvenanceBindings,
+    ]),
     status: suiteResult.status,
     work_order_id: workOrderId,
     work_order_kind: requiredString(input.workOrder.work_order_kind, 'work_order.work_order_kind'),
@@ -809,11 +983,14 @@ function buildObservedEvaluation(input: {
       input.workOrderPath,
       input.suiteSeedPath,
       input.observationPacketPath,
+      ...evaluationProvenance,
       ...stringList(input.workOrder.source_refs),
       ...stringList(input.workOrder.reviewer_refs),
     ]),
     agent_lab_suite_result_ref: suiteResultPath,
     foundry_lab_execution_receipt_ref: executionReceiptPath,
+    evaluation_provenance_refs: evaluationProvenance,
+    evaluation_provenance_bindings: evaluationProvenanceBindings,
     improvement_candidate_refs: suiteResult.refs.improvement_candidate_refs,
     input_candidate_refs: candidateRefs.inputCandidateRefs,
     mechanism_proposal_refs: [],
@@ -828,7 +1005,11 @@ function buildObservedEvaluation(input: {
       mechanism_proposal_refs: [],
       scaleout_ledger_refs: [],
       target_owner_receipt_or_typed_blocker_ref: null,
-      reason: typedBlocker ? 'agent_lab_suite_blocked' : 'target_owner_closeout_required',
+      reason: typedBlocker
+        ? 'agent_lab_suite_blocked'
+        : suiteResult.status === 'blocked'
+          ? 'target_owner_closeout_required_for_blocked_domain_evaluation'
+          : 'target_owner_closeout_required',
     },
     authority_boundary: EVALUATION_AUTHORITY_BOUNDARY,
   };
