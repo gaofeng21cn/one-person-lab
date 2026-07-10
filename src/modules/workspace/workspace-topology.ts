@@ -3,16 +3,20 @@ import path from 'node:path';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../kernel/standard-agent-registry.ts';
 import type { WorkspaceAgentProfile } from './workspace-agent-defaults.ts';
 
 export type WorkspaceModeInput = 'auto' | 'one_off' | 'series' | 'portfolio';
-export type WorkspaceProfileId = 'one_off' | 'series' | 'portfolio' | 'rca_series' | 'mas_portfolio';
+export type WorkspaceProfileId = 'one_off' | 'series' | 'portfolio';
 
 export type TopologyProfile = {
   workspace_mode: 'one_off' | 'series' | 'portfolio';
   project_collection_path: string;
   series_capable_skeleton?: boolean;
-  profile_role?: 'canonical' | 'legacy_domain_alias';
+  profile_role?: 'canonical';
   canonical_profile_id?: 'one_off' | 'series' | 'portfolio';
   shared_resource_roots: string[];
   project_stage_outputs_root: string;
@@ -150,48 +154,10 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
       project_stage_outputs_root: 'artifacts/stage_outputs',
     },
-    rca_series: {
-      workspace_mode: 'series',
-      profile_role: 'legacy_domain_alias',
-      canonical_profile_id: 'series',
-      project_collection_path: 'projects',
-      shared_resource_roots: [
-        'shared/sources',
-        'shared/brand',
-        'shared/visual_memory',
-        'shared/style_system',
-        'shared/material_inventory',
-      ],
-      project_stage_outputs_root: 'artifacts/stage_outputs',
-    },
-    mas_portfolio: {
-      workspace_mode: 'portfolio',
-      profile_role: 'legacy_domain_alias',
-      canonical_profile_id: 'portfolio',
-      project_collection_path: 'projects',
-      shared_resource_roots: ['data', 'literature', 'memory', 'shared/sources'],
-      project_stage_outputs_root: 'artifacts/stage_outputs',
-    },
   },
-  domain_profile_defaults: {
-    mas: 'portfolio',
-    mag: 'one_off',
-    rca: 'series',
-    oma: 'one_off',
-    obf: 'one_off',
-  },
-  legacy_domain_profile_aliases: {
-    mas_portfolio: {
-      canonical_profile_id: 'portfolio',
-      alias_for_domain: 'mas',
-      alias_role: 'legacy_domain_alias',
-    },
-    rca_series: {
-      canonical_profile_id: 'series',
-      alias_for_domain: 'rca',
-      alias_role: 'legacy_domain_alias',
-    },
-  },
+  domain_profile_defaults: Object.fromEntries(STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
+    .map((entry) => [entry.agent_id, entry.workspace_profile.default_profile_id])),
   default_user_inspection_surface: {
     ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
     project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',
@@ -216,9 +182,8 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
   workspace_initialization_policy: {
     default_workspace_mode: 'one_off',
     default_project_collection_path: 'projects',
-    legacy_project_collection_aliases: ['deliverables', 'studies'],
-    infer_series_when_user_requests_multiple_related_deliverables: true,
-    infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies: true,
+    infer_series_when_user_requests_multiple_related_projects: true,
+    infer_portfolio_when_user_requests_shared_workspace_with_multiple_projects: true,
     upgrading_one_off_to_series_must_not_move_existing_project_roots: true,
     explicit_workspace_mode_declaration_preferred: true,
   },
@@ -227,7 +192,6 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
       project_collection_path: 'projects',
       project_root_pattern: 'projects/<project-id>',
       project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',
-      legacy_project_collection_aliases: ['deliverables'],
     },
     series: {
       shared_roots: [
@@ -238,33 +202,21 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
         'shared/material_inventory',
       ],
       project_collection_path: 'projects',
-      project_root_pattern: 'projects/<deck-id>',
-      project_stage_outputs_pattern: 'projects/<deck-id>/artifacts/stage_outputs/<stage-id>/',
-      legacy_project_collection_aliases: ['deliverables'],
+      project_root_pattern: 'projects/<project-id>',
+      project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',
     },
     portfolio: {
       shared_roots: ['data', 'literature', 'memory'],
       project_collection_path: 'projects',
-      project_root_pattern: 'projects/<study-id>',
-      project_stage_outputs_pattern: 'projects/<study-id>/artifacts/stage_outputs/<stage-id>/',
-      legacy_project_collection_aliases: ['studies'],
-    },
-    rca_series: {
-      canonical_layout: 'series',
-      alias_role: 'legacy_domain_alias',
-      legacy_project_collection_aliases: ['deliverables'],
-    },
-    mas_portfolio: {
-      canonical_layout: 'portfolio',
-      alias_role: 'legacy_domain_alias',
-      legacy_project_collection_aliases: ['studies'],
+      project_root_pattern: 'projects/<project-id>',
+      project_stage_outputs_pattern: 'projects/<project-id>/artifacts/stage_outputs/<stage-id>/',
     },
   },
 } as const;
 
-const WORKSPACE_PROFILE_IDS = ['one_off', 'series', 'portfolio', 'rca_series', 'mas_portfolio'] as const;
+const WORKSPACE_PROFILE_IDS = ['one_off', 'series', 'portfolio'] as const;
 
-function isWorkspaceProfileId(value: unknown): value is WorkspaceProfileId {
+export function isWorkspaceProfileId(value: unknown): value is WorkspaceProfileId {
   return typeof value === 'string' && WORKSPACE_PROFILE_IDS.includes(value as WorkspaceProfileId);
 }
 
@@ -278,14 +230,6 @@ const SHARED_RESOURCE_ROLES: Record<string, string> = {
   'shared/visual_memory': 'visual_memory',
   'shared/style_system': 'style_system',
   'shared/material_inventory': 'material_inventory',
-};
-
-const PROJECT_COLLECTION_DISPLAY_LABELS: Record<WorkspaceAgentProfile['agent_id'], string> = {
-  mas: 'studies',
-  mag: 'deliverables',
-  rca: 'deliverables',
-  oma: 'deliverables',
-  obf: 'books',
 };
 
 function topologyContract() {
@@ -338,7 +282,7 @@ export function profileFromTopologyContract(profileId: WorkspaceProfileId): Topo
     workspace_mode: workspaceMode,
     project_collection_path: String(profile.project_collection_path),
     series_capable_skeleton: (profile as Record<string, unknown>).series_capable_skeleton === true,
-    profile_role: profile.profile_role === 'legacy_domain_alias' ? 'legacy_domain_alias' : 'canonical',
+    profile_role: 'canonical',
     canonical_profile_id:
       profile.canonical_profile_id === 'series' || profile.canonical_profile_id === 'portfolio'
         ? profile.canonical_profile_id
@@ -348,45 +292,11 @@ export function profileFromTopologyContract(profileId: WorkspaceProfileId): Topo
   };
 }
 
-export function defaultWorkspaceProfileId(agent: WorkspaceAgentProfile): WorkspaceProfileId {
-  const contract = topologyContract();
-  const defaults = contract.domain_profile_defaults;
-  if (!isRecord(defaults)) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'Workspace topology profile domain_profile_defaults must be an object.',
-      { contract_ref: WORKSPACE_TOPOLOGY_CONTRACT_REF },
-    );
-  }
-  const profileId = defaults[agent.agent_id];
-  if (isWorkspaceProfileId(profileId)) {
-    return profileId;
-  }
-  throw new FrameworkContractError(
-    'contract_shape_invalid',
-    'Workspace topology profile is missing the agent default profile.',
-    { agent_id: agent.agent_id, profile_id: profileId },
-  );
-}
-
 export function selectWorkspaceProfileId(
   agent: WorkspaceAgentProfile,
   requestedMode: WorkspaceModeInput,
-  commandName: 'workspace init' | 'workspace ensure' | 'workspace adopt' = 'workspace init',
 ): WorkspaceProfileId {
-  if (requestedMode === 'auto') {
-    return defaultWorkspaceProfileId(agent);
-  }
-  if (requestedMode === 'one_off') {
-    return 'one_off';
-  }
-  if (requestedMode === 'series') {
-    return 'series';
-  }
-  if (requestedMode === 'portfolio') {
-    return 'portfolio';
-  }
-  return defaultWorkspaceProfileId(agent);
+  return requestedMode === 'auto' ? agent.default_profile_id : requestedMode;
 }
 
 export function workspaceProjectEntry(
@@ -492,7 +402,7 @@ export function buildWorkspaceDisplayLabels(
 ): WorkspaceDisplayLabels {
   return {
     workspace: agent.workspace_kind,
-    project_collection: PROJECT_COLLECTION_DISPLAY_LABELS[agent.agent_id],
+    project_collection: 'projects',
     project_unit: agent.project_kind,
     stage_outputs: profile.project_stage_outputs_root,
     shared_resources: 'shared_resources',

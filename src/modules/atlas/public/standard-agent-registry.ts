@@ -4,4 +4,4 @@ export {
   listStandardDomainAgentIds,
   resolveStandardAgentByCanonicalPluginName,
   standardAgentDomainAliasEntries,
-} from '../standard-agent-registry.ts';
+} from '../../../kernel/standard-agent-registry.ts';

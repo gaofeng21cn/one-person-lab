@@ -372,32 +372,18 @@ test('agents scaffold emits canonical workspace topology profile', () => {
       'memory',
       'shared/sources',
     ]);
-    assert.equal(topology.default_profiles.mas_portfolio.workspace_mode, 'portfolio');
-    assert.equal(topology.default_profiles.mas_portfolio.profile_role, 'legacy_domain_alias');
-    assert.equal(topology.default_profiles.mas_portfolio.canonical_profile_id, 'portfolio');
-    assert.equal(topology.default_profiles.mas_portfolio.project_collection_path, 'projects');
-    assert.equal(topology.default_profiles.mas_portfolio.project_stage_outputs_root, 'artifacts/stage_outputs');
-    assert.deepEqual(topology.default_profiles.mas_portfolio.shared_resource_roots, [
-      'data',
-      'literature',
-      'memory',
-      'shared/sources',
-    ]);
     assert.equal(topology.default_profiles.series.workspace_mode, 'series');
     assert.equal(topology.default_profiles.series.profile_role, 'canonical');
     assert.equal(topology.default_profiles.series.canonical_profile_id, 'series');
-    assert.equal(topology.default_profiles.rca_series.workspace_mode, 'series');
-    assert.equal(topology.default_profiles.rca_series.profile_role, 'legacy_domain_alias');
-    assert.equal(topology.default_profiles.rca_series.canonical_profile_id, 'series');
-    assert.equal(topology.default_profiles.rca_series.project_collection_path, 'projects');
-    assert.equal(topology.default_profiles.rca_series.project_stage_outputs_root, 'artifacts/stage_outputs');
+    assert.deepEqual(Object.keys(topology.default_profiles).sort(), ['one_off', 'portfolio', 'series']);
     assert.equal(topology.domain_profile_defaults.mas, 'portfolio');
     assert.equal(topology.domain_profile_defaults.rca, 'series');
     assert.equal(topology.domain_profile_defaults.mag, 'one_off');
     assert.equal(topology.domain_profile_defaults.oma, 'one_off');
     assert.equal(topology.domain_profile_defaults.obf, 'one_off');
-    assert.equal(topology.legacy_domain_profile_aliases.mas_portfolio.canonical_profile_id, 'portfolio');
-    assert.equal(topology.legacy_domain_profile_aliases.rca_series.canonical_profile_id, 'series');
+    assert.equal('legacy_domain_profile_aliases' in topology, false);
+    assert.equal(JSON.stringify(topology).includes('studies'), false);
+    assert.equal(JSON.stringify(topology).includes('deliverables'), false);
     assert.equal(
       topology.default_user_inspection_surface.project_stage_outputs_pattern,
       '<project-root>/artifacts/stage_outputs/<stage-id>/',
@@ -439,6 +425,41 @@ test('agents scaffold validation blocks Foundry contracts missing workspace topo
       validated.validation.blockers.includes('foundry_agent_series_workspace_topology_profile_missing_or_invalid'),
       true,
     );
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold validation rejects legacy workspace profile aliases', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-topology-legacy-alias-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'workspace-topology-legacy-alias',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = readGeneratedJson(foundryContractPath);
+    foundryContract.workspace_topology_profile.default_profiles.rca_series = structuredClone(
+      foundryContract.workspace_topology_profile.default_profiles.series,
+    );
+    foundryContract.workspace_topology_profile.legacy_domain_profile_aliases = {
+      rca_series: { canonical_profile_id: 'series' },
+    };
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
+    assert.equal(validated.validation.blockers.includes(
+      'foundry_agent_series_workspace_topology_default_profile_keys_invalid',
+    ), true);
+    assert.equal(validated.validation.blockers.includes(
+      'foundry_agent_series_workspace_topology_legacy_profile_aliases_forbidden',
+    ), true);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }

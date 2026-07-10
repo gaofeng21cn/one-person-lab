@@ -54,7 +54,7 @@ Skill 弹性保留在 Skill 层。OPL foundation support Skill 和 source-only h
 
 ## 2026-07-08 追加收口：standard agent registry pointer hygiene
 
-本轮继续排查标准智能体边界，确认 `mas`、`mag`、`rca`、`oma`、`obf` 是 standard domain agents，`mas-scholar-skills` 是 `framework_capability_package`。`opl-meta-agent` 与 `opl-bookforge` 只作为 OMA / BookForge repo、alias、plugin 或 package carrier 名保留，不再作为 standard-agent canonical id。已把 Standard Agent Registry 的 canonical pointer 从旧 root-level 路径修正为 `src/modules/charter/standard-agent-registry.ts`，并同步 foundry series contract、target architecture、Foundry CLI / skill boundary tests 与默认 Skill 生态文档。详细矩阵见 [OPL 标准智能体边界调整 2026-07-08](./opl-standard-agent-boundary-adjustment-20260708.md)。
+本轮继续排查标准智能体边界，确认 `mas`、`mag`、`rca`、`oma`、`obf` 是 standard domain agents，`mas-scholar-skills` 是 `framework_capability_package`。`opl-meta-agent` 与 `opl-bookforge` 只作为 OMA / BookForge repo、alias、plugin 或 package carrier 名保留，不再作为 standard-agent canonical id。已把 Standard Agent Registry 的 canonical pointer 从旧 root-level 路径修正为 `src/kernel/standard-agent-registry.ts`，并同步 foundry series contract、target architecture、Foundry CLI / skill boundary tests 与默认 Skill 生态文档。详细矩阵见 [OPL 标准智能体边界调整 2026-07-08](./opl-standard-agent-boundary-adjustment-20260708.md)。
 
 ## 2026-07-09 追加收口：vocabulary / profile data hygiene
 

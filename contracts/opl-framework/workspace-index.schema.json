@@ -55,7 +55,8 @@
             "mas",
             "mag",
             "rca",
-            "oma"
+            "oma",
+            "obf"
           ]
         },
         "project_id": {
@@ -209,8 +210,8 @@
         "profile_id": {
           "enum": [
             "one_off",
-            "rca_series",
-            "mas_portfolio"
+            "series",
+            "portfolio"
           ]
         },
         "workspace_mode": {
@@ -250,8 +251,8 @@
         "profile_id": {
           "enum": [
             "one_off",
-            "rca_series",
-            "mas_portfolio"
+            "series",
+            "portfolio"
           ]
         },
         "profile_version": {
@@ -348,8 +349,8 @@
         "profile_id": {
           "enum": [
             "one_off",
-            "rca_series",
-            "mas_portfolio"
+            "series",
+            "portfolio"
           ]
         },
         "workspace_mode": {
@@ -537,6 +538,9 @@
       "required": [
         "root",
         "stage_folder_unit",
+        "stage_outputs_index_file",
+        "current_stage_pointer_file",
+        "stage_lifecycle_model",
         "required_stage_folder_shape"
       ],
       "properties": {
@@ -545,6 +549,25 @@
         },
         "stage_folder_unit": {
           "const": "stage_artifact_unit"
+        },
+        "stage_outputs_index_file": {
+          "const": "stage_outputs_index.json"
+        },
+        "current_stage_pointer_file": {
+          "const": "current_stage.json"
+        },
+        "stage_lifecycle_model": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "open" },
+            { "const": "active" },
+            { "const": "completed" },
+            { "const": "blocked" },
+            { "const": "superseded" },
+            { "const": "archived" }
+          ],
+          "minItems": 6,
+          "maxItems": 6
         },
         "required_stage_folder_shape": {
           "type": "array",
@@ -578,35 +601,37 @@
         "object",
         "null"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
+        "profile",
+        "workspace_mode",
+        "project_kind",
         "project_collection_path",
         "canonical_project_collection_role",
-        "project_collection_alias_role",
-        "project_collection_display_label",
-        "project_semantic_aliases",
         "user_inspection_roots",
-        "legacy_project_collection_aliases"
+        "shared_resource_roots"
       ],
       "properties": {
-        "canonical_project_collection_role": {
-          "const": "project_units"
-        },
-        "project_collection_alias_role": {
+        "profile": {
           "enum": [
-            "legacy_display_alias",
-            "display_domain_alias"
+            "one_off",
+            "series",
+            "portfolio"
           ]
         },
-        "project_collection_display_label": {
-          "type": "string"
+        "workspace_mode": {
+          "enum": [
+            "one_off",
+            "series",
+            "portfolio"
+          ]
         },
-        "project_semantic_aliases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1
+        "project_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "canonical_project_collection_role": {
+          "const": "project_units"
         },
         "user_inspection_roots": {
           "type": "array",
@@ -615,14 +640,14 @@
           },
           "minItems": 1
         },
-        "project_collection_path": {
-          "const": "projects"
-        },
-        "legacy_project_collection_aliases": {
+        "shared_resource_roots": {
           "type": "array",
           "items": {
             "type": "string"
           }
+        },
+        "project_collection_path": {
+          "const": "projects"
         }
       }
     },

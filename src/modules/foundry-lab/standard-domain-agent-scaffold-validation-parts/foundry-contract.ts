@@ -3,6 +3,10 @@ import {
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
 } from '../standard-domain-agent-scaffold-constants.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../kernel/standard-agent-registry.ts';
 import { isPlainRecord, readOptionalString, readStringArray } from './shared.ts';
 
 function forbiddenActivePublicFoundryFieldName(key: string) {
@@ -89,21 +93,20 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
   const portfolioWorkspaceProfile = isPlainRecord(defaultProfiles?.portfolio)
     ? defaultProfiles.portfolio
     : null;
-  const legacyProfileAliases = isPlainRecord(workspaceTopologyProfile?.legacy_domain_profile_aliases)
-    ? workspaceTopologyProfile.legacy_domain_profile_aliases
-    : null;
-  const legacyMasPortfolioAlias = isPlainRecord(legacyProfileAliases?.mas_portfolio)
-    ? legacyProfileAliases.mas_portfolio
-    : null;
-  const legacyRcaSeriesAlias = isPlainRecord(legacyProfileAliases?.rca_series)
-    ? legacyProfileAliases.rca_series
-    : null;
   const oneOffSharedResourceRoots = readStringArray(oneOffWorkspaceProfile?.shared_resource_roots);
   const seriesSharedResourceRoots = readStringArray(seriesWorkspaceProfile?.shared_resource_roots);
   const portfolioSharedResourceRoots = readStringArray(portfolioWorkspaceProfile?.shared_resource_roots);
   const domainProfileDefaults = isPlainRecord(workspaceTopologyProfile?.domain_profile_defaults)
     ? workspaceTopologyProfile.domain_profile_defaults
     : null;
+  const standardDomainRegistryEntries = STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP);
+  const defaultProfileKeys = Object.keys(defaultProfiles ?? {}).sort();
+  const expectedDefaultProfileKeys = ['one_off', 'portfolio', 'series'];
+  const domainProfileDefaultKeys = Object.keys(domainProfileDefaults ?? {}).sort();
+  const expectedDomainProfileDefaultKeys = standardDomainRegistryEntries
+    .map((entry) => entry.agent_id)
+    .sort();
   const defaultUserInspectionSurface = isPlainRecord(
     workspaceTopologyProfile?.default_user_inspection_surface,
   )
@@ -143,6 +146,12 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
   const toolSectionFinding = stagePackSections.includes('tools')
     ? null
     : 'foundry_agent_series_design_profile_missing_tools_section';
+  const domainProfileDefaultBlockers = standardDomainRegistryEntries
+    .map((entry) =>
+      readOptionalString(domainProfileDefaults?.[entry.agent_id]) === entry.workspace_profile.default_profile_id
+        ? null
+        : `foundry_agent_series_workspace_topology_${entry.agent_id}_default_profile_invalid`
+    );
   const blockers = [
     contract ? null : 'foundry_agent_series_contract_missing_or_invalid',
     readOptionalString(contract?.surface_kind) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.surface_kind
@@ -260,6 +269,15 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     readOptionalString(workspaceTopologyProfile?.profile_id) === 'opl.workspace_topology_profile.v1'
       ? null
       : 'foundry_agent_series_workspace_topology_profile_id_invalid',
+    defaultProfileKeys.join('/') === expectedDefaultProfileKeys.join('/')
+      ? null
+      : 'foundry_agent_series_workspace_topology_default_profile_keys_invalid',
+    domainProfileDefaultKeys.join('/') === expectedDomainProfileDefaultKeys.join('/')
+      ? null
+      : 'foundry_agent_series_workspace_topology_domain_profile_default_keys_invalid',
+    !workspaceTopologyProfile || !('legacy_domain_profile_aliases' in workspaceTopologyProfile)
+      ? null
+      : 'foundry_agent_series_workspace_topology_legacy_profile_aliases_forbidden',
     topologyModel.includes('workspace_group')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_workspace_group',
@@ -335,24 +353,7 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     workspaceModes.includes('portfolio')
       ? null
       : 'foundry_agent_series_workspace_topology_missing_portfolio_mode',
-    readOptionalString(domainProfileDefaults?.mas) === 'portfolio'
-      ? null
-      : 'foundry_agent_series_workspace_topology_mas_default_profile_invalid',
-    readOptionalString(domainProfileDefaults?.mag) === 'one_off'
-      ? null
-      : 'foundry_agent_series_workspace_topology_mag_default_profile_invalid',
-    readOptionalString(domainProfileDefaults?.rca) === 'series'
-      ? null
-      : 'foundry_agent_series_workspace_topology_rca_default_profile_invalid',
-    readOptionalString(legacyMasPortfolioAlias?.canonical_profile_id) === 'portfolio'
-      ? null
-      : 'foundry_agent_series_workspace_topology_legacy_mas_alias_invalid',
-    readOptionalString(legacyRcaSeriesAlias?.canonical_profile_id) === 'series'
-      ? null
-      : 'foundry_agent_series_workspace_topology_legacy_rca_alias_invalid',
-    readOptionalString(domainProfileDefaults?.oma) === 'one_off'
-      ? null
-      : 'foundry_agent_series_workspace_topology_oma_default_profile_invalid',
+    ...domainProfileDefaultBlockers,
     readOptionalString(defaultUserInspectionSurface?.ordinary_user_default_surface)
       === 'workspace_local_project_stage_outputs'
       ? null

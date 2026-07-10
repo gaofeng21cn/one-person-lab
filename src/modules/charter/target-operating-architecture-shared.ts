@@ -8,7 +8,7 @@ import {
   BRAND_MODULE_IDS,
   expectNonEmptyStringArray,
 } from './brand-module-contracts.ts';
-import { listStandardDomainAgentIds } from './standard-agent-registry.ts';
+import { listStandardDomainAgentIds } from '../../kernel/standard-agent-registry.ts';
 
 export function expectFalseBoolean(value: unknown, field: string, filePath: string) {
   if (value !== false) {

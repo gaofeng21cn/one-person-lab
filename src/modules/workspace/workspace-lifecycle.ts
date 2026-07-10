@@ -30,6 +30,7 @@ import {
 } from './workspace-artifacts.ts';
 import { buildWorkspaceCatalog, type WorkspaceBinding } from './workspace-registry.ts';
 import {
+  isWorkspaceProfileId,
   type TopologyProfile,
   type WorkspaceLifecycleStatus,
   type WorkspaceProfileId,
@@ -93,16 +94,7 @@ function readWorkspaceIndex(indexPath: string) {
 function profileIdFromIndex(index: Record<string, unknown>): WorkspaceProfileId | null {
   const profile = isRecord(index.workspace_topology_profile) ? index.workspace_topology_profile : null;
   const profileId = profile?.profile_id;
-  if (
-    profileId === 'one_off'
-    || profileId === 'series'
-    || profileId === 'portfolio'
-    || profileId === 'rca_series'
-    || profileId === 'mas_portfolio'
-  ) {
-    return profileId;
-  }
-  return null;
+  return isWorkspaceProfileId(profileId) ? profileId : null;
 }
 
 function profileFromIndex(index: Record<string, unknown>): TopologyProfile | null {

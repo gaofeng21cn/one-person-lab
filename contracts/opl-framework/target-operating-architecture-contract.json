@@ -1018,7 +1018,7 @@
   "foundry_agent_os_standard": {
     "pattern_id": "foundry_agent_os_standard.v1",
     "source_pattern_ref": "human_doc:mas_opl_agent_os_target_operating_architecture",
-    "standard_agent_registry_ref": "src/modules/charter/standard-agent-registry.ts",
+    "standard_agent_registry_ref": "src/kernel/standard-agent-registry.ts",
     "target_shape": "OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry",
     "applies_to_domain_agents": [
       "mas",

@@ -11,7 +11,7 @@ import type {
 import {
   listStandardDomainAgentIds,
   resolveStandardAgent,
-} from './standard-agent-registry.ts';
+} from '../../kernel/standard-agent-registry.ts';
 
 type BrandModuleCommandArgs = string[];
 type AgentInternalModuleCommandArgs = string[];

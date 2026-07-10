@@ -8,7 +8,7 @@
   "state": "active_contract",
   "machine_boundary": "OPL owns the topology envelope, workspace modes, default profile templates, generated projection boundary, and runtime-state boundary. Domain repositories own domain truth, workspace instances, product views, artifact bodies, owner receipts, typed blockers, quality verdicts, and export verdicts.",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "required": [
     "surface_kind",
     "version",
@@ -70,7 +70,7 @@
     },
     "default_profiles": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "one_off",
         "series",
@@ -85,49 +85,18 @@
         },
         "portfolio": {
           "$ref": "#/$defs/portfolio_profile"
-        },
-        "rca_series": {
-          "$ref": "#/$defs/legacy_rca_series_profile"
-        },
-        "mas_portfolio": {
-          "$ref": "#/$defs/legacy_mas_portfolio_profile"
         }
       }
     },
     "domain_profile_defaults": {
       "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "mas",
-        "mag",
-        "rca",
-        "oma"
-      ],
-      "properties": {
-        "mas": {
-          "const": "portfolio"
-        },
-        "mag": {
-          "const": "one_off"
-        },
-        "rca": {
-          "const": "series"
-        },
-        "oma": {
-          "const": "one_off"
-        }
-      }
-    },
-    "legacy_domain_profile_aliases": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "mas_portfolio": {
-          "$ref": "#/$defs/legacy_profile_alias"
-        },
-        "rca_series": {
-          "$ref": "#/$defs/legacy_profile_alias"
-        }
+      "minProperties": 1,
+      "additionalProperties": {
+        "enum": [
+          "one_off",
+          "series",
+          "portfolio"
+        ]
       }
     },
     "default_user_inspection_surface": {
@@ -253,71 +222,6 @@
         }
       }
     },
-    "legacy_rca_series_profile": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/series_profile"
-        },
-        {
-          "type": "object",
-          "additionalProperties": true,
-          "required": [
-            "profile_role",
-            "canonical_profile_id"
-          ],
-          "properties": {
-            "profile_role": {
-              "const": "legacy_domain_alias"
-            },
-            "canonical_profile_id": {
-              "const": "series"
-            }
-          }
-        }
-      ]
-    },
-    "legacy_mas_portfolio_profile": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/portfolio_profile"
-        },
-        {
-          "type": "object",
-          "additionalProperties": true,
-          "required": [
-            "profile_role",
-            "canonical_profile_id"
-          ],
-          "properties": {
-            "profile_role": {
-              "const": "legacy_domain_alias"
-            },
-            "canonical_profile_id": {
-              "const": "portfolio"
-            }
-          }
-        }
-      ]
-    },
-    "legacy_profile_alias": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "canonical_profile_id",
-        "alias_role"
-      ],
-      "properties": {
-        "canonical_profile_id": {
-          "enum": [
-            "series",
-            "portfolio"
-          ]
-        },
-        "alias_role": {
-          "const": "legacy_domain_alias"
-        }
-      }
-    },
     "runtime_state_boundary": {
       "type": "object",
       "additionalProperties": true,
@@ -380,13 +284,12 @@
     },
     "workspace_initialization_policy": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "default_workspace_mode",
         "default_project_collection_path",
-        "legacy_project_collection_aliases",
-        "infer_series_when_user_requests_multiple_related_deliverables",
-        "infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies",
+        "infer_series_when_user_requests_multiple_related_projects",
+        "infer_portfolio_when_user_requests_shared_workspace_with_multiple_projects",
         "upgrading_one_off_to_series_must_not_move_existing_project_roots",
         "explicit_workspace_mode_declaration_preferred"
       ],
@@ -394,10 +297,10 @@
         "default_workspace_mode": {
           "const": "one_off"
         },
-        "infer_series_when_user_requests_multiple_related_deliverables": {
+        "infer_series_when_user_requests_multiple_related_projects": {
           "const": true
         },
-        "infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies": {
+        "infer_portfolio_when_user_requests_shared_workspace_with_multiple_projects": {
           "const": true
         },
         "upgrading_one_off_to_series_must_not_move_existing_project_roots": {
@@ -408,25 +311,12 @@
         },
         "default_project_collection_path": {
           "const": "projects"
-        },
-        "legacy_project_collection_aliases": {
-          "type": "array",
-          "prefixItems": [
-            {
-              "const": "deliverables"
-            },
-            {
-              "const": "studies"
-            }
-          ],
-          "minItems": 2,
-          "maxItems": 2
         }
       }
     },
     "example_project_layouts": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "one_off",
         "series",
@@ -435,12 +325,11 @@
       "properties": {
         "one_off": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "required": [
             "project_collection_path",
             "project_root_pattern",
-            "project_stage_outputs_pattern",
-            "legacy_project_collection_aliases"
+            "project_stage_outputs_pattern"
           ],
           "properties": {
             "project_collection_path": {
@@ -451,24 +340,17 @@
             },
             "project_stage_outputs_pattern": {
               "const": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
-            },
-            "legacy_project_collection_aliases": {
-              "type": "array",
-              "contains": {
-                "const": "deliverables"
-              }
             }
           }
         },
         "series": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "required": [
             "shared_roots",
             "project_collection_path",
             "project_root_pattern",
-            "project_stage_outputs_pattern",
-            "legacy_project_collection_aliases"
+            "project_stage_outputs_pattern"
           ],
           "properties": {
             "shared_roots": {
@@ -481,28 +363,21 @@
               "const": "projects"
             },
             "project_root_pattern": {
-              "const": "projects/<deck-id>"
+              "const": "projects/<project-id>"
             },
             "project_stage_outputs_pattern": {
-              "const": "projects/<deck-id>/artifacts/stage_outputs/<stage-id>/"
-            },
-            "legacy_project_collection_aliases": {
-              "type": "array",
-              "contains": {
-                "const": "deliverables"
-              }
+              "const": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
             }
           }
         },
         "portfolio": {
           "type": "object",
-          "additionalProperties": true,
+          "additionalProperties": false,
           "required": [
             "shared_roots",
             "project_collection_path",
             "project_root_pattern",
-            "project_stage_outputs_pattern",
-            "legacy_project_collection_aliases"
+            "project_stage_outputs_pattern"
           ],
           "properties": {
             "shared_roots": {
@@ -515,16 +390,10 @@
               "const": "projects"
             },
             "project_root_pattern": {
-              "const": "projects/<study-id>"
+              "const": "projects/<project-id>"
             },
             "project_stage_outputs_pattern": {
-              "const": "projects/<study-id>/artifacts/stage_outputs/<stage-id>/"
-            },
-            "legacy_project_collection_aliases": {
-              "type": "array",
-              "contains": {
-                "const": "studies"
-              }
+              "const": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
             }
           }
         }
@@ -588,33 +457,6 @@
             "shared/sources"
           ],
           "project_stage_outputs_root": "artifacts/stage_outputs"
-        },
-        "rca_series": {
-          "workspace_mode": "series",
-          "profile_role": "legacy_domain_alias",
-          "canonical_profile_id": "series",
-          "project_collection_path": "projects",
-          "shared_resource_roots": [
-            "shared/sources",
-            "shared/brand",
-            "shared/visual_memory",
-            "shared/style_system",
-            "shared/material_inventory"
-          ],
-          "project_stage_outputs_root": "artifacts/stage_outputs"
-        },
-        "mas_portfolio": {
-          "workspace_mode": "portfolio",
-          "profile_role": "legacy_domain_alias",
-          "canonical_profile_id": "portfolio",
-          "project_collection_path": "projects",
-          "shared_resource_roots": [
-            "data",
-            "literature",
-            "memory",
-            "shared/sources"
-          ],
-          "project_stage_outputs_root": "artifacts/stage_outputs"
         }
       },
       "domain_profile_defaults": {
@@ -622,19 +464,7 @@
         "mag": "one_off",
         "rca": "series",
         "oma": "one_off",
-        "bookforge": "one_off"
-      },
-      "legacy_domain_profile_aliases": {
-        "mas_portfolio": {
-          "canonical_profile_id": "portfolio",
-          "alias_for_domain": "mas",
-          "alias_role": "legacy_domain_alias"
-        },
-        "rca_series": {
-          "canonical_profile_id": "series",
-          "alias_for_domain": "rca",
-          "alias_role": "legacy_domain_alias"
-        }
+        "obf": "one_off"
       },
       "default_user_inspection_surface": {
         "ordinary_user_default_surface": "workspace_local_project_stage_outputs",
@@ -659,24 +489,17 @@
       },
       "workspace_initialization_policy": {
         "default_workspace_mode": "one_off",
-        "infer_series_when_user_requests_multiple_related_deliverables": true,
-        "infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies": true,
+        "infer_series_when_user_requests_multiple_related_projects": true,
+        "infer_portfolio_when_user_requests_shared_workspace_with_multiple_projects": true,
         "upgrading_one_off_to_series_must_not_move_existing_project_roots": true,
         "explicit_workspace_mode_declaration_preferred": true,
-        "default_project_collection_path": "projects",
-        "legacy_project_collection_aliases": [
-          "deliverables",
-          "studies"
-        ]
+        "default_project_collection_path": "projects"
       },
       "example_project_layouts": {
         "one_off": {
           "project_collection_path": "projects",
           "project_root_pattern": "projects/<project-id>",
-          "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/",
-          "legacy_project_collection_aliases": [
-            "deliverables"
-          ]
+          "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
         },
         "series": {
           "shared_roots": [
@@ -687,11 +510,8 @@
             "shared/material_inventory"
           ],
           "project_collection_path": "projects",
-          "project_root_pattern": "projects/<deck-id>",
-          "project_stage_outputs_pattern": "projects/<deck-id>/artifacts/stage_outputs/<stage-id>/",
-          "legacy_project_collection_aliases": [
-            "deliverables"
-          ]
+          "project_root_pattern": "projects/<project-id>",
+          "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
         },
         "portfolio": {
           "shared_roots": [
@@ -700,25 +520,8 @@
             "memory"
           ],
           "project_collection_path": "projects",
-          "project_root_pattern": "projects/<study-id>",
-          "project_stage_outputs_pattern": "projects/<study-id>/artifacts/stage_outputs/<stage-id>/",
-          "legacy_project_collection_aliases": [
-            "studies"
-          ]
-        },
-        "rca_series": {
-          "canonical_layout": "series",
-          "alias_role": "legacy_domain_alias",
-          "legacy_project_collection_aliases": [
-            "deliverables"
-          ]
-        },
-        "mas_portfolio": {
-          "canonical_layout": "portfolio",
-          "alias_role": "legacy_domain_alias",
-          "legacy_project_collection_aliases": [
-            "studies"
-          ]
+          "project_root_pattern": "projects/<project-id>",
+          "project_stage_outputs_pattern": "projects/<project-id>/artifacts/stage_outputs/<stage-id>/"
         }
       }
     }

@@ -98,7 +98,7 @@ const DOMAIN_SPECIFIC_CARRIER_BOUNDARIES = [
     allowed_machine_role: 'domain_owned_fundability_verdict_ref_projection',
     source_evidence_refs: [
       'src/modules/runway/generic-substrate-projection.ts',
-      'src/modules/charter/standard-agent-registry.ts',
+      'src/kernel/standard-agent-registry.ts',
       'src/modules/foundry-lab/agent-lab-promotion.ts',
     ],
   },

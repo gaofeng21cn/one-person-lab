@@ -100,9 +100,6 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
     topology.default_project_collection_path === 'projects'
       ? null
       : 'workspace_default_project_collection_path_drift',
-    topology.legacy_project_collection_aliases.join('/') === 'deliverables/studies'
-      ? null
-      : 'workspace_legacy_project_collection_aliases_drift',
     profileIds.join('/') === supportedAgentIds.join('/')
       ? null
       : 'workspace_domain_topology_profiles_must_match_standard_agent_registry',

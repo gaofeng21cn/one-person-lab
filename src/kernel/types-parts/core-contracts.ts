@@ -169,6 +169,10 @@ export interface AgentWorkspaceNormContract {
   owner: string;
   scope: string;
   machine_boundary: string;
+  supported_agent_registry: {
+    source_ref: string;
+    series_membership: string;
+  };
   supported_agents: string[];
   default_workspace_precondition: {
     action_id: string;
@@ -238,7 +242,6 @@ export interface AgentWorkspaceNormContract {
       required_stage_folder_shape: string[];
     };
     default_project_collection_path: string;
-    legacy_project_collection_aliases: string[];
     workspace_modes: string[];
     series_capable_one_off_skeleton: boolean;
   };
@@ -248,10 +251,6 @@ export interface AgentWorkspaceNormContract {
     project_kind: string;
     project_collection_path: string;
     canonical_project_collection_role: string;
-    project_collection_alias_role: string;
-    project_collection_display_label: string;
-    project_semantic_aliases: string[];
-    legacy_project_collection_aliases: string[];
     user_inspection_roots: string[];
     shared_resource_roots: string[];
   }>;

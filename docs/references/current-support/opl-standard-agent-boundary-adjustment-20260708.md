@@ -9,7 +9,7 @@ Machine boundary: 本文是人读排查与调整说明。机器真相继续归 s
 
 本轮排查使用以下当前读面：
 
-- `src/modules/charter/standard-agent-registry.ts`
+- `src/kernel/standard-agent-registry.ts`
 - `contracts/opl-framework/foundry-agent-series-contract.json`
 - `contracts/opl-framework/target-operating-architecture-contract.json`
 - `contracts/opl-framework/domain-private-platform-tail-matrix.json`
@@ -23,7 +23,7 @@ Machine boundary: 本文是人读排查与调整说明。机器真相继续归 s
 
 | 调整 | 类型 | 原问题 | 当前落点 |
 | --- | --- | --- | --- |
-| Standard Agent Registry pointer 修正 | OPL 基座上收 / hygiene | contract、readback 和测试仍指向已不存在的旧 root-level registry path，容易误导维护者把标准智能体 registry 当成缺失或第二套 truth。 | canonical ref 改为 `src/modules/charter/standard-agent-registry.ts`；同步 `foundry-agent-series`、target architecture、Foundry CLI / skill boundary / brand-module tests 与 active support doc。 |
+| Standard Agent Registry pointer 修正 | OPL 基座上收 / hygiene | contract、readback 和测试仍指向已不存在的旧 root-level registry path，容易误导维护者把标准智能体 registry 当成缺失或第二套 truth。 | canonical ref 改为 `src/kernel/standard-agent-registry.ts`；同步 `foundry-agent-series`、target architecture、Foundry CLI / skill boundary / brand-module tests 与 active support doc。 |
 | Derived projection paths 修正 | OPL 基座上收 / hygiene | `foundry-agent-series-contract` 仍把 derived surfaces 写成旧 root-level 文件。 | 改为 `src/modules/foundry-lab/foundry-agent-cli-spine.ts`、`src/modules/connect/opl-skills.ts`、`src/modules/foundry-lab/standard-domain-agent-conformance-foundry-agent-os.ts`。 |
 | 默认 Skill 生态 source pointer 修正 | OPL Connect hygiene | `opl-default-skill-ecosystem` 仍引用旧 root-level Skill catalog 和旧 plugin registry 路径。 | 改为 `src/modules/connect/opl-skills.ts` 与 `src/modules/connect/system-installation/codex-plugin-registry.ts`。 |
 | Primary Skill carrier projection 固化 | OPL Connect / Codex install carrier | 五个标准 agent 的 `agent/primary_skill/SKILL.md` 是 repo-owned canonical source，但 Codex plugin install 仍需要 plugin 目录下真实 `SKILL.md`；如果只把 plugin skill 当重复文件删除，会破坏 standalone plugin 安装。 | `foundry-agent-series-contract` 增加 `primary_skill_carrier_projection_policy`；`opl connect sync-skills` materialize 完整 skill copy，并在 generated plugin 写入 `opl-carrier.json` provenance。Carrier 不是 membership/status/authority 轴。 |

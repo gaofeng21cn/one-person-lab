@@ -34,6 +34,7 @@ import {
   buildWorkspaceDisplayLabels,
   profileFromTopologyContract,
   expectedDomainTopologyProfile,
+  isWorkspaceProfileId,
   selectWorkspaceProfileId,
   toWorkspaceRelative,
   WORKSPACE_TOPOLOGY_CONTRACT_REF,
@@ -225,16 +226,7 @@ function normalizeExistingProjects(projects: unknown) {
 function profileIdFromWorkspaceIndex(index: Record<string, unknown> | null): WorkspaceProfileId | null {
   const profile = isRecord(index?.workspace_topology_profile) ? index.workspace_topology_profile : null;
   const profileId = profile?.profile_id;
-  if (
-    profileId === 'one_off'
-    || profileId === 'series'
-    || profileId === 'portfolio'
-    || profileId === 'rca_series'
-    || profileId === 'mas_portfolio'
-  ) {
-    return profileId;
-  }
-  return null;
+  return isWorkspaceProfileId(profileId) ? profileId : null;
 }
 
 function mergeWorkspaceProjects(
@@ -486,7 +478,7 @@ export function initializeWorkspace(
 ) {
   const agent = findWorkspaceAgentProfile(options.agentId);
   const mode = normalizeMode(options.mode);
-  const profileId = selectWorkspaceProfileId(agent, mode, 'workspace init');
+  const profileId = selectWorkspaceProfileId(agent, mode);
   const profile = profileFromTopologyContract(profileId);
   const workspacePath = resolveWorkspacePath(options, agent);
   const workspaceId = normalizeRequiredSegment(path.basename(workspacePath), 'workspace_id');
@@ -691,7 +683,7 @@ export function ensureWorkspace(
 
   if (activeWorkspacePath && activeWorkspaceIndexPath && indexedProject && !options.force) {
     const refreshedIndex = readExistingWorkspaceIndex(activeWorkspaceIndexPath);
-    const profileId = profileIdFromWorkspaceIndex(refreshedIndex) ?? selectWorkspaceProfileId(agent, 'auto', 'workspace ensure');
+    const profileId = profileIdFromWorkspaceIndex(refreshedIndex) ?? selectWorkspaceProfileId(agent, 'auto');
     const profile = profileFromTopologyContract(profileId);
     if (refreshedIndex) {
       assertCompatibleExistingIndex({ existingIndex: refreshedIndex, agent, profileId, profile });

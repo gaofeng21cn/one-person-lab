@@ -6,7 +6,7 @@ import { test } from 'node:test';
 
 import { readFamilySkillPacks } from '../../src/modules/connect/opl-skills.ts';
 import { normalizeDomainSelection } from '../../src/modules/connect/opl-skills-parts/registry.ts';
-import { resolveStandardAgent } from '../../src/modules/atlas/standard-agent-registry.ts';
+import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/modules/connect/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/modules/connect/system-installation/shared.ts';
 
@@ -196,7 +196,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.professional_skill_exposure.default_codex_exposed_count, 0);
     assert.equal(pack.foundry_agent_series.canonical_command_surface, 'opl agents foundry');
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
-    assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/modules/charter/standard-agent-registry.ts');
+    assert.equal(pack.foundry_agent_series.standard_agent_registry_ref, 'src/kernel/standard-agent-registry.ts');
     assert.equal(
       pack.foundry_agent_series.default_foundry_command_surface,
       `opl foundry agents inspect ${pack.foundry_agent_series.foundry_agent_id}`,

@@ -3,15 +3,12 @@
   "version": "agent-workspace-norm.v1",
   "norm_id": "opl.agent_workspace_norm.v1",
   "owner": "one-person-lab",
-  "scope": "OPL-owned executable workspace norm for MAS, MAG, RCA, OMA, OBF, and future Foundry Agents",
+  "scope": "OPL-owned executable workspace norm for standard domain agents declared by the canonical registry",
   "machine_boundary": "This contract fixes the framework-owned workspace precondition, topology, registry, descriptor delegate, user inspection, and authority boundary. Domain agents keep domain truth, source/artifact/memory bodies, owner receipts, typed blockers, and quality/export verdicts.",
-  "supported_agents": [
-    "mas",
-    "mag",
-    "rca",
-    "oma",
-    "obf"
-  ],
+  "supported_agent_registry": {
+    "source_ref": "src/kernel/standard-agent-registry.ts",
+    "series_membership": "standard_domain_agent"
+  },
   "default_workspace_precondition": {
     "action_id": "opl_workspace_ensure",
     "command": "opl workspace ensure",
@@ -119,11 +116,7 @@
       "series",
       "portfolio"
     ],
-    "series_capable_one_off_skeleton": true,
-    "legacy_project_collection_aliases": [
-      "deliverables",
-      "studies"
-    ]
+    "series_capable_one_off_skeleton": true
   },
   "domain_topology_profiles": {
     "mas": {
@@ -132,12 +125,6 @@
       "project_kind": "study",
       "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "legacy_display_alias",
-      "project_collection_display_label": "studies",
-      "project_semantic_aliases": [
-        "study",
-        "studies"
-      ],
       "user_inspection_roots": [
         "projects/<project-id>/artifacts/stage_outputs"
       ],
@@ -146,9 +133,6 @@
         "literature",
         "memory",
         "shared/sources"
-      ],
-      "legacy_project_collection_aliases": [
-        "studies"
       ]
     },
     "mag": {
@@ -157,12 +141,6 @@
       "project_kind": "grant_project",
       "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "legacy_display_alias",
-      "project_collection_display_label": "deliverables",
-      "project_semantic_aliases": [
-        "grant_project",
-        "deliverable"
-      ],
       "user_inspection_roots": [
         "projects/<project-id>/artifacts/stage_outputs"
       ],
@@ -170,9 +148,6 @@
         "shared/sources",
         "shared/memory",
         "shared/style_system"
-      ],
-      "legacy_project_collection_aliases": [
-        "deliverables"
       ]
     },
     "rca": {
@@ -181,13 +156,6 @@
       "project_kind": "slide_deck",
       "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "legacy_display_alias",
-      "project_collection_display_label": "deliverables",
-      "project_semantic_aliases": [
-        "slide_deck",
-        "deck",
-        "deliverable"
-      ],
       "user_inspection_roots": [
         "projects/<project-id>/artifacts/stage_outputs"
       ],
@@ -197,9 +165,6 @@
         "shared/visual_memory",
         "shared/style_system",
         "shared/material_inventory"
-      ],
-      "legacy_project_collection_aliases": [
-        "deliverables"
       ]
     },
     "oma": {
@@ -208,12 +173,6 @@
       "project_kind": "agent_capability",
       "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "legacy_display_alias",
-      "project_collection_display_label": "deliverables",
-      "project_semantic_aliases": [
-        "agent_capability",
-        "deliverable"
-      ],
       "user_inspection_roots": [
         "projects/<project-id>/artifacts/stage_outputs"
       ],
@@ -221,9 +180,6 @@
         "shared/sources",
         "shared/memory",
         "shared/style_system"
-      ],
-      "legacy_project_collection_aliases": [
-        "deliverables"
       ]
     },
     "obf": {
@@ -232,12 +188,6 @@
       "project_kind": "book_project",
       "project_collection_path": "projects",
       "canonical_project_collection_role": "project_units",
-      "project_collection_alias_role": "legacy_display_alias",
-      "project_collection_display_label": "books",
-      "project_semantic_aliases": [
-        "book_project",
-        "book"
-      ],
       "user_inspection_roots": [
         "projects/<project-id>/artifacts/stage_outputs"
       ],
@@ -245,9 +195,6 @@
         "shared/sources",
         "shared/memory",
         "shared/style_system"
-      ],
-      "legacy_project_collection_aliases": [
-        "deliverables"
       ]
     }
   },

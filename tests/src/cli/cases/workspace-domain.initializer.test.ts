@@ -4,9 +4,15 @@ import {
   os,
   parseJsonText,
   path,
+  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
+import {
+  STANDARD_AGENT_REGISTRY,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../../src/kernel/standard-agent-registry.ts';
+import { validateJsonSchemaPayload } from '../../../../src/kernel/schema-registry.ts';
 
 import './workspace-domain-initializer-cases/bookforge-artifact-lifecycle.ts';
 import './workspace-domain-initializer-cases/resource-provenance.ts';
@@ -23,7 +29,13 @@ function assertHasKeys(surface: Record<string, unknown>, keys: string[]) {
   }
 }
 
-test('workspace init materializes portfolio topology and appends studies', () => {
+const workspaceIndexSchemaPath = path.join(
+  repoRoot,
+  'contracts/opl-framework/workspace-index.schema.json',
+);
+const workspaceIndexSchema = readJsonFile(workspaceIndexSchemaPath);
+
+test('workspace init materializes portfolio topology and appends projects', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-init-mas-root-'));
 
@@ -82,6 +94,53 @@ test('workspace init materializes portfolio topology and appends studies', () =>
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace init and validate roundtrip every standard-agent registry profile', () => {
+  const agents = STANDARD_AGENT_REGISTRY.filter((entry) =>
+    entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP
+  );
+
+  for (const agent of agents) {
+    const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-workspace-${agent.agent_id}-state-`));
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-workspace-${agent.agent_id}-root-`));
+    try {
+      const projectId = `${agent.domain_alias}-roundtrip`;
+      const initialized = runCli([
+        'workspace',
+        'init',
+        '--agent',
+        agent.agent_id,
+        '--workspace-root',
+        workspaceRoot,
+        '--workspace-id',
+        `${agent.agent_id}-roundtrip`,
+        '--project-id',
+        projectId,
+      ], { OPL_STATE_DIR: stateRoot });
+      const workspacePath = initialized.workspace_initialization.workspace_path;
+      const validated = runCli([
+        'workspace',
+        'validate',
+        '--workspace',
+        workspacePath,
+      ], { OPL_STATE_DIR: stateRoot });
+      const workspaceIndex = readJsonFile(path.join(workspacePath, 'workspace_index.json'));
+      const schemaValidation = validateJsonSchemaPayload({
+        schemaId: workspaceIndexSchema.$id,
+        schema: workspaceIndexSchema,
+        sourceRef: 'contracts/opl-framework/workspace-index.schema.json',
+      }, workspaceIndex);
+
+      assert.equal(validated.workspace_validation.status, 'passed', agent.agent_id);
+      assert.equal(schemaValidation.ok, true, `${agent.agent_id}: ${JSON.stringify(schemaValidation)}`);
+      assert.equal(workspaceIndex.agent.project_kind, agent.workspace_profile.project_kind, agent.agent_id);
+      assert.equal(workspaceIndex.profile_binding.profile_id, agent.workspace_profile.default_profile_id, agent.agent_id);
+    } finally {
+      fs.rmSync(stateRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   }
 });
 

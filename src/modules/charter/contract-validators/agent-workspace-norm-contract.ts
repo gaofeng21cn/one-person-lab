@@ -6,7 +6,11 @@ import {
   isRecord,
 } from '../../../kernel/contract-validation.ts';
 import type { AgentWorkspaceNormContract } from '../../../kernel/types.ts';
-import { listStandardDomainAgentIds } from '../standard-agent-registry.ts';
+import {
+  listStandardDomainAgentIds,
+  STANDARD_AGENT_REGISTRY_REF,
+  STANDARD_AGENT_SERIES_MEMBERSHIP,
+} from '../../../kernel/standard-agent-registry.ts';
 
 function requireRecord(value: unknown, field: string, filePath: string) {
   if (!isRecord(value)) {
@@ -99,19 +103,35 @@ function validateDomainProfiles(
   supportedAgents: string[],
   filePath: string,
 ) {
+  assertExactStringArray(
+    Object.keys(section).sort(),
+    [...supportedAgents].sort(),
+    'domain_topology_profiles',
+    filePath,
+  );
   const profiles: AgentWorkspaceNormContract['domain_topology_profiles'] = {};
   for (const agentId of supportedAgents) {
     const profile = requireSection(section, agentId, filePath);
+    assertExactStringArray(
+      Object.keys(profile).sort(),
+      [
+        'profile',
+        'workspace_mode',
+        'project_kind',
+        'project_collection_path',
+        'canonical_project_collection_role',
+        'user_inspection_roots',
+        'shared_resource_roots',
+      ].sort(),
+      `domain_topology_profiles.${agentId}`,
+      filePath,
+    );
     profiles[agentId] = {
       profile: stringField(profile, 'profile', filePath),
       workspace_mode: stringField(profile, 'workspace_mode', filePath),
       project_kind: stringField(profile, 'project_kind', filePath),
       project_collection_path: stringField(profile, 'project_collection_path', filePath),
       canonical_project_collection_role: stringField(profile, 'canonical_project_collection_role', filePath),
-      project_collection_alias_role: stringField(profile, 'project_collection_alias_role', filePath),
-      project_collection_display_label: stringField(profile, 'project_collection_display_label', filePath),
-      project_semantic_aliases: stringArrayField(profile, 'project_semantic_aliases', filePath),
-      legacy_project_collection_aliases: stringArrayField(profile, 'legacy_project_collection_aliases', filePath),
       user_inspection_roots: stringArrayField(profile, 'user_inspection_roots', filePath),
       shared_resource_roots: stringArrayField(profile, 'shared_resource_roots', filePath),
     };
@@ -174,6 +194,18 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(contract.version, 'agent-workspace-norm.v1', 'version', filePath);
   assertExactString(contract.norm_id, 'opl.agent_workspace_norm.v1', 'norm_id', filePath);
   assertExactString(contract.owner, 'one-person-lab', 'owner', filePath);
+  assertExactString(
+    contract.supported_agent_registry.source_ref,
+    STANDARD_AGENT_REGISTRY_REF,
+    'supported_agent_registry.source_ref',
+    filePath,
+  );
+  assertExactString(
+    contract.supported_agent_registry.series_membership,
+    STANDARD_AGENT_SERIES_MEMBERSHIP,
+    'supported_agent_registry.series_membership',
+    filePath,
+  );
   assertExactStringArray(
     contract.supported_agents,
     listStandardDomainAgentIds(),
@@ -282,7 +314,6 @@ function validateAgentWorkspaceNormSemantics(
     filePath,
   );
   assertExactString(topology.default_project_collection_path, 'projects', 'topology_contract.default_project_collection_path', filePath);
-  assertExactStringArray(topology.legacy_project_collection_aliases, ['deliverables', 'studies'], 'topology_contract.legacy_project_collection_aliases', filePath);
   assertExactStringArray(topology.workspace_modes, ['one_off', 'series', 'portfolio'], 'topology_contract.workspace_modes', filePath);
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
 
@@ -525,11 +556,29 @@ export function validateAgentWorkspaceNorm(
   value: unknown,
 ): AgentWorkspaceNormContract {
   const root = requireRecord(value, 'agent-workspace-norm-contract.json', filePath);
-  const supportedAgents = stringArrayField(root, 'supported_agents', filePath);
+  const supportedAgentRegistry = requireSection(root, 'supported_agent_registry', filePath);
+  const supportedAgents = listStandardDomainAgentIds();
   const defaultWorkspacePrecondition = requireSection(root, 'default_workspace_precondition', filePath);
   const explicitInitialization = requireSection(root, 'explicit_initialization', filePath);
   const descriptorDelegates = requireSection(root, 'descriptor_delegates', filePath);
   const topologyContract = requireSection(root, 'topology_contract', filePath);
+  assertExactStringArray(
+    Object.keys(topologyContract).sort(),
+    [
+      'contract_ref',
+      'profile_id',
+      'topology_model',
+      'canonical_project_collection_role',
+      'canonical_project_unit_semantics',
+      'project_stage_outputs_root',
+      'stage_output_root_protocol',
+      'default_project_collection_path',
+      'workspace_modes',
+      'series_capable_one_off_skeleton',
+    ].sort(),
+    'topology_contract',
+    filePath,
+  );
   const domainTopologyProfiles = requireSection(root, 'domain_topology_profiles', filePath);
   const userInspection = requireSection(root, 'user_inspection', filePath);
   const registryPolicy = requireSection(root, 'registry_policy', filePath);
@@ -547,6 +596,10 @@ export function validateAgentWorkspaceNorm(
     owner: stringField(root, 'owner', filePath),
     scope: stringField(root, 'scope', filePath),
     machine_boundary: stringField(root, 'machine_boundary', filePath),
+    supported_agent_registry: {
+      source_ref: stringField(supportedAgentRegistry, 'source_ref', filePath),
+      series_membership: stringField(supportedAgentRegistry, 'series_membership', filePath),
+    },
     supported_agents: supportedAgents,
     default_workspace_precondition: {
       action_id: stringField(defaultWorkspacePrecondition, 'action_id', filePath),
@@ -590,7 +643,6 @@ export function validateAgentWorkspaceNorm(
         filePath,
       ),
       default_project_collection_path: stringField(topologyContract, 'default_project_collection_path', filePath),
-      legacy_project_collection_aliases: stringArrayField(topologyContract, 'legacy_project_collection_aliases', filePath),
       workspace_modes: stringArrayField(topologyContract, 'workspace_modes', filePath),
       series_capable_one_off_skeleton: booleanField(topologyContract, 'series_capable_one_off_skeleton', filePath),
     },

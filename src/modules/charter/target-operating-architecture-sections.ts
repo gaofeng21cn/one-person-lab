@@ -12,7 +12,7 @@ import {
 } from './brand-module-contracts.ts';
 import {
   STANDARD_AGENT_REGISTRY_REF,
-} from './standard-agent-registry.ts';
+} from '../../kernel/standard-agent-registry.ts';
 import {
   TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
   TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
