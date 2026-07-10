@@ -14,6 +14,7 @@ import {
 } from '../../src/modules/pack/index.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { withOplMetaAgentDescriptorEntry } from '../../src/modules/atlas/index.ts';
+import { buildReadyAgentRepo, retargetReadyRepo } from './cli/cases/agents-conformance-fixtures.ts';
 
 type JsonRecord = Record<string, any>;
 
@@ -321,6 +322,53 @@ test('generated interfaces family report blocks identity mismatch without aborti
   assert.equal(details.requested_agent_id, 'mag');
   assert.equal(details.canonical_agent_id, 'mas');
   assert.equal(projection.generated_agent_interfaces.status, 'blocked');
+});
+
+test('family reports isolate unsupported stage fields as typed repo blockers', async (t) => {
+  const cases: Array<[string, string]> = [
+    ['stage_kind', 'unsupported_stage_kind'],
+    ['trust_lane', 'unsupported_trust_lane'],
+  ];
+
+  for (const [field, value] of cases) {
+    await t.test(field, () => {
+      const blockedRoot = buildReadyAgentRepo();
+      const readyRoot = buildReadyAgentRepo();
+      retargetReadyRepo(blockedRoot, `invalid-${field}`, `Invalid ${field}`);
+      retargetReadyRepo(readyRoot, `ready-${field}`, `Ready ${field}`);
+      const manifest = readManifest(blockedRoot);
+      manifest.stages[0][field] = value;
+      writeManifest(blockedRoot, manifest);
+      const familyRepoInputs = [
+        { requested_agent_id: `invalid-${field}`, repo_dir: blockedRoot },
+        { requested_agent_id: `ready-${field}`, repo_dir: readyRoot },
+      ];
+
+      const reports: JsonRecord[] = [
+        buildDomainPackCompilerList({} as any, { familyDefaults: true, familyRepoInputs })
+          .domain_pack_compiler as JsonRecord,
+        buildGeneratedAgentInterfaces({} as any, ['--family-defaults'], { familyRepoInputs })
+          .generated_agent_interfaces as JsonRecord,
+      ];
+
+      for (const report of reports) {
+        const entries = (report.domains ?? report.reports) as JsonRecord[];
+        const byAgent = new Map(entries.map((entry: JsonRecord) => [entry.requested_agent_id, entry]));
+        const blocked = byAgent.get(`invalid-${field}`) as JsonRecord;
+        const ready = byAgent.get(`ready-${field}`) as JsonRecord;
+        assert.deepEqual(report.summary, {
+          ...report.summary,
+          total_domain_count: 2,
+          ready_domain_count: 1,
+          blocked_domain_count: 1,
+        });
+        assert.equal(blocked.compiler_status, 'blocked');
+        assert.equal(blocked.repo_contract_error.code, 'contract_shape_invalid');
+        assert.notEqual(blocked.repo_contract_error.code, 'unexpected_error');
+        assert.equal(ready.compiler_status, 'ready');
+      }
+    });
+  }
 });
 
 test('OMA hosted descriptor consumes the generated stage plane without a legacy fallback', () => {
@@ -632,6 +680,38 @@ test('stage manifest compiler requires canonical manifest kind, version, and tru
       mutate(manifest);
       writeManifest(root, manifest);
       assert.throws(() => compileStandardAgentStageManifest(root));
+    });
+  }
+});
+
+test('stage manifest compiler rejects OPL authority ownership and non-boolean authority gates', async (t) => {
+  const cases: Array<[string, (authority: JsonRecord) => void]> = [
+    ['quality_verdict_owner', (authority) => { authority.quality_verdict_owner = 'one-person-lab'; }],
+    ['quality_verdict_owner_whitespace', (authority) => { authority.quality_verdict_owner = ' one-person-lab '; }],
+    ['artifact_authority_owner', (authority) => { authority.artifact_authority_owner = 'one-person-lab'; }],
+    ['artifact_authority_owner_whitespace', (authority) => { authority.artifact_authority_owner = ' one-person-lab '; }],
+    ['non_boolean_opl_gate', (authority) => { authority.opl_can_write_domain_truth = 'true'; }],
+  ];
+
+  for (const [name, mutate] of cases) {
+    await t.test(name, () => {
+      const root = fixture(`target-authority-${name.replaceAll('_', '-')}`);
+      const manifest = readManifest(root);
+      mutate(manifest.authority_boundary);
+      writeManifest(root, manifest);
+      assert.throws(() => compileStandardAgentStageManifest(root), FrameworkContractError);
+    });
+  }
+});
+
+test('stage manifest compiler rejects present non-object stage contracts', async (t) => {
+  for (const value of [[], 'invalid-stage-contract']) {
+    await t.test(JSON.stringify(value), () => {
+      const root = fixture('target-invalid-stage-contract');
+      const manifest = readManifest(root);
+      manifest.stages[0].stage_contract = value;
+      writeManifest(root, manifest);
+      assert.throws(() => compileStandardAgentStageManifest(root), FrameworkContractError);
     });
   }
 });

@@ -12,16 +12,23 @@ test('real family-defaults pack compiler preserves JSON readback when individual
   ].every((repo) => fs.existsSync(`/Users/gaofeng/workspace/${repo}/contracts/domain_descriptor.json`)),
 }, () => {
   const report = runCli(['agents', 'pack-compiler', '--family-defaults']).domain_pack_compiler;
-  const domains = new Map(report.domains.map((domain: { requested_agent_id: string }) => [
+  const domains = new Map<string, Record<string, any>>(report.domains.map((domain: Record<string, any>) => [
     domain.requested_agent_id,
     domain,
   ]));
 
   assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
-  assert.equal(report.summary.total_domain_count, 5);
-  assert.equal(report.summary.ready_domain_count + report.summary.blocked_domain_count, 5);
-  assert.equal(report.summary.blocked_domain_count >= 2, true);
-  for (const agentId of ['mas', 'rca']) {
+  assert.deepEqual({
+    total_domain_count: report.summary.total_domain_count,
+    ready_domain_count: report.summary.ready_domain_count,
+    blocked_domain_count: report.summary.blocked_domain_count,
+  }, {
+    total_domain_count: 5,
+    ready_domain_count: 1,
+    blocked_domain_count: 4,
+  });
+  assert.equal(domains.get('oma')?.compiler_status, 'ready');
+  for (const agentId of ['mag', 'mas', 'obf', 'rca']) {
     const domain = domains.get(agentId) as Record<string, any>;
     assert.equal(domain.compiler_status, 'blocked');
     assert.equal(domain.blocker_reasons.length > 0, true);
@@ -40,16 +47,20 @@ test('real family-defaults generated interfaces preserve JSON readback when indi
   ].every((repo) => fs.existsSync(`/Users/gaofeng/workspace/${repo}/contracts/domain_descriptor.json`)),
 }, () => {
   const report = runCli(['agents', 'interfaces', '--family-defaults']).generated_agent_interfaces;
-  const domains = new Map(report.reports.map((domain: { requested_agent_id: string }) => [
+  const domains = new Map<string, Record<string, any>>(report.reports.map((domain: Record<string, any>) => [
     domain.requested_agent_id,
     domain,
   ]));
 
   assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
-  assert.equal(report.summary.total_domain_count, 5);
-  assert.equal(report.summary.ready_domain_count + report.summary.blocked_domain_count, 5);
-  assert.equal(report.summary.blocked_domain_count >= 2, true);
-  for (const agentId of ['mas', 'rca']) {
+  assert.deepEqual(report.summary, {
+    total_domain_count: 5,
+    ready_domain_count: 1,
+    blocked_domain_count: 4,
+  });
+  assert.equal(domains.get('oma')?.compiler_status, 'ready');
+  assert.equal(domains.get('oma')?.generated_agent_interfaces.status, 'ready');
+  for (const agentId of ['mag', 'mas', 'obf', 'rca']) {
     const domain = domains.get(agentId) as Record<string, any>;
     assert.equal(domain.compiler_status, 'blocked');
     assert.equal(domain.generated_agent_interfaces.status, 'blocked');

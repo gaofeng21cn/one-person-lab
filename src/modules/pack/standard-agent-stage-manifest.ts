@@ -113,17 +113,25 @@ function readJson(repoDir: string, ref: string, field: string) {
 }
 
 function assertNoOplAuthority(boundary: JsonRecord, field: string, repoDir: string) {
-  const forbidden = Object.entries(boundary)
-    .filter(([key, value]) => value === true && (
+  const forbidden = Object.entries(boundary).filter(([key, value]) => (
+    (
       key.startsWith('opl_can_')
       || key === 'provider_completion_is_domain_completion'
       || key === 'provider_completion_counts_as_domain_completion'
-    ))
-    .map(([key]) => key);
+    )
+      ? value !== false
+      : (
+          key === 'quality_verdict_owner'
+          || key === 'artifact_authority_owner'
+        ) && optionalString(value) === 'one-person-lab'
+  ));
   if (forbidden.length > 0) {
     fail(`${field} grants forbidden OPL or provider authority.`, {
       repo_dir: repoDir,
-      forbidden_true_fields: forbidden,
+      forbidden_authority_fields: forbidden.map(([key]) => key),
+      forbidden_true_fields: forbidden
+        .filter(([, value]) => value === true)
+        .map(([key]) => key),
     });
   }
 }
@@ -359,7 +367,9 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     const runtimeEventRefs = effectBoundary
       ? [`runtime_event:${stageId}.owner_receipt_recorded`]
       : [];
-    const declaredStageContract = isRecord(stage.stage_contract) ? stage.stage_contract : {};
+    const declaredStageContract = stage.stage_contract === undefined
+      ? {}
+      : record(stage.stage_contract, 'stage.stage_contract', repoDir);
     const frameworkStageContract = {
       expected_receipt_refs: [repoSurfaceRef(
         'domain_owner_receipt_or_typed_blocker_ref',

@@ -1,7 +1,11 @@
-import { isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString } from '../../kernel/json-file.ts';
 
 type JsonRecord = Record<string, unknown>;
+
+function invalid(message: string): never {
+  throw new FrameworkContractError('contract_shape_invalid', message);
+}
 
 export type FamilyStageKind =
   | 'intake'
@@ -142,7 +146,7 @@ export interface FamilyStageControlPlane {
 function requireString(value: unknown, field: string) {
   const text = optionalString(value);
   if (!text) {
-    throw new Error(`Missing required string field: ${field}`);
+    invalid(`Missing required string field: ${field}`);
   }
   return text;
 }
@@ -165,12 +169,12 @@ function normalizeRefValue(value: unknown, field: string) {
   if (values.length > 0) {
     return values;
   }
-  throw new Error(`Missing required string or string-list field: ${field}`);
+  invalid(`Missing required string or string-list field: ${field}`);
 }
 
 function normalizeSurfaceRef(value: unknown, field: string): FamilyStageSurfaceRef {
   if (!isRecord(value)) {
-    throw new Error(`${field} must be an object.`);
+    invalid(`${field} must be an object.`);
   }
   return {
     ...(optionalString(value.ref_kind) ? { ref_kind: optionalString(value.ref_kind)! } : {}),
@@ -209,7 +213,7 @@ function normalizeRuntimeAssumption(value: unknown, field: string): string | Fam
     return text;
   }
   if (!isRecord(value)) {
-    throw new Error(`${field} must be a string or an object.`);
+    invalid(`${field} must be a string or an object.`);
   }
   return {
     ...value,
@@ -251,7 +255,7 @@ const FAMILY_STAGE_TRUST_LANES = new Set<string>([
 function normalizeStageKind(value: unknown, field: string): FamilyStageKind {
   const text = requireString(value, field);
   if (!FAMILY_STAGE_KINDS.has(text)) {
-    throw new Error(`${field} has unsupported stage kind: ${text}`);
+    invalid(`${field} has unsupported stage kind: ${text}`);
   }
   return text as FamilyStageKind;
 }
@@ -262,7 +266,7 @@ function optionalBoolean(record: JsonRecord, key: string, field: string) {
     return undefined;
   }
   if (typeof value !== 'boolean') {
-    throw new Error(`${field}.${key} must be a boolean.`);
+    invalid(`${field}.${key} must be a boolean.`);
   }
   return value;
 }
@@ -304,7 +308,7 @@ function normalizeTrustBoundary(value: unknown, field: string): FamilyStageTrust
   }
   const lane = requireString(value.lane, `${field}.lane`);
   if (!FAMILY_STAGE_TRUST_LANES.has(lane)) {
-    throw new Error(`${field}.lane has unsupported trust lane: ${lane}`);
+    invalid(`${field}.lane has unsupported trust lane: ${lane}`);
   }
   const staticCheckEligible = optionalBoolean(value, 'static_check_eligible', field);
   const effectBoundary = optionalBoolean(value, 'effect_boundary', field);
@@ -328,11 +332,11 @@ function normalizeTrustBoundary(value: unknown, field: string): FamilyStageTrust
 
 function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilyStageDescriptor {
   if (!isRecord(value)) {
-    throw new Error(`${field} must be an object.`);
+    invalid(`${field} must be an object.`);
   }
   const boundary = isRecord(value.authority_boundary) ? value.authority_boundary : null;
   if (!boundary) {
-    throw new Error(`${field}.authority_boundary must be an object.`);
+    invalid(`${field}.authority_boundary must be an object.`);
   }
   const stageOrigin = optionalString(value.stage_origin);
   const patternId = optionalString(value.pattern_id);
@@ -394,21 +398,21 @@ export function normalizeFamilyStageControlPlane(
 
   const surfaceKind = requireString(value.surface_kind, `${field}.surface_kind`);
   if (surfaceKind !== 'family_stage_control_plane') {
-    throw new Error(`${field}.surface_kind must be family_stage_control_plane.`);
+    invalid(`${field}.surface_kind must be family_stage_control_plane.`);
   }
   const version = requireString(value.version, `${field}.version`);
   if (version !== 'family-stage-control-plane.v1') {
-    throw new Error(`${field}.version must be family-stage-control-plane.v1.`);
+    invalid(`${field}.version must be family-stage-control-plane.v1.`);
   }
   if (!Array.isArray(value.stages) || value.stages.length === 0) {
-    throw new Error(`${field}.stages must contain at least one stage.`);
+    invalid(`${field}.stages must contain at least one stage.`);
   }
 
   const seen = new Set<string>();
   const stages = value.stages.map((entry, index) => {
     const stage = normalizeFamilyStageDescriptor(entry, `${field}.stages[${index}]`);
     if (seen.has(stage.stage_id)) {
-      throw new Error(`${field}.stages contains duplicate stage_id: ${stage.stage_id}`);
+      invalid(`${field}.stages contains duplicate stage_id: ${stage.stage_id}`);
     }
     seen.add(stage.stage_id);
     return stage;
