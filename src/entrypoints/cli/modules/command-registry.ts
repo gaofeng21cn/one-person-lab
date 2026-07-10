@@ -1,6 +1,9 @@
 import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
 
-import { FrameworkContractError } from '../../../modules/charter/index.ts';
+import {
+  FrameworkContractError,
+  validateCliCommandRegistryEntry,
+} from '../../../modules/charter/index.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandRegistryMetadata, CommandSpec } from './types.ts';
 
@@ -13,11 +16,12 @@ function commandRegistryMetadataFromContract(
   registryKey: string,
   value: unknown,
 ): CommandRegistryMetadata {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw registryShapeError(registryKey, ['registry.contract_entry_invalid']);
-  }
-  const entry = value as Record<string, unknown>;
-  const command = typeof entry.command_id === 'string' ? entry.command_id : registryKey;
+  const entry = validateCliCommandRegistryEntry(
+    'contracts/opl-framework/cli-command-registry.json',
+    registryKey,
+    value,
+  );
+  const command = entry.command_id;
   const metadata = {
     command_id: entry.command_id,
     parser_adapter: entry.parser_adapter,
@@ -129,6 +133,9 @@ function registryShapeViolations(command: string, registry: CommandRegistryMetad
   if (!boundary || boundary.can_create_owner_receipt !== false) {
     violations.push('registry.authority_boundary.can_create_owner_receipt');
   }
+  if (!boundary || (boundary as Record<string, unknown>).can_create_typed_blocker === true) {
+    violations.push('registry.authority_boundary.can_create_typed_blocker');
+  }
   if (!boundary || boundary.can_claim_domain_ready !== false) {
     violations.push('registry.authority_boundary.can_claim_domain_ready');
   }
@@ -175,8 +182,7 @@ function coerceOptionValue(
   option: CommandRegistryMetadata['options'][number],
   value: unknown,
 ): CommandOptionValue | CommandOptionValue[] | undefined {
-  if (value === undefined) {
-    if (option.default !== undefined) return option.default;
+  if (value === undefined && option.default === undefined) {
     if (option.required) {
       throw buildUsageError(`${command} requires ${option.flag}.`, spec, {
         required: [option.flag],
@@ -184,6 +190,7 @@ function coerceOptionValue(
     }
     return undefined;
   }
+  value ??= option.default;
 
   if (Array.isArray(value)) {
     return value

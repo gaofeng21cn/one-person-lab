@@ -130,6 +130,204 @@ function validateWorkstreamsRegistry(
   };
 }
 
+function cliCommandRegistryShapeError(filePath: string, field: string, message: string): never {
+  throw new FrameworkContractError('contract_shape_invalid', message, { file: filePath, field });
+}
+
+export function validateCliCommandRegistryEntry(
+  filePath: string,
+  registryKey: string,
+  value: unknown,
+) {
+  if (!isRecord(value)) {
+    return cliCommandRegistryShapeError(
+      filePath,
+      `commands.${registryKey}`,
+      'CLI command registry entry must be an object.',
+    );
+  }
+  const commandId = expectString(value.command_id, `commands.${registryKey}.command_id`, filePath);
+  const parserAdapter = expectString(
+    value.parser_adapter,
+    `commands.${registryKey}.parser_adapter`,
+    filePath,
+  );
+  if (parserAdapter !== 'node_util_parse_args') {
+    return cliCommandRegistryShapeError(
+      filePath,
+      `commands.${registryKey}.parser_adapter`,
+      'CLI command registry parser_adapter must be node_util_parse_args.',
+    );
+  }
+  if (!Array.isArray(value.options)) {
+    return cliCommandRegistryShapeError(
+      filePath,
+      `commands.${registryKey}.options`,
+      'CLI command registry options must be an array.',
+    );
+  }
+  const options = value.options.map((rawOption, index) => {
+    const field = `commands.${registryKey}.options[${index}]`;
+    if (!isRecord(rawOption)) {
+      return cliCommandRegistryShapeError(filePath, field, 'CLI command option must be an object.');
+    }
+    const name = expectString(rawOption.name, `${field}.name`, filePath);
+    const flag = expectString(rawOption.flag, `${field}.flag`, filePath);
+    const valueKind = expectString(rawOption.value_kind, `${field}.value_kind`, filePath);
+    if (!flag.startsWith('--')) {
+      return cliCommandRegistryShapeError(filePath, `${field}.flag`, 'CLI command option flag must start with --.');
+    }
+    if (!['string', 'integer', 'boolean'].includes(valueKind)) {
+      return cliCommandRegistryShapeError(
+        filePath,
+        `${field}.value_kind`,
+        'CLI command option value_kind must be string, integer, or boolean.',
+      );
+    }
+    const required = rawOption.required === undefined
+      ? undefined
+      : expectBoolean(rawOption.required, `${field}.required`, filePath);
+    const multiple = rawOption.multiple === undefined
+      ? undefined
+      : expectBoolean(rawOption.multiple, `${field}.multiple`, filePath);
+    let allowedRange: { min: number; max: number } | undefined;
+    if (rawOption.allowed_range !== undefined) {
+      if (!isRecord(rawOption.allowed_range)) {
+        return cliCommandRegistryShapeError(
+          filePath,
+          `${field}.allowed_range`,
+          'CLI command option allowed_range must be an object.',
+        );
+      }
+      const { min, max } = rawOption.allowed_range;
+      if (
+        valueKind !== 'integer'
+        || typeof min !== 'number'
+        || typeof max !== 'number'
+        || !Number.isInteger(min)
+        || !Number.isInteger(max)
+        || min > max
+      ) {
+        return cliCommandRegistryShapeError(
+          filePath,
+          `${field}.allowed_range`,
+          'CLI integer option allowed_range must contain ordered integer min/max values.',
+        );
+      }
+      allowedRange = { min, max };
+    }
+    const allowedValues = rawOption.allowed_values === undefined
+      ? undefined
+      : Array.isArray(rawOption.allowed_values)
+        ? rawOption.allowed_values
+        : cliCommandRegistryShapeError(
+          filePath,
+          `${field}.allowed_values`,
+          'CLI command option allowed_values must be an array.',
+        );
+    const valueMatchesKind = (entry: unknown) => valueKind === 'string'
+      ? typeof entry === 'string'
+      : valueKind === 'boolean'
+        ? typeof entry === 'boolean'
+        : typeof entry === 'number' && Number.isInteger(entry);
+    if (allowedValues && !allowedValues.every(valueMatchesKind)) {
+      return cliCommandRegistryShapeError(
+        filePath,
+        `${field}.allowed_values`,
+        'CLI command option allowed_values must match value_kind.',
+      );
+    }
+    if (rawOption.default !== undefined) {
+      if (!valueMatchesKind(rawOption.default)) {
+        return cliCommandRegistryShapeError(
+          filePath,
+          `${field}.default`,
+          'CLI command option default must match value_kind.',
+        );
+      }
+      if (
+        allowedRange
+        && typeof rawOption.default === 'number'
+        && (rawOption.default < allowedRange.min || rawOption.default > allowedRange.max)
+      ) {
+        return cliCommandRegistryShapeError(
+          filePath,
+          `${field}.default`,
+          'CLI command option default must be inside allowed_range.',
+        );
+      }
+      if (allowedValues && !allowedValues.includes(rawOption.default)) {
+        return cliCommandRegistryShapeError(
+          filePath,
+          `${field}.default`,
+          'CLI command option default must be included in allowed_values.',
+        );
+      }
+    }
+    return {
+      ...rawOption,
+      name,
+      flag,
+      value_kind: valueKind,
+      ...(required === undefined ? {} : { required }),
+      ...(multiple === undefined ? {} : { multiple }),
+      ...(allowedRange === undefined ? {} : { allowed_range: allowedRange }),
+      ...(allowedValues === undefined ? {} : { allowed_values: allowedValues }),
+    };
+  });
+  const authorityBoundary = value.authority_boundary;
+  if (!isRecord(authorityBoundary)) {
+    return cliCommandRegistryShapeError(
+      filePath,
+      `commands.${registryKey}.authority_boundary`,
+      'CLI command registry authority_boundary must be an object.',
+    );
+  }
+  for (const field of [
+    'can_write_domain_truth',
+    'can_create_owner_receipt',
+    'can_claim_domain_ready',
+    'can_claim_production_ready',
+  ]) {
+    if (expectBoolean(authorityBoundary[field], `commands.${registryKey}.authority_boundary.${field}`, filePath)) {
+      return cliCommandRegistryShapeError(
+        filePath,
+        `commands.${registryKey}.authority_boundary.${field}`,
+        `CLI command registry authority_boundary.${field} must be false.`,
+      );
+    }
+  }
+  if (
+    authorityBoundary.can_create_typed_blocker !== undefined
+    && expectBoolean(
+      authorityBoundary.can_create_typed_blocker,
+      `commands.${registryKey}.authority_boundary.can_create_typed_blocker`,
+      filePath,
+    )
+  ) {
+    return cliCommandRegistryShapeError(
+      filePath,
+      `commands.${registryKey}.authority_boundary.can_create_typed_blocker`,
+      'CLI command registry authority_boundary.can_create_typed_blocker must be false.',
+    );
+  }
+  if (!isRecord(value.output_schema)) {
+    return cliCommandRegistryShapeError(
+      filePath,
+      `commands.${registryKey}.output_schema`,
+      'CLI command registry output_schema must be an object.',
+    );
+  }
+  return {
+    ...value,
+    command_id: commandId,
+    parser_adapter: 'node_util_parse_args' as const,
+    options,
+    authority_boundary: authorityBoundary,
+    output_schema: value.output_schema,
+  };
+}
+
 function validateCliCommandRegistry(filePath: string, value: unknown) {
   if (!isRecord(value)) {
     throw new FrameworkContractError(
@@ -164,7 +362,10 @@ function validateCliCommandRegistry(filePath: string, value: unknown) {
       'protected_command_prefixes',
       filePath,
     ),
-    commands: value.commands,
+    commands: Object.fromEntries(Object.entries(value.commands).map(([registryKey, entry]) => [
+      registryKey,
+      validateCliCommandRegistryEntry(filePath, registryKey, entry),
+    ])),
   };
 }
 

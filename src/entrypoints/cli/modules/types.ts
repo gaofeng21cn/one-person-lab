@@ -8,7 +8,7 @@ type CommandOptionMetadata = {
   name: string;
   flag: string;
   value_kind: CommandOptionValueKind;
-  summary: string;
+  summary?: string;
   required?: boolean;
   multiple?: boolean;
   default?: string | number | boolean;
@@ -24,6 +24,7 @@ type CommandAuthorityBoundary = {
   surface: string;
   can_write_domain_truth: false;
   can_create_owner_receipt: false;
+  can_create_typed_blocker?: false;
   can_claim_domain_ready: false;
   can_claim_production_ready: false;
 };
