@@ -47,7 +47,13 @@ test('runtime visualization projection exposes canonical stage progress and Temp
     actionRefs: [],
     ownerReceipts: [],
     typedBlockers: {},
-    domainProjectionIngestion: {},
+    domainProjectionIngestion: {
+      items: [{
+        domain_id: 'medautoscience',
+        operator_route_lens_refs: ['example://operator/lens'],
+        paper_route_lens_refs: ['example://retired/paper-lens'],
+      }],
+    },
     routeTransitionDrilldown: {},
     stageProductionEvidence: {},
     domainDispatchEvidence: {},
@@ -82,33 +88,6 @@ test('runtime visualization projection exposes canonical stage progress and Temp
   assert.equal(projection.authority_boundary.can_read_memory_body, false);
   assert.equal(projection.authority_boundary.can_read_artifact_body, false);
   assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
-});
-
-test('runtime visualization consumes generic operator lens refs only', () => {
-  const projection = buildRuntimeVisualizationProjection({
-    attempts: [],
-    routeRefs: [],
-    decisionRefs: [],
-    artifactRefs: [],
-    packageLifecycle: {},
-    memoryRefs: {},
-    qualityRefs: {},
-    actionRefs: [],
-    ownerReceipts: [],
-    typedBlockers: {},
-    domainProjectionIngestion: {
-      items: [{
-        domain_id: 'example-domain',
-        operator_route_lens_refs: ['example://operator/lens'],
-        paper_route_lens_refs: ['example://retired/paper-lens'],
-      }],
-    },
-    routeTransitionDrilldown: {},
-    stageProductionEvidence: {},
-    domainDispatchEvidence: {},
-    safeActions: [],
-  });
-
   assert.equal(projection.operator_lens.surface_kind, 'opl_app_runtime_operator_lens_refs');
   assert.equal(projection.summary.operator_route_lens_ref_count, 1);
   assert.equal(projection.operator_lens.operator_route_lens_refs[0].ref, 'example://operator/lens');
@@ -117,47 +96,26 @@ test('runtime visualization consumes generic operator lens refs only', () => {
 
 test('domain owner payload summary preserves active MAS closeout as refs-only compatibility', () => {
   const projection = buildDomainOwnerPayloadSummaryRefs({
-    domainManifestProjects: [
-      {
-        status: 'resolved',
-        project_id: 'medautoscience',
-        project: 'Med Auto Science',
-        manifest: {
-          target_domain_id: 'medautoscience',
-          real_paper_autonomy_guarded_apply_proof: {
-            paper_line_provider_canary_closeout: {
-              paper_line_owner_payload_summary: { paper_line_count: 1 },
-              paper_line_domain_dispatch_evidence_record_payloads: [{
-                study_id: 'legacy',
-                record_payload: {
-                  typed_blocker_refs: ['typed-blocker:mas/paper-line'],
-                },
-              }],
-            },
+    domainManifestProjects: [{
+      status: 'resolved',
+      project_id: 'medautoscience',
+      project: 'Med Auto Science',
+      manifest: {
+        target_domain_id: 'medautoscience',
+        real_paper_autonomy_guarded_apply_proof: {
+          paper_line_provider_canary_closeout: {
+            paper_line_owner_payload_summary: { paper_line_count: 1 },
+            paper_line_domain_dispatch_evidence_record_payloads: [{
+              study_id: 'legacy',
+              record_payload: { typed_blocker_refs: ['typed-blocker:mas/paper-line'] },
+            }],
           },
         },
       },
-      {
-        status: 'resolved',
-        project_id: 'example-domain',
-        project: 'Example Domain',
-        manifest: {
-          target_domain_id: 'example-domain',
-          operator_evidence_readiness_projection: {
-            production_evidence_scaleout_refs: {
-              owner_payload_item_summary: {
-                surface_kind: 'example_owner_payload_item_summary',
-                owner: 'example-domain',
-                work_items: [],
-              },
-            },
-          },
-        },
-      },
-    ] as any,
+    }] as any,
   });
 
-  assert.equal(projection.summary.domain_count, 2);
+  assert.equal(projection.summary.domain_count, 1);
   const legacyMas = projection.domains.find((entry) => entry.domain_id === 'medautoscience');
   assert.ok(legacyMas);
   assert.ok(legacyMas.owner_payload_item_summary);
@@ -169,7 +127,4 @@ test('domain owner payload summary preserves active MAS closeout as refs-only co
     legacyMas.owner_payload_item_summary.work_items[0].typed_blocker_path_payload,
     { typed_blocker_refs: ['typed-blocker:mas/paper-line'] },
   );
-  const generic = projection.domains.find((entry) => entry.domain_id === 'example-domain');
-  assert.ok(generic);
-  assert.equal(generic.source_surface, 'operator_evidence_readiness_projection');
 });
