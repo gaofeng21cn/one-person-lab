@@ -1,0 +1,33 @@
+# Action-to-Stage 路由与 Stage 规模原则
+
+owner: OPL Stagecraft  
+purpose: 固化 OPL family 的 Stage 规模、Action 必经路由与 Progress-first 边界  
+state: active  
+machine boundary: `family-action-catalog.v1.actions[].stage_route`、`family-stage-control-plane.v1`、generated interface `action_stage_routes`
+
+## 结论
+
+Stage 大小按“一个主要开放语义判断”划分，不按文件数、receipt 数或工具调用数划分。同一判断派生的文件物化、schema 校验、readback 和机械 receipt 留在 Stage 内；拥有不同知识、owner、quality gate 或失败路由的独立判断才拆成新的顶层 Stage。
+
+Action 不能再只声明“哪些 Stage 允许它”，还可以声明一条可执行的 `stage_route`：
+
+- `required_stage_refs` 是按顺序必须完成的 Stage attempt，不能跳过；
+- `optional_stage_refs` 只表达同一目标内的条件分支或有界修订，不替代 required Stage；
+- `terminal_stage_refs` 是该 Action 可以合法结束或交棒的位置；
+- `route_policy=ordered_stage_attempts_no_skip` 要求 executor 按已有 StageRun/attempt/closeout primitive 推进。
+
+`standard-stage-pack.v2` 的 declarative manifest 编译时必须为每个 mutating Action 声明 route。read-only Action 只观察当前 Stage，不伪装成要执行的多 Stage workflow，其可观察范围继续由 Stage `allowed_action_refs` 表达。旧的 direct control plane 可以渐进声明；一旦声明 route，OPL 会校验 Stage 存在性、action allow-list 双向一致、required 顺序可达性和 optional 分支的 entry-to-terminal 可达性，并把 route 投影到 generated interfaces。
+
+## Progress-first 边界
+
+route 合同不是第二套 scheduler，也不引入独立 reviewer、人工审批或新的运行时状态机。普通 Stage closeout 满足原有 receipt/typed output 合同后直接进入下一个 required Stage；只有原 Stage 自身已经声明的 human gate、authority mutation 或 quality/export closeout 才能形成合法 gate。
+
+因此，防跳流程依赖“route + Stage attempt receipt 顺序”而不是额外控制面：缺失或逆序 receipt 必须继续同一 Action 的下一 Stage 或返回 typed continuation；不能用泛化 Stage ref、provider completion、测试通过或单个大 Stage closeout 冒充整条 Action 完成。
+
+## 审计口径
+
+1. 每个顶层 Stage 是否只承担一个主要开放语义判断。
+2. 多文件输出是否由同一个 typed packet 派生，而不是要求模型同时自由设计多套正文。
+3. Action 的 required Stage 是否按控制面图可达且不能被 optional Stage 替代。
+4. 普通进展是否无需新增 review/human gate；typed blocker 是否只出现在真实权限、输入、authority 或不可继续的语义缺口。
+5. terminal Stage 是否有精确 closeout receipt；不得用 catalog 存在、单测通过或任意 Stage receipt 声称全流程完成。

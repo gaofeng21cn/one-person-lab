@@ -28,6 +28,16 @@ export interface FamilyActionSourceOfWork {
   domain_repo_wrapper_policy?: 'handler_target_refs_only_adapter_or_tombstone_candidate';
 }
 
+export type FamilyActionStageRoutePolicy = 'ordered_stage_attempts_no_skip';
+
+export interface FamilyActionStageRoute {
+  entry_stage_ref: string;
+  required_stage_refs: string[];
+  optional_stage_refs: string[];
+  terminal_stage_refs: string[];
+  route_policy: FamilyActionStageRoutePolicy;
+}
+
 export interface FamilyActionCatalogAction {
   action_id: string;
   title: string;
@@ -40,6 +50,7 @@ export interface FamilyActionCatalogAction {
   output_schema_ref: string;
   workspace_locator_fields: string[];
   human_gate_ids: string[];
+  stage_route?: FamilyActionStageRoute;
   supported_surfaces: {
     cli: FamilyActionSurfaceDescriptor | null;
     mcp: FamilyActionSurfaceDescriptor | null;
@@ -146,6 +157,59 @@ function normalizeSourceOfWork(
   };
 }
 
+function routeStringList(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`${field} must be an array.`);
+  }
+  const values = value.map((entry, index) => requireString(entry, `${field}[${index}]`));
+  if (new Set(values).size !== values.length) {
+    throw new Error(`${field} must not contain duplicates.`);
+  }
+  return values;
+}
+
+function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRoute | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  const requiredStageRefs = routeStringList(value.required_stage_refs, `${field}.required_stage_refs`);
+  if (requiredStageRefs.length === 0) {
+    throw new Error(`${field}.required_stage_refs must contain at least one stage.`);
+  }
+  const optionalStageRefs = routeStringList(value.optional_stage_refs, `${field}.optional_stage_refs`);
+  const terminalStageRefs = routeStringList(value.terminal_stage_refs, `${field}.terminal_stage_refs`);
+  if (terminalStageRefs.length === 0) {
+    throw new Error(`${field}.terminal_stage_refs must contain at least one stage.`);
+  }
+  const entryStageRef = requireString(value.entry_stage_ref, `${field}.entry_stage_ref`);
+  if (entryStageRef !== requiredStageRefs[0]) {
+    throw new Error(`${field}.entry_stage_ref must equal required_stage_refs[0].`);
+  }
+  const overlap = optionalStageRefs.filter((entry) => requiredStageRefs.includes(entry));
+  if (overlap.length > 0) {
+    throw new Error(`${field}.optional_stage_refs must not repeat required stages: ${overlap.join(', ')}`);
+  }
+  const routeStageRefs = new Set([...requiredStageRefs, ...optionalStageRefs]);
+  const unknownTerminalRefs = terminalStageRefs.filter((entry) => !routeStageRefs.has(entry));
+  if (unknownTerminalRefs.length > 0) {
+    throw new Error(`${field}.terminal_stage_refs must belong to the declared route: ${unknownTerminalRefs.join(', ')}`);
+  }
+  const routePolicy = requireString(value.route_policy, `${field}.route_policy`);
+  if (routePolicy !== 'ordered_stage_attempts_no_skip') {
+    throw new Error(`${field}.route_policy must be ordered_stage_attempts_no_skip.`);
+  }
+  return {
+    entry_stage_ref: entryStageRef,
+    required_stage_refs: requiredStageRefs,
+    optional_stage_refs: optionalStageRefs,
+    terminal_stage_refs: terminalStageRefs,
+    route_policy: 'ordered_stage_attempts_no_skip',
+  };
+}
+
 function normalizeFamilyAction(value: unknown, field: string, catalogId: string | null): FamilyActionCatalogAction {
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
@@ -164,6 +228,7 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
   requireSupportedSurfaceSlots(supportedSurfaces, field);
 
   const actionId = requireString(value.action_id, `${field}.action_id`);
+  const stageRoute = normalizeStageRoute(value.stage_route, `${field}.stage_route`);
 
   return {
     action_id: actionId,
@@ -180,6 +245,7 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
     output_schema_ref: requireString(value.output_schema_ref, `${field}.output_schema_ref`),
     workspace_locator_fields: stringList(value.workspace_locator_fields),
     human_gate_ids: stringList(value.human_gate_ids),
+    ...(stageRoute ? { stage_route: stageRoute } : {}),
     supported_surfaces: {
       cli: normalizeSurfaceDescriptor(supportedSurfaces.cli),
       mcp: normalizeSurfaceDescriptor(supportedSurfaces.mcp),

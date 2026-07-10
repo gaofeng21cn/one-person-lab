@@ -15,6 +15,7 @@ export type { FamilyStageAdmissionReview, FamilyStageAdmissionStageResult } from
 export type { FamilyStageDomainManifest, FamilyStageDomainManifestCatalog, FamilyStageDomainManifestCatalogEntry, ManifestCommandTimeoutPolicy } from './family-stage-domain-manifest.ts';
 export { buildFamilyStageCohortLoopProjection } from './family-stage-cohort-loop.ts';
 export type { FamilyStageCohortLoopStage } from './family-stage-cohort-loop.ts';
+export { buildFamilyActionStageRouteParity } from './family-action-stage-route.ts';
 export { buildFamilyStageControlPlaneParity, buildFamilyStageLaunchAdmissionGate, buildFamilyStageReadinessInspect, buildFamilyStagesList } from './family-stage-control-plane.ts';
 export { normalizeFamilyStageControlPlane } from './family-stage-control-plane-contract.ts';
 export type { FamilyStageControlPlane, FamilyStageDescriptor, FamilyStageSurfaceRef } from './family-stage-control-plane-contract.ts';

@@ -47,6 +47,7 @@ import {
   buildFamilyStagePackSourceSpecProjection,
 } from './family-stage-source-spec.ts';
 import { buildFamilyStageGraphProjection } from './family-stage-control-plane-graph.ts';
+import { buildFamilyActionStageRouteParity } from './family-action-stage-route.ts';
 import {
   buildFamilyStageGuaranteeProjection,
   type FamilyStageGuaranteeMode,
@@ -194,7 +195,8 @@ export function buildFamilyStageControlPlaneParity(
   manifest: Pick<FamilyStageDomainManifest, 'family_action_catalog'> | null = null,
 ) {
   const issues: string[] = [];
-  const actionIds = new Set(manifest?.family_action_catalog?.actions.map((action) => action.action_id) ?? []);
+  const actionCatalog = manifest?.family_action_catalog ?? null;
+  const actionIds = new Set(actionCatalog?.actions.map((action) => action.action_id) ?? []);
   for (const stage of plane.stages) {
     if (!isRecord(stage.authority_boundary)) {
       issues.push(`${stage.stage_id}: authority_boundary must be an object`);
@@ -208,6 +210,9 @@ export function buildFamilyStageControlPlaneParity(
         issues.push(`${stage.stage_id}: allowed_action_ref not found in family action catalog: ${actionRef}`);
       }
     }
+  }
+  if (actionCatalog) {
+    issues.push(...buildFamilyActionStageRouteParity(actionCatalog, plane).issues);
   }
 
   return {

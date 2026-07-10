@@ -50,6 +50,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       surface_kind: surfaceKind(action, productEntrySurface),
       summary: action.summary,
       requires: action.workspace_locator_fields,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
     cli: {
       action_id: action.action_id,
@@ -60,6 +61,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       input_schema_ref: action.input_schema_ref,
       output_schema_ref: action.output_schema_ref,
       source_of_work: lineage,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
     mcp: {
       name: stringValue(mcpSurface?.tool_name) ?? action.action_id,
@@ -71,6 +73,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       public_runtime: mcpSurface?.public_runtime !== false,
       descriptor_only: mcpSurface?.descriptor_only === true,
       source_of_work: lineage,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
     skill: {
       command_contract_id: stringValue(skillSurface?.command_contract_id) ?? action.action_id,
@@ -83,6 +86,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
     product_entry: {
       action_key: stringValue(productEntrySurface?.action_key) ?? action.action_id,
@@ -93,6 +97,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
     openai: {
       type: 'function',
@@ -108,6 +113,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
     ai_sdk: {
       name: stringValue(aiSdkSurface?.tool_name) ?? action.action_id,
@@ -116,6 +122,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       outputSchemaRef: action.output_schema_ref,
       command,
       source_of_work: lineage,
+      ...(action.stage_route ? { stage_route: action.stage_route } : {}),
     },
   };
 }
