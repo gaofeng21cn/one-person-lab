@@ -1,3 +1,5 @@
+import { parseArgs } from 'node:util';
+
 import {
   buildWorkspaceInitializeInterfaces,
   ensureWorkspace,
@@ -22,10 +24,12 @@ import {
 } from '../../../modules/workspace/workspace-lifecycle.ts';
 import { materializeWorkspaceArtifactLifecycle } from '../../../modules/workspace/workspace-artifact-lifecycle.ts';
 import { ingestWorkspaceSourceMaterial } from '../../../modules/workspace/workspace-source-material.ts';
+import { assertRepoSourceByproductsClean } from '../../../modules/workspace/repo-source-byproduct-guard.ts';
 import { buildBrandModuleSurfaceInspect } from '../../../modules/charter/brand-module-surfaces.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import {
   assertNoArgs,
+  buildUsageError,
   parseWorkspaceAdoptArgs,
   parseWorkspaceArtifactLifecycleArgs,
   parseWorkspaceInitializeArgs,
@@ -34,6 +38,26 @@ import {
   parseWorkspaceValidationArgs,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
+
+function parseRepoSourceHygieneArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  try {
+    const { values } = parseArgs({
+      args,
+      options: { 'source-root': { type: 'string' } },
+      strict: true,
+      allowPositionals: false,
+    });
+    return values['source-root'] ?? process.cwd();
+  } catch (error) {
+    throw buildUsageError(
+      error instanceof Error ? error.message : String(error),
+      spec,
+    );
+  }
+}
 
 export function buildWorkspaceInitializeCommandSpecs(
   getContracts: () => FrameworkContracts,
@@ -122,6 +146,18 @@ export function buildWorkspaceInitializeCommandSpecs(
           workspacePath: parsed.workspacePath,
         });
       },
+    },
+    'workspace source-hygiene': {
+      usage: 'opl workspace source-hygiene [--source-root <repo>]',
+      summary:
+        'Fail closed when a source checkout contains cache or install byproducts; this does not assert domain or release readiness.',
+      examples: [
+        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
+      ],
+      handler: (args) =>
+        assertRepoSourceByproductsClean(
+          parseRepoSourceHygieneArgs(args, specs['workspace source-hygiene']),
+        ),
     },
     'workspace adopt': {
       usage:

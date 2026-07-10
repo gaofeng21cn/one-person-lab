@@ -28,7 +28,9 @@ function scanDirectory(root: string, current: string, issues: RepoSourceByproduc
       issues.push({
         kind: 'repo_source_generated_byproduct',
         path: relativePath,
-        byproduct_type: 'directory',
+        byproduct_type: BYPRODUCT_DIRECTORY_NAMES.has(entry.name) || entry.isDirectory()
+          ? 'directory'
+          : 'file',
         reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
       });
       continue;

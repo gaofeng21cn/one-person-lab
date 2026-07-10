@@ -13,7 +13,7 @@ export function buildWorkspaceCommandSpecs(
   const workspaceCommandSpecs: Record<string, CommandSpec> = {
     workspace: {
       usage:
-        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
+        'opl workspace projects|list|fleet report|root|init|ensure|validate|doctor|source-hygiene|adopt|upgrade|artifact-lifecycle|source ingest|project lifecycle|project archive|project delete|export-map|health|inspect|inventory|report|interfaces|bind|activate|archive [options]',
       summary:
         'Manage OPL workspace bindings, standard family-agent workspace initialization, generated inspection refs, and workspace-local project lifecycle projections.',
       examples: [
@@ -24,6 +24,7 @@ export function buildWorkspaceCommandSpecs(
         'opl workspace report --workspace /Users/gaofeng/workspace/visual-theme-a',
         'opl workspace fleet report',
         'opl workspace inspect --workspace /Users/gaofeng/workspace/visual-theme-a',
+        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
         'opl workspace artifact-lifecycle --workspace /Users/gaofeng/workspace/Book --project-id ai-university-bookforge-20260619 --apply',
         'opl workspace source ingest --workspace /Users/gaofeng/workspace/agent-foundry --file hema-guide.pdf --role reference_design',
         'opl workspace interfaces',
@@ -59,6 +60,11 @@ export function buildWorkspaceCommandSpecs(
           command: 'workspace doctor',
           usage: 'opl workspace doctor --workspace <path>',
           summary: 'Report workspace topology, generated refs, indexed projects, and blockers without writing.',
+        },
+        {
+          command: 'workspace source-hygiene',
+          usage: 'opl workspace source-hygiene [--source-root <repo>]',
+          summary: 'Fail closed when a source checkout contains cache or install byproducts.',
         },
         {
           command: 'workspace inspect',
@@ -153,6 +159,13 @@ export function buildWorkspaceCommandSpecs(
       usage: 'opl workspace doctor --workspace <path>',
       examples: [
         'opl workspace doctor --workspace /Users/gaofeng/workspace/visual-theme-a',
+      ],
+      group: 'workspace',
+    }),
+    'workspace source-hygiene': cloneCommandSpec(commandSpecs['workspace source-hygiene'], {
+      usage: 'opl workspace source-hygiene [--source-root <repo>]',
+      examples: [
+        'opl workspace source-hygiene --source-root /Users/gaofeng/workspace/opl-bookforge',
       ],
       group: 'workspace',
     }),
