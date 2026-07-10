@@ -25,10 +25,30 @@ const CURRENT_CONTROL_PROVIDER_ADMISSION_IDENTITY_BLOCKERS = new Set([
   'current_control_transition_non_advancing_apply_recorded',
 ]);
 
-function currentControlAdmissionWorkUnitIds(inputs: StageAttemptProjectionInput[]) {
+function currentControlAdmissionIdentities(inputs: StageAttemptProjectionInput[]) {
   return new Set(inputs
-    .map((input) => optionalString(input.payload.work_unit_id))
-    .filter((workUnitId): workUnitId is string => Boolean(workUnitId)));
+    .map((input) => {
+      const workUnitId = optionalString(input.payload.work_unit_id);
+      if (!workUnitId) {
+        return null;
+      }
+      const studyId = optionalString(input.payload.study_id)
+        ?? optionalString(input.payload.quest_id)
+        ?? '';
+      return `${input.domainId}\u0000${studyId}\u0000${workUnitId}`;
+    })
+    .filter((identity): identity is string => Boolean(identity)));
+}
+
+function currentControlAdmissionIdentity(input: StageAttemptProjectionInput) {
+  const workUnitId = optionalString(input.payload.work_unit_id);
+  if (!workUnitId) {
+    return null;
+  }
+  const studyId = optionalString(input.payload.study_id)
+    ?? optionalString(input.payload.quest_id)
+    ?? '';
+  return `${input.domainId}\u0000${studyId}\u0000${workUnitId}`;
 }
 
 function currentControlBlockedWorkUnitIds(blocked: Array<{ reason: string; task: unknown }>) {
@@ -165,22 +185,24 @@ export function suppressStaleDefaultExecutorInputs(
   currentAdmissionInputs: StageAttemptProjectionInput[],
   currentAdmissionBlocked: Array<{ reason: string; task: unknown }> = [],
 ) {
-  const currentWorkUnitIds = currentControlAdmissionWorkUnitIds(currentAdmissionInputs);
-  for (const workUnitId of currentControlBlockedWorkUnitIds(currentAdmissionBlocked)) {
-    currentWorkUnitIds.add(workUnitId);
-  }
-  if (currentWorkUnitIds.size === 0) {
+  const currentIdentities = currentControlAdmissionIdentities(currentAdmissionInputs);
+  const blockedWorkUnitIds = currentControlBlockedWorkUnitIds(currentAdmissionBlocked);
+  if (currentIdentities.size === 0 && blockedWorkUnitIds.size === 0) {
     return { inputs, suppressed_count: 0 };
   }
   const retained = inputs.filter((input) => {
     const workUnitId = optionalString(input.payload.work_unit_id);
+    const currentIdentity = currentControlAdmissionIdentity(input);
     return !(
       (
         input.taskKind === 'domain_owner/default-executor-dispatch'
         || isDomainRouteInput(input)
       )
       && workUnitId !== null
-      && currentWorkUnitIds.has(workUnitId)
+      && (
+        (currentIdentity !== null && currentIdentities.has(currentIdentity))
+        || blockedWorkUnitIds.has(workUnitId)
+      )
     );
   });
   return {
