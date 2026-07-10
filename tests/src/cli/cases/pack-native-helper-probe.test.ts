@@ -1,0 +1,136 @@
+import crypto from 'node:crypto';
+
+import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+
+const FALSE_AUTHORITY = {
+  can_write_domain_truth: false,
+  can_mutate_artifact_body: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_authorize_quality_verdict: false,
+  can_authorize_export_readiness: false,
+  can_claim_domain_ready: false,
+  can_claim_production_ready: false,
+};
+
+function sha256(content: string | Buffer) {
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+function writeDescriptor(root: string, overrides: Record<string, unknown> = {}) {
+  const descriptorPath = path.join(root, 'native-helper.json');
+  const descriptor = {
+    surface_kind: 'opl_pack_native_helper_probe_descriptor',
+    schema_version: 1,
+    helper_id: 'fixture.helper',
+    owner: 'fixture-domain',
+    entrypoint_ref: 'helper.js',
+    runtime_command: process.execPath,
+    required_commands: [],
+    authority_boundary: FALSE_AUTHORITY,
+    ...overrides,
+  };
+  fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+  return descriptorPath;
+}
+
+test('pack native-helper probe binds resolved receipt to descriptor and helper content', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-'));
+  try {
+    const helperContent = 'process.stdout.write("fixture");\n';
+    fs.writeFileSync(path.join(root, 'helper.js'), helperContent);
+    const descriptorPath = writeDescriptor(root);
+
+    const receipt = runCli([
+      'pack',
+      'native-helper',
+      'probe',
+      '--descriptor',
+      descriptorPath,
+    ]).pack_native_helper_probe_receipt;
+
+    assert.equal(receipt.surface_kind, 'opl_pack_native_helper_probe_receipt');
+    assert.equal(receipt.status, 'resolved');
+    assert.equal(receipt.descriptor_sha256, sha256(fs.readFileSync(descriptorPath)));
+    assert.equal(receipt.content_sha256, sha256(helperContent));
+    assert.equal(receipt.runtime_command_probe.status, 'resolved');
+    assert.deepEqual(receipt.required_command_probes, []);
+    assert.deepEqual(receipt.authority_boundary, FALSE_AUTHORITY);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe returns a missing receipt without executing the helper', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-missing-'));
+  try {
+    fs.writeFileSync(path.join(root, 'helper.js'), 'throw new Error("must not execute");\n');
+    const descriptorPath = writeDescriptor(root, {
+      runtime_command: 'opl-command-that-does-not-exist',
+      required_commands: ['another-missing-command'],
+    });
+
+    const receipt = runCli([
+      'pack',
+      'native-helper',
+      'probe',
+      '--descriptor',
+      descriptorPath,
+    ]).pack_native_helper_probe_receipt;
+
+    assert.equal(receipt.status, 'missing');
+    assert.equal(receipt.runtime_command_probe.status, 'missing');
+    assert.deepEqual(receipt.missing_requirements, [
+      'runtime_command:opl-command-that-does-not-exist',
+      'required_command:another-missing-command',
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe rejects entrypoint refs outside the descriptor root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-invalid-'));
+  try {
+    const descriptorPath = writeDescriptor(root, { entrypoint_ref: '../helper.js' });
+    assert.throws(
+      () => runCli(['pack', 'native-helper', 'probe', '--descriptor', descriptorPath]),
+      /entrypoint_ref must stay inside the descriptor directory/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe rejects undeclared authority fields', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-authority-'));
+  try {
+    fs.writeFileSync(path.join(root, 'helper.js'), 'process.exit(0);\n');
+    const descriptorPath = writeDescriptor(root, {
+      authority_boundary: {
+        ...FALSE_AUTHORITY,
+        can_execute_domain_renderer: true,
+      },
+    });
+    assert.throws(
+      () => runCli(['pack', 'native-helper', 'probe', '--descriptor', descriptorPath]),
+      /authority_boundary contains unknown fields/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe is discoverable under OPL Pack help', () => {
+  const help = runCli(['pack', 'native-helper']).help;
+  assert.equal(help.command, 'pack native-helper');
+  assert.equal(
+    help.subcommands.some((entry: { command: string }) => entry.command === 'pack native-helper probe'),
+    true,
+  );
+});
+
+test('pack native-helper probe reports missing CLI arguments as usage errors', () => {
+  const failure = runCliFailure(['pack', 'native-helper', 'probe']);
+  assert.equal(failure.payload.error.code, 'cli_usage_error');
+});

@@ -3,6 +3,7 @@ import {
   runPackBundleManifestCommand,
   runPackBundleWriteCommand,
 } from '../../../../modules/pack/pack-bundle.ts';
+import { runPackNativeHelperProbeCommand } from '../../../../modules/pack/native-helper-probe.ts';
 import {
   runGenericPackCheckCommand,
   runGenericPackGalleryCommand,
@@ -124,6 +125,30 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       ],
       group: 'brand-pack',
       handler: runPackBundleCheckCommand,
+    },
+    'pack native-helper': {
+      usage: 'opl pack native-helper <probe> --descriptor <path>',
+      summary: 'Probe a domain-owned native helper descriptor without executing the helper or claiming domain authority.',
+      examples: ['opl pack native-helper probe --descriptor contracts/native-helper.json --json'],
+      group: 'brand-pack',
+      subcommands: [
+        {
+          command: 'pack native-helper probe',
+          usage: 'opl pack native-helper probe --descriptor <path>',
+          summary: 'Resolve declared helper content and required commands into a content-bound no-authority receipt.',
+        },
+      ],
+      handler: (args) => {
+        assertNoArgs(args, specs['pack native-helper']);
+        return buildCommandHelp('pack native-helper', specs['pack native-helper']);
+      },
+    },
+    'pack native-helper probe': {
+      usage: 'opl pack native-helper probe --descriptor <path>',
+      summary: 'Resolve declared helper content and required commands into a content-bound no-authority receipt.',
+      examples: ['opl pack native-helper probe --descriptor contracts/native-helper.json --json'],
+      group: 'brand-pack',
+      handler: runPackNativeHelperProbeCommand,
     },
     'pack os inspect': {
       usage: 'opl pack os inspect --descriptor <path>',

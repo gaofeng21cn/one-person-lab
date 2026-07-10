@@ -118,6 +118,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/okf-command-surface.test.ts',
   'tests/src/cli/cases/runtime-environment-substrate-command-surface.test.ts',
   'tests/src/cli/cases/pack-bundle-command-surface.test.ts',
+  'tests/src/cli/cases/pack-native-helper-probe.test.ts',
   'tests/src/cli/cases/opl-foundation-skills-plugin-surface.test.ts',
   'tests/src/cli/cases/connect-pubmed.test.ts',
   'tests/src/cli/cases/connect-scientific.test.ts',

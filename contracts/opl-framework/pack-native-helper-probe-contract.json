@@ -1,0 +1,62 @@
+{
+  "version": "v1",
+  "contract_id": "opl_pack_native_helper_probe",
+  "contract_ref": "contracts/opl-framework/pack-native-helper-probe-contract.json",
+  "scope": "provider_and_domain_neutral_native_helper_probe_receipt",
+  "owner": "OPL Pack",
+  "purpose": "Resolve domain-owned native helper content and declared command dependencies into a content-bound no-authority receipt without executing the helper.",
+  "state": "active",
+  "machine_boundary": "The probe resolves local refs and executable paths only. Domain renderers, helper execution, artifact mutation, owner receipts, typed blockers, quality verdicts, publication proof, and export authority remain outside OPL Pack.",
+  "command": "opl pack native-helper probe --descriptor <path> --json",
+  "descriptor": {
+    "surface_kind": "opl_pack_native_helper_probe_descriptor",
+    "schema_version": 1,
+    "required_fields": [
+      "helper_id",
+      "owner",
+      "entrypoint_ref",
+      "runtime_command",
+      "required_commands",
+      "authority_boundary"
+    ],
+    "entrypoint_ref_policy": "descriptor_directory_relative_file",
+    "runtime_command_policy": "absolute_path_descriptor_relative_path_or_PATH_command",
+    "required_commands_policy": "unique_PATH_commands_or_paths"
+  },
+  "receipt": {
+    "surface_kind": "opl_pack_native_helper_probe_receipt",
+    "statuses": [
+      "resolved",
+      "missing"
+    ],
+    "required_binding_fields": [
+      "descriptor_ref",
+      "descriptor_sha256",
+      "entrypoint_ref",
+      "content_sha256"
+    ],
+    "probe_fields": [
+      "entrypoint_probe",
+      "runtime_command_probe",
+      "required_command_probes",
+      "missing_requirements"
+    ]
+  },
+  "authority_boundary": {
+    "can_write_domain_truth": false,
+    "can_mutate_artifact_body": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_authorize_quality_verdict": false,
+    "can_authorize_export_readiness": false,
+    "can_claim_domain_ready": false,
+    "can_claim_production_ready": false
+  },
+  "non_goals": [
+    "not_a_domain_renderer",
+    "not_a_helper_executor",
+    "not_a_pdf_or_image_generator",
+    "not_publication_or_export_proof",
+    "not_a_domain_owner_receipt"
+  ]
+}

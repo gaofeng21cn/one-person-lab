@@ -43,7 +43,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 11. `OMA Agent Lab ledger`：suite、owner receipt、learning candidate、promotion / mechanism / scaleout ledger 由 Foundry Lab 托管；OMA 保留 agent-building judgment 与 candidate refs。
 12. `OMA takeover materializer`：suite 写入、Agent Lab 调用与 delivery gate 组装由 Foundry Lab execution 承担；OMA 只提交 declarative work order。
 13. `OBF project hygiene`：通用目录遍历、source byproduct、cache 与 lifecycle 检查由 Workspace / Charter 承担；书稿长度、章节、图表与 review-PDF 判断留 OBF。
-14. `OBF native-helper shell`：PDF / imagegen 执行、工具探测与 receipt envelope 由 Pack 承担；renderer、publication proof、版式质量与 export authority 留 OBF。
+14. `OBF native-helper shell`：Pack 已提供 provider/domain-neutral `opl pack native-helper probe`，用 descriptor/content SHA-256 绑定 `resolved|missing` 工具探测 receipt；renderer、helper 执行、publication proof、版式质量与 export authority 留 OBF。OBF caller cutover 与私有通用 shell 删除仍由 OBF domain lane 验收。
 
 ### List 2：OPL 基座中应迁出或通用化的能力
 
