@@ -392,7 +392,7 @@ Semantic theme: OPL active-support reviewed header cleanup.
 Single Source of Truth:
 
 - Active completion / gap / baton owner: `docs/active/current-state-vs-ideal-gap.md`.
-- Active support owner map and target-state support: `docs/active/current-development-lines.md`, `docs/active/opl-family-development-reference.md`, `docs/active/opl-family-ideal-operating-model-redesign.md`, `docs/active/ordinary-progress-spine-and-audit-sidecar-plan.md`, `docs/active/opl-foundry-agent-target-operating-architecture.md`, `docs/active/foundry-agent-os-family-target-implementation-plan.md`, `docs/active/opl-stage-native-kernel-rollout-plan.md`, `docs/active/opl-family-purpose-first-current-design-audit.md`, `docs/active/production-framework-closure-gap-matrix.md`, and `docs/active/standard-agent-private-platform-inventory.md`.
+- Active support owner map and target-state support: `docs/active/current-development-lines.md`, `docs/active/opl-family-development-reference.md`, `docs/active/opl-family-ideal-operating-model-redesign.md`, `docs/active/opl-foundry-agent-target-operating-architecture.md`, `docs/active/opl-stage-native-kernel-rollout-plan.md`, `docs/active/production-framework-closure-gap-matrix.md`, and `docs/active/standard-agent-private-platform-inventory.md`.
 - Docs lifecycle owner: `docs/docs_portfolio_consolidation.md` and `docs/policies/docs-lifecycle-policy.md`.
 - Machine truth and retirement guards: OPL contracts, source/tests, CLI/read-model, runtime ledger, provider receipts, domain-owned manifests, owner receipts and typed blockers.
 

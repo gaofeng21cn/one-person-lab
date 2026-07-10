@@ -59,7 +59,7 @@ function walkFiles(root: string) {
   return fs.globSync(['**/*', '**/.*', '**/.*/**'], {
     cwd: root,
     exclude: (entry) => isIgnoredPath(toRepoPath(entry)),
-  }).filter((relativePath) => fs.statSync(path.join(root, relativePath)).isFile());
+  }).filter((relativePath) => fs.lstatSync(path.join(root, relativePath)).isFile());
 }
 
 function gitFiles(root: string) {
