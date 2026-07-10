@@ -522,6 +522,7 @@ export function buildRuntimeEnvironmentPrepareReadback(input: RuntimeEnvironment
       managed_required_r_packages: managedRequiredRPackages,
       managed_required_python_packages: requiredPythonPackages,
       base_or_recommended_r_packages: baseRPackageRequirements,
+      r_package_requirements: requiredRPackageRequirements,
       package_installation_receipt: installReceipt,
       python_package_installation_receipt: pythonInstallReceipt,
       writes_domain_truth: false,

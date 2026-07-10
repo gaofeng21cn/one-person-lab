@@ -90,11 +90,13 @@ function rPackageInstallSource(entry: JsonRecord): RPackageRequirement['install_
   const source = entry.source;
   if (source && typeof source === 'object' && !Array.isArray(source)) {
     const sourceRecord = source as JsonRecord;
-    if (sourceRecord.type === 'github') {
-      return 'github';
+    if (sourceRecord.type === 'github' || sourceRecord.type === 'bioconductor') {
+      return sourceRecord.type;
     }
   }
-  return entry.install_source === 'github' ? 'github' : 'cran';
+  return entry.install_source === 'github' || entry.install_source === 'bioconductor'
+    ? entry.install_source
+    : 'cran';
 }
 
 function rPackageGithubRepo(entry: JsonRecord): string | undefined {
@@ -120,7 +122,7 @@ function rPackageRequirementsFromEntries(value: unknown): RPackageRequirement[] 
       return {
         name,
         install_source: installSource,
-        github_repo: installSource === 'github' ? rPackageGithubRepo(entry) : undefined,
+        ...(installSource === 'github' ? { github_repo: rPackageGithubRepo(entry) } : {}),
       };
     })
     .filter((entry): entry is RPackageRequirement => Boolean(entry));
@@ -256,12 +258,21 @@ export function installRPackagesIntoManagedLibrary(
     .filter((entry) => entry.install_source === 'cran')
     .map((entry) => entry.name);
   const githubPackages = packagesToInstall.filter((entry) => entry.install_source === 'github');
+  const bioconductorPackages = packagesToInstall
+    .filter((entry) => entry.install_source === 'bioconductor')
+    .map((entry) => entry.name);
   fs.mkdirSync(libraryPath, { recursive: true });
   const expression = [
     `dir.create(${JSON.stringify(libraryPath)}, recursive = TRUE, showWarnings = FALSE)`,
     `.libPaths(c(${JSON.stringify(libraryPath)}, .libPaths()))`,
     cranPackages.length > 0
       ? `install.packages(${rCharacterVector(cranPackages)}, lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`
+      : '',
+    bioconductorPackages.length > 0
+      ? [
+        `if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`,
+        `BiocManager::install(${rCharacterVector(bioconductorPackages)}, lib = ${JSON.stringify(libraryPath)}, ask = FALSE, update = FALSE, quiet = TRUE)`,
+      ].join('; ')
       : '',
     ...githubPackages.map((entry) => {
       if (!entry.github_repo) {

@@ -6,7 +6,7 @@ export type JsonRecord = Record<string, unknown>;
 
 export type RPackageRequirement = {
   name: string;
-  install_source: 'cran' | 'github';
+  install_source: 'cran' | 'github' | 'bioconductor';
   github_repo?: string;
 };
 

@@ -420,6 +420,12 @@
       "managed_environment": "UV_PROJECT_ENVIRONMENT"
     },
     "r_package_environment": "R_LIBS_USER",
+    "supported_r_package_sources": [
+      "cran",
+      "github",
+      "bioconductor"
+    ],
+    "bioconductor_installer": "BiocManager",
     "python_package_environment": "UV_PROJECT_ENVIRONMENT",
     "python_installer": "uv",
     "requirement_profile_selection": "all_profiles_by_default_or_scoped_by_requirement_profile_id",

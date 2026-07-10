@@ -11,6 +11,7 @@ import {
   buildRuntimeEnvironmentPrepareReadback,
   buildRuntimeEnvironmentRunContextReadback,
 } from '../../src/modules/runway/runtime-environment-substrate.ts';
+import { installRPackagesIntoManagedLibrary } from '../../src/modules/runway/runtime-environment-substrate-parts/package-profile.ts';
 
 type Json = Record<string, unknown>;
 
@@ -264,6 +265,8 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.deepEqual((preparePolicy.python_standard_handoff as Json).lock_refs, ['uv.lock', 'pyproject.toml']);
   assert.equal((preparePolicy.python_standard_handoff as Json).managed_environment, 'UV_PROJECT_ENVIRONMENT');
   assert.equal(preparePolicy.r_package_environment, 'R_LIBS_USER');
+  assert.deepEqual(preparePolicy.supported_r_package_sources, ['cran', 'github', 'bioconductor']);
+  assert.equal(preparePolicy.bioconductor_installer, 'BiocManager');
   assert.equal(preparePolicy.python_package_environment, 'UV_PROJECT_ENVIRONMENT');
   assert.equal(preparePolicy.python_installer, 'uv');
   assert.equal(
@@ -613,4 +616,66 @@ test('runtime env prepare carries renv and uv lock refs into output, run-context
   assert.notEqual((changedPrepare.requirement_profile_identity as Json).profile_fingerprint, firstFingerprint);
   assert.notEqual(changedPrepare.managed_r_library_path, firstRCacheKey);
   assert.notEqual(changedPrepare.managed_python_environment_path, firstPythonCacheKey);
+});
+
+test('runtime env prepare preserves Bioconductor package source intent', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-bioconductor-'));
+  const profilePath = path.join(tempRoot, 'requirements.json');
+  fs.writeFileSync(
+    profilePath,
+    `${JSON.stringify({
+      profiles: [{
+        profile_id: 'analysis',
+        runtime_binaries: [],
+        language_packages: {
+          r: [{
+            name: 'ComplexHeatmap',
+            required: true,
+            source: { type: 'bioconductor' },
+          }],
+        },
+      }],
+    }, null, 2)}\n`,
+  );
+
+  const readback = buildRuntimeEnvironmentPrepareReadback({
+    domainId: 'mas',
+    profileId: 'analysis',
+    platformId: 'macos-arm64',
+    requirementProfilePath: profilePath,
+    requirementProfileId: 'analysis',
+    artifactRoot: path.join(tempRoot, 'artifacts'),
+  }) as Json;
+
+  assert.deepEqual((readback.prepare as Json).r_package_requirements, [{
+    name: 'ComplexHeatmap',
+    install_source: 'bioconductor',
+  }]);
+});
+
+test('runtime env installs Bioconductor packages into the managed R library', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-bioc-install-'));
+  const rscriptPath = path.join(tempRoot, 'Rscript');
+  const commandLog = path.join(tempRoot, 'install-expression.txt');
+  const libraryPath = path.join(tempRoot, 'library');
+  fs.writeFileSync(
+    rscriptPath,
+    `#!/bin/sh\ncase "$2" in\n  *installed.packages*) printf 'ComplexHeatmap\\n' ;;\n  *) printf '%s\\n' "$2" > ${JSON.stringify(commandLog)} ;;\nesac\n`,
+    { mode: 0o755 },
+  );
+
+  const receipt = installRPackagesIntoManagedLibrary(
+    rscriptPath,
+    libraryPath,
+    [{ name: 'ComplexHeatmap', install_source: 'bioconductor' }],
+    ['ComplexHeatmap'],
+  );
+
+  assert.equal(receipt.status, 'installed');
+  assert.deepEqual(receipt.failed, []);
+  const expression = fs.readFileSync(commandLog, 'utf8');
+  assert.match(expression, /install\.packages\("BiocManager"/);
+  assert.match(expression, /BiocManager::install\(c\("ComplexHeatmap"\)/);
+  assert.equal(expression.includes('repos = "https://cloud.r-project.org"'), true);
+  assert.equal(expression.includes(`lib = ${JSON.stringify(libraryPath)}`), true);
 });
