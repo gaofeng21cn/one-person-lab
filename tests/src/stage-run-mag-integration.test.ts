@@ -8,8 +8,8 @@ import { pathToFileURL } from 'node:url';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../src/modules/runway/family-runtime-domain-handler-process.ts';
 import {
+  buildStageRunCycleIdentity,
   buildStageRunCycleManifestFromControlPlane,
-  initializeStageRunCycleState,
   reduceStageRunCycleState,
   type StageRunCycleManifest,
   type StageRunCycleState,
@@ -80,12 +80,19 @@ function runMagJson(repoDir: string, args: string[], env: NodeJS.ProcessEnv) {
 }
 
 function eventIdentity(manifest: StageRunCycleManifest) {
-  const state = initializeStageRunCycleState(manifest);
+  const identity = buildStageRunCycleIdentity({
+    target_agent_ref: manifest.target_agent_ref,
+    descriptor_ref: manifest.descriptor_ref,
+    stage_ref: manifest.stage_bindings[0].stage_ref,
+    run_ref: manifest.run_ref,
+    cycle_index: 1,
+    attempt_index: 1,
+  });
   return {
     manifest_id: manifest.manifest_id,
-    stage_run_id: state.stage_run_id,
-    cycle_index: state.cycle_index,
-    attempt_index: state.attempt_index,
+    stage_run_id: identity.stage_run_id,
+    cycle_index: 1,
+    attempt_index: 1,
   };
 }
 
@@ -103,12 +110,12 @@ function routeEvent(manifest: StageRunCycleManifest, stageRef: string, decisionR
   };
 }
 
-function realManifest(input: {
+function realCycle(input: {
   repoDir: string;
   runRef: string;
   inputRef: string;
-}): StageRunCycleManifest {
-  return buildStageRunCycleManifestFromControlPlane({
+}) {
+  const manifest_input = {
     stage_control_plane: compileStandardAgentStageManifest(input.repoDir).stage_control_plane,
     target_agent_ref: 'mag',
     descriptor_ref: pathToFileURL(path.join(input.repoDir, 'contracts/domain_descriptor.json')).href,
@@ -116,7 +123,11 @@ function realManifest(input: {
     input_refs: [input.inputRef],
     max_cycles: 2,
     max_attempts_per_cycle: 2,
-  });
+  };
+  return {
+    manifest_input,
+    manifest: buildStageRunCycleManifestFromControlPlane(manifest_input),
+  };
 }
 
 test('StageRun consumes real MAG quality route, single-pass result, and typed-blocker refs', () => {
@@ -189,17 +200,17 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
     ).href;
     assert.equal(fs.existsSync(typedBlocker.owner_receipt_evidence.receipt_instance_ref), true);
 
-    const blockerManifest = realManifest({
+    const blockerCycle = realCycle({
       repoDir,
       runRef: `mag://integration/${gitHead}/quality-route`,
       inputRef: pathToFileURL(p3aPath).href,
     });
     const blockerState = reduceStageRunCycleState({
-      manifest: blockerManifest,
+      manifest_input: blockerCycle.manifest_input,
       events: [
-        routeEvent(blockerManifest, 'review_and_rebuttal', typedBlockerRef),
+        routeEvent(blockerCycle.manifest, 'review_and_rebuttal', typedBlockerRef),
         {
-          ...eventIdentity(blockerManifest),
+          ...eventIdentity(blockerCycle.manifest),
           surface_kind: 'opl_stage_run_effect_observation_event',
           version: 'stage-run-cycle-event.v1',
           event_kind: 'effect_observation',
@@ -242,17 +253,17 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
     assert.equal(forwardRoute.transition_intent.return_shape, 'transition_intent_ref');
     assert.equal(forwardRoute.requires_human_confirmation, false);
     const domainResultRef = pathToFileURL(revision.output_path).href;
-    const resultManifest = realManifest({
+    const resultCycle = realCycle({
       repoDir,
       runRef: `mag://integration/${gitHead}/revision-pass`,
       inputRef: pathToFileURL(path.join(repoDir, 'examples/nsfc_workspace_p2c_critique.json')).href,
     });
     const resultState: StageRunCycleState = reduceStageRunCycleState({
-      manifest: resultManifest,
+      manifest_input: resultCycle.manifest_input,
       events: [
-        routeEvent(resultManifest, 'proposal_authoring', domainResultRef),
+        routeEvent(resultCycle.manifest, 'proposal_authoring', domainResultRef),
         {
-          ...eventIdentity(resultManifest),
+          ...eventIdentity(resultCycle.manifest),
           surface_kind: 'opl_stage_run_effect_observation_event',
           version: 'stage-run-cycle-event.v1',
           event_kind: 'effect_observation',

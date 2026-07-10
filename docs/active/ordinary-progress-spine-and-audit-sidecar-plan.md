@@ -224,12 +224,12 @@ MDS / DeepScientist 的经验吸收口径固定为：
 - 每次 terminal closeout 能归类为 `paper_progress_delta`、`deliverable_progress_delta`、`platform_repair_delta`、`advisory_delta`、`typed_blocker` 或 `human_gate`。
 - platform repair 不能写成 paper progress。
 
-### P3：Readiness JIT 与 stop-loss
+### P3：Readiness JIT 与 anti-spin advisory
 
 目标：
 
 - readiness inventory 只在当前 delta 需要时进入。
-- 同一 lineage 反复 receipt-only、read-model reconcile-only、stale-route redrive-only 时冻结普通 launch，只接受 fresh owner delta、stable typed blocker 或 human gate。
+- 同一 lineage 反复 receipt-only、read-model reconcile-only、stale-route redrive-only 时只形成 advisory 与 owner-route 提示；是否阻断仍由 Stage Kernel hard gate、domain typed blocker 或 human gate 决定，不能由重复计数冻结普通 launch。
 
 验收：
 

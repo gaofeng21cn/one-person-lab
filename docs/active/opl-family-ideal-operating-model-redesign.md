@@ -99,7 +99,7 @@ supporting planes:
 | `durable_autonomy` | `Runway` 用 Temporal-backed StageRun 保持 resume、retry、dead-letter、human gate 和 repair。 | 长论文线不因 worker 重启、网络失败或上下文切换丢进度。 | MAS 私有 scheduler、daemon、第二 attempt loop。 |
 | `artifact_first_progress` | `Workspace` 物化 Stage Artifact Unit，T0/T1/T2/T3 分层。 | 用户能打开 evidence map、analysis pack、manuscript draft、review letter、revision packet。 | 用 receipt count、provider completion 或 schema pass 代替论文进展。 |
 | `jit_readiness` | readiness 只在当前 delta 需要时升级；缺口变成 route-back / typed blocker / next owner delta。 | 写作、分析、review 不被全量 readiness inventory 卡住。 | 先补齐所有 preflight 才允许继续工作。 |
-| `anti_spin` | repeated receipt-only / reconcile-only / stale-redrive-only 进入 stop-loss。 | MAS 若没有 paper/evidence/reviewer/gate delta，就明确转成 domain typed blocker 或 human gate。 | 无交付地反复跑 provider tick、read-model rebuild、evidence accounting。 |
+| `anti_spin` | repeated receipt-only / reconcile-only / stale-redrive-only 进入 advisory lineage 与 owner-route readback，不直接冻结 launch。 | MAS 若没有 paper/evidence/reviewer/gate delta，由 domain owner明确返回 typed blocker 或 human gate。 | 用平台重复计数替代 Stage Kernel hard gate 或 domain owner answer。 |
 
 理想状态下，`Runway Progress Reconciler` 每次只允许输出一个普通结论：继续执行、等待 owner、请求 human gate、执行 OPL repair、记录 typed blocker、或把证据留在 sidecar。它不能从 raw evidence 自己生成 MAS 下一步。
 
@@ -243,7 +243,7 @@ human-owner-decision-gate
 
 | Primitive | 持有职责 | 不持有 |
 | --- | --- | --- |
-| `owner-delta-controller` | desired/current reconcile、next owner、accepted answer shape、hard gate、stop-loss。 | domain goal generation、quality verdict、artifact authority。 |
+| `owner-delta-controller` | desired/current reconcile、next owner、accepted answer shape和 identity/authority/currentness hard gate；重复 lineage 只做 advisory。 | domain goal generation、quality verdict、artifact authority或基于重复计数的 launch freeze。 |
 | `stage-attempt-runtime` | admission、provider binding、execution authorization、attempt lease、Codex executor launch、retry/dead-letter、closeout receipt binding。 | stage 内认知策略、工具顺序、domain judgment。 |
 | `stage-artifact-kernel` | physical output、manifest、hash、owner answer、current pointer、lineage。 | artifact body verdict、publication/export/visual quality。 |
 | `agent-product-pack-compiler` | domain pack、stage refs、tool affordance、quality gate refs、golden path profile。 | domain-specific truth 或 private runtime loop。 |

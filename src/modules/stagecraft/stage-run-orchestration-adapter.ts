@@ -43,7 +43,7 @@ type StageRunCycleManifestIdentityInput = Pick<
   | 'max_attempts_per_cycle'
 >;
 
-export function buildStageRunCycleManifestId(input: StageRunCycleManifestIdentityInput) {
+function buildStageRunCycleManifestId(input: StageRunCycleManifestIdentityInput) {
   return stableId('stage_run_manifest', [
     input.target_agent_ref,
     input.descriptor_ref,

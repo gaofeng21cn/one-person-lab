@@ -95,7 +95,8 @@
           "max_cycles",
           "max_attempts_per_cycle"
         ],
-      "manifest_id_recomputed_on_read": true,
+      "manifest_id_built_from_normalized_control_plane_input": true,
+      "raw_manifest_reducer_input_allowed": false,
       "target_agent_ref_source": "explicit_canonical_agent_identity",
       "target_agent_ref_may_be_inferred_from_target_domain_id": false,
       "target_agent_ref_must_match_canonical_control_plane_owner": true,
@@ -169,16 +170,14 @@
         "domain_result_ref_or_blocker_ref"
       ],
       "rebuilds_from": [
-        "declarative_manifest",
+        "canonical_control_plane_manifest_input",
         "ordered_route_and_effect_events"
       ],
+      "reducer_input_fields": [
+        "manifest_input",
+        "events"
+      ],
       "caller_mutable_state_accepted": false,
-      "persisted_state_validation": {
-        "api_ref": "src/modules/stagecraft/stage-run-orchestration.ts#validateStageRunPersistedState",
-        "canonical_event_replay_match_required": true,
-        "active_persistence_consumer": null,
-        "persistence_enforcement_claimed": false
-      },
       "filesystem_writes": false,
       "process_spawn": false,
       "callback_execution": false,

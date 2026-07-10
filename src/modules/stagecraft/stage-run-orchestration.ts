@@ -1,8 +1,9 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
-import { canonicalOwnerId } from '../../kernel/owner-id.ts';
-import { isDeepStrictEqual } from 'node:util';
-import { buildStageRunCycleManifestId } from './stage-run-orchestration-adapter.ts';
+import {
+  buildStageRunCycleManifestFromControlPlane,
+  type StageRunControlPlaneManifestInput,
+} from './stage-run-orchestration-adapter.ts';
 import {
   STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY,
   STAGE_RUN_CANONICAL_LAUNCH_OWNER,
@@ -16,28 +17,6 @@ import {
   type StageRunRouteDecision,
 } from './stage-run-orchestration-types.ts';
 
-const ALLOWED_MANIFEST_FIELDS = new Set([
-  'surface_kind',
-  'version',
-  'manifest_id',
-  'target_agent_ref',
-  'descriptor_ref',
-  'run_ref',
-  'control_plane_binding',
-  'launch_owner',
-  'input_refs',
-  'stage_bindings',
-  'max_cycles',
-  'max_attempts_per_cycle',
-]);
-
-const ALLOWED_STAGE_BINDING_FIELDS = new Set(['stage_ref', 'runner_ref']);
-const ALLOWED_CONTROL_PLANE_BINDING_FIELDS = new Set([
-  'plane_id',
-  'target_domain_id',
-  'owner',
-  'fingerprint',
-]);
 const EVENT_IDENTITY_FIELDS = ['manifest_id', 'stage_run_id', 'cycle_index', 'attempt_index'] as const;
 
 const ALLOWED_ROUTE_DECISION_FIELDS = {
@@ -66,8 +45,7 @@ const ALLOWED_EFFECT_FIELDS = {
   runtime_blocker: new Set(['effect_status', 'stage_ref', 'runtime_blocker_ref', 'closeout_refs']),
 } as const;
 
-const ALLOWED_REDUCER_INPUT_FIELDS = new Set(['manifest', 'events']);
-const ALLOWED_PERSISTED_STATE_INPUT_FIELDS = new Set(['manifest', 'events', 'state']);
+const ALLOWED_REDUCER_INPUT_FIELDS = new Set(['manifest_input', 'events']);
 
 function contractError(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, details);
@@ -105,116 +83,6 @@ function uniqueRefs(value: unknown, field: string, required = false) {
 
 function unexpectedFields(value: Record<string, unknown>, allowed: Set<string>) {
   return Object.keys(value).filter((field) => !allowed.has(field));
-}
-
-function canonicalRunnerRef(value: unknown, field: string): typeof STAGE_RUN_CANONICAL_RUNNER_REF {
-  const runnerRef = requiredRef(value, field);
-  if (runnerRef !== STAGE_RUN_CANONICAL_RUNNER_REF) {
-    contractError('StageRun runner_ref must bind a canonical OPL runner owner.', {
-      field,
-      runner_ref: runnerRef,
-    });
-  }
-  return STAGE_RUN_CANONICAL_RUNNER_REF;
-}
-
-function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest {
-  if (
-    !isRecord(value)
-    || value.surface_kind !== 'opl_stage_run_cycle_manifest'
-    || value.version !== 'stage-run-cycle.v1'
-    || !Array.isArray(value.stage_bindings)
-  ) {
-    contractError('Invalid StageRun cycle manifest envelope.');
-  }
-  const unexpected = unexpectedFields(value, ALLOWED_MANIFEST_FIELDS);
-  if (unexpected.length > 0) {
-    contractError('StageRun cycle manifest must contain refs-only contract fields.', {
-      unexpected_fields: unexpected,
-    });
-  }
-  const stageBindings = value.stage_bindings.map((binding) => {
-    if (!isRecord(binding)) {
-      contractError('StageRun cycle manifest stage_bindings entries must be objects.');
-    }
-    const unexpectedBindingFields = unexpectedFields(binding, ALLOWED_STAGE_BINDING_FIELDS);
-    if (unexpectedBindingFields.length > 0) {
-      contractError('StageRun cycle manifest stage_bindings must contain identity fields only.', {
-        unexpected_fields: unexpectedBindingFields,
-      });
-    }
-    return {
-      stage_ref: requiredRef(binding.stage_ref, 'stage_bindings.stage_ref'),
-      runner_ref: canonicalRunnerRef(binding.runner_ref, 'stage_bindings.runner_ref'),
-    };
-  });
-  if (stageBindings.length === 0) {
-    contractError('StageRun cycle manifest requires stage_bindings.');
-  }
-  if (new Set(stageBindings.map((binding) => binding.stage_ref)).size !== stageBindings.length) {
-    contractError('StageRun cycle manifest stage_ref values must be unique.');
-  }
-  if (value.launch_owner !== STAGE_RUN_CANONICAL_LAUNCH_OWNER) {
-    contractError('StageRun launch_owner must bind the canonical OPL launch owner.', {
-      launch_owner: value.launch_owner,
-    });
-  }
-  if (!isRecord(value.control_plane_binding)) {
-    contractError('StageRun cycle manifest requires a control-plane binding.');
-  }
-  const unexpectedControlPlaneFields = unexpectedFields(
-    value.control_plane_binding,
-    ALLOWED_CONTROL_PLANE_BINDING_FIELDS,
-  );
-  if (unexpectedControlPlaneFields.length > 0) {
-    contractError('StageRun control-plane binding must contain identity fields only.', {
-      unexpected_fields: unexpectedControlPlaneFields,
-    });
-  }
-  const controlPlaneBinding = {
-    plane_id: requiredRef(value.control_plane_binding.plane_id, 'control_plane_binding.plane_id'),
-    target_domain_id: requiredRef(
-      value.control_plane_binding.target_domain_id,
-      'control_plane_binding.target_domain_id',
-    ),
-    owner: requiredRef(value.control_plane_binding.owner, 'control_plane_binding.owner'),
-    fingerprint: requiredRef(
-      value.control_plane_binding.fingerprint,
-      'control_plane_binding.fingerprint',
-    ),
-  };
-  const canonicalTargetOwner = canonicalOwnerId(requiredRef(value.target_agent_ref, 'target_agent_ref'));
-  if (
-    canonicalOwnerId(controlPlaneBinding.target_domain_id) !== canonicalTargetOwner
-    || canonicalOwnerId(controlPlaneBinding.owner) !== canonicalTargetOwner
-  ) {
-    contractError('StageRun target agent must match the control-plane domain owner.');
-  }
-  const manifestIdentity = {
-    target_agent_ref: requiredRef(value.target_agent_ref, 'target_agent_ref'),
-    descriptor_ref: requiredRef(value.descriptor_ref, 'descriptor_ref'),
-    run_ref: requiredRef(value.run_ref, 'run_ref'),
-    control_plane_binding: controlPlaneBinding,
-    input_refs: uniqueRefs(value.input_refs, 'input_refs', true),
-    stage_bindings: stageBindings,
-    max_cycles: positiveInteger(value.max_cycles, 'max_cycles'),
-    max_attempts_per_cycle: positiveInteger(value.max_attempts_per_cycle, 'max_attempts_per_cycle'),
-  };
-  const manifestId = requiredRef(value.manifest_id, 'manifest_id');
-  const expectedManifestId = buildStageRunCycleManifestId(manifestIdentity);
-  if (manifestId !== expectedManifestId) {
-    contractError('StageRun manifest_id must match the canonical manifest identity.', {
-      manifest_id: manifestId,
-      expected_manifest_id: expectedManifestId,
-    });
-  }
-  return {
-    surface_kind: 'opl_stage_run_cycle_manifest',
-    version: 'stage-run-cycle.v1',
-    manifest_id: expectedManifestId,
-    ...manifestIdentity,
-    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
-  };
 }
 
 function normalizeRouteDecision(value: StageRunRouteDecision): StageRunRouteDecision {
@@ -401,8 +269,7 @@ function expectedStageRunId(manifest: StageRunCycleManifest) {
   }).stage_run_id;
 }
 
-export function initializeStageRunCycleState(value: StageRunCycleManifest): StageRunCycleState {
-  const manifest = normalizeManifest(value);
+function initializeStageRunCycleState(manifest: StageRunCycleManifest): StageRunCycleState {
   return {
     surface_kind: 'opl_stage_run_cycle_state',
     version: 'stage-run-cycle.v1',
@@ -572,7 +439,7 @@ function reduceEffectObservation(
 }
 
 export function reduceStageRunCycleState(input: {
-  manifest: StageRunCycleManifest;
+  manifest_input: StageRunControlPlaneManifestInput;
   events: StageRunCycleEvent[];
 }): StageRunCycleState {
   if (!isRecord(input)) {
@@ -580,14 +447,14 @@ export function reduceStageRunCycleState(input: {
   }
   const unexpected = unexpectedFields(input, ALLOWED_REDUCER_INPUT_FIELDS);
   if (unexpected.length > 0) {
-    contractError('StageRun reducer rebuilds state and does not accept caller mutable state.', {
+    contractError('StageRun reducer requires canonical control-plane manifest input and events only.', {
       unexpected_fields: unexpected,
     });
   }
   if (!Array.isArray(input.events)) {
     contractError('StageRun reducer requires an ordered events array.');
   }
-  const manifest = normalizeManifest(input.manifest);
+  const manifest = buildStageRunCycleManifestFromControlPlane(input.manifest_input);
   let state = initializeStageRunCycleState(manifest);
   for (const value of input.events) {
     if (state.status !== 'running') {
@@ -616,34 +483,7 @@ export function reduceStageRunCycleState(input: {
   return state;
 }
 
-export function validateStageRunPersistedState(input: {
-  manifest: StageRunCycleManifest;
-  events: StageRunCycleEvent[];
-  state: unknown;
-}): StageRunCycleState {
-  if (!isRecord(input)) {
-    contractError('StageRun persisted state validation requires an input object.');
-  }
-  const unexpected = unexpectedFields(input, ALLOWED_PERSISTED_STATE_INPUT_FIELDS);
-  if (unexpected.length > 0) {
-    contractError('StageRun persisted state validation accepts manifest, events, and state only.', {
-      unexpected_fields: unexpected,
-    });
-  }
-  const canonicalState = reduceStageRunCycleState({
-    manifest: input.manifest,
-    events: input.events,
-  });
-  if (!isDeepStrictEqual(input.state, canonicalState)) {
-    contractError('StageRun persisted state does not match canonical event replay.', {
-      manifest_id: canonicalState.manifest_id,
-      stage_run_id: canonicalState.stage_run_id,
-    });
-  }
-  return canonicalState;
-}
-
-export { buildStageRunCycleManifestFromControlPlane, buildStageRunCycleManifestId } from './stage-run-orchestration-adapter.ts';
+export { buildStageRunCycleManifestFromControlPlane } from './stage-run-orchestration-adapter.ts';
 export type { StageRunControlPlaneManifestInput } from './stage-run-orchestration-adapter.ts';
 export { STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY } from './stage-run-orchestration-types.ts';
 export { STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF } from './stage-run-orchestration-types.ts';

@@ -95,8 +95,12 @@ function controlPlaneManifestInput(runRef = 'mag://authoring-run/proposal-1') {
   };
 }
 
-function manifestInput(module: Record<string, any>, runRef = 'mag://authoring-run/proposal-1') {
-  return module.buildStageRunCycleManifestFromControlPlane(controlPlaneManifestInput(runRef));
+function cycleInput(module: Record<string, any>, runRef = 'mag://authoring-run/proposal-1') {
+  const manifest_input = controlPlaneManifestInput(runRef);
+  return {
+    manifest_input,
+    manifest: module.buildStageRunCycleManifestFromControlPlane(manifest_input),
+  };
 }
 
 function eventIdentity(manifest: StageRunCycleManifest, cycleIndex = 1, attemptIndex = 1) {
@@ -151,7 +155,7 @@ test('StageRun orchestration is a pure reducer over canonical runner and domain 
   const packageJson = readJson<Record<string, any>>('package.json');
   const source = fs.readFileSync(path.join(repoRoot, orchestrationModulePath), 'utf8');
   const module = await import(pathToFileURL(path.join(repoRoot, orchestrationModulePath)).href);
-  const manifest = manifestInput(module);
+  const { manifest } = cycleInput(module);
   const common = {
     descriptor_ref: 'mag://agent/descriptor',
     stage_ref: 'proposal_authoring',
@@ -166,8 +170,13 @@ test('StageRun orchestration is a pure reducer over canonical runner and domain 
   assert.equal(contract.cycle_orchestration.execution_model, 'pure_refs_only_event_reducer');
   assert.equal(
     contract.cycle_orchestration.declarative_manifest.generated_control_plane_adapter
-      .manifest_id_recomputed_on_read,
+      .manifest_id_built_from_normalized_control_plane_input,
     true,
+  );
+  assert.equal(
+    contract.cycle_orchestration.declarative_manifest.generated_control_plane_adapter
+      .raw_manifest_reducer_input_allowed,
+    false,
   );
   assert.equal(
     contract.cycle_orchestration.declarative_manifest.generated_control_plane_adapter
@@ -203,16 +212,16 @@ test('StageRun orchestration is a pure reducer over canonical runner and domain 
 
 test('StageRun reducer consumes declared route and canonical runner domain refs without executing effects', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, orchestrationModulePath)).href);
-  const manifest = manifestInput(module);
+  const { manifest_input, manifest } = cycleInput(module);
   const events: Array<Record<string, any>> = [];
-  let state = module.initializeStageRunCycleState(manifest);
+  let state = module.reduceStageRunCycleState({ manifest_input, events });
   events.push(routeEvent(manifest, {
     decision: 'dispatch',
     stage_ref: 'proposal_authoring',
     decision_refs: ['mag://route-decisions/proposal-authoring'],
   }));
   state = module.reduceStageRunCycleState({
-    manifest,
+    manifest_input,
     events,
   });
   assert.equal(state.pending_stage_ref, 'proposal_authoring');
@@ -227,7 +236,7 @@ test('StageRun reducer consumes declared route and canonical runner domain refs 
     closeout_refs: ['mag://stage-closeouts/revision-pass'],
   }));
   state = module.reduceStageRunCycleState({
-    manifest,
+    manifest_input,
     events,
   });
   assert.equal(state.completed_step_count, 1);
@@ -240,7 +249,7 @@ test('StageRun reducer consumes declared route and canonical runner domain refs 
     decision_refs: ['mag://route-decisions/review-and-rebuttal'],
   }, 2));
   state = module.reduceStageRunCycleState({
-    manifest,
+    manifest_input,
     events,
   });
   events.push(effectEvent(manifest, {
@@ -251,7 +260,7 @@ test('StageRun reducer consumes declared route and canonical runner domain refs 
     closeout_refs: ['mag://stage-closeouts/quality-aware-review'],
   }, 2));
   state = module.reduceStageRunCycleState({
-    manifest,
+    manifest_input,
     events,
   });
   assert.deepEqual(state.latest_output_refs, [
@@ -265,7 +274,7 @@ test('StageRun reducer consumes declared route and canonical runner domain refs 
     decision_refs: ['mag://route-decisions/accepted'],
   }, 3));
   state = module.reduceStageRunCycleState({
-    manifest,
+    manifest_input,
     events,
   });
   assert.equal(state.status, 'checkpoint_accepted');
@@ -283,7 +292,8 @@ test('StageRun manifest binds the canonical agent and complete control-plane ide
     /target agent must match the control-plane domain owner/,
   );
 
-  const original = manifestInput(module, 'mag://authoring-run/semantic-currentness');
+  const originalCycle = cycleInput(module, 'mag://authoring-run/semantic-currentness');
+  const original = originalCycle.manifest;
   const changedInput = controlPlaneManifestInput('mag://authoring-run/semantic-currentness');
   changedInput.stage_control_plane.stages[0] = {
     ...changedInput.stage_control_plane.stages[0],
@@ -299,13 +309,31 @@ test('StageRun manifest binds the canonical agent and complete control-plane ide
   });
   assert.notEqual(changed.manifest_id, original.manifest_id);
   assert.notEqual(changed.control_plane_binding.fingerprint, original.control_plane_binding.fingerprint);
+
+  const forgedIdentity = {
+    ...original,
+    control_plane_binding: {
+      ...original.control_plane_binding,
+      fingerprint: 'stage_control_plane_forged',
+    },
+  };
+  const forged = {
+    ...forgedIdentity,
+    manifest_id: 'stage_run_manifest_forged_consistent_pair',
+  };
+  assert.throws(
+    () => module.reduceStageRunCycleState({ manifest: forged, events: [] }),
+    /requires canonical control-plane manifest input/,
+  );
 });
 
 test('StageRun events are bound to one manifest, run, cycle, and attempt', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, orchestrationModulePath)).href);
-  const manifestA = manifestInput(module, 'mag://authoring-run/event-a');
-  const manifestB = manifestInput(module, 'mag://authoring-run/event-b');
-  const initialA = module.initializeStageRunCycleState(manifestA);
+  const cycleA = cycleInput(module, 'mag://authoring-run/event-a');
+  const cycleB = cycleInput(module, 'mag://authoring-run/event-b');
+  const manifestA = cycleA.manifest;
+  const manifestB = cycleB.manifest;
+  const initialA = module.reduceStageRunCycleState({ manifest_input: cycleA.manifest_input, events: [] });
   const event = {
     ...routeEvent(manifestA, {
       decision: 'dispatch',
@@ -319,13 +347,27 @@ test('StageRun events are bound to one manifest, run, cycle, and attempt', async
   };
 
   assert.equal(
-    module.reduceStageRunCycleState({ manifest: manifestA, events: [event] }).pending_stage_ref,
+    module.reduceStageRunCycleState({ manifest_input: cycleA.manifest_input, events: [event] }).pending_stage_ref,
     'proposal_authoring',
   );
   assert.throws(
-    () => module.reduceStageRunCycleState({ manifest: manifestB, events: [event] }),
+    () => module.reduceStageRunCycleState({ manifest_input: cycleB.manifest_input, events: [event] }),
     /event identity must match the canonical cycle state/,
   );
+  for (const [field, value] of [
+    ['manifest_id', manifestB.manifest_id],
+    ['stage_run_id', 'stage_run_forged'],
+    ['cycle_index', 2],
+    ['attempt_index', 2],
+  ]) {
+    assert.throws(
+      () => module.reduceStageRunCycleState({
+        manifest_input: cycleA.manifest_input,
+        events: [{ ...event, [field]: value }],
+      }),
+      /event identity must match the canonical cycle state/,
+    );
+  }
 });
 
 test('StageRun cycle identity rejects non-object input with a typed contract error', async () => {
@@ -338,7 +380,8 @@ test('StageRun cycle identity rejects non-object input with a typed contract err
 
 test('StageRun reducer merges owner blockers and exhausts retry budgets without synthesizing authority', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, orchestrationModulePath)).href);
-  const manifest = manifestInput(module, 'mag://authoring-run/blockers');
+  const cycle = cycleInput(module, 'mag://authoring-run/blockers');
+  const { manifest } = cycle;
   const events = [
     routeEvent(manifest, {
       decision: 'dispatch',
@@ -351,7 +394,7 @@ test('StageRun reducer merges owner blockers and exhausts retry budgets without 
       runtime_blocker_ref: 'opl://runtime-blockers/provider-exit',
     }),
   ];
-  let state = module.reduceStageRunCycleState({ manifest, events });
+  let state = module.reduceStageRunCycleState({ manifest_input: cycle.manifest_input, events });
   assert.equal(state.attempt_index, 2);
   events.push(routeEvent(manifest, {
     decision: 'blocked',
@@ -360,7 +403,7 @@ test('StageRun reducer merges owner blockers and exhausts retry budgets without 
     human_gate_refs: ['mag://human-gates/review'],
     runtime_blocker_refs: ['opl://runtime-blockers/owner-route'],
   }, 1, 2));
-  state = module.reduceStageRunCycleState({ manifest, events });
+  state = module.reduceStageRunCycleState({ manifest_input: cycle.manifest_input, events });
   assert.deepEqual(state.runtime_blocker_refs, [
     'opl://runtime-blockers/provider-exit',
     'opl://runtime-blockers/owner-route',
@@ -368,7 +411,8 @@ test('StageRun reducer merges owner blockers and exhausts retry budgets without 
   assert.deepEqual(state.typed_blocker_refs, ['mag://typed-blockers/quality']);
   assert.equal(state.domain_typed_blocker_created, false);
 
-  const retryManifest = manifestInput(module, 'mag://authoring-run/runtime-retry');
+  const retryCycle = cycleInput(module, 'mag://authoring-run/runtime-retry');
+  const retryManifest = retryCycle.manifest;
   const retryEvents: Array<Record<string, any>> = [];
   for (let attempt = 0; attempt < 2; attempt += 1) {
     retryEvents.push(routeEvent(retryManifest, {
@@ -382,7 +426,10 @@ test('StageRun reducer merges owner blockers and exhausts retry budgets without 
       runtime_blocker_ref: `opl://runtime-blockers/provider-exit-${attempt}`,
     }, 1, attempt + 1));
   }
-  const exhausted = module.reduceStageRunCycleState({ manifest: retryManifest, events: retryEvents });
+  const exhausted = module.reduceStageRunCycleState({
+    manifest_input: retryCycle.manifest_input,
+    events: retryEvents,
+  });
   assert.equal(exhausted.status, 'exhausted');
   assert.equal(exhausted.termination_reason, 'max_attempts_exhausted');
   assert.deepEqual(exhausted.typed_blocker_refs, []);
@@ -390,26 +437,8 @@ test('StageRun reducer merges owner blockers and exhausts retry budgets without 
 
 test('StageRun reducer rejects caller state, untrusted runners, invalid effects, and pending-stage replacement', async () => {
   const module = await import(pathToFileURL(path.join(repoRoot, orchestrationModulePath)).href);
-  const manifest = manifestInput(module, 'mag://authoring-run/fail-closed');
-  assert.throws(
-    () => module.initializeStageRunCycleState({ ...manifest, artifact_body: { forbidden: true } }),
-    /refs-only contract fields/,
-  );
-  assert.throws(
-    () => module.initializeStageRunCycleState({ ...manifest, launch_owner: 'target-domain' }),
-    /canonical OPL launch owner/,
-  );
-  assert.throws(
-    () => module.initializeStageRunCycleState({ ...manifest, manifest_id: 'stage_run_manifest_forged' }),
-    /must match the canonical manifest identity/,
-  );
-  assert.throws(
-    () => module.initializeStageRunCycleState({
-      ...manifest,
-      stage_bindings: [{ stage_ref: 'proposal_authoring', runner_ref: 'mag://private-scheduler' }],
-    }),
-    /canonical OPL runner owner/,
-  );
+  const cycle = cycleInput(module, 'mag://authoring-run/fail-closed');
+  const { manifest } = cycle;
   assert.throws(
     () => module.buildStageRunCycleManifestFromControlPlane({
       ...controlPlaneManifestInput('mag://authoring-run/untrusted-runner'),
@@ -422,26 +451,10 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     stage_ref: 'proposal_authoring',
     decision_refs: ['mag://routes/dispatch'],
   });
-  const state = module.reduceStageRunCycleState({ manifest, events: [dispatch] });
-  assert.deepEqual(module.validateStageRunPersistedState({
-    manifest,
-    events: [dispatch],
-    state,
-  }), state);
-  for (const tamperedState of [
-    { ...state, completed_step_count: 99 },
-    { ...state, checkpoint_refs: 'mag://forged-checkpoint' },
-    { ...state, accepted_checkpoint_ref: 'mag://forged-checkpoint', status: 'running' },
-    { ...state, rollback_to_checkpoint_ref: 'mag://forged-checkpoint', status: 'running' },
-    { ...state, status: 'checkpoint_accepted' },
-  ]) {
-    assert.throws(
-      () => module.validateStageRunPersistedState({ manifest, events: [dispatch], state: tamperedState }),
-      /does not match canonical event replay/,
-    );
-  }
+  const state = module.reduceStageRunCycleState({ manifest_input: cycle.manifest_input, events: [dispatch] });
+  assert.equal(state.pending_stage_ref, 'proposal_authoring');
   assert.throws(() => module.reduceStageRunCycleState({
-    manifest,
+    manifest_input: cycle.manifest_input,
     events: [dispatch, routeEvent(manifest, {
       decision: 'dispatch',
       stage_ref: 'review_and_rebuttal',
@@ -449,7 +462,7 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     })],
   }), /cannot replace a pending canonical runner effect/);
   assert.throws(() => module.reduceStageRunCycleState({
-    manifest,
+    manifest_input: cycle.manifest_input,
     events: [dispatch, effectEvent(manifest, {
       effect_status: 'domain_result',
       stage_ref: 'proposal_authoring',
@@ -457,7 +470,7 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     })],
   }), /fields do not match its effect status/);
   assert.throws(() => module.reduceStageRunCycleState({
-    manifest,
+    manifest_input: cycle.manifest_input,
     events: [routeEvent(manifest, {
       decision: 'dispatch',
       stage_ref: 'proposal_authoring',
@@ -482,12 +495,12 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     },
   ]) {
     assert.throws(() => module.reduceStageRunCycleState({
-      manifest,
+      manifest_input: cycle.manifest_input,
       events: [dispatch, effectEvent(manifest, effect)],
     }), /fields do not match its effect status/);
   }
   assert.throws(() => module.reduceStageRunCycleState({
-    manifest,
+    manifest_input: cycle.manifest_input,
     events: [dispatch, effectEvent(manifest, {
       effect_status: 'domain_result',
       stage_ref: 'review_and_rebuttal',
@@ -495,7 +508,7 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     })],
   }), /must match the pending stage ref/);
   assert.throws(() => module.reduceStageRunCycleState({
-    manifest,
+    manifest_input: cycle.manifest_input,
     events: [dispatch, effectEvent(manifest, {
       effect_status: 'no_progress',
       stage_ref: 'proposal_authoring',
