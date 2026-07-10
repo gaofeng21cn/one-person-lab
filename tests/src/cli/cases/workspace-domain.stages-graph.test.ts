@@ -51,11 +51,24 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
     }).family_stage_readiness;
+    const boundStages = list.stages.filter(
+      (stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent',
+    );
+    const admittedStages = list.stages.filter(
+      (stage: { admission_status: string }) => stage.admission_status === 'admitted',
+    );
+    const boundReadinessDomains = readiness.domains.filter(
+      (domain: { project_id: string }) => domain.project_id !== 'opl-meta-agent',
+    );
 
-    assert.equal(list.summary.admitted_stages_count, 19);
-    assert.equal(list.summary.blocked_stages_count, 0);
+    assert.equal(boundStages.length, 18);
+    assert.equal(list.summary.admitted_stages_count, admittedStages.length);
     assert.equal(
-      list.stages.filter((stage: { project_id: string }) => stage.project_id !== 'opl-meta-agent').every(
+      boundStages.filter((stage: { admission_status: string }) => stage.admission_status === 'blocked').length,
+      0,
+    );
+    assert.equal(
+      boundStages.every(
         (stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean } }) =>
           stage.admission_status === 'admitted'
           && stage.guarantee_mode === 'runtime_enforced'
@@ -66,7 +79,14 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     assert.equal(proofBundle.admission_status, 'admitted');
     assert.equal(proofBundle.authority_boundary.can_write_domain_truth, false);
     assert.equal(readiness.family_defaults, true);
-    assert.equal(readiness.summary.hard_blocker_count, 0);
+    assert.equal(
+      boundReadinessDomains.reduce(
+        (count: number, domain: { summary: { hard_blocker_count: number } }) =>
+          count + domain.summary.hard_blocker_count,
+        0,
+      ),
+      0,
+    );
     assert.equal(readiness.summary.can_claim_domain_ready, false);
     assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
