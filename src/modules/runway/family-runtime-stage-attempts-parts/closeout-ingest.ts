@@ -87,7 +87,7 @@ function syncAttemptRowFromAcceptedCloseout(
   ) {
     reconcileDomainRouteTerminalTaskForAttempt(db, {
       stageAttemptId: input.stageAttemptId,
-      source: 'typed-closeout-ingest:paper-mission-stage-route-terminal',
+      source: 'typed-closeout-ingest:domain-route-terminal',
     });
     return input.attempt;
   }
@@ -131,7 +131,7 @@ function syncAttemptRowFromAcceptedCloseout(
   );
   reconcileDomainRouteTerminalTaskForAttempt(db, {
     stageAttemptId: input.stageAttemptId,
-    source: 'typed-closeout-ingest:paper-mission-stage-route-terminal',
+    source: 'typed-closeout-ingest:domain-route-terminal',
   });
   return inspectStageAttempt(db, input.stageAttemptId);
 }

@@ -233,7 +233,7 @@ function temporalCompletedMissingCloseoutBlocker(observation: TemporalStageAttem
 function reconcileDomainRouteTerminalObservation(db: DatabaseSync, stageAttemptId: string) {
   reconcileDomainRouteTerminalTaskForAttempt(db, {
     stageAttemptId,
-    source: 'temporal-terminal-observation:paper-mission-stage-route-terminal',
+    source: 'temporal-terminal-observation:domain-route-terminal',
   });
 }
 
