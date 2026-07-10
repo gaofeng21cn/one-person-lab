@@ -27,6 +27,12 @@ export type StageRunCycleManifest = {
   target_agent_ref: string;
   descriptor_ref: string;
   run_ref: string;
+  control_plane_binding: {
+    plane_id: string;
+    target_domain_id: string;
+    owner: string;
+    fingerprint: string;
+  };
   launch_owner: typeof STAGE_RUN_CANONICAL_LAUNCH_OWNER;
   input_refs: string[];
   stage_bindings: Array<{
@@ -83,8 +89,15 @@ export type StageRunEffectObservation =
       closeout_refs?: string[];
     };
 
-export type StageRunCycleEvent =
-  | {
+type StageRunCycleEventIdentity = {
+  manifest_id: string;
+  stage_run_id: string;
+  cycle_index: number;
+  attempt_index: number;
+};
+
+export type StageRunCycleEvent = StageRunCycleEventIdentity & (
+  {
       surface_kind: 'opl_stage_run_route_decision_event';
       version: 'stage-run-cycle-event.v1';
       event_kind: 'route_decision';
@@ -95,7 +108,8 @@ export type StageRunCycleEvent =
       version: 'stage-run-cycle-event.v1';
       event_kind: 'effect_observation';
       effect: StageRunEffectObservation;
-    };
+    }
+);
 
 export type StageRunCycleState = {
   surface_kind: 'opl_stage_run_cycle_state';

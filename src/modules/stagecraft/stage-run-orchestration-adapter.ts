@@ -1,4 +1,5 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { canonicalOwnerId } from '../../kernel/owner-id.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import {
   normalizeFamilyStageControlPlane,
@@ -35,6 +36,7 @@ type StageRunCycleManifestIdentityInput = Pick<
   | 'target_agent_ref'
   | 'descriptor_ref'
   | 'run_ref'
+  | 'control_plane_binding'
   | 'input_refs'
   | 'stage_bindings'
   | 'max_cycles'
@@ -46,6 +48,7 @@ export function buildStageRunCycleManifestId(input: StageRunCycleManifestIdentit
     input.target_agent_ref,
     input.descriptor_ref,
     input.run_ref,
+    input.control_plane_binding,
     input.input_refs,
     input.stage_bindings,
     input.max_cycles,
@@ -96,12 +99,29 @@ export function buildStageRunCycleManifestFromControlPlane(
   );
   if (!plane) contractError('StageRun control-plane adapter requires a generated stage control plane.');
   const targetAgentRef = requiredRef(input.target_agent_ref, 'target_agent_ref');
+  const canonicalTargetOwner = canonicalOwnerId(targetAgentRef);
+  if (
+    canonicalOwnerId(plane.target_domain_id) !== canonicalTargetOwner
+    || canonicalOwnerId(plane.owner) !== canonicalTargetOwner
+  ) {
+    contractError('StageRun target agent must match the control-plane domain owner.', {
+      target_agent_ref: targetAgentRef,
+      target_domain_id: plane.target_domain_id,
+      control_plane_owner: plane.owner,
+    });
+  }
   const descriptorRef = requiredRef(input.descriptor_ref, 'descriptor_ref');
   const runRef = requiredRef(input.run_ref, 'run_ref');
   const manifestIdentity = {
     target_agent_ref: targetAgentRef,
     descriptor_ref: descriptorRef,
     run_ref: runRef,
+    control_plane_binding: {
+      plane_id: plane.plane_id,
+      target_domain_id: plane.target_domain_id,
+      owner: plane.owner,
+      fingerprint: stableId('stage_control_plane', [plane]),
+    },
     input_refs: uniqueRefs(input.input_refs, 'input_refs'),
     stage_bindings: plane.stages.map((stage) => ({
       stage_ref: stage.stage_id,

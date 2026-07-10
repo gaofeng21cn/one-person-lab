@@ -1,5 +1,6 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
+import { canonicalOwnerId } from '../../kernel/owner-id.ts';
 import { isDeepStrictEqual } from 'node:util';
 import { buildStageRunCycleManifestId } from './stage-run-orchestration-adapter.ts';
 import {
@@ -22,6 +23,7 @@ const ALLOWED_MANIFEST_FIELDS = new Set([
   'target_agent_ref',
   'descriptor_ref',
   'run_ref',
+  'control_plane_binding',
   'launch_owner',
   'input_refs',
   'stage_bindings',
@@ -30,6 +32,13 @@ const ALLOWED_MANIFEST_FIELDS = new Set([
 ]);
 
 const ALLOWED_STAGE_BINDING_FIELDS = new Set(['stage_ref', 'runner_ref']);
+const ALLOWED_CONTROL_PLANE_BINDING_FIELDS = new Set([
+  'plane_id',
+  'target_domain_id',
+  'owner',
+  'fingerprint',
+]);
+const EVENT_IDENTITY_FIELDS = ['manifest_id', 'stage_run_id', 'cycle_index', 'attempt_index'] as const;
 
 const ALLOWED_ROUTE_DECISION_FIELDS = {
   dispatch: new Set(['decision', 'stage_ref', 'decision_refs']),
@@ -150,10 +159,42 @@ function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest 
       launch_owner: value.launch_owner,
     });
   }
+  if (!isRecord(value.control_plane_binding)) {
+    contractError('StageRun cycle manifest requires a control-plane binding.');
+  }
+  const unexpectedControlPlaneFields = unexpectedFields(
+    value.control_plane_binding,
+    ALLOWED_CONTROL_PLANE_BINDING_FIELDS,
+  );
+  if (unexpectedControlPlaneFields.length > 0) {
+    contractError('StageRun control-plane binding must contain identity fields only.', {
+      unexpected_fields: unexpectedControlPlaneFields,
+    });
+  }
+  const controlPlaneBinding = {
+    plane_id: requiredRef(value.control_plane_binding.plane_id, 'control_plane_binding.plane_id'),
+    target_domain_id: requiredRef(
+      value.control_plane_binding.target_domain_id,
+      'control_plane_binding.target_domain_id',
+    ),
+    owner: requiredRef(value.control_plane_binding.owner, 'control_plane_binding.owner'),
+    fingerprint: requiredRef(
+      value.control_plane_binding.fingerprint,
+      'control_plane_binding.fingerprint',
+    ),
+  };
+  const canonicalTargetOwner = canonicalOwnerId(requiredRef(value.target_agent_ref, 'target_agent_ref'));
+  if (
+    canonicalOwnerId(controlPlaneBinding.target_domain_id) !== canonicalTargetOwner
+    || canonicalOwnerId(controlPlaneBinding.owner) !== canonicalTargetOwner
+  ) {
+    contractError('StageRun target agent must match the control-plane domain owner.');
+  }
   const manifestIdentity = {
     target_agent_ref: requiredRef(value.target_agent_ref, 'target_agent_ref'),
     descriptor_ref: requiredRef(value.descriptor_ref, 'descriptor_ref'),
     run_ref: requiredRef(value.run_ref, 'run_ref'),
+    control_plane_binding: controlPlaneBinding,
     input_refs: uniqueRefs(value.input_refs, 'input_refs', true),
     stage_bindings: stageBindings,
     max_cycles: positiveInteger(value.max_cycles, 'max_cycles'),
@@ -274,7 +315,9 @@ function normalizeEvent(value: StageRunCycleEvent): StageRunCycleEvent {
   if (value.event_kind === 'route_decision') {
     if (
       value.surface_kind !== 'opl_stage_run_route_decision_event'
-      || unexpectedFields(value, new Set(['surface_kind', 'version', 'event_kind', 'route_decision'])).length > 0
+      || unexpectedFields(value, new Set([
+        'surface_kind', 'version', 'event_kind', 'route_decision', ...EVENT_IDENTITY_FIELDS,
+      ])).length > 0
     ) {
       contractError('Invalid StageRun route decision event envelope.');
     }
@@ -282,13 +325,19 @@ function normalizeEvent(value: StageRunCycleEvent): StageRunCycleEvent {
       surface_kind: 'opl_stage_run_route_decision_event',
       version: 'stage-run-cycle-event.v1',
       event_kind: 'route_decision',
+      manifest_id: requiredRef(value.manifest_id, 'event.manifest_id'),
+      stage_run_id: requiredRef(value.stage_run_id, 'event.stage_run_id'),
+      cycle_index: positiveInteger(value.cycle_index, 'event.cycle_index'),
+      attempt_index: positiveInteger(value.attempt_index, 'event.attempt_index'),
       route_decision: normalizeRouteDecision(value.route_decision as StageRunRouteDecision),
     };
   }
   if (value.event_kind === 'effect_observation') {
     if (
       value.surface_kind !== 'opl_stage_run_effect_observation_event'
-      || unexpectedFields(value, new Set(['surface_kind', 'version', 'event_kind', 'effect'])).length > 0
+      || unexpectedFields(value, new Set([
+        'surface_kind', 'version', 'event_kind', 'effect', ...EVENT_IDENTITY_FIELDS,
+      ])).length > 0
     ) {
       contractError('Invalid StageRun effect observation event envelope.');
     }
@@ -296,6 +345,10 @@ function normalizeEvent(value: StageRunCycleEvent): StageRunCycleEvent {
       surface_kind: 'opl_stage_run_effect_observation_event',
       version: 'stage-run-cycle-event.v1',
       event_kind: 'effect_observation',
+      manifest_id: requiredRef(value.manifest_id, 'event.manifest_id'),
+      stage_run_id: requiredRef(value.stage_run_id, 'event.stage_run_id'),
+      cycle_index: positiveInteger(value.cycle_index, 'event.cycle_index'),
+      attempt_index: positiveInteger(value.attempt_index, 'event.attempt_index'),
       effect: normalizeEffect(value.effect as StageRunEffectObservation),
     };
   }
@@ -303,6 +356,9 @@ function normalizeEvent(value: StageRunCycleEvent): StageRunCycleEvent {
 }
 
 export function buildStageRunCycleIdentity(input: StageRunCycleIdentityInput): StageRunCycleIdentity {
+  if (!isRecord(input)) {
+    contractError('StageRun cycle identity requires an input object.');
+  }
   const normalized = {
     target_agent_ref: requiredRef(input.target_agent_ref, 'target_agent_ref'),
     descriptor_ref: requiredRef(input.descriptor_ref, 'descriptor_ref'),
@@ -540,6 +596,19 @@ export function reduceStageRunCycleState(input: {
       });
     }
     const event = normalizeEvent(value);
+    if (
+      event.manifest_id !== state.manifest_id
+      || event.stage_run_id !== state.stage_run_id
+      || event.cycle_index !== state.cycle_index
+      || event.attempt_index !== state.attempt_index
+    ) {
+      contractError('StageRun event identity must match the canonical cycle state.', {
+        manifest_id: event.manifest_id,
+        stage_run_id: event.stage_run_id,
+        cycle_index: event.cycle_index,
+        attempt_index: event.attempt_index,
+      });
+    }
     state = event.event_kind === 'route_decision'
       ? reduceRouteDecision(manifest, state, event.route_decision)
       : reduceEffectObservation(manifest, state, event.effect);
