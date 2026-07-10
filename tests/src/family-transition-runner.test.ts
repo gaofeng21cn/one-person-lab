@@ -279,6 +279,9 @@ function visualAdapterRegistryFixture(input: {
     version: 'visual-transition-adapter-profile-registry.v1',
     owner: input.targetDomainId,
     registry_role: 'domain_owned_transition_adapter_profile_registry',
+    source_visual_transition_spec_ref: 'opl_generated:product_entry_manifest#/visual_transition_spec',
+    profile_count: 1,
+    compatibility_profile_count: input.profileRole === 'compatibility_projection' ? 1 : 0,
     registry_entries: [{
       profile_id: input.profileId,
       target_domain_ids: input.targetDomainIds,
@@ -299,6 +302,8 @@ function visualAdapterRegistryFixture(input: {
       },
     }],
     authority_boundary: {
+      domain_transition_profile_extension_is_core_ontology: false,
+      refs_only: true,
       can_execute_domain_action: false,
       can_write_domain_truth: false,
       can_create_owner_receipt: false,
@@ -813,16 +818,92 @@ test('visual transition adapter registry readback exposes compatibility without 
 
 test('visual transition ingestion has no built-in RCA profile and rejects authority overclaim', () => {
   assert.throws(
-    () => resolveVisualTransitionAdapterProfile('redcube-ai', []),
+    () => resolveVisualTransitionAdapterProfile(
+      'redcube-ai',
+      normalizeVisualTransitionAdapterProfileRegistry({
+        surface_kind: 'opl_domain_transition_adapter_profile_registry',
+        version: 'visual-transition-adapter-profile-registry.v1',
+        owner: 'redcube_ai',
+        registry_role: 'domain_owned_transition_adapter_profile_registry',
+        source_visual_transition_spec_ref: 'opl_generated:product_entry_manifest#/visual_transition_spec',
+        profile_count: 0,
+        compatibility_profile_count: 0,
+        registry_entries: [],
+        authority_boundary: {
+          domain_transition_profile_extension_is_core_ontology: false,
+          refs_only: true,
+          can_execute_domain_action: false,
+          can_write_domain_truth: false,
+          can_create_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_claim_domain_ready: false,
+          can_claim_visual_ready: false,
+          can_claim_exportable: false,
+          can_mutate_artifacts: false,
+        },
+      }),
+    ),
     /No visual transition adapter profile is registered/,
   );
   assert.equal(buildVisualTransitionAdapterProfileRegistryReadback().profile_count, 0);
   assert.throws(
     () => normalizeVisualTransitionAdapterProfileRegistry({
       surface_kind: 'opl_domain_transition_adapter_profile_registry',
+      version: 'visual-transition-adapter-profile-registry.v1',
+      owner: 'mas',
+      registry_role: 'domain_owned_transition_adapter_profile_registry',
+      source_visual_transition_spec_ref: 'opl_generated:product_entry_manifest#/visual_transition_spec',
+      profile_count: 0,
+      compatibility_profile_count: 0,
       registry_entries: [],
-      authority_boundary: { can_claim_visual_ready: true },
+      authority_boundary: {
+        domain_transition_profile_extension_is_core_ontology: false,
+        refs_only: true,
+        can_execute_domain_action: false,
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_domain_ready: false,
+        can_claim_visual_ready: true,
+        can_claim_exportable: false,
+        can_mutate_artifacts: false,
+      },
     }),
     /grants forbidden authority/,
+  );
+  assert.throws(
+    () => normalizeVisualTransitionAdapterProfileRegistry({
+      surface_kind: 'opl_domain_transition_adapter_profile_registry',
+      version: 'forged.v1',
+      owner: 'mas',
+      registry_role: 'domain_owned_transition_adapter_profile_registry',
+      source_visual_transition_spec_ref: 'opl_generated:product_entry_manifest#/visual_transition_spec',
+      profile_count: 0,
+      compatibility_profile_count: 0,
+      registry_entries: [],
+      authority_boundary: {
+        refs_only: true,
+        can_execute_domain_action: false,
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_domain_ready: false,
+        can_claim_visual_ready: false,
+        can_claim_exportable: false,
+        can_mutate_artifacts: false,
+      },
+    }),
+    /version/,
+  );
+  assert.throws(
+    () => visualAdapterRegistryFixture({
+      profileId: 'forged.visual-transition.v1',
+      targetDomainId: 'rca',
+      targetDomainIds: ['mas'],
+      profileRole: 'compatibility_projection',
+      guardOwnerLabel: 'RCA',
+      refPrefix: 'rca',
+    }),
+    /target_domain_id.*target_domain_ids/,
   );
 });

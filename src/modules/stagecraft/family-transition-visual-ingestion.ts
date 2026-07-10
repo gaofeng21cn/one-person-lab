@@ -26,9 +26,36 @@ export type VisualTransitionAdapterProfile = {
 };
 
 export type VisualTransitionAdapterProfileRegistryEntry = {
-  profileId: string;
-  targetDomainIds: readonly string[];
-  adapterProfile: VisualTransitionAdapterProfile;
+  profile_id: string;
+  target_domain_ids: string[];
+  adapter_profile: {
+    profile_id: string;
+    profile_surface_kind: 'opl_domain_transition_adapter_profile';
+    profile_role: 'domain_transition_profile_extension' | 'compatibility_projection';
+    profile_registry_role: 'registry_entry';
+    profile_extension_kind: 'visual_transition';
+    compatibility_surface_kind: 'visual_transition_spec';
+    target_domain_id: string;
+    guard_owner_label: string;
+    work_unit_ref_prefix: string;
+    owner_route_ref_prefix: string;
+    owner_receipt_ref_prefix: string;
+    oracle_fixture_ref_prefix: string;
+    stage_ref_prefix: string;
+  };
+};
+
+export type VisualTransitionAdapterProfileRegistry = {
+  surface_kind: 'opl_domain_transition_adapter_profile_registry';
+  version: 'visual-transition-adapter-profile-registry.v1';
+  owner: string;
+  registry_role: 'domain_owned_transition_adapter_profile_registry';
+  source_visual_transition_spec_ref: string;
+  source_ref: string | null;
+  profile_count: number;
+  compatibility_profile_count: number;
+  registry_entries: VisualTransitionAdapterProfileRegistryEntry[];
+  authority_boundary: JsonRecord;
 };
 
 export type VisualTransitionSpec = {
@@ -72,125 +99,220 @@ function canonicalDomainId(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function requireProfileString(value: unknown, field: string) {
+function requireString(value: unknown, field: string) {
   const text = optionalString(value);
   if (!text) {
-    throw new Error(`Missing required visual transition adapter profile string field: ${field}`);
+    throw new Error(`Missing required visual transition string field: ${field}`);
   }
   return text;
 }
 
-function requireProfileStringList(value: unknown, field: string) {
+function requireStringList(value: unknown, field: string) {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(`${field} must be a non-empty string array.`);
   }
-  return value.map((entry, index) => requireProfileString(entry, `${field}[${index}]`));
+  return value.map((entry, index) => requireString(entry, `${field}[${index}]`));
 }
+
+const REQUIRED_FALSE_REGISTRY_AUTHORITY_FIELDS = [
+  'domain_transition_profile_extension_is_core_ontology',
+  'can_execute_domain_action',
+  'can_write_domain_truth',
+  'can_create_owner_receipt',
+  'can_create_typed_blocker',
+  'can_claim_domain_ready',
+  'can_claim_visual_ready',
+  'can_claim_exportable',
+  'can_mutate_artifacts',
+] as const;
 
 export function normalizeVisualTransitionAdapterProfileRegistry(
   value: unknown,
-): VisualTransitionAdapterProfileRegistryEntry[] {
+): VisualTransitionAdapterProfileRegistry {
   if (!isRecord(value)
     || value.surface_kind !== VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_SURFACE_KIND
     || !Array.isArray(value.registry_entries)) {
     throw new Error('Visual transition adapter profile registry is invalid.');
   }
-  if (isRecord(value.authority_boundary)) {
-    const forbidden = Object.entries(value.authority_boundary)
-      .filter(([field, enabled]) => field.startsWith('can_') && enabled === true)
-      .map(([field]) => field);
-    if (forbidden.length > 0) {
-      throw new Error(`Visual transition adapter profile registry grants forbidden authority: ${forbidden.join(', ')}`);
+  if (value.version !== 'visual-transition-adapter-profile-registry.v1') {
+    throw new Error('Visual transition adapter profile registry version is invalid.');
+  }
+  if (value.registry_role !== 'domain_owned_transition_adapter_profile_registry') {
+    throw new Error('Visual transition adapter profile registry role is invalid.');
+  }
+  const owner = requireString(value.owner, 'owner');
+  const sourceVisualTransitionSpecRef = requireString(
+    value.source_visual_transition_spec_ref,
+    'source_visual_transition_spec_ref',
+  );
+  if (!isRecord(value.authority_boundary)) {
+    throw new Error('Visual transition adapter profile registry authority_boundary is required.');
+  }
+  if (value.authority_boundary.refs_only !== true) {
+    throw new Error('Visual transition adapter profile registry authority_boundary.refs_only must be true.');
+  }
+  const forbidden = Object.entries(value.authority_boundary)
+    .filter(([field, enabled]) => field.startsWith('can_') && enabled === true)
+    .map(([field]) => field);
+  if (forbidden.length > 0) {
+    throw new Error(`Visual transition adapter profile registry grants forbidden authority: ${forbidden.join(', ')}`);
+  }
+  for (const field of REQUIRED_FALSE_REGISTRY_AUTHORITY_FIELDS) {
+    if (value.authority_boundary[field] !== false) {
+      throw new Error(`Visual transition adapter profile registry authority_boundary.${field} must be false.`);
     }
   }
-  return value.registry_entries.map((rawEntry, index) => {
+
+  const profileIds = new Set<string>();
+  const domainAliases = new Set<string>();
+  const entries = value.registry_entries.map((rawEntry, index) => {
     if (!isRecord(rawEntry) || !isRecord(rawEntry.adapter_profile)) {
       throw new Error(`visual transition adapter registry_entries[${index}] is invalid.`);
     }
     const rawProfile = rawEntry.adapter_profile;
-    const profileRole = requireProfileString(
+    const profileRole = requireString(
       rawProfile.profile_role,
       `registry_entries[${index}].adapter_profile.profile_role`,
     );
     if (profileRole !== 'domain_transition_profile_extension' && profileRole !== 'compatibility_projection') {
       throw new Error(`registry_entries[${index}].adapter_profile.profile_role is invalid.`);
     }
-    const profileId = requireProfileString(rawEntry.profile_id, `registry_entries[${index}].profile_id`);
+    const normalizedProfileRole = profileRole as VisualTransitionAdapterProfile['profileRole'];
+    const profileId = requireString(rawEntry.profile_id, `registry_entries[${index}].profile_id`);
+    if (profileIds.has(profileId)) {
+      throw new Error(`visual transition adapter profile_id is duplicated: ${profileId}`);
+    }
+    profileIds.add(profileId);
     if (rawProfile.profile_id !== profileId) {
       throw new Error(`registry_entries[${index}].adapter_profile.profile_id must match profile_id.`);
     }
-    const profile: VisualTransitionAdapterProfile = {
-      profileId,
-      profileRegistrySurfaceKind: VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_SURFACE_KIND,
-      profileRegistryRole: 'registry_entry',
-      targetDomainId: requireProfileString(
-        rawProfile.target_domain_id,
-        `registry_entries[${index}].adapter_profile.target_domain_id`,
-      ),
-      profileSurfaceKind: 'opl_domain_transition_adapter_profile',
-      profileRole,
-      profileExtensionKind: 'visual_transition',
-      compatibilitySurfaceKind: 'visual_transition_spec',
-      guardOwnerLabel: requireProfileString(rawProfile.guard_owner_label, `registry_entries[${index}].adapter_profile.guard_owner_label`),
-      workUnitRefPrefix: requireProfileString(rawProfile.work_unit_ref_prefix, `registry_entries[${index}].adapter_profile.work_unit_ref_prefix`),
-      ownerRouteRefPrefix: requireProfileString(rawProfile.owner_route_ref_prefix, `registry_entries[${index}].adapter_profile.owner_route_ref_prefix`),
-      ownerReceiptRefPrefix: requireProfileString(rawProfile.owner_receipt_ref_prefix, `registry_entries[${index}].adapter_profile.owner_receipt_ref_prefix`),
-      oracleFixtureRefPrefix: requireProfileString(rawProfile.oracle_fixture_ref_prefix, `registry_entries[${index}].adapter_profile.oracle_fixture_ref_prefix`),
-      stageRefPrefix: requireProfileString(rawProfile.stage_ref_prefix, `registry_entries[${index}].adapter_profile.stage_ref_prefix`),
-    };
-    if (rawProfile.profile_surface_kind !== profile.profileSurfaceKind
-      || rawProfile.profile_registry_role !== profile.profileRegistryRole
-      || rawProfile.profile_extension_kind !== profile.profileExtensionKind
-      || rawProfile.compatibility_surface_kind !== profile.compatibilitySurfaceKind) {
+    const targetDomainIds = requireStringList(
+      rawEntry.target_domain_ids,
+      `registry_entries[${index}].target_domain_ids`,
+    );
+    const exactAliases = targetDomainIds.map((alias) => alias.toLowerCase());
+    if (new Set(exactAliases).size !== exactAliases.length) {
+      throw new Error(`registry_entries[${index}].target_domain_ids contains duplicate aliases.`);
+    }
+    const canonicalAliases = [...new Set(targetDomainIds.map(canonicalDomainId))];
+    for (const alias of canonicalAliases) {
+      if (domainAliases.has(alias)) {
+        throw new Error(`visual transition adapter domain alias is ambiguous: ${alias}`);
+      }
+      domainAliases.add(alias);
+    }
+    const targetDomainId = requireString(
+      rawProfile.target_domain_id,
+      `registry_entries[${index}].adapter_profile.target_domain_id`,
+    );
+    if (!canonicalAliases.includes(canonicalDomainId(targetDomainId))) {
+      throw new Error(`registry_entries[${index}].adapter_profile.target_domain_id must be listed in target_domain_ids.`);
+    }
+    if (!canonicalAliases.includes(canonicalDomainId(owner))) {
+      throw new Error(`registry_entries[${index}].target_domain_ids must include the registry owner.`);
+    }
+    if (rawProfile.profile_surface_kind !== 'opl_domain_transition_adapter_profile'
+      || rawProfile.profile_registry_role !== 'registry_entry'
+      || rawProfile.profile_extension_kind !== 'visual_transition'
+      || rawProfile.compatibility_surface_kind !== 'visual_transition_spec') {
       throw new Error(`registry_entries[${index}].adapter_profile has an invalid profile contract.`);
     }
     return {
-      profileId,
-      targetDomainIds: requireProfileStringList(
-        rawEntry.target_domain_ids,
-        `registry_entries[${index}].target_domain_ids`,
-      ),
-      adapterProfile: profile,
+      profile_id: profileId,
+      target_domain_ids: targetDomainIds,
+      adapter_profile: {
+        profile_id: profileId,
+        profile_surface_kind: 'opl_domain_transition_adapter_profile' as const,
+        profile_role: normalizedProfileRole,
+        profile_registry_role: 'registry_entry' as const,
+        profile_extension_kind: 'visual_transition' as const,
+        compatibility_surface_kind: 'visual_transition_spec' as const,
+        target_domain_id: targetDomainId,
+        guard_owner_label: requireString(rawProfile.guard_owner_label, `registry_entries[${index}].adapter_profile.guard_owner_label`),
+        work_unit_ref_prefix: requireString(rawProfile.work_unit_ref_prefix, `registry_entries[${index}].adapter_profile.work_unit_ref_prefix`),
+        owner_route_ref_prefix: requireString(rawProfile.owner_route_ref_prefix, `registry_entries[${index}].adapter_profile.owner_route_ref_prefix`),
+        owner_receipt_ref_prefix: requireString(rawProfile.owner_receipt_ref_prefix, `registry_entries[${index}].adapter_profile.owner_receipt_ref_prefix`),
+        oracle_fixture_ref_prefix: requireString(rawProfile.oracle_fixture_ref_prefix, `registry_entries[${index}].adapter_profile.oracle_fixture_ref_prefix`),
+        stage_ref_prefix: requireString(rawProfile.stage_ref_prefix, `registry_entries[${index}].adapter_profile.stage_ref_prefix`),
+      },
     };
   });
+  const compatibilityProfileCount = entries.filter(
+    (entry) => entry.adapter_profile.profile_role === 'compatibility_projection',
+  ).length;
+  if (value.profile_count !== entries.length) {
+    throw new Error('Visual transition adapter profile registry profile_count is invalid.');
+  }
+  if (value.compatibility_profile_count !== compatibilityProfileCount) {
+    throw new Error('Visual transition adapter profile registry compatibility_profile_count is invalid.');
+  }
+  return {
+    surface_kind: VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_SURFACE_KIND,
+    version: 'visual-transition-adapter-profile-registry.v1',
+    owner,
+    registry_role: 'domain_owned_transition_adapter_profile_registry',
+    source_visual_transition_spec_ref: sourceVisualTransitionSpecRef,
+    source_ref: optionalString(value.source_ref),
+    profile_count: entries.length,
+    compatibility_profile_count: compatibilityProfileCount,
+    registry_entries: entries,
+    authority_boundary: value.authority_boundary,
+  };
+}
+
+function adapterProfile(entry: VisualTransitionAdapterProfileRegistryEntry): VisualTransitionAdapterProfile {
+  return {
+    profileId: entry.profile_id,
+    profileRegistrySurfaceKind: VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_SURFACE_KIND,
+    profileRegistryRole: entry.adapter_profile.profile_registry_role,
+    targetDomainId: entry.adapter_profile.target_domain_id,
+    profileSurfaceKind: entry.adapter_profile.profile_surface_kind,
+    profileRole: entry.adapter_profile.profile_role,
+    profileExtensionKind: entry.adapter_profile.profile_extension_kind,
+    compatibilitySurfaceKind: entry.adapter_profile.compatibility_surface_kind,
+    guardOwnerLabel: entry.adapter_profile.guard_owner_label,
+    workUnitRefPrefix: entry.adapter_profile.work_unit_ref_prefix,
+    ownerRouteRefPrefix: entry.adapter_profile.owner_route_ref_prefix,
+    ownerReceiptRefPrefix: entry.adapter_profile.owner_receipt_ref_prefix,
+    oracleFixtureRefPrefix: entry.adapter_profile.oracle_fixture_ref_prefix,
+    stageRefPrefix: entry.adapter_profile.stage_ref_prefix,
+  };
 }
 
 export function resolveVisualTransitionAdapterProfile(
   targetDomainId: string,
-  registry: ReadonlyArray<VisualTransitionAdapterProfileRegistryEntry>,
+  registry: VisualTransitionAdapterProfileRegistry,
+  specOwner?: string,
 ) {
   const canonicalTarget = canonicalDomainId(targetDomainId);
-  const entry = registry.find((candidate) =>
-    candidate.targetDomainIds.some((domainId) => canonicalDomainId(domainId) === canonicalTarget)
+  const matches = registry.registry_entries.filter((candidate) =>
+    candidate.target_domain_ids.some((domainId) => canonicalDomainId(domainId) === canonicalTarget)
   );
-  if (!entry) {
+  if (matches.length === 0) {
     throw new Error(`No visual transition adapter profile is registered for domain: ${targetDomainId}`);
   }
-  return entry.adapterProfile;
+  if (matches.length > 1) {
+    throw new Error(`Visual transition adapter profile is ambiguous for domain: ${targetDomainId}`);
+  }
+  const entry = matches[0];
+  if (specOwner && !entry.target_domain_ids.some(
+    (domainId) => canonicalDomainId(domainId) === canonicalDomainId(specOwner)
+  )) {
+    throw new Error(`Visual transition spec owner does not match the adapter profile domain: ${specOwner}`);
+  }
+  return adapterProfile(entry);
 }
 
 export function buildVisualTransitionAdapterProfileRegistryReadback(
-  registry: ReadonlyArray<VisualTransitionAdapterProfileRegistryEntry> = [],
+  registry?: VisualTransitionAdapterProfileRegistry,
 ) {
-  const entries = registry.map((entry) => ({
-    profile_id: entry.profileId,
+  const entries = (registry?.registry_entries ?? []).map((entry) => ({
+    profile_id: entry.profile_id,
     registry_role: 'compatibility_profile',
-    target_domain_ids: [...entry.targetDomainIds],
+    target_domain_ids: [...entry.target_domain_ids],
     adapter_profile: {
-      profile_id: entry.adapterProfile.profileId,
-      profile_surface_kind: entry.adapterProfile.profileSurfaceKind,
-      profile_role: entry.adapterProfile.profileRole,
-      profile_registry_role: entry.adapterProfile.profileRegistryRole,
-      profile_extension_kind: entry.adapterProfile.profileExtensionKind,
-      compatibility_surface_kind: entry.adapterProfile.compatibilitySurfaceKind,
-      target_domain_id: entry.adapterProfile.targetDomainId,
-      compatibility_projection: entry.adapterProfile.profileRole === 'compatibility_projection',
-      guard_owner_label: entry.adapterProfile.guardOwnerLabel,
-      work_unit_ref_prefix: entry.adapterProfile.workUnitRefPrefix,
-      owner_route_ref_prefix: entry.adapterProfile.ownerRouteRefPrefix,
-      owner_receipt_ref_prefix: entry.adapterProfile.ownerReceiptRefPrefix,
-      oracle_fixture_ref_prefix: entry.adapterProfile.oracleFixtureRefPrefix,
-      stage_ref_prefix: entry.adapterProfile.stageRefPrefix,
+      ...entry.adapter_profile,
+      compatibility_projection: entry.adapter_profile.profile_role === 'compatibility_projection',
     },
   }));
   return {
@@ -220,14 +342,6 @@ export function buildVisualTransitionAdapterProfileRegistryReadback(
   };
 }
 
-function requireVisualString(value: unknown, field: string) {
-  const text = optionalString(value);
-  if (!text) {
-    throw new Error(`Missing required visual transition spec string field: ${field}`);
-  }
-  return text;
-}
-
 function requireVisualRecord(value: unknown, field: string) {
   if (!isRecord(value)) {
     throw new Error(`Missing required visual transition spec object field: ${field}`);
@@ -247,7 +361,7 @@ function readVisualStringList(value: unknown, field: string) {
     throw new Error(`Missing required visual transition spec string list field: ${field}`);
   }
   return value.map((entry, index) =>
-    requireVisualString(entry, `${field}[${index}]`)
+    requireString(entry, `${field}[${index}]`)
   );
 }
 
@@ -287,7 +401,7 @@ function visualTransitionAuthorityBoundary(
 
 export function normalizeVisualTransitionSpec(value: unknown): VisualTransitionSpec {
   const spec = requireVisualRecord(value, 'visual_transition_spec');
-  const surfaceKind = requireVisualString(spec.surface_kind, 'visual_transition_spec.surface_kind');
+  const surfaceKind = requireString(spec.surface_kind, 'visual_transition_spec.surface_kind');
   if (surfaceKind !== 'visual_transition_spec') {
     throw new Error('visual_transition_spec.surface_kind must be visual_transition_spec.');
   }
@@ -295,15 +409,15 @@ export function normalizeVisualTransitionSpec(value: unknown): VisualTransitionS
     spec.transition_table,
     'visual_transition_spec.transition_table',
   ).map((entry, index) => ({
-    transition_id: requireVisualString(
+    transition_id: requireString(
       entry.transition_id,
       `visual_transition_spec.transition_table[${index}].transition_id`,
     ),
-    from_stage: requireVisualString(
+    from_stage: requireString(
       entry.from_stage,
       `visual_transition_spec.transition_table[${index}].from_stage`,
     ),
-    to_stage: requireVisualString(
+    to_stage: requireString(
       entry.to_stage,
       `visual_transition_spec.transition_table[${index}].to_stage`,
     ),
@@ -311,7 +425,7 @@ export function normalizeVisualTransitionSpec(value: unknown): VisualTransitionS
       entry.required_guard_refs,
       `visual_transition_spec.transition_table[${index}].required_guard_refs`,
     ),
-    owner_action: requireVisualString(
+    owner_action: requireString(
       entry.owner_action,
       `visual_transition_spec.transition_table[${index}].owner_action`,
     ),
@@ -323,8 +437,8 @@ export function normalizeVisualTransitionSpec(value: unknown): VisualTransitionS
 
   return {
     surface_kind: 'visual_transition_spec',
-    spec_id: requireVisualString(spec.spec_id, 'visual_transition_spec.spec_id'),
-    owner: requireVisualString(spec.owner, 'visual_transition_spec.owner'),
+    spec_id: requireString(spec.spec_id, 'visual_transition_spec.spec_id'),
+    owner: requireString(spec.owner, 'visual_transition_spec.owner'),
     status: optionalString(spec.status) ?? undefined,
     transition_model: optionalString(spec.transition_model) ?? undefined,
     source_contract: optionalString(spec.source_contract) ?? undefined,
@@ -335,7 +449,7 @@ export function normalizeVisualTransitionSpec(value: unknown): VisualTransitionS
     transition_table: transitionTable,
     guard_contract: requireVisualRecord(spec.guard_contract, 'visual_transition_spec.guard_contract'),
     oracle_fixture: {
-      fixture_id: requireVisualString(
+      fixture_id: requireString(
         oracleFixture.fixture_id,
         'visual_transition_spec.oracle_fixture.fixture_id',
       ),

@@ -16,7 +16,7 @@ import type {
 } from '../../pack/index.ts';
 import type { GrantTransitionOracle } from '../../stagecraft/index.ts';
 import type {
-  VisualTransitionAdapterProfileRegistryEntry,
+  VisualTransitionAdapterProfileRegistry,
   VisualTransitionSpec,
 } from '../../stagecraft/index.ts';
 
@@ -505,7 +505,7 @@ export interface NormalizedDomainManifest {
   family_transition_materialization: JsonRecord | null;
   family_transition: NormalizedFamilyTransitionProjection;
   grant_transition_oracle: GrantTransitionOracle | null;
-  visual_transition_adapter_profile_registry: VisualTransitionAdapterProfileRegistryEntry[];
+  visual_transition_adapter_profile_registry: VisualTransitionAdapterProfileRegistry | null;
   visual_transition_spec: VisualTransitionSpec | null;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;

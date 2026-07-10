@@ -194,12 +194,20 @@ export function normalizeFamilyTransitionSurfaces(
   const visualTransitionSpec = normalizeVisualSpec(manifest.visual_transition_spec);
   const visualTransitionAdapterRegistry = manifest.visual_transition_adapter_profile_registry
     ? normalizeVisualTransitionAdapterProfileRegistry(manifest.visual_transition_adapter_profile_registry)
-    : [];
+    : null;
   const explicitSpec = normalizeFamilyTransitionSpec(manifest.family_transition_spec);
   const explicitCases = normalizeFamilyTransitionMatrixCases(manifest.family_transition_matrix_cases);
-  const visualTransitionAdapterProfile = visualTransitionSpec && (!explicitSpec || explicitCases.length === 0)
-    ? resolveVisualTransitionAdapterProfile(manifestTargetDomainId, visualTransitionAdapterRegistry)
-    : null;
+  let visualTransitionAdapterProfile = null;
+  if (visualTransitionSpec && (!explicitSpec || explicitCases.length === 0)) {
+    if (!visualTransitionAdapterRegistry) {
+      throw new Error(`No visual transition adapter profile registry is declared for domain: ${manifestTargetDomainId}`);
+    }
+    visualTransitionAdapterProfile = resolveVisualTransitionAdapterProfile(
+      manifestTargetDomainId,
+      visualTransitionAdapterRegistry,
+      visualTransitionSpec.owner,
+    );
+  }
   const spec = explicitSpec
     ?? (visualTransitionSpec && visualTransitionAdapterProfile
       ? adaptVisualTransitionSpecToFamilyTransitionSpec(

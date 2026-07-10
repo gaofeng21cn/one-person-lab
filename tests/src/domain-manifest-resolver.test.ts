@@ -86,6 +86,42 @@ function minimalManifest(targetDomainId = 'med-autoscience') {
   };
 }
 
+function rcaVisualManifest() {
+  return {
+    ...loadFamilyManifestFixtures().redcube,
+    visual_transition_spec: {
+      surface_kind: 'visual_transition_spec',
+      spec_id: 'redcube-ai.visual-transition.v1',
+      owner: 'redcube_ai',
+      covered_family_stage_kinds: ['visual_intake', 'visual_export_review'],
+      transition_table: [{
+        transition_id: 'intake_to_export_review',
+        from_stage: 'visual_intake',
+        to_stage: 'visual_export_review',
+        required_guard_refs: ['source_assets_indexed'],
+        owner_action: 'review_visual_export',
+      }],
+      guard_contract: {
+        source_assets_indexed: {
+          owner: 'redcube_ai',
+        },
+      },
+      oracle_fixture: {
+        fixture_id: 'visual-intake-ready',
+        covered_families: ['redcube_ai'],
+        expected_return_shapes: ['domain_owner_receipt'],
+        forbidden_oracle_fields: ['visual_ready_claimed', 'exportable_claimed'],
+      },
+      runner_boundary: {
+        opl_can_execute_transition_spec: true,
+      },
+      repository_boundary: {
+        domain_truth_owner: 'redcube_ai',
+      },
+    },
+  };
+}
+
 function resolveWithCommand(
   workspacePath: string,
   manifestCommand: string,
@@ -115,11 +151,112 @@ test('resolveBindingManifest resolves a configured command with env timeout poli
     const entry = withEnvVar('OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS', '2500', () =>
       resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`));
 
-    assert.equal(entry.status, 'resolved');
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
     assert.equal(entry.error, null);
     assert.equal(entry.manifest?.target_domain_id, 'med-autoscience');
   } finally {
     fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('resolveBindingManifest consumes the real RCA visual transition profile by contract ref', {
+  skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/visual_transition_adapter_profile.json'),
+}, () => {
+  const workspacePath = createWorkspace();
+  try {
+    const contractsDir = path.join(workspacePath, 'contracts');
+    fs.mkdirSync(contractsDir, { recursive: true });
+    fs.copyFileSync(
+      '/Users/gaofeng/workspace/redcube-ai/contracts/visual_transition_adapter_profile.json',
+      path.join(contractsDir, 'visual_transition_adapter_profile.json'),
+    );
+    fs.writeFileSync(path.join(contractsDir, 'domain_descriptor.json'), `${JSON.stringify({
+      standard_contract_refs: {
+        visual_transition_adapter_profile: 'contracts/visual_transition_adapter_profile.json',
+      },
+    })}\n`);
+    const manifest = rcaVisualManifest();
+    const scriptPath = writeScript(
+      workspacePath,
+      'rca-manifest.cjs',
+      `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
+    );
+
+    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(
+      entry.manifest?.visual_transition_adapter_profile_registry?.surface_kind,
+      'opl_domain_transition_adapter_profile_registry',
+    );
+    assert.equal(
+      entry.manifest?.visual_transition_adapter_profile_registry?.source_ref,
+      'contracts/visual_transition_adapter_profile.json',
+    );
+    assert.equal(entry.manifest?.family_transition.status, 'matrix_evaluated');
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('resolveBindingManifest rejects conflicting visual transition profile contract refs', () => {
+  const workspacePath = createWorkspace();
+  try {
+    const contractsDir = path.join(workspacePath, 'contracts');
+    fs.mkdirSync(contractsDir, { recursive: true });
+    fs.writeFileSync(path.join(contractsDir, 'domain_descriptor.json'), `${JSON.stringify({
+      standard_contract_refs: {
+        visual_transition_adapter_profile: 'contracts/visual-transition-a.json',
+      },
+    })}\n`);
+    fs.writeFileSync(path.join(contractsDir, 'pack_compiler_input.json'), `${JSON.stringify({
+      source_refs: {
+        visual_transition_adapter_profile_source_ref: 'contracts/visual-transition-b.json',
+      },
+    })}\n`);
+    const manifest = rcaVisualManifest();
+    const scriptPath = writeScript(
+      workspacePath,
+      'rca-manifest.cjs',
+      `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
+    );
+
+    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+
+    assert.equal(entry.status, 'invalid_manifest');
+    assert.match(entry.error?.message ?? '', /visual transition adapter profile refs disagree/i);
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('resolveBindingManifest rejects visual transition profile refs that escape the domain repo', () => {
+  const workspacePath = createWorkspace();
+  const externalPath = path.join(os.tmpdir(), `opl-visual-profile-${process.pid}-${Date.now()}.json`);
+  try {
+    const contractsDir = path.join(workspacePath, 'contracts');
+    fs.mkdirSync(contractsDir, { recursive: true });
+    fs.writeFileSync(externalPath, '{}\n');
+    fs.symlinkSync(externalPath, path.join(contractsDir, 'visual-transition.json'));
+    fs.writeFileSync(path.join(contractsDir, 'domain_descriptor.json'), `${JSON.stringify({
+      standard_contract_refs: {
+        visual_transition_adapter_profile: 'contracts/visual-transition.json',
+      },
+    })}\n`);
+    const manifest = rcaVisualManifest();
+    const scriptPath = writeScript(
+      workspacePath,
+      'rca-manifest.cjs',
+      `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
+    );
+
+    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+
+    assert.equal(entry.status, 'invalid_manifest');
+    assert.match(entry.error?.message ?? '', /escapes its domain repo/i);
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+    fs.rmSync(externalPath, { force: true });
   }
 });
 

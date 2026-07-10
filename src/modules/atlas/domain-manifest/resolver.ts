@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import type { SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import type { WorkspaceBinding } from '../../workspace/index.ts';
 import {
@@ -11,6 +13,7 @@ import {
   recordManagedShellUvCacheRecovery,
 } from '../../../kernel/managed-shell-command-env.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import { resolveContainedRepoJsonFile } from '../../../kernel/repo-contained-json-file.ts';
 import { materializeFamilyTransitionSurfaces } from './family-transition-materializer.ts';
 import { normalizeManifest } from './normalizers.ts';
 import { isRecord } from './shared-utils.ts';
@@ -26,6 +29,88 @@ type JsonRecord = Record<string, unknown>;
 export type ManifestCommandTimeoutPolicy = 'env_or_default' | 'fixed';
 type ManifestCommandResult = SpawnSyncReturns<string>;
 const DEFAULT_TRANSITION_MATERIALIZATION_TIMEOUT_MS = 1_000;
+const VISUAL_TRANSITION_PROFILE_REF_SOURCES = [
+  {
+    contractRef: 'contracts/domain_descriptor.json',
+    containerField: 'standard_contract_refs',
+    refField: 'visual_transition_adapter_profile',
+  },
+  {
+    contractRef: 'contracts/pack_compiler_input.json',
+    containerField: 'source_refs',
+    refField: 'visual_transition_adapter_profile_source_ref',
+  },
+] as const;
+
+function optionalRecordString(record: JsonRecord, field: string) {
+  const value = record[field];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readVisualTransitionProfileRef(
+  workspacePath: string,
+  source: typeof VISUAL_TRANSITION_PROFILE_REF_SOURCES[number],
+) {
+  const contractPath = path.join(workspacePath, source.contractRef);
+  if (!fs.existsSync(contractPath)) {
+    return null;
+  }
+  const resolved = resolveContainedRepoJsonFile(
+    workspacePath,
+    source.contractRef,
+    source.contractRef,
+    'domain repo',
+  );
+  const contract = parseJsonText(fs.readFileSync(resolved.real_path, 'utf8'));
+  if (!isRecord(contract)) {
+    throw new Error(`${source.contractRef} must contain a JSON object.`);
+  }
+  const refs = contract[source.containerField];
+  return isRecord(refs) ? optionalRecordString(refs, source.refField) : null;
+}
+
+function withoutSourceRef(value: JsonRecord) {
+  const { source_ref: _sourceRef, ...body } = value;
+  return body;
+}
+
+function hydrateVisualTransitionAdapterProfileRegistry(parsed: JsonRecord, workspacePath: string) {
+  if (!isRecord(parsed.visual_transition_spec)) {
+    return parsed;
+  }
+  const refs = VISUAL_TRANSITION_PROFILE_REF_SOURCES
+    .map((source) => readVisualTransitionProfileRef(workspacePath, source))
+    .filter((ref): ref is string => Boolean(ref));
+  const uniqueRefs = [...new Set(refs)];
+  if (uniqueRefs.length > 1) {
+    throw new Error(`Visual transition adapter profile refs disagree: ${uniqueRefs.join(', ')}`);
+  }
+  const profileRef = uniqueRefs[0];
+  if (!profileRef) {
+    return parsed;
+  }
+  const resolved = resolveContainedRepoJsonFile(
+    workspacePath,
+    profileRef,
+    'visual transition adapter profile ref',
+    'domain repo',
+  );
+  const registry = parseJsonText(fs.readFileSync(resolved.real_path, 'utf8'));
+  if (!isRecord(registry)) {
+    throw new Error('Visual transition adapter profile registry must contain a JSON object.');
+  }
+  if (isRecord(parsed.visual_transition_adapter_profile_registry)
+    && !isDeepStrictEqual(withoutSourceRef(parsed.visual_transition_adapter_profile_registry), registry)) {
+    throw new Error('Inline visual transition adapter profile registry disagrees with its repo contract ref.');
+  }
+  return {
+    ...parsed,
+    visual_transition_adapter_profile_registry: {
+      ...registry,
+      source_ref: resolved.repo_relative_ref,
+    },
+  };
+}
 
 function resolveManifestCommandTimeoutMs(
   defaultTimeoutMs = 30_000,
@@ -135,9 +220,10 @@ function buildResolvedManifestEntry(
     transitionMaterializationTimeoutMs?: number;
   } = {},
 ): DomainManifestCatalogEntry {
+  const hydrated = hydrateVisualTransitionAdapterProfileRegistry(parsed, binding.workspace_path);
   const materialized = options.materializeFamilyTransitions === false
-    ? parsed
-    : materializeFamilyTransitionSurfaces(parsed, {
+    ? hydrated
+    : materializeFamilyTransitionSurfaces(hydrated, {
       binding,
       timeoutMs,
       materializationTimeoutMs:
