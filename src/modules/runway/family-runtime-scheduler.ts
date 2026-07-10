@@ -17,7 +17,7 @@ import {
   type FamilyRuntimeProviderKind,
 } from './family-runtime-types.ts';
 import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
-import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { readManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
 import {
   familyRuntimePaths,
   insertEvent,
@@ -219,7 +219,7 @@ export async function runTemporalSchedulerCadenceCommand(
     });
   }
   const provider = await inspectProvidersWithLifecycleDefault(providerKind, paths, {
-    managedProviderProjection: readMasManagedProviderProjection(),
+    managedProviderProjection: readManagedProviderProjectionSummary(),
   });
   const selected = provider.providers.temporal;
   if (!selected?.ready) {
@@ -319,7 +319,7 @@ export async function runTemporalProviderCadenceReadback(
   const inspectProvidersWithLifecycle = deps.inspectProvidersWithLifecycle ?? inspectProvidersWithLifecycleDefault;
   const runProviderSloTick = deps.runProviderSloTick ?? runTemporalProviderSloTick;
   const providerBeforeSlo = await inspectProvidersWithLifecycle(providerKind, paths, {
-    managedProviderProjection: readMasManagedProviderProjection(),
+    managedProviderProjection: readManagedProviderProjectionSummary(),
   });
   const selectedBeforeSlo = providerBeforeSlo.providers.temporal;
   const blockerBeforeSlo = selectedBeforeSlo ? buildTemporalProviderLivenessBlocker(selectedBeforeSlo) : null;
@@ -337,7 +337,7 @@ export async function runTemporalProviderCadenceReadback(
       force: input.force ?? false,
     });
     provider = await inspectProvidersWithLifecycle(providerKind, paths, {
-      managedProviderProjection: readMasManagedProviderProjection(),
+      managedProviderProjection: readManagedProviderProjectionSummary(),
       detail: 'fast',
     });
     selected = provider.providers.temporal;

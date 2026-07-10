@@ -3,7 +3,6 @@ import {
   inspectFamilyRuntimeProviderWithLifecycle,
   resolveFamilyRuntimeProviderKind,
   readMasManagedProviderProjection,
-  projectionFromMasManifestEntry,
   buildProviderContinuousProof,
   openFamilyRuntimeSqlite,
   familyRuntimePaths,
@@ -548,9 +547,6 @@ export async function buildRuntimeTraySnapshot(
 ) {
   const providerKind = resolveFamilyRuntimeProviderKind(options.providerKind);
   const familyProviderPaths = familyRuntimePaths();
-  const sidecarMasManagedProviderProjection = readMasManagedProviderProjection({
-    includeManifest: false,
-  });
   const domainManifests = options.domainManifests ?? buildDomainManifestCatalog(contracts, {
     manifestCommandTimeoutMs: RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS,
     manifestCommandTimeoutPolicy: 'fixed',
@@ -558,17 +554,13 @@ export async function buildRuntimeTraySnapshot(
   }).domain_manifests;
   const functionalPrivatizationDomainManifests =
     withOplMetaAgentDescriptorEntry(withOplMetaAgentRegistryExtension(domainManifests));
-  const masManagedProviderProjection =
-    projectionFromMasManifestEntry(domainManifests.projects.find((entry) => (
-      entry.project_id === 'medautoscience'
-    )))
-    ?? sidecarMasManagedProviderProjection;
+  const managedProviderProjection = readMasManagedProviderProjection({ domainManifests });
   const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyProviderPaths, {
-    managedProviderProjection: masManagedProviderProjection,
+    managedProviderProjection,
   });
   const providerReady = lifecycleProvider.ready === true;
   const stageAttemptWorkbench = await buildStageAttemptWorkbench({
-    managedProviderProjection: masManagedProviderProjection,
+    managedProviderProjection,
   });
   const providerContinuousProof = buildRuntimeProviderContinuousProof();
   const nativeHelperExecutionEnvelope = buildNativeHelperExecutionEnvelope();
@@ -672,22 +664,21 @@ export async function buildRuntimeTraySnapshot(
       managed_domain_provider_states: {
         surface_kind: 'opl_runtime_tray_managed_domain_provider_states',
         role: 'app_status_read_model_only',
-        medautoscience: masManagedProviderProjection,
-        managed_domain_projection_summary: masManagedProviderProjection
+        domains: managedProviderProjection?.domains ?? {},
+        managed_domain_projection_summary: managedProviderProjection
           ? {
-              managed_temporal_state_consistency_declared: masManagedProviderProjection.managed_temporal_state_consistency_declared,
-              family_stage_control_plane_declared: masManagedProviderProjection.family_stage_control_plane_declared,
-              domain_memory_descriptor_declared: masManagedProviderProjection.domain_memory_descriptor_declared,
-              owner_receipt_contract_declared: masManagedProviderProjection.owner_receipt_contract_declared,
-              legacy_retirement_tombstone_declared: masManagedProviderProjection.legacy_retirement_tombstone_declared,
+              status: managedProviderProjection.status,
+              ...managedProviderProjection.summary,
+              managed_temporal_state_consistency_declared: managedProviderProjection.managed_temporal_state_consistency_declared,
+              conflicts: managedProviderProjection.conflicts,
             }
           : null,
         authority_boundary: {
           opl: 'display_and_status_projection_only',
-          domain_truth_owner: 'med-autoscience',
+          domain_truth_owner: 'each_domain_agent',
           can_write_domain_truth: false,
           can_authorize_quality_verdict: false,
-          can_authorize_submission_readiness: false,
+          can_authorize_domain_ready: false,
         },
       },
       source_refs: uniqueByRef([
@@ -699,9 +690,9 @@ export async function buildRuntimeTraySnapshot(
         sourceRef('/native_helper_execution_envelope', 'native_helper_execution_envelope'),
         sourceRef('/domain_projection_ingestion', 'domain_projection_ingestion'),
         sourceRef('/app_operator_drilldown', 'app_operator_drilldown'),
-        ...(masManagedProviderProjection
-          ? [sourceRef('/managed_domain_provider_states/medautoscience', 'managed_domain_provider_projection')]
-          : []),
+        ...Object.keys(managedProviderProjection?.domains ?? {}).map((domainId) =>
+          sourceRef(`/managed_domain_provider_states/domains/${domainId}`, 'managed_domain_provider_projection')
+        ),
         ...appOperatorDrilldown.source_refs,
         ...domainProjectionIngestion.source_refs,
       ]),

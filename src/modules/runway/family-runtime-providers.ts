@@ -11,7 +11,7 @@ import {
 import {
   inspectTemporalWorkerLifecycleWithDetail,
 } from './family-runtime-temporal-worker-lifecycle.ts';
-import type { MasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import type { ManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
 import type { familyRuntimePaths } from './family-runtime-store.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
@@ -38,13 +38,13 @@ export type FamilyRuntimeProviderInspection = {
 };
 
 type ManagedProviderProjection = Partial<Pick<
-  MasManagedProviderProjection,
+  ManagedProviderProjectionSummary,
   | 'managed_temporal_state_consistency'
   | 'managed_temporal_state_consistency_declared'
-  | 'family_stage_control_plane_declared'
-  | 'domain_memory_descriptor_declared'
-  | 'owner_receipt_contract_declared'
-  | 'legacy_retirement_tombstone_declared'
+  | 'status'
+  | 'domains'
+  | 'conflicts'
+  | 'summary'
 >> | null;
 
 type ProviderLifecycleOptions = {
@@ -97,7 +97,7 @@ function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>
   return {
     ...buildTemporalWorkerReadiness({
       address,
-      addressSource: 'mas_managed_temporal_state_consistency_projection',
+      addressSource: 'managed_domain_temporal_state_consistency_projection',
       namespace,
       taskQueue,
       workerEnabled: null,
@@ -118,7 +118,6 @@ function buildManagedTemporalWorkerReadiness(projection: Record<string, unknown>
     authority_boundary: {
       opl: 'managed_temporal_state_projection_consumer_only',
       domain: 'truth_quality_artifact_gate_owner',
-      paper_closure_authority: 'mas_only',
       can_authorize_opl_provider_ready: false,
     },
   };
@@ -288,7 +287,7 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       'workflow_history_provider_code',
       'worker_lifecycle_contract',
       'stage_attempt_visibility_search_attributes',
-      ...(managedTemporalProjection ? ['mas_managed_temporal_state_consistency_projection'] : []),
+      ...(managedTemporalProjection ? ['managed_domain_temporal_state_consistency_projection'] : []),
     ],
     details: {
       address: workerReadiness.address,
@@ -310,15 +309,14 @@ export async function inspectFamilyRuntimeProviderWithLifecycle(
       managed_temporal_projection_readiness: managedProjectionReadiness,
       managed_domain_projection_summary: managedProviderProjection
         ? {
+            status: managedProviderProjection.status ?? 'available',
+            domain_count: managedProviderProjection.summary?.domain_count ?? 0,
+            conflict_count: managedProviderProjection.summary?.conflict_count ?? 0,
             managed_temporal_state_consistency_declared: Boolean(managedProviderProjection.managed_temporal_state_consistency_declared),
-            family_stage_control_plane_declared: Boolean(managedProviderProjection.family_stage_control_plane_declared),
-            domain_memory_descriptor_declared: Boolean(managedProviderProjection.domain_memory_descriptor_declared),
-            owner_receipt_contract_declared: Boolean(managedProviderProjection.owner_receipt_contract_declared),
-            legacy_retirement_tombstone_declared: Boolean(managedProviderProjection.legacy_retirement_tombstone_declared),
             managed_temporal_projection_authorizes_opl_provider_ready: false,
           }
         : null,
-      mas_managed_provider_projection: managedProviderProjection,
+      managed_domain_provider_projection_summary: managedProviderProjection,
       worker_lifecycle: {
         worker_required: true,
         task_queue: workerReadiness.task_queue,

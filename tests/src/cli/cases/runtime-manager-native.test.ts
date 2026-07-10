@@ -301,16 +301,6 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
           paper_closure_authority: 'mas_only',
         },
       },
-      legacy_retirement_tombstone_proof: {
-        surface_kind: 'legacy_retirement_tombstone_proof',
-        status: 'no_active_default_caller_proven',
-        active_default_callers: [],
-        source_refs: ['mas://runtime/legacy_retirement_tombstone_proof/latest.json'],
-        authority_boundary: {
-          opl_role: 'projection_consumer_only',
-          paper_closure_authority: 'mas_only',
-        },
-      },
     },
   };
   runningManifest.product_entry_start = {
@@ -331,6 +321,19 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     ...(attentionManifest.progress_projection as Record<string, unknown>),
     session_id: 'redcube-entry-session-001',
     attention_items: ['Review the generated deck before continuing.'],
+    domain_projection: {
+      managed_temporal_state_consistency: {
+        surface_kind: 'managed_temporal_state_consistency',
+        projection_status: 'ready',
+        provider_kind: 'temporal',
+        service_status: 'ready',
+        worker_status: 'ready',
+        address: 'redcube-managed-temporal.example.test:7233',
+        namespace: 'default',
+        task_queue: 'opl-stage-attempts',
+        source_refs: ['redcube://runtime/managed_temporal_state_consistency/latest.json'],
+      },
+    },
   };
 
   const recentManifest = structuredClone(fixtures.medautogrant);
@@ -383,17 +386,17 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
       ['action_counts', { user: 1, opl: 0, infrastructure: 1 }],
       ['managed_domain_provider_states.surface_kind', 'opl_runtime_tray_managed_domain_provider_states'],
       ['managed_domain_provider_states.role', 'app_status_read_model_only'],
-      ['managed_domain_provider_states.medautoscience.role', 'read_only_status_projection'],
-      ['managed_domain_provider_states.medautoscience.managed_temporal_state_consistency.address', 'mas-managed-temporal.example.test:7233'],
-      ['managed_domain_provider_states.medautoscience.legacy_retirement_tombstone_proof.status', 'no_active_default_caller_proven'],
+      ['managed_domain_provider_states.domains.medautoscience.role', 'read_only_status_projection'],
+      ['managed_domain_provider_states.domains.medautoscience.managed_temporal_state_consistency.address', 'mas-managed-temporal.example.test:7233'],
+      ['managed_domain_provider_states.domains.redcube.managed_temporal_state_consistency.address', 'redcube-managed-temporal.example.test:7233'],
+      ['managed_domain_provider_states.managed_domain_projection_summary.status', 'conflicted'],
+      ['managed_domain_provider_states.managed_domain_projection_summary.domain_count', 2],
+      ['managed_domain_provider_states.managed_domain_projection_summary.managed_temporal_domain_count', 2],
+      ['managed_domain_provider_states.managed_domain_projection_summary.conflict_count', 1],
       ['managed_domain_provider_states.managed_domain_projection_summary.managed_temporal_state_consistency_declared', true],
-      ['managed_domain_provider_states.managed_domain_projection_summary.family_stage_control_plane_declared', true],
-      ['managed_domain_provider_states.managed_domain_projection_summary.domain_memory_descriptor_declared', false],
-      ['managed_domain_provider_states.managed_domain_projection_summary.owner_receipt_contract_declared', false],
-      ['managed_domain_provider_states.managed_domain_projection_summary.legacy_retirement_tombstone_declared', true],
-      ['managed_domain_provider_states.medautoscience.authority_boundary.can_write_domain_truth', false],
-      ['managed_domain_provider_states.medautoscience.authority_boundary.can_authorize_publication_quality', false],
-      ['managed_domain_provider_states.authority_boundary.can_authorize_submission_readiness', false],
+      ['managed_domain_provider_states.domains.medautoscience.authority_boundary.can_write_domain_truth', false],
+      ['managed_domain_provider_states.domains.medautoscience.authority_boundary.can_authorize_quality_verdict', false],
+      ['managed_domain_provider_states.authority_boundary.can_authorize_domain_ready', false],
       ['daemon_policy.local_daemon_added', false],
       ['daemon_policy.runtime_kernel_owner', 'provider_backed_family_runtime'],
     ]);
@@ -650,7 +653,6 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
-
     assertPathValues(snapshot, [
       ['runtime_health.status', 'offline'],
       ['attention_items.length', 2],

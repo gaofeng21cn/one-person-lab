@@ -126,7 +126,7 @@ function commandFromEnv(name: string) {
   return override ? override.split(/\s+/) : null;
 }
 
-function domainHandlerExportEnvName(entry: DomainManifestCatalogEntry) {
+export function domainHandlerExportEnvNames(entry: DomainManifestCatalogEntry) {
   const manifestDomain = optionalString(entry.manifest?.target_domain_id);
   const candidates = [
     manifestDomain,
@@ -163,7 +163,7 @@ function findSubstrateAdapter(payload: unknown): JsonRecord | null {
 }
 
 function readDomainHandlerSubstrateAdapter(entry: DomainManifestCatalogEntry) {
-  for (const envName of domainHandlerExportEnvName(entry)) {
+  for (const envName of domainHandlerExportEnvNames(entry)) {
     const command = commandFromEnv(envName);
     if (!command) {
       continue;

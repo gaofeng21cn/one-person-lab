@@ -8,7 +8,7 @@ import {
 import { buildTemporalWorkerLifecycleContract } from './family-runtime-temporal-readiness.ts';
 import { buildTemporalFirstRuntimeContract } from './family-runtime-temporal.ts';
 import { buildTemporalProviderLivenessBlocker } from './family-runtime-provider-liveness-blocker.ts';
-import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { readManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
 import {
   QUEUE_SCHEMA_VERSION,
   buildQueueTemporalLifecycleBoundary,
@@ -26,7 +26,7 @@ export async function buildFamilyRuntimeStatusPayload(
     requestedProvider,
     paths,
     options: {
-      managedProviderProjection: readMasManagedProviderProjection(),
+      managedProviderProjection: readManagedProviderProjectionSummary(),
     },
   });
   const fullOnlineReady = selectedProvider === 'temporal' && provider.ready;

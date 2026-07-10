@@ -8,7 +8,7 @@ import {
   DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
   OPL_RUNTIME_OWNER_ROUTE,
   buildDomainRouteSupportProjection,
-  readMasManagedProviderProjection,
+  readManagedProviderProjectionSummary,
   familyRuntimePaths,
   DEFAULT_NATIVE_HELPERS,
   buildNativeHelperProjection,
@@ -382,7 +382,7 @@ export async function buildRuntimeManager(
       requestedProvider: resolveFamilyRuntimeProviderKind(),
       paths: familyRuntimePaths(),
       options: {
-        managedProviderProjection: readMasManagedProviderProjection(),
+        managedProviderProjection: readManagedProviderProjectionSummary(),
       },
     });
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {

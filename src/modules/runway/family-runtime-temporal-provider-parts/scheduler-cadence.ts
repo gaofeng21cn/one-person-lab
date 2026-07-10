@@ -14,7 +14,7 @@ import {
 import {
   resolveTemporalAddressForPaths,
 } from '../family-runtime-temporal-service.ts';
-import { resolveMedautoscienceDomainProfile } from '../family-runtime-medautoscience-profile.ts';
+import { resolveFamilyRuntimeDomainProfiles } from '../family-runtime-domain-profiles.ts';
 
 type TemporalSchedulerInfoProjection = {
   num_actions_skipped_overlap?: number;
@@ -30,17 +30,12 @@ function temporalSchedulerClientOptions(paths: TemporalWorkerPaths) {
   return { addressOverride: temporalAddressForScheduler(paths) };
 }
 
-function domainProfilesForScheduler(input?: FamilyRuntimeDomainProfiles): FamilyRuntimeDomainProfiles | undefined {
-  const medautoscienceProfile = resolveMedautoscienceDomainProfile(input);
-  return medautoscienceProfile ? { medautoscience: medautoscienceProfile } : undefined;
-}
-
 export function buildTemporalSchedulerTickWorkflowArgs(input: {
   limit?: number;
   hydrate?: boolean;
   domainProfiles?: FamilyRuntimeDomainProfiles;
 } = {}) {
-  const domainProfiles = domainProfilesForScheduler(input.domainProfiles);
+  const domainProfiles = resolveFamilyRuntimeDomainProfiles(input.domainProfiles);
   return {
     provider_kind: 'temporal' as const,
     tick_source: 'temporal-schedule',

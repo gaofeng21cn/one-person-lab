@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import {
   buildTemporalSchedulerHealthProjection,
   buildTemporalSchedulerTickWorkflowArgs,
 } from '../../../src/modules/runway/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
+import { loadFrameworkContracts } from '../../../src/modules/charter/index.ts';
+import { bindWorkspace } from '../../../src/modules/workspace/workspace-registry.ts';
 
 test('Temporal scheduler health projection surfaces current stale action repair without domain authority', () => {
   const healthy = buildTemporalSchedulerHealthProjection({
@@ -55,15 +60,28 @@ test('Temporal scheduler health projection requires cadence install when missing
   assert.equal(missing.authority_boundary.can_write_domain_truth, false);
 });
 
-test('Temporal scheduler cadence snapshots MAS profile into tick workflow args', () => {
+test('Temporal scheduler cadence resolves explicit, env, and registry domain profiles', () => {
   const previousProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+  const previousGrantProfile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scheduler-profiles-'));
+  const registryProfile = path.join(stateRoot, 'mas-workspace.toml');
   try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    fs.writeFileSync(registryProfile, 'workspace_name = "scheduler-test"\n');
     delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE;
+    process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE = '/tmp/env-mag-workspace.json';
+    bindWorkspace(loadFrameworkContracts(), {
+      projectId: 'medautoscience',
+      workspacePath: stateRoot,
+      profileRef: registryProfile,
+      deriveDirectEntry: false,
+    });
     const explicit = buildTemporalSchedulerTickWorkflowArgs({
       limit: 7,
       hydrate: true,
       domainProfiles: {
-        medautoscience: '/tmp/dm-cvd.local.toml',
+        redcube: '/tmp/explicit-redcube-workspace.json',
       },
     });
     assert.deepEqual(explicit, {
@@ -73,7 +91,9 @@ test('Temporal scheduler cadence snapshots MAS profile into tick workflow args',
       limit: 7,
       hydrate: true,
       domain_profiles: {
-        medautoscience: '/tmp/dm-cvd.local.toml',
+        medautoscience: registryProfile,
+        medautogrant: '/tmp/env-mag-workspace.json',
+        redcube: '/tmp/explicit-redcube-workspace.json',
       },
     });
 
@@ -90,6 +110,17 @@ test('Temporal scheduler cadence snapshots MAS profile into tick workflow args',
     } else {
       process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE = previousProfile;
     }
+    if (previousGrantProfile === undefined) {
+      delete process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE;
+    } else {
+      process.env.OPL_FAMILY_RUNTIME_MEDAUTOGRANT_PROFILE = previousGrantProfile;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

@@ -5,7 +5,7 @@ import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
 } from './family-runtime-providers.ts';
-import { readMasManagedProviderProjection } from './family-runtime-mas-managed-provider-projection.ts';
+import { readManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
 import {
   buildQueueTemporalLifecycleBoundary,
   familyRuntimePaths,
@@ -355,7 +355,7 @@ export async function buildFamilyRuntimeControlLoopStatus(
     requestedProvider: providerKind,
     paths,
     options: {
-      managedProviderProjection: readMasManagedProviderProjection(),
+      managedProviderProjection: readManagedProviderProjectionSummary(),
     },
   });
   const selected = providerRuntime.provider;

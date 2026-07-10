@@ -13,6 +13,7 @@ import {
 
 const DEFAULT_DOMAIN_HANDLER_DISPATCH_TIMEOUT_MS = 120_000;
 const DEFAULT_DOMAIN_HANDLER_EXPORT_TIMEOUT_MS = 600_000;
+const READ_ONLY_DOMAIN_HANDLER_TIMEOUT_MS = 2_000;
 const DEFAULT_DOMAIN_HANDLER_MAX_BUFFER = 10 * 1024 * 1024;
 
 type DomainHandlerTimeoutKind = 'dispatch' | 'export';
@@ -449,6 +450,21 @@ export function runFamilyRuntimeDomainHandlerCommand(
     retry_tmp_root: retryTmpRoot,
     first_error_excerpt: firstErrorExcerpt,
   });
+}
+
+export function runReadOnlyFamilyRuntimeDomainHandlerCommand(
+  command: string[],
+  options: { cwd: string; env?: NodeJS.ProcessEnv; maxBuffer?: number },
+): DomainHandlerProcessResult {
+  if (!command[0]) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Family runtime domain-handler command is empty.', {
+      command,
+    });
+  }
+  return normalizeDomainHandlerResult(
+    spawnDomainHandlerCommand(command, options, READ_ONLY_DOMAIN_HANDLER_TIMEOUT_MS),
+    READ_ONLY_DOMAIN_HANDLER_TIMEOUT_MS,
+  );
 }
 
 export function domainHandlerResultErrorMessage(result: DomainHandlerProcessResult, label: string) {

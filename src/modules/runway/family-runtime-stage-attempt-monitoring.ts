@@ -307,7 +307,7 @@ function compactProviderReadiness(
     omitted_payloads: [
       'details',
       'managed_temporal_state_consistency',
-      'mas_managed_provider_projection',
+      'managed_domain_provider_projection_summary',
       'domain_manifest',
       'payload_body',
     ],

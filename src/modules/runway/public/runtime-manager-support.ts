@@ -8,7 +8,7 @@ export {
   OPL_RUNTIME_OWNER_ROUTE,
   buildDomainRouteSupportProjection,
 } from '../family-runtime-domain-route.ts';
-export { readMasManagedProviderProjection } from '../family-runtime-mas-managed-provider-projection.ts';
+export { readManagedProviderProjectionSummary } from '../family-runtime-managed-provider-projection.ts';
 export { familyRuntimePaths } from '../family-runtime-store.ts';
 export {
   DEFAULT_NATIVE_HELPERS,
