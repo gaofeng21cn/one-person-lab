@@ -21,9 +21,16 @@ function resolveRepoRootPath(options: ResolveFamilyWorkspaceRootOptions = {}) {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 }
 
-function isFamilyRepoRoot(directory: string, familyRepoDirectories: readonly string[]) {
-  return familyRepoDirectories.includes(path.basename(directory))
-    || fs.existsSync(path.join(directory, '.git'));
+function currentRepoDirectory(repoRoot: string) {
+  const gitMetadata = path.join(repoRoot, '.git');
+  if (fs.existsSync(gitMetadata) && fs.statSync(gitMetadata).isFile()) {
+    const gitDir = fs.readFileSync(gitMetadata, 'utf8').trim().replace(/^gitdir:\s*/, '');
+    const markerIndex = gitDir.lastIndexOf(`${path.sep}.git${path.sep}`);
+    if (markerIndex > 0) {
+      return path.basename(gitDir.slice(0, markerIndex));
+    }
+  }
+  return path.basename(repoRoot);
 }
 
 export function resolveFamilyWorkspaceRootFromRepoRoot(
@@ -36,7 +43,7 @@ export function resolveFamilyWorkspaceRootFromRepoRoot(
     const baseName = path.basename(current);
     if (baseName === '.worktrees' || baseName === 'worktrees') {
       const parent = path.dirname(current);
-      return isFamilyRepoRoot(parent, familyRepoDirectories)
+      return familyRepoDirectories.includes(path.basename(parent))
         ? path.dirname(parent)
         : parent;
     }
@@ -55,8 +62,9 @@ export function resolveDefaultFamilyWorkspaceRoot(options: ResolveFamilyWorkspac
     return path.resolve(configuredWorkspaceRoot);
   }
 
-  return resolveFamilyWorkspaceRootFromRepoRoot(
-    resolveRepoRootPath(options),
-    options.familyRepoDirectories,
-  );
+  const repoRoot = resolveRepoRootPath(options);
+  return resolveFamilyWorkspaceRootFromRepoRoot(repoRoot, [
+    currentRepoDirectory(repoRoot),
+    ...(options.familyRepoDirectories ?? []),
+  ]);
 }

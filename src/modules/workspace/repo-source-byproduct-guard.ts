@@ -3,23 +3,15 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 
-const BYPRODUCT_PATTERN =
-  '**/{.venv,__pycache__,.pytest_cache,dist,coverage,node_modules,*.egg-info,*.pyc,*.pyo}';
-const EXCLUDED_DESCENDANTS = [
-  '.git/**',
-  '**/.git/**',
-  '.worktrees/**',
-  '**/.worktrees/**',
-  'worktrees/**',
-  '**/worktrees/**',
-  '**/.venv/**',
-  '**/__pycache__/**',
-  '**/.pytest_cache/**',
-  '**/dist/**',
-  '**/coverage/**',
-  '**/node_modules/**',
-  '**/*.egg-info/**',
-] as const;
+const EXCLUDED_DIRECTORY_NAMES = new Set(['.git', '.worktrees', 'worktrees']);
+const BYPRODUCT_DIRECTORY_NAMES = new Set([
+  '.venv',
+  '__pycache__',
+  '.pytest_cache',
+  'dist',
+  'coverage',
+  'node_modules',
+]);
 
 export type RepoSourceByproductIssue = {
   kind: 'repo_source_byproduct_scan_failed' | 'repo_source_generated_byproduct';
@@ -27,6 +19,40 @@ export type RepoSourceByproductIssue = {
   byproduct_type: 'directory' | 'file' | null;
   reason: string;
 };
+
+function scanDirectory(root: string, current: string, issues: RepoSourceByproductIssue[]) {
+  for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+    const absolutePath = path.join(current, entry.name);
+    const relativePath = path.relative(root, absolutePath);
+    if (entry.isSymbolicLink()) {
+      continue;
+    }
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRECTORY_NAMES.has(entry.name)) {
+        continue;
+      }
+      if (BYPRODUCT_DIRECTORY_NAMES.has(entry.name) || entry.name.endsWith('.egg-info')) {
+        issues.push({
+          kind: 'repo_source_generated_byproduct',
+          path: relativePath,
+          byproduct_type: 'directory',
+          reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
+        });
+        continue;
+      }
+      scanDirectory(root, absolutePath, issues);
+      continue;
+    }
+    if (entry.isFile() && (entry.name.endsWith('.pyc') || entry.name.endsWith('.pyo'))) {
+      issues.push({
+        kind: 'repo_source_generated_byproduct',
+        path: relativePath,
+        byproduct_type: 'file',
+        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
+      });
+    }
+  }
+}
 
 export function inspectRepoSourceByproducts(sourceRoot: string) {
   const root = path.resolve(sourceRoot);
@@ -40,16 +66,15 @@ export function inspectRepoSourceByproducts(sourceRoot: string) {
       reason: 'source_root_missing_or_not_a_directory',
     });
   } else {
-    for (const relativePath of fs.globSync(BYPRODUCT_PATTERN, {
-      cwd: root,
-      exclude: EXCLUDED_DESCENDANTS,
-    }).sort()) {
-      const absolutePath = path.join(root, relativePath);
+    try {
+      scanDirectory(root, root, issues);
+      issues.sort((left, right) => left.path.localeCompare(right.path));
+    } catch (error) {
       issues.push({
-        kind: 'repo_source_generated_byproduct',
-        path: relativePath,
-        byproduct_type: fs.statSync(absolutePath).isDirectory() ? 'directory' : 'file',
-        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
+        kind: 'repo_source_byproduct_scan_failed',
+        path: root,
+        byproduct_type: null,
+        reason: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -62,8 +87,9 @@ export function inspectRepoSourceByproducts(sourceRoot: string) {
     status: issues.length === 0 ? 'passed' as const : 'blocked' as const,
     issues,
     policy: {
-      forbidden_pattern: BYPRODUCT_PATTERN,
-      excluded_worktree_roots: ['.git', '.worktrees', 'worktrees'],
+      forbidden_directory_names: [...BYPRODUCT_DIRECTORY_NAMES],
+      forbidden_file_suffixes: ['.egg-info', '.pyc', '.pyo'],
+      excluded_worktree_roots: [...EXCLUDED_DIRECTORY_NAMES],
       ignored_only_is_fallback_not_authority: true,
     },
     authority_boundary: {

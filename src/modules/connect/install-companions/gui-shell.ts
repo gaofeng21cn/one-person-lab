@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../workspace/index.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/index.ts';
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import type { OplGuiShellSurface } from '../install-companions.ts';
 
 export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
-  const workspaceRoot = resolveFamilyWorkspaceRootFromRepoRoot(repoRoot);
+  const workspaceRoot = resolveDefaultFamilyWorkspaceRoot({ repoRootHint: repoRoot });
   const siblingCheckoutPath = path.join(workspaceRoot, 'one-person-lab-app');
   const releaseVersion = getOplReleaseVersion();
 
