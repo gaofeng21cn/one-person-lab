@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { buildPackNativeHelperProbeReceipt } from '../../../../src/modules/pack/native-helper-probe.ts';
 
 const FALSE_AUTHORITY = {
   can_write_domain_truth: false,
@@ -140,6 +141,89 @@ test('pack native-helper probe accepts entrypoint symlinks inside the descriptor
     assert.equal(receipt.status, 'resolved');
     assert.equal(receipt.content_sha256, sha256(helperContent));
   } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe hashes the same contained file identity that it validates', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-race-'));
+  const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-race-outside-'));
+  const originalRealpathSync = fs.realpathSync;
+  try {
+    const entrypointPath = path.join(root, 'helper.js');
+    const internalTarget = path.join(root, 'helper-target.js');
+    const outsideTarget = path.join(outsideRoot, 'helper.js');
+    const internalContent = 'process.stdout.write("internal");\n';
+    const outsideContent = 'process.stdout.write("outside");\n';
+    fs.writeFileSync(internalTarget, internalContent);
+    fs.writeFileSync(outsideTarget, outsideContent);
+    fs.symlinkSync('helper-target.js', entrypointPath);
+    const descriptorPath = writeDescriptor(root);
+    let swapped = false;
+    fs.realpathSync = ((candidate: fs.PathLike) => {
+      const resolved = originalRealpathSync(candidate);
+      if (!swapped && path.resolve(String(candidate)) === entrypointPath) {
+        fs.rmSync(entrypointPath);
+        fs.symlinkSync(outsideTarget, entrypointPath);
+        swapped = true;
+      }
+      return resolved;
+    }) as typeof fs.realpathSync;
+
+    const receipt = buildPackNativeHelperProbeReceipt(descriptorPath);
+
+    assert.equal(swapped, true);
+    assert.equal(receipt.content_sha256, sha256(internalContent));
+    assert.notEqual(receipt.content_sha256, sha256(outsideContent));
+  } finally {
+    fs.realpathSync = originalRealpathSync;
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outsideRoot, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe parses and hashes one descriptor byte snapshot', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-descriptor-race-'));
+  const originalReadFileSync = fs.readFileSync;
+  const originalRealpathSync = fs.realpathSync;
+  try {
+    fs.writeFileSync(path.join(root, 'helper.js'), 'process.exit(0);\n');
+    const descriptorPath = writeDescriptor(root, { helper_id: 'first.helper' });
+    const firstBytes = fs.readFileSync(descriptorPath);
+    const secondDescriptor = JSON.parse(firstBytes.toString('utf8')) as Record<string, unknown>;
+    secondDescriptor.helper_id = 'second.helper';
+    const secondBytes = Buffer.from(`${JSON.stringify(secondDescriptor, null, 2)}\n`);
+    let swapped = false;
+    const swapDescriptor = () => {
+      if (swapped) return;
+      const replacementPath = `${descriptorPath}.replacement`;
+      fs.writeFileSync(replacementPath, secondBytes);
+      fs.renameSync(replacementPath, descriptorPath);
+      swapped = true;
+    };
+    fs.realpathSync = ((candidate: fs.PathLike) => {
+      const resolved = originalRealpathSync(candidate);
+      if (!swapped && path.resolve(String(candidate)) === descriptorPath) {
+        swapDescriptor();
+      }
+      return resolved;
+    }) as typeof fs.realpathSync;
+    fs.readFileSync = ((candidate: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+      const content = originalReadFileSync(candidate, ...(args as [any]));
+      if (!swapped && typeof candidate !== 'number' && path.resolve(String(candidate)) === descriptorPath) {
+        swapDescriptor();
+      }
+      return content;
+    }) as typeof fs.readFileSync;
+
+    const receipt = buildPackNativeHelperProbeReceipt(descriptorPath);
+
+    assert.equal(swapped, true);
+    assert.equal(receipt.helper_id, 'second.helper');
+    assert.equal(receipt.descriptor_sha256, sha256(secondBytes));
+  } finally {
+    fs.readFileSync = originalReadFileSync;
+    fs.realpathSync = originalRealpathSync;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

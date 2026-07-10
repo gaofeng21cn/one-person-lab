@@ -1,10 +1,10 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
+import { parseJsonText } from '../../kernel/json-file.ts';
 import {
-  readJsonFile,
-  sha256File,
   shape,
   type JsonRecord,
 } from './pack-os-parts/descriptor.ts';
@@ -24,6 +24,57 @@ const AUTHORITY_FALSE_FIELDS = [
   'can_claim_domain_ready',
   'can_claim_production_ready',
 ] as const;
+
+function outside(root: string, candidate: string) {
+  const relative = path.relative(root, candidate);
+  return relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+}
+
+function fileSnapshot(
+  filePath: string,
+  options: {
+    containmentRoot?: string;
+    notFileMessage: string;
+    details: JsonRecord;
+  },
+) {
+  const realPath = fs.realpathSync(filePath);
+  if (options.containmentRoot && outside(options.containmentRoot, realPath)) {
+    throw shape('native_helper_descriptor.entrypoint_ref must stay inside the descriptor directory.', options.details);
+  }
+  const noFollow = typeof fs.constants.O_NOFOLLOW === 'number' ? fs.constants.O_NOFOLLOW : 0;
+  const fd = fs.openSync(realPath, fs.constants.O_RDONLY | noFollow);
+  try {
+    const opened = fs.fstatSync(fd);
+    if (!opened.isFile()) {
+      throw shape(options.notFileMessage, options.details);
+    }
+    const currentRealPath = fs.realpathSync(realPath);
+    if (options.containmentRoot && outside(options.containmentRoot, currentRealPath)) {
+      throw shape('native_helper_descriptor.entrypoint_ref must stay inside the descriptor directory.', options.details);
+    }
+    const current = fs.statSync(currentRealPath);
+    if (opened.dev !== current.dev || opened.ino !== current.ino) {
+      throw shape('Native helper file changed while it was being probed.', options.details);
+    }
+    const content = fs.readFileSync(fd);
+    const finished = fs.fstatSync(fd);
+    if (
+      opened.size !== finished.size
+      || opened.mtimeMs !== finished.mtimeMs
+      || opened.ctimeMs !== finished.ctimeMs
+    ) {
+      throw shape('Native helper file changed while it was being probed.', options.details);
+    }
+    return {
+      realPath: currentRealPath,
+      content,
+      sha256: crypto.createHash('sha256').update(content).digest('hex'),
+    };
+  } finally {
+    fs.closeSync(fd);
+  }
+}
 
 function requireString(record: JsonRecord, field: string) {
   const value = record[field];
@@ -94,19 +145,14 @@ function resolveEntrypoint(descriptorDir: string, entrypointRef: string) {
     return { status: 'missing' as const, path: entrypointPath, sha256: null };
   }
   const realDescriptorDir = fs.realpathSync(descriptorDir);
-  const realEntrypointPath = fs.realpathSync(entrypointPath);
-  const realRelative = path.relative(realDescriptorDir, realEntrypointPath);
-  if (realRelative === '..' || realRelative.startsWith(`..${path.sep}`) || path.isAbsolute(realRelative)) {
-    throw shape('native_helper_descriptor.entrypoint_ref must stay inside the descriptor directory.', {
+  const snapshot = fileSnapshot(entrypointPath, {
+    containmentRoot: realDescriptorDir,
+    notFileMessage: 'native_helper_descriptor.entrypoint_ref must resolve to a file.',
+    details: {
       entrypoint_ref: entrypointRef,
-    });
-  }
-  if (!fs.statSync(entrypointPath).isFile()) {
-    throw shape('native_helper_descriptor.entrypoint_ref must resolve to a file.', {
-      entrypoint_ref: entrypointRef,
-    });
-  }
-  return { status: 'resolved' as const, path: entrypointPath, sha256: sha256File(entrypointPath) };
+    },
+  });
+  return { status: 'resolved' as const, path: entrypointPath, sha256: snapshot.sha256 };
 }
 
 function executable(candidate: string) {
@@ -145,7 +191,39 @@ function probeCommand(command: string, descriptorDir: string) {
 
 function parseDescriptor(descriptorPath: string) {
   const resolvedPath = path.resolve(descriptorPath);
-  const descriptor = readJsonFile(resolvedPath);
+  let snapshot;
+  try {
+    snapshot = fileSnapshot(resolvedPath, {
+      notFileMessage: 'Native helper descriptor must resolve to a file.',
+      details: { descriptor: resolvedPath },
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new FrameworkContractError(
+        'contract_file_missing',
+        `Native helper descriptor is missing: ${resolvedPath}.`,
+        { descriptor: resolvedPath },
+      );
+    }
+    throw error;
+  }
+  let parsed: unknown;
+  try {
+    parsed = parseJsonText(snapshot.content.toString('utf8'));
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_json_invalid',
+      `Native helper descriptor contains invalid JSON: ${resolvedPath}.`,
+      {
+        descriptor: resolvedPath,
+        cause: error instanceof Error ? error.message : 'JSON parse failed',
+      },
+    );
+  }
+  if (!isRecord(parsed)) {
+    throw shape('Native helper descriptor root must be a JSON object.', { descriptor: resolvedPath });
+  }
+  const descriptor = parsed;
   if (descriptor.surface_kind !== DESCRIPTOR_KIND) {
     throw shape(`native_helper_descriptor.surface_kind must be ${DESCRIPTOR_KIND}.`, {
       surface_kind: descriptor.surface_kind,
@@ -159,7 +237,7 @@ function parseDescriptor(descriptorPath: string) {
   const entrypointRef = requireString(descriptor, 'entrypoint_ref');
   return {
     descriptor_path: resolvedPath,
-    descriptor_sha256: sha256File(resolvedPath),
+    descriptor_sha256: snapshot.sha256,
     helper_id: requireString(descriptor, 'helper_id'),
     owner: requireString(descriptor, 'owner'),
     entrypoint_ref: entrypointRef,
