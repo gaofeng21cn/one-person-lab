@@ -106,6 +106,19 @@ function writeProfileStageCompilerSources(
     }],
     notes: [],
   });
+  writeJson(path.join(repoDir, 'contracts', 'profile.input.schema.json'), {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    required: ['workspace_root'],
+    properties: {
+      workspace_root: { type: 'string', minLength: 1 },
+    },
+    additionalProperties: false,
+  });
+  writeJson(path.join(repoDir, 'contracts', 'profile.output.schema.json'), {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+  });
   writeJson(path.join(repoDir, 'contracts', 'pack_compiler_input.json'), {
     surface_kind: 'opl_domain_pack_compiler_input',
     domain_id: domainId,
