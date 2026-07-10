@@ -215,9 +215,7 @@
         "tier": "remote_sandbox",
         "role": "post_default_remote_execution_provider",
         "provider_examples": [
-          "e2b",
-          "daytona",
-          "modal"
+          "e2b"
         ]
       }
     ],
@@ -226,9 +224,7 @@
       "devcontainer"
     ],
     "external_provider_examples": [
-      "e2b",
-      "daytona",
-      "modal"
+      "e2b"
     ],
     "provider_family_catalog": [
       {
@@ -238,16 +234,6 @@
         "default_dependency": false,
         "package_dependency_class": "optional_dependency",
         "connect_role": "external_provider_configuration_assist"
-      },
-      {
-        "family_id": "daytona_style_adapter",
-        "substrate": "daytona",
-        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
-      },
-      {
-        "family_id": "modal_style_adapter",
-        "substrate": "modal",
-        "adapter_shape": "external_sandbox_endpoint_credential_receipt_refs"
       }
     ],
     "required_external_sandbox_refs": [
@@ -255,24 +241,6 @@
       "OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF",
       "OPL_EXTERNAL_SANDBOX_PROVIDER_RECEIPT_REF"
     ],
-    "modal_like_env_spec_catalog": {
-      "source_ref": "AcademicForge:skills/claude-science/remote-compute-modal/envs",
-      "catalog_kind": "modal_like_env_spec_ids_no_authority",
-      "env_ids": [
-        "chemistry_gpu",
-        "esmfold2_gpu",
-        "genomics_evo2_gpu",
-        "proteomics_boltz_gpu",
-        "proteomics_gpu",
-        "proteomics_jax_gpu",
-        "proteomics_openfold_gpu",
-        "proteomics_rfd_diffdock_gpu",
-        "singlecell_gpu"
-      ],
-      "env_id_counts_as_image_built": false,
-      "env_id_counts_as_provider_ready": false,
-      "env_id_counts_as_runtime_ready": false
-    },
     "provider_role": "post_default_execution_isolation_substrate",
     "e2b_default_dependency": false,
     "e2b_package_dependency_class": "optional_dependency",
@@ -539,8 +507,6 @@
     "external_sandbox_template_exists_means_provider_ready",
     "external_sandbox_snapshot_exists_means_runtime_ready",
     "external_sandbox_receipt_means_domain_ready",
-    "modal_env_spec_id_means_image_built",
-    "modal_env_spec_id_means_provider_ready",
     "model_endpoint_ref_means_endpoint_ready",
     "model_endpoint_provider_receipt_means_domain_ready",
     "model_endpoint_readback_means_runtime_ready",

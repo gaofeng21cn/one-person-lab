@@ -182,17 +182,12 @@ function parseRulesToml(root: string): RulesConfig | null {
   return config;
 }
 
-function globToRegExp(pattern: string) {
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '\u0000')
-    .replace(/\*/g, '[^/]*')
-    .replace(/\u0000/g, '.*');
-  return new RegExp(`^${escaped}$`);
+function dotMatchable(value: string) {
+  return value.replace(/(^|\/)\./g, '$1_');
 }
 
 function matches(pattern: string, relativePath: string) {
-  return globToRegExp(pattern).test(relativePath);
+  return path.matchesGlob(dotMatchable(relativePath), dotMatchable(pattern));
 }
 
 function layerFor(file: string, config: RulesConfig) {

@@ -257,7 +257,7 @@ test('runtime manager fail-closes external sandbox provider when adapter config 
     );
     assert.equal(
       output.notes.includes(
-        'external_sandbox is an agent_sandbox_execution_substrate readback for E2B/Daytona/Modal-style adapters; it is not a Temporal durable workflow substrate replacement.',
+        'external_sandbox is an agent_sandbox_execution_substrate readback for the E2B executor or a generic external adapter; it is not a Temporal durable workflow substrate replacement.',
       ),
       true,
     );

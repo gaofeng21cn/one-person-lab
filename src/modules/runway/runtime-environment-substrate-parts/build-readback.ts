@@ -99,8 +99,6 @@ export function buildRuntimeEnvironmentBuildReadback(input: RuntimeEnvironmentTa
         local_sandbox_receipt_counts_as_production_ready: false,
         external_sandbox_template_exists_counts_as_provider_ready: false,
         external_sandbox_receipt_counts_as_domain_ready: false,
-        modal_env_spec_id_counts_as_image_built: false,
-        modal_env_spec_id_counts_as_provider_ready: false,
         model_endpoint_ref_counts_as_endpoint_ready: false,
         model_endpoint_provider_receipt_counts_as_domain_ready: false,
         model_endpoint_readback_counts_as_runtime_ready: false,

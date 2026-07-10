@@ -96,22 +96,6 @@ function listDirNames(dir: string) {
     .sort();
 }
 
-function listFilesRecursive(dir: string, prefix = ''): string[] {
-  if (!fs.existsSync(dir)) {
-    return [];
-  }
-  const files: string[] = [];
-  for (const entry of fs.readdirSync(path.join(dir, prefix), { withFileTypes: true })) {
-    const relativePath = path.join(prefix, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...listFilesRecursive(dir, relativePath));
-    } else if (entry.isFile()) {
-      files.push(relativePath.split(path.sep).join('/'));
-    }
-  }
-  return files.sort();
-}
-
 function sha256Text(value: crypto.BinaryLike) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }

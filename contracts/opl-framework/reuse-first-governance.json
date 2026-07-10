@@ -49,7 +49,6 @@
     ],
     "ignored_paths": [
       "contracts/opl-framework/reuse-first-governance.json",
-      "contracts/opl-framework/reuse-first-historical-worklist.json",
       "scripts/reuse-first-scan.mjs",
       "tests/src/reuse-first-scan.test.ts"
     ]

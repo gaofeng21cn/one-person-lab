@@ -66,7 +66,7 @@ function providerMetadata(kind: FamilyRuntimeProviderKind) {
       provider_kind: kind,
       provider_role: 'agent_sandbox_execution_substrate',
       substrate_boundary: 'external_agent_sandbox_not_temporal_durable_workflow_substrate',
-      supported_external_substrates: ['e2b', 'daytona', 'modal'],
+      supported_external_substrates: ['e2b'],
       deep_inspection: 'selected_provider_only',
       production_online_readiness_provider: false,
       fail_closed_when_unconfigured: true,
@@ -218,7 +218,7 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
       details: {
         substrate_boundary: 'external_agent_sandbox_not_temporal_durable_workflow_substrate',
         provider_role: 'agent_sandbox_execution_substrate',
-        supported_external_substrates: ['e2b', 'daytona', 'modal'],
+        supported_external_substrates: ['e2b'],
         endpoint_configured: Boolean(config.endpoint),
         credential_ref_configured: Boolean(config.credentialRef),
         provider_receipt_ref_configured: Boolean(config.providerReceiptRef),

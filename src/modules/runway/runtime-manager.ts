@@ -499,7 +499,7 @@ export async function buildRuntimeManager(
       },
       notes: [
         'Family runtime provider is Temporal-only; local_sqlite is retired as a provider and SQLite sidecars are projection/readback indexes only.',
-        'external_sandbox is an agent_sandbox_execution_substrate readback for E2B/Daytona/Modal-style adapters; it is not a Temporal durable workflow substrate replacement.',
+        'external_sandbox is an agent_sandbox_execution_substrate readback for the E2B executor or a generic external adapter; it is not a Temporal durable workflow substrate replacement.',
         `OPL Runtime Manager is the product control plane, stage ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection layer.`,
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
@@ -585,7 +585,7 @@ export async function runRuntimeManagerAction(
           'manager',
         ],
         note:
-          'External sandbox provider needs an explicit adapter endpoint, credential reference, and provider receipt reference. Runtime Manager does not call E2B, Daytona, Modal, or read credential material.',
+          'External sandbox provider needs an explicit adapter endpoint, credential reference, and provider receipt reference. Runtime Manager does not call E2B or read credential material.',
       });
       continue;
     }

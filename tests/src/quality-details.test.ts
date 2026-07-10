@@ -7,6 +7,81 @@ import { spawnSync } from 'node:child_process';
 
 import { cliPath, repoRoot, runCli, runCliInCwd, runCliRaw, runCliRawInCwd } from './cli/helpers.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { listRepoFiles } from '../../src/modules/stagecraft/quality-details/filesystem.ts';
+import { analyzeRules } from '../../src/modules/stagecraft/quality-details/rules.ts';
+
+test('quality fallback scan keeps hidden files and skips ignored or linked paths', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-native-glob-'));
+  try {
+    for (const directory of ['.git/objects', '.hidden/.nested', 'node_modules/pkg', 'visible']) {
+      fs.mkdirSync(path.join(root, directory), { recursive: true });
+    }
+    for (const relativePath of [
+      '.dot.ts',
+      '.git/config',
+      '.hidden/.nested/hidden.ts',
+      'node_modules/pkg/index.js',
+      'visible/z.ts',
+    ]) {
+      fs.writeFileSync(path.join(root, relativePath), relativePath);
+    }
+    fs.symlinkSync(path.join(root, 'visible', 'z.ts'), path.join(root, 'linked.ts'));
+    fs.symlinkSync(path.join(root, 'visible'), path.join(root, 'linked-dir'));
+
+    assert.deepEqual(listRepoFiles(root), [
+      '.dot.ts',
+      '.hidden/.nested/hidden.ts',
+      'visible/z.ts',
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('quality path glob rules retain wildcard matches for dotfiles', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-path-glob-'));
+  try {
+    fs.mkdirSync(path.join(root, '.sentrux'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.sentrux', 'rules.toml'), [
+      '[[layers]]',
+      'name = "all"',
+      'paths = ["**"]',
+      'order = 1',
+      '',
+      '[[boundaries]]',
+      'from = "all"',
+      'to = "all"',
+      'reason = "self dependency is forbidden"',
+      '',
+    ].join('\n'));
+    const findings = analyzeRules(root, [
+      {
+        absolutePath: path.join(root, '.hidden.ts'),
+        relativePath: '.hidden.ts',
+        language: 'typescript',
+        lineCount: 1,
+        importTargets: ['./visible.ts'],
+        resolvedImports: ['visible.ts'],
+        isTest: false,
+      },
+      {
+        absolutePath: path.join(root, 'visible.ts'),
+        relativePath: 'visible.ts',
+        language: 'typescript',
+        lineCount: 1,
+        importTargets: [],
+        resolvedImports: [],
+        isTest: false,
+      },
+    ], 1);
+
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0]?.file, '.hidden.ts');
+    assert.equal(findings[0]?.rule_kind, 'layer_boundary');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function makeQualityFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-'));

@@ -56,25 +56,13 @@ function sourceLanguageFor(relativePath: string): SourceLanguage | null {
 }
 
 function walkFiles(root: string) {
-  const files: string[] = [];
-
-  const walk = (directory: string) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const absolutePath = path.join(directory, entry.name);
-      const relativePath = toRepoPath(path.relative(root, absolutePath));
-      if (isIgnoredPath(relativePath)) {
-        continue;
-      }
-      if (entry.isDirectory()) {
-        walk(absolutePath);
-      } else if (entry.isFile()) {
-        files.push(relativePath);
-      }
-    }
-  };
-
-  walk(root);
-  return files;
+  return fs.globSync(['**/*', '**/.*', '**/.*/**/*'], {
+    cwd: root,
+    withFileTypes: true,
+    exclude: (entry) => entry.isSymbolicLink() || IGNORED_DIRS.has(entry.name),
+  })
+    .filter((entry) => entry.isFile())
+    .map((entry) => toRepoPath(path.relative(root, path.join(entry.parentPath, entry.name))));
 }
 
 function gitFiles(root: string) {

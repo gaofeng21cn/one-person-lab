@@ -35,23 +35,20 @@ export function gitTrackedOrWalkedFiles(repoDir: string) {
   return walkFiles(repoDir).sort();
 }
 
-function walkFiles(root: string, current = root): string[] {
-  if (!fs.existsSync(current)) {
+function walkFiles(root: string): string[] {
+  if (!fs.existsSync(root)) {
     return [];
   }
-  return fs.readdirSync(current, { withFileTypes: true }).flatMap((entry) => {
-    if (entry.name.startsWith('.git') || entry.name === 'node_modules' || entry.name === 'dist') {
-      return [];
-    }
-    const absolutePath = path.join(current, entry.name);
-    if (entry.isDirectory()) {
-      return walkFiles(root, absolutePath);
-    }
-    if (!entry.isFile()) {
-      return [];
-    }
-    return [path.relative(root, absolutePath).split(path.sep).join('/')];
-  });
+  return fs.globSync(['**/*', '**/.*', '**/.*/**/*'], {
+    cwd: root,
+    withFileTypes: true,
+    exclude: (entry) => entry.isSymbolicLink()
+      || entry.name.startsWith('.git')
+      || entry.name === 'node_modules'
+      || entry.name === 'dist',
+  })
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'));
 }
 
 export function collectFieldValues(

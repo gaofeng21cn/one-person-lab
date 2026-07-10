@@ -64,18 +64,6 @@ export function writeFakeExecutable(binDir: string, name: string) {
   return executablePath;
 }
 
-export const modalLikeEnvSpecIds = [
-  'chemistry_gpu',
-  'esmfold2_gpu',
-  'genomics_evo2_gpu',
-  'proteomics_boltz_gpu',
-  'proteomics_gpu',
-  'proteomics_jax_gpu',
-  'proteomics_openfold_gpu',
-  'proteomics_rfd_diffdock_gpu',
-  'singlecell_gpu',
-];
-
 export function fastLocalEnvDefaultFields(readback: Record<string, any>) {
   const defaultPath = readback.default_current_path ?? {};
   const handoff = readback.standard_tool_handoff ?? {};

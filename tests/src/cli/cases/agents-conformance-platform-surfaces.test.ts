@@ -1,8 +1,39 @@
-import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { gitTrackedOrWalkedFiles } from '../../../../src/modules/foundry-lab/standard-domain-agent-conformance-utils.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
 } from './agents-conformance-fixtures.ts';
+
+test('agents fallback scan keeps hidden files sorted and skips ignored or linked paths', () => {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-native-glob-'));
+  try {
+    for (const directory of ['.git/objects', '.github/workflows', '.hidden/.nested', 'dist', 'node_modules/pkg', 'visible']) {
+      fs.mkdirSync(path.join(repoDir, directory), { recursive: true });
+    }
+    for (const relativePath of [
+      '.dot.ts',
+      '.git/config',
+      '.github/workflows/check.json',
+      '.hidden/.nested/hidden.ts',
+      'dist/output.js',
+      'node_modules/pkg/index.js',
+      'visible/z.ts',
+    ]) {
+      fs.writeFileSync(path.join(repoDir, relativePath), relativePath);
+    }
+    fs.symlinkSync(path.join(repoDir, 'visible', 'z.ts'), path.join(repoDir, 'linked.ts'));
+    fs.symlinkSync(path.join(repoDir, 'visible'), path.join(repoDir, 'linked-dir'));
+
+    assert.deepEqual(gitTrackedOrWalkedFiles(repoDir), [
+      '.dot.ts',
+      '.hidden/.nested/hidden.ts',
+      'visible/z.ts',
+    ]);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
 
 test('agents platform-surfaces blocks explicit generic platform owner claims', () => {
   const repoDir = buildReadyAgentRepo();

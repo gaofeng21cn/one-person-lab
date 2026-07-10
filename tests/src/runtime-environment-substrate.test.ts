@@ -16,18 +16,6 @@ type Json = Record<string, unknown>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const modalLikeEnvSpecIds = [
-  'chemistry_gpu',
-  'esmfold2_gpu',
-  'genomics_evo2_gpu',
-  'proteomics_boltz_gpu',
-  'proteomics_gpu',
-  'proteomics_jax_gpu',
-  'proteomics_openfold_gpu',
-  'proteomics_rfd_diffdock_gpu',
-  'singlecell_gpu',
-];
-
 const fastLocalEnvDefaultFields = (readback: Json) => {
   const defaultPath = (readback.default_current_path ?? {}) as Json;
   const handoff = (readback.standard_tool_handoff ?? {}) as Json;
@@ -153,7 +141,7 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   ]);
   assert.equal(sandboxPolicy.default_provider_kind, 'fast_local_env');
   assert.deepEqual(sandboxPolicy.local_provider_examples, ['docker', 'devcontainer']);
-  assert.deepEqual(sandboxPolicy.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.deepEqual(sandboxPolicy.external_provider_examples, ['e2b']);
   assert.deepEqual(sandboxPolicy.required_external_sandbox_refs, [
     'OPL_EXTERNAL_SANDBOX_ENDPOINT',
     'OPL_EXTERNAL_SANDBOX_CREDENTIAL_REF',
@@ -161,14 +149,8 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   ]);
   assert.deepEqual(
     (sandboxPolicy.provider_family_catalog as Json[]).map((entry) => entry.substrate),
-    ['e2b', 'daytona', 'modal'],
+    ['e2b'],
   );
-  const modalCatalog = sandboxPolicy.modal_like_env_spec_catalog as Json;
-  assert.equal(modalCatalog.source_ref, 'AcademicForge:skills/claude-science/remote-compute-modal/envs');
-  assert.deepEqual(modalCatalog.env_ids, modalLikeEnvSpecIds);
-  assert.equal(modalCatalog.env_id_counts_as_image_built, false);
-  assert.equal(modalCatalog.env_id_counts_as_provider_ready, false);
-  assert.equal(modalCatalog.env_id_counts_as_runtime_ready, false);
   assert.equal(sandboxPolicy.provider_role, 'post_default_execution_isolation_substrate');
   assert.equal(sandboxPolicy.e2b_default_dependency, false);
   assert.equal(sandboxPolicy.e2b_package_dependency_class, 'optional_dependency');
@@ -326,8 +308,6 @@ test('runtime environment substrate contract defines OPL-owned false-ready bound
   assert.equal(forbiddenClaims.includes('external_sandbox_template_exists_means_provider_ready'), true);
   assert.equal(forbiddenClaims.includes('external_sandbox_snapshot_exists_means_runtime_ready'), true);
   assert.equal(forbiddenClaims.includes('external_sandbox_receipt_means_domain_ready'), true);
-  assert.equal(forbiddenClaims.includes('modal_env_spec_id_means_image_built'), true);
-  assert.equal(forbiddenClaims.includes('modal_env_spec_id_means_provider_ready'), true);
   assert.equal(forbiddenClaims.includes('model_endpoint_ref_means_endpoint_ready'), true);
   assert.equal(forbiddenClaims.includes('model_endpoint_provider_receipt_means_domain_ready'), true);
   assert.equal(forbiddenClaims.includes('model_endpoint_readback_means_runtime_ready'), true);
@@ -395,7 +375,7 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal(sandboxPlan.selected_provider, 'fast_local_env');
   assert.equal(sandboxPlan.provider_role, 'fast_local_env_default_current_path');
   assert.deepEqual(sandboxPlan.later_sandbox_provider_kinds, ['local_docker', 'external_sandbox']);
-  assert.deepEqual(sandboxPlan.later_external_sandbox_substrates, ['e2b', 'daytona', 'modal']);
+  assert.deepEqual(sandboxPlan.later_external_sandbox_substrates, ['e2b']);
   assert.equal(sandboxPlan.materialization_root_provider, 'local_managed_root');
   assert.equal(sandboxPlan.temporal_replacement, false);
   assert.equal(sandboxPlan.can_claim_provider_ready, false);
@@ -406,7 +386,6 @@ test('runtime env build readback exposes Full bundle producer manifest lock refs
   assert.equal((producer.false_ready_flags as Json).bundle_lock_exists_counts_as_app_full_release_ready, false);
   assert.equal((producer.false_ready_flags as Json).local_sandbox_template_exists_counts_as_provider_ready, false);
   assert.equal((producer.false_ready_flags as Json).local_sandbox_receipt_counts_as_domain_ready, false);
-  assert.equal((producer.false_ready_flags as Json).modal_env_spec_id_counts_as_provider_ready, false);
   assert.equal((producer.false_ready_flags as Json).model_endpoint_ref_counts_as_endpoint_ready, false);
   assert.equal((producer.false_ready_flags as Json).model_endpoint_readback_counts_as_runtime_ready, false);
   assert.equal((producer.app_full_consumer_boundary as Json).app_owns_release_verdict, true);
@@ -474,12 +453,10 @@ test('runtime env build readback exposes external sandbox provider plan without 
   const plan = readback.sandbox_provider_plan as Json;
   assert.equal(plan.status, 'external_sandbox_provider_adapter_unconfigured');
   assert.equal(plan.provider_role, 'agent_sandbox_execution_substrate');
-  assert.deepEqual(plan.external_provider_examples, ['e2b', 'daytona', 'modal']);
+  assert.deepEqual(plan.external_provider_examples, ['e2b']);
   assert.equal(plan.e2b_default_dependency, false);
   assert.equal(plan.e2b_package_dependency_class, 'optional_dependency');
   assert.equal(plan.e2b_connect_configuration_assist_only, true);
-  assert.deepEqual((plan.modal_like_env_spec_catalog as Json).env_ids, modalLikeEnvSpecIds);
-  assert.equal((plan.modal_like_env_spec_catalog as Json).env_id_counts_as_provider_ready, false);
   assert.deepEqual((plan.model_endpoint_provider_family as Json).required_endpoint_refs, [
     'OPL_MODEL_ENDPOINT_URL_REF',
     'OPL_MODEL_ENDPOINT_CREDENTIAL_REF',
@@ -513,8 +490,6 @@ test('runtime env build readback exposes external sandbox provider plan without 
   assert.equal(producer.sandbox_provider, 'external_sandbox');
   assert.equal(flags.external_sandbox_template_exists_counts_as_provider_ready, false);
   assert.equal(flags.external_sandbox_receipt_counts_as_domain_ready, false);
-  assert.equal(flags.modal_env_spec_id_counts_as_image_built, false);
-  assert.equal(flags.modal_env_spec_id_counts_as_provider_ready, false);
   assert.equal(flags.model_endpoint_provider_receipt_counts_as_domain_ready, false);
 });
 

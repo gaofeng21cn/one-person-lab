@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
 import { resolveStandardAgent } from '../charter/index.ts';
@@ -38,6 +37,7 @@ import {
   defaultCallerSurfaceGates,
 } from './default-caller-surface-gates.ts';
 import { buildDomainPrivatePlatformTailMatrixReadback } from './domain-private-platform-tail-matrix.ts';
+import { gitTrackedOrWalkedFiles } from './standard-domain-agent-conformance-utils.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 
 interface RepoInput {
@@ -187,36 +187,6 @@ function parseRepoArgs(args: string[], commandName: string): RepoInput[] {
     requested_agent_id: repo.requested_agent_id,
     repo_dir: path.resolve(repo.repo_dir),
   }));
-}
-
-function gitTrackedOrWalkedFiles(repoDir: string) {
-  const gitResult = spawnSync('git', ['ls-files'], {
-    cwd: repoDir,
-    encoding: 'utf8',
-  });
-  if (gitResult.status === 0 && gitResult.stdout.trim()) {
-    return gitResult.stdout.split('\n').filter(Boolean).sort();
-  }
-  return walkFiles(repoDir).sort();
-}
-
-function walkFiles(root: string, current = root): string[] {
-  if (!fs.existsSync(current)) {
-    return [];
-  }
-  return fs.readdirSync(current, { withFileTypes: true }).flatMap((entry) => {
-    if (entry.name.startsWith('.git') || entry.name === 'node_modules' || entry.name === 'dist') {
-      return [];
-    }
-    const absolutePath = path.join(current, entry.name);
-    if (entry.isDirectory()) {
-      return walkFiles(root, absolutePath);
-    }
-    if (!entry.isFile()) {
-      return [];
-    }
-    return [path.relative(root, absolutePath).split(path.sep).join('/')];
-  });
 }
 
 function codeFile(pathname: string) {
