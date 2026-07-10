@@ -14,7 +14,6 @@ export interface PackOsContract {
     distribute: string;
     lock: string;
     validate: string;
-    mas_display_smoke: string;
   };
   descriptor_contract: {
     surface_kind: string;
@@ -78,17 +77,6 @@ export interface PackOsContract {
     opl_can_authorize_visual_export_readiness: false;
     opl_can_authorize_app_release_readiness: false;
     provider_completion_is_pack_quality_ready: false;
-  };
-  domain_handoff: {
-    mas_display_pack_v2: {
-      source_contract_ref: string;
-      transport_role: string;
-      domain_authority_owner: string;
-      consumer_smoke_surface: string;
-      audit_surface: string;
-      forbidden_claim: string;
-    };
-    future_family_packs: string[];
   };
   forbidden_claims: string[];
   verification: {

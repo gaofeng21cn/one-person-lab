@@ -5,7 +5,7 @@
   "purpose": "Generic Pack OS lifecycle contract for capability-pack descriptor intake, registry install, content-addressed cache, refs-only distribution, lock projection, artifact lifecycle refs, and review receipt transport.",
   "state": "active_l4_structural_baseline",
   "machine_boundary": "This contract covers OPL-owned pack descriptor transport, registry install records, content-addressed cache records for present local resources, refs-only distribution manifests, resolver/lock projection, content hash refs, artifact locator refs, lifecycle state refs, and reviewer receipt refs. It does not authorize domain truth, artifact body mutation, owner receipt signing, quality verdicts, publication readiness, grant readiness, visual export readiness, App release readiness, or production maturity.",
-  "source_module": "src/pack-os.ts",
+  "source_module": "src/modules/pack/pack-os.ts",
   "cli_surfaces": {
     "inspect": "opl pack os inspect --descriptor <path>",
     "install": "opl pack os install --descriptor <path> --registry <path> [--cache-root <dir>]",
@@ -13,8 +13,7 @@
     "cache": "opl pack os cache --descriptor <path> --cache-root <dir>",
     "distribute": "opl pack os distribute --descriptor <path> --output <path> [--cache-root <dir>]",
     "lock": "opl pack os lock --descriptor <path>",
-    "validate": "opl pack os validate --descriptor <path>",
-    "mas_display_smoke": "opl pack os mas-display-smoke --contract <path>"
+    "validate": "opl pack os validate --descriptor <path>"
   },
   "descriptor_contract": {
     "surface_kind": "opl_generic_capability_pack_descriptor",
@@ -142,36 +141,19 @@
     "opl_can_authorize_app_release_readiness": false,
     "provider_completion_is_pack_quality_ready": false
   },
-  "domain_handoff": {
-    "mas_display_pack_v2": {
-      "source_contract_ref": "med-autoscience:contracts/display-pack-contract.v2.json",
-      "transport_role": "Display Pack descriptor refs, display_pack_lock refs, publication_figure_quality_refs, visual audit receipt refs, and polish lifecycle refs can be transported by OPL Pack OS.",
-      "domain_authority_owner": "MedAutoScience",
-      "consumer_smoke_surface": "opl pack os mas-display-smoke --contract <path>",
-      "audit_surface": "opl_pack_os_mas_display_pack_v2_audit",
-      "forbidden_claim": "OPL Pack OS does not become MAS medical display truth, publication quality authority, or evidence-figure renderer authority."
-    },
-    "future_family_packs": [
-      "MAG grant package/display helpers",
-      "RCA visual deliverable packs",
-      "Deck/report/app UI capability packs"
-    ]
-  },
   "forbidden_claims": [
     "pack_lock_is_domain_ready",
     "review_receipt_transport_is_quality_verdict",
     "artifact_locator_ref_is_artifact_authority",
-    "provider_completion_is_pack_quality_ready",
-    "OPL Pack OS owns MAS publication quality",
-    "OPL Pack OS mutates domain artifact bodies"
+    "provider_completion_is_pack_quality_ready"
   ],
   "verification": {
     "focused_tests": [
-      "tests/src/pack-os.test.ts",
-      "tests/src/cli/cases/pack-os-command-surface.test.ts"
+      "tests/src/cli/cases/contracts-help.test.ts",
+      "tests/src/profile-capability-plan.test.ts"
     ],
     "required_commands_when_changed": [
-      "node --experimental-strip-types --test tests/src/pack-os.test.ts tests/src/cli/cases/pack-os-command-surface.test.ts",
+      "node --experimental-strip-types --test tests/src/cli/cases/contracts-help.test.ts tests/src/profile-capability-plan.test.ts",
       "npm run typecheck",
       "scripts/verify.sh"
     ]
