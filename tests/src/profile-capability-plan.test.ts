@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -22,6 +23,10 @@ function writeJson(filePath: string, payload: unknown) {
 
 function readJson(filePath: string): JsonRecord {
   return readJsonPayloadFile(filePath) as JsonRecord;
+}
+
+function fileFingerprint(filePath: string) {
+  return `sha256:${crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')}`;
 }
 
 function withTempDir(run: (root: string) => void) {
@@ -63,6 +68,9 @@ function writeStandardCatalog(repoDir: string, domainId = 'test-agent') {
 
 function writeBoundDelta(filePath: string, input: {
   deltaId?: string;
+  deltaRef?: string;
+  domain?: string;
+  domainId?: string;
   currentOwner?: string;
   capabilityRef: string;
   hardBoundary?: string;
@@ -72,7 +80,9 @@ function writeBoundDelta(filePath: string, input: {
     schema_version: 'current-owner-delta.v1',
     default_planning_root: 'current_owner_delta',
     delta_id: input.deltaId ?? 'current-owner-delta:test/1',
-    domain: 'test-agent',
+    ...(input.deltaRef === undefined ? {} : { delta_ref: input.deltaRef }),
+    domain: input.domain ?? 'test-agent',
+    ...(input.domainId === undefined ? {} : { domain_id: input.domainId }),
     task_or_study_ref: 'task:test/1',
     stage_ref: 'stage:test/plan',
     work_unit_ref: 'work-unit:test/1',
@@ -81,7 +91,7 @@ function writeBoundDelta(filePath: string, input: {
       capability_ref: input.capabilityRef,
       binding_kind: 'route_required',
       ...(input.hardBoundary === undefined ? {} : { hard_boundary: input.hardBoundary }),
-      required_by_delta_ref: input.deltaId ?? 'current-owner-delta:test/1',
+      required_by_delta_ref: input.deltaRef ?? input.deltaId ?? 'current-owner-delta:test/1',
     }],
   });
 }
@@ -93,8 +103,10 @@ test('profile capability plan resolves a schema-valid exact ref and emits cwd-bo
     const { mapPath, map } = writeStandardCatalog(catalogRepo);
     const firstCapability = map.capabilities[0];
     const capabilityRef = String(firstCapability.capability_id);
+    const pointerRef = 'contracts/capability_map.json#/capabilities/0';
     const descriptorRef = 'packs/test-agent/opl_pack.json';
-    writeJson(path.join(catalogRepo, descriptorRef), { surface_kind: 'opl_generic_capability_pack_descriptor' });
+    const descriptorPath = path.join(catalogRepo, descriptorRef);
+    writeJson(descriptorPath, { surface_kind: 'opl_generic_capability_pack_descriptor' });
     firstCapability.dependency_profile_refs = ['runtime_env_dependency_profile:test-agent-v1'];
     firstCapability.environment_action_refs = [
       'opl runtime env prepare --domain test-agent --profile default --platform <platform> --requirement-profile <path> --artifact-root <path> --json',
@@ -107,7 +119,7 @@ test('profile capability plan resolves a schema-valid exact ref and emits cwd-bo
       descriptor_ref: descriptorRef,
     }];
     writeJson(mapPath, map);
-    writeSelection(selectionFile, [capabilityRef, 'capability:missing/optional']);
+    writeSelection(selectionFile, [capabilityRef, pointerRef, 'capability:missing/optional']);
 
     const readback = buildProfileCapabilityPlan({
       selectionFile,
@@ -115,7 +127,8 @@ test('profile capability plan resolves a schema-valid exact ref and emits cwd-bo
     }).capability_plan;
 
     assert.equal(readback.surface_kind, 'opl_profile_capability_plan');
-    assert.deepEqual(readback.exact_capability_readout.capability_refs, [capabilityRef]);
+    assert.deepEqual(readback.exact_capability_readout.capability_refs, [pointerRef, capabilityRef].sort());
+    assert.equal(readback.dependency_feasibility.candidate_capability_count, 1);
     assert.deepEqual(readback.missing_optional_requirements, [
       'capability:missing/optional',
       'profile-capability-kind:stage_prompt',
@@ -135,7 +148,11 @@ test('profile capability plan resolves a schema-valid exact ref and emits cwd-bo
     );
     assert.deepEqual(
       readback.dependency_feasibility.descriptor_materialization.candidate_descriptor_refs,
-      [{ descriptor_ref: descriptorRef, catalog_root: fs.realpathSync.native(catalogRepo) }],
+      [{
+        descriptor_ref: descriptorRef,
+        catalog_root: fs.realpathSync.native(catalogRepo),
+        descriptor_source_fingerprint: fileFingerprint(descriptorPath),
+      }],
     );
     assert.deepEqual(
       readback.dependency_feasibility.descriptor_materialization.candidate_inspect_actions[0],
@@ -144,6 +161,7 @@ test('profile capability plan resolves a schema-valid exact ref and emits cwd-bo
         argv: ['opl', 'pack', 'os', 'inspect', '--descriptor', descriptorRef, '--json'],
         cwd: fs.realpathSync.native(catalogRepo),
         descriptor_ref: descriptorRef,
+        descriptor_source_fingerprint: fileFingerprint(descriptorPath),
       },
     );
     assert.deepEqual(readback.dependency_feasibility.default_side_effects, {
@@ -212,6 +230,38 @@ test('profile capability plan creates a blocker candidate only for a canonical b
   });
 });
 
+test('profile capability plan rejects empty or conflicting current-owner-delta identity fields', () => {
+  withTempDir((root) => {
+    const catalogRepo = path.join(root, 'agent-repo');
+    const selectionFile = path.join(root, 'profile-selection.json');
+    const deltaFile = path.join(root, 'current-owner-delta.json');
+    writeStandardCatalog(catalogRepo);
+    writeSelection(selectionFile, []);
+
+    const invalidIdentities = [
+      { domain: '' },
+      { currentOwner: ' ' },
+      { domain: 'test-agent', domainId: 'other-agent' },
+      {
+        deltaId: 'current-owner-delta:test/id',
+        deltaRef: 'current-owner-delta:test/ref',
+      },
+    ];
+    for (const identity of invalidIdentities) {
+      writeBoundDelta(deltaFile, {
+        capabilityRef: 'capability:missing/route-required',
+        hardBoundary: 'source_data_evidence',
+        ...identity,
+      });
+      assert.throws(() => buildProfileCapabilityPlan({
+        selectionFile,
+        catalogRepos: [catalogRepo],
+        currentOwnerDeltaFile: deltaFile,
+      }), /not a canonical bound delta/);
+    }
+  });
+});
+
 test('profile capability plan binds its fingerprint to current-owner-delta content and identity', () => {
   withTempDir((root) => {
     const catalogRepo = path.join(root, 'agent-repo');
@@ -271,15 +321,102 @@ test('profile capability plan rejects ambiguous repo-relative refs across explic
   });
 });
 
+test('profile capability plan rejects duplicate capability ids inside a standard catalog', () => {
+  withTempDir((root) => {
+    const catalogRepo = path.join(root, 'agent-repo');
+    const selectionFile = path.join(root, 'profile-selection.json');
+    const { mapPath, map } = writeStandardCatalog(catalogRepo);
+    const duplicate = structuredClone(map.capabilities[0]);
+    map.capabilities[0].dependency_profile_refs = ['dep:first'];
+    duplicate.dependency_profile_refs = ['dep:second'];
+    map.capabilities.push(duplicate);
+    writeJson(mapPath, map);
+    writeSelection(selectionFile, [String(map.capabilities[0].capability_id)]);
+
+    assert.throws(() => buildProfileCapabilityPlan({
+      selectionFile,
+      catalogRepos: [catalogRepo],
+    }), /repeats capability ids/);
+  });
+});
+
+test('profile capability plan binds descriptor content to candidate actions and plan fingerprint', () => {
+  withTempDir((root) => {
+    const catalogRepo = path.join(root, 'agent-repo');
+    const selectionFile = path.join(root, 'profile-selection.json');
+    const { mapPath, map } = writeStandardCatalog(catalogRepo);
+    const capabilityRef = String(map.capabilities[0].capability_id);
+    const descriptorRef = 'packs/test-agent/opl_pack.json';
+    const descriptorPath = path.join(catalogRepo, descriptorRef);
+    map.capabilities[0].pack_os_descriptor_refs = [{
+      surface_kind: 'opl_pack_os_descriptor_ref',
+      descriptor_ref: descriptorRef,
+    }];
+    writeJson(mapPath, map);
+    writeSelection(selectionFile, [capabilityRef]);
+
+    writeJson(descriptorPath, { surface_kind: 'opl_generic_capability_pack_descriptor', revision: 1 });
+    const firstPlan = buildProfileCapabilityPlan({
+      selectionFile,
+      catalogRepos: [catalogRepo],
+    }).capability_plan;
+    writeJson(descriptorPath, { surface_kind: 'opl_generic_capability_pack_descriptor', revision: 2 });
+    const secondPlan = buildProfileCapabilityPlan({
+      selectionFile,
+      catalogRepos: [catalogRepo],
+    }).capability_plan;
+
+    assert.notEqual(firstPlan.plan_fingerprint, secondPlan.plan_fingerprint);
+    assert.notEqual(
+      firstPlan.dependency_feasibility.descriptor_materialization
+        .candidate_descriptor_refs[0].descriptor_source_fingerprint,
+      secondPlan.dependency_feasibility.descriptor_materialization
+        .candidate_descriptor_refs[0].descriptor_source_fingerprint,
+    );
+    assert.equal(
+      secondPlan.dependency_feasibility.descriptor_materialization
+        .candidate_inspect_actions[0].descriptor_source_fingerprint,
+      fileFingerprint(descriptorPath),
+    );
+  });
+});
+
 test('profile capability plan reads owner capability maps without activating legacy ids or inferring source pack descriptors', () => {
   withTempDir((root) => {
     const catalogRepo = path.join(root, 'scholar-skills');
     const selectionFile = path.join(root, 'profile-selection.json');
-    const { mapPath, map } = writeStandardCatalog(catalogRepo, 'mas-scholar-skills');
-    map.capabilities[0].capability_id = 'mas-scholar-skills.data';
-    map.capabilities[0].legacy_module_ids = ['opl.scholarskills.data'];
-    map.capabilities[0].source_pack_ref = 'packs/medical-display-core/display_pack.toml';
-    writeJson(mapPath, map);
+    writeJson(path.join(catalogRepo, 'contracts', 'capability_map.json'), {
+      surface_kind: 'owner_capability_map',
+      schema_version: 1,
+      domain_id: 'mas-scholar-skills',
+      authority_boundary: {
+        outputs_are_refs_only_candidates: true,
+        can_write_domain_truth: false,
+        can_write_runtime_state: false,
+        can_mutate_artifact_body: false,
+        can_sign_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_quality_verdict: false,
+        can_claim_owner_closeout: false,
+      },
+      capabilities: [{
+        capability_id: 'mas-scholar-skills.data',
+        external_repo_ref: 'external_repo:mas-scholar-skills/skills/medical-data-governance/SKILL.md',
+        legacy_module_ids: ['opl.scholarskills.data'],
+        source_pack_ref: 'packs/medical-display-core/display_pack.toml',
+        dependency_profile_refs: ['runtime_env_dependency_profile:scholarskills_data_v1'],
+        authority_boundary: {
+          outputs_are_refs_only_candidates: true,
+          can_write_domain_truth: false,
+          can_write_runtime_state: false,
+          can_mutate_artifact_body: false,
+          can_sign_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_claim_quality_verdict: false,
+          can_claim_owner_closeout: false,
+        },
+      }],
+    });
     writeSelection(selectionFile, [
       'mas-scholar-skills.data',
       'opl.scholarskills.data',
@@ -297,6 +434,32 @@ test('profile capability plan reads owner capability maps without activating leg
       plan.dependency_feasibility.descriptor_materialization.candidate_descriptor_refs,
       [],
     );
+    assert.deepEqual(plan.dependency_feasibility.candidate_dependency_refs, [
+      'runtime_env_dependency_profile:scholarskills_data_v1',
+    ]);
+  });
+});
+
+test('profile capability plan rejects generic owner maps without an explicit refs-only authority envelope', () => {
+  withTempDir((root) => {
+    const catalogRepo = path.join(root, 'owner-pack');
+    const selectionFile = path.join(root, 'profile-selection.json');
+    writeJson(path.join(catalogRepo, 'contracts', 'capability_map.json'), {
+      surface_kind: 'owner_capability_map',
+      schema_version: 1,
+      domain_id: 'owner-pack',
+      authority_boundary: {},
+      capabilities: [{
+        capability_id: 'owner-pack.example',
+        authority_boundary: {},
+      }],
+    });
+    writeSelection(selectionFile, ['owner-pack.example']);
+
+    assert.throws(() => buildProfileCapabilityPlan({
+      selectionFile,
+      catalogRepos: [catalogRepo],
+    }), /refs-only no-authority envelope/);
   });
 });
 
@@ -317,6 +480,24 @@ test('profile capability plan rejects Pack OS descriptor refs that escape the ca
     }];
     writeJson(mapPath, map);
     writeSelection(selectionFile, [capabilityRef]);
+
+    assert.throws(() => buildProfileCapabilityPlan({
+      selectionFile,
+      catalogRepos: [catalogRepo],
+    }), /escapes its catalog repo/);
+  });
+});
+
+test('profile capability plan rejects a capability map symlink that escapes the catalog root', () => {
+  withTempDir((root) => {
+    const catalogRepo = path.join(root, 'agent-repo');
+    const selectionFile = path.join(root, 'profile-selection.json');
+    const { mapPath, map } = writeStandardCatalog(catalogRepo);
+    const outsideMap = path.join(root, 'outside-capability-map.json');
+    writeJson(outsideMap, map);
+    fs.rmSync(mapPath);
+    fs.symlinkSync(outsideMap, mapPath);
+    writeSelection(selectionFile, [String(map.capabilities[0].capability_id)]);
 
     assert.throws(() => buildProfileCapabilityPlan({
       selectionFile,
@@ -391,4 +572,54 @@ test('profiles select real CLI accepts documented source and pattern aliases and
     (payload.profile_capability_plan_input as JsonRecord).surface_kind,
     'opl_profile_capability_plan_input',
   );
+});
+
+test('profiles select real CLI accepts every source and pattern alias in --flag=value form', () => {
+  const cases = [
+    ...[
+      '--reference-source',
+      '--reference-source-ref',
+      '--reference-design-source',
+      '--source-ref',
+      '--paper',
+      '--paper-ref',
+    ].map((option) => ({
+      option,
+      receiptField: 'reference_design_source_refs',
+      value: `paper-ref:${option.slice(2)}`,
+    })),
+    ...[
+      '--reference-design-pattern-packet',
+      '--reference-design-pattern-packet-ref',
+      '--pattern-packet',
+      '--pattern-packet-ref',
+    ].map((option) => ({
+      option,
+      receiptField: 'reference_design_pattern_packet_refs',
+      value: `pattern-packet-ref:${option.slice(2)}`,
+    })),
+  ];
+
+  for (const fixture of cases) {
+    const result = spawnSync('./bin/opl', [
+      'profiles',
+      'select',
+      '--intent=colorectal surgery risk decision support',
+      `${fixture.option}=${fixture.value}`,
+      '--json',
+    ], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        OPL_SKIP_SKILL_SYNC: '1',
+      },
+    });
+
+    assert.equal(result.status, 0, `${fixture.option}: ${result.stderr}`);
+    const payload = parseJsonText(result.stdout) as JsonRecord;
+    const receipt = payload.profile_selection_receipt as JsonRecord;
+    const sourceReceipt = receipt.source_derived_design_receipt as JsonRecord;
+    assert.deepEqual(sourceReceipt[fixture.receiptField], [fixture.value], fixture.option);
+  }
 });

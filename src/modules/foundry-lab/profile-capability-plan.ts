@@ -21,7 +21,7 @@ type JsonRecord = Record<string, unknown>;
 type CatalogProvenance = {
   catalog_repo: string;
   contract_ref: string;
-  catalog_kind: 'standard_agent_capability_map';
+  catalog_kind: 'standard_agent_capability_map' | 'owner_capability_map';
   owner: string;
   source_fingerprint: string;
 };
@@ -29,9 +29,11 @@ type CatalogProvenance = {
 type PackOsDescriptorRef = {
   descriptor_ref: string;
   catalog_root: string;
+  descriptor_source_fingerprint: string;
 };
 
 type CapabilityPlanningMetadata = {
+  capability_identity: string;
   catalog_root: string;
   capability_ref: string;
   dependency_refs: string[];
@@ -96,6 +98,16 @@ const PLAN_INPUT_AUTHORITY_KEYS = new Set([
   'can_create_typed_blocker',
   'can_claim_target_ready',
 ]);
+
+const GENERIC_OWNER_NO_AUTHORITY_FALSE_FIELDS = [
+  'can_write_domain_truth',
+  'can_write_runtime_state',
+  'can_mutate_artifact_body',
+  'can_sign_owner_receipt',
+  'can_create_typed_blocker',
+  'can_claim_quality_verdict',
+  'can_claim_owner_closeout',
+] as const;
 
 const CAPABILITY_REQUIREMENTS_SCHEMA = {
   $id: 'opl.profile-capability-plan.current-owner-delta-requirements.v1',
@@ -277,7 +289,7 @@ function normalizedRepoRoot(repoRef: string) {
   }
 }
 
-function containedRepoPath(repoDir: string, ref: string, label: string) {
+function containedRepoJsonFile(repoDir: string, ref: string, label: string) {
   if (!ref.trim() || path.isAbsolute(ref) || ref.includes('\0') || /^[a-z][a-z0-9+.-]*:/i.test(ref)) {
     throw new Error(`${label} must be a repo-relative local JSON path: ${ref}`);
   }
@@ -293,12 +305,20 @@ function containedRepoPath(repoDir: string, ref: string, label: string) {
     throw new Error(`${label} escapes its catalog repo: ${ref}`);
   }
   if (path.extname(realPath).toLowerCase() !== '.json') {
-    throw new Error(`${label} must reference a JSON Pack OS descriptor: ${ref}`);
+    throw new Error(`${label} must reference a repo-local JSON file: ${ref}`);
   }
-  return relative.split(path.sep).join('/');
+  return {
+    real_path: realPath,
+    repo_relative_ref: relative.split(path.sep).join('/'),
+  };
 }
 
-function explicitPackOsDescriptorRefs(entry: JsonRecord, repoDir: string, label: string) {
+function explicitPackOsDescriptorRefs(
+  entry: JsonRecord,
+  repoDir: string,
+  label: string,
+  descriptorFingerprintCache: Map<string, string>,
+) {
   if (entry.pack_os_descriptor_refs === undefined) {
     return [];
   }
@@ -318,9 +338,23 @@ function explicitPackOsDescriptorRefs(entry: JsonRecord, repoDir: string, label:
       || typeof value.descriptor_ref !== 'string') {
       throw new Error(`${label}.pack_os_descriptor_refs[${index}] is not a typed Pack OS descriptor ref.`);
     }
+    const descriptor = containedRepoJsonFile(
+      repoDir,
+      value.descriptor_ref,
+      `${label}.pack_os_descriptor_refs[${index}]`,
+    );
+    let descriptorSourceFingerprint = descriptorFingerprintCache.get(descriptor.real_path);
+    if (!descriptorSourceFingerprint) {
+      descriptorSourceFingerprint = readJsonRecord(
+        descriptor.real_path,
+        `${label}.pack_os_descriptor_refs[${index}]`,
+      ).source_fingerprint;
+      descriptorFingerprintCache.set(descriptor.real_path, descriptorSourceFingerprint);
+    }
     return {
-      descriptor_ref: containedRepoPath(repoDir, value.descriptor_ref, `${label}.pack_os_descriptor_refs[${index}]`),
+      descriptor_ref: descriptor.repo_relative_ref,
       catalog_root: repoDir,
+      descriptor_source_fingerprint: descriptorSourceFingerprint,
     };
   });
 }
@@ -329,7 +363,74 @@ function capabilitySurfaceRef(entry: JsonRecord, fallback: string): string {
   if (isRecord(entry.physical_source_ref) && typeof entry.physical_source_ref.ref === 'string') {
     return entry.physical_source_ref.ref;
   }
+  if (typeof entry.external_repo_ref === 'string' && entry.external_repo_ref.trim()) {
+    return entry.external_repo_ref.trim();
+  }
+  if (typeof entry.canonical_path === 'string' && entry.canonical_path.trim()) {
+    return entry.canonical_path.trim();
+  }
   return fallback;
+}
+
+function assertNoPositiveAuthorityClaims(value: unknown, label: string) {
+  if (!isRecord(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  const positiveClaims = Object.entries(value)
+    .filter(([key, fieldValue]) => key.startsWith('can_') && fieldValue === true)
+    .map(([key]) => key);
+  if (positiveClaims.length > 0) {
+    throw new Error(`${label} contains positive authority claims: ${positiveClaims.sort().join(', ')}`);
+  }
+}
+
+function assertGenericOwnerNoAuthorityEnvelope(value: unknown, label: string) {
+  if (!isRecord(value)
+    || value.outputs_are_refs_only_candidates !== true
+    || GENERIC_OWNER_NO_AUTHORITY_FALSE_FIELDS.some((field) => value[field] !== false)) {
+    throw new Error(`${label} must declare the Framework generic refs-only no-authority envelope.`);
+  }
+  assertNoPositiveAuthorityClaims(value, label);
+}
+
+function assertUniqueCapabilityIds(capabilities: JsonRecord[], filePath: string) {
+  const capabilityIds = capabilities.map((entry, index) => {
+    if (typeof entry.capability_id !== 'string' || !entry.capability_id.trim()) {
+      throw new Error(`Capability map capability_id is invalid: ${filePath}#/capabilities/${index}`);
+    }
+    return entry.capability_id.trim();
+  });
+  const duplicates = capabilityIds.filter((id, index, all) => all.indexOf(id) !== index);
+  if (duplicates.length > 0) {
+    throw new Error(`Capability map repeats capability ids: ${uniqueStrings(duplicates).join(', ')}`);
+  }
+  return capabilityIds;
+}
+
+function validateOwnerCapabilityMap(filePath: string, payload: JsonRecord) {
+  if (typeof payload.surface_kind !== 'string'
+    || typeof payload.domain_id !== 'string'
+    || !payload.domain_id.trim()
+    || !Array.isArray(payload.capabilities)
+    || payload.capabilities.length === 0) {
+    throw new Error(`Owner capability map has an invalid generic catalog shape: ${filePath}`);
+  }
+  assertGenericOwnerNoAuthorityEnvelope(payload.authority_boundary, `${filePath}#/authority_boundary`);
+  const capabilities = records(payload.capabilities);
+  if (capabilities.length !== payload.capabilities.length) {
+    throw new Error(`Owner capability map capabilities must be objects: ${filePath}`);
+  }
+  assertUniqueCapabilityIds(capabilities, filePath);
+  capabilities.forEach((entry, index) => {
+    assertGenericOwnerNoAuthorityEnvelope(
+      entry.authority_boundary,
+      `${filePath}#/capabilities/${index}/authority_boundary`,
+    );
+    optionalStringList(
+      entry.dependency_profile_refs,
+      `${filePath}#/capabilities/${index}/dependency_profile_refs`,
+    );
+  });
 }
 
 function catalogCapability(input: {
@@ -345,8 +446,9 @@ function catalogCapability(input: {
   installActionRefs: string[];
   descriptorRefs: PackOsDescriptorRef[];
 }) {
+  const identity = `${input.catalogIdentity}#${input.capabilityId}`;
   return {
-    identity: `${input.catalogIdentity}#${input.capabilityId}`,
+    identity,
     entry: {
       capability_ref: input.capabilityRef,
       capability_id: input.capabilityId,
@@ -356,6 +458,7 @@ function catalogCapability(input: {
       lifecycle: 'available',
     },
     metadata: {
+      capability_identity: identity,
       catalog_root: input.catalogRoot,
       capability_ref: input.capabilityRef,
       dependency_refs: input.dependencyRefs,
@@ -368,18 +471,25 @@ function catalogCapability(input: {
 
 function standardAgentCatalog(
   repoDir: string,
+  contractRef: string,
   filePath: string,
   loaded: LoadedJsonRecord,
 ): LoadedCatalog {
-  assertJsonSchemaPayload({
-    schemaId: 'opl.standard_agent_capability_map.v1',
-    schema: standardAgentCapabilityMapSchema,
-    sourceRef: 'contracts/opl-framework/standard-agent-capability-map.schema.json',
-  }, loaded.payload);
   const payload = loaded.payload;
+  const standardAgentMap = payload.surface_kind === 'opl_standard_agent_capability_map';
+  if (standardAgentMap) {
+    assertJsonSchemaPayload({
+      schemaId: 'opl.standard_agent_capability_map.v1',
+      schema: standardAgentCapabilityMapSchema,
+      sourceRef: 'contracts/opl-framework/standard-agent-capability-map.schema.json',
+    }, payload);
+    assertUniqueCapabilityIds(records(payload.capabilities), filePath);
+  } else {
+    validateOwnerCapabilityMap(filePath, payload);
+  }
   const owner = String(payload.domain_id);
-  const contractRef = path.relative(repoDir, filePath).split(path.sep).join('/');
   const catalogIdentity = `${repoDir}:${loaded.source_fingerprint}:${contractRef}`;
+  const descriptorFingerprintCache = new Map<string, string>();
   const capabilities = records(payload.capabilities).flatMap((entry, index) => {
     const capabilityId = String(entry.capability_id);
     const pointerRef = `${contractRef}#/capabilities/${index}`;
@@ -387,6 +497,7 @@ function standardAgentCatalog(
       entry,
       repoDir,
       `${contractRef}#/capabilities/${index}`,
+      descriptorFingerprintCache,
     );
     const dependencyRefs = optionalStringList(
       entry.dependency_profile_refs,
@@ -418,7 +529,7 @@ function standardAgentCatalog(
     provenance: {
       catalog_repo: repoDir,
       contract_ref: contractRef,
-      catalog_kind: 'standard_agent_capability_map',
+      catalog_kind: standardAgentMap ? 'standard_agent_capability_map' : 'owner_capability_map',
       owner,
       source_fingerprint: loaded.source_fingerprint,
     },
@@ -428,23 +539,18 @@ function standardAgentCatalog(
 
 function loadCatalogRepo(repoRef: string): LoadedCatalog[] {
   const repoDir = normalizedRepoRoot(repoRef);
-  const candidates = [
-    {
-      filePath: path.join(repoDir, 'contracts', 'capability_map.json'),
-      load: standardAgentCatalog,
-    },
-  ];
-  const loaded = candidates
-    .filter(({ filePath }) => fs.existsSync(filePath))
-    .map(({ filePath, load }) => load(
-      repoDir,
-      filePath,
-      readJsonRecord(filePath, 'Capability catalog'),
-    ));
-  if (loaded.length === 0) {
+  const contractRef = 'contracts/capability_map.json';
+  const logicalPath = path.join(repoDir, contractRef);
+  if (!fs.existsSync(logicalPath)) {
     throw new Error(`--catalog-repo has no supported capability contract: ${repoDir}`);
   }
-  return loaded;
+  const contract = containedRepoJsonFile(repoDir, contractRef, 'Capability catalog');
+  return [standardAgentCatalog(
+    repoDir,
+    contractRef,
+    contract.real_path,
+    readJsonRecord(contract.real_path, 'Capability catalog'),
+  )];
 }
 
 function currentOwnerDelta(input: {
@@ -473,19 +579,22 @@ function currentOwnerDelta(input: {
     sourceRef: 'contracts/opl-framework/current-owner-delta.schema.json#/$defs/current_owner_delta_capability_requirement',
   }, requirements);
   const typedRequirements = requirements as CurrentOwnerDeltaCapabilityRequirement[];
-  const deltaRef = typeof candidate.delta_ref === 'string' && candidate.delta_ref.trim()
-    ? candidate.delta_ref.trim()
-    : typeof candidate.delta_id === 'string' && candidate.delta_id.trim()
-      ? candidate.delta_id.trim()
-      : null;
+  const deltaRefs = uniqueStrings([candidate.delta_ref, candidate.delta_id]);
+  const domains = uniqueStrings([candidate.domain, candidate.domain_id]);
+  const routeIdentityRefs = uniqueStrings([
+    candidate.task_or_study_ref,
+    candidate.stage_ref,
+    candidate.work_unit_ref,
+  ]);
+  const deltaRef = deltaRefs.length === 1 ? deltaRefs[0] : null;
   const hasIdentity = candidate.surface_kind === 'opl_current_owner_delta'
     && candidate.schema_version === 'current-owner-delta.v1'
     && candidate.default_planning_root === 'current_owner_delta'
     && deltaRef !== null
-    && (typeof candidate.domain === 'string' || typeof candidate.domain_id === 'string')
+    && domains.length === 1
     && typeof candidate.current_owner === 'string'
-    && [candidate.task_or_study_ref, candidate.stage_ref, candidate.work_unit_ref]
-      .some((value) => typeof value === 'string' && value.trim().length > 0);
+    && candidate.current_owner.trim().length > 0
+    && routeIdentityRefs.length > 0;
   if (!hasIdentity) {
     throw new Error('Current owner delta capability binding is not a canonical bound delta.');
   }
@@ -552,12 +661,18 @@ function ownerCommandActions(
   return [...new Map(actions.map((entry) => [
     `${entry.cwd}\0${entry.command_ref}`,
     entry,
-  ])).values()];
+  ])).values()].sort((left, right) => `${left.cwd}\0${left.command_ref}`.localeCompare(
+    `${right.cwd}\0${right.command_ref}`,
+  ));
 }
 
 function dependencyFeasibility(metadata: CapabilityPlanningMetadata[]) {
-  const dependencyRefs = uniqueStrings(metadata.flatMap((entry) => entry.dependency_refs));
-  const descriptorRefs = [...new Map(metadata
+  const selectedMetadata = [...new Map(metadata.map((entry) => [
+    entry.capability_identity,
+    entry,
+  ])).values()];
+  const dependencyRefs = uniqueStrings(selectedMetadata.flatMap((entry) => entry.dependency_refs));
+  const descriptorRefs = [...new Map(selectedMetadata
     .flatMap((entry) => entry.descriptor_refs)
     .map((entry) => [`${entry.catalog_root}:${entry.descriptor_ref}`, entry])).values()];
   const action = (kind: string, descriptor: PackOsDescriptorRef, suffix: string[]) => ({
@@ -565,16 +680,17 @@ function dependencyFeasibility(metadata: CapabilityPlanningMetadata[]) {
     argv: ['opl', 'pack', 'os', kind, '--descriptor', descriptor.descriptor_ref, ...suffix, '--json'],
     cwd: descriptor.catalog_root,
     descriptor_ref: descriptor.descriptor_ref,
+    descriptor_source_fingerprint: descriptor.descriptor_source_fingerprint,
   });
   return {
     surface_kind: 'opl_profile_capability_dependency_feasibility',
     status: 'conditional_actions_not_executed',
-    candidate_capability_count: metadata.length,
+    candidate_capability_count: selectedMetadata.length,
     candidate_dependency_refs: dependencyRefs,
-    candidate_install_actions: ownerCommandActions(metadata, 'install_action_refs'),
+    candidate_install_actions: ownerCommandActions(selectedMetadata, 'install_action_refs'),
     environment_preflight: {
       status: 'not_executed',
-      candidate_actions: ownerCommandActions(metadata, 'environment_action_refs'),
+      candidate_actions: ownerCommandActions(selectedMetadata, 'environment_action_refs'),
       preflight_executed: false,
       dependencies_available_claimed: false,
       environment_ready_claimed: false,
