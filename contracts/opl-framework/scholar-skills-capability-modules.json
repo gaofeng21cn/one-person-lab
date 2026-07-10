@@ -6,6 +6,128 @@
   "brand_family": "MAS Scholar Skills",
   "purpose": "Canonical capability-module catalog for OPL-hosted scholarly skills that can be discovered by OPL Atlas, packaged by OPL Pack, prepared through OPL runtime env, invoked by OPL Runway, and consumed by domain agents as refs-only candidate outputs.",
   "machine_boundary": "This contract describes independent capability modules and their descriptor, dependency, run-context, artifact, receipt, and quality-evidence refs. It does not add an eleventh OPL brand module, execute domain stages, write domain truth, mutate artifact bodies, schedule runtime attempts, sign owner receipts, create typed blockers, or claim runtime, domain, quality, artifact, publication, App, or production readiness.",
+  "source_projection_contract": {
+    "contract_id": "opl_scholarskills_source_projection",
+    "schema_version": "scholar-skills-source-projection.v1",
+    "canonical_source": {
+      "owner_repo": "mas-scholar-skills",
+      "repository": "https://github.com/gaofeng21cn/mas-scholar-skills.git",
+      "ref": "main",
+      "commit": "6b5146a74af95a570973e1d272871174f376f7a8",
+      "contract_path": "contracts/scholar-skills-capability-modules.json",
+      "contract_role": "canonical_owner_contract",
+      "fingerprint_algorithm": "sha256",
+      "fingerprint": "4efa4795120c5fcec8296133c05650800c63bd949f13a9a085ebd0d0763151c9"
+    },
+    "projection_owner": "OPL Framework",
+    "projection_role": "executable_projection_not_canonical_owner_truth",
+    "projected_fields": {
+      "identity_fields": [
+        "contract_id",
+        "schema_version",
+        "brand_family",
+        "modules[].module_id",
+        "modules[].legacy_module_ids"
+      ],
+      "executable_fields": [
+        "runtime_environment_bridge",
+        "modules[].stage_fit",
+        "modules[].dependency_profile_refs",
+        "modules[].invocation_entries"
+      ],
+      "expanded_false_authority_fields": [
+        "can_claim_publication_readiness",
+        "can_claim_owner_acceptance",
+        "can_claim_current_package_authority"
+      ]
+    },
+    "owner_only_metadata_refs": {
+      "canonical_contract_ref": "mas-scholar-skills@6b5146a74af95a570973e1d272871174f376f7a8:contracts/scholar-skills-capability-modules.json",
+      "projection_policy": "refs_only_owner_metadata_not_materialized_in_opl",
+      "learned_pattern_policy_refs": {
+        "mas-scholar-skills.display": "#/modules/0/learned_pattern_policy",
+        "mas-scholar-skills.tables": "#/modules/1/learned_pattern_policy",
+        "mas-scholar-skills.stats": "#/modules/2/learned_pattern_policy",
+        "mas-scholar-skills.lit": "#/modules/3/learned_pattern_policy",
+        "mas-scholar-skills.write": "#/modules/4/learned_pattern_policy",
+        "mas-scholar-skills.review": "#/modules/5/learned_pattern_policy",
+        "mas-scholar-skills.submit": "#/modules/6/learned_pattern_policy"
+      },
+      "display_quality_floor_policy_refs": {
+        "mas-scholar-skills.display": "#/modules/0/display_quality_floor_policy"
+      }
+    },
+    "intentional_transformations": [
+      {
+        "transform_id": "opl_executable_root_vocabulary",
+        "source_vocabulary": "--paper-root",
+        "projected_vocabulary": "--artifact-root",
+        "applies_to": [
+          "runtime_environment_bridge.*_commands",
+          "modules[].dependency_profile_refs",
+          "modules[].invocation_entries"
+        ],
+        "reason": "OPL executable commands use the generic artifact-root vocabulary; paper-root remains an accepted compatibility alias at the CLI parser boundary."
+      },
+      {
+        "transform_id": "opl_owned_executable_envelope",
+        "opl_owned_fields": [
+          "runtime_environment_bridge",
+          "modules[].stage_fit",
+          "modules[].dependency_profile_refs",
+          "modules[].invocation_entries"
+        ],
+        "reason": "OPL keeps executable Pack and runtime references in OPL syntax and does not copy owner-repo commands or authority narratives blindly."
+      },
+      {
+        "transform_id": "owner_narrative_omission",
+        "omitted_top_level_fields": [
+          "advanced_specialist_pack_policy",
+          "capability_module_classification_policy",
+          "codex_skill_exposure_policy",
+          "feedback_self_evolution_trigger",
+          "feedbackops_refs_only_adapter_policy",
+          "medical_method_specialist_pack_policy",
+          "positioning_policy",
+          "professional_skill_quality_upgrade_policy",
+          "specialist_skill_policy",
+          "standard_handoff_ref_families"
+        ],
+        "omitted_module_fields": [
+          "learned_pattern_policy",
+          "display_quality_floor_policy",
+          "external_learning_module_fit",
+          "medical_sci_initial_draft_quality_floor_policy",
+          "retention_closeout_policy"
+        ],
+        "reason": "Professional learning and display-quality policies remain canonical in MAS Scholar Skills; OPL retains refs only and projects executable capability-planning fields plus no-authority guards."
+      }
+    ],
+    "currentness_boundary": {
+      "snapshot_kind": "pinned_source_commit",
+      "canonical_ref_may_advance": true,
+      "projection_current_only_for_recorded_commit_and_fingerprint": true,
+      "projection_claims_live_owner_currentness": false,
+      "sibling_repo_required_in_ci": false,
+      "refresh_requires_new_owner_commit_and_fingerprint": true
+    },
+    "projection_fingerprint_policy": {
+      "algorithm": "sha256",
+      "canonicalization": "stable_json",
+      "readback_field": "projection_fingerprint",
+      "covered_fields": [
+        "source_projection_contract",
+        "runtime_environment_bridge",
+        "authority_boundary",
+        "modules[].module_id",
+        "modules[].legacy_module_ids",
+        "modules[].stage_fit",
+        "modules[].dependency_profile_refs",
+        "modules[].invocation_entries",
+        "modules[].authority_boundary"
+      ]
+    }
+  },
   "ownership_boundary": {
     "opl_owned_surfaces": [
       "package_descriptor",
@@ -81,7 +203,10 @@
     "can_sign_owner_receipt": false,
     "can_create_typed_blocker": false,
     "can_replace_domain_owner": false,
-    "can_replace_ai_executor_planning": false
+    "can_replace_ai_executor_planning": false,
+    "can_claim_publication_readiness": false,
+    "can_claim_owner_acceptance": false,
+    "can_claim_current_package_authority": false
   },
   "modules": [
     {
@@ -160,7 +285,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -169,6 +297,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.display"
       ]
     },
     {
@@ -240,7 +371,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -249,6 +383,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.tables"
       ]
     },
     {
@@ -320,7 +457,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -329,6 +469,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.stats"
       ]
     },
     {
@@ -400,7 +543,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -409,6 +555,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.lit"
       ]
     },
     {
@@ -481,7 +630,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -490,6 +642,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.write"
       ]
     },
     {
@@ -562,7 +717,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -571,6 +729,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.review"
       ]
     },
     {
@@ -642,7 +803,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [
@@ -651,6 +815,9 @@
         "runtime queues/outbox/state",
         "owner receipts",
         "typed blockers"
+      ],
+      "legacy_module_ids": [
+        "opl.scholarskills.submit"
       ]
     },
     {
@@ -762,7 +929,10 @@
         "can_sign_owner_receipt": false,
         "can_create_typed_blocker": false,
         "can_replace_domain_owner": false,
-        "can_replace_ai_executor_planning": false
+        "can_replace_ai_executor_planning": false,
+        "can_claim_publication_readiness": false,
+        "can_claim_owner_acceptance": false,
+        "can_claim_current_package_authority": false
       },
       "allowed_writes": [],
       "forbidden_writes": [

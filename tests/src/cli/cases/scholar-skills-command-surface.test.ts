@@ -1,4 +1,5 @@
 import { assert, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
+import { buildScholarSkillsCatalog } from '../../../../src/modules/pack/scholar-skills.ts';
 
 const expectedModuleIds = [
   'mas-scholar-skills.display',
@@ -10,6 +11,8 @@ const expectedModuleIds = [
   'mas-scholar-skills.submit',
   'mas-scholar-skills.data',
 ] as const;
+
+const canonicalSourceFingerprint = '4efa4795120c5fcec8296133c05650800c63bd949f13a9a085ebd0d0763151c9';
 
 function writeFakeRscript(binDir: string) {
   fs.mkdirSync(binDir, { recursive: true });
@@ -84,6 +87,152 @@ function assertFalseAuthority(boundary: Record<string, unknown>) {
     if (key in boundary) assert.equal(boundary[key], false, key);
   }
 }
+
+test('ScholarSkills executable projection binds the canonical source snapshot without sibling-repo access', () => {
+  const contract = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'scholar-skills-capability-modules.json'),
+    'utf8',
+  ));
+  const sourceProjection = contract.source_projection_contract;
+
+  assert.equal(sourceProjection.canonical_source.owner_repo, 'mas-scholar-skills');
+  assert.equal(
+    sourceProjection.canonical_source.repository,
+    'https://github.com/gaofeng21cn/mas-scholar-skills.git',
+  );
+  assert.equal(sourceProjection.canonical_source.ref, 'main');
+  assert.equal(sourceProjection.canonical_source.commit, '6b5146a74af95a570973e1d272871174f376f7a8');
+  assert.equal(sourceProjection.canonical_source.fingerprint_algorithm, 'sha256');
+  assert.equal(sourceProjection.canonical_source.fingerprint, canonicalSourceFingerprint);
+  assert.equal(sourceProjection.currentness_boundary.sibling_repo_required_in_ci, false);
+  assert.equal(sourceProjection.currentness_boundary.projection_claims_live_owner_currentness, false);
+  assert.deepEqual(sourceProjection.projected_fields.identity_fields, [
+    'contract_id',
+    'schema_version',
+    'brand_family',
+    'modules[].module_id',
+    'modules[].legacy_module_ids',
+  ]);
+  assert.deepEqual(sourceProjection.projected_fields.executable_fields, [
+    'runtime_environment_bridge',
+    'modules[].stage_fit',
+    'modules[].dependency_profile_refs',
+    'modules[].invocation_entries',
+  ]);
+  assert.deepEqual(sourceProjection.projected_fields.expanded_false_authority_fields, [
+    'can_claim_publication_readiness',
+    'can_claim_owner_acceptance',
+    'can_claim_current_package_authority',
+  ]);
+
+  const rootVocabularyTransform = sourceProjection.intentional_transformations.find(
+    (entry: { transform_id: string }) => entry.transform_id === 'opl_executable_root_vocabulary',
+  );
+  assert.equal(rootVocabularyTransform.source_vocabulary, '--paper-root');
+  assert.equal(rootVocabularyTransform.projected_vocabulary, '--artifact-root');
+  assert.equal(
+    sourceProjection.owner_only_metadata_refs.canonical_contract_ref,
+    'mas-scholar-skills@6b5146a74af95a570973e1d272871174f376f7a8:contracts/scholar-skills-capability-modules.json',
+  );
+  assert.equal(
+    Object.keys(sourceProjection.owner_only_metadata_refs.learned_pattern_policy_refs).length,
+    expectedModuleIds.length - 1,
+  );
+  assert.equal(
+    sourceProjection.owner_only_metadata_refs.display_quality_floor_policy_refs['mas-scholar-skills.display'],
+    '#/modules/0/display_quality_floor_policy',
+  );
+  assert.equal(
+    sourceProjection.projection_fingerprint_policy.covered_fields.some((field: string) =>
+      field.includes('learned_pattern_policy') || field.includes('display_quality_floor_policy')
+    ),
+    false,
+  );
+  const narrativeOmission = sourceProjection.intentional_transformations.find(
+    (entry: { transform_id: string }) => entry.transform_id === 'owner_narrative_omission',
+  );
+  for (const field of narrativeOmission.omitted_top_level_fields) {
+    assert.equal(Object.hasOwn(contract, field), false, field);
+  }
+  for (const module of contract.modules) {
+    for (const field of narrativeOmission.omitted_module_fields) {
+      assert.equal(Object.hasOwn(module, field), false, `${module.module_id}.${field}`);
+    }
+  }
+
+  assert.deepEqual(contract.modules.map((entry: { module_id: string }) => entry.module_id), expectedModuleIds);
+  for (const module of contract.modules) {
+    assert.deepEqual(module.legacy_module_ids, [
+      module.module_id.replace('mas-scholar-skills.', 'opl.scholarskills.'),
+    ]);
+    for (const field of sourceProjection.projected_fields.expanded_false_authority_fields) {
+      assert.equal(module.authority_boundary[field], false, `${module.module_id}.${field}`);
+    }
+  }
+  for (const field of sourceProjection.projected_fields.expanded_false_authority_fields) {
+    assert.equal(contract.authority_boundary[field], false, `authority_boundary.${field}`);
+  }
+  assert.equal(contract.modules.every((entry: Record<string, unknown>) =>
+    !Object.hasOwn(entry, 'learned_pattern_policy')
+    && !Object.hasOwn(entry, 'display_quality_floor_policy')
+  ), true);
+  assert.doesNotMatch(JSON.stringify(contract.runtime_environment_bridge), /--paper-root/);
+  assert.match(JSON.stringify(contract.runtime_environment_bridge), /--artifact-root/);
+
+  const catalog = runCli(['scholar-skills', 'list', '--json']).scholar_skills;
+  assert.deepEqual(catalog.source_projection_contract, sourceProjection);
+  assert.equal(catalog.source_fingerprint, `sha256:${canonicalSourceFingerprint}`);
+  assert.match(catalog.projection_fingerprint, /^sha256:[a-f0-9]{64}$/);
+  assert.deepEqual(
+    catalog.modules.map((entry: { module_id: string }) => entry.module_id),
+    expectedModuleIds,
+  );
+  for (const module of catalog.modules) {
+    assert.equal(Object.hasOwn(module, 'learned_pattern_policy'), false, module.module_id);
+    assert.equal(Object.hasOwn(module, 'display_quality_floor_policy'), false, module.module_id);
+    assert.equal(module.stage_fit.length > 0, true, module.module_id);
+    assert.equal(module.dependency_profile_refs.length > 0, true, module.module_id);
+    assert.equal(module.invocation_entries.length > 0, true, module.module_id);
+  }
+  for (const claim of ['publication_readiness', 'owner_acceptance', 'current_package_authority']) {
+    assert.equal(catalog.forbidden_claims.includes(claim), true, claim);
+  }
+});
+
+test('ScholarSkills catalog preserves the injected contracts root projection', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholar-skills-contract-root-'));
+  const contractsDir = path.join(fixtureRoot, 'contracts', 'opl-framework');
+  const customFingerprint = 'a'.repeat(64);
+  const customCommit = 'b'.repeat(40);
+  try {
+    fs.cpSync(path.join(repoRoot, 'contracts', 'opl-framework'), contractsDir, { recursive: true });
+    const contractPath = path.join(contractsDir, 'scholar-skills-capability-modules.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    contract.source_projection_contract.canonical_source.fingerprint = customFingerprint;
+    contract.source_projection_contract.canonical_source.commit = customCommit;
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+
+    const contracts = loadFrameworkContracts({ contractsDir, source: 'api' });
+    const injectedProjection = contracts.scholarSkillsCapabilityModules.source_projection_contract;
+    const catalog = buildScholarSkillsCatalog(contracts).scholar_skills;
+
+    assert.equal(contracts.contractsDir, contractsDir);
+    assert.equal(injectedProjection.canonical_source.fingerprint, customFingerprint);
+    assert.equal(injectedProjection.canonical_source.commit, customCommit);
+    assert.equal(injectedProjection.currentness_boundary.snapshot_kind, 'pinned_source_commit');
+    assert.equal(catalog.source_fingerprint, `sha256:${customFingerprint}`);
+    assert.equal(catalog.source_projection_contract, injectedProjection);
+
+    contract.authority_boundary.can_claim_owner_acceptance = true;
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+    assert.throws(
+      () => loadFrameworkContracts({ contractsDir, source: 'api' }),
+      (error: unknown) => (error as { code?: string }).code === 'contract_shape_invalid',
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
 
 test('ScholarSkills catalog and list expose active modules without authority', () => {
   const contracts = loadFrameworkContracts(repoRoot);

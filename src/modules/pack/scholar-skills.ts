@@ -33,6 +33,12 @@ type ValidationCheck = {
   detail: string;
 };
 
+const EXPANDED_AUTHORITY_FALSE_FIELDS = [
+  'can_claim_publication_readiness',
+  'can_claim_owner_acceptance',
+  'can_claim_current_package_authority',
+] as const;
+
 type PrepareInput = {
   moduleId: string;
   profile: string;
@@ -184,7 +190,7 @@ function authorityBoundaryViolations(
   boundary: ScholarSkillAuthorityBoundary,
   prefix: string,
 ) {
-  return AUTHORITY_FALSE_FIELDS
+  return [...AUTHORITY_FALSE_FIELDS, ...EXPANDED_AUTHORITY_FALSE_FIELDS]
     .filter((field) => boundary[field] !== false)
     .map((field) => `${prefix}.${field}`);
 }
@@ -242,6 +248,28 @@ function scholarSkillMaterializeCommands(contractRoot: ScholarSkillsCapabilityMo
     ]),
     'opl scholar-skills materialize --module <module_id> --input-ref <ref> --artifact-root <ref-or-path> --output-root <path> --emit-candidate-artifacts --payload-file <path> --json',
   ];
+}
+
+function buildProjectionReadback(contractRoot: ScholarSkillsCapabilityModulesContract) {
+  const source = contractRoot.source_projection_contract.canonical_source;
+  const projectedSnapshot = {
+    source_projection_contract: contractRoot.source_projection_contract,
+    runtime_environment_bridge: contractRoot.runtime_environment_bridge,
+    authority_boundary: contractRoot.authority_boundary,
+    modules: contractRoot.modules.map((module) => ({
+      module_id: module.module_id,
+      legacy_module_ids: module.legacy_module_ids,
+      stage_fit: module.stage_fit,
+      dependency_profile_refs: module.dependency_profile_refs,
+      invocation_entries: module.invocation_entries,
+      authority_boundary: module.authority_boundary,
+    })),
+  };
+  return {
+    source_projection_contract: contractRoot.source_projection_contract,
+    source_fingerprint: `${source.fingerprint_algorithm}:${source.fingerprint}`,
+    projection_fingerprint: `sha256:${sha256Hex(stableJson(projectedSnapshot))}`,
+  };
 }
 
 function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
@@ -366,6 +394,7 @@ function buildValidation(contractRoot: ScholarSkillsCapabilityModulesContract) {
 
 export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
   const contractRoot = contract(contracts);
+  const projectionReadback = buildProjectionReadback(contractRoot);
   return {
     version: 'g2',
     scholar_skills: {
@@ -376,6 +405,7 @@ export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
       brand_family: contractRoot.brand_family,
       purpose: contractRoot.purpose,
       machine_boundary: contractRoot.machine_boundary,
+      ...projectionReadback,
       ownership_boundary: contractRoot.ownership_boundary,
       module_count: contractRoot.modules.length,
       modules: contractRoot.modules.map(moduleSummary),
@@ -387,6 +417,9 @@ export function buildScholarSkillsCatalog(contracts: FrameworkContracts) {
         'quality_verdict',
         'artifact_authority',
         'production_ready',
+        'publication_readiness',
+        'owner_acceptance',
+        'current_package_authority',
         'owner_receipt',
         'typed_blocker',
       ],

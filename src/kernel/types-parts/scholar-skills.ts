@@ -23,6 +23,63 @@ export interface ScholarSkillAuthorityBoundary {
   can_create_typed_blocker: false;
   can_replace_domain_owner: false;
   can_replace_ai_executor_planning: false;
+  can_claim_publication_readiness: false;
+  can_claim_owner_acceptance: false;
+  can_claim_current_package_authority: false;
+}
+
+export interface ScholarSkillsProjectionTransformation {
+  transform_id: string;
+  source_vocabulary?: string;
+  projected_vocabulary?: string;
+  applies_to?: string[];
+  opl_owned_fields?: string[];
+  omitted_top_level_fields?: string[];
+  omitted_module_fields?: string[];
+  reason: string;
+}
+
+export interface ScholarSkillsSourceProjectionContract {
+  contract_id: 'opl_scholarskills_source_projection';
+  schema_version: 'scholar-skills-source-projection.v1';
+  canonical_source: {
+    owner_repo: 'mas-scholar-skills';
+    repository: string;
+    ref: string;
+    commit: string;
+    contract_path: 'contracts/scholar-skills-capability-modules.json';
+    contract_role: 'canonical_owner_contract';
+    fingerprint_algorithm: 'sha256';
+    fingerprint: string;
+  };
+  projection_owner: 'OPL Framework';
+  projection_role: 'executable_projection_not_canonical_owner_truth';
+  projected_fields: {
+    identity_fields: string[];
+    executable_fields: string[];
+    expanded_false_authority_fields: string[];
+  };
+  owner_only_metadata_refs: {
+    canonical_contract_ref: string;
+    projection_policy: 'refs_only_owner_metadata_not_materialized_in_opl';
+    learned_pattern_policy_refs: Record<string, string>;
+    display_quality_floor_policy_refs: Record<string, string>;
+  };
+  intentional_transformations: ScholarSkillsProjectionTransformation[];
+  currentness_boundary: {
+    snapshot_kind: 'pinned_source_commit';
+    canonical_ref_may_advance: true;
+    projection_current_only_for_recorded_commit_and_fingerprint: true;
+    projection_claims_live_owner_currentness: false;
+    sibling_repo_required_in_ci: false;
+    refresh_requires_new_owner_commit_and_fingerprint: true;
+  };
+  projection_fingerprint_policy: {
+    algorithm: 'sha256';
+    canonicalization: 'stable_json';
+    readback_field: 'projection_fingerprint';
+    covered_fields: string[];
+  };
 }
 
 export interface ScholarSkillInvocationEntry {
@@ -123,6 +180,7 @@ export interface ScholarSkillsCapabilityModulesContract {
   brand_family: 'MAS Scholar Skills';
   purpose: string;
   machine_boundary: string;
+  source_projection_contract: ScholarSkillsSourceProjectionContract;
   ownership_boundary: ScholarSkillsOwnershipBoundary;
   runtime_environment_bridge: {
     mode: 'refs_only';
