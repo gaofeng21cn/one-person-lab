@@ -5,6 +5,21 @@ Purpose: `decisions`
 State: `active_truth`
 Machine boundary: 本文是核心人读真相面。机器真相继续归 contracts、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned manifest 和真实 workspace / App evidence。
 
+## 2026-07-10
+
+### 决策：Profile capability planning 只组合显式 exact refs 与 owner catalogs
+
+原因：论文/PDF 驱动 OMA 设计需要把 profile selection、现有 capability、依赖与环境动作接成一条可消费链，但 Framework 不能因此复制 OMA `ReferenceDesignPacket` ABI、维护 central specialty catalog、扫描本机 HOME/Skill cache，或用 heuristic scoring 猜测“相似能力”。现有 Connect exact resolver 已经定义 optional fail-open 与 current-owner-delta route-required hard-boundary gate，应直接复用。
+
+影响：
+
+- canonical 入口是 `opl profiles capability-plan --selection-file <path> [--catalog-repo <owner-repo>] [--current-owner-delta-file <path>] [--capability-ref <exact-ref>] --json`。
+- selection file 必须携带 Framework-owned `profile_capability_plan_input` 固定投影；只有其中的 `exact_capability_refs`、显式 `--capability-ref` 和 current-owner-delta typed requirements 可以进入 exact resolver。Profile requirement refs不能被 heuristic 映射成 capability，OMA object 内部同名字段也不能被递归扫描。
+- owner catalog 只从显式 repo读取 schema-valid `contracts/capability_map.json`；专业能力包继续由 owner repo 的标准 capability map 和 Connect package/source refs暴露，OPL 不复制 module body、legacy id catalog、固定 owner commit/fingerprint 或字段级 parity validator。Catalog content fingerprint与 catalog root identity进入 plan provenance/fingerprint。
+- dependency、runtime environment、descriptor materialization、Pack lock只输出条件化 action refs；network、search、sync、install、download、cache write、preflight、materialize 和 lock write默认均不执行。
+- optional exact miss继续 fail open；只有绑定 current-owner-delta 的 route-required hard-boundary miss输出 typed blocker candidate，Framework不能创建 typed blocker instance。
+- capability-plan、catalog hit、resolver pass、descriptor ref或Pack lock candidate都不构成 target/domain/production readiness、owner acceptance或quality/export verdict。
+
 ## 2026-07-09
 
 ### 决策：StructuredCloseoutGate 固定为 OPL Runway typed closeout primitive
@@ -1241,8 +1256,8 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - Runtime environment substrate 不继续扩张成自研 VM/container sandbox；Docker/devcontainer 和 E2B 只是后置 provider，不是所有 runtime env profile 的必备 substrate。
 - 当前 Framework 的默认环境 profile 是 `fast_local_env`：doctor / prepare / run-context 负责确认 R/Python/MAS display 这类本机依赖是否可消费；R 标准 handoff 是 `renv.lock` refs + `R_LIBS_USER` managed library，Python 标准 handoff 是 `uv.lock` / project refs + `UV_PROJECT_ENVIRONMENT` managed env。Fast Local Env doctor 只检查 host binary、language packages 和 system hints；缺 run-context、target identity mismatch 或 doctor failure 必须 fail closed，不能偷偷回落到未声明的宿主机包环境，也不能声明 runtime/domain/App ready。
 - Local Docker / Devcontainer slice 保留为显式 local provider：只有显式选择 `local_sandbox` / `local_docker` / `local_devcontainer` profile 或 `OPL_CODEX_STAGE_SANDBOX_PROVIDER=local_docker|local_devcontainer` 时，Runway 才进入 Docker/devcontainer path；Codex stage runner 无显式 sandbox provider 时走 host executor，不默认启动 local devcontainer。Runway 通过 Docker/devcontainer preflight、workspace transport、executor run 和 `sandbox_execution` receipt 证明隔离执行路径；缺本地 image / Docker preflight 或 workspace transport 时只输出 repair / preflight work order。
-- E2B slice 保留为显式 remote provider / OPL Connect 配置辅助，不是默认依赖：选择 `remote_sandbox` / `e2b` profile 时，Runway 会创建或连接 E2B sandbox，并保留 credential-ref / provider-receipt-ref / no-secret-log guard。该 slice 不覆盖 Daytona / Modal，不读取、打印或转发 host secret material，不在缺 E2B credential 或缺 git workspace transport 时回落到 Fast Local Env，也不声明 provider ready / runtime ready / domain ready。
-- Fast Local Env doctor/run-context、live Docker/devcontainer run、live E2B / Daytona / Modal credential run、provider long-soak、App release cohort 和真实用户路径是不同证据层；docs、contracts、focused tests、materialization receipt、cache hit、doctor pass、run-context exists、mocked local Docker path 或 provider adapter dry-run 都不能声明 runtime ready、provider ready、domain ready、App release ready、Brand L5 或 production ready。
+- E2B slice 保留为当前唯一已实现的显式 remote provider / OPL Connect 配置辅助，不是默认依赖：选择 `remote_sandbox` / `e2b` profile 时，Runway 会创建或连接 E2B sandbox，并保留 credential-ref / provider-receipt-ref / no-secret-log guard。其他外部 compute provider只能进入通用 external adapter / Connect discovery候选，不构成 Runway executor support。E2B adapter不读取、打印或转发 host secret material，不在缺 credential 或 git workspace transport 时回落到 Fast Local Env，也不声明 provider ready / runtime ready / domain ready。
+- Fast Local Env doctor/run-context、live Docker/devcontainer run、live E2B credential run、provider long-soak、App release cohort 和真实用户路径是不同证据层；docs、contracts、focused tests、materialization receipt、cache hit、doctor pass、run-context exists、mocked local Docker path 或 provider adapter dry-run 都不能声明 runtime ready、provider ready、domain ready、App release ready、Brand L5 或 production ready。
 
 ## 2026-05-15
 

@@ -9,6 +9,12 @@ import {
   validateReferenceSourcePacketPolicy,
 } from './agent-profile-spine-conformance.ts';
 import { validateReferenceBuildReceiptMaterialization } from './reference-build-proof.ts';
+import { buildProfileCapabilityPlanInputProjection } from './profile-capability-plan.ts';
+import {
+  matchedProfileTriggerSignals,
+  parseProfileSelectionArgs,
+  type ParsedProfileSelectionArgs,
+} from './profile-selection-intent.ts';
 
 const EVIDENCE_PROFILE_ID = 'evidence_grounded_decision_agent_profile.v1';
 const EVIDENCE_PROFILE_REF = `opl-profile:${EVIDENCE_PROFILE_ID}`;
@@ -235,14 +241,6 @@ type ProfileCatalogEntry = {
 };
 
 type ProfileSelectionMode = 'builtin_profile' | 'source_derived_design' | 'hybrid';
-
-type ParsedSelectionArgs = {
-  intent: string;
-  intent_signals: string[];
-  reference_source_refs: string[];
-  reference_design_pattern_packet_refs: string[];
-};
-
 function uniqueStrings(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -254,10 +252,6 @@ function uniqueStrings(value: unknown): string[] {
         .map((entry) => entry.trim()),
     ),
   ];
-}
-
-function canonicalIntentSignals(value: unknown): string[] {
-  return uniqueStrings(uniqueStrings(value).map((entry) => entry.toLowerCase()));
 }
 
 function machineFieldStrings(value: unknown): string[] {
@@ -382,119 +376,6 @@ function sourceDerivedDesignProfileEntry(): ProfileCatalogEntry {
     source_readback_command: 'opl profiles select --intent <intent> --reference-source <source-ref> --json',
     can_claim_domain_ready: false,
     can_claim_production_ready: false,
-  };
-}
-
-function matchedTriggerSignals(
-  intent: string,
-  intentSignals: string[],
-  profile: ProfileCatalogEntry,
-): string[] {
-  const normalized = intent.toLowerCase();
-  const explicitSignals = new Set(intentSignals);
-  return profile.trigger_signals.filter((signal) => {
-    const canonicalSignal = signal.toLowerCase();
-    return normalized.includes(canonicalSignal) || explicitSignals.has(canonicalSignal);
-  });
-}
-
-function takeOptionText(args: string[], index: number, option: string) {
-  const values: string[] = [];
-  let cursor = index + 1;
-  while (cursor < args.length && !args[cursor].startsWith('--')) {
-    values.push(args[cursor]);
-    cursor += 1;
-  }
-  if (values.length === 0) {
-    throw new Error(`opl profiles select requires a value for ${option}.`);
-  }
-  return { value: values.join(' ').trim(), nextIndex: cursor - 1 };
-}
-
-function pushCsvRefs(target: string[], value: string) {
-  target.push(...value.split(',').map((entry) => entry.trim()).filter(Boolean));
-}
-
-function parseIntentArgs(args: string[]): ParsedSelectionArgs {
-  const intentParts: string[] = [];
-  const intentSignals: string[] = [];
-  const referenceSourceRefs: string[] = [];
-  const patternPacketRefs: string[] = [];
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--intent') {
-      const parsed = takeOptionText(args, index, arg);
-      intentParts.push(parsed.value);
-      index = parsed.nextIndex;
-      continue;
-    }
-    if (arg.startsWith('--intent=')) {
-      intentParts.push(arg.slice('--intent='.length).trim());
-      continue;
-    }
-    if (arg === '--intent-signal') {
-      const parsed = takeOptionText(args, index, arg);
-      pushCsvRefs(intentSignals, parsed.value);
-      index = parsed.nextIndex;
-      continue;
-    }
-    if (arg.startsWith('--intent-signal=')) {
-      pushCsvRefs(intentSignals, arg.slice('--intent-signal='.length));
-      continue;
-    }
-    if (
-      arg === '--reference-source'
-      || arg === '--reference-source-ref'
-      || arg === '--reference-design-source'
-      || arg === '--source-ref'
-      || arg === '--paper'
-      || arg === '--paper-ref'
-    ) {
-      const parsed = takeOptionText(args, index, arg);
-      pushCsvRefs(referenceSourceRefs, parsed.value);
-      index = parsed.nextIndex;
-      continue;
-    }
-    if (
-      arg.startsWith('--reference-source=')
-      || arg.startsWith('--reference-source-ref=')
-      || arg.startsWith('--reference-design-source=')
-      || arg.startsWith('--source-ref=')
-      || arg.startsWith('--paper=')
-      || arg.startsWith('--paper-ref=')
-    ) {
-      pushCsvRefs(referenceSourceRefs, arg.slice(arg.indexOf('=') + 1));
-      continue;
-    }
-    if (
-      arg === '--reference-design-pattern-packet'
-      || arg === '--reference-design-pattern-packet-ref'
-      || arg === '--pattern-packet'
-      || arg === '--pattern-packet-ref'
-    ) {
-      const parsed = takeOptionText(args, index, arg);
-      pushCsvRefs(patternPacketRefs, parsed.value);
-      index = parsed.nextIndex;
-      continue;
-    }
-    if (
-      arg.startsWith('--reference-design-pattern-packet=')
-      || arg.startsWith('--reference-design-pattern-packet-ref=')
-      || arg.startsWith('--pattern-packet=')
-      || arg.startsWith('--pattern-packet-ref=')
-    ) {
-      pushCsvRefs(patternPacketRefs, arg.slice(arg.indexOf('=') + 1));
-      continue;
-    }
-    intentParts.push(arg);
-  }
-
-  return {
-    intent: intentParts.join(' ').trim(),
-    intent_signals: canonicalIntentSignals(intentSignals),
-    reference_source_refs: uniqueStrings(referenceSourceRefs),
-    reference_design_pattern_packet_refs: uniqueStrings(patternPacketRefs),
   };
 }
 
@@ -647,7 +528,7 @@ function sourceDerivedProfileRequirements() {
   };
 }
 
-function buildSourceDerivedDesignReceipt(parsed: ParsedSelectionArgs) {
+function buildSourceDerivedDesignReceipt(parsed: ParsedProfileSelectionArgs) {
   return {
     route_id: SOURCE_DERIVED_PROFILE_ID,
     route_ref: SOURCE_DERIVED_PROFILE_REF,
@@ -762,14 +643,18 @@ export function buildAgentProfileInspect(args: string[]) {
 }
 
 export function buildAgentProfileSelection(args: string[]) {
-  const parsed = parseIntentArgs(args);
+  const parsed = parseProfileSelectionArgs(args);
   const intent = parsed.intent;
   const hasReferenceDesignSignal = parsed.reference_source_refs.length > 0
     || parsed.reference_design_pattern_packet_refs.length > 0;
   const candidates = catalogEntries()
     .map((profile) => ({
       profile,
-      matched_trigger_signals: matchedTriggerSignals(intent, parsed.intent_signals, profile),
+      matched_trigger_signals: matchedProfileTriggerSignals(
+        intent,
+        parsed.intent_signals,
+        profile.trigger_signals,
+      ),
     }))
     .filter((candidate) => candidate.matched_trigger_signals.length > 0);
   const selected = candidates[0] ?? null;
@@ -811,6 +696,10 @@ export function buildAgentProfileSelection(args: string[]) {
     : builtinRequirements ?? sourceRequirements;
   return {
     version: 'g2',
+    profile_capability_plan_input: buildProfileCapabilityPlanInputProjection({
+      requiredCapabilityKinds: profileRequirements?.required_capability_kinds ?? [],
+      requiredSurfaceRoles: profileRequirements?.required_surface_roles ?? [],
+    }),
     profile_selection_receipt: {
       surface_kind: 'opl_profile_selection_receipt',
       version: 'profile-selection-receipt.v1',

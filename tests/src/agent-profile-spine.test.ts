@@ -571,6 +571,20 @@ test('profile selector chooses evidence-grounded profile for decision-support ri
   assert.equal(receipt.authority_boundary.selector_can_claim_domain_ready, false);
 });
 
+test('profile selector accepts explicit canonical intent signals without heuristic scoring', () => {
+  const receipt = buildAgentProfileSelection([
+    '--intent',
+    'Build a specialist workflow',
+    '--intent-signal',
+    'RISK',
+  ]).profile_selection_receipt;
+
+  assert.equal(receipt.status, 'selected');
+  assert.deepEqual(receipt.intent_signals, ['risk']);
+  assert.deepEqual(receipt.matched_trigger_signals, ['risk']);
+  assert.equal(receipt.selected_profile_id, 'evidence_grounded_decision_agent_profile.v1');
+});
+
 test('profile selector routes unmatched paper-backed intent to source-derived design', () => {
   const receipt = buildAgentProfileSelection([
     '--intent',

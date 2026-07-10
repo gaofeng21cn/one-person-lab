@@ -12,7 +12,10 @@ export {
   resolveCapabilityForCurrentDelta,
 } from './capability-registry-resolver.ts';
 export type {
+  CapabilityBindingKind,
   CapabilityHardBoundary,
+  CapabilityRegistryCatalog,
+  CapabilityRegistryEntry,
   CapabilityRegistryReadout,
   CapabilityRegistryResolution,
   CurrentOwnerDeltaCapabilityBinding,
