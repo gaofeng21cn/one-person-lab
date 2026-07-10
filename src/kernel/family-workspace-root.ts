@@ -1,18 +1,10 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const FAMILY_REPO_DIRECTORIES = [
-  'one-person-lab',
-  'med-autoscience',
-  'med-autogrant',
-  'redcube-ai',
-  'opl-meta-agent',
-  'opl-bookforge',
-  'mas-scholar-skills',
-] as const;
-
 export type ResolveFamilyWorkspaceRootOptions = {
   repoRootHint?: string;
+  familyRepoDirectories?: readonly string[];
 };
 
 function normalizeOptionalString(value: string | undefined | null) {
@@ -29,18 +21,22 @@ function resolveRepoRootPath(options: ResolveFamilyWorkspaceRootOptions = {}) {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 }
 
-function isFamilyRepoDirectoryName(directoryName: string) {
-  return FAMILY_REPO_DIRECTORIES.includes(directoryName as typeof FAMILY_REPO_DIRECTORIES[number]);
+function isFamilyRepoRoot(directory: string, familyRepoDirectories: readonly string[]) {
+  return familyRepoDirectories.includes(path.basename(directory))
+    || fs.existsSync(path.join(directory, '.git'));
 }
 
-export function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {
+export function resolveFamilyWorkspaceRootFromRepoRoot(
+  repoRoot: string,
+  familyRepoDirectories: readonly string[] = [],
+) {
   let current = path.resolve(repoRoot);
 
   while (true) {
     const baseName = path.basename(current);
     if (baseName === '.worktrees' || baseName === 'worktrees') {
       const parent = path.dirname(current);
-      return isFamilyRepoDirectoryName(path.basename(parent))
+      return isFamilyRepoRoot(parent, familyRepoDirectories)
         ? path.dirname(parent)
         : parent;
     }
@@ -59,5 +55,8 @@ export function resolveDefaultFamilyWorkspaceRoot(options: ResolveFamilyWorkspac
     return path.resolve(configuredWorkspaceRoot);
   }
 
-  return resolveFamilyWorkspaceRootFromRepoRoot(resolveRepoRootPath(options));
+  return resolveFamilyWorkspaceRootFromRepoRoot(
+    resolveRepoRootPath(options),
+    options.familyRepoDirectories,
+  );
 }

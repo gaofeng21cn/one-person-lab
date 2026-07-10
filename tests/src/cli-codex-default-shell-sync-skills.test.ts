@@ -150,7 +150,7 @@ test('opl connect skills discovers the family plugin packs through the configure
 
 test('nested worktree repo roots resolve the family workspace root without OPL_FAMILY_WORKSPACE_ROOT', () => {
   assert.equal(
-    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab/.worktrees/codex-opl-turnkey'),
+    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/med-autoscience/.worktrees/codex-mas-turnkey'),
     '/tmp/workspace',
   );
   assert.equal(

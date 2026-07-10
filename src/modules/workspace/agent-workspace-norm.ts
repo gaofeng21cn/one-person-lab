@@ -51,6 +51,10 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
   const topology = contract.topology_contract;
   const profileIds = Object.keys(contract.domain_topology_profiles).sort();
   const supportedAgentIds = [...contract.supported_agents].sort();
+  const profileLegacyAliases = [...new Set(
+    Object.values(contract.domain_topology_profiles)
+      .flatMap((profile) => profile.legacy_project_collection_aliases),
+  )].sort();
 
   const blockers = [
     precondition.action_id === 'opl_workspace_ensure' ? null : 'workspace_ensure_action_id_drift',
@@ -100,7 +104,7 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
     topology.default_project_collection_path === 'projects'
       ? null
       : 'workspace_default_project_collection_path_drift',
-    topology.legacy_project_collection_aliases.join('/') === 'deliverables/studies'
+    [...topology.legacy_project_collection_aliases].sort().join('/') === profileLegacyAliases.join('/')
       ? null
       : 'workspace_legacy_project_collection_aliases_drift',
     profileIds.join('/') === supportedAgentIds.join('/')

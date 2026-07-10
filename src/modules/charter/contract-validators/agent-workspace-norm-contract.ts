@@ -282,7 +282,16 @@ function validateAgentWorkspaceNormSemantics(
     filePath,
   );
   assertExactString(topology.default_project_collection_path, 'projects', 'topology_contract.default_project_collection_path', filePath);
-  assertExactStringArray(topology.legacy_project_collection_aliases, ['deliverables', 'studies'], 'topology_contract.legacy_project_collection_aliases', filePath);
+  const profileLegacyAliases = [...new Set(
+    Object.values(contract.domain_topology_profiles)
+      .flatMap((profile) => profile.legacy_project_collection_aliases),
+  )].sort();
+  assertExactStringArray(
+    [...topology.legacy_project_collection_aliases].sort(),
+    profileLegacyAliases,
+    'topology_contract.legacy_project_collection_aliases',
+    filePath,
+  );
   assertExactStringArray(topology.workspace_modes, ['one_off', 'series', 'portfolio'], 'topology_contract.workspace_modes', filePath);
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
 
