@@ -236,7 +236,75 @@ function stageAttemptCloseoutToPayload(row: StageAttemptCloseoutRow) {
   };
 }
 
-export function listStageAttempts(db: DatabaseSync) {
+export function listStageAttempts(db: DatabaseSync, options: {
+  workUnitLimitPerLane?: number;
+  attemptLimitPerWorkUnit?: number;
+} = {}) {
+  const workUnitLimitPerLane = options.workUnitLimitPerLane;
+  const attemptLimitPerWorkUnit = options.attemptLimitPerWorkUnit;
+  if (
+    typeof workUnitLimitPerLane === 'number'
+    && Number.isInteger(workUnitLimitPerLane)
+    && workUnitLimitPerLane > 0
+    && typeof attemptLimitPerWorkUnit === 'number'
+    && Number.isInteger(attemptLimitPerWorkUnit)
+    && attemptLimitPerWorkUnit > 0
+  ) {
+    return (db.prepare(`
+      WITH normalized AS (
+        SELECT
+          stage_attempts.*,
+          COALESCE(
+            NULLIF(json_extract(workspace_locator_json, '$.work_unit_id'), ''),
+            NULLIF(json_extract(workspace_locator_json, '$.task_or_work_unit_ref'), ''),
+            NULLIF(json_extract(workspace_locator_json, '$.task_ref'), ''),
+            task_id,
+            stage_attempt_id
+          ) AS work_unit_key
+        FROM stage_attempts
+      ), ranked AS (
+        SELECT
+          normalized.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY domain_id, work_unit_key
+            ORDER BY updated_at DESC, created_at DESC, stage_attempt_id DESC
+          ) AS attempt_rank
+        FROM normalized
+      ), latest AS (
+        SELECT
+          ranked.*,
+          CASE
+            WHEN status = 'running' THEN 'running'
+            WHEN status IN ('blocked', 'dead_lettered', 'failed', 'human_gate') THEN 'attention'
+            ELSE 'recent'
+          END AS activity_lane
+        FROM ranked
+        WHERE attempt_rank = 1
+      ), selected AS (
+        SELECT
+          latest.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY activity_lane
+            ORDER BY updated_at DESC, created_at DESC, stage_attempt_id DESC
+          ) AS lane_rank
+        FROM latest
+      )
+      SELECT ranked.*
+      FROM ranked
+      JOIN selected
+        ON selected.domain_id = ranked.domain_id
+        AND selected.work_unit_key = ranked.work_unit_key
+      WHERE selected.lane_rank <= ?
+        AND ranked.attempt_rank <= ?
+      ORDER BY
+        CASE selected.activity_lane WHEN 'running' THEN 0 WHEN 'attention' THEN 1 ELSE 2 END,
+        selected.updated_at DESC,
+        selected.created_at DESC,
+        selected.stage_attempt_id DESC,
+        ranked.attempt_rank ASC
+    `).all(workUnitLimitPerLane, attemptLimitPerWorkUnit) as StageAttemptRow[])
+      .map(stageAttemptToPayload);
+  }
   return (db.prepare(`
     SELECT * FROM stage_attempts ORDER BY updated_at DESC, created_at DESC
   `).all() as StageAttemptRow[]).map(stageAttemptToPayload);

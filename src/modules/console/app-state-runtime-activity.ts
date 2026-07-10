@@ -23,6 +23,7 @@ import { listWorkspaceBindings, type WorkspaceBinding } from '../workspace/index
 const RUNNING_STATUSES = new Set(['running']);
 const ATTENTION_STATUSES = new Set(['blocked', 'dead_lettered', 'failed', 'human_gate']);
 const MAX_ATTEMPT_REFS_PER_WORK_UNIT = 8;
+const FAST_WORK_UNITS_PER_LANE = 1;
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -56,7 +57,7 @@ function queueDbPath() {
   return path.join(resolveOplStatePaths().state_dir, 'family-runtime', 'queue.sqlite');
 }
 
-function readStageAttempts() {
+function readStageAttempts(profile: 'fast' | 'full') {
   const queueDb = queueDbPath();
   if (!fs.existsSync(queueDb)) {
     return { queueDb, attempts: [] as JsonRecord[] };
@@ -65,7 +66,12 @@ function readStageAttempts() {
   try {
     return {
       queueDb,
-      attempts: listStageAttempts(db).filter(isRecord),
+      attempts: listStageAttempts(db, profile === 'fast'
+        ? {
+            workUnitLimitPerLane: FAST_WORK_UNITS_PER_LANE,
+            attemptLimitPerWorkUnit: MAX_ATTEMPT_REFS_PER_WORK_UNIT,
+          }
+        : undefined).filter(isRecord),
     };
   } catch {
     return { queueDb, attempts: [] as JsonRecord[] };
@@ -277,8 +283,8 @@ function projectAttemptGroup(input: {
   };
 }
 
-export function buildAppStateRuntimeActivityItems() {
-  const { queueDb, attempts } = readStageAttempts();
+export function buildAppStateRuntimeActivityItems(profile: 'fast' | 'full' = 'full') {
+  const { queueDb, attempts } = readStageAttempts(profile);
   if (attempts.length === 0) {
     return [];
   }

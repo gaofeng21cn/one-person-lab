@@ -331,6 +331,137 @@ function fullRuntimeWorkbenchSummary(fullDrilldown: JsonRecord | null) {
   };
 }
 
+function recordArray(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function compactFastRuntimeTask(value: unknown) {
+  const task = isRecord(value) ? value : {};
+  return {
+    task_id: task.task_id,
+    domain_id: task.domain_id,
+    domain_label: task.domain_label,
+    title: task.title,
+    state: task.state,
+    status: task.status,
+    status_label: task.status_label,
+    priority_bucket: task.priority_bucket,
+    active_stage_id: task.active_stage_id,
+    active_stage_label: task.active_stage_label,
+    active_run_id: task.active_run_id,
+    next_visible_step: task.next_visible_step,
+    last_progress_at: task.last_progress_at,
+    study_id: task.study_id,
+    runtime_readback_source: task.runtime_readback_source,
+    runtime_attempt_status: task.runtime_attempt_status,
+    runtime_closeout_observed: task.runtime_closeout_observed,
+    primary_state: task.primary_state,
+    primary_state_label: task.primary_state_label,
+    automation_state: task.automation_state,
+    automation_state_label: task.automation_state_label,
+    running_proof_status: task.running_proof_status,
+    typed_blocker_summary: task.typed_blocker_summary,
+    typed_blocker_owner: task.typed_blocker_owner,
+    runtime_blocker_summary: task.runtime_blocker_summary,
+  };
+}
+
+function compactFastTaskRun(value: unknown) {
+  const task = isRecord(value) ? value : {};
+  return {
+    ...compactFastRuntimeTask(task),
+    conditions: recordArray(task.conditions).map((condition) => ({
+      type: condition.type,
+      status: condition.status,
+      reason: condition.reason,
+      severity: condition.severity,
+      owner: condition.owner,
+      ref: condition.ref,
+    })),
+  };
+}
+
+function compactFastWorkItem(value: unknown) {
+  const item = isRecord(value) ? value : {};
+  const stage = isRecord(item.stage) ? item.stage : {};
+  const attempt = isRecord(item.attempt) ? item.attempt : {};
+  const action = isRecord(item.action) ? item.action : {};
+  const status = isRecord(item.status) ? item.status : {};
+  return {
+    item_id: item.item_id,
+    title: item.title,
+    stage: { stage_id: stage.stage_id, label: stage.label },
+    attempt: { run_id: attempt.run_id, status: attempt.status },
+    action: {
+      action_kind: action.action_kind,
+      title: action.title,
+      summary: action.summary,
+      ref: action.ref,
+      action_ref: action.action_ref,
+    },
+    status: {
+      primary_state: status.primary_state,
+      automation_state: status.automation_state,
+    },
+  };
+}
+
+function compactFastOperatorRuntimeProjection(operator: JsonRecord) {
+  const workbench = isRecord(operator.workbench) ? operator.workbench : {};
+  const taskRun = isRecord(workbench.task_run_projection_v2) ? workbench.task_run_projection_v2 : {};
+  const workItems = isRecord(workbench.work_item_projection_v1) ? workbench.work_item_projection_v1 : {};
+  const activityCenter = isRecord(workbench.activity_center) ? workbench.activity_center : {};
+  const compactWorkItems = recordArray(workItems.items).map(compactFastWorkItem);
+  const compactActivityCenter = {
+    ...activityCenter,
+    needs_attention: recordArray(activityCenter.needs_attention).map(compactFastRuntimeTask),
+    active_projects: recordArray(activityCenter.active_projects).map(compactFastRuntimeTask),
+    recent_projects: recordArray(activityCenter.recent_projects).map(compactFastRuntimeTask),
+  };
+  const compactVisualRefGroups = isRecord(operator.visual_ref_groups)
+    ? Object.fromEntries(Object.entries(operator.visual_ref_groups).map(([key, value]) => [
+        key,
+        ['needs_attention_refs', 'active_project_refs', 'recent_project_refs'].includes(key)
+          && Array.isArray(value)
+          ? recordArray(value).map(compactFastRuntimeTask)
+          : value,
+      ]))
+    : operator.visual_ref_groups;
+
+  return {
+    ...operator,
+    workbench: {
+      ...workbench,
+      activity_center: compactActivityCenter,
+      current_owner_delta: {
+        source_ref: 'app_state.operator.current_owner_delta',
+      },
+      current_owner_delta_read_model: {
+        source_ref: 'app_state.operator.current_owner_delta_read_model',
+      },
+      current_owner_delta_next_action: {
+        source_ref: 'app_state.operator.current_owner_delta_next_action',
+      },
+      stage_run_cockpit: {
+        source_ref: 'app_state.operator.stage_run_cockpit',
+      },
+      stage_run_cockpit_summary: {
+        source_ref: 'app_state.operator.stage_run_cockpit_summary',
+      },
+      task_drilldowns: recordArray(workbench.task_drilldowns),
+      task_run_projection_v2: {
+        ...taskRun,
+        tasks: recordArray(taskRun.tasks).map(compactFastTaskRun),
+        work_item_projection_v1: {
+          source_ref: 'app_state.operator.workbench.work_item_projection_v1',
+        },
+      },
+      work_item_projection_v1: { ...workItems, items: compactWorkItems },
+    },
+    visual_ref_groups: compactVisualRefGroups,
+  };
+}
+
 export async function buildOplAppState(input: { profile?: AppStateProfile } = {}) {
   const startedAt = Date.now();
   const profile = input.profile ?? 'fast';
@@ -378,7 +509,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     },
   };
   const uiDefaults = buildUiDefaults();
-  const runtimeActivityItems = buildAppStateRuntimeActivityItems();
+  const runtimeActivityItems = buildAppStateRuntimeActivityItems(profile);
   const fullRuntimeDrilldown = profile === 'full'
     ? (await buildRuntimeTraySnapshot(contracts, {
         appOperatorDrilldownDetailLevel: 'full',
@@ -430,7 +561,7 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     release,
     paths,
   });
-  const operator = buildOplAppOperatorViewModel({
+  const rawOperator = buildOplAppOperatorViewModel({
     profile,
     core,
     developerMode,
@@ -448,6 +579,9 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
     agentLabFeedbackSelfEvolution,
     feedbackOps,
   });
+  const operator = profile === 'fast'
+    ? compactFastOperatorRuntimeProjection(rawOperator)
+    : rawOperator;
 
   return {
     version: 'g2',
