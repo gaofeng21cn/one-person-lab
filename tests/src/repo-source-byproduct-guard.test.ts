@@ -9,12 +9,13 @@ import {
   inspectRepoSourceByproducts,
 } from '../../src/modules/workspace/repo-source-byproduct-guard.ts';
 
-test('repo source byproduct guard uses the platform glob and excludes worktree internals', () => {
+test('repo source byproduct guard fails closed and excludes worktree internals', () => {
   const root = fs.mkdtempSync(path.join(process.env.OPL_REPO_TEMP_ROOT || os.tmpdir(), 'opl-source-guard-'));
   try {
     fs.mkdirSync(path.join(root, 'src', '__pycache__'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src', '__pycache__', 'module.pyc'), 'cache');
     fs.mkdirSync(path.join(root, '.worktrees', 'candidate', 'node_modules'), { recursive: true });
+    fs.symlinkSync(path.join(root, 'missing-node-modules'), path.join(root, 'linked-node-modules'));
 
     const report = inspectRepoSourceByproducts(root);
     assert.equal(report.status, 'blocked');
@@ -24,6 +25,11 @@ test('repo source byproduct guard uses the platform glob and excludes worktree i
 
     fs.rmSync(path.join(root, 'src', '__pycache__'), { recursive: true });
     assert.equal(assertRepoSourceByproductsClean(root).status, 'passed');
+
+    fs.mkdirSync(path.join(root, 'locked'));
+    fs.chmodSync(path.join(root, 'locked'), 0o000);
+    assert.equal(inspectRepoSourceByproducts(root).status, 'blocked');
+    fs.chmodSync(path.join(root, 'locked'), 0o700);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

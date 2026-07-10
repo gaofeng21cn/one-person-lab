@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../kernel/family-workspace-root.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../../kernel/family-workspace-root.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type FrameworkLocatorSource =
@@ -162,7 +162,7 @@ function buildCandidateList(): FrameworkLocatorCandidate[] {
     {
       source: 'sibling_checkout',
       kind: 'root',
-      value: path.join(resolveFamilyWorkspaceRootFromRepoRoot(currentRoot), 'one-person-lab'),
+      value: path.join(resolveDefaultFamilyWorkspaceRoot({ repoRootHint: currentRoot }), 'one-person-lab'),
       required: false,
     },
   ];
