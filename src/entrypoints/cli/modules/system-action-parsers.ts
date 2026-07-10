@@ -419,60 +419,26 @@ function parseWorkspaceRegistryArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): WorkspaceRegistryCliInput {
   const parsed: WorkspaceRegistryCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--project':
-        parsed.projectId = value;
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--label':
-        parsed.label = value;
-        break;
-      case '--entry-command':
-        parsed.entryCommand = value;
-        break;
-      case '--manifest-command':
-        parsed.manifestCommand = value;
-        break;
-      case '--entry-url':
-        parsed.entryUrl = value;
-        break;
-      case '--workspace-root':
-        parsed.workspaceRoot = value;
-        break;
-      case '--profile':
-        parsed.profileRef = value;
-        break;
-      case '--input':
-        parsed.inputPath = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for workspace registry command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
+  const values = parseCommandOptions(args, spec, {
+    project: { type: 'string' },
+    path: { type: 'string' },
+    label: { type: 'string' },
+    'entry-command': { type: 'string' },
+    'manifest-command': { type: 'string' },
+    'entry-url': { type: 'string' },
+    'workspace-root': { type: 'string' },
+    profile: { type: 'string' },
+    input: { type: 'string' },
+  });
+  if (values.project !== undefined) parsed.projectId = values.project as string;
+  if (values.path !== undefined) parsed.workspacePath = values.path as string;
+  if (values.label !== undefined) parsed.label = values.label as string;
+  if (values['entry-command'] !== undefined) parsed.entryCommand = values['entry-command'] as string;
+  if (values['manifest-command'] !== undefined) parsed.manifestCommand = values['manifest-command'] as string;
+  if (values['entry-url'] !== undefined) parsed.entryUrl = values['entry-url'] as string;
+  if (values['workspace-root'] !== undefined) parsed.workspaceRoot = values['workspace-root'] as string;
+  if (values.profile !== undefined) parsed.profileRef = values.profile as string;
+  if (values.input !== undefined) parsed.inputPath = values.input as string;
   return parsed;
 }
 
@@ -536,46 +502,17 @@ function parseOplModuleArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): OplModuleCliInput {
-  const parsed: OplModuleCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--module':
-        parsed.moduleId = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for module command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  if (!parsed.moduleId) {
+  const moduleId = parseCommandOptions(args, spec, {
+    module: { type: 'string' },
+  }).module as string | undefined;
+  if (!moduleId) {
     throw buildUsageError(
       'module commands require --module.',
       spec,
       { required: ['--module'] },
     );
   }
-
-  return parsed;
+  return { moduleId };
 }
 
 function parseOplModuleExecArgs(
@@ -650,15 +587,11 @@ function parseSessionRuntimeArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SessionRuntimeCliInput {
-  let acp = false;
-  for (const token of args) {
-    if (token === '--acp') {
-      acp = true;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for session runtime: ${token}.`, spec, { option: token });
-  }
-  return { acp };
+  return {
+    acp: parseCommandOptions(args, spec, {
+      acp: { type: 'boolean' },
+    }).acp === true,
+  };
 }
 
 function parseWorkspaceRootArgs(
@@ -666,36 +599,12 @@ function parseWorkspaceRootArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): WorkspaceRootCliInput {
   const parsed: WorkspaceRootCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--path':
-        parsed.path = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for workspace root command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const path = parseCommandOptions(args, spec, {
+    path: { type: 'string' },
+  }).path as string | undefined;
+  if (path !== undefined) {
+    parsed.path = path;
   }
-
   return parsed;
 }
 

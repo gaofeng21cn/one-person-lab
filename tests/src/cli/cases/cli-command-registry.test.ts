@@ -2,6 +2,13 @@ import { assert, fs, os, parseJsonText, path, repoRoot, runCli, runCliFailure, t
 import { FrameworkContractError } from '../../../../src/modules/charter/contracts.ts';
 import type { CommandSpec } from '../../../../src/entrypoints/cli/modules/support.ts';
 import {
+  parseLaunchDomainArgs,
+  parseOplModuleExecArgs,
+  parseSessionLedgerArgs,
+  parseSkillPackArgs,
+  parseStartArgs,
+} from '../../../../src/entrypoints/cli/modules/support.ts';
+import {
   bindCommandRegistryMetadata,
   parseRegisteredCommandOptions,
   validateCommandRegistryCoverage,
@@ -382,6 +389,58 @@ test('registered command parser rejects values outside registry allowed_values',
       assert.deepEqual((error as FrameworkContractError).details?.allowed_values, ['crossref']);
       return true;
     },
+  );
+});
+
+test('core option parsers reuse node parseArgs without changing their value semantics', () => {
+  const spec = { usage: 'opl example', examples: ['opl example'] };
+
+  assert.deepEqual(parseSessionLedgerArgs(['--limit', '3'], spec), { limit: 3 });
+  assert.deepEqual(parseStartArgs([
+    '--project', 'first',
+    '--project', '  final project  ',
+    '--mode', 'interactive',
+  ], spec), {
+    projectId: '  final project  ',
+    modeId: 'interactive',
+  });
+  assert.deepEqual(parseLaunchDomainArgs([
+    '--project', 'redcube',
+    '--path', '  /workspace/redcube  ',
+    '--strategy', 'spawn_command',
+    '--dry-run',
+  ], spec), {
+    projectId: 'redcube',
+    workspacePath: '  /workspace/redcube  ',
+    strategy: 'spawn_command',
+    dryRun: true,
+  });
+  assert.deepEqual(parseSkillPackArgs([
+    '--domain', 'mas',
+    '--domain', 'mag',
+    '--home', '  /tmp/codex home  ',
+    '--quiet',
+  ], spec), {
+    domains: ['mas', 'mag'],
+    home: '  /tmp/codex home  ',
+    quiet: true,
+  });
+  assert.deepEqual(parseOplModuleExecArgs(['--module', 'mas', '--', 'status'], spec), {
+    moduleId: 'mas',
+    args: ['status'],
+  });
+
+  for (const args of [['unexpected'], ['--unknown', 'value']]) {
+    assert.throws(
+      () => parseStartArgs(args, spec),
+      (error) => error instanceof FrameworkContractError && error.code === 'cli_usage_error',
+    );
+  }
+  assert.throws(
+    () => parseOplModuleExecArgs(['--', 'status'], spec),
+    (error) => error instanceof FrameworkContractError
+      && error.code === 'cli_usage_error'
+      && error.message.includes('require --module'),
   );
 });
 

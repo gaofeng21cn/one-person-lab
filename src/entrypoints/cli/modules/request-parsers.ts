@@ -10,6 +10,7 @@ import type {
   SkillPacksCliInput,
   StartCliInput,
 } from './types.ts';
+import { parseCommandOptions } from './command-registry.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 
 const PRODUCT_ENTRY_AGENT_HANDLE_MAP = {
@@ -290,36 +291,12 @@ function parseSessionLedgerArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SessionLedgerCliInput {
   const parsed: SessionLedgerCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--limit':
-        parsed.limit = parsePositiveInteger(token, value, spec);
-        break;
-      default:
-        throw buildUsageError(`Unknown option for session ledger: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const limit = parseCommandOptions(args, spec, {
+    limit: { type: 'string' },
+  }).limit as string | undefined;
+  if (limit !== undefined) {
+    parsed.limit = parsePositiveInteger('--limit', limit, spec);
   }
-
   return parsed;
 }
 
@@ -328,39 +305,16 @@ function parseStartArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): StartCliInput {
   const parsed: StartCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--project':
-        parsed.projectId = value;
-        break;
-      case '--mode':
-        parsed.modeId = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for start: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const values = parseCommandOptions(args, spec, {
+    project: { type: 'string' },
+    mode: { type: 'string' },
+  });
+  if (values.project !== undefined) {
+    parsed.projectId = values.project as string;
   }
-
+  if (values.mode !== undefined) {
+    parsed.modeId = values.mode as string;
+  }
   return parsed;
 }
 
@@ -369,53 +323,31 @@ function parseLaunchDomainArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): LaunchDomainCliInput {
   const parsed: LaunchDomainCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--dry-run') {
-      parsed.dryRun = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--project':
-        parsed.projectId = value;
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--strategy':
-        if (!['auto', 'open_url', 'spawn_command'].includes(value)) {
-          throw buildUsageError(`Option ${token} must be one of auto, open_url, or spawn_command.`, spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.strategy = value as DomainLaunchStrategy;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for domain launch: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const values = parseCommandOptions(args, spec, {
+    project: { type: 'string' },
+    path: { type: 'string' },
+    strategy: { type: 'string' },
+    'dry-run': { type: 'boolean' },
+  });
+  const strategy = values.strategy as string | undefined;
+  if (strategy && !['auto', 'open_url', 'spawn_command'].includes(strategy)) {
+    throw buildUsageError('Option --strategy must be one of auto, open_url, or spawn_command.', spec, {
+      option: '--strategy',
+      value: strategy,
+    });
   }
-
+  if (values.project !== undefined) {
+    parsed.projectId = values.project as string;
+  }
+  if (values.path !== undefined) {
+    parsed.workspacePath = values.path as string;
+  }
+  if (strategy !== undefined) {
+    parsed.strategy = strategy as DomainLaunchStrategy;
+  }
+  if (values['dry-run'] === true) {
+    parsed.dryRun = true;
+  }
   return parsed;
 }
 
@@ -427,71 +359,40 @@ function parseSkillPackArgs(
     domains: [],
     quiet: false,
   };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--quiet') {
-      parsed.quiet = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--domain':
-        parsed.domains.push(value);
-        break;
-      case '--home':
-        parsed.home = value;
-        break;
-      case '--scope':
-        if (value !== 'codex' && value !== 'workspace' && value !== 'quest') {
-          throw buildUsageError('Option --scope requires codex, workspace, or quest.', spec, { option: token, value });
-        }
-        parsed.scope = value;
-        break;
-      case '--target-workspace':
-        parsed.targetWorkspace = value;
-        break;
-      case '--target-quest':
-        parsed.targetQuest = value;
-        break;
-      case '--target-root':
-        parsed.targetRoot = value;
-        break;
-      case '--mode':
-        if (value !== 'observe' && value !== 'ask_to_apply' && value !== 'managed') {
-          throw buildUsageError('Option --mode requires observe, ask_to_apply, or managed.', spec, { option: token, value });
-        }
-        parsed.companionMode = value;
-        break;
-      case '--superpowers':
-        if (value !== 'keep' && value !== 'lite' && value !== 'full') {
-          throw buildUsageError('Option --superpowers requires keep, lite, or full.', spec, { option: token, value });
-        }
-        parsed.superpowersProfile = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for skill pack command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const values = parseCommandOptions(args, spec, {
+    domain: { type: 'string', multiple: true },
+    home: { type: 'string' },
+    scope: { type: 'string' },
+    'target-workspace': { type: 'string' },
+    'target-quest': { type: 'string' },
+    'target-root': { type: 'string' },
+    mode: { type: 'string' },
+    superpowers: { type: 'string' },
+    quiet: { type: 'boolean' },
+  });
+  const scope = values.scope as string | undefined;
+  const mode = values.mode as string | undefined;
+  const superpowers = values.superpowers as string | undefined;
+  if (scope && scope !== 'codex' && scope !== 'workspace' && scope !== 'quest') {
+    throw buildUsageError('Option --scope requires codex, workspace, or quest.', spec, { option: '--scope', value: scope });
   }
-
+  if (mode && mode !== 'observe' && mode !== 'ask_to_apply' && mode !== 'managed') {
+    throw buildUsageError('Option --mode requires observe, ask_to_apply, or managed.', spec, { option: '--mode', value: mode });
+  }
+  if (superpowers && superpowers !== 'keep' && superpowers !== 'lite' && superpowers !== 'full') {
+    throw buildUsageError('Option --superpowers requires keep, lite, or full.', spec, { option: '--superpowers', value: superpowers });
+  }
+  parsed.domains = (values.domain as string[] | undefined) ?? [];
+  parsed.quiet = values.quiet === true;
+  if (values.home !== undefined) parsed.home = values.home as string;
+  if (scope !== undefined) parsed.scope = scope as SkillPacksCliInput['scope'];
+  if (values['target-workspace'] !== undefined) parsed.targetWorkspace = values['target-workspace'] as string;
+  if (values['target-quest'] !== undefined) parsed.targetQuest = values['target-quest'] as string;
+  if (values['target-root'] !== undefined) parsed.targetRoot = values['target-root'] as string;
+  if (mode !== undefined) parsed.companionMode = mode as SkillPacksCliInput['companionMode'];
+  if (superpowers !== undefined) {
+    parsed.superpowersProfile = superpowers as SkillPacksCliInput['superpowersProfile'];
+  }
   return parsed;
 }
 
