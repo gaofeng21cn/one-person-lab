@@ -130,20 +130,26 @@ test('Developer Mode scaleout accepts only verified risk-tier evidence', () => {
       'developer_mode_risk_tier_auto_promotion_ref_not_verified_agent_lab_receipt',
     );
 
-    for (const payload of [
+    for (const { payload, blocker } of [
       {
-        ...verifiedRiskTierPromotionPayload,
-        independent_ai_review_receipt: {
-          ...verifiedRiskTierPromotionPayload.independent_ai_review_receipt,
-          receipt_source: 'generated_fixture',
-          assessment_mode: 'generated_fixture',
+        payload: {
+          ...verifiedRiskTierPromotionPayload,
+          independent_ai_review_receipt: {
+            ...verifiedRiskTierPromotionPayload.independent_ai_review_receipt,
+            receipt_source: 'generated_fixture',
+            assessment_mode: 'generated_fixture',
+          },
+          receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/generated-fixture',
         },
-        receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/generated-fixture',
+        blocker: 'agent_lab_risk_tier_auto_promotion_independent_ai_review_not_verified',
       },
       {
-        ...verifiedRiskTierPromotionPayload,
-        risk_tier: 'high_risk',
-        receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/high-risk-blocked',
+        payload: {
+          ...verifiedRiskTierPromotionPayload,
+          risk_tier: 'high_risk',
+          receipt_ref: 'agent-lab-risk-tier-auto-promotion-ref:mas/high-risk-blocked',
+        },
+        blocker: 'agent_lab_risk_tier_auto_promotion_requires_low_or_medium_risk',
       },
     ]) {
       const blocked = runCli([
@@ -154,6 +160,7 @@ test('Developer Mode scaleout accepts only verified risk-tier evidence', () => {
         JSON.stringify(payload),
       ], env).agent_lab_risk_tier_promotion_ledger_record;
       assert.equal(blocked.status, 'no_eligible_agent_lab_risk_tier_auto_promotion_receipts');
+      assert.equal(blocked.blocked_receipts[0].blocker.blocker_id, blocker);
     }
 
     const promotion = runCli([

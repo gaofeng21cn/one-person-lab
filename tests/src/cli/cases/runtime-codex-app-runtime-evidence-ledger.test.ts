@@ -169,6 +169,19 @@ test('Codex App long-soak owner retains start, event, finish, and minimum-durati
         earliest_finish_at: '2026-05-24T01:00:00.000Z',
       }, null, 2)}\n`,
     );
+    assert.throws(
+      () => runCli([
+        'runtime',
+        'codex-app-runtime-evidence',
+        'long-soak',
+        'event',
+        '--workorder-file',
+        start.workorder_file,
+        '--event-kind',
+        'freeform_operator_note',
+      ], env),
+      /event_kind must be one of:/,
+    );
     const events = [
       ['temporal_hosted_stage_or_worker_window_observed', '2026-05-24T00:05:00.000Z'],
       ['provider_state_linkage_checked', '2026-05-24T00:15:00.000Z'],

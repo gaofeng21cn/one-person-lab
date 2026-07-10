@@ -51,6 +51,19 @@ test('App release long-operator retains start, event, finish, and minimum-durati
         earliest_finish_at: '2026-05-24T01:00:00.000Z',
       }, null, 2)}\n`,
     );
+    assert.throws(
+      () => runCli([
+        'runtime',
+        'app-release-evidence',
+        'long-operator',
+        'event',
+        '--workorder-file',
+        start.workorder_file,
+        '--event-kind',
+        'freeform_operator_note',
+      ], env),
+      /event_kind must be one of:/,
+    );
     for (const [index, eventKind] of eventKinds.entries()) {
       const event = runCli([
         'runtime',
