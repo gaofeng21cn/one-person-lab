@@ -301,17 +301,18 @@ test('standard Agent stage manifest compiler binds pack identity to the descript
 test('pack compiler rejects requested Agent identity that differs from the repo canonical id', () => {
   const root = fixture('med-autoscience', 'mas');
 
-  assert.throws(() => buildDomainPackCompilerList({} as any, {
+  const report = buildDomainPackCompilerList({} as any, {
     familyDefaults: true,
     familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
-  }), (error: unknown) => {
-    assert.ok(error instanceof FrameworkContractError);
-    assert.equal(error.code, 'contract_shape_invalid');
-    assert.equal(error.details?.blocker, 'identity_mismatch');
-    assert.equal(error.details?.requested_agent_id, 'mag');
-    assert.equal(error.details?.canonical_agent_id, 'mas');
-    return true;
   });
+  const projection = report.domain_pack_compiler.domains[0];
+
+  assert.equal(report.domain_pack_compiler.summary.blocked_domain_count, 1);
+  assert.equal(projection?.compiler_status, 'blocked');
+  assert.equal(projection?.blocker_reasons.includes('identity_mismatch'), true);
+  assert.equal(projection?.repo_contract_error?.code, 'contract_shape_invalid');
+  assert.equal(projection?.repo_contract_error?.details.requested_agent_id, 'mag');
+  assert.equal(projection?.repo_contract_error?.details.canonical_agent_id, 'mas');
 });
 
 test('OMA hosted descriptor consumes the generated stage plane without a legacy fallback', () => {

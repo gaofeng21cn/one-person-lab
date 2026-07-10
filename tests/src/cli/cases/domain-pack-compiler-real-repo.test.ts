@@ -1,5 +1,33 @@
 import { assert, fs, runCli, test } from '../helpers.ts';
 
+test('real family-defaults pack compiler preserves JSON readback when individual repos are blocked', {
+  skip: ![
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+    'opl-meta-agent',
+    'opl-bookforge',
+  ].every((repo) => fs.existsSync(`/Users/gaofeng/workspace/${repo}/contracts/domain_descriptor.json`)),
+}, () => {
+  const report = runCli(['agents', 'pack-compiler', '--family-defaults']).domain_pack_compiler;
+  const domains = new Map(report.domains.map((domain: { requested_agent_id: string }) => [
+    domain.requested_agent_id,
+    domain,
+  ]));
+
+  assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
+  assert.equal(report.summary.total_domain_count, 5);
+  assert.equal(report.summary.ready_domain_count + report.summary.blocked_domain_count, 5);
+  assert.equal(report.summary.blocked_domain_count >= 2, true);
+  for (const agentId of ['mas', 'rca']) {
+    const domain = domains.get(agentId) as Record<string, any>;
+    assert.equal(domain.compiler_status, 'blocked');
+    assert.equal(domain.blocker_reasons.length > 0, true);
+    assert.equal(domain.repo_contract_error.code, 'contract_shape_invalid');
+    assert.equal(typeof domain.repo_contract_error.message, 'string');
+  }
+});
+
 test('generated interfaces expose RCA wrapper descriptor scope from real repo contracts when present', {
   skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/domain_descriptor.json'),
 }, () => {

@@ -458,6 +458,7 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
   const generatedSurfaces = GENERATED_SURFACES.map((surface) => surfaceProjection(descriptor, surface));
   const missingRequired = generatedSurfaces.flatMap((surface) => surface.missing_descriptor_surfaces);
   const blockerReasons = [
+    ...stringList(descriptor.repo_contract_blockers),
     optionalString(descriptor.manifest_status) === 'resolved' ? null : 'domain_manifest_not_resolved',
     genericResidueBlocked(summary) ? 'functional_privatization_audit_has_generic_residue_or_blocker' : null,
     ...missingRequired.map((surface) => `missing_descriptor_surface:${surface}`),
@@ -477,6 +478,9 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
     agent_id: optionalString(descriptor.agent_id),
     compiler_status: status,
     blocker_reasons: [...new Set(blockerReasons)],
+    repo_contract_error: isRecord(descriptor.repo_contract_error)
+      ? descriptor.repo_contract_error
+      : null,
     pack_compiler_input_projection: {
       surface_kind: 'opl_domain_pack_compiler_input_projection',
       source_descriptor_ref: `opl agents descriptor --domain ${optionalString(descriptor.agent_id) ?? optionalString(descriptor.project_id) ?? 'unknown'}`,
@@ -525,6 +529,24 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
   };
 }
 
+function blockedRepoContractDescriptor(
+  repo: StandardDomainAgentRepoInput,
+  error: FrameworkContractError,
+) {
+  const details = isRecord(error.details) ? error.details : {};
+  return {
+    requested_agent_id: repo.requested_agent_id,
+    repo_dir: repo.repo_dir,
+    project_id: repo.requested_agent_id,
+    source_kind: 'standard_agent_repo_contracts',
+    manifest_status: 'repo_contracts_blocked',
+    repo_contract_blockers: [
+      optionalString(details.blocker) ?? `repo_contract_descriptor_failed:${error.code}`,
+    ],
+    repo_contract_error: error.toJSON().error,
+  };
+}
+
 function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPackCompilerOptions = {}) {
   if (options.familyDefaults) {
     const repos = options.familyRepoInputs;
@@ -541,16 +563,23 @@ function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPack
         env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
       });
     }
-    return repos.map((repo) =>
-      buildPackCompilerProjection(
-        descriptorWithRepoContractInputs(
-          repoContractDescriptorForPackCompiler(
-            buildRepoContractDescriptor(repo.repo_dir),
-            repo.requested_agent_id,
+    return repos.map((repo) => {
+      try {
+        return buildPackCompilerProjection(
+          descriptorWithRepoContractInputs(
+            repoContractDescriptorForPackCompiler(
+              buildRepoContractDescriptor(repo.repo_dir),
+              repo.requested_agent_id,
+            ),
           ),
-        ),
-      )
-    );
+        );
+      } catch (error) {
+        if (!(error instanceof FrameworkContractError)) {
+          throw error;
+        }
+        return buildPackCompilerProjection(blockedRepoContractDescriptor(repo, error));
+      }
+    });
   }
   const descriptors = options.agentDescriptors ?? options.loadAgentDescriptors?.();
   if (!descriptors) {
