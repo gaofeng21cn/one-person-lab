@@ -249,6 +249,7 @@ test('Codex stage closeout output schema accepts refs-only object metadata', () 
     'size_bytes',
     'uri',
   ]);
+  assert.equal(objectRefSchema.additionalProperties, false);
 });
 
 test('Codex stage closeout capture cleans temp directory after construction failure', () => {

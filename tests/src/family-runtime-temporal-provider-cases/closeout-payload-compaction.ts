@@ -47,6 +47,13 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
     'receipt:large-closeout',
     'file:///tmp/redcube-runtime/artifacts/closeout.json',
   ]);
+  assert.deepEqual(compacted.closeout_ref_metadata, [{
+    ref_kind: 'stage_attempt_closeout_packet_ref',
+    uri: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+    sha256: 'sha256:closeout',
+    size_bytes: 2048,
+    ref: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+  }]);
   assert.deepEqual(compacted.domain_output, {
     surface_kind: 'domain_owned_stage_output_ref',
     version: 'domain-owned-stage-output-ref.v1',
@@ -63,4 +70,15 @@ test('Temporal Codex activity compacts typed closeout packets before activity co
   assert.equal(JSON.stringify(compacted).includes('forbidden_body'), false);
   assert.ok(compacted.temporal_payload_policy.retained_fields.includes('domain_output'));
   assert.ok(Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000);
+});
+
+test('Temporal Codex activity rejects object closeout refs carrying nested body metadata', () => {
+  assert.equal(compactCloseoutPacketForTemporalResult({
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: [{
+      ref_kind: 'stage_attempt_closeout_packet_ref',
+      uri: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+      payload: { artifact_body: 'must-not-enter-temporal' },
+    }],
+  }), null);
 });

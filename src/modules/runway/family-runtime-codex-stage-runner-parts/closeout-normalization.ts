@@ -120,6 +120,8 @@ function readCloseoutRefEntries(value: unknown) {
   }
   const refs: string[] = [];
   const metadata: JsonRecord[] = [];
+  const allowedMetadataFields = new Set(['ref_kind', 'kind', 'uri', 'sha256', 'ref', 'size_bytes']);
+  const stringMetadataFields = ['ref_kind', 'kind', 'uri', 'sha256', 'ref'] as const;
   for (const entry of value) {
     const direct = optionalString(entry);
     if (direct) {
@@ -127,15 +129,46 @@ function readCloseoutRefEntries(value: unknown) {
       continue;
     }
     if (!isRecord(entry)) {
-      continue;
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'closeout_refs object metadata contains an unsupported field or value.',
+        { allowed_fields: [...allowedMetadataFields] },
+      );
+    }
+    if (
+      Object.keys(entry).some((field) => !allowedMetadataFields.has(field))
+      || stringMetadataFields.some((field) => field in entry && !optionalString(entry[field]))
+      || ('size_bytes' in entry && (
+        typeof entry.size_bytes !== 'number'
+        || !Number.isFinite(entry.size_bytes)
+        || entry.size_bytes < 0
+      ))
+    ) {
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'closeout_refs object metadata contains an unsupported field or value.',
+        { allowed_fields: [...allowedMetadataFields] },
+      );
     }
     const ref = optionalString(entry.ref) ?? optionalString(entry.uri);
     if (!ref) {
-      continue;
+      throw new FrameworkContractError(
+        'contract_shape_invalid',
+        'closeout_refs object metadata contains an unsupported field or value.',
+        { required: ['ref|uri'] },
+      );
     }
     refs.push(ref);
+    const normalizedMetadata: JsonRecord = {};
+    for (const field of stringMetadataFields) {
+      const fieldValue = optionalString(entry[field]);
+      if (fieldValue) {
+        normalizedMetadata[field] = fieldValue;
+      }
+    }
     metadata.push({
-      ...entry,
+      ...normalizedMetadata,
+      ...('size_bytes' in entry ? { size_bytes: entry.size_bytes } : {}),
       ref,
     });
   }

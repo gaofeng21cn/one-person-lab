@@ -244,6 +244,19 @@
         "domain_id_matches_stage_attempt_domain_id",
         "output_ref_is_present_in_closeout_refs"
       ]
+    },
+    "closeout_ref_metadata_contract": {
+      "allowed_fields": [
+        "ref_kind",
+        "kind",
+        "uri",
+        "sha256",
+        "ref",
+        "size_bytes"
+      ],
+      "unknown_fields_allowed": false,
+      "string_fields_require_nonempty_values": true,
+      "size_bytes_requires_finite_nonnegative_number": true
     }
   },
   "operator_visibility_fields": [

@@ -57,6 +57,15 @@ test('family runtime attempt contract keeps Temporal attempt, typed closeout, an
     'refs_only_no_domain_output_body_in_temporal_or_opl_ledger',
   );
   assert.ok(contract.operator_visibility_fields.includes('domain_output_ref'));
+  assert.equal(contract.typed_closeout_contract.closeout_ref_metadata_contract.unknown_fields_allowed, false);
+  assert.deepEqual(contract.typed_closeout_contract.closeout_ref_metadata_contract.allowed_fields, [
+    'ref_kind',
+    'kind',
+    'uri',
+    'sha256',
+    'ref',
+    'size_bytes',
+  ]);
   assert.equal(
     contract.provider_lifecycle_contract.temporal.workflow_name,
     'StageAttemptWorkflow',

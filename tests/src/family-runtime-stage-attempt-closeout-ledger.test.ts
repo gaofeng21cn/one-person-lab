@@ -9,6 +9,7 @@ import {
   ingestStageAttemptCloseout,
   inspectStageAttempt,
   listStageAttemptCloseouts,
+  queryStageAttempt,
 } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
 
 function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
@@ -138,4 +139,59 @@ test('stage attempt closeout preserves OPL-selected action route and ignores for
   } finally {
     db.close();
   }
+});
+
+test('stage attempt closeout rejects non-refs-only object metadata without ledger writes', () => {
+  withAttempt((db, attemptId) => {
+    for (const metadata of [
+      { payload: { artifact_body: 'must-not-enter-ledger' } },
+      { label: 'unknown-field' },
+      { sha256: ['sha256:nested-array'] },
+      { size_bytes: -1 },
+    ]) {
+      assert.throws(
+        () => ingestStageAttemptCloseout(db, {
+          stageAttemptId: attemptId,
+          packet: {
+            ...closeoutPacket(),
+            closeout_refs: [{
+              ...metadata,
+              ref_kind: 'stage_attempt_closeout_packet_ref',
+              uri: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+            }],
+          },
+        }),
+        (error) => error instanceof FrameworkContractError
+          && /unsupported field or value/.test(error.message),
+      );
+    }
+
+    const query = queryStageAttempt(db, attemptId).stage_attempt_query;
+    assert.deepEqual(query.closeouts, []);
+    assert.deepEqual(query.attempt.closeout_refs, []);
+    assert.equal(query.attempt.closeout_receipt_status, null);
+  });
+});
+
+test('stage attempt closeout preserves canonical object-ref metadata through query', () => {
+  withAttempt((db, attemptId) => {
+    const ref = {
+      ref_kind: 'stage_attempt_closeout_packet_ref',
+      uri: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+      sha256: 'sha256:closeout',
+      size_bytes: 2048,
+    };
+    ingestStageAttemptCloseout(db, {
+      stageAttemptId: attemptId,
+      packet: {
+        ...closeoutPacket(),
+        closeout_refs: [ref],
+      },
+    });
+
+    assert.deepEqual(
+      queryStageAttempt(db, attemptId).stage_attempt_query.closeouts[0].packet.closeout_ref_metadata,
+      [{ ...ref, ref: ref.uri }],
+    );
+  });
 });
