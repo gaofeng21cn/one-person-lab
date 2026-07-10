@@ -1,6 +1,5 @@
 import {
   DECLARATIVE_DOMAIN_PACK,
-  DEFAULT_STAGE_EXECUTOR_BINDING_REF,
   DOMAIN_RETAINED_THIN_SURFACES,
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
@@ -12,12 +11,8 @@ import {
   STARTER_STAGE_ID,
   STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
   STANDARD_AGENT_PACK_ABI,
-  STANDARD_STAGE_COMPLETION_POLICY,
-  STANDARD_PROGRESS_DELTA_POLICY,
   STATE_INDEX_KERNEL_ADOPTION_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
-  STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-  STANDARD_USER_STAGE_LOG_CONTRACT,
   STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY,
   STAGE_RUN_KERNEL_PROFILE,
   WORKSPACE_FILE_LIFECYCLE_POLICY,
@@ -119,7 +114,7 @@ function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
     domain_aliases: [domainId],
     authority_owner: domainId,
     stage_manifest_ref: 'agent/stages/manifest.json',
-    stage_control_plane_ref: 'contracts/stage_control_plane.json',
+    stage_control_plane_ref: 'opl-generated:family_stage_control_plane',
     stage_control_plane_target_domain_id: domainId,
     app_projection_ref: 'contracts/generated_surface_handoff.json#/product_entry',
     domain_progress_aliases: {
@@ -353,6 +348,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
             'source_locator_refs',
             'expected_deliverable_class_ref',
             'domain_authority_owner_ref',
+            `stage-completion-policy-ref:${domainId}/${STARTER_STAGE_ID}`,
           ],
           ensures: [
             'domain_intake_receipt_or_typed_blocker_ref',
@@ -425,7 +421,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           foundry_agent_series: 'contracts/foundry_agent_series.json',
           foundry_agent_series_policy_release: FOUNDRY_AGENT_SERIES_POLICY_RELEASE.release_contract_ref,
           stage_manifest: 'agent/stages/manifest.json',
-          stage_control_plane: 'contracts/stage_control_plane.json',
+          stage_control_plane: 'opl-generated:family_stage_control_plane',
           pack_compiler_input: 'contracts/pack_compiler_input.json',
           capability_map: CAPABILITY_MAP_REF,
           generated_surface_handoff: 'contracts/generated_surface_handoff.json',
@@ -524,239 +520,6 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           'typed_blocker_schema',
           'minimal_authority_function_refs',
           'no_forbidden_write_evidence',
-        ],
-        marker: SCAFFOLD_MARKER,
-      }),
-    },
-    {
-      path: 'contracts/stage_control_plane.json',
-      content: json({
-        surface_kind: 'family_stage_control_plane',
-        version: 'family-stage-control-plane.v1',
-        plane_id: `${domainId}.stage-control-plane.v1`,
-        target_domain_id: domainId,
-        owner: domainId,
-        domain_id: domainId,
-        stage_pack_conformance_version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
-        authority_boundary: {
-          domain_truth_owner: domainId,
-          opl_role: 'projection_consumer_only',
-          opl_can_write_domain_truth: false,
-          opl_can_authorize_quality_or_export: false,
-        },
-        stages: [
-          {
-            stage_id: STARTER_STAGE_ID,
-            stage_kind: 'intake',
-            title: 'Domain intake',
-            summary: 'Capture domain intent, source refs, authority boundary, and next-stage readiness.',
-            goal: 'Produce intake receipt refs and a next-stage recommendation without granting OPL domain truth authority.',
-            owner: domainId,
-            stage_pack_conformance_version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
-            selected_executor: {
-              executor_kind: 'codex_cli',
-              default_executor: true,
-              executor_binding_ref: DEFAULT_STAGE_EXECUTOR_BINDING_REF,
-              binding_policy: 'default_first_class_executor_for_ai_first_stage_execution',
-              required_capabilities: [
-                'repo_context_reading',
-                'domain_skill_invocation',
-                'receipt_or_typed_blocker_return',
-                'no_forbidden_write_guard',
-              ],
-            },
-            capability_map_refs: [
-              {
-                ref_kind: 'repo_path',
-                ref: CAPABILITY_MAP_REF,
-                role: 'stage_capability_resolver_index',
-              },
-            ],
-            domain_stage_refs: [STARTER_STAGE_ID],
-            inputs: [],
-            knowledge_refs: [
-              {
-                ref_kind: 'repo_path',
-                ref: 'agent/knowledge/domain_boundary.md',
-                role: 'domain_pack_knowledge',
-              },
-            ],
-            skills: [
-              {
-                ref_kind: 'repo_path',
-                ref: 'agent/skills/domain_execution.md',
-                role: 'domain_pack_skill_policy',
-              },
-            ],
-            prompt_refs: [
-              {
-                ref_kind: 'repo_path',
-                ref: `agent/prompts/${STARTER_STAGE_ID}.md`,
-                role: 'stage_prompt',
-              },
-            ],
-            tool_refs: [
-              {
-                ref_kind: 'repo_path',
-                ref: 'agent/tools/domain_affordances.md',
-                role: 'tool_affordance_catalog',
-              },
-            ],
-            tool_affordance_boundary: {
-              catalog_role: 'available_affordance_catalog_not_workflow_script',
-              capability_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'agent/tools/domain_affordances.md',
-                  role: 'tool_capability_boundary',
-                },
-              ],
-              permission_scope_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'agent/tools/domain_affordances.md',
-                  role: 'tool_permission_scope_boundary',
-                },
-              ],
-              credential_boundary_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'agent/tools/domain_affordances.md',
-                  role: 'tool_credential_boundary',
-                },
-              ],
-              write_scope_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'agent/tools/domain_affordances.md',
-                  role: 'tool_write_scope_boundary',
-                },
-              ],
-              side_effect_risk_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'agent/tools/domain_affordances.md',
-                  role: 'tool_side_effect_risk_boundary',
-                },
-              ],
-              forbidden_authority_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'agent/tools/domain_affordances.md',
-                  role: 'tool_forbidden_authority_boundary',
-                },
-              ],
-              executor_autonomy: {
-                executor_can_choose_tools: true,
-                executor_can_skip_tools: true,
-                executor_can_substitute_tools_within_boundary: true,
-                executor_can_choose_order_and_parallelism: true,
-                executor_can_request_missing_context_or_human_gate: true,
-                tool_catalog_can_prescribe_tool_sequence: false,
-                tool_catalog_can_define_cognitive_strategy: false,
-                tool_catalog_can_override_stage_goal: false,
-                tool_catalog_can_authorize_forbidden_write: false,
-              },
-            },
-            allowed_action_refs: [STARTER_ACTION_ID],
-            outputs: [
-              {
-                ref_kind: 'domain_ref',
-                ref: ['intake_receipt_ref', 'typed_blocker_ref', 'next_stage_ref'],
-                role: 'domain_intake_refs',
-              },
-            ],
-            evaluation: [
-              {
-                ref_kind: 'repo_path',
-                ref: 'agent/quality_gates/domain_acceptance.md',
-                role: 'agent_quality_gate',
-              },
-            ],
-            independent_gate_policy: {
-              gate_ref: 'agent/quality_gates/domain_acceptance.md',
-              gate_owner: domainId,
-              execution_review_separation_required: true,
-              mechanical_completion_can_close_stage: false,
-              provider_completion_can_claim_domain_ready: false,
-              generated_surface_readiness_can_claim_quality_or_export: false,
-            },
-            stage_contract: {
-              requires: [
-                'user_intent_ref',
-                'source_locator_refs',
-                'expected_deliverable_class_ref',
-                'domain_authority_owner_ref',
-                `stage-completion-policy-ref:${domainId}/${STARTER_STAGE_ID}`,
-              ],
-              ensures: [
-                'domain_intake_receipt_or_typed_blocker_ref',
-                'next_stage_recommendation_ref',
-                'authority_boundary_ref',
-                'no_forbidden_write_evidence_ref',
-                `stage-closeout-packet-ref:${domainId}/${STARTER_STAGE_ID}/{stage_attempt_id}`,
-              ],
-              expected_receipt_refs: [
-                {
-                  ref_kind: 'domain_ref',
-                  ref: 'intake_receipt_ref',
-                  role: 'domain_owner_receipt',
-                },
-                {
-                  ref_kind: 'stage_closeout_packet_ref',
-                  ref: `stage-closeout-packet-ref:${domainId}/${STARTER_STAGE_ID}/{stage_attempt_id}`,
-                  role: 'domain_stage_completion_closeout',
-                },
-                {
-                  ref_kind: 'domain_ref',
-                  ref: 'typed_blocker_ref',
-                  role: 'route_back_or_blocker',
-                },
-              ],
-              receipt_schema_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'contracts/owner_receipt_contract.json',
-                  role: 'owner_receipt_schema',
-                },
-              ],
-              authority_function_refs: [
-                {
-                  ref_kind: 'repo_path',
-                  ref: 'runtime/authority_functions/README.md',
-                  role: 'minimal_authority_function_inventory',
-                },
-              ],
-              l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
-              l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
-              stage_completion_policy: {
-                ...STANDARD_STAGE_COMPLETION_POLICY,
-                policy_ref: `stage-completion-policy-ref:${domainId}/${STARTER_STAGE_ID}`,
-                stage_id: STARTER_STAGE_ID,
-                target_domain_id: domainId,
-              },
-              user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
-              progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-              typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-            },
-            handoff: {
-              next_owner: domainId,
-              next_stage_refs: [],
-            },
-            source_refs: [
-              {
-                ref_kind: 'repo_path',
-                ref: `agent/stages/${STARTER_STAGE_ID}.md`,
-                role: 'stage_policy',
-              },
-            ],
-            authority_boundary: {
-              domain_truth_owner: domainId,
-              opl_role: 'projection_consumer_only',
-              opl_can_write_domain_truth: false,
-              opl_can_authorize_quality_or_export: false,
-            },
-          },
         ],
         marker: SCAFFOLD_MARKER,
       }),

@@ -66,6 +66,10 @@ function strings(value: unknown, field: string, repoDir: string) {
   return value.map((entry, index) => text(entry, `${field}[${index}]`, repoDir));
 }
 
+function optionalStrings(value: unknown, field: string, repoDir: string) {
+  return value === undefined ? [] : strings(value, field, repoDir);
+}
+
 function repoFile(repoDir: string, value: unknown, field: string) {
   const ref = text(value, field, repoDir);
   if (
@@ -234,8 +238,21 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   const stagePackDeclaration = isRecord(packCompilerInput.standard_stage_pack_conformance)
     ? packCompilerInput.standard_stage_pack_conformance
     : null;
+  const declaredStagePackVersion = optionalString(stagePackDeclaration?.version);
+  if (
+    stagePackDeclaration?.required === true
+    && declaredStagePackVersion !== STANDARD_STAGE_PACK_CONFORMANCE_VERSION
+  ) {
+    fail(
+      `pack_compiler_input.standard_stage_pack_conformance.version must be ${STANDARD_STAGE_PACK_CONFORMANCE_VERSION} when required=true.`,
+      {
+        repo_dir: repoDir,
+        declared_version: declaredStagePackVersion,
+      },
+    );
+  }
   const stagePackV2Required = stagePackDeclaration?.required === true
-    && optionalString(stagePackDeclaration.version) === STANDARD_STAGE_PACK_CONFORMANCE_VERSION;
+    || declaredStagePackVersion === STANDARD_STAGE_PACK_CONFORMANCE_VERSION;
   const manifestRead = readJson(repoDir, STANDARD_AGENT_STAGE_MANIFEST_REF, 'stage_manifest_ref');
   const manifest = record(manifestRead.payload, 'stage_manifest', repoDir);
   text(manifest.surface_kind, 'stage_manifest.surface_kind', repoDir);
@@ -302,6 +319,70 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       fail('Stage manifest references unresolved next stages.', { repo_dir: repoDir, stage_id: stageId, missingStages });
     }
     const declaredStageContract = isRecord(stage.stage_contract) ? stage.stage_contract : {};
+    const stageOrigin = optionalString(stage.stage_origin);
+    const patternId = optionalString(stage.pattern_id);
+    const stepId = optionalString(stage.step_id);
+    const provenanceKind = optionalString(stage.provenance_kind);
+    const sourcePatternRef = optionalString(stage.source_pattern_ref);
+    const targetOnlyRequirementRef = optionalString(stage.target_only_requirement_ref);
+    const sourceAnchorRefs = optionalStrings(stage.source_anchor_refs, 'stage.source_anchor_refs', repoDir);
+    const declaredStagePatternSourceRefs = optionalStrings(
+      stage.stage_pattern_source_refs,
+      'stage.stage_pattern_source_refs',
+      repoDir,
+    );
+    if (stageOrigin === 'source_pattern_ref') {
+      if (!patternId || !stepId || !provenanceKind || !sourcePatternRef || sourceAnchorRefs.length === 0) {
+        fail('Source-derived manifest stages must bind pattern, step, provenance, source pattern, and source anchors.', {
+          repo_dir: repoDir,
+          stage_id: stageId,
+        });
+      }
+      if (targetOnlyRequirementRef) {
+        fail('Source-derived manifest stages cannot also bind target_only_requirement_ref.', {
+          repo_dir: repoDir,
+          stage_id: stageId,
+        });
+      }
+    } else if (stageOrigin === 'target_only_requirement') {
+      if (!targetOnlyRequirementRef) {
+        fail('Target-only manifest stages must bind target_only_requirement_ref.', {
+          repo_dir: repoDir,
+          stage_id: stageId,
+        });
+      }
+      if (
+        patternId
+        || stepId
+        || provenanceKind
+        || sourcePatternRef
+        || sourceAnchorRefs.length > 0
+        || declaredStagePatternSourceRefs.length > 0
+      ) {
+        fail('Target-only manifest stages cannot bind source-pattern provenance fields.', {
+          repo_dir: repoDir,
+          stage_id: stageId,
+        });
+      }
+    } else if (
+      stageOrigin
+      || patternId
+      || stepId
+      || provenanceKind
+      || sourcePatternRef
+      || targetOnlyRequirementRef
+      || sourceAnchorRefs.length > 0
+      || declaredStagePatternSourceRefs.length > 0
+    ) {
+      fail('Manifest stage provenance requires stage_origin=source_pattern_ref or target_only_requirement.', {
+        repo_dir: repoDir,
+        stage_id: stageId,
+        stage_origin: stageOrigin,
+      });
+    }
+    const stagePatternSourceRefs = sourcePatternRef
+      ? [...new Set([sourcePatternRef, ...declaredStagePatternSourceRefs])]
+      : declaredStagePatternSourceRefs;
     return {
       stage_id: stageId,
       stage_kind: text(stage.stage_kind, 'stage.stage_kind', repoDir),
@@ -309,6 +390,14 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       summary: optionalString(stage.summary),
       goal: text(stage.goal, 'stage.goal', repoDir),
       owner: domainId,
+      ...(stageOrigin ? { stage_origin: stageOrigin } : {}),
+      ...(patternId ? { pattern_id: patternId } : {}),
+      ...(stepId ? { step_id: stepId } : {}),
+      ...(provenanceKind ? { provenance_kind: provenanceKind } : {}),
+      ...(sourcePatternRef ? { source_pattern_ref: sourcePatternRef } : {}),
+      ...(targetOnlyRequirementRef ? { target_only_requirement_ref: targetOnlyRequirementRef } : {}),
+      ...(sourceAnchorRefs.length > 0 ? { source_anchor_refs: sourceAnchorRefs } : {}),
+      ...(stagePatternSourceRefs.length > 0 ? { stage_pattern_source_refs: stagePatternSourceRefs } : {}),
       stage_pack_conformance_version: stagePackV2Required
         ? STANDARD_STAGE_PACK_CONFORMANCE_VERSION
         : undefined,
@@ -390,12 +479,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         l5_entry_gate: isRecord(declaredStageContract.l5_entry_gate)
           ? declaredStageContract.l5_entry_gate
           : STANDARD_AGENT_PACK_ABI.l5_entry_gate,
-        stage_completion_policy: isRecord(declaredStageContract.stage_completion_policy)
-          ? declaredStageContract.stage_completion_policy
-          : STANDARD_STAGE_COMPLETION_POLICY,
-        user_stage_log_contract: isRecord(declaredStageContract.user_stage_log_contract)
-          ? declaredStageContract.user_stage_log_contract
-          : STANDARD_USER_STAGE_LOG_CONTRACT,
+        stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
+        user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
         progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
         typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       },

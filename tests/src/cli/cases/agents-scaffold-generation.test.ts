@@ -1,4 +1,5 @@
 import { validateJsonSchemaPayload } from '../../../../src/kernel/schema-registry.ts';
+import { compileStandardAgentStageManifest } from '../../../../src/modules/pack/index.ts';
 import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 
 function readJsonFile<T = any>(filePath: string): T {
@@ -60,12 +61,16 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     assert.equal(descriptor.domain_id, 'award-foundry');
     assert.equal(descriptor.standard_contract_refs.foundry_agent_series, 'contracts/foundry_agent_series.json');
     assert.equal(descriptor.standard_contract_refs.capability_map, 'contracts/capability_map.json');
+    assert.equal(descriptor.standard_contract_refs.stage_manifest, 'agent/stages/manifest.json');
+    assert.equal(descriptor.standard_contract_refs.stage_control_plane, 'opl-generated:family_stage_control_plane');
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
 
     const foundryAgentSeries = readJsonFile(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
     assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
     assert.equal(foundryAgentSeries.domain_id, 'award-foundry');
+    assert.equal(foundryAgentSeries.stage_manifest_ref, 'agent/stages/manifest.json');
+    assert.equal(foundryAgentSeries.stage_control_plane_ref, 'opl-generated:family_stage_control_plane');
     assert.equal(foundryAgentSeries.agent_cli_command_surface_policy.policy_id, 'foundry_agent_series_spine_public_command_surface');
     assertIncludesAll(foundryAgentSeries.agent_cli_command_surface_policy.ordinary_public_command_surface_spine, [
       'workspace',
@@ -95,12 +100,13 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'capability_map_source_ref',
     ]);
 
-    const stageControlPlane = readJsonFile(path.join(targetDir, 'contracts/stage_control_plane.json'));
-    const stage = stageControlPlane.stages[0];
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/stage_control_plane.json')), false);
+    const stageControlPlane = compileStandardAgentStageManifest(targetDir).stage_control_plane;
+    const stage = stageControlPlane.stages[0] as any;
     assert.equal(stageControlPlane.surface_kind, 'family_stage_control_plane');
     assert.equal(stage.stage_pack_conformance_version, 'standard-stage-pack.v2');
     assert.equal(stage.selected_executor.executor_kind, 'codex_cli');
-    assert.equal(stage.independent_gate_policy.provider_completion_can_claim_domain_ready, false);
+    assert.equal(stage.authority_boundary.provider_completion_is_domain_completion, false);
     assertIncludesAll(stage.stage_contract.requires, [
       'user_intent_ref',
       'domain_authority_owner_ref',
@@ -157,7 +163,7 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     assert.equal(validated.mode, 'validate');
     assert.equal(validated.state, 'validated');
     assert.equal(validated.validation.status, 'passed');
-    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 8);
+    assert.equal(validated.validation.agent_pack_validation.semantic_listed_path_count, 9);
     assert.deepEqual(validated.validation.user_stage_log_validation.blockers, []);
     assert.deepEqual(validated.validation.foundry_agent_series_validation.blockers, []);
     assert.deepEqual(validated.validation.stage_pack_v2_validation.blockers, []);

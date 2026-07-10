@@ -102,7 +102,7 @@ function selfEvolutionRoutingFields(input: {
 }
 
 export function standardCapabilityMap(domainId: string, domainLabel: string) {
-  const stageRef = 'contracts/stage_control_plane.json#/stages/0';
+  const stageRef = 'opl-generated:family_stage_control_plane#/stages/0';
   return {
     surface_kind: 'opl_standard_agent_capability_map',
     schema_version: 'standard-agent-capability-map.v1',

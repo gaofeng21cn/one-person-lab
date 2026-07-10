@@ -588,7 +588,7 @@
     "product_layer",
     "domain_label",
     "authority_owner",
-    "stage_control_plane_ref"
+    "stage_manifest_ref"
   ],
   "required_stage_packets": [
     "stage_completion_policy",

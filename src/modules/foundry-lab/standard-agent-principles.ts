@@ -138,14 +138,15 @@ export function buildStandardAgentPrinciplesAdoption(domainId: string, domainLab
     source_refs: {
       opl_projection_ref: 'agent/principles/opl-standard-agent-principles.md',
       domain_specialization_ref: 'agent/principles/domain-specialization.md',
-      stage_control_plane_ref: 'contracts/stage_control_plane.json',
+      stage_manifest_ref: 'agent/stages/manifest.json',
+      stage_control_plane_ref: 'opl-generated:family_stage_control_plane',
       pack_compiler_input_ref: 'contracts/pack_compiler_input.json',
       action_catalog_ref: 'contracts/action_catalog.json',
     },
     domain_mapping: {
       domain_intake: {
         principle_id: 'domain_intake_mapping',
-        domain_stage_ref: 'contracts/stage_control_plane.json#/stages/0',
+        domain_stage_ref: 'agent/stages/manifest.json#/stages/0',
         stage_id: 'domain_intake',
         prompt_ref: 'agent/prompts/domain_intake.md',
         is_standalone_skill: false,
@@ -213,9 +214,24 @@ export function buildStandardAgentPrincipleAdoptionChecks(repoDir: string) {
     optionalString(sourceRefs.domain_specialization_ref)?.startsWith('agent/principles/')
       ? null
       : 'standard_agent_domain_specialization_ref_missing',
+    optionalString(sourceRefs.stage_manifest_ref) === 'agent/stages/manifest.json'
+      ? null
+      : 'standard_agent_stage_manifest_ref_invalid',
+    [
+      'opl-generated:family_stage_control_plane',
+      '/product_entry_manifest/family_stage_control_plane',
+    ].includes(optionalString(sourceRefs.stage_control_plane_ref) ?? '')
+      ? null
+      : 'standard_agent_generated_stage_control_plane_ref_invalid',
     optionalString(domainIntake.principle_id) === 'domain_intake_mapping'
       ? null
       : 'standard_agent_domain_intake_principle_mapping_missing',
+    [
+      'agent/stages/manifest.json#/stages/0',
+      '/product_entry_manifest/family_stage_control_plane/stages/0',
+    ].includes(optionalString(domainIntake.domain_stage_ref) ?? '')
+      ? null
+      : 'standard_agent_domain_intake_stage_ref_invalid',
     domainIntake.is_standalone_skill === false
       ? null
       : 'standard_agent_domain_intake_must_not_be_standalone_skill',
@@ -247,11 +263,13 @@ export function buildStandardAgentPrincipleAdoptionChecks(repoDir: string) {
     source_refs: {
       opl_projection_ref: optionalString(sourceRefs.opl_projection_ref),
       domain_specialization_ref: optionalString(sourceRefs.domain_specialization_ref),
+      stage_manifest_ref: optionalString(sourceRefs.stage_manifest_ref),
       stage_control_plane_ref: optionalString(sourceRefs.stage_control_plane_ref),
       pack_compiler_input_ref: optionalString(sourceRefs.pack_compiler_input_ref),
     },
     domain_mapping: {
       domain_intake_stage_id: optionalString(domainIntake.stage_id),
+      domain_intake_stage_ref: optionalString(domainIntake.domain_stage_ref),
       domain_intake_is_standalone_skill: domainIntake.is_standalone_skill ?? null,
       owner_receipt_or_typed_blocker_required:
         domainIntake.owner_receipt_or_typed_blocker_required ?? null,

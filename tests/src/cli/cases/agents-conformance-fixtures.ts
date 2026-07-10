@@ -1,4 +1,5 @@
 import { fs, os, parseJsonText, path, runCli } from '../helpers.ts';
+import { compileStandardAgentStageManifest } from '../../../../src/modules/pack/index.ts';
 
 const FORBIDDEN_GENERIC_OWNER_ROLES = [
   'generic_scheduler_owner',
@@ -251,11 +252,10 @@ export function buildReadyAgentRepo() {
     ],
     notes: [],
   });
-  const stageControlPlanePath = contractPath(targetDir, 'stage_control_plane.json');
-  const stageControlPlane = readJson(stageControlPlanePath);
-  stageControlPlane.stages[0].allowed_action_refs = ['draft_brief'];
-  writeJson(stageControlPlanePath, stageControlPlane);
-  syncStageManifestFromPlane(targetDir, stageControlPlane);
+  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = readJson(stageManifestPath);
+  stageManifest.stages[0].allowed_action_refs = ['draft_brief'];
+  writeJson(stageManifestPath, stageManifest);
 
   writeJson(contractPath(targetDir, 'generated_surface_handoff.json'), {
     surface_kind: 'opl_generated_surface_handoff',
@@ -466,7 +466,7 @@ export function buildReadyAgentRepo() {
     },
     domain_pack_binding: {
       accepted_source_refs: [
-        'contracts/stage_control_plane.json',
+        'agent/stages/manifest.json',
         'contracts/foundry_agent_series.json',
       ],
       domain_output_roles_are_interface: true,
@@ -588,8 +588,9 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
 }
 
 function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
-  const stageControlPlanePath = contractPath(repoDir, 'stage_control_plane.json');
-  const stageControlPlane = readJson(stageControlPlanePath);
+  const stageControlPlane = structuredClone(
+    compileStandardAgentStageManifest(repoDir).stage_control_plane,
+  ) as Record<string, any>;
   stageControlPlane.target_domain_id = domainId;
   stageControlPlane.owner = owner;
   stageControlPlane.domain_id = domainId;
@@ -601,7 +602,7 @@ function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
     opl_can_write_domain_truth: false,
     opl_can_authorize_quality_or_export: false,
   };
-  return { stageControlPlanePath, stageControlPlane };
+  return stageControlPlane;
 }
 
 function stageFromBase(baseStage: Record<string, any>, input: {
@@ -697,7 +698,7 @@ export function configureReadyMagMorphology(repoDir: string) {
 }
 
 export function configureReadyRcaMorphology(repoDir: string) {
-  const { stageControlPlanePath, stageControlPlane } = setStagePlaneTarget(repoDir, 'redcube-ai', 'redcube-ai');
+  const stageControlPlane = setStagePlaneTarget(repoDir, 'redcube-ai', 'redcube-ai');
   const baseStage = stageControlPlane.stages[0];
   stageControlPlane.stages = [
     {
@@ -774,7 +775,6 @@ export function configureReadyRcaMorphology(repoDir: string) {
       executorBindingRef: 'rca_native_pptx_export_affordance',
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'redcube-ai', ...stage }));
-  writeJson(stageControlPlanePath, stageControlPlane);
   syncStageManifestFromPlane(repoDir, stageControlPlane);
 
   writeJson(path.join(repoDir, 'contracts', 'physical_source_morphology_policy.json'), {
@@ -808,7 +808,7 @@ export function configureReadyRcaMorphology(repoDir: string) {
 }
 
 export function configureReadyMetaMorphology(repoDir: string) {
-  const { stageControlPlanePath, stageControlPlane } = setStagePlaneTarget(repoDir, 'opl-meta-agent', 'opl-meta-agent');
+  const stageControlPlane = setStagePlaneTarget(repoDir, 'opl-meta-agent', 'opl-meta-agent');
   const baseStage = stageControlPlane.stages[0];
   stageControlPlane.stages = [
     {
@@ -834,7 +834,6 @@ export function configureReadyMetaMorphology(repoDir: string) {
       goal: 'Produce target-agent work-order output refs, no-forbidden-write proof, and target-owner handoff refs.',
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'opl-meta-agent', ...stage }));
-  writeJson(stageControlPlanePath, stageControlPlane);
   syncStageManifestFromPlane(repoDir, stageControlPlane);
 
   fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });

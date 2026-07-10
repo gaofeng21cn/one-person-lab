@@ -1,4 +1,5 @@
 import { assert, fs, parseJsonText, path, runCli, test } from '../helpers.ts';
+import { compileStandardAgentStageManifest } from '../../../../src/modules/pack/index.ts';
 import {
   buildReadyAgentRepo,
   writeJson,
@@ -7,7 +8,7 @@ import {
 test('agents conformance ignores legacy stage-plane default routes after manifest cutover', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
+  const stageControlPlane = compileStandardAgentStageManifest(repoDir).stage_control_plane as any;
   const secondaryDefaultStage = {
     ...stageControlPlane.stages[0],
     stage_id: 'secondary_default_stage',

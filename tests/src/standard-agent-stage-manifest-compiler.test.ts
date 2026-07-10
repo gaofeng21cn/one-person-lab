@@ -10,6 +10,7 @@ import {
   buildStandardAgentRepoContractReadout,
   compileStandardAgentStageManifest,
 } from '../../src/modules/pack/index.ts';
+import { buildStandardDomainAgentConformanceReport } from '../../src/modules/foundry-lab/standard-domain-agent-conformance.ts';
 
 type JsonRecord = Record<string, any>;
 
@@ -153,6 +154,21 @@ function writeManifest(root: string, manifest: unknown) {
   writeJson(root, 'agent/stages/manifest.json', manifest);
 }
 
+function collectNestedBlockers(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(collectNestedBlockers);
+  }
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, entry]) => [
+    ...(key === 'blockers' && Array.isArray(entry)
+      ? entry.filter((blocker): blocker is string => typeof blocker === 'string')
+      : []),
+    ...collectNestedBlockers(entry),
+  ]);
+}
+
 test('standard Agent stage manifest compiler keeps stable domain identity and target separation', () => {
   const alphaRoot = fixture('target-alpha', 'agent-alpha');
   const betaRoot = fixture('target-beta', 'agent-beta');
@@ -180,6 +196,41 @@ test('standard Agent stage manifest compiler keeps stable domain identity and ta
   const generated = buildRepoGeneratedInterfaceBundle(alphaRoot, 'product-entry').bundle as JsonRecord;
   assert.equal(generated.agent_id, 'agent-alpha');
   assert.equal(generated.target_domain_id, 'target-alpha');
+});
+
+test('standard Agent stage manifest compiler preserves exclusive source-derived provenance', () => {
+  const root = fixture('target-provenance');
+  const manifest = readManifest(root);
+  manifest.stages[0] = {
+    ...manifest.stages[0],
+    stage_origin: 'source_pattern_ref',
+    pattern_id: 'source-pattern',
+    step_id: 'intake-step',
+    provenance_kind: 'source_derived',
+    source_pattern_ref: 'pattern-ref:source/intake',
+    source_anchor_refs: ['source-ref:paper#intake'],
+  };
+  manifest.stages[1] = {
+    ...manifest.stages[1],
+    stage_origin: 'target_only_requirement',
+    target_only_requirement_ref: 'target-only-requirement:target-provenance/deliver',
+  };
+  writeManifest(root, manifest);
+
+  const compilation = compileStandardAgentStageManifest(root);
+  assert.equal(compilation.stage_control_plane.stages[0]?.stage_origin, 'source_pattern_ref');
+  assert.equal(compilation.stage_control_plane.stages[0]?.pattern_id, 'source-pattern');
+  assert.equal(compilation.stage_control_plane.stages[0]?.step_id, 'intake-step');
+  assert.equal(compilation.stage_control_plane.stages[0]?.source_pattern_ref, 'pattern-ref:source/intake');
+  assert.deepEqual(
+    compilation.stage_control_plane.stages[0]?.stage_pattern_source_refs,
+    ['pattern-ref:source/intake'],
+  );
+  assert.equal(compilation.stage_control_plane.stages[1]?.stage_origin, 'target_only_requirement');
+  assert.equal(
+    compilation.stage_control_plane.stages[1]?.target_only_requirement_ref,
+    'target-only-requirement:target-provenance/deliver',
+  );
 });
 
 test('standard Agent stage manifest compiler requires an explicit canonical agent id', async (t) => {
@@ -232,6 +283,32 @@ test('standard Agent stage manifest compiler fails closed for malformed identity
       ...manifest,
       stages: [{ ...manifest.stages[0], next_stage_refs: ['missing'] }, manifest.stages[1]],
     })],
+    ['mixed source and target-only provenance', (_root, manifest) => ({
+      ...manifest,
+      stages: [{
+        ...manifest.stages[0],
+        stage_origin: 'source_pattern_ref',
+        pattern_id: 'source-pattern',
+        step_id: 'intake-step',
+        provenance_kind: 'source_derived',
+        source_pattern_ref: 'pattern-ref:source/intake',
+        source_anchor_refs: ['source-ref:paper#intake'],
+        target_only_requirement_ref: 'target-only-requirement:target-negative/intake',
+      }, manifest.stages[1]],
+    })],
+    ['mixed target-only and source provenance', (_root, manifest) => ({
+      ...manifest,
+      stages: [{
+        ...manifest.stages[0],
+        stage_origin: 'target_only_requirement',
+        target_only_requirement_ref: 'target-only-requirement:target-negative/intake',
+        pattern_id: 'source-pattern',
+        step_id: 'intake-step',
+        provenance_kind: 'source_derived',
+        source_pattern_ref: 'pattern-ref:source/intake',
+        source_anchor_refs: ['source-ref:paper#intake'],
+      }, manifest.stages[1]],
+    })],
   ];
   for (const [name, mutate] of cases) {
     await t.test(name, () => {
@@ -277,17 +354,74 @@ test('stage manifest compiler rejects missing default receipt and authority-func
   }
 });
 
+test('stage manifest compiler fails closed for an invalid required v2 declaration', () => {
+  const root = fixture('target-invalid-stage-pack');
+  const inputRef = path.join(root, 'contracts/pack_compiler_input.json');
+  const input = JSON.parse(fs.readFileSync(inputRef, 'utf8')) as JsonRecord;
+  input.standard_stage_pack_conformance = {
+    required: true,
+    version: 'standard-stage-pack.v1',
+  };
+  writeJson(root, 'contracts/pack_compiler_input.json', input);
+  assert.throws(() => compileStandardAgentStageManifest(root));
+});
+
+test('stage manifest compiler honors an explicit v2 version without allowing policy overrides', () => {
+  const root = fixture('target-stage-policy');
+  const inputRef = path.join(root, 'contracts/pack_compiler_input.json');
+  const input = JSON.parse(fs.readFileSync(inputRef, 'utf8')) as JsonRecord;
+  input.standard_stage_pack_conformance = {
+    required: false,
+    version: 'standard-stage-pack.v2',
+  };
+  writeJson(root, 'contracts/pack_compiler_input.json', input);
+  const manifest = readManifest(root);
+  manifest.stages[0].stage_contract = {
+    stage_completion_policy: {
+      surface_kind: 'domain_override',
+      owner: 'target-stage-policy',
+      closeout_packet_required: false,
+    },
+    user_stage_log_contract: {
+      surface_kind: 'domain_override',
+      owner: 'target-stage-policy',
+      required: false,
+    },
+  };
+  writeManifest(root, manifest);
+
+  const compilation = compileStandardAgentStageManifest(root);
+  const stage = compilation.stage_control_plane.stages[0]!;
+  const completionPolicy = stage.stage_contract?.stage_completion_policy as JsonRecord;
+  const userStageLogContract = stage.stage_contract?.user_stage_log_contract as JsonRecord;
+  assert.equal(compilation.stage_control_plane.stage_pack_conformance_version, 'standard-stage-pack.v2');
+  assert.equal(stage.stage_pack_conformance_version, 'standard-stage-pack.v2');
+  assert.equal(completionPolicy.surface_kind, 'domain_stage_completion_policy');
+  assert.equal(completionPolicy.owner, 'one-person-lab');
+  assert.equal(completionPolicy.closeout_packet_required, true);
+  assert.equal(userStageLogContract.surface_kind, 'opl_standard_agent_user_stage_log_contract');
+  assert.equal(userStageLogContract.owner, 'one-person-lab');
+});
+
 test('real MAG manifest compiles into generated product-entry without the legacy contract', (t) => {
+  const explicitMagRepo = process.env.MAG_REPO_DIR
+    ? path.resolve(process.env.MAG_REPO_DIR)
+    : null;
   const candidates = [
-    process.env.MAG_REPO_DIR,
     path.resolve(REPO_ROOT, '../med-autogrant'),
     path.resolve(REPO_ROOT, '../../med-autogrant'),
-  ].filter((entry): entry is string => Boolean(entry));
-  const magRepo = candidates.find((entry) => fs.existsSync(path.join(entry, 'agent/stages/manifest.json')));
+  ];
+  const magRepo = explicitMagRepo
+    ?? candidates.find((entry) =>
+      fs.existsSync(path.join(entry, 'agent/stages/manifest.json'))
+      && !fs.existsSync(path.join(entry, 'contracts/stage_control_plane.json'))
+    );
   if (!magRepo) {
     t.skip('real MAG checkout not available');
     return;
   }
+  assert.equal(fs.existsSync(path.join(magRepo, 'contracts/stage_control_plane.json')), false);
+  assert.equal(fs.existsSync(path.join(magRepo, 'src/med_autogrant/stage_control_plane.py')), false);
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-mag-stage-manifest-'));
   fs.cpSync(path.join(magRepo, 'agent'), path.join(root, 'agent'), { recursive: true });
@@ -340,4 +474,12 @@ test('real MAG manifest compiles into generated product-entry without the legacy
   const consumed = generated.source_contract_consumption.consumed_contracts as JsonRecord[];
   assert.equal(consumed.some((entry) => entry.path === 'contracts/stage_control_plane.json'), false);
   assert.equal(consumed.some((entry) => entry.path === 'agent/stages/manifest.json'), true);
+
+  const conformance = buildStandardDomainAgentConformanceReport([
+    '--agent',
+    `mag=${magRepo}`,
+  ]).standard_domain_agent_conformance;
+  assert.equal(conformance.status, 'passed');
+  assert.equal(conformance.reports[0]?.status, 'passed');
+  assert.deepEqual(collectNestedBlockers(conformance.reports[0]), []);
 });

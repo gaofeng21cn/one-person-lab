@@ -33,7 +33,7 @@ export const STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY = {
   },
   domain_pack_binding: {
     accepted_source_refs: [
-      'contracts/stage_control_plane.json',
+      'agent/stages/manifest.json',
       'contracts/foundry_agent_series.json',
     ],
     domain_output_roles_are_interface: true,

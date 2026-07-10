@@ -521,7 +521,7 @@ export function buildStandardDomainAgentTemplateConsumptionReadModel() {
       'contracts/capability_map.json',
       'contracts/pack_compiler_input.json',
       'contracts/generated_surface_handoff.json',
-      'contracts/stage_control_plane.json',
+      'agent/stages/manifest.json',
       'agent/prompts/domain_intake.md',
       'agent/skills/domain_execution.md',
       'agent/tools/domain_affordances.md',

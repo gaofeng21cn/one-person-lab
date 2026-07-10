@@ -38,6 +38,28 @@
     "stage_plane_identity_policy": "family_stage_control_plane_remains_domain_scoped_and_does_not_duplicate_canonical_agent_identity",
     "missing_canonical_agent_id_policy": "fail_closed"
   },
+  "standard_agent_stage_manifest_compilation": {
+    "source_ref": "agent/stages/manifest.json",
+    "generated_surface_ref": "opl-generated:family_stage_control_plane",
+    "tracked_stage_control_plane_policy": "forbidden_as_standard_agent_source_or_fallback",
+    "required_v2_policy": "standard_stage_pack_conformance.required=true_requires_version_standard-stage-pack.v2_and_invalid_or_missing_version_fails_closed",
+    "explicit_v2_version_policy": "version_standard-stage-pack.v2_enables_v2_even_when_required_is_false",
+    "stagecraft_policy_ownership": {
+      "stage_completion_policy": "opl_stagecraft_constant_not_domain_overrideable",
+      "user_stage_log_contract": "opl_stagecraft_constant_not_domain_overrideable"
+    },
+    "source_derived_stage_provenance_fields": [
+      "stage_origin",
+      "pattern_id",
+      "step_id",
+      "provenance_kind",
+      "source_pattern_ref",
+      "source_anchor_refs",
+      "stage_pattern_source_refs",
+      "target_only_requirement_ref"
+    ],
+    "provenance_exclusivity_policy": "source_pattern_ref_and_target_only_requirement_are_mutually_exclusive_stage_origins"
+  },
   "input_surfaces": [
     "family_agent_descriptor.entry",
     "family_agent_descriptor.family_action_catalog",

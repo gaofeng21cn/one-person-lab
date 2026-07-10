@@ -42,6 +42,8 @@ function findForbiddenActivePublicFoundryFields(value: unknown, pathParts: strin
 export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, enforceToolAffordanceBoundary: boolean) {
   const contract = isPlainRecord(foundryAgentSeries) ? foundryAgentSeries : null;
   const requiredIdentityFields = readStringArray(contract?.required_identity_fields);
+  const stageManifestRef = readOptionalString(contract?.stage_manifest_ref);
+  const stageControlPlaneRef = readOptionalString(contract?.stage_control_plane_ref);
   const requiredStagePackets = readStringArray(contract?.required_stage_packets);
   const sharedProgressProjectionFields = readStringArray(contract?.shared_progress_projection_fields);
   const contractVersionPolicy = isPlainRecord(contract?.contract_version_policy)
@@ -479,16 +481,13 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     readOptionalString(contract?.domain_id) ? null : 'foundry_agent_series_missing_domain_id',
     readOptionalString(contract?.foundry_agent_id) ? null : 'foundry_agent_series_missing_foundry_agent_id',
     readOptionalString(contract?.authority_owner) ? null : 'foundry_agent_series_missing_authority_owner',
-    [
-      'agent/stages/manifest.json',
-      'contracts/stage_control_plane.json',
-    ].includes(
-      readOptionalString(contract?.stage_manifest_ref)
-        ?? readOptionalString(contract?.stage_control_plane_ref)
-        ?? '',
-    )
+    stageManifestRef === 'agent/stages/manifest.json'
       ? null
-      : 'foundry_agent_series_stage_control_plane_ref_invalid',
+      : 'foundry_agent_series_stage_manifest_ref_invalid',
+    stageControlPlaneRef === 'opl-generated:family_stage_control_plane'
+      || stageControlPlaneRef === '/product_entry_manifest/family_stage_control_plane'
+      ? null
+      : 'foundry_agent_series_generated_stage_control_plane_ref_invalid',
     requiredIdentityFields.includes('domain_id')
       ? null
       : 'foundry_agent_series_missing_identity_domain_id',
@@ -498,6 +497,9 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     requiredIdentityFields.includes('authority_owner')
       ? null
       : 'foundry_agent_series_missing_identity_authority_owner',
+    requiredIdentityFields.includes('stage_manifest_ref')
+      ? null
+      : 'foundry_agent_series_missing_identity_stage_manifest_ref',
     requiredStagePackets.includes('progress_delta_policy')
       ? null
       : 'foundry_agent_series_missing_stage_packet_progress_delta_policy',

@@ -96,6 +96,14 @@ export interface FamilyStageDescriptor {
   summary: string | null;
   goal: string;
   owner: string;
+  stage_origin?: string | null;
+  pattern_id?: string | null;
+  step_id?: string | null;
+  provenance_kind?: string | null;
+  source_pattern_ref?: string | null;
+  target_only_requirement_ref?: string | null;
+  source_anchor_refs?: string[];
+  stage_pattern_source_refs?: string[];
   stage_pack_conformance_version?: string | null;
   selected_executor?: JsonRecord | null;
   domain_stage_refs: string[];
@@ -326,6 +334,14 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
   if (!boundary) {
     throw new Error(`${field}.authority_boundary must be an object.`);
   }
+  const stageOrigin = optionalString(value.stage_origin);
+  const patternId = optionalString(value.pattern_id);
+  const stepId = optionalString(value.step_id);
+  const provenanceKind = optionalString(value.provenance_kind);
+  const sourcePatternRef = optionalString(value.source_pattern_ref);
+  const targetOnlyRequirementRef = optionalString(value.target_only_requirement_ref);
+  const sourceAnchorRefs = readStringList(value.source_anchor_refs);
+  const stagePatternSourceRefs = readStringList(value.stage_pattern_source_refs);
 
   return {
     stage_id: requireString(value.stage_id, `${field}.stage_id`),
@@ -334,6 +350,14 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     summary: optionalString(value.summary),
     goal: requireString(value.goal, `${field}.goal`),
     owner: requireString(value.owner, `${field}.owner`),
+    ...(stageOrigin ? { stage_origin: stageOrigin } : {}),
+    ...(patternId ? { pattern_id: patternId } : {}),
+    ...(stepId ? { step_id: stepId } : {}),
+    ...(provenanceKind ? { provenance_kind: provenanceKind } : {}),
+    ...(sourcePatternRef ? { source_pattern_ref: sourcePatternRef } : {}),
+    ...(targetOnlyRequirementRef ? { target_only_requirement_ref: targetOnlyRequirementRef } : {}),
+    ...(sourceAnchorRefs.length > 0 ? { source_anchor_refs: sourceAnchorRefs } : {}),
+    ...(stagePatternSourceRefs.length > 0 ? { stage_pattern_source_refs: stagePatternSourceRefs } : {}),
     stage_pack_conformance_version: optionalString(value.stage_pack_conformance_version),
     selected_executor: isRecord(value.selected_executor) ? value.selected_executor : null,
     domain_stage_refs: readStringList(value.domain_stage_refs),

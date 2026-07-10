@@ -980,6 +980,11 @@ function buildSourceDerivedTypedObjectFloor(
       blockers.push(`source_derived_design_stage_control_plane_planned_stage_count_invalid:${stageId}`);
       return;
     }
+    const actualStage = actualStages[0];
+    const actualOrigin = machineString(actualStage.stage_origin);
+    if (actualOrigin !== origin) {
+      blockers.push(`source_derived_design_stage_manifest_origin_mismatch:${stageId}`);
+    }
     if (origin === 'target_only_requirement') {
       const targetOnlyRequirementRef = machineString(plannedStage.target_only_requirement_ref);
       if (!targetOnlyRequirementRef) {
@@ -987,6 +992,30 @@ function buildSourceDerivedTypedObjectFloor(
         return;
       }
       targetOnlyRequirementRefs.push(targetOnlyRequirementRef);
+      if (machineString(actualStage.target_only_requirement_ref) !== targetOnlyRequirementRef) {
+        blockers.push(`source_derived_design_stage_manifest_target_only_requirement_ref_mismatch:${stageId}`);
+      }
+    } else if (origin === 'source_pattern_ref') {
+      const plannedPatternId = machineString(plannedStage.pattern_id);
+      const plannedStepId = machineString(plannedStage.step_id);
+      const plannedSourcePatternRef = machineString(plannedStage.source_pattern_ref);
+      if (!plannedPatternId || !plannedStepId || !plannedSourcePatternRef) {
+        blockers.push(`source_derived_design_agent_pack_plan_invalid_source_provenance:${stageId}`);
+        return;
+      }
+      if (machineString(actualStage.pattern_id) !== plannedPatternId) {
+        blockers.push(`source_derived_design_stage_manifest_pattern_id_mismatch:${stageId}`);
+      }
+      if (machineString(actualStage.step_id) !== plannedStepId) {
+        blockers.push(`source_derived_design_stage_manifest_step_id_mismatch:${stageId}`);
+      }
+      const actualSourcePatternRefs = uniqueStrings([
+        actualStage.source_pattern_ref,
+        ...uniqueStrings(actualStage.stage_pattern_source_refs),
+      ]);
+      if (!actualSourcePatternRefs.includes(plannedSourcePatternRef)) {
+        blockers.push(`source_derived_design_stage_manifest_source_pattern_ref_mismatch:${stageId}`);
+      }
     } else if (origin !== 'source_pattern_ref') {
       blockers.push(`source_derived_design_agent_pack_plan_invalid_stage_origin:${stageId}`);
     }

@@ -337,7 +337,7 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     'product_layer',
     'domain_label',
     'authority_owner',
-    'stage_control_plane_ref',
+    'stage_manifest_ref',
   ],
   required_stage_packets: [
     'stage_completion_policy',
@@ -384,7 +384,7 @@ export const STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY = {
   owner: 'one-person-lab',
   policy_id: 'golden_path_single_default',
   default_surface_budget_id: 'default_surface_budget',
-  stage_control_plane_ref: 'contracts/stage_control_plane.json',
+  stage_control_plane_ref: 'opl-generated:family_stage_control_plane',
   ordinary_default_route_budget: 1,
   default_route_selector: 'stages[] without explicit lane kind + selected_executor.default_executor',
   explicit_lane_kinds: [

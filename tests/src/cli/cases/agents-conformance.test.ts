@@ -146,7 +146,7 @@ test('agents conformance live family probe covers pass and blocked admission pat
   assert.equal(readyReport.family_live_conformance_probe.status, 'passed');
   assert.equal(readyReport.family_live_conformance_probe.domains[0].false_authority_boundary.domain_ready_authorized, false);
 
-  fs.rmSync(path.join(readyRepo, 'contracts', 'stage_control_plane.json'));
+  assert.equal(fs.existsSync(path.join(readyRepo, 'contracts', 'stage_control_plane.json')), false);
   const legacylessReport = runCli([
     'agents',
     'conformance',
