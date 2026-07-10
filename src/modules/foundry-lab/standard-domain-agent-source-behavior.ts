@@ -1,10 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import {
   gitTrackedOrWalkedFiles,
+  isRecord,
+  optionalString,
+  readJsonFile,
   unique,
 } from './standard-domain-agent-conformance-utils.ts';
+import type {
+  FunctionalPrivatizationAuditItem,
+  FunctionalPrivatizationMigrationClass,
+} from './functional-privatization-audit.ts';
 
 type SourceBehaviorSignature = {
   signature_id: string;
@@ -49,6 +57,8 @@ const EXECUTABLE_SOURCE_EXTENSIONS = new Set([
   '.tsx',
   '.zsh',
 ]);
+
+const TEST_OR_SPEC_PATH = /(?:^|\/)(?:test|tests|spec|specs|[^/]*[._-](?:test|spec))(?=\/|[._-]|$)/i;
 
 const SOURCE_BEHAVIOR_SIGNATURES: SourceBehaviorSignature[] = [
   {
@@ -174,11 +184,31 @@ const SOURCE_BEHAVIOR_SIGNATURES: SourceBehaviorSignature[] = [
   },
 ];
 
+const LEGAL_DECLARED_MIGRATION_CLASSES = new Set<FunctionalPrivatizationMigrationClass>([
+  'declarative_pack',
+  'minimal_authority_function',
+  'refs_only_domain_adapter',
+  'opl_storage_substrate_mas_refs_projection',
+  'provenance_or_fixture',
+  'domain_authority',
+  'retire_tombstone',
+]);
+
+const ACTIVE_PRIVATE_MIGRATION_CLASSES = new Set<FunctionalPrivatizationMigrationClass>([
+  'opl_owned_replacement',
+  'opl_hosted_surface',
+  'opl_generated_surface',
+  'temporary_migration_bridge',
+]);
+
 function isActiveExecutableSource(relativePath: string) {
   if (!ACTIVE_SOURCE_ROOTS.some((root) => relativePath.startsWith(root))) {
     return false;
   }
   if (EXCLUDED_SOURCE_PREFIXES.some((prefix) => relativePath.startsWith(prefix))) {
+    return false;
+  }
+  if (TEST_OR_SPEC_PATH.test(relativePath)) {
     return false;
   }
   return EXECUTABLE_SOURCE_EXTENSIONS.has(path.extname(relativePath).toLowerCase());
@@ -218,27 +248,108 @@ function sourceBehaviorMatches(relativePath: string, content: string) {
   });
 }
 
+function normalizedAuditPath(value: string) {
+  return value
+    .replaceAll('\\', '/')
+    .replace(/^\.\/+/, '')
+    .replace(/\/+$/, '');
+}
+
+function auditPathCoversSource(auditPath: string, relativePath: string) {
+  const normalized = normalizedAuditPath(auditPath);
+  return normalized.length > 0
+    && (relativePath === normalized || relativePath.startsWith(`${normalized}/`));
+}
+
+function functionalAuditItems(repoDir: string) {
+  const functionalAudit = readJsonFile(repoDir, 'contracts/functional_privatization_audit.json');
+  const payload = functionalAudit.payload;
+  return buildFunctionalPrivatizationAudit(isRecord(payload)
+    ? {
+        target_domain_id: optionalString(payload.target_domain_id),
+        functional_privatization_audit: payload,
+      }
+    : null).modules;
+}
+
+function auditCoverageForPath(items: FunctionalPrivatizationAuditItem[], relativePath: string) {
+  return items.filter((item) =>
+    item.code_paths.some((auditPath) => auditPathCoversSource(auditPath, relativePath))
+  );
+}
+
+function isActivePrivateAuditItem(item: FunctionalPrivatizationAuditItem) {
+  if (item.blocker || ACTIVE_PRIVATE_MIGRATION_CLASSES.has(item.migration_class)) {
+    return true;
+  }
+  if (item.migration_class === 'diagnostic_cleanup_path') {
+    return item.active_caller_allowed;
+  }
+  return !LEGAL_DECLARED_MIGRATION_CLASSES.has(item.migration_class);
+}
+
+function evaluateMatch(
+  match: ReturnType<typeof sourceBehaviorMatches>[number],
+  auditItems: FunctionalPrivatizationAuditItem[],
+) {
+  const coverage = auditCoverageForPath(auditItems, match.path);
+  const disposition = coverage.length === 0
+    ? 'unclassified_generic_behavior'
+    : coverage.some(isActivePrivateAuditItem)
+      ? 'active_private_generic_residue'
+      : 'declared_domain_boundary_evidence';
+  return {
+    ...match,
+    audit_disposition: disposition,
+    audit_coverage: coverage.map((item) => ({
+      module_id: item.module_id,
+      migration_class: item.migration_class,
+      active_caller_status: item.active_caller_status,
+      active_caller_allowed: item.active_caller_allowed,
+      code_paths: item.code_paths,
+    })),
+  };
+}
+
 export function buildStandardAgentSourceBehaviorChecks(repoDir: string) {
   const sourceFiles = gitTrackedOrWalkedFiles(repoDir).filter(isActiveExecutableSource);
+  const auditItems = functionalAuditItems(repoDir);
   const matches = sourceFiles.flatMap((relativePath) => {
     try {
       return sourceBehaviorMatches(relativePath, fs.readFileSync(path.join(repoDir, relativePath), 'utf8'));
     } catch {
       return [];
     }
-  });
-  const blockers = unique(matches.map((match) =>
+  }).map((match) => evaluateMatch(match, auditItems));
+  const blockingMatches = matches.filter((match) =>
+    match.audit_disposition !== 'declared_domain_boundary_evidence'
+  );
+  const allowedMatches = matches.filter((match) =>
+    match.audit_disposition === 'declared_domain_boundary_evidence'
+  );
+  const blockers = unique(blockingMatches.map((match) =>
     `source_behavior_generic_capability_residue:${match.signature_id}:${match.path}`
   ));
   return {
     surface_kind: 'opl_standard_agent_source_behavior_checks',
     owner: 'one-person-lab',
     status: blockers.length === 0 ? 'passed' : 'blocked',
-    scan_policy: 'opl_owned_signatures_scan_active_executable_source_independent_of_domain_audit_claims',
+    scan_policy: 'opl_owned_signatures_cross_checked_against_canonical_functional_privatization_audit',
     scanned_source_file_count: sourceFiles.length,
-    matched_source_behavior_count: matches.length,
-    matched_signature_ids: unique(matches.map((match) => match.signature_id)),
-    matches,
+    detected_source_behavior_count: matches.length,
+    matched_source_behavior_count: blockingMatches.length,
+    allowed_source_behavior_count: allowedMatches.length,
+    unclassified_generic_behavior_count: blockingMatches.filter((match) =>
+      match.audit_disposition === 'unclassified_generic_behavior'
+    ).length,
+    active_private_generic_residue_count: blockingMatches.filter((match) =>
+      match.audit_disposition === 'active_private_generic_residue'
+    ).length,
+    declared_domain_boundary_evidence_count: allowedMatches.length,
+    matched_signature_ids: unique(blockingMatches.map((match) => match.signature_id)),
+    allowed_signature_ids: unique(allowedMatches.map((match) => match.signature_id)),
+    matches: blockingMatches,
+    allowed_matches: allowedMatches,
     blockers,
     authority_boundary: {
       source_scan_can_write_domain_repo: false,

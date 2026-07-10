@@ -41,6 +41,117 @@ test('agents conformance blocks active private generic residue before standard-a
   );
 });
 
+test('agents conformance blocks generic source behavior omitted from the domain audit', () => {
+  const repoDir = buildReadyAgentRepo();
+  const privateSchedulerPath = path.join(repoDir, 'src', 'private-scheduler.ts');
+  fs.mkdirSync(path.dirname(privateSchedulerPath), { recursive: true });
+  fs.writeFileSync(privateSchedulerPath, 'setInterval(() => runNextTask(), 60_000);\n');
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].source_behavior_checks;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(checks.status, 'blocked');
+  assert.equal(checks.matched_source_behavior_count, 1);
+  assert.equal(checks.allowed_source_behavior_count, 0);
+  assert.equal(checks.unclassified_generic_behavior_count, 1);
+  assert.equal(checks.active_private_generic_residue_count, 0);
+  assert.equal(checks.matches[0].audit_disposition, 'unclassified_generic_behavior');
+  assert.deepEqual(checks.matches[0].audit_coverage, []);
+  assert.deepEqual(checks.matched_signature_ids, ['repo_owned_scheduler_or_daemon']);
+  assert.equal(checks.matches[0].path, 'src/private-scheduler.ts');
+  assert.equal(
+    checks.blockers.includes(
+      'source_behavior_generic_capability_residue:repo_owned_scheduler_or_daemon:src/private-scheduler.ts',
+    ),
+    true,
+  );
+});
+
+test('agents conformance source behavior gate blocks audit-declared active private residue', () => {
+  const repoDir = buildReadyAgentRepo();
+  const privateSchedulerPath = path.join(repoDir, 'src', 'private-scheduler.ts');
+  fs.mkdirSync(path.dirname(privateSchedulerPath), { recursive: true });
+  fs.writeFileSync(privateSchedulerPath, 'setInterval(() => runNextTask(), 60_000);\n');
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
+  functionalAudit.modules.push({
+    module_id: 'sample_brief_private_scheduler',
+    classification: 'generic_scheduler_or_daemon',
+    owner: 'SampleBriefAgent',
+    code_paths: ['src/private-scheduler.ts'],
+    active_callers: ['legacy local cadence'],
+    active_caller_status: 'active_private_scheduler_still_called',
+    migration_action: 'move_to_opl_provider_scheduler_then_tombstone',
+  });
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].source_behavior_checks;
+
+  assert.equal(checks.status, 'blocked');
+  assert.equal(checks.matched_source_behavior_count, 1);
+  assert.equal(checks.allowed_source_behavior_count, 0);
+  assert.equal(checks.unclassified_generic_behavior_count, 0);
+  assert.equal(checks.active_private_generic_residue_count, 1);
+  assert.equal(checks.matches[0].audit_disposition, 'active_private_generic_residue');
+  assert.deepEqual(checks.matches[0].audit_coverage.map((entry: { module_id: string }) => entry.module_id), [
+    'sample_brief_private_scheduler',
+  ]);
+});
+
+test('agents conformance source behavior gate records legal audit declarations as evidence', () => {
+  const repoDir = buildReadyAgentRepo();
+  const adapterPath = path.join(repoDir, 'src', 'product-status-domain-adapter.ts');
+  fs.mkdirSync(path.dirname(adapterPath), { recursive: true });
+  fs.writeFileSync(adapterPath, 'export const productStatusRef = "owner-receipt-ref";\n');
+  const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const functionalAudit = parseJsonText(fs.readFileSync(functionalAuditPath, 'utf8')) as Record<string, any>;
+  functionalAudit.modules.push({
+    module_id: 'sample_brief_product_status_refs',
+    classification: 'refs_only_domain_adapter',
+    owner: 'SampleBriefAgent',
+    code_paths: ['src/product-status-domain-adapter.ts'],
+    active_callers: ['OPL hosted product status projection'],
+    active_caller_status: 'refs_only_adapter_active',
+    migration_action: 'keep_domain_refs_only_adapter',
+  });
+  writeJson(functionalAuditPath, functionalAudit);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const checks = report.reports[0].source_behavior_checks;
+
+  assert.equal(report.status, 'passed');
+  assert.equal(checks.status, 'passed');
+  assert.equal(checks.detected_source_behavior_count, 1);
+  assert.equal(checks.matched_source_behavior_count, 0);
+  assert.equal(checks.allowed_source_behavior_count, 1);
+  assert.equal(checks.declared_domain_boundary_evidence_count, 1);
+  assert.equal(checks.unclassified_generic_behavior_count, 0);
+  assert.equal(checks.active_private_generic_residue_count, 0);
+  assert.deepEqual(checks.matches, []);
+  assert.equal(checks.allowed_matches[0].audit_disposition, 'declared_domain_boundary_evidence');
+  assert.deepEqual(checks.allowed_matches[0].audit_coverage.map((entry: { module_id: string }) => entry.module_id), [
+    'sample_brief_product_status_refs',
+  ]);
+  assert.deepEqual(checks.blockers, []);
+});
+
 test('agents conformance blocks retired route aliases from re-entering active caller inventory', () => {
   const repoDir = buildReadyAgentRepo();
   const functionalAuditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
