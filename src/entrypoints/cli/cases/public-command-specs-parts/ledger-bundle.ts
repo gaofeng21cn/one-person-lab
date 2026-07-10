@@ -5,70 +5,65 @@ import {
   recordArtifactProvenanceBundle,
   validateArtifactProvenanceBundle,
 } from '../../../../modules/ledger/index.ts';
-import { buildUsageError } from '../../modules/support.ts';
+import { buildUsageError, parseCommandOptions } from '../../modules/support.ts';
+import { readOptionalString } from '../../modules/json-boundary.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
-function parseRequiredOption(
-  args: string[],
-  option: string,
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-) {
-  const index = args.indexOf(option);
-  const value = index >= 0 ? args[index + 1] : null;
-  if (!value || value.startsWith('--')) {
-    throw buildUsageError(`ledger bundle requires ${option}.`, spec, { required: [option] });
-  }
-  return value;
-}
-
-function assertKnownOptions(
-  args: string[],
-  allowed: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-) {
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--json') {
-      continue;
-    }
-    if (!allowed.includes(token)) {
-      throw buildUsageError(`Unknown option for ledger bundle: ${token}.`, spec, { option: token });
-    }
-    index += 1;
-  }
-}
-
 function parseBundleArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
-  assertKnownOptions(args, ['--bundle'], spec);
-  return { bundlePath: parseRequiredOption(args, '--bundle', spec) };
+  const parsed = parseCommandOptions(args, spec, { bundle: { type: 'string' } });
+  const bundle = readOptionalString(parsed.bundle);
+  if (!bundle) {
+    throw buildUsageError('ledger bundle requires --bundle.', spec, { required: ['--bundle'] });
+  }
+  return { bundlePath: bundle };
 }
 
 function parseInspectArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
-  assertKnownOptions(args, ['--bundle', '--artifact'], spec);
-  const hasBundle = args.includes('--bundle');
-  const hasArtifact = args.includes('--artifact');
-  if (hasBundle === hasArtifact) {
-    throw buildUsageError('ledger bundle inspect requires exactly one of --bundle or --artifact.', spec, {
-      required_one_of: ['--bundle', '--artifact'],
-    });
-  }
-  return hasBundle
-    ? { bundlePath: parseRequiredOption(args, '--bundle', spec) }
-    : { artifactRef: parseRequiredOption(args, '--artifact', spec) };
+  const parsed = parseCommandOptions(args, spec, {
+    artifact: { type: 'string' },
+    bundle: { type: 'string' },
+  });
+  const artifact = readOptionalString(parsed.artifact);
+  const bundle = readOptionalString(parsed.bundle);
+  if (bundle && !artifact) return { bundlePath: bundle };
+  if (artifact && !bundle) return { artifactRef: artifact };
+  throw buildUsageError('ledger bundle inspect requires exactly one of --bundle or --artifact.', spec, {
+    required_one_of: ['--bundle', '--artifact'],
+  });
 }
 
 function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
-  assertKnownOptions(args, ['--bundle', '--domain', '--artifact'], spec);
+  const parsed = parseCommandOptions(args, spec, {
+    artifact: { type: 'string' },
+    bundle: { type: 'string' },
+    domain: { type: 'string' },
+  });
+  const artifact = readOptionalString(parsed.artifact);
+  const bundle = readOptionalString(parsed.bundle);
+  const domain = readOptionalString(parsed.domain);
+  if (!bundle) throw buildUsageError('ledger bundle requires --bundle.', spec, { required: ['--bundle'] });
+  if (!domain) throw buildUsageError('ledger bundle requires --domain.', spec, { required: ['--domain'] });
+  if (!artifact) throw buildUsageError('ledger bundle requires --artifact.', spec, { required: ['--artifact'] });
   return {
-    bundlePath: parseRequiredOption(args, '--bundle', spec),
-    domainId: parseRequiredOption(args, '--domain', spec),
-    artifactRef: parseRequiredOption(args, '--artifact', spec),
+    bundlePath: bundle,
+    domainId: domain,
+    artifactRef: artifact,
   };
 }
 
 function parseExportArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
-  assertKnownOptions(args, ['--bundle', '--format'], spec);
-  const format = parseRequiredOption(args, '--format', spec);
+  const parsed = parseCommandOptions(args, spec, {
+    bundle: { type: 'string' },
+    format: { type: 'string' },
+  });
+  const bundle = readOptionalString(parsed.bundle);
+  const format = readOptionalString(parsed.format);
+  if (!bundle) {
+    throw buildUsageError('ledger bundle requires --bundle.', spec, { required: ['--bundle'] });
+  }
+  if (!format) {
+    throw buildUsageError('ledger bundle requires --format.', spec, { required: ['--format'] });
+  }
   if (format !== 'ro-crate') {
     throw buildUsageError('ledger bundle export --format must be ro-crate.', spec, {
       format,
@@ -76,7 +71,7 @@ function parseExportArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     });
   }
   return {
-    bundlePath: parseRequiredOption(args, '--bundle', spec),
+    bundlePath: bundle,
     format: 'ro-crate' as const,
   };
 }
