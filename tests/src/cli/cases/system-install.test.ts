@@ -509,11 +509,11 @@ test('install command applies bundled Codex defaults when only the API key is pr
 
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'ultra');
+    assert.equal(bootstrap.reasoning_effort, 'max');
 
     const config = fs.readFileSync(bootstrap.config_path, 'utf8');
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "ultra"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

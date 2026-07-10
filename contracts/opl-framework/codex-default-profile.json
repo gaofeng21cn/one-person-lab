@@ -3,10 +3,10 @@
   "version": "g1",
   "model_provider": "gflab",
   "model": "gpt-5.6-sol",
-  "model_reasoning_effort": "ultra",
+  "model_reasoning_effort": "max",
   "provider_name": "gflab",
   "base_url": "https://gflabtoken.cn/v1",
   "base_url_role": "product_default_provider_endpoint",
   "model_profile_role": "maintainer_current_initial_profile",
-  "profile_generated_at": "2026-07-09T22:56:43.000Z"
+  "profile_generated_at": "2026-07-10T08:12:22.000Z"
 }

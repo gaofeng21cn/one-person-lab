@@ -41,7 +41,7 @@ test('system configure-codex writes the product endpoint default and current ini
     assert.equal(output.codex_config.status, 'completed');
     assert.equal(output.codex_config.default_profile.model_provider, 'gflab');
     assert.equal(output.codex_config.default_profile.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.default_profile.model_reasoning_effort, 'ultra');
+    assert.equal(output.codex_config.default_profile.model_reasoning_effort, 'max');
     assert.equal(output.codex_config.default_profile.base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.default_profile.base_url_role, 'product_default_provider_endpoint');
     assert.equal(output.codex_config.default_profile.model_profile_role, 'maintainer_current_initial_profile');
@@ -51,7 +51,7 @@ test('system configure-codex writes the product endpoint default and current ini
     const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "ultra"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-stdin-key"/);
   } finally {
@@ -195,7 +195,7 @@ test('system configure-codex completes a plugin-only Codex config created during
 
     assert.equal(output.codex_config.status, 'completed');
     assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'ultra');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'max');
     assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.bootstrap.api_key_present, true);
     assert.equal(JSON.stringify(output).includes(apiKey), false);
@@ -203,7 +203,7 @@ test('system configure-codex completes a plugin-only Codex config created during
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "ultra"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-plugin-key"/);
     assert.match(config, /\[marketplaces\.med-autoscience-local\]/);

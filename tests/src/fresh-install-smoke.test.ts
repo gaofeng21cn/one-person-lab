@@ -608,7 +608,7 @@ test('bundled Codex profile separates the product endpoint default from the main
   assert.equal(profile.surface_id, 'opl_codex_default_profile');
   assert.equal(profile.model_provider, 'gflab');
   assert.equal(profile.model, 'gpt-5.6-sol');
-  assert.equal(profile.model_reasoning_effort, 'ultra');
+  assert.equal(profile.model_reasoning_effort, 'max');
   assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(profile.base_url_role, 'product_default_provider_endpoint');
   assert.equal(profile.model_profile_role, 'maintainer_current_initial_profile');

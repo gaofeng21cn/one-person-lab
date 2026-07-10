@@ -91,7 +91,7 @@ function createCodexConfig(homeDir) {
     [
       'model_provider = "gflab"',
       'model = "gpt-5.6-sol"',
-      'model_reasoning_effort = "ultra"',
+      'model_reasoning_effort = "max"',
       '',
       '[model_providers.gflab]',
       'name = "gflab"',
