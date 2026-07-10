@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
@@ -333,6 +334,34 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     const runtimeEventRefs = effectBoundary
       ? [`runtime_event:${stageId}.owner_receipt_recorded`]
       : [];
+    const declaredStageContract = isRecord(stage.stage_contract) ? stage.stage_contract : {};
+    const frameworkStageContract = {
+      expected_receipt_refs: [repoSurfaceRef(
+        'domain_owner_receipt_or_typed_blocker_ref',
+        'domain_stage_closeout',
+        'domain_ref',
+      )],
+      receipt_schema_refs: [repoSurfaceRef(ownerReceiptContractRef, 'owner_receipt_schema')],
+      authority_function_refs: [repoSurfaceRef(
+        authorityFunctionInventoryRef,
+        'minimal_authority_function_inventory',
+      )],
+      l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
+      l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
+      stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
+      user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
+    };
+    for (const [field, expected] of Object.entries(frameworkStageContract)) {
+      const declared = declaredStageContract[field];
+      if (declared !== undefined && !isDeepStrictEqual(declared, expected)) {
+        fail('Stage manifest stage_contract Framework floor mismatch.', {
+          repo_dir: repoDir,
+          stage_id: stageId,
+          field,
+          blocker: 'standard_agent_stage_contract_framework_floor_mismatch',
+        });
+      }
+    }
     if (qualityGateRefs.length === 0) {
       fail('Every standard Agent stage must declare at least one quality_gate_ref.', {
         repo_dir: repoDir,
@@ -355,7 +384,6 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     if (missingStages.length > 0) {
       fail('Stage manifest references unresolved next stages.', { repo_dir: repoDir, stage_id: stageId, missingStages });
     }
-    const declaredStageContract = isRecord(stage.stage_contract) ? stage.stage_contract : {};
     const stageOrigin = optionalString(stage.stage_origin);
     const patternId = optionalString(stage.pattern_id);
     const stepId = optionalString(stage.step_id);
@@ -513,18 +541,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         source_scope_refs: [surfaceRef(repoDir, policyRef, 'stage.policy_ref', 'stage_policy_source')],
         artifact_scope_refs: [],
         workspace_scope_refs: [],
-        expected_receipt_refs: Array.isArray(declaredStageContract.expected_receipt_refs)
-          ? declaredStageContract.expected_receipt_refs
-          : [repoSurfaceRef('domain_owner_receipt_or_typed_blocker_ref', 'domain_stage_closeout', 'domain_ref')],
-        receipt_schema_refs: [repoSurfaceRef(ownerReceiptContractRef, 'owner_receipt_schema')],
-        authority_function_refs: [repoSurfaceRef(
-          authorityFunctionInventoryRef,
-          'minimal_authority_function_inventory',
-        )],
-        l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
-        l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
-        stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
-        user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
+        ...frameworkStageContract,
         progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
         typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       },

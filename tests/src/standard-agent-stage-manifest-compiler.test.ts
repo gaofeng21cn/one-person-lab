@@ -10,6 +10,7 @@ import {
   buildStandardAgentRepoContractReadout,
   compileStandardAgentStageManifest,
 } from '../../src/modules/pack/index.ts';
+import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../src/modules/foundry-lab/standard-domain-agent-conformance.ts';
 import { withOplMetaAgentDescriptorEntry } from '../../src/modules/atlas/index.ts';
 import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/index.ts';
@@ -556,7 +557,7 @@ test('stage manifest compiler fails closed for an invalid required v2 declaratio
   assert.throws(() => compileStandardAgentStageManifest(root));
 });
 
-test('stage manifest compiler honors an explicit v2 version without allowing policy overrides', () => {
+test('stage manifest compiler honors an explicit v2 version with canonical Framework floors', () => {
   const root = fixture('target-stage-policy');
   const inputRef = path.join(root, 'contracts/pack_compiler_input.json');
   const input = JSON.parse(fs.readFileSync(inputRef, 'utf8')) as JsonRecord;
@@ -565,25 +566,6 @@ test('stage manifest compiler honors an explicit v2 version without allowing pol
     version: 'standard-stage-pack.v2',
   };
   writeJson(root, 'contracts/pack_compiler_input.json', input);
-  const manifest = readManifest(root);
-  manifest.stages[0].stage_contract = {
-    receipt_schema_refs: [{ ref_kind: 'url', ref: 'https://attacker.invalid/receipt' }],
-    authority_function_refs: [{ ref_kind: 'url', ref: 'https://attacker.invalid/sign' }],
-    l4_entry_gate: { entry_level: 'L4_fake', can_claim_domain_ready: true },
-    l5_entry_gate: { entry_level: 'L5_fake', conformance_pass_counts_as_l5: true },
-    stage_completion_policy: {
-      surface_kind: 'domain_override',
-      owner: 'target-stage-policy',
-      closeout_packet_required: false,
-    },
-    user_stage_log_contract: {
-      surface_kind: 'domain_override',
-      owner: 'target-stage-policy',
-      required: false,
-    },
-  };
-  writeManifest(root, manifest);
-
   const compilation = compileStandardAgentStageManifest(root);
   const stage = compilation.stage_control_plane.stages[0]!;
   const stageContract = stage.stage_contract as JsonRecord;
@@ -612,6 +594,42 @@ test('stage manifest compiler honors an explicit v2 version without allowing pol
   assert.equal(l4EntryGate.can_claim_domain_ready, false);
   assert.equal(l5EntryGate.entry_level, 'L5_production_operating_maturity');
   assert.equal(l5EntryGate.conformance_pass_counts_as_l5, false);
+});
+
+test('stage manifest compiler fails closed on every Framework stage-contract floor mismatch', async (t) => {
+  const cases: Array<[string, unknown]> = [
+    ['expected_receipt_refs', []],
+    ['receipt_schema_refs', [{ ref_kind: 'url', ref: 'https://attacker.invalid/receipt' }]],
+    ['authority_function_refs', [{ ref_kind: 'url', ref: 'https://attacker.invalid/sign' }]],
+    ['l4_entry_gate', { entry_level: 'L4_fake', can_claim_domain_ready: true }],
+    ['l5_entry_gate', { entry_level: 'L5_fake', conformance_pass_counts_as_l5: true }],
+    ['stage_completion_policy', {
+      surface_kind: 'domain_override',
+      owner: 'target-stage-policy',
+      closeout_packet_required: false,
+    }],
+    ['user_stage_log_contract', {
+      surface_kind: 'domain_override',
+      owner: 'target-stage-policy',
+      required: false,
+    }],
+  ];
+
+  for (const [field, value] of cases) {
+    await t.test(field, () => {
+      const root = fixture(`target-stage-policy-${field.replaceAll('_', '-')}`);
+      const manifest = readManifest(root);
+      manifest.stages[0].stage_contract = { [field]: value };
+      writeManifest(root, manifest);
+
+      assert.throws(() => compileStandardAgentStageManifest(root), (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.details?.blocker, 'standard_agent_stage_contract_framework_floor_mismatch');
+        assert.equal(error.details?.field, field);
+        return true;
+      });
+    });
+  }
 });
 
 test('real MAG manifest compiles into generated product-entry without the legacy contract', (t) => {
