@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from './family-workspace-root.ts';
 
 export interface StandardDomainAgentRepoInput {
   requested_agent_id: string | null;
@@ -32,19 +32,14 @@ export function hasStandardDomainAgentSurface(repoDir: string) {
 function workspaceCandidatesFrom(seed: string, repoDefaults: readonly FamilyRepoDefault[]) {
   const resolvedSeed = path.resolve(seed);
   const repoDirectories = repoDefaults.map((entry) => entry.directory);
-  const candidates = [
+  return [
     resolvedSeed,
     path.dirname(resolvedSeed),
-    resolveFamilyWorkspaceRootFromRepoRoot(resolvedSeed, repoDirectories),
+    resolveDefaultFamilyWorkspaceRoot({
+      repoRootHint: resolvedSeed,
+      familyRepoDirectories: repoDirectories,
+    }),
   ];
-  let current = resolvedSeed;
-  while (current !== path.dirname(current)) {
-    if (path.basename(current) === '.worktrees') {
-      candidates.push(resolveFamilyWorkspaceRootFromRepoRoot(seed, repoDirectories));
-    }
-    current = path.dirname(current);
-  }
-  return candidates;
 }
 
 export function discoverFamilyRepoInputs(

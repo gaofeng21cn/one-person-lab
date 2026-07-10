@@ -6,6 +6,10 @@ import path from 'node:path';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../../src/kernel/family-workspace-root.ts';
+import {
+  discoverFamilyRepoInputs,
+  hasStandardDomainAgentSurface,
+} from '../../src/kernel/standard-domain-agent-family-repos.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/modules/connect/opl-skills.ts';
 import {
   binPath,
@@ -180,6 +184,61 @@ test('relative git worktree metadata resolves the framework workspace root', () 
     fs.writeFileSync(path.join(candidate, '.git'), 'gitdir: ../../.git/worktrees/candidate\n');
     assert.equal(resolveDefaultFamilyWorkspaceRoot({ repoRootHint: candidate }), workspaceRoot);
   } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('family repo discovery includes sibling agents from a framework worktree', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-repo-worktree-'));
+  const candidate = path.join(workspaceRoot, 'one-person-lab', '.worktrees', 'candidate');
+  const domainRepo = path.join(workspaceRoot, 'med-autoscience');
+  const previousCwd = process.cwd();
+  const previousWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  try {
+    fs.mkdirSync(candidate, { recursive: true });
+    fs.writeFileSync(path.join(candidate, '.git'), 'gitdir: ../../.git/worktrees/candidate\n');
+    fs.mkdirSync(path.join(domainRepo, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(domainRepo, 'contracts', 'domain_descriptor.json'), '{}\n');
+    delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    process.chdir(candidate);
+
+    assert.equal(discoverFamilyRepoInputs(
+      [{ requested_agent_id: 'mas', directory: 'med-autoscience' }],
+      hasStandardDomainAgentSurface,
+    ).some((entry) => entry.requested_agent_id === 'mas'
+      && entry.repo_dir === fs.realpathSync(domainRepo)), true);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousWorkspaceRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousWorkspaceRoot;
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('family repo discovery includes sibling agents from a standalone clone under framework worktrees', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-repo-standalone-'));
+  const frameworkRepo = path.join(workspaceRoot, 'one-person-lab');
+  const candidate = path.join(frameworkRepo, '.worktrees', 'candidate');
+  const domainRepo = path.join(workspaceRoot, 'med-autoscience');
+  const previousCwd = process.cwd();
+  const previousWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  try {
+    fs.mkdirSync(path.join(frameworkRepo, '.git'), { recursive: true });
+    fs.mkdirSync(path.join(candidate, '.git'), { recursive: true });
+    fs.mkdirSync(path.join(domainRepo, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(domainRepo, 'contracts', 'domain_descriptor.json'), '{}\n');
+    delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    process.chdir(candidate);
+
+    assert.equal(discoverFamilyRepoInputs(
+      [{ requested_agent_id: 'mas', directory: 'med-autoscience' }],
+      hasStandardDomainAgentSurface,
+    ).some((entry) => entry.requested_agent_id === 'mas'
+      && entry.repo_dir === fs.realpathSync(domainRepo)), true);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousWorkspaceRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousWorkspaceRoot;
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

@@ -47,6 +47,7 @@ export function resolveFamilyWorkspaceRootFromRepoRoot(
     if (baseName === '.worktrees' || baseName === 'worktrees') {
       const parent = path.dirname(current);
       return familyRepoDirectories.includes(path.basename(parent))
+        || fs.existsSync(path.join(parent, '.git'))
         ? path.dirname(parent)
         : parent;
     }
