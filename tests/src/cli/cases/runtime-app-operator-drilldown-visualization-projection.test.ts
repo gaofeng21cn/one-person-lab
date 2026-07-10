@@ -117,14 +117,9 @@ test('domain owner payload summary preserves active MAS closeout as refs-only co
 
   assert.equal(projection.summary.domain_count, 1);
   const legacyMas = projection.domains.find((entry) => entry.domain_id === 'medautoscience');
-  assert.ok(legacyMas);
-  assert.ok(legacyMas.owner_payload_item_summary);
-  assert.equal(
-    legacyMas.source_surface,
-    'real_paper_autonomy_guarded_apply_proof_compatibility',
-  );
+  assert.equal(legacyMas?.source_surface, 'real_paper_autonomy_guarded_apply_proof_compatibility');
   assert.deepEqual(
-    legacyMas.owner_payload_item_summary.work_items[0].typed_blocker_path_payload,
+    legacyMas?.owner_payload_item_summary?.work_items[0].typed_blocker_path_payload,
     { typed_blocker_refs: ['typed-blocker:mas/paper-line'] },
   );
 });
