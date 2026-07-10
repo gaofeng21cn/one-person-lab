@@ -6,6 +6,29 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { parseJsonText } from '../../../src/kernel/json-file.ts';
 import type { FamilyStageControlPlane } from '../../../src/modules/stagecraft/family-stage-control-plane-contract.ts';
+import type {
+  StageRunEffectObservation,
+  StageRunRouteDecision,
+} from '../../../src/modules/stagecraft/stage-run-orchestration-types.ts';
+
+const forgedDispatchType: StageRunRouteDecision = {
+  decision: 'dispatch',
+  stage_ref: 'proposal_authoring',
+  decision_refs: ['mag://route'],
+  // @ts-expect-error dispatch decisions cannot carry accepted checkpoint refs
+  accepted_checkpoint_ref: 'mag://checkpoint/forged',
+};
+
+const forgedEffectType: StageRunEffectObservation = {
+  effect_status: 'typed_blocker',
+  stage_ref: 'proposal_authoring',
+  typed_blocker_ref: 'mag://blocker',
+  // @ts-expect-error typed blocker effects cannot carry output refs
+  output_refs: ['mag://output/forged'],
+};
+
+void forgedDispatchType;
+void forgedEffectType;
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const contractPath = 'contracts/opl-framework/stage-run-kernel-contract.json';

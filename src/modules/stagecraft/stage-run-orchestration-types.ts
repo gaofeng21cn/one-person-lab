@@ -37,27 +37,51 @@ export type StageRunCycleManifest = {
   max_attempts_per_cycle: number;
 };
 
-export type StageRunRouteDecision = {
-  decision: 'dispatch' | 'accepted' | 'rollback' | 'blocked';
-  stage_ref?: string;
-  decision_refs: string[];
-  accepted_checkpoint_ref?: string;
-  rollback_to_checkpoint_ref?: string;
-  typed_blocker_refs?: string[];
-  human_gate_refs?: string[];
-  runtime_blocker_refs?: string[];
-};
+export type StageRunRouteDecision =
+  | {
+      decision: 'dispatch';
+      stage_ref: string;
+      decision_refs: string[];
+    }
+  | {
+      decision: 'accepted';
+      decision_refs: string[];
+      accepted_checkpoint_ref: string;
+    }
+  | {
+      decision: 'rollback';
+      decision_refs: string[];
+      rollback_to_checkpoint_ref: string;
+    }
+  | {
+      decision: 'blocked';
+      decision_refs: string[];
+      typed_blocker_refs?: string[];
+      human_gate_refs?: string[];
+      runtime_blocker_refs?: string[];
+    };
 
-export type StageRunEffectObservation = {
-  effect_status: 'domain_result' | 'typed_blocker' | 'runtime_blocker';
-  stage_ref: string;
-  domain_result_ref?: string;
-  typed_blocker_ref?: string;
-  runtime_blocker_ref?: string;
-  output_refs?: string[];
-  checkpoint_ref?: string;
-  closeout_refs?: string[];
-};
+export type StageRunEffectObservation =
+  | {
+      effect_status: 'domain_result';
+      stage_ref: string;
+      domain_result_ref: string;
+      output_refs?: string[];
+      checkpoint_ref?: string;
+      closeout_refs?: string[];
+    }
+  | {
+      effect_status: 'typed_blocker';
+      stage_ref: string;
+      typed_blocker_ref: string;
+      closeout_refs?: string[];
+    }
+  | {
+      effect_status: 'runtime_blocker';
+      stage_ref: string;
+      runtime_blocker_ref: string;
+      closeout_refs?: string[];
+    };
 
 export type StageRunCycleEvent =
   | {

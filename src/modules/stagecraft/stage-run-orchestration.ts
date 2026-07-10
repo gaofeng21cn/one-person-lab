@@ -180,7 +180,7 @@ function normalizeRouteDecision(value: StageRunRouteDecision): StageRunRouteDeci
   if (!isRecord(value) || !['dispatch', 'accepted', 'rollback', 'blocked'].includes(String(value.decision))) {
     contractError('StageRun route oracle returned an invalid decision.');
   }
-  const decision = value.decision as StageRunRouteDecision['decision'];
+  const decision = value.decision;
   const unexpected = unexpectedFields(value, ALLOWED_ROUTE_DECISION_FIELDS[decision]);
   if (unexpected.length > 0) {
     contractError('StageRun route oracle fields do not match its decision.', {
@@ -230,7 +230,7 @@ function normalizeEffect(value: StageRunEffectObservation): StageRunEffectObserv
   ) {
     contractError('StageRun effect observation has an invalid status.');
   }
-  const effectStatus = value.effect_status as StageRunEffectObservation['effect_status'];
+  const effectStatus = value.effect_status;
   const unexpected = unexpectedFields(value, ALLOWED_EFFECT_FIELDS[effectStatus]);
   if (unexpected.length > 0) {
     contractError('StageRun effect observation fields do not match its effect status.', {
