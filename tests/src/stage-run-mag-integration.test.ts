@@ -143,8 +143,8 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
   const manifestSource = parseJsonText(
     fs.readFileSync(path.join(repoDir, 'agent/stages/manifest.json'), 'utf8'),
   ) as Record<string, any>;
-  assert.equal(manifestSource.surface_kind, 'mag_declarative_stage_manifest');
-  assert.equal(manifestSource.version, 'mag-declarative-stage-manifest.v1');
+  assert.equal(manifestSource.surface_kind, 'opl_standard_agent_declarative_stage_manifest');
+  assert.equal(manifestSource.version, 'opl-standard-agent-declarative-stage-manifest.v1');
   assert.equal(manifestSource.target_domain_id, 'med-autogrant');
   const stageIds = manifestSource.stages.map((stage: Record<string, any>) => stage.stage_id);
   assert.deepEqual(stageIds, expectedStageIds);
