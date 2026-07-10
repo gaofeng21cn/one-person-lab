@@ -3,105 +3,80 @@
 Owner: `One Person Lab`
 Purpose: `active_cleanup_plan`
 State: `active_plan`
-Machine boundary: 本文是人读规划与执行地图。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、package lock、domain-owned manifest 和 repo-native verification。
+Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机器真相归 source、contracts、CLI/readback、provider receipt、domain owner surface 与 repo-native verification。
 
-## 2026-07-09 边界修复声明
+## 目标边界
 
-- `209,869` 行净删与 `10-18 万`完成口径属于历史 mixed-commit snapshot，不能继续作为严格“测试内容瘦身”完成证据；其中 RCA `0a986912` 是源码 / 脚本 / docs / tests 混合收薄，MAS `0e7b005da` 也包含 `src/`、`contracts/` 与 `Makefile` 联动。后续只能用 path-filtered `tests/**` / `*.test.*` / `*.spec.*` / 根级 `test_*.py` 重新计算。
-- `opl-aion-shell` 与 App `shells/aionui/**` 不属于本测试瘦身任务。若 Aion checkout 出现 upstream body dirty diff，该写集只能由 Aion owner 线程处理，本计划不得把它修复、清理或统计为测试瘦身成果。
-- OMA 若处于非测试 rebase/conflict 状态，测试瘦身 lane 只能停在 owner handoff；不得在本任务内接管 `agent/`、`docs/`、`scripts/` 或 stage-decomposition feature 写集。
+本轮按 Ponytail ultra 执行：删除优先，能回到 Node 标准库或既有 OPL primitive 就不保留私有实现。清理不能删掉 authority、currentness、replay、receipt、typed blocker、human gate、不可逆写保护或真实 active caller。
 
-## 2026-07-10 严格测试瘦身落地快照
+主模块是 `OPL Runway`、`OPL Console`、`OPL Connect/CLI`、`OPL Ledger`。协同模块是 `Workspace`、`Pack`、`Stagecraft`、`Foundry Lab`。不触碰 AionUI upstream body，也不把 domain truth、quality verdict、artifact authority 或 owner acceptance 上收到 OPL。
 
-本快照只统计本轮主会话复核、focused 验证、吸收并推送到各仓 `main` 的测试面改动；mixed source/docs/scripts commit、Aion upstream body、MedOPL、DeepScientist / med-deepscientist、App `shells/aionui/**` 均不计入。
+## 当前净变化
 
-| Repo | Commit | 测试面 | 净行数 | Fresh verification |
-| --- | --- | --- | ---: | --- |
-| OPL | `47913390a` + `555a7f531` + `63bdc710e` + `b3615ce96` + `6afbda9b7` + `f2c3f5fe` + `cfef857ab` + `9d2f16468` + `c4733343b` | domain progress transition runtime；runtime manager native cases；Codex default shell generated-surface helpers；runtime drilldown helper fixtures；workspace domain transitions coverage；system module fixture cases；agents conformance fixtures；product-entry companion duplicate imports | `-443` | domain progress transition runtime：`22/22 pass`；runtime manager native：`11/11 pass`；Codex default shell：`21/21 pass`；runtime drilldown：`2/2 pass`；workspace transitions：`11/11 pass`；system modules：`11/11 pass`；agents conformance focused node tests：`23 pass`；product-entry companion pytest：`5 passed`；`npm run typecheck` |
-| MAS | `2e361d8ec` + `3ccd05fcb` + `66c94dbac` + `c7e7311f4` + `86bee42d3` + `e7d98dcb3` + `caa0e9a8d` + `ad5193c19` | currentness / provider admission owner identity tests；AI reviewer routeback cases；runtime protocol study runtime cases；runtime health kernel tests；stage artifact index cases；CLI command import cleanup；stage memory CLI cases；stale collection anchors and broken `test_cli.py` facade | `-862` | owner/currentness：`27 passed`；routeback focused pytest：`21 passed`；runtime protocol focused pytest：`42 passed`；runtime health kernel focused pytest：`25 passed`；stage artifact index focused pytest：`18 passed`；CLI command import cleanup focused pytest：`5 passed`；stage memory CLI focused pytest：`14 passed`；collection hygiene / smoke / line-budget：`20 passed`；CLI case collect-only：`97 tests collected`；full collect remains baseline-red but no longer includes `tests/test_cli.py` (`4203 collected, 8 errors`) |
-| RCA | `fb1cb34c` + `a630314a` + `f00f2b18` + `3eff3f75` + `50a09950` + `bef97fe6` + `9db3c235` | native PPT Python layout fixture parts；RedCube Playwright mock helper；native PPT layout fixtures；source intake cases；RedCube mock Python helper payloads；native-plan validation helper extraction；native fixture JSON helper reuse | `-414` | native PPT focused tests：`11/11 pass`；helper-referencing focused tests：`60/60 pass`；source intake：`17/17 pass`；native PPT quality nonregression：`3/3 pass`；native PPT plan/preflight/retry focused tests：`7 pass`；native PPT focused node tests：`4 pass`；`npm run typecheck` |
-| MAG | `c5cab6a` + `8f6a8fb` + `f7b8ad3` + `8858cbf` + `e9747e7` + `56487e4` | product entry / workspace summary / critique executor tests；domain handler receipt assertion preservation；workspace summary cases；critique executor tests；domain entry cases；grant autonomy unused support helper | `-408` | affected product/workspace/critique focused tests：`51 passed, 60 subtests passed`；workspace summary focused pytest：`4 passed, 51 subtests passed`；critique executor focused pytest：`7 passed, 2 subtests passed`；domain entry focused pytest：`7 passed, 19 subtests passed`；grant autonomy controller pytest：`11 passed`；`./scripts/verify.sh`：`234 passed, 351 subtests passed` |
-| App | `23d450e` + `d44dd99` + `72b490a` + `3dc9dee` + `144eaf0` + `03991bb` | release boundary tests；release closeout cases；release helper core；release closeout fixtures；release boundary helper fixture consolidation；Docker/WebUI release evidence assertion consolidation | `-489` | Docker/WebUI installer focused node test：`13 pass`；`OPL_APP_SHELL_ROOT=/Users/gaofeng/workspace/one-person-lab-app/shells/aionui npm run test:release-boundary`：`116 pass, 2 skip`；release closeout focused node test：`9/9 pass` |
-| OMA | `6cbda67` + `5be0845` + `72f8177` | external-suite fixture tests；takeover-loop assertions；bootstrap / external work-order duplicate assertions | `-129` | `scripts/run-with-repo-temp-env.sh node --test tests/external-suite-*.test.ts`：`16/16 pass`；takeover-loop focused node test：`5/5 pass`；bootstrap/external-work-order focused node tests：`8 pass`；`npm run typecheck` |
+相对原审计基线 `98e34ec687a1` 的当前集成树：
 
-2026-07-10 第二轮追加吸收仍只统计主会话复核、focused 验证、吸收进各仓 `main` 的测试面改动：
+| 范围 | Added | Deleted | Net |
+| --- | ---: | ---: | ---: |
+| `tests/**` | 13,182 | 25,187 | `-12,005` |
+| 非测试 | 14,960 | 28,451 | `-13,491` |
+| 合计 | 28,142 | 53,638 | `-25,496` |
 
-| Repo | Commit | 测试面 | 净行数 | Fresh verification |
-| --- | --- | --- | ---: | --- |
-| OPL | `d95dbde6e` | work-order execution duplicate happy-path coverage | `-63` | `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli/cases/work-order-execution.test.ts`：`17 pass` |
-| MAS | `7bcdc7274` + `bdb70367c` | non-default-collected orphan explicit lanes and historical explicit lanes without machine/import entry | `-4,662` | `./scripts/run-pytest-clean.sh -q tests/test_collection_hygiene.py tests/test_smoke_entrypoints.py tests/test_line_budget.py`：`20 passed`；full collect remains baseline-red with `4203 collected, 8 errors` and no new error class |
-| RCA | `8dd74303` | duplicate JSON IO helpers in stage-folder, AgentLab suite, and product-entry checkpoint tests | `-19` | `npm run build`；focused node tests：`26 pass`；`npm run typecheck` |
-| MAG | `0268a89` | CLI workspace validation helper reuse across workspace and executor tests | `-132` | affected pytest subset：`47 passed, 85 subtests passed` |
-| App | `4c84a98` | release fixture helper reuse across release closeout/operator/notes/attestation/Docker WebUI tests | `-33` | `OPL_APP_SHELL_ROOT=/Users/gaofeng/workspace/one-person-lab-app/shells/aionui npm run test:release-boundary`：`116 pass, 2 skip`；`shells/aionui/**` unchanged |
-| OMA | `e45e2f7` | tempdir and external-suite fixture helper reuse in bootstrap/takeover tests | `-27` | `scripts/run-with-repo-temp-env.sh node --test tests/bootstrap-loop.test.ts tests/takeover-loop.test.ts tests/external-suite-*.test.ts`：`27 pass`；`npm run typecheck` |
+其中 `tests/src/cli/**` 为 `+7,026/-19,973`，净删 `12,947` 行；`docs/active/*.md` 净删 `1,286` 行。净删量只说明体量变化，不替代行为、authority 或跨仓 caller 验收。
 
-Strict test-only landed total after main-session semantic repairs and reverted candidates: `-7,681` lines.
+## 原始 12 条候选完成度
 
-2026-07-10 第三轮高阈值复查结论：OPL、MAS、RCA、MAG、OMA 均未找到达到本轮阈值且可在 tests-only 边界内安全吸收的候选；这些 no-safe-cut 结果说明低风险删除/小合并已基本耗尽，继续追 `10-18 万` 行目标需要进入 owner-level 测试分层重设计或明确覆盖降级决策，不能靠偷删现有 contract / authority / currentness tests。App 另发现并吸收 `a1259a8`，删除 `tests/release/release-readiness/helpers.ts` 中全 repo 无引用的旧 release-readiness runner / passing artifact fixture 导出，净删 `327` 行；fresh verification：`OPL_APP_SHELL_ROOT=/Users/gaofeng/workspace/one-person-lab-app/shells/aionui npm run test:release-boundary` -> `116 pass, 2 skip`，且 `shells/aionui/**` unchanged。
+| # | 候选 | 状态 | 当前结果与边界 |
+| ---: | --- | --- | --- |
+| 1 | 收拢 `docs/active` | done | 从原审计 23 份 / 4,327 行收拢为 17 份 / 3,041 行；重复 target/support 计划已归并或删除，active 层只保当前 owner 文档。 |
+| 2 | 删除纯转发与伪入口 | done | 零调用 re-export、MAG alias、`system-installation.ts`、ScholarSkills 私有入口等已删除；仍保留的 module index/public entry 是真实 package boundary。 |
+| 3 | 用 Node 原生 glob 替代 walker/正则 | done | Stagecraft source hygiene 与 test lane stable groups 已改用 `fs.globSync`；不再维护同类递归 walker。 |
+| 4 | 停止虚假宣称 Daytona/Modal supported | done | 实现面只广告 E2B；Daytona/Modal 仅保留 reference candidate/no-ready 示例，不声明 runner 已实现。 |
+| 5 | 删除 reuse-first 历史 full-scan 系统 | done | 592 行历史 worklist 已删除；scanner/test 从约 1,478 行收薄为 446 行，只保 strict diff gate。 |
+| 6 | 退役 framework tranche backlog | done | 第二套 backlog source、CLI 与 5 个专属测试已删除。 |
+| 7 | 清理四个未接线 Runway 策略 | partial | anti-spin、stop-loss successor、paper supervisor consumer、dead-letter redrive 已删除，currentness由当前StageRun/Runway主链承担。通用no-progress budget没有canonical consumer；当前machine contract明确只允许advisory，禁止其block/exhaust StageRun，因此不能把旧correctness设想写成已落地。 |
+| 8 | receipt ledgers 复用 JSON ledger helper | done | 通用 ledger 已复用 `readJsonReceiptLedger` / `writeJsonReceiptLedger` / `upsertJsonReceipts`；`external-evidence-ledger` 保留独有的 lock + atomic rename，不为统一外观删除并发保护。 |
+| 9 | 合并 Console operator action route 构造 | done | 10 组 route 共用现有 builder/value helper，相关 Console + Ledger 提交净删 260 行；authority boundary 仍逐 route 显式保留。 |
+| 10 | 收薄 `test-lanes.mjs` | done | stable test groups 使用原生 glob；当前 821 行中的显式路径是 lane ownership/成本分层，不再按“估算应删 300-500 行”强行改变 suite 语义。全文件统计的 46 次重复出现包含同一测试被不同成本 lane复用，不能直接按重复代码删除。 |
+| 11 | CLI parser 回归 `node:util.parseArgs` | done | safe pure-options parser 已迁移，最后两条 lane 的CLI source为`+392/-1,180`，净删788行；含新增回归测试后总净删655行。手写arg loop从105降到20。保留的20个loop均承担positionals、alias出现顺序、跨flag累积、`--`分隔或dry-run/apply状态机。共享adapter对unknown/positional/missing/空字符串fail-closed，保留raw whitespace。 |
+| 12 | CLI 测试按语义合并 | done | `tests/src/cli/**` 净删 12,947 行；authority/currentness/no-authority/replay/admission owner coverage保留。删除收益按 path-filtered 统计，不再引用旧 mixed-commit `8,008` 下界。 |
 
-Strict test-only landed total after third-pass absorption: `-8,008` lines.
+## 明确拒绝与外部 blocker
 
-Tracked-test surface inventory is not a completion proof in this snapshot. Fresh path-filtered inventory on 2026-07-10 after the latest absorption is OPL `503` files / `125,165` lines, MAS `860` / `242,114`, RCA `247` / `44,493`, MAG `119` / `20,261`, App `37` / `7,762`, OMA `36` / `7,304`, total `1,802` files / `447,099` lines. The bound slimming evidence here is still the absorbed test-only commit numstat plus the listed repo-native verification.
+| 项目 | 状态 | 证据与停止条件 |
+| --- | --- | --- |
+| 删除整个 `DomainProgressTransitionRuntime` | rejected | MAS 仍真实消费 `opl_domain_progress_transition_runtime_live_readback` 与对应 contract。只有 MAS consumer 迁到 StageRun/Temporal/current-control 等价 ABI，或落地真正接线的 compatibility adapter 后，才可重新评估物理删除。 |
+| Runway no-progress enforcement | rejected_by_current_contract | `stage-run-kernel-contract.json` 当前声明 `canonical_admission_consumer=null`、`enforcement=advisory_only_outside_stage_run_reducer`、`can_block_or_exhaust_stage_run=false`。只有Runway owner先修改canonical admission contract并给出consumer/回归，才能重开correctness实现。 |
+| OBF source-byproduct caller cutover | blocked | `opl-bookforge/scripts/verify.sh` 仍两处调用 `bookforge_project_hygiene.py --source-byproduct-check`。OPL 的 Workspace source guard 已落地，但 OBF caller 未切换，不能声明 List 1 #13 完成。 |
+| OBF native-helper 私有 shell 退役 | partial | OPL 已提供 `opl pack native-helper probe` receipt envelope；OBF renderer/export authority应留在 OBF。只有 OBF 默认 caller 切到 OPL primitive并删除重复通用 shell后才能关闭。 |
 
-## 目标读法
+## Fresh 结构 readback
 
-本轮目标不是削弱 OPL，而是把 OPL 收回到标准平台边界：Framework 持有通用 runtime、package lifecycle、generated/hosted surface、projection、receipt 和 refs-only control plane；App 负责 cockpit 与用户操作；domain agent 继续持有领域 truth、quality verdict、artifact authority、owner receipt、typed blocker 和 human gate。
+当前 `opl agents default-callers --family-defaults --json` 返回：
 
-完成口径按功能/结构与证据分账：
+- `blocked_count=2`
+- `active_deletion_evidence_worklist_count=8`
+- `closed_surface_retirement_gate_count=16`
+- `default_caller_delete_ready=false`
+- `physical_delete_authorized=false`
+- `no_further_opl_default_caller_delete_work=false`
 
-- 功能/结构完成：active caller 已迁移、重复 wrapper/facade 已删除或 tombstone、package/runtime/observability/test surface 回到 owner 边界，repo-native tests 通过。
-- 后置证据：真实 App release、live provider long-soak、domain owner-chain scaleout、Brand L5、真实 package install/uninstall/rollback evidence 另账验收。docs、contract pass、focused tests 或 dry-run readback 不能声明 release-ready、domain-ready 或 production-ready。
+当前 `opl agents conformance --family-defaults --json` 返回：
 
-## 模块定位
+- `passed_count=3`
+- `blocked_count=3`
+- `structural_conformance_status=blocked`
+- `structural_contract_status=blocked`
+- `family_live_conformance_probe_status=blocked`
 
-| 模块 | 保留职责 | 收薄方向 | 禁止承担 |
-| --- | --- | --- | --- |
-| `OPL Connect` | Agent Package registry / manifest / lock / lifecycle receipt；Skill / connector / external descriptor 分发；provider refs 与 no-authority receipt。 | 保留 Agent Package Manager，但拆成 package core 与 carrier adapter。Package core 只管 `id/version/digest/dependencies/trust/lock/lifecycle receipt/exposure/shortcut`；carrier adapter 只负责 Codex Plugin、OPL App、Capability Pack、MCP/Web/native 等物理投影。 | 不做通用私有 package manager；不写 domain workflow、prompt body、artifact schema、quality verdict、owner receipt 或 runtime authority。 |
-| `OPL App` / `OPL Console` | cockpit、安装/更新/回滚操作、权限/审批、read-model 展示、operator action refs。 | 只消费 Framework package/runtime/action refs；缺 ref 时显示不可执行或需要 owner action。 | 不 hard-code MAS/MAG/RCA 语义；不拥有 package truth、domain truth 或 runtime dependency truth。 |
-| `OPL Runway` | Temporal-backed durable stage run、attempt、lease、retry/dead-letter、execution authorization、repair/readiness projection。 | Durable lifecycle 只保 Temporal/provider 路径；删除本地 scheduler / queue / intake / enqueue / tick / redrive 成功路径，SQLite sidecar 只保 stage-attempt projection、diagnostic 和 readback index。 | 不保留第二套 scheduler、queue runtime、local provider 或 attempt authority。 |
-| `OPL Ledger` | refs-only evidence、lineage、receipt/blocker refs、OpenTelemetry-compatible observability projection。 | 观测字段优先映射 OpenTelemetry semantic conventions；只保 OPL authority refs 和 audit packet。 | 不自建独立 observability truth ledger；不把 telemetry clean 写成 ready。 |
-| `OPL Stagecraft` / `OPL Pack` | declarative pack、stage prompt policy、capability ABI、generated/hosted surface。 | 删除只为历史 alias 存在的 one-line wrappers；active caller 直连 owner module public entry。 | 不保留兼容 facade 来维持旧路线。 |
-| tests / fixtures | 验证 machine-readable contract、CLI/API 行为、runtime projection 与 no-authority guard。 | 超大 narrative / alias / tombstone assertions 合并成 semantic fixtures；删除重复实现细节测试；旧测试变红只说明现有断言被影响，最终判断看必要覆盖是否仍由更小测试、contract reader 或 readback 保住。 | 不用测试固定 prose wording、历史文档章节或兼容 alias；不把“当前测试依赖它”当成必须保留的充分理由。 |
+因此旧的 `passed_count=6 / blocked_count=0`、`no_further_opl_default_caller_delete_work=true` 和 Runway `95%` 均已撤销。结构 blocker 与 live owner evidence 分账；任一 readback 都不能授权 domain physical delete 或声明 production ready。
 
-## 落地清单
+## 下一步停止条件
 
-| 优先级 | 项 | 动作 | 验证 |
-| --- | --- | --- | --- |
-| P0 | Agent Package Manager 边界 | 保留 `connect agent-packages`，把 docs/source 中的读法改成 `package core + carrier adapters`；Codex Plugin 只是 carrier 之一；OPL App 管理 package，但不拥有 package/domain semantics。 | `npm run test:fast` 或 touched package tests；`./bin/opl connect agent-packages ... --json` shape 不回归；docs/contract 不出现 Codex Plugin-only 读法。 |
-| P0 | 一行 wrapper / re-export | 迁移 active imports 后删除无语义 wrapper，例如 Console management/runtime/workspace、stage-run cockpit、runway family runtime id 等只转发文件。 | `rg` 无 active import 指向退役 wrapper；`npm run typecheck`；source-module strict import/cycle gate。 |
-| P1 | Runway local scheduler / queue tail | 物理删除本地 scheduler / queue / intake / enqueue / tick / redrive 成功路径；保留 SQLite sidecar 作为 stage-attempt projection/readback index 与 retired-provider negative guard。 | focused runtime tests；readback false-ready flags；CLI/help/contract 不再暴露本地 queue 或 scheduler tick 成功入口。 |
-| P1 | Ledger observability tail | 将私有 drilldown/ledger 字段收敛到 OTel-compatible event/ref projection；保留 OPL receipt refs。 | focused ledger/observability tests；no domain authority write proof。 |
-| P2 | 测试与 fixture surface | 历史 `10-18 万`口径已撤销为 mixed-commit snapshot，不能作为测试瘦身完成证据。当前严格 test-only 已落地 OPL/MAS/RCA/MAG/App/OMA 六仓净删 `8,008` 行；所有计入候选均限制在 `tests/**` 或等价测试文件，且通过 focused repo-native 验证；MAS display QC helper candidate、MAS layout-sidecar candidate、OMA bootstrap-loop candidate、MAS owner-route unused-import candidate 与 OPL work-order candidate 均因净增、验证环境越界或 focused 验证不满足被拒绝，不计入收益。当前推进范围继续排除 MedOPL、已归档 DeepScientist/med-deepscientist、`opl-aion-shell` upstream fork body 和 App `shells/aionui/**` vendor copy。2026-07-10 path-filtered 当前库存是 `1,802` 个测试文件 / `447,099` 行，但库存不作为本快照完成证据。 | focused P2 tests + sibling App/RCA/MAS/MAG/OMA repo-native validators；Aion fork 与 App `shells/aionui/**` 只做 read-only ownership/readback 或误动回退，不做测试瘦身；继续瘦身必须按新候选分类为 `delete / merge / rewrite / keep / owner-blocked`，不能把旧测试会红当成保留理由，也不能把 mixed commit 当测试收益。 |
+OPL 仓内原始 12 条 overengineering 候选中，11条已关闭；Runway旧策略的物理清理已完成，但follow-up no-progress enforcement按当前contract明确不落地。后续只在以下条件成立时重开：
 
-## 执行流水生命周期
+1. OBF owner 完成 caller cutover并给出 source guard/native-helper no-active-caller evidence。
+2. MAS owner 迁移 `DomainProgressTransitionRuntime` consumer ABI，允许重新审计 runtime retirement。
+3. Runway owner为no-progress enforcement指定canonical admission consumer并修改当前advisory-only contract。
+4. fresh source/readback 发现新的零调用实现、第二真相源或标准库替代机会。
 
-本文件只保留当前收薄目标、owner boundary、完成度审计和下一轮入口。已吸收的 P0-P2、test lane registry、Connect package preference、Runway fallow、Codex carrier、low-risk export、semantic cleanout 和 four-lane cleanup 过程记录不再作为 active truth 维护；它们的验证命令、commit、行数变化、结构计数和 worktree closeout 只按提交历史、ops ledger、automation memory 或 `docs/history/process/` provenance 读取。
-
-当前维护规则：
-
-- 新增收薄或退役候选先回到上方落地清单和 completion audit，不在本文追加逐日流水。
-- 涉及测试内容瘦身时，完成度只接受 path-filtered 测试文件证据；mixed source/docs/scripts commit 只能作为旁路治理记录，不能支撑“测试代码已净删 N 行”。
-- 纯 line-budget、cycle、duplicate helper、wide export 或大函数自然拆分默认路由到 `refactor_patrol`；只有它们制造 docs/machine truth 冲突、第二真相源或 retired public surface 泄漏时，才进入本治理主线。
-- `done` 只表示对应结构/功能边界已经由 repo-native evidence 支撑；Live App install、Codex reload、provider long-soak、owner-chain scaleout、Brand L5、release currentness 和 production evidence 仍是后置 owner lane。
-- 需要过程细节时，从 fresh `git log --oneline -- docs/active/overengineering-retirement-plan.md`、相关提交 diff、repo-native tests 和 ops ledger 读取，不能从本文继承旧 snapshot。
-
-## 完成度审计
-
-| 条目 | 状态 | 完成度 | 当前证据 owner 口径 | 剩余缺口 / 下一步 |
-| --- | --- | ---: | --- | --- |
-| Agent Package Manager 边界 | done | 100% | package core、carrier adapter、canonical package action、Managed Update owner route 和 modular distribution 读法回 source/contracts/CLI/tests。 | Live App installed-user-path、Codex reload、real install/uninstall/rollback、release currentness 与 owner-chain scaleout 仍是后置证据 lane。 |
-| 一行 wrapper / re-export | done | 100% | active imports 已迁到 owning module public entry 或 kernel；retired wrapper 只能按 history/tombstone 读取。 | 继续用 source-module gate 和 active-import scan 防止 wrapper 复活；不为未来统一指标新增 facade。 |
-| Runway local scheduler / queue tail | partial | 95% | 当前目标是 Temporal/provider path + stage-attempt projection/readback index；local scheduler/queue/tick/redrive 成功路径不得作为 active runtime。 | 需要后续 refactor/runtime owner 用 fresh source、CLI help、focused tests 和 provider readback 关闭剩余 tail；外部 Temporal long-soak 另账。 |
-| Ledger observability tail | done | 100% | OPL Ledger 只持 refs-only evidence、lineage、receipt/blocker refs 和 OTel-compatible projection。 | telemetry clean 不等于 provider/domain/production ready。 |
-| 测试与 fixture surface：严格 test-only 吸收 | partial | 8% | 已吸收六仓严格测试瘦身：OPL `47913390a` / `555a7f531` / `63bdc710e` / `b3615ce96` / `6afbda9b7` / `f2c3f5fe` / `cfef857ab` / `9d2f16468` / `c4733343b` / `d95dbde6e`、MAS `2e361d8ec` / `3ccd05fcb` / `66c94dbac` / `c7e7311f4` / `86bee42d3` / `e7d98dcb3` / `caa0e9a8d` / `ad5193c19` / `7bcdc7274` / `bdb70367c`、RCA `fb1cb34c` / `a630314a` / `f00f2b18` / `3eff3f75` / `50a09950` / `bef97fe6` / `9db3c235` / `8dd74303`、MAG `c5cab6a` / `8f6a8fb` / `f7b8ad3` / `8858cbf` / `e9747e7` / `56487e4` / `0268a89`、App `23d450e` / `d44dd99` / `72b490a` / `3dc9dee` / `144eaf0` / `03991bb` / `4c84a98` / `a1259a8`、OMA `6cbda67` / `5be0845` / `72f8177` / `e45e2f7`，合计净删 `8,008` 行；所有计入候选均由主会话复核 write set 与 focused verification。 | 相对于历史 `10-18 万`目标，只能确认 `8,008 / 100,000` 的严格 test-only 下界证据；第三轮 OPL/MAS/RCA/MAG/OMA 高阈值复查均为 no-safe-cut，后续大体量削减必须走测试分层/覆盖策略 owner 决策，不能从旧 mixed snapshot 继承完成度。 |
-| 测试与 fixture surface：当前库存与下一轮候选 | partial | 0% | 2026-07-10 fresh path-filtered 库存：OPL `503` 文件 / `125,165` 行，MAS `860` / `242,114`，RCA `247` / `44,493`，MAG `119` / `20,261`，App `37` / `7,762`，OMA `36` / `7,304`，总计 `1,802` 文件 / `447,099` 行；MAS display QC helper candidate 与 MAS layout-sidecar candidate 均不计入收益。 | 后续如继续追更深瘦身，必须重新列候选并分类为 `delete / merge / rewrite / keep / owner-blocked`：旧 wrapper/文案/实现细节断言可删或改写，必要 authority/currentness/no-authority 覆盖要用更小测试或 contract/readback 替代，真实 owner 降低覆盖粒度才需要 human decision。 |
-| Aion upstream fork 边界 | done | 100% | 用户明确 `opl-aion-shell` 是 fork 的 AionUI，上游主要维护；本测试瘦身任务不处理、不修复、不统计 Aion upstream body，也不触碰 App `shells/aionui/**` vendor copy。 | 不再对 Aion upstream body 做测试瘦身、结构重写、样式交互重构、依赖升级或实现清理；只允许 read-only 核查、误动回退、或 OPL-owned overlay 边界内改动。 |
-| Source size / fallow / cycle advisory | partial | 0% | 纯结构复杂度不计入本治理实质成果；只有制造 SSOT 冲突或 retired public surface 泄漏时才进入 governance_ssot。 | 默认 route 为 `refactor_patrol`；physical delete 仍需 active caller、owner surface 和 verification gate。 |
-| Test lane registry / full gate wrapper | done | 100% | 机器 truth 回 `scripts/test-lanes.mjs`、`scripts/verify.sh`、`package.json` 和 GitHub workflow。 | 若将来需要并发性能，在 CI matrix 或显式 runner lane 重新设计，不恢复第二 wrapper。 |
-| Codex carrier / Skill 暴露 | done | 100% | Agent Package 是统一抽象；Codex Plugin、App、MCP/Web/native 是 carrier/projection；Skill 暴露按 source -> explicit sync -> workspace/quest local。 | 真实 Codex App reload、用户级可见性、App release owner acceptance 和 external skill content security 仍是后置证据 lane。 |
-
-## 停止条件
-
-- 若 active caller、source of truth 或 authority owner 不清，先停在 typed blocker，不能靠兼容 wrapper 掩盖。
-- 若真实 App install/rollback、provider long-soak 或 owner-chain evidence 未跑，只能声明结构 landed，不能声明 ready。
-- 若 root checkout 或 sibling repo 有同写集脏改，必须先保留对方变更，在隔离 worktree 中完成后再由主线吸收。
+Live provider long-soak、真实 App 用户路径、domain owner acceptance、Brand L5 和 release-ready 继续作为后置证据，不属于本清理计划的功能结构完成声明。
