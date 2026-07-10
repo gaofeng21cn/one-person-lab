@@ -123,6 +123,9 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
   )
     ? workspaceTopologyProfile.workspace_initialization_policy
     : null;
+  const registryDerivedTopology =
+    workspaceInitializationPolicy?.infer_series_when_user_requests_multiple_related_projects === true
+    && workspaceInitializationPolicy?.infer_portfolio_when_user_requests_shared_workspace_with_multiple_projects === true;
   const sharedLifecyclePipeline = readStringArray(seriesDesignProfile?.shared_lifecycle_pipeline);
   const stagePackSections = readStringArray(seriesDesignProfile?.stage_pack_sections);
   const domainIoProfile = isPlainRecord(seriesDesignProfile?.domain_io_profile)
@@ -147,11 +150,16 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     ? null
     : 'foundry_agent_series_design_profile_missing_tools_section';
   const domainProfileDefaultBlockers = standardDomainRegistryEntries
-    .map((entry) =>
-      readOptionalString(domainProfileDefaults?.[entry.agent_id]) === entry.workspace_profile.default_profile_id
+    .map((entry) => {
+      const allowedKeys = registryDerivedTopology
+        ? [entry.agent_id]
+        : [entry.agent_id, ...entry.aliases];
+      return allowedKeys.some(
+        (key) => readOptionalString(domainProfileDefaults?.[key]) === entry.workspace_profile.default_profile_id,
+      )
         ? null
-        : `foundry_agent_series_workspace_topology_${entry.agent_id}_default_profile_invalid`
-    );
+        : `foundry_agent_series_workspace_topology_${entry.agent_id}_default_profile_invalid`;
+    });
   const blockers = [
     contract ? null : 'foundry_agent_series_contract_missing_or_invalid',
     readOptionalString(contract?.surface_kind) === STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.surface_kind
@@ -269,13 +277,15 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     readOptionalString(workspaceTopologyProfile?.profile_id) === 'opl.workspace_topology_profile.v1'
       ? null
       : 'foundry_agent_series_workspace_topology_profile_id_invalid',
-    defaultProfileKeys.join('/') === expectedDefaultProfileKeys.join('/')
+    !registryDerivedTopology || defaultProfileKeys.join('/') === expectedDefaultProfileKeys.join('/')
       ? null
       : 'foundry_agent_series_workspace_topology_default_profile_keys_invalid',
-    domainProfileDefaultKeys.join('/') === expectedDomainProfileDefaultKeys.join('/')
+    !registryDerivedTopology || domainProfileDefaultKeys.join('/') === expectedDomainProfileDefaultKeys.join('/')
       ? null
       : 'foundry_agent_series_workspace_topology_domain_profile_default_keys_invalid',
-    !workspaceTopologyProfile || !('legacy_domain_profile_aliases' in workspaceTopologyProfile)
+    !registryDerivedTopology
+      || !workspaceTopologyProfile
+      || !('legacy_domain_profile_aliases' in workspaceTopologyProfile)
       ? null
       : 'foundry_agent_series_workspace_topology_legacy_profile_aliases_forbidden',
     topologyModel.includes('workspace_group')

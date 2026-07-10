@@ -465,6 +465,60 @@ test('agents scaffold validation rejects legacy workspace profile aliases', () =
   }
 });
 
+test('agents scaffold validation accepts a legacy topology pinned to a published owner commit', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-topology-published-pin-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'workspace-topology-published-pin',
+    ]);
+    const foundryContractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const foundryContract = readGeneratedJson(foundryContractPath);
+    foundryContract.shared_release_pin_strategy.owner_commit_pin = 'published-owner-commit';
+    const initializationPolicy = foundryContract.workspace_topology_profile.workspace_initialization_policy;
+    delete initializationPolicy.infer_series_when_user_requests_multiple_related_projects;
+    delete initializationPolicy.infer_portfolio_when_user_requests_shared_workspace_with_multiple_projects;
+    initializationPolicy.legacy_project_collection_aliases = ['deliverables', 'studies'];
+    initializationPolicy.infer_series_when_user_requests_multiple_related_deliverables = true;
+    initializationPolicy.infer_portfolio_when_user_requests_shared_research_workspace_with_multiple_studies = true;
+    foundryContract.workspace_topology_profile.default_profiles.rca_series = {
+      ...structuredClone(foundryContract.workspace_topology_profile.default_profiles.series),
+      profile_role: 'legacy_domain_alias',
+      canonical_profile_id: 'series',
+    };
+    foundryContract.workspace_topology_profile.default_profiles.mas_portfolio = {
+      ...structuredClone(foundryContract.workspace_topology_profile.default_profiles.portfolio),
+      profile_role: 'legacy_domain_alias',
+      canonical_profile_id: 'portfolio',
+    };
+    delete foundryContract.workspace_topology_profile.domain_profile_defaults.obf;
+    foundryContract.workspace_topology_profile.domain_profile_defaults.bookforge = 'one_off';
+    foundryContract.workspace_topology_profile.legacy_domain_profile_aliases = {
+      rca_series: {
+        canonical_profile_id: 'series',
+        alias_for_domain: 'rca',
+        alias_role: 'legacy_domain_alias',
+      },
+      mas_portfolio: {
+        canonical_profile_id: 'portfolio',
+        alias_for_domain: 'mas',
+        alias_role: 'legacy_domain_alias',
+      },
+    };
+    fs.writeFileSync(foundryContractPath, `${JSON.stringify(foundryContract, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.validation.foundry_agent_series_validation.status, 'passed');
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold emits domain-specific controlled StageRun canary evidence', () => {
   const described = runCli([
     'agents',
