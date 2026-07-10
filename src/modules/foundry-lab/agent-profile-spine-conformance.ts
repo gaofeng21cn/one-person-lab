@@ -221,6 +221,13 @@ export function validateReferenceSourcePacketPolicy(
   const packetSourceRefs = uniqueStrings(packet.reference_source_refs);
   const patternPacketRefs = uniqueStrings(packet.reference_design_pattern_packet_refs);
   const userPacketRefs = patternPacketRefs.filter((ref) => !isSeedPacketRef(ref));
+  const designOrigin = isRecord(packet.design_origin) ? packet.design_origin : null;
+  const activePatterns = Array.isArray(packet.transferable_design_patterns)
+    ? packet.transferable_design_patterns.filter(isRecord)
+    : [];
+  const dispositions = Array.isArray(packet.pattern_dispositions)
+    ? packet.pattern_dispositions.filter(isRecord)
+    : [];
   const sameDeclaredSources = packetSourceRefs.length === declaredSourceRefs.length
     && declaredSourceRefs.every((ref) => packetSourceRefs.includes(ref));
 
@@ -234,6 +241,29 @@ export function validateReferenceSourcePacketPolicy(
   }
   if (declaredSourceRefs.length > 0 && patternPacketRefs[0] && isSeedPacketRef(patternPacketRefs[0])) {
     blockers.push(`source_derived_design_seed_packet_cannot_be_primary:${patternPacketRefs[0]}`);
+  }
+  if (declaredSourceRefs.length > 0 && (
+    designOrigin?.origin_kind !== 'user_supplied_reference_design'
+    || designOrigin?.seed_library_role !== 'secondary_context_only'
+  )) {
+    blockers.push('source_derived_design_user_source_origin_invalid');
+  }
+  for (const pattern of activePatterns) {
+    const patternRef = machineString(pattern.source_pattern_ref) ?? 'missing-pattern-ref';
+    if (declaredSourceRefs.length > 0 && pattern.pattern_origin !== 'user_typed_pattern_packet') {
+      blockers.push(`source_derived_design_active_pattern_origin_invalid:${patternRef}`);
+    }
+  }
+  for (const disposition of dispositions) {
+    const patternRef = machineString(disposition.pattern_ref) ?? 'missing-pattern-ref';
+    if (
+      declaredSourceRefs.length > 0
+      && disposition.pattern_origin === 'oma_seed_library'
+      && disposition.disposition !== 'adapt'
+      && disposition.disposition !== 'reject'
+    ) {
+      blockers.push(`source_derived_design_seed_disposition_invalid:${patternRef}`);
+    }
   }
 
   const expandedStages = new Map<string, string>();

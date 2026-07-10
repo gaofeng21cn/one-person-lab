@@ -239,10 +239,23 @@ function makeSourceDerivedAgentFixture() {
     packet_ref: referenceDesignPacketRefs[0],
     reference_source_refs: referenceDesignSourceRefs,
     reference_design_pattern_packet_refs: referenceDesignPacketRefs,
+    design_origin: {
+      origin_kind: 'user_supplied_reference_design',
+      primary_source_refs: referenceDesignSourceRefs,
+      primary_pattern_refs: [sourcePatternRef],
+      secondary_seed_pattern_refs: [],
+      seed_library_role: 'secondary_context_only',
+    },
+    pattern_dispositions: [{
+      pattern_ref: sourcePatternRef,
+      pattern_origin: 'user_typed_pattern_packet',
+      disposition: 'adopt',
+    }],
     transferable_design_patterns: [
       {
         pattern_id: patternId,
         source_pattern_ref: sourcePatternRef,
+        pattern_origin: 'user_typed_pattern_packet',
         transferable_workflow_steps: workflowSteps,
       },
     ],
@@ -917,6 +930,26 @@ test('profile conformance requires one user packet per declared source and keeps
   assert.equal(
     seedExpansion.blockers.includes(
       `source_derived_design_seed_packet_expands_active_stage_graph:source-material-intake:${seedPacketRef}`,
+    ),
+    true,
+  );
+
+  const relabeledOriginFixture = makeSourceDerivedAgentFixture();
+  let relabeledPatternRef = '';
+  updateSourceDerivedTypedObjectProjections(relabeledOriginFixture.repoDir, (typedObjects) => {
+    relabeledPatternRef = typedObjects.reference_design_packet.transferable_design_patterns[0].source_pattern_ref;
+    typedObjects.reference_design_packet.transferable_design_patterns[0].pattern_origin = 'oma_seed_library';
+  });
+  const relabeledOrigin = buildAgentProfileConformance([
+    '--repo-dir',
+    relabeledOriginFixture.repoDir,
+    '--profile',
+    'source_derived_design_profile_route.v1',
+  ]).profile_conformance;
+  assert.equal(relabeledOrigin.status, 'blocked');
+  assert.equal(
+    relabeledOrigin.blockers.includes(
+      `source_derived_design_active_pattern_origin_invalid:${relabeledPatternRef}`,
     ),
     true,
   );
