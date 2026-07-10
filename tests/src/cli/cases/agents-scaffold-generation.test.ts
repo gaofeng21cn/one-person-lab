@@ -125,6 +125,19 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       runCli(['agents', 'interfaces', '--repo-dir', targetDir]).generated_agent_interfaces.status,
       'ready',
     );
+    const outputSchema = readJsonFile(path.join(targetDir, 'contracts/domain-intake.output.schema.json'));
+    const outputSchemaEntry = {
+      schemaId: 'opl.standard_agent_scaffold.domain_intake_output.v1',
+      schema: outputSchema,
+      sourceRef: 'contracts/domain-intake.output.schema.json',
+    };
+    assert.equal(validateJsonSchemaPayload(outputSchemaEntry, {}).ok, false);
+    assert.equal(validateJsonSchemaPayload(outputSchemaEntry, { owner_receipt_ref: 'receipt://owner' }).ok, true);
+    assert.equal(validateJsonSchemaPayload(outputSchemaEntry, { typed_blocker_ref: 'blocker://typed' }).ok, true);
+    assert.equal(validateJsonSchemaPayload(outputSchemaEntry, {
+      owner_receipt_ref: 'receipt://owner',
+      typed_blocker_ref: 'blocker://typed',
+    }).ok, false);
 
     const capabilityMap = readJsonFile(path.join(targetDir, 'contracts/capability_map.json'));
     const capabilityMapSchema = readJsonFile(path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'));

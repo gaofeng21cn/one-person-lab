@@ -92,12 +92,7 @@ test('agents scaffold validation blocks empty or unreferenced agent directories'
       validated.validation.blockers.includes('missing_agent_pack_section:prompts'),
       true,
     );
-    assert.equal(
-      validated.validation.blockers.some((blocker: string) =>
-        blocker.startsWith('stage_invalid_agent_ref:domain_intake:agent/prompts/domain_intake.md:missing')
-      ),
-      true,
-    );
+    assert.equal(validated.validation.blockers.includes('missing_stage_control_plane_stages'), true);
   } finally {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
