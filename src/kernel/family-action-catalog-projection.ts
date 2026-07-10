@@ -33,6 +33,15 @@ function sourceOfWork(action: FamilyActionCatalogAction) {
   };
 }
 
+function actionInputContract(action: FamilyActionCatalogAction) {
+  return {
+    required_fields: action.required_fields,
+    optional_fields: action.optional_fields,
+    workspace_locator_fields: action.workspace_locator_fields,
+    ...(action.handler_binding ?? {}),
+  };
+}
+
 export function projectFamilyAction(action: FamilyActionCatalogAction) {
   const cliSurface = action.supported_surfaces.cli;
   const mcpSurface = action.supported_surfaces.mcp;
@@ -49,7 +58,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       command: surfaceCommand(action, productEntrySurface),
       surface_kind: surfaceKind(action, productEntrySurface),
       summary: action.summary,
-      requires: action.workspace_locator_fields,
+      requires: action.required_fields,
+      ...actionInputContract(action),
     },
     cli: {
       action_id: action.action_id,
@@ -59,6 +69,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       effect: action.effect,
       input_schema_ref: action.input_schema_ref,
       output_schema_ref: action.output_schema_ref,
+      ...actionInputContract(action),
       source_of_work: lineage,
     },
     mcp: {
@@ -70,6 +81,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       output_schema_ref: action.output_schema_ref,
       public_runtime: mcpSurface?.public_runtime !== false,
       descriptor_only: mcpSurface?.descriptor_only === true,
+      ...actionInputContract(action),
       source_of_work: lineage,
     },
     skill: {
@@ -78,7 +90,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       command,
       surface_kind: kind,
       summary: action.summary,
-      required_fields: action.workspace_locator_fields,
+      ...actionInputContract(action),
       effect: action.effect,
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
@@ -89,7 +101,8 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       command: surfaceCommand(action, productEntrySurface),
       surface_kind: surfaceKind(action, productEntrySurface),
       summary: action.summary,
-      requires: action.workspace_locator_fields,
+      requires: action.required_fields,
+      ...actionInputContract(action),
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
       source_of_work: lineage,
@@ -107,6 +120,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       },
       output_schema_ref: action.output_schema_ref,
       accepted_answer_shape_ref: action.output_schema_ref,
+      ...actionInputContract(action),
       source_of_work: lineage,
     },
     ai_sdk: {
@@ -115,6 +129,7 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
       inputSchemaRef: action.input_schema_ref,
       outputSchemaRef: action.output_schema_ref,
       command,
+      ...actionInputContract(action),
       source_of_work: lineage,
     },
   };

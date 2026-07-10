@@ -70,6 +70,67 @@ function normalizeRepoActionCatalog(repoDir: string, value: unknown) {
   }
 }
 
+function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof normalizeFamilyActionCatalog>) {
+  return (catalog?.actions ?? []).map((action) => {
+    const schemaRef = action.input_schema_ref;
+    const [fileRef] = schemaRef.split('#', 1);
+    if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(fileRef)) {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolution_scope: 'external_contract_ref',
+        status: 'external_resolution_explicit',
+      };
+    }
+    if (!fileRef || path.isAbsolute(fileRef)) {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolution_scope: 'repo_relative',
+        status: 'invalid_repo_relative_ref',
+      };
+    }
+    const filePath = path.resolve(repoDir, fileRef);
+    const relativePath = path.relative(repoDir, filePath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolution_scope: 'repo_relative',
+        status: 'invalid_repo_relative_ref',
+      };
+    }
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolved_path: relativePath,
+        resolution_scope: 'repo_relative',
+        status: 'missing',
+      };
+    }
+    try {
+      if (!isRecord(parseJsonText(fs.readFileSync(filePath, 'utf8')))) {
+        throw new Error('schema document must be an object');
+      }
+    } catch {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolved_path: relativePath,
+        resolution_scope: 'repo_relative',
+        status: 'invalid_json',
+      };
+    }
+    return {
+      action_id: action.action_id,
+      input_schema_ref: schemaRef,
+      resolved_path: relativePath,
+      resolution_scope: 'repo_relative',
+      status: 'resolved',
+    };
+  });
+}
 export function buildRepoContractDescriptor(repoDirInput: string) {
   const repoDir = path.resolve(repoDirInput);
   if (!fs.existsSync(repoDir) || !fs.statSync(repoDir).isDirectory()) {
@@ -131,11 +192,22 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
     functional_privatization_audit: functionalAuditRaw ?? undefined,
   };
   const functionalAudit = buildFunctionalPrivatizationAudit(functionalAuditManifest);
+  const actionInputSchemaResolutions = resolveActionInputSchemas(repoDir, actionCatalog);
+  const actionInputSchemaBlockers = actionInputSchemaResolutions.flatMap((resolution) => {
+    if (resolution.status === 'resolved' || resolution.status === 'external_resolution_explicit') {
+      return [];
+    }
+    const prefix = resolution.status === 'missing'
+      ? 'missing_action_input_schema'
+      : 'invalid_action_input_schema';
+    return [`${prefix}:${resolution.action_id}:${resolution.input_schema_ref}`];
+  });
   const blockerReasons = [
     actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
     genericResidueBlocked(functionalAudit.summary)
       ? 'functional_privatization_audit_has_generic_residue_or_blocker'
       : null,
+    ...actionInputSchemaBlockers,
   ].filter((reason): reason is string => Boolean(reason));
   const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
 
@@ -150,6 +222,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
         surface_kind: 'opl_repo_contract_consumption_projection',
         repo_dir: repoDir,
         status: status,
+        action_input_schema_resolutions: actionInputSchemaResolutions,
         consumed_contracts: [
           {
             contract_id: 'domain_descriptor',

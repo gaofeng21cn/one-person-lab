@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-10
 
+### 决策：family action 参数与 domain handler binding 必须结构化
+
+原因：`workspace_locator_fields` 只描述 workspace 定位身份，不能继续被 generated surface 暗中当成完整请求参数；`module.path:Class.method#action_id` 也不能只作为看似可执行的 command 字符串透传。
+
+影响：
+
+- 新 action 显式声明 `required_fields` 与 `optional_fields`；旧 action 仅保留 locator-to-required 的迁移兼容，standard scaffold 不再生成这种旧形态。
+- CLI、MCP、Skill、product-entry、OpenAI 与 AI SDK descriptor 保留 required/optional/locator 三组字段；合法 Python callable target 统一投影为 `callable_ref` 和 `{command: action_id}`，suffix 不一致时 fail closed。
+- repo compiler 从目标 repo root 解析本地 `input_schema_ref`，缺失、越界或非法 JSON 会阻断；带 URI scheme 的外部 ref 明确标为 external resolution。该 binding 只路由 domain handler，不把 handler implementation 或 domain authority 移入 OPL。
+
 ### 决策：Profile capability planning 只组合显式 exact refs 与 owner catalogs
 
 原因：论文/PDF 驱动 OMA 设计需要把 profile selection、现有 capability、依赖与环境动作接成一条可消费链，但 Framework 不能因此复制 OMA `ReferenceDesignPacket` ABI、维护 central specialty catalog、扫描本机 HOME/Skill cache，或用 heuristic scoring 猜测“相似能力”。现有 Connect exact resolver 已经定义 optional fail-open 与 current-owner-delta route-required hard-boundary gate，应直接复用。

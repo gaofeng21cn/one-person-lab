@@ -20,12 +20,14 @@ export {
 } from '../../kernel/family-action-catalog-projection.ts';
 export {
   normalizeFamilyActionCatalog,
+  resolveFamilyActionHandlerBinding,
 } from './family-action-catalog-contract.ts';
 export type {
   FamilyActionCatalog,
   FamilyActionCatalogAction,
   FamilyActionEffect,
   FamilyActionExportFormat,
+  FamilyActionHandlerBinding,
   FamilyActionSourceCommand,
   FamilyActionSurfaceDescriptor,
 } from './family-action-catalog-contract.ts';

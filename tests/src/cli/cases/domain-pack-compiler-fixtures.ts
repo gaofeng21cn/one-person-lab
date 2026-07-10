@@ -106,6 +106,8 @@ function withActionCatalog(payload: JsonRecord, targetDomainId: string, owner: s
         },
         input_schema_ref: 'contracts/input.schema.json',
         output_schema_ref: 'contracts/output.schema.json',
+        required_fields: ['workspace_root'],
+        optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
         human_gate_ids: [],
         supported_surfaces: {
@@ -492,6 +494,12 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     },
   });
   writeJson(path.join(contractsDir, 'action_catalog.json'), manifest.family_action_catalog as JsonRecord);
+  writeJson(path.join(contractsDir, 'input.schema.json'), {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    required: ['workspace_root'],
+    properties: { workspace_root: { type: 'string' } },
+  });
   writeJson(path.join(contractsDir, 'stage_control_plane.json'), manifest.family_stage_control_plane as JsonRecord);
   writeJson(path.join(contractsDir, 'memory_descriptor.json'), manifest.domain_memory_descriptor as JsonRecord);
   writeJson(path.join(contractsDir, 'functional_privatization_audit.json'), manifest.functional_privatization_audit as JsonRecord);

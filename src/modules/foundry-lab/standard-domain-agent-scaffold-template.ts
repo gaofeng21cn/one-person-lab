@@ -139,6 +139,8 @@ function starterAction(domainId: string) {
     },
     input_schema_ref: 'contracts/domain-intake.input.schema.json',
     output_schema_ref: 'contracts/domain-intake.output.schema.json',
+    required_fields: ['workspace_root'],
+    optional_fields: [],
     workspace_locator_fields: ['workspace_root'],
     human_gate_ids: ['domain_owner_review'],
     supported_surfaces: {
@@ -542,6 +544,18 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         forbidden_generic_owner_roles: FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
         notes: [],
         marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
+      path: 'contracts/domain-intake.input.schema.json',
+      content: json({
+        $schema: 'https://json-schema.org/draft/2020-12/schema',
+        type: 'object',
+        required: ['workspace_root'],
+        properties: {
+          workspace_root: { type: 'string', minLength: 1 },
+        },
+        additionalProperties: true,
       }),
     },
     {

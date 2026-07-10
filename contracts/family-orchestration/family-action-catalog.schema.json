@@ -120,6 +120,22 @@
           "type": "string",
           "minLength": 1
         },
+        "required_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "optional_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "workspace_locator_fields": {
           "type": "array",
           "items": {

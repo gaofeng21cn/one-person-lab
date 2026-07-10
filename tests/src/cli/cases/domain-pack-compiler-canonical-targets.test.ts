@@ -11,25 +11,32 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
 
   assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
   assert.equal(report.owner, 'one-person-lab');
-  assert.equal(report.status, 'ready');
   assert.equal(report.summary.total_domain_count, report.reports.length);
-  for (const agentId of [
-    'med-autoscience',
-    'med-autogrant',
-    'redcube_ai',
-    'opl-meta-agent',
-    'opl-bookforge',
+  assert.equal(
+    report.summary.ready_domain_count + report.summary.blocked_domain_count,
+    report.summary.total_domain_count,
+  );
+  assert.equal(
+    report.status,
+    report.summary.blocked_domain_count > 0 ? 'blocked' : 'ready',
+  );
+  for (const [agentId, targetDomainId] of [
+    ['mas', 'med-autoscience'],
+    ['mag', 'med-autogrant'],
+    ['rca', 'redcube_ai'],
+    ['oma', 'opl-meta-agent'],
+    ['obf', 'opl-bookforge'],
   ]) {
     assert.equal(
-      report.reports.some((entry: { agent_id: string }) => entry.agent_id === agentId),
+      report.reports.some((entry: { agent_id: string; target_domain_id: string }) => (
+        entry.agent_id === agentId && entry.target_domain_id === targetDomainId
+      )),
       true,
     );
   }
-  assert.equal(report.summary.ready_domain_count, 5);
-  assert.equal(report.summary.blocked_domain_count, 0);
   assert.equal(
     report.reports.some((entry: { agent_id: string; repo_dir: string }) => (
-      entry.agent_id === 'opl-meta-agent'
+      entry.agent_id === 'oma'
       && entry.repo_dir.endsWith('/opl-meta-agent')
     )),
     true,

@@ -220,6 +220,8 @@ export function buildReadyAgentRepo() {
         },
         input_schema_ref: 'contracts/draft-brief.input.schema.json',
         output_schema_ref: 'contracts/draft-brief.output.schema.json',
+        required_fields: ['workspace_root'],
+        optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
         human_gate_ids: ['brief_owner_review'],
         supported_surfaces: {
@@ -256,6 +258,12 @@ export function buildReadyAgentRepo() {
   const stageManifest = readJson(stageManifestPath);
   stageManifest.stages[0].allowed_action_refs = ['draft_brief'];
   writeJson(stageManifestPath, stageManifest);
+  writeJson(contractPath(targetDir, 'draft-brief.input.schema.json'), {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    required: ['workspace_root'],
+    properties: { workspace_root: { type: 'string' } },
+  });
 
   writeJson(contractPath(targetDir, 'generated_surface_handoff.json'), {
     surface_kind: 'opl_generated_surface_handoff',
