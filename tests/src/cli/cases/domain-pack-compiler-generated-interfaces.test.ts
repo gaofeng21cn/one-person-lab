@@ -345,6 +345,96 @@ test('repo compiler rejects uncompileable schemas and missing local fragments', 
     'missing_fragment');
 });
 
+test('repo compiler resolves nested relative refs from each schema file', () => {
+  const repoDir = buildReadyAgentRepo();
+  const schemaPath = path.join(repoDir, 'contracts', 'draft-brief.input.schema.json');
+  writeJson(schemaPath, {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $ref: './schemas/draft/input.schema.json',
+    type: 'object',
+    required: ['workspace_root'],
+    properties: { workspace_root: { type: 'string' } },
+  });
+  fs.mkdirSync(path.join(repoDir, 'contracts', 'schemas', 'draft'), { recursive: true });
+  fs.mkdirSync(path.join(repoDir, 'contracts', 'schemas', 'shared'), { recursive: true });
+  writeJson(path.join(repoDir, 'contracts', 'schemas', 'draft', 'input.schema.json'), {
+    type: 'object',
+    required: ['workspace_root'],
+    properties: {
+      workspace_root: { $ref: '../shared/non-empty-string.schema.json' },
+    },
+  });
+  writeJson(path.join(repoDir, 'contracts', 'schemas', 'shared', 'non-empty-string.schema.json'), {
+    type: 'string',
+    minLength: 1,
+  });
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+
+  assert.equal(bundle.status, 'ready');
+  assert.equal(bundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'resolved');
+});
+
+test('repo compiler projects the canonical declarative stage manifest before legacy fallback', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'stage_control_plane.json'));
+  const stageManifestRef = 'agent/stages/manifest.json';
+  const stageManifest = {
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: 'sample-domain',
+    owner: 'sample-domain',
+    stages: [{
+      stage_id: 'domain_intake',
+      stage_kind: 'intake',
+      title: 'Domain intake',
+      summary: 'Read the request.',
+      goal: 'Prepare the domain request.',
+      policy_ref: 'agent/stages/domain_intake.md',
+      prompt_ref: 'agent/prompts/domain_intake.md',
+      knowledge_refs: ['agent/knowledge/domain.md'],
+      quality_gate_refs: ['agent/quality_gates/domain.md'],
+      allowed_action_refs: ['draft_brief'],
+      requires: ['request_received'],
+      ensures: ['request_ready'],
+      next_stage_refs: [],
+      trust_lane: 'domain_agent',
+    }],
+    authority_boundary: {
+      domain_truth_owner: 'sample-domain',
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  };
+  writeJson(path.join(repoDir, stageManifestRef), stageManifest);
+  const packCompilerPath = path.join(repoDir, 'contracts', 'pack_compiler_input.json');
+  const packCompiler = parseJsonText(fs.readFileSync(packCompilerPath, 'utf8')) as Record<string, any>;
+  packCompiler.source_refs.stage_manifest = stageManifestRef;
+  writeJson(packCompilerPath, packCompiler);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  const stageContract = bundle.source_contract_consumption.consumed_contracts.find(
+    (entry: { contract_id: string }) => entry.contract_id === 'stage_control_plane',
+  );
+
+  assert.equal(bundle.status, 'ready');
+  assert.equal(stageContract.path, stageManifestRef);
+  assert.equal(stageContract.status, 'resolved_from_declarative_stage_manifest');
+
+  const graphRefRepoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(graphRefRepoDir, 'contracts', 'stage_control_plane.json'));
+  writeJson(path.join(graphRefRepoDir, stageManifestRef), stageManifest);
+  const graphPackPath = path.join(graphRefRepoDir, 'contracts', 'pack_compiler_input.json');
+  const graphPack = parseJsonText(fs.readFileSync(graphPackPath, 'utf8')) as Record<string, any>;
+  graphPack.source_refs.stage_graph_source_ref = stageManifestRef;
+  writeJson(graphPackPath, graphPack);
+
+  const graphBundle = runCli(['agents', 'interfaces', '--repo-dir', graphRefRepoDir])
+    .generated_agent_interfaces;
+  assert.equal(graphBundle.status, 'ready');
+});
+
 test('repo compiler requires action fields to match the selected input schema', () => {
   const repoDir = buildReadyAgentRepo();
   const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');

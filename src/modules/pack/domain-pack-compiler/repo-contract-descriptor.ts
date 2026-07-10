@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
@@ -70,19 +71,123 @@ function normalizeRepoActionCatalog(repoDir: string, value: unknown) {
   }
 }
 
-function normalizeRepoStageControlPlane(repoDir: string, value: unknown) {
+function normalizeRepoStageControlPlane(
+  repoDir: string,
+  value: unknown,
+  sourceRef = 'contracts/stage_control_plane.json',
+) {
   if (!value) {
     return null;
   }
   try {
     return normalizeFamilyStageControlPlane(value);
   } catch (error) {
-    throw new FrameworkContractError('contract_shape_invalid', 'contracts/stage_control_plane.json is not a valid family-stage-control-plane.v1 contract.', {
+    throw new FrameworkContractError('contract_shape_invalid', `${sourceRef} is not a valid family-stage-control-plane.v1 contract.`, {
       repo_dir: repoDir,
-      relative_path: 'contracts/stage_control_plane.json',
+      relative_path: sourceRef,
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+function repoSurfaceRefs(value: unknown, role: string) {
+  return Array.isArray(value)
+    ? value.flatMap((entry) => {
+      const ref = optionalString(entry);
+      return ref ? [{ ref, ref_kind: 'repo_path', role }] : [];
+    })
+    : [];
+}
+
+function projectDeclarativeStageManifest(repoDir: string, value: unknown, sourceRef: string) {
+  if (!isRecord(value)
+    || value.surface_kind !== 'opl_standard_agent_declarative_stage_manifest'
+    || value.version !== 'opl-standard-agent-declarative-stage-manifest.v1'
+    || !Array.isArray(value.stages)) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `${sourceRef} is not a valid OPL standard declarative stage manifest.`,
+      { repo_dir: repoDir, relative_path: sourceRef },
+    );
+  }
+  const targetDomainId = optionalString(value.target_domain_id);
+  const owner = optionalString(value.owner);
+  if (!targetDomainId || !owner) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      `${sourceRef} must declare target_domain_id and owner.`,
+      { repo_dir: repoDir, relative_path: sourceRef },
+    );
+  }
+  const authorityBoundary = isRecord(value.authority_boundary) ? value.authority_boundary : {};
+  return normalizeRepoStageControlPlane(repoDir, {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: `${targetDomainId.replace(/[^a-z0-9]+/gi, '_')}.stage-control-plane.v1`,
+    target_domain_id: targetDomainId,
+    owner,
+    authority_boundary: authorityBoundary,
+    stages: value.stages.map((entry) => {
+      if (!isRecord(entry)) return entry;
+      const policyRef = optionalString(entry.policy_ref);
+      const promptRef = optionalString(entry.prompt_ref);
+      const trustLane = optionalString(entry.trust_lane);
+      const nextStageRefs = stringList(entry.next_stage_refs);
+      return {
+        stage_id: entry.stage_id,
+        stage_kind: entry.stage_kind,
+        title: entry.title,
+        summary: entry.summary,
+        goal: entry.goal,
+        owner: optionalString(entry.owner) ?? owner,
+        domain_stage_refs: policyRef ? [policyRef] : [],
+        knowledge_refs: repoSurfaceRefs(entry.knowledge_refs, 'stage_knowledge'),
+        prompt_refs: promptRef
+          ? [{ ref: promptRef, ref_kind: 'repo_path', role: 'stage_prompt' }]
+          : [],
+        allowed_action_refs: stringList(entry.allowed_action_refs),
+        evaluation: repoSurfaceRefs(entry.quality_gate_refs, 'stage_quality_gate'),
+        handoff: nextStageRefs.length > 0 ? { next_stage_refs: nextStageRefs } : null,
+        source_refs: policyRef
+          ? [{ ref: policyRef, ref_kind: 'repo_path', role: 'stage_policy' }]
+          : [],
+        stage_contract: {
+          requires: stringList(entry.requires),
+          ensures: stringList(entry.ensures),
+        },
+        trust_boundary: trustLane ? { lane: trustLane } : null,
+        authority_boundary: authorityBoundary,
+      };
+    }),
+    notes: [`Projected from ${sourceRef}.`],
+  }, sourceRef);
+}
+
+function resolveRepoStageControlPlane(repoDir: string, packCompilerInput: unknown) {
+  const pack = isRecord(packCompilerInput) ? packCompilerInput : null;
+  const sourceRefs = isRecord(pack?.source_refs) ? pack.source_refs : null;
+  const manifestRef = optionalString(sourceRefs?.stage_manifest);
+  const graphRef = optionalString(sourceRefs?.stage_graph_source_ref);
+  const sourceRef = manifestRef ?? graphRef ?? 'contracts/stage_control_plane.json';
+  const missingSourceKind = manifestRef ? 'declarative_stage_manifest' : 'stage_control_plane';
+  const candidate = path.resolve(repoDir, sourceRef);
+  if (!fs.existsSync(candidate)) {
+    return { source_ref: sourceRef, source_kind: missingSourceKind, stage_control_plane: null };
+  }
+  const contained = resolveContainedRepoJsonFile(repoDir, sourceRef, 'Stage graph source');
+  const parsed = parseJsonText(fs.readFileSync(contained.real_path, 'utf8'));
+  const sourceKind = isRecord(parsed)
+    && parsed.surface_kind === 'opl_standard_agent_declarative_stage_manifest'
+    ? 'declarative_stage_manifest'
+    : 'stage_control_plane';
+  const stageControlPlane = sourceKind === 'declarative_stage_manifest'
+    ? projectDeclarativeStageManifest(repoDir, parsed, contained.repo_relative_ref)
+    : normalizeRepoStageControlPlane(repoDir, parsed, contained.repo_relative_ref);
+  return {
+    source_ref: contained.repo_relative_ref,
+    source_kind: sourceKind,
+    stage_control_plane: stageControlPlane,
+  };
 }
 
 function splitSchemaRef(schemaRef: string) {
@@ -135,7 +240,13 @@ function sameStringSet(left: string[], right: string[]) {
 }
 
 function localSchemaDependencies(repoDir: string, rootPath: string, rootSchema: JsonRecord) {
-  const dependencies: JsonRecord[] = [];
+  const dependencies: Array<{
+    schemaId: string;
+    schema: JsonRecord;
+    schemaKey: string;
+    sourceRef: string;
+  }> = [];
+  const repoRoot = fs.realpathSync.native(repoDir);
   const pending = [{ file_path: rootPath, schema: rootSchema }];
   const seen = new Set([rootPath]);
   while (pending.length > 0) {
@@ -154,7 +265,7 @@ function localSchemaDependencies(repoDir: string, rootPath: string, rootSchema: 
       const fileRef = splitSchemaRef(ref).file_ref;
       if (!fileRef || path.isAbsolute(fileRef) || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(fileRef)) continue;
       const candidate = path.resolve(path.dirname(current.file_path), fileRef);
-      const relativeRef = path.relative(repoDir, candidate).split(path.sep).join('/');
+      const relativeRef = path.relative(repoRoot, candidate).split(path.sep).join('/');
       const contained = resolveContainedRepoJsonFile(repoDir, relativeRef, 'Referenced input schema');
       if (seen.has(contained.real_path)) continue;
       const parsed = parseJsonText(fs.readFileSync(contained.real_path, 'utf8'));
@@ -162,7 +273,12 @@ function localSchemaDependencies(repoDir: string, rootPath: string, rootSchema: 
         throw new Error(`Referenced input schema must be an object: ${relativeRef}`);
       }
       seen.add(contained.real_path);
-      dependencies.push(parsed);
+      dependencies.push({
+        schemaId: contained.repo_relative_ref,
+        schema: parsed,
+        schemaKey: pathToFileURL(contained.real_path).href,
+        sourceRef: contained.repo_relative_ref,
+      });
       pending.push({ file_path: contained.real_path, schema: parsed });
     }
   }
@@ -251,6 +367,7 @@ function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof n
         schemaId: `${action.action_id}:input`,
         schema,
         sourceRef: schemaRef,
+        schemaKey: pathToFileURL(containedFile.real_path).href,
       }, localSchemaDependencies(repoDir, containedFile.real_path, schema));
     } catch {
       return {
@@ -301,13 +418,11 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
 
   const domainDescriptor = readRepoJson(repoDir, 'contracts/domain_descriptor.json') ?? {};
   const actionCatalog = normalizeRepoActionCatalog(repoDir, readRepoJson(repoDir, 'contracts/action_catalog.json'));
-  const stageControlPlane = normalizeRepoStageControlPlane(
-    repoDir,
-    readRepoJson(repoDir, 'contracts/stage_control_plane.json'),
-  );
+  const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
+  const stageSource = resolveRepoStageControlPlane(repoDir, packCompilerInput);
+  const stageControlPlane = stageSource.stage_control_plane;
   const functionalAuditRaw = readRepoJson(repoDir, 'contracts/functional_privatization_audit.json');
   const generatedSurfaceHandoffRaw = readRepoJson(repoDir, 'contracts/generated_surface_handoff.json');
-  const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
   const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
   const generatedSurfaceHandoff = isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : null;
   const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : null;
@@ -338,7 +453,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   });
   const blockerReasons = [
     actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
-    stageControlPlane ? null : 'missing_or_invalid_contract:contracts/stage_control_plane.json',
+    stageControlPlane ? null : `missing_or_invalid_contract:${stageSource.source_ref}`,
     genericResidueBlocked(functionalAudit.summary)
       ? 'functional_privatization_audit_has_generic_residue_or_blocker'
       : null,
@@ -370,8 +485,12 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
           },
           {
             contract_id: 'stage_control_plane',
-            path: 'contracts/stage_control_plane.json',
-            status: stageControlPlane ? 'resolved' : 'missing',
+            path: stageSource.source_ref,
+            status: stageControlPlane
+              ? stageSource.source_kind === 'declarative_stage_manifest'
+                ? 'resolved_from_declarative_stage_manifest'
+                : 'resolved'
+              : 'missing',
           },
           {
             contract_id: 'generated_surface_handoff',
@@ -406,6 +525,8 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
       },
       family_stage_control_plane: {
         status: stageControlPlane ? 'resolved' : 'missing',
+        source_ref: stageSource.source_ref,
+        source_kind: stageSource.source_kind,
         raw_descriptor: stageControlPlane,
       },
       generated_surface_handoff_contract: generatedSurfaceHandoff,
@@ -415,7 +536,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
         source_refs: [
           'contracts/domain_descriptor.json',
           'contracts/action_catalog.json',
-          'contracts/stage_control_plane.json',
+          stageSource.source_ref,
           'contracts/functional_privatization_audit.json',
         ],
         product_entry_manifest_contract_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
@@ -479,6 +600,11 @@ function repoContractRuntimeSurfacesProjection(descriptor: JsonRecord) {
   const generatedSurfaceHandoff = isRecord(descriptor.generated_surface_handoff_contract)
     ? descriptor.generated_surface_handoff_contract
     : null;
+  const stageControlPlane = isRecord(descriptor.family_stage_control_plane)
+    ? descriptor.family_stage_control_plane
+    : null;
+  const stageSourceRef = optionalString(stageControlPlane?.source_ref)
+    ?? 'contracts/stage_control_plane.json';
   return {
     cli: {
       status: statusOf(descriptor.family_action_catalog) === 'resolved' ? 'resolved' : 'missing',
@@ -503,7 +629,7 @@ function repoContractRuntimeSurfacesProjection(descriptor: JsonRecord) {
     },
     workbench: {
       status: statusOf(descriptor.family_stage_control_plane) === 'resolved' ? 'resolved' : 'missing',
-      source_ref: 'contracts/stage_control_plane.json',
+      source_ref: stageSourceRef,
     },
     generated_surface_handoff: {
       status: generatedSurfaceHandoff ? 'resolved' : 'missing',
@@ -523,7 +649,7 @@ function repoContractTransitionProjection(descriptor: JsonRecord) {
   return {
     status: statusOf(stageControlPlane) === 'resolved' ? 'descriptor_only' : 'missing',
     source_kind: 'standard_agent_repo_contracts',
-    source_ref: 'contracts/stage_control_plane.json',
+    source_ref: optionalString(stageControlPlane?.source_ref) ?? 'contracts/stage_control_plane.json',
     transition_count: stages.length,
     authority_boundary: {
       transition_projection_can_claim_domain_ready: false,

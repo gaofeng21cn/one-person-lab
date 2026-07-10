@@ -10,6 +10,7 @@ export type JsonSchemaRegistryEntry = {
   schemaId: string;
   schema: AnySchema;
   sourceRef?: string;
+  schemaKey?: string;
 };
 
 export type JsonSchemaValidationIssue = {
@@ -135,7 +136,7 @@ export function assertJsonSchemaPayload(
 
 export function assertJsonSchemaCompiles(
   entry: JsonSchemaRegistryEntry,
-  dependencies: unknown[] = [],
+  dependencies: JsonSchemaRegistryEntry[] = [],
 ): void {
   const compiler = new Ajv2020({
     allErrors: true,
@@ -144,9 +145,16 @@ export function assertJsonSchemaCompiles(
   });
   try {
     for (const dependency of dependencies) {
-      compiler.addSchema(dependency as AnySchema);
+      compiler.addSchema(dependency.schema, dependency.schemaKey ?? dependency.schemaId);
     }
-    compiler.compile(entry.schema);
+    if (entry.schemaKey) {
+      compiler.addSchema(entry.schema, entry.schemaKey);
+      if (!compiler.getSchema(entry.schemaKey)) {
+        throw new Error(`JSON Schema was not registered: ${entry.schemaKey}`);
+      }
+    } else {
+      compiler.compile(entry.schema);
+    }
   } catch (error) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
