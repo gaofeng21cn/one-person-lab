@@ -49,7 +49,7 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
   }
   writeText(root, 'runtime/authority_functions/README.md');
   writeJson(root, 'contracts/owner_receipt_contract.json', {
-    surface_kind: 'domain_owner_receipt_contract',
+    surface_kind: 'owner_receipt_contract',
   });
   writeJson(root, 'contracts/domain_descriptor.json', {
     surface_kind: 'domain_agent_descriptor',
@@ -350,6 +350,7 @@ test('OMA hosted descriptor consumes the generated stage plane without a legacy 
   const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
   assert.equal(entry?.status, 'resolved');
   assert.equal(entry?.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id, 'oma');
+  assert.equal(entry?.manifest?.session_continuity?.domain_agent_id, 'oma');
   assert.equal(entry?.manifest?.standard_domain_agent_skeleton?.agent_id, 'oma');
   assert.equal(entry?.manifest?.family_stage_control_plane?.plane_id, 'opl_meta_agent_stage_control_plane');
   assert.equal(
@@ -606,6 +607,7 @@ test('stage manifest compiler rejects malformed or non-object owner receipt cont
   for (const [name, source] of [
     ['malformed', '{'],
     ['non-object', '[]'],
+    ['foreign-kind', '{"surface_kind":"foreign_owner_receipt_contract"}'],
   ] as const) {
     await t.test(name, () => {
       const root = fixture(`target-owner-receipt-${name}`);
@@ -780,5 +782,5 @@ test('real MAG legacy manifest kind is blocked without skip or false-ready proje
   assert.equal(projection?.requested_agent_id, 'mag');
   assert.equal(projection?.compiler_status, 'blocked');
   assert.equal(projection?.repo_contract_error?.code, 'contract_shape_invalid');
-  assert.match(projection?.repo_contract_error?.message ?? '', /stage_manifest\.surface_kind must be/);
+  assert.match(String(projection?.repo_contract_error?.message ?? ''), /stage_manifest\.surface_kind must be/);
 });

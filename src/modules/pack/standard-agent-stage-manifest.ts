@@ -261,11 +261,20 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   const defaultSkillRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/skills/'));
   const defaultToolRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/tools/'));
   const ownerReceiptContractRef = repoFile(repoDir, OWNER_RECEIPT_CONTRACT_REF, 'owner_receipt_contract_ref').ref;
-  record(
+  const ownerReceiptContract = record(
     readJson(repoDir, ownerReceiptContractRef, 'owner_receipt_contract_ref').payload,
     'owner_receipt_contract',
     repoDir,
   );
+  if (text(
+    ownerReceiptContract.surface_kind,
+    'owner_receipt_contract.surface_kind',
+    repoDir,
+  ) !== 'owner_receipt_contract') {
+    fail('owner_receipt_contract.surface_kind must be owner_receipt_contract.', {
+      repo_dir: repoDir,
+    });
+  }
   const authorityFunctionInventoryRef = repoFile(
     repoDir,
     AUTHORITY_FUNCTION_INVENTORY_REF,

@@ -250,7 +250,7 @@ function buildDomainMemoryDescriptor(memoryDescriptor: JsonRecord | null, stageC
   };
 }
 
-function buildRuntimeSurfaces(repoDir: string, registry: JsonRecord) {
+function buildRuntimeSurfaces(repoDir: string, registry: JsonRecord, canonicalAgentId: string) {
   const summary = registrySummary(registry);
   const registryStatus = optionalString(registry.status) ?? 'resolved';
   const appWorkbenchSections =
@@ -280,7 +280,7 @@ function buildRuntimeSurfaces(repoDir: string, registry: JsonRecord) {
     session_continuity: {
       surface_kind: 'session_continuity',
       summary: 'OMA descriptor continuity is projected through OPL-generated refs-only surfaces.',
-      domain_agent_id: OMA_PROJECT_ID,
+      domain_agent_id: canonicalAgentId,
       runtime_owner: 'one-person-lab',
       domain_owner: OMA_PROJECT_ID,
       executor_owner: 'codex-cli',
@@ -429,7 +429,7 @@ function buildRawManifest(repoDir: string, registry: JsonRecord) {
     return null;
   }
   const memoryDescriptor = readJson(repoDir, OMA_CONTRACTS.memoryDescriptor);
-  const runtimeSurfaces = buildRuntimeSurfaces(repoDir, registry);
+  const runtimeSurfaces = buildRuntimeSurfaces(repoDir, registry, canonicalAgentId);
   return {
     surface_kind: 'product_entry_manifest',
     manifest_kind: 'opl_hosted_standard_contract_descriptor_adapter',

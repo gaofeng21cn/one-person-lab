@@ -110,6 +110,10 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
   ] as const) {
     fs.writeFileSync(path.join(targetDir, 'contracts', file), `${JSON.stringify(payload)}\n`);
   }
+  const stageManifestPath = path.join(targetDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as Record<string, any>;
+  stageManifest.stages[0].allowed_action_refs = [manifestSurface.family_action_catalog.actions[0].action_id];
+  fs.writeFileSync(stageManifestPath, `${JSON.stringify(stageManifest, null, 2)}\n`);
   return manifestSurface;
 }
 
