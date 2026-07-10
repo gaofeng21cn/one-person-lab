@@ -22,7 +22,7 @@ export const SUMMARY_DRILLDOWN_KEYS = [
   'lifecycle_ledger_refs',
   'domain_projection_refs',
   'domain_owner_payload_summary_refs',
-  'mag_manifest_sustained_consumption_followthrough_refs',
+  'owner_evidence_sustained_consumption_refs',
   'domain_evidence_request_refs',
   'production_evidence_tail_ledger',
   'evidence_envelope',

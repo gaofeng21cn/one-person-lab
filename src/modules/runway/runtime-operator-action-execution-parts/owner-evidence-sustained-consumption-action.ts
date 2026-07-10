@@ -28,12 +28,10 @@ function refsFromPayload(payload: JsonRecord, keys: string[]) {
 
 const RECORD_ACTION_KINDS = [
   'owner_evidence_sustained_consumption_receipt_record',
-  'mag_manifest_sustained_consumption_followthrough_receipt_record',
 ] as const;
 
 const VERIFY_ACTION_KINDS = [
   'owner_evidence_sustained_consumption_receipt_verify',
-  'mag_manifest_sustained_consumption_followthrough_receipt_verify',
 ] as const;
 
 function ownerEvidenceSustainedConsumptionInput(
@@ -134,6 +132,3 @@ export function ownerEvidenceSustainedConsumptionExecution(
         },
   };
 }
-
-export const magManifestSustainedConsumptionExecution =
-  ownerEvidenceSustainedConsumptionExecution;

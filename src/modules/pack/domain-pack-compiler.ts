@@ -4,10 +4,11 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
-} from '../../kernel/standard-domain-agent-family-repos.ts';
+} from '../atlas/standard-domain-agent-family-repos.ts';
 import {
   STANDARD_AGENT_PACK_ABI,
 } from './standard-agent-pack-abi.ts';
+import { resolveStandardAgent } from '../charter/standard-agent-registry.ts';
 import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,
@@ -45,30 +46,7 @@ function recordPathList(value: unknown) {
 }
 
 function normalizeDomainSelection(value: string) {
-  const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    mas: 'medautoscience',
-    'med-autoscience': 'medautoscience',
-    medautoscience: 'medautoscience',
-    mag: 'medautogrant',
-    'med-autogrant': 'medautogrant',
-    medautogrant: 'medautogrant',
-    rca: 'redcube',
-    redcube: 'redcube',
-    'redcube-ai': 'redcube',
-    redcube_ai: 'redcube',
-    oma: 'opl-meta-agent',
-    oplmetaagent: 'opl-meta-agent',
-    'opl-meta-agent': 'opl-meta-agent',
-    opl_meta_agent: 'opl-meta-agent',
-    bookforge: 'opl-bookforge',
-    'book-forge': 'opl-bookforge',
-    book_forge: 'opl-bookforge',
-    oplbookforge: 'opl-bookforge',
-    'opl-bookforge': 'opl-bookforge',
-    opl_bookforge: 'opl-bookforge',
-  };
-  return aliases[key] ?? key;
+  return resolveStandardAgent(value)?.domain_id ?? value.trim().toLowerCase();
 }
 
 function domainSelectionMatches(candidate: JsonRecord, domain: string) {

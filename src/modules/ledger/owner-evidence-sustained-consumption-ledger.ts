@@ -62,9 +62,6 @@ const FORBIDDEN_BODY_FIELDS = new Set([
   'artifact_body',
   'artifact_content',
   'body',
-  'grant_artifact_body',
-  'grant_artifact_content',
-  'grant_truth_body',
   'memory_body',
   'package_body',
   'payload_body',
@@ -76,18 +73,15 @@ const FORBIDDEN_BODY_FIELDS = new Set([
 const FORBIDDEN_CLAIM_FIELDS = new Set([
   'claims_app_sustained_consumption_complete',
   'claims_export_ready',
-  'claims_grant_ready',
   'claims_human_approval_obtained',
   'claims_provider_long_soak_complete',
   'claims_quality_ready',
   'claims_submission_ready',
   'claims_submission_ready_export',
   'closes_app_sustained_consumption',
-  'closes_grant_ready',
   'closes_provider_long_soak',
   'closes_submission_ready',
   'export_ready',
-  'grant_ready',
   'provider_long_soak_complete',
   'quality_ready',
   'submission_ready',
@@ -278,10 +272,7 @@ function normalizeReceipt(value: unknown): OwnerEvidenceSustainedConsumptionRece
   const receipt_ref = optionalString(source.receipt_ref);
   if (
     !receipt_ref
-    || (
-      source.source_surface !== 'opl_owner_evidence_sustained_consumption_refs'
-      && source.source_surface !== 'opl_mag_manifest_sustained_consumption_followthrough_refs'
-    )
+    || source.source_surface !== 'opl_owner_evidence_sustained_consumption_refs'
   ) {
     return null;
   }

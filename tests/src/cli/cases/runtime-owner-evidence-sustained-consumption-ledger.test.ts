@@ -14,11 +14,11 @@ test('runtime owner-evidence sustained-consumption records and verifies refs-onl
   ));
   try {
     const env = { OPL_STATE_DIR: stateRoot };
-    const receiptRef = 'opl://owner-evidence/sustained-consumption/medautogrant';
-    const targetIdentity = { domain_id: 'medautogrant' };
+    const receiptRef = 'opl://owner-evidence/sustained-consumption/example-domain';
+    const targetIdentity = { domain_id: 'example-domain' };
     const payload = {
       receipt_ref: receiptRef,
-      typed_blocker_refs: ['typed-blocker:app/operator/mag/open'],
+      typed_blocker_refs: ['typed-blocker:owner-consumption/open'],
     };
 
     const recorded = runCli([

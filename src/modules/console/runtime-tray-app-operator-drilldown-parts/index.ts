@@ -14,9 +14,9 @@ export { buildExternalEvidenceActionRoutes } from './external-evidence-action-ro
 export { buildDomainOwnerPayloadSummaryRefs } from './domain-owner-payload-summary-refs.ts';
 export { buildDomainOwnerPayloadSummaryActionRoutes } from './domain-owner-payload-summary-action-routes.ts';
 export {
-  buildMagManifestSustainedConsumptionFollowthroughActionRoutes,
-  buildMagManifestSustainedConsumptionFollowthroughRefs,
-} from './mag-manifest-sustained-consumption.ts';
+  buildOwnerEvidenceSustainedConsumptionFollowthroughActionRoutes,
+  buildOwnerEvidenceSustainedConsumptionFollowthroughRefs,
+} from './owner-evidence-sustained-consumption.ts';
 export { buildAppDrilldownRefsOnlyAuthorityBoundary } from './authority-boundary.ts';
 export {
   buildCodexAppRuntimeEvidenceActionRoutes,

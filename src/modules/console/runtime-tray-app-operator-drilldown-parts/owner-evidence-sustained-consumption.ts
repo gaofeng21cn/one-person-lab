@@ -1,19 +1,19 @@
 import type { DomainManifestCatalogEntry } from '../../atlas/index.ts';
 import {
-  listOwnerEvidenceSustainedConsumptionReceipts as listMagManifestSustainedConsumptionReceipts,
-  ownerEvidenceSustainedConsumptionTargetKey as magManifestSustainedConsumptionTargetKey,
-  type OwnerEvidenceSustainedConsumptionReceipt as MagManifestSustainedConsumptionReceipt,
+  listOwnerEvidenceSustainedConsumptionReceipts,
+  ownerEvidenceSustainedConsumptionTargetKey,
+  type OwnerEvidenceSustainedConsumptionReceipt,
 } from '../../ledger/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import { record, recordList, stringList, stringValue } from './value-utils.ts';
 
-type MagManifestSustainedConsumptionRoute = JsonRecord & {
+type OwnerEvidenceSustainedConsumptionRoute = JsonRecord & {
   ref: string;
   role: 'operator_action_route';
   action_id: string;
   action_kind:
-    | 'mag_manifest_sustained_consumption_followthrough_receipt_record'
-    | 'mag_manifest_sustained_consumption_followthrough_receipt_verify';
+    | 'owner_evidence_sustained_consumption_receipt_record'
+    | 'owner_evidence_sustained_consumption_receipt_verify';
   owner: 'opl';
   route_target_kind: 'opl_cli';
   execution_policy: 'opl_safe_action_shell';
@@ -40,8 +40,8 @@ const REQUIRED_PAYLOAD_FIELDS = [
 
 function authorityBoundary() {
   return {
-    opl: 'mag_manifest_sustained_consumption_followthrough_projection_and_ledger_refs_only',
-    domain: 'med_autogrant_manifest_consumption_payload_authority',
+    opl: 'owner_evidence_sustained_consumption_projection_and_ledger_refs_only',
+    domain: 'domain_owner_evidence_payload_authority',
     refs_only: true,
     payload_owner: 'app_operator_or_release_default_caller',
     can_write_domain_truth: false,
@@ -56,7 +56,6 @@ function authorityBoundary() {
     can_declare_submission_ready: false,
     can_declare_provider_long_soak_complete: false,
     can_claim_sustained_app_consumption_complete: false,
-    can_claim_grant_ready: false,
     can_claim_quality_ready: false,
     can_claim_export_ready: false,
     can_claim_submission_ready: false,
@@ -76,14 +75,6 @@ function candidateFromManifest(manifest: JsonRecord) {
       source_ref: '/product_entry_manifest/owner_payload_response',
       owner_payload_response: record(productEntryManifest.owner_payload_response),
     },
-    {
-      source_ref: '/mag_opl_owner_payload_response',
-      owner_payload_response: record(manifest.mag_opl_owner_payload_response),
-    },
-    {
-      source_ref: '/product_entry_manifest/mag_opl_owner_payload_response',
-      owner_payload_response: record(productEntryManifest.mag_opl_owner_payload_response),
-    },
   ];
   return candidates
     .map((candidate) => ({
@@ -95,7 +86,7 @@ function candidateFromManifest(manifest: JsonRecord) {
     }))
     .find((candidate) =>
       stringValue(candidate.workorder.surface_kind)
-        === 'mag_manifest_sustained_consumption_followthrough_workorder'
+        === 'owner_evidence_sustained_consumption_followthrough_workorder'
     ) ?? null;
 }
 
@@ -110,7 +101,7 @@ function workspaceScaleoutRef(manifest: JsonRecord) {
   return null;
 }
 
-function receiptProjection(receipt: MagManifestSustainedConsumptionReceipt | undefined) {
+function receiptProjection(receipt: OwnerEvidenceSustainedConsumptionReceipt | undefined) {
   return receipt
     ? {
         receipt_ref: receipt.receipt_ref,
@@ -121,13 +112,13 @@ function receiptProjection(receipt: MagManifestSustainedConsumptionReceipt | und
     : null;
 }
 
-export function buildMagManifestSustainedConsumptionFollowthroughRefs(input: {
+export function buildOwnerEvidenceSustainedConsumptionFollowthroughRefs(input: {
   domainManifestProjects: DomainManifestCatalogEntry[];
 }) {
-  const receipts = listMagManifestSustainedConsumptionReceipts();
-  const receiptsByTarget = new Map<string, MagManifestSustainedConsumptionReceipt>();
+  const receipts = listOwnerEvidenceSustainedConsumptionReceipts();
+  const receiptsByTarget = new Map<string, OwnerEvidenceSustainedConsumptionReceipt>();
   for (const receipt of receipts) {
-    const targetKey = magManifestSustainedConsumptionTargetKey(receipt.target_identity);
+    const targetKey = ownerEvidenceSustainedConsumptionTargetKey(receipt.target_identity);
     if (targetKey && !receiptsByTarget.has(targetKey)) {
       receiptsByTarget.set(targetKey, receipt);
     }
@@ -140,29 +131,33 @@ export function buildMagManifestSustainedConsumptionFollowthroughRefs(input: {
     }
     const domainId =
       stringValue(project.project_id)
-      ?? stringValue(candidate.owner_payload_response.target_domain_id)
-      ?? 'medautogrant';
+      ?? stringValue(candidate.owner_payload_response.target_domain_id);
+    if (!domainId) {
+      return [];
+    }
+    const targetDomainId =
+      stringValue(candidate.owner_payload_response.target_domain_id) ?? domainId;
+    const domainOwner =
+      stringValue(candidate.owner_payload_response.owner) ?? project.project;
     const targetIdentity = {
       domain_id: domainId,
       project: project.project,
-      target_domain_id:
-        stringValue(candidate.owner_payload_response.target_domain_id) ?? 'med-autogrant',
-      owner: stringValue(candidate.owner_payload_response.owner) ?? 'med-autogrant',
-      source_surface: 'mag_manifest_sustained_consumption_followthrough_workorder',
+      target_domain_id: targetDomainId,
+      owner: domainOwner,
+      source_surface: 'owner_evidence_sustained_consumption_followthrough_workorder',
       source_ref:
         `${candidate.source_ref}/manifest_consumer_evidence`
         + '/sustained_consumption_followthrough_workorder',
-      workorder_kind: 'manifest_sustained_consumption_followthrough',
+      workorder_kind: 'owner_evidence_sustained_consumption_followthrough',
     };
-    const targetKey = magManifestSustainedConsumptionTargetKey(targetIdentity);
+    const targetKey = ownerEvidenceSustainedConsumptionTargetKey(targetIdentity);
     const receipt = receiptsByTarget.get(targetKey);
     return [{
       domain_id: domainId,
       project: project.project,
-      target_domain_id:
-        stringValue(candidate.owner_payload_response.target_domain_id) ?? 'med-autogrant',
-      owner: stringValue(candidate.owner_payload_response.owner) ?? 'med-autogrant',
-      source_surface: 'mag_manifest_sustained_consumption_followthrough_workorder',
+      target_domain_id: targetDomainId,
+      owner: domainOwner,
+      source_surface: 'owner_evidence_sustained_consumption_followthrough_workorder',
       source_ref:
         `${candidate.source_ref}/manifest_consumer_evidence`
         + '/sustained_consumption_followthrough_workorder',
@@ -180,7 +175,6 @@ export function buildMagManifestSustainedConsumptionFollowthroughRefs(input: {
       ledger_receipt: receiptProjection(receipt),
       operator_payload_submitted: candidate.workorder.operator_payload_submitted === true,
       claims_sustained_app_consumption_complete: false,
-      claims_grant_ready: false,
       claims_submission_ready: false,
       claims_provider_long_soak_complete: false,
       authority_boundary: authorityBoundary(),
@@ -189,9 +183,9 @@ export function buildMagManifestSustainedConsumptionFollowthroughRefs(input: {
   const recordedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'recorded');
   const verifiedReceipts = receipts.filter((receipt) => receipt.receipt_status === 'verified');
   return {
-    surface_kind: 'opl_app_drilldown_mag_manifest_sustained_consumption_followthrough_refs',
+    surface_kind: 'opl_app_drilldown_owner_evidence_sustained_consumption_followthrough_refs',
     projection_policy:
-      'refs_only_mag_manifest_sustained_consumption_followthrough_no_payload_generation_or_ready_claim',
+      'refs_only_owner_evidence_sustained_consumption_no_payload_generation_or_ready_claim',
     summary: {
       followthrough_domain_count: domains.length,
       workorder_count: domains.length,
@@ -200,7 +194,6 @@ export function buildMagManifestSustainedConsumptionFollowthroughRefs(input: {
       verified_ledger_receipt_ref_count: verifiedReceipts.length,
       pending_verify_receipt_ref_count: recordedReceipts.length,
       can_claim_sustained_app_consumption_complete_count: 0,
-      can_claim_grant_ready_count: 0,
       can_claim_submission_ready_count: 0,
       can_claim_provider_long_soak_complete_count: 0,
     },
@@ -243,13 +236,13 @@ function safeActionIdPart(value: string) {
 function basePayloadWorkorder(domain: JsonRecord) {
   const workorder = record(domain.workorder);
   return {
-    surface_kind: 'opl_mag_manifest_sustained_consumption_followthrough_payload_workorder',
+    surface_kind: 'opl_owner_evidence_sustained_consumption_payload_workorder',
     workorder_policy:
       'operator_must_choose_real_app_operator_or_default_caller_success_refs_path_or_typed_blocker_path_empty_template_blocks',
     payload_owner: 'app_operator_or_release_default_caller',
-    payload_kind: 'manifest_sustained_consumption_refs_or_typed_blocker',
-    mag_authority_command: stringValue(workorder.authority_command),
-    mag_authority_command_internal: stringValue(workorder.authority_command_internal),
+    payload_kind: 'owner_evidence_sustained_consumption_refs_or_typed_blocker',
+    domain_authority_command: stringValue(workorder.authority_command),
+    domain_authority_command_internal: stringValue(workorder.authority_command_internal),
     accepted_payload_path_policy:
       stringValue(workorder.accepted_payload_path_policy)
       ?? 'real_app_operator_or_default_caller_consumption_refs_or_typed_blocker',
@@ -286,14 +279,14 @@ function basePayloadWorkorder(domain: JsonRecord) {
   };
 }
 
-export function buildMagManifestSustainedConsumptionFollowthroughActionRoutes(
+export function buildOwnerEvidenceSustainedConsumptionFollowthroughActionRoutes(
   projection: JsonRecord,
-): MagManifestSustainedConsumptionRoute[] {
-  const routes: MagManifestSustainedConsumptionRoute[] = [];
+): OwnerEvidenceSustainedConsumptionRoute[] {
+  const routes: OwnerEvidenceSustainedConsumptionRoute[] = [];
   for (const domain of recordList(projection.domains)) {
     const targetIdentity = record(domain.target_identity);
     const targetKey = stringValue(domain.target_key)
-      ?? magManifestSustainedConsumptionTargetKey(targetIdentity);
+      ?? ownerEvidenceSustainedConsumptionTargetKey(targetIdentity);
     if (!targetKey) {
       continue;
     }
@@ -309,13 +302,13 @@ export function buildMagManifestSustainedConsumptionFollowthroughActionRoutes(
       domain_id: stringValue(domain.domain_id),
       target_domain_id: stringValue(domain.target_domain_id),
       project_id: stringValue(domain.project),
-      request_id: `mag_manifest_sustained_consumption_followthrough:${targetKey}`,
-      request_pack_id: 'one_person_lab.mag_manifest_sustained_consumption_followthrough',
-      request_scope: 'opl_owned_refs_only_mag_manifest_sustained_consumption_followthrough_receipt',
-      evidence_route_kind: 'mag_manifest_sustained_consumption_followthrough',
+      request_id: `owner_evidence_sustained_consumption:${targetKey}`,
+      request_pack_id: 'one_person_lab.owner_evidence_sustained_consumption',
+      request_scope: 'opl_owned_refs_only_owner_evidence_sustained_consumption_receipt',
+      evidence_route_kind: 'owner_evidence_sustained_consumption',
       evidence_source_ref:
         '/runtime_tray_snapshot/app_operator_drilldown/'
-        + 'mag_manifest_sustained_consumption_followthrough_refs',
+        + 'owner_evidence_sustained_consumption_followthrough_refs',
       target_identity: targetIdentity,
       target_key: targetKey,
       payload_owner: 'app_operator_or_release_default_caller',
@@ -328,7 +321,6 @@ export function buildMagManifestSustainedConsumptionFollowthroughActionRoutes(
       can_generate_typed_blocker: false,
       can_submit_operator_payload: false,
       can_claim_sustained_app_consumption_complete: false,
-      can_claim_grant_ready: false,
       can_claim_submission_ready: false,
       can_claim_provider_long_soak_complete: false,
       payload_body_allowed: false,
@@ -339,34 +331,34 @@ export function buildMagManifestSustainedConsumptionFollowthroughActionRoutes(
     }
     if (stringValue(existingReceipt.receipt_status) === 'recorded') {
       const actionId =
-        `mag_manifest_sustained_consumption_followthrough:${safeActionIdPart(targetKey)}:verify`;
+        `owner_evidence_sustained_consumption:${safeActionIdPart(targetKey)}:verify`;
       routes.push({
         ...common,
         ref: commandRef(verifyRuntimeActionExecuteCommand(actionId)),
         opl_cli_args: [
           'runtime',
-          'mag-manifest-sustained-consumption',
+          'owner-evidence-sustained-consumption',
           'verify',
           '--receipt-ref',
           stringValue(existingReceipt.receipt_ref),
         ].filter((entry): entry is string => Boolean(entry)),
         action_id: actionId,
-        action_kind: 'mag_manifest_sustained_consumption_followthrough_receipt_verify',
+        action_kind: 'owner_evidence_sustained_consumption_receipt_verify',
         route_status: 'verify_route_available',
         route_status_detail:
-          'recorded_mag_manifest_sustained_consumption_followthrough_receipt_waiting_for_verify',
+          'recorded_owner_evidence_sustained_consumption_receipt_waiting_for_verify',
         route_requires_domain_or_app_payload: false,
         can_close_without_domain_or_app_payload: true,
         required_operator_payload_refs: [],
         required_evidence_refs: [],
         required_return_shapes: [],
         required_receipt_shapes: [
-          'mag_manifest_sustained_consumption_followthrough_verified_receipt_ref',
+          'owner_evidence_sustained_consumption_verified_receipt_ref',
         ],
         receipt_ref: stringValue(existingReceipt.receipt_ref),
         typed_blocker_refs: stringList(existingReceipt.typed_blocker_refs),
         open_reason:
-          'recorded_mag_manifest_sustained_consumption_followthrough_receipt_requires_verify',
+          'recorded_owner_evidence_sustained_consumption_receipt_requires_verify',
         payload_requirement: null,
         payload_template: null,
         payload_ref_hints: null,
@@ -379,28 +371,28 @@ export function buildMagManifestSustainedConsumptionFollowthroughActionRoutes(
       continue;
     }
     const actionId =
-      `mag_manifest_sustained_consumption_followthrough:${safeActionIdPart(targetKey)}:record`;
+      `owner_evidence_sustained_consumption:${safeActionIdPart(targetKey)}:record`;
     const payloadWorkorder = basePayloadWorkorder(domain);
     routes.push({
       ...common,
       ref: commandRef(runtimeActionExecuteCommand(actionId)),
-      opl_cli_args: ['runtime', 'mag-manifest-sustained-consumption', 'record'],
+      opl_cli_args: ['runtime', 'owner-evidence-sustained-consumption', 'record'],
       action_id: actionId,
-      action_kind: 'mag_manifest_sustained_consumption_followthrough_receipt_record',
+      action_kind: 'owner_evidence_sustained_consumption_receipt_record',
       route_status: 'record_route_available',
       route_status_detail:
-        'mag_manifest_sustained_consumption_followthrough_waiting_for_real_app_or_default_caller_refs_payload',
+        'owner_evidence_sustained_consumption_waiting_for_real_app_or_default_caller_refs_payload',
       route_requires_domain_or_app_payload: true,
       can_close_without_domain_or_app_payload: false,
       required_operator_payload_refs: REQUIRED_PAYLOAD_FIELDS,
       required_evidence_refs: [],
       required_return_shapes: payloadWorkorder.required_return_shapes,
-      required_receipt_shapes: ['mag_manifest_sustained_consumption_followthrough_receipt_ref'],
+      required_receipt_shapes: ['owner_evidence_sustained_consumption_receipt_ref'],
       typed_blocker_refs: [],
       open_reason:
         'real_app_operator_or_default_caller_sustained_consumption_refs_or_typed_blocker_refs_required',
       payload_requirement:
-        'app_operator_or_release_default_caller_refs_payload_required_to_record_mag_manifest_sustained_consumption_followthrough',
+        'app_operator_or_release_default_caller_refs_payload_required_to_record_owner_evidence_sustained_consumption',
       payload_template: payloadWorkorder.payload_template,
       payload_ref_hints: payloadWorkorder.payload_ref_hints,
       payload_workorder: payloadWorkorder,

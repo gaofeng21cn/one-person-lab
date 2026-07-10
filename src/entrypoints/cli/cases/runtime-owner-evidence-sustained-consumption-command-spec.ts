@@ -173,7 +173,7 @@ Record<string, CommandSpec> {
       summary:
         'Record refs-only owner-evidence sustained-consumption evidence without creating domain owner receipts or readiness claims.',
       examples: [
-        'opl runtime owner-evidence-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
+        'opl runtime owner-evidence-sustained-consumption record --target-identity \'{"domain_id":"example-domain"}\' --payload \'{"typed_blocker_refs":["typed-blocker:owner-consumption/open"]}\'',
       ],
       handler: (args) => {
         const parsed = parseRecordArgs(
@@ -193,7 +193,7 @@ Record<string, CommandSpec> {
       summary:
         'Verify an existing refs-only owner-evidence sustained-consumption receipt without claiming App sustained consumption or production readiness.',
       examples: [
-        'opl runtime owner-evidence-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/medautogrant',
+        'opl runtime owner-evidence-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/example-domain',
       ],
       handler: (args) => ({
         owner_evidence_sustained_consumption_ledger_verify:
@@ -239,32 +239,6 @@ Record<string, CommandSpec> {
         };
       },
     },
-  };
-  commandSpecs['runtime mag-manifest-sustained-consumption record'] = {
-    ...commandSpecs['runtime owner-evidence-sustained-consumption record'],
-    usage:
-      'opl runtime mag-manifest-sustained-consumption record --target-identity <json> (--payload <json>|--payload-file <path>)',
-    summary:
-      'Deprecated legacy compatibility alias for runtime owner-evidence-sustained-consumption record.',
-    examples: [
-      'opl runtime mag-manifest-sustained-consumption record --target-identity \'{"domain_id":"medautogrant"}\' --payload \'{"typed_blocker_refs":["typed-blocker:app/operator/mag/open"]}\'',
-    ],
-  };
-  commandSpecs['runtime mag-manifest-sustained-consumption verify'] = {
-    ...commandSpecs['runtime owner-evidence-sustained-consumption verify'],
-    usage: 'opl runtime mag-manifest-sustained-consumption verify [--receipt-ref <ref>]',
-    summary:
-      'Deprecated legacy compatibility alias for runtime owner-evidence-sustained-consumption verify.',
-    examples: [
-      'opl runtime mag-manifest-sustained-consumption verify --receipt-ref opl://owner-evidence/sustained-consumption/medautogrant',
-    ],
-  };
-  commandSpecs['runtime mag-manifest-sustained-consumption list'] = {
-    ...commandSpecs['runtime owner-evidence-sustained-consumption list'],
-    usage: 'opl runtime mag-manifest-sustained-consumption list',
-    summary:
-      'Deprecated legacy compatibility alias for runtime owner-evidence-sustained-consumption list.',
-    examples: ['opl runtime mag-manifest-sustained-consumption list --json'],
   };
   return commandSpecs;
 }

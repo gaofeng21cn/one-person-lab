@@ -481,8 +481,8 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'codex_app_runtime_evidence_receipt_verify'
     || actionKind === 'domain_owner_payload_summary_receipt_record'
     || actionKind === 'domain_owner_payload_summary_receipt_verify'
-    || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
-    || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
+    || actionKind === 'owner_evidence_sustained_consumption_receipt_record'
+    || actionKind === 'owner_evidence_sustained_consumption_receipt_verify'
     || actionKind === 'oma_production_consumption_receipt_record'
   ) {
     if (
@@ -492,14 +492,14 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       || actionKind === 'codex_app_runtime_evidence_receipt_verify'
       || actionKind === 'domain_owner_payload_summary_receipt_record'
       || actionKind === 'domain_owner_payload_summary_receipt_verify'
-      || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
-      || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
+      || actionKind === 'owner_evidence_sustained_consumption_receipt_record'
+      || actionKind === 'owner_evidence_sustained_consumption_receipt_verify'
       || actionKind === 'oma_production_consumption_receipt_record'
     ) {
       return {
         executionKind: actionKind === 'oma_production_consumption_receipt_record'
           ? 'opl_cli_oma_production_consumption_apply'
-          : actionKind.startsWith('mag_manifest_sustained_consumption_')
+          : actionKind.startsWith('owner_evidence_sustained_consumption_')
             ? 'opl_cli_owner_evidence_sustained_consumption_apply'
           : actionKind.startsWith('domain_owner_payload_summary_')
             ? 'opl_cli_domain_owner_payload_summary_apply'
@@ -615,8 +615,8 @@ async function executeRoute(
       actionKind === 'domain_owner_payload_summary_receipt_record'
       || actionKind === 'domain_owner_payload_summary_receipt_verify';
     const ownerEvidenceSustainedConsumptionAction =
-      actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
-      || actionKind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify';
+      actionKind === 'owner_evidence_sustained_consumption_receipt_record'
+      || actionKind === 'owner_evidence_sustained_consumption_receipt_verify';
     const omaProductionConsumptionAction =
       actionKind === 'oma_production_consumption_receipt_record';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'

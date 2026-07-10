@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
+import { resolveStandardAgent } from '../charter/standard-agent-registry.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileResult } from '../../kernel/json-file.ts';
 import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
@@ -124,21 +125,7 @@ function readJsonFile(repoDir: string, relativePath: string) {
 }
 
 function normalizeDomainSelection(value: string) {
-  const key = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    mas: 'med-autoscience',
-    medautoscience: 'med-autoscience',
-    'med-autoscience': 'med-autoscience',
-    mag: 'med-autogrant',
-    medautogrant: 'med-autogrant',
-    'med-autogrant': 'med-autogrant',
-    rca: 'redcube-ai',
-    redcube: 'redcube-ai',
-    'redcube-ai': 'redcube-ai',
-    redcube_ai: 'redcube-ai',
-    'opl-meta-agent': 'opl-meta-agent',
-  };
-  return aliases[key] ?? key;
+  return resolveStandardAgent(value)?.domain_id ?? value.trim().toLowerCase();
 }
 
 function readDomainId(repoDir: string, fallback: string | null) {

@@ -3,23 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
 
-interface StandardDomainAgentRepoInput {
+export interface StandardDomainAgentRepoInput {
   requested_agent_id: string | null;
   repo_dir: string;
 }
 
-export const DEFAULT_FAMILY_REPOS = [
-  { requested_agent_id: 'mas', directory: 'med-autoscience' },
-  { requested_agent_id: 'mag', directory: 'med-autogrant' },
-  { requested_agent_id: 'rca', directory: 'redcube-ai' },
-  { requested_agent_id: 'oma', directory: 'opl-meta-agent' },
-  { requested_agent_id: 'obf', directory: 'opl-bookforge' },
-  { requested_agent_id: 'mas-scholar-skills', directory: 'mas-scholar-skills' },
-] as const;
-
-export const DEFAULT_STANDARD_DOMAIN_AGENT_REPOS = DEFAULT_FAMILY_REPOS.filter((repo) =>
-  repo.requested_agent_id !== 'mas-scholar-skills'
-);
+export type FamilyRepoDefault = {
+  requested_agent_id: string;
+  directory: string;
+};
 
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const OPL_REPO_ROOT = path.resolve(SOURCE_DIR, '../..');
@@ -28,12 +20,12 @@ function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));
 }
 
-function hasDefaultFamilyConformanceSurface(repoDir: string) {
+export function hasDefaultFamilyConformanceSurface(repoDir: string) {
   return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'))
     || fs.existsSync(path.join(repoDir, 'contracts', 'scholar-skills-capability-modules.json'));
 }
 
-function hasStandardDomainAgentSurface(repoDir: string) {
+export function hasStandardDomainAgentSurface(repoDir: string) {
   return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'));
 }
 
@@ -50,8 +42,8 @@ function workspaceCandidatesFrom(seed: string) {
   return candidates;
 }
 
-function discoverFamilyRepoInputs(
-  repoDefaults: readonly { requested_agent_id: string; directory: string }[],
+export function discoverFamilyRepoInputs(
+  repoDefaults: readonly FamilyRepoDefault[],
   hasSurface: (repoDir: string) => boolean,
 ): StandardDomainAgentRepoInput[] {
   const configuredWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim();
@@ -80,12 +72,4 @@ function discoverFamilyRepoInputs(
     }
   }
   return repos;
-}
-
-export function defaultFamilyRepoInputs(): StandardDomainAgentRepoInput[] {
-  return discoverFamilyRepoInputs(DEFAULT_FAMILY_REPOS, hasDefaultFamilyConformanceSurface);
-}
-
-export function defaultStandardDomainAgentRepoInputs(): StandardDomainAgentRepoInput[] {
-  return discoverFamilyRepoInputs(DEFAULT_STANDARD_DOMAIN_AGENT_REPOS, hasStandardDomainAgentSurface);
 }

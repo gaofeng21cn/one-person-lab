@@ -44,7 +44,7 @@ type AppOperatorDrilldownSummaryInput = {
   functionalSummary: JsonRecord;
   evidenceRequests: JsonRecord;
   domainOwnerPayloadSummaryRefs: JsonRecord;
-  magManifestSustainedConsumptionFollowthroughRefs: JsonRecord;
+  ownerEvidenceSustainedConsumptionFollowthroughRefs: JsonRecord;
   productionEvidenceTailLedger: JsonRecord;
   legacyCleanupPlans: JsonRecord;
   oplMetaAgentRegistry: JsonRecord;
@@ -92,8 +92,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   const lifecycleSummary = record(input.lifecycleRefs.summary);
   const evidenceRequestSummary = record(input.evidenceRequests.summary);
   const domainOwnerPayloadSummary = record(input.domainOwnerPayloadSummaryRefs.summary);
-  const magManifestSustainedConsumptionSummary = record(
-    input.magManifestSustainedConsumptionFollowthroughRefs.summary,
+  const ownerEvidenceSustainedConsumptionSummary = record(
+    input.ownerEvidenceSustainedConsumptionFollowthroughRefs.summary,
   );
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
@@ -522,30 +522,30 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       countBy(input.actionRefs, (ref) =>
         ref.action_kind === 'domain_owner_payload_summary_receipt_verify'
       ),
-    mag_manifest_sustained_consumption_followthrough_domain_count:
-      magManifestSustainedConsumptionSummary.followthrough_domain_count,
-    mag_manifest_sustained_consumption_followthrough_workorder_count:
-      magManifestSustainedConsumptionSummary.workorder_count,
-    mag_manifest_sustained_consumption_followthrough_ledger_receipt_ref_count:
-      magManifestSustainedConsumptionSummary.ledger_receipt_ref_count,
-    mag_manifest_sustained_consumption_followthrough_recorded_ledger_receipt_ref_count:
-      magManifestSustainedConsumptionSummary.recorded_ledger_receipt_ref_count,
-    mag_manifest_sustained_consumption_followthrough_verified_ledger_receipt_ref_count:
-      magManifestSustainedConsumptionSummary.verified_ledger_receipt_ref_count,
-    mag_manifest_sustained_consumption_followthrough_pending_verify_receipt_ref_count:
-      magManifestSustainedConsumptionSummary.pending_verify_receipt_ref_count,
-    mag_manifest_sustained_consumption_followthrough_action_route_count:
+    owner_evidence_sustained_consumption_domain_count:
+      ownerEvidenceSustainedConsumptionSummary.followthrough_domain_count,
+    owner_evidence_sustained_consumption_workorder_count:
+      ownerEvidenceSustainedConsumptionSummary.workorder_count,
+    owner_evidence_sustained_consumption_ledger_receipt_ref_count:
+      ownerEvidenceSustainedConsumptionSummary.ledger_receipt_ref_count,
+    owner_evidence_sustained_consumption_recorded_ledger_receipt_ref_count:
+      ownerEvidenceSustainedConsumptionSummary.recorded_ledger_receipt_ref_count,
+    owner_evidence_sustained_consumption_verified_ledger_receipt_ref_count:
+      ownerEvidenceSustainedConsumptionSummary.verified_ledger_receipt_ref_count,
+    owner_evidence_sustained_consumption_pending_verify_receipt_ref_count:
+      ownerEvidenceSustainedConsumptionSummary.pending_verify_receipt_ref_count,
+    owner_evidence_sustained_consumption_action_route_count:
       countBy(input.actionRefs, (ref) => (
-        ref.action_kind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
-        || ref.action_kind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
+        ref.action_kind === 'owner_evidence_sustained_consumption_receipt_record'
+        || ref.action_kind === 'owner_evidence_sustained_consumption_receipt_verify'
       )),
-    mag_manifest_sustained_consumption_followthrough_record_action_route_count:
+    owner_evidence_sustained_consumption_record_action_route_count:
       countBy(input.actionRefs, (ref) =>
-        ref.action_kind === 'mag_manifest_sustained_consumption_followthrough_receipt_record'
+        ref.action_kind === 'owner_evidence_sustained_consumption_receipt_record'
       ),
-    mag_manifest_sustained_consumption_followthrough_verify_action_route_count:
+    owner_evidence_sustained_consumption_verify_action_route_count:
       countBy(input.actionRefs, (ref) =>
-        ref.action_kind === 'mag_manifest_sustained_consumption_followthrough_receipt_verify'
+        ref.action_kind === 'owner_evidence_sustained_consumption_receipt_verify'
       ),
     app_operator_production_evidence_tail_item_count: productionEvidenceTailItemCount,
     app_operator_production_evidence_tail_open_item_count: productionEvidenceTailOpenItemCount,
