@@ -24,13 +24,13 @@ test('real family-defaults pack compiler preserves JSON readback when individual
     blocked_domain_count: report.summary.blocked_domain_count,
   }, {
     total_domain_count: 5,
-    ready_domain_count: 2,
-    blocked_domain_count: 3,
+    ready_domain_count: 3,
+    blocked_domain_count: 2,
   });
-  for (const agentId of ['mag', 'oma']) {
+  for (const agentId of ['mag', 'mas', 'oma']) {
     assert.equal(domains.get(agentId)?.compiler_status, 'ready');
   }
-  for (const agentId of ['mas', 'obf', 'rca']) {
+  for (const agentId of ['obf', 'rca']) {
     const domain = domains.get(agentId) as Record<string, any>;
     assert.equal(domain.compiler_status, 'blocked');
     assert.equal(domain.blocker_reasons.length > 0, true);
@@ -57,14 +57,14 @@ test('real family-defaults generated interfaces preserve JSON readback when indi
   assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
   assert.deepEqual(report.summary, {
     total_domain_count: 5,
-    ready_domain_count: 2,
-    blocked_domain_count: 3,
+    ready_domain_count: 3,
+    blocked_domain_count: 2,
   });
-  for (const agentId of ['mag', 'oma']) {
+  for (const agentId of ['mag', 'mas', 'oma']) {
     assert.equal(domains.get(agentId)?.compiler_status, 'ready');
     assert.equal(domains.get(agentId)?.generated_agent_interfaces.status, 'ready');
   }
-  for (const agentId of ['mas', 'obf', 'rca']) {
+  for (const agentId of ['obf', 'rca']) {
     const domain = domains.get(agentId) as Record<string, any>;
     assert.equal(domain.compiler_status, 'blocked');
     assert.equal(domain.generated_agent_interfaces.status, 'blocked');

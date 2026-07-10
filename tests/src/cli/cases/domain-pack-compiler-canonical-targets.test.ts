@@ -13,8 +13,8 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
   assert.equal(report.owner, 'one-person-lab');
   assert.equal(report.status, 'blocked');
   assert.equal(report.summary.total_domain_count, report.reports.length);
-  assert.equal(report.summary.ready_domain_count, 2);
-  assert.equal(report.summary.blocked_domain_count, 3);
+  assert.equal(report.summary.ready_domain_count, 3);
+  assert.equal(report.summary.blocked_domain_count, 2);
   for (const agentId of ['mas', 'mag', 'rca', 'oma', 'obf']) {
     assert.equal(
       report.reports.some((entry: { requested_agent_id: string }) => entry.requested_agent_id === agentId),
@@ -22,6 +22,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     );
   }
   for (const [agentId, targetDomainId] of [
+    ['mas', 'mas'],
     ['mag', 'med-autogrant'],
     ['oma', 'opl-meta-agent'],
   ]) {
@@ -32,7 +33,7 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
     assert.equal(entry.target_domain_id, targetDomainId);
     assert.equal(entry.compiler_status, 'ready');
   }
-  for (const agentId of ['mas', 'rca', 'obf']) {
+  for (const agentId of ['rca', 'obf']) {
     const entry = report.reports.find(
       (candidate: { requested_agent_id: string }) => candidate.requested_agent_id === agentId,
     );
