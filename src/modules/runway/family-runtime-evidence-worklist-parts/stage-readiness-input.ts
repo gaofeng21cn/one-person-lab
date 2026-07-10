@@ -1,4 +1,7 @@
-import { buildDomainManifestCatalog } from '../../atlas/index.ts';
+import {
+  buildDomainManifestCatalog,
+  withOplMetaAgentDescriptorEntry,
+} from '../../atlas/index.ts';
 import { buildFamilyStageReadinessInspect } from '../../stagecraft/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { record, type JsonRecord } from '../../../kernel/json-record.ts';
@@ -23,12 +26,14 @@ export function domainManifestsForWorklist(
   if (input.runtimeSnapshot && input.stageReadiness) {
     return null;
   }
-  return buildDomainManifestCatalog(contracts, {
-    manifestCommandTimeoutMs: EVIDENCE_WORKLIST_MANIFEST_COMMAND_TIMEOUT_MS,
-    manifestCommandTimeoutPolicy: 'fixed',
-    materializeFamilyTransitions: false,
-    useProjectionCacheOnFailure: true,
-  }).domain_manifests;
+  return withOplMetaAgentDescriptorEntry(
+    buildDomainManifestCatalog(contracts, {
+      manifestCommandTimeoutMs: EVIDENCE_WORKLIST_MANIFEST_COMMAND_TIMEOUT_MS,
+      manifestCommandTimeoutPolicy: 'fixed',
+      materializeFamilyTransitions: false,
+      useProjectionCacheOnFailure: true,
+    }).domain_manifests,
+  );
 }
 
 export function stageReadinessForWorklist(

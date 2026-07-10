@@ -1009,11 +1009,7 @@ function buildSourceDerivedTypedObjectFloor(
       if (machineString(actualStage.step_id) !== plannedStepId) {
         blockers.push(`source_derived_design_stage_manifest_step_id_mismatch:${stageId}`);
       }
-      const actualSourcePatternRefs = uniqueStrings([
-        actualStage.source_pattern_ref,
-        ...uniqueStrings(actualStage.stage_pattern_source_refs),
-      ]);
-      if (!actualSourcePatternRefs.includes(plannedSourcePatternRef)) {
+      if (machineString(actualStage.source_pattern_ref) !== plannedSourcePatternRef) {
         blockers.push(`source_derived_design_stage_manifest_source_pattern_ref_mismatch:${stageId}`);
       }
     } else if (origin !== 'source_pattern_ref') {

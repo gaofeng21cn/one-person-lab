@@ -560,6 +560,11 @@ export function retargetReadyRepoToMag(repoDir: string) {
   const actionCatalog = readJson(actionCatalogPath);
   actionCatalog.target_domain_id = 'med-autogrant';
   writeJson(actionCatalogPath, actionCatalog);
+  const packCompilerInputPath = contractPath(repoDir, 'pack_compiler_input.json');
+  const packCompilerInput = readJson(packCompilerInputPath);
+  packCompilerInput.domain_id = 'med-autogrant';
+  packCompilerInput.canonical_agent_id = 'mag';
+  writeJson(packCompilerInputPath, packCompilerInput);
   const manifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
   const manifest = readJson(manifestPath);
   manifest.target_domain_id = 'med-autogrant';
@@ -579,6 +584,17 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
   const actionCatalog = readJson(actionCatalogPath);
   actionCatalog.target_domain_id = domainId;
   writeJson(actionCatalogPath, actionCatalog);
+  const canonicalAgentIds: Record<string, string> = {
+    'med-autoscience': 'mas',
+    'redcube-ai': 'rca',
+    'opl-meta-agent': 'oma',
+    'opl-bookforge': 'obf',
+  };
+  const packCompilerInputPath = contractPath(repoDir, 'pack_compiler_input.json');
+  const packCompilerInput = readJson(packCompilerInputPath);
+  packCompilerInput.domain_id = domainId;
+  packCompilerInput.canonical_agent_id = canonicalAgentIds[domainId] ?? domainId;
+  writeJson(packCompilerInputPath, packCompilerInput);
   const manifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
   const manifest = readJson(manifestPath);
   manifest.target_domain_id = domainId;

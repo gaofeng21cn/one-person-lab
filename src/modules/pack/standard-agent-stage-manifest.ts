@@ -26,6 +26,7 @@ const PACK_COMPILER_INPUT_REF = 'contracts/pack_compiler_input.json';
 const OWNER_RECEIPT_CONTRACT_REF = 'contracts/owner_receipt_contract.json';
 const AUTHORITY_FUNCTION_INVENTORY_REF = 'runtime/authority_functions/README.md';
 const TOOL_AFFORDANCE_CATALOG_ROLE = 'available_affordance_catalog_not_workflow_script';
+const EFFECT_BOUNDARY_TRUST_LANES = new Set(['ai_decision', 'human_gate', 'external_system']);
 
 export interface StandardAgentStageManifestCompilation {
   stage_control_plane: FamilyStageControlPlane;
@@ -202,12 +203,40 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   if (!actionCatalog || actionCatalog.target_domain_id !== domainId) {
     fail('Action catalog target_domain_id must match domain_descriptor.domain_id.', { repo_dir: repoDir });
   }
+  assertNoOplAuthority(
+    record(actionCatalog.authority_boundary, 'action_catalog.authority_boundary', repoDir),
+    'action_catalog.authority_boundary',
+    repoDir,
+  );
 
   const packCompilerInput = record(
     readJson(repoDir, PACK_COMPILER_INPUT_REF, 'pack_compiler_input_ref').payload,
     'pack_compiler_input',
     repoDir,
   );
+  if (text(packCompilerInput.domain_id, 'pack_compiler_input.domain_id', repoDir) !== domainId) {
+    fail('pack_compiler_input.domain_id must match domain_descriptor.domain_id.', { repo_dir: repoDir });
+  }
+  if (
+    (packCompilerInput.generated_surface_owner !== undefined
+      && packCompilerInput.generated_surface_owner !== 'one-person-lab')
+    || packCompilerInput.domain_repo_can_own_generated_surface === true
+  ) {
+    fail('pack_compiler_input must keep generated surfaces owned by one-person-lab.', { repo_dir: repoDir });
+  }
+  if (packCompilerInput.authority_boundary !== undefined) {
+    const packCompilerAuthority = record(
+      packCompilerInput.authority_boundary,
+      'pack_compiler_input.authority_boundary',
+      repoDir,
+    );
+    assertNoOplAuthority(packCompilerAuthority, 'pack_compiler_input.authority_boundary', repoDir);
+    if (packCompilerAuthority.domain_can_claim_generated_surface_owner === true) {
+      fail('pack_compiler_input cannot grant generated-surface ownership to the domain repo.', {
+        repo_dir: repoDir,
+      });
+    }
+  }
   const canonicalAgentId = text(
     packCompilerInput.canonical_agent_id,
     'pack_compiler_input.canonical_agent_id',
@@ -223,8 +252,11 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       repo_dir: repoDir,
     });
   }
-  const defaultSkillRefs = requiredPackPaths.filter((entry) => entry.startsWith('agent/skills/'));
-  const defaultToolRefs = requiredPackPaths.filter((entry) => entry.startsWith('agent/tools/'));
+  const resolvedRequiredPackPaths = requiredPackPaths.map((entry, index) =>
+    repoFile(repoDir, entry, `pack_compiler_input.required_domain_pack_paths[${index}]`).ref
+  );
+  const defaultSkillRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/skills/'));
+  const defaultToolRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/tools/'));
   const ownerReceiptContractRef = repoFile(
     repoDir,
     OWNER_RECEIPT_CONTRACT_REF,
@@ -296,6 +328,11 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     const allowedActionRefs = strings(stage.allowed_action_refs, 'stage.allowed_action_refs', repoDir);
     const nextStageRefs = strings(stage.next_stage_refs, 'stage.next_stage_refs', repoDir);
     const laneKind = optionalString(stage.lane_kind);
+    const trustLane = text(stage.trust_lane, 'stage.trust_lane', repoDir);
+    const effectBoundary = EFFECT_BOUNDARY_TRUST_LANES.has(trustLane);
+    const runtimeEventRefs = effectBoundary
+      ? [`runtime_event:${stageId}.owner_receipt_recorded`]
+      : [];
     if (qualityGateRefs.length === 0) {
       fail('Every standard Agent stage must declare at least one quality_gate_ref.', {
         repo_dir: repoDir,
@@ -336,6 +373,17 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         fail('Source-derived manifest stages must bind pattern, step, provenance, source pattern, and source anchors.', {
           repo_dir: repoDir,
           stage_id: stageId,
+        });
+      }
+      if (
+        declaredStagePatternSourceRefs.length > 0
+        && declaredStagePatternSourceRefs[0] !== sourcePatternRef
+      ) {
+        fail('Source-derived manifest stage primary source_pattern_ref must match stage_pattern_source_refs[0].', {
+          repo_dir: repoDir,
+          stage_id: stageId,
+          source_pattern_ref: sourcePatternRef,
+          declared_primary_source_pattern_ref: declaredStagePatternSourceRefs[0],
         });
       }
       if (targetOnlyRequirementRef) {
@@ -459,6 +507,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
           'domain_owner_retains_truth_quality_and_closeout_authority',
         ],
         properties: [],
+        ...(runtimeEventRefs.length > 0 ? { runtime_event_refs: runtimeEventRefs } : {}),
         runtime_assumptions: [],
         monitor_refs: [],
         source_scope_refs: [surfaceRef(repoDir, policyRef, 'stage.policy_ref', 'stage_policy_source')],
@@ -467,31 +516,30 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         expected_receipt_refs: Array.isArray(declaredStageContract.expected_receipt_refs)
           ? declaredStageContract.expected_receipt_refs
           : [repoSurfaceRef('domain_owner_receipt_or_typed_blocker_ref', 'domain_stage_closeout', 'domain_ref')],
-        receipt_schema_refs: Array.isArray(declaredStageContract.receipt_schema_refs)
-          ? declaredStageContract.receipt_schema_refs
-          : [repoSurfaceRef(ownerReceiptContractRef, 'owner_receipt_schema')],
-        authority_function_refs: Array.isArray(declaredStageContract.authority_function_refs)
-          ? declaredStageContract.authority_function_refs
-          : [repoSurfaceRef(authorityFunctionInventoryRef, 'minimal_authority_function_inventory')],
-        l4_entry_gate: isRecord(declaredStageContract.l4_entry_gate)
-          ? declaredStageContract.l4_entry_gate
-          : STANDARD_AGENT_PACK_ABI.l4_entry_gate,
-        l5_entry_gate: isRecord(declaredStageContract.l5_entry_gate)
-          ? declaredStageContract.l5_entry_gate
-          : STANDARD_AGENT_PACK_ABI.l5_entry_gate,
+        receipt_schema_refs: [repoSurfaceRef(ownerReceiptContractRef, 'owner_receipt_schema')],
+        authority_function_refs: [repoSurfaceRef(
+          authorityFunctionInventoryRef,
+          'minimal_authority_function_inventory',
+        )],
+        l4_entry_gate: STANDARD_AGENT_PACK_ABI.l4_entry_gate,
+        l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
         stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
         user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
         progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
         typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       },
       trust_boundary: {
-        lane: text(stage.trust_lane, 'stage.trust_lane', repoDir),
+        lane: trustLane,
+        static_check_eligible: !effectBoundary,
+        effect_boundary: effectBoundary,
+        records_runtime_events: effectBoundary,
+        ...(runtimeEventRefs.length > 0 ? { runtime_event_refs: runtimeEventRefs } : {}),
         owner_receipt_required: true,
-        human_gate_required: stage.trust_lane === 'human_gate',
+        human_gate_required: trustLane === 'human_gate',
       },
       authority_boundary: {
         domain_truth_owner: domainId,
-        opl_role: 'descriptor_runtime_and_transition_carrier',
+        opl_role: 'projection_consumer_only',
         opl_can_write_domain_truth: false,
         opl_can_authorize_quality_or_export: false,
         opl_can_sign_owner_receipt: false,
@@ -511,7 +559,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       : undefined,
     authority_boundary: {
       ...manifestAuthority,
-      opl_role: 'descriptor_runtime_and_transition_carrier',
+      opl_role: 'projection_consumer_only',
       opl_can_write_domain_truth: false,
       opl_can_authorize_quality_or_export: false,
       opl_can_sign_owner_receipt: false,

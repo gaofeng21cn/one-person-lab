@@ -3,7 +3,7 @@
 Owner: `One Person Lab`
 Purpose: `agent_capability_admission_and_skill_exposure_audit`
 State: `current_support_audit`
-Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 repo 的 `contracts/capability_map.json`、`contracts/stage_control_plane.json`、Skill source、exposure manifest、App install exposure policy、CLI/readback、runtime artifact 和 owner receipt。
+Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 repo 的 `contracts/capability_map.json`、`agent/stages/manifest.json`、OPL generated `family_stage_control_plane`、Skill source、exposure manifest、App install exposure policy、CLI/readback、runtime artifact 和 owner receipt。
 
 ## 审计口径
 
@@ -26,7 +26,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | OPL foundation support skills | 27 个 source skill，全部由 `plugins/opl-foundation-skills/exposure.json` 管理；当前分布为 `developer_codex=6`、`project_local=15`、`workspace_local=6`。 | 基本合理。它们是 framework support / reviewer / router，不是 domain professional pack，也没有默认 global user 暴露。 | 后续新增必须先填 admission record；优先复用 router/reviewer，避免为每个小任务新增 support Skill。 |
 | MAS | MAS 本仓无 repo-local `agent/professional_skills`；`contracts/capability_map.json` 声明 13 个能力，其中 8 个 professional skill 指向外置 `mas-scholar-skills`。 | 合理。MAS 保持 stage / runtime / owner authority，专业方法由外置包承接。 | 继续避免 MAS 仓内复制 MAS Scholar Skills 正文或 optional specialist catalog。 |
 | MAS Scholar Skills | 33 个真实 Codex Skill；默认 Codex exposure 为 false；默认 compact sync 只包含 aggregate + core skills，optional specialist 必须 named specialty / explicit developer。 | 合理。它是 OPL-owned 外置专业能力包，不是 MAS truth owner。 | optional skill 数量已大，新增 optional 必须证明 default core 覆盖不到，并保留 no-authority handoff。 |
-| MAG | 8 个 repo-local professional skills，全部进入 `contracts/capability_map.json`；另有 stage prompt、tool connector、reference pack、contract module。 | 合理。Grant 方法留 repo-local，authority 留 MAG。 | stage control plane 主要引用 `agent/skills/grant_authoring.md`，如未来需要 executor 直接按 specialist 注入，可从 capability map 投影，不另建新目录。 |
+| MAG | 8 个 repo-local professional skills，全部进入 `contracts/capability_map.json`；另有 stage prompt、tool connector、reference pack、contract module。 | 合理。Grant 方法留 repo-local，authority 留 MAG。 | `agent/stages/manifest.json` 引用 `agent/skills/grant_authoring.md`，OPL Pack 将其编译进 generated stage plane；如未来需要 executor 直接按 specialist 注入，可从 capability map 投影，不另建新目录。 |
 | RCA | 7 个 repo-local professional skills，全部进入 capability map；stage prompts / control plane 对主要 PPT specialist 有直接 refs。 | 合理。视觉方法、template profiling、native PPT design 与 memory curation 分层清楚。 | `agent/skills/*.md` 作为 legacy policy ref 的边界要继续保持，不能退回成“又一套 professional skill”。 |
 | OMA | 9 个 repo-local professional skills，全部进入 capability map；`agent/skills/*.md` 明确是 domain skill declarations。 | 合理。OMA 的 target-agent improvement / work-order / suite design 等是元智能体专业方法。 | 继续防止把 action flow、target truth 或 takeover authority 写进 professional Skill。 |
 | BookForge | 9 个 repo-local professional skills，全部进入 capability map；book stage prompt 只做目标和 handoff，方法下沉到 professional skills。 | 合理。长文写作、style、reference absorption、publication design 与 source claim review 是专业方法。 | PDF/export 后端属于 helper/connector/authority 边界，不应放进 professional Skill 正文。 |

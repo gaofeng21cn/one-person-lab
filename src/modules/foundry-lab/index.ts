@@ -17,6 +17,8 @@ export { buildStandardDomainAgentSkeletonInspection } from './family-domain-agen
 export { splitOperatorAttentionCounts } from './framework-readiness-attention-counts.ts';
 export { buildFunctionalSourcePurityTailReadModel, compactFunctionalPrivatizationAuditEnvelope } from './functional-privatization-envelope.ts';
 export { OMA_PRODUCTION_CONSUMPTION_ACTION_ID, OMA_PRODUCTION_CONSUMPTION_ACTION_KIND, omaProductionConsumptionPayloadRefHints, omaProductionConsumptionPayloadTemplate, omaProductionConsumptionPayloadWorkorder, omaProductionConsumptionRuntimeActionExecuteCommand } from './oma-production-consumption-action.ts';
-export { buildOplMetaAgentRegistryExtension } from './opl-meta-agent-consumption.ts';
-export { withOplMetaAgentDescriptorEntry } from './opl-meta-agent-descriptor-adapter.ts';
+export {
+  buildOplMetaAgentRegistryExtension,
+  withOplMetaAgentRegistryExtension,
+} from './opl-meta-agent-consumption.ts';
 export { buildStandardDomainAgentTemplateConsumptionReadModel } from './standard-domain-agent-scaffold.ts';

@@ -1,7 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import { loadFrameworkContracts } from '../charter/index.ts';
-import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import {
+  buildDomainManifestCatalog,
+  withOplMetaAgentDescriptorEntry,
+} from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
 import { buildFamilyConflictOrBlockerEnvelope, buildFamilyConflictSubject } from '../stagecraft/index.ts';
 import { buildFamilyStageAdmissionReview } from '../stagecraft/index.ts';
@@ -867,7 +870,9 @@ export function buildStageAdmissionLaunchGate(
   } = {},
 ): StageAdmissionLaunchGateResult {
   const catalog = options.domainManifests
-    ?? buildDomainManifestCatalog(loadFrameworkContracts()).domain_manifests;
+    ?? withOplMetaAgentDescriptorEntry(
+      buildDomainManifestCatalog(loadFrameworkContracts()).domain_manifests,
+    );
   const entry = catalog.projects.find((candidate) => entryMatchesDomain(candidate, input.domainId));
   if (!entry) {
     return withCapabilityRegistryGate(

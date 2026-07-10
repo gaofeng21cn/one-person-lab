@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { sourceRef, uniqueByRef } from '../../kernel/source-ref.ts';
+import type { DomainManifestCatalog } from '../atlas/index.ts';
 import { listManagedInstallUpdateReceipts } from '../connect/index.ts';
 import { omaProductionConsumptionRecordAction } from './oma-production-consumption-action.ts';
 import { listOmaAppLivePathReceipts } from './oma-app-live-path-ledger.ts';
@@ -804,5 +805,17 @@ export function buildOplMetaAgentRegistryExtension(options: { repoDir?: string |
       sourceRef(`${repoDir}/${OMA_RELATIVE_CONTRACT_REFS.scaleoutEvidence}`, 'oma_real_target_agent_scaleout_evidence'),
       sourceRef(`${repoDir}/${OMA_RELATIVE_CONTRACT_REFS.productionAcceptance}`, 'oma_production_acceptance'),
     ]),
+  };
+}
+
+export function withOplMetaAgentRegistryExtension<T extends DomainManifestCatalog>(catalog: T): T {
+  const registry = catalog.opl_meta_agent_registry ?? buildOplMetaAgentRegistryExtension();
+  return {
+    ...catalog,
+    opl_meta_agent_registry: registry,
+    notes: [
+      ...catalog.notes,
+      'OPL Meta Agent registry extension is composed by Foundry Lab consumers and does not expand production domain truth or readiness authority.',
+    ],
   };
 }

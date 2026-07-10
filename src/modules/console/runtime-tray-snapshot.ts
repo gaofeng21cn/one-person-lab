@@ -9,7 +9,10 @@ import {
   familyRuntimePaths,
   listEvents,
 } from '../runway/index.ts';
-import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import {
+  buildDomainManifestCatalog,
+  withOplMetaAgentDescriptorEntry,
+} from '../atlas/index.ts';
 import type { DomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from '../atlas/index.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
@@ -32,7 +35,7 @@ import {
   buildAppOperatorDrilldown,
   type AppOperatorDrilldownDetailLevel,
 } from './runtime-tray-app-operator-drilldown.ts';
-import { withOplMetaAgentDescriptorEntry } from '../foundry-lab/index.ts';
+import { withOplMetaAgentRegistryExtension } from '../foundry-lab/index.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 
 const RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
@@ -554,7 +557,7 @@ export async function buildRuntimeTraySnapshot(
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
   const functionalPrivatizationDomainManifests =
-    withOplMetaAgentDescriptorEntry(domainManifests);
+    withOplMetaAgentDescriptorEntry(withOplMetaAgentRegistryExtension(domainManifests));
   const masManagedProviderProjection =
     projectionFromMasManifestEntry(domainManifests.projects.find((entry) => (
       entry.project_id === 'medautoscience'

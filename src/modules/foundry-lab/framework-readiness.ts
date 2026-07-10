@@ -4,6 +4,7 @@ import {
   buildDomainManifestCatalog,
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+  withOplMetaAgentDescriptorEntry,
 } from '../atlas/index.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
@@ -17,6 +18,7 @@ import {
   buildFamilyStagesList,
 } from '../stagecraft/index.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
+import { withOplMetaAgentRegistryExtension } from './opl-meta-agent-consumption.ts';
 import {
   evidenceEnvelopeOpenCount,
   evidenceEnvelopeSummary,
@@ -173,12 +175,16 @@ export async function buildFrameworkReadinessSummary(
   const agentReadiness = agentReadinessDiagnostic.readiness;
   const generatedDefaultEntrySourceOfWork =
     record(record(agentReadiness).generated_default_entry_source_of_work);
-  const domainManifests = buildDomainManifestCatalog(contracts, {
-    manifestCommandTimeoutMs: FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS,
-    manifestCommandTimeoutPolicy: 'fixed',
-    materializeFamilyTransitions: false,
-    useProjectionCacheOnFailure: true,
-  }).domain_manifests;
+  const domainManifests = withOplMetaAgentDescriptorEntry(
+    withOplMetaAgentRegistryExtension(
+      buildDomainManifestCatalog(contracts, {
+        manifestCommandTimeoutMs: FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS,
+        manifestCommandTimeoutPolicy: 'fixed',
+        materializeFamilyTransitions: false,
+        useProjectionCacheOnFailure: true,
+      }).domain_manifests,
+    ),
+  );
   const packCompiler = record(buildDomainPackCompilerList(contracts, {
     familyDefaults: true,
     familyRepoInputs: defaultStandardDomainAgentRepoInputs(),

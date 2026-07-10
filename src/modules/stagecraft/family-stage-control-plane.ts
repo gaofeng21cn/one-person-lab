@@ -1,5 +1,4 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
-import { withOplMetaAgentStageAttemptEntry } from './family-stage-control-plane-oma.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString } from '../../kernel/json-file.ts';
 import type {
@@ -284,7 +283,7 @@ function buildStageIndex(contracts: FrameworkContracts, options: ManifestCatalog
       projects: [],
       notes: ['domain_manifest_catalog_not_injected'],
     };
-  const catalog = withOplMetaAgentStageAttemptEntry(baseCatalog);
+  const catalog = baseCatalog;
   const domains = catalog.projects.map((entry) => {
     const plane = resolvePlaneFromEntry(entry);
     return {

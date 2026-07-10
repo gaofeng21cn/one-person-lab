@@ -11,7 +11,10 @@ import {
   buildFamilyStageRuntimeBudgetInspect,
   buildFamilyStagesList,
 } from '../../../../modules/stagecraft/family-stage-control-plane.ts';
-import { buildDomainManifestCatalog } from '../../../../modules/atlas/index.ts';
+import {
+  buildDomainManifestCatalog,
+  withOplMetaAgentDescriptorEntry,
+} from '../../../../modules/atlas/index.ts';
 import {
   familyStageDiagnosticLensCommands,
   requireFamilyStageDerivedLens,
@@ -103,8 +106,12 @@ function assertRegisteredStageArgs(
 export function buildStageCommandSpecs(
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
-  const loadDomainManifests = (contracts: FrameworkContracts, options: Parameters<typeof buildDomainManifestCatalog>[1]) =>
-    buildDomainManifestCatalog(contracts, options).domain_manifests;
+  const loadDomainManifests = (
+    contracts: FrameworkContracts,
+    options: Parameters<typeof buildDomainManifestCatalog>[1],
+  ) => withOplMetaAgentDescriptorEntry(
+    buildDomainManifestCatalog(contracts, options).domain_manifests,
+  );
   const stageCommandSpecs: Record<string, CommandSpec> = {
     'stages list': {
       usage: 'opl stages list',

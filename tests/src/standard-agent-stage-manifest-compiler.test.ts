@@ -11,6 +11,8 @@ import {
   compileStandardAgentStageManifest,
 } from '../../src/modules/pack/index.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../src/modules/foundry-lab/standard-domain-agent-conformance.ts';
+import { withOplMetaAgentDescriptorEntry } from '../../src/modules/atlas/index.ts';
+import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/index.ts';
 
 type JsonRecord = Record<string, any>;
 
@@ -96,6 +98,14 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
     surface_kind: 'opl_domain_pack_compiler_input',
     domain_id: domainId,
     canonical_agent_id: canonicalAgentId,
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+      domain_can_claim_generated_surface_owner: false,
+    },
     required_domain_pack_paths: packRefs,
   });
   writeJson(root, 'agent/stages/manifest.json', {
@@ -233,6 +243,30 @@ test('standard Agent stage manifest compiler preserves exclusive source-derived 
   );
 });
 
+test('standard Agent stage manifest compiler rejects an alias as the primary source pattern ref', () => {
+  const root = fixture('target-provenance-primary-mismatch');
+  const manifest = readManifest(root);
+  manifest.stages[0] = {
+    ...manifest.stages[0],
+    stage_origin: 'source_pattern_ref',
+    pattern_id: 'source-pattern',
+    step_id: 'intake-step',
+    provenance_kind: 'source_derived',
+    source_pattern_ref: 'pattern-ref:source/alias',
+    source_anchor_refs: ['source-ref:paper#intake'],
+    stage_pattern_source_refs: [
+      'pattern-ref:source/intake',
+      'pattern-ref:source/alias',
+    ],
+  };
+  writeManifest(root, manifest);
+
+  assert.throws(
+    () => compileStandardAgentStageManifest(root),
+    /primary source_pattern_ref must match stage_pattern_source_refs\[0\]/,
+  );
+});
+
 test('standard Agent stage manifest compiler requires an explicit canonical agent id', async (t) => {
   for (const canonicalAgentId of [undefined, '', '   ']) {
     await t.test(JSON.stringify(canonicalAgentId), () => {
@@ -251,6 +285,162 @@ test('standard Agent stage manifest compiler requires an explicit canonical agen
       assert.deepEqual(readout.blockers, ['invalid_contract:contracts/pack_compiler_input.json']);
     });
   }
+});
+
+test('standard Agent stage manifest compiler binds pack identity to the descriptor domain', () => {
+  const root = fixture('target-pack-domain-mismatch');
+  const ref = path.join(root, 'contracts/pack_compiler_input.json');
+  const input = JSON.parse(fs.readFileSync(ref, 'utf8')) as JsonRecord;
+  input.domain_id = 'other-domain';
+  writeJson(root, 'contracts/pack_compiler_input.json', input);
+  assert.throws(() => compileStandardAgentStageManifest(root));
+});
+
+test('OMA hosted descriptor consumes the generated stage plane without a legacy fallback', () => {
+  const root = fixture('opl-meta-agent', 'oma');
+  writeJson(root, 'contracts/generated_surface_handoff.json', {
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+  });
+  writeJson(root, 'contracts/functional_privatization_audit.json', {
+    surface_kind: 'functional_privatization_audit',
+    modules: [],
+  });
+
+  const catalog = withOplMetaAgentDescriptorEntry({
+    summary: {
+      total_projects_count: 0,
+      resolved_count: 0,
+      failed_count: 0,
+    },
+    projects: [],
+    notes: [],
+    opl_meta_agent_registry: {
+      repo_dir: root,
+      summary: {},
+    },
+  } as any);
+  const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
+  assert.equal(entry?.status, 'resolved');
+  assert.equal(entry?.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id, 'oma');
+  assert.equal(entry?.manifest?.standard_domain_agent_skeleton?.agent_id, 'oma');
+  assert.equal(entry?.manifest?.family_stage_control_plane?.plane_id, 'opl_meta_agent_stage_control_plane');
+  assert.equal(
+    entry?.manifest?.standard_domain_agent_skeleton?.contracts?.descriptor_refs?.includes(
+      'agent/stages/manifest.json',
+    ),
+    true,
+  );
+  assert.equal(
+    entry?.manifest?.standard_domain_agent_skeleton?.contracts?.descriptor_refs?.includes(
+      'contracts/stage_control_plane.json',
+    ),
+    false,
+  );
+  assert.equal(
+    entry?.manifest?.family_transition_spec_descriptor?.spec_ref,
+    'agent/stages/manifest.json#stages',
+  );
+});
+
+test('standard Agent repo contract readout blocks active private generic residue', () => {
+  const root = fixture('target-private-residue');
+  writeJson(root, 'contracts/functional_privatization_audit.json', {
+    surface_kind: 'functional_privatization_audit',
+    target_domain_id: 'target-private-residue',
+    modules: [
+      {
+        module_id: 'repo_owned_generic_scheduler',
+        classification: 'generic_scheduler_or_daemon',
+        owner: 'target-private-residue',
+        code_paths: ['runtime/legacy-scheduler.ts'],
+        active_callers: ['legacy local cadence'],
+        active_caller_status: 'active_private_scheduler_still_called',
+        migration_action: 'move_to_opl_provider_scheduler_then_tombstone',
+      },
+    ],
+  });
+
+  const readout = buildStandardAgentRepoContractReadout(root);
+  assert.equal(readout.status, 'blocked');
+  assert.deepEqual(readout.blockers, [
+    'functional_privatization_audit_has_generic_residue_or_blocker',
+  ]);
+});
+
+test('OMA hosted descriptor rejects a repo with non-OMA canonical identity', () => {
+  const root = fixture('med-autogrant', 'mag');
+  writeJson(root, 'contracts/generated_surface_handoff.json', {
+    generated_surface_owner: 'one-person-lab',
+    domain_repo_can_own_generated_surface: false,
+  });
+  writeJson(root, 'contracts/functional_privatization_audit.json', {
+    surface_kind: 'functional_privatization_audit',
+    modules: [],
+  });
+
+  const catalog = withOplMetaAgentDescriptorEntry({
+    summary: {
+      total_projects_count: 0,
+      resolved_count: 0,
+      failed_count: 0,
+    },
+    projects: [],
+    notes: [],
+  } as any, [{ requested_agent_id: 'oma', repo_dir: root }]);
+  const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
+
+  assert.equal(entry?.status, 'invalid_manifest');
+  assert.equal(entry?.manifest, null);
+});
+
+test('standard Agent repo contracts reject generated-surface authority escalation', async (t) => {
+  const cases: Array<[string, (root: string) => void]> = [
+    ['pack compiler input', (root) => {
+      const ref = path.join(root, 'contracts/pack_compiler_input.json');
+      const input = JSON.parse(fs.readFileSync(ref, 'utf8')) as JsonRecord;
+      input.generated_surface_owner = 'target-authority';
+      input.domain_repo_can_own_generated_surface = true;
+      input.authority_boundary.opl_can_write_domain_truth = true;
+      writeJson(root, 'contracts/pack_compiler_input.json', input);
+    }],
+    ['action catalog', (root) => {
+      const ref = path.join(root, 'contracts/action_catalog.json');
+      const catalog = JSON.parse(fs.readFileSync(ref, 'utf8')) as JsonRecord;
+      catalog.authority_boundary.opl_can_authorize_quality_or_export = true;
+      writeJson(root, 'contracts/action_catalog.json', catalog);
+    }],
+    ['generated surface handoff', (root) => {
+      writeJson(root, 'contracts/generated_surface_handoff.json', {
+        generated_surface_owner: 'target-authority',
+        domain_repo_can_own_generated_surface: true,
+        authority_boundary: {
+          opl_can_write_domain_truth: true,
+        },
+      });
+    }],
+  ];
+
+  for (const [name, mutate] of cases) {
+    await t.test(name, () => {
+      const root = fixture('target-authority');
+      mutate(root);
+      const readout = buildStandardAgentRepoContractReadout(root);
+      assert.equal(readout.status, 'blocked');
+    });
+  }
+});
+
+test('standard Agent stage manifest compiler requires every declared pack source', () => {
+  const root = fixture('target-missing-required-source');
+  const ref = path.join(root, 'contracts/pack_compiler_input.json');
+  const input = JSON.parse(fs.readFileSync(ref, 'utf8')) as JsonRecord;
+  input.required_domain_pack_paths = [
+    ...(input.required_domain_pack_paths as string[]),
+    'agent/prompts/definitely-missing.md',
+  ];
+  writeJson(root, 'contracts/pack_compiler_input.json', input);
+  assert.throws(() => compileStandardAgentStageManifest(root));
 });
 
 test('standard Agent stage manifest compiler fails closed for malformed identity, refs, actions, and transitions', async (t) => {
@@ -377,6 +567,10 @@ test('stage manifest compiler honors an explicit v2 version without allowing pol
   writeJson(root, 'contracts/pack_compiler_input.json', input);
   const manifest = readManifest(root);
   manifest.stages[0].stage_contract = {
+    receipt_schema_refs: [{ ref_kind: 'url', ref: 'https://attacker.invalid/receipt' }],
+    authority_function_refs: [{ ref_kind: 'url', ref: 'https://attacker.invalid/sign' }],
+    l4_entry_gate: { entry_level: 'L4_fake', can_claim_domain_ready: true },
+    l5_entry_gate: { entry_level: 'L5_fake', conformance_pass_counts_as_l5: true },
     stage_completion_policy: {
       surface_kind: 'domain_override',
       owner: 'target-stage-policy',
@@ -392,8 +586,11 @@ test('stage manifest compiler honors an explicit v2 version without allowing pol
 
   const compilation = compileStandardAgentStageManifest(root);
   const stage = compilation.stage_control_plane.stages[0]!;
-  const completionPolicy = stage.stage_contract?.stage_completion_policy as JsonRecord;
-  const userStageLogContract = stage.stage_contract?.user_stage_log_contract as JsonRecord;
+  const stageContract = stage.stage_contract as JsonRecord;
+  const completionPolicy = stageContract.stage_completion_policy as JsonRecord;
+  const userStageLogContract = stageContract.user_stage_log_contract as JsonRecord;
+  const l4EntryGate = stageContract.l4_entry_gate as JsonRecord;
+  const l5EntryGate = stageContract.l5_entry_gate as JsonRecord;
   assert.equal(compilation.stage_control_plane.stage_pack_conformance_version, 'standard-stage-pack.v2');
   assert.equal(stage.stage_pack_conformance_version, 'standard-stage-pack.v2');
   assert.equal(completionPolicy.surface_kind, 'domain_stage_completion_policy');
@@ -401,6 +598,20 @@ test('stage manifest compiler honors an explicit v2 version without allowing pol
   assert.equal(completionPolicy.closeout_packet_required, true);
   assert.equal(userStageLogContract.surface_kind, 'opl_standard_agent_user_stage_log_contract');
   assert.equal(userStageLogContract.owner, 'one-person-lab');
+  assert.deepEqual(stage.stage_contract?.receipt_schema_refs, [{
+    ref_kind: 'repo_path',
+    ref: 'contracts/owner_receipt_contract.json',
+    role: 'owner_receipt_schema',
+  }]);
+  assert.deepEqual(stage.stage_contract?.authority_function_refs, [{
+    ref_kind: 'repo_path',
+    ref: 'runtime/authority_functions/README.md',
+    role: 'minimal_authority_function_inventory',
+  }]);
+  assert.equal(l4EntryGate.entry_level, 'L4_structural_baseline');
+  assert.equal(l4EntryGate.can_claim_domain_ready, false);
+  assert.equal(l5EntryGate.entry_level, 'L5_production_operating_maturity');
+  assert.equal(l5EntryGate.conformance_pass_counts_as_l5, false);
 });
 
 test('real MAG manifest compiles into generated product-entry without the legacy contract', (t) => {
@@ -466,6 +677,15 @@ test('real MAG manifest compiles into generated product-entry without the legacy
     stage.stage_contract?.user_stage_log_contract?.surface_kind
       === 'opl_standard_agent_user_stage_log_contract'
   ));
+  type AdmissionManifest = NonNullable<Parameters<typeof buildFamilyStageAdmissionReview>[1]>;
+  const actionCatalog = JSON.parse(
+    fs.readFileSync(path.join(root, 'contracts/action_catalog.json'), 'utf8'),
+  ) as NonNullable<AdmissionManifest['family_action_catalog']>;
+  const admission = buildFamilyStageAdmissionReview(compilation.stage_control_plane, {
+    family_action_catalog: actionCatalog,
+  });
+  assert.equal(admission.status, 'admitted');
+  assert.deepEqual(admission.findings.filter((finding) => finding.severity === 'blocker'), []);
 
   const generated = buildRepoGeneratedInterfaceBundle(root, 'product-entry').bundle as JsonRecord;
   assert.equal(generated.agent_id, 'mag');

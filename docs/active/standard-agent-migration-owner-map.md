@@ -19,7 +19,7 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 含义：
 
-- Domain repo 用 `agent/`、`contracts/`、stage control plane、capability map、quality gates、knowledge / tool refs 和最小 authority functions 声明领域能力。
+- Domain repo 用 `agent/stages/manifest.json`、其余 `agent/` source、`contracts/`、capability map、quality gates、knowledge / tool refs 和最小 authority functions 声明领域能力；OPL Pack 生成 stage control plane，domain repo 不维护第二份 generated plane。
 - OPL 生成或托管 CLI / MCP / Skill/plugin / App action / status / workbench / session / default-caller / conformance / package transport 等通用面。
 - Domain repo 继续持有 domain truth、quality / export / review verdict、artifact authority、memory accept/reject、owner receipt、typed blocker、human gate 和 direct domain skill path。
 - 任何 repo-local generic scheduler、queue、session store、progress shell、workbench shell、sidecar/status wrapper、currentness tracker、artifact lifecycle shell、delivery export shell 或 conformance scaffold 都是迁移输入，不是长期设计。

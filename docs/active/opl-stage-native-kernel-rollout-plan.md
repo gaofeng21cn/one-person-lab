@@ -225,7 +225,7 @@ status
   forbidden_authority_flags[]
 ```
 
-`opl agents conformance --family-defaults --json` 同时输出 `family_live_conformance_probe`：该 probe 对每个 domain 读取 generated interfaces、`contracts/action_catalog.json`、`contracts/stage_control_plane.json` 和 `contracts/opl-framework/standard-agent-admission-gates.json`，把 standard admission gate 的通过/阻塞、blockers 与 false-authority boundary 投影到同一机器面。这个 probe 只证明 live gate readout 可执行，不声明 domain ready、production ready、owner receipt、typed blocker、artifact ready 或 quality verdict。
+`opl agents conformance --family-defaults --json` 同时输出 `family_live_conformance_probe`：该 probe 对每个 domain 读取 generated interfaces、`contracts/action_catalog.json`、`agent/stages/manifest.json` 编译出的 `family_stage_control_plane` 和 `contracts/opl-framework/standard-agent-admission-gates.json`，把 standard admission gate 的通过/阻塞、blockers 与 false-authority boundary 投影到同一机器面。它不读取 tracked legacy stage-plane fallback。这个 probe 只证明 live gate readout 可执行，不声明 domain ready、production ready、owner receipt、typed blocker、artifact ready 或 quality verdict。
 
 只有 `launch_blockers` 和 `closeout_blockers` 可以进入默认阻断；`advisory_warnings`、`route_back_recommendations` 和 `audit_drilldown_refs` 不得抢占 default next action。
 

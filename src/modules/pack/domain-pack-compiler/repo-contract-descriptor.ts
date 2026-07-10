@@ -87,6 +87,39 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
   const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
   const generatedSurfaceHandoff = isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : null;
+  if (generatedSurfaceHandoff && (
+    generatedSurfaceHandoff.generated_surface_owner !== 'one-person-lab'
+    || generatedSurfaceHandoff.domain_repo_can_own_generated_surface !== false
+  )) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'contracts/generated_surface_handoff.json must keep generated surfaces owned by one-person-lab.',
+      { repo_dir: repoDir, relative_path: 'contracts/generated_surface_handoff.json' },
+    );
+  }
+  const generatedSurfaceAuthority = generatedSurfaceHandoff && isRecord(generatedSurfaceHandoff.authority_boundary)
+    ? generatedSurfaceHandoff.authority_boundary
+    : null;
+  const forbiddenGeneratedSurfaceAuthority = generatedSurfaceAuthority
+    ? Object.entries(generatedSurfaceAuthority)
+      .filter(([key, value]) => value === true && (
+        key.startsWith('opl_can_')
+        || key === 'provider_completion_is_domain_completion'
+        || key === 'provider_completion_counts_as_domain_completion'
+      ))
+      .map(([key]) => key)
+    : [];
+  if (forbiddenGeneratedSurfaceAuthority.length > 0) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'contracts/generated_surface_handoff.json grants forbidden OPL or provider authority.',
+      {
+        repo_dir: repoDir,
+        relative_path: 'contracts/generated_surface_handoff.json',
+        forbidden_true_fields: forbiddenGeneratedSurfaceAuthority,
+      },
+    );
+  }
   const targetDomainId =
     actionCatalog?.target_domain_id
     ?? stageControlPlane?.target_domain_id
@@ -288,8 +321,9 @@ export function buildStandardAgentRepoContractReadout(
       && isRecord(stageSurface.raw_descriptor)
       ? stageSurface.raw_descriptor as ReturnType<typeof compileStandardAgentStageManifest>['stage_control_plane']
       : null;
+    const resolved = Boolean(stageControlPlane) && repoContractDescriptor.status === 'ready';
     return {
-      status: stageControlPlane ? 'resolved' : 'blocked',
+      status: resolved ? 'resolved' : 'blocked',
       repo_dir: repoDir,
       canonical_agent_id: repoContractDescriptor.descriptor.canonical_agent_id,
       target_domain_id: repoContractDescriptor.descriptor.target_domain_id,
@@ -297,7 +331,10 @@ export function buildStandardAgentRepoContractReadout(
       required_source_refs: requiredSourceRefs,
       repo_contract_descriptor: repoContractDescriptor,
       stage_control_plane: stageControlPlane,
-      blockers: stageControlPlane ? [] : ['standard_agent_stage_manifest_compilation_missing_stage_plane'],
+      blockers: [
+        ...repoContractDescriptor.blockerReasons,
+        ...(stageControlPlane ? [] : ['standard_agent_stage_manifest_compilation_missing_stage_plane']),
+      ],
       error: null,
     };
   } catch (error) {

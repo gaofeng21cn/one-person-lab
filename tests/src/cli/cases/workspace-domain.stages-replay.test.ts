@@ -3,6 +3,12 @@ import {
   type JsonRecord,
   withReplayEvidenceStagePack,
 } from './workspace-domain-test-helper.ts';
+import {
+  buildReadyAgentRepo,
+  configureReadyMetaMorphology,
+  retargetReadyRepo,
+  writeJson,
+} from './agents-conformance-fixtures.ts';
 
 test('family stage replay drilldowns consume declared replay evidence refs by default', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-replay-drilldown-state-'));
@@ -107,46 +113,40 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
   }
 });
 
-test('OMA stage decomposition consumes hosted replay refs and preserves baseline owner review gate', () => {
+test('OMA stage projection consumes the declarative manifest without a hardcoded fallback plane', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-stage-replay-state-'));
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-stage-replay-family-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const generatedRepo = buildReadyAgentRepo();
+  const omaRepo = path.join(familyRoot, 'opl-meta-agent');
+  fs.renameSync(generatedRepo, omaRepo);
+  retargetReadyRepo(omaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  configureReadyMetaMorphology(omaRepo);
+  for (const ref of [
+    'contracts/opl_domain_manifest_registration.json',
+    'contracts/app_workbench_projection.json',
+    'contracts/real_target_agent_scaleout_evidence.json',
+  ]) {
+    writeJson(path.join(omaRepo, ref), {});
+  }
 
   try {
-    const readinessOutput = runCli(['stages', 'readiness', '--domain', 'oma', '--detail', 'full'], {
+    const list = runCli(['stages', 'list'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_STATE_DIR: stateRoot,
-    }).family_stage_readiness as JsonRecord;
-    const readiness = (
-      ((readinessOutput.family_stage_readiness as JsonRecord | undefined)?.family_stage_readiness as JsonRecord | undefined)
-      ?? readinessOutput.family_stage_readiness
-      ?? readinessOutput
-    ) as {
-      summary: { hard_blocker_count: number };
-      blockers?: Array<{ code: string }>;
-      hard_blockers?: Array<{ code: string }>;
-      warnings: Array<{ code: string; minimal_counterexample?: { missing_ref?: string } }>;
-    };
-    const blockerCodes = (readiness.blockers ?? readiness.hard_blockers ?? [])
-      .map((finding: { code: string }) => finding.code);
-    const replayWarnings = readiness.warnings.filter((finding: {
-      code: string;
-      minimal_counterexample?: { missing_ref?: string };
-    }) => finding.code === 'expected_receipt_ref_missing');
-    const missingReplayRefs = replayWarnings.map((finding: {
-      minimal_counterexample?: { missing_ref?: string };
-    }) => finding.minimal_counterexample?.missing_ref);
-    const warningCodes = readiness.warnings.map((finding: { code: string }) => finding.code);
+      OPL_FAMILY_WORKSPACE_ROOT: familyRoot,
+    }).family_stages;
+    const domain = list.domains.find((entry: JsonRecord) => entry.project_id === 'opl-meta-agent');
+    const stageIds = list.stages
+      .filter((entry: JsonRecord) => entry.project_id === 'opl-meta-agent')
+      .map((entry: JsonRecord) => entry.stage_id);
 
-    assert.equal(readiness.summary.hard_blocker_count, 0);
-    assert.equal(blockerCodes.includes('missing_progress_delta_policy'), false);
-    assert.equal(blockerCodes.includes('missing_typed_blocker_lineage_policy'), false);
-    assert.equal(warningCodes.includes('append_only_event_log_ref_missing'), false);
-    assert.equal(warningCodes.includes('attempt_ledger_ref_missing'), false);
-    assert.equal(missingReplayRefs.includes('stage-attempt-receipt-ref:stage-decomposition'), false);
-    assert.equal(missingReplayRefs.includes('executor-receipt-ref:stage-decomposition/codex-cli'), false);
-    assert.equal(missingReplayRefs.includes('independent-gate-receipt-ref:stage-decomposition'), false);
-    assert.equal(missingReplayRefs.includes('human_gate:oma_baseline_owner_review'), true);
+    assert.equal(domain?.ready, true);
+    assert.equal(domain?.plane_id, 'opl_meta_agent_stage_control_plane');
+    assert.equal(stageIds.includes('stage-decomposition'), true);
+    assert.equal(fs.existsSync(path.join(omaRepo, 'contracts/stage_control_plane.json')), false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(familyRoot, { recursive: true, force: true });
   }
 });

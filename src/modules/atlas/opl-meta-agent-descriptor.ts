@@ -4,18 +4,22 @@ import path from 'node:path';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { optionalString, readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { recordList, stringList, type JsonRecord } from '../../kernel/json-record.ts';
-import type { DomainManifestCatalog } from '../atlas/index.ts';
-import { normalizeManifest } from '../atlas/index.ts';
-import type { DomainManifestCatalogEntry } from '../atlas/index.ts';
-import { buildOplMetaAgentRegistryExtension } from './opl-meta-agent-consumption.ts';
+import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
+import { buildStandardAgentRepoContractReadout } from '../pack/index.ts';
+import type { DomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
+import { normalizeManifest } from './domain-manifest/normalizers.ts';
+import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
+import { defaultStandardDomainAgentRepoInputs } from './standard-domain-agent-family-repos.ts';
 
 const OMA_PROJECT_ID = 'opl-meta-agent';
 const OMA_PROJECT = 'opl-meta-agent';
+const OMA_CANONICAL_AGENT_ID = 'oma';
+const STANDARD_AGENT_STAGE_MANIFEST_REF = 'agent/stages/manifest.json';
 
 const OMA_CONTRACTS = {
   domainDescriptor: 'contracts/domain_descriptor.json',
   actionCatalog: 'contracts/action_catalog.json',
-  stageControlPlane: 'contracts/stage_control_plane.json',
+  stageManifest: STANDARD_AGENT_STAGE_MANIFEST_REF,
   generatedSurfaceHandoff: 'contracts/generated_surface_handoff.json',
   functionalPrivatizationAudit: 'contracts/functional_privatization_audit.json',
   packCompilerInput: 'contracts/pack_compiler_input.json',
@@ -88,6 +92,7 @@ function locatorSchemaFromActions(actionCatalog: JsonRecord) {
 function buildDomainEntryContract(input: {
   actionCatalog: JsonRecord;
   domainDescriptor: JsonRecord;
+  canonicalAgentId: string;
 }) {
   const commandContracts = actionCommandContracts(input.actionCatalog);
   const supportedCommands = commandContracts.map((contract) => contract.command);
@@ -101,7 +106,7 @@ function buildDomainEntryContract(input: {
     product_entry_kind: 'opl_generated_surface',
     domain_agent_entry_spec: {
       surface_kind: 'domain_agent_entry_spec',
-      agent_id: OMA_PROJECT_ID,
+      agent_id: input.canonicalAgentId,
       title: domainLabel(input.domainDescriptor),
       description:
         optionalString(input.domainDescriptor.purpose)
@@ -135,7 +140,11 @@ function buildSharedHandoff() {
   };
 }
 
-function buildStandardSkeleton(repoDir: string, generatedSurfaceHandoff: JsonRecord | null) {
+function buildStandardSkeleton(
+  repoDir: string,
+  generatedSurfaceHandoff: JsonRecord | null,
+  canonicalAgentId: string,
+) {
   const rootRefs = [
     ['agent', 'agent/knowledge/opl-boundary-policy.md'],
     ['contracts', OMA_CONTRACTS.domainDescriptor],
@@ -152,7 +161,7 @@ function buildStandardSkeleton(repoDir: string, generatedSurfaceHandoff: JsonRec
   return {
     surface_kind: 'standard_domain_agent_skeleton',
     version: 'standard-domain-agent-skeleton.v1',
-    agent_id: OMA_PROJECT_ID,
+    agent_id: canonicalAgentId,
     repo_source_boundary: {
       required_dirs: ['agent', 'contracts', 'runtime', 'docs'],
       forbidden_dirs: ['artifacts', 'workspace', 'workspaces'],
@@ -161,7 +170,7 @@ function buildStandardSkeleton(repoDir: string, generatedSurfaceHandoff: JsonRec
       descriptor_refs: [
         OMA_CONTRACTS.domainDescriptor,
         OMA_CONTRACTS.actionCatalog,
-        OMA_CONTRACTS.stageControlPlane,
+        OMA_CONTRACTS.stageManifest,
         OMA_CONTRACTS.packCompilerInput,
       ],
       sidecar_refs: [
@@ -321,7 +330,7 @@ function buildRuntimeSurfaces(repoDir: string, registry: JsonRecord) {
       supporting_files: [
         artifactFile('domain_descriptor', OMA_CONTRACTS.domainDescriptor, 'OMA domain descriptor contract.'),
         artifactFile('action_catalog', OMA_CONTRACTS.actionCatalog, 'OMA family action catalog contract.'),
-        artifactFile('stage_control_plane', OMA_CONTRACTS.stageControlPlane, 'OMA family stage control plane contract.'),
+        artifactFile('stage_manifest', OMA_CONTRACTS.stageManifest, 'OMA declarative stage manifest source.'),
         artifactFile('generated_surface_handoff', OMA_CONTRACTS.generatedSurfaceHandoff, 'OPL generated surface handoff contract.'),
       ],
       inspect_paths: Object.values(OMA_CONTRACTS),
@@ -381,7 +390,7 @@ function buildTransitionDescriptor() {
     descriptor_id: 'opl-meta-agent.transition.descriptor',
     target_domain_id: OMA_PROJECT_ID,
     owner: OMA_PROJECT_ID,
-    spec_ref: 'contracts/stage_control_plane.json#stages.stage_contract',
+    spec_ref: `${STANDARD_AGENT_STAGE_MANIFEST_REF}#stages`,
     matrix_cases_ref: 'contracts/real_target_agent_scaleout_evidence.json#multi_target_scaleout_closeout',
     authority_boundary: {
       domain_transition_owner: OMA_PROJECT_ID,
@@ -396,10 +405,21 @@ function buildTransitionDescriptor() {
 function buildRawManifest(repoDir: string, registry: JsonRecord) {
   const domainDescriptor = readJson(repoDir, OMA_CONTRACTS.domainDescriptor) ?? {};
   const actionCatalog = readJson(repoDir, OMA_CONTRACTS.actionCatalog);
-  const stageControlPlane = readJson(repoDir, OMA_CONTRACTS.stageControlPlane);
+  const repoContractReadout = buildStandardAgentRepoContractReadout(repoDir);
+  const stageControlPlane = repoContractReadout.stage_control_plane as unknown as JsonRecord | null;
+  const canonicalAgentId = repoContractReadout.canonical_agent_id;
+  const targetDomainId = repoContractReadout.target_domain_id;
   const generatedSurfaceHandoff = readJson(repoDir, OMA_CONTRACTS.generatedSurfaceHandoff);
   const functionalPrivatizationAudit = readJson(repoDir, OMA_CONTRACTS.functionalPrivatizationAudit);
-  if (!actionCatalog || !stageControlPlane || !generatedSurfaceHandoff || !functionalPrivatizationAudit) {
+  if (
+    !actionCatalog
+    || repoContractReadout.status !== 'resolved'
+    || !stageControlPlane
+    || canonicalAgentId !== OMA_CANONICAL_AGENT_ID
+    || targetDomainId !== OMA_PROJECT_ID
+    || !generatedSurfaceHandoff
+    || !functionalPrivatizationAudit
+  ) {
     return null;
   }
   const memoryDescriptor = readJson(repoDir, OMA_CONTRACTS.memoryDescriptor);
@@ -431,13 +451,21 @@ function buildRawManifest(repoDir: string, registry: JsonRecord) {
       summary: 'OPL-hosted OMA descriptor projection from standard repo contracts.',
     },
     recommended_shell: 'opl_hosted_descriptor',
-    domain_entry_contract: buildDomainEntryContract({ actionCatalog, domainDescriptor }),
+    domain_entry_contract: buildDomainEntryContract({
+      actionCatalog,
+      domainDescriptor,
+      canonicalAgentId,
+    }),
     shared_handoff: buildSharedHandoff(),
     family_action_catalog: actionCatalog,
     family_stage_control_plane: stageControlPlane,
     family_transition_spec_descriptor: buildTransitionDescriptor(),
     domain_memory_descriptor: buildDomainMemoryDescriptor(memoryDescriptor, stageControlPlane),
-    standard_domain_agent_skeleton: buildStandardSkeleton(repoDir, generatedSurfaceHandoff),
+    standard_domain_agent_skeleton: buildStandardSkeleton(
+      repoDir,
+      generatedSurfaceHandoff,
+      canonicalAgentId,
+    ),
     generated_surface_handoff: generatedSurfaceHandoff,
     functional_privatization_audit: functionalPrivatizationAudit,
     skill_catalog: buildSkillCatalog(actionCatalog),
@@ -461,12 +489,9 @@ function buildRawManifest(repoDir: string, registry: JsonRecord) {
 }
 
 function buildOplMetaAgentDescriptorEntry(
+  repoDir: string,
   registry: JsonRecord,
-): DomainManifestCatalogEntry | null {
-  const repoDir = repoDirFromRegistry(registry);
-  if (!repoDir) {
-    return null;
-  }
+): DomainManifestCatalogEntry {
   const rawManifest = buildRawManifest(repoDir, registry);
   if (!rawManifest) {
     return {
@@ -497,25 +522,42 @@ function buildOplMetaAgentDescriptorEntry(
   };
 }
 
-export function withOplMetaAgentDescriptorEntry<T extends DomainManifestCatalog>(catalog: T): T {
+function resolveOplMetaAgentRepoDir(
+  catalog: DomainManifestCatalog,
+  repoInputs: StandardDomainAgentRepoInput[],
+) {
+  return repoDirFromRegistry(catalog.opl_meta_agent_registry ?? {})
+    ?? repoInputs.find((entry) => entry.requested_agent_id === OMA_CANONICAL_AGENT_ID)?.repo_dir
+    ?? null;
+}
+
+export function withOplMetaAgentDescriptorEntry<T extends DomainManifestCatalog>(
+  catalog: T,
+  repoInputs: StandardDomainAgentRepoInput[] = defaultStandardDomainAgentRepoInputs(),
+): T {
   if (catalog.projects.some((entry) =>
     entry.project_id === OMA_PROJECT_ID
     || entry.project === OMA_PROJECT
     || entry.manifest?.target_domain_id === OMA_PROJECT_ID
     || entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === OMA_PROJECT_ID
+    || entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id === OMA_CANONICAL_AGENT_ID
   )) {
     return catalog;
   }
 
-  const registry = catalog.opl_meta_agent_registry ?? buildOplMetaAgentRegistryExtension();
-  const entry = buildOplMetaAgentDescriptorEntry(registry);
-  if (!entry) {
+  const repoDir = resolveOplMetaAgentRepoDir(catalog, repoInputs);
+  if (!repoDir) {
     return catalog;
   }
+  const registry = catalog.opl_meta_agent_registry ?? {
+    repo_dir: repoDir,
+    status: 'standard_repo_contracts_resolved',
+    summary: {},
+  };
+  const entry = buildOplMetaAgentDescriptorEntry(repoDir, registry);
 
   return {
     ...catalog,
-    opl_meta_agent_registry: registry,
     summary: {
       ...catalog.summary,
       total_projects_count: catalog.summary.total_projects_count + 1,
@@ -526,18 +568,6 @@ export function withOplMetaAgentDescriptorEntry<T extends DomainManifestCatalog>
     notes: [
       ...catalog.notes,
       'OPL Meta Agent descriptor is generated from standard repo contracts by an OPL-hosted refs-only descriptor adapter.',
-    ],
-  };
-}
-
-export function withOplMetaAgentRegistryExtension<T extends DomainManifestCatalog>(catalog: T): T {
-  const registry = catalog.opl_meta_agent_registry ?? buildOplMetaAgentRegistryExtension();
-  return {
-    ...catalog,
-    opl_meta_agent_registry: registry,
-    notes: [
-      ...catalog.notes,
-      'OPL Meta Agent registry extension is composed by Foundry Lab consumers and does not expand production domain truth or readiness authority.',
     ],
   };
 }

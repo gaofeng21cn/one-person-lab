@@ -860,7 +860,9 @@ test('profile conformance binds generated stage provenance to the planned stage 
     {
       name: 'target-only requirement ref',
       mutate: (stages) => {
-        stages.at(-1).target_only_requirement_ref = 'target-only-requirement:wrong/closeout';
+        const stage = stages.at(-1);
+        assert.ok(stage);
+        stage.target_only_requirement_ref = 'target-only-requirement:wrong/closeout';
       },
       blocker: 'source_derived_design_stage_manifest_target_only_requirement_ref_mismatch:owner-gated-closeout',
     },

@@ -34,6 +34,7 @@
   "standard_agent_identity_binding": {
     "canonical_agent_id_source_ref": "contracts/pack_compiler_input.json#/canonical_agent_id",
     "target_domain_id_source_ref": "contracts/domain_descriptor.json#/domain_id",
+    "pack_domain_binding_policy": "contracts/pack_compiler_input.json#/domain_id must exactly match contracts/domain_descriptor.json#/domain_id",
     "generated_interface_agent_id_policy": "copy_explicit_canonical_agent_id_without_domain_or_alias_inference",
     "stage_plane_identity_policy": "family_stage_control_plane_remains_domain_scoped_and_does_not_duplicate_canonical_agent_identity",
     "missing_canonical_agent_id_policy": "fail_closed"
@@ -42,6 +43,8 @@
     "source_ref": "agent/stages/manifest.json",
     "generated_surface_ref": "opl-generated:family_stage_control_plane",
     "tracked_stage_control_plane_policy": "forbidden_as_standard_agent_source_or_fallback",
+    "required_pack_path_policy": "every required_domain_pack_paths entry must resolve to a file inside the target repo before generated interfaces can be ready",
+    "hosted_adapter_policy": "active descriptor, stage index, readiness, worklist, and launch-admission readers consume the same compiled stage manifest readout and may not inject a hand-written first-party plane",
     "required_v2_policy": "standard_stage_pack_conformance.required=true_requires_version_standard-stage-pack.v2_and_invalid_or_missing_version_fails_closed",
     "explicit_v2_version_policy": "version_standard-stage-pack.v2_enables_v2_even_when_required_is_false",
     "stagecraft_policy_ownership": {
@@ -58,7 +61,8 @@
       "stage_pattern_source_refs",
       "target_only_requirement_ref"
     ],
-    "provenance_exclusivity_policy": "source_pattern_ref_and_target_only_requirement_are_mutually_exclusive_stage_origins"
+    "provenance_exclusivity_policy": "source_pattern_ref_and_target_only_requirement_are_mutually_exclusive_stage_origins",
+    "source_pattern_binding_policy": "generated stage source_pattern_ref must exactly match the planned primary source_pattern_ref; when stage_pattern_source_refs is declared its first entry is that same primary ref and later aliases cannot substitute for it"
   },
   "input_surfaces": [
     "family_agent_descriptor.entry",
@@ -566,6 +570,8 @@
       "standard_domain_agent_scaffold_validation",
       "pack_compiler_input canonical_semantic_pack_root and legacy root field guard",
       "required_domain_pack_paths reject README-only semantic anchors",
+      "required_domain_pack_paths resolve to files inside the target repo",
+      "pack_compiler_input domain_id exactly matches domain_descriptor domain_id",
       "generated_surface_handoff OPL owner guard",
       "generated interface readiness and active-caller target proof",
       "functional_privatization_audit generic runtime owner and active-path scan guard"

@@ -3,7 +3,7 @@
 Owner: `One Person Lab`
 Purpose: `stage_pack_v2_migration_checklist`
 State: `active_policy`
-Machine boundary: 本文是人读迁移清单。机器判断继续归 `opl agents conformance --json`、`contracts/stage_control_plane.json`、`contracts/pack_compiler_input.json`、domain-owned contracts/source/tests 和 owner evidence。
+Machine boundary: 本文是人读迁移清单。机器判断继续归 `opl agents conformance --json`、`agent/stages/manifest.json`、OPL generated `family_stage_control_plane`、`contracts/pack_compiler_input.json`、domain-owned contracts/source/tests 和 owner evidence。
 
 ## 结论
 
@@ -21,47 +21,34 @@ OBF 当前是样板；MAS、MAG、RCA、OMA 迁移时复用同一组字段，不
 | `standard_stage_pack_conformance.required` | `true` |
 | `standard_agent_pack_abi.version` | `standard-agent-pack-abi.v1` |
 | `standard_agent_pack_abi.required_repo_layout` | 至少包含 `agent/`、`contracts/`、`runtime/authority_functions/` |
-| `source_refs.stage_graph_source_ref` | `contracts/stage_control_plane.json` |
+| `source_refs.stage_graph_source_ref` | `agent/stages/manifest.json` |
 | `source_refs.quality_gate_source_ref` | 指向真实 `agent/quality_gates/*` |
-| `source_refs.executor_policy_source_ref` | 指向 `contracts/stage_control_plane.json#/stages/*/selected_executor` |
+| `source_refs.executor_policy_source_ref` | `opl-generated:family_stage_control_plane#/stages/*/selected_executor`；domain repo 不提交第二份 generated plane |
 | `source_refs.owner_receipt_schema_source_ref` | `contracts/owner_receipt_contract.json` |
 | `source_refs.authority_functions_source_ref` | `runtime/authority_functions/README.md` 或等价 source |
 | `source_refs.functional_privatization_audit_source_ref` | `contracts/functional_privatization_audit.json` |
 | `source_refs.generated_surface_handoff_source_ref` | `contracts/generated_surface_handoff.json` |
 | `source_refs.capability_map_source_ref` | `contracts/capability_map.json` |
-| `required_domain_pack_paths` | 必须包含真实非 README pack files，含 `agent/tools/domain_affordances.md` |
+| `required_domain_pack_paths` | 必须包含 `agent/stages/manifest.json` 与所有真实非 README pack files，含 `agent/tools/domain_affordances.md`；每个声明路径必须物理存在且位于 repo 内 |
 
-## Stage Control Plane
+## Declarative Stage Manifest
 
-`contracts/stage_control_plane.json` 顶层必须声明：
+`agent/stages/manifest.json` 顶层必须声明 domain identity、owner、authority boundary 与非空 `stages[]`。OPL Pack 只从该 source 生成 `family_stage_control_plane`，不读取 tracked legacy fallback。
 
-```json
-{
-  "stage_pack_conformance_version": "standard-stage-pack.v2"
-}
-```
-
-每个 `stages[]` 条目必须声明：
+每个 `stages[]` 条目至少声明：
 
 | 字段 | 要求 |
 | --- | --- |
-| `stage_pack_conformance_version` | `standard-stage-pack.v2` |
-| `selected_executor.executor_kind` | 默认 `codex_cli`；非默认 executor 必须带 binding ref |
-| `selected_executor.default_executor` | Codex 默认 stage 为 `true` |
-| `selected_executor.executor_binding_ref` | Codex 默认 stage 为 `default_codex_cli` |
-| `tool_refs[]` | 至少一个 `agent/tools/domain_affordances.md` repo ref |
-| `tool_affordance_boundary.catalog_role` | `available_affordance_catalog_not_workflow_script` |
-| `tool_affordance_boundary.*_refs[]` | `capability_refs`、`permission_scope_refs`、`credential_boundary_refs`、`write_scope_refs`、`side_effect_risk_refs`、`forbidden_authority_refs` 全部非空 |
-| `tool_affordance_boundary.executor_autonomy` | executor 可选工具、可跳过、可替代、可并行、可请求 human gate；tool catalog 不能规定顺序、认知策略、stage goal 或 forbidden write |
-| `stage_contract.requires[]` | 非空，引用 stage、prompt、skill、knowledge、quality gate、tool boundary 等输入 |
-| `stage_contract.ensures[]` | 非空，引用 stage attempt、owner handoff、receipt、typed blocker 或 stage folder refs |
-| `stage_contract.expected_receipt_refs[]` | 非空 |
-| `stage_contract.receipt_schema_refs[]` | 指向 `contracts/owner_receipt_contract.json` |
-| `stage_contract.authority_function_refs[]` | 指向 `runtime/authority_functions/README.md` 或等价 source |
-| `stage_contract.l4_entry_gate` | `entry_level=L4_structural_baseline`、`can_claim_l5=false`、`can_claim_domain_ready=false` |
-| `stage_contract.l5_entry_gate` | `entry_level=L5_production_operating_maturity`，且 conformance / contract / provider / App projection 均不能计为 L5 |
-| `stage_contract.stage_completion_policy` | domain stage 持有 completion judgment；provider completion、file presence、suite pass、conformance pass 都不能关闭 stage |
-| `independent_gate_policy` | 指向真实 `agent/quality_gates/*`，并声明 execution / review separation |
+| `stage_id` / `stage_kind` / `title` / `goal` | 非空，且 `stage_id` 全局唯一 |
+| `policy_ref` / `prompt_ref` | 指向 repo 内真实 `agent/stages/*` / `agent/prompts/*` |
+| `knowledge_refs[]` / `quality_gate_refs[]` | 指向 repo 内真实 source；quality gate 至少一个 |
+| `allowed_action_refs[]` | 非空，且全部存在于 `contracts/action_catalog.json` |
+| `requires[]` / `ensures[]` | 非空 domain stage contract 输入与输出语义 |
+| `next_stage_refs[]` | 全部解析到同一 manifest 内的 stage id |
+| `trust_lane` | 显式声明 domain / executor / human / external trust lane |
+| source-derived provenance | `stage_origin=source_pattern_ref` 时必须精确绑定 `pattern_id`、`step_id`、primary `source_pattern_ref` 与 source anchors；target-only stage 只能绑定 `target_only_requirement_ref` |
+
+生成 plane 无条件注入 Stagecraft 的 executor binding、completion policy、user-stage-log、progress-delta、typed-blocker lineage、receipt schema、authority-function refs 与 false-authority boundary；domain manifest 不能覆盖这些 Framework 下限。
 
 ## Tool Affordance Catalog
 

@@ -25,8 +25,9 @@ import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manife
 import {
   defaultStandardDomainAgentRepoInputs,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+  withOplMetaAgentDescriptorEntry,
 } from '../../../modules/atlas/index.ts';
-import { withOplMetaAgentDescriptorEntry } from '../../../modules/foundry-lab/opl-meta-agent-descriptor-adapter.ts';
+import { withOplMetaAgentRegistryExtension } from '../../../modules/foundry-lab/index.ts';
 import {
   buildGeneratedAgentInterfaces,
   buildDomainPackCompilerInspect,
@@ -169,7 +170,11 @@ export function buildPublicCommandSpecs(
   const workspaceCommandSpecs = buildWorkspaceCommandSpecs(commandSpecs);
   const buildAgentDescriptorManifests = (options: Parameters<typeof buildDomainManifestCatalog>[1] = {}) =>
     withStandardDomainAgentSkeletonInspection(
-      withOplMetaAgentDescriptorEntry(buildDomainManifestCatalog(getContracts(), options).domain_manifests),
+      withOplMetaAgentDescriptorEntry(
+        withOplMetaAgentRegistryExtension(
+          buildDomainManifestCatalog(getContracts(), options).domain_manifests,
+        ),
+      ),
     );
   const loadAgentDescriptorsForPackCompiler = () =>
     buildFamilyAgentDescriptorList(getContracts(), {
