@@ -65,7 +65,7 @@ function writeProfileStageCompilerSources(
   fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
   fs.writeFileSync(path.join(repoDir, 'runtime', 'authority_functions', 'README.md'), '# Authority functions\n');
   writeJson(path.join(repoDir, 'contracts', 'owner_receipt_contract.json'), {
-    surface_kind: 'domain_owner_receipt_contract',
+    surface_kind: 'owner_receipt_contract',
   });
   writeJson(path.join(repoDir, 'contracts', 'domain_descriptor.json'), {
     surface_kind: 'domain_agent_descriptor',
