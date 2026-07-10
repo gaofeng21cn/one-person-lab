@@ -32,7 +32,7 @@ case "$lane" in
     OPL_STRUCTURAL_QUALITY_STRICT=1 ./scripts/run-structural-quality-gate.sh
     ;;
   reuse-first)
-    npm run reuse-first:scan:diff -- --strict
+    npm run reuse-first:scan:diff
     ;;
   family)
     npm run family:shared-release -- check

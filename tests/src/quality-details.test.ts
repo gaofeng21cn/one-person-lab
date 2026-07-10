@@ -7,6 +7,21 @@ import { spawnSync } from 'node:child_process';
 
 import { cliPath, repoRoot, runCli, runCliInCwd, runCliRaw, runCliRawInCwd } from './cli/helpers.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { listRepoFiles } from '../../src/modules/stagecraft/quality-details/filesystem.ts';
+
+test('quality details non-git fallback includes dot paths and skips ignored directories', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-files-'));
+  try {
+    fs.mkdirSync(path.join(root, '.hidden'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'nested', 'node_modules', 'package'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.hidden', 'visible.ts'), 'export const visible = true;\n');
+    fs.writeFileSync(path.join(root, 'nested', 'node_modules', 'package', 'ignored.ts'), 'ignored\n');
+
+    assert.deepEqual(listRepoFiles(root), ['.hidden/visible.ts']);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function makeQualityFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-'));
@@ -94,12 +109,12 @@ function makeQualityFixture() {
       '',
       '[[layers]]',
       'name = "entry"',
-      'paths = ["src/main.ts"]',
+      'paths = ["src/m*.ts"]',
       'order = 1',
       '',
       '[[layers]]',
       'name = "leaf"',
-      'paths = ["src/util.ts"]',
+      'paths = ["src/**/util.ts"]',
       'order = 2',
       '',
       '[[boundaries]]',
@@ -142,6 +157,12 @@ test('quality details emits function, dependency, test gap, and rules diagnostic
       output.quality_details.rules_findings.some(
         (finding: { rule_kind: string; file?: string }) =>
           finding.rule_kind === 'max_file_lines' && finding.file === 'src/main.ts',
+      ),
+    );
+    assert.ok(
+      output.quality_details.rules_findings.some(
+        (finding: { rule_kind: string; file?: string }) =>
+          finding.rule_kind === 'layer_boundary' && finding.file === 'src/main.ts',
       ),
     );
     assert.ok(output.quality_details.agent_triage_targets.length > 0);

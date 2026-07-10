@@ -60,7 +60,7 @@ Repo 角色按当前 App 边界固定读取：`one-person-lab` 是 framework/run
 - [OPL 当前开发线路](./active/current-development-lines.md)
 - [OPL 开发文档组合整理](./active/development-document-portfolio.md)
 - [OPL Family 当前状态与理想目标差距](./active/current-state-vs-ideal-gap.md)
-- [Ordinary Progress Spine 与 Audit Sidecar 完整规划](./active/ordinary-progress-spine-and-audit-sidecar-plan.md)
+- [OPL Foundry Agent 目标操作架构](./active/opl-foundry-agent-target-operating-architecture.md)
 - [OPL 与 Foundry Agents 理想目标态](./references/runtime-substrate/opl-family-agent-ideal-state.md)
 - [OPL 品牌模块理想态](./references/brand-modules/README.md)
 - [OPL 品牌模块完成度对照](./references/brand-modules/current-maturity-against-workspace.md)

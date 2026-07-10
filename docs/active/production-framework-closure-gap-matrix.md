@@ -52,7 +52,7 @@ OPL readiness、provider proof、generated surface proof、stage evidence workor
 Docs-only 治理最小验证：
 
 ```bash
-rtk git diff --check docs/active/README.md docs/active/current-state-vs-ideal-gap.md docs/active/current-development-lines.md docs/active/production-framework-closure-gap-matrix.md docs/active/opl-family-purpose-first-current-design-audit.md docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/opl-family-ideal-operating-model-redesign.md docs/docs_portfolio_consolidation.md
+rtk git diff --check docs/active/README.md docs/active/current-state-vs-ideal-gap.md docs/active/current-development-lines.md docs/active/production-framework-closure-gap-matrix.md docs/active/opl-foundry-agent-target-operating-architecture.md docs/active/opl-family-ideal-operating-model-redesign.md docs/docs_portfolio_consolidation.md
 rtk rg -n "^(<<<<<<<|=======|>>>>>>>)" docs/active docs/docs_portfolio_consolidation.md
 ```
 

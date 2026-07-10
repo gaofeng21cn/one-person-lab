@@ -16,7 +16,7 @@ const SOURCE_EXTENSIONS = new Map<string, SourceLanguage>([
   ['.py', 'python'],
 ]);
 
-const IGNORED_DIRS = new Set([
+const IGNORED_DIRS = [
   '.git',
   '.hg',
   '.svn',
@@ -33,14 +33,14 @@ const IGNORED_DIRS = new Set([
   '.mypy_cache',
   '.ruff_cache',
   'target',
-]);
+];
 
 function toRepoPath(filePath: string) {
   return filePath.split(path.sep).join('/');
 }
 
 function isIgnoredPath(relativePath: string) {
-  return relativePath.split('/').some((part) => IGNORED_DIRS.has(part));
+  return relativePath.split('/').some((part) => IGNORED_DIRS.includes(part));
 }
 
 function isTestPath(relativePath: string) {
@@ -56,25 +56,10 @@ function sourceLanguageFor(relativePath: string): SourceLanguage | null {
 }
 
 function walkFiles(root: string) {
-  const files: string[] = [];
-
-  const walk = (directory: string) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const absolutePath = path.join(directory, entry.name);
-      const relativePath = toRepoPath(path.relative(root, absolutePath));
-      if (isIgnoredPath(relativePath)) {
-        continue;
-      }
-      if (entry.isDirectory()) {
-        walk(absolutePath);
-      } else if (entry.isFile()) {
-        files.push(relativePath);
-      }
-    }
-  };
-
-  walk(root);
-  return files;
+  return fs.globSync(['**/*', '**/.*', '**/.*/**'], {
+    cwd: root,
+    exclude: (entry) => isIgnoredPath(toRepoPath(entry)),
+  }).filter((relativePath) => fs.statSync(path.join(root, relativePath)).isFile());
 }
 
 function gitFiles(root: string) {

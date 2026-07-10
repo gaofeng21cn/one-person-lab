@@ -2,7 +2,7 @@
 
 Owner: `One Person Lab`
 Purpose: `standard_agent_migration_owner_map`
-State: `active_plan`
+State: `active_support`
 Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contracts/`、source、CLI/API 行为、runtime ledger、provider receipt、domain-owned contracts、domain owner receipt、typed blocker、真实 workspace / App / release evidence。
 
 ## 本轮边界

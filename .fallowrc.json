@@ -30,7 +30,6 @@
     "src/modules/runway/native-helper-doctor.ts",
     "src/modules/runway/opl-session-runtime.ts",
     "src/modules/console/product-entry.ts",
-    "src/modules/connect/system-installation.ts",
     "src/modules/console/management/progress.ts",
     ".github/actions/quality-details/emit-quality-details.mjs",
     "src/modules/index.ts",
