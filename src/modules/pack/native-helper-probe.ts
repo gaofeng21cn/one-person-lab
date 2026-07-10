@@ -93,6 +93,14 @@ function resolveEntrypoint(descriptorDir: string, entrypointRef: string) {
   if (!fs.existsSync(entrypointPath)) {
     return { status: 'missing' as const, path: entrypointPath, sha256: null };
   }
+  const realDescriptorDir = fs.realpathSync(descriptorDir);
+  const realEntrypointPath = fs.realpathSync(entrypointPath);
+  const realRelative = path.relative(realDescriptorDir, realEntrypointPath);
+  if (realRelative === '..' || realRelative.startsWith(`..${path.sep}`) || path.isAbsolute(realRelative)) {
+    throw shape('native_helper_descriptor.entrypoint_ref must stay inside the descriptor directory.', {
+      entrypoint_ref: entrypointRef,
+    });
+  }
   if (!fs.statSync(entrypointPath).isFile()) {
     throw shape('native_helper_descriptor.entrypoint_ref must resolve to a file.', {
       entrypoint_ref: entrypointRef,

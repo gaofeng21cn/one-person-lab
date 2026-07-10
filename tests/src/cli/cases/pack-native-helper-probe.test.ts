@@ -102,6 +102,48 @@ test('pack native-helper probe rejects entrypoint refs outside the descriptor ro
   }
 });
 
+test('pack native-helper probe rejects entrypoint symlinks outside the descriptor root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-symlink-'));
+  const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-outside-'));
+  try {
+    const outsideHelper = path.join(outsideRoot, 'helper.js');
+    fs.writeFileSync(outsideHelper, 'process.exit(0);\n');
+    fs.symlinkSync(outsideHelper, path.join(root, 'helper.js'));
+    const descriptorPath = writeDescriptor(root);
+
+    assert.throws(
+      () => runCli(['pack', 'native-helper', 'probe', '--descriptor', descriptorPath]),
+      /entrypoint_ref must stay inside the descriptor directory/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outsideRoot, { recursive: true, force: true });
+  }
+});
+
+test('pack native-helper probe accepts entrypoint symlinks inside the descriptor root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-internal-symlink-'));
+  try {
+    const helperContent = 'process.exit(0);\n';
+    fs.writeFileSync(path.join(root, 'helper-target.js'), helperContent);
+    fs.symlinkSync('helper-target.js', path.join(root, 'helper.js'));
+    const descriptorPath = writeDescriptor(root);
+
+    const receipt = runCli([
+      'pack',
+      'native-helper',
+      'probe',
+      '--descriptor',
+      descriptorPath,
+    ]).pack_native_helper_probe_receipt;
+
+    assert.equal(receipt.status, 'resolved');
+    assert.equal(receipt.content_sha256, sha256(helperContent));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('pack native-helper probe rejects undeclared authority fields', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-native-helper-authority-'));
   try {
