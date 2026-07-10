@@ -288,7 +288,6 @@ function rawCurrentOwnerDeltaUnprovenBinding(value: unknown) {
   }
   const unprovenRequirements = requirements.filter((requirement) => (
     optionalString(record(requirement).binding_kind) !== 'optional'
-    || !typedCapabilityRequirement(requirement)
   ));
   return {
     unproven: unprovenRequirements.length > 0,

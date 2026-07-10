@@ -523,10 +523,12 @@ test('malformed current-owner-delta with optional-only requirements remains fail
   const invalidOptionalBoundaryReceipt = buildCapabilityRegistryLaunchGateReceipt(
     invalidOptionalBoundaryInput,
   );
-  assert.equal(invalidOptionalBoundaryReceipt.status, 'blocked');
+  assert.equal(invalidOptionalBoundaryReceipt.status, 'not_applicable');
+  assert.equal(invalidOptionalBoundaryReceipt.blocked_reason, null);
+  assert.deepEqual(invalidOptionalBoundaryReceipt.blocked_capability_refs, []);
   assert.equal(
     invalidOptionalBoundaryReceipt.typed_input_status.unproven_explicit_capability_binding,
-    true,
+    false,
   );
 });
 
