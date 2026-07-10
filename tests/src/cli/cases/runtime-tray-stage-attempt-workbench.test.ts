@@ -1,6 +1,37 @@
 import { spawnSync } from 'node:child_process';
 
+import { buildFamilyRuntimeControlledApplyContract } from '../../../../src/modules/runway/index.ts';
 import { assert, createFamilyContractsFixtureRoot, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
+
+test('controlled apply projects one generic return contract across domains', () => {
+  const expectedReturnShapes = [
+    'domain_owner_receipt_ref',
+    'quality_gate_receipt_ref',
+    'typed_blocker_ref',
+    'human_gate_ref',
+    'route_back_evidence_ref',
+    'no_regression_evidence_ref',
+  ];
+  const domains = [
+    ['medautoscience', 'opl_temporal_controlled_mas_owner_answer_apply_contract'],
+    ['medautogrant', 'opl_temporal_controlled_stage_attempt_apply_contract'],
+    ['redcube', 'opl_temporal_controlled_visual_stage_attempt_apply_contract'],
+    ['opl-meta-agent', 'opl_temporal_controlled_domain_stage_attempt_apply_contract'],
+  ] as const;
+
+  for (const [domainId, contractId] of domains) {
+    const contract = buildFamilyRuntimeControlledApplyContract({
+      domainId,
+      stageId: 'review',
+      workspaceLocator: {
+        controlled_apply_request: { action_kind: 'controlled_apply' },
+      },
+    });
+    assert.equal(contract.contract_id, contractId);
+    assert.deepEqual(contract.authority_boundary.allowed_return_shapes, expectedReturnShapes);
+    assert.deepEqual(contract.typed_blockers[0]?.required_return_shapes, expectedReturnShapes);
+  }
+});
 
 test('runtime snapshot projects stage attempt workbench without owning domain verdicts', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-attempt-workbench-state-'));

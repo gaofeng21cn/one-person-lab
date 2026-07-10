@@ -42,13 +42,7 @@ const CONTRACT_IDS: Partial<Record<FamilyRuntimeDomainId, string>> = {
   redcube: 'opl_temporal_controlled_visual_stage_attempt_apply_contract',
 };
 
-const DEFAULT_ALLOWED_RETURN_SHAPES = [
-  'domain_owner_receipt_ref',
-  'typed_blocker_ref',
-  'no_regression_evidence_ref',
-];
-
-const MAS_ALLOWED_RETURN_SHAPES = [
+const ALLOWED_RETURN_SHAPES = [
   'domain_owner_receipt_ref',
   'quality_gate_receipt_ref',
   'typed_blocker_ref',
@@ -86,9 +80,6 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
   const contractId = stringValue(request?.contract_id)
     ?? CONTRACT_IDS[input.domainId]
     ?? 'opl_temporal_controlled_domain_stage_attempt_apply_contract';
-  const allowedReturnShapes = input.domainId === 'medautoscience'
-    ? MAS_ALLOWED_RETURN_SHAPES
-    : DEFAULT_ALLOWED_RETURN_SHAPES;
   const ownerReceiptRefs = [
     ...stringList(request?.owner_receipt_refs),
     ...stringList(request?.domain_receipt_refs),
@@ -119,7 +110,7 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
             blocker_kind: 'domain_owner_gate',
             blocker_id: `${contractId}:domain_receipt_or_no_regression_evidence_required`,
             required_owner: input.domainId,
-            required_return_shapes: allowedReturnShapes,
+            required_return_shapes: ALLOWED_RETURN_SHAPES,
           },
         ];
   const applyStatus: FamilyRuntimeControlledApplyContract['apply_status'] =
@@ -153,7 +144,7 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
     authority_boundary: {
       opl: 'attempt_contract_receipt_projection_only',
       domain: 'stage_apply_truth_artifact_quality_owner',
-      allowed_return_shapes: allowedReturnShapes,
+      allowed_return_shapes: ALLOWED_RETURN_SHAPES,
       forbidden_opl_actions: [
         'write_domain_truth',
         'write_domain_artifact',
