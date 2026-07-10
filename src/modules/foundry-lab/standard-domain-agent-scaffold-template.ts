@@ -559,6 +559,14 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       }),
     },
     {
+      path: 'contracts/domain-intake.output.schema.json',
+      content: json({
+        $schema: 'https://json-schema.org/draft/2020-12/schema',
+        type: 'object',
+        additionalProperties: true,
+      }),
+    },
+    {
       path: 'contracts/memory_descriptor.json',
       content: json({
         surface_kind: 'domain_memory_descriptor_locator',

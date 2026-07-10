@@ -40,6 +40,8 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'contracts/foundry_agent_series.json',
       'contracts/pack_compiler_input.json',
       'contracts/generated_surface_handoff.json',
+      'contracts/domain-intake.input.schema.json',
+      'contracts/domain-intake.output.schema.json',
       'contracts/standard-agent-principles-adoption.json',
       'contracts/capability_map.json',
       'contracts/functional_privatization_audit.json',
@@ -119,6 +121,10 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     ]);
     assert.equal(stage.stage_contract.progress_delta_policy.platform_only_is_not_deliverable_progress, true);
     assert.equal(stage.stage_contract.typed_blocker_lineage_policy.surface_kind, 'family-stall-lineage.v1');
+    assert.equal(
+      runCli(['agents', 'interfaces', '--repo-dir', targetDir]).generated_agent_interfaces.status,
+      'ready',
+    );
 
     const capabilityMap = readJsonFile(path.join(targetDir, 'contracts/capability_map.json'));
     const capabilityMapSchema = readJsonFile(path.join(repoRoot, 'contracts/opl-framework/standard-agent-capability-map.schema.json'));
