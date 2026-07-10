@@ -65,12 +65,12 @@ test('runtime scope dedupes workspace options by workspace path', () => {
   const inferredScope = operator.workbench.runtime_scope.inferred_scope_hint;
   assert.ok(inferredScope);
   assert.equal(inferredScope.label, 'dm-cvd-mortality-risk');
-  const task = operator.workbench.task_drilldowns.find(
-    (entry: Record<string, unknown>) => entry.task_id === 'task-a',
-  ) as Record<string, unknown>;
-  assert.equal((task.task_identity as any).work_item.work_item_id, 'task-a');
-  assert.equal((task.task_identity as any).work_item.kind, 'runtime_activity');
-  assert.equal((task.active_path as any[])[0].node_kind, 'runtime_activity_projection');
+  const task = operator.workbench.task_drilldowns.find((entry: any) => entry.task_id === 'task-a');
+  assert.ok(task);
+  assert.deepEqual(
+    [task.task_identity.work_item.work_item_id, task.task_identity.work_item.kind, task.active_path[0].node_kind],
+    ['task-a', 'runtime_activity', 'runtime_activity_projection'],
+  );
 });
 
 test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspace study', () => {

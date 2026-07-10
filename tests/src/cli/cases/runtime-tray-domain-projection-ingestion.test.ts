@@ -45,7 +45,6 @@ test('runtime snapshot ingests domain-owned projection refs without claiming dom
         surface_kind: 'research_runtime_control_projection',
         source_refs: ['mas://runtime/control/latest.json'],
         operator_route_lens_refs: ['mas://runtime/operator-route/latest.json'],
-        paper_route_lens_refs: ['mas://runtime/retired-paper-route/latest.json'],
       },
       publication_quality_verdict: 'ready',
     },
@@ -171,10 +170,9 @@ test('runtime snapshot ingests domain-owned projection refs without claiming dom
       ),
       true,
     );
-    const progressProjection = projection.items.find((item: { pointer: string }) =>
+    assert.deepEqual(projection.items.find((item: { pointer: string }) =>
       item.pointer === '/progress_projection/domain_projection'
-    );
-    assert.deepEqual(progressProjection.operator_route_lens_refs, [
+    )?.operator_route_lens_refs, [
       'mas://runtime/operator-route/latest.json',
     ]);
     assert.equal(projection.authority_boundary.can_read_domain_truth_body, false);
