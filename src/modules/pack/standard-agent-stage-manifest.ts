@@ -9,6 +9,7 @@ import { optionalString, parseJsonText } from '../../kernel/json-file.ts';
 import { STANDARD_AGENT_PACK_ABI } from './standard-agent-pack-abi.ts';
 import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
+  buildFamilyActionStageRouteParity,
   normalizeFamilyStageControlPlane,
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
@@ -628,6 +629,16 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   });
   if (!stageControlPlane) {
     fail('Stage manifest did not compile to a family stage control plane.', { repo_dir: repoDir });
+  }
+  const actionStageRouteParity = buildFamilyActionStageRouteParity(actionCatalog, stageControlPlane, {
+    require_declared_routes: stagePackV2Required,
+  });
+  if (actionStageRouteParity.status !== 'aligned') {
+    fail('Action-to-stage route contract is not aligned with the compiled stage manifest.', {
+      repo_dir: repoDir,
+      blocker: 'standard_agent_action_stage_route_contract_drift',
+      issues: actionStageRouteParity.issues,
+    });
   }
   return {
     stage_control_plane: stageControlPlane,

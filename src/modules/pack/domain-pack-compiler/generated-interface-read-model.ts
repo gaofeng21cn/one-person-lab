@@ -218,6 +218,12 @@ function buildSupportedDerivedSurfaces() {
   }));
 }
 
+function buildActionStageRoutes(catalog: FamilyActionCatalog | null) {
+  return catalog?.actions.flatMap((action) => action.stage_route
+    ? [{ action_id: action.action_id, ...action.stage_route }]
+    : []) ?? [];
+}
+
 function buildSourceOfWorkLineage(catalog: FamilyActionCatalog | null, stageControlPlane: FamilyStageControlPlane | null) {
   return {
     surface_kind: 'opl_generated_surface_source_of_work_lineage',
@@ -921,6 +927,7 @@ export function buildGeneratedInterfaceBundle(
     stage_routes: include('product-entry') || selectedFormat === 'all'
       ? buildStageRoutes(stageControlPlane)
       : [],
+    action_stage_routes: buildActionStageRoutes(catalog),
     parity: catalog ? buildFamilyActionCatalogParity(catalog) : null,
     generated_direct_parity: generatedDirectParity,
     authority_boundary: {
@@ -978,6 +985,7 @@ export function selectGeneratedInterfaceBundleFormat(
     active_caller_target_proof: bundle.active_caller_target_proof,
     active_legacy_caller_deletion_gate_readout: bundle.active_legacy_caller_deletion_gate_readout,
     stage_routes: selectedFormat === 'product-entry' ? bundle.stage_routes : [],
+    action_stage_routes: bundle.action_stage_routes,
     parity: bundle.parity,
     generated_direct_parity: bundle.generated_direct_parity,
     authority_boundary: bundle.authority_boundary,
