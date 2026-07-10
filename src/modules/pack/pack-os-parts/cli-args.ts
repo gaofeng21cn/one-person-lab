@@ -209,33 +209,3 @@ export function parseDistributionArgs(args: string[], usageText: string) {
   }
   return { descriptor, output, cacheRoot };
 }
-
-export function parseContractArgs(args: string[], usageText: string) {
-  let contract: string | null = null;
-  let output: string | null = null;
-  const remaining = [...args];
-  while (remaining.length > 0) {
-    const token = remaining.shift()!;
-    if (token === '--contract') {
-      contract = remaining.shift() ?? null;
-      if (!contract) {
-        throw usage(`${usageText} requires a value after --contract.`, { required: ['--contract <path>'] });
-      }
-      continue;
-    }
-    if (token === '--output') {
-      output = remaining.shift() ?? null;
-      if (!output) {
-        throw usage(`${usageText} requires a value after --output.`, { required: ['--output <path>'] });
-      }
-      continue;
-    }
-    throw usage(`Unknown pack os option: ${token}.`, { token, usage: usageText });
-  }
-
-  if (!contract) {
-    throw usage(`${usageText} requires --contract <path>.`, { required: ['--contract <path>'] });
-  }
-
-  return { contract, output };
-}

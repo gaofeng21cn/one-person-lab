@@ -4,7 +4,6 @@ import path from 'node:path';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import {
   parseCacheArgs,
-  parseContractArgs,
   parseDescriptorArgs,
   parseDistributionArgs,
   parseGenericPackArgs,
@@ -14,10 +13,8 @@ import {
   usage,
 } from './pack-os-parts/cli-args.ts';
 import {
-  buildMasDisplayPackV2Descriptor,
   loadGenericPackDescriptor,
   loadGenericPackDescriptorFromRecord,
-  MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
   normalizeRelativeRef,
   PACK_OS_CONTENT_ADDRESSED_LOCK_POLICY,
   readJsonFile,
@@ -34,57 +31,6 @@ function writeJsonFile(outputPath: string, payload: unknown) {
     path: outputPath,
     sha256: sha256File(outputPath),
     status: 'written',
-  };
-}
-
-export function buildMasDisplayPackV2PackOsSmoke(contractPath: string) {
-  const descriptor = buildMasDisplayPackV2Descriptor(contractPath);
-  const loaded = loadGenericPackDescriptorFromRecord(contractPath, descriptor, sha256File(contractPath));
-  const lock = buildPackOsLockFromLoaded(loaded).pack_lock;
-  const checks = [
-    {
-      check_id: 'mas_display_pack_v2_contract_loaded',
-      status: 'pass',
-      ref: lock.provenance.source_ref,
-    },
-    {
-      check_id: 'mas_authority_boundary_preserved',
-      status: 'pass',
-      owner: lock.review_transport.quality_verdict_owner,
-    },
-    {
-      check_id: 'refs_only_lock_projected',
-      status: 'pass',
-      artifact_locator_ref_count: lock.summary.artifact_locator_ref_count,
-      receipt_ref_count: lock.summary.receipt_ref_count,
-    },
-    {
-      check_id: 'no_mas_authority_claimed',
-      status: 'pass',
-      not_claims: lock.not_claims,
-    },
-  ];
-  return {
-    version: 'g2',
-    pack_os_display_pack_v2_smoke: {
-      surface_kind: 'opl_pack_os_mas_display_pack_v2_smoke',
-      contract_ref: 'contracts/opl-framework/pack-os-contract.json',
-      source_contract_ref: MAS_DISPLAY_PACK_V2_SOURCE_CONTRACT_REF,
-      source_contract_id: 'display-pack-contract.v2',
-      domain_authority_owner: lock.owner,
-      status: 'pass',
-      pack_lock: lock,
-      audit: {
-        surface_kind: 'opl_pack_os_mas_display_pack_v2_audit',
-        status: 'pass',
-        checks,
-        forbidden_claims: [
-          'OPL owns MAS publication quality',
-          'OPL mutates MAS display artifacts',
-          'OPL pack lock authorizes MAS publication readiness',
-        ],
-      },
-    },
   };
 }
 
@@ -770,24 +716,6 @@ export function runPackOsValidateCommand(args: string[]) {
   return buildPackOsValidation(parsed.descriptor);
 }
 
-export function runPackOsMasDisplaySmokeCommand(args: string[]) {
-  const parsed = parseContractArgs(args, 'opl pack os mas-display-smoke --contract <path> [--output <path>]');
-  const payload = buildMasDisplayPackV2PackOsSmoke(parsed.contract);
-  if (!parsed.output) {
-    return payload;
-  }
-  const outputPath = path.resolve(parsed.output);
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, `${JSON.stringify(payload.pack_os_display_pack_v2_smoke.pack_lock, null, 2)}\n`);
-  return {
-    ...payload,
-    pack_lock_output: {
-      path: outputPath,
-      sha256: sha256File(outputPath),
-      status: 'written',
-    },
-  };
-}
 
 export function runPackOsLockCommand(args: string[]) {
   const parsed = parseDescriptorArgs(args, 'opl pack os lock --descriptor <path> [--output <path>]');

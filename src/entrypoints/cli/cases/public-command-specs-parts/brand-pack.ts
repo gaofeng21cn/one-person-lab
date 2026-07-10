@@ -13,7 +13,6 @@ import {
   runPackOsInstallCommand,
   runPackOsInspectCommand,
   runPackOsLockCommand,
-  runPackOsMasDisplaySmokeCommand,
   runPackOsRegistryCommand,
   runPackOsValidateCommand,
 } from '../../../../modules/pack/pack-os.ts';
@@ -191,16 +190,6 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       ],
       group: 'brand-pack',
       handler: runPackOsValidateCommand,
-    },
-    'pack os mas-display-smoke': {
-      usage: 'opl pack os mas-display-smoke --contract <path> [--output <path>]',
-      summary: 'Consume a MAS Display Pack v2 contract into a refs-only Pack OS lock and audit smoke.',
-      examples: [
-        'opl pack os mas-display-smoke --contract contracts/display-pack-contract.v2.json --json',
-        'opl pack os mas-display-smoke --contract contracts/display-pack-contract.v2.json --output build/pack-lock.json --json',
-      ],
-      group: 'brand-pack',
-      handler: runPackOsMasDisplaySmokeCommand,
     },
   };
   return specs;
