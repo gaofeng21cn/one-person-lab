@@ -16,6 +16,7 @@ import { explainDomainBoundary, selectDomainAgentEntry } from '../../../modules/
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../../modules/workspace/workspace-registry.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
+import { buildWorkspaceCloudSyncCommandSpecs } from './workspace-cloud-sync-command-spec.ts';
 import { buildPrivateAgentCommandSpecs } from './private-command-specs-parts/agents.ts';
 import { buildPrivateRuntimeCommandSpecs } from './private-command-specs-parts/runtime.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
@@ -517,6 +518,7 @@ resume: {
       },
     },
     ...buildWorkspaceInitializeCommandSpecs(getContracts),
+    ...buildWorkspaceCloudSyncCommandSpecs(getCommandSpecs),
     'workspace-bind': {
       usage:
         'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',

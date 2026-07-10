@@ -9,6 +9,7 @@ export type OplStatePaths = {
   workspace_root_file: string;
   session_ledger_file: string;
   task_state_dir: string;
+  cloud_sync_db: string;
   runtime_modes_file: string;
   update_channel_file: string;
   developer_supervisor_config_file: string;
@@ -66,6 +67,7 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     workspace_root_file: path.join(stateDir, 'workspace-root.json'),
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
     task_state_dir: path.join(stateDir, 'tasks'),
+    cloud_sync_db: path.join(stateDir, 'cloud-sync', 'sync.sqlite'),
     runtime_modes_file: path.join(stateDir, 'runtime-modes.json'),
     update_channel_file: path.join(stateDir, 'update-channel.json'),
     developer_supervisor_config_file: path.join(stateDir, 'developer-supervisor.json'),

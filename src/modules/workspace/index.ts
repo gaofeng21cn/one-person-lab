@@ -22,3 +22,13 @@ export { ingestWorkspaceSourceMaterial } from './workspace-source-material.ts';
 export { buildWorkspaceCatalog, getActiveWorkspaceBinding, listWorkspaceBindings, resolveWorkspaceLocator } from './workspace-registry.ts';
 export type { WorkspaceBinding } from './workspace-registry.ts';
 export { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from './workspace-topology.ts';
+export {
+  importCloudContinuation,
+  listCloudChanges,
+  listCloudConflicts,
+  listPendingCloudMutations,
+  pullCloudChanges,
+  pushCloudOutbox,
+  queueCloudMutation,
+  readCloudCursor,
+} from './cloud-sync.ts';
