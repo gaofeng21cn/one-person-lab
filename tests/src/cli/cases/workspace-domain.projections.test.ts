@@ -8,6 +8,9 @@ import {
   test,
 } from '../helpers.ts';
 
+import './workspace-domain.descriptor.test.ts';
+import './workspace-domain.progress.test.ts';
+
 function readJsonFile(filePath: string) {
   return parseJsonText(fs.readFileSync(filePath, 'utf8')) as any;
 }

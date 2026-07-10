@@ -110,6 +110,7 @@ test('project progress promotes the active MAS study into a paper-facing summary
     assert.ok(currentStudy, JSON.stringify(brief.project_progress, null, 2));
     assert.equal(currentStudy.study_id, studyId);
     assert.equal(currentStudy.title, 'Clinically interpretable invasive phenotype architecture');
+    assert.ok(currentStudy.story_summary);
     assert.match(currentStudy.story_summary, /Knosp boundary/);
     assert.equal(currentStudy.current_stage, 'publication_supervision');
     assert.equal(currentStudy.monitoring.health_status, 'live');
