@@ -174,6 +174,43 @@ test('stage attempt closeout rejects non-refs-only object metadata without ledge
   });
 });
 
+test('stage attempt closeout rejects string entries in explicit ref metadata', () => {
+  const injectedRef = 'file:///tmp/redcube-runtime/injected-output.json';
+  const cases = [
+    {
+      name: 'metadata_string_ref',
+      packet: {
+        ...closeoutPacket(),
+        closeout_ref_metadata: [injectedRef],
+      },
+    },
+    {
+      name: 'domain_output_metadata_string_binding',
+      packet: {
+        ...closeoutPacket(),
+        closeout_ref_metadata: [injectedRef],
+        domain_output: {
+          surface_kind: 'domain_owned_stage_output_ref',
+          version: 'domain-owned-stage-output-ref.v1',
+          domain_id: 'redcube',
+          output_ref: injectedRef,
+        },
+      },
+    },
+  ];
+  const acceptedCases = cases.flatMap(({ name, packet }) => {
+    try {
+      normalizeTypedStageCloseoutPacket(packet);
+      return [name];
+    } catch (error) {
+      assert.match(String(error), /closeout_ref_metadata must contain refs-only metadata objects/);
+      return [];
+    }
+  });
+
+  assert.deepEqual(acceptedCases, []);
+});
+
 test('stage attempt closeout preserves canonical object-ref metadata through query', () => {
   withAttempt((db, attemptId) => {
     const ref = {

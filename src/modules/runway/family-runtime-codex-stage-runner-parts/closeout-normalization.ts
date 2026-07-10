@@ -219,6 +219,15 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
       'closeout_ref_metadata must be an array of refs-only metadata.',
     );
   }
+  if (
+    Array.isArray(value.closeout_ref_metadata)
+    && value.closeout_ref_metadata.some((entry) => !isRecord(entry))
+  ) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'closeout_ref_metadata must contain refs-only metadata objects.',
+    );
+  }
   const explicitCloseoutRefMetadata = readCloseoutRefEntries(value.closeout_ref_metadata);
   const closeoutRefs = [
     ...closeoutRefEntries.refs,
