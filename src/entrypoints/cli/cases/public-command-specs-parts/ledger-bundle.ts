@@ -6,12 +6,11 @@ import {
   validateArtifactProvenanceBundle,
 } from '../../../../modules/ledger/index.ts';
 import { buildUsageError, parseCommandOptions } from '../../modules/support.ts';
-import { readOptionalString } from '../../modules/json-boundary.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
 function parseBundleArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
   const parsed = parseCommandOptions(args, spec, { bundle: { type: 'string' } });
-  const bundle = readOptionalString(parsed.bundle);
+  const bundle = parsed.bundle as string | undefined;
   if (!bundle) {
     throw buildUsageError('ledger bundle requires --bundle.', spec, { required: ['--bundle'] });
   }
@@ -23,8 +22,8 @@ function parseInspectArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exa
     artifact: { type: 'string' },
     bundle: { type: 'string' },
   });
-  const artifact = readOptionalString(parsed.artifact);
-  const bundle = readOptionalString(parsed.bundle);
+  const artifact = parsed.artifact as string | undefined;
+  const bundle = parsed.bundle as string | undefined;
   if (bundle && !artifact) return { bundlePath: bundle };
   if (artifact && !bundle) return { artifactRef: artifact };
   throw buildUsageError('ledger bundle inspect requires exactly one of --bundle or --artifact.', spec, {
@@ -38,9 +37,9 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     bundle: { type: 'string' },
     domain: { type: 'string' },
   });
-  const artifact = readOptionalString(parsed.artifact);
-  const bundle = readOptionalString(parsed.bundle);
-  const domain = readOptionalString(parsed.domain);
+  const artifact = parsed.artifact as string | undefined;
+  const bundle = parsed.bundle as string | undefined;
+  const domain = parsed.domain as string | undefined;
   if (!bundle) throw buildUsageError('ledger bundle requires --bundle.', spec, { required: ['--bundle'] });
   if (!domain) throw buildUsageError('ledger bundle requires --domain.', spec, { required: ['--domain'] });
   if (!artifact) throw buildUsageError('ledger bundle requires --artifact.', spec, { required: ['--artifact'] });
@@ -56,8 +55,8 @@ function parseExportArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
     bundle: { type: 'string' },
     format: { type: 'string' },
   });
-  const bundle = readOptionalString(parsed.bundle);
-  const format = readOptionalString(parsed.format);
+  const bundle = parsed.bundle as string | undefined;
+  const format = parsed.format as string | undefined;
   if (!bundle) {
     throw buildUsageError('ledger bundle requires --bundle.', spec, { required: ['--bundle'] });
   }

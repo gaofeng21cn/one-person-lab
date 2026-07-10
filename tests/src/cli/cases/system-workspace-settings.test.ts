@@ -58,6 +58,10 @@ test('developer supervisor persists direct-route developer mode only from explic
 
   try {
     const initial = runCli(['system', 'developer-supervisor'], env).system_action;
+    assert.equal(initial.status, 'ready');
+    assert.equal(initial.developer_supervisor.source, 'default');
+    assert.equal(fs.existsSync(path.join(stateDir, 'developer-supervisor.json')), false);
+
     const updated = runCli([
       'system',
       'developer-supervisor',

@@ -21,7 +21,6 @@ import type {
   WorkspaceRootCliInput,
 } from './types.ts';
 import { parseCommandOptions } from './command-registry.ts';
-import { readOptionalString, readStringList } from './json-boundary.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 
 function parseWorkspaceInitializeArgs(
@@ -705,7 +704,7 @@ function parseUpdateChannelArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): UpdateChannelCliInput {
   const parsed = parseCommandOptions(args, spec, { channel: { type: 'string' } });
-  const channel = readOptionalString(parsed.channel);
+  const channel = parsed.channel as string | undefined;
   if (channel && channel !== 'stable' && channel !== 'preview') {
     throw buildUsageError('system update-channel requires stable or preview.', spec, {
       option: '--channel',
@@ -723,7 +722,7 @@ function parseSystemDependencyArgs(
     apply: { type: 'boolean' },
     profile: { type: 'string' },
   });
-  const profile = readOptionalString(parsed.profile);
+  const profile = parsed.profile as string | undefined;
   if (!profile) {
     throw buildUsageError('system dependency command requires an explicit --profile selected by the active agent or package.', spec, {
       required: ['--profile'],
@@ -742,9 +741,9 @@ function parseSystemSeedApplyArgs(
     'projects-dir': { type: 'string' },
   });
   return {
-    seedDir: readOptionalString(parsed.from) ?? undefined,
-    dataDir: readOptionalString(parsed['data-dir']) ?? undefined,
-    projectsDir: readOptionalString(parsed['projects-dir']) ?? undefined,
+    seedDir: parsed.from as string | undefined,
+    dataDir: parsed['data-dir'] as string | undefined,
+    projectsDir: parsed['projects-dir'] as string | undefined,
   };
 }
 
@@ -753,7 +752,7 @@ function parseSystemStartupMaintenanceArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SystemStartupMaintenanceCliInput {
   const parsed = parseCommandOptions(args, spec, { scope: { type: 'string' } });
-  const scope = readOptionalString(parsed.scope);
+  const scope = parsed.scope as string | undefined;
   if (scope && scope !== 'all' && scope !== 'runtime_substrate') {
     throw buildUsageError('system startup-maintenance --scope requires all or runtime_substrate.', spec, {
       option: '--scope',
@@ -773,8 +772,8 @@ function parseDeveloperSupervisorArgs(
     enabled: { type: 'string' },
     mode: { type: 'string' },
   });
-  const enabled = readOptionalString(parsed.enabled);
-  const mode = readOptionalString(parsed.mode);
+  const enabled = parsed.enabled as string | undefined;
+  const mode = parsed.mode as string | undefined;
   if (enabled && enabled !== 'auto' && enabled !== 'on' && enabled !== 'off') {
     throw buildUsageError('system developer-supervisor requires auto, on, or off for --enabled.', spec, {
       option: '--enabled',
@@ -792,7 +791,7 @@ function parseDeveloperSupervisorArgs(
     developerSupervisorEnabled: enabled as DeveloperSupervisorCliInput['developerSupervisorEnabled'],
     developerSupervisorMode: mode as DeveloperSupervisorCliInput['developerSupervisorMode'],
     developerSupervisorAutoEnableGithubLogin:
-      readStringList(parsed['auto-enable-github-login']).at(-1),
+      (parsed['auto-enable-github-login'] as string[] | undefined)?.at(-1),
   };
 }
 
