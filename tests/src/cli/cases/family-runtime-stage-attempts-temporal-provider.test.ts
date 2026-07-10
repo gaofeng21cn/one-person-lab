@@ -19,26 +19,26 @@ test('family-runtime maps a Temporal attempt to provider launch input without do
       'attempt',
       'create',
       '--domain',
-      'medautoscience',
+      'redcube',
       '--stage',
       'domain_owner/default-executor-dispatch',
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/dm-cvd"}',
+      '{"workspace_root":"/tmp/redcube-runtime"}',
       '--executor-kind',
       'codex_cli',
       '--source-fingerprint',
-      'truth-snapshot::dm002-dispatch',
+      'source:artifact-owner-current',
       '--checkpoint-ref',
-      'studies/002-dm/prompt.json',
+      'packets/artifact-owner.json',
     ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
 
     const input = buildTemporalStageAttemptWorkflowInput(created.family_runtime_stage_attempt.attempt);
 
-    assert.equal(input.stage_packet_ref, 'studies/002-dm/prompt.json');
+    assert.equal(input.stage_packet_ref, 'packets/artifact-owner.json');
     assert.equal(input.codex_stage_runner?.runner_mode, 'codex_cli');
-    assert.equal(input.workspace_locator.workspace_root, '/tmp/dm-cvd');
+    assert.equal(input.workspace_locator.workspace_root, '/tmp/redcube-runtime');
     assert.equal(input.opl_execution_authorization?.authority_boundary.opl_can_create_owner_receipt, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -53,17 +53,17 @@ test('family-runtime does not authorize Temporal launch without source fingerpri
       'attempt',
       'create',
       '--domain',
-      'medautoscience',
+      'redcube',
       '--stage',
       'domain_owner/default-executor-dispatch',
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/dm-cvd"}',
+      '{"workspace_root":"/tmp/redcube-runtime"}',
       '--executor-kind',
       'codex_cli',
       '--checkpoint-ref',
-      'studies/002-dm/prompt.json',
+      'packets/artifact-owner.json',
     ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
 
     assert.equal(

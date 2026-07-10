@@ -76,6 +76,29 @@ function initializeQueueDb() {
   return db;
 }
 
+function blockedRestartGuard(blockerId: string) {
+  const ledgerUnavailable = blockerId === 'stage_attempt_ledger_unavailable';
+  return {
+    surface_kind: 'temporal_worker_source_stale_restart_guard' as const,
+    guard_status: 'blocked' as const,
+    blocker_ids: [blockerId],
+    worker_mutation_guard: null,
+    temporal_service_reachable: blockerId === 'temporal_service_unreachable' ? false : true,
+    stage_attempt_ledger_readable: !ledgerUnavailable,
+    stage_attempt_ledger_error: ledgerUnavailable ? 'queue ledger unavailable' : null,
+    active_stage_attempt_count: 0,
+    active_stage_attempt_statuses: [],
+    active_stage_attempts_by_status: {},
+    active_stage_attempt_sample_limit: 20,
+    active_stage_attempts: [],
+    diagnostic_stage_attempt_count: 0,
+    diagnostic_stage_attempt_statuses: [],
+    diagnostic_stage_attempts_by_status: {},
+    diagnostic_stage_attempt_sample_limit: 20,
+    diagnostic_stage_attempts: [],
+  };
+}
+
 test('provider-slo starts a missing Temporal worker before proof', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-slo-worker-start-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -148,10 +171,10 @@ test('provider-slo repair refuses to restart while a stage attempt is running', 
     process.env.OPL_STATE_DIR = stateRoot;
     db = initializeQueueDb();
     const attempt = createStageAttempt(db, {
-      domainId: 'medautoscience',
-      stageId: 'domain_owner/default-executor-dispatch',
+      domainId: 'redcube',
+      stageId: 'artifact_creation',
       providerKind: 'temporal',
-      workspaceLocator: { workspace_root: '/tmp/mas' },
+      workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
       sourceFingerprint: 'source:fresh',
       executorKind: 'codex_cli',
       newAttempt: true,
@@ -183,5 +206,42 @@ test('provider-slo repair refuses to restart while a stage attempt is running', 
     if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
     else process.env.OPL_STATE_DIR = previousStateDir;
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('provider-slo repair fails closed for restart guard blockers without worker mutation', async () => {
+  for (const blockerId of [
+    'developer_supervisor_required',
+    'temporal_service_unreachable',
+    'stage_attempt_ledger_unavailable',
+  ]) {
+    const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-provider-slo-repair-blocked-'));
+    const previousStateDir = process.env.OPL_STATE_DIR;
+    try {
+      process.env.OPL_STATE_DIR = stateRoot;
+      let mutations = 0;
+      const receipt = await maybeRepairTemporalWorkerForProviderSlo(familyRuntimePaths(), {
+        inspectTemporalWorkerLifecycle: async () => staleWorker(),
+        inspectWorkerRestartGuard: async () => blockedRestartGuard(blockerId),
+        stopTemporalWorkerLifecycle: async () => {
+          mutations += 1;
+          return stoppedWorker();
+        },
+        startTemporalWorkerLifecycle: async () => {
+          mutations += 1;
+          return startedWorker();
+        },
+      });
+
+      assert.equal(mutations, 0, blockerId);
+      assert.equal(receipt.repair_status, 'blocked', blockerId);
+      assert.deepEqual(receipt.blocker_ids, [blockerId], blockerId);
+      assert.equal(receipt.stop, null, blockerId);
+      assert.equal(receipt.start, null, blockerId);
+    } finally {
+      if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+      else process.env.OPL_STATE_DIR = previousStateDir;
+      fs.rmSync(stateRoot, { recursive: true, force: true });
+    }
   }
 });

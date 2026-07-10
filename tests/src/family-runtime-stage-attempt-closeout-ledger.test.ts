@@ -16,10 +16,10 @@ function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
   try {
     createStageAttemptTable(db);
     const attempt = createStageAttempt(db, {
-      domainId: 'medautoscience',
-      stageId: 'publication_handoff',
+      domainId: 'redcube',
+      stageId: 'artifact_handoff',
       providerKind: 'temporal',
-      workspaceLocator: { workspace_root: '/tmp/mas' },
+      workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
       sourceFingerprint: 'sha256:handoff',
     }).attempt;
     fn(db, attempt.stage_attempt_id);
@@ -28,13 +28,13 @@ function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
   }
 }
 
-function closeoutPacket(closeoutRef = 'receipt:publication-handoff') {
+function closeoutPacket(closeoutRef = 'receipt:artifact-handoff') {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
-    closeout_id: 'closeout:publication-handoff',
+    closeout_id: 'closeout:artifact-handoff',
     closeout_refs: [closeoutRef],
     consumed_refs: ['evidence:handoff-ledger'],
-    next_owner: 'med-autoscience',
+    next_owner: 'redcube',
     domain_ready_verdict: 'domain_gate_pending',
   };
 }
@@ -62,7 +62,7 @@ test('stage attempt closeout replay is idempotent and conflicting receipts fail 
         && error.details?.receipt_conflict instanceof Object
         && (error.details.receipt_conflict as Record<string, unknown>).fail_closed === true,
     );
-    assert.deepEqual(inspectStageAttempt(db, attemptId).closeout_refs, ['receipt:publication-handoff']);
+    assert.deepEqual(inspectStageAttempt(db, attemptId).closeout_refs, ['receipt:artifact-handoff']);
   });
 });
 
@@ -80,7 +80,7 @@ test('stage attempt closeout replay repairs a persisted attempt missing closeout
     });
 
     assert.equal(replay.closeout.idempotent_noop, true);
-    assert.deepEqual(replay.attempt.closeout_refs, ['receipt:publication-handoff']);
+    assert.deepEqual(replay.attempt.closeout_refs, ['receipt:artifact-handoff']);
     assert.equal(replay.attempt.closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
   });

@@ -27,13 +27,13 @@ test('family-runtime Temporal start fails closed without a stage packet', () => 
       'attempt',
       'create',
       '--domain',
-      'medautoscience',
+      'redcube',
       '--stage',
       'domain_owner/default-executor-dispatch',
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/dm-cvd"}',
+      '{"workspace_root":"/tmp/redcube-runtime"}',
       '--executor-kind',
       'codex_cli',
     ], familyRuntimeEnv(stateRoot)) as TemporalStageAttemptCreateOutput;
@@ -73,13 +73,13 @@ test('family-runtime Temporal query keeps the local public envelope when provide
       'attempt',
       'create',
       '--domain',
-      'medautoscience',
+      'redcube',
       '--stage',
       'review',
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      '{"workspace_root":"/tmp/redcube-runtime"}',
     ], familyRuntimeEnv(stateRoot));
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     const output = runCli(['family-runtime', 'attempt', 'query', attemptId], {

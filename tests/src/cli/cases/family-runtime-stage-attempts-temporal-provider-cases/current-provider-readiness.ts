@@ -58,13 +58,13 @@ test('family-runtime attempt inspect uses current readiness instead of its creat
       'attempt',
       'create',
       '--domain',
-      'medautoscience',
+      'redcube',
       '--stage',
-      'ai_reviewer_re_eval',
+      'artifact_creation',
       '--provider',
       'temporal',
       '--workspace-locator',
-      '{"workspace_root":"/tmp/mas"}',
+      '{"workspace_root":"/tmp/redcube-runtime"}',
     ], env);
     const inspected = runCli([
       'family-runtime',

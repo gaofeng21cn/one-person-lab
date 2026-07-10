@@ -36,15 +36,15 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
   return {
     stage_attempt_id: 'sat_temporal_test',
     workflow_id: 'wf_temporal_test',
-    domain_id: 'medautoscience',
-    stage_id: 'analysis-campaign',
-    workspace_locator: { workspace_root: '/tmp/mas' },
-    source_fingerprint: 'sha256:test',
+    domain_id: 'redcube',
+    stage_id: 'artifact_creation',
+    workspace_locator: { workspace_root: '/tmp/redcube-runtime' },
+    source_fingerprint: 'sha256:runtime-owner',
     executor_kind: 'codex_cli',
     retry_budget: { max_attempts: 3 },
-    task_id: 'task-temporal-test',
-    stage_packet_ref: 'packet:analysis',
-    checkpoint_refs: ['checkpoint:seed'],
+    task_id: 'task-temporal-owner-test',
+    stage_packet_ref: 'packet:artifact-creation',
+    checkpoint_refs: ['checkpoint:artifact-seed'],
     codex_stage_runner: { runner_mode: 'dry_run' },
     closeout_packet: {
       surface_kind: 'stage_memory_closeout_packet',
@@ -53,10 +53,44 @@ function workflowInput(): TemporalStageAttemptWorkflowInput {
       consumed_memory_refs: [],
       writeback_receipt_refs: [],
       rejected_writes: [],
-      next_owner: 'med-autoscience',
+      next_owner: 'redcube',
       domain_ready_verdict: 'domain_gate_pending',
     },
   };
+}
+
+type WorkflowActivityOverrides = {
+  codexStageActivity?: (
+    input: TemporalStageAttemptWorkflowInput,
+  ) => Promise<Record<string, unknown>>;
+};
+
+async function runWorkflowCase(
+  name: string,
+  input: TemporalStageAttemptWorkflowInput,
+  activityOverrides: WorkflowActivityOverrides = {},
+) {
+  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
+  const taskQueue = `opl-stage-attempt-owner-${name}-${Date.now()}`;
+  try {
+    const worker = await Worker.create({
+      connection: testEnv.nativeConnection,
+      namespace: testEnv.namespace,
+      taskQueue,
+      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
+      activities: { ...activities, ...activityOverrides },
+    });
+    return await worker.runUntil(async () => {
+      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
+        args: [input],
+        taskQueue,
+        workflowId: `wf-temporal-owner-${name}-${Date.now()}`,
+      });
+      return await handle.result();
+    });
+  } finally {
+    await testEnv.teardown();
+  }
 }
 
 test('Temporal provider contract maps activity budgets and required Search Attributes', () => {
@@ -149,7 +183,7 @@ test('Temporal integration retries short activities without replaying Codex', as
             consumed_memory_refs: [],
             writeback_receipt_refs: [],
             rejected_writes: [],
-            next_owner: 'med-autoscience',
+            next_owner: 'redcube',
             domain_ready_verdict: 'domain_gate_pending',
             route_impact: {},
             closeout_packet_surface_kind: 'stage_attempt_closeout_packet',
@@ -174,6 +208,81 @@ test('Temporal integration retries short activities without replaying Codex', as
     await testEnv.teardown();
   }
 });
+
+for (const scenario of [
+  {
+    name: 'missing-closeout',
+    blockedReason: 'typed_closeout_packet_required',
+    expectedCloseoutRefs: [] as string[],
+    codexStageActivity: null,
+  },
+  {
+    name: 'protocol-blocker',
+    blockedReason: 'codex_cli_unsupported_function_call',
+    expectedCloseoutRefs: [
+      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_unsupported_function_call',
+    ],
+    codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+      surface_kind: 'temporal_codex_stage_activity_receipt',
+      activity_kind: 'codex_stage_activity',
+      activity_status: 'completed',
+      stage_attempt_id: input.stage_attempt_id,
+      stage_id: input.stage_id,
+      checkpoint_refs: input.checkpoint_refs ?? [],
+      closeout_packet: null,
+      process_output_summary: {
+        exit_code: 124,
+        timeout_reason: 'unsupported_tool_protocol',
+        blocked_reason: 'codex_cli_unsupported_function_call',
+        pending_function_call_count: 1,
+        function_call_names: ['exec_command'],
+      },
+    }),
+  },
+  {
+    name: 'cross-attempt-closeout',
+    blockedReason: 'typed_closeout_stage_attempt_id_mismatch',
+    expectedCloseoutRefs: [
+      'opl://stage-attempts/sat_temporal_test/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
+    ],
+    codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
+      surface_kind: 'temporal_codex_stage_activity_receipt',
+      activity_kind: 'codex_stage_activity',
+      activity_status: 'completed',
+      stage_attempt_id: input.stage_attempt_id,
+      stage_id: input.stage_id,
+      checkpoint_refs: input.checkpoint_refs ?? [],
+      closeout_packet: {
+        surface_kind: 'stage_attempt_closeout_packet',
+        stage_attempt_id: 'sat_previous_temporal_attempt',
+        closeout_refs: ['receipt:stale-closeout'],
+        consumed_refs: ['artifact:stale'],
+        next_owner: 'redcube',
+        domain_ready_verdict: 'domain_gate_pending',
+      },
+    }),
+  },
+] as const) {
+  test(`Temporal StageAttemptWorkflow fails closed for ${scenario.name}`, async () => {
+    const result = await runWorkflowCase(
+      scenario.name,
+      { ...workflowInput(), closeout_packet: null },
+      scenario.codexStageActivity
+        ? { codexStageActivity: scenario.codexStageActivity }
+        : {},
+    );
+    const dispatchEvent = result.activity_events.find(
+      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
+    );
+
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
+    assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
+    assert.equal(dispatchEvent?.activity_status, 'blocked');
+    assert.equal(dispatchEvent?.blocked_reason, scenario.blockedReason);
+    assert.deepEqual(result.closeout_refs, scenario.expectedCloseoutRefs);
+  });
+}
 
 test('Temporal replay gate accepts production workflow history', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();

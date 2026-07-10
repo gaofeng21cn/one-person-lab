@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import {
@@ -7,12 +10,18 @@ import {
 import { createFamilyRuntimeQueueTables } from '../../../src/modules/runway/family-runtime-store.ts';
 
 export function withStageAttemptDb(fn: (db: DatabaseSync) => void) {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-terminal-sync-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
   const db = new DatabaseSync(':memory:');
   try {
+    process.env.OPL_STATE_DIR = stateRoot;
     createStageAttemptTable(db);
     fn(db);
   } finally {
     db.close();
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 }
 
@@ -59,13 +68,57 @@ export function insertMasDefaultExecutorTask(
   );
 }
 
+export function insertGenericDomainRouteTask(
+  db: DatabaseSync,
+  input: {
+    taskId: string;
+    status: 'queued' | 'running' | 'succeeded' | 'blocked';
+    createdAt: string;
+  },
+) {
+  db.prepare(`
+    INSERT INTO tasks(
+      task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status, attempts,
+      max_attempts, source, requires_approval, approved_at, lease_owner, lease_expires_at,
+      last_error, dead_letter_reason, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.taskId,
+    'redcube',
+    'domain_route/stage-route',
+    '{}',
+    null,
+    0,
+    input.status,
+    1,
+    3,
+    'test',
+    0,
+    null,
+    null,
+    null,
+    null,
+    null,
+    input.createdAt,
+    input.createdAt,
+  );
+}
+
+type TerminalObservationIdentity = {
+  domainId?: string;
+  stageId?: string;
+  checkpointRef?: string;
+  nextOwner?: string;
+};
+
 function terminalObservation(input: {
   stageAttemptId: string;
   workflowId: string;
   createdAt: string;
   status: 'blocked' | 'completed' | 'failed';
   blockedReason?: string;
-}) {
+} & TerminalObservationIdentity) {
   const completed = input.status === 'completed';
   const blockedReason = input.blockedReason ?? 'typed_closeout_packet_required';
   const closeoutRefs = completed ? ['receipt:domain-closeout'] : [];
@@ -80,19 +133,19 @@ function terminalObservation(input: {
       provider_kind: 'temporal',
       stage_attempt_id: input.stageAttemptId,
       workflow_id: input.workflowId,
-      domain_id: 'medautoscience',
-      stage_id: 'domain_owner/default-executor-dispatch',
+      domain_id: input.domainId ?? 'medautoscience',
+      stage_id: input.stageId ?? 'domain_owner/default-executor-dispatch',
       status: input.status,
       started_at: input.createdAt,
       updated_at: input.createdAt,
       activity_events: [],
-      checkpoint_refs: ['checkpoint:mas-default-writer-start'],
+      checkpoint_refs: [input.checkpointRef ?? 'checkpoint:mas-default-writer-start'],
       closeout_refs: closeoutRefs,
       consumed_refs: [],
       consumed_memory_refs: [],
       writeback_receipt_refs: [],
       rejected_writes: [],
-      next_owner: 'med-autoscience',
+      next_owner: input.nextOwner ?? 'med-autoscience',
       route_impact: {},
       human_gate_refs: [],
       signals: [],
@@ -123,7 +176,7 @@ export function blockedTemporalObservation(input: {
   workflowId: string;
   createdAt: string;
   blockedReason?: string;
-}) {
+} & TerminalObservationIdentity) {
   return terminalObservation({ ...input, status: 'blocked' });
 }
 
@@ -131,7 +184,7 @@ export function completedTemporalObservation(input: {
   stageAttemptId: string;
   workflowId: string;
   createdAt: string;
-}) {
+} & TerminalObservationIdentity) {
   return terminalObservation({ ...input, status: 'completed' });
 }
 
@@ -139,7 +192,7 @@ export function failedTemporalObservation(input: {
   stageAttemptId: string;
   workflowId: string;
   createdAt: string;
-}) {
+} & TerminalObservationIdentity) {
   return terminalObservation({ ...input, status: 'failed' });
 }
 
@@ -194,5 +247,24 @@ export function createMasDefaultExecutorAttempt(
     executorKind: 'codex_cli',
     taskId: input.taskId,
     checkpointRefs: ['dispatch:mas-default-writer-start'],
+  }).attempt;
+}
+
+export function createGenericDomainHandlerAttempt(
+  db: DatabaseSync,
+  input: { taskId: string; sourceFingerprint?: string },
+) {
+  return createStageAttempt(db, {
+    domainId: 'redcube',
+    stageId: 'domain_route/stage-route',
+    providerKind: 'temporal',
+    workspaceLocator: {
+      workspace_root: '/tmp/redcube-runtime',
+      route_ref: 'domain_route/stage-route',
+    },
+    sourceFingerprint: input.sourceFingerprint ?? 'sha256:generic-domain-route',
+    executorKind: 'domain_handler',
+    taskId: input.taskId,
+    checkpointRefs: ['checkpoint:generic-domain-route'],
   }).attempt;
 }

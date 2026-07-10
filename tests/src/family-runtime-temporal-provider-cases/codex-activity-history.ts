@@ -40,9 +40,9 @@ test('Temporal history stores refs-only Codex activity results', async () => {
     const input: TemporalStageAttemptWorkflowInput = {
       stage_attempt_id: 'sat_history',
       workflow_id: 'wf_history',
-      domain_id: 'medautoscience',
-      stage_id: 'analysis-campaign',
-      workspace_locator: { workspace_root: '/tmp/mas' },
+      domain_id: 'redcube',
+      stage_id: 'artifact_creation',
+      workspace_locator: { workspace_root: '/tmp/redcube-runtime' },
       source_fingerprint: 'sha256:history',
       executor_kind: 'codex_cli',
       retry_budget: { max_attempts: 3 },
