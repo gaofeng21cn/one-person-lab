@@ -27,7 +27,8 @@
     "./reference-build-proof": "./dist/modules/foundry-lab/reference-build-proof.js",
     "./reference-design-pattern-packet": "./dist/modules/workspace/reference-design-pattern-packet.js",
     "./runtime-task-companions": "./dist/modules/runway/runtime-task-companions.js",
-    "./skill-catalog": "./dist/modules/pack/skill-catalog.js"
+    "./skill-catalog": "./dist/modules/pack/skill-catalog.js",
+    "./standard-agent-pack-abi": "./dist/modules/pack/public/standard-agent-pack-abi.js"
   },
   "bin": {
     "opl": "./bin/opl"

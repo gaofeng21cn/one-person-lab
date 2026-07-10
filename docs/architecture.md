@@ -21,6 +21,8 @@ Foundry Agent profile catalog 和 standard scaffold 是这条 target shape 的 l
 
 `opl-framework-shared/reference-build-proof` 是 reference-driven build 的 canonical digest primitive。它把 AgentPackPlan 的 control/capability/stage semantic refs 解析为 target-agent local file / JSON Pointer，统一使用 raw bytes 或 `canonical_json_without_agent_build_receipt_projection` 计算 SHA-256，从而避免 receipt 写回 capability map / stage control plane 时形成自引用 hash。OMA 负责在写盘后调用该 primitive 生成 receipt；OPL conformance 使用同一 primitive 重算并 fail closed。
 
+`opl-framework-shared/standard-agent-pack-abi` 是标准 Agent Pack ABI 的 public package surface。OMA 和其他 agent builder 必须直接消费该 export，不得在 domain repo 复制 `standard_agent_pack_abi` body；domain repo 只保留本仓拥有的 stage、progress、owner 和 delivery policy。
+
 同一目标态在人读架构上按 multi-plane operating model 表达：`Console` 承接 ordinary progress plane，只从 fresh `current_owner_delta` 生成 owner-action projection；`Runway` 承接 durable runway plane，只管理 admitted stage attempt、provider observation、repair/retry/dead-letter、handoff gate 和 OPL runtime blocker；`Workspace` / `Stage Artifact Unit` 承接 artifact plane；domain kernel / human gate 承接 authority decision plane；`Ledger` 承接 passive evidence / telemetry plane；`Foundry Lab` / OMA 承接 improvement plane。所有 plane 共享一个规则：只有 domain/App/brand owner 可以签 owner answer、typed blocker、quality/export/review verdict、release verdict、physical delete authorization 或 ready declaration。
 
 OPL 的设计取向是 AI-first、executor-first、AI 原生专家判断优先、contract-light：框架通过 stage、selected executor、清晰目标、上下文、authority boundary、available affordances、knowledge、rubric 与 quality gate 承接 AI 能力进步；合同只做 owner boundary、权限、安全、凭据、可写范围、审计、receipt、阻塞、恢复和 projection 这些下限，不把专家拆解、创作、评审、路线判断、工具编排或修订策略固化成脚本引擎，也不让机械检查替代专家 stage 判断。
