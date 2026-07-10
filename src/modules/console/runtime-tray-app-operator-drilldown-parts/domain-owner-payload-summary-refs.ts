@@ -183,6 +183,57 @@ const DOMAIN_OWNER_PAYLOAD_REQUIRED_RETURN_SHAPES = [
   'typed_blocker_ref',
 ];
 
+function refsFromRecordOrTopLevel(value: JsonRecord, key: string) {
+  const refs = stringList(record(value.record_payload)[key]);
+  return refs.length > 0 ? refs : stringList(value[key]);
+}
+
+function legacyMasPaperLineOwnerPayloadWorkItem(value: JsonRecord, index: number) {
+  const typedBlockerRefs = refsFromRecordOrTopLevel(value, 'typed_blocker_refs');
+  return ownerPayloadWorkItem({
+    item_id:
+      stringValue(value.study_id)
+      ?? stringValue(value.task_kind)
+      ?? `paper_line_owner_payload_${index + 1}`,
+    sequence: index + 1,
+    remaining_gap_id: stringValue(value.reason),
+    workorder_item_ref:
+      '/real_paper_autonomy_guarded_apply_proof/paper_line_provider_canary_closeout/'
+      + `paper_line_domain_dispatch_evidence_record_payloads/${index}`,
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    current_payload_template: Object.fromEntries(
+      DOMAIN_OWNER_PAYLOAD_REQUIRED_REFS.map((key) => [key, []]),
+    ),
+    success_refs_path_payload: Object.fromEntries(
+      DOMAIN_OWNER_PAYLOAD_REQUIRED_REFS.map((key) => [key, refsFromRecordOrTopLevel(value, key)]),
+    ),
+    typed_blocker_path_payload: { typed_blocker_refs: typedBlockerRefs },
+    operator_payload_submitted: booleanValue(value.operator_payload_submitted) === true,
+    recommended_current_payload_path:
+      typedBlockerRefs.length > 0 ? 'typed_blocker_path' : 'success_refs_path',
+  });
+}
+
+function legacyMasPaperLineOwnerPayloadItemSummary(closeout: JsonRecord) {
+  const payloads = recordList(closeout.paper_line_domain_dispatch_evidence_record_payloads);
+  if (payloads.length === 0 || Object.keys(record(closeout.paper_line_owner_payload_summary)).length === 0) {
+    return null;
+  }
+  return ownerPayloadItemSummary({
+    surface_kind: 'mas_paper_line_owner_payload_item_summary',
+    owner: 'med-autoscience',
+    consumer: 'one_person_lab',
+    status: 'per_paper_line_owner_payload_refs_ready',
+    payload_kind: 'domain_owner_receipt_or_typed_blocker_refs',
+    payload_path_policy:
+      'operator_reads_domain_owned_paper_line_success_refs_or_typed_blocker_refs_no_body',
+    required_operator_payload_refs: DOMAIN_OWNER_PAYLOAD_REQUIRED_REFS,
+    required_return_shapes: DOMAIN_OWNER_PAYLOAD_REQUIRED_RETURN_SHAPES,
+    accepted_payload_paths_ref: stringValue(closeout.accepted_payload_paths_ref),
+    work_items: payloads.map(legacyMasPaperLineOwnerPayloadWorkItem),
+  });
+}
+
 function refsFromMagOwnerPayloadResponse(value: JsonRecord, key: string) {
   const recordPayload = record(value.record_payload);
   const refs = stringList(recordPayload[key]);
@@ -340,6 +391,35 @@ function domainOwnerPayloadSummaryFromOperatorEvidence(project: DomainManifestCa
   };
 }
 
+function domainOwnerPayloadSummaryFromLegacyMasPaperLineCloseout(project: DomainManifestCatalogEntry) {
+  const manifest = project.status === 'resolved' ? project.manifest : null;
+  const closeout = record(
+    record(manifest?.real_paper_autonomy_guarded_apply_proof).paper_line_provider_canary_closeout,
+  );
+  const ownerSummary = legacyMasPaperLineOwnerPayloadItemSummary(closeout);
+  if (!ownerSummary) {
+    return null;
+  }
+  const stageSummarySource = record(closeout.stage_expected_receipt_payload_summary);
+  return {
+    domain_id: project.project_id,
+    project: project.project,
+    target_domain_id: manifest?.target_domain_id ?? null,
+    owner: stringValue(ownerSummary.owner),
+    source_surface: 'real_paper_autonomy_guarded_apply_proof_compatibility',
+    source_ref:
+      '/real_paper_autonomy_guarded_apply_proof/paper_line_provider_canary_closeout',
+    owner_payload_item_summary: ownerSummary,
+    stage_expected_receipt_payload_summary: Object.keys(stageSummarySource).length > 0
+      ? stageExpectedReceiptPayloadSummary(stageSummarySource)
+      : null,
+    payload_body_allowed: false,
+    projection_closes_domain_ready: false,
+    projection_claims_production_ready: false,
+    authority_boundary: authorityBoundary(),
+  };
+}
+
 function domainOwnerPayloadSummaryFromMagOwnerPayloadResponse(project: DomainManifestCatalogEntry) {
   const manifest = project.status === 'resolved' ? project.manifest : null;
   const candidate = magOwnerPayloadResponseCandidate(record(manifest));
@@ -384,6 +464,7 @@ export function buildDomainOwnerPayloadSummaryRefs(input: {
   const domains = input.domainManifestProjects.flatMap((project) => {
     return [
       domainOwnerPayloadSummaryFromOperatorEvidence(project),
+      domainOwnerPayloadSummaryFromLegacyMasPaperLineCloseout(project),
       domainOwnerPayloadSummaryFromMagOwnerPayloadResponse(project),
     ].filter((domain): domain is Exclude<typeof domain, null> => domain !== null);
   });

@@ -115,7 +115,7 @@ test('runtime visualization consumes generic operator lens refs only', () => {
   assert.equal(JSON.stringify(projection).includes('retired/paper-lens'), false);
 });
 
-test('domain owner payload summary ignores MAS-only closeout compatibility', () => {
+test('domain owner payload summary preserves active MAS closeout as refs-only compatibility', () => {
   const projection = buildDomainOwnerPayloadSummaryRefs({
     domainManifestProjects: [
       {
@@ -127,7 +127,12 @@ test('domain owner payload summary ignores MAS-only closeout compatibility', () 
           real_paper_autonomy_guarded_apply_proof: {
             paper_line_provider_canary_closeout: {
               paper_line_owner_payload_summary: { paper_line_count: 1 },
-              paper_line_domain_dispatch_evidence_record_payloads: [{ study_id: 'legacy' }],
+              paper_line_domain_dispatch_evidence_record_payloads: [{
+                study_id: 'legacy',
+                record_payload: {
+                  typed_blocker_refs: ['typed-blocker:mas/paper-line'],
+                },
+              }],
             },
           },
         },
@@ -152,7 +157,19 @@ test('domain owner payload summary ignores MAS-only closeout compatibility', () 
     ] as any,
   });
 
-  assert.equal(projection.summary.domain_count, 1);
-  assert.equal(projection.domains[0].domain_id, 'example-domain');
-  assert.equal(projection.domains[0].source_surface, 'operator_evidence_readiness_projection');
+  assert.equal(projection.summary.domain_count, 2);
+  const legacyMas = projection.domains.find((entry) => entry.domain_id === 'medautoscience');
+  assert.ok(legacyMas);
+  assert.ok(legacyMas.owner_payload_item_summary);
+  assert.equal(
+    legacyMas.source_surface,
+    'real_paper_autonomy_guarded_apply_proof_compatibility',
+  );
+  assert.deepEqual(
+    legacyMas.owner_payload_item_summary.work_items[0].typed_blocker_path_payload,
+    { typed_blocker_refs: ['typed-blocker:mas/paper-line'] },
+  );
+  const generic = projection.domains.find((entry) => entry.domain_id === 'example-domain');
+  assert.ok(generic);
+  assert.equal(generic.source_surface, 'operator_evidence_readiness_projection');
 });
