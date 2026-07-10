@@ -9,7 +9,7 @@ import {
   readOptionalString,
   readStringList,
 } from '../modules/json-boundary.ts';
-import { assertNoArgs, buildUsageError } from '../modules/support.ts';
+import { assertNoArgs, buildUsageError, parseCommandOptions } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 function parseRuntimeDeveloperModeCloseoutPayload(
@@ -44,52 +44,30 @@ function parseRuntimeDeveloperModeCloseoutRecordArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: DeveloperModeCloseoutReceiptInput | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime developer-mode-closeout record requires --payload.', spec, {
-          required: ['--payload'],
-        });
-      }
-      payload = parseRuntimeDeveloperModeCloseoutPayload(value, spec);
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime developer-mode-closeout record: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const payload = parseCommandOptions(args, spec, {
+    payload: { type: 'string' },
+  }).payload as string | undefined;
   if (!payload) {
     throw buildUsageError('runtime developer-mode-closeout record requires --payload.', spec, {
       required: ['--payload'],
     });
   }
-  return payload;
+  return parseRuntimeDeveloperModeCloseoutPayload(payload, spec);
 }
 
 function parseRuntimeDeveloperModeCloseoutVerifyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let receiptRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--receipt-ref') {
-      throw buildUsageError(`Unknown option for runtime developer-mode-closeout verify: ${token}.`, spec, {
-        option: token,
-      });
-    }
-    const value = args[++index];
-    if (!value) {
-      throw buildUsageError('runtime developer-mode-closeout verify requires --receipt-ref value.', spec, {
-        option: '--receipt-ref',
-      });
-    }
-    receiptRef = value;
+  const receiptRef = parseCommandOptions(args, spec, {
+    'receipt-ref': { type: 'string' },
+  })['receipt-ref'] as string | undefined;
+  if (receiptRef === '') {
+    throw buildUsageError('runtime developer-mode-closeout verify requires --receipt-ref value.', spec, {
+      option: '--receipt-ref',
+    });
   }
-  return { receipt_ref: receiptRef };
+  return { receipt_ref: receiptRef ?? null };
 }
 
 function refsOnlyAuthorityBoundary() {

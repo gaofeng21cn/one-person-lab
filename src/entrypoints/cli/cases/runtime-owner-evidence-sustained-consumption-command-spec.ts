@@ -13,6 +13,7 @@ import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
+  parseCommandOptions,
   readPayloadFileText,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -60,80 +61,42 @@ function payloadInput(
 }
 
 function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
-  let payload: Record<string, unknown> | null = null;
-  let targetIdentity: Record<string, unknown> | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime owner-evidence-sustained-consumption record requires --payload.',
-          spec,
-          { required_any: ['--payload', '--payload-file'] },
-        );
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseJsonObject(
-        value,
-        'runtime owner-evidence-sustained-consumption record payload must be a JSON object.',
-        spec,
-      );
-      continue;
-    }
-    if (token === '--payload-file') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime owner-evidence-sustained-consumption record requires --payload-file.',
-          spec,
-          { required_any: ['--payload', '--payload-file'] },
-        );
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseJsonObject(
-        readPayloadFileText(value, spec),
-        'runtime owner-evidence-sustained-consumption record payload must be a JSON object.',
-        spec,
-      );
-      continue;
-    }
-    if (token === '--target-identity') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime owner-evidence-sustained-consumption record requires --target-identity value.',
-          spec,
-          { option: '--target-identity' },
-        );
-      }
-      targetIdentity = parseJsonObject(
-        value,
-        'runtime owner-evidence-sustained-consumption target identity must be a JSON object.',
-        spec,
-      );
-      continue;
-    }
-    throw buildUsageError(
-      `Unknown option for runtime owner-evidence-sustained-consumption record: ${token}.`,
-      spec,
-      { option: token },
-    );
-  }
-  if (!payload) {
+  const parsed = parseCommandOptions(args, spec, {
+    payload: { type: 'string', multiple: true },
+    'payload-file': { type: 'string', multiple: true },
+    'target-identity': { type: 'string' },
+  });
+  const inlinePayloads = parsed.payload as string[] | undefined;
+  const payloadFiles = parsed['payload-file'] as string[] | undefined;
+  const targetIdentityValue = parsed['target-identity'] as string | undefined;
+  assertSinglePayloadSource((inlinePayloads?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
+  const inlinePayload = inlinePayloads?.[0];
+  const payloadFile = payloadFiles?.[0];
+  const payloadValue = inlinePayload ?? (payloadFile ? readPayloadFileText(payloadFile, spec) : null);
+  if (!payloadValue) {
     throw buildUsageError(
       'runtime owner-evidence-sustained-consumption record requires --payload or --payload-file.',
       spec,
       { required_any: ['--payload', '--payload-file'] },
     );
   }
-  if (!targetIdentity) {
+  if (!targetIdentityValue) {
     throw buildUsageError(
       'runtime owner-evidence-sustained-consumption record requires --target-identity.',
       spec,
       { required: ['--target-identity'] },
     );
   }
+  const payload = parseJsonObject(
+    payloadValue,
+    'runtime owner-evidence-sustained-consumption record payload must be a JSON object.',
+    spec,
+  );
+  const targetIdentity = parseJsonObject(
+    targetIdentityValue,
+    'runtime owner-evidence-sustained-consumption target identity must be a JSON object.',
+    spec,
+  );
   return {
     input: payloadInput(payload, targetIdentity),
     rawPayload: payload,
@@ -141,27 +104,17 @@ function parseRecordArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'exam
 }
 
 function parseVerifyArgs(args: string[], spec: Pick<CommandSpec, 'usage' | 'examples'>) {
-  let receiptRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--receipt-ref') {
-      throw buildUsageError(
-        `Unknown option for runtime owner-evidence-sustained-consumption verify: ${token}.`,
-        spec,
-        { option: token },
-      );
-    }
-    const value = args[++index];
-    if (!value) {
-      throw buildUsageError(
-        'runtime owner-evidence-sustained-consumption verify requires --receipt-ref value.',
-        spec,
-        { option: '--receipt-ref' },
-      );
-    }
-    receiptRef = value;
+  const receiptRef = parseCommandOptions(args, spec, {
+    'receipt-ref': { type: 'string' },
+  })['receipt-ref'] as string | undefined;
+  if (receiptRef === '') {
+    throw buildUsageError(
+      'runtime owner-evidence-sustained-consumption verify requires --receipt-ref value.',
+      spec,
+      { option: '--receipt-ref' },
+    );
   }
-  return { receipt_ref: receiptRef };
+  return { receipt_ref: receiptRef ?? null };
 }
 
 export function buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs():

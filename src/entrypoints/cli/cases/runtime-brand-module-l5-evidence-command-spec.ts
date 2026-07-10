@@ -17,6 +17,7 @@ import {
 import {
   assertSinglePayloadSource,
   buildUsageError,
+  parseCommandOptions,
   readPayloadFileText,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -55,76 +56,41 @@ function parseRuntimeBrandModuleL5EvidenceRecordArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: BrandModuleL5EvidenceReceiptInput | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime brand-module-l5-evidence record requires --payload.',
-          spec,
-          { required_any: ['--payload', '--payload-file'] },
-        );
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseRuntimeBrandModuleL5EvidencePayload(value, spec);
-      continue;
-    }
-    if (token === '--payload-file') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime brand-module-l5-evidence record requires --payload-file.',
-          spec,
-          { required_any: ['--payload', '--payload-file'] },
-        );
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseRuntimeBrandModuleL5EvidencePayload(readPayloadFileText(value, spec), spec);
-      continue;
-    }
-    throw buildUsageError(
-      `Unknown option for runtime brand-module-l5-evidence record: ${token}.`,
-      spec,
-      { option: token },
-    );
-  }
-  if (!payload) {
+  const parsed = parseCommandOptions(args, spec, {
+    payload: { type: 'string', multiple: true },
+    'payload-file': { type: 'string', multiple: true },
+  });
+  const inlinePayloads = parsed.payload as string[] | undefined;
+  const payloadFiles = parsed['payload-file'] as string[] | undefined;
+  assertSinglePayloadSource((inlinePayloads?.length ?? 0) + (payloadFiles?.length ?? 0) > 1, spec);
+  const inlinePayload = inlinePayloads?.[0];
+  const payloadFile = payloadFiles?.[0];
+  const payloadValue = inlinePayload ?? (payloadFile ? readPayloadFileText(payloadFile, spec) : null);
+  if (!payloadValue) {
     throw buildUsageError(
       'runtime brand-module-l5-evidence record requires --payload or --payload-file.',
       spec,
       { required_any: ['--payload', '--payload-file'] },
     );
   }
-  return payload;
+  return parseRuntimeBrandModuleL5EvidencePayload(payloadValue, spec);
 }
 
 function parseRuntimeBrandModuleL5EvidenceVerifyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let receiptRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--receipt-ref') {
-      throw buildUsageError(
-        `Unknown option for runtime brand-module-l5-evidence verify: ${token}.`,
-        spec,
-        { option: token },
-      );
-    }
-    const value = args[++index];
-    if (!value) {
-      throw buildUsageError(
-        'runtime brand-module-l5-evidence verify requires --receipt-ref value.',
-        spec,
-        { option: '--receipt-ref' },
-      );
-    }
-    receiptRef = value;
+  const receiptRef = parseCommandOptions(args, spec, {
+    'receipt-ref': { type: 'string' },
+  })['receipt-ref'] as string | undefined;
+  if (receiptRef === '') {
+    throw buildUsageError(
+      'runtime brand-module-l5-evidence verify requires --receipt-ref value.',
+      spec,
+      { option: '--receipt-ref' },
+    );
   }
-  return { receipt_ref: receiptRef };
+  return { receipt_ref: receiptRef ?? null };
 }
 
 function parseRuntimeBrandModuleL5EvidenceListArgs(

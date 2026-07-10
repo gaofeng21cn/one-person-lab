@@ -110,3 +110,47 @@ test('owner-evidence sustained-consumption rejects empty, placeholder, and mixed
     }
   }
 });
+
+test('runtime evidence commands use strict standard option parsing', () => {
+  for (const command of [
+    'owner-evidence-sustained-consumption',
+    'app-release-evidence',
+    'codex-app-runtime-evidence',
+    'provider-long-soak-evidence',
+    'domain-owner-payload-summary',
+    'memory-artifact-lifecycle-evidence',
+    'developer-mode-closeout',
+    'brand-module-l5-evidence',
+  ]) {
+    const failure = runCliFailure(['runtime', command, 'record', '--unknown']);
+    assert.equal(failure.status, 2);
+    assert.equal(failure.payload.error.code, 'cli_usage_error');
+    assert.equal(failure.payload.error.details.parser_adapter, 'node_util_parse_args');
+  }
+
+  const positional = runCliFailure([
+    'runtime',
+    'provider-long-soak-evidence',
+    'verify',
+    'unexpected-positional',
+  ]);
+  assert.equal(positional.payload.error.details.parser_adapter, 'node_util_parse_args');
+
+  for (const args of [
+    ['--payload', '{}', '--payload', '{}'],
+    ['--payload', '{}', '--payload-file', 'unused.json'],
+  ]) {
+    const duplicatePayload = runCliFailure([
+      'runtime',
+      'owner-evidence-sustained-consumption',
+      'record',
+      '--target-identity',
+      JSON.stringify(targetIdentity),
+      ...args,
+    ]);
+    assert.deepEqual(duplicatePayload.payload.error.details.options, [
+      '--payload',
+      '--payload-file',
+    ]);
+  }
+});
