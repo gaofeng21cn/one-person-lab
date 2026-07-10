@@ -303,28 +303,15 @@ export function resolveVisualTransitionAdapterProfile(
   return adapterProfile(entry);
 }
 
-export function buildVisualTransitionAdapterProfileRegistryReadback(
-  registry?: VisualTransitionAdapterProfileRegistry,
-) {
-  const entries = (registry?.registry_entries ?? []).map((entry) => ({
-    profile_id: entry.profile_id,
-    registry_role: 'compatibility_profile',
-    target_domain_ids: [...entry.target_domain_ids],
-    adapter_profile: {
-      ...entry.adapter_profile,
-      compatibility_projection: entry.adapter_profile.profile_role === 'compatibility_projection',
-    },
-  }));
+export function buildVisualTransitionAdapterProfileRegistryReadback() {
   return {
     surface_kind: VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_READBACK_SURFACE_KIND,
     version: 'visual-transition-adapter-profile-registry-readback.v1',
     registry_surface_kind: VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_SURFACE_KIND,
     registry_role: 'generic_domain_transition_adapter_profile_registry',
-    profile_count: entries.length,
-    compatibility_profile_count: entries.filter((entry) =>
-      entry.adapter_profile.profile_role === 'compatibility_projection'
-    ).length,
-    registry_entries: entries,
+    profile_count: 0,
+    compatibility_profile_count: 0,
+    registry_entries: [],
     authority_boundary: {
       surface_kind: 'opl_domain_transition_adapter_profile_registry_authority_boundary',
       registry_surface_kind: VISUAL_TRANSITION_ADAPTER_PROFILE_REGISTRY_SURFACE_KIND,

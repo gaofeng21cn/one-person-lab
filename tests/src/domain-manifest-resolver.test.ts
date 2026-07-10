@@ -122,6 +122,69 @@ function rcaVisualManifest() {
   };
 }
 
+function rcaVisualProfileRegistry() {
+  return {
+    surface_kind: 'opl_domain_transition_adapter_profile_registry',
+    version: 'visual-transition-adapter-profile-registry.v1',
+    owner: 'redcube_ai',
+    registry_role: 'domain_owned_transition_adapter_profile_registry',
+    source_visual_transition_spec_ref: 'opl_generated:product_entry_manifest#/visual_transition_spec',
+    profile_count: 1,
+    compatibility_profile_count: 1,
+    registry_entries: [{
+      profile_id: 'redcube-ai.visual_transition.compatibility.v1',
+      target_domain_ids: ['rca', 'redcube_ai', 'redcube-ai', 'redcube'],
+      adapter_profile: {
+        profile_id: 'redcube-ai.visual_transition.compatibility.v1',
+        profile_surface_kind: 'opl_domain_transition_adapter_profile',
+        profile_role: 'compatibility_projection',
+        profile_registry_role: 'registry_entry',
+        profile_extension_kind: 'visual_transition',
+        compatibility_surface_kind: 'visual_transition_spec',
+        target_domain_id: 'rca',
+        guard_owner_label: 'RCA',
+        work_unit_ref_prefix: 'rca-work-unit',
+        owner_route_ref_prefix: 'rca-visual-transition',
+        owner_receipt_ref_prefix: 'rca-domain-owner-receipt',
+        oracle_fixture_ref_prefix: 'rca-oracle-fixture',
+        stage_ref_prefix: 'rca-stage',
+      },
+    }],
+    authority_boundary: {
+      domain_transition_profile_extension_is_core_ontology: false,
+      refs_only: true,
+      can_execute_domain_action: false,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_visual_ready: false,
+      can_claim_exportable: false,
+      can_mutate_artifacts: false,
+    },
+  };
+}
+
+function resolveRcaVisualProfile(workspacePath: string, registry: unknown) {
+  const contractsDir = path.join(workspacePath, 'contracts');
+  fs.mkdirSync(contractsDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(contractsDir, 'visual_transition_adapter_profile.json'),
+    `${JSON.stringify(registry)}\n`,
+  );
+  fs.writeFileSync(path.join(contractsDir, 'domain_descriptor.json'), `${JSON.stringify({
+    standard_contract_refs: {
+      visual_transition_adapter_profile: 'contracts/visual_transition_adapter_profile.json',
+    },
+  })}\n`);
+  const scriptPath = writeScript(
+    workspacePath,
+    'rca-manifest.cjs',
+    `process.stdout.write(${JSON.stringify(`${JSON.stringify(rcaVisualManifest())}\n`)});\n`,
+  );
+  return resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+}
+
 function resolveWithCommand(
   workspacePath: string,
   manifestCommand: string,
@@ -159,30 +222,38 @@ test('resolveBindingManifest resolves a configured command with env timeout poli
   }
 });
 
+test('resolveBindingManifest consumes a repo-local visual transition profile by contract ref', () => {
+  const workspacePath = createWorkspace();
+  try {
+    const entry = resolveRcaVisualProfile(workspacePath, rcaVisualProfileRegistry());
+
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(
+      entry.manifest?.visual_transition_adapter_profile_registry?.surface_kind,
+      'opl_domain_transition_adapter_profile_registry',
+    );
+    assert.equal(
+      entry.manifest?.visual_transition_adapter_profile_registry?.source_ref,
+      'contracts/visual_transition_adapter_profile.json',
+    );
+    assert.equal(entry.manifest?.family_transition.status, 'matrix_evaluated');
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('resolveBindingManifest consumes the real RCA visual transition profile by contract ref', {
   skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/visual_transition_adapter_profile.json'),
 }, () => {
   const workspacePath = createWorkspace();
   try {
-    const contractsDir = path.join(workspacePath, 'contracts');
-    fs.mkdirSync(contractsDir, { recursive: true });
-    fs.copyFileSync(
-      '/Users/gaofeng/workspace/redcube-ai/contracts/visual_transition_adapter_profile.json',
-      path.join(contractsDir, 'visual_transition_adapter_profile.json'),
+    const registry = JSON.parse(
+      fs.readFileSync(
+        '/Users/gaofeng/workspace/redcube-ai/contracts/visual_transition_adapter_profile.json',
+        'utf8',
+      ),
     );
-    fs.writeFileSync(path.join(contractsDir, 'domain_descriptor.json'), `${JSON.stringify({
-      standard_contract_refs: {
-        visual_transition_adapter_profile: 'contracts/visual_transition_adapter_profile.json',
-      },
-    })}\n`);
-    const manifest = rcaVisualManifest();
-    const scriptPath = writeScript(
-      workspacePath,
-      'rca-manifest.cjs',
-      `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
-    );
-
-    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+    const entry = resolveRcaVisualProfile(workspacePath, registry);
 
     assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
     assert.equal(

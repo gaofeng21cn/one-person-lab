@@ -791,31 +791,6 @@ test('visual transition consumes a domain-owned RCA compatibility profile', () =
   assert.equal(spec.authority_boundary.opl_can_mutate_artifacts, false);
 });
 
-test('visual transition adapter registry readback exposes compatibility without authority', () => {
-  const domainRegistry = visualAdapterRegistryFixture({
-    profileId: 'redcube-ai.visual_transition.compatibility.v1',
-    targetDomainId: 'rca',
-    targetDomainIds: ['rca', 'redcube_ai', 'redcube-ai', 'redcube'],
-    profileRole: 'compatibility_projection',
-    guardOwnerLabel: 'RCA',
-    refPrefix: 'rca',
-  });
-  const registry = buildVisualTransitionAdapterProfileRegistryReadback(domainRegistry);
-  const entry = registry.registry_entries[0];
-
-  assert.equal(registry.surface_kind, 'opl_domain_transition_adapter_profile_registry_readback');
-  assert.equal(registry.registry_surface_kind, 'opl_domain_transition_adapter_profile_registry');
-  assert.equal(registry.registry_role, 'generic_domain_transition_adapter_profile_registry');
-  assert.equal(entry.profile_id, 'redcube-ai.visual_transition.compatibility.v1');
-  assert.deepEqual(entry.target_domain_ids, ['rca', 'redcube_ai', 'redcube-ai', 'redcube']);
-  assert.equal(entry.adapter_profile.profile_role, 'compatibility_projection');
-  assert.equal(entry.adapter_profile.compatibility_projection, true);
-  assert.equal(registry.authority_boundary.can_write_domain_truth, false);
-  assert.equal(registry.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(registry.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(registry.authority_boundary.can_claim_visual_ready, false);
-});
-
 test('visual transition ingestion has no built-in RCA profile and rejects authority overclaim', () => {
   assert.throws(
     () => resolveVisualTransitionAdapterProfile(
