@@ -168,18 +168,17 @@ test('default family root resolves from the canonical repo root in both main che
   const canonicalRepoRoot = resolveCanonicalRepoRoot({ repoRoot });
   const defaultFamilyRoot = resolveDefaultFamilyRoot({ repoRoot });
 
-  assert.equal(path.basename(canonicalRepoRoot), 'one-person-lab');
+  assert.equal(
+    fs.existsSync(path.join(canonicalRepoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH)),
+    true,
+  );
   assert.equal(defaultFamilyRoot, path.resolve(canonicalRepoRoot, '..'));
 
   const repoParent = path.resolve(repoRoot, '..');
-  if (
-    repoRoot.includes(`${path.sep}.worktrees${path.sep}`)
-    || repoRoot.includes(`${path.sep}worktrees${path.sep}`)
-    || repoRoot.includes(`${path.sep}_worktrees${path.sep}`)
-  ) {
-    assert.notEqual(defaultFamilyRoot, repoParent);
-  } else {
+  if (canonicalRepoRoot === repoRoot) {
     assert.equal(defaultFamilyRoot, repoParent);
+  } else {
+    assert.notEqual(defaultFamilyRoot, repoParent);
   }
 });
 

@@ -113,6 +113,10 @@ export function resolveOwnerRepoRoot({
   if (ownerRepoRoot) {
     return path.resolve(ownerRepoRoot);
   }
+  const canonicalRepoRoot = resolveCanonicalRepoRoot({ repoRoot });
+  if (fs.existsSync(path.join(canonicalRepoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH))) {
+    return canonicalRepoRoot;
+  }
   return path.join(resolveDefaultFamilyRoot({ repoRoot }), ownerRepo);
 }
 
