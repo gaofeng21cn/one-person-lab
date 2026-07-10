@@ -209,7 +209,7 @@ test('current owner delta freezes only default same-route redrive without synthe
         status: 'frozen',
         no_progress_budget: {
           same_stage_run_route_no_progress_count: 2,
-          max_default_redrives: 2,
+          max_same_stage_run_route_no_progress_attempts: 2,
           exhausted: true,
         },
         successor_admission: {

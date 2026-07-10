@@ -61,11 +61,46 @@ test('evidence worklist keeps raw audit items out of current-owner planning', ()
     ownerDeltaFirst: {
       next_required_delta: 'domain_deliverable_delta_or_domain_owned_typed_blocker_required',
       stop_loss_state: {
+        surface_kind: 'opl_current_owner_delta_stop_loss_state',
         status: 'frozen',
-        lineage_repeat_count: 2,
+        default_redrive_allowed: false,
         fresh_owner_delta_required_to_resume: true,
-        release_conditions: ['fresh_owner_delta', 'stable_typed_blocker'],
-        terminal_blocker_code: 'anti_loop_budget_exhausted',
+        freeze_reason: 'same_stage_run_route_no_progress_budget_exhausted',
+        release_conditions: ['fresh_current_owner_delta', 'stable_domain_typed_blocker'],
+        no_progress_budget: {
+          same_stage_run_route_no_progress_count: 2,
+          max_same_stage_run_route_no_progress_attempts: 2,
+          exhausted: true,
+          attempt_classifications: ['platform_repair_only', 'platform_repair_only'],
+        },
+        successor_admission: {
+          status: 'identity_different_successor_or_gate_required',
+          same_stage_run_route_redrive_allowed: false,
+          successor_ref: 'domain://policy/successors/review-repair',
+          identity_difference_fields: ['work_unit_id'],
+          gate_ref: 'domain://human-gates/review-repair',
+          authority_boundary: {
+            can_freeze_default_redrive: true,
+            can_select_domain_successor: false,
+            can_create_owner_receipt: false,
+            can_create_typed_blocker: false,
+            can_write_domain_truth: false,
+            can_claim_domain_ready: false,
+            budget_exhaustion_is_domain_typed_blocker: false,
+            temporal_retry_policy_replaced: false,
+          },
+        },
+        policy_ref: 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state',
+        authority_boundary: {
+          can_freeze_default_redrive: true,
+          can_select_domain_successor: false,
+          can_create_owner_receipt: false,
+          can_create_typed_blocker: false,
+          can_write_domain_truth: false,
+          can_claim_domain_ready: false,
+          budget_exhaustion_is_domain_typed_blocker: false,
+          temporal_retry_policy_replaced: false,
+        },
       },
     },
   });
@@ -75,7 +110,37 @@ test('evidence worklist keeps raw audit items out of current-owner planning', ()
   assert.equal(projection.current_owner_delta.authority_boundary.raw_worklist_can_drive_default_planning, false);
   assert.equal(projection.current_owner_delta.authority_boundary.route_reconciler_can_sign_receipts, false);
   assert.equal(projection.current_owner_delta.stop_loss_state.status, 'frozen');
-  assert.equal(projection.next_safe_action_or_none?.derivation_source, 'current_owner_delta');
+  assert.equal(projection.current_owner_delta.stop_loss_state.default_redrive_allowed, false);
+  assert.equal(
+    projection.current_owner_delta.stop_loss_state.fresh_owner_delta_required_to_resume,
+    true,
+  );
+  const stopLossState = projection.current_owner_delta.stop_loss_state as Record<string, any>;
+  assert.deepEqual(stopLossState.release_conditions, [
+    'fresh_current_owner_delta',
+    'stable_domain_typed_blocker',
+  ]);
+  assert.equal(stopLossState.terminal_blocker_code, undefined);
+  assert.deepEqual(stopLossState.no_progress_budget.attempt_classifications, [
+    'platform_repair_only',
+    'platform_repair_only',
+  ]);
+  assert.equal(
+    stopLossState.successor_admission.successor_ref,
+    'domain://policy/successors/review-repair',
+  );
+  assert.equal(
+    stopLossState.successor_admission.same_stage_run_route_redrive_allowed,
+    false,
+  );
+  assert.equal(
+    stopLossState.successor_admission.authority_boundary.can_create_owner_receipt,
+    false,
+  );
+  assert.equal(
+    projection.next_safe_action_or_none?.derivation_source,
+    'current_owner_delta',
+  );
   assert.equal(projection.next_safe_action_or_none?.owner, 'med-autoscience');
   assert.equal(projection.owner_delta_audit_tail.audit_next_safe_action_or_none?.owner, 'redcube-ai');
 });

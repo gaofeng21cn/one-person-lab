@@ -627,12 +627,12 @@
     "required_substrate_surfaces": {
       "stage_run_currentness_identity": {
         "purpose": "OPL-owned strict StageRun route/run currentness identity used for default-executor live skip, terminal closeout reconciliation, and current-control projection without claiming domain authority.",
-        "implementation_ref": "src/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity",
+        "implementation_ref": "src/modules/runway/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity",
         "test_ref": "tests/src/family-runtime-stage-run-currentness-identity.test.ts",
         "test_lane": "fast",
         "comparison_refs": {
-          "attempt_match_ref": "src/family-runtime-stage-run-currentness-identity.ts#sameStageRunCurrentnessIdentity",
-          "route_currentness_match_ref": "src/family-runtime-stage-run-currentness-identity.ts#sameStageRunRouteCurrentnessIdentity",
+          "attempt_match_ref": "src/modules/runway/family-runtime-stage-run-currentness-identity.ts#sameStageRunCurrentnessIdentity",
+          "route_currentness_match_ref": "src/modules/runway/family-runtime-stage-run-currentness-identity.ts#sameStageRunRouteCurrentnessIdentity",
           "route_currentness_match_policy": "sameStageRunRouteCurrentnessIdentity compares route/currentness fields without using stage_attempt_id so an admitted attempt and a fresh candidate for the same selected dispatch/stage packet identity can reconcile, while stale work-unit/source/currentness basis or selected dispatch/stage packet mismatch fails closed"
         },
         "consumed_by": [
@@ -717,13 +717,28 @@
       },
       "no_progress_budget_contract": {
         "scope_identity": "sameStageRunRouteCurrentnessIdentity",
+        "implementation_ref": "src/modules/runway/family-runtime-no-progress-stop-loss.ts#buildSameRouteNoProgressStopLossState",
+        "current_control_projection_ref": "src/modules/runway/family-runtime-current-control-state.ts#deriveCurrentControlStateForTask",
+        "focused_test_ref": "tests/src/family-runtime-attempt-contract.test.ts",
+        "max_same_stage_run_route_no_progress_attempts": 2,
         "budget_scope": [
           "domain_id",
           "study_id_or_quest_id",
+          "stage_id",
           "action_type",
           "work_unit_id",
           "work_unit_fingerprint",
-          "source_eval_id"
+          "source_fingerprint",
+          "truth_epoch",
+          "runtime_health_epoch",
+          "source_eval_id",
+          "idempotency_key",
+          "route_identity_key",
+          "attempt_idempotency_key",
+          "recovery_obligation_id",
+          "dispatch_ref",
+          "stage_packet_ref",
+          "stage_packet_refs"
         ],
         "no_progress_classes": [
           "receipt_only",
@@ -742,12 +757,21 @@
           "successor_ref_owner": "domain_policy_adapter",
           "default_successor_ref": null,
           "identity_must_differ_by_any_of": [
+            "stage_id",
             "action_type",
             "work_unit_id",
             "work_unit_fingerprint",
             "source_fingerprint",
+            "truth_epoch",
+            "runtime_health_epoch",
+            "source_eval_id",
+            "idempotency_key",
             "route_identity_key",
-            "stage_packet_ref"
+            "attempt_idempotency_key",
+            "recovery_obligation_id",
+            "dispatch_ref",
+            "stage_packet_ref",
+            "stage_packet_refs"
           ],
           "stable_operator_or_human_gate_allowed": true,
           "authority_boundary": {

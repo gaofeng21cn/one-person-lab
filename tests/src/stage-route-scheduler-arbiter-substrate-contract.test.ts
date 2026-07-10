@@ -41,7 +41,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   const identity = surfaces.stage_run_currentness_identity;
   assert.equal(
     identity.implementation_ref,
-    'src/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity',
+    'src/modules/runway/family-runtime-stage-run-currentness-identity.ts#buildStageRunCurrentnessIdentity',
   );
   assert.equal(
     identity.test_ref,
@@ -84,13 +84,34 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
 
   const budget = surfaces.no_progress_budget_contract;
   assert.equal(budget.scope_identity, 'sameStageRunRouteCurrentnessIdentity');
+  assert.equal(
+    budget.implementation_ref,
+    'src/modules/runway/family-runtime-no-progress-stop-loss.ts#buildSameRouteNoProgressStopLossState',
+  );
+  assert.equal(
+    budget.current_control_projection_ref,
+    'src/modules/runway/family-runtime-current-control-state.ts#deriveCurrentControlStateForTask',
+  );
+  assert.equal(budget.focused_test_ref, 'tests/src/family-runtime-attempt-contract.test.ts');
+  assert.equal(budget.max_same_stage_run_route_no_progress_attempts, 2);
   assert.deepEqual(budget.budget_scope, [
     'domain_id',
     'study_id_or_quest_id',
+    'stage_id',
     'action_type',
     'work_unit_id',
     'work_unit_fingerprint',
+    'source_fingerprint',
+    'truth_epoch',
+    'runtime_health_epoch',
     'source_eval_id',
+    'idempotency_key',
+    'route_identity_key',
+    'attempt_idempotency_key',
+    'recovery_obligation_id',
+    'dispatch_ref',
+    'stage_packet_ref',
+    'stage_packet_refs',
   ]);
   for (const noProgressClass of [
     'read_model_reconcile_only',

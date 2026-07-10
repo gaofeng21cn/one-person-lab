@@ -2,10 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { deriveCurrentControlStateForTask } from '../../src/modules/runway/family-runtime-current-control-state.ts';
+import { createStageAttempt } from '../../src/modules/runway/family-runtime-stage-attempts.ts';
+import { createFamilyRuntimeQueueTables } from '../../src/modules/runway/family-runtime-store.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -65,8 +70,146 @@ test('family runtime attempt contract keeps Temporal attempt, typed closeout, an
     'temporal_backed_opl_refs_only_stage_observability_no_domain_truth',
   );
   assertFalseAuthority(contract.stage_progress_log_contract.authority_boundary);
+  assert.equal(
+    contract.current_control_state_projection.stop_loss_state_contract_ref,
+    'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state',
+  );
+  assert.equal(
+    contract.current_control_state_projection.no_progress_scope_identity,
+    'sameStageRunRouteCurrentnessIdentity',
+  );
+  assert.equal(
+    contract.current_control_state_projection.no_progress_budget_exhaustion_effect,
+    'freeze_default_same_route_redrive_only',
+  );
+  assert.equal(
+    contract.current_control_state_projection.authority_boundary.can_select_domain_successor,
+    false,
+  );
+  assert.equal(
+    contract.current_control_state_projection.authority_boundary.budget_exhaustion_is_domain_typed_blocker,
+    false,
+  );
+  assert.equal(
+    contract.current_control_state_projection.authority_boundary.temporal_retry_policy_replaced,
+    false,
+  );
   assertFalseAuthority(contract.current_control_state_projection.authority_boundary);
   assertFalseAuthority(contract.stability_projection_authority_boundary);
+});
+
+test('current control freezes only default redrive after two same-route no-progress attempts', () => {
+  const db = new DatabaseSync(':memory:');
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-no-progress-stop-loss-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    createFamilyRuntimeQueueTables(db);
+    const taskId = 'frt-no-progress-stop-loss';
+    const routeIdentity = {
+      study_id: 'study-no-progress',
+      action_type: 'review_current_artifact',
+      work_unit_id: 'review-current-artifact',
+      work_unit_fingerprint: 'sha256:work-unit-current',
+      source_fingerprint: 'sha256:domain-source-current',
+      truth_epoch: 'truth-current',
+      runtime_health_epoch: 'runtime-current',
+      source_eval_id: 'source-eval-current',
+      idempotency_key: 'request-current',
+      route_identity_key: 'route-current',
+      attempt_idempotency_key: 'attempt-route-current',
+      recovery_obligation_id: 'recovery-current',
+      dispatch_ref: 'domain://dispatch/current',
+      stage_packet_ref: 'domain://stage-packet/current',
+      stage_packet_refs: ['domain://stage-packet/current'],
+    };
+    db.prepare(`
+      INSERT INTO tasks(
+        task_id, domain_id, task_kind, payload_json, dedupe_key, priority, status,
+        attempts, max_attempts, source, requires_approval, approved_at, lease_owner,
+        lease_expires_at, last_error, dead_letter_reason, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, 0, 'succeeded', 2, 3, 'test', 0, NULL, NULL, NULL, NULL, NULL, ?, ?)
+    `).run(
+      taskId,
+      'medautoscience',
+      'domain_owner/default-executor-dispatch',
+      JSON.stringify(routeIdentity),
+      'no-progress-stop-loss',
+      '2026-07-10T00:00:00.000Z',
+      '2026-07-10T00:00:00.000Z',
+    );
+
+    let latestAttemptId = '';
+    for (const attemptNumber of [1, 2]) {
+      const created = createStageAttempt(db, {
+        domainId: 'medautoscience',
+        stageId: 'domain_owner/default-executor-dispatch',
+        providerKind: 'temporal',
+        workspaceLocator: { ...routeIdentity, workspace_root: stateRoot },
+        sourceFingerprint: 'sha256:provider-admission-current',
+        taskId,
+        newAttempt: true,
+        closeoutRefs: [`domain://closeout/platform-repair-${attemptNumber}`],
+      });
+      latestAttemptId = created.attempt.stage_attempt_id;
+      db.prepare(`
+        UPDATE stage_attempts
+        SET status = 'completed', provider_run_json = ?, route_impact_json = ?,
+            closeout_receipt_status = 'accepted_typed_closeout'
+        WHERE stage_attempt_id = ?
+      `).run(
+        JSON.stringify({ provider_status: 'completed' }),
+        JSON.stringify({
+          user_stage_log: {
+            stage_name: 'Review current artifact',
+            problem_summary: 'Current artifact still needs domain review.',
+            stage_goal: 'Produce a domain-owned review delta.',
+            progress_delta_classification: 'platform_repair',
+            deliverable_progress_delta: { delta_count: 0, delta_refs: [] },
+            platform_repair_delta: {
+              delta_count: 1,
+              delta_refs: [`opl://runtime-repair/${attemptNumber}`],
+            },
+            next_forced_delta: 'domain_deliverable_or_owner_answer_required',
+            stage_work_done: ['runtime projection repaired'],
+            changed_stage_surfaces: ['runtime projection'],
+            outcome: 'platform_repair_only',
+            remaining_blockers: [],
+            evidence_refs: [`opl://runtime-repair/${attemptNumber}`],
+          },
+        }),
+        latestAttemptId,
+      );
+    }
+
+    const frozen = deriveCurrentControlStateForTask(db, taskId);
+    assert.equal(frozen.stop_loss_state.status, 'frozen');
+    assert.equal(frozen.stop_loss_state.default_redrive_allowed, false);
+    assert.deepEqual(frozen.stop_loss_state.no_progress_budget.attempt_classifications, [
+      'platform_repair_only',
+      'platform_repair_only',
+    ]);
+    assert.equal(frozen.stop_loss_state.successor_admission, null);
+    assert.equal(frozen.stop_loss_state.authority_boundary.can_create_typed_blocker, false);
+    assert.equal(frozen.stop_loss_state.authority_boundary.temporal_retry_policy_replaced, false);
+    assert.deepEqual(frozen.typed_blocker_refs, []);
+
+    const currentRouteImpact = JSON.parse((db.prepare(`
+      SELECT route_impact_json FROM stage_attempts WHERE stage_attempt_id = ?
+    `).get(latestAttemptId) as { route_impact_json: string }).route_impact_json);
+    db.prepare(`UPDATE stage_attempts SET route_impact_json = ? WHERE stage_attempt_id = ?`).run(
+      JSON.stringify({ ...currentRouteImpact, owner_receipt_ref: 'domain://owner-receipts/current' }),
+      latestAttemptId,
+    );
+    const ownerAnswered = deriveCurrentControlStateForTask(db, taskId);
+    assert.equal(ownerAnswered.stop_loss_state.status, 'not_triggered');
+    assert.equal(ownerAnswered.stop_loss_state.default_redrive_allowed, true);
+  } finally {
+    db.close();
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('stage route scheduler contract keeps route hydration separate from domain route execution', () => {

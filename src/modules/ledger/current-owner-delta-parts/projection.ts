@@ -117,7 +117,7 @@ function defaultStopLossState() {
     release_conditions: [],
     no_progress_budget: {
       same_stage_run_route_no_progress_count: 0,
-      max_default_redrives: null,
+      max_same_stage_run_route_no_progress_attempts: null,
       exhausted: false,
       attempt_classifications: [],
     },
@@ -136,12 +136,30 @@ const STOP_LOSS_RELEASE_CONDITIONS = new Set([
 ]);
 
 const STOP_LOSS_IDENTITY_DIFFERENCE_FIELDS = new Set([
+  'stage_id',
   'action_type',
   'work_unit_id',
   'work_unit_fingerprint',
   'source_fingerprint',
+  'truth_epoch',
+  'runtime_health_epoch',
+  'source_eval_id',
+  'idempotency_key',
   'route_identity_key',
+  'attempt_idempotency_key',
+  'recovery_obligation_id',
+  'dispatch_ref',
   'stage_packet_ref',
+  'stage_packet_refs',
+]);
+
+const STOP_LOSS_NO_PROGRESS_CLASSES = new Set([
+  'receipt_only',
+  'read_model_reconcile_only',
+  'stale_route_redrive_only',
+  'platform_repair_only',
+  'owner_output_already_current',
+  'no_deliverable_delta',
 ]);
 
 function stopLossAuthorityBoundary() {
@@ -170,16 +188,17 @@ function normalizedReleaseConditions(value: unknown) {
 function compactNoProgressBudget(value: unknown, frozen: boolean) {
   const budget = record(value);
   const count = numberValue(budget.same_stage_run_route_no_progress_count);
-  const maxDefaultRedrives = typeof budget.max_default_redrives === 'number'
-    && Number.isInteger(budget.max_default_redrives)
-    && budget.max_default_redrives >= 0
-    ? budget.max_default_redrives
+  const maxNoProgressAttempts = typeof budget.max_same_stage_run_route_no_progress_attempts === 'number'
+    && Number.isInteger(budget.max_same_stage_run_route_no_progress_attempts)
+    && budget.max_same_stage_run_route_no_progress_attempts >= 0
+    ? budget.max_same_stage_run_route_no_progress_attempts
     : null;
   return {
     same_stage_run_route_no_progress_count: count,
-    max_default_redrives: maxDefaultRedrives,
+    max_same_stage_run_route_no_progress_attempts: maxNoProgressAttempts,
     exhausted: frozen || budget.exhausted === true,
-    attempt_classifications: stringList(budget.attempt_classifications),
+    attempt_classifications: stringList(budget.attempt_classifications)
+      .filter((entry) => STOP_LOSS_NO_PROGRESS_CLASSES.has(entry)),
   };
 }
 

@@ -344,8 +344,11 @@
         "status",
         "default_redrive_allowed",
         "fresh_owner_delta_required_to_resume",
+        "freeze_reason",
         "release_conditions",
         "no_progress_budget",
+        "successor_admission",
+        "policy_ref",
         "authority_boundary"
       ],
       "properties": {
@@ -392,15 +395,16 @@
           "additionalProperties": false,
           "required": [
             "same_stage_run_route_no_progress_count",
-            "max_default_redrives",
-            "exhausted"
+            "max_same_stage_run_route_no_progress_attempts",
+            "exhausted",
+            "attempt_classifications"
           ],
           "properties": {
             "same_stage_run_route_no_progress_count": {
               "type": "integer",
               "minimum": 0
             },
-            "max_default_redrives": {
+            "max_same_stage_run_route_no_progress_attempts": {
               "anyOf": [
                 {
                   "type": "integer",
@@ -460,12 +464,21 @@
               "items": {
                 "type": "string",
                 "enum": [
+                  "stage_id",
                   "action_type",
                   "work_unit_id",
                   "work_unit_fingerprint",
                   "source_fingerprint",
+                  "truth_epoch",
+                  "runtime_health_epoch",
+                  "source_eval_id",
+                  "idempotency_key",
                   "route_identity_key",
-                  "stage_packet_ref"
+                  "attempt_idempotency_key",
+                  "recovery_obligation_id",
+                  "dispatch_ref",
+                  "stage_packet_ref",
+                  "stage_packet_refs"
                 ]
               }
             },

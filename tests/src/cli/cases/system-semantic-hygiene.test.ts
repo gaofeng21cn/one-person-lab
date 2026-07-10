@@ -19,8 +19,8 @@ const EXPECTED_GATES = [
 ] as const;
 
 const EXPECTED_DOMAIN_CARRIERS = [
-  'paper_mission',
-  'paper_autonomy',
+  'domain_route',
+  'domain_autonomy',
   'visual_transition',
   'publication',
   'fundability',
@@ -366,7 +366,8 @@ test('system semantic hygiene exposes machine gates without production or domain
     assert.equal(carrier?.can_authorize_quality_or_export, false);
     assert.equal(carrier?.can_write_domain_truth, false);
   }
-  assert.equal(carriers.get('paper_mission')?.carrier_kind, 'compatibility_profile');
+  assert.equal(carriers.get('domain_route')?.carrier_kind, 'domain_owned_route_profile');
+  assert.equal(carriers.get('domain_autonomy')?.carrier_kind, 'domain_owned_task_profile');
   assert.equal(carriers.get('visual_transition')?.carrier_kind, 'domain_transition_profile_extension');
   assert.equal(carriers.get('publication')?.carrier_kind, 'domain_owned_verdict_ref');
   assert.equal(carriers.get('fundability')?.carrier_kind, 'domain_owned_verdict_ref');

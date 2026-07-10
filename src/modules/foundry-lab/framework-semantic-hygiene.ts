@@ -53,22 +53,22 @@ type DomainSpecificCarrierBoundaryConformance =
 
 const DOMAIN_SPECIFIC_CARRIER_BOUNDARIES = [
   {
-    carrier_string: 'paper_mission',
-    carrier_kind: 'compatibility_profile',
-    boundary_ref: 'MAS_PAPER_MISSION_ROUTE_COMPATIBILITY_PROFILE',
-    allowed_machine_role: 'mas_domain_route_compatibility_carrier',
+    carrier_string: 'domain_route',
+    carrier_kind: 'domain_owned_route_profile',
+    boundary_ref: 'DOMAIN_ROUTE_COMPATIBILITY_PROFILE',
+    allowed_machine_role: 'domain_route_compatibility_carrier',
     source_evidence_refs: [
-      'src/modules/runway/family-runtime-domain-intake-parts/paper-mission-route-handoff/shared.ts',
-      'src/modules/runway/family-runtime-paper-mission-stage-route-runner.ts',
+      'src/modules/runway/family-runtime-domain-route.ts',
+      'src/modules/runway/family-runtime-domain-route-terminal-sync.ts',
     ],
   },
   {
-    carrier_string: 'paper_autonomy',
+    carrier_string: 'domain_autonomy',
     carrier_kind: 'domain_owned_task_profile',
-    boundary_ref: 'paper_autonomy_supervisor_decision authority_boundary',
-    allowed_machine_role: 'mas_domain_recovery_supervisor_projection',
+    boundary_ref: 'domain_autonomy_supervisor_decision authority_boundary',
+    allowed_machine_role: 'domain_recovery_supervisor_projection',
     source_evidence_refs: [
-      'src/modules/runway/family-runtime-paper-autonomy.ts',
+      'src/modules/runway/family-runtime-domain-autonomy.ts',
     ],
   },
   {
@@ -385,15 +385,15 @@ export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContra
         : 'attention_required',
       owner: 'one-person-lab',
       source_evidence: [
-        'src/modules/runway/family-runtime-domain-intake-parts/paper-mission-route-handoff/shared.ts',
-        'src/modules/runway/family-runtime-paper-autonomy.ts',
+        'src/modules/runway/family-runtime-domain-route.ts',
+        'src/modules/runway/family-runtime-domain-autonomy.ts',
         'src/modules/stagecraft/family-transition-visual-ingestion.ts',
         'src/modules/stagecraft/quality-gate-runtime.ts',
         'src/modules/runway/generic-substrate-projection.ts',
       ],
       current_state_claims: NO_READY_CLAIMS,
       required_boundary:
-        'Active paper_mission, paper_autonomy, visual_transition, publication, and fundability strings are compatibility/profile/fixture/ref-only carriers; they must not be read as OPL core ontology or domain authority.',
+        'Active domain_route, domain_autonomy, visual_transition, publication, and fundability strings are compatibility/profile/fixture/ref-only carriers; they must not be read as OPL core ontology or domain authority.',
       next_action:
         'Keep domain-specific carrier strings explicitly classified with false OPL ontology, domain-ready, quality/export, and domain-truth authority flags before adding or retiring related active surfaces.',
       domain_specific_carrier_boundary: domainSpecificCarrierBoundary,
