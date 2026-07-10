@@ -50,6 +50,21 @@ printf '{"type":"item.completed","item":{"type":"agent_message","id":"msg-1","te
 `, { mode: 0o755 });
 }
 
+test('work-order execute rejects explicit empty watchdog values', () => {
+  assert.throws(
+    () => runCli([
+      'work-order',
+      'execute',
+      '--work-order',
+      'unused.json',
+      '--codex-timeout-ms',
+      '',
+      '--dry-run',
+    ]),
+    /requires a non-empty value/,
+  );
+});
+
 test('work-order execute rebases onto target checkout advances before absorption', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-work-order-currentness-'));
   try {

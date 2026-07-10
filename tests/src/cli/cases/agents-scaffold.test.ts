@@ -24,6 +24,10 @@ test('agents scaffold uses standard option parsing without changing command sema
   assert.throws(() => parseAgentsScaffoldArgs(['--unknown'], spec));
   assert.throws(() => parseAgentsScaffoldArgs(['positional'], spec));
   assert.throws(() => parseAgentsScaffoldArgs(['--target-dir'], spec));
+  assert.throws(
+    () => parseAgentsScaffoldArgs(['--validate', ''], spec),
+    /requires a non-empty value/,
+  );
   assert.throws(() => parseAgentsScaffoldArgs(['--validate', '.', '--force'], spec));
 });
 
