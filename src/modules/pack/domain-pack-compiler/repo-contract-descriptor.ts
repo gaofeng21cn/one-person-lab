@@ -431,9 +431,23 @@ export function repoContractDescriptorForPackCompiler(
   requestedAgentId: string | null,
 ) {
   const descriptor = repoProjection.descriptor as JsonRecord;
+  const canonicalAgentId = optionalString(descriptor.canonical_agent_id)
+    ?? optionalString(descriptor.agent_id);
+  if (requestedAgentId && requestedAgentId !== canonicalAgentId) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'Requested Agent identity must match the repo canonical_agent_id.',
+      {
+        blocker: 'identity_mismatch',
+        requested_agent_id: requestedAgentId,
+        canonical_agent_id: canonicalAgentId,
+        repo_dir: repoProjection.repoDir,
+      },
+    );
+  }
   return {
     ...descriptor,
-    requested_agent_id: requestedAgentId ?? optionalString(descriptor.agent_id) ?? optionalString(descriptor.project_id),
+    requested_agent_id: requestedAgentId ?? canonicalAgentId ?? optionalString(descriptor.project_id),
     repo_dir: repoProjection.repoDir,
     source_kind: 'standard_agent_repo_contracts',
     manifest_status: repoProjection.status === 'ready' ? 'resolved' : 'repo_contracts_blocked',

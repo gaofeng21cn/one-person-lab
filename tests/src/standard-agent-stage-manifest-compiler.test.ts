@@ -6,6 +6,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  buildDomainPackCompilerList,
   buildRepoGeneratedInterfaceBundle,
   buildStandardAgentRepoContractReadout,
   compileStandardAgentStageManifest,
@@ -295,6 +296,22 @@ test('standard Agent stage manifest compiler binds pack identity to the descript
   input.domain_id = 'other-domain';
   writeJson(root, 'contracts/pack_compiler_input.json', input);
   assert.throws(() => compileStandardAgentStageManifest(root));
+});
+
+test('pack compiler rejects requested Agent identity that differs from the repo canonical id', () => {
+  const root = fixture('med-autoscience', 'mas');
+
+  assert.throws(() => buildDomainPackCompilerList({} as any, {
+    familyDefaults: true,
+    familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
+  }), (error: unknown) => {
+    assert.ok(error instanceof FrameworkContractError);
+    assert.equal(error.code, 'contract_shape_invalid');
+    assert.equal(error.details?.blocker, 'identity_mismatch');
+    assert.equal(error.details?.requested_agent_id, 'mag');
+    assert.equal(error.details?.canonical_agent_id, 'mas');
+    return true;
+  });
 });
 
 test('OMA hosted descriptor consumes the generated stage plane without a legacy fallback', () => {
