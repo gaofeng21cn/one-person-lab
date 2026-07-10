@@ -13,6 +13,7 @@
     "route_controlled_stage_requires_explicit_action": true,
     "selected_action_participates_in_attempt_identity": true,
     "selected_route_readback": "route_impact.selected_action_id + route_impact.selected_stage_route",
+    "domain_closeout_can_override_selected_action_route": false,
     "entry_launch_admission_scope": "selected_route_applicability_and_current_stage_intrinsic_findings_only",
     "route_order_execution_owner": "StageRun_attempt_receipt_sequence",
     "entry_admission_is_full_route_no_skip_proof": false,

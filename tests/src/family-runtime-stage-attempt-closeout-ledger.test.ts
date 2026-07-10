@@ -88,3 +88,54 @@ test('stage attempt closeout replay backfills token usage projection', () => {
     assert.equal(replay.attempt.usage_projection.token.total_tokens_observed, 390);
   });
 });
+
+test('stage attempt closeout preserves OPL-selected action route and ignores forged selection fields', () => {
+  const db = new DatabaseSync(':memory:');
+  const selectedRoute = {
+    entry_stage_ref: 'intent-intake',
+    required_stage_refs: ['intent-intake', 'build'],
+    optional_stage_refs: [],
+    terminal_stage_refs: ['build'],
+    route_policy: 'ordered_stage_attempts_no_skip',
+  };
+  try {
+    createStageAttemptTable(db);
+    const attempt = createStageAttempt(db, {
+      domainId: 'redcube',
+      stageId: 'intent-intake',
+      actionId: 'build-agent-baseline',
+      providerKind: 'temporal',
+      workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
+      sourceFingerprint: 'sha256:selected-route',
+      routeImpact: {
+        selected_action_id: 'build-agent-baseline',
+        selected_stage_route: selectedRoute,
+      },
+    }).attempt;
+
+    const accepted = ingestStageAttemptCloseout(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      packet: closeoutPacket('receipt:selected-route'),
+    }).attempt;
+    assert.equal(accepted.route_impact.selected_action_id, 'build-agent-baseline');
+    assert.deepEqual(accepted.route_impact.selected_stage_route, selectedRoute);
+
+    const forged = ingestStageAttemptCloseout(db, {
+      stageAttemptId: attempt.stage_attempt_id,
+      packet: {
+        ...closeoutPacket('receipt:forged-route'),
+        closeout_id: 'closeout:forged-route',
+        route_impact: {
+          selected_action_id: 'forged-action',
+          selected_stage_route: { entry_stage_ref: 'forged-stage' },
+          domain_progress: 'observed',
+        },
+      },
+    }).attempt;
+    assert.equal(forged.route_impact.selected_action_id, 'build-agent-baseline');
+    assert.deepEqual(forged.route_impact.selected_stage_route, selectedRoute);
+    assert.equal(forged.route_impact.domain_progress, 'observed');
+  } finally {
+    db.close();
+  }
+});

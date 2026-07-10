@@ -23,14 +23,28 @@ import {
   reconcileDomainRouteTerminalTaskForAttempt,
 } from '../family-runtime-domain-route-terminal-sync.ts';
 
-function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
+function normalizeRouteImpact(
+  packet: TypedStageCloseoutPacket,
+  existingRouteImpact: Record<string, unknown>,
+) {
   const routeImpact = packet.route_impact && typeof packet.route_impact === 'object' && !Array.isArray(packet.route_impact)
     ? packet.route_impact
     : {};
+  const {
+    selected_action_id: _ignoredSelectedActionId,
+    selected_stage_route: _ignoredSelectedStageRoute,
+    ...domainRouteImpact
+  } = routeImpact;
+  const selectedActionId = typeof existingRouteImpact.selected_action_id === 'string'
+    ? existingRouteImpact.selected_action_id
+    : null;
+  const selectedStageRoute = optionalRecord(existingRouteImpact.selected_stage_route);
   return {
-    ...routeImpact,
+    ...domainRouteImpact,
     next_owner: packet.next_owner,
     domain_ready_verdict: packet.domain_ready_verdict,
+    ...(selectedActionId ? { selected_action_id: selectedActionId } : {}),
+    ...(selectedStageRoute ? { selected_stage_route: selectedStageRoute } : {}),
   };
 }
 
@@ -124,7 +138,7 @@ function syncAttemptRowFromAcceptedCloseout(
     JSON.stringify(humanGateRefsForAttempt(input.attempt)),
     JSON.stringify(providerRun),
     JSON.stringify(activityEvents),
-    JSON.stringify(normalizeRouteImpact(input.packet)),
+    JSON.stringify(normalizeRouteImpact(input.packet, input.attempt.route_impact)),
     'accepted_typed_closeout',
     input.observedAt,
     input.stageAttemptId,
