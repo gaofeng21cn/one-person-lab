@@ -135,13 +135,6 @@ function isMasOwnerTypedBlockerObserved(task: JsonRecord) {
   );
 }
 
-function isMasOwnerRouteCheckpointConsumed(task: JsonRecord) {
-  return (
-    isMedAutoScienceTask(task)
-      && asString(task.mas_owner_consumption_status) === 'owner_consumed_route_checkpoint'
-  );
-}
-
 function deriveUserFacingTaskState(task: JsonRecord) {
   const lane = asString(task.lane);
   const status = asString(task.status);
@@ -153,14 +146,10 @@ function deriveUserFacingTaskState(task: JsonRecord) {
     task.action_summary,
   );
   const runtimeCloseoutObserved = asBoolean(task.runtime_closeout_observed);
-  const ownerConsumedLatest = asBoolean(task.mas_owner_consumption_matches_runtime_closeout);
-  const resultPendingTerminalization = runtimeCloseoutObserved && !ownerConsumedLatest;
   const masOwnerTypedBlockerObserved = isMasOwnerTypedBlockerObserved(task);
-  const masOwnerRouteCheckpointConsumed = isMasOwnerRouteCheckpointConsumed(task);
-  const terminalRouteConsumedWithoutOpenRuntime = masOwnerRouteCheckpointConsumed && !resultPendingTerminalization;
   const runtimeAttentionDemotedToDiagnostic = asBoolean(task.runtime_attention_demoted_to_diagnostic);
   const automationFailed = ['failed', 'dead_lettered'].includes(status ?? '')
-    && !terminalRouteConsumedWithoutOpenRuntime
+    && !runtimeCloseoutObserved
     && !masOwnerTypedBlockerObserved
     && !runtimeAttentionDemotedToDiagnostic;
   const ownerDecisionRequired = includesAny(text, [
@@ -185,40 +174,30 @@ function deriveUserFacingTaskState(task: JsonRecord) {
     ? 'automation_running'
     : automationFailed
       ? 'automation_failed'
-      : resultPendingTerminalization
-        ? 'result_pending_terminalization'
-        : 'automation_idle';
+      : 'automation_idle';
   const automationStateLabel = automationState === 'automation_running'
     ? '自动运行中'
     : automationState === 'automation_failed'
       ? '自动流程异常'
-      : automationState === 'result_pending_terminalization'
-        ? '最近一次自动结果待收口'
-        : '当前无自动任务';
+      : '当前无自动任务';
   const automationStateReason = automationState === 'automation_running'
     ? 'active_runtime_run_observed'
     : automationState === 'automation_failed'
       ? 'runtime_failure_observed'
-      : automationState === 'result_pending_terminalization'
-        ? 'latest_runtime_result_not_yet_owner_consumed'
-        : 'no_active_runtime_automation';
+      : 'no_active_runtime_automation';
 
   const primaryState = lane === 'running'
     ? 'in_progress'
-    : resultPendingTerminalization
-      ? 'system_attention_required'
-      : terminalRouteConsumedWithoutOpenRuntime
-        ? 'delivered_auto_paused'
-        : masOwnerTypedBlockerObserved
-          ? 'paused_waiting_for_direction'
-          : pausedWaiting
+    : masOwnerTypedBlockerObserved
+      ? 'paused_waiting_for_direction'
+      : pausedWaiting
       ? 'paused_waiting_for_direction'
       : ownerDecisionRequired
         ? 'owner_decision_required'
-        : automationFailed || lane === 'attention'
-          ? 'system_attention_required'
-          : runtimeCloseoutObserved || status === 'completed' || ownerConsumedLatest
-            ? 'delivered_auto_paused'
+        : runtimeCloseoutObserved || status === 'completed'
+          ? 'delivered_auto_paused'
+          : automationFailed || lane === 'attention'
+            ? 'system_attention_required'
             : 'paused_waiting_for_direction';
   const primaryStateLabel = primaryState === 'in_progress'
     ? '进行中'
@@ -519,7 +498,9 @@ function activityState(item: JsonRecord) {
 function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
   const studyId = asString(item.study_id);
   const taskId = asString(item.item_id)
-    ?? (studyId ? `medautoscience:study:${studyId}` : `runtime-activity-${index + 1}`);
+    ?? asString(item.task_id)
+    ?? asString(item.work_item_id)
+    ?? `runtime-activity-${index + 1}`;
   const title = asString(item.title) ?? studyId ?? taskId;
   const encodedTaskId = encodeURIComponent(taskId);
   const sourceRef = `app_state.operator.workbench.task_drilldowns.${encodedTaskId}`;
@@ -588,9 +569,9 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
       workspace_label: asString(item.workspace_label),
     },
     work_item: {
-      work_item_id: studyId ?? taskId,
+      work_item_id: asString(item.work_item_id) ?? taskId,
       label: workItemDisplayName,
-      kind: studyId ? 'study' : 'runtime_activity',
+      kind: asString(item.work_item_kind) ?? 'runtime_activity',
       scope_id: asString(item.task_scope_id) ?? `task:${taskId}`,
     },
     execution_run: {
@@ -683,17 +664,11 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     source_ref_count: sourceRefCount(item),
     blocker_ref_count: blockerRefCount,
     safe_action_ref_count: route ? 1 : 0,
-    paper_route_lens_ref_count: 0,
     runtime_readback_source: asString(item.runtime_readback_source),
     runtime_attempt_status: asString(item.runtime_attempt_status),
     runtime_attention_demoted_to_diagnostic: asBoolean(item.runtime_attention_demoted_to_diagnostic),
     runtime_closeout_observed: item.runtime_closeout_observed === true,
     runtime_closeout_ref: asString(item.runtime_closeout_ref),
-    mas_owner_consumption_status: asString(item.mas_owner_consumption_status),
-    mas_owner_consumption_ref: asString(item.mas_owner_consumption_ref),
-    mas_owner_consumed_stage_attempt_id: asString(item.mas_owner_consumed_stage_attempt_id),
-    mas_owner_consumed_closeout_ref: asString(item.mas_owner_consumed_closeout_ref),
-    mas_owner_consumption_matches_runtime_closeout: item.mas_owner_consumption_matches_runtime_closeout === true,
     primary_state: userState.primaryState,
     primary_state_label: userState.primaryStateLabel,
     primary_state_reason: userState.primaryStateReason,
@@ -734,7 +709,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     active_path: [
       {
         node_id: taskId,
-        node_kind: studyId ? 'mas_study_runtime_projection' : 'runtime_activity_projection',
+        node_kind: 'runtime_activity_projection',
         label: title,
         state,
         owner: 'opl_framework',
@@ -808,7 +783,6 @@ function moduleTaskDrilldowns(input: OplAppOperatorViewModelInput) {
       stage_attempt_ids: [],
       safe_action_ref_count: 0,
       blocker_ref_count: blockerRefCount,
-      paper_route_lens_ref_count: 0,
       primary_state: primaryState,
       primary_state_label: primaryStateLabel,
       primary_state_reason: primaryStateReason,
@@ -859,7 +833,6 @@ function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
         state: healthStatus,
         active_stage_id: 'module_runtime',
         active_path_node_ids: [`module:${moduleId}`],
-        paper_route_lens_ref_count: 0,
       };
       const tasks = runtimeTasks.length > 0
         ? runtimeTasks.map((task) => ({
@@ -870,7 +843,6 @@ function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
             active_path_node_ids: [task.task_id],
             study_id: task.study_id,
             active_run_id: task.active_run_id,
-            paper_route_lens_ref_count: task.paper_route_lens_ref_count,
           }))
         : [moduleTask];
       return {
@@ -880,7 +852,6 @@ function buildDomainLaneMap(input: OplAppOperatorViewModelInput) {
         blocked_task_count: statusTone(healthStatus) === 'ready'
           ? tasks.filter((task) => task.state === 'attention_needed').length
           : 1,
-        paper_route_lens_ref_count: 0,
         tasks,
       };
     }),

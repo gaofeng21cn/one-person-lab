@@ -65,6 +65,12 @@ test('runtime scope dedupes workspace options by workspace path', () => {
   const inferredScope = operator.workbench.runtime_scope.inferred_scope_hint;
   assert.ok(inferredScope);
   assert.equal(inferredScope.label, 'dm-cvd-mortality-risk');
+  const task = operator.workbench.task_drilldowns.find(
+    (entry: Record<string, unknown>) => entry.task_id === 'task-a',
+  ) as Record<string, unknown>;
+  assert.equal((task.task_identity as any).work_item.work_item_id, 'task-a');
+  assert.equal((task.task_identity as any).work_item.kind, 'runtime_activity');
+  assert.equal((task.active_path as any[])[0].node_kind, 'runtime_activity_projection');
 });
 
 test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspace study', () => {
@@ -151,7 +157,7 @@ test('MAS owner typed blocker without active automation is shown as paused waiti
   assert.equal(workbench.user_task_status_summary.paused_count, 1);
 });
 
-test('MAS consumed route checkpoint is delivered even when a stale autopush attempt failed', () => {
+test('domain runtime closeout is delivered even when a stale attempt failed', () => {
   const operator = buildOperatorForRuntimeItems([
     {
       domain_id: 'medautoscience',
@@ -166,8 +172,7 @@ test('MAS consumed route checkpoint is delivered even when a stale autopush atte
       active_stage_id: 'submission_milestone_candidate::followthrough::followthrough-01',
       typed_blocker_summary: 'temporal_workflow_not_started_or_not_found',
       typed_blocker_owner: 'med-autoscience',
-      mas_owner_consumption_status: 'owner_consumed_route_checkpoint',
-      mas_owner_consumption_matches_runtime_closeout: false,
+      runtime_closeout_observed: true,
       workspace_path: '/Users/example/Yang/DM-CVD-Mortality-Risk',
       workspace_label: 'dm-cvd-mortality-risk',
       workspace_scope_id: 'workspace:dm',

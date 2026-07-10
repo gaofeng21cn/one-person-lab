@@ -3,8 +3,9 @@ import {
   test,
 } from '../helpers.ts';
 import {
+  buildDomainOwnerPayloadSummaryRefs,
   buildRuntimeVisualizationProjection,
-} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/runtime-visualization-projection.ts';
+} from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/index.ts';
 
 test('runtime visualization projection exposes canonical stage progress and Temporal refs only', () => {
   const projection = buildRuntimeVisualizationProjection({
@@ -81,4 +82,77 @@ test('runtime visualization projection exposes canonical stage progress and Temp
   assert.equal(projection.authority_boundary.can_read_memory_body, false);
   assert.equal(projection.authority_boundary.can_read_artifact_body, false);
   assert.equal(projection.authority_boundary.can_claim_domain_ready, false);
+});
+
+test('runtime visualization consumes generic operator lens refs only', () => {
+  const projection = buildRuntimeVisualizationProjection({
+    attempts: [],
+    routeRefs: [],
+    decisionRefs: [],
+    artifactRefs: [],
+    packageLifecycle: {},
+    memoryRefs: {},
+    qualityRefs: {},
+    actionRefs: [],
+    ownerReceipts: [],
+    typedBlockers: {},
+    domainProjectionIngestion: {
+      items: [{
+        domain_id: 'example-domain',
+        operator_route_lens_refs: ['example://operator/lens'],
+        paper_route_lens_refs: ['example://retired/paper-lens'],
+      }],
+    },
+    routeTransitionDrilldown: {},
+    stageProductionEvidence: {},
+    domainDispatchEvidence: {},
+    safeActions: [],
+  });
+
+  assert.equal(projection.operator_lens.surface_kind, 'opl_app_runtime_operator_lens_refs');
+  assert.equal(projection.summary.operator_route_lens_ref_count, 1);
+  assert.equal(projection.operator_lens.operator_route_lens_refs[0].ref, 'example://operator/lens');
+  assert.equal(JSON.stringify(projection).includes('retired/paper-lens'), false);
+});
+
+test('domain owner payload summary ignores MAS-only closeout compatibility', () => {
+  const projection = buildDomainOwnerPayloadSummaryRefs({
+    domainManifestProjects: [
+      {
+        status: 'resolved',
+        project_id: 'medautoscience',
+        project: 'Med Auto Science',
+        manifest: {
+          target_domain_id: 'medautoscience',
+          real_paper_autonomy_guarded_apply_proof: {
+            paper_line_provider_canary_closeout: {
+              paper_line_owner_payload_summary: { paper_line_count: 1 },
+              paper_line_domain_dispatch_evidence_record_payloads: [{ study_id: 'legacy' }],
+            },
+          },
+        },
+      },
+      {
+        status: 'resolved',
+        project_id: 'example-domain',
+        project: 'Example Domain',
+        manifest: {
+          target_domain_id: 'example-domain',
+          operator_evidence_readiness_projection: {
+            production_evidence_scaleout_refs: {
+              owner_payload_item_summary: {
+                surface_kind: 'example_owner_payload_item_summary',
+                owner: 'example-domain',
+                work_items: [],
+              },
+            },
+          },
+        },
+      },
+    ] as any,
+  });
+
+  assert.equal(projection.summary.domain_count, 1);
+  assert.equal(projection.domains[0].domain_id, 'example-domain');
+  assert.equal(projection.domains[0].source_surface, 'operator_evidence_readiness_projection');
 });

@@ -458,8 +458,8 @@ export function buildAppOperatorDrilldown(input: {
       record(runtimeVisualizationProjection.summary).edge_count,
     runtime_visualization_timeline_event_count:
       record(runtimeVisualizationProjection.summary).timeline_event_count,
-    runtime_visualization_paper_route_lens_ref_count:
-      record(runtimeVisualizationProjection.summary).paper_route_lens_ref_count,
+    runtime_visualization_operator_route_lens_ref_count:
+      record(runtimeVisualizationProjection.summary).operator_route_lens_ref_count,
     runtime_visualization_stage_progress_event_count:
       record(runtimeVisualizationProjection.summary).stage_progress_event_count,
     runtime_visualization_temporal_stage_progress_ref_count:

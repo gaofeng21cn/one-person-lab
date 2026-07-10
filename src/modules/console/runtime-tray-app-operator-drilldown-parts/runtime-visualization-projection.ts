@@ -337,11 +337,11 @@ function timelineEvents(input: RuntimeVisualizationInput) {
   ].filter((event) => stringValue(event.event_id) && stringValue(event.ref));
 }
 
-function paperRouteLensRefs(domainProjectionIngestion: JsonRecord) {
+function operatorRouteLensRefs(domainProjectionIngestion: JsonRecord) {
   return uniqueRefs(recordList(domainProjectionIngestion.items).flatMap((item) =>
-    stringList(item.paper_route_lens_refs).map((ref) => ({
+    stringList(item.operator_route_lens_refs).map((ref) => ({
       ref,
-      role: 'paper_route_lens_ref',
+      role: 'operator_route_lens_ref',
       domain_id: stringValue(item.domain_id),
       source_surface: stringValue(item.source_surface),
       pointer: stringValue(item.pointer),
@@ -351,8 +351,8 @@ function paperRouteLensRefs(domainProjectionIngestion: JsonRecord) {
   ));
 }
 
-function researchLens(input: RuntimeVisualizationInput) {
-  const lensRefs = paperRouteLensRefs(input.domainProjectionIngestion);
+function operatorLens(input: RuntimeVisualizationInput) {
+  const lensRefs = operatorRouteLensRefs(input.domainProjectionIngestion);
   const lensDomains = new Set(lensRefs.map((entry) => entry.domain_id).filter(Boolean));
   const stageAttemptRefs = input.attempts
     .filter((attempt) => {
@@ -361,7 +361,7 @@ function researchLens(input: RuntimeVisualizationInput) {
     })
     .map((attempt) => ({
       ref: attemptRef(stringValue(attempt.stage_attempt_id) ?? ''),
-      role: 'research_stage_attempt_ref',
+      role: 'operator_stage_attempt_ref',
       domain_id: stringValue(attempt.domain_id),
       stage_id: stringValue(attempt.stage_id),
       stage_attempt_id: stringValue(attempt.stage_attempt_id),
@@ -369,15 +369,15 @@ function researchLens(input: RuntimeVisualizationInput) {
     }))
     .filter(nonNullRef);
   return {
-    surface_kind: 'opl_app_runtime_research_lens_refs',
-    projection_policy: 'domain_declared_paper_route_lens_refs_only_no_paper_body_or_verdict',
-    paper_route_lens_refs: lensRefs,
+    surface_kind: 'opl_app_runtime_operator_lens_refs',
+    projection_policy: 'domain_declared_operator_route_lens_refs_only_no_domain_body_or_verdict',
+    operator_route_lens_refs: lensRefs,
     stage_attempt_refs: uniqueRefs(stageAttemptRefs),
     owner_route_refs: recordList(input.routeTransitionDrilldown.owner_route_refs),
     owner_receipt_refs: input.ownerReceipts,
     typed_blocker_refs: recordList(input.typedBlockers.refs),
     summary: {
-      paper_route_lens_ref_count: lensRefs.length,
+      operator_route_lens_ref_count: lensRefs.length,
       stage_attempt_ref_count: stageAttemptRefs.length,
       owner_route_ref_count: recordList(input.routeTransitionDrilldown.owner_route_refs).length,
       owner_receipt_ref_count: input.ownerReceipts.length,
@@ -385,9 +385,9 @@ function researchLens(input: RuntimeVisualizationInput) {
     },
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),
-      can_read_paper_body: false,
-      can_write_paper_truth: false,
-      can_authorize_publication_ready: false,
+      can_read_domain_body: false,
+      can_write_domain_truth: false,
+      can_authorize_domain_ready: false,
       can_authorize_quality_verdict: false,
     },
   };
@@ -486,7 +486,7 @@ function buildRuntimeWorkbench(
   timeline: JsonRecord[],
   lens: JsonRecord,
 ) {
-  const lensRefs = recordList(lens.paper_route_lens_refs);
+  const lensRefs = recordList(lens.operator_route_lens_refs);
   const lensDomains = new Set(lensRefs.map((ref) => stringValue(ref.domain_id)).filter(Boolean));
   const typedBlockerRefs = recordList(input.typedBlockers.refs);
   const taskDrilldowns = input.attempts.map((attempt) => {
@@ -496,7 +496,7 @@ function buildRuntimeWorkbench(
     const taskId = taskKey(attempt);
     const safeActionRefs = refsForAttempt(input.safeActions, stageAttemptId);
     const blockerRefs = refsForAttempt(typedBlockerRefs, stageAttemptId);
-    const paperRouteLensRefCount = domainId && lensDomains.has(domainId) ? lensRefs.length : 0;
+    const operatorRouteLensRefCount = domainId && lensDomains.has(domainId) ? lensRefs.length : 0;
     return {
       task_id: taskId,
       title: `${domainDisplayLabel(domainId)} ${stageId ?? 'task'}`,
@@ -521,7 +521,7 @@ function buildRuntimeWorkbench(
       owner_receipt_ref_count: refsForAttempt(input.ownerReceipts, stageAttemptId).length,
       blocker_ref_count: blockerRefs.length,
       safe_action_ref_count: safeActionRefs.length,
-      paper_route_lens_ref_count: paperRouteLensRefCount,
+      operator_route_lens_ref_count: operatorRouteLensRefCount,
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
   });
@@ -537,7 +537,7 @@ function buildRuntimeWorkbench(
       priority_bucket: task.priority_bucket,
       safe_action_ref_count: task.safe_action_ref_count,
       blocker_ref_count: task.blocker_ref_count,
-      paper_route_lens_ref_count: task.paper_route_lens_ref_count,
+      operator_route_lens_ref_count: task.operator_route_lens_ref_count,
       stage_attempt_ids: task.stage_attempt_ids,
     }))
     .sort((left, right) => {
@@ -557,7 +557,7 @@ function buildRuntimeWorkbench(
       lane_label: domainDisplayLabel(domainId === 'general' ? null : domainId),
       active_task_count: tasks.filter((task) => task.priority_bucket !== 'recent_done').length,
       blocked_task_count: tasks.filter((task) => task.priority_bucket === 'blocked').length,
-      paper_route_lens_ref_count: tasks.reduce((count, task) => count + task.paper_route_lens_ref_count, 0),
+      operator_route_lens_ref_count: tasks.reduce((count, task) => count + task.operator_route_lens_ref_count, 0),
       tasks: tasks.map((task) => ({
         task_id: task.task_id,
         label: task.title,
@@ -565,7 +565,7 @@ function buildRuntimeWorkbench(
         priority_bucket: task.priority_bucket,
         active_stage_id: task.active_stage_id,
         active_path_node_ids: task.active_path.map((node) => node.node_id),
-        paper_route_lens_ref_count: task.paper_route_lens_ref_count,
+        operator_route_lens_ref_count: task.operator_route_lens_ref_count,
       })),
     };
   });
@@ -614,7 +614,7 @@ function buildRuntimeWorkbench(
       lanes,
     },
     task_drilldowns: taskDrilldowns,
-    paper_route_lens_refs: lensRefs,
+    operator_route_lens_refs: lensRefs,
     graph_budget: {
       default_node_limit: 120,
       default_edge_limit: 160,
@@ -651,7 +651,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
     ...stageProductionEdges(input.attempts, input.stageProductionEvidence),
   ]);
   const timeline = timelineEvents(input);
-  const lens = researchLens(input);
+  const lens = operatorLens(input);
   const runtimeWorkbench = buildRuntimeWorkbench(input, nodes, edges, timeline, lens);
   const graphSummary = {
     node_count: nodes.length,
@@ -694,7 +694,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
       },
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
-    research_lens: lens,
+    operator_lens: lens,
     runtime_workbench: runtimeWorkbench,
     visual_ref_groups: {
       route_graph_refs: input.routeRefs,
@@ -709,9 +709,9 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
     summary: {
       ...graphSummary,
       timeline_event_count: timeline.length,
-      paper_route_lens_ref_count:
-        record(record(lens).summary).paper_route_lens_ref_count ?? 0,
-      research_stage_attempt_ref_count:
+      operator_route_lens_ref_count:
+        record(record(lens).summary).operator_route_lens_ref_count ?? 0,
+      operator_stage_attempt_ref_count:
         record(record(lens).summary).stage_attempt_ref_count ?? 0,
       stage_progress_event_count:
         timeline.filter((event) => event.event_kind === 'stage_progress_event').length,
@@ -732,7 +732,7 @@ export function buildRuntimeVisualizationProjection(input: RuntimeVisualizationI
       can_claim_production_ready: false,
     },
     non_goals: [
-      'does_not_read_paper_or_memory_or_artifact_body',
+      'does_not_read_domain_or_memory_or_artifact_body',
       'does_not_create_owner_receipt_or_typed_blocker',
       'does_not_close_stage_domain_publication_or_production_ready',
       'does_not_execute_domain_action',

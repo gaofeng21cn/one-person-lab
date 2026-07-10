@@ -199,13 +199,11 @@ function buildItems(entries: DomainManifestCatalogEntry[]) {
           'typed_blocker_ref',
           'typed_blocker_refs',
         ]))),
-        paper_route_lens_refs: uniqueStrings(collectRefsByKey(source.projection, new Set([
-          'paper_route_lens_ref',
-          'paper_route_lens_refs',
-          'research_route_lens_ref',
-          'research_route_lens_refs',
-          'study_route_lens_ref',
-          'study_route_lens_refs',
+        operator_route_lens_refs: uniqueStrings(collectRefsByKey(source.projection, new Set([
+          'operator_route_lens_ref',
+          'operator_route_lens_refs',
+          'domain_route_lens_ref',
+          'domain_route_lens_refs',
         ]))),
         typed_blockers: collectRecordsByKey(source.projection, 'typed_blockers'),
         freshness: freshnessProjection(source.projection),
