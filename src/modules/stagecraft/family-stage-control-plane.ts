@@ -422,7 +422,7 @@ function findingAppliesToLaunch(
     return finding.stage_id === stageId || finding.target_stage_id === stageId;
   }
   if (stageId === selectedRoute.entry_stage_ref) {
-    return false;
+    return finding.target_stage_id === stageId && finding.stage_id !== stageId;
   }
   const routeStageIds = new Set([
     ...selectedRoute.required_stage_refs,

@@ -288,6 +288,24 @@ test('family-runtime launch gate selects one declared action route without treat
     ], env).family_runtime_stage_attempt;
     assert.equal(downstream.attempt.status, 'blocked');
     assert.match(downstream.stage_launch_admission_gate.block_reason, /composition_obligation_not_satisfied/);
+
+    const manifestWithIncomingEntry = structuredClone(manifest) as Record<string, any>;
+    manifestWithIncomingEntry.family_stage_control_plane.stages.push(createMasScoutStage({
+      stage_id: 'route-prerequisite',
+      handoff: { next_stage_refs: ['intent-intake'] },
+      stage_contract: { requires: ['source_ready'], ensures: ['different_entry_requirement'] },
+    }));
+    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestWithIncomingEntry);
+    const incomingEntry = runCli([
+      ...createArgs('build-agent-baseline'), '--new-attempt',
+    ], env).family_runtime_stage_attempt;
+    assert.equal(incomingEntry.attempt.status, 'blocked');
+    assert.equal(incomingEntry.stage_launch_admission_gate.blocker_findings.some(
+      (finding: { code: string; stage_id: string; target_stage_id: string }) =>
+        finding.code === 'composition_obligation_not_satisfied'
+        && finding.stage_id === 'route-prerequisite'
+        && finding.target_stage_id === 'intent-intake'
+    ), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
