@@ -1,7 +1,46 @@
 import { STANDARD_PROGRESS_DELTA_POLICY, STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
-import { buildManifestCommand, repoRoot, runCli } from '../helpers.ts';
+import {
+  buildManifestCommand,
+  fs,
+  os,
+  path,
+  repoRoot,
+  runCli,
+} from '../helpers.ts';
 
 export type JsonRecord = Record<string, unknown>;
+
+export function createWorkspaceFixture(input: {
+  agent: 'mag' | 'mas' | 'rca';
+  workspaceId: string;
+  projectId: string;
+}) {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fixture-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-fixture-root-'));
+  const output = runCli([
+    'workspace',
+    'init',
+    '--agent',
+    input.agent,
+    '--workspace-root',
+    workspaceRoot,
+    '--workspace-id',
+    input.workspaceId,
+    '--project-id',
+    input.projectId,
+  ], { OPL_STATE_DIR: stateRoot });
+
+  return {
+    output,
+    stateRoot,
+    workspaceRoot,
+    workspacePath: path.join(workspaceRoot, input.workspaceId),
+    cleanup() {
+      fs.rmSync(stateRoot, { recursive: true, force: true });
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    },
+  };
+}
 
 export function attachManifestSurface(payload: JsonRecord, field: string, value: JsonRecord) {
   if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {

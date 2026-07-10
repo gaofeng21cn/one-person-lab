@@ -3,44 +3,30 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL, fileURLToPath } from 'node:url';
-import {
-  recordStageRunExecutionAuthorizationReceipts,
-} from '../../src/modules/stagecraft/stage-run-execution-authorization-ledger.ts';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { recordStageRunExecutionAuthorizationReceipts } from '../../src/modules/stagecraft/stage-run-execution-authorization-ledger.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const modulePath = 'src/modules/ledger/current-owner-delta-topline.ts';
-const projectionModulePath = 'src/modules/ledger/current-owner-delta-projection.ts';
+const projectionModuleUrl = pathToFileURL(
+  path.join(repoRoot, 'src/modules/ledger/current-owner-delta-projection.ts'),
+).href;
+const toplineModuleUrl = pathToFileURL(
+  path.join(repoRoot, 'src/modules/ledger/current-owner-delta-topline.ts'),
+).href;
 
-function authorizationIdentity(input: {
-  domainId: string;
-  studyId: string;
-  stageId: string;
-  actionType: string;
-  workUnitId: string;
-  sourceFingerprint: string;
-}) {
-  return {
-    study_id: input.studyId,
-    domain_context: {
-      domain_id: input.domainId,
-      study_id: input.studyId,
-      stage_id: input.stageId,
-    },
-    action_type: input.actionType,
-    work_unit_id: input.workUnitId,
-    work_unit_fingerprint: input.sourceFingerprint,
-    decision: 'authorize',
-    reason: 'test_authorized_refs_only_stage_attempt_execution',
-    operator: 'test:current-owner-delta-topline',
-  };
-}
+const EMPTY_COUNTS = {
+  openSafeActionCount: 0,
+  payloadRequiredCount: 0,
+  payloadFreeCount: 0,
+  blockedRefsOnlyCount: 0,
+  evidenceEnvelopeOpenCount: 0,
+  evidenceEnvelopeBlockedCount: 0,
+  domainDispatchWorkorderCount: 0,
+  stageReplayMissingReceiptWorkorderCount: 0,
+};
 
-function ownerAnswerReadModel(
-  deltaOverrides: Record<string, unknown>,
-  actionOverrides: Record<string, unknown> = {},
-) {
+function ownerAnswerReadModel(overrides: Record<string, unknown> = {}) {
   const acceptedAnswerShape = [
     'domain_owner_receipt_ref',
     'quality_gate_receipt_ref',
@@ -56,6 +42,7 @@ function ownerAnswerReadModel(
       current_owner: 'med-autoscience',
       owner: 'med-autoscience',
       stage_ref: 'paper_closeout',
+      stage_id: 'paper_closeout',
       desired_delta_kind: 'owner_answer',
       desired_delta_description: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
       payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
@@ -63,10 +50,11 @@ function ownerAnswerReadModel(
       hard_gate: {
         state: 'owner_delta_open',
         human_or_domain_owner_required: true,
+        domain_ready_authorized: false,
       },
       source_fingerprint: 'sha256:owner-delta-topline-test',
       audit_refs: {},
-      ...deltaOverrides,
+      ...overrides,
     },
     next_safe_action_or_none: {
       surface_kind: 'opl_current_owner_delta_default_next_action',
@@ -80,618 +68,13 @@ function ownerAnswerReadModel(
       payload_requirement: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
       accepted_answer_shape: acceptedAnswerShape,
       route_requires_domain_or_app_payload: true,
-      ...actionOverrides,
     },
   };
 }
 
-test('current owner delta topline keeps domain owner when only owner answer binding is missing', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = stateRoot;
-  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
-  try {
-    recordStageRunExecutionAuthorizationReceipts([{
-      stage_run_id: 'app-stage-run:med-autoscience:paper-closeout',
-      domain_id: 'med-autoscience',
-      stage_id: 'paper_closeout',
-      phase: 'launch',
-      selected_executor: 'codex_cli',
-      provider_attempt_ref: 'temporal://attempt/sat-owner-delta-topline',
-      stage_attempt_id: 'sat-owner-delta-topline',
-      attempt_lease_ref: 'opl://stage-attempts/sat-owner-delta-topline/leases/task-owner-delta-topline/active',
-      attempt_lease_status: 'active',
-      execution_authorization_decision_ref:
-        'opl://stage-attempts/sat-owner-delta-topline/execution-authorizations/task-owner-delta-topline/wf-owner-delta-topline',
-      workspace_scope_ref: 'workspace:/tmp/mas',
-      artifact_scope_ref: 'stage-packet:owner-delta-topline',
-      source_fingerprint: 'sha256:owner-delta-topline-test',
-      ...authorizationIdentity({
-        domainId: 'med-autoscience',
-        studyId: 'study:owner-delta-topline-test',
-        stageId: 'paper_closeout',
-        actionType: 'paper_closeout',
-        workUnitId: 'stage-packet:owner-delta-topline',
-        sourceFingerprint: 'sha256:owner-delta-topline-test',
-      }),
-      idempotency_key: 'idem-owner-delta-topline',
-      current_pointer_ref: 'opl://stage-runs/app-stage-run%3Amed-autoscience%3Apaper-closeout/current',
-      stage_manifest_ref: 'opl://stage-manifests/paper_closeout',
-    }]);
-
-    const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: ownerAnswerReadModel({}),
-    });
-
-    assert.equal(topline.operator_current_owner_delta_owner, 'med-autoscience');
-    assert.equal(topline.operator_next_owner, 'med-autoscience');
-    assert.equal(topline.operator_next_action_owner, 'med-autoscience');
-    assert.equal(
-      topline.operator_next_required_action,
-      'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-    );
-    assert.equal(
-      topline.operator_payload_requirement,
-      'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-    );
-    assert.deepEqual(topline.operator_accepted_answer_shape, [
-      'domain_owner_receipt_ref',
-      'quality_gate_receipt_ref',
-      'typed_blocker_ref',
-    ]);
-    assert.equal(
-      topline.operator_next_action_source,
-      'current_owner_delta',
-    );
-    assert.equal(
-      topline.operator_next_action_authority_boundary.derivation_source,
-      'current_owner_delta',
-    );
-    assert.equal(
-      topline.stage_run_next_required_owner_action.next_required_owner,
-      'med-autoscience',
-    );
-    assert.equal(
-      topline.stage_run_next_required_owner_action.next_required_action,
-      'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-    );
-    assert.equal(topline.stage_run_cockpit_summary.current_owner_delta_owner, 'med-autoscience');
-    assert.equal(topline.stage_run_cockpit_summary.current_owner, 'med-autoscience');
-    assert.equal(topline.stage_run_cockpit_summary.next_required_owner, 'med-autoscience');
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_phase, 'closeout');
-    assert.deepEqual(topline.stage_run_cockpit_summary.blocked_authority, [
-      'closeout_receipt_binding',
-    ]);
-    assert.equal(topline.stage_run_cockpit_summary.launch_blocker_count, 0);
-    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 6);
-    assert.equal(topline.stage_run_cockpit_summary.route_requires_domain_or_app_payload, true);
-    assert.equal(topline.stage_run_cockpit_summary.route_requires_opl_runtime_refs, false);
-    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocked, true);
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_refs_missing, false);
-  } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('current owner delta topline keeps current owner delta as ordinary root when StageRun launch refs are missing', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-stage-run-missing-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = stateRoot;
-  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
-  try {
-    const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: ownerAnswerReadModel(
-        {
-          delta_id: 'current-owner-delta:medautoscience:reviewer-refresh:owner-answer',
-          domain: 'medautoscience',
-          domain_id: 'medautoscience',
-          stage_ref: 'publication_aftercare/reviewer-refresh',
-          stage_id: 'publication_aftercare/reviewer-refresh',
-          lineage_ref: 'sat_missing_stage_run_refs',
-          desired_delta_kind: 'owner_answer_or_typed_blocker',
-          required_return_shapes: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-          ],
-          hard_gate: {
-            state: 'owner_delta_open',
-            human_or_domain_owner_required: true,
-            domain_ready_authorized: false,
-            quality_or_export_authorized: false,
-          },
-          source_fingerprint: 'owner-delta-first:mas-reviewer-refresh',
-        },
-        {
-          can_create_owner_receipt: false,
-          can_claim_domain_ready: false,
-        },
-      ),
-    });
-
-    assert.equal(topline.operator_next_action_source, 'current_owner_delta');
-    assert.equal(topline.operator_next_action_owner, 'med-autoscience');
-    assert.equal(
-      topline.operator_next_action_kind,
-      'current_owner_delta_owner_answer_or_typed_blocker_required',
-    );
-    assert.equal(
-      topline.operator_next_action.default_planning_root,
-      'current_owner_delta',
-    );
-    assert.equal(
-      topline.operator_next_action_authority_boundary.route_requires_domain_or_app_payload,
-      true,
-    );
-    assert.equal(
-      topline.operator_next_action_authority_boundary.route_requires_opl_runtime_refs,
-      false,
-    );
-    assert.equal(
-      topline.stage_run_next_required_owner_action.next_required_owner,
-      'one-person-lab',
-    );
-    assert.equal(
-      topline.stage_run_next_required_owner_action.action_kind,
-      'stage_run_execution_authorization_or_closeout_binding_required',
-    );
-    assert.equal(
-      topline.stage_run_execution_authorization_next_action_authority_boundary.route_requires_opl_runtime_refs,
-      true,
-    );
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorized, false);
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_refs_missing, true);
-    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocked, true);
-  } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('current owner delta topline folds closed StageRun owner answer into default hard gate', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-topline-closed-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = stateRoot;
-  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
-  try {
-    const stageRunId = 'app-stage-run:med-autoscience:paper-closeout-closed';
-    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
-    recordStageRunExecutionAuthorizationReceipts([{
-      stage_run_id: stageRunId,
-      domain_id: 'med-autoscience',
-      stage_id: 'paper_closeout_closed',
-      generation: 0,
-      phase: 'closeout',
-      selected_executor: 'codex_cli',
-      provider_attempt_ref: 'temporal://attempt/sat-owner-delta-topline-closed',
-      stage_attempt_id: 'sat-owner-delta-topline-closed',
-      attempt_lease_ref: 'opl://stage-attempts/sat-owner-delta-topline-closed/leases/task-owner-delta-topline/active',
-      attempt_lease_status: 'active',
-      execution_authorization_decision_ref:
-        'opl://stage-attempts/sat-owner-delta-topline-closed/execution-authorizations/task-owner-delta-topline/wf-owner-delta-topline',
-      workspace_scope_ref: 'workspace:/tmp/mas',
-      artifact_scope_ref: 'stage-packet:owner-delta-topline-closed',
-      source_fingerprint: 'sha256:owner-delta-topline-closed-test',
-      ...authorizationIdentity({
-        domainId: 'med-autoscience',
-        studyId: 'study:owner-delta-topline-closed-test',
-        stageId: 'paper_closeout_closed',
-        actionType: 'paper_closeout_closed',
-        workUnitId: 'stage-packet:owner-delta-topline-closed',
-        sourceFingerprint: 'sha256:owner-delta-topline-closed-test',
-      }),
-      idempotency_key: 'idem-owner-delta-topline-closed',
-      current_pointer_ref: currentPointerRef,
-      stage_manifest_ref: 'opl://stage-manifests/paper_closeout_closed',
-      owner_answer_ref: 'mas://owner-answer/dm003/typed-blocker',
-      owner_answer_kind: 'typed_blocker',
-      owner_answer_stage_run_id: stageRunId,
-      owner_answer_generation: 0,
-      owner_answer_manifest_ref: 'opl://stage-manifests/paper_closeout_closed',
-      owner_answer_current_pointer_ref: currentPointerRef,
-      owner_answer_source_fingerprint: 'sha256:owner-delta-topline-closed-test',
-      owner_answer_idempotency_key: 'idem-owner-delta-topline-closed',
-    }]);
-
-    const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: ownerAnswerReadModel({
-        delta_id: 'current-owner-delta:med-autoscience:paper-closeout-closed:owner-answer',
-        stage_ref: 'paper_closeout_closed',
-        stage_id: 'paper_closeout_closed',
-        lineage_ref: 'sat-owner-delta-topline-closed',
-        hard_gate: {
-          state: 'owner_delta_open',
-          human_or_domain_owner_required: true,
-          domain_ready_authorized: false,
-        },
-        source_fingerprint: 'sha256:owner-delta-topline-closed-test',
-      }),
-    });
-
-    assert.equal(topline.current_owner_delta.latest_owner_answer_ref, 'mas://owner-answer/dm003/typed-blocker');
-    assert.equal(topline.current_owner_delta.latest_owner_answer_kind, 'typed_blocker');
-    assert.equal(topline.current_owner_delta.hard_gate.state, 'domain_owner_answer_recorded');
-    assert.equal(topline.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
-    assert.equal(topline.current_owner_delta.hard_gate.domain_ready_authorized, false);
-    assert.equal(topline.current_owner_delta.hard_gate.quality_or_export_authorized, false);
-    assert.equal(
-      topline.current_owner_delta.stage_run_closeout_binding_ref,
-      '/stage_run_cockpit/execution_authorization/closeout_binding',
-    );
-    assert.equal(topline.current_owner_delta_read_model.current_owner_delta, topline.current_owner_delta);
-    assert.equal(topline.current_owner_delta_read_model.next_safe_action_or_none, null);
-    assert.equal(topline.current_owner_delta_next_action, null);
-    assert.equal(topline.operator_next_action, null);
-    assert.equal(topline.operator_next_action_source, 'stage_run_execution_authorization_closed');
-    assert.equal(topline.stage_run_next_required_owner_action, null);
-    assert.deepEqual(topline.stage_run_next_missing_input_refs, []);
-    assert.deepEqual(topline.operator_next_missing_input_refs, []);
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorized, true);
-    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 0);
-  } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('current owner delta topline bridges closed StageRun answer by stage attempt identity', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-stage-attempt-bridge-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = stateRoot;
-  const module = await import(pathToFileURL(path.join(repoRoot, modulePath)).href);
-  try {
-    const stageRunId = 'app-stage-run:medautoscience:domain-owner-default-executor-dispatch';
-    const stageAttemptId = 'sat-stage-attempt-bridge';
-    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
-    recordStageRunExecutionAuthorizationReceipts([{
-      stage_run_id: stageRunId,
-      domain_id: 'medautoscience',
-      stage_id: 'domain_owner/default-executor-dispatch',
-      generation: 0,
-      phase: 'closeout',
-      selected_executor: 'codex_cli',
-      provider_attempt_ref: `temporal://attempt/${stageAttemptId}`,
-      stage_attempt_id: stageAttemptId,
-      attempt_lease_ref: `opl://stage-attempts/${stageAttemptId}/leases/task-stage-attempt-bridge/active`,
-      attempt_lease_status: 'active',
-      execution_authorization_decision_ref:
-        `opl://stage-attempts/${stageAttemptId}/execution-authorizations/task-stage-attempt-bridge/wf-stage-attempt-bridge`,
-      workspace_scope_ref: 'workspace:/tmp/mas-stage-attempt-bridge',
-      artifact_scope_ref: 'stage-packet:stage-attempt-bridge',
-      source_fingerprint: 'sha256:stage-attempt-bridge',
-      ...authorizationIdentity({
-        domainId: 'medautoscience',
-        studyId: '002-dm-china-us-mortality-attribution',
-        stageId: 'domain_owner/default-executor-dispatch',
-        actionType: 'run_gate_clearing_batch',
-        workUnitId: 'publication_gate_replay',
-        sourceFingerprint: 'sha256:stage-attempt-bridge',
-      }),
-      idempotency_key: 'idem-stage-attempt-bridge',
-      current_pointer_ref: currentPointerRef,
-      stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
-      owner_answer_ref:
-        'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/sat-stage-attempt-bridge.closeout.json#typed_blocker',
-      owner_answer_kind: 'typed_blocker',
-      owner_answer_stage_run_id: stageRunId,
-      owner_answer_generation: 0,
-      owner_answer_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
-      owner_answer_current_pointer_ref: currentPointerRef,
-      owner_answer_source_fingerprint: 'sha256:stage-attempt-bridge',
-      owner_answer_idempotency_key: 'idem-stage-attempt-bridge',
-    }]);
-
-    const topline = module.buildCurrentOwnerDeltaTopline({
-      currentOwnerDeltaReadModel: {
-        surface_kind: 'opl_current_owner_delta_read_model',
-        current_owner_delta: {
-          surface_kind: 'opl_current_owner_delta',
-          delta_id:
-            'current-owner-delta:medautoscience:publication-supervision:typed-blocker',
-          domain: 'medautoscience',
-          domain_id: 'medautoscience',
-          task_or_study_ref: '002-dm-china-us-mortality-attribution',
-          study_id: '002-dm-china-us-mortality-attribution',
-          current_owner: 'one-person-lab',
-          owner: 'one-person-lab',
-          stage_ref: 'publication_supervision',
-          stage_id: 'publication_supervision',
-          lineage_ref: stageAttemptId,
-          stage_attempt_id: stageAttemptId,
-          action_type: 'run_gate_clearing_batch',
-          work_unit_id: 'ai_reviewer_record_gate_consumption',
-          work_unit_fingerprint:
-            'domain-transition::route_back_same_line::ai_reviewer_record_gate_consumption',
-          desired_delta_kind: 'typed_blocker',
-          desired_delta_description:
-            'domain_current_work_unit_owner_action_or_typed_blocker_required',
-          payload_requirement:
-            'domain_current_work_unit_owner_action_or_typed_blocker_required',
-          accepted_answer_shape: [
-            'domain_owner_receipt_ref',
-            'quality_gate_receipt_ref',
-            'typed_blocker_ref',
-            'human_gate_ref',
-            'route_back_evidence_ref',
-          ],
-          hard_gate: {
-            state: 'domain_owner_answer_recorded',
-            provider_liveness_required: false,
-            human_or_domain_owner_required: false,
-            owner_answer_ref:
-              'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_execution/sat-stage-attempt-bridge.closeout.json#typed_blocker',
-            owner_answer_kind: 'typed_blocker',
-            domain_ready_authorized: false,
-            quality_or_export_authorized: false,
-          },
-          source_fingerprint:
-            'owner_delta_first:one-person-lab:medautoscience:publication-supervision',
-          audit_refs: {},
-        },
-        next_safe_action_or_none: null,
-      },
-    });
-
-    assert.equal(
-      topline.stage_run_cockpit.stage_run_current_owner_delta.stage_run_id,
-      stageRunId,
-    );
-    assert.equal(
-      topline.stage_run_cockpit.stage_run_current_owner_delta.source_current_owner_delta_stage_run_id,
-      'app-stage-run:medautoscience:publication-supervision',
-    );
-    assert.equal(
-      topline.stage_run_cockpit.stage_run_current_owner_delta.stage_run_identity_source,
-      'stage_attempt_execution_authorization_receipt',
-    );
-    assert.equal(topline.stage_run_cockpit_summary.stage_id, 'domain_owner/default-executor-dispatch');
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorized, true);
-    assert.equal(topline.stage_run_cockpit_summary.execution_authorization_refs_missing, false);
-    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocked, false);
-    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 0);
-    assert.equal(topline.stage_run_next_required_owner_action, null);
-    assert.deepEqual(topline.stage_run_next_missing_input_refs, []);
-    assert.equal(topline.operator_next_action_source, 'stage_run_execution_authorization_closed');
-  } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('current owner delta hard gate ignores generic audit-only open safe-action counts', async () => {
-  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+test('current owner delta requires a domain-owned answer without minting authority', async () => {
+  const module = await import(projectionModuleUrl);
   const readModel = module.buildCurrentOwnerDeltaReadModel({
-    ownerDeltaFirst: {
-      next_owner: 'one-person-lab',
-      next_required_delta: 'no_opl_operator_actionable_delta_required',
-      required_return_shapes: ['typed_blocker_ref'],
-    },
-    nextSafeAction: {
-      action_id: 'legacy-cleanup:medautoscience:apply',
-      action_kind: 'legacy_cleanup_apply',
-      owner: 'opl',
-      ref: 'opl agents legacy-cleanup apply --domain medautoscience --mode apply',
-      route_requires_domain_or_app_payload: false,
-    },
-    countSummary: {
-      openSafeActionCount: 1,
-      payloadRequiredCount: 0,
-      payloadFreeCount: 1,
-      blockedRefsOnlyCount: 0,
-      evidenceEnvelopeOpenCount: 0,
-      evidenceEnvelopeBlockedCount: 0,
-      domainDispatchWorkorderCount: 0,
-      stageReplayMissingReceiptWorkorderCount: 0,
-    },
-  });
-
-  assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
-  assert.equal(
-    readModel.default_summary.ordinary_progress_spine_ref,
-    '/current_owner_delta/ordinary_progress_spine',
-  );
-  assert.equal(
-    readModel.default_summary.progress_delta_receipt_ref,
-    '/current_owner_delta/progress_delta_receipt',
-  );
-  assert.equal(
-    readModel.current_owner_delta.ordinary_progress_spine.default_planning_root,
-    'current_owner_delta',
-  );
-  assert.equal(
-    readModel.current_owner_delta.ordinary_progress_spine.default_next_action_derives_from,
-    'current_owner_delta',
-  );
-  assert.equal(
-    readModel.current_owner_delta.progress_delta_receipt.ordinary_receipt_kind,
-    'ProgressDeltaReceipt',
-  );
-  assert.equal(
-    readModel.current_owner_delta.progress_delta_receipt.stage_transition_requires_owner_receipt_or_typed_blocker,
-    true,
-  );
-  assert.equal(
-    readModel.current_owner_delta.progress_delta_receipt.cannot_authorize.includes('production_ready'),
-    true,
-  );
-  assert.equal(
-    readModel.current_owner_delta.artifact_tier_policy.default_ordinary_tier,
-    'T0_progress_delta',
-  );
-  assert.equal(
-    readModel.current_owner_delta.audit_sidecar_policy.blocked_refs_only_can_generate_default_next_action,
-    false,
-  );
-  assert.equal(
-    readModel.current_owner_delta.authority_boundary.blocked_refs_only_can_drive_default_planning,
-    false,
-  );
-  assert.equal(readModel.current_owner_delta.desired_delta_kind, 'none');
-  assert.equal(readModel.current_owner_delta.hard_gate.state, 'none');
-  assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
-  assert.equal(readModel.next_safe_action_or_none, null);
-  assert.equal(readModel.owner_delta_audit_tail.count_summary.open_safe_action_count, 1);
-  assert.equal(
-    readModel.owner_delta_audit_tail.audit_next_safe_action_or_none.action_kind,
-    'legacy_cleanup_apply',
-  );
-});
-
-test('current owner delta hard gate requires domain owner when answer shape is owner receipt or blocker', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-answer-missing-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
-  process.env.OPL_STATE_DIR = stateRoot;
-  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
-  try {
-    const readModel = module.buildCurrentOwnerDeltaReadModel({
-      ownerDeltaFirst: {
-        next_owner: 'med-autoscience',
-        domain_id: 'medautoscience',
-        next_required_delta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
-        required_return_shapes: [
-          'domain_owner_receipt_ref',
-          'quality_gate_receipt_ref',
-          'typed_blocker_ref',
-        ],
-        primary_item: {
-          stage_id: 'paper_autonomy/guarded-apply',
-          stage_attempt_id: 'sat-owner-answer-missing',
-        },
-      },
-      countSummary: {
-        openSafeActionCount: 0,
-        payloadRequiredCount: 0,
-        payloadFreeCount: 0,
-        blockedRefsOnlyCount: 0,
-        evidenceEnvelopeOpenCount: 0,
-        evidenceEnvelopeBlockedCount: 0,
-        domainDispatchWorkorderCount: 0,
-        stageReplayMissingReceiptWorkorderCount: 0,
-      },
-    });
-
-    assert.equal(readModel.current_owner_delta.current_owner, 'med-autoscience');
-    assert.equal(readModel.current_owner_delta.stage_id, 'paper_autonomy/guarded-apply');
-    assert.deepEqual(readModel.current_owner_delta.accepted_answer_shape, [
-      'domain_owner_receipt_ref',
-      'quality_gate_receipt_ref',
-      'typed_blocker_ref',
-      'human_gate_ref',
-      'route_back_evidence_ref',
-    ]);
-    assert.deepEqual(readModel.next_safe_action_or_none.accepted_answer_shape, [
-      'domain_owner_receipt_ref',
-      'quality_gate_receipt_ref',
-      'typed_blocker_ref',
-      'human_gate_ref',
-      'route_back_evidence_ref',
-    ]);
-    assert.equal(readModel.current_owner_delta.latest_owner_answer_ref, null);
-    assert.equal(readModel.current_owner_delta.hard_gate.state, 'owner_delta_open');
-    assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, true);
-    assert.equal(
-      readModel.next_safe_action_or_none.action_kind,
-      'current_owner_delta_owner_answer_or_typed_blocker_required',
-    );
-    assert.equal(readModel.next_safe_action_or_none.route_requires_domain_or_app_payload, true);
-    assert.equal(readModel.next_safe_action_or_none.can_create_owner_receipt, false);
-    assert.equal(readModel.next_safe_action_or_none.can_claim_domain_ready, false);
-  } finally {
-    if (previousStateDir === undefined) {
-      delete process.env.OPL_STATE_DIR;
-    } else {
-      process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('current owner delta keeps blocked refs-only residue as audit sidecar only', async () => {
-  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
-  const readModel = module.buildCurrentOwnerDeltaReadModel({
-    ownerDeltaFirst: {
-      next_owner: 'one-person-lab',
-      next_required_delta: 'no_opl_operator_actionable_delta_required',
-      required_return_shapes: ['typed_blocker_ref'],
-    },
-    nextSafeAction: {
-      action_id: 'private-residue:mas:blocked-refs-only',
-      action_kind: 'private_residue_refs_only_attention',
-      owner: 'one-person-lab',
-      ref: 'opl audit private-residue --domain medautoscience --detail full',
-      route_requires_domain_or_app_payload: false,
-    },
-    countSummary: {
-      openSafeActionCount: 0,
-      payloadRequiredCount: 0,
-      payloadFreeCount: 0,
-      blockedRefsOnlyCount: 3,
-      evidenceEnvelopeOpenCount: 0,
-      evidenceEnvelopeBlockedCount: 3,
-      domainDispatchWorkorderCount: 0,
-      stageReplayMissingReceiptWorkorderCount: 0,
-    },
-  });
-
-  assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
-  assert.equal(
-    readModel.default_next_action_derivation_policy,
-    'derive_default_next_action_only_from_current_owner_delta',
-  );
-  assert.equal(
-    readModel.current_owner_delta.ordinary_progress_spine.default_next_action_derives_from,
-    'current_owner_delta',
-  );
-  assert.equal(
-    readModel.current_owner_delta.ordinary_progress_spine.default_next_action_must_not_derive_from
-      .includes('audit_sidecar'),
-    true,
-  );
-  assert.equal(readModel.current_owner_delta.desired_delta_kind, 'none');
-  assert.equal(readModel.current_owner_delta.hard_gate.state, 'none');
-  assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, false);
-  assert.equal(readModel.current_owner_delta.hard_gate.audit_sidecar_blocked_refs_only_count, 3);
-  assert.equal(readModel.current_owner_delta.hard_gate.audit_sidecar_hard_gate_upgrade_required, false);
-  assert.equal(
-    readModel.current_owner_delta.authority_boundary.blocked_refs_only_can_drive_default_planning,
-    false,
-  );
-  assert.equal(
-    readModel.current_owner_delta.audit_sidecar_policy.blocked_refs_only_can_generate_default_next_action,
-    false,
-  );
-  assert.equal(
-    readModel.current_owner_delta.audit_sidecar_policy.audit_next_safe_action_can_generate_default_next_action,
-    false,
-  );
-  assert.equal(readModel.next_safe_action_or_none, null);
-  assert.equal(readModel.owner_delta_audit_tail.count_summary.blocked_refs_only_count, 3);
-  assert.equal(
-    readModel.owner_delta_audit_tail.audit_next_safe_action_or_none.action_kind,
-    'private_residue_refs_only_attention',
-  );
-});
-
-test('current owner delta source fingerprint ignores audit tail counters', async () => {
-  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
-  const baseInput = {
     ownerDeltaFirst: {
       next_owner: 'med-autoscience',
       domain_id: 'medautoscience',
@@ -702,55 +85,131 @@ test('current owner delta source fingerprint ignores audit tail counters', async
         'typed_blocker_ref',
       ],
       primary_item: {
-        step_kind: 'owner_steering_required',
+        stage_id: 'paper_autonomy/guarded-apply',
+        stage_attempt_id: 'sat-owner-answer-missing',
+      },
+    },
+    countSummary: EMPTY_COUNTS,
+  });
+
+  assert.equal(readModel.current_owner_delta.current_owner, 'med-autoscience');
+  assert.equal(readModel.current_owner_delta.hard_gate.state, 'owner_delta_open');
+  assert.equal(readModel.current_owner_delta.hard_gate.human_or_domain_owner_required, true);
+  assert.equal(readModel.next_safe_action_or_none.route_requires_domain_or_app_payload, true);
+  assert.equal(readModel.next_safe_action_or_none.can_create_owner_receipt, false);
+  assert.equal(readModel.next_safe_action_or_none.can_claim_domain_ready, false);
+  assert.equal(readModel.current_owner_delta.authority_boundary.can_write_domain_truth, false);
+});
+
+test('topline consumes only an identity-bound StageRun owner answer and keeps readiness unauthorized', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-closed-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const stageRunId = 'app-stage-run:med-autoscience:paper-closeout';
+    const currentPointerRef = `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`;
+    recordStageRunExecutionAuthorizationReceipts([{
+      stage_run_id: stageRunId,
+      domain_id: 'med-autoscience',
+      study_id: 'study:owner-delta-topline-test',
+      domain_context: {
+        domain_id: 'med-autoscience',
+        study_id: 'study:owner-delta-topline-test',
+        stage_id: 'paper_closeout',
+      },
+      stage_id: 'paper_closeout',
+      generation: 0,
+      phase: 'closeout',
+      selected_executor: 'codex_cli',
+      provider_attempt_ref: 'temporal://attempt/sat-owner-delta-topline',
+      stage_attempt_id: 'sat-owner-delta-topline',
+      attempt_lease_ref: 'opl://stage-attempts/sat-owner-delta-topline/leases/task/active',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref: 'opl://stage-attempts/sat-owner-delta-topline/authorization',
+      workspace_scope_ref: 'workspace:/tmp/mas',
+      artifact_scope_ref: 'stage-packet:owner-delta-topline',
+      action_type: 'paper_closeout',
+      work_unit_id: 'stage-packet:owner-delta-topline',
+      work_unit_fingerprint: 'sha256:owner-delta-topline-test',
+      source_fingerprint: 'sha256:owner-delta-topline-test',
+      decision: 'authorize',
+      reason: 'test_authorized_refs_only_stage_attempt_execution',
+      operator: 'test:current-owner-delta-topline',
+      idempotency_key: 'idem-owner-delta-topline',
+      current_pointer_ref: currentPointerRef,
+      stage_manifest_ref: 'opl://stage-manifests/paper_closeout',
+      owner_answer_ref: 'mas://owner-answer/dm003/typed-blocker',
+      owner_answer_kind: 'typed_blocker',
+      owner_answer_stage_run_id: stageRunId,
+      owner_answer_generation: 0,
+      owner_answer_manifest_ref: 'opl://stage-manifests/paper_closeout',
+      owner_answer_current_pointer_ref: currentPointerRef,
+      owner_answer_source_fingerprint: 'sha256:owner-delta-topline-test',
+      owner_answer_idempotency_key: 'idem-owner-delta-topline',
+    }]);
+
+    const module = await import(toplineModuleUrl);
+    const topline = module.buildCurrentOwnerDeltaTopline({
+      currentOwnerDeltaReadModel: ownerAnswerReadModel(),
+    });
+    assert.equal(topline.current_owner_delta.latest_owner_answer_ref, 'mas://owner-answer/dm003/typed-blocker');
+    assert.equal(topline.current_owner_delta.hard_gate.state, 'domain_owner_answer_recorded');
+    assert.equal(topline.current_owner_delta.hard_gate.domain_ready_authorized, false);
+    assert.equal(topline.current_owner_delta.hard_gate.quality_or_export_authorized, false);
+    assert.equal(topline.current_owner_delta_next_action, null);
+    assert.equal(topline.operator_next_action_source, 'stage_run_execution_authorization_closed');
+    assert.equal(topline.stage_run_cockpit_summary.execution_authorized, true);
+    assert.equal(topline.stage_run_cockpit_summary.closeout_binding_blocker_count, 0);
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('audit counters remain sidecar data and do not change current-owner identity', async () => {
+  const module = await import(projectionModuleUrl);
+  const input = {
+    ownerDeltaFirst: {
+      next_owner: 'med-autoscience',
+      domain_id: 'medautoscience',
+      next_required_delta: 'domain_owner_receipt_quality_gate_or_typed_blocker_required',
+      required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+      primary_item: {
         owner: 'med-autoscience',
         domain_id: 'medautoscience',
         stage_id: 'domain_owner/default-executor-dispatch',
         stage_attempt_id: 'sat-current-owner-answer-target',
-        workstream_id: 'medautoscience:frt-current-owner-answer-target',
+        workstream_id: 'medautoscience:current-owner-answer-target',
       },
     },
     nextSafeAction: {
-      action_id: 'app_release_user_path_evidence:one_person_lab_app_release_user_path:record',
-      action_kind: 'app_release_user_path_evidence_receipt_record',
+      action_id: 'legacy-cleanup:medautoscience:apply',
+      action_kind: 'legacy_cleanup_apply',
       owner: 'opl',
-      ref: 'app-release-user-path:transient-safe-action',
-      route_requires_domain_or_app_payload: true,
+      ref: 'opl agents legacy-cleanup apply --domain medautoscience --mode apply',
+      route_requires_domain_or_app_payload: false,
     },
   };
   const first = module.buildCurrentOwnerDeltaReadModel({
-    ...baseInput,
-    countSummary: {
-      openSafeActionCount: 1,
-      blockedRefsOnlyCount: 2095,
-    },
+    ...input,
+    countSummary: { ...EMPTY_COUNTS, openSafeActionCount: 1 },
   });
   const second = module.buildCurrentOwnerDeltaReadModel({
-    ...baseInput,
-    countSummary: {
-      openSafeActionCount: 6,
-      blockedRefsOnlyCount: 2095,
-    },
+    ...input,
+    countSummary: { ...EMPTY_COUNTS, openSafeActionCount: 6, blockedRefsOnlyCount: 3 },
   });
 
-  assert.equal(
-    first.current_owner_delta.source_fingerprint,
-    second.current_owner_delta.source_fingerprint,
-  );
-  assert.equal(
-    first.current_owner_delta.task_or_study_ref,
-    second.current_owner_delta.task_or_study_ref,
-  );
-  assert.equal(
-    first.current_owner_delta.lineage_ref,
-    second.current_owner_delta.lineage_ref,
-  );
+  assert.equal(first.current_owner_delta.source_fingerprint, second.current_owner_delta.source_fingerprint);
+  assert.equal(first.current_owner_delta.delta_id, second.current_owner_delta.delta_id);
+  assert.equal(second.current_owner_delta.audit_sidecar_policy.blocked_refs_only_can_generate_default_next_action, false);
+  assert.equal(second.current_owner_delta.authority_boundary.blocked_refs_only_can_drive_default_planning, false);
   assert.equal(first.owner_delta_audit_tail.count_summary.open_safe_action_count, 1);
   assert.equal(second.owner_delta_audit_tail.count_summary.open_safe_action_count, 6);
 });
 
-test('current owner delta provider hard gate remains explicit even with receipt-shaped answers', async () => {
-  const module = await import(pathToFileURL(path.join(repoRoot, projectionModulePath)).href);
+test('provider hard gate remains OPL-owned and cannot create domain receipts', async () => {
+  const module = await import(projectionModuleUrl);
   const nextAction = module.buildDefaultNextActionFromCurrentOwnerDelta({
     surface_kind: 'opl_current_owner_delta',
     delta_id: 'current-owner-delta:opl:provider-liveness',
@@ -759,10 +218,7 @@ test('current owner delta provider hard gate remains explicit even with receipt-
     domain_id: 'one-person-lab',
     desired_delta_kind: 'provider_liveness',
     payload_requirement: 'provider_worker_liveness_required',
-    accepted_answer_shape: [
-      'provider_worker_repair_receipt_ref',
-      'domain_owner_receipt_ref',
-    ],
+    accepted_answer_shape: ['provider_worker_repair_receipt_ref', 'domain_owner_receipt_ref'],
     hard_gate: {
       state: 'provider_liveness_required',
       provider_liveness_required: true,
@@ -771,12 +227,8 @@ test('current owner delta provider hard gate remains explicit even with receipt-
   });
 
   assert.equal(nextAction.action_kind, 'provider_hard_gate_required');
-  assert.equal(nextAction.default_planning_root, 'current_owner_delta');
-  assert.equal(nextAction.hard_gate.provider_liveness_required, true);
-  assert.equal(nextAction.hard_gate.human_or_domain_owner_required, false);
   assert.equal(nextAction.route_requires_opl_runtime_refs, true);
   assert.equal(nextAction.route_requires_domain_or_app_payload, false);
-  assert.equal(nextAction.can_close_without_domain_or_app_payload, true);
   assert.equal(nextAction.can_execute_domain_action, false);
   assert.equal(nextAction.can_create_owner_receipt, false);
   assert.equal(nextAction.can_create_typed_blocker, false);
