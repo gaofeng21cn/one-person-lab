@@ -90,17 +90,10 @@ export function buildStageRunCycleManifestFromControlPlane(
       unexpected_fields: unexpectedFields,
     });
   }
-  let plane: FamilyStageControlPlane | null = null;
-  try {
-    plane = normalizeFamilyStageControlPlane(
-      input.stage_control_plane,
-      'stage_run_control_plane',
-    );
-  } catch (error) {
-    contractError('StageRun control-plane adapter rejected an invalid generated control plane.', {
-      reason: error instanceof Error ? error.message : 'unknown_contract_error',
-    });
-  }
+  const plane = normalizeFamilyStageControlPlane(
+    input.stage_control_plane,
+    'stage_run_control_plane',
+  );
   if (!plane) contractError('StageRun control-plane adapter requires a generated stage control plane.');
   const targetAgentRef = requiredRef(input.target_agent_ref, 'target_agent_ref');
   const descriptorRef = requiredRef(input.descriptor_ref, 'descriptor_ref');

@@ -801,7 +801,7 @@
     }
   },
   "stage_progress_log_minimum_viability_policy": {
-    "purpose": "Define how OPL treats domain-provided user stage logs when projecting terminal StageRun progress and deciding whether a repeated route can launch again.",
+    "purpose": "Define how OPL treats domain-provided user stage logs when projecting terminal StageRun progress and advisory repeated-route signals; this policy cannot authorize or block launch.",
     "canonical_projection_surface": "stage_progress_log.user_stage_log",
     "accepted_domain_sources": [
       "typed_closeout_packet.paper_stage_log",
