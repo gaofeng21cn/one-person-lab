@@ -74,6 +74,22 @@ test('generated interfaces can compile a standard agent repo contract pack witho
       notes: [],
     })}\n`,
   );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'draft-brief.input.schema.json'),
+    `${JSON.stringify({
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+      properties: { workspace_root: { type: 'string' } },
+      required: ['workspace_root'],
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'contracts', 'draft-brief.output.schema.json'),
+    `${JSON.stringify({
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+    })}\n`,
+  );
   const packRefs = [
     'agent/stages/manifest.json',
     'agent/stages/brief-draft.md',

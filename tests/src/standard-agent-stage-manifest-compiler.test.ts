@@ -96,6 +96,16 @@ function fixture(domainId: string, canonicalAgentId = domainId) {
       })),
     notes: [],
   });
+  writeJson(root, 'contracts/input.schema.json', {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    properties: { workspace_root: { type: 'string' } },
+    required: ['workspace_root'],
+  });
+  writeJson(root, 'contracts/output.schema.json', {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+  });
   writeJson(root, 'contracts/pack_compiler_input.json', {
     surface_kind: 'opl_domain_pack_compiler_input',
     domain_id: domainId,
@@ -831,6 +841,7 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-mag-stage-manifest-'));
   fs.cpSync(path.join(magRepo, 'agent'), path.join(root, 'agent'), { recursive: true });
+  fs.cpSync(path.join(magRepo, 'schemas'), path.join(root, 'schemas'), { recursive: true });
   for (const ref of [
     'contracts/domain_descriptor.json',
     'contracts/action_catalog.json',
