@@ -726,12 +726,21 @@
       "surface_kind": "opl_meta_agent_agent_lab_suite_seed",
       "version": "opl-meta-agent.agent-lab-suite-seed.v1",
       "role": "declarative_spec_and_request_only",
+      "task_identity_policy": {
+        "task_domain_owner_may_differ_from_target_agent": true,
+        "required_task_fields": [
+          "domain_id",
+          "target_agent_ref"
+        ],
+        "oma_takeover_identity": "domain_id=opl-meta-agent with target_agent_ref bound to the target agent"
+      },
       "spec_fields": [
         "recovery_probe_specs",
         "trajectory_plan",
         "scorecard_spec",
         "improvement_candidate_seed",
-        "promotion_gate_request"
+        "promotion_gate_request",
+        "production_evidence_gate.gate_ids"
       ],
       "must_not_be_treated_as_observed_fields": [
         "recovery_probes[].observed_status",
@@ -741,10 +750,20 @@
         "promotion_gate.gate_status"
       ]
     },
+    "seed_observation_policy": {
+      "required_observations_owner": "opl_agent_lab_canonical_policy",
+      "seed_required_observations_can_narrow_canonical_gate": false,
+      "seed_production_gate_is_observation": false,
+      "production_gate_seed_role": "gate_identity_spec_only"
+    },
     "observation_packet": {
       "surface_kind": "opl_foundry_lab_evaluation_observation_packet",
       "version": "opl.foundry-lab-evaluation-observation-packet.v1",
       "required_for_agent_lab_suite_materialization": true,
+      "required_provenance_fields": [
+        "evaluation_owner",
+        "evaluation_receipt_ref"
+      ],
       "required_task_groups": [
         "recovery_probe_observations",
         "trajectory_observation",
@@ -757,12 +776,57 @@
         "suite_id",
         "domain_id",
         "task_id",
+        "target_agent_ref",
         "probe_ref",
         "trajectory_ref",
         "scorecard_ref",
         "gate_ref"
       ],
-      "forbidden_true_authority_claims_rejected_before_execution": true
+      "required_group_provenance": {
+        "recovery_probe_observations": [
+          "observation_owner",
+          "observation_receipt_ref"
+        ],
+        "trajectory_observation": [
+          "observation_owner",
+          "observation_receipt_ref"
+        ],
+        "scorecard_observation": [
+          "scorecard_owner",
+          "scorecard_receipt_ref"
+        ],
+        "promotion_gate_observation": [
+          "evaluation_owner",
+          "evaluation_receipt_ref"
+        ],
+        "stage_completion_policy": [
+          "policy_owner",
+          "policy_receipt_ref"
+        ]
+      },
+      "unknown_true_authority_claim_policy": "reject_before_agent_lab_execution",
+      "known_safe_true_authority_flags": [
+        "refs_only"
+      ],
+      "forbidden_true_authority_claims_rejected_before_execution": true,
+      "materialized_authority_boundary": "opl_agent_lab_canonical_false_boundary_only"
+    },
+    "production_evidence_gate_observation": {
+      "required_for_suite_kind": "agent_production_evidence_suite",
+      "seed_gate_refs_are_observations": false,
+      "seed_gate_ids_are_identity_spec_only": true,
+      "required_provenance_fields": [
+        "evaluation_owner",
+        "evaluation_receipt_ref"
+      ],
+      "required_observed_ref_fields": [
+        "gate_ids",
+        "owner_route_refs",
+        "no_forbidden_write_proof_refs",
+        "required_owner_receipt_refs",
+        "gate_result_refs"
+      ],
+      "domain_verdict_claimed": false
     },
     "no_observation_result": {
       "status": "blocked_missing_evaluation_observations",
@@ -783,6 +847,13 @@
       "scaleout_ledger_refs",
       "target_owner_receipt_or_typed_blocker_ref"
     ],
+    "candidate_ref_projection": {
+      "input_candidate_refs_are_output_results": false,
+      "immediate_improvement_source": "suite_seed.tasks[].improvement_candidate_seed.candidate_ref",
+      "mechanism_candidate_refs_remain_downstream_pending": true,
+      "unclassified_input_candidate_refs_remain_non_result_inputs": true
+    },
+    "output_reuse_policy": "fail_closed_when_known_evaluation_artifacts_exist",
     "authority_boundary": {
       "can_create_platform_typed_blocker": true,
       "can_create_target_typed_blocker": false,

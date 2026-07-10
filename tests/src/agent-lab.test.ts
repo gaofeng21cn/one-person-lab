@@ -505,6 +505,38 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     contract.evaluation_work_order_consumer_surface.observation_packet.required_for_agent_lab_suite_materialization,
     true,
   );
+  assert.deepEqual(
+    contract.evaluation_work_order_consumer_surface.observation_packet.required_provenance_fields,
+    ['evaluation_owner', 'evaluation_receipt_ref'],
+  );
+  assertIncludesAll(
+    contract.evaluation_work_order_consumer_surface.observation_packet.identity_match_fields,
+    ['domain_id', 'task_id', 'target_agent_ref', 'probe_ref', 'trajectory_ref', 'scorecard_ref', 'gate_ref'],
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.observation_packet.unknown_true_authority_claim_policy,
+    'reject_before_agent_lab_execution',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.seed_observation_policy.required_observations_owner,
+    'opl_agent_lab_canonical_policy',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.seed_observation_policy.seed_production_gate_is_observation,
+    false,
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.output_reuse_policy,
+    'fail_closed_when_known_evaluation_artifacts_exist',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.candidate_ref_projection.immediate_improvement_source,
+    'suite_seed.tasks[].improvement_candidate_seed.candidate_ref',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.production_evidence_gate_observation.seed_gate_refs_are_observations,
+    false,
+  );
   assert.equal(
     contract.evaluation_work_order_consumer_surface.no_observation_result.writes_agent_lab_suite_result,
     false,
