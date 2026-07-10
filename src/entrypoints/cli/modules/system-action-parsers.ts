@@ -20,6 +20,8 @@ import type {
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
 } from './types.ts';
+import { parseCommandOptions } from './command-registry.ts';
+import { readOptionalString, readStringList } from './json-boundary.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 
 function parseWorkspaceInitializeArgs(
@@ -702,252 +704,109 @@ function parseUpdateChannelArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): UpdateChannelCliInput {
-  const parsed: UpdateChannelCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--channel':
-        if (value !== 'stable' && value !== 'preview') {
-          throw buildUsageError('system update-channel requires stable or preview.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.channel = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for system update-channel command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const parsed = parseCommandOptions(args, spec, { channel: { type: 'string' } });
+  const channel = readOptionalString(parsed.channel);
+  if (channel && channel !== 'stable' && channel !== 'preview') {
+    throw buildUsageError('system update-channel requires stable or preview.', spec, {
+      option: '--channel',
+      value: channel,
+    });
   }
-
-  return parsed;
+  return { channel: channel as UpdateChannelCliInput['channel'] };
 }
 
 function parseSystemDependencyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SystemDependencyCliInput {
-  const parsed: SystemDependencyCliInput = { profile: '' };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--apply') {
-      parsed.apply = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-
-    switch (token) {
-      case '--profile':
-        parsed.profile = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for system dependency command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  if (!parsed.profile) {
+  const parsed = parseCommandOptions(args, spec, {
+    apply: { type: 'boolean' },
+    profile: { type: 'string' },
+  });
+  const profile = readOptionalString(parsed.profile);
+  if (!profile) {
     throw buildUsageError('system dependency command requires an explicit --profile selected by the active agent or package.', spec, {
       required: ['--profile'],
     });
   }
-  return parsed;
+  return { profile, apply: parsed.apply === true };
 }
 
 function parseSystemSeedApplyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SystemSeedApplyCliInput {
-  const parsed: SystemSeedApplyCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-
-    switch (token) {
-      case '--from':
-        parsed.seedDir = value;
-        break;
-      case '--data-dir':
-        parsed.dataDir = value;
-        break;
-      case '--projects-dir':
-        parsed.projectsDir = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for system seed-apply command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
+  const parsed = parseCommandOptions(args, spec, {
+    'data-dir': { type: 'string' },
+    from: { type: 'string' },
+    'projects-dir': { type: 'string' },
+  });
+  return {
+    seedDir: readOptionalString(parsed.from) ?? undefined,
+    dataDir: readOptionalString(parsed['data-dir']) ?? undefined,
+    projectsDir: readOptionalString(parsed['projects-dir']) ?? undefined,
+  };
 }
 
 function parseSystemStartupMaintenanceArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SystemStartupMaintenanceCliInput {
-  const parsed: SystemStartupMaintenanceCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
-    }
-
-    switch (token) {
-      case '--scope':
-        if (value !== 'all' && value !== 'runtime_substrate') {
-          throw buildUsageError('system startup-maintenance --scope requires all or runtime_substrate.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.scope = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for system startup-maintenance command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const parsed = parseCommandOptions(args, spec, { scope: { type: 'string' } });
+  const scope = readOptionalString(parsed.scope);
+  if (scope && scope !== 'all' && scope !== 'runtime_substrate') {
+    throw buildUsageError('system startup-maintenance --scope requires all or runtime_substrate.', spec, {
+      option: '--scope',
+      value: scope,
+    });
   }
-
-  return parsed;
+  return { scope: scope as SystemStartupMaintenanceCliInput['scope'] };
 }
 
 function parseDeveloperSupervisorArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): DeveloperSupervisorCliInput {
-  const parsed: DeveloperSupervisorCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--enabled':
-        if (value !== 'auto' && value !== 'on' && value !== 'off') {
-          throw buildUsageError('system developer-supervisor requires auto, on, or off for --enabled.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.developerSupervisorEnabled = value;
-        break;
-      case '--mode':
-        if (value !== 'external_observe' && value !== 'developer_apply_safe') {
-          throw buildUsageError(
-            'system developer-supervisor requires external_observe or developer_apply_safe for --mode.',
-            spec,
-            { option: token, value },
-          );
-        }
-        parsed.developerSupervisorMode = value;
-        break;
-      case '--auto-enable-github-login':
-      case '--github-login':
-        parsed.developerSupervisorAutoEnableGithubLogin = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for system developer-supervisor command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
+  const normalizedArgs = args.map((arg) => arg === '--github-login' ? '--auto-enable-github-login' : arg);
+  const parsed = parseCommandOptions(normalizedArgs, spec, {
+    'auto-enable-github-login': { type: 'string', multiple: true },
+    enabled: { type: 'string' },
+    mode: { type: 'string' },
+  });
+  const enabled = readOptionalString(parsed.enabled);
+  const mode = readOptionalString(parsed.mode);
+  if (enabled && enabled !== 'auto' && enabled !== 'on' && enabled !== 'off') {
+    throw buildUsageError('system developer-supervisor requires auto, on, or off for --enabled.', spec, {
+      option: '--enabled',
+      value: enabled,
+    });
   }
-
-  return parsed;
+  if (mode && mode !== 'external_observe' && mode !== 'developer_apply_safe') {
+    throw buildUsageError(
+      'system developer-supervisor requires external_observe or developer_apply_safe for --mode.',
+      spec,
+      { option: '--mode', value: mode },
+    );
+  }
+  return {
+    developerSupervisorEnabled: enabled as DeveloperSupervisorCliInput['developerSupervisorEnabled'],
+    developerSupervisorMode: mode as DeveloperSupervisorCliInput['developerSupervisorMode'],
+    developerSupervisorAutoEnableGithubLogin:
+      readStringList(parsed['auto-enable-github-login']).at(-1),
+  };
 }
 
 function parseSystemConfigureCodexArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): SystemConfigureCodexCliInput {
-  const parsed: SystemConfigureCodexCliInput = {};
-
-  for (const token of args) {
-    if (token === '--api-key-stdin') {
-      parsed.apiKeyStdin = true;
-      continue;
-    }
-
-    throw buildUsageError(`Unknown option for system configure-codex command: ${token}.`, spec, {
-      option: token,
-    });
-  }
-
-  if (!parsed.apiKeyStdin) {
+  const parsed = parseCommandOptions(args, spec, { 'api-key-stdin': { type: 'boolean' } });
+  if (parsed['api-key-stdin'] !== true) {
     throw buildUsageError('system configure-codex requires --api-key-stdin.', spec, {
       required: ['--api-key-stdin'],
     });
   }
-
-  return parsed;
+  return { apiKeyStdin: true };
 }
 
 function assertNoArgs(
