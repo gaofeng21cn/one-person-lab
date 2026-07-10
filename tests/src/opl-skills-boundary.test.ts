@@ -6,6 +6,7 @@ import { test } from 'node:test';
 
 import { readFamilySkillPacks } from '../../src/modules/connect/opl-skills.ts';
 import { normalizeDomainSelection } from '../../src/modules/connect/opl-skills-parts/registry.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/kernel/family-workspace-root.ts';
 import { resolveStandardAgent } from '../../src/kernel/standard-agent-registry.ts';
 import { registerOplFamilyCodexPlugins } from '../../src/modules/connect/system-installation/codex-plugin-registry.ts';
 import type { OplModuleId } from '../../src/modules/connect/system-installation/shared.ts';
@@ -97,10 +98,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   let catalog!: ReturnType<typeof readFamilySkillPacks>['skill_catalog'];
   try {
     const repoRoot = process.cwd();
-    const workspaceRoot = path.basename(path.dirname(repoRoot)) === '.codex-worktrees'
-      ? path.resolve(repoRoot, '..', '..')
-      : path.resolve(repoRoot, '..');
-    process.env.OPL_FAMILY_WORKSPACE_ROOT = workspaceRoot;
+    process.env.OPL_FAMILY_WORKSPACE_ROOT = resolveFamilyWorkspaceRootFromRepoRoot(repoRoot);
     process.env.OPL_MODULE_SOURCE_MODE = 'git_checkout';
     catalog = readFamilySkillPacks().skill_catalog;
   } finally {
