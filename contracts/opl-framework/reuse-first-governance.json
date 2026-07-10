@@ -4,8 +4,7 @@
   "owner": "one-person-lab",
   "purpose": "Keep OPL family platform work reuse-first: mature substrate, standard library, native platform, or already-owned helper before new hand-rolled generic runtime, schema, CLI, package, update, workspace, or observability machinery.",
   "state": "active_contract",
-  "machine_boundary": "This contract feeds the advisory reuse-first scan. It does not prove release readiness, production readiness, domain readiness, owner acceptance, or physical delete authorization.",
-  "default_mode": "advisory",
+  "machine_boundary": "This contract feeds the strict reuse-first diff gate. It does not inventory historical findings or prove release readiness, production readiness, domain readiness, owner acceptance, or physical delete authorization.",
   "strict_mode": {
     "intended_use": "diff_added_lines_only",
     "default_diff_ref": "origin/main",
@@ -49,7 +48,6 @@
     ],
     "ignored_paths": [
       "contracts/opl-framework/reuse-first-governance.json",
-      "contracts/opl-framework/reuse-first-historical-worklist.json",
       "scripts/reuse-first-scan.mjs",
       "tests/src/reuse-first-scan.test.ts"
     ]
