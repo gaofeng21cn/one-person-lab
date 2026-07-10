@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from '../../src/kernel/family-workspace-root.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/modules/connect/opl-skills.ts';
 import {
   binPath,
@@ -169,6 +170,18 @@ test('nested worktree repo roots resolve the family workspace root without OPL_F
     resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab'),
     '/tmp/workspace',
   );
+});
+
+test('relative git worktree metadata resolves the framework workspace root', () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-relative-worktree-'));
+  const candidate = path.join(workspaceRoot, 'one-person-lab', '.worktrees', 'candidate');
+  try {
+    fs.mkdirSync(candidate, { recursive: true });
+    fs.writeFileSync(path.join(candidate, '.git'), 'gitdir: ../../.git/worktrees/candidate\n');
+    assert.equal(resolveDefaultFamilyWorkspaceRoot({ repoRootHint: candidate }), workspaceRoot);
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
 });
 
 test('opl connect skills discovers OPL-managed module installs without OPL_FAMILY_WORKSPACE_ROOT', () => {

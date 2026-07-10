@@ -24,7 +24,10 @@ function resolveRepoRootPath(options: ResolveFamilyWorkspaceRootOptions = {}) {
 function currentRepoDirectory(repoRoot: string) {
   const gitMetadata = path.join(repoRoot, '.git');
   if (fs.existsSync(gitMetadata) && fs.statSync(gitMetadata).isFile()) {
-    const gitDir = fs.readFileSync(gitMetadata, 'utf8').trim().replace(/^gitdir:\s*/, '');
+    const gitDir = path.resolve(
+      repoRoot,
+      fs.readFileSync(gitMetadata, 'utf8').trim().replace(/^gitdir:\s*/, ''),
+    );
     const markerIndex = gitDir.lastIndexOf(`${path.sep}.git${path.sep}`);
     if (markerIndex > 0) {
       return path.basename(gitDir.slice(0, markerIndex));
