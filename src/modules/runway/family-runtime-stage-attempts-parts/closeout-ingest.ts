@@ -20,8 +20,8 @@ import {
 } from './shared.ts';
 import { inspectStageAttempt } from './inspect.ts';
 import {
-  reconcilePaperMissionStageRouteTerminalTaskForAttempt,
-} from '../family-runtime-paper-mission-stage-route-terminal-sync.ts';
+  reconcileDomainRouteTerminalTaskForAttempt,
+} from '../family-runtime-domain-route-terminal-sync.ts';
 
 function normalizeRouteImpact(packet: TypedStageCloseoutPacket) {
   const routeImpact = packet.route_impact && typeof packet.route_impact === 'object' && !Array.isArray(packet.route_impact)
@@ -85,7 +85,7 @@ function syncAttemptRowFromAcceptedCloseout(
     && attemptAlreadyAbsorbedCloseout(input.attempt, input.packet)
     && (!input.costSummary || optionalRecord(input.attempt.provider_run.cost_summary))
   ) {
-    reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
+    reconcileDomainRouteTerminalTaskForAttempt(db, {
       stageAttemptId: input.stageAttemptId,
       source: 'typed-closeout-ingest:paper-mission-stage-route-terminal',
     });
@@ -129,7 +129,7 @@ function syncAttemptRowFromAcceptedCloseout(
     input.observedAt,
     input.stageAttemptId,
   );
-  reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
+  reconcileDomainRouteTerminalTaskForAttempt(db, {
     stageAttemptId: input.stageAttemptId,
     source: 'typed-closeout-ingest:paper-mission-stage-route-terminal',
   });

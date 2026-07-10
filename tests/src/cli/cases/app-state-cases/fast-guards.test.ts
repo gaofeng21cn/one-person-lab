@@ -1,21 +1,12 @@
 import { assert, createFakeCodexFixture, fs, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
 import { assertCurrentOwnerDeltaProjection } from '../owner-payload-workorder-assertions.ts';
-import {
-  bindMasWorkspaceForAppState,
-  writeCurrentOwnerDeltaProjectionCacheFixture,
-  writeMasProgressPortalFixture,
-} from './fixtures.ts';
+import { writeCurrentOwnerDeltaProjectionCacheFixture } from './fixtures.ts';
 
 test('app state fast ignores non-framework owner-delta cache as default cockpit source', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-home-'));
-  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-repo-'));
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-cache-workspace-'));
   const stateDir = path.join(homeRoot, 'opl-state');
-  const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
 
   try {
-    bindMasWorkspaceForAppState({ stateDir, workspaceRoot: masRepoRoot, profilePath });
-    writeMasProgressPortalFixture(workspaceRoot, profilePath);
     writeCurrentOwnerDeltaProjectionCacheFixture(stateDir);
     const output = runCli(['app', 'state', '--profile', 'fast'], {
       HOME: homeRoot,
@@ -37,17 +28,16 @@ test('app state fast ignores non-framework owner-delta cache as default cockpit 
     };
 
     assertCurrentOwnerDeltaProjection(output.app_state.operator.current_owner_delta, {
-      currentOwner: 'med-autoscience',
-      requiredDelta: '提交 MAS owner receipt 或 typed blocker。',
+      currentOwner: 'one-person-lab',
+      requiredDelta: 'refresh_current_owner_delta_read_model_required',
+      acceptedAnswerShapeIncludes: ['framework_readiness_ref'],
     });
     assert.equal(
       output.app_state.operator.workbench.summary_cards.find((entry) => entry.card_id === 'active_projects')?.value,
-      1,
+      0,
     );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(masRepoRoot, { recursive: true, force: true });
-    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

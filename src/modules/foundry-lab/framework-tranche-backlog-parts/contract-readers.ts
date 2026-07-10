@@ -4,6 +4,10 @@ import {
   buildDomainPackCompilerList,
   buildGeneratedAgentInterfaces,
 } from '../../pack/index.ts';
+import {
+  defaultStandardDomainAgentRepoInputs,
+  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+} from '../../atlas/index.ts';
 import { readJsonPayloadFile } from '../../../kernel/json-file.ts';
 import {
   FrameworkContractError,
@@ -245,7 +249,11 @@ export function readDomainPackCompilerFamilyReadback(
 ): DomainPackCompilerFamilyReadback {
   const sourceCommand = 'opl agents pack-compiler --family-defaults --json';
   try {
-    const readback = buildDomainPackCompilerList(contracts, { familyDefaults: true });
+    const readback = buildDomainPackCompilerList(contracts, {
+      familyDefaults: true,
+      familyRepoInputs: defaultStandardDomainAgentRepoInputs(),
+      defaultRepoDirectories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
+    });
     const packCompiler = recordField(
       readback as unknown as JsonRecord,
       'domain_pack_compiler',
@@ -343,7 +351,10 @@ export function readGeneratedInterfacesFamilyReadback(
 ): GeneratedInterfacesFamilyReadback {
   const sourceCommand = 'opl agents interfaces --family-defaults --json';
   try {
-    const readback = buildGeneratedAgentInterfaces(contracts, ['--family-defaults']);
+    const readback = buildGeneratedAgentInterfaces(contracts, ['--family-defaults'], {
+      familyRepoInputs: defaultStandardDomainAgentRepoInputs(),
+      defaultRepoDirectories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
+    });
     const { interfaces, reports } = generatedInterfaceReports(
       readback as unknown as JsonRecord,
       sourceCommand,

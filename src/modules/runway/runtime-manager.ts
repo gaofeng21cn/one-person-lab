@@ -4,10 +4,10 @@ import {
 } from './public/runtime-manager-support.ts';
 import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import {
-  MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
-  MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+  DOMAIN_ROUTE_RECONCILE_APPLY_TASK_KIND,
+  DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
   OPL_RUNTIME_OWNER_ROUTE,
-  buildMasDomainRouteSupportProjection,
+  buildDomainRouteSupportProjection,
   readMasManagedProviderProjection,
   familyRuntimePaths,
   DEFAULT_NATIVE_HELPERS,
@@ -142,9 +142,9 @@ function buildFamilySchedulerReplacement() {
         replacement_role:
           `OPL owns scheduler cadence, provider SLO tick, Temporal attempt ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection; the selected domain owner keeps progress semantics, owner receipts, typed blockers, and safe action refs.`,
         required_domain_refs: [
-          MAS_RUNTIME_OWNER_ROUTE_HANDOFF,
+          DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
           OPL_RUNTIME_OWNER_ROUTE,
-          MAS_DOMAIN_ROUTE_RECONCILE_APPLY,
+          DOMAIN_ROUTE_RECONCILE_APPLY_TASK_KIND,
           'mas_opl_runtime_workbench_projection',
           'sidecar_owner_receipt_or_typed_blocker',
           'no_forbidden_write_evidence',
@@ -431,7 +431,7 @@ export async function buildRuntimeManager(
         stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
         wakeup_bridge: 'Temporal schedule/workflow history -> provider SLO and stage-attempt projection readback',
         webhook_bridge: 'provider signal/webhook -> Temporal signal/update',
-        mas_domain_route_projection: buildMasDomainRouteSupportProjection(),
+        domain_route_projection: buildDomainRouteSupportProjection(),
       },
       family_scheduler_replacement: {
         ...buildFamilySchedulerReplacement(),

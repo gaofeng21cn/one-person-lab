@@ -2,13 +2,8 @@ import crypto from 'node:crypto';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import {
-  defaultStandardDomainAgentRepoInputs,
-  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
-} from '../atlas/standard-domain-agent-family-repos.ts';
-import {
   STANDARD_AGENT_PACK_ABI,
 } from './standard-agent-pack-abi.ts';
-import { resolveStandardAgent } from '../charter/standard-agent-registry.ts';
 import {
   buildGeneratedInterfaceBundle,
   GENERATED_INTERFACE_SOURCE_REFS,
@@ -22,6 +17,7 @@ import {
   repoContractDescriptorForPackCompiler,
 } from './domain-pack-compiler/repo-contract-descriptor.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
+import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import {
   recordList,
@@ -37,6 +33,9 @@ type DomainPackCompilerOptions = {
   familyDefaults?: boolean;
   agentDescriptors?: JsonRecord[];
   loadAgentDescriptors?: () => JsonRecord[];
+  familyRepoInputs?: StandardDomainAgentRepoInput[];
+  defaultRepoDirectories?: string[];
+  resolveDomainSelection?: (value: string) => string;
 };
 
 function recordPathList(value: unknown) {
@@ -45,12 +44,19 @@ function recordPathList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
-function normalizeDomainSelection(value: string) {
-  return resolveStandardAgent(value)?.domain_id ?? value.trim().toLowerCase();
+function normalizeDomainSelection(value: string, options: DomainPackCompilerOptions) {
+  return (options.resolveDomainSelection?.(value) ?? value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
-function domainSelectionMatches(candidate: JsonRecord, domain: string) {
-  const normalizedDomain = normalizeDomainSelection(domain);
+function domainSelectionMatches(
+  candidate: JsonRecord,
+  domain: string,
+  options: DomainPackCompilerOptions,
+) {
+  const normalizedDomain = normalizeDomainSelection(domain, options);
   const candidateValues = [
     optionalString(candidate.project_id),
     optionalString(candidate.project),
@@ -59,9 +65,7 @@ function domainSelectionMatches(candidate: JsonRecord, domain: string) {
     optionalString(candidate.requested_agent_id),
   ].filter((value): value is string => Boolean(value));
   return candidateValues.some((value) =>
-    value === domain
-    || value === normalizedDomain
-    || normalizeDomainSelection(value) === normalizedDomain
+    normalizeDomainSelection(value, options) === normalizedDomain
   );
 }
 
@@ -523,11 +527,17 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
 
 function buildCompilerDomains(contracts: FrameworkContracts, options: DomainPackCompilerOptions = {}) {
   if (options.familyDefaults) {
-    const repos = defaultStandardDomainAgentRepoInputs();
+    const repos = options.familyRepoInputs;
+    if (!repos) {
+      throw new FrameworkContractError('cli_usage_error', 'Pack compiler family-defaults requires Atlas-supplied repo inputs.', {
+        required_input: 'familyRepoInputs',
+        owner_boundary: 'Atlas discovers standard agent repos; Pack compiles generated surfaces from descriptor input.',
+      });
+    }
     if (repos.length === 0) {
       throw new FrameworkContractError('cli_usage_error', 'pack compiler family-defaults could not discover family agent repos.', {
         usage: 'opl agents pack-compiler --family-defaults',
-        default_repo_directories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
+        default_repo_directories: options.defaultRepoDirectories ?? [],
         env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
       });
     }
@@ -617,7 +627,9 @@ export function buildDomainPackCompilerInspect(
     ...options,
     familyDefaults: options.familyDefaults ?? parsed.familyDefaults,
   });
-  const selected = domains.find((candidate) => domainSelectionMatches(candidate as JsonRecord, domain));
+  const selected = domains.find((candidate) =>
+    domainSelectionMatches(candidate as JsonRecord, domain, options)
+  );
   if (!selected) {
     throw new FrameworkContractError('cli_usage_error', `Unknown pack compiler domain: ${domain}.`, {
       domain,
@@ -667,11 +679,17 @@ export function buildGeneratedAgentInterfaces(
   }
 
   if (familyDefaults) {
-    const repos = defaultStandardDomainAgentRepoInputs();
+    const repos = options.familyRepoInputs;
+    if (!repos) {
+      throw new FrameworkContractError('cli_usage_error', 'Generated interfaces family-defaults requires Atlas-supplied repo inputs.', {
+        required_input: 'familyRepoInputs',
+        owner_boundary: 'Atlas discovers standard agent repos; Pack compiles generated interfaces from repo descriptors.',
+      });
+    }
     if (repos.length === 0) {
       throw new FrameworkContractError('cli_usage_error', 'generated interfaces could not discover family agent repos.', {
         usage: 'opl agents interfaces --family-defaults [--format <cli|mcp|skill|product-entry|openai|ai-sdk>]',
-        default_repo_directories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
+        default_repo_directories: options.defaultRepoDirectories ?? [],
         env_override: 'OPL_FAMILY_WORKSPACE_ROOT',
       });
     }
@@ -717,7 +735,9 @@ export function buildGeneratedAgentInterfaces(
   }
 
   const domains = buildCompilerDomains(contracts, options);
-  const selected = domains.find((candidate) => domainSelectionMatches(candidate as JsonRecord, domain));
+  const selected = domains.find((candidate) =>
+    domainSelectionMatches(candidate as JsonRecord, domain, options)
+  );
   if (!selected) {
     throw new FrameworkContractError('cli_usage_error', `Unknown generated interface domain: ${domain}.`, {
       domain,

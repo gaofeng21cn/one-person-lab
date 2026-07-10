@@ -35,8 +35,8 @@ import {
 import { inspectStageAttempt } from './inspect.ts';
 import { ingestStageAttemptCloseout } from './closeout-ingest.ts';
 import {
-  reconcilePaperMissionStageRouteTerminalTaskForAttempt,
-} from '../family-runtime-paper-mission-stage-route-terminal-sync.ts';
+  reconcileDomainRouteTerminalTaskForAttempt,
+} from '../family-runtime-domain-route-terminal-sync.ts';
 
 type TemporalStageAttemptTerminalObservation = {
   surface_kind: 'temporal_stage_attempt_query_receipt';
@@ -230,8 +230,8 @@ function temporalCompletedMissingCloseoutBlocker(observation: TemporalStageAttem
     : null;
 }
 
-function reconcilePaperMissionStageRouteTerminalObservation(db: DatabaseSync, stageAttemptId: string) {
-  reconcilePaperMissionStageRouteTerminalTaskForAttempt(db, {
+function reconcileDomainRouteTerminalObservation(db: DatabaseSync, stageAttemptId: string) {
+  reconcileDomainRouteTerminalTaskForAttempt(db, {
     stageAttemptId,
     source: 'temporal-terminal-observation:paper-mission-stage-route-terminal',
   });
@@ -374,14 +374,14 @@ export function syncStageAttemptFromTemporalTerminalObservation(
           observedAt: nowIso(),
         });
       }
-      reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
+      reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
       return synced;
     }
     const costSummary = latestActivityCostSummaryFromTemporalObservation(observation);
     const existingProviderRun = parseStageAttemptJsonObject(row.provider_run_json);
     if (rowHasCompletedTerminalObservation(row) && (!costSummary || recordOrNull(existingProviderRun.cost_summary))) {
       markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt: nowIso() });
-      reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
+      reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
       return null;
     }
     const observedAt = nowIso();
@@ -392,7 +392,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       WHERE stage_attempt_id = ?
     `).run(JSON.stringify(providerRun), observedAt, observation.stage_attempt_id);
     markLinkedDefaultExecutorTaskCompleted(db, { row, observedAt });
-    reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
+    reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
     return inspectStageAttempt(db, observation.stage_attempt_id);
   }
   if (!failureReason && !nonCompletionBlocker && !completedCloseoutPacket) {
@@ -411,7 +411,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
         observedAt: nowIso(),
       });
     }
-    reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
+    reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
     return synced;
   }
   const observedAt = nowIso();
@@ -477,7 +477,7 @@ export function syncStageAttemptFromTemporalTerminalObservation(
       taskDeadLetterReason: taskDeadLetterReasonForTemporalNonCompletionBlocker(nonCompletionBlocker),
       eventType: 'stage_attempt_terminal_blocked_task',
     });
-    reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
+    reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
     return inspectStageAttempt(db, observation.stage_attempt_id);
   }
   if (!failureReason) {
@@ -536,6 +536,6 @@ export function syncStageAttemptFromTemporalTerminalObservation(
     taskDeadLetterReason,
     eventType: taskEventType,
   });
-  reconcilePaperMissionStageRouteTerminalObservation(db, observation.stage_attempt_id);
+  reconcileDomainRouteTerminalObservation(db, observation.stage_attempt_id);
   return inspectStageAttempt(db, observation.stage_attempt_id);
 }

@@ -28,7 +28,7 @@ export { buildProviderContinuousProof } from './family-runtime-provider-continuo
 export { applyProviderClosureEvidence, providerClosureEvidence, providerResidencyGapStatus, readProviderContinuousProof } from './family-domain-agent-provider-closure.ts';
 export type { ProviderContinuousProof } from './family-domain-agent-provider-closure.ts';
 export { runFamilyRuntimeEvidenceWorklist } from './family-runtime-evidence-worklist.ts';
-export { buildMasDomainRouteSupportProjection } from './family-runtime-mas-domain-route.ts';
+export { buildDomainRouteSupportProjection } from './family-runtime-domain-route.ts';
 export { runFamilyRuntimeLifecycleApply, type LifecycleApplyMode } from './family-runtime-lifecycle-index.ts';
 export { buildAttemptGenericProjections, buildWorkbenchGenericProjections } from './stage-attempt-projections/stage-attempt-generic-projections.ts';
 export type { StageAttemptGenericProjectionInput } from './stage-attempt-projections/stage-attempt-generic-projections.ts';

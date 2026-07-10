@@ -273,6 +273,7 @@ function taskRunProjectionTask(task: JsonRecord) {
     usage_telemetry_status: asString(task.usage_telemetry_status),
     typed_blocker_summary: asString(task.typed_blocker_summary),
     typed_blocker_owner: asString(task.typed_blocker_owner),
+    runtime_blocker_summary: asString(task.runtime_blocker_summary),
     resolution_route: asString(task.resolution_route),
     gateway_status_ref: asString(task.gateway_status_ref),
     connector_readiness_refs: asStringArray(task.connector_readiness_refs).length > 0

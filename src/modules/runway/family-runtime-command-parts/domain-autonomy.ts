@@ -1,25 +1,25 @@
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FamilyRuntimeCommandInput } from '../family-runtime-command.ts';
-import type { PaperAutonomyStageRunIdentity } from '../family-runtime-paper-autonomy.ts';
+import type { DomainAutonomyStageRunIdentity } from '../family-runtime-domain-autonomy.ts';
 import { parseCliOptions, parsePayload, parsePayloadFile } from './shared.ts';
 
-export type PaperAutonomySupervisorCommandInput =
+export type DomainAutonomySupervisorCommandInput =
   | {
-    mode: 'paper_autonomy_supervisor_readback';
+    mode: 'domain_autonomy_supervisor_readback';
     input: {
       obligation_ledger_path: string;
       decision_ledger_path: string;
       obligation_id: string;
-      current_identity: PaperAutonomyStageRunIdentity;
+      current_identity: DomainAutonomyStageRunIdentity;
     };
   }
   | {
-    mode: 'paper_autonomy_supervisor_decide';
+    mode: 'domain_autonomy_supervisor_decide';
     input: {
       obligation_ledger_path: string;
       decision_ledger_path: string;
       obligation_id: string;
-      current_identity: PaperAutonomyStageRunIdentity;
+      current_identity: DomainAutonomyStageRunIdentity;
       current_owner_delta_ref?: string;
       provider_admission_identity_ref?: string;
       terminal_closeout_ref?: string;
@@ -35,15 +35,7 @@ export type PaperAutonomySupervisorCommandInput =
     };
   };
 
-export type AutonomySupervisorCommandInput = PaperAutonomySupervisorCommandInput;
-
-export function parsePaperAutonomyArgs(rest: string[]): FamilyRuntimeCommandInput | null {
-  if (rest[0] !== 'supervisor' || (rest[1] !== 'readback' && rest[1] !== 'decide')) {
-    return null;
-  }
-
-  return parseAutonomySupervisorAction(rest[1], rest, 2, 'paper-autonomy supervisor');
-}
+export type AutonomySupervisorCommandInput = DomainAutonomySupervisorCommandInput;
 
 export function parseAutonomySupervisorArgs(rest: string[]): FamilyRuntimeCommandInput | null {
   if (rest[0] !== 'readback' && rest[0] !== 'decide') {
@@ -62,7 +54,7 @@ function parseAutonomySupervisorAction(
   let obligationLedgerPath = '';
   let decisionLedgerPath = '';
   let obligationId = '';
-  let currentIdentity: PaperAutonomyStageRunIdentity | null = null;
+  let currentIdentity: DomainAutonomyStageRunIdentity | null = null;
   let currentOwnerDeltaRef: string | undefined;
   let providerAdmissionIdentityRef: string | undefined;
   let terminalCloseoutRef: string | undefined;
@@ -87,10 +79,10 @@ function parseAutonomySupervisorAction(
       obligationId = value;
       return true;
     } else if (token === '--current-identity' && value) {
-      currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayload(value), commandPath);
+      currentIdentity = parseDomainAutonomyStageRunIdentity(parsePayload(value), commandPath);
       return true;
     } else if (token === '--current-identity-file' && value) {
-      currentIdentity = parsePaperAutonomyStageRunIdentity(parsePayloadFile(value), commandPath);
+      currentIdentity = parseDomainAutonomyStageRunIdentity(parsePayloadFile(value), commandPath);
       return true;
     } else if (action === 'decide' && token === '--current-owner-delta-ref' && value) {
       currentOwnerDeltaRef = value;
@@ -167,7 +159,7 @@ function parseAutonomySupervisorAction(
 
   if (action === 'decide') {
     return {
-      mode: 'paper_autonomy_supervisor_decide',
+      mode: 'domain_autonomy_supervisor_decide',
       input: {
         obligation_ledger_path: obligationLedgerPath,
         decision_ledger_path: decisionLedgerPath,
@@ -190,7 +182,7 @@ function parseAutonomySupervisorAction(
   }
 
   return {
-    mode: 'paper_autonomy_supervisor_readback',
+    mode: 'domain_autonomy_supervisor_readback',
     input: {
       obligation_ledger_path: obligationLedgerPath,
       decision_ledger_path: decisionLedgerPath,
@@ -200,10 +192,10 @@ function parseAutonomySupervisorAction(
   };
 }
 
-function parsePaperAutonomyStageRunIdentity(
+function parseDomainAutonomyStageRunIdentity(
   payload: Record<string, unknown>,
   commandPath: string,
-): PaperAutonomyStageRunIdentity {
+): DomainAutonomyStageRunIdentity {
   const stagePacketRefs = Array.isArray(payload.stage_packet_refs)
     ? payload.stage_packet_refs.filter((value): value is string => typeof value === 'string')
     : [];

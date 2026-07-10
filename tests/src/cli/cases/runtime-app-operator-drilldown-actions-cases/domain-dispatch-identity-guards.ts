@@ -158,14 +158,14 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
       `${JSON.stringify({
         surface_kind: 'mas_domain_owner_typed_blocker',
         study_id: '002-dm-china-us-mortality-attribution',
-        source_fingerprint: 'mas_default_executor_source_stale_handoff',
+        source_fingerprint: 'default_executor_source_stale_handoff',
         closeout_binding: {
           study_id: '002-dm-china-us-mortality-attribution',
           stage_id: '08-publication_package_handoff',
           stage_run_id: 'stage-run::002-dm-china-us-mortality-attribution::08-publication_package_handoff',
           stage_manifest_ref: 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json',
           current_pointer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/current.json',
-          source_fingerprint: 'mas_default_executor_source_stale_handoff',
+          source_fingerprint: 'default_executor_source_stale_handoff',
           idempotency_key: 'idem_stale_publication_handoff',
           provider_attempt_ref: 'temporal://attempt/sat_stale_publication_handoff',
           attempt_lease_ref: 'opl://stage-attempts/sat_stale_publication_handoff/leases/frt_stale/active',
@@ -198,7 +198,7 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
       '--task',
       'task-domain-dispatch-local-typed-blocker-conflict',
       '--source-fingerprint',
-      'mas_default_executor_source_current_dispatch',
+      'default_executor_source_current_dispatch',
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -255,7 +255,7 @@ test('runtime action execute blocks stale local typed blocker refs bound to anot
     );
     assert.equal(
       preflight.local_owner_answer_ref_identity.inspected_refs[0].identity.source_fingerprint,
-      'mas_default_executor_source_stale_handoff',
+      'default_executor_source_stale_handoff',
     );
     const conflictFields = preflight.identity_conflicts.map((conflict: { field: string }) => conflict.field);
     assert.equal(conflictFields.includes('stage_id'), true);

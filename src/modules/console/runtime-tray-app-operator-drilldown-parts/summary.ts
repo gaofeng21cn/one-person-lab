@@ -1,6 +1,7 @@
 import {
   countValue as numberValue,
   record,
+  stringValue,
   type JsonRecord,
 } from '../../../kernel/json-record.ts';
 import {
@@ -121,9 +122,8 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     domainOwnerPayloadSummaryReceipts.filter((receipt) => receipt.receipt_status === 'recorded').length;
   const domainOwnerPayloadSummaryVerifiedReceiptCount =
     domainOwnerPayloadSummaryReceipts.filter((receipt) => receipt.receipt_status === 'verified').length;
-  const routeSupport = record(input.runtimeManagerRouteSupport.mas_domain_route_projection);
-  const supportedTaskKinds = stringList(routeSupport.supported_task_kinds);
-  const routeSupportActionRefs = stringList(routeSupport.action_refs);
+  const routeSupport = record(input.runtimeManagerRouteSupport.domain_route_projection);
+  const supportedTaskKinds = stringList(routeSupport.canonical_task_kinds);
   const productionEvidenceTailItemCount = numberValue(productionTailSummary.tail_item_count);
   const productionEvidenceTailOpenItemCount = numberValue(productionTailSummary.open_tail_item_count);
   const productionEvidenceTailOwnerGroupCount = numberValue(productionTailSummary.owner_group_count);
@@ -168,10 +168,11 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
     quality_ref_count: qualityRefs.length,
     readiness_ref_count: readinessRefs.length,
     provider_slo_action_count: input.providerActionRefs.length,
-    runtime_manager_mas_route_support_task_kind_count: supportedTaskKinds.length,
-    runtime_manager_mas_aftercare_route_support_count:
-      supportedTaskKinds.filter((taskKind) => taskKind.startsWith('publication_aftercare/')).length,
-    runtime_manager_mas_route_support_action_ref_count: routeSupportActionRefs.length,
+    runtime_manager_domain_route_support_task_kind_count: supportedTaskKinds.length,
+    runtime_manager_domain_route_task_kind_prefix:
+      stringValue(routeSupport.supported_task_kind_prefix),
+    runtime_manager_domain_route_action_ref_source:
+      stringValue(routeSupport.action_ref_source),
     provider_slo_cadence_window_status: input.providerCadenceWindow.window_status,
     provider_slo_cadence_window_long_evidence_ready: input.providerCadenceWindow.long_window_evidence_ready,
     provider_slo_cadence_window_expected_receipt_count: input.providerCadenceWindow.expected_slo_execution_receipt_count,

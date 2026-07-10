@@ -1,9 +1,13 @@
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { buildDomainManifestCatalog } from '../atlas/index.ts';
+import {
+  buildDomainManifestCatalog,
+  defaultStandardDomainAgentRepoInputs,
+  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+} from '../atlas/index.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
-  buildMasDomainRouteSupportProjection,
+  buildDomainRouteSupportProjection,
   requireRuntimeTraySnapshotProvider,
   runFamilyRuntimeEvidenceWorklist,
   type RuntimeTraySnapshotProvider,
@@ -175,7 +179,11 @@ export async function buildFrameworkReadinessSummary(
     materializeFamilyTransitions: false,
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
-  const packCompiler = record(buildDomainPackCompilerList(contracts, { familyDefaults: true }).domain_pack_compiler);
+  const packCompiler = record(buildDomainPackCompilerList(contracts, {
+    familyDefaults: true,
+    familyRepoInputs: defaultStandardDomainAgentRepoInputs(),
+    defaultRepoDirectories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
+  }).domain_pack_compiler);
   const familyStages = record(buildFamilyStagesList(contracts, { domainManifests }).family_stages);
   const familyStageReadiness = record(buildFamilyStageReadinessInspect(
     contracts,
@@ -345,15 +353,11 @@ export async function buildFrameworkReadinessSummary(
       + numberValue(appSummary.domain_dispatch_attention_missing_owner_chain_count)
     );
   const runtimeManagerRouteSupport = record(appOperatorDrilldown.runtime_manager_route_support);
-  const runtimeManagerMasRouteSupport = Object.keys(record(runtimeManagerRouteSupport.mas_domain_route_projection)).length > 0
-    ? record(runtimeManagerRouteSupport.mas_domain_route_projection)
-    : buildMasDomainRouteSupportProjection();
-  const runtimeManagerRouteSupportTaskKinds = Array.isArray(runtimeManagerMasRouteSupport.supported_task_kinds)
-    ? runtimeManagerMasRouteSupport.supported_task_kinds
-      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-  const runtimeManagerRouteSupportActionRefs = Array.isArray(runtimeManagerMasRouteSupport.action_refs)
-    ? runtimeManagerMasRouteSupport.action_refs
+  const runtimeManagerDomainRouteSupport = Object.keys(record(runtimeManagerRouteSupport.domain_route_projection)).length > 0
+    ? record(runtimeManagerRouteSupport.domain_route_projection)
+    : buildDomainRouteSupportProjection();
+  const runtimeManagerRouteSupportTaskKinds = Array.isArray(runtimeManagerDomainRouteSupport.canonical_task_kinds)
+    ? runtimeManagerDomainRouteSupport.canonical_task_kinds
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
   const runtimeManagerRouteSupportAuthorityBoundary = {
@@ -362,11 +366,9 @@ export async function buildFrameworkReadinessSummary(
     can_claim_production_ready: false,
     can_close_owner_chain: false,
     can_record_owner_receipt: false,
-    can_authorize_publication_aftercare: false,
+    can_authorize_domain_route: false,
     ...record(runtimeManagerRouteSupport.authority_boundary),
   };
-  const runtimeManagerAftercareRouteSupportCount =
-    runtimeManagerRouteSupportTaskKinds.filter((taskKind) => taskKind.startsWith('publication_aftercare/')).length;
   const developerModeLiveCloseoutAttentionCount =
     numberValue(developerModeLiveCloseoutEvidence.attention_count);
   const openTailCount =
@@ -508,9 +510,11 @@ export async function buildFrameworkReadinessSummary(
     domain_blocked_unique_typed_blocker_ref_count: typedBlockerAttention.uniqueTypedBlockerRefCount,
     domain_blocked_typed_blocker_group_count: typedBlockerAttention.typedBlockerGroupCount,
     domain_blocked_attention_grouping_semantics: typedBlockerAttention.groupingSemantics,
-    runtime_manager_mas_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
-    runtime_manager_mas_aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
-    runtime_manager_mas_route_support_action_ref_count: runtimeManagerRouteSupportActionRefs.length,
+    runtime_manager_domain_route_support_task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
+    runtime_manager_domain_route_task_kind_prefix:
+      stringValue(runtimeManagerDomainRouteSupport.supported_task_kind_prefix),
+    runtime_manager_domain_route_action_ref_source:
+      stringValue(runtimeManagerDomainRouteSupport.action_ref_source),
     domain_manifest_projection_cache_used_count:
       numberValue(domainManifests.summary.projection_cache_used_count),
     domain_manifest_stale_binding_count:
@@ -614,7 +618,7 @@ export async function buildFrameworkReadinessSummary(
         domain_dispatch_attention:
           'App/operator owner-chain dispatch attention derived from stage evidence typed blockers and missing owner-chain refs without authorizing domain ready',
         runtime_manager_route_support:
-          'Runtime Manager supported MAS route catalog projection only; support does not close owner-chain receipts or authorize domain ready',
+          'Runtime Manager exposes a generic domain-route catalog projection only; support does not close owner-chain receipts or authorize domain ready',
         provider_slo_fields:
           'provider_slo_* fields describe Temporal provider cadence/capability SLO only',
         owner_delta_handoff: OWNER_DELTA_HANDOFF_TAXONOMY,
@@ -894,17 +898,17 @@ export async function buildFrameworkReadinessSummary(
         surface_kind: stringValue(runtimeManagerRouteSupport.surface_kind)
           ?? 'opl_app_drilldown_runtime_manager_route_support',
         source_surface: stringValue(runtimeManagerRouteSupport.source_surface)
-          ?? 'opl_runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection',
+          ?? 'opl_runtime_manager.family_runtime_stage_attempt_index.domain_route_projection',
         projection_policy: stringValue(runtimeManagerRouteSupport.projection_policy)
           ?? 'refs_only_supported_route_catalog_no_owner_chain_closure_or_domain_ready_claim',
-        owner_route_handoff_ref: stringValue(runtimeManagerMasRouteSupport.owner_route_handoff_ref),
+        owner_route_handoff_ref: stringValue(runtimeManagerDomainRouteSupport.owner_route_handoff_ref),
         accepted_runtime_owner_route_ref:
-          stringValue(runtimeManagerMasRouteSupport.accepted_runtime_owner_route_ref),
+          stringValue(runtimeManagerDomainRouteSupport.accepted_runtime_owner_route_ref),
         supported_task_kinds: runtimeManagerRouteSupportTaskKinds,
-        action_refs: runtimeManagerRouteSupportActionRefs,
+        supported_task_kind_prefix:
+          stringValue(runtimeManagerDomainRouteSupport.supported_task_kind_prefix),
+        action_ref_source: stringValue(runtimeManagerDomainRouteSupport.action_ref_source),
         task_kind_count: runtimeManagerRouteSupportTaskKinds.length,
-        aftercare_route_support_count: runtimeManagerAftercareRouteSupportCount,
-        action_ref_count: runtimeManagerRouteSupportActionRefs.length,
         support_catalog_is_owner_chain_closure: false,
         can_claim_domain_ready: false,
         can_claim_production_ready: false,

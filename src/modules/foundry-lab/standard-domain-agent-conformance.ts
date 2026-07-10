@@ -13,7 +13,7 @@ import { buildPrivatePlatformResidueDeletionGate } from './private-platform-resi
 import {
   defaultFamilyRepoInputs,
   DEFAULT_FAMILY_REPOS,
-} from './standard-domain-agent-family-repos.ts';
+} from '../atlas/index.ts';
 import { resolveStandardAgent } from '../atlas/index.ts';
 import {
   buildStageArtifactKernelAdoptionChecks,
@@ -29,6 +29,7 @@ import { buildFamilyAgentLiveConformanceProbe } from './family-agent-conformance
 import { buildGeneratedInterfaceCheck } from './standard-domain-agent-conformance-generated-interfaces.ts';
 import { buildGoldenPathDefaultSurfaceBudgetChecks } from './standard-domain-agent-conformance-golden-path.ts';
 import { buildPhysicalMorphologyChecks } from './standard-domain-agent-conformance-physical-morphology.ts';
+import { buildStandardAgentSourceBehaviorChecks } from './standard-domain-agent-source-behavior.ts';
 import { buildStageRunDomainAdoptionReadModel } from './standard-domain-agent-conformance-stage-run-adoption.ts';
 import { buildFoundryAgentOsConformance } from './standard-domain-agent-conformance-foundry-agent-os.ts';
 import { validateStandardDomainAgentScaffold } from './standard-domain-agent-scaffold.ts';
@@ -308,6 +309,7 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
   const generatedInterfaceChecks = buildGeneratedInterfaceCheck(repoDir);
   const platformSurfaceOwnershipChecks = buildAgentPlatformSurfaceOwnershipForRepo(repoDir, input.requested_agent_id);
   const physicalMorphologyChecks = buildPhysicalMorphologyChecks(repoDir, domainId);
+  const sourceBehaviorChecks = buildStandardAgentSourceBehaviorChecks(repoDir);
   const workspaceFileLifecycleChecks = buildWorkspaceFileLifecycleChecks(repoDir);
   const stageArtifactKernelAdoptionChecks = buildStageArtifactKernelAdoptionChecks(repoDir);
   const stageRunKernelProfileChecks = buildStageRunKernelProfileChecks(repoDir);
@@ -331,6 +333,7 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
     ...generatedInterfaceChecks.blockers,
     ...platformSurfaceOwnershipChecks.blockers,
     ...physicalMorphologyChecks.blockers,
+    ...sourceBehaviorChecks.blockers,
     ...workspaceFileLifecycleChecks.blockers,
     ...stageArtifactKernelAdoptionChecks.blockers,
     ...stageRunKernelProfileChecks.blockers,
@@ -361,6 +364,7 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
     generated_interface_checks: generatedInterfaceChecks,
     platform_surface_ownership_checks: platformSurfaceOwnershipChecks,
     physical_morphology_checks: physicalMorphologyChecks,
+    source_behavior_checks: sourceBehaviorChecks,
     workspace_file_lifecycle_checks: workspaceFileLifecycleChecks,
     stage_artifact_kernel_adoption_checks: stageArtifactKernelAdoptionChecks,
     stage_run_kernel_profile_checks: stageRunKernelProfileChecks,

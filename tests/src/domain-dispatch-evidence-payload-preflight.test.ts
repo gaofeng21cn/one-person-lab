@@ -111,7 +111,7 @@ test('typed blocker refs lacking current StageRun closeout binding fail closed w
           stage_manifest_ref: 'opl://stage-manifests/domain_owner%2Fdefault-executor-dispatch',
           current_pointer_ref:
             'opl://stage-runs/app-stage-run%3Amedautoscience%3Adomain-owner-default-executor-dispatch/current',
-          source_fingerprint: 'mas_default_executor_source_current',
+          source_fingerprint: 'default_executor_source_current',
           idempotency_key: 'idem_current',
           provider_attempt_ref: 'temporal://attempt/sat-current',
           attempt_lease_ref: 'opl://stage-attempts/sat-current/leases/frt-current/active',
@@ -251,7 +251,7 @@ test('MAS owner delta result closeout binding can satisfy StageRun owner-answer 
           stage_run_id: 'stage-run::dm002::domain-owner-dispatch',
           stage_manifest_ref: 'mas://stage-manifests/dm002/domain-owner-dispatch',
           current_pointer_ref: 'mas://current-pointers/dm002/domain-owner-dispatch',
-          source_fingerprint: 'mas_default_executor_source_current',
+          source_fingerprint: 'default_executor_source_current',
           idempotency_key: 'owner-route::dm002::medical-paper-readiness',
           provider_attempt_ref: 'opl://stage-attempts/sat-dm002-readiness',
           attempt_lease_ref: 'opl://stage-attempts/sat-dm002-readiness/leases/current',
@@ -266,7 +266,7 @@ test('MAS owner delta result closeout binding can satisfy StageRun owner-answer 
         stage_run_id: 'stage-run::dm002::domain-owner-dispatch',
         stage_manifest_ref: 'mas://stage-manifests/dm002/domain-owner-dispatch',
         current_pointer_ref: 'mas://current-pointers/dm002/domain-owner-dispatch',
-        source_fingerprint: 'mas_default_executor_source_current',
+        source_fingerprint: 'default_executor_source_current',
         idempotency_key: 'owner-route::dm002::medical-paper-readiness',
         provider_attempt_ref: 'opl://stage-attempts/sat-dm002-readiness',
         attempt_lease_ref: 'opl://stage-attempts/sat-dm002-readiness/leases/current',
@@ -303,7 +303,7 @@ test('MAS owner delta result closeout binding conflicts fail closed', () => {
           stage_run_id: 'stage-run::dm002::stale',
           stage_manifest_ref: 'mas://stage-manifests/dm002/stale',
           current_pointer_ref: 'mas://current-pointers/dm002/stale',
-          source_fingerprint: 'mas_default_executor_source_stale',
+          source_fingerprint: 'default_executor_source_stale',
           idempotency_key: 'owner-route::dm002::stale',
         },
       },
@@ -314,7 +314,7 @@ test('MAS owner delta result closeout binding conflicts fail closed', () => {
         stage_run_id: 'stage-run::dm002::current',
         stage_manifest_ref: 'mas://stage-manifests/dm002/current',
         current_pointer_ref: 'mas://current-pointers/dm002/current',
-        source_fingerprint: 'mas_default_executor_source_current',
+        source_fingerprint: 'default_executor_source_current',
         idempotency_key: 'owner-route::dm002::current',
       },
     },
@@ -441,7 +441,7 @@ test('domain dispatch evidence separates OPL attempt key from domain source fres
         domain_id: 'medautoscience',
         task_kind: 'domain_owner/default-executor-dispatch',
         study_id: '002-dm-china-us-mortality-attribution',
-        source_fingerprint: 'mas_default_executor_source_76b3786a207154317d53c958',
+        source_fingerprint: 'default_executor_source_76b3786a207154317d53c958',
         domain_source_fingerprint: '4a0c28ae63dc5d68',
       },
     },
@@ -456,7 +456,7 @@ test('domain dispatch evidence separates OPL attempt key from domain source fres
   );
   assert.equal(
     preflight.identity_binding.target_identity.source_fingerprint,
-    'mas_default_executor_source_76b3786a207154317d53c958',
+    'default_executor_source_76b3786a207154317d53c958',
   );
   assert.equal(preflight.identity_binding.payload_identity.source_fingerprint, undefined);
 });
@@ -475,7 +475,7 @@ test('domain source freshness mismatch still fails closed', () => {
         domain_id: 'medautoscience',
         task_kind: 'domain_owner/default-executor-dispatch',
         study_id: '002-dm-china-us-mortality-attribution',
-        source_fingerprint: 'mas_default_executor_source_76b3786a207154317d53c958',
+        source_fingerprint: 'default_executor_source_76b3786a207154317d53c958',
         domain_source_fingerprint: '4a0c28ae63dc5d68',
       },
     },
@@ -502,7 +502,7 @@ test('explicit OPL attempt key still conflicts independently from domain source 
         domain_id: 'medautoscience',
         task_kind: 'domain_owner/default-executor-dispatch',
         study_id: '002-dm-china-us-mortality-attribution',
-        source_fingerprint: 'mas_default_executor_source_76b3786a207154317d53c958',
+        source_fingerprint: 'default_executor_source_76b3786a207154317d53c958',
         domain_source_fingerprint: '4a0c28ae63dc5d68',
       },
     },
@@ -534,7 +534,7 @@ test('typed blocker ref content identity mismatch fails closed even when payload
         'opl://stage-attempts/sat_current/execution-authorizations/frt_current/wf_current',
       workspace_scope_ref: `workspace:${workspaceRoot}`,
       artifact_scope_ref: 'stage-packet:current',
-      source_fingerprint: 'mas_default_executor_source_current',
+      source_fingerprint: 'default_executor_source_current',
       study_id: 'study:domain-dispatch-current',
       domain_context: {
         domain_id: 'medautoscience',
@@ -543,7 +543,7 @@ test('typed blocker ref content identity mismatch fails closed even when payload
       },
       action_type: 'domain_owner/default-executor-dispatch',
       work_unit_id: 'stage-packet:current',
-      work_unit_fingerprint: 'mas_default_executor_source_current',
+      work_unit_fingerprint: 'default_executor_source_current',
       decision: 'authorize',
       reason: 'test_authorized_refs_only_stage_attempt_execution',
       operator: 'test:domain-dispatch-evidence-payload-preflight',
@@ -565,10 +565,10 @@ test('typed blocker ref content identity mismatch fails closed even when payload
       stage_run_id: 'stage-run::003-dpcc-primary-care-phenotype-treatment-gap::08-publication_package_handoff',
       stage_manifest_ref: 'artifacts/stage_outputs/08-publication_package_handoff/stage_manifest.json',
       current_pointer_ref: 'artifacts/stage_outputs/08-publication_package_handoff/current.json',
-      source_fingerprint: 'mas_default_executor_source_stale',
+      source_fingerprint: 'default_executor_source_stale',
       idempotency_key: 'idem_stale',
       closeout_binding: {
-        source_fingerprint: 'mas_default_executor_source_stale',
+        source_fingerprint: 'default_executor_source_stale',
         idempotency_key: 'idem_stale',
         provider_attempt_ref: 'temporal://attempt/sat_stale',
         attempt_lease_ref: 'opl://stage-attempts/sat_stale/leases/frt_stale/active',
@@ -653,7 +653,7 @@ test('local owner answer inspection supports JSON fragments and ignores JSONL hi
     const historyPath = join(workspaceRoot, historyRef);
     mkdirSync(join(closeoutPath, '..'), { recursive: true });
     writeFileSync(closeoutPath, JSON.stringify({
-      surface_kind: 'mas_default_executor_execution_closeout',
+      surface_kind: 'default_executor_execution_closeout',
       stage_attempt_id: 'sat-current',
       study_id: '002-dm-china-us-mortality-attribution',
       domain_blocker: {

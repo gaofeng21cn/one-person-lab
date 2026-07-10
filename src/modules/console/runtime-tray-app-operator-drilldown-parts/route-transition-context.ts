@@ -5,7 +5,7 @@ import {
 import type {
   ProviderContinuousProof,
 } from '../../runway/index.ts';
-import { buildMasDomainRouteSupportProjection } from '../../runway/index.ts';
+import { buildDomainRouteSupportProjection } from '../../runway/index.ts';
 import type { JsonRecord } from '../runtime-tray-snapshot-types.ts';
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary as refsOnlyAuthorityBoundary,
@@ -130,10 +130,10 @@ export function legacyCleanupPlanRefs(
 export function runtimeManagerRouteSupportRefs() {
   return {
     surface_kind: 'opl_app_drilldown_runtime_manager_route_support',
-    source_surface: 'opl_runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection',
+    source_surface: 'opl_runtime_manager.family_runtime_stage_attempt_index.domain_route_projection',
     projection_policy:
       'refs_only_supported_route_catalog_no_owner_chain_closure_or_domain_ready_claim',
-    mas_domain_route_projection: buildMasDomainRouteSupportProjection(),
+    domain_route_projection: buildDomainRouteSupportProjection(),
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),
       can_claim_domain_ready: false,
@@ -141,7 +141,7 @@ export function runtimeManagerRouteSupportRefs() {
       can_claim_artifact_authority: false,
       can_close_owner_chain: false,
       can_record_owner_receipt: false,
-      can_authorize_publication_aftercare: false,
+      can_authorize_domain_route: false,
     },
   };
 }
@@ -315,7 +315,7 @@ export function routeTransitionDrilldown(input: {
   return {
     surface_kind: 'opl_app_drilldown_route_transition_drilldown',
     projection_policy: 'refs_only_no_domain_truth_or_owner_receipt_generation',
-    mas_route_support: record(input.runtimeManagerRouteSupport.mas_domain_route_projection),
+    domain_route_support: record(input.runtimeManagerRouteSupport.domain_route_projection),
     transition_spec_refs: transitionSpecRefs,
     materialization_refs: materializationRefs,
     stage_attempt_refs: stageAttemptRefs,

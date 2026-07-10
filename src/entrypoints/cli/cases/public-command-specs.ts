@@ -1,4 +1,5 @@
 import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../../modules/charter/contracts.ts';
+import { resolveStandardAgent } from '../../../modules/charter/index.ts';
 import { buildOplFrameworkLocator } from '../../../modules/connect/opl-framework-locator.ts';
 import {
   buildFrameworkOperatingMaturityCompactReadback,
@@ -22,6 +23,10 @@ import {
   buildFamilyAgentDescriptorList,
 } from '../../../modules/atlas/family-domain-agent-descriptor.ts';
 import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manifest/catalog-builder.ts';
+import {
+  defaultStandardDomainAgentRepoInputs,
+  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+} from '../../../modules/atlas/index.ts';
 import { withOplMetaAgentDescriptorEntry } from '../../../modules/foundry-lab/opl-meta-agent-descriptor-adapter.ts';
 import {
   buildGeneratedAgentInterfaces,
@@ -83,6 +88,11 @@ export function buildPublicCommandSpecs(
   commandSpecs: Record<string, CommandSpec>,
   getContracts: () => FrameworkContracts,
 ): Record<string, CommandSpec> {
+  const standardAgentPackCompilerInputs = () => ({
+    familyRepoInputs: defaultStandardDomainAgentRepoInputs(),
+    defaultRepoDirectories: DEFAULT_STANDARD_DOMAIN_AGENT_REPOS.map((repo) => repo.directory),
+    resolveDomainSelection: (value: string) => resolveStandardAgent(value)?.domain_id ?? value,
+  });
   const buildEngineActionSpec = (
     action: 'install' | 'update' | 'reinstall' | 'remove',
     usage: string,
@@ -440,7 +450,7 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|scheduler status|scheduler install|scheduler trigger|scheduler remove|evidence-worklist|paper-autonomy supervisor decide|paper-autonomy supervisor readback|attempt list|attempt inspect|attempt query|attempt cancel|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|provider repair|provider-slo tick|provider-worker supervisor|scheduler status|scheduler install|scheduler trigger|scheduler remove|evidence-worklist|autonomy-supervisor decide|autonomy-supervisor readback|attempt list|attempt inspect|attempt query|attempt cancel|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
@@ -454,8 +464,8 @@ export function buildPublicCommandSpecs(
         'opl family-runtime scheduler remove --provider temporal',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --json',
         'opl family-runtime evidence-worklist --family-defaults --provider temporal --executor-kind codex_cli --detail full --json',
-        'opl family-runtime paper-autonomy supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json --typed-blocker-ref mas://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
-        'opl family-runtime paper-autonomy supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:dm003 --current-identity-file /tmp/current-identity.json',
+        'opl family-runtime autonomy-supervisor decide --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:example --current-identity-file /tmp/current-identity.json --typed-blocker-ref domain://typed-blocker --budget-or-missing-evidence-ref opl://non-advancing',
+        'opl family-runtime autonomy-supervisor readback --obligation-ledger /tmp/obligations.jsonl --decision-ledger /tmp/decisions.jsonl --obligation-id obligation:example --current-identity-file /tmp/current-identity.json',
       ],
       group: 'runtime',
     }),
@@ -628,6 +638,7 @@ export function buildPublicCommandSpecs(
         return buildDomainPackCompilerList(getContracts(), {
           ...parsePackCompilerArgs(args),
           loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+          ...standardAgentPackCompilerInputs(),
         });
       },
     },
@@ -641,6 +652,7 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildDomainPackCompilerInspect(getContracts(), args, {
         loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+        ...standardAgentPackCompilerInputs(),
       }),
     },
     'agents interfaces': {
@@ -655,6 +667,7 @@ export function buildPublicCommandSpecs(
       group: 'domain',
       handler: (args) => buildGeneratedAgentInterfaces(getContracts(), args, {
         loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+        ...standardAgentPackCompilerInputs(),
       }),
     },
     'agents platform-surfaces': {

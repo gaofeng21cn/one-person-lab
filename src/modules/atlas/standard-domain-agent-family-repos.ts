@@ -6,7 +6,7 @@ import {
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
-} from '../charter/standard-agent-registry.ts';
+} from '../charter/index.ts';
 
 export const DEFAULT_FAMILY_REPOS = STANDARD_AGENT_REGISTRY.map((entry) => ({
   requested_agent_id: entry.agent_id,

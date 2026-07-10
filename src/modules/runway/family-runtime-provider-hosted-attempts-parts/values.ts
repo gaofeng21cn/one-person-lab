@@ -26,7 +26,7 @@ function nestedRecord(value: Record<string, unknown> | null, keys: string[]) {
   return isRecord(current) ? current : null;
 }
 
-export function masDefaultExecutorCurrentnessBasis(payload: Record<string, unknown>) {
+export function defaultExecutorCurrentnessBasis(payload: Record<string, unknown>) {
   return (isRecord(payload.owner_route_currentness_basis) ? payload.owner_route_currentness_basis : null)
     ?? nestedRecord(payload, ['owner_route', 'currentness_contract', 'basis']);
 }
@@ -58,15 +58,6 @@ export function sameOptionalStringField(left: Record<string, unknown>, right: Re
   return leftValue === rightValue;
 }
 
-export function workspaceRootFromProfile(profile: string | null) {
-  if (!profile) {
-    return null;
-  }
-  const marker = '/ops/medautoscience/profiles/';
-  const index = profile.indexOf(marker);
-  return index >= 0 ? profile.slice(0, index) : null;
-}
-
 export function workspaceRelativeRef(value: string | null, workspaceRoot: string | null) {
   if (!value || !workspaceRoot || !path.isAbsolute(value)) {
     return value;
@@ -83,8 +74,7 @@ export function relativeDispatchRefFromPath(payload: Record<string, unknown>) {
   if (!dispatchPath) {
     return null;
   }
-  const workspaceRoot = optionalString(payload.workspace_root)
-    ?? workspaceRootFromProfile(optionalString(payload.profile));
+  const workspaceRoot = optionalString(payload.workspace_root);
   if (!workspaceRoot) {
     return null;
   }

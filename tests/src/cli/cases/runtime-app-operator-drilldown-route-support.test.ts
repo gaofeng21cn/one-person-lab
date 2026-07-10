@@ -6,8 +6,8 @@ import {
   test,
 } from '../helpers.ts';
 import {
-  buildMasDomainRouteSupportProjection,
-} from '../../../../src/modules/runway/family-runtime-mas-domain-route.ts';
+  buildDomainRouteSupportProjection,
+} from '../../../../src/modules/runway/family-runtime-domain-route.ts';
 import {
   buildAppOperatorDrilldown,
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown.ts';
@@ -26,18 +26,18 @@ function useTempState(t: { after: (fn: () => void) => void }, prefix: string) {
   });
 }
 
-test('runtime App exposes MAS route support as refs-only runtime-manager projection', (t) => {
+test('runtime App exposes generic route support as refs-only runtime-manager projection', (t) => {
   useTempState(t, 'opl-app-route-support-');
-  const supportProjection = buildMasDomainRouteSupportProjection();
-  assert.deepEqual(supportProjection.supported_task_kinds, [
+  const supportProjection = buildDomainRouteSupportProjection();
+  assert.deepEqual(supportProjection.canonical_task_kinds, [
+    'domain_route/stage-route',
     'domain_route/reconcile-apply',
-    'publication_aftercare/analysis-queue-progress',
-    'publication_aftercare/reviewer-refresh',
   ]);
-  assert.deepEqual(supportProjection.action_refs, [
-    'domain_route_reconcile_apply',
-    'ai_reviewer_recheck_execute_dispatch',
-  ]);
+  assert.equal(supportProjection.supported_task_kind_prefix, 'domain_route/');
+  assert.equal(
+    supportProjection.action_ref_source,
+    'domain_route_runtime_request.command_kind_or_action_ref',
+  );
 
   const projection = buildAppOperatorDrilldown({
     stageAttemptWorkbench: { attempts: [] },
@@ -52,21 +52,20 @@ test('runtime App exposes MAS route support as refs-only runtime-manager project
     'opl_app_drilldown_runtime_manager_route_support',
   );
   assert.deepEqual(
-    projection.runtime_manager_route_support.mas_domain_route_projection.supported_task_kinds,
-    supportProjection.supported_task_kinds,
+    projection.runtime_manager_route_support.domain_route_projection.canonical_task_kinds,
+    supportProjection.canonical_task_kinds,
   );
-  assert.deepEqual(
-    projection.runtime_manager_route_support.mas_domain_route_projection.action_refs,
-    supportProjection.action_refs,
+  assert.equal(projection.summary.runtime_manager_domain_route_support_task_kind_count, 2);
+  assert.equal(projection.summary.runtime_manager_domain_route_task_kind_prefix, 'domain_route/');
+  assert.equal(
+    projection.summary.runtime_manager_domain_route_action_ref_source,
+    'domain_route_runtime_request.command_kind_or_action_ref',
   );
-  assert.equal(projection.summary.runtime_manager_mas_route_support_task_kind_count, 3);
-  assert.equal(projection.summary.runtime_manager_mas_aftercare_route_support_count, 2);
-  assert.equal(projection.summary.runtime_manager_mas_route_support_action_ref_count, 2);
   assert.equal(projection.runtime_manager_route_support.authority_boundary.can_write_domain_truth, false);
   assert.equal(projection.runtime_manager_route_support.authority_boundary.can_claim_domain_ready, false);
   assert.equal(projection.runtime_manager_route_support.authority_boundary.can_close_owner_chain, false);
   assert.equal(projection.runtime_manager_route_support.authority_boundary.can_record_owner_receipt, false);
-  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_authorize_publication_aftercare, false);
+  assert.equal(projection.runtime_manager_route_support.authority_boundary.can_authorize_domain_route, false);
 });
 
 test('runtime App exposes route-as-transition refs in one operator projection', () => {
@@ -104,7 +103,7 @@ test('runtime App exposes route-as-transition refs in one operator projection', 
       items: [
         {
           domain_id: 'medautoscience',
-          source_surface: 'mas_domain_route_projection',
+          source_surface: 'domain_route_projection',
           owner_route_refs: ['owner-route:mas/DM002/ai-reviewer-refresh'],
           owner_receipt_refs: ['owner-receipt:mas/DM002/reviewer-feedback-intake'],
           typed_blocker_refs: ['typed-blocker:mas/DM002/reviewer-refresh-required'],
@@ -125,8 +124,8 @@ test('runtime App exposes route-as-transition refs in one operator projection', 
     'refs_only_no_domain_truth_or_owner_receipt_generation',
   );
   assert.deepEqual(
-    routeTransition.mas_route_support.supported_task_kinds,
-    buildMasDomainRouteSupportProjection().supported_task_kinds,
+    routeTransition.domain_route_support.canonical_task_kinds,
+    buildDomainRouteSupportProjection().canonical_task_kinds,
   );
   assert.deepEqual(
     routeTransition.transition_spec_refs.map((ref: { ref: string }) => ref.ref),

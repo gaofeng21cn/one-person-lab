@@ -521,7 +521,7 @@ export function buildAppOperatorDrilldown(input: {
       '/memory-artifact-lifecycle-evidence-ledger',
       'memory_artifact_lifecycle_evidence_ledger',
     ),
-    sourceRef('/runtime_manager/family_runtime_stage_attempt_index/mas_domain_route_projection', 'runtime_manager_mas_route_support'),
+    sourceRef('/runtime_manager/family_runtime_stage_attempt_index/domain_route_projection', 'runtime_manager_domain_route_support'),
     sourceRef('/runtime_tray_snapshot/app_operator_drilldown/route_transition_drilldown', 'route_transition_drilldown'),
     sourceRef('/family-runtime/lifecycle-index', 'family_runtime_lifecycle_index'),
     sourceRef('/external-evidence-ledger', 'external_evidence_ledger'),

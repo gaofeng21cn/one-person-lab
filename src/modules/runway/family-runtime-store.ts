@@ -6,11 +6,10 @@ import type { DatabaseSync } from 'node:sqlite';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { stableId } from '../../kernel/stable-id.ts';
-import { masDomainRouteProjection } from './family-runtime-mas-domain-route.ts';
+import { domainRouteProjection } from './family-runtime-domain-route.ts';
 import {
   domainAutonomyProjection,
-  paperAutonomyProjection,
-} from './family-runtime-paper-autonomy.ts';
+} from './family-runtime-domain-autonomy.ts';
 import {
   deriveCurrentControlStateForTask,
   latestProviderActivityHeartbeat,
@@ -260,9 +259,8 @@ export function taskToPayload(row: FamilyRuntimeTaskRow) {
     domain_id: row.domain_id,
     task_kind: row.task_kind,
     payload,
-    domain_route: masDomainRouteProjection(row, payload),
+    domain_route: domainRouteProjection(row, payload),
     domain_autonomy: domainAutonomyProjection(row, payload),
-    paper_autonomy: paperAutonomyProjection(row, payload),
     dedupe_key: row.dedupe_key,
     priority: row.priority,
     status: row.status,
@@ -458,16 +456,16 @@ function eventToPayload(row: FamilyRuntimeEventRow) {
   };
 }
 
-function latestPaperMissionTransitionReceipt(events: ReturnType<typeof eventToPayload>[]) {
+function latestDomainRouteTransitionReceipt(events: ReturnType<typeof eventToPayload>[]) {
   for (const event of [...events].reverse()) {
-    if (event.event_type !== 'paper_mission_stage_route_terminal_task_reconciled') {
+    if (event.event_type !== 'domain_route_terminal_task_reconciled') {
       continue;
     }
     const payload = isRecord(event.payload) ? event.payload : {};
     const receipt = payload.opl_transition_receipt;
     if (
       isRecord(receipt)
-      && receipt.surface_kind === 'opl_transition_receipt'
+      && receipt.surface_kind === 'opl_domain_route_transition_receipt'
     ) {
       return receipt;
     }
@@ -836,7 +834,7 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
   `).all(taskId) as FamilyRuntimeNotificationRow[]).map(notificationToPayload);
   const taskPayload = taskToPayload(task);
   const currentControlState = deriveCurrentControlStateForTask(db, taskId);
-  const transitionReceipt = latestPaperMissionTransitionReceipt(events);
+  const transitionReceipt = latestDomainRouteTransitionReceipt(events);
   const receiptProjection = transitionReceipt
     ? {
         opl_transition_receipt: transitionReceipt,

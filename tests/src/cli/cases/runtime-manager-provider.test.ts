@@ -47,7 +47,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     );
     assert.equal(
       output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[0],
-      'mas_runtime_owner_route_handoff',
+      'domain_runtime_owner_route_handoff',
     );
     assert.equal(
       output.runtime_manager.family_scheduler_replacement.managed_domains[0].required_domain_refs[1],
@@ -58,21 +58,20 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       'domain_route/reconcile-apply',
     );
     assert.equal(output.runtime_manager.family_scheduler_replacement.managed_domains[0].migration_priority, 'p0');
-    assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.supported_task_kinds, [
+    assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.canonical_task_kinds, [
+      'domain_route/stage-route',
       'domain_route/reconcile-apply',
-      'publication_aftercare/analysis-queue-progress',
-      'publication_aftercare/reviewer-refresh',
     ]);
     assert.equal(
-      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.owner_route_handoff_ref,
-      'mas_runtime_owner_route_handoff',
+      output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.owner_route_handoff_ref,
+      'domain_runtime_owner_route_handoff',
     );
     assert.equal(
-      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.accepted_runtime_owner_route_ref,
+      output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.accepted_runtime_owner_route_ref,
       'opl_runtime_owner_route',
     );
     assert.deepEqual(
-      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.accepted_runtime_responsibilities,
+      output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.accepted_runtime_responsibilities,
       [
         'stage_attempt_index',
         'stage_attempt_ledger',
@@ -81,10 +80,10 @@ test('runtime manager reports OPL control plane over provider-backed family runt
         'typed_blocker_or_temporal_failure_projection',
       ],
     );
-    assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.action_refs, [
-      'domain_route_reconcile_apply',
-      'ai_reviewer_recheck_execute_dispatch',
-    ]);
+    assert.equal(
+      output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.action_ref_source,
+      'domain_route_runtime_request.command_kind_or_action_ref',
+    );
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_install_domain_daemon, false);
     assert.equal(output.runtime_manager.family_scheduler_replacement.authority_boundary.can_write_domain_memory_body, false);
@@ -186,12 +185,12 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
     assert.deepEqual(
-      runtimeManagerContract.family_runtime_stage_attempt_index.mas_domain_route_projection.supported_task_kinds,
-      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.supported_task_kinds,
+      runtimeManagerContract.family_runtime_stage_attempt_index.domain_route_projection.canonical_task_kinds,
+      output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.canonical_task_kinds,
     );
     assert.deepEqual(
-      runtimeManagerContract.family_runtime_stage_attempt_index.mas_domain_route_projection.action_refs,
-      output.runtime_manager.family_runtime_stage_attempt_index.mas_domain_route_projection.action_refs,
+      runtimeManagerContract.family_runtime_stage_attempt_index.domain_route_projection.action_ref_source,
+      output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.action_ref_source,
     );
     assert.equal(
       runtimeManagerContract.standard_domain_agent_scaffold.surface_kind,

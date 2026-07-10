@@ -10,15 +10,14 @@ import {
   type TaskLeaseProjectionRow,
 } from './family-runtime-queue-projection-boundary.ts';
 import {
-  MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION,
-  isMasOwnerRouteTask,
-  masOwnerRouteActionRef,
-} from './family-runtime-mas-domain-route.ts';
+  domainRouteActionRef,
+  isDomainRouteTask,
+} from './family-runtime-domain-route.ts';
 import {
   isMasReadinessStageNativeOwnerAction,
   masReadinessPayloadReferencesStageNativeOwnerAnswer,
 } from './family-runtime-mas-stage-native-owner-answer.ts';
-import { MAS_PAPER_AUTONOMY_TASK_KINDS } from './family-runtime-paper-autonomy.ts';
+import { DOMAIN_AUTONOMY_TASK_KINDS } from './family-runtime-domain-autonomy.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
   createStageAttempt,
@@ -64,7 +63,7 @@ import {
 import {
   exportOwnerFingerprint,
   isRecord,
-  masDefaultExecutorCurrentnessBasis,
+  defaultExecutorCurrentnessBasis,
   optionalString,
   recordList,
   recordStringRefs,
@@ -72,7 +71,6 @@ import {
   sameStringField,
   stringList,
   uniqueStrings,
-  workspaceRootFromProfile,
 } from './family-runtime-provider-hosted-attempts-parts/values.ts';
 
 function isSameDefaultExecutorDispatch(
@@ -82,24 +80,24 @@ function isSameDefaultExecutorDispatch(
   const sameDispatchRef = sameStringField(left, right, 'dispatch_ref');
   const sameDomainSourceFingerprint = sameStringField(left, right, 'domain_source_fingerprint');
   return sameStringField(left, right, 'workspace_root')
-    && sameStringField(left, right, 'study_id')
+    && sameStringField(left, right, 'work_unit_id')
     && sameStringField(left, right, 'action_type')
     && (sameDispatchRef || sameDomainSourceFingerprint);
 }
 
-function isSameDefaultExecutorStudyStage(
+function isSameDefaultExecutorWorkUnitStage(
   left: Record<string, unknown>,
   right: Record<string, unknown>,
 ) {
   return sameStringField(left, right, 'workspace_root')
-    && sameStringField(left, right, 'study_id');
+    && sameStringField(left, right, 'work_unit_id');
 }
 
-function isSameDefaultExecutorStudyActionStage(
+function isSameDefaultExecutorWorkUnitActionStage(
   left: Record<string, unknown>,
   right: Record<string, unknown>,
 ) {
-  return isSameDefaultExecutorStudyStage(left, right)
+  return isSameDefaultExecutorWorkUnitStage(left, right)
     && sameStringField(left, right, 'action_type');
 }
 
@@ -121,7 +119,7 @@ const DEFAULT_EXECUTOR_CROSS_TASK_LIVE_TASK_STATUSES = new Set<string>([
   FAMILY_RUNTIME_TASK_STATUS.succeeded,
 ]);
 const DEFAULT_EXECUTOR_TERMINAL_PROVIDER_STATUSES = new Set(['completed', 'failed', 'blocked', 'timed_out']);
-const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
+const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'default_executor_superseded_by_current_source';
 const DEFAULT_EXECUTOR_TASK_LEASE_MS = 5 * 60 * 1000;
 
 function hasActiveDefaultExecutorTaskLease(db: DatabaseSync, taskId: string | null) {
@@ -164,8 +162,8 @@ function isCrossTaskLiveDefaultExecutorAttempt(
     && (
       sameOptionalStringField(attempt.workspace_locator, workspaceLocator, 'domain_source_fingerprint')
       || (
-        isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
-        && !isSameDefaultExecutorStudyActionStage(attempt.workspace_locator, workspaceLocator)
+        isSameDefaultExecutorWorkUnitStage(attempt.workspace_locator, workspaceLocator)
+        && !isSameDefaultExecutorWorkUnitActionStage(attempt.workspace_locator, workspaceLocator)
       )
     );
 }
@@ -194,11 +192,11 @@ function liveDefaultExecutorAttemptBlocksCandidate(
   const candidateLocator = workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload);
   if (
     isSameDefaultExecutorDispatch(attempt.workspace_locator, candidateLocator)
-    || isSameDefaultExecutorStudyActionStage(attempt.workspace_locator, candidateLocator)
+    || isSameDefaultExecutorWorkUnitActionStage(attempt.workspace_locator, candidateLocator)
   ) {
     return sameDefaultExecutorStageRunIdentity(attempt, candidateRow, candidatePayload);
   }
-  return isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
+  return isSameDefaultExecutorWorkUnitStage(attempt.workspace_locator, candidateLocator);
 }
 
 function blockingLiveDefaultExecutorAttemptBlocksCandidate(
@@ -225,11 +223,11 @@ function blockingLiveDefaultExecutorAttemptBlocksCandidate(
   const candidateLocator = workspaceLocatorForProviderHostedTask(candidateRow, candidatePayload);
   if (
     isSameDefaultExecutorDispatch(attempt.workspace_locator, candidateLocator)
-    || isSameDefaultExecutorStudyActionStage(attempt.workspace_locator, candidateLocator)
+    || isSameDefaultExecutorWorkUnitActionStage(attempt.workspace_locator, candidateLocator)
   ) {
     return sameExplicitDefaultExecutorStageRunIdentityOrUnspecified(attempt, candidateRow, candidatePayload);
   }
-  return isSameDefaultExecutorStudyStage(attempt.workspace_locator, candidateLocator);
+  return isSameDefaultExecutorWorkUnitStage(attempt.workspace_locator, candidateLocator);
 }
 
 function sameDefaultExecutorStageRunIdentity(
@@ -262,7 +260,7 @@ function sameDefaultExecutorStageRunIdentity(
 }
 
 function hasExplicitDefaultExecutorStageRunIdentity(payload: Record<string, unknown>) {
-  const basis = masDefaultExecutorCurrentnessBasis(payload);
+  const basis = defaultExecutorCurrentnessBasis(payload);
   return Boolean(
     optionalString(basis?.work_unit_fingerprint)
     || optionalString(basis?.source_eval_id)
@@ -371,8 +369,7 @@ export function isDefaultExecutorDispatchTask(
   payload: Record<string, unknown>,
 ) {
   const nextOwner = optionalString(payload.next_executable_owner);
-  return row.domain_id === 'medautoscience'
-    && row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
+  return row.task_kind === DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
     && hasDefaultExecutorDispatchIdentity(payload)
     && isAdmittedDefaultExecutorNextOwner(nextOwner)
     && ['codex_cli_default', 'codex_cli'].includes(optionalString(payload.executor_kind) ?? '');
@@ -386,17 +383,17 @@ export function defaultExecutorDispatchIdentity(
     return null;
   }
   const locator = workspaceLocatorForProviderHostedTask(row, payload);
-  return stableId('mas_default_executor_dispatch_identity', [
+  return stableId('default_executor_dispatch_identity', [
     row.domain_id,
     row.task_kind,
     optionalString(locator.workspace_root),
-    optionalString(locator.study_id),
+    optionalString(locator.work_unit_id),
     optionalString(locator.action_type),
     defaultExecutorDispatchIdentityRef(payload),
   ]);
 }
 
-export function defaultExecutorStudyActionIdentity(
+export function defaultExecutorWorkUnitActionIdentity(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
@@ -404,16 +401,16 @@ export function defaultExecutorStudyActionIdentity(
     return null;
   }
   const locator = workspaceLocatorForProviderHostedTask(row, payload);
-  return stableId('mas_default_executor_study_action_identity', [
+  return stableId('default_executor_work_unit_action_identity', [
     row.domain_id,
     row.task_kind,
     optionalString(locator.workspace_root),
-    optionalString(locator.study_id),
+    optionalString(locator.work_unit_id),
     optionalString(locator.action_type),
   ]);
 }
 
-export function defaultExecutorStudyIdentity(
+export function defaultExecutorWorkUnitIdentity(
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
 ) {
@@ -421,11 +418,11 @@ export function defaultExecutorStudyIdentity(
     return null;
   }
   const locator = workspaceLocatorForProviderHostedTask(row, payload);
-  return stableId('mas_default_executor_study_identity', [
+  return stableId('default_executor_work_unit_identity', [
     row.domain_id,
     row.task_kind,
     optionalString(locator.workspace_root),
-    optionalString(locator.study_id),
+    optionalString(locator.work_unit_id),
   ]);
 }
 
@@ -506,12 +503,12 @@ export function findLiveDefaultExecutorStudyAttempt(
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
     && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
-    && isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+    && isSameDefaultExecutorWorkUnitStage(attempt.workspace_locator, workspaceLocator)
     && liveDefaultExecutorAttemptBlocksCandidate(attempt, row, payload)
   )) ?? null;
 }
 
-export function findBlockingLiveDefaultExecutorStudyAttempt(
+export function findBlockingLiveDefaultExecutorWorkUnitAttempt(
   db: DatabaseSync,
   row: FamilyRuntimeTaskRow,
   payload: Record<string, unknown>,
@@ -532,7 +529,7 @@ export function findBlockingLiveDefaultExecutorStudyAttempt(
     && attempt.domain_id === row.domain_id
     && attempt.stage_id === stageId
     && isCrossTaskLiveDefaultExecutorAttempt(db, attempt, workspaceLocator)
-    && isSameDefaultExecutorStudyStage(attempt.workspace_locator, workspaceLocator)
+    && isSameDefaultExecutorWorkUnitStage(attempt.workspace_locator, workspaceLocator)
     && blockingLiveDefaultExecutorAttemptBlocksCandidate(attempt, row, payload)
   )) ?? null;
 }
@@ -606,13 +603,13 @@ export function refreshDefaultExecutorLiveAttemptTaskLease(
 }
 
 export function stageIdForProviderHostedTask(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
-  if (isMasOwnerRouteTask(row.domain_id, row.task_kind)) {
+  if (isDomainRouteTask(row.domain_id, row.task_kind, payload)) {
     return row.task_kind;
   }
   if (isDefaultExecutorDispatchTask(row, payload)) {
     return row.task_kind;
   }
-  if (row.domain_id === 'medautoscience' && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
+  if (DOMAIN_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
     return row.task_kind;
   }
   const transition = familyTransitionResult(payload);
@@ -646,21 +643,21 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
   const providerAdmissionIdentity = isRecord(payload.provider_admission_identity)
     ? payload.provider_admission_identity
     : null;
-  if (isMasOwnerRouteTask(row.domain_id, row.task_kind)) {
+  if (isDomainRouteTask(row.domain_id, row.task_kind, payload)) {
     locator.route_ref = row.task_kind;
-    locator.action_ref = masOwnerRouteActionRef(row.task_kind) ?? MAS_DOMAIN_ROUTE_RECONCILE_APPLY_ACTION;
-    locator.domain_truth_owner = 'med-autoscience';
+    locator.action_ref = domainRouteActionRef(row.task_kind, payload);
+    locator.domain_truth_owner = optionalString(payload.domain_truth_owner);
     locator.opl_writes_domain_truth = false;
-    locator.opl_writes_publication_quality = false;
-    locator.opl_writes_artifact_gate = false;
-    locator.opl_writes_current_package = false;
+    locator.opl_writes_domain_quality_verdict = false;
+    locator.opl_writes_domain_artifact_gate = false;
+    locator.opl_writes_domain_current_package = false;
   }
   if (isDefaultExecutorDispatchTask(row, payload)) {
-    locator.domain_truth_owner = 'med-autoscience';
+    locator.domain_truth_owner = optionalString(payload.domain_truth_owner) ?? row.domain_id;
     locator.opl_writes_domain_truth = false;
-    locator.opl_writes_publication_quality = false;
-    locator.opl_writes_artifact_gate = false;
-    locator.opl_writes_current_package = false;
+    locator.opl_writes_domain_quality_verdict = false;
+    locator.opl_writes_domain_artifact_gate = false;
+    locator.opl_writes_domain_current_package = false;
     const dispatchRef = defaultExecutorDispatchRef(payload);
     if (dispatchRef) {
       locator.dispatch_ref = dispatchRef;
@@ -670,11 +667,7 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
       locator.stage_packet_ref = stagePacketRefs[0];
       locator.stage_packet_refs = stagePacketRefs;
     }
-    const profileWorkspaceRoot = workspaceRootFromProfile(optionalString(payload.profile));
-    if (profileWorkspaceRoot) {
-      locator.workspace_root = profileWorkspaceRoot;
-    }
-    const basis = masDefaultExecutorCurrentnessBasis(payload);
+    const basis = defaultExecutorCurrentnessBasis(payload);
     for (const [targetKey, value] of Object.entries({
       work_unit_id: optionalString(payload.work_unit_id)
         ?? optionalString(basis?.work_unit_id)
@@ -705,25 +698,25 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
         ?? optionalString(providerAdmissionIdentity?.attempt_idempotency_key)
         ?? optionalString(providerAdmissionIdentity?.idempotency_key),
       recovery_obligation_id: optionalString(payload.recovery_obligation_id)
-        ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id)
-        ?? optionalString(providerAdmissionIdentity?.paper_recovery_obligation_id),
+        ?? optionalString(providerAdmissionIdentity?.recovery_obligation_id),
     })) {
       if (value) {
         locator[targetKey] = value;
       }
     }
   }
-  if (row.domain_id === 'medautoscience' && MAS_PAPER_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
-    locator.domain_truth_owner = 'med-autoscience';
+  if (DOMAIN_AUTONOMY_TASK_KINDS.has(row.task_kind)) {
+    locator.domain_truth_owner = optionalString(payload.domain_truth_owner) ?? row.domain_id;
     locator.opl_writes_domain_truth = false;
-    locator.opl_writes_publication_quality = false;
-    locator.opl_writes_artifact_gate = false;
-    locator.opl_writes_current_package = false;
+    locator.opl_writes_domain_quality_verdict = false;
+    locator.opl_writes_domain_artifact_gate = false;
+    locator.opl_writes_domain_current_package = false;
   }
   for (const key of [
     'profile',
     'profile_name',
-    'study_id',
+    'domain_truth_owner',
+    'profile_ref',
     'quest_id',
     'action_type',
     'dispatch_authority',
@@ -810,11 +803,11 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     }
   }
   if (isDefaultExecutorDispatchTask(row, payload)) {
-    locator.domain_truth_owner = 'med-autoscience';
+    locator.domain_truth_owner = optionalString(payload.domain_truth_owner) ?? row.domain_id;
     locator.opl_writes_domain_truth = false;
-    locator.opl_writes_publication_quality = false;
-    locator.opl_writes_artifact_gate = false;
-    locator.opl_writes_current_package = false;
+    locator.opl_writes_domain_quality_verdict = false;
+    locator.opl_writes_domain_artifact_gate = false;
+    locator.opl_writes_domain_current_package = false;
     locator.domain_source_fingerprint = defaultExecutorSourceFingerprint(payload);
   }
   return locator;
@@ -835,7 +828,7 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
   if (isDefaultExecutorDispatchTask(row, payload)) {
     const admissionIdentity = providerAdmissionCurrentnessIdentity(payload);
     if (admissionIdentity) {
-      return stableId('mas_default_executor_provider_admission_source', [
+      return stableId('default_executor_provider_admission_source', [
         row.domain_id,
         row.task_kind,
         defaultExecutorDispatchRef(payload),
@@ -845,7 +838,7 @@ function sourceFingerprintForProviderHostedTask(row: FamilyRuntimeTaskRow, paylo
         admissionIdentity,
       ]);
     }
-    return stableId('mas_default_executor_source', [
+    return stableId('default_executor_source', [
       row.domain_id,
       row.task_kind,
       defaultExecutorDispatchRef(payload),
@@ -897,7 +890,7 @@ export function ensureProviderHostedStageAttempt(
   }
   if (!options.newAttempt && isDefaultExecutorDispatchTask(row, payload) && stageId) {
     const liveDispatchAttempt = findBlockingLiveDefaultExecutorDispatchAttempt(db, row, payload);
-    const liveStudyAttempt = liveDispatchAttempt ?? findBlockingLiveDefaultExecutorStudyAttempt(db, row, payload);
+    const liveStudyAttempt = liveDispatchAttempt ?? findBlockingLiveDefaultExecutorWorkUnitAttempt(db, row, payload);
     if (liveStudyAttempt) {
       insertEvent(db, {
         taskId: row.task_id,
@@ -913,7 +906,7 @@ export function ensureProviderHostedStageAttempt(
           dispatch_ref: workspaceLocator.dispatch_ref ?? null,
           action_type: workspaceLocator.action_type ?? null,
           live_action_type: liveStudyAttempt.workspace_locator.action_type ?? null,
-          study_id: workspaceLocator.study_id ?? null,
+          work_unit_id: workspaceLocator.work_unit_id ?? null,
         },
       });
       return null;

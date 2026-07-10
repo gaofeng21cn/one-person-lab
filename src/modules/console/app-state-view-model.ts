@@ -541,6 +541,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
   const taskTotalUsage = asRecord(item.task_total_usage);
   const typedBlockerSummary = asString(item.typed_blocker_summary);
   const typedBlockerOwner = asString(item.typed_blocker_owner) ?? domainId ?? 'opl_framework';
+  const runtimeBlockerSummary = asString(item.runtime_blocker_summary);
   const resolutionRoute = asString(item.resolution_route) ?? nextVisibleStep;
   const userState = deriveUserFacingTaskState(item);
   const state = userFacingActivityState(rawState, userState.primaryState);
@@ -618,6 +619,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     task_total_usage: taskTotalUsage,
     typed_blocker_summary: typedBlockerSummary,
     typed_blocker_owner: typedBlockerOwner,
+    runtime_blocker_summary: runtimeBlockerSummary,
     typed_blocker_resolution_ref: `${sourceRef}.resolution_route`,
   };
   const stageRunCockpitSummary = {
@@ -636,6 +638,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     task_total_usage: taskTotalUsage,
     typed_blocker_summary: typedBlockerSummary,
     typed_blocker_owner: typedBlockerOwner,
+    runtime_blocker_summary: runtimeBlockerSummary,
     resolution_route: resolutionRoute,
   };
   const connectorReadinessRefs = [
@@ -719,6 +722,7 @@ function normalizeRuntimeActivityItem(item: JsonRecord, index: number) {
     usage_telemetry_status: asString(item.usage_telemetry_status),
     typed_blocker_summary: typedBlockerSummary,
     typed_blocker_owner: typedBlockerOwner,
+    runtime_blocker_summary: runtimeBlockerSummary,
     resolution_route: resolutionRoute,
     gateway_status_ref: 'app_state.provider.temporal',
     connector_readiness_refs: connectorReadinessRefs,

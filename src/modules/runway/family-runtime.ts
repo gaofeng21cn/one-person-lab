@@ -57,9 +57,9 @@ import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-eviden
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
 import { buildFamilyRuntimeControlLoopStatus } from './family-runtime-control-loop.ts';
 import {
-  runFamilyRuntimePaperAutonomySupervisorDecideCommand,
-  runFamilyRuntimePaperAutonomySupervisorReadbackCommand,
-} from './family-runtime-paper-autonomy-command.ts';
+  runFamilyRuntimeDomainAutonomySupervisorDecideCommand,
+  runFamilyRuntimeDomainAutonomySupervisorReadbackCommand,
+} from './family-runtime-domain-autonomy-command.ts';
 import type { RuntimeTraySnapshotProvider } from './runtime-tray-snapshot-provider.ts';
 import {
   blockAttemptForCheckoutCurrentness,
@@ -315,11 +315,11 @@ export async function runFamilyRuntime(
         family_runtime_lifecycle_reconcile: reconcileFamilyRuntimeLifecycleRefs(parsed.input),
       };
     }
-    if (parsed.mode === 'paper_autonomy_supervisor_readback') {
-      return runFamilyRuntimePaperAutonomySupervisorReadbackCommand(parsed);
+    if (parsed.mode === 'domain_autonomy_supervisor_readback') {
+      return runFamilyRuntimeDomainAutonomySupervisorReadbackCommand(parsed);
     }
-    if (parsed.mode === 'paper_autonomy_supervisor_decide') {
-      return runFamilyRuntimePaperAutonomySupervisorDecideCommand(parsed);
+    if (parsed.mode === 'domain_autonomy_supervisor_decide') {
+      return runFamilyRuntimeDomainAutonomySupervisorDecideCommand(parsed);
     }
     if (parsed.mode === 'evidence_worklist') {
       const evidenceWorklistInput =

@@ -126,19 +126,27 @@ export function codexStageAttemptEnv(input: {
     OPL_WORKSPACE_ROOT: input.workspaceRoot,
     OPL_TASK_ID: optionalString(input.attempt.task_id) ?? undefined,
     OPL_WORKFLOW_ID: optionalString(input.attempt.workflow_id) ?? undefined,
-    OPL_STUDY_ID: optionalString(workspaceLocator.study_id) ?? undefined,
+    OPL_DOMAIN_ID:
+      optionalString(input.attempt.domain_id) ?? optionalString(workspaceLocator.domain_id) ?? undefined,
+    OPL_DOMAIN_TRUTH_OWNER: optionalString(workspaceLocator.domain_truth_owner) ?? undefined,
     OPL_QUEST_ID: optionalString(workspaceLocator.quest_id) ?? undefined,
     OPL_ACTION_TYPE: optionalString(workspaceLocator.action_type) ?? undefined,
     OPL_WORK_UNIT_ID: workUnitIdFromAttempt(input.attempt) ?? undefined,
     OPL_CANDIDATE_REF: optionalString(workspaceLocator.candidate_ref) ?? undefined,
-    OPL_PAPER_MISSION_TRANSACTION_REF:
-      optionalString(workspaceLocator.paper_mission_transaction_ref) ?? undefined,
-    OPL_ROUTE_COMMAND_REF: optionalString(workspaceLocator.opl_route_command_ref) ?? undefined,
+    OPL_DOMAIN_ROUTE_PROFILE_REF: optionalString(workspaceLocator.profile_ref) ?? undefined,
+    OPL_DOMAIN_ROUTE_HANDOFF_REF: optionalString(workspaceLocator.domain_route_handoff_ref) ?? undefined,
+    OPL_DOMAIN_ROUTE_TRANSACTION_REF:
+      optionalString(workspaceLocator.domain_route_transaction_ref) ?? undefined,
+    OPL_DOMAIN_ROUTE_COMMAND_REF:
+      optionalString(workspaceLocator.domain_route_command_ref) ?? undefined,
     OPL_ROUTE_COMMAND_KIND: optionalString(workspaceLocator.command_kind) ?? undefined,
     OPL_ROUTE_TARGET: optionalString(workspaceLocator.route_target) ?? undefined,
     OPL_DOMAIN_COMMAND_CWD: optionalString(workspaceLocator.command_cwd) ?? undefined,
     OPL_DOMAIN_COMMAND_SOURCE: optionalString(workspaceLocator.command_source) ?? undefined,
-    OPL_ROUTE_HANDOFF_SOURCE_REF: optionalString(workspaceLocator.source_ref) ?? undefined,
+    OPL_ROUTE_HANDOFF_SOURCE_REF:
+      optionalString(workspaceLocator.domain_route_handoff_ref)
+      ?? optionalString(workspaceLocator.source_ref)
+      ?? undefined,
     OPL_PROVIDER_ATTEMPT_REF: providerAttemptRef ?? undefined,
     OPL_ATTEMPT_LEASE_REF: attemptLeaseRef ?? undefined,
     OPL_ATTEMPT_LEASE_STATUS: attemptLeaseStatus ?? undefined,

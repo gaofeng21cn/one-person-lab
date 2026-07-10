@@ -96,9 +96,6 @@ function closeoutRouteImpactForTemporalResult(
   closeout: ReturnType<typeof normalizeTypedStageCloseoutPacket>,
 ) {
   const routeImpact = closeout.route_impact ? { ...closeout.route_impact } : {};
-  if (!isRecord(routeImpact.paper_stage_log) && isRecord(closeout.paper_stage_log)) {
-    routeImpact.paper_stage_log = compactDomainStageLogForRouteImpact(closeout.paper_stage_log) ?? closeout.paper_stage_log;
-  }
   if (!isRecord(routeImpact.user_stage_log) && isRecord(closeout.user_stage_log)) {
     routeImpact.user_stage_log = compactDomainStageLogForRouteImpact(closeout.user_stage_log) ?? closeout.user_stage_log;
   }

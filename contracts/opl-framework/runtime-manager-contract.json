@@ -240,18 +240,18 @@
     "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
     "wakeup_bridge": "Temporal schedule/workflow history -> provider SLO and stage-attempt projection readback",
     "webhook_bridge": "provider signal/webhook -> Temporal signal/update",
-    "mas_domain_route_projection": {
-      "owner_route_handoff_ref": "mas_runtime_owner_route_handoff",
+    "domain_route_projection": {
+      "surface_kind": "opl_domain_route_support_projection",
+      "schema_version": 1,
+      "owner_route_handoff_ref": "domain_runtime_owner_route_handoff",
       "accepted_runtime_owner_route_ref": "opl_runtime_owner_route",
-      "supported_task_kinds": [
-        "domain_route/reconcile-apply",
-        "publication_aftercare/analysis-queue-progress",
-        "publication_aftercare/reviewer-refresh"
+      "supported_task_kind_prefix": "domain_route/",
+      "canonical_task_kinds": [
+        "domain_route/stage-route",
+        "domain_route/reconcile-apply"
       ],
-      "action_refs": [
-        "domain_route_reconcile_apply",
-        "ai_reviewer_recheck_execute_dispatch"
-      ],
+      "action_ref_source": "domain_route_runtime_request.command_kind_or_action_ref",
+      "profile_source": "domain_owned_profile_ref",
       "accepted_runtime_responsibilities": [
         "stage_attempt_index",
         "stage_attempt_ledger",
@@ -259,7 +259,17 @@
         "provider_wakeup",
         "typed_blocker_or_temporal_failure_projection"
       ],
-      "authority_boundary": "OPL indexes MAS domain route refs and Temporal attempt projections but never writes MAS truth, publication quality, artifact gates, or current_package."
+      "authority_boundary": {
+        "writes_domain_truth": false,
+        "writes_domain_quality_verdict": false,
+        "writes_domain_owner_receipt": false,
+        "writes_domain_typed_blocker": false,
+        "writes_domain_human_gate": false,
+        "writes_domain_current_package": false,
+        "writes_domain_artifact_body": false,
+        "provider_completion_is_domain_progress": false,
+        "provider_completion_is_domain_ready": false
+      }
     }
   },
   "family_scheduler_replacement": {

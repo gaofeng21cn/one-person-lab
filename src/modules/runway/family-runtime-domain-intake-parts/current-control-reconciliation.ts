@@ -11,7 +11,7 @@ import {
 import { taskFailureProjectionSql } from '../family-runtime-queue-projection-boundary.ts';
 import { updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
 
-const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'mas_default_executor_superseded_by_current_source';
+const DEFAULT_EXECUTOR_SUPERSEDED_REASON = 'default_executor_superseded_by_current_source';
 
 const EXISTING_DEFAULT_EXECUTOR_SUPPRESSIBLE_STATUSES = new Set([
   'queued',
@@ -25,20 +25,20 @@ const CURRENT_CONTROL_PROVIDER_ADMISSION_IDENTITY_BLOCKERS = new Set([
   'current_control_transition_non_advancing_apply_recorded',
 ]);
 
-function currentControlAdmissionStudyIds(inputs: StageAttemptProjectionInput[]) {
+function currentControlAdmissionWorkUnitIds(inputs: StageAttemptProjectionInput[]) {
   return new Set(inputs
-    .map((input) => optionalString(input.payload.study_id))
-    .filter((studyId): studyId is string => Boolean(studyId)));
+    .map((input) => optionalString(input.payload.work_unit_id))
+    .filter((workUnitId): workUnitId is string => Boolean(workUnitId)));
 }
 
-function currentControlBlockedStudyIds(blocked: Array<{ reason: string; task: unknown }>) {
+function currentControlBlockedWorkUnitIds(blocked: Array<{ reason: string; task: unknown }>) {
   return new Set(blocked
-    .map((item) => isRecord(item.task) ? optionalString(item.task.study_id) : null)
-    .filter((studyId): studyId is string => Boolean(studyId)));
+    .map((item) => isRecord(item.task) ? optionalString(item.task.work_unit_id) : null)
+    .filter((workUnitId): workUnitId is string => Boolean(workUnitId)));
 }
 
-function currentControlBlockedByStudy(blocked: Array<{ reason: string; task: unknown }>) {
-  const blockedByStudy = new Map<string, { reason: string; task: Record<string, unknown> }>();
+function currentControlBlockedByWorkUnit(blocked: Array<{ reason: string; task: unknown }>) {
+  const blockedByWorkUnit = new Map<string, { reason: string; task: Record<string, unknown> }>();
   for (const item of blocked) {
     if (!CURRENT_CONTROL_PROVIDER_ADMISSION_IDENTITY_BLOCKERS.has(item.reason)) {
       continue;
@@ -46,27 +46,26 @@ function currentControlBlockedByStudy(blocked: Array<{ reason: string; task: unk
     if (!isRecord(item.task)) {
       continue;
     }
-    const studyId = optionalString(item.task.study_id);
-    if (!studyId) {
+    const workUnitId = optionalString(item.task.work_unit_id);
+    if (!workUnitId) {
       continue;
     }
-    blockedByStudy.set(studyId, {
+    blockedByWorkUnit.set(workUnitId, {
       reason: item.reason,
       task: item.task,
     });
   }
-  return blockedByStudy;
+  return blockedByWorkUnit;
 }
 
 function payloadString(input: StageAttemptProjectionInput, key: string) {
   return optionalString(input.payload[key]);
 }
 
-function isMasPaperMissionStartOrResumeInput(input: StageAttemptProjectionInput) {
-  return input.domainId === 'medautoscience'
-    && input.taskKind === 'paper_mission/start_or_resume'
+function isDomainRouteInput(input: StageAttemptProjectionInput) {
+  return input.taskKind.startsWith('domain_route/')
     && (
-      isRecord(input.payload.opl_runtime_carrier)
+      isRecord(input.payload.runtime_request)
       || isRecord(input.payload.opl_domain_progress_transition_request)
     );
 }
@@ -86,16 +85,14 @@ function sameDefaultExecutorOwnerAction(
   right: StageAttemptProjectionInput,
 ) {
   if (
-    left.domainId !== 'medautoscience'
-    || right.domainId !== 'medautoscience'
+    left.domainId !== right.domainId
     || left.taskKind !== 'domain_owner/default-executor-dispatch'
     || right.taskKind !== 'domain_owner/default-executor-dispatch'
   ) {
     return false;
   }
   if (
-    !samePayloadString(left, right, 'study_id')
-    || !samePayloadString(left, right, 'action_type')
+    !samePayloadString(left, right, 'action_type')
     || !samePayloadString(left, right, 'work_unit_id')
   ) {
     return false;
@@ -124,11 +121,10 @@ function sourceFingerprint(payload: Record<string, unknown>) {
 }
 
 function isSuppressibleExistingDefaultExecutorRow(row: FamilyRuntimeTaskRow, payload: Record<string, unknown>) {
-  return row.domain_id === 'medautoscience'
-    && row.task_kind === 'domain_owner/default-executor-dispatch'
+  return row.task_kind === 'domain_owner/default-executor-dispatch'
     && EXISTING_DEFAULT_EXECUTOR_SUPPRESSIBLE_STATUSES.has(row.status)
     && row.dead_letter_reason !== DEFAULT_EXECUTOR_SUPERSEDED_REASON
-    && optionalString(payload.study_id) !== null;
+    && optionalString(payload.work_unit_id) !== null;
 }
 
 export function reconcileCurrentControlExecutableOwners(
@@ -169,23 +165,22 @@ export function suppressStaleDefaultExecutorInputs(
   currentAdmissionInputs: StageAttemptProjectionInput[],
   currentAdmissionBlocked: Array<{ reason: string; task: unknown }> = [],
 ) {
-  const currentStudyIds = currentControlAdmissionStudyIds(currentAdmissionInputs);
-  for (const studyId of currentControlBlockedStudyIds(currentAdmissionBlocked)) {
-    currentStudyIds.add(studyId);
+  const currentWorkUnitIds = currentControlAdmissionWorkUnitIds(currentAdmissionInputs);
+  for (const workUnitId of currentControlBlockedWorkUnitIds(currentAdmissionBlocked)) {
+    currentWorkUnitIds.add(workUnitId);
   }
-  if (currentStudyIds.size === 0) {
+  if (currentWorkUnitIds.size === 0) {
     return { inputs, suppressed_count: 0 };
   }
   const retained = inputs.filter((input) => {
-    const studyId = optionalString(input.payload.study_id);
+    const workUnitId = optionalString(input.payload.work_unit_id);
     return !(
-      input.domainId === 'medautoscience'
-      && (
+      (
         input.taskKind === 'domain_owner/default-executor-dispatch'
-        || isMasPaperMissionStartOrResumeInput(input)
+        || isDomainRouteInput(input)
       )
-      && studyId !== null
-      && currentStudyIds.has(studyId)
+      && workUnitId !== null
+      && currentWorkUnitIds.has(workUnitId)
     );
   });
   return {
@@ -200,8 +195,8 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
   currentAdmissionBlocked: Array<{ reason: string; task: unknown }> = [],
   source: string,
 ) {
-  const blockedByStudy = currentControlBlockedByStudy(currentAdmissionBlocked);
-  if (blockedByStudy.size === 0) {
+  const blockedByWorkUnit = currentControlBlockedByWorkUnit(currentAdmissionBlocked);
+  if (blockedByWorkUnit.size === 0) {
     return 0;
   }
   let suppressedCount = 0;
@@ -210,8 +205,8 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
     if (!isSuppressibleExistingDefaultExecutorRow(row, payload)) {
       continue;
     }
-    const studyId = optionalString(payload.study_id);
-    const blocker = studyId ? blockedByStudy.get(studyId) : null;
+    const workUnitId = optionalString(payload.work_unit_id);
+    const blocker = workUnitId ? blockedByWorkUnit.get(workUnitId) : null;
     if (!blocker) {
       continue;
     }
@@ -237,10 +232,10 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
       status: 'blocked',
       blockedReason: DEFAULT_EXECUTOR_SUPERSEDED_REASON,
       activityEvent: {
-        activity_kind: 'mas_default_executor_currentness',
+        activity_kind: 'default_executor_currentness',
         activity_status: 'blocked',
         blocked_reason: DEFAULT_EXECUTOR_SUPERSEDED_REASON,
-        reason: 'same_study_current_control_admission_blocked',
+        reason: 'same_work_unit_current_control_admission_blocked',
         current_blocked_reason: blocker.reason,
         current_source_fingerprint: sourceFingerprint(blocker.task),
         previous_status: previousStatus,
@@ -259,7 +254,7 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
       eventType: 'task_default_executor_superseded_by_current_source',
       source,
       payload: {
-        reason: 'same_study_current_control_admission_blocked',
+        reason: 'same_work_unit_current_control_admission_blocked',
         current_task_id: null,
         current_blocked_reason: blocker.reason,
         current_source_fingerprint: sourceFingerprint(blocker.task),
@@ -269,15 +264,15 @@ export function suppressExistingStaleDefaultExecutorRowsForBlockedCurrentControl
         operator_hold_preserved: operatorHoldPreserved,
         dispatch_ref: payload.dispatch_ref ?? null,
         action_type: payload.action_type ?? null,
-        study_id: studyId,
+        work_unit_id: workUnitId,
         blocked_stage_attempt_ids: blockedAttempts.map((attempt) => attempt.stage_attempt_id),
         authority_boundary: {
           opl: 'stage_attempt_projection_currentness_supersession_only',
           domain: 'truth_quality_artifact_gate_owner',
           domain_truth_mutation: false,
-          publication_quality_mutation: false,
-          artifact_gate_mutation: false,
-          current_package_mutation: false,
+          domain_quality_verdict_mutation: false,
+          domain_artifact_gate_mutation: false,
+          domain_current_package_mutation: false,
           provider_stage_attempt_started: false,
         },
       },

@@ -358,9 +358,6 @@ function withCodexTokenAccounting(
     ...(closeoutPacket.user_stage_log
       ? { user_stage_log: withStageLogAccounting(closeoutPacket.user_stage_log) }
       : {}),
-    ...(closeoutPacket.paper_stage_log
-      ? { paper_stage_log: withStageLogAccounting(closeoutPacket.paper_stage_log) }
-      : {}),
     ...(closeoutPacket.stage_log_summary
       ? { stage_log_summary: withStageLogAccounting(closeoutPacket.stage_log_summary) }
       : {}),

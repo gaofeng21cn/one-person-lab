@@ -159,7 +159,7 @@ function defaultExecutorPayload(sourceFingerprint: string) {
     next_executable_owner: 'write',
     executor_kind: 'codex_cli_default',
     dispatch_ref: 'studies/002-dm-china-us-mortality-attribution/artifacts/supervision/consumer/default_executor_dispatches/run_quality_repair_batch.json',
-    authority_boundary: 'mas_default_executor_dispatch_request_only',
+    authority_boundary: 'default_executor_dispatch_request_only',
     workspace_root: '/tmp/explicit-workspace-root',
     source_fingerprint: sourceFingerprint,
   };
@@ -534,7 +534,7 @@ export function writeDefaultExecutorDispatchPacket(workspaceRoot: string, studyI
   const packetPath = path.join(workspaceRoot, ref);
   fs.mkdirSync(path.dirname(packetPath), { recursive: true });
   fs.writeFileSync(packetPath, JSON.stringify({
-    surface_kind: 'mas_default_executor_dispatch_request',
+    surface_kind: 'default_executor_dispatch_request',
     study_id: studyId,
     quest_id: studyId,
     action_type: actionType,

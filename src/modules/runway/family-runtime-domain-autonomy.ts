@@ -1,4 +1,4 @@
-export type PaperAutonomyProjectionTask = {
+export type DomainAutonomyProjectionTask = {
   domain_id: string;
   task_kind: string;
   dedupe_key: string | null;
@@ -10,20 +10,6 @@ export const DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND =
   'opl_domain_autonomy_supervisor_transition_packet';
 export const DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND =
   'opl_domain_autonomy_task_projection';
-export const LEGACY_DOMAIN_AUTONOMY_PROFILE_ID = 'mas-paper-autonomy';
-const LEGACY_PAPER_AUTONOMY_TASK_PROJECTION_SURFACE_KIND =
-  'opl_mas_paper_autonomy_task_projection';
-
-export const MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE = {
-  profile_id: LEGACY_DOMAIN_AUTONOMY_PROFILE_ID,
-  profile_role: 'domain_owned_compatibility_profile',
-  source_domain: 'medautoscience',
-  domain_truth_owner: 'med-autoscience',
-  compatibility_only: true,
-  canonical_projection: 'domain_autonomy',
-} as const;
-
-type MasPaperAutonomyCompatibilityProfile = typeof MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE;
 
 const DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY = {
   opl_can_write_domain_truth: false,
@@ -32,17 +18,27 @@ const DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY = {
   provider_completion_is_domain_ready: false,
 } as const;
 
-export const MAS_PAPER_AUTONOMY_TASK_KINDS = new Set([
-  'paper_autonomy/repair-recheck',
-  'paper_autonomy/ai-reviewer-recheck',
-  'paper_autonomy/gate-replay',
-  'paper_autonomy/guarded-apply',
-  'paper_autonomy/route-decision',
+function recordValue(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+export const DOMAIN_AUTONOMY_TASK_KINDS = new Set([
+  'domain_autonomy/repair-recheck',
+  'domain_autonomy/ai-reviewer-recheck',
+  'domain_autonomy/gate-replay',
+  'domain_autonomy/guarded-apply',
+  'domain_autonomy/route-decision',
 ]);
 
-export const MAS_PAPER_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON = 'domain_handler_closeout_required';
+export const DOMAIN_AUTONOMY_DOMAIN_HANDLER_CLOSEOUT_REQUIRED_REASON = 'domain_handler_closeout_required';
 
-export const PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS = [
+export const DOMAIN_AUTONOMY_SUPERVISOR_DECISION_KINDS = [
   'execute_current_owner_delta',
   'consume_terminal_closeout',
   'materialize_recovery_action',
@@ -51,9 +47,9 @@ export const PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS = [
   'stop_with_owner_receipt',
 ] as const;
 
-export type PaperAutonomySupervisorDecisionKind = typeof PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS[number];
+export type DomainAutonomySupervisorDecisionKind = typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_KINDS[number];
 
-export type PaperAutonomyStageRunIdentity = {
+export type DomainAutonomyStageRunIdentity = {
   stage_run_id: string;
   route_identity_key: string;
   attempt_idempotency_key: string;
@@ -69,10 +65,10 @@ export type PaperAutonomyStageRunIdentity = {
   work_unit_fingerprint: string;
 };
 
-export type PaperAutonomyRecoveryObligation = {
+export type DomainAutonomyRecoveryObligation = {
   obligation_id: string;
   desired_delta_ref: string;
-  current_identity: PaperAutonomyStageRunIdentity;
+  current_identity: DomainAutonomyStageRunIdentity;
   status: 'open' | 'current_owner_delta_executed' | 'terminal_closeout_consumed' | 'recovery_materialized' | 'waiting_for_owner' | 'stopped_with_typed_blocker' | 'stopped_with_owner_receipt';
   last_evidence_refs: string[];
   no_progress_budget_state?: string;
@@ -80,10 +76,12 @@ export type PaperAutonomyRecoveryObligation = {
   supervisor_decision_ref?: string;
 };
 
-export type PaperAutonomySupervisorDecisionInput = {
+export type DomainAutonomySupervisorDecisionInput = {
   obligation_id: string;
-  decision_kind: PaperAutonomySupervisorDecisionKind;
-  current_identity: PaperAutonomyStageRunIdentity;
+  decision_kind: DomainAutonomySupervisorDecisionKind;
+  current_identity: DomainAutonomyStageRunIdentity;
+  domain_id?: string;
+  domain_truth_owner?: string;
   current_owner_delta_ref?: string;
   provider_admission_identity_ref?: string;
   terminal_closeout_ref?: string;
@@ -98,9 +96,11 @@ export type PaperAutonomySupervisorDecisionInput = {
   observability_refs?: string[];
 };
 
-export type PaperAutonomySupervisorObligationReadbackInput = {
+export type DomainAutonomySupervisorObligationReadbackInput = {
   obligation_id: string;
-  current_identity: PaperAutonomyStageRunIdentity;
+  current_identity: DomainAutonomyStageRunIdentity;
+  domain_id?: string;
+  domain_truth_owner?: string;
   current_owner_delta_ref?: string;
   provider_admission_identity_ref?: string;
   terminal_closeout_ref?: string;
@@ -117,27 +117,25 @@ export type PaperAutonomySupervisorObligationReadbackInput = {
   observability_refs?: string[];
 };
 
-export type PaperAutonomySupervisorDecisionReadback = {
-  surface_kind: 'opl_paper_autonomy_supervisor_decision_readback';
+export type DomainAutonomySupervisorDecisionReadback = {
+  surface_kind: 'opl_domain_autonomy_supervisor_decision_readback';
   surface_id: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
   canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND;
-  legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback';
-  compatibility_profile: MasPaperAutonomyCompatibilityProfile;
   readback_kind: 'domain_autonomy_supervisor_decision';
   domain_progress_readback: {
     surface_kind: 'opl_domain_progress_supervisor_decision_readback';
     readback_role: 'identity_bound_transition_advice';
     domain_progress_delta: false;
     provider_completion_is_domain_ready: false;
-    compatibility_profile: MasPaperAutonomyCompatibilityProfile;
   };
   obligation_id: string;
   decision_id: string;
-  decision_kind: PaperAutonomySupervisorDecisionKind;
+  decision_kind: DomainAutonomySupervisorDecisionKind;
   status: 'decision_ready_for_identity_bound_transition';
-  domain_truth_owner: 'med-autoscience';
+  domain_id: string;
+  domain_truth_owner: string;
   substrate_owner: 'one-person-lab';
-  current_identity: PaperAutonomyStageRunIdentity;
+  current_identity: DomainAutonomyStageRunIdentity;
   transition_ref: string;
   provider_admission_identity_ref: string | null;
   current_owner_delta_ref: string | null;
@@ -155,7 +153,6 @@ export type PaperAutonomySupervisorDecisionReadback = {
     read_model_can_execute: false;
     observability_can_close_owner_answer: false;
     opl_can_write_domain_truth: false;
-    opl_can_write_mas_truth: false;
     opl_can_create_domain_owner_receipt: false;
     opl_can_create_domain_typed_blocker: false;
     provider_completion_is_domain_ready: false;
@@ -181,19 +178,17 @@ export type PaperAutonomySupervisorDecisionReadback = {
   };
 };
 
-export type PaperAutonomySupervisorTransitionPacket = {
-  surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
+export type DomainAutonomySupervisorTransitionPacket = {
+  surface_kind: 'opl_domain_autonomy_supervisor_transition_packet';
   surface_id: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
   canonical_surface_kind: typeof DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND;
-  legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet';
-  compatibility_profile: MasPaperAutonomyCompatibilityProfile;
-  transition_profile_kind: 'domain_progress_profile_compatibility';
+  transition_profile_kind: 'domain_progress_profile';
   obligation_id: string;
   supervisor_decision_ref: string;
-  transition_kind: PaperAutonomySupervisorDecisionKind;
+  transition_kind: DomainAutonomySupervisorDecisionKind;
   transition_ref: string;
   provider_admission_identity_ref: string | null;
-  current_identity: PaperAutonomyStageRunIdentity;
+  current_identity: DomainAutonomyStageRunIdentity;
   evidence_refs: string[];
   observability_refs: string[];
   runtime_apply_target: {
@@ -211,12 +206,11 @@ export type PaperAutonomySupervisorTransitionPacket = {
     human_resume_token_required: boolean;
     stable_typed_blocker_required: boolean;
     owner_receipt_consumption_required: boolean;
-    domain_truth_owner: 'med-autoscience';
+    domain_truth_owner: string;
     substrate_owner: 'one-person-lab';
   };
   authority_boundary: {
     opl_can_write_domain_truth: false;
-    opl_can_write_mas_truth: false;
     opl_can_create_domain_owner_receipt: false;
     opl_can_create_domain_typed_blocker: false;
     provider_completion_is_domain_ready: false;
@@ -236,75 +230,56 @@ export type PaperAutonomySupervisorTransitionPacket = {
   };
 };
 
-export function paperAutonomyProjection(
-  task: PaperAutonomyProjectionTask,
+export function domainAutonomyProjection(
+  task: DomainAutonomyProjectionTask,
   payload: Record<string, unknown>,
 ) {
-  if (task.domain_id !== 'medautoscience' || !MAS_PAPER_AUTONOMY_TASK_KINDS.has(task.task_kind)) {
+  if (!DOMAIN_AUTONOMY_TASK_KINDS.has(task.task_kind)) {
     return null;
   }
-  const repairWorkUnit = payload.repair_work_unit
-    && typeof payload.repair_work_unit === 'object'
-    && !Array.isArray(payload.repair_work_unit)
-    ? payload.repair_work_unit as Record<string, unknown>
-    : {};
-  const sourceRefs = Array.isArray(repairWorkUnit.source_refs)
-    ? repairWorkUnit.source_refs
+  const workUnit = recordValue(payload.current_work_unit) ?? recordValue(payload.work_unit) ?? {};
+  const sourceRefs = Array.isArray(workUnit.source_refs)
+    ? workUnit.source_refs
     : Array.isArray(payload.source_refs)
       ? payload.source_refs
       : [];
-  const sourceFingerprint = typeof repairWorkUnit.source_fingerprint === 'string'
-    ? repairWorkUnit.source_fingerprint
-    : typeof payload.source_fingerprint === 'string'
-      ? payload.source_fingerprint
-      : null;
-  const guardedApply = task.task_kind === 'paper_autonomy/guarded-apply';
+  const sourceFingerprint = stringValue(workUnit.source_fingerprint)
+    ?? stringValue(payload.source_fingerprint);
+  const domainTruthOwner = stringValue(payload.domain_truth_owner) ?? task.domain_id;
   return {
-    surface_kind: LEGACY_PAPER_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
+    surface_kind: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
     surface_id: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
-    legacy_surface_kind: LEGACY_PAPER_AUTONOMY_TASK_PROJECTION_SURFACE_KIND,
-    compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
     projection_kind: 'domain_autonomy',
-    domain_truth_owner: 'med-autoscience',
+    domain_id: task.domain_id,
+    domain_truth_owner: domainTruthOwner,
     queue_owner: 'one-person-lab',
     online_runtime_substrate_owner: 'provider_backed_family_runtime',
     task_kind: task.task_kind,
-    study_id: typeof payload.study_id === 'string' ? payload.study_id : null,
-    next_owner: guardedApply
-      ? 'med-autoscience'
-      : typeof repairWorkUnit.owner === 'string'
-        ? repairWorkUnit.owner
-        : null,
-    callable_surface: guardedApply
-      ? 'medautosci domain-handler dispatch'
-      : typeof repairWorkUnit.callable_surface === 'string'
-        ? repairWorkUnit.callable_surface
-        : null,
-    repair_command: 'medautosci domain-handler dispatch --task <task.json> --format json',
+    work_unit_ref: stringValue(payload.work_unit_ref)
+      ?? stringValue(payload.task_or_study_ref)
+      ?? stringValue(workUnit.work_unit_ref)
+      ?? stringValue(workUnit.work_unit_id),
+    next_owner: stringValue(payload.next_owner) ?? stringValue(workUnit.owner),
+    callable_surface: stringValue(payload.callable_surface) ?? stringValue(workUnit.callable_surface),
+    repair_command: stringValue(payload.repair_command) ?? stringValue(workUnit.repair_command),
     source_refs: sourceRefs,
     source_fingerprint: sourceFingerprint,
     idempotency_key: task.dedupe_key,
     authority_boundary: {
       ...DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY,
-      writes_mas_truth: false,
       writes_domain_truth: false,
-      writes_publication_quality: false,
       writes_domain_quality_verdict: false,
-      writes_artifact_gate: false,
       writes_domain_artifact_gate: false,
-      writes_current_package: false,
       writes_domain_current_package: false,
       can_claim_domain_ready: false,
     },
   };
 }
 
-export const domainAutonomyProjection = paperAutonomyProjection;
-
-export function buildPaperAutonomySupervisorDecisionReadback(
-  input: PaperAutonomySupervisorDecisionInput,
-): PaperAutonomySupervisorDecisionReadback {
+export function buildDomainAutonomySupervisorDecisionReadback(
+  input: DomainAutonomySupervisorDecisionInput,
+): DomainAutonomySupervisorDecisionReadback {
   assertAllowedDecisionKind(input.decision_kind);
   assertCompleteStageRunIdentity(input.current_identity);
   const transitionRef = transitionRefForDecision(input);
@@ -317,24 +292,22 @@ export function buildPaperAutonomySupervisorDecisionReadback(
   ].join('|');
 
   return {
-    surface_kind: 'opl_paper_autonomy_supervisor_decision_readback',
+    surface_kind: 'opl_domain_autonomy_supervisor_decision_readback',
     surface_id: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_DECISION_READBACK_SURFACE_KIND,
-    legacy_surface_kind: 'opl_paper_autonomy_supervisor_decision_readback',
-    compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
     readback_kind: 'domain_autonomy_supervisor_decision',
     domain_progress_readback: {
       surface_kind: 'opl_domain_progress_supervisor_decision_readback',
       readback_role: 'identity_bound_transition_advice',
       domain_progress_delta: false,
       provider_completion_is_domain_ready: false,
-      compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
     },
     obligation_id: input.obligation_id,
     decision_id: decisionId,
     decision_kind: input.decision_kind,
     status: 'decision_ready_for_identity_bound_transition',
-    domain_truth_owner: 'med-autoscience',
+    domain_id: input.domain_id ?? 'domain-agent',
+    domain_truth_owner: input.domain_truth_owner ?? input.domain_id ?? 'domain-agent',
     substrate_owner: 'one-person-lab',
     current_identity: input.current_identity,
     transition_ref: transitionRef,
@@ -354,7 +327,6 @@ export function buildPaperAutonomySupervisorDecisionReadback(
       ...DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY,
       read_model_can_execute: false,
       observability_can_close_owner_answer: false,
-      opl_can_write_mas_truth: false,
       opl_can_create_domain_owner_receipt: false,
       opl_can_create_domain_typed_blocker: false,
       provider_completion_is_domain_ready: false,
@@ -383,12 +355,14 @@ export function buildPaperAutonomySupervisorDecisionReadback(
   };
 }
 
-export function readPaperAutonomySupervisorDecisionFromObligation(
-  input: PaperAutonomySupervisorObligationReadbackInput,
-): PaperAutonomySupervisorDecisionReadback {
+export function readDomainAutonomySupervisorDecisionFromObligation(
+  input: DomainAutonomySupervisorObligationReadbackInput,
+): DomainAutonomySupervisorDecisionReadback {
   const base = {
     obligation_id: input.obligation_id,
     current_identity: input.current_identity,
+    domain_id: input.domain_id,
+    domain_truth_owner: input.domain_truth_owner,
     current_owner_delta_ref: input.current_owner_delta_ref,
     provider_admission_identity_ref: input.provider_admission_identity_ref,
     terminal_closeout_ref: input.terminal_closeout_ref,
@@ -404,73 +378,73 @@ export function readPaperAutonomySupervisorDecisionFromObligation(
   };
 
   if (input.terminal_closeout_ref) {
-    return buildPaperAutonomySupervisorDecisionReadback({
+    return buildDomainAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'consume_terminal_closeout',
     });
   }
   if (input.owner_receipt_ref) {
-    return buildPaperAutonomySupervisorDecisionReadback({
+    return buildDomainAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'stop_with_owner_receipt',
     });
   }
   if (input.typed_blocker_ref) {
-    return buildPaperAutonomySupervisorDecisionReadback({
+    return buildDomainAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'stop_with_stable_typed_blocker',
     });
   }
   if (input.human_gate_ref) {
-    return buildPaperAutonomySupervisorDecisionReadback({
+    return buildDomainAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'wait_for_owner_with_resume_token',
     });
   }
   if (input.recovery_action_ref || input.no_progress_or_inconsistency_ref) {
-    return buildPaperAutonomySupervisorDecisionReadback({
+    return buildDomainAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'materialize_recovery_action',
     });
   }
   if (input.current_owner_delta_ref && input.provider_admission_identity_ref) {
-    return buildPaperAutonomySupervisorDecisionReadback({
+    return buildDomainAutonomySupervisorDecisionReadback({
       ...base,
       decision_kind: 'execute_current_owner_delta',
     });
   }
 
-  throw new Error('Paper autonomy supervisor obligation missing actionable transition evidence; action_queue and provider_admission_pending_count are not terminal evidence');
+  throw new Error('Domain autonomy supervisor obligation missing actionable transition evidence; action_queue and provider_admission_pending_count are not terminal evidence');
 }
 
-export function selectPaperAutonomyRecoveryObligation(
-  obligations: PaperAutonomyRecoveryObligation[],
-  currentIdentity: PaperAutonomyStageRunIdentity,
-): PaperAutonomyRecoveryObligation | null {
+export function selectDomainAutonomyRecoveryObligation(
+  obligations: DomainAutonomyRecoveryObligation[],
+  currentIdentity: DomainAutonomyStageRunIdentity,
+): DomainAutonomyRecoveryObligation | null {
   return obligations.find((obligation) =>
-    obligation.status === 'open' && samePaperAutonomyStageRunIdentity(
+    obligation.status === 'open' && sameDomainAutonomyStageRunIdentity(
       obligation.current_identity,
       currentIdentity,
     )
   ) ?? null;
 }
 
-export function applyPaperAutonomySupervisorDecision(
-  obligation: PaperAutonomyRecoveryObligation,
-  decision: PaperAutonomySupervisorDecisionReadback,
+export function applyDomainAutonomySupervisorDecision(
+  obligation: DomainAutonomyRecoveryObligation,
+  decision: DomainAutonomySupervisorDecisionReadback,
 ):
   | {
     applied: true;
-    obligation: PaperAutonomyRecoveryObligation;
-    transition: PaperAutonomySupervisorTransitionPacket;
+    obligation: DomainAutonomyRecoveryObligation;
+    transition: DomainAutonomySupervisorTransitionPacket;
   }
   | {
     applied: false;
     reason: 'identity_mismatch';
-    obligation: PaperAutonomyRecoveryObligation;
+    obligation: DomainAutonomyRecoveryObligation;
   } {
   if (obligation.obligation_id !== decision.obligation_id
-    || !samePaperAutonomyStageRunIdentity(obligation.current_identity, decision.current_identity)
+    || !sameDomainAutonomyStageRunIdentity(obligation.current_identity, decision.current_identity)
   ) {
     return {
       applied: false,
@@ -487,20 +461,18 @@ export function applyPaperAutonomySupervisorDecision(
       supervisor_decision_ref: decision.decision_id,
       last_evidence_refs: decision.evidence_refs,
     },
-    transition: buildPaperAutonomySupervisorTransitionPacket(decision),
+    transition: buildDomainAutonomySupervisorTransitionPacket(decision),
   };
 }
 
-function buildPaperAutonomySupervisorTransitionPacket(
-  decision: PaperAutonomySupervisorDecisionReadback,
-): PaperAutonomySupervisorTransitionPacket {
+function buildDomainAutonomySupervisorTransitionPacket(
+  decision: DomainAutonomySupervisorDecisionReadback,
+): DomainAutonomySupervisorTransitionPacket {
   return {
-    surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
+    surface_kind: 'opl_domain_autonomy_supervisor_transition_packet',
     surface_id: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
     canonical_surface_kind: DOMAIN_AUTONOMY_SUPERVISOR_TRANSITION_PACKET_SURFACE_KIND,
-    legacy_surface_kind: 'opl_paper_autonomy_supervisor_transition_packet',
-    compatibility_profile: MAS_PAPER_AUTONOMY_COMPATIBILITY_PROFILE,
-    transition_profile_kind: 'domain_progress_profile_compatibility',
+    transition_profile_kind: 'domain_progress_profile',
     obligation_id: decision.obligation_id,
     supervisor_decision_ref: decision.decision_id,
     transition_kind: decision.decision_kind,
@@ -509,10 +481,12 @@ function buildPaperAutonomySupervisorTransitionPacket(
     current_identity: decision.current_identity,
     evidence_refs: decision.evidence_refs,
     observability_refs: decision.observability_refs,
-    runtime_apply_target: runtimeApplyTargetForDecision(decision.decision_kind),
+    runtime_apply_target: runtimeApplyTargetForDecision(
+      decision.decision_kind,
+      decision.domain_truth_owner,
+    ),
     authority_boundary: {
       ...DOMAIN_AUTONOMY_AUTHORITY_BOUNDARY,
-      opl_can_write_mas_truth: false,
       opl_can_create_domain_owner_receipt: false,
       opl_can_create_domain_typed_blocker: false,
       provider_completion_is_domain_ready: false,
@@ -534,10 +508,11 @@ function buildPaperAutonomySupervisorTransitionPacket(
 }
 
 function runtimeApplyTargetForDecision(
-  decisionKind: PaperAutonomySupervisorDecisionKind,
-): PaperAutonomySupervisorTransitionPacket['runtime_apply_target'] {
+  decisionKind: DomainAutonomySupervisorDecisionKind,
+  domainTruthOwner: string,
+): DomainAutonomySupervisorTransitionPacket['runtime_apply_target'] {
   const common = {
-    domain_truth_owner: 'med-autoscience' as const,
+    domain_truth_owner: domainTruthOwner,
     substrate_owner: 'one-person-lab' as const,
   };
   switch (decisionKind) {
@@ -616,13 +591,13 @@ function runtimeApplyTargetForDecision(
   }
 }
 
-function assertAllowedDecisionKind(decisionKind: PaperAutonomySupervisorDecisionKind) {
-  if (!PAPER_AUTONOMY_SUPERVISOR_DECISION_KINDS.includes(decisionKind)) {
-    throw new Error(`Unsupported paper autonomy supervisor decision kind: ${decisionKind}`);
+function assertAllowedDecisionKind(decisionKind: DomainAutonomySupervisorDecisionKind) {
+  if (!DOMAIN_AUTONOMY_SUPERVISOR_DECISION_KINDS.includes(decisionKind)) {
+    throw new Error(`Unsupported domain autonomy supervisor decision kind: ${decisionKind}`);
   }
 }
 
-function assertCompleteStageRunIdentity(identity: PaperAutonomyStageRunIdentity) {
+function assertCompleteStageRunIdentity(identity: DomainAutonomyStageRunIdentity) {
   for (const field of [
     'stage_run_id',
     'route_identity_key',
@@ -638,15 +613,15 @@ function assertCompleteStageRunIdentity(identity: PaperAutonomyStageRunIdentity)
     'work_unit_fingerprint',
   ] as const) {
     if (!identity[field]) {
-      throw new Error(`Paper autonomy supervisor identity missing ${field}`);
+      throw new Error(`Domain autonomy supervisor identity missing ${field}`);
     }
   }
   if (identity.stage_packet_refs.length === 0) {
-    throw new Error('Paper autonomy supervisor identity missing stage_packet_refs');
+    throw new Error('Domain autonomy supervisor identity missing stage_packet_refs');
   }
 }
 
-function transitionRefForDecision(input: PaperAutonomySupervisorDecisionInput) {
+function transitionRefForDecision(input: DomainAutonomySupervisorDecisionInput) {
   switch (input.decision_kind) {
     case 'execute_current_owner_delta':
       requiredRef(input.provider_admission_identity_ref, 'provider_admission_identity_ref');
@@ -671,14 +646,14 @@ function transitionRefForDecision(input: PaperAutonomySupervisorDecisionInput) {
 
 function requiredRef(value: string | undefined, field: string) {
   if (!value) {
-    throw new Error(`Paper autonomy supervisor decision missing ${field}`);
+    throw new Error(`Domain autonomy supervisor decision missing ${field}`);
   }
   return value;
 }
 
 function obligationStatusForDecision(
-  decisionKind: PaperAutonomySupervisorDecisionKind,
-): PaperAutonomyRecoveryObligation['status'] {
+  decisionKind: DomainAutonomySupervisorDecisionKind,
+): DomainAutonomyRecoveryObligation['status'] {
   switch (decisionKind) {
     case 'execute_current_owner_delta':
       return 'current_owner_delta_executed';
@@ -695,9 +670,9 @@ function obligationStatusForDecision(
   }
 }
 
-function samePaperAutonomyStageRunIdentity(
-  left: PaperAutonomyStageRunIdentity,
-  right: PaperAutonomyStageRunIdentity,
+function sameDomainAutonomyStageRunIdentity(
+  left: DomainAutonomyStageRunIdentity,
+  right: DomainAutonomyStageRunIdentity,
 ) {
   return left.stage_run_id === right.stage_run_id
     && left.route_identity_key === right.route_identity_key
@@ -718,7 +693,7 @@ function sameStringArray(left: string[], right: string[]) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function supervisorEvidenceRefs(input: PaperAutonomySupervisorObligationReadbackInput) {
+function supervisorEvidenceRefs(input: DomainAutonomySupervisorObligationReadbackInput) {
   return [
     ...(input.evidence_refs ?? []),
     input.provider_admission_identity_ref,
@@ -728,4 +703,4 @@ function supervisorEvidenceRefs(input: PaperAutonomySupervisorObligationReadback
   ].filter((value): value is string => Boolean(value));
 }
 
-export * from './family-runtime-paper-autonomy-parts/substrate.ts';
+export * from './family-runtime-domain-autonomy-parts/substrate.ts';

@@ -242,7 +242,7 @@ exit 64
   assert.equal(receipt.process_output_summary?.structured_closeout_gate?.repair_action, null);
 });
 
-test('Codex stage runner rejects MAS PaperMission stage-route closeout without user stage log', async () => {
+test('Codex stage runner rejects domain-route closeout without user stage log', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     closeout_refs: ['receipt:paper-route-record-only'],
@@ -266,9 +266,9 @@ exit 64
       stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
       domain_id: 'medautoscience',
       workspace_locator: {
-        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
-        task_kind: 'paper_mission/stage-route',
-        runtime_request_kind: 'mas_paper_mission_stage_route',
+        surface_kind: 'opl_domain_route_runtime_request',
+        task_kind: 'domain_route/stage-route',
+        runtime_request_kind: 'domain_route_stage_route',
         workspace_root: fixtureRoot,
         study_id: '003-dpcc-primary-care-phenotype-treatment-gap',
         route_target: 'submission_milestone_candidate::followthrough::followthrough-02',
@@ -282,23 +282,23 @@ exit 64
 
   assert.equal(receipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
   assert.deepEqual(receipt.closeout_packet?.closeout_refs, [
-    'opl://stage-attempts/sat_paper_route_record_only_closeout_test/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    'opl://stage-attempts/sat_paper_route_record_only_closeout_test/runtime-blockers/typed_closeout_domain_route_user_stage_log_missing',
   ]);
   assert.equal(
     receipt.closeout_packet?.route_impact?.provider_blocker_reason,
-    'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    'typed_closeout_domain_route_user_stage_log_missing',
   );
   assert.equal(
     receipt.process_output_summary?.closeout_rejection_reason,
-    'paper_mission_stage_route_user_stage_log_missing',
+    'domain_route_user_stage_log_missing',
   );
   assert.equal(
     receipt.process_output_summary?.blocked_reason,
-    'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
+    'typed_closeout_domain_route_user_stage_log_missing',
   );
 });
 
-test('Codex stage runner accepts MAS PaperMission stage-route closeout when attempt route impact carries user stage log', async () => {
+test('Codex stage runner accepts domain-route closeout when attempt route impact carries user stage log', async () => {
   const closeout = {
     surface_kind: 'stage_attempt_closeout_packet',
     closeout_refs: ['receipt:paper-route-attempt-route-impact-stage-log'],
@@ -352,9 +352,9 @@ exit 64
       stage_id: 'submission_milestone_candidate::followthrough::followthrough-02',
       domain_id: 'medautoscience',
       workspace_locator: {
-        surface_kind: 'opl_mas_paper_mission_stage_route_workspace_locator',
-        task_kind: 'paper_mission/stage-route',
-        runtime_request_kind: 'mas_paper_mission_stage_route',
+        surface_kind: 'opl_domain_route_runtime_request',
+        task_kind: 'domain_route/stage-route',
+        runtime_request_kind: 'domain_route_stage_route',
         workspace_root: fixtureRoot,
         study_id: '002-dm-china-us-mortality-attribution',
         route_target: 'submission_milestone_candidate::followthrough::followthrough-02',

@@ -3,7 +3,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
-import { resolveStandardAgent } from '../charter/standard-agent-registry.ts';
+import { resolveStandardAgent } from '../charter/index.ts';
+import {
+  defaultStandardDomainAgentRepoInputs,
+  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
+} from '../atlas/index.ts';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileResult } from '../../kernel/json-file.ts';
 import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
@@ -15,10 +19,6 @@ import {
   uniqueStringList,
   type JsonRecord,
 } from '../../kernel/json-record.ts';
-import {
-  defaultStandardDomainAgentRepoInputs,
-  DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,
-} from './standard-domain-agent-family-repos.ts';
 import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';

@@ -24,7 +24,6 @@ export type TypedStageCloseoutPacket = {
   usage_refs?: string[];
   session_usage_refs?: JsonRecord;
   cost_summary?: JsonRecord;
-  paper_stage_log?: JsonRecord;
   user_stage_log?: JsonRecord;
   stage_log_summary?: JsonRecord;
   human_stage_log?: JsonRecord;
@@ -36,33 +35,20 @@ export type StageCloseoutPacketRejection = {
   reason:
     | 'stage_attempt_id_mismatch'
     | 'idempotency_key_mismatch'
-    | 'paper_mission_stage_route_user_stage_log_missing';
+    | 'domain_route_user_stage_log_missing';
   stage_attempt_id: string | null;
   idempotency_key: string | null;
 };
 
-function normalizedDomainId(attempt: JsonRecord) {
+function isDomainRouteAttempt(attempt: JsonRecord) {
   const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
-  const raw = optionalString(attempt.domain_id)
-    ?? optionalString(locator.domain_id)
-    ?? optionalString(locator.project_id);
-  const normalized = raw?.toLowerCase().replace(/[-_]/g, '');
-  return normalized === 'mas' || normalized === 'medautoscience' ? 'medautoscience' : raw;
-}
-
-function isMasPaperMissionStageRouteAttempt(attempt: JsonRecord) {
-  const locator = isRecord(attempt.workspace_locator) ? attempt.workspace_locator : {};
-  return normalizedDomainId(attempt) === 'medautoscience'
-    && (
-      optionalString(locator.task_kind) === 'paper_mission/stage-route'
-      || optionalString(locator.runtime_request_kind) === 'mas_paper_mission_stage_route'
-      || optionalString(locator.surface_kind) === 'opl_mas_paper_mission_stage_route_workspace_locator'
-    );
+  return optionalString(locator.task_kind) === 'domain_route/stage-route'
+    || optionalString(locator.runtime_request_kind) === 'domain_route_stage_route'
+    || optionalString(locator.surface_kind) === 'opl_domain_route_runtime_request';
 }
 
 function recordHasDomainProvidedStageLog(value: JsonRecord) {
-  return isRecord(value.paper_stage_log)
-    || isRecord(value.user_stage_log)
+  return isRecord(value.user_stage_log)
     || isRecord(value.stage_log_summary)
     || isRecord(value.human_stage_log);
 }
@@ -211,11 +197,11 @@ export function validateCloseoutPacketForAttempt(input: {
       },
     };
   }
-  if (isMasPaperMissionStageRouteAttempt(input.attempt) && !hasDomainProvidedStageLog(closeoutPacket, input.attempt)) {
+  if (isDomainRouteAttempt(input.attempt) && !hasDomainProvidedStageLog(closeoutPacket, input.attempt)) {
     return {
       closeoutPacket: null,
       rejection: {
-        reason: 'paper_mission_stage_route_user_stage_log_missing' as const,
+        reason: 'domain_route_user_stage_log_missing' as const,
         stage_attempt_id: closeoutPacket.stage_attempt_id ?? null,
         idempotency_key: closeoutPacket.idempotency_key ?? null,
       },

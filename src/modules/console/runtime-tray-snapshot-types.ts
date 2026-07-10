@@ -65,10 +65,3 @@ export type RuntimeTrayItem = {
   current_work_unit?: JsonRecord | null;
   study_progress_current_work_unit_diagnostic?: JsonRecord | null;
 };
-
-export type MasWorkspaceProjectionRef = {
-  workspace_root: string;
-  profile_ref: string | null;
-  profile_name: string | null;
-  source_refs: RuntimeTraySourceRef[];
-};

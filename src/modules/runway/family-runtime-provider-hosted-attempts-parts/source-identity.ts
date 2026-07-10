@@ -1,12 +1,11 @@
 import {
   isRecord,
-  masDefaultExecutorCurrentnessBasis,
+  defaultExecutorCurrentnessBasis,
   optionalString,
   relativeDispatchRefFromPath,
   stringList,
   uniqueStrings,
   workspaceRelativeRef,
-  workspaceRootFromProfile,
 } from './values.ts';
 
 export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
@@ -18,8 +17,7 @@ export function defaultExecutorDispatchRef(payload: Record<string, unknown>) {
 }
 
 function defaultExecutorStageRefs(payload: Record<string, unknown>) {
-  const workspaceRoot = optionalString(payload.workspace_root)
-    ?? workspaceRootFromProfile(optionalString(payload.profile));
+  const workspaceRoot = optionalString(payload.workspace_root);
   return uniqueStrings([
     workspaceRelativeRef(optionalString(payload.stage_packet_ref), workspaceRoot),
     ...stringList(payload.stage_packet_refs).map((ref) => workspaceRelativeRef(ref, workspaceRoot)),
@@ -28,7 +26,7 @@ function defaultExecutorStageRefs(payload: Record<string, unknown>) {
 }
 
 function preservesCurrentControlStagePacketIdentity(payload: Record<string, unknown>) {
-  const basis = masDefaultExecutorCurrentnessBasis(payload);
+  const basis = defaultExecutorCurrentnessBasis(payload);
   return optionalString(payload.dispatch_authority) === 'opl_current_control_state_handoff'
     || optionalString(payload.provider_admission_schema_source) === 'action_queue'
     || optionalString(basis?.surface) === 'opl_current_control_state_handoff';
@@ -54,7 +52,7 @@ export function defaultExecutorStageCheckpointRefs(payload: Record<string, unkno
 
 export function defaultExecutorSourceFingerprint(payload: Record<string, unknown>) {
   const ownerRoute = isRecord(payload.owner_route) ? payload.owner_route : null;
-  const basis = masDefaultExecutorCurrentnessBasis(payload);
+  const basis = defaultExecutorCurrentnessBasis(payload);
   return optionalString(payload.source_fingerprint)
     ?? optionalString(payload.action_fingerprint)
     ?? optionalString(payload.repeat_suppression_key)

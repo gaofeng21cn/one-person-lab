@@ -40,7 +40,7 @@ export function structuredCloseoutRepairClassFor(input: {
   ) {
     return 'closeout_identity_mismatch';
   }
-  if (reason === 'typed_closeout_paper_mission_stage_route_user_stage_log_missing') {
+  if (reason === 'typed_closeout_domain_route_user_stage_log_missing') {
     return 'closeout_semantics_missing';
   }
   if (

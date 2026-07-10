@@ -1,7 +1,7 @@
 import {
   parseRegisteredFamilyRuntimeCommand,
 } from './family-runtime-command-parts/registry.ts';
-import type { PaperAutonomySupervisorCommandInput } from './family-runtime-command-parts/paper-autonomy.ts';
+import type { DomainAutonomySupervisorCommandInput } from './family-runtime-command-parts/domain-autonomy.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   type FamilyRuntimeDomainId,
@@ -93,7 +93,7 @@ export type FamilyRuntimeCommandInput =
       max_age_ms?: number | null;
     };
   }
-  | PaperAutonomySupervisorCommandInput
+  | DomainAutonomySupervisorCommandInput
   | {
     mode: 'stage_artifact';
     input: {

@@ -9,9 +9,9 @@ import {
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import {
   isDefaultExecutorDispatchTask,
-  defaultExecutorStudyIdentity,
+  defaultExecutorWorkUnitIdentity,
 } from './family-runtime-provider-hosted-attempts.ts';
-import { MAS_DOMAIN_ROUTE_RECONCILE_APPLY } from './family-runtime-mas-domain-route.ts';
+import { isDomainRouteTask } from './family-runtime-domain-route.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
   buildModelRouteCostProjection,
@@ -26,8 +26,8 @@ import {
   missingStageRunCurrentnessIdentityFields,
 } from './family-runtime-stage-run-currentness-identity.ts';
 import {
-  isPaperMissionStageRouteTask,
-} from './family-runtime-paper-mission-stage-route-terminal-sync.ts';
+  isDomainRouteStageRouteTask,
+} from './family-runtime-domain-route-terminal-sync.ts';
 import {
   masDomainOwnerAnswerObservationFromRecords,
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
@@ -407,7 +407,7 @@ function domainHandlerProviderAdmissionRequested(
     && attempt.closeout_receipt_status === 'domain_handler_receipt_ref_only';
 }
 
-function paperMissionStageRouteAdmissionRequested(
+function domainRouteAdmissionRequested(
   task: FamilyRuntimeTaskRow | undefined,
   taskPayload: Record<string, unknown>,
   attempt: ControlAttemptRow | undefined,
@@ -416,7 +416,7 @@ function paperMissionStageRouteAdmissionRequested(
     task
     && !attempt
     && ['queued', 'retry_waiting', 'running'].includes(task.status)
-    && isPaperMissionStageRouteTask(task, taskPayload),
+    && isDomainRouteStageRouteTask(task, taskPayload),
   );
 }
 
@@ -463,7 +463,7 @@ function mismatchedWorkUnitIdentityFields(stale: WorkUnitIdentity, current: Work
     .filter((field) => stale[field] && current[field] && stale[field] !== current[field]);
 }
 
-function currentDefaultExecutorSameStudyTask(
+function currentDefaultExecutorSameWorkUnitTask(
   db: DatabaseSync,
   task: FamilyRuntimeTaskRow,
   taskPayload: Record<string, unknown>,
@@ -472,8 +472,8 @@ function currentDefaultExecutorSameStudyTask(
   if (!isDefaultExecutorDispatchTask(task, taskPayload)) {
     return null;
   }
-  const studyIdentity = defaultExecutorStudyIdentity(task, taskPayload);
-  if (!studyIdentity) {
+  const defaultExecutorWorkUnitId = defaultExecutorWorkUnitIdentity(task, taskPayload);
+  if (!defaultExecutorWorkUnitId) {
     return null;
   }
   const staleWorkUnit = workUnitIdentity(taskPayload, current);
@@ -493,7 +493,7 @@ function currentDefaultExecutorSameStudyTask(
     const payload = parseRecord(row.payload_json);
     if (
       !isDefaultExecutorDispatchTask(row, payload)
-      || defaultExecutorStudyIdentity(row, payload) !== studyIdentity
+      || defaultExecutorWorkUnitIdentity(row, payload) !== defaultExecutorWorkUnitId
     ) {
       continue;
     }
@@ -523,7 +523,7 @@ function staleWorkUnitDiagnostic(
   if (!task || !current || !liveProviderAttempt) {
     return null;
   }
-  const currentTask = currentDefaultExecutorSameStudyTask(db, task, taskPayload, current);
+  const currentTask = currentDefaultExecutorSameWorkUnitTask(db, task, taskPayload, current);
   if (!currentTask) {
     return null;
   }
@@ -623,8 +623,8 @@ function deriveCurrentControlStateFromRows(
     ...refListFromRecord(routeImpact, ['typed_blocker_ref', 'typed_blocker_refs']),
     ...typedBlockerRefsFromCloseoutRefs(closeoutRefs),
   ]);
-  const ownerAnswerObservation = task?.domain_id === 'medautoscience'
-    && task.task_kind === MAS_DOMAIN_ROUTE_RECONCILE_APPLY
+  const ownerAnswerObservation = task
+    && isDomainRouteTask(task.domain_id, task.task_kind, taskPayload)
     ? masDomainOwnerAnswerObservationFromRecords([
         { source: 'task_payload', value: taskPayload },
         { source: 'stage_attempt_route_impact', value: routeImpact },
@@ -718,7 +718,7 @@ function deriveCurrentControlStateFromRows(
   }
   if (
     domainHandlerProviderAdmissionRequested(task, current)
-    || paperMissionStageRouteAdmissionRequested(task, taskPayload, current)
+    || domainRouteAdmissionRequested(task, taskPayload, current)
   ) {
     return {
       ...base,

@@ -2,106 +2,106 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import type {
-  PaperAutonomyRecoveryObligation,
-  PaperAutonomyStageRunIdentity,
-  PaperAutonomySupervisorDecisionKind,
-  PaperAutonomySupervisorDecisionReadback,
-} from '../family-runtime-paper-autonomy.ts';
+  DomainAutonomyRecoveryObligation,
+  DomainAutonomyStageRunIdentity,
+  DomainAutonomySupervisorDecisionKind,
+  DomainAutonomySupervisorDecisionReadback,
+} from '../family-runtime-domain-autonomy.ts';
 
-type PaperAutonomySubstrateAuthorityBoundary = {
-  opl_can_write_mas_truth: false;
+type DomainAutonomySubstrateAuthorityBoundary = {
+  opl_can_write_domain_truth: false;
   opl_can_create_domain_owner_receipt: false;
   opl_can_create_domain_typed_blocker: false;
   provider_completion_is_domain_ready: false;
 };
 
-type PaperAutonomyEntryProjection = {
+type DomainAutonomyEntryProjection = {
   append_only_jsonl_compatible: true;
   payload_refs_only: true;
   identity_bound: true;
 };
 
-export type PaperAutonomyRecoveryObligationStoreEntry = {
-  surface_kind: 'opl_paper_autonomy_recovery_obligation_store_entry';
+export type DomainAutonomyRecoveryObligationStoreEntry = {
+  surface_kind: 'opl_domain_autonomy_recovery_obligation_store_entry';
   entry_kind: 'obligation_appended' | 'obligation_apply_succeeded' | 'obligation_apply_rejected';
   obligation_id: string;
-  current_identity: PaperAutonomyStageRunIdentity;
-  obligation: PaperAutonomyRecoveryObligation | null;
+  current_identity: DomainAutonomyStageRunIdentity;
+  obligation: DomainAutonomyRecoveryObligation | null;
   supervisor_decision_ref: string | null;
   transition_ref: string | null;
   reason: 'stale_supervisor_decision' | 'obligation_not_found' | 'identity_mismatch' | null;
   recorded_at: string;
-  projection: PaperAutonomyEntryProjection;
-  authority_boundary: PaperAutonomySubstrateAuthorityBoundary;
+  projection: DomainAutonomyEntryProjection;
+  authority_boundary: DomainAutonomySubstrateAuthorityBoundary;
 };
 
-export type PaperAutonomySupervisorDecisionLedgerEntry = {
-  surface_kind: 'opl_paper_autonomy_supervisor_decision_ledger_entry';
+export type DomainAutonomySupervisorDecisionLedgerEntry = {
+  surface_kind: 'opl_domain_autonomy_supervisor_decision_ledger_entry';
   entry_kind: 'supervisor_decision_appended' | 'supervisor_decision_rejected';
   obligation_id: string;
-  current_identity: PaperAutonomyStageRunIdentity;
-  decision: PaperAutonomySupervisorDecisionReadback | null;
+  current_identity: DomainAutonomyStageRunIdentity;
+  decision: DomainAutonomySupervisorDecisionReadback | null;
   decision_id: string | null;
-  decision_kind: PaperAutonomySupervisorDecisionKind | null;
+  decision_kind: DomainAutonomySupervisorDecisionKind | null;
   reason: 'identity_mismatch' | null;
   recorded_at: string;
-  projection: PaperAutonomyEntryProjection & {
+  projection: DomainAutonomyEntryProjection & {
     current_latest_by_identity: true;
   };
-  authority_boundary: PaperAutonomySubstrateAuthorityBoundary;
+  authority_boundary: DomainAutonomySubstrateAuthorityBoundary;
 };
 
-export type PaperAutonomyCloseoutInboxEntry = {
-  surface_kind: 'opl_paper_autonomy_closeout_inbox_entry';
+export type DomainAutonomyCloseoutInboxEntry = {
+  surface_kind: 'opl_domain_autonomy_closeout_inbox_entry';
   entry_kind: 'closeout_pending' | 'closeout_consumed' | 'closeout_rejected';
   status: 'pending' | 'consumed' | 'rejected';
   closeout_ref: string;
   obligation_id: string;
-  current_identity: PaperAutonomyStageRunIdentity;
+  current_identity: DomainAutonomyStageRunIdentity;
   terminal_closeout_ref: string;
   supervisor_decision_ref: string | null;
   reason: string | null;
   recorded_at: string;
-  projection: PaperAutonomyEntryProjection;
-  authority_boundary: PaperAutonomySubstrateAuthorityBoundary;
+  projection: DomainAutonomyEntryProjection;
+  authority_boundary: DomainAutonomySubstrateAuthorityBoundary;
 };
 
-type PaperAutonomyJsonlLedgerEntry =
-  | PaperAutonomyRecoveryObligationStoreEntry
-  | PaperAutonomySupervisorDecisionLedgerEntry
-  | PaperAutonomyCloseoutInboxEntry;
+type DomainAutonomyJsonlLedgerEntry =
+  | DomainAutonomyRecoveryObligationStoreEntry
+  | DomainAutonomySupervisorDecisionLedgerEntry
+  | DomainAutonomyCloseoutInboxEntry;
 
-type PaperAutonomyJsonlSurfaceKind = PaperAutonomyJsonlLedgerEntry['surface_kind'];
+type DomainAutonomyJsonlSurfaceKind = DomainAutonomyJsonlLedgerEntry['surface_kind'];
 
-const authorityBoundary: PaperAutonomySubstrateAuthorityBoundary = {
-  opl_can_write_mas_truth: false,
+const authorityBoundary: DomainAutonomySubstrateAuthorityBoundary = {
+  opl_can_write_domain_truth: false,
   opl_can_create_domain_owner_receipt: false,
   opl_can_create_domain_typed_blocker: false,
   provider_completion_is_domain_ready: false,
 };
 
-const baseProjection: PaperAutonomyEntryProjection = {
+const baseProjection: DomainAutonomyEntryProjection = {
   append_only_jsonl_compatible: true,
   payload_refs_only: true,
   identity_bound: true,
 };
 
-function decisionProjection(): PaperAutonomySupervisorDecisionLedgerEntry['projection'] {
+function decisionProjection(): DomainAutonomySupervisorDecisionLedgerEntry['projection'] {
   return {
     ...baseProjection,
     current_latest_by_identity: true,
   };
 }
 
-export function appendPaperAutonomyRecoveryObligation(
-  entries: PaperAutonomyRecoveryObligationStoreEntry[],
+export function appendDomainAutonomyRecoveryObligation(
+  entries: DomainAutonomyRecoveryObligationStoreEntry[],
   input: {
-    obligation: PaperAutonomyRecoveryObligation;
+    obligation: DomainAutonomyRecoveryObligation;
     appended_at: string;
   },
 ) {
-  const entry: PaperAutonomyRecoveryObligationStoreEntry = {
-    surface_kind: 'opl_paper_autonomy_recovery_obligation_store_entry',
+  const entry: DomainAutonomyRecoveryObligationStoreEntry = {
+    surface_kind: 'opl_domain_autonomy_recovery_obligation_store_entry',
     entry_kind: 'obligation_appended',
     obligation_id: input.obligation.obligation_id,
     current_identity: input.obligation.current_identity,
@@ -121,31 +121,31 @@ export function appendPaperAutonomyRecoveryObligation(
   };
 }
 
-export function readPaperAutonomyRecoveryObligationStoreJsonl(
+export function readDomainAutonomyRecoveryObligationStoreJsonl(
   ledgerPath: string,
-): PaperAutonomyRecoveryObligationStoreEntry[] {
-  return readPaperAutonomyJsonlLedger(
+): DomainAutonomyRecoveryObligationStoreEntry[] {
+  return readDomainAutonomyJsonlLedger(
     ledgerPath,
-    'opl_paper_autonomy_recovery_obligation_store_entry',
-  ) as PaperAutonomyRecoveryObligationStoreEntry[];
+    'opl_domain_autonomy_recovery_obligation_store_entry',
+  ) as DomainAutonomyRecoveryObligationStoreEntry[];
 }
 
-export function appendPaperAutonomyRecoveryObligationStoreJsonl(
+export function appendDomainAutonomyRecoveryObligationStoreJsonl(
   ledgerPath: string,
-  entry: PaperAutonomyRecoveryObligationStoreEntry,
+  entry: DomainAutonomyRecoveryObligationStoreEntry,
 ) {
-  appendPaperAutonomyJsonlLedgerEntry(
+  appendDomainAutonomyJsonlLedgerEntry(
     ledgerPath,
     entry,
-    'opl_paper_autonomy_recovery_obligation_store_entry',
+    'opl_domain_autonomy_recovery_obligation_store_entry',
   );
 }
 
-export function currentPaperAutonomyRecoveryObligation(
-  entries: PaperAutonomyRecoveryObligationStoreEntry[],
+export function currentDomainAutonomyRecoveryObligation(
+  entries: DomainAutonomyRecoveryObligationStoreEntry[],
   input: {
     obligation_id: string;
-    current_identity: PaperAutonomyStageRunIdentity;
+    current_identity: DomainAutonomyStageRunIdentity;
   },
 ) {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
@@ -155,7 +155,7 @@ export function currentPaperAutonomyRecoveryObligation(
     }
     if (
       entry.obligation_id === input.obligation_id
-      && samePaperAutonomyStageRunIdentity(entry.current_identity, input.current_identity)
+      && sameDomainAutonomyStageRunIdentity(entry.current_identity, input.current_identity)
     ) {
       return entry.obligation;
     }
@@ -163,18 +163,18 @@ export function currentPaperAutonomyRecoveryObligation(
   return null;
 }
 
-export function recordPaperAutonomySupervisorDecision(
-  entries: PaperAutonomySupervisorDecisionLedgerEntry[],
+export function recordDomainAutonomySupervisorDecision(
+  entries: DomainAutonomySupervisorDecisionLedgerEntry[],
   input: {
     obligation_id: string;
-    current_identity: PaperAutonomyStageRunIdentity;
-    decision: PaperAutonomySupervisorDecisionReadback;
+    current_identity: DomainAutonomyStageRunIdentity;
+    decision: DomainAutonomySupervisorDecisionReadback;
     appended_at: string;
   },
 ) {
   if (
     input.decision.obligation_id !== input.obligation_id
-    || !samePaperAutonomyStageRunIdentity(input.decision.current_identity, input.current_identity)
+    || !sameDomainAutonomyStageRunIdentity(input.decision.current_identity, input.current_identity)
   ) {
     const entry = supervisorDecisionEntry({
       entry_kind: 'supervisor_decision_rejected',
@@ -208,31 +208,31 @@ export function recordPaperAutonomySupervisorDecision(
   };
 }
 
-export function readPaperAutonomySupervisorDecisionLedgerJsonl(
+export function readDomainAutonomySupervisorDecisionLedgerJsonl(
   ledgerPath: string,
-): PaperAutonomySupervisorDecisionLedgerEntry[] {
-  return readPaperAutonomyJsonlLedger(
+): DomainAutonomySupervisorDecisionLedgerEntry[] {
+  return readDomainAutonomyJsonlLedger(
     ledgerPath,
-    'opl_paper_autonomy_supervisor_decision_ledger_entry',
-  ) as PaperAutonomySupervisorDecisionLedgerEntry[];
+    'opl_domain_autonomy_supervisor_decision_ledger_entry',
+  ) as DomainAutonomySupervisorDecisionLedgerEntry[];
 }
 
-export function appendPaperAutonomySupervisorDecisionLedgerJsonl(
+export function appendDomainAutonomySupervisorDecisionLedgerJsonl(
   ledgerPath: string,
-  entry: PaperAutonomySupervisorDecisionLedgerEntry,
+  entry: DomainAutonomySupervisorDecisionLedgerEntry,
 ) {
-  appendPaperAutonomyJsonlLedgerEntry(
+  appendDomainAutonomyJsonlLedgerEntry(
     ledgerPath,
     entry,
-    'opl_paper_autonomy_supervisor_decision_ledger_entry',
+    'opl_domain_autonomy_supervisor_decision_ledger_entry',
   );
 }
 
-export function currentPaperAutonomySupervisorDecision(
-  entries: PaperAutonomySupervisorDecisionLedgerEntry[],
+export function currentDomainAutonomySupervisorDecision(
+  entries: DomainAutonomySupervisorDecisionLedgerEntry[],
   input: {
     obligation_id: string;
-    current_identity: PaperAutonomyStageRunIdentity;
+    current_identity: DomainAutonomyStageRunIdentity;
   },
 ) {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
@@ -242,7 +242,7 @@ export function currentPaperAutonomySupervisorDecision(
     }
     if (
       entry.obligation_id === input.obligation_id
-      && samePaperAutonomyStageRunIdentity(entry.current_identity, input.current_identity)
+      && sameDomainAutonomyStageRunIdentity(entry.current_identity, input.current_identity)
     ) {
       return entry.decision;
     }
@@ -250,13 +250,13 @@ export function currentPaperAutonomySupervisorDecision(
   return null;
 }
 
-export function listCurrentPaperAutonomySupervisorDecisions(
-  entries: PaperAutonomySupervisorDecisionLedgerEntry[],
+export function listCurrentDomainAutonomySupervisorDecisions(
+  entries: DomainAutonomySupervisorDecisionLedgerEntry[],
   input: {
     obligation_id?: string;
   } = {},
 ) {
-  const latestByIdentity = new Map<string, PaperAutonomySupervisorDecisionReadback>();
+  const latestByIdentity = new Map<string, DomainAutonomySupervisorDecisionReadback>();
   for (const entry of entries) {
     if (entry.entry_kind !== 'supervisor_decision_appended' || !entry.decision) {
       continue;
@@ -265,32 +265,32 @@ export function listCurrentPaperAutonomySupervisorDecisions(
       continue;
     }
     latestByIdentity.set(
-      paperAutonomyIdentityKey(entry.obligation_id, entry.current_identity),
+      domainAutonomyIdentityKey(entry.obligation_id, entry.current_identity),
       entry.decision,
     );
   }
   return [...latestByIdentity.values()];
 }
 
-export function applyPaperAutonomySupervisorDecisionFromLedger(input: {
-  obligation_entries: PaperAutonomyRecoveryObligationStoreEntry[];
-  decision_entries: PaperAutonomySupervisorDecisionLedgerEntry[];
-  decision: PaperAutonomySupervisorDecisionReadback;
+export function applyDomainAutonomySupervisorDecisionFromLedger(input: {
+  obligation_entries: DomainAutonomyRecoveryObligationStoreEntry[];
+  decision_entries: DomainAutonomySupervisorDecisionLedgerEntry[];
+  decision: DomainAutonomySupervisorDecisionReadback;
   applied_at: string;
 }):
   | {
     applied: true;
-    obligation: PaperAutonomyRecoveryObligation;
-    entry: PaperAutonomyRecoveryObligationStoreEntry;
-    entries: PaperAutonomyRecoveryObligationStoreEntry[];
+    obligation: DomainAutonomyRecoveryObligation;
+    entry: DomainAutonomyRecoveryObligationStoreEntry;
+    entries: DomainAutonomyRecoveryObligationStoreEntry[];
   }
   | {
     applied: false;
     reason: 'stale_supervisor_decision' | 'obligation_not_found';
-    entry: PaperAutonomyRecoveryObligationStoreEntry;
-    entries: PaperAutonomyRecoveryObligationStoreEntry[];
+    entry: DomainAutonomyRecoveryObligationStoreEntry;
+    entries: DomainAutonomyRecoveryObligationStoreEntry[];
   } {
-  const latestDecision = currentPaperAutonomySupervisorDecision(input.decision_entries, {
+  const latestDecision = currentDomainAutonomySupervisorDecision(input.decision_entries, {
     obligation_id: input.decision.obligation_id,
     current_identity: input.decision.current_identity,
   });
@@ -298,7 +298,7 @@ export function applyPaperAutonomySupervisorDecisionFromLedger(input: {
     return rejectedObligationApply(input, 'stale_supervisor_decision');
   }
 
-  const obligation = currentPaperAutonomyRecoveryObligation(input.obligation_entries, {
+  const obligation = currentDomainAutonomyRecoveryObligation(input.obligation_entries, {
     obligation_id: input.decision.obligation_id,
     current_identity: input.decision.current_identity,
   });
@@ -306,14 +306,14 @@ export function applyPaperAutonomySupervisorDecisionFromLedger(input: {
     return rejectedObligationApply(input, 'obligation_not_found');
   }
 
-  const nextObligation: PaperAutonomyRecoveryObligation = {
+  const nextObligation: DomainAutonomyRecoveryObligation = {
     ...obligation,
     status: obligationStatusForDecision(input.decision.decision_kind),
     supervisor_decision_ref: input.decision.decision_id,
     last_evidence_refs: input.decision.evidence_refs,
   };
-  const entry: PaperAutonomyRecoveryObligationStoreEntry = {
-    surface_kind: 'opl_paper_autonomy_recovery_obligation_store_entry',
+  const entry: DomainAutonomyRecoveryObligationStoreEntry = {
+    surface_kind: 'opl_domain_autonomy_recovery_obligation_store_entry',
     entry_kind: 'obligation_apply_succeeded',
     obligation_id: nextObligation.obligation_id,
     current_identity: nextObligation.current_identity,
@@ -333,18 +333,18 @@ export function applyPaperAutonomySupervisorDecisionFromLedger(input: {
   };
 }
 
-export function appendPaperAutonomyCloseoutInboxPending(
-  entries: PaperAutonomyCloseoutInboxEntry[],
+export function appendDomainAutonomyCloseoutInboxPending(
+  entries: DomainAutonomyCloseoutInboxEntry[],
   input: {
     closeout_ref: string;
     obligation_id: string;
-    current_identity: PaperAutonomyStageRunIdentity;
+    current_identity: DomainAutonomyStageRunIdentity;
     terminal_closeout_ref: string;
     appended_at: string;
   },
 ) {
-  const entry: PaperAutonomyCloseoutInboxEntry = {
-    surface_kind: 'opl_paper_autonomy_closeout_inbox_entry',
+  const entry: DomainAutonomyCloseoutInboxEntry = {
+    surface_kind: 'opl_domain_autonomy_closeout_inbox_entry',
     entry_kind: 'closeout_pending',
     status: 'pending',
     closeout_ref: input.closeout_ref,
@@ -364,38 +364,38 @@ export function appendPaperAutonomyCloseoutInboxPending(
   };
 }
 
-export function readPaperAutonomyCloseoutInboxJsonl(
+export function readDomainAutonomyCloseoutInboxJsonl(
   ledgerPath: string,
-): PaperAutonomyCloseoutInboxEntry[] {
-  return readPaperAutonomyJsonlLedger(
+): DomainAutonomyCloseoutInboxEntry[] {
+  return readDomainAutonomyJsonlLedger(
     ledgerPath,
-    'opl_paper_autonomy_closeout_inbox_entry',
-  ) as PaperAutonomyCloseoutInboxEntry[];
+    'opl_domain_autonomy_closeout_inbox_entry',
+  ) as DomainAutonomyCloseoutInboxEntry[];
 }
 
-export function appendPaperAutonomyCloseoutInboxJsonl(
+export function appendDomainAutonomyCloseoutInboxJsonl(
   ledgerPath: string,
-  entry: PaperAutonomyCloseoutInboxEntry,
+  entry: DomainAutonomyCloseoutInboxEntry,
 ) {
-  appendPaperAutonomyJsonlLedgerEntry(
+  appendDomainAutonomyJsonlLedgerEntry(
     ledgerPath,
     entry,
-    'opl_paper_autonomy_closeout_inbox_entry',
+    'opl_domain_autonomy_closeout_inbox_entry',
   );
 }
 
-export function readPaperAutonomyCloseoutInboxEntry(
-  entries: PaperAutonomyCloseoutInboxEntry[],
+export function readDomainAutonomyCloseoutInboxEntry(
+  entries: DomainAutonomyCloseoutInboxEntry[],
   input: {
     closeout_ref: string;
-    current_identity: PaperAutonomyStageRunIdentity;
+    current_identity: DomainAutonomyStageRunIdentity;
   },
 ) {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry = entries[index];
     if (
       entry.closeout_ref === input.closeout_ref
-      && samePaperAutonomyStageRunIdentity(entry.current_identity, input.current_identity)
+      && sameDomainAutonomyStageRunIdentity(entry.current_identity, input.current_identity)
     ) {
       return entry;
     }
@@ -403,16 +403,16 @@ export function readPaperAutonomyCloseoutInboxEntry(
   return null;
 }
 
-export function consumePaperAutonomyCloseoutInboxEntry(
-  entries: PaperAutonomyCloseoutInboxEntry[],
+export function consumeDomainAutonomyCloseoutInboxEntry(
+  entries: DomainAutonomyCloseoutInboxEntry[],
   input: {
     closeout_ref: string;
-    current_identity: PaperAutonomyStageRunIdentity;
+    current_identity: DomainAutonomyStageRunIdentity;
     supervisor_decision_ref: string;
     consumed_at: string;
   },
 ) {
-  const pending = readPaperAutonomyCloseoutInboxEntry(entries, input);
+  const pending = readDomainAutonomyCloseoutInboxEntry(entries, input);
   if (!pending || pending.status !== 'pending') {
     return {
       consumed: false as const,
@@ -420,7 +420,7 @@ export function consumePaperAutonomyCloseoutInboxEntry(
       entries,
     };
   }
-  const entry: PaperAutonomyCloseoutInboxEntry = {
+  const entry: DomainAutonomyCloseoutInboxEntry = {
     ...pending,
     entry_kind: 'closeout_consumed',
     status: 'consumed',
@@ -434,16 +434,16 @@ export function consumePaperAutonomyCloseoutInboxEntry(
   };
 }
 
-export function rejectPaperAutonomyCloseoutInboxEntry(
-  entries: PaperAutonomyCloseoutInboxEntry[],
+export function rejectDomainAutonomyCloseoutInboxEntry(
+  entries: DomainAutonomyCloseoutInboxEntry[],
   input: {
     closeout_ref: string;
-    current_identity: PaperAutonomyStageRunIdentity;
+    current_identity: DomainAutonomyStageRunIdentity;
     reason: string;
     rejected_at: string;
   },
 ) {
-  const pending = readPaperAutonomyCloseoutInboxEntry(entries, input);
+  const pending = readDomainAutonomyCloseoutInboxEntry(entries, input);
   if (!pending || pending.status !== 'pending') {
     return {
       rejected: false as const,
@@ -451,7 +451,7 @@ export function rejectPaperAutonomyCloseoutInboxEntry(
       entries,
     };
   }
-  const entry: PaperAutonomyCloseoutInboxEntry = {
+  const entry: DomainAutonomyCloseoutInboxEntry = {
     ...pending,
     entry_kind: 'closeout_rejected',
     status: 'rejected',
@@ -466,15 +466,15 @@ export function rejectPaperAutonomyCloseoutInboxEntry(
 }
 
 function supervisorDecisionEntry(input: {
-  entry_kind: PaperAutonomySupervisorDecisionLedgerEntry['entry_kind'];
+  entry_kind: DomainAutonomySupervisorDecisionLedgerEntry['entry_kind'];
   obligation_id: string;
-  current_identity: PaperAutonomyStageRunIdentity;
-  decision: PaperAutonomySupervisorDecisionReadback;
-  reason: PaperAutonomySupervisorDecisionLedgerEntry['reason'];
+  current_identity: DomainAutonomyStageRunIdentity;
+  decision: DomainAutonomySupervisorDecisionReadback;
+  reason: DomainAutonomySupervisorDecisionLedgerEntry['reason'];
   recorded_at: string;
-}): PaperAutonomySupervisorDecisionLedgerEntry {
+}): DomainAutonomySupervisorDecisionLedgerEntry {
   return {
-    surface_kind: 'opl_paper_autonomy_supervisor_decision_ledger_entry',
+    surface_kind: 'opl_domain_autonomy_supervisor_decision_ledger_entry',
     entry_kind: input.entry_kind,
     obligation_id: input.obligation_id,
     current_identity: input.current_identity,
@@ -490,14 +490,14 @@ function supervisorDecisionEntry(input: {
 
 function rejectedObligationApply(
   input: {
-    obligation_entries: PaperAutonomyRecoveryObligationStoreEntry[];
-    decision: PaperAutonomySupervisorDecisionReadback;
+    obligation_entries: DomainAutonomyRecoveryObligationStoreEntry[];
+    decision: DomainAutonomySupervisorDecisionReadback;
     applied_at: string;
   },
   reason: 'stale_supervisor_decision' | 'obligation_not_found',
 ) {
-  const entry: PaperAutonomyRecoveryObligationStoreEntry = {
-    surface_kind: 'opl_paper_autonomy_recovery_obligation_store_entry',
+  const entry: DomainAutonomyRecoveryObligationStoreEntry = {
+    surface_kind: 'opl_domain_autonomy_recovery_obligation_store_entry',
     entry_kind: 'obligation_apply_rejected',
     obligation_id: input.decision.obligation_id,
     current_identity: input.decision.current_identity,
@@ -517,39 +517,39 @@ function rejectedObligationApply(
   };
 }
 
-function readPaperAutonomyJsonlLedger(
+function readDomainAutonomyJsonlLedger(
   ledgerPath: string,
-  expectedSurfaceKind: PaperAutonomyJsonlSurfaceKind,
-): PaperAutonomyJsonlLedgerEntry[] {
+  expectedSurfaceKind: DomainAutonomyJsonlSurfaceKind,
+): DomainAutonomyJsonlLedgerEntry[] {
   if (!existsSync(ledgerPath)) {
     return [];
   }
   const raw = readFileSync(ledgerPath, 'utf8');
-  const entries: PaperAutonomyJsonlLedgerEntry[] = [];
+  const entries: DomainAutonomyJsonlLedgerEntry[] = [];
   for (const [index, line] of raw.split(/\r?\n/u).entries()) {
     const trimmed = line.trim();
     if (!trimmed) {
       continue;
     }
-    const parsed = parseJsonText(trimmed) as Partial<PaperAutonomyJsonlLedgerEntry>;
+    const parsed = parseJsonText(trimmed) as Partial<DomainAutonomyJsonlLedgerEntry>;
     if (parsed.surface_kind !== expectedSurfaceKind) {
       throw new Error(
-        `Unexpected paper autonomy JSONL surface at line ${index + 1}: ${String(parsed.surface_kind)}`,
+        `Unexpected domain autonomy JSONL surface at line ${index + 1}: ${String(parsed.surface_kind)}`,
       );
     }
-    entries.push(parsed as PaperAutonomyJsonlLedgerEntry);
+    entries.push(parsed as DomainAutonomyJsonlLedgerEntry);
   }
   return entries;
 }
 
-function appendPaperAutonomyJsonlLedgerEntry(
+function appendDomainAutonomyJsonlLedgerEntry(
   ledgerPath: string,
-  entry: PaperAutonomyJsonlLedgerEntry,
-  expectedSurfaceKind: PaperAutonomyJsonlSurfaceKind,
+  entry: DomainAutonomyJsonlLedgerEntry,
+  expectedSurfaceKind: DomainAutonomyJsonlSurfaceKind,
 ) {
   if (entry.surface_kind !== expectedSurfaceKind) {
     throw new Error(
-      `Unexpected paper autonomy JSONL append surface: ${entry.surface_kind}`,
+      `Unexpected domain autonomy JSONL append surface: ${entry.surface_kind}`,
     );
   }
   mkdirSync(dirname(ledgerPath), { recursive: true });
@@ -557,8 +557,8 @@ function appendPaperAutonomyJsonlLedgerEntry(
 }
 
 function obligationStatusForDecision(
-  decisionKind: PaperAutonomySupervisorDecisionKind,
-): PaperAutonomyRecoveryObligation['status'] {
+  decisionKind: DomainAutonomySupervisorDecisionKind,
+): DomainAutonomyRecoveryObligation['status'] {
   switch (decisionKind) {
     case 'execute_current_owner_delta':
       return 'current_owner_delta_executed';
@@ -575,9 +575,9 @@ function obligationStatusForDecision(
   }
 }
 
-function paperAutonomyIdentityKey(
+function domainAutonomyIdentityKey(
   obligationId: string,
-  identity: PaperAutonomyStageRunIdentity,
+  identity: DomainAutonomyStageRunIdentity,
 ) {
   return JSON.stringify([
     obligationId,
@@ -597,9 +597,9 @@ function paperAutonomyIdentityKey(
   ]);
 }
 
-function samePaperAutonomyStageRunIdentity(
-  left: PaperAutonomyStageRunIdentity,
-  right: PaperAutonomyStageRunIdentity,
+function sameDomainAutonomyStageRunIdentity(
+  left: DomainAutonomyStageRunIdentity,
+  right: DomainAutonomyStageRunIdentity,
 ) {
   return left.stage_run_id === right.stage_run_id
     && left.route_identity_key === right.route_identity_key
