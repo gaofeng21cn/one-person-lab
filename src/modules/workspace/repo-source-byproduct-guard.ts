@@ -24,6 +24,24 @@ function scanDirectory(root: string, current: string, issues: RepoSourceByproduc
   for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
     const absolutePath = path.join(current, entry.name);
     const relativePath = path.relative(root, absolutePath);
+    if (BYPRODUCT_DIRECTORY_NAMES.has(entry.name) || entry.name.endsWith('.egg-info')) {
+      issues.push({
+        kind: 'repo_source_generated_byproduct',
+        path: relativePath,
+        byproduct_type: 'directory',
+        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
+      });
+      continue;
+    }
+    if (entry.name.endsWith('.pyc') || entry.name.endsWith('.pyo')) {
+      issues.push({
+        kind: 'repo_source_generated_byproduct',
+        path: relativePath,
+        byproduct_type: 'file',
+        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
+      });
+      continue;
+    }
     if (entry.isSymbolicLink()) {
       continue;
     }
@@ -31,25 +49,8 @@ function scanDirectory(root: string, current: string, issues: RepoSourceByproduc
       if (EXCLUDED_DIRECTORY_NAMES.has(entry.name)) {
         continue;
       }
-      if (BYPRODUCT_DIRECTORY_NAMES.has(entry.name) || entry.name.endsWith('.egg-info')) {
-        issues.push({
-          kind: 'repo_source_generated_byproduct',
-          path: relativePath,
-          byproduct_type: 'directory',
-          reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
-        });
-        continue;
-      }
       scanDirectory(root, absolutePath, issues);
       continue;
-    }
-    if (entry.isFile() && (entry.name.endsWith('.pyc') || entry.name.endsWith('.pyo'))) {
-      issues.push({
-        kind: 'repo_source_generated_byproduct',
-        path: relativePath,
-        byproduct_type: 'file',
-        reason: 'repo_source_must_not_rely_on_cache_or_install_byproducts',
-      });
     }
   }
 }
@@ -58,25 +59,25 @@ export function inspectRepoSourceByproducts(sourceRoot: string) {
   const root = path.resolve(sourceRoot);
   const issues: RepoSourceByproductIssue[] = [];
 
-  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
-    issues.push({
-      kind: 'repo_source_byproduct_scan_failed',
-      path: root,
-      byproduct_type: null,
-      reason: 'source_root_missing_or_not_a_directory',
-    });
-  } else {
-    try {
-      scanDirectory(root, root, issues);
-      issues.sort((left, right) => left.path.localeCompare(right.path));
-    } catch (error) {
+  try {
+    if (!fs.statSync(root).isDirectory()) {
       issues.push({
         kind: 'repo_source_byproduct_scan_failed',
         path: root,
         byproduct_type: null,
-        reason: error instanceof Error ? error.message : String(error),
+        reason: 'source_root_missing_or_not_a_directory',
       });
+    } else {
+      scanDirectory(root, root, issues);
+      issues.sort((left, right) => left.path.localeCompare(right.path));
     }
+  } catch (error) {
+    issues.push({
+      kind: 'repo_source_byproduct_scan_failed',
+      path: root,
+      byproduct_type: null,
+      reason: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return {

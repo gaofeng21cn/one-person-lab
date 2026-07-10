@@ -50,7 +50,10 @@ import {
   resolveStandardAgentByCanonicalPluginName,
 } from '../atlas/public/standard-agent-registry.ts';
 
-const FAMILY_REPO_DIRECTORIES = STANDARD_AGENT_REGISTRY.map((entry) => entry.project);
+const FAMILY_REPO_DIRECTORIES = [
+  'one-person-lab',
+  ...STANDARD_AGENT_REGISTRY.map((entry) => entry.project),
+];
 
 export function resolveDefaultFamilyWorkspaceRoot(
   options: Parameters<typeof resolveDefaultFamilyWorkspaceRootImpl>[0] = {},
