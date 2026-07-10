@@ -11,15 +11,10 @@ test('generated interfaces expose a family-defaults source for readiness drilldo
 
   assert.equal(report.surface_kind, 'opl_generated_agent_interfaces_family_report');
   assert.equal(report.owner, 'one-person-lab');
+  assert.equal(report.status, 'ready');
   assert.equal(report.summary.total_domain_count, report.reports.length);
-  assert.equal(
-    report.summary.ready_domain_count + report.summary.blocked_domain_count,
-    report.summary.total_domain_count,
-  );
-  assert.equal(
-    report.status,
-    report.summary.blocked_domain_count > 0 ? 'blocked' : 'ready',
-  );
+  assert.equal(report.summary.ready_domain_count, 5);
+  assert.equal(report.summary.blocked_domain_count, 0);
   for (const [agentId, targetDomainId] of [
     ['mas', 'med-autoscience'],
     ['mag', 'med-autogrant'],

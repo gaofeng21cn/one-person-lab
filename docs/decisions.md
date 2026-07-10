@@ -15,7 +15,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - 新 action 显式声明 `required_fields` 与 `optional_fields`；旧 action 仅保留 locator-to-required 的迁移兼容，standard scaffold 不再生成这种旧形态。
 - CLI、MCP、Skill、product-entry、OpenAI 与 AI SDK descriptor 保留 required/optional/locator 三组字段；合法 Python callable target 统一投影为 `callable_ref` 和 `{command: action_id}`，suffix 不一致时 fail closed。
-- repo compiler 从目标 repo root 解析本地 `input_schema_ref`，缺失、越界或非法 JSON 会阻断；带 URI scheme 的外部 ref 明确标为 external resolution。该 binding 只路由 domain handler，不把 handler implementation 或 domain authority 移入 OPL。
+- repo compiler 从目标 repo root 通过 realpath containment 解析本地 `input_schema_ref`；缺失、路径或 symlink 越界、非法 JSON、JSON Schema 不可编译、本地 fragment 缺失，或显式 required/optional 与选中 schema 不一致都会阻断。带 URI scheme 的外部 ref 明确标为 external resolution。该 binding 只路由 domain handler，不把 handler implementation 或 domain authority 移入 OPL。
 
 ### 决策：Profile capability planning 只组合显式 exact refs 与 owner catalogs
 

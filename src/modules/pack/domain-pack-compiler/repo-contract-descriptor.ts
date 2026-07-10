@@ -13,6 +13,8 @@ import {
 } from '../functional-privatization-audit.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringList } from '../../../kernel/json-record.ts';
+import { resolveContainedRepoJsonFile } from '../../../kernel/repo-contained-json-file.ts';
+import { assertJsonSchemaCompiles } from '../../../kernel/schema-registry.ts';
 import {
   optionalString,
   parseJsonText,
@@ -83,10 +85,105 @@ function normalizeRepoStageControlPlane(repoDir: string, value: unknown) {
   }
 }
 
+function splitSchemaRef(schemaRef: string) {
+  const hashIndex = schemaRef.indexOf('#');
+  return hashIndex < 0
+    ? { file_ref: schemaRef, fragment: null }
+    : { file_ref: schemaRef.slice(0, hashIndex), fragment: schemaRef.slice(hashIndex + 1) };
+}
+
+function localSchemaFragment(schema: JsonRecord, fragment: string | null): unknown {
+  if (fragment === null || fragment === '') {
+    return schema;
+  }
+  let decodedFragment: string;
+  try {
+    decodedFragment = decodeURIComponent(fragment);
+  } catch {
+    return undefined;
+  }
+  if (!decodedFragment.startsWith('/')) {
+    const pending: unknown[] = [schema];
+    while (pending.length > 0) {
+      const candidate = pending.pop();
+      if (Array.isArray(candidate)) {
+        pending.push(...candidate);
+        continue;
+      }
+      if (!isRecord(candidate)) continue;
+      if (candidate.$anchor === decodedFragment) return candidate;
+      pending.push(...Object.values(candidate));
+    }
+    return undefined;
+  }
+  let current: unknown = schema;
+  for (const rawToken of decodedFragment.slice(1).split('/')) {
+    const token = rawToken.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (Array.isArray(current) && /^\d+$/.test(token)) {
+      current = current[Number(token)];
+    } else if (isRecord(current) && Object.prototype.hasOwnProperty.call(current, token)) {
+      current = current[token];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+function sameStringSet(left: string[], right: string[]) {
+  return left.length === right.length && left.every((entry) => right.includes(entry));
+}
+
+function localSchemaDependencies(repoDir: string, rootPath: string, rootSchema: JsonRecord) {
+  const dependencies: JsonRecord[] = [];
+  const pending = [{ file_path: rootPath, schema: rootSchema }];
+  const seen = new Set([rootPath]);
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    const nodes: unknown[] = [current.schema];
+    while (nodes.length > 0) {
+      const node = nodes.pop();
+      if (Array.isArray(node)) {
+        nodes.push(...node);
+        continue;
+      }
+      if (!isRecord(node)) continue;
+      nodes.push(...Object.values(node));
+      const ref = optionalString(node.$ref);
+      if (!ref) continue;
+      const fileRef = splitSchemaRef(ref).file_ref;
+      if (!fileRef || path.isAbsolute(fileRef) || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(fileRef)) continue;
+      const candidate = path.resolve(path.dirname(current.file_path), fileRef);
+      const relativeRef = path.relative(repoDir, candidate).split(path.sep).join('/');
+      const contained = resolveContainedRepoJsonFile(repoDir, relativeRef, 'Referenced input schema');
+      if (seen.has(contained.real_path)) continue;
+      const parsed = parseJsonText(fs.readFileSync(contained.real_path, 'utf8'));
+      if (!isRecord(parsed)) {
+        throw new Error(`Referenced input schema must be an object: ${relativeRef}`);
+      }
+      seen.add(contained.real_path);
+      dependencies.push(parsed);
+      pending.push({ file_path: contained.real_path, schema: parsed });
+    }
+  }
+  return dependencies;
+}
+
+function schemaFieldsMatchAction(schema: unknown, requiredFields: string[], optionalFields: string[]) {
+  if (!isRecord(schema) || !isRecord(schema.properties)) {
+    return false;
+  }
+  const schemaRequired = stringList(schema.required);
+  const schemaProperties = Object.keys(schema.properties);
+  const schemaOptional = schemaProperties.filter((entry) => !schemaRequired.includes(entry));
+  return sameStringSet(requiredFields, schemaRequired)
+    && sameStringSet(optionalFields, schemaOptional);
+}
+
 function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof normalizeFamilyActionCatalog>) {
   return (catalog?.actions ?? []).map((action) => {
     const schemaRef = action.input_schema_ref;
-    const [fileRef] = schemaRef.split('#', 1);
+    const { file_ref: fileRef, fragment } = splitSchemaRef(schemaRef);
     if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(fileRef)) {
       return {
         action_id: action.action_id,
@@ -113,7 +210,7 @@ function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof n
         status: 'invalid_repo_relative_ref',
       };
     }
-    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    if (!fs.existsSync(filePath)) {
       return {
         action_id: action.action_id,
         input_schema_ref: schemaRef,
@@ -122,10 +219,24 @@ function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof n
         status: 'missing',
       };
     }
+    let containedFile: ReturnType<typeof resolveContainedRepoJsonFile>;
     try {
-      if (!isRecord(parseJsonText(fs.readFileSync(filePath, 'utf8')))) {
+      containedFile = resolveContainedRepoJsonFile(repoDir, fileRef, 'Action input schema');
+    } catch {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolution_scope: 'repo_relative',
+        status: 'invalid_repo_relative_ref',
+      };
+    }
+    let schema: JsonRecord;
+    try {
+      const parsed = parseJsonText(fs.readFileSync(containedFile.real_path, 'utf8'));
+      if (!isRecord(parsed)) {
         throw new Error('schema document must be an object');
       }
+      schema = parsed;
     } catch {
       return {
         action_id: action.action_id,
@@ -135,10 +246,45 @@ function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof n
         status: 'invalid_json',
       };
     }
+    try {
+      assertJsonSchemaCompiles({
+        schemaId: `${action.action_id}:input`,
+        schema,
+        sourceRef: schemaRef,
+      }, localSchemaDependencies(repoDir, containedFile.real_path, schema));
+    } catch {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolved_path: containedFile.repo_relative_ref,
+        resolution_scope: 'repo_relative',
+        status: 'invalid_schema',
+      };
+    }
+    const selectedSchema = localSchemaFragment(schema, fragment);
+    if (selectedSchema === undefined) {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolved_path: containedFile.repo_relative_ref,
+        resolution_scope: 'repo_relative',
+        status: 'missing_fragment',
+      };
+    }
+    if (action.parameter_fields_explicit
+      && !schemaFieldsMatchAction(selectedSchema, action.required_fields, action.optional_fields)) {
+      return {
+        action_id: action.action_id,
+        input_schema_ref: schemaRef,
+        resolved_path: containedFile.repo_relative_ref,
+        resolution_scope: 'repo_relative',
+        status: 'field_contract_mismatch',
+      };
+    }
     return {
       action_id: action.action_id,
       input_schema_ref: schemaRef,
-      resolved_path: relativePath,
+      resolved_path: containedFile.repo_relative_ref,
       resolution_scope: 'repo_relative',
       status: 'resolved',
     };

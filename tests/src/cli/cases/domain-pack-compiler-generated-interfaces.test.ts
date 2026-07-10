@@ -112,8 +112,17 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
   }
   for (const action of manifestSurface.family_action_catalog.actions) {
     const schemaPath = path.join(targetDir, action.input_schema_ref);
+    const requiredFields = action.required_fields ?? action.workspace_locator_fields ?? [];
+    const optionalFields = action.optional_fields ?? [];
     fs.mkdirSync(path.dirname(schemaPath), { recursive: true });
-    fs.writeFileSync(schemaPath, `${JSON.stringify({ type: 'object' })}\n`);
+    fs.writeFileSync(schemaPath, `${JSON.stringify({
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+      required: requiredFields,
+      properties: Object.fromEntries(
+        [...requiredFields, ...optionalFields].map((field) => [field, { type: 'string' }]),
+      ),
+    })}\n`);
   }
   return manifestSurface;
 }
@@ -232,17 +241,22 @@ test('generated interfaces preserve action fields and expose executable callable
   action.source_command.command = 'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch#draft_brief';
   action.supported_surfaces.cli.command = action.source_command.command;
   action.supported_surfaces.product_entry.command = action.source_command.command;
+  action.input_schema_ref = 'contracts/draft-brief.input.schema.json#/$defs/input';
   action.required_fields = ['workspace_root', 'brief'];
   action.optional_fields = ['audience'];
   writeJson(actionCatalogPath, actionCatalog);
   writeJson(path.join(repoDir, 'contracts', 'draft-brief.input.schema.json'), {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    type: 'object',
-    required: ['workspace_root', 'brief'],
-    properties: {
-      workspace_root: { type: 'string' },
-      brief: { type: 'string' },
-      audience: { type: 'string' },
+    $defs: {
+      input: {
+        type: 'object',
+        required: ['workspace_root', 'brief'],
+        properties: {
+          workspace_root: { type: 'string' },
+          brief: { type: 'string' },
+          audience: { type: 'string' },
+        },
+      },
     },
   });
 
@@ -266,6 +280,83 @@ test('generated interfaces preserve action fields and expose executable callable
   assert.equal(bundle.domain_handler.descriptors[0].callable_ref,
     'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch');
   assert.deepEqual(bundle.domain_handler.descriptors[0].request, { command: 'draft_brief' });
+});
+
+test('action catalog parameter lists reject non-arrays and non-string entries', () => {
+  for (const [field, value] of [
+    ['required_fields', 'workspace_root'],
+    ['required_fields', ['workspace_root', 7]],
+    ['optional_fields', 'audience'],
+    ['optional_fields', ['audience', false]],
+    ['workspace_locator_fields', 'workspace_root'],
+    ['workspace_locator_fields', ['workspace_root', {}]],
+  ] as const) {
+    const repoDir = buildReadyAgentRepo();
+    const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+    const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
+    actionCatalog.actions[0][field] = value;
+    writeJson(actionCatalogPath, actionCatalog);
+
+    const failure = runCliFailure(['agents', 'interfaces', '--repo-dir', repoDir]);
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.ok(failure.payload.error.details.error.includes(`family_action_catalog.actions[0].${field}`));
+  }
+});
+
+test('repo compiler rejects input schema symlinks that escape the repo', () => {
+  const repoDir = buildReadyAgentRepo();
+  const schemaPath = path.join(repoDir, 'contracts', 'draft-brief.input.schema.json');
+  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-action-schema-outside-'));
+  const outsideSchema = path.join(outsideDir, 'outside.schema.json');
+  writeJson(outsideSchema, {
+    type: 'object',
+    required: ['workspace_root'],
+    properties: { workspace_root: { type: 'string' } },
+  });
+  fs.rmSync(schemaPath);
+  fs.symlinkSync(outsideSchema, schemaPath);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  assert.equal(bundle.status, 'blocked');
+  assert.equal(bundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'invalid_repo_relative_ref');
+});
+
+test('repo compiler rejects uncompileable schemas and missing local fragments', () => {
+  const invalidRepoDir = buildReadyAgentRepo();
+  writeJson(path.join(invalidRepoDir, 'contracts', 'draft-brief.input.schema.json'), {
+    type: 'not-a-json-schema-type',
+  });
+  const invalidBundle = runCli(['agents', 'interfaces', '--repo-dir', invalidRepoDir])
+    .generated_agent_interfaces;
+  assert.equal(invalidBundle.status, 'blocked');
+  assert.equal(invalidBundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'invalid_schema');
+
+  const fragmentRepoDir = buildReadyAgentRepo();
+  const catalogPath = path.join(fragmentRepoDir, 'contracts', 'action_catalog.json');
+  const catalog = parseJsonText(fs.readFileSync(catalogPath, 'utf8')) as Record<string, any>;
+  catalog.actions[0].input_schema_ref = 'contracts/draft-brief.input.schema.json#/$defs/missing';
+  writeJson(catalogPath, catalog);
+  const fragmentBundle = runCli(['agents', 'interfaces', '--repo-dir', fragmentRepoDir])
+    .generated_agent_interfaces;
+  assert.equal(fragmentBundle.status, 'blocked');
+  assert.equal(fragmentBundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'missing_fragment');
+});
+
+test('repo compiler requires action fields to match the selected input schema', () => {
+  const repoDir = buildReadyAgentRepo();
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
+  actionCatalog.actions[0].required_fields = ['workspace_root', 'brief'];
+  actionCatalog.actions[0].optional_fields = ['audience'];
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  assert.equal(bundle.status, 'blocked');
+  assert.equal(bundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'field_contract_mismatch');
 });
 
 test('repo compiler blocks missing repo-relative action input schemas', () => {

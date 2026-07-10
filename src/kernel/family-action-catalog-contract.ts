@@ -48,6 +48,7 @@ export interface FamilyActionCatalogAction {
   output_schema_ref: string;
   required_fields: string[];
   optional_fields: string[];
+  parameter_fields_explicit?: boolean;
   workspace_locator_fields: string[];
   human_gate_ids: string[];
   supported_surfaces: {
@@ -88,6 +89,20 @@ function requireString(value: unknown, field: string) {
     throw new Error(`Missing required string field: ${field}`);
   }
   return text;
+}
+
+function optionalStringArray(value: unknown, field: string) {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${field} must be an array of strings.`);
+  }
+  const entries = value.map((entry, index) => requireString(entry, `${field}[${index}]`));
+  if (new Set(entries).size !== entries.length) {
+    throw new Error(`${field} must not contain duplicate fields.`);
+  }
+  return entries;
 }
 
 const PYTHON_HANDLER_TARGET = /^(?<module>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*):(?<callable>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+)#(?<action>[A-Za-z_][A-Za-z0-9_-]*)$/;
@@ -199,12 +214,16 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
   requireSupportedSurfaceSlots(supportedSurfaces, field);
 
   const actionId = requireString(value.action_id, `${field}.action_id`);
-  const workspaceLocatorFields = stringList(value.workspace_locator_fields);
+  const workspaceLocatorFields = optionalStringArray(
+    value.workspace_locator_fields,
+    `${field}.workspace_locator_fields`,
+  );
   const hasExplicitRequiredFields = Object.prototype.hasOwnProperty.call(value, 'required_fields');
+  const hasExplicitOptionalFields = Object.prototype.hasOwnProperty.call(value, 'optional_fields');
   const requiredFields = hasExplicitRequiredFields
-    ? stringList(value.required_fields)
+    ? optionalStringArray(value.required_fields, `${field}.required_fields`)
     : workspaceLocatorFields;
-  const optionalFields = stringList(value.optional_fields);
+  const optionalFields = optionalStringArray(value.optional_fields, `${field}.optional_fields`);
   const overlappingFields = requiredFields.filter((entry) => optionalFields.includes(entry));
   if (overlappingFields.length > 0) {
     throw new Error(`${field}.required_fields and optional_fields overlap: ${overlappingFields.join(', ')}`);
@@ -233,6 +252,7 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
     output_schema_ref: requireString(value.output_schema_ref, `${field}.output_schema_ref`),
     required_fields: requiredFields,
     optional_fields: optionalFields,
+    parameter_fields_explicit: hasExplicitRequiredFields || hasExplicitOptionalFields,
     workspace_locator_fields: workspaceLocatorFields,
     human_gate_ids: stringList(value.human_gate_ids),
     supported_surfaces: {

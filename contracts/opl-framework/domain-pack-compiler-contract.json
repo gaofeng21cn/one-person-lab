@@ -158,7 +158,8 @@
         "validation": "callable target action suffix must exactly match action_id"
       },
       "input_schema_resolution": {
-        "repo_relative_refs": "resolved from the target repo root and blocked when missing, escaping the repo, or invalid JSON",
+        "repo_relative_refs": "resolved through realpath containment from the target repo root and blocked when missing, escaping through traversal or symlink, invalid JSON, not compilable as JSON Schema, or naming a missing local fragment",
+        "parameter_schema_consistency": "when required_fields or optional_fields are explicitly declared, they must exactly match the selected schema fragment required and properties sets",
         "external_refs": "URI-scheme refs are marked external_resolution_explicit and are not misreported as repo-local files"
       }
     },

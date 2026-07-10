@@ -132,3 +132,30 @@ export function assertJsonSchemaPayload(
     },
   );
 }
+
+export function assertJsonSchemaCompiles(
+  entry: JsonSchemaRegistryEntry,
+  dependencies: unknown[] = [],
+): void {
+  const compiler = new Ajv2020({
+    allErrors: true,
+    strict: false,
+    logger: false,
+  });
+  try {
+    for (const dependency of dependencies) {
+      compiler.addSchema(dependency as AnySchema);
+    }
+    compiler.compile(entry.schema);
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'JSON Schema contract could not be compiled by Ajv.',
+      {
+        schema_id: entry.schemaId,
+        source_ref: entry.sourceRef,
+        cause: error instanceof Error ? error.message : 'Ajv schema compilation failed.',
+      },
+    );
+  }
+}
