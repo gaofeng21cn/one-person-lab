@@ -68,7 +68,6 @@ const DOMAIN_SPECIFIC_CARRIER_BOUNDARIES = [
     boundary_ref: 'paper_autonomy_supervisor_decision authority_boundary',
     allowed_machine_role: 'mas_domain_recovery_supervisor_projection',
     source_evidence_refs: [
-      'src/modules/runway/family-runtime-domain-intake-parts/paper-autonomy-supervisor-decision.ts',
       'src/modules/runway/family-runtime-paper-autonomy.ts',
     ],
   },
@@ -387,7 +386,7 @@ export function buildOplFrameworkSemanticHygieneAudit(contracts: FrameworkContra
       owner: 'one-person-lab',
       source_evidence: [
         'src/modules/runway/family-runtime-domain-intake-parts/paper-mission-route-handoff/shared.ts',
-        'src/modules/runway/family-runtime-domain-intake-parts/paper-autonomy-supervisor-decision.ts',
+        'src/modules/runway/family-runtime-paper-autonomy.ts',
         'src/modules/stagecraft/family-transition-visual-ingestion.ts',
         'src/modules/stagecraft/quality-gate-runtime.ts',
         'src/modules/runway/generic-substrate-projection.ts',

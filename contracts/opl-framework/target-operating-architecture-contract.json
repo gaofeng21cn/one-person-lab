@@ -796,7 +796,9 @@
         "status": "opl_landed_owner_gated",
         "opl_landed_surfaces": [
           "contracts/opl-framework/family-runtime-online-substrate-contract.json",
-          "src/family-runtime-progress-first-anti-spin-gate.ts",
+          "contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state",
+          "src/modules/runway/family-runtime-stage-run-currentness-identity.ts",
+          "src/modules/runway/family-runtime-stage-progress-log.ts",
           "src/family-runtime-temporal-provider.ts",
           "src/family-runtime-control-loop.ts",
           "opl runtime app-operator-drilldown --detail full --json"

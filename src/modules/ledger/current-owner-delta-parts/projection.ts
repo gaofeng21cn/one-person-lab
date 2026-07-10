@@ -109,47 +109,118 @@ function stageRefFrom(action: CompactCurrentOwnerDeltaAction, ownerDeltaFirst: J
 
 function defaultStopLossState() {
   return {
+    surface_kind: 'opl_current_owner_delta_stop_loss_state',
     status: 'not_triggered',
-    lineage_repeat_count: 0,
-    receipt_only_repeat_count: 0,
-    read_model_reconcile_repeat_count: 0,
-    platform_repair_only_repeat_count: 0,
-    stale_route_repeat_count: 0,
-    unclassified_no_delta_repeat_count: 0,
-    no_progress_attempt_classification: [],
+    default_redrive_allowed: true,
     fresh_owner_delta_required_to_resume: false,
+    freeze_reason: null,
+    release_conditions: [],
+    no_progress_budget: {
+      same_stage_run_route_no_progress_count: 0,
+      max_default_redrives: null,
+      exhausted: false,
+      attempt_classifications: [],
+    },
+    successor_admission: null,
+    policy_ref: 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state',
+    authority_boundary: stopLossAuthorityBoundary(),
   };
 }
 
-function compactStopLossState(...values: unknown[]) {
+const STOP_LOSS_RELEASE_CONDITIONS = new Set([
+  'fresh_current_owner_delta',
+  'accepted_domain_owner_answer',
+  'stable_domain_typed_blocker',
+  'human_decision',
+  'provider_hard_gate_clearance',
+]);
+
+const STOP_LOSS_IDENTITY_DIFFERENCE_FIELDS = new Set([
+  'action_type',
+  'work_unit_id',
+  'work_unit_fingerprint',
+  'source_fingerprint',
+  'route_identity_key',
+  'stage_packet_ref',
+]);
+
+function stopLossAuthorityBoundary() {
+  return {
+    can_freeze_default_redrive: true,
+    can_select_domain_successor: false,
+    can_create_owner_receipt: false,
+    can_create_typed_blocker: false,
+    can_write_domain_truth: false,
+    can_claim_domain_ready: false,
+    budget_exhaustion_is_domain_typed_blocker: false,
+    temporal_retry_policy_replaced: false,
+  };
+}
+
+function normalizedReleaseConditions(value: unknown) {
+  return stringList(value)
+    .map((entry) => entry === 'fresh_owner_delta'
+      ? 'fresh_current_owner_delta'
+      : entry === 'stable_typed_blocker'
+        ? 'stable_domain_typed_blocker'
+        : entry)
+    .filter((entry) => STOP_LOSS_RELEASE_CONDITIONS.has(entry));
+}
+
+function compactNoProgressBudget(value: unknown, frozen: boolean) {
+  const budget = record(value);
+  const count = numberValue(budget.same_stage_run_route_no_progress_count);
+  const maxDefaultRedrives = typeof budget.max_default_redrives === 'number'
+    && Number.isInteger(budget.max_default_redrives)
+    && budget.max_default_redrives >= 0
+    ? budget.max_default_redrives
+    : null;
+  return {
+    same_stage_run_route_no_progress_count: count,
+    max_default_redrives: maxDefaultRedrives,
+    exhausted: frozen || budget.exhausted === true,
+    attempt_classifications: stringList(budget.attempt_classifications),
+  };
+}
+
+function compactSuccessorAdmission(value: unknown) {
+  const admission = record(value);
+  if (Object.keys(admission).length === 0) {
+    return null;
+  }
+  return {
+    status: 'identity_different_successor_or_gate_required',
+    same_stage_run_route_redrive_allowed: false,
+    successor_ref: firstString(admission.successor_ref, admission.domain_successor_ref),
+    identity_difference_fields: stringList(admission.identity_difference_fields)
+      .filter((field) => STOP_LOSS_IDENTITY_DIFFERENCE_FIELDS.has(field)),
+    gate_ref: firstString(admission.gate_ref, admission.human_gate_ref, admission.operator_gate_ref),
+    authority_boundary: stopLossAuthorityBoundary(),
+  };
+}
+
+function compactStopLossState(...values: unknown[]): JsonRecord {
   const folded = values.map(record).find((value) => stringValue(value.status));
   if (!folded) {
     return defaultStopLossState();
   }
-  const terminalBlockerCode = stringValue(folded.terminal_blocker_code);
-  const successorAdmission = record(folded.successor_admission);
+  const frozen = stringValue(folded.status) === 'frozen'
+    || record(folded.no_progress_budget).exhausted === true;
+  const releaseConditions = normalizedReleaseConditions(folded.release_conditions);
   return {
-    ...defaultStopLossState(),
-    surface_kind: stringValue(folded.surface_kind),
-    status: stringValue(folded.status) ?? 'not_triggered',
-    lineage_repeat_count: numberValue(folded.lineage_repeat_count),
-    receipt_only_repeat_count: numberValue(folded.receipt_only_repeat_count),
-    read_model_reconcile_repeat_count:
-      numberValue(folded.read_model_reconcile_repeat_count),
-    platform_repair_only_repeat_count: numberValue(folded.platform_repair_only_repeat_count),
-    stale_route_repeat_count: numberValue(folded.stale_route_repeat_count),
-    unclassified_no_delta_repeat_count:
-      numberValue(folded.unclassified_no_delta_repeat_count),
-    no_progress_attempt_classification:
-      Array.isArray(folded.no_progress_attempt_classification)
-        ? folded.no_progress_attempt_classification
-        : [],
+    surface_kind: 'opl_current_owner_delta_stop_loss_state',
+    status: frozen ? 'frozen' : stringValue(folded.status) ?? 'not_triggered',
+    default_redrive_allowed: !frozen,
     fresh_owner_delta_required_to_resume:
-      folded.fresh_owner_delta_required_to_resume === true,
-    release_conditions: stringList(folded.release_conditions),
-    ...(terminalBlockerCode ? { terminal_blocker_code: terminalBlockerCode } : {}),
-    ...(Object.keys(successorAdmission).length > 0 ? { successor_admission: successorAdmission } : {}),
-    policy_ref: stringValue(folded.policy_ref),
+      frozen || folded.fresh_owner_delta_required_to_resume === true,
+    freeze_reason: frozen ? 'same_stage_run_route_no_progress_budget_exhausted' : null,
+    release_conditions: frozen && releaseConditions.length === 0
+      ? [...STOP_LOSS_RELEASE_CONDITIONS]
+      : releaseConditions,
+    no_progress_budget: compactNoProgressBudget(folded.no_progress_budget, frozen),
+    successor_admission: compactSuccessorAdmission(folded.successor_admission),
+    policy_ref: 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state',
+    authority_boundary: stopLossAuthorityBoundary(),
   };
 }
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { resolveCapabilityForCurrentDelta } from '../../src/modules/connect/capability-registry-resolver.ts';
+import { buildCurrentOwnerDeltaReadModel } from '../../src/modules/ledger/current-owner-delta-projection.ts';
 
 import './target-architecture-schema-contracts-cases/target-operating-architecture.ts';
 
@@ -25,7 +26,6 @@ const schemaPaths = [
   'contracts/opl-framework/owner-answer.schema.json',
   'contracts/opl-framework/evidence-ledger-event.schema.json',
   'contracts/opl-framework/golden-path-profile.schema.json',
-  'contracts/opl-framework/stop-loss-policy.schema.json',
   'contracts/opl-framework/default-surface-budget.schema.json',
   'contracts/opl-framework/workspace-topology-profile.schema.json',
   'contracts/opl-framework/workspace-index.schema.json',
@@ -73,7 +73,6 @@ test('target architecture schemas retain sparse identity, required-field, and au
   const ownerAnswer = schemas['contracts/opl-framework/owner-answer.schema.json'];
   const evidenceLedger = schemas['contracts/opl-framework/evidence-ledger-event.schema.json'];
   const goldenPath = schemas['contracts/opl-framework/golden-path-profile.schema.json'];
-  const stopLoss = schemas['contracts/opl-framework/stop-loss-policy.schema.json'];
   const surfaceBudget = schemas['contracts/opl-framework/default-surface-budget.schema.json'];
   const workspaceTopology = schemas['contracts/opl-framework/workspace-topology-profile.schema.json'];
   const workspaceIndex = schemas['contracts/opl-framework/workspace-index.schema.json'];
@@ -110,7 +109,6 @@ test('target architecture schemas retain sparse identity, required-field, and au
     [ownerAnswer.$defs.authority_boundary.properties, ['opl_can_sign_domain_owner_answer', 'opl_can_authorize_quality_verdict']],
     [evidenceLedger.$defs.authority_boundary.properties, ['event_can_create_default_action_without_delta', 'opl_can_write_domain_truth']],
     [goldenPath.$defs.authority_boundary.properties, ['variant_can_be_default_without_explicit_selection', 'opl_can_authorize_domain_ready']],
-    [stopLoss.$defs.authority_boundary.properties, ['opl_can_synthesize_fallback_verdict', 'opl_can_authorize_quality_verdict']],
     [surfaceBudget.$defs.authority_boundary.properties, ['default_surface_can_claim_production_ready', 'default_surface_can_replace_domain_owner']],
     [workspaceTopology.$defs.authority_boundary.properties, ['opl_can_write_domain_truth', 'runtime_state_counts_as_user_default_surface']],
     [workspaceIndex.$defs.authority_boundary.properties, ['opl_can_write_domain_truth', 'runtime_state_counts_as_user_default_surface']],
@@ -122,23 +120,40 @@ test('target architecture schemas retain sparse identity, required-field, and au
   }
 
   assert.equal(goldenPath.$defs.explicit_variant.properties.explicit_selection_required.const, true);
-  assert.equal(stopLoss.properties.successor_policy.properties.same_work_unit_redrive_allowed.const, false);
-  const ownerDeltaStopLoss = ownerDelta.properties.stop_loss_state.properties.successor_admission.properties;
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'contracts/opl-framework/stop-loss-policy.schema.json')),
+    false,
+    'stop-loss must be owned by current-owner-delta instead of a second schema',
+  );
+  const ownerDeltaStopLoss = ownerDelta.properties.stop_loss_state.properties;
+  assert.equal(ownerDeltaStopLoss.default_redrive_allowed.type, 'boolean');
+  assert.equal(
+    ownerDeltaStopLoss.successor_admission.properties.same_stage_run_route_redrive_allowed.const,
+    false,
+  );
+  assert.equal(
+    ownerDeltaStopLoss.successor_admission.properties.successor_ref.$ref,
+    '#/$defs/nullable_ref',
+  );
+  assert.equal(
+    Object.hasOwn(ownerDeltaStopLoss.successor_admission.properties, 'preferred_successor'),
+    false,
+  );
+  assert.equal(
+    ownerDelta.$defs.stop_loss_authority_boundary.properties.can_create_typed_blocker.const,
+    false,
+  );
   const targetArchitecture = readJson<Record<string, any>>(
     'contracts/opl-framework/target-operating-architecture-contract.json',
   );
   const targetCapability = targetArchitecture.foundry_agent_os_standard.capability_registry_boundary;
   assert.deepEqual(
     [
-      stopLoss.properties.successor_policy.properties.same_work_unit_redrive_allowed.const,
-      stopLoss.properties.successor_policy.properties.default_successor_action_type.const,
       targetCapability.resolver_abi_ref,
       targetCapability.default_behavior,
       ownerDelta.properties.capability_invocation_hard_gate_policy.properties.runway_can_write_domain_truth.const,
     ],
     [
-      ownerDeltaStopLoss.same_work_unit_redrive_allowed.const,
-      ownerDeltaStopLoss.preferred_successor.properties.action_type.const,
       'contracts/opl-framework/capability-registry-resolver.schema.json',
       capabilityResolver.$defs.capability_registry_readout.properties.default_behavior.const,
       capabilityResolver.$defs.authority_boundary.properties.can_write_domain_truth.const,
@@ -162,35 +177,8 @@ test('target architecture schemas retain sparse identity, required-field, and au
     capabilityRef: 'capability:missing',
     workUnitRef: 'work:schema-sentinel',
   });
-  const stopLossPayload = {
-    surface_kind: 'opl_stop_loss_policy',
-    schema_version: 'stop-loss-policy.v1',
-    policy_id: 'stop-loss:schema-sentinel',
-    lineage_ref: 'lineage:schema-sentinel',
-    freeze_state: 'frozen',
-    release_conditions: ['fresh_owner_delta'],
-    repeat_budget: { policy_id: 'repeat:schema-sentinel', repeat_threshold: 1, matched_on: 'default' },
-    successor_policy: {
-      same_work_unit_redrive_allowed: false,
-      identity_different_successor_allowed: true,
-      default_successor_action_type: 'publishability_repair_sprint',
-      default_successor_work_unit_id: 'publishability_repair_sprint_after_anti_loop_budget_exhausted',
-      stable_operator_gate_allowed: true,
-      required_identity_difference_any_of: ['source_fingerprint'],
-    },
-    authority_boundary: {
-      opl_can_freeze_default_launch: true,
-      opl_can_delete_domain_attempts: false,
-      opl_can_ignore_fresh_owner_delta: false,
-      opl_can_ignore_stable_typed_blocker: false,
-      opl_can_synthesize_fallback_verdict: false,
-      opl_can_authorize_domain_ready: false,
-      opl_can_authorize_quality_verdict: false,
-    },
-  };
   for (const [schemaPath, payload, group, field] of [
     ['contracts/opl-framework/capability-registry-resolver.schema.json', capabilityPayload, 'authority_boundary', 'can_write_domain_truth'],
-    ['contracts/opl-framework/stop-loss-policy.schema.json', stopLossPayload, 'successor_policy', 'same_work_unit_redrive_allowed'],
   ] as const) {
     const schema = schemas[schemaPath];
     const entry = { schemaId: schema.$id, schema, sourceRef: schemaPath };
@@ -209,4 +197,49 @@ test('target architecture schemas retain sparse identity, required-field, and au
       );
     }
   }
+});
+
+test('current owner delta freezes only default same-route redrive without synthesizing domain authority', () => {
+  const readModel = buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'med-autoscience',
+      next_required_delta: 'domain_owner_answer_or_typed_blocker_required',
+      required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+      stop_loss_state: {
+        status: 'frozen',
+        no_progress_budget: {
+          same_stage_run_route_no_progress_count: 2,
+          max_default_redrives: 2,
+          exhausted: true,
+        },
+        successor_admission: {
+          status: 'identity_different_successor_or_gate_required',
+          successor_ref: 'mas://policy/successors/publication-repair',
+          identity_difference_fields: ['work_unit_id'],
+        },
+      },
+    },
+  });
+
+  const stopLoss = readModel.current_owner_delta.stop_loss_state as Record<string, any>;
+  assert.equal(stopLoss.status, 'frozen');
+  assert.equal(stopLoss.default_redrive_allowed, false);
+  assert.equal(stopLoss.freeze_reason, 'same_stage_run_route_no_progress_budget_exhausted');
+  assert.equal(stopLoss.fresh_owner_delta_required_to_resume, true);
+  assert.equal(stopLoss.terminal_blocker_code, undefined);
+  assert.equal(stopLoss.successor_admission.same_stage_run_route_redrive_allowed, false);
+  assert.equal(stopLoss.successor_admission.successor_ref, 'mas://policy/successors/publication-repair');
+  assert.equal(stopLoss.successor_admission.preferred_successor, undefined);
+  assert.equal(stopLoss.authority_boundary.can_create_owner_receipt, false);
+  assert.equal(stopLoss.authority_boundary.can_create_typed_blocker, false);
+  assert.equal(stopLoss.authority_boundary.can_write_domain_truth, false);
+  assert.equal(stopLoss.policy_ref, 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state');
+
+  const schema = readJson<Record<string, any>>('contracts/opl-framework/current-owner-delta.schema.json');
+  const validation = validateJsonSchemaPayload({
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/current-owner-delta.schema.json',
+  }, readModel.current_owner_delta);
+  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors));
 });

@@ -83,6 +83,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(terminalOrdering.forbidden_fallbacks.includes('stale_transport_status'), true);
 
   const budget = surfaces.no_progress_budget_contract;
+  assert.equal(budget.scope_identity, 'sameStageRunRouteCurrentnessIdentity');
   assert.deepEqual(budget.budget_scope, [
     'domain_id',
     'study_id_or_quest_id',
@@ -102,26 +103,31 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   }
   assert.equal(
     budget.budget_exhaustion_action,
-    'freeze_default_redrive_and_project_stop_loss_state_until_fresh_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance',
+    'freeze_default_redrive_and_project_current_owner_delta_stop_loss_state_until_fresh_current_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance',
   );
-  assert.equal(budget.budget_exhaustion_terminal_blocker_code, 'anti_loop_budget_exhausted');
-  assert.equal(budget.same_work_unit_redrive_after_budget_exhaustion_allowed, false);
+  assert.equal(budget.budget_exhaustion_is_domain_typed_blocker, false);
+  assert.equal(budget.same_stage_run_route_redrive_after_budget_exhaustion_allowed, false);
+  assert.equal(budget.temporal_retry_and_dead_letter_policy_replaced, false);
   assert.equal(
-    budget.successor_admission_policy.default_successor_action_type,
-    'publishability_repair_sprint',
+    budget.successor_admission_policy.successor_ref_owner,
+    'domain_policy_adapter',
   );
-  assert.equal(
-    budget.successor_admission_policy.default_successor_work_unit_id,
-    'publishability_repair_sprint_after_anti_loop_budget_exhausted',
-  );
+  assert.equal(budget.successor_admission_policy.default_successor_ref, null);
+  assert.equal(budget.successor_admission_policy.default_successor_action_type, undefined);
   assert.equal(
     budget.successor_admission_policy.identity_must_differ_by_any_of.includes('source_fingerprint'),
     true,
   );
+  assert.equal(
+    budget.successor_admission_policy.identity_must_differ_by_any_of.includes('route_identity_key'),
+    true,
+  );
   assert.equal(budget.successor_admission_policy.stable_operator_or_human_gate_allowed, true);
   assert.equal(budget.successor_admission_policy.authority_boundary.can_create_owner_receipt, false);
-  assert.ok(budget.counts_as_progress_refs.includes('domain_owner_receipt_ref'));
-  assert.ok(budget.counts_as_progress_refs.includes('paper_or_artifact_delta_ref'));
+  assert.equal(budget.successor_admission_policy.authority_boundary.can_select_domain_successor, false);
+  assert.ok(budget.budget_release_or_terminal_refs.includes('structured_closeout_ref'));
+  assert.ok(budget.budget_release_or_terminal_refs.includes('domain_owner_receipt_ref'));
+  assert.ok(budget.budget_release_or_terminal_refs.includes('paper_or_artifact_delta_ref'));
 
   const workerStale = surfaces.worker_source_stale_supervisor_projection;
   assert.equal(workerStale.status, 'fail_closed_supervisor_guard');

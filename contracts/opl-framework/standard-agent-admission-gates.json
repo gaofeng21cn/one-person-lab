@@ -239,7 +239,7 @@
           "candidate_domain_repo:blocker_lineage_policy",
           "contracts/opl-framework/stage-typed-blocker.schema.json",
           "contracts/opl-framework/owner-answer.schema.json",
-          "contracts/opl-framework/stop-loss-policy.schema.json"
+          "contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state"
         ],
         "forbidden_claims": [
           "domain_ready",

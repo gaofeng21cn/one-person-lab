@@ -545,7 +545,7 @@ OMA 的重构点是保持 target-agent generic vocabulary；它不成为第二 O
 | `owner-answer.schema.json` | owner receipt / typed blocker / human decision / route-back 的统一 return shape。 |
 | `evidence-ledger-event.schema.json` | audit-only evidence 分类和 bounded envelope。 |
 | `golden-path-profile.schema.json` | 每个 Foundry Agent 的 ordinary path 与 explicit variants。 |
-| `stop-loss-policy.schema.json` | lineage repeat、receipt-only、platform-repair-only、stale-route 的冻结规则。 |
+| `current-owner-delta.schema.json#/properties/stop_loss_state` | 同一 StageRun route 无进展时默认 redrive 的冻结规则；successor 由 domain policy ref 提供。 |
 | `default-surface-budget.schema.json` | default / diagnostic / audit / production / cleanup 的升级门。 |
 | `cognitive-computation-kernel.json` | stage 内认知计算层、tool affordance boundary、独立 quality gate 和 route/stage 分层边界。 |
 
@@ -599,7 +599,7 @@ domain-agent-repo/
 | `stage-artifact-progress-truth-policy.json` | progress 必须同时具备 physical output、valid manifest、owner answer 和 current pointer。 |
 | `cognitive-computation-kernel.json` | stage 内认知计算、tool affordance boundary、knowledge refs 和 independent gate 的 refs-only 组织边界。 |
 | `evidence-ledger-event.schema.json` | raw evidence、trace、replay、typed blocker group、long-soak 和 cleanup provenance 只作为 passive audit。 |
-| `stop-loss-policy.schema.json` | receipt-only、platform-repair-only、read-model-reconcile-only 或 stale-route lineage 的默认冻结规则。 |
+| `current-owner-delta.schema.json#/properties/stop_loss_state` | receipt-only、platform-repair-only、read-model-reconcile-only 或 stale-route 无进展时默认 redrive 的冻结规则。 |
 | `guardrail-tier-policy.json` | launch-hard、runtime-enforced、domain/human gate、audit-only 分级。 |
 | `wrapper-retirement-gate-policy.json` | replacement parity、no-active-caller、owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 删除门。 |
 | `golden-path-profile.schema.json` | 每个 Foundry Agent 的 single ordinary route 与 explicit variants。 |

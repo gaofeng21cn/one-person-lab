@@ -332,7 +332,6 @@
           "existing_surfaces": [
             "current-owner-delta.schema.json",
             "stage_route_arbiter_substrate_contract.no_progress_budget_contract",
-            "stop-loss-policy.schema.json",
             "state-index-kernel-contract.json"
           ],
           "required_obligation_refs": [
@@ -717,6 +716,7 @@
         ]
       },
       "no_progress_budget_contract": {
+        "scope_identity": "sameStageRunRouteCurrentnessIdentity",
         "budget_scope": [
           "domain_id",
           "study_id_or_quest_id",
@@ -733,28 +733,33 @@
           "owner_output_already_current",
           "no_deliverable_delta"
         ],
-        "budget_exhaustion_action": "freeze_default_redrive_and_project_stop_loss_state_until_fresh_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance",
-        "budget_exhaustion_terminal_blocker_code": "anti_loop_budget_exhausted",
-        "same_work_unit_redrive_after_budget_exhaustion_allowed": false,
+        "budget_exhaustion_action": "freeze_default_redrive_and_project_current_owner_delta_stop_loss_state_until_fresh_current_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance",
+        "budget_exhaustion_is_domain_typed_blocker": false,
+        "same_stage_run_route_redrive_after_budget_exhaustion_allowed": false,
+        "temporal_retry_and_dead_letter_policy_replaced": false,
         "successor_admission_policy": {
           "status": "identity_different_successor_or_gate_required",
-          "default_successor_action_type": "publishability_repair_sprint",
-          "default_successor_work_unit_id": "publishability_repair_sprint_after_anti_loop_budget_exhausted",
+          "successor_ref_owner": "domain_policy_adapter",
+          "default_successor_ref": null,
           "identity_must_differ_by_any_of": [
             "action_type",
             "work_unit_id",
             "work_unit_fingerprint",
-            "source_fingerprint"
+            "source_fingerprint",
+            "route_identity_key",
+            "stage_packet_ref"
           ],
           "stable_operator_or_human_gate_allowed": true,
           "authority_boundary": {
             "can_write_domain_truth": false,
             "can_create_owner_receipt": false,
             "can_create_typed_blocker": false,
+            "can_select_domain_successor": false,
             "can_authorize_quality_verdict": false
           }
         },
-        "counts_as_progress_refs": [
+        "budget_release_or_terminal_refs": [
+          "structured_closeout_ref",
           "domain_owner_receipt_ref",
           "quality_gate_receipt_ref",
           "typed_blocker_ref",
@@ -881,25 +886,29 @@
       "next_forced_delta",
       "evidence_refs"
     ],
-    "missing_domain_semantics": {
+      "missing_domain_semantics": {
       "projection_status": "missing_domain_fields",
       "typed_blocker_reason": "domain_closeout_provided_incomplete_user_stage_log",
       "counts_as_deliverable_progress": false,
       "counts_as_domain_ready": false,
       "may_trigger_default_redrive": false,
-      "allowed_next_evidence": [
-        "fresh_owner_delta",
-        "stable_typed_blocker",
-        "human_decision",
+        "allowed_next_evidence": [
+          "fresh_current_owner_delta",
+          "accepted_domain_owner_answer",
+          "stable_domain_typed_blocker",
+          "human_decision",
         "provider_hard_gate_clearance"
       ]
     },
     "authority_boundary": {
       "opl_can_project_missing_fields": true,
-      "opl_can_freeze_default_launch": true,
+      "opl_can_freeze_default_redrive": true,
+      "opl_can_select_domain_successor": false,
       "opl_can_generate_domain_summary": false,
       "opl_can_create_typed_blocker": false,
       "opl_can_write_domain_truth": false,
+      "budget_exhaustion_is_domain_typed_blocker": false,
+      "temporal_retry_policy_replaced": false,
       "provider_completion_is_domain_progress": false
     }
   },
