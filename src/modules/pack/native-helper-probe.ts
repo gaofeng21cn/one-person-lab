@@ -67,7 +67,6 @@ function fileSnapshot(
       throw shape('Native helper file changed while it was being probed.', options.details);
     }
     return {
-      realPath: currentRealPath,
       content,
       sha256: crypto.createHash('sha256').update(content).digest('hex'),
     };
