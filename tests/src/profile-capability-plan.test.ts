@@ -381,12 +381,12 @@ test('profile capability plan binds descriptor content to candidate actions and 
   });
 });
 
-test('profile capability plan reads owner capability maps without activating legacy ids or inferring source pack descriptors', () => {
+test('profile capability plan resolves canonical ScholarSkills capability ids without treating shared module ids as aliases', () => {
   withTempDir((root) => {
     const catalogRepo = path.join(root, 'scholar-skills');
     const selectionFile = path.join(root, 'profile-selection.json');
     writeJson(path.join(catalogRepo, 'contracts', 'capability_map.json'), {
-      surface_kind: 'owner_capability_map',
+      surface_kind: 'oma_capability_pack_map',
       schema_version: 1,
       domain_id: 'mas-scholar-skills',
       authority_boundary: {
@@ -400,11 +400,13 @@ test('profile capability plan reads owner capability maps without activating leg
         can_claim_owner_closeout: false,
       },
       capabilities: [{
-        capability_id: 'mas-scholar-skills.data',
-        external_repo_ref: 'external_repo:mas-scholar-skills/skills/medical-data-governance/SKILL.md',
-        legacy_module_ids: ['opl.scholarskills.data'],
+        capability_id: 'medical-figure-design',
+        module_id: 'mas-scholar-skills.display',
+        canonical_path: 'skills/medical-figure-design/SKILL.md',
+        external_repo_ref: 'external_repo:mas-scholar-skills/skills/medical-figure-design/SKILL.md',
+        legacy_module_ids: ['opl.scholarskills.display'],
         source_pack_ref: 'packs/medical-display-core/display_pack.toml',
-        dependency_profile_refs: ['runtime_env_dependency_profile:scholarskills_data_v1'],
+        dependency_profile_refs: ['runtime_env_dependency_profile:scholarskills_display_v1'],
         authority_boundary: {
           outputs_are_refs_only_candidates: true,
           can_write_domain_truth: false,
@@ -418,8 +420,9 @@ test('profile capability plan reads owner capability maps without activating leg
       }],
     });
     writeSelection(selectionFile, [
-      'mas-scholar-skills.data',
-      'opl.scholarskills.data',
+      'medical-figure-design',
+      'mas-scholar-skills.display',
+      'opl.scholarskills.display',
     ]);
 
     const plan = buildProfileCapabilityPlan({
@@ -427,15 +430,17 @@ test('profile capability plan reads owner capability maps without activating leg
       catalogRepos: [catalogRepo],
     }).capability_plan;
 
-    assert.deepEqual(plan.exact_capability_readout.capability_refs, ['mas-scholar-skills.data']);
+    assert.deepEqual(plan.exact_capability_readout.capability_refs, ['medical-figure-design']);
     assert.equal(plan.exact_capability_readout.resolver_readout.resolutions
-      .find((entry) => entry.capability_ref === 'opl.scholarskills.data')?.resolution_status, 'fail_open');
+      .find((entry) => entry.capability_ref === 'mas-scholar-skills.display')?.resolution_status, 'fail_open');
+    assert.equal(plan.exact_capability_readout.resolver_readout.resolutions
+      .find((entry) => entry.capability_ref === 'opl.scholarskills.display')?.resolution_status, 'fail_open');
     assert.deepEqual(
       plan.dependency_feasibility.descriptor_materialization.candidate_descriptor_refs,
       [],
     );
     assert.deepEqual(plan.dependency_feasibility.candidate_dependency_refs, [
-      'runtime_env_dependency_profile:scholarskills_data_v1',
+      'runtime_env_dependency_profile:scholarskills_display_v1',
     ]);
   });
 });
@@ -514,6 +519,14 @@ test('profiles capability-plan accepts only the Framework-owned fixed projection
     const capabilityRef = String(map.capabilities[0].capability_id);
     writeSelection(selectionFile, []);
     const spec = buildProfileCommandSpecs()['profiles capability-plan'];
+    assert.equal(
+      spec.examples.some((example) => example.includes('--capability-ref medical-figure-design')),
+      true,
+    );
+    assert.equal(
+      spec.examples.some((example) => example.includes('--capability-ref mas-scholar-skills.display')),
+      false,
+    );
 
     const readback = spec.handler([
       '--selection-file',

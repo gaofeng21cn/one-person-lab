@@ -95,7 +95,7 @@ export function buildProfileCommandSpecs(): Record<string, CommandSpec> {
     summary: 'Resolve exact capability refs from a profile-selection receipt against explicitly supplied owner catalogs and return conditional dependency, environment, descriptor, and pack-lock action refs without executing them.',
     examples: [
       'opl profiles capability-plan --selection-file profile-selection.json --catalog-repo /path/to/agent-repo --json',
-      'opl profiles capability-plan --selection-file profile-selection.json --catalog-repo /path/to/mas-scholar-skills --capability-ref mas-scholar-skills.display --json',
+      'opl profiles capability-plan --selection-file profile-selection.json --catalog-repo /path/to/mas-scholar-skills --capability-ref medical-figure-design --json',
     ],
     group: 'profiles',
     registry: {
