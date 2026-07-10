@@ -12,6 +12,11 @@ import {
   type JsonSchemaRegistryEntry,
 } from '../../src/kernel/schema-registry.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
+import {
+  assertReferenceDesignPatternPacket,
+  referenceDesignPatternPacketSchemaEntry,
+  validateReferenceDesignPatternPacket,
+} from '../../src/modules/workspace/reference-design-pattern-packet.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -59,14 +64,6 @@ function validProgressDeltaReceipt() {
       can_create_typed_blocker: false,
       platform_repair_counts_as_deliverable_progress: false,
     },
-  };
-}
-
-function referenceDesignPatternPacketSchema(): JsonSchemaRegistryEntry {
-  return {
-    schemaId: 'opl.reference_design_pattern_packet.v1',
-    schema: readJson(referenceDesignPatternPacketSchemaRef),
-    sourceRef: referenceDesignPatternPacketSchemaRef,
   };
 }
 
@@ -149,10 +146,14 @@ test('Ajv schema registry rejects invalid payloads through the contract schema',
 
 test('Ajv schema registry validates refs-only ReferenceDesignPatternPacket authority', () => {
   const packet = validReferenceDesignPatternPacket();
-  const result = validateJsonSchemaPayload(referenceDesignPatternPacketSchema(), packet);
+  const result = validateReferenceDesignPatternPacket(packet);
 
   assert.equal(result.ok, true);
   assert.equal(result.schema_id, 'opl.reference_design_pattern_packet.v1');
+  assert.equal(
+    referenceDesignPatternPacketSchemaEntry().sourceRef,
+    referenceDesignPatternPacketSchemaRef,
+  );
   assert.equal(
     packet.consumer_route.required_return_contract_ref,
     'oma-contract:reference-design-packet.v1',
@@ -165,10 +166,7 @@ test('Ajv schema registry validates refs-only ReferenceDesignPatternPacket autho
       opl_can_claim_pattern_quality_ready: true,
     },
   };
-  const invalidResult = validateJsonSchemaPayload(
-    referenceDesignPatternPacketSchema(),
-    authorityOverclaim,
-  );
+  const invalidResult = validateReferenceDesignPatternPacket(authorityOverclaim);
   assert.equal(invalidResult.ok, false);
   if (invalidResult.ok) {
     assert.fail('authority-overclaiming packet unexpectedly passed JSON Schema validation');
@@ -179,6 +177,10 @@ test('Ajv schema registry validates refs-only ReferenceDesignPatternPacket autho
       && error.keyword === 'const'
     ),
     true,
+  );
+  assert.throws(
+    () => assertReferenceDesignPatternPacket(authorityOverclaim),
+    FrameworkContractError,
   );
 });
 
