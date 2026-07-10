@@ -11,31 +11,13 @@ import {
   writeOkfContextBundleProjection,
 } from '../../../../modules/pack/okf-context-bundle.ts';
 import type { OkfDomainPackCompilerInput } from '../../../../modules/pack/okf-context-bundle.ts';
-import { buildUsageError } from '../../modules/support.ts';
+import { buildUsageError, parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
 function parseOkfBundleArgs(args: string[], spec: CommandSpec) {
-  let bundlePath: string | undefined;
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--json') {
-      continue;
-    }
-    if (arg === '--bundle') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf command requires a value for --bundle.', spec, {
-          required: ['--bundle'],
-        });
-      }
-      bundlePath = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown okf option: ${arg}.`, spec, {
-      option: arg,
-    });
-  }
+  const bundlePath = parseCommandOptions(args, spec, {
+    bundle: { type: 'string' },
+  }).bundle as string | undefined;
   if (!bundlePath) {
     throw buildUsageError('okf command requires --bundle.', spec, {
       required: ['--bundle'],
@@ -45,220 +27,68 @@ function parseOkfBundleArgs(args: string[], spec: CommandSpec) {
 }
 
 function parseOkfProjectPackArgs(args: string[], spec: CommandSpec) {
-  let packPath: string | undefined;
-  let outputPath: string | undefined;
-  let bundleId: string | undefined;
-  let sourceRootRef: string | undefined;
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--json') {
-      continue;
-    }
-    if (arg === '--pack') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-pack requires a value for --pack.', spec, {
-          required: ['--pack'],
-        });
-      }
-      packPath = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--output') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-pack requires a value for --output.', spec, {
-          required: ['--output'],
-        });
-      }
-      outputPath = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--bundle-id') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-pack requires a value for --bundle-id.', spec, {
-          option: '--bundle-id',
-        });
-      }
-      bundleId = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--source-root-ref') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-pack requires a value for --source-root-ref.', spec, {
-          option: '--source-root-ref',
-        });
-      }
-      sourceRootRef = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown okf project-pack option: ${arg}.`, spec, {
-      option: arg,
-    });
-  }
+  const values = parseCommandOptions(args, spec, {
+    pack: { type: 'string' },
+    output: { type: 'string' },
+    'bundle-id': { type: 'string' },
+    'source-root-ref': { type: 'string' },
+  });
+  const packPath = values.pack as string | undefined;
+  const outputPath = values.output as string | undefined;
   if (!packPath || !outputPath) {
     throw buildUsageError('okf project-pack requires --pack and --output.', spec, {
       required: ['--pack', '--output'],
     });
   }
   return {
-    bundleId,
+    bundleId: values['bundle-id'] as string | undefined,
     outputPath,
     packPath,
-    sourceRootRef,
+    sourceRootRef: values['source-root-ref'] as string | undefined,
   };
 }
 
 function parseOkfProjectRepoArgs(args: string[], spec: CommandSpec) {
-  let repoRoot: string | undefined;
-  let outputPath: string | undefined;
-  let packPath: string | undefined;
-  let memoryDescriptorPath: string | undefined;
-  let bundleId: string | undefined;
-  let sourceRootRef: string | undefined;
-  let includeMemoryLocators = true;
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--json') {
-      continue;
-    }
-    if (arg === '--repo') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-repo requires a value for --repo.', spec, {
-          required: ['--repo'],
-        });
-      }
-      repoRoot = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--output') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-repo requires a value for --output.', spec, {
-          required: ['--output'],
-        });
-      }
-      outputPath = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--pack') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-repo requires a value for --pack.', spec, {
-          option: '--pack',
-        });
-      }
-      packPath = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--memory-descriptor') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-repo requires a value for --memory-descriptor.', spec, {
-          option: '--memory-descriptor',
-        });
-      }
-      memoryDescriptorPath = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--no-memory-locators') {
-      includeMemoryLocators = false;
-      continue;
-    }
-    if (arg === '--bundle-id') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-repo requires a value for --bundle-id.', spec, {
-          option: '--bundle-id',
-        });
-      }
-      bundleId = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--source-root-ref') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf project-repo requires a value for --source-root-ref.', spec, {
-          option: '--source-root-ref',
-        });
-      }
-      sourceRootRef = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown okf project-repo option: ${arg}.`, spec, {
-      option: arg,
-    });
-  }
+  const values = parseCommandOptions(args, spec, {
+    repo: { type: 'string' },
+    output: { type: 'string' },
+    pack: { type: 'string' },
+    'memory-descriptor': { type: 'string' },
+    'no-memory-locators': { type: 'boolean' },
+    'bundle-id': { type: 'string' },
+    'source-root-ref': { type: 'string' },
+  });
+  const repoRoot = values.repo as string | undefined;
+  const outputPath = values.output as string | undefined;
   if (!repoRoot || !outputPath) {
     throw buildUsageError('okf project-repo requires --repo and --output.', spec, {
       required: ['--repo', '--output'],
     });
   }
   return {
-    bundleId,
-    includeMemoryLocators,
-    memoryDescriptorPath,
+    bundleId: values['bundle-id'] as string | undefined,
+    includeMemoryLocators: values['no-memory-locators'] !== true,
+    memoryDescriptorPath: values['memory-descriptor'] as string | undefined,
     outputPath,
-    packPath,
+    packPath: values.pack as string | undefined,
     repoRoot,
-    sourceRootRef,
+    sourceRootRef: values['source-root-ref'] as string | undefined,
   };
 }
 
 function parseOkfNativeFrontmatterInspectArgs(args: string[], spec: CommandSpec) {
-  let repoRoot: string | undefined;
-  let agentRoot: string | undefined;
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--json') {
-      continue;
-    }
-    if (arg === '--repo') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf native-frontmatter inspect requires a value for --repo.', spec, {
-          required: ['--repo'],
-        });
-      }
-      repoRoot = value;
-      index += 1;
-      continue;
-    }
-    if (arg === '--agent-root') {
-      const value = args[index + 1];
-      if (!value) {
-        throw buildUsageError('okf native-frontmatter inspect requires a value for --agent-root.', spec, {
-          option: '--agent-root',
-        });
-      }
-      agentRoot = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown okf native-frontmatter inspect option: ${arg}.`, spec, {
-      option: arg,
-    });
-  }
+  const values = parseCommandOptions(args, spec, {
+    repo: { type: 'string' },
+    'agent-root': { type: 'string' },
+  });
+  const repoRoot = values.repo as string | undefined;
   if (!repoRoot) {
     throw buildUsageError('okf native-frontmatter inspect requires --repo.', spec, {
       required: ['--repo'],
     });
   }
   return {
-    agentRoot,
+    agentRoot: values['agent-root'] as string | undefined,
     repoRoot,
   };
 }

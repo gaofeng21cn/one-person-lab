@@ -166,6 +166,8 @@ test('work-order execute dry-run plans without launching Codex or opening a targ
       outputDir,
       '--verification-command',
       'test -f docs/efficiency.md',
+      '--verification-command',
+      'test -d docs',
       '--dry-run',
       '--json',
     ]);
@@ -198,6 +200,7 @@ test('work-order execute dry-run plans without launching Codex or opening a targ
     assert.equal(receipt.planned_closeout.closeout_requires_target_owner, true);
     assert.deepEqual(receipt.planned_verification.commands, [
       'test -f docs/efficiency.md',
+      'test -d docs',
       'git diff --check',
     ]);
     assert.equal(receipt.planned_codex_watchdogs.total_timeout_ms, 3600000);

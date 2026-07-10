@@ -5,6 +5,7 @@ import {
 import {
   assertSinglePayloadSource,
   buildUsageError,
+  parseCommandOptions,
   readPayloadFileText,
 } from '../modules/support.ts';
 import { readJsonObject } from '../modules/json-boundary.ts';
@@ -26,52 +27,26 @@ function parseRuntimeStageCandidatePortfolioSummaryArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: unknown = null;
-  let payloadPresent = false;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime stage-candidate-portfolio summary requires --payload value.',
-          spec,
-          { option: '--payload' },
-        );
-      }
-      assertSinglePayloadSource(payloadPresent, spec);
-      payload = parseJsonPayload(value, spec);
-      payloadPresent = true;
-      continue;
-    }
-    if (token === '--payload-file') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(
-          'runtime stage-candidate-portfolio summary requires --payload-file value.',
-          spec,
-          { option: '--payload-file' },
-        );
-      }
-      assertSinglePayloadSource(payloadPresent, spec);
-      payload = parseJsonPayload(readPayloadFileText(value, spec), spec);
-      payloadPresent = true;
-      continue;
-    }
-    throw buildUsageError(
-      `Unknown option for runtime stage-candidate-portfolio summary: ${token}.`,
-      spec,
-      { option: token },
-    );
-  }
-  if (!payloadPresent) {
+  const values = parseCommandOptions(args, spec, {
+    payload: { type: 'string' },
+    'payload-file': { type: 'string' },
+  });
+  const payload = values.payload as string | undefined;
+  const payloadFile = values['payload-file'] as string | undefined;
+  const hasPayload = payload !== undefined;
+  const hasPayloadFile = payloadFile !== undefined;
+  assertSinglePayloadSource(hasPayload && hasPayloadFile, spec);
+  if (!hasPayload && !hasPayloadFile) {
     throw buildUsageError(
       'runtime stage-candidate-portfolio summary requires --payload or --payload-file.',
       spec,
       { required_any: ['--payload', '--payload-file'] },
     );
   }
-  return payload;
+  return parseJsonPayload(
+    hasPayload ? payload as string : readPayloadFileText(payloadFile as string, spec),
+    spec,
+  );
 }
 
 function buildStageCandidatePortfolioReadModel(

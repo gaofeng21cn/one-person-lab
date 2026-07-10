@@ -25,6 +25,7 @@ import { buildOplModules } from '../../../modules/connect/index.ts';
 import {
   assertNoArgs,
   buildUsageError,
+  parseCommandOptions,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
@@ -193,30 +194,15 @@ function parseVerifyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): RuntimeEnvironmentVerifyInput {
-  const parsed: Partial<RuntimeEnvironmentVerifyInput> = {};
-  visitRuntimeEnvOptions(args, (token, value) => {
-    if (token === '--json') {
-      return false;
-    }
-    if (token === '--runtime-root') {
-      parsed.runtimeRoot = requireOptionValue(
-        token,
-        value,
-        spec,
-        'runtime env verify requires --runtime-root value.',
-      );
-      return true;
-    }
-    throw buildUsageError(`Unknown option for runtime env verify: ${token}.`, spec, {
-      option: token,
-    });
-  });
-  if (!parsed.runtimeRoot) {
+  const runtimeRoot = parseCommandOptions(args, spec, {
+    'runtime-root': { type: 'string' },
+  })['runtime-root'] as string | undefined;
+  if (!runtimeRoot) {
     throw buildUsageError('runtime env verify requires --runtime-root.', spec, {
       required: ['--runtime-root'],
     });
   }
-  return parsed as RuntimeEnvironmentVerifyInput;
+  return { runtimeRoot };
 }
 
 function parsePrepareArgs(
@@ -331,20 +317,11 @@ function parseCachePruneArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): RuntimeEnvironmentCachePruneInput {
-  const parsed: RuntimeEnvironmentCachePruneInput = {};
-  visitRuntimeEnvOptions(args, (token) => {
-    if (token === '--json' || token === '--dry-run') {
-      return false;
-    }
-    if (token === '--apply') {
-      parsed.apply = true;
-      return false;
-    }
-    throw buildUsageError(`Unknown option for runtime env cache prune: ${token}.`, spec, {
-      option: token,
-    });
+  const values = parseCommandOptions(args, spec, {
+    apply: { type: 'boolean' },
+    'dry-run': { type: 'boolean' },
   });
-  return parsed;
+  return { apply: values.apply === true };
 }
 
 function parseEnvRunArgs(

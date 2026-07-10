@@ -17,6 +17,7 @@ import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
+  parseCommandOptions,
   readPayloadFileText,
 } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -49,66 +50,34 @@ function parseRuntimeOmaProductionConsumptionRecordArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: OmaProductionConsumptionReceiptInput | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime oma-production-consumption record requires --payload.', spec, {
-          required_any: ['--payload', '--payload-file'],
-        });
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseRuntimeOmaProductionConsumptionPayload(value, spec);
-      continue;
-    }
-    if (token === '--payload-file') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime oma-production-consumption record requires --payload-file.', spec, {
-          required_any: ['--payload', '--payload-file'],
-        });
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseRuntimeOmaProductionConsumptionPayload(readPayloadFileText(value, spec), spec);
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime oma-production-consumption record: ${token}.`, spec, {
-      option: token,
-    });
-  }
-  if (!payload) {
+  const values = parseCommandOptions(args, spec, {
+    payload: { type: 'string' },
+    'payload-file': { type: 'string' },
+  });
+  const payload = values.payload as string | undefined;
+  const payloadFile = values['payload-file'] as string | undefined;
+  const hasPayload = payload !== undefined;
+  const hasPayloadFile = payloadFile !== undefined;
+  assertSinglePayloadSource(hasPayload && hasPayloadFile, spec);
+  if (!hasPayload && !hasPayloadFile) {
     throw buildUsageError('runtime oma-production-consumption record requires --payload or --payload-file.', spec, {
       required_any: ['--payload', '--payload-file'],
     });
   }
-  return payload;
+  return parseRuntimeOmaProductionConsumptionPayload(
+    hasPayload ? payload as string : readPayloadFileText(payloadFile as string, spec),
+    spec,
+  );
 }
 
 function parseRuntimeOmaProductionConsumptionVerifyArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let receiptRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token !== '--receipt-ref') {
-      throw buildUsageError(`Unknown option for runtime oma-production-consumption verify: ${token}.`, spec, {
-        option: token,
-      });
-    }
-    const value = args[++index];
-    if (!value) {
-      throw buildUsageError(
-        'runtime oma-production-consumption verify requires --receipt-ref value.',
-        spec,
-        { option: '--receipt-ref' },
-      );
-    }
-    receiptRef = value;
-  }
-  return { receipt_ref: receiptRef };
+  const values = parseCommandOptions(args, spec, {
+    'receipt-ref': { type: 'string' },
+  });
+  return { receipt_ref: values['receipt-ref'] as string | undefined ?? null };
 }
 
 function parsePositiveInteger(
@@ -135,25 +104,15 @@ function parseRuntimeOmaLongSoakStartArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let evidenceDir: string | null = null;
-  let minimumDurationMinutes: number | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--evidence-dir' && value) {
-      evidenceDir = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--minimum-duration-minutes') {
-      minimumDurationMinutes = parsePositiveInteger(value, token, spec);
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime oma-production-consumption long-soak start: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const values = parseCommandOptions(args, spec, {
+    'evidence-dir': { type: 'string' },
+    'minimum-duration-minutes': { type: 'string' },
+  });
+  const evidenceDir = values['evidence-dir'] as string | undefined;
+  const minimumDurationMinutesValue = values['minimum-duration-minutes'] as string | undefined;
+  const minimumDurationMinutes = minimumDurationMinutesValue
+    ? parsePositiveInteger(minimumDurationMinutesValue, '--minimum-duration-minutes', spec)
+    : null;
   if (!minimumDurationMinutes) {
     throw buildUsageError(
       'runtime oma-production-consumption long-soak start requires --minimum-duration-minutes.',
@@ -178,25 +137,11 @@ function parseRuntimeOmaLongSoakFinishArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let workorderFile = '';
-  let finishedAt: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--workorder-file' && value) {
-      workorderFile = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--finished-at' && value) {
-      finishedAt = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime oma-production-consumption long-soak finish: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const values = parseCommandOptions(args, spec, {
+    'workorder-file': { type: 'string' },
+    'finished-at': { type: 'string' },
+  });
+  const workorderFile = values['workorder-file'] as string | undefined;
   if (!workorderFile) {
     throw buildUsageError(
       'runtime oma-production-consumption long-soak finish requires --workorder-file.',
@@ -204,44 +149,21 @@ function parseRuntimeOmaLongSoakFinishArgs(
       { required: ['--workorder-file'] },
     );
   }
-  return { workorderFile, finishedAt };
+  return { workorderFile, finishedAt: values['finished-at'] as string | undefined ?? null };
 }
 
 function parseRuntimeOmaLongSoakEventArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let workorderFile = '';
-  let eventKind = '';
-  let observedAt: string | null = null;
-  let evidenceRef: string | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--workorder-file' && value) {
-      workorderFile = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--event-kind' && value) {
-      eventKind = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--observed-at' && value) {
-      observedAt = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--evidence-ref' && value) {
-      evidenceRef = value;
-      index += 1;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime oma-production-consumption long-soak event: ${token}.`, spec, {
-      option: token,
-    });
-  }
+  const values = parseCommandOptions(args, spec, {
+    'workorder-file': { type: 'string' },
+    'event-kind': { type: 'string' },
+    'observed-at': { type: 'string' },
+    'evidence-ref': { type: 'string' },
+  });
+  const workorderFile = values['workorder-file'] as string | undefined;
+  const eventKind = values['event-kind'] as string | undefined;
   if (!workorderFile) {
     throw buildUsageError(
       'runtime oma-production-consumption long-soak event requires --workorder-file.',
@@ -256,7 +178,12 @@ function parseRuntimeOmaLongSoakEventArgs(
       { required: ['--event-kind'] },
     );
   }
-  return { workorderFile, eventKind, observedAt, evidenceRef };
+  return {
+    workorderFile,
+    eventKind,
+    observedAt: values['observed-at'] as string | undefined ?? null,
+    evidenceRef: values['evidence-ref'] as string | undefined ?? null,
+  };
 }
 
 function omaProductionConsumptionAuthorityBoundary() {

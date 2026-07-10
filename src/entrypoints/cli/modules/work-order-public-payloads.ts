@@ -1,133 +1,47 @@
 import { executeOplDeveloperWorkOrder } from '../../../modules/foundry-lab/agent-lab-work-order-execution.ts';
+import { parseCommandOptions } from './command-registry.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
 
 function parseWorkOrderExecuteArgs(args: string[], spec: CommandSpec, commandLabel: string) {
-  const parsed: {
-    workOrderPath: string | null;
-    targetAgentDir: string | null;
-    suitePath: string | null;
-    outputDir: string | null;
-    verificationCommands: string[];
-    codexBin: string | null;
-    codexTimeoutMs: number | null;
-    codexNoOutputTimeoutMs: number | null;
-    codexCommandNoProgressTimeoutMs: number | null;
-    dryRun: boolean;
-  } = {
-    workOrderPath: null,
-    targetAgentDir: null,
-    suitePath: null,
-    outputDir: null,
-    verificationCommands: [],
-    codexBin: null,
-    codexTimeoutMs: null,
-    codexNoOutputTimeoutMs: null,
-    codexCommandNoProgressTimeoutMs: null,
-    dryRun: false,
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    const value = args[index + 1];
-    if (token === '--work-order') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --work-order.', spec, { option: '--work-order' });
-      }
-      parsed.workOrderPath = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--target-agent-dir') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --target-agent-dir.', spec, { option: '--target-agent-dir' });
-      }
-      parsed.targetAgentDir = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--suite') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --suite.', spec, { option: '--suite' });
-      }
-      parsed.suitePath = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--output-dir') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --output-dir.', spec, { option: '--output-dir' });
-      }
-      parsed.outputDir = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--verification-command') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --verification-command.', spec, {
-          option: '--verification-command',
-        });
-      }
-      parsed.verificationCommands.push(value);
-      index += 1;
-      continue;
-    }
-    if (token === '--codex-bin') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --codex-bin.', spec, { option: '--codex-bin' });
-      }
-      parsed.codexBin = value;
-      index += 1;
-      continue;
-    }
-    if (token === '--codex-timeout-ms') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --codex-timeout-ms.', spec, {
-          option: '--codex-timeout-ms',
-        });
-      }
-      parsed.codexTimeoutMs = parsePositiveInteger(value, '--codex-timeout-ms', spec);
-      index += 1;
-      continue;
-    }
-    if (token === '--codex-no-output-timeout-ms') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --codex-no-output-timeout-ms.', spec, {
-          option: '--codex-no-output-timeout-ms',
-        });
-      }
-      parsed.codexNoOutputTimeoutMs = parsePositiveInteger(value, '--codex-no-output-timeout-ms', spec);
-      index += 1;
-      continue;
-    }
-    if (token === '--codex-command-no-progress-timeout-ms') {
-      if (!value) {
-        throw buildUsageError('Missing value for option: --codex-command-no-progress-timeout-ms.', spec, {
-          option: '--codex-command-no-progress-timeout-ms',
-        });
-      }
-      parsed.codexCommandNoProgressTimeoutMs = parsePositiveInteger(
-        value,
-        '--codex-command-no-progress-timeout-ms',
-        spec,
-      );
-      index += 1;
-      continue;
-    }
-    if (token === '--dry-run') {
-      parsed.dryRun = true;
-      continue;
-    }
-    throw buildUsageError(`Unknown option for ${commandLabel}: ${token}.`, spec, { option: token });
-  }
-
-  if (!parsed.workOrderPath) {
+  const values = parseCommandOptions(args, spec, {
+    'work-order': { type: 'string' },
+    'target-agent-dir': { type: 'string' },
+    suite: { type: 'string' },
+    'output-dir': { type: 'string' },
+    'verification-command': { type: 'string', multiple: true },
+    'codex-bin': { type: 'string' },
+    'codex-timeout-ms': { type: 'string' },
+    'codex-no-output-timeout-ms': { type: 'string' },
+    'codex-command-no-progress-timeout-ms': { type: 'string' },
+    'dry-run': { type: 'boolean' },
+  });
+  const workOrderPath = values['work-order'] as string | undefined;
+  if (!workOrderPath) {
     throw buildUsageError(`${commandLabel} requires --work-order <developer-patch-work-order.json>.`,
       spec, { option: '--work-order' });
   }
   return {
-    ...parsed,
-    workOrderPath: parsed.workOrderPath,
+    workOrderPath,
+    targetAgentDir: values['target-agent-dir'] as string | undefined ?? null,
+    suitePath: values.suite as string | undefined ?? null,
+    outputDir: values['output-dir'] as string | undefined ?? null,
+    verificationCommands: values['verification-command'] as string[] | undefined ?? [],
+    codexBin: values['codex-bin'] as string | undefined ?? null,
+    codexTimeoutMs: values['codex-timeout-ms']
+      ? parsePositiveInteger(values['codex-timeout-ms'] as string, '--codex-timeout-ms', spec)
+      : null,
+    codexNoOutputTimeoutMs: values['codex-no-output-timeout-ms']
+      ? parsePositiveInteger(values['codex-no-output-timeout-ms'] as string, '--codex-no-output-timeout-ms', spec)
+      : null,
+    codexCommandNoProgressTimeoutMs: values['codex-command-no-progress-timeout-ms']
+      ? parsePositiveInteger(
+          values['codex-command-no-progress-timeout-ms'] as string,
+          '--codex-command-no-progress-timeout-ms',
+          spec,
+        )
+      : null,
+    dryRun: values['dry-run'] === true,
   };
 }
 

@@ -1,4 +1,5 @@
 import { assert, fs, path, repoRoot, runCli, test } from '../helpers.ts';
+import { parseAgentsScaffoldArgs } from '../../../../src/entrypoints/cli/cases/private-command-specs-parts/agents-scaffold.ts';
 import { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from '../../../../src/modules/workspace/workspace-topology.ts';
 
 function assertIncludesAll(values: unknown[], expected: unknown[]) {
@@ -13,6 +14,18 @@ function readSkeletonContract() {
     ),
   );
 }
+
+test('agents scaffold uses standard option parsing without changing command semantics', () => {
+  const spec = { usage: 'opl agents scaffold', examples: ['opl agents scaffold'] };
+  assert.equal(
+    parseAgentsScaffoldArgs(['--target-dir', '  ./agent  '], spec).targetDir,
+    '  ./agent  ',
+  );
+  assert.throws(() => parseAgentsScaffoldArgs(['--unknown'], spec));
+  assert.throws(() => parseAgentsScaffoldArgs(['positional'], spec));
+  assert.throws(() => parseAgentsScaffoldArgs(['--target-dir'], spec));
+  assert.throws(() => parseAgentsScaffoldArgs(['--validate', '.', '--force'], spec));
+});
 
 test('agents scaffold exposes the reusable agent scaffold contract without domain authority', () => {
   const scaffold = runCli(['agents', 'scaffold']).standard_domain_agent_scaffold;

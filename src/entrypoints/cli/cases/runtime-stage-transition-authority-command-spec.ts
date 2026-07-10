@@ -10,6 +10,7 @@ import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
+  parseCommandOptions,
   readPayloadFileText,
 } from '../modules/support.ts';
 import { readJsonObject } from '../modules/json-boundary.ts';
@@ -31,48 +32,27 @@ function parsePayloadArg(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
   commandName: string,
 ) {
-  let payload: unknown = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--json') {
-      continue;
-    }
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(`${commandName} requires --payload value.`, spec, {
-          required_any: ['--payload', '--payload-file'],
-        });
-      }
-      assertSinglePayloadSource(payload !== null, spec);
-      payload = parseJsonValue(value, `${commandName} payload must be valid JSON.`, spec);
-      continue;
-    }
-    if (token === '--payload-file') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError(`${commandName} requires --payload-file value.`, spec, {
-          required_any: ['--payload', '--payload-file'],
-        });
-      }
-      assertSinglePayloadSource(payload !== null, spec);
-      payload = parseJsonValue(
-        readPayloadFileText(value, spec),
-        `${commandName} payload file must contain valid JSON.`,
-        spec,
-      );
-      continue;
-    }
-    throw buildUsageError(`Unknown option for ${commandName}: ${token}.`, spec, {
-      option: token,
-    });
-  }
-  if (payload === null) {
+  const values = parseCommandOptions(args, spec, {
+    payload: { type: 'string' },
+    'payload-file': { type: 'string' },
+  });
+  const payload = values.payload as string | undefined;
+  const payloadFile = values['payload-file'] as string | undefined;
+  const hasPayload = payload !== undefined;
+  const hasPayloadFile = payloadFile !== undefined;
+  assertSinglePayloadSource(hasPayload && hasPayloadFile, spec);
+  if (!hasPayload && !hasPayloadFile) {
     throw buildUsageError(`${commandName} requires --payload or --payload-file.`, spec, {
       required_any: ['--payload', '--payload-file'],
     });
   }
-  return payload;
+  return parseJsonValue(
+    hasPayload ? payload as string : readPayloadFileText(payloadFile as string, spec),
+    hasPayload
+      ? `${commandName} payload must be valid JSON.`
+      : `${commandName} payload file must contain valid JSON.`,
+    spec,
+  );
 }
 
 function parseIntentPayload(

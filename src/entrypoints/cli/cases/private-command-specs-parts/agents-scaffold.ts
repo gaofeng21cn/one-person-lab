@@ -1,50 +1,26 @@
-import { buildUsageError } from '../../modules/support.ts';
+import { buildUsageError, parseCommandOptions } from '../../modules/support.ts';
 import type { CommandSpec } from '../../modules/support.ts';
 
 export function parseAgentsScaffoldArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  const parsed: {
-    targetDir?: string;
-    domainId?: string;
-    domainLabel?: string;
-    force?: boolean;
-    validateRepoDir?: string;
-    consumptionEvidence?: boolean;
-  } = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    switch (token) {
-      case '--target-dir':
-        parsed.targetDir = args[++index];
-        break;
-      case '--domain-id':
-        parsed.domainId = args[++index];
-        break;
-      case '--domain-label':
-        parsed.domainLabel = args[++index];
-        break;
-      case '--force':
-        parsed.force = true;
-        break;
-      case '--validate':
-        parsed.validateRepoDir = args[++index];
-        break;
-      case '--consumption-evidence':
-        parsed.consumptionEvidence = true;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for agents scaffold command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    if (['--target-dir', '--domain-id', '--domain-label', '--validate'].includes(token) && !args[index]) {
-      throw buildUsageError(`Missing value for ${token}.`, spec, { option: token });
-    }
-  }
+  const values = parseCommandOptions(args, spec, {
+    'target-dir': { type: 'string' },
+    'domain-id': { type: 'string' },
+    'domain-label': { type: 'string' },
+    force: { type: 'boolean' },
+    validate: { type: 'string' },
+    'consumption-evidence': { type: 'boolean' },
+  });
+  const parsed = {
+    targetDir: values['target-dir'] as string | undefined,
+    domainId: values['domain-id'] as string | undefined,
+    domainLabel: values['domain-label'] as string | undefined,
+    force: values.force === true,
+    validateRepoDir: values.validate as string | undefined,
+    consumptionEvidence: values['consumption-evidence'] === true,
+  };
 
   if (parsed.validateRepoDir && (parsed.targetDir || parsed.domainId || parsed.domainLabel || parsed.force)) {
     throw buildUsageError('--validate cannot be combined with scaffold generation options.', spec, {

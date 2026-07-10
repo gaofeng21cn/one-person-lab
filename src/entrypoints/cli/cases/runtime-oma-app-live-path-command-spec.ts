@@ -7,6 +7,7 @@ import {
   assertNoArgs,
   assertSinglePayloadSource,
   buildUsageError,
+  parseCommandOptions,
   readPayloadFileText,
 } from '../modules/support.ts';
 import {
@@ -37,41 +38,24 @@ function parseRuntimeOmaAppLivePathRecordArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ) {
-  let payload: OmaAppLivePathReceiptInput | null = null;
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (token === '--payload') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime oma-app-live-path record requires --payload.', spec, {
-          required_any: ['--payload', '--payload-file'],
-        });
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseRuntimeOmaAppLivePathPayload(value, spec);
-      continue;
-    }
-    if (token === '--payload-file') {
-      const value = args[++index];
-      if (!value) {
-        throw buildUsageError('runtime oma-app-live-path record requires --payload-file.', spec, {
-          required_any: ['--payload', '--payload-file'],
-        });
-      }
-      assertSinglePayloadSource(Boolean(payload), spec);
-      payload = parseRuntimeOmaAppLivePathPayload(readPayloadFileText(value, spec), spec);
-      continue;
-    }
-    throw buildUsageError(`Unknown option for runtime oma-app-live-path record: ${token}.`, spec, {
-      option: token,
-    });
-  }
-  if (!payload) {
+  const values = parseCommandOptions(args, spec, {
+    payload: { type: 'string' },
+    'payload-file': { type: 'string' },
+  });
+  const payload = values.payload as string | undefined;
+  const payloadFile = values['payload-file'] as string | undefined;
+  const hasPayload = payload !== undefined;
+  const hasPayloadFile = payloadFile !== undefined;
+  assertSinglePayloadSource(hasPayload && hasPayloadFile, spec);
+  if (!hasPayload && !hasPayloadFile) {
     throw buildUsageError('runtime oma-app-live-path record requires --payload or --payload-file.', spec, {
       required_any: ['--payload', '--payload-file'],
     });
   }
-  return payload;
+  return parseRuntimeOmaAppLivePathPayload(
+    hasPayload ? payload as string : readPayloadFileText(payloadFile as string, spec),
+    spec,
+  );
 }
 
 export function buildRuntimeOmaAppLivePathCommandSpecs(): Record<string, CommandSpec> {
