@@ -25,7 +25,6 @@ import {
   buildStageRunCurrentnessIdentity,
   missingStageRunCurrentnessIdentityFields,
 } from './family-runtime-stage-run-currentness-identity.ts';
-import { buildSameRouteNoProgressStopLossState } from './family-runtime-no-progress-stop-loss.ts';
 import {
   isDomainRouteStageRouteTask,
 } from './family-runtime-domain-route-terminal-sync.ts';
@@ -277,39 +276,6 @@ function currentStageProgressLog(
     createdAt: current.created_at,
     updatedAt: current.updated_at,
   });
-}
-
-function noProgressObservation(db: DatabaseSync, attempt: ControlAttemptRow) {
-  const workspaceLocator = parseRecord(attempt.workspace_locator_json);
-  const providerRun = parseRecord(attempt.provider_run_json);
-  const activityEvents = parseList(attempt.activity_events_json);
-  const latestCloseout = readLatestCloseoutPacket(db, attempt.stage_attempt_id);
-  return {
-    identity: buildStageRunCurrentnessIdentity({
-      task: {
-        domain_id: attempt.domain_id,
-        task_id: attempt.task_id ?? undefined,
-        payload: workspaceLocator,
-      },
-      taskPayload: workspaceLocator,
-      stageAttempt: {
-        domain_id: attempt.domain_id,
-        stage_id: attempt.stage_id,
-        stage_attempt_id: attempt.stage_attempt_id,
-        source_fingerprint: attempt.source_fingerprint,
-        idempotency_key: attempt.idempotency_key,
-        workflow_id: attempt.workflow_id,
-        task_id: attempt.task_id,
-        workspace_locator: workspaceLocator,
-      },
-    }),
-    stageProgressLog: currentStageProgressLog(
-      attempt,
-      latestProviderActivityHeartbeat(activityEvents, providerRun),
-      activityEvents,
-      latestCloseout,
-    ) ?? {},
-  };
 }
 
 function requiredIdentityMissing(task: FamilyRuntimeTaskRow | undefined, attempt: ControlAttemptRow | undefined) {
@@ -642,10 +608,6 @@ function deriveCurrentControlStateFromRows(
   const stageProgressLog = currentStageProgressLog(current, livenessProviderRun, activityEvents, latestCloseout);
   const missingIdentity = requiredIdentityMissing(task, current);
   const staleEpochs = task && current ? staleEpochKinds(taskPayload, current) : [];
-  const stopLossState = buildSameRouteNoProgressStopLossState({
-    currentIdentity: stageRunCurrentnessIdentity,
-    observations: attempts.map((attempt) => noProgressObservation(db, attempt)),
-  });
   const ownerReceiptRefs = uniqueStrings([
     ...refListFromRecord(latestCloseout, ['owner_receipt_ref', 'owner_receipt_refs']),
     ...refListFromRecord(routeImpact, [
@@ -689,7 +651,6 @@ function deriveCurrentControlStateFromRows(
     stale_epoch_kinds: staleEpochs,
     stale_work_unit_diagnostic: staleWorkUnit,
     stage_run_currentness_identity: stageRunCurrentnessIdentity,
-    stop_loss_state: stopLossState,
     missing_stage_run_currentness_identity_fields:
       missingStageRunCurrentnessIdentityFields(stageRunCurrentnessIdentity),
     missing_identity_fields: missingIdentity,

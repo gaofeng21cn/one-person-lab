@@ -3,7 +3,6 @@ import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../../kernel/observabili
 import {
   type JsonRecord,
   firstString,
-  numberValue,
   record,
   sanitizeIdPart,
   stringList,
@@ -105,142 +104,6 @@ function stageRefFrom(action: CompactCurrentOwnerDeltaAction, ownerDeltaFirst: J
     ?? stringValue(record(ownerDeltaFirst.selected_safe_action).stage_id)
     ?? stringValue(action?.stage_id)
     ?? null;
-}
-
-function defaultStopLossState() {
-  return {
-    surface_kind: 'opl_current_owner_delta_stop_loss_state',
-    status: 'not_triggered',
-    default_redrive_allowed: true,
-    fresh_owner_delta_required_to_resume: false,
-    freeze_reason: null,
-    release_conditions: [],
-    no_progress_budget: {
-      same_stage_run_route_no_progress_count: 0,
-      max_same_stage_run_route_no_progress_attempts: null,
-      exhausted: false,
-      attempt_classifications: [],
-    },
-    successor_admission: null,
-    policy_ref: 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state',
-    authority_boundary: stopLossAuthorityBoundary(),
-  };
-}
-
-const STOP_LOSS_RELEASE_CONDITIONS = new Set([
-  'fresh_current_owner_delta',
-  'accepted_domain_owner_answer',
-  'stable_domain_typed_blocker',
-  'human_decision',
-  'provider_hard_gate_clearance',
-]);
-
-const STOP_LOSS_IDENTITY_DIFFERENCE_FIELDS = new Set([
-  'stage_id',
-  'action_type',
-  'work_unit_id',
-  'work_unit_fingerprint',
-  'source_fingerprint',
-  'truth_epoch',
-  'runtime_health_epoch',
-  'source_eval_id',
-  'idempotency_key',
-  'route_identity_key',
-  'attempt_idempotency_key',
-  'recovery_obligation_id',
-  'dispatch_ref',
-  'stage_packet_ref',
-  'stage_packet_refs',
-]);
-
-const STOP_LOSS_NO_PROGRESS_CLASSES = new Set([
-  'receipt_only',
-  'read_model_reconcile_only',
-  'stale_route_redrive_only',
-  'platform_repair_only',
-  'owner_output_already_current',
-  'no_deliverable_delta',
-]);
-
-function stopLossAuthorityBoundary() {
-  return {
-    can_freeze_default_redrive: true,
-    can_select_domain_successor: false,
-    can_create_owner_receipt: false,
-    can_create_typed_blocker: false,
-    can_write_domain_truth: false,
-    can_claim_domain_ready: false,
-    budget_exhaustion_is_domain_typed_blocker: false,
-    temporal_retry_policy_replaced: false,
-  };
-}
-
-function normalizedReleaseConditions(value: unknown) {
-  return stringList(value)
-    .map((entry) => entry === 'fresh_owner_delta'
-      ? 'fresh_current_owner_delta'
-      : entry === 'stable_typed_blocker'
-        ? 'stable_domain_typed_blocker'
-        : entry)
-    .filter((entry) => STOP_LOSS_RELEASE_CONDITIONS.has(entry));
-}
-
-function compactNoProgressBudget(value: unknown, frozen: boolean) {
-  const budget = record(value);
-  const count = numberValue(budget.same_stage_run_route_no_progress_count);
-  const maxNoProgressAttempts = typeof budget.max_same_stage_run_route_no_progress_attempts === 'number'
-    && Number.isInteger(budget.max_same_stage_run_route_no_progress_attempts)
-    && budget.max_same_stage_run_route_no_progress_attempts >= 0
-    ? budget.max_same_stage_run_route_no_progress_attempts
-    : null;
-  return {
-    same_stage_run_route_no_progress_count: count,
-    max_same_stage_run_route_no_progress_attempts: maxNoProgressAttempts,
-    exhausted: frozen || budget.exhausted === true,
-    attempt_classifications: stringList(budget.attempt_classifications)
-      .filter((entry) => STOP_LOSS_NO_PROGRESS_CLASSES.has(entry)),
-  };
-}
-
-function compactSuccessorAdmission(value: unknown) {
-  const admission = record(value);
-  if (Object.keys(admission).length === 0) {
-    return null;
-  }
-  return {
-    status: 'identity_different_successor_or_gate_required',
-    same_stage_run_route_redrive_allowed: false,
-    successor_ref: firstString(admission.successor_ref, admission.domain_successor_ref),
-    identity_difference_fields: stringList(admission.identity_difference_fields)
-      .filter((field) => STOP_LOSS_IDENTITY_DIFFERENCE_FIELDS.has(field)),
-    gate_ref: firstString(admission.gate_ref, admission.human_gate_ref, admission.operator_gate_ref),
-    authority_boundary: stopLossAuthorityBoundary(),
-  };
-}
-
-function compactStopLossState(...values: unknown[]): JsonRecord {
-  const folded = values.map(record).find((value) => stringValue(value.status));
-  if (!folded) {
-    return defaultStopLossState();
-  }
-  const frozen = stringValue(folded.status) === 'frozen'
-    || record(folded.no_progress_budget).exhausted === true;
-  const releaseConditions = normalizedReleaseConditions(folded.release_conditions);
-  return {
-    surface_kind: 'opl_current_owner_delta_stop_loss_state',
-    status: frozen ? 'frozen' : stringValue(folded.status) ?? 'not_triggered',
-    default_redrive_allowed: !frozen,
-    fresh_owner_delta_required_to_resume:
-      frozen || folded.fresh_owner_delta_required_to_resume === true,
-    freeze_reason: frozen ? 'same_stage_run_route_no_progress_budget_exhausted' : null,
-    release_conditions: frozen && releaseConditions.length === 0
-      ? [...STOP_LOSS_RELEASE_CONDITIONS]
-      : releaseConditions,
-    no_progress_budget: compactNoProgressBudget(folded.no_progress_budget, frozen),
-    successor_admission: compactSuccessorAdmission(folded.successor_admission),
-    policy_ref: 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state',
-    authority_boundary: stopLossAuthorityBoundary(),
-  };
 }
 
 function foldedOwnerDeltaRef(ownerDeltaFirst: JsonRecord, key: string) {
@@ -683,11 +546,6 @@ export function buildCurrentOwnerDeltaProjection(input: {
     latest_owner_answer_ref: latestOwnerAnswerRef,
     latest_owner_answer_kind: latestOwnerAnswerKind,
     cognitive_kernel_boundary: cognitiveKernelBoundary(),
-    stop_loss_state: compactStopLossState(
-      input.handoff.stop_loss_state,
-      input.ownerDeltaFirst.stop_loss_state,
-      record(input.ownerDeltaFirst.primary_item).stop_loss_state,
-    ),
     audit_refs: auditRefs,
     authority_boundary: {
       route_not_stage_strategy: true,

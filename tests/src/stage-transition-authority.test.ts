@@ -53,13 +53,7 @@ test('Stage Transition Authority accepts only current bound owner answers as sta
   assert.ok(decision.accepted_transition_ref?.startsWith('opl://stage-transition-authority/'));
   assert.equal(decision.current_owner_delta?.surface_kind, 'opl_current_owner_delta');
   assert.equal(decision.current_owner_delta?.default_planning_root, 'current_owner_delta');
-  const stopLossState = decision.current_owner_delta?.stop_loss_state as Record<string, any>;
-  assert.equal(stopLossState.surface_kind, 'opl_current_owner_delta_stop_loss_state');
-  assert.equal(stopLossState.status, 'not_triggered');
-  assert.equal(stopLossState.default_redrive_allowed, true);
-  assert.equal(stopLossState.successor_admission, null);
-  assert.equal(stopLossState.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(stopLossState.authority_boundary.temporal_retry_policy_replaced, false);
+  assert.equal(Object.hasOwn(decision.current_owner_delta ?? {}, 'stop_loss_state'), false);
   assert.equal(
     (decision.current_owner_delta?.authority_boundary as Record<string, unknown>)
       .stage_transition_authority_single_writer,

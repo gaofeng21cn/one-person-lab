@@ -71,7 +71,6 @@ export type DomainAutonomyRecoveryObligation = {
   current_identity: DomainAutonomyStageRunIdentity;
   status: 'open' | 'current_owner_delta_executed' | 'terminal_closeout_consumed' | 'recovery_materialized' | 'waiting_for_owner' | 'stopped_with_typed_blocker' | 'stopped_with_owner_receipt';
   last_evidence_refs: string[];
-  no_progress_budget_state?: string;
   stale_read_model_lag?: string;
   supervisor_decision_ref?: string;
 };

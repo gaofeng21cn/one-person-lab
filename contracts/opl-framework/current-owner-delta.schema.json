@@ -4,9 +4,9 @@
   "schema_id": "opl.current_owner_delta.v1",
   "surface_kind": "opl_current_owner_delta_schema",
   "owner": "one-person-lab",
-  "purpose": "Define the bounded OPL-owned default owner/delta/hard-gate/action payload, including same-StageRun-route no-progress redrive control, used as the root of ordinary planning and App/operator projection.",
+  "purpose": "Define the bounded OPL-owned default owner/delta/hard-gate/action payload used as the root of ordinary planning and App/operator projection.",
   "state": "active_contract",
-  "machine_boundary": "OPL owns desired/current reconciliation, launch gating, same-StageRun-route default-redrive freeze, refs, and projection shape; domain repositories retain successor policy, domain truth, artifact authority, quality verdicts, typed blockers, and owner receipt signing.",
+  "machine_boundary": "OPL owns desired/current reconciliation, launch gating, refs, and projection shape; domain repositories retain successor policy, domain truth, artifact authority, quality verdicts, typed blockers, and owner receipt signing. No-progress observations are advisory unless a canonical admission consumer is declared elsewhere.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -28,7 +28,6 @@
     "accepted_answer_shape",
     "hard_gate",
     "advisory_warnings",
-    "stop_loss_state",
     "audit_refs",
     "authority_boundary"
   ],
@@ -336,202 +335,6 @@
     "latest_owner_answer_ref": {
       "$ref": "#/$defs/nullable_ref"
     },
-    "stop_loss_state": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "surface_kind",
-        "status",
-        "default_redrive_allowed",
-        "fresh_owner_delta_required_to_resume",
-        "freeze_reason",
-        "release_conditions",
-        "no_progress_budget",
-        "successor_admission",
-        "policy_ref",
-        "authority_boundary"
-      ],
-      "properties": {
-        "surface_kind": {
-          "const": "opl_current_owner_delta_stop_loss_state"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "not_triggered",
-            "watch",
-            "frozen",
-            "released"
-          ]
-        },
-        "default_redrive_allowed": {
-          "type": "boolean"
-        },
-        "fresh_owner_delta_required_to_resume": {
-          "type": "boolean"
-        },
-        "freeze_reason": {
-          "enum": [
-            "same_stage_run_route_no_progress_budget_exhausted",
-            null
-          ]
-        },
-        "release_conditions": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "enum": [
-              "fresh_current_owner_delta",
-              "accepted_domain_owner_answer",
-              "stable_domain_typed_blocker",
-              "human_decision",
-              "provider_hard_gate_clearance"
-            ]
-          }
-        },
-        "no_progress_budget": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "same_stage_run_route_no_progress_count",
-            "max_same_stage_run_route_no_progress_attempts",
-            "exhausted",
-            "attempt_classifications"
-          ],
-          "properties": {
-            "same_stage_run_route_no_progress_count": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "max_same_stage_run_route_no_progress_attempts": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "exhausted": {
-              "type": "boolean"
-            },
-            "attempt_classifications": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "receipt_only",
-                  "read_model_reconcile_only",
-                  "stale_route_redrive_only",
-                  "platform_repair_only",
-                  "owner_output_already_current",
-                  "no_deliverable_delta"
-                ]
-              }
-            }
-          }
-        },
-        "successor_admission": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": false,
-          "required": [
-            "status",
-            "same_stage_run_route_redrive_allowed",
-            "successor_ref",
-            "identity_difference_fields",
-            "gate_ref",
-            "authority_boundary"
-          ],
-          "properties": {
-            "status": {
-              "const": "identity_different_successor_or_gate_required"
-            },
-            "same_stage_run_route_redrive_allowed": {
-              "const": false
-            },
-            "successor_ref": {
-              "$ref": "#/$defs/nullable_ref"
-            },
-            "identity_difference_fields": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "enum": [
-                  "stage_id",
-                  "action_type",
-                  "work_unit_id",
-                  "work_unit_fingerprint",
-                  "source_fingerprint",
-                  "truth_epoch",
-                  "runtime_health_epoch",
-                  "source_eval_id",
-                  "idempotency_key",
-                  "route_identity_key",
-                  "attempt_idempotency_key",
-                  "recovery_obligation_id",
-                  "dispatch_ref",
-                  "stage_packet_ref",
-                  "stage_packet_refs"
-                ]
-              }
-            },
-            "gate_ref": {
-              "$ref": "#/$defs/nullable_ref"
-            },
-            "authority_boundary": {
-              "$ref": "#/$defs/stop_loss_authority_boundary"
-            }
-          }
-        },
-        "policy_ref": {
-          "const": "contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state"
-        },
-        "authority_boundary": {
-          "$ref": "#/$defs/stop_loss_authority_boundary"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "const": "frozen"
-              }
-            },
-            "required": [
-              "status"
-            ]
-          },
-          "then": {
-            "properties": {
-              "default_redrive_allowed": {
-                "const": false
-              },
-              "fresh_owner_delta_required_to_resume": {
-                "const": true
-              },
-              "freeze_reason": {
-                "const": "same_stage_run_route_no_progress_budget_exhausted"
-              },
-              "no_progress_budget": {
-                "properties": {
-                  "exhausted": {
-                    "const": true
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
     "audit_refs": {
       "type": "object",
       "additionalProperties": {
@@ -548,6 +351,11 @@
     "authority_boundary": {
       "$ref": "#/$defs/authority_boundary"
     }
+  },
+  "not": {
+    "required": [
+      "stop_loss_state"
+    ]
   },
   "$defs": {
     "current_owner_delta_capability_requirement": {
@@ -622,46 +430,6 @@
           "type": "null"
         }
       ]
-    },
-    "stop_loss_authority_boundary": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "can_freeze_default_redrive",
-        "can_select_domain_successor",
-        "can_create_owner_receipt",
-        "can_create_typed_blocker",
-        "can_write_domain_truth",
-        "can_claim_domain_ready",
-        "budget_exhaustion_is_domain_typed_blocker",
-        "temporal_retry_policy_replaced"
-      ],
-      "properties": {
-        "can_freeze_default_redrive": {
-          "const": true
-        },
-        "can_select_domain_successor": {
-          "const": false
-        },
-        "can_create_owner_receipt": {
-          "const": false
-        },
-        "can_create_typed_blocker": {
-          "const": false
-        },
-        "can_write_domain_truth": {
-          "const": false
-        },
-        "can_claim_domain_ready": {
-          "const": false
-        },
-        "budget_exhaustion_is_domain_typed_blocker": {
-          "const": false
-        },
-        "temporal_retry_policy_replaced": {
-          "const": false
-        }
-      }
     },
     "authority_boundary": {
       "type": "object",

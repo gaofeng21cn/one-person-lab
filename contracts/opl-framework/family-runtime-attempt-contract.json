@@ -563,19 +563,11 @@
       "provider_completed_without_typed_closeout"
     ],
     "temporal_ordering_policy": "newest_queue_or_stage_attempt_wins_over_older_terminal_attempt",
-    "stop_loss_state_contract_ref": "contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state",
-    "no_progress_scope_identity": "sameStageRunRouteCurrentnessIdentity",
-    "no_progress_budget_exhaustion_effect": "freeze_default_same_route_redrive_only",
     "authority_boundary": {
       "can_claim_domain_ready": false,
       "can_claim_publication_ready": false,
       "can_claim_artifact_ready": false,
       "can_sign_domain_owner_receipt": false,
-      "can_freeze_default_redrive": true,
-      "can_select_domain_successor": false,
-      "can_create_typed_blocker": false,
-      "budget_exhaustion_is_domain_typed_blocker": false,
-      "temporal_retry_policy_replaced": false,
       "provider_completion_is_domain_ready": false
     }
   },

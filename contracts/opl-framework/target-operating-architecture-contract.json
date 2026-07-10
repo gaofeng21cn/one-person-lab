@@ -796,10 +796,8 @@
         "status": "opl_landed_owner_gated",
         "opl_landed_surfaces": [
           "contracts/opl-framework/family-runtime-online-substrate-contract.json",
-          "contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state",
           "src/modules/runway/family-runtime-stage-run-currentness-identity.ts",
           "src/modules/runway/family-runtime-stage-progress-log.ts",
-          "src/modules/runway/family-runtime-no-progress-stop-loss.ts",
           "src/modules/runway/family-runtime-current-control-state.ts",
           "src/modules/runway/family-runtime-temporal-provider.ts",
           "src/modules/runway/family-runtime-control-loop.ts",

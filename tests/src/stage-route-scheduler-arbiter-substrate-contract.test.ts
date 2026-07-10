@@ -13,7 +13,7 @@ function readJson(relativePath: string) {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
 }
 
-test('stage route scheduler contract declares the OPL arbiter substrate against false running and no-progress loops', () => {
+test('stage route scheduler contract declares the OPL arbiter substrate against false running', () => {
   const contract = readJson('contracts/opl-framework/stage-route-scheduler-contract.json');
   const substrate = contract.stage_route_arbiter_substrate_contract as Record<string, any>;
 
@@ -82,73 +82,7 @@ test('stage route scheduler contract declares the OPL arbiter substrate against 
   assert.equal(terminalOrdering.forbidden_fallbacks.includes('active_run_id_non_null'), true);
   assert.equal(terminalOrdering.forbidden_fallbacks.includes('stale_transport_status'), true);
 
-  const budget = surfaces.no_progress_budget_contract;
-  assert.equal(budget.scope_identity, 'sameStageRunRouteCurrentnessIdentity');
-  assert.equal(
-    budget.implementation_ref,
-    'src/modules/runway/family-runtime-no-progress-stop-loss.ts#buildSameRouteNoProgressStopLossState',
-  );
-  assert.equal(
-    budget.current_control_projection_ref,
-    'src/modules/runway/family-runtime-current-control-state.ts#deriveCurrentControlStateForTask',
-  );
-  assert.equal(budget.focused_test_ref, 'tests/src/family-runtime-attempt-contract.test.ts');
-  assert.equal(budget.max_same_stage_run_route_no_progress_attempts, 2);
-  assert.deepEqual(budget.budget_scope, [
-    'domain_id',
-    'study_id_or_quest_id',
-    'stage_id',
-    'action_type',
-    'work_unit_id',
-    'work_unit_fingerprint',
-    'source_fingerprint',
-    'truth_epoch',
-    'runtime_health_epoch',
-    'source_eval_id',
-    'idempotency_key',
-    'route_identity_key',
-    'attempt_idempotency_key',
-    'recovery_obligation_id',
-    'dispatch_ref',
-    'stage_packet_ref',
-    'stage_packet_refs',
-  ]);
-  for (const noProgressClass of [
-    'read_model_reconcile_only',
-    'stale_route_redrive_only',
-    'platform_repair_only',
-    'owner_output_already_current',
-    'no_deliverable_delta',
-  ]) {
-    assert.ok(budget.no_progress_classes.includes(noProgressClass));
-  }
-  assert.equal(
-    budget.budget_exhaustion_action,
-    'freeze_default_redrive_and_project_current_owner_delta_stop_loss_state_until_fresh_current_owner_delta_domain_answer_human_decision_or_provider_hard_gate_clearance',
-  );
-  assert.equal(budget.budget_exhaustion_is_domain_typed_blocker, false);
-  assert.equal(budget.same_stage_run_route_redrive_after_budget_exhaustion_allowed, false);
-  assert.equal(budget.temporal_retry_and_dead_letter_policy_replaced, false);
-  assert.equal(
-    budget.successor_admission_policy.successor_ref_owner,
-    'domain_policy_adapter',
-  );
-  assert.equal(budget.successor_admission_policy.default_successor_ref, null);
-  assert.equal(budget.successor_admission_policy.default_successor_action_type, undefined);
-  assert.equal(
-    budget.successor_admission_policy.identity_must_differ_by_any_of.includes('source_fingerprint'),
-    true,
-  );
-  assert.equal(
-    budget.successor_admission_policy.identity_must_differ_by_any_of.includes('route_identity_key'),
-    true,
-  );
-  assert.equal(budget.successor_admission_policy.stable_operator_or_human_gate_allowed, true);
-  assert.equal(budget.successor_admission_policy.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(budget.successor_admission_policy.authority_boundary.can_select_domain_successor, false);
-  assert.ok(budget.budget_release_or_terminal_refs.includes('structured_closeout_ref'));
-  assert.ok(budget.budget_release_or_terminal_refs.includes('domain_owner_receipt_ref'));
-  assert.ok(budget.budget_release_or_terminal_refs.includes('paper_or_artifact_delta_ref'));
+  assert.equal(Object.hasOwn(surfaces, 'no_progress_budget_contract'), false);
 
   const workerStale = surfaces.worker_source_stale_supervisor_projection;
   assert.equal(workerStale.status, 'fail_closed_supervisor_guard');

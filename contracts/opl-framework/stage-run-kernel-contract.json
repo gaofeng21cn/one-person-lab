@@ -69,11 +69,11 @@
         "target_agent_ref",
         "descriptor_ref",
         "run_ref",
+        "launch_owner",
         "input_refs",
         "stage_bindings",
         "max_cycles",
-        "max_attempts_per_cycle",
-        "no_progress_limit"
+        "max_attempts_per_cycle"
       ],
       "stage_binding_fields": [
         "stage_ref",
@@ -91,10 +91,13 @@
           "run_ref"
         ],
         "target_agent_ref_source": "explicit_canonical_agent_identity",
-        "target_agent_ref_may_be_inferred_from_target_domain_id": false
+        "target_agent_ref_may_be_inferred_from_target_domain_id": false,
+        "launch_owner_source": "injected_canonical_kernel_constant",
+        "runner_ref_source": "injected_canonical_agent_stage_runner_constant",
+        "caller_runner_or_launch_override_allowed": false
       }
     },
-    "execution_model": "pure_refs_only_state_reducer",
+    "execution_model": "pure_refs_only_event_reducer",
     "identity": {
       "stage_run_id_fields": [
         "target_agent_ref",
@@ -133,15 +136,18 @@
       "effect_statuses": [
         "domain_result",
         "typed_blocker",
-        "runtime_blocker",
-        "no_progress"
+        "runtime_blocker"
       ],
       "required_effect_binding": [
         "pending_stage_ref",
         "stage_ref",
         "domain_result_ref_or_blocker_ref"
       ],
-      "state_only": true,
+      "rebuilds_from": [
+        "declarative_manifest",
+        "ordered_route_and_effect_events"
+      ],
+      "caller_mutable_state_accepted": false,
       "filesystem_writes": false,
       "process_spawn": false,
       "callback_execution": false,
@@ -149,8 +155,11 @@
       "run_closeout_creation": false
     },
     "canonical_effect_boundary": {
-      "runner_owner": "existing_opl_stage_runner",
+      "launch_owner": "one-person-lab",
+      "runner_owner": "one-person-lab",
       "runner_ref": "src/modules/runway/family-runtime-codex-stage-runner.ts#runAgentStageRunner",
+      "domain_handler_runner_ref": "src/modules/runway/family-runtime-domain-handler-process.ts#runFamilyRuntimeDomainHandlerCommand",
+      "untrusted_runner_or_launch_owner_policy": "reject",
       "execution_authorization_ref": "src/modules/stagecraft/stage-run-execution-authorization-ledger.ts",
       "domain_effect_owner": "target_domain_agent",
       "accepted_observations": [
@@ -165,6 +174,31 @@
       "reducer_accepts_argv_or_env": false,
       "reducer_writes_receipt_or_manifest": false
     },
+    "no_progress_policy": {
+      "canonical_admission_consumer": null,
+      "manifest_or_effect_field_admitted": false,
+      "enforcement": "advisory_only_outside_stage_run_reducer",
+      "can_block_or_exhaust_stage_run": false
+    },
+    "real_domain_integration_gate": {
+      "command": "npm run test:stage-run-mag-integration",
+      "required_env": [
+        "MAG_REPO_DIR",
+        "EXPECTED_MAG_HEAD"
+      ],
+      "missing_or_wrong_repo_policy": "fail_closed",
+      "mock_or_skip_allowed": false,
+      "required_surfaces": [
+        "agent/stages/manifest.json",
+        "workspace next-step",
+        "authority owner-receipt-evidence",
+        "pass revision"
+      ],
+      "required_effect_refs": [
+        "typed_blocker_ref",
+        "domain_result_ref"
+      ]
+    },
     "termination": {
       "statuses": [
         "checkpoint_accepted",
@@ -174,8 +208,7 @@
       ],
       "exhaustion_reasons": [
         "max_cycles_exhausted",
-        "max_attempts_exhausted",
-        "no_progress_budget_exhausted"
+        "max_attempts_exhausted"
       ],
       "exhaustion_creates_domain_typed_blocker": false,
       "effect_observation_closes_domain_stage": false

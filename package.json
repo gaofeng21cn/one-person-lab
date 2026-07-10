@@ -89,6 +89,7 @@
     "test:integration": "node ./scripts/test-lanes.mjs run integration",
     "test:artifact": "node ./scripts/test-lanes.mjs run artifact",
     "test:fresh-install": "node ./scripts/test-lanes.mjs run fresh-install",
+    "test:stage-run-mag-integration": "node --experimental-strip-types --test tests/src/stage-run-mag-integration.test.ts",
     "test:native": "./scripts/verify.sh native",
     "test:structure": "./scripts/verify.sh structure",
     "test:full": "node ./scripts/test-lanes.mjs run full",

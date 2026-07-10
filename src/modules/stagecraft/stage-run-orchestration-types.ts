@@ -1,3 +1,14 @@
+export const STAGE_RUN_CANONICAL_LAUNCH_OWNER = 'one-person-lab' as const;
+
+export const STAGE_RUN_CANONICAL_RUNNER_REFS = Object.freeze({
+  agent_stage_runner: 'src/modules/runway/family-runtime-codex-stage-runner.ts#runAgentStageRunner',
+  domain_handler_runner: 'src/modules/runway/family-runtime-domain-handler-process.ts#runFamilyRuntimeDomainHandlerCommand',
+} as const);
+
+export type StageRunCanonicalRunnerRef = (
+  typeof STAGE_RUN_CANONICAL_RUNNER_REFS[keyof typeof STAGE_RUN_CANONICAL_RUNNER_REFS]
+);
+
 export type StageRunCycleIdentityInput = {
   target_agent_ref: string;
   descriptor_ref: string;
@@ -22,14 +33,14 @@ export type StageRunCycleManifest = {
   target_agent_ref: string;
   descriptor_ref: string;
   run_ref: string;
+  launch_owner: typeof STAGE_RUN_CANONICAL_LAUNCH_OWNER;
   input_refs: string[];
   stage_bindings: Array<{
     stage_ref: string;
-    runner_ref: string;
+    runner_ref: StageRunCanonicalRunnerRef;
   }>;
   max_cycles: number;
   max_attempts_per_cycle: number;
-  no_progress_limit: number;
 };
 
 export type StageRunRouteDecision = {
@@ -44,7 +55,7 @@ export type StageRunRouteDecision = {
 };
 
 export type StageRunEffectObservation = {
-  effect_status: 'domain_result' | 'typed_blocker' | 'runtime_blocker' | 'no_progress';
+  effect_status: 'domain_result' | 'typed_blocker' | 'runtime_blocker';
   stage_ref: string;
   domain_result_ref?: string;
   typed_blocker_ref?: string;
@@ -80,7 +91,6 @@ export type StageRunCycleState = {
   cycle_index: number;
   attempt_index: number;
   completed_step_count: number;
-  consecutive_no_progress_count: number;
   pending_stage_ref: string | null;
   checkpoint_refs: string[];
   accepted_checkpoint_ref: string | null;
@@ -97,7 +107,7 @@ export type StageRunCycleState = {
   authority_boundary: typeof STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY;
 };
 
-export const STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY = {
+export const STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY = Object.freeze({
   owner: 'one-person-lab',
   can_reduce_refs_only_cycle_state: true,
   can_build_stable_cycle_identity: true,
@@ -114,4 +124,4 @@ export const STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY = {
   can_authorize_quality_verdict: false,
   can_claim_domain_ready: false,
   effect_owner: 'canonical_stage_runner_and_target_domain_agent',
-} as const;
+} as const);

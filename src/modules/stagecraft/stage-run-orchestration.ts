@@ -2,6 +2,9 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { stableId } from '../../kernel/stable-id.ts';
 import {
   STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY,
+  STAGE_RUN_CANONICAL_LAUNCH_OWNER,
+  STAGE_RUN_CANONICAL_RUNNER_REFS,
+  type StageRunCanonicalRunnerRef,
   type StageRunCycleEvent,
   type StageRunCycleIdentity,
   type StageRunCycleIdentityInput,
@@ -18,11 +21,11 @@ const ALLOWED_MANIFEST_FIELDS = new Set([
   'target_agent_ref',
   'descriptor_ref',
   'run_ref',
+  'launch_owner',
   'input_refs',
   'stage_bindings',
   'max_cycles',
   'max_attempts_per_cycle',
-  'no_progress_limit',
 ]);
 
 const ALLOWED_STAGE_BINDING_FIELDS = new Set(['stage_ref', 'runner_ref']);
@@ -48,6 +51,8 @@ const ALLOWED_EFFECT_FIELDS = new Set([
   'checkpoint_ref',
   'closeout_refs',
 ]);
+
+const ALLOWED_REDUCER_INPUT_FIELDS = new Set(['manifest', 'events']);
 
 function contractError(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, details);
@@ -87,6 +92,17 @@ function unexpectedFields(value: Record<string, unknown>, allowed: Set<string>) 
   return Object.keys(value).filter((field) => !allowed.has(field));
 }
 
+function canonicalRunnerRef(value: unknown, field: string): StageRunCanonicalRunnerRef {
+  const runnerRef = requiredRef(value, field);
+  if (!Object.values(STAGE_RUN_CANONICAL_RUNNER_REFS).includes(runnerRef as StageRunCanonicalRunnerRef)) {
+    contractError('StageRun runner_ref must bind a canonical OPL runner owner.', {
+      field,
+      runner_ref: runnerRef,
+    });
+  }
+  return runnerRef as StageRunCanonicalRunnerRef;
+}
+
 function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest {
   if (
     !isRecord(value)
@@ -114,7 +130,7 @@ function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest 
     }
     return {
       stage_ref: requiredRef(binding.stage_ref, 'stage_bindings.stage_ref'),
-      runner_ref: requiredRef(binding.runner_ref, 'stage_bindings.runner_ref'),
+      runner_ref: canonicalRunnerRef(binding.runner_ref, 'stage_bindings.runner_ref'),
     };
   });
   if (stageBindings.length === 0) {
@@ -123,6 +139,11 @@ function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest 
   if (new Set(stageBindings.map((binding) => binding.stage_ref)).size !== stageBindings.length) {
     contractError('StageRun cycle manifest stage_ref values must be unique.');
   }
+  if (value.launch_owner !== STAGE_RUN_CANONICAL_LAUNCH_OWNER) {
+    contractError('StageRun launch_owner must bind the canonical OPL launch owner.', {
+      launch_owner: value.launch_owner,
+    });
+  }
   return {
     surface_kind: 'opl_stage_run_cycle_manifest',
     version: 'stage-run-cycle.v1',
@@ -130,11 +151,11 @@ function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest 
     target_agent_ref: requiredRef(value.target_agent_ref, 'target_agent_ref'),
     descriptor_ref: requiredRef(value.descriptor_ref, 'descriptor_ref'),
     run_ref: requiredRef(value.run_ref, 'run_ref'),
+    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
     input_refs: uniqueRefs(value.input_refs, 'input_refs', true),
     stage_bindings: stageBindings,
     max_cycles: positiveInteger(value.max_cycles, 'max_cycles'),
     max_attempts_per_cycle: positiveInteger(value.max_attempts_per_cycle, 'max_attempts_per_cycle'),
-    no_progress_limit: positiveInteger(value.no_progress_limit, 'no_progress_limit'),
   };
 }
 
@@ -167,7 +188,7 @@ function normalizeRouteDecision(value: StageRunRouteDecision): StageRunRouteDeci
 function normalizeEffect(value: StageRunEffectObservation): StageRunEffectObservation {
   if (
     !isRecord(value)
-    || !['domain_result', 'typed_blocker', 'runtime_blocker', 'no_progress']
+    || !['domain_result', 'typed_blocker', 'runtime_blocker']
       .includes(String(value.effect_status))
   ) {
     contractError('StageRun effect observation has an invalid status.');
@@ -193,7 +214,7 @@ function normalizeEffect(value: StageRunEffectObservation): StageRunEffectObserv
     normalized.typed_blocker_ref,
     normalized.runtime_blocker_ref,
   ].filter(Boolean);
-  if (normalized.effect_status === 'no_progress' ? carrierRefs.length > 0 : carrierRefs.length !== 1) {
+  if (carrierRefs.length !== 1) {
     contractError('StageRun effect status must bind exactly its declared result or blocker ref.', {
       effect_status: normalized.effect_status,
     });
@@ -311,7 +332,6 @@ export function initializeStageRunCycleState(value: StageRunCycleManifest): Stag
     cycle_index: 1,
     attempt_index: 1,
     completed_step_count: 0,
-    consecutive_no_progress_count: 0,
     pending_stage_ref: null,
     checkpoint_refs: [],
     accepted_checkpoint_ref: null,
@@ -325,31 +345,8 @@ export function initializeStageRunCycleState(value: StageRunCycleManifest): Stag
     runtime_blocker_refs: [],
     termination_reason: null,
     domain_typed_blocker_created: false,
-    authority_boundary: STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY,
+    authority_boundary: { ...STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY },
   };
-}
-
-function assertStateBinding(manifest: StageRunCycleManifest, state: StageRunCycleState) {
-  if (
-    !isRecord(state)
-    || state.surface_kind !== 'opl_stage_run_cycle_state'
-    || state.version !== 'stage-run-cycle.v1'
-    || state.manifest_id !== manifest.manifest_id
-    || state.stage_run_id !== expectedStageRunId(manifest)
-    || state.target_agent_ref !== manifest.target_agent_ref
-    || state.descriptor_ref !== manifest.descriptor_ref
-    || state.run_ref !== manifest.run_ref
-    || !['running', 'checkpoint_accepted', 'rollback_required', 'blocked', 'exhausted']
-      .includes(String(state.status))
-  ) {
-    contractError('StageRun cycle state is not bound to its manifest and stable identity.');
-  }
-  const authorityBoundary = state.authority_boundary as Record<string, unknown>;
-  for (const [field, value] of Object.entries(STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY)) {
-    if (!isRecord(authorityBoundary) || authorityBoundary[field] !== value) {
-      contractError('StageRun cycle state authority boundary is invalid.', { field });
-    }
-  }
 }
 
 function reduceRouteDecision(
@@ -447,7 +444,6 @@ function reduceEffectObservation(
       cycle_index: state.cycle_index + 1,
       attempt_index: 1,
       completed_step_count: state.completed_step_count + 1,
-      consecutive_no_progress_count: 0,
       pending_stage_ref: null,
       checkpoint_refs: checkpointRefs,
       latest_output_refs: outputRefs.length > 0
@@ -469,28 +465,15 @@ function reduceEffectObservation(
       termination_reason: 'domain_typed_blocker_ref_observed',
     };
   }
-  const noProgressCount = state.consecutive_no_progress_count + 1;
   const nextAttempt = state.attempt_index + 1;
   const runtimeBlockerRefs = effect.runtime_blocker_ref
     ? [...new Set([...state.runtime_blocker_refs, effect.runtime_blocker_ref])]
     : state.runtime_blocker_refs;
-  if (noProgressCount >= manifest.no_progress_limit) {
-    return {
-      ...state,
-      status: 'exhausted',
-      pending_stage_ref: null,
-      consecutive_no_progress_count: noProgressCount,
-      runtime_blocker_refs: runtimeBlockerRefs,
-      closeout_refs: closeoutRefs,
-      termination_reason: 'no_progress_budget_exhausted',
-    };
-  }
   if (nextAttempt > manifest.max_attempts_per_cycle) {
     return {
       ...state,
       status: 'exhausted',
       pending_stage_ref: null,
-      consecutive_no_progress_count: noProgressCount,
       runtime_blocker_refs: runtimeBlockerRefs,
       closeout_refs: closeoutRefs,
       termination_reason: 'max_attempts_exhausted',
@@ -500,7 +483,6 @@ function reduceEffectObservation(
     ...state,
     attempt_index: nextAttempt,
     pending_stage_ref: null,
-    consecutive_no_progress_count: noProgressCount,
     runtime_blocker_refs: runtimeBlockerRefs,
     closeout_refs: closeoutRefs,
   };
@@ -508,26 +490,42 @@ function reduceEffectObservation(
 
 export function reduceStageRunCycleState(input: {
   manifest: StageRunCycleManifest;
-  state: StageRunCycleState;
-  event: StageRunCycleEvent;
+  events: StageRunCycleEvent[];
 }): StageRunCycleState {
-  const manifest = normalizeManifest(input.manifest);
-  assertStateBinding(manifest, input.state);
-  if (input.state.status !== 'running') {
-    contractError('StageRun terminal cycle state cannot consume another event.', {
-      status: input.state.status,
+  if (!isRecord(input)) {
+    contractError('StageRun reducer requires an input object.');
+  }
+  const unexpected = unexpectedFields(input, ALLOWED_REDUCER_INPUT_FIELDS);
+  if (unexpected.length > 0) {
+    contractError('StageRun reducer rebuilds state and does not accept caller mutable state.', {
+      unexpected_fields: unexpected,
     });
   }
-  const event = normalizeEvent(input.event);
-  return event.event_kind === 'route_decision'
-    ? reduceRouteDecision(manifest, input.state, event.route_decision)
-    : reduceEffectObservation(manifest, input.state, event.effect);
+  if (!Array.isArray(input.events)) {
+    contractError('StageRun reducer requires an ordered events array.');
+  }
+  const manifest = normalizeManifest(input.manifest);
+  let state = initializeStageRunCycleState(manifest);
+  for (const value of input.events) {
+    if (state.status !== 'running') {
+      contractError('StageRun terminal cycle state cannot consume another event.', {
+        status: state.status,
+      });
+    }
+    const event = normalizeEvent(value);
+    state = event.event_kind === 'route_decision'
+      ? reduceRouteDecision(manifest, state, event.route_decision)
+      : reduceEffectObservation(manifest, state, event.effect);
+  }
+  return state;
 }
 
 export { buildStageRunCycleManifestFromControlPlane } from './stage-run-orchestration-adapter.ts';
 export type { StageRunControlPlaneManifestInput } from './stage-run-orchestration-adapter.ts';
 export { STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY } from './stage-run-orchestration-types.ts';
+export { STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REFS } from './stage-run-orchestration-types.ts';
 export type {
+  StageRunCanonicalRunnerRef,
   StageRunCycleEvent,
   StageRunCycleIdentity,
   StageRunCycleIdentityInput,

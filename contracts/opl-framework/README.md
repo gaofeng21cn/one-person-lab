@@ -66,7 +66,6 @@ These schema files are the machine-readable OPL target architecture surface. The
 
 - `current-owner-delta.schema.json`: compact default owner / delta / hard-gate / action payload and ordinary next-action root.
 - `owner-answer.schema.json`: unified return shape for owner receipt, typed blocker, human decision, and route-back.
-- `current-owner-delta.schema.json#/properties/stop_loss_state`: same-StageRun-route no-progress default-redrive freeze/release policy; domain successor selection remains outside OPL.
 
 ### Stage Artifact Unit
 
@@ -168,7 +167,6 @@ These schema files are the machine-readable OPL target architecture surface. The
 - `owner-answer.schema.json`
 - `evidence-ledger-event.schema.json`
 - `golden-path-profile.schema.json`
-- `current-owner-delta.schema.json#/properties/stop_loss_state`
 - `guardrail-tier-policy.json`
 - `wrapper-retirement-gate-policy.json`
 - `default-surface-budget.schema.json`

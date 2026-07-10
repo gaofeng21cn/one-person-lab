@@ -58,6 +58,28 @@ test('target architecture schemas compile and reject an empty canonical fixture'
   }
 });
 
+test('current owner delta rejects the retired stop-loss enforcement field', () => {
+  const schema = readJson<Record<string, any>>('contracts/opl-framework/current-owner-delta.schema.json');
+  const currentOwnerDelta = buildCurrentOwnerDeltaReadModel({
+    ownerDeltaFirst: {
+      next_owner: 'med-autoscience',
+      next_required_delta: 'domain_owner_answer_or_typed_blocker_required',
+      required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
+    },
+  }).current_owner_delta;
+  const entry = {
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/current-owner-delta.schema.json',
+  };
+
+  assert.equal(validateJsonSchemaPayload(entry, currentOwnerDelta).ok, true);
+  assert.equal(validateJsonSchemaPayload(entry, {
+    ...currentOwnerDelta,
+    stop_loss_state: { status: 'frozen' },
+  }).ok, false);
+});
+
 test('target architecture schemas retain sparse identity, required-field, and authority boundaries', () => {
   const schemas = Object.fromEntries(
     schemaPaths.map((schemaPath) => [schemaPath, readJson<Record<string, any>>(schemaPath)]),
@@ -125,24 +147,8 @@ test('target architecture schemas retain sparse identity, required-field, and au
     false,
     'stop-loss must be owned by current-owner-delta instead of a second schema',
   );
-  const ownerDeltaStopLoss = ownerDelta.properties.stop_loss_state.properties;
-  assert.equal(ownerDeltaStopLoss.default_redrive_allowed.type, 'boolean');
-  assert.equal(
-    ownerDeltaStopLoss.successor_admission.properties.same_stage_run_route_redrive_allowed.const,
-    false,
-  );
-  assert.equal(
-    ownerDeltaStopLoss.successor_admission.properties.successor_ref.$ref,
-    '#/$defs/nullable_ref',
-  );
-  assert.equal(
-    Object.hasOwn(ownerDeltaStopLoss.successor_admission.properties, 'preferred_successor'),
-    false,
-  );
-  assert.equal(
-    ownerDelta.$defs.stop_loss_authority_boundary.properties.can_create_typed_blocker.const,
-    false,
-  );
+  assert.equal(Object.hasOwn(ownerDelta.properties, 'stop_loss_state'), false);
+  assert.equal(Object.hasOwn(ownerDelta.$defs, 'stop_loss_authority_boundary'), false);
   const targetArchitecture = readJson<Record<string, any>>(
     'contracts/opl-framework/target-operating-architecture-contract.json',
   );
@@ -197,49 +203,4 @@ test('target architecture schemas retain sparse identity, required-field, and au
       );
     }
   }
-});
-
-test('current owner delta freezes only default same-route redrive without synthesizing domain authority', () => {
-  const readModel = buildCurrentOwnerDeltaReadModel({
-    ownerDeltaFirst: {
-      next_owner: 'med-autoscience',
-      next_required_delta: 'domain_owner_answer_or_typed_blocker_required',
-      required_return_shapes: ['domain_owner_receipt_ref', 'typed_blocker_ref'],
-      stop_loss_state: {
-        status: 'frozen',
-        no_progress_budget: {
-          same_stage_run_route_no_progress_count: 2,
-          max_same_stage_run_route_no_progress_attempts: 2,
-          exhausted: true,
-        },
-        successor_admission: {
-          status: 'identity_different_successor_or_gate_required',
-          successor_ref: 'mas://policy/successors/publication-repair',
-          identity_difference_fields: ['work_unit_id'],
-        },
-      },
-    },
-  });
-
-  const stopLoss = readModel.current_owner_delta.stop_loss_state as Record<string, any>;
-  assert.equal(stopLoss.status, 'frozen');
-  assert.equal(stopLoss.default_redrive_allowed, false);
-  assert.equal(stopLoss.freeze_reason, 'same_stage_run_route_no_progress_budget_exhausted');
-  assert.equal(stopLoss.fresh_owner_delta_required_to_resume, true);
-  assert.equal(stopLoss.terminal_blocker_code, undefined);
-  assert.equal(stopLoss.successor_admission.same_stage_run_route_redrive_allowed, false);
-  assert.equal(stopLoss.successor_admission.successor_ref, 'mas://policy/successors/publication-repair');
-  assert.equal(stopLoss.successor_admission.preferred_successor, undefined);
-  assert.equal(stopLoss.authority_boundary.can_create_owner_receipt, false);
-  assert.equal(stopLoss.authority_boundary.can_create_typed_blocker, false);
-  assert.equal(stopLoss.authority_boundary.can_write_domain_truth, false);
-  assert.equal(stopLoss.policy_ref, 'contracts/opl-framework/current-owner-delta.schema.json#/properties/stop_loss_state');
-
-  const schema = readJson<Record<string, any>>('contracts/opl-framework/current-owner-delta.schema.json');
-  const validation = validateJsonSchemaPayload({
-    schemaId: schema.$id,
-    schema,
-    sourceRef: 'contracts/opl-framework/current-owner-delta.schema.json',
-  }, readModel.current_owner_delta);
-  assert.equal(validation.ok, true, validation.ok ? undefined : JSON.stringify(validation.errors));
 });
