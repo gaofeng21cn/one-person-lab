@@ -806,7 +806,7 @@ test('stage manifest compiler fails closed on every Framework stage-contract flo
   }
 });
 
-test('real MAG legacy manifest kind is blocked without skip or false-ready projection', (t) => {
+test('real MAG canonical manifest compiles while the legacy kind remains blocked', (t) => {
   const explicitMagRepo = process.env.MAG_REPO_DIR
     ? path.resolve(process.env.MAG_REPO_DIR)
     : null;
@@ -825,6 +825,9 @@ test('real MAG legacy manifest kind is blocked without skip or false-ready proje
   }
   assert.equal(fs.existsSync(path.join(magRepo, 'contracts/stage_control_plane.json')), false);
   assert.equal(fs.existsSync(path.join(magRepo, 'src/med_autogrant/stage_control_plane.py')), false);
+  const sourceManifest = readManifest(magRepo);
+  assert.equal(sourceManifest.surface_kind, 'opl_standard_agent_declarative_stage_manifest');
+  assert.equal(sourceManifest.version, 'opl-standard-agent-declarative-stage-manifest.v1');
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-real-mag-stage-manifest-'));
   fs.cpSync(path.join(magRepo, 'agent'), path.join(root, 'agent'), { recursive: true });
@@ -850,17 +853,32 @@ test('real MAG legacy manifest kind is blocked without skip or false-ready proje
   );
   assert.equal(fs.existsSync(path.join(root, 'contracts/stage_control_plane.json')), false);
 
-  const report = buildDomainPackCompilerList({} as any, {
+  const readyReport = buildDomainPackCompilerList({} as any, {
     familyDefaults: true,
     familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
   });
-  const projection = report.domain_pack_compiler.domains[0];
+  const readyProjection = readyReport.domain_pack_compiler.domains[0];
 
-  assert.equal(report.domain_pack_compiler.summary.total_domain_count, 1);
-  assert.equal(report.domain_pack_compiler.summary.ready_domain_count, 0);
-  assert.equal(report.domain_pack_compiler.summary.blocked_domain_count, 1);
-  assert.equal(projection?.requested_agent_id, 'mag');
-  assert.equal(projection?.compiler_status, 'blocked');
-  assert.equal(projection?.repo_contract_error?.code, 'contract_shape_invalid');
-  assert.match(String(projection?.repo_contract_error?.message ?? ''), /stage_manifest\.surface_kind must be/);
+  assert.equal(readyReport.domain_pack_compiler.summary.total_domain_count, 1);
+  assert.equal(readyReport.domain_pack_compiler.summary.ready_domain_count, 1);
+  assert.equal(readyReport.domain_pack_compiler.summary.blocked_domain_count, 0);
+  assert.equal(readyProjection?.requested_agent_id, 'mag');
+  assert.equal(readyProjection?.compiler_status, 'ready');
+
+  const legacyManifest = readManifest(root);
+  legacyManifest.surface_kind = 'mag_declarative_stage_manifest';
+  writeManifest(root, legacyManifest);
+  const blockedReport = buildDomainPackCompilerList({} as any, {
+    familyDefaults: true,
+    familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
+  });
+  const blockedProjection = blockedReport.domain_pack_compiler.domains[0];
+
+  assert.equal(blockedReport.domain_pack_compiler.summary.total_domain_count, 1);
+  assert.equal(blockedReport.domain_pack_compiler.summary.ready_domain_count, 0);
+  assert.equal(blockedReport.domain_pack_compiler.summary.blocked_domain_count, 1);
+  assert.equal(blockedProjection?.requested_agent_id, 'mag');
+  assert.equal(blockedProjection?.compiler_status, 'blocked');
+  assert.equal(blockedProjection?.repo_contract_error?.code, 'contract_shape_invalid');
+  assert.match(String(blockedProjection?.repo_contract_error?.message ?? ''), /stage_manifest\.surface_kind must be/);
 });
