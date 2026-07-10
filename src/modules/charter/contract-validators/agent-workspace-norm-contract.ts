@@ -98,47 +98,6 @@ function validateStageOutputRootProtocol(section: Record<string, unknown>, fileP
   };
 }
 
-function validateDomainProfiles(
-  section: Record<string, unknown>,
-  supportedAgents: string[],
-  filePath: string,
-) {
-  assertExactStringArray(
-    Object.keys(section).sort(),
-    [...supportedAgents].sort(),
-    'domain_topology_profiles',
-    filePath,
-  );
-  const profiles: AgentWorkspaceNormContract['domain_topology_profiles'] = {};
-  for (const agentId of supportedAgents) {
-    const profile = requireSection(section, agentId, filePath);
-    assertExactStringArray(
-      Object.keys(profile).sort(),
-      [
-        'profile',
-        'workspace_mode',
-        'project_kind',
-        'project_collection_path',
-        'canonical_project_collection_role',
-        'user_inspection_roots',
-        'shared_resource_roots',
-      ].sort(),
-      `domain_topology_profiles.${agentId}`,
-      filePath,
-    );
-    profiles[agentId] = {
-      profile: stringField(profile, 'profile', filePath),
-      workspace_mode: stringField(profile, 'workspace_mode', filePath),
-      project_kind: stringField(profile, 'project_kind', filePath),
-      project_collection_path: stringField(profile, 'project_collection_path', filePath),
-      canonical_project_collection_role: stringField(profile, 'canonical_project_collection_role', filePath),
-      user_inspection_roots: stringArrayField(profile, 'user_inspection_roots', filePath),
-      shared_resource_roots: stringArrayField(profile, 'shared_resource_roots', filePath),
-    };
-  }
-  return profiles;
-}
-
 function assertExactString(
   value: string,
   expected: string,
@@ -316,29 +275,6 @@ function validateAgentWorkspaceNormSemantics(
   assertExactString(topology.default_project_collection_path, 'projects', 'topology_contract.default_project_collection_path', filePath);
   assertExactStringArray(topology.workspace_modes, ['one_off', 'series', 'portfolio'], 'topology_contract.workspace_modes', filePath);
   assertExactBoolean(topology.series_capable_one_off_skeleton, true, 'topology_contract.series_capable_one_off_skeleton', filePath);
-
-  for (const agentId of contract.supported_agents) {
-    const profile = contract.domain_topology_profiles[agentId];
-    assertExactString(
-      profile.project_collection_path,
-      topology.default_project_collection_path,
-      `${agentId}.project_collection_path`,
-      filePath,
-    );
-    assertExactString(
-      profile.canonical_project_collection_role,
-      topology.canonical_project_collection_role,
-      `${agentId}.canonical_project_collection_role`,
-      filePath,
-    );
-    if (!topology.workspace_modes.includes(profile.workspace_mode)) {
-      throw new FrameworkContractError(
-        'contract_shape_invalid',
-        `Agent workspace profile "${agentId}" uses an unregistered workspace mode.`,
-        { file: filePath, agent_id: agentId, workspace_mode: profile.workspace_mode },
-      );
-    }
-  }
 
   const inspection = contract.user_inspection;
   assertExactString(inspection.ordinary_user_default_surface, 'workspace_local_project_stage_outputs', 'user_inspection.ordinary_user_default_surface', filePath);
@@ -556,6 +492,33 @@ export function validateAgentWorkspaceNorm(
   value: unknown,
 ): AgentWorkspaceNormContract {
   const root = requireRecord(value, 'agent-workspace-norm-contract.json', filePath);
+  assertExactStringArray(
+    Object.keys(root).sort(),
+    [
+      'authority_boundary',
+      'conformance_policy',
+      'default_workspace_precondition',
+      'descriptor_delegates',
+      'domain_workspace_lifecycle_policy',
+      'explicit_initialization',
+      'machine_boundary',
+      'norm_id',
+      'owner',
+      'registry_policy',
+      'runtime_state_boundary',
+      'scope',
+      'supported_agent_registry',
+      'surface_kind',
+      'topology_contract',
+      'user_inspection',
+      'version',
+      'workspace_diagnostic_policy',
+      'workspace_governance_policy',
+      'workspace_management_surfaces',
+    ].sort(),
+    'agent-workspace-norm-contract.json',
+    filePath,
+  );
   const supportedAgentRegistry = requireSection(root, 'supported_agent_registry', filePath);
   const supportedAgents = listStandardDomainAgentIds();
   const defaultWorkspacePrecondition = requireSection(root, 'default_workspace_precondition', filePath);
@@ -579,7 +542,6 @@ export function validateAgentWorkspaceNorm(
     'topology_contract',
     filePath,
   );
-  const domainTopologyProfiles = requireSection(root, 'domain_topology_profiles', filePath);
   const userInspection = requireSection(root, 'user_inspection', filePath);
   const registryPolicy = requireSection(root, 'registry_policy', filePath);
   const runtimeStateBoundary = requireSection(root, 'runtime_state_boundary', filePath);
@@ -646,7 +608,6 @@ export function validateAgentWorkspaceNorm(
       workspace_modes: stringArrayField(topologyContract, 'workspace_modes', filePath),
       series_capable_one_off_skeleton: booleanField(topologyContract, 'series_capable_one_off_skeleton', filePath),
     },
-    domain_topology_profiles: validateDomainProfiles(domainTopologyProfiles, supportedAgents, filePath),
     user_inspection: {
       ordinary_user_default_surface: stringField(userInspection, 'ordinary_user_default_surface', filePath),
       project_stage_outputs_pattern: stringField(userInspection, 'project_stage_outputs_pattern', filePath),

@@ -9,8 +9,12 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../src/kernel/standard-agent-registry.ts';
 import { validateAgentWorkspaceNorm } from '../../src/modules/charter/contract-validators/agent-workspace-norm-contract.ts';
-import { buildAgentWorkspaceNormChecks } from '../../src/modules/workspace/agent-workspace-norm.ts';
+import {
+  buildAgentWorkspaceNormChecks,
+  buildAgentWorkspaceNormProjection,
+} from '../../src/modules/workspace/agent-workspace-norm.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from '../../src/modules/workspace/workspace-agent-defaults.ts';
+import { profileFromTopologyContract } from '../../src/modules/workspace/workspace-topology.ts';
 import { repoRoot } from './cli/helpers.ts';
 
 const contractPath = path.join(repoRoot, 'contracts/opl-framework/agent-workspace-norm-contract.json');
@@ -35,6 +39,7 @@ test('workspace agent identity and supported agents derive from the standard-age
     source_ref: 'src/kernel/standard-agent-registry.ts',
     series_membership: 'standard_domain_agent',
   });
+  assert.equal('domain_topology_profiles' in rawContract, false);
   assert.deepEqual(contract.supported_agents, registryAgents.map((entry) => entry.agent_id));
   assert.deepEqual(
     OPL_WORKSPACE_AGENT_PROFILES.map((entry) => ({
@@ -59,37 +64,40 @@ test('workspace agent identity and supported agents derive from the standard-age
     })),
   );
 
-  const extraProfile = rawContractFixture();
-  extraProfile.domain_topology_profiles.phantom = structuredClone(extraProfile.domain_topology_profiles.mas);
-  assert.throws(
-    () => validateAgentWorkspaceNorm(contractPath, extraProfile),
-    /domain_topology_profiles/,
-  );
-
-  const legacyAlias = rawContractFixture();
-  legacyAlias.domain_topology_profiles.mas.project_semantic_aliases = ['study'];
-  assert.throws(
-    () => validateAgentWorkspaceNorm(contractPath, legacyAlias),
-    /domain_topology_profiles\.mas/,
-  );
+  for (const agent of OPL_WORKSPACE_AGENT_PROFILES) {
+    const profile = profileFromTopologyContract(agent.default_profile_id);
+    assert.deepEqual(
+      buildAgentWorkspaceNormProjection({ contract, agentId: agent.agent_id }).domain_topology_profile,
+      {
+        profile: agent.default_profile_id,
+        workspace_mode: profile.workspace_mode,
+        project_kind: agent.project_kind,
+        project_collection_path: profile.project_collection_path,
+        canonical_project_collection_role: 'project_units',
+        user_inspection_roots: [
+          `${profile.project_collection_path}/<project-id>/${profile.project_stage_outputs_root}`,
+        ],
+        shared_resource_roots: profile.shared_resource_roots,
+      },
+    );
+  }
 });
 
 test('agent workspace norm validates registry coverage and generic topology constraints', () => {
   const contract = contractFixture();
   assert.deepEqual(buildAgentWorkspaceNormChecks(contract).blockers, []);
-  assert.equal(Object.values(contract.domain_topology_profiles).every((profile) =>
-    profile.project_collection_path === 'projects'
-  ), true);
 
-  const missingProfile = structuredClone(contract);
-  delete missingProfile.domain_topology_profiles.mas;
-  assert.ok(buildAgentWorkspaceNormChecks(missingProfile).blockers.includes(
-    'workspace_domain_topology_profiles_must_match_standard_agent_registry',
-  ));
-
-  const invalidTopology = structuredClone(contract);
-  invalidTopology.domain_topology_profiles.mas.workspace_mode = 'domain_specific_mode';
-  assert.ok(buildAgentWorkspaceNormChecks(invalidTopology).blockers.includes(
-    'workspace_domain_topology_profile_generic_contract_drift',
-  ));
+  const divergentProfileList = rawContractFixture();
+  divergentProfileList.domain_topology_profiles = {
+    mas: {
+      profile: 'one_off',
+      workspace_mode: 'one_off',
+      project_kind: 'not_a_study',
+      shared_resource_roots: ['wrong/root'],
+    },
+  };
+  assert.throws(
+    () => validateAgentWorkspaceNorm(contractPath, divergentProfileList),
+    /agent-workspace-norm-contract\.json/,
+  );
 });

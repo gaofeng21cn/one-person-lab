@@ -1,5 +1,12 @@
 import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
-import type { WorkspaceAgentId } from './workspace-agent-defaults.ts';
+import {
+  OPL_WORKSPACE_AGENT_PROFILES,
+  type WorkspaceAgentId,
+} from './workspace-agent-defaults.ts';
+import {
+  expectedDomainTopologyProfile,
+  profileFromTopologyContract,
+} from './workspace-topology.ts';
 
 export const AGENT_WORKSPACE_NORM_CONTRACT_REF =
   'contracts/opl-framework/agent-workspace-norm-contract.json';
@@ -9,11 +16,20 @@ export type WorkspaceNormProjectionInput = {
   agentId?: WorkspaceAgentId | string | null;
 };
 
-function domainProfile(contract: AgentWorkspaceNormContract, agentId: string | null | undefined) {
+function domainProfile(agentId: string | null | undefined) {
   if (!agentId) {
     return null;
   }
-  return contract.domain_topology_profiles[agentId] ?? null;
+  const agent = OPL_WORKSPACE_AGENT_PROFILES.find((entry) => entry.agent_id === agentId);
+  if (!agent) {
+    return null;
+  }
+  const profile = profileFromTopologyContract(agent.default_profile_id);
+  return expectedDomainTopologyProfile({
+    agent,
+    profileId: agent.default_profile_id,
+    profile,
+  });
 }
 
 export function buildAgentWorkspaceNormProjection(input: WorkspaceNormProjectionInput) {
@@ -25,7 +41,7 @@ export function buildAgentWorkspaceNormProjection(input: WorkspaceNormProjection
     contract_ref: AGENT_WORKSPACE_NORM_CONTRACT_REF,
     supported_agents: input.contract.supported_agents,
     agent_id: input.agentId ?? null,
-    domain_topology_profile: domainProfile(input.contract, input.agentId),
+    domain_topology_profile: domainProfile(input.agentId),
     default_workspace_precondition: input.contract.default_workspace_precondition,
     explicit_initialization: input.contract.explicit_initialization,
     descriptor_delegates: input.contract.descriptor_delegates,
@@ -49,8 +65,6 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
   const runtime = contract.runtime_state_boundary;
   const authority = contract.authority_boundary;
   const topology = contract.topology_contract;
-  const profileIds = Object.keys(contract.domain_topology_profiles).sort();
-  const supportedAgentIds = [...contract.supported_agents].sort();
 
   const blockers = [
     precondition.action_id === 'opl_workspace_ensure' ? null : 'workspace_ensure_action_id_drift',
@@ -100,16 +114,6 @@ export function buildAgentWorkspaceNormChecks(contract: AgentWorkspaceNormContra
     topology.default_project_collection_path === 'projects'
       ? null
       : 'workspace_default_project_collection_path_drift',
-    profileIds.join('/') === supportedAgentIds.join('/')
-      ? null
-      : 'workspace_domain_topology_profiles_must_match_standard_agent_registry',
-    Object.entries(contract.domain_topology_profiles).every(([, profile]) =>
-      profile.project_collection_path === topology.default_project_collection_path
-      && profile.canonical_project_collection_role === topology.canonical_project_collection_role
-      && topology.workspace_modes.includes(profile.workspace_mode)
-    )
-      ? null
-      : 'workspace_domain_topology_profile_generic_contract_drift',
     topology.project_stage_outputs_root === 'artifacts/stage_outputs'
       ? null
       : 'workspace_stage_outputs_root_drift',

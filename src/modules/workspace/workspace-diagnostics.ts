@@ -258,31 +258,10 @@ function validateIndexSemantics(input: {
     const expectedDisplayLabels = buildWorkspaceDisplayLabels(agent, profile);
     const expectedSharedResources = buildSharedResources(profile);
     const expectedNormProfile = expectedDomainTopologyProfile({
-      contract: input.contracts.agentWorkspaceNorm,
       agent,
       profileId,
       profile,
     });
-    const declaredDomainProfile = input.contracts.agentWorkspaceNorm.domain_topology_profiles[agent.agent_id];
-    const domainProfileMatches = declaredDomainProfile
-      && declaredDomainProfile.profile === profileId
-      && declaredDomainProfile.workspace_mode === profile.workspace_mode
-      && declaredDomainProfile.project_kind === agent.project_kind
-      && declaredDomainProfile.project_collection_path === profile.project_collection_path
-      && sameJson(declaredDomainProfile.shared_resource_roots, profile.shared_resource_roots);
-    if (!domainProfileMatches) {
-      addBlocker(blockers, 'domain_topology_profile_drift', {
-        agent_id: agent.agent_id,
-        expected: declaredDomainProfile ?? null,
-        actual: {
-          profile: profileId,
-          workspace_mode: profile.workspace_mode,
-          project_kind: agent.project_kind,
-          project_collection_path: profile.project_collection_path,
-          shared_resource_roots: profile.shared_resource_roots,
-        },
-      });
-    }
 
     if (!isRecord(input.index.canonical_topology)) {
       addBlocker(blockers, 'canonical_topology_missing');

@@ -458,7 +458,6 @@ export function buildWorkspaceIndex(input: {
       agentId: input.agent.agent_id,
     }),
     expected_domain_topology_profile: expectedDomainTopologyProfile({
-      contract: input.contracts.agentWorkspaceNorm,
       agent: input.agent,
       profileId: input.profileId,
       profile: input.profile,

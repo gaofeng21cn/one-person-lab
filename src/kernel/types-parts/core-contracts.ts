@@ -245,15 +245,6 @@ export interface AgentWorkspaceNormContract {
     workspace_modes: string[];
     series_capable_one_off_skeleton: boolean;
   };
-  domain_topology_profiles: Record<string, {
-    profile: string;
-    workspace_mode: string;
-    project_kind: string;
-    project_collection_path: string;
-    canonical_project_collection_role: string;
-    user_inspection_roots: string[];
-    shared_resource_roots: string[];
-  }>;
   user_inspection: {
     ordinary_user_default_surface: string;
     project_stage_outputs_pattern: string;

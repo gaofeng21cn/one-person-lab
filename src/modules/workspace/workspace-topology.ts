@@ -2,7 +2,6 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
-import type { AgentWorkspaceNormContract } from '../../kernel/types.ts';
 import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
@@ -421,18 +420,19 @@ export function buildSharedResources(profile: TopologyProfile): WorkspaceSharedR
 }
 
 export function expectedDomainTopologyProfile(input: {
-  contract: AgentWorkspaceNormContract;
   agent: WorkspaceAgentProfile;
   profileId: WorkspaceProfileId;
   profile: TopologyProfile;
 }) {
-  const projection = input.contract.domain_topology_profiles[input.agent.agent_id] ?? null;
   return {
     profile: input.profileId,
     workspace_mode: input.profile.workspace_mode,
     project_kind: input.agent.project_kind,
     project_collection_path: input.profile.project_collection_path,
+    canonical_project_collection_role: 'project_units' as const,
+    user_inspection_roots: [
+      `${input.profile.project_collection_path}/<project-id>/${input.profile.project_stage_outputs_root}`,
+    ],
     shared_resource_roots: input.profile.shared_resource_roots,
-    projected_profile: projection,
   };
 }
