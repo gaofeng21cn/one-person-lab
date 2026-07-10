@@ -13,7 +13,7 @@ import {
 
 test('agent descriptor commands keep partial domain surfaces discoverable and non-authoritative', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-descriptor-partial-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const manifest = loadFamilyManifestFixtures().medautoscience;
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
 
@@ -40,5 +40,6 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
     assert.equal(descriptor.non_authority_flags.opl_owns_domain_truth, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

@@ -192,6 +192,53 @@ test('domain manifests owns transition matrix evaluation and domain mismatch blo
   }
 });
 
+test('transition projections preserve descriptor-only and missing-matrix refresh semantics', () => {
+  const fixture = loadFamilyManifestFixtures().medautoscience;
+  const rows = [
+    {
+      name: 'descriptor_only',
+      manifest: withMasTransitionDescriptor(fixture),
+      status: 'descriptor_only',
+      refreshRequired: true,
+      blockedReason: null,
+    },
+    {
+      name: 'transition_matrix_cases_missing',
+      manifest: {
+        ...withMasTransitions(fixture),
+        family_transition_matrix_cases: [],
+      },
+      status: 'blocked',
+      refreshRequired: true,
+      blockedReason: 'transition_matrix_cases_missing',
+    },
+  ];
+
+  for (const row of rows) {
+    const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-transition-${row.name}-`));
+    const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+    const env = { OPL_STATE_DIR: stateRoot, OPL_CONTRACTS_DIR: fixtureContractsRoot };
+    try {
+      bindManifest('medautoscience', row.manifest, env);
+      const projections = [
+        findDomainManifest(runCli(['domain', 'manifests'], env), 'medautoscience')
+          .manifest.family_transition,
+        runCli(['agents', 'descriptor', '--domain', 'mas'], env)
+          .family_agent_descriptor.family_transition,
+      ];
+
+      for (const projection of projections) {
+        assert.equal(projection.status, row.status, row.name);
+        assert.equal(projection.refresh_required, row.refreshRequired, row.name);
+        assert.equal(projection.blocked_reason, row.blockedReason, row.name);
+      }
+    } finally {
+      fs.rmSync(stateRoot, { recursive: true, force: true });
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  }
+});
+
 test('descriptor materialization accepts read-only transition metadata', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-transition-materialize-'));
   const scriptRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-transition-script-'));

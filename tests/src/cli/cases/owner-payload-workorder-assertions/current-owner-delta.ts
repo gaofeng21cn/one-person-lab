@@ -11,10 +11,11 @@ const FALSE_AUTHORITY_FIELDS = [
   'can_claim_production_ready',
 ];
 
-function assertFalseAuthority(boundary: JsonRecord, extra: string[] = []) {
-  assert.equal(typeof boundary, 'object');
-  for (const field of [...FALSE_AUTHORITY_FIELDS, ...extra]) {
-    if (field in boundary) assert.equal(boundary[field], false, field);
+function assertFalseAuthority(boundary: JsonRecord, fields: string[] = FALSE_AUTHORITY_FIELDS) {
+  assert.equal(boundary !== null && typeof boundary === 'object', true);
+  for (const field of fields) {
+    assert.equal(Object.hasOwn(boundary, field), true, `${field} must be present`);
+    assert.equal(boundary[field], false, field);
   }
 }
 
@@ -67,17 +68,34 @@ export function assertCurrentOwnerDeltaReadModel(
   if (nextAction) {
     assert.equal(nextAction.derivation_source, 'current_owner_delta');
     assert.equal(nextAction.current_owner, readModel.current_owner);
-    assertFalseAuthority(nextAction, ['can_close_without_domain_or_app_payload']);
+    assertFalseAuthority(nextAction, [
+      ...FALSE_AUTHORITY_FIELDS,
+      'can_close_without_domain_or_app_payload',
+    ]);
   }
 }
 
 export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
   const delta = surface.current_owner_delta;
   const nextAction = surface.current_owner_delta_read_model.next_safe_action_or_none;
+  const stageRunAction = surface.stage_run_cockpit?.next_required_owner_action ?? null;
+  const ownerAnswerMissing =
+    stageRunAction?.owner_answer_missing_before_opl_closeout_binding === true;
+  const expectedOperatorNextAction = ownerAnswerMissing && nextAction
+    ? {
+        ...nextAction,
+        missing_input_refs: stageRunAction.missing_input_refs,
+        required_ref_shape: stageRunAction.required_ref_shape,
+        stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
+        stage_run_closeout_binding_policy:
+          'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+      }
+    : nextAction;
   assert.deepEqual(surface.current_owner_delta_read_model.current_owner_delta, delta);
   assert.equal(surface.operator_current_owner_delta_owner, delta.current_owner);
   assert.equal(surface.operator_next_owner, delta.current_owner);
   assert.deepEqual(surface.current_owner_delta_next_action, nextAction);
+  assert.deepEqual(surface.operator_next_action, expectedOperatorNextAction);
 
   if (nextAction) {
     assert.equal(surface.operator_next_action_source, 'current_owner_delta');
@@ -85,12 +103,23 @@ export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
     assert.equal(surface.operator_next_action_kind, nextAction.action_kind);
   }
   assertFalseAuthority(surface.operator_next_action_authority_boundary, [
+    ...FALSE_AUTHORITY_FIELDS,
     'can_submit_to_safe_action_shell',
     'worklist_item_is_completion_claim',
   ]);
 
-  const stageRunAction = surface.stage_run_cockpit?.next_required_owner_action;
-  if (stageRunAction) assertStageRunAuthorizationNextAction(stageRunAction);
+  if (stageRunAction) {
+    assertStageRunAuthorizationNextAction(stageRunAction);
+    assert.deepEqual(surface.stage_run_next_required_owner_action, stageRunAction);
+  }
+  if (ownerAnswerMissing) {
+    assert.deepEqual(surface.operator_next_missing_input_refs, stageRunAction.missing_input_refs);
+    assert.deepEqual(surface.operator_next_action.required_ref_shape, stageRunAction.required_ref_shape);
+    assert.equal(
+      surface.operator_next_action.stage_run_closeout_binding_ref,
+      '/stage_run_cockpit/execution_authorization',
+    );
+  }
 }
 
 export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
@@ -107,6 +136,10 @@ export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
   assert.equal(Array.isArray(action.missing_input_refs), true);
   assert.equal(action.missing_input_refs.length > 0, true);
   assertFalseAuthority(action, [
+    'can_execute_domain_action',
+    'can_write_domain_truth',
+    'can_create_owner_receipt',
+    'can_create_typed_blocker',
     'domain_truth_changed',
     'owner_receipt_signed',
     'domain_typed_blocker_created',
@@ -153,13 +186,20 @@ export function assertCurrentOwnerDeltaProjection(
     false,
   );
   assertFalseAuthority(currentOwnerDelta.authority_boundary, [
+    ...FALSE_AUTHORITY_FIELDS,
     'raw_evidence_can_drive_default_planning',
     'raw_worklist_can_drive_default_planning',
     'audit_tail_can_drive_default_planning',
     'blocked_refs_only_can_drive_default_planning',
   ]);
-  assertFalseAuthority(currentOwnerDelta.cognitive_kernel_boundary.authority_boundary, [
+  const cognitiveBoundary = currentOwnerDelta.cognitive_kernel_boundary.authority_boundary;
+  for (const field of [
+    'can_write_domain_truth',
+    'can_create_typed_blocker',
     'can_authorize_quality_verdict',
     'tool_affordance_can_override_stage_goal',
-  ]);
+  ]) {
+    assert.equal(Object.hasOwn(cognitiveBoundary, field), true, `${field} must be present`);
+    assert.equal(cognitiveBoundary[field], false, field);
+  }
 }

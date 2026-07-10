@@ -21,9 +21,14 @@ test('project progress promotes the active MAS study into a paper-facing summary
   const studyId = '004-invasive-architecture';
   const studyRoot = path.join(workspace.fixtureRoot, 'studies', studyId);
   const controllerDir = path.join(studyRoot, 'artifacts', 'controller');
+  const paperDir = path.join(studyRoot, 'paper');
+  const questRoot = path.join(workspace.fixtureRoot, 'runtime', 'quests', studyId);
+  const questPaperDir = path.join(questRoot, 'paper');
+  const questPaperBuildDir = path.join(questPaperDir, 'build');
   const progressCommand = buildManifestCommand({
     study_id: studyId,
     study_root: studyRoot,
+    quest_root: questRoot,
     current_stage: 'publication_supervision',
     current_stage_summary: 'The manuscript is in publication supervision.',
     current_blockers: [],
@@ -56,11 +61,41 @@ test('project progress promotes the active MAS study into a paper-facing summary
   });
 
   fs.mkdirSync(controllerDir, { recursive: true });
+  fs.mkdirSync(paperDir, { recursive: true });
+  fs.mkdirSync(path.join(questPaperDir, 'figures'), { recursive: true });
+  fs.mkdirSync(path.join(questPaperDir, 'tables'), { recursive: true });
+  fs.mkdirSync(questPaperBuildDir, { recursive: true });
   fs.writeFileSync(path.join(controllerDir, 'study_charter.json'), `${JSON.stringify({
     study_id: studyId,
     title: 'Clinically interpretable invasive phenotype architecture',
     publication_objective: 'Reconstruct the invasive phenotype architecture around the Knosp boundary.',
     paper_framing_summary: 'This is a paper-facing study, not a generic project summary.',
+  })}\n`);
+  fs.writeFileSync(path.join(paperDir, 'paper_experiment_matrix.json'), `${JSON.stringify({
+    current_judgment: {
+      current_judgment: 'Beyond-Knosp stayed negative while the bounded extension reached AUROC 0.7999.',
+    },
+  })}\n`);
+  fs.writeFileSync(path.join(questPaperDir, 'figures', 'figure_catalog.json'), `${JSON.stringify({
+    figures: [
+      { figure_id: 'F1', paper_role: 'main_text' },
+      { figure_id: 'F2', paper_role: 'main_text' },
+      { figure_id: 'F3', paper_role: 'main_text' },
+      { figure_id: 'S1', paper_role: 'supplementary' },
+    ],
+  })}\n`);
+  fs.writeFileSync(path.join(questPaperDir, 'tables', 'table_catalog.json'), `${JSON.stringify({
+    tables: [
+      { table_id: 'T1', paper_role: 'main_text' },
+      { table_id: 'T2', paper_role: 'main_text' },
+      { table_id: 'TA1', paper_role: 'supplementary' },
+    ],
+  })}\n`);
+  fs.writeFileSync(path.join(questPaperDir, 'reference_coverage_report.json'), `${JSON.stringify({
+    record_count: 32,
+  })}\n`);
+  fs.writeFileSync(path.join(questPaperBuildDir, 'compile_report.json'), `${JSON.stringify({
+    page_count: 12,
   })}\n`);
 
   const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience) as Record<string, any>;
@@ -114,6 +149,18 @@ test('project progress promotes the active MAS study into a paper-facing summary
     assert.match(currentStudy.story_summary, /Knosp boundary/);
     assert.equal(currentStudy.current_stage, 'publication_supervision');
     assert.equal(currentStudy.monitoring.health_status, 'live');
+    const paperSnapshot = currentStudy.paper_snapshot;
+    assert.ok(paperSnapshot);
+    assert.equal(paperSnapshot.main_figure_count, 3);
+    assert.equal(paperSnapshot.supplementary_figure_count, 1);
+    assert.equal(paperSnapshot.main_table_count, 2);
+    assert.equal(paperSnapshot.supplementary_table_count, 1);
+    assert.equal(paperSnapshot.reference_count, 32);
+    assert.equal(paperSnapshot.page_count, 12);
+    assert.equal(
+      paperSnapshot.current_effect_summary,
+      'Beyond-Knosp stayed negative while the bounded extension reached AUROC 0.7999.',
+    );
     assert.equal(brief.project_progress.progress_feedback.runtime_status, 'live');
     assert.equal(brief.project_progress.recommended_commands.progress, progressCommand);
   } finally {

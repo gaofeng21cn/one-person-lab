@@ -101,6 +101,69 @@ test('current owner delta requires a domain-owned answer without minting authori
   assert.equal(readModel.current_owner_delta.authority_boundary.can_write_domain_truth, false);
 });
 
+test('topline composes current-owner action with StageRun owner-answer binding requirements', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-open-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  process.env.OPL_STATE_DIR = stateRoot;
+  try {
+    const stageRunId = 'app-stage-run:med-autoscience:paper-closeout';
+    recordStageRunExecutionAuthorizationReceipts([{
+      stage_run_id: stageRunId,
+      domain_id: 'med-autoscience',
+      study_id: 'study:owner-delta-topline-test',
+      domain_context: {
+        domain_id: 'med-autoscience',
+        study_id: 'study:owner-delta-topline-test',
+        stage_id: 'paper_closeout',
+      },
+      stage_id: 'paper_closeout',
+      generation: 0,
+      phase: 'launch',
+      selected_executor: 'codex_cli',
+      provider_attempt_ref: 'temporal://attempt/sat-owner-delta-topline-open',
+      stage_attempt_id: 'sat-owner-delta-topline-open',
+      attempt_lease_ref: 'opl://stage-attempts/sat-owner-delta-topline-open/leases/task/active',
+      attempt_lease_status: 'active',
+      execution_authorization_decision_ref: 'opl://stage-attempts/sat-owner-delta-topline-open/authorization',
+      workspace_scope_ref: 'workspace:/tmp/mas',
+      artifact_scope_ref: 'stage-packet:owner-delta-topline',
+      action_type: 'paper_closeout',
+      work_unit_id: 'stage-packet:owner-delta-topline',
+      work_unit_fingerprint: 'sha256:owner-delta-topline-test',
+      source_fingerprint: 'sha256:owner-delta-topline-test',
+      decision: 'authorize',
+      reason: 'test_authorized_refs_only_stage_attempt_execution',
+      operator: 'test:current-owner-delta-topline',
+      idempotency_key: 'idem-owner-delta-topline-open',
+      current_pointer_ref: `opl://stage-runs/${encodeURIComponent(stageRunId)}/current`,
+      stage_manifest_ref: 'opl://stage-manifests/paper_closeout',
+    }]);
+
+    const module = await import(toplineModuleUrl);
+    const topline = module.buildCurrentOwnerDeltaTopline({
+      currentOwnerDeltaReadModel: ownerAnswerReadModel(),
+    });
+    const ownerDeltaAction = topline.current_owner_delta_next_action;
+    const stageRunAction = topline.stage_run_next_required_owner_action;
+
+    assert.equal(stageRunAction.owner_answer_missing_before_opl_closeout_binding, true);
+    assert.deepEqual(topline.operator_next_action, {
+      ...ownerDeltaAction,
+      missing_input_refs: stageRunAction.missing_input_refs,
+      required_ref_shape: stageRunAction.required_ref_shape,
+      stage_run_closeout_binding_ref: '/stage_run_cockpit/execution_authorization',
+      stage_run_closeout_binding_policy:
+        'domain_owner_answer_must_bind_stage_run_manifest_current_pointer_source_fingerprint_and_idempotency',
+    });
+    assert.equal(topline.operator_next_action_source, 'current_owner_delta');
+    assert.equal(topline.operator_next_action_owner, 'med-autoscience');
+  } finally {
+    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateDir;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('topline consumes only an identity-bound StageRun owner answer and keeps readiness unauthorized', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-owner-delta-closed-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
