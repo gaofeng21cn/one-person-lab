@@ -1,5 +1,6 @@
 import { buildRepoGeneratedInterfaceBundle } from '../../../../src/modules/pack/index.ts';
-import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, runCli, runCliFailure, test } from '../helpers.ts';
+import { buildReadyAgentRepo, retargetReadyRepo } from './agents-conformance-fixtures.ts';
 
 test('real family-defaults pack compiler preserves JSON readback when individual repos are blocked', {
   skip: ![
@@ -72,35 +73,14 @@ test('RCA forbidden generated authority blocks the real repo without losing cano
     'opl_can_compile_generated_surfaces_from_refs',
   ]);
 
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-canonical-agent-'));
+  const root = buildReadyAgentRepo();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.cpSync('/Users/gaofeng/workspace/redcube-ai/agent', path.join(root, 'agent'), { recursive: true });
-  for (const ref of [
-    'contracts/domain_descriptor.json',
-    'contracts/action_catalog.json',
-    'contracts/pack_compiler_input.json',
-    'contracts/functional_privatization_audit.json',
-    'contracts/generated_surface_handoff.json',
-    'contracts/memory_descriptor.json',
-    'contracts/owner_receipt_contract.json',
-  ]) {
-    fs.mkdirSync(path.dirname(path.join(root, ref)), { recursive: true });
-    fs.copyFileSync(path.join('/Users/gaofeng/workspace/redcube-ai', ref), path.join(root, ref));
-  }
-  fs.mkdirSync(path.join(root, 'runtime', 'authority_functions'), { recursive: true });
-  fs.copyFileSync(
-    '/Users/gaofeng/workspace/redcube-ai/runtime/authority_functions/README.md',
-    path.join(root, 'runtime', 'authority_functions', 'README.md'),
-  );
-  const inputRef = path.join(root, 'contracts', 'pack_compiler_input.json');
-  const input = JSON.parse(fs.readFileSync(inputRef, 'utf8')) as Record<string, any>;
-  delete input.authority_boundary.opl_can_compile_generated_surfaces_from_refs;
-  fs.writeFileSync(inputRef, `${JSON.stringify(input, null, 2)}\n`);
+  retargetReadyRepo(root, 'redcube-ai', 'RedCube AI');
 
   const bundle = buildRepoGeneratedInterfaceBundle(root).bundle as Record<string, any>;
 
   assert.equal(bundle.source_kind, 'standard_agent_repo_contracts');
-  assert.equal(bundle.target_domain_id, 'redcube_ai');
+  assert.equal(bundle.target_domain_id, 'redcube-ai');
   assert.equal(bundle.agent_id, 'rca');
   assert.equal(bundle.status, 'ready');
   assert.equal(bundle.blocker_reasons.length, 0);

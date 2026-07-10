@@ -1,6 +1,6 @@
 import './domain-pack-compiler-generated-interfaces-cases/active-caller-cutover-cases.ts';
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
-import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
+import { buildReadyAgentRepo, retargetReadyRepo, writeJson } from './agents-conformance-fixtures.ts';
 import {
   bindFamilyManifests,
   createFamilyDefaultContractWorkspace,
@@ -296,7 +296,8 @@ test('generated interfaces family-defaults expose product-entry feed and direct 
 test('generated interfaces consume active repo handoff and disambiguate multi-action MCP lineage', () => {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-domain-handoff-'));
-  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interface-domain-repo-'));
+  const targetDir = buildReadyAgentRepo();
+  retargetReadyRepo(targetDir, 'med-autoscience', 'MedAutoScience');
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
   const fixtures = loadFamilyManifestFixtures();
   const manifest = withPackCompilerReadySurfaces(fixtures.medautoscience, {

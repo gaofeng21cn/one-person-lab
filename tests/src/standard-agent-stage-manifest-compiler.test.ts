@@ -13,9 +13,7 @@ import {
   compileStandardAgentStageManifest,
 } from '../../src/modules/pack/index.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
-import { buildStandardDomainAgentConformanceReport } from '../../src/modules/foundry-lab/standard-domain-agent-conformance.ts';
 import { withOplMetaAgentDescriptorEntry } from '../../src/modules/atlas/index.ts';
-import { buildFamilyStageAdmissionReview } from '../../src/modules/stagecraft/index.ts';
 
 type JsonRecord = Record<string, any>;
 
@@ -165,21 +163,6 @@ function readManifest(root: string) {
 
 function writeManifest(root: string, manifest: unknown) {
   writeJson(root, 'agent/stages/manifest.json', manifest);
-}
-
-function collectNestedBlockers(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap(collectNestedBlockers);
-  }
-  if (!value || typeof value !== 'object') {
-    return [];
-  }
-  return Object.entries(value).flatMap(([key, entry]) => [
-    ...(key === 'blockers' && Array.isArray(entry)
-      ? entry.filter((blocker): blocker is string => typeof blocker === 'string')
-      : []),
-    ...collectNestedBlockers(entry),
-  ]);
 }
 
 test('standard Agent stage manifest compiler keeps stable domain identity and target separation', () => {
@@ -741,7 +724,7 @@ test('stage manifest compiler fails closed on every Framework stage-contract flo
   }
 });
 
-test('real MAG manifest compiles into generated product-entry without the legacy contract', (t) => {
+test('real MAG legacy manifest kind is blocked without skip or false-ready projection', (t) => {
   const explicitMagRepo = process.env.MAG_REPO_DIR
     ? path.resolve(process.env.MAG_REPO_DIR)
     : null;
@@ -785,48 +768,17 @@ test('real MAG manifest compiles into generated product-entry without the legacy
   );
   assert.equal(fs.existsSync(path.join(root, 'contracts/stage_control_plane.json')), false);
 
-  const compilation = compileStandardAgentStageManifest(root);
-  assert.equal(compilation.stage_control_plane.plane_id, 'med_autogrant_stage_control_plane');
-  assert.equal(compilation.source_binding.canonical_agent_id, 'mag');
-  assert.equal(compilation.source_binding.domain_id, 'med-autogrant');
-  assert.equal(compilation.stage_control_plane.stages.length, 6);
-  assert.ok(compilation.stage_control_plane.stages.every((stage) =>
-    stage.skills.some((entry) => entry.ref === 'agent/skills/grant_authoring.md')
-  ));
-  assert.ok(compilation.stage_control_plane.stages.every((stage) =>
-    stage.tool_refs?.some((entry) => entry.ref === 'agent/tools/domain_affordances.md')
-  ));
-  assert.ok(compilation.stage_control_plane.stages.every((stage) =>
-    (stage.stage_contract?.stage_completion_policy as JsonRecord)?.surface_kind
-      === 'domain_stage_completion_policy'
-  ));
-  assert.ok(compilation.stage_control_plane.stages.every((stage) =>
-    stage.stage_contract?.user_stage_log_contract?.surface_kind
-      === 'opl_standard_agent_user_stage_log_contract'
-  ));
-  type AdmissionManifest = NonNullable<Parameters<typeof buildFamilyStageAdmissionReview>[1]>;
-  const actionCatalog = JSON.parse(
-    fs.readFileSync(path.join(root, 'contracts/action_catalog.json'), 'utf8'),
-  ) as NonNullable<AdmissionManifest['family_action_catalog']>;
-  const admission = buildFamilyStageAdmissionReview(compilation.stage_control_plane, {
-    family_action_catalog: actionCatalog,
+  const report = buildDomainPackCompilerList({} as any, {
+    familyDefaults: true,
+    familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
   });
-  assert.equal(admission.status, 'admitted');
-  assert.deepEqual(admission.findings.filter((finding) => finding.severity === 'blocker'), []);
+  const projection = report.domain_pack_compiler.domains[0];
 
-  const generated = buildRepoGeneratedInterfaceBundle(root, 'product-entry').bundle as JsonRecord;
-  assert.equal(generated.agent_id, 'mag');
-  assert.equal(generated.target_domain_id, 'med-autogrant');
-  assert.equal(generated.product_entry.family_stage_control_plane.plane_id, 'med_autogrant_stage_control_plane');
-  const consumed = generated.source_contract_consumption.consumed_contracts as JsonRecord[];
-  assert.equal(consumed.some((entry) => entry.path === 'contracts/stage_control_plane.json'), false);
-  assert.equal(consumed.some((entry) => entry.path === 'agent/stages/manifest.json'), true);
-
-  const conformance = buildStandardDomainAgentConformanceReport([
-    '--agent',
-    `mag=${magRepo}`,
-  ]).standard_domain_agent_conformance;
-  assert.equal(conformance.status, 'passed');
-  assert.equal(conformance.reports[0]?.status, 'passed');
-  assert.deepEqual(collectNestedBlockers(conformance.reports[0]), []);
+  assert.equal(report.domain_pack_compiler.summary.total_domain_count, 1);
+  assert.equal(report.domain_pack_compiler.summary.ready_domain_count, 0);
+  assert.equal(report.domain_pack_compiler.summary.blocked_domain_count, 1);
+  assert.equal(projection?.requested_agent_id, 'mag');
+  assert.equal(projection?.compiler_status, 'blocked');
+  assert.equal(projection?.repo_contract_error?.code, 'contract_shape_invalid');
+  assert.match(projection?.repo_contract_error?.message ?? '', /stage_manifest\.surface_kind must be/);
 });

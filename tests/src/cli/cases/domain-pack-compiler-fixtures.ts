@@ -8,6 +8,7 @@ import {
   runCli,
 } from '../helpers.ts';
 import { STANDARD_AGENT_PACK_ABI } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
 import { createOmaContractFixture } from './runtime-app-operator-drilldown-helpers.ts';
 
 export type JsonRecord = Record<string, unknown>;
@@ -467,10 +468,8 @@ function generatedSurfaceHandoff(targetDomainId: string) {
 
 function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefaultContractRepoSpec) {
   const repoDir = path.join(workspaceRoot, spec.repoDirectory);
+  fs.renameSync(buildReadyAgentRepo(), repoDir);
   const contractsDir = path.join(repoDir, 'contracts');
-  fs.mkdirSync(path.join(repoDir, 'agent'), { recursive: true });
-  fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
-  fs.mkdirSync(contractsDir, { recursive: true });
   const manifest = withPackCompilerReadySurfaces({}, {
     agentId: spec.agentId,
     targetDomainId: spec.targetDomainId,
@@ -498,7 +497,11 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
   writeJson(path.join(contractsDir, 'memory_descriptor.json'), manifest.domain_memory_descriptor as JsonRecord);
   writeJson(path.join(contractsDir, 'functional_privatization_audit.json'), manifest.functional_privatization_audit as JsonRecord);
   writeJson(path.join(contractsDir, 'generated_surface_handoff.json'), generatedSurfaceHandoff(spec.targetDomainId));
+  const packCompilerInput = JSON.parse(
+    fs.readFileSync(path.join(contractsDir, 'pack_compiler_input.json'), 'utf8'),
+  ) as JsonRecord;
   writeJson(path.join(contractsDir, 'pack_compiler_input.json'), {
+    ...packCompilerInput,
     surface_kind: 'opl_domain_pack_compiler_input',
     domain_id: spec.targetDomainId,
     canonical_agent_id: spec.agentId,
@@ -507,6 +510,13 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     domain_repo_can_own_generated_surface: false,
     standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
   });
+  const stageManifestRef = path.join(repoDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = JSON.parse(fs.readFileSync(stageManifestRef, 'utf8')) as JsonRecord;
+  stageManifest.target_domain_id = spec.targetDomainId;
+  stageManifest.owner = spec.targetDomainId;
+  (stageManifest.authority_boundary as JsonRecord).domain_truth_owner = spec.targetDomainId;
+  ((stageManifest.stages as JsonRecord[])[0]!).allowed_action_refs = [spec.actionId];
+  writeJson(stageManifestRef, stageManifest);
   if (spec.targetDomainId === 'med-autogrant') {
     writeMagProductionAcceptanceFixture(contractsDir);
   }
