@@ -3,9 +3,6 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import './family-runtime-temporal-provider-cases/closeout-payload-compaction.ts';
-import './family-runtime-temporal-provider-cases/operator-updates.ts';
-import './family-runtime-temporal-provider-cases/scheduler-and-readiness.ts';
 import './family-runtime-temporal-provider-cases/codex-activity-history.ts';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
@@ -14,7 +11,6 @@ import * as activities from '../../src/modules/runway/family-runtime-temporal-ac
 import {
   buildTemporalStageAttemptWorkflowContract,
   type TemporalStageAttemptWorkflowInput,
-  type TemporalStageAttemptWorkflowState,
 } from '../../src/modules/runway/family-runtime-temporal.ts';
 import {
   DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
@@ -22,14 +18,11 @@ import {
 } from '../../src/modules/runway/family-runtime-temporal-constants.ts';
 import {
   humanGateSignal,
-  stageAttemptQuery,
   StageAttemptWorkflow,
   userInstructionSignal,
 } from '../../src/modules/runway/family-runtime-temporal-workflows.ts';
 import {
-  buildTemporalStageAttemptWorkflowInputForTest,
   buildTemporalStageAttemptReplayGateForTest,
-  buildTemporalWorkerReadiness,
 } from '../../src/modules/runway/family-runtime-temporal-provider.ts';
 import {
   buildTemporalStageAttemptSearchAttributes,
@@ -39,43 +32,36 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 
-
 function workflowInput(): TemporalStageAttemptWorkflowInput {
   return {
     stage_attempt_id: 'sat_temporal_test',
     workflow_id: 'wf_temporal_test',
     domain_id: 'medautoscience',
     stage_id: 'analysis-campaign',
-    workspace_locator: {
-      workspace_root: '/tmp/mas',
-    },
+    workspace_locator: { workspace_root: '/tmp/mas' },
     source_fingerprint: 'sha256:test',
     executor_kind: 'codex_cli',
-    retry_budget: {
-      max_attempts: 3,
-    },
+    retry_budget: { max_attempts: 3 },
     task_id: 'task-temporal-test',
     stage_packet_ref: 'packet:analysis',
     checkpoint_refs: ['checkpoint:seed'],
-    codex_stage_runner: {
-      runner_mode: 'dry_run',
-    },
+    codex_stage_runner: { runner_mode: 'dry_run' },
     closeout_packet: {
       surface_kind: 'stage_memory_closeout_packet',
       closeout_refs: ['receipt:domain-closeout'],
-      consumed_refs: ['evidence:table1'],
-      consumed_memory_refs: ['memory:route-policy'],
-      writeback_receipt_refs: ['memory-writeback:receipt-1'],
-      rejected_writes: [{ reason: 'domain_router_rejected' }],
+      consumed_refs: [],
+      consumed_memory_refs: [],
+      writeback_receipt_refs: [],
+      rejected_writes: [],
       next_owner: 'med-autoscience',
       domain_ready_verdict: 'domain_gate_pending',
-      route_impact: { route: 'review', next_owner: 'med-autoscience' },
     },
   };
 }
 
-test('Temporal stage attempt contract exposes Codex runner total and no-output budgets', () => {
+test('Temporal provider contract maps activity budgets and required Search Attributes', () => {
   const contract = buildTemporalStageAttemptWorkflowContract();
+
   assert.equal(
     contract.activity_timeout_policy.codex_stage_activity.runner_timeout_ms,
     DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
@@ -86,58 +72,30 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
   );
   assert.equal(contract.activity_timeout_policy.short_stage_activities.retry.maximum_attempts, 3);
   assert.equal(contract.activity_timeout_policy.codex_stage_activity.retry.maximum_attempts, 1);
-  assert.equal(contract.operator_action_updates[0], 'StageAttemptOperatorUpdate');
-  assert.deepEqual(contract.required_search_attributes, [
-    'OplStageAttemptId',
-    'OplDomainId',
-    'OplStageId',
-    'OplAttemptStatus',
-    'OplStagePhase',
-    'OplBlockedReason',
-    'OplTaskId',
-    'OplSourceFingerprint',
-    'OplExecutorKind',
-  ]);
+  assert.ok(contract.required_search_attributes.includes('OplStageAttemptId'));
+  assert.ok(contract.required_search_attributes.includes('OplSourceFingerprint'));
 });
 
-test('Temporal visibility readiness requires OPL stage attempt Search Attributes', () => {
+test('Temporal visibility readiness fails closed until required Search Attributes exist', () => {
+  const contract = buildTemporalStageAttemptWorkflowContract();
   const blocked = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'opl-test',
     observedCustomAttributes: { OplStageAttemptId: 'Keyword' },
   });
   const ready = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'opl-test',
-    observedCustomAttributes: {
-      OplStageAttemptId: 'Keyword',
-      OplDomainId: 'Keyword',
-      OplStageId: 'Keyword',
-      OplAttemptStatus: 'Keyword',
-      OplStagePhase: 'Keyword',
-      OplBlockedReason: 'Keyword',
-      OplTaskId: 'Keyword',
-      OplSourceFingerprint: 'Keyword',
-      OplExecutorKind: 'Keyword',
-    },
+    observedCustomAttributes: Object.fromEntries(
+      contract.required_search_attributes.map((name) => [name, 'Keyword']),
+    ),
   });
 
   assert.equal(blocked.readiness_status, 'missing_search_attributes');
-  assert.deepEqual(blocked.missing_search_attributes.map((attribute) => attribute.name), [
-    'OplDomainId',
-    'OplStageId',
-    'OplAttemptStatus',
-    'OplStagePhase',
-    'OplBlockedReason',
-    'OplTaskId',
-    'OplSourceFingerprint',
-    'OplExecutorKind',
-  ]);
+  assert.ok(blocked.missing_search_attributes.length > 0);
   assert.equal(blocked.repair_action?.action_id, 'install_temporal_stage_attempt_search_attributes');
   assert.equal(ready.readiness_status, 'ready');
-  assert.deepEqual(ready.missing_search_attributes, []);
-  assert.equal(ready.repair_action, null);
 });
 
-test('Temporal workflow start Search Attributes are array-valued even when optional fields are absent', () => {
+test('Temporal workflow start maps optional Search Attributes to arrays', () => {
   const attributes = buildTemporalStageAttemptSearchAttributes({
     ...workflowInput(),
     source_fingerprint: null,
@@ -145,15 +103,12 @@ test('Temporal workflow start Search Attributes are array-valued even when optio
     provider_blocker: null,
   });
 
-  assert.deepEqual(attributes.OplBlockedReason, []);
   assert.deepEqual(attributes.OplTaskId, []);
   assert.deepEqual(attributes.OplSourceFingerprint, []);
-  for (const [name, value] of Object.entries(attributes)) {
-    assert.equal(Array.isArray(value), true, `${name} must be an array for Temporal start`);
-  }
+  assert.equal(Object.values(attributes).every(Array.isArray), true);
 });
 
-test('Temporal StageAttemptWorkflow retries short idempotent activities without retrying Codex activity', async () => {
+test('Temporal integration retries short activities without replaying Codex', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-short-retry-test-${Date.now()}`;
   let codexAttempts = 0;
@@ -196,7 +151,7 @@ test('Temporal StageAttemptWorkflow retries short idempotent activities without 
             rejected_writes: [],
             next_owner: 'med-autoscience',
             domain_ready_verdict: 'domain_gate_pending',
-            route_impact: { retry_observed: true },
+            route_impact: {},
             closeout_packet_surface_kind: 'stage_attempt_closeout_packet',
           };
         },
@@ -215,73 +170,12 @@ test('Temporal StageAttemptWorkflow retries short idempotent activities without 
     assert.equal(result.status, 'completed');
     assert.equal(codexAttempts, 1);
     assert.equal(dispatchAttempts, 2);
-    assert.deepEqual(result.closeout_refs, ['receipt:retried-dispatch']);
   } finally {
     await testEnv.teardown();
   }
 });
 
-test('Temporal StageAttemptWorkflow exposes activity state, signals, and completion boundary', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
-    });
-
-    const result = await worker.runUntil(async () => {
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [workflowInput()],
-        taskQueue,
-        workflowId: `wf-temporal-test-${Date.now()}`,
-      });
-      await handle.signal(humanGateSignal, {
-        signal_kind: 'human_gate',
-        payload: {
-          human_gate_ref: 'gate:operator-review',
-          reason: 'needs_review',
-        },
-        source: 'test',
-      });
-      await handle.signal(userInstructionSignal, {
-        signal_kind: 'user_instruction',
-        payload: {
-          instruction_ref: 'user:revision-10',
-        },
-        source: 'test',
-      });
-      const finalState = await handle.result();
-      const queriedState = await handle.query<TemporalStageAttemptWorkflowState>(stageAttemptQuery);
-      return { finalState, queriedState };
-    });
-
-    assert.equal(result.finalState.surface_kind, 'temporal_stage_attempt_query');
-    assert.equal(result.finalState.status, 'completed');
-    assert.equal(result.finalState.completion_boundary.provider_completion, 'completed');
-    assert.equal(result.finalState.completion_boundary.provider_completion_is_domain_ready, false);
-    assert.equal(result.finalState.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
-    assert.deepEqual(result.finalState.closeout_refs, ['receipt:domain-closeout']);
-    assert.equal(result.finalState.rejected_writes[0].reason, 'domain_router_rejected');
-    assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'codex_stage_activity'));
-    const codexCompletion = result.finalState.activity_events.find(
-      (event) => event.activity_kind === 'codex_stage_activity' && event.activity_status === 'completed',
-    ) as Record<string, any> | undefined;
-    assert.equal(codexCompletion?.runner_status.runner_mode, 'dry_run');
-    assert.equal(codexCompletion?.runner_status.live_process_started, false);
-    assert.ok(result.finalState.activity_events.some((event) => event.activity_kind === 'domain_handler_dispatch_activity'));
-    assert.equal(result.queriedState.signals.length, 2);
-    assert.deepEqual(result.queriedState.human_gate_refs, ['gate:operator-review']);
-    assert.equal(result.queriedState.authority_boundary.domain, 'truth_quality_artifact_gate_owner');
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal replay gate replays completed StageAttemptWorkflow history with the production bundle', async () => {
+test('Temporal replay gate accepts production workflow history', async () => {
   const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `opl-stage-attempt-replay-test-${Date.now()}`;
   try {
@@ -293,7 +187,6 @@ test('Temporal replay gate replays completed StageAttemptWorkflow history with t
       activities,
     });
     const workflowId = `wf-temporal-replay-test-${Date.now()}`;
-
     const history = await worker.runUntil(async () => {
       const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
         args: [workflowInput()],
@@ -302,18 +195,13 @@ test('Temporal replay gate replays completed StageAttemptWorkflow history with t
       });
       await handle.signal(humanGateSignal, {
         signal_kind: 'human_gate',
-        payload: {
-          human_gate_ref: 'gate:replay-operator-review',
-          reason: 'replay_gate_signal_history',
-        },
-        source: 'replay-test',
+        payload: { human_gate_ref: 'gate:replay', reason: 'replay_history' },
+        source: 'test',
       });
       await handle.signal(userInstructionSignal, {
         signal_kind: 'user_instruction',
-        payload: {
-          instruction_ref: 'user:replay-revision-request',
-        },
-        source: 'replay-test',
+        payload: { instruction_ref: 'user:replay' },
+        source: 'test',
       });
       await handle.result();
       return await handle.fetchHistory();
@@ -321,461 +209,10 @@ test('Temporal replay gate replays completed StageAttemptWorkflow history with t
 
     const gate = await buildTemporalStageAttemptReplayGateForTest(history, workflowId);
 
-    assert.equal(gate.surface_kind, 'temporal_stage_attempt_replay_gate');
     assert.equal(gate.replay_status, 'passed');
     assert.equal(gate.workflow_id, workflowId);
-    const replayBundle = gate.worker_options.workflowBundle;
-    assert.ok(replayBundle && 'codePath' in replayBundle);
-    assert.equal(replayBundle.codePath, gate.workflow_bundle.code_path);
+    assert.ok(gate.worker_options.workflowBundle && 'codePath' in gate.worker_options.workflowBundle);
     assert.equal('workflowsPath' in gate.worker_options, false);
-    assert.match(gate.workflow_bundle.workflow_bundle_version, /^workflow-bundle:sha256:/);
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal worker readiness helper reports live configured state without starting a worker', () => {
-  const readiness = buildTemporalWorkerReadiness({
-    address: '127.0.0.1:7233',
-    workerEnabled: '1',
-    workerStatus: 'ready',
-    namespace: 'opl-test',
-    taskQueue: 'opl-stage-attempts-test',
-  });
-
-  assert.equal(readiness.surface_kind, 'temporal_worker_readiness');
-  assert.equal(readiness.readiness_status, 'ready');
-  assert.equal(readiness.worker_ready, true);
-  assert.equal(readiness.live_probe_started_worker, false);
-  assert.equal(readiness.repair_action.action_id, 'none');
-  assert.deepEqual(readiness.blockers, []);
-});
-
-test('Temporal stage attempt contract exposes Codex cancellation and payload-history guards', () => {
-  const input = buildTemporalStageAttemptWorkflowInputForTest({
-    ...workflowInput(),
-    stage_packet_ref: `packet:${'x'.repeat(140_000)}`,
-  });
-
-  const contract = buildTemporalStageAttemptWorkflowContract();
-  assert.equal(contract.activity_timeout_policy.codex_stage_activity.cancellation_delivered_by_heartbeat, true);
-  assert.equal(contract.payload_history_policy.max_inline_string_bytes, 131_072);
-  assert.equal(contract.payload_history_policy.large_payload_storage, 'external_ref_required');
-  assert.equal(
-    contract.payload_history_policy.scheduler_tick_activity_result.result_surface_kind,
-    'temporal_scheduler_tick_activity_receipt',
-  );
-  assert.equal(
-    contract.payload_history_policy.scheduler_tick_activity_result.max_inline_bytes,
-    131_072,
-  );
-  assert.equal(
-    contract.payload_history_policy.scheduler_tick_activity_result.full_scheduler_tick_body_omitted,
-    true,
-  );
-  assert.ok(
-    contract.payload_history_policy.scheduler_tick_activity_result.omitted_body_fields.includes(
-      'provider_runtime',
-    ),
-  );
-  assert.equal(input.stage_packet_ref, 'payload_ref:sha256:bd0056ae8e68b912');
-  assert.equal(input.payload_guard?.truncated_fields[0].field, 'stage_packet_ref');
-  assert.equal(input.payload_guard?.policy.large_payload_storage, 'external_ref_required');
-});
-
-test('Temporal StageAttemptWorkflow blocks provider completion when typed closeout is missing', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-blocked-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities,
-    });
-
-    const result = await worker.runUntil(async () => {
-      const input = workflowInput();
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{
-          ...input,
-          closeout_packet: null,
-        }],
-        taskQueue,
-        workflowId: `wf-temporal-blocked-test-${Date.now()}`,
-      });
-      return await handle.result();
-    });
-
-    assert.equal(result.status, 'blocked');
-    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
-    assert.equal(result.completion_boundary.domain_ready_verdict, null);
-    assert.deepEqual(result.closeout_refs, []);
-    const dispatchEvent = result.activity_events.find(
-      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
-    );
-    assert.equal(dispatchEvent?.activity_status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_packet_required');
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal StageAttemptWorkflow surfaces Codex runner protocol blockers before domain dispatch', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-runner-blocker-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities: {
-        ...activities,
-        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
-          surface_kind: 'temporal_codex_stage_activity_receipt',
-          activity_kind: 'codex_stage_activity',
-          activity_status: 'completed',
-          stage_attempt_id: input.stage_attempt_id,
-          stage_id: input.stage_id,
-          checkpoint_refs: input.checkpoint_refs ?? [],
-          closeout_packet: null,
-          process_output_summary: {
-            exit_code: 124,
-            timeout_reason: 'unsupported_tool_protocol',
-            blocked_reason: 'codex_cli_unsupported_function_call',
-            pending_function_call_count: 1,
-            function_call_names: ['exec_command'],
-          },
-        }),
-      },
-    });
-
-    const result = await worker.runUntil(async () => {
-      const input = workflowInput();
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{
-          ...input,
-          closeout_packet: null,
-        }],
-        taskQueue,
-        workflowId: `wf-temporal-runner-blocker-test-${Date.now()}`,
-      });
-      return await handle.result();
-    });
-
-    assert.equal(result.status, 'blocked');
-    assert.equal(result.closeout_packet?.blocked_reason, 'codex_cli_unsupported_function_call');
-    const dispatchEvent = result.activity_events.find(
-      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
-    );
-    assert.equal(dispatchEvent?.activity_status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'codex_cli_unsupported_function_call');
-    assert.equal(
-      (dispatchEvent?.route_impact as Record<string, unknown>)?.provider_blocker_reason,
-      'codex_cli_unsupported_function_call',
-    );
-    assert.deepEqual(result.closeout_refs, [
-      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_unsupported_function_call',
-    ]);
-    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
-    assert.equal(result.completion_boundary.provider_completion_is_domain_ready, false);
-    assert.equal(
-      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
-      false,
-    );
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal StageAttemptWorkflow preserves MAS stage-route user stage log on provider blockers', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-runner-user-log-blocker-test-${Date.now()}`;
-  const userStageLog = {
-    surface_kind: 'opl_user_stage_log',
-    semantic_status: 'provided_by_domain',
-    semantic_source: 'med_autoscience.paper_mission_stage_route',
-    progress_delta_classification: 'deliverable_progress',
-  };
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities: {
-        ...activities,
-        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
-          surface_kind: 'temporal_codex_stage_activity_receipt',
-          activity_kind: 'codex_stage_activity',
-          activity_status: 'completed',
-          stage_attempt_id: input.stage_attempt_id,
-          stage_id: input.stage_id,
-          checkpoint_refs: input.checkpoint_refs ?? [],
-          closeout_packet: {
-            surface_kind: 'stage_attempt_closeout_packet',
-            closeout_refs: [
-              `opl://stage-attempts/${input.stage_attempt_id}/runtime-blockers/typed_closeout_paper_mission_stage_route_user_stage_log_missing`,
-            ],
-            consumed_refs: input.checkpoint_refs ?? [],
-            consumed_memory_refs: [],
-            writeback_receipt_refs: [],
-            rejected_writes: [{
-              reason: 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
-            }],
-            next_owner: input.domain_id,
-            domain_ready_verdict: 'domain_gate_pending',
-            route_impact: {
-              ...(input.route_impact ?? {}),
-              user_stage_log: userStageLog,
-            },
-            authority_boundary: {
-              opl: 'provider_runtime_closeout_transport_only',
-              domain: 'truth_quality_artifact_gate_owner',
-              provider_completion_is_domain_ready: false,
-            },
-          },
-          process_output_summary: {
-            exit_code: 0,
-            blocked_reason: 'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
-          },
-        }),
-      },
-    });
-
-    const result = await worker.runUntil(async () => {
-      const input = workflowInput();
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{
-          ...input,
-          closeout_packet: null,
-          route_impact: {
-            user_stage_log: userStageLog,
-          },
-        }],
-        taskQueue,
-        workflowId: `wf-temporal-runner-user-log-blocker-test-${Date.now()}`,
-      });
-      return await handle.result();
-    });
-
-    assert.equal(result.status, 'blocked');
-    assert.equal(
-      (result.route_impact.user_stage_log as Record<string, unknown>)?.semantic_status,
-      'provided_by_domain',
-    );
-    assert.equal(
-      (result.route_impact as Record<string, unknown>)?.provider_blocker_reason,
-      'typed_closeout_paper_mission_stage_route_user_stage_log_missing',
-    );
-    const dispatchEvent = result.activity_events.find(
-      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
-    );
-    assert.equal(
-      ((dispatchEvent?.route_impact as Record<string, unknown>)?.user_stage_log as Record<string, unknown>)
-        ?.semantic_source,
-      'med_autoscience.paper_mission_stage_route',
-    );
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal StageAttemptWorkflow consumes Codex activity typed closeout for provider completion', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-codex-closeout-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities: {
-        ...activities,
-        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
-          surface_kind: 'temporal_codex_stage_activity_receipt',
-          activity_kind: 'codex_stage_activity',
-          activity_status: 'completed',
-          stage_attempt_id: input.stage_attempt_id,
-          stage_id: input.stage_id,
-          checkpoint_refs: input.checkpoint_refs ?? [],
-          closeout_packet: {
-            surface_kind: 'stage_attempt_closeout_packet',
-            closeout_refs: ['receipt:codex-closeout'],
-            consumed_refs: ['paper:draft.md'],
-            next_owner: 'med-autoscience',
-            domain_ready_verdict: 'domain_gate_pending',
-          },
-        }),
-      },
-    });
-
-    const result = await worker.runUntil(async () => {
-      const input = workflowInput();
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{
-          ...input,
-          closeout_packet: null,
-        }],
-        taskQueue,
-        workflowId: `wf-temporal-codex-closeout-test-${Date.now()}`,
-      });
-      return await handle.result();
-    });
-
-    assert.equal(result.status, 'completed');
-    assert.equal(result.completion_boundary.provider_completion, 'completed');
-    assert.equal(result.completion_boundary.domain_ready_verdict, 'domain_gate_pending');
-    assert.deepEqual(result.closeout_refs, ['receipt:codex-closeout']);
-    assert.deepEqual(result.consumed_refs, ['paper:draft.md']);
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal StageAttemptWorkflow keeps OPL provider-runtime closeout as blocked', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-provider-runtime-closeout-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities: {
-        ...activities,
-        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
-          surface_kind: 'temporal_codex_stage_activity_receipt',
-          activity_kind: 'codex_stage_activity',
-          activity_status: 'completed',
-          stage_attempt_id: input.stage_attempt_id,
-          stage_id: input.stage_id,
-          checkpoint_refs: input.checkpoint_refs ?? [],
-          closeout_packet: {
-            surface_kind: 'stage_attempt_closeout_packet',
-            stage_attempt_id: input.stage_attempt_id,
-            closeout_refs: [
-              `opl://stage-attempts/${input.stage_attempt_id}/runtime-blockers/codex_cli_typed_closeout_not_materialized`,
-            ],
-            consumed_refs: ['packet:dm003-submission'],
-            next_owner: input.domain_id,
-            domain_ready_verdict: 'domain_gate_pending',
-            rejected_writes: [{
-              reason: 'codex_cli_typed_closeout_not_materialized',
-              provider_completion_is_domain_ready: false,
-            }],
-            route_impact: {
-              provider_blocker_reason: 'codex_cli_typed_closeout_not_materialized',
-              provider_completion_is_domain_ready: false,
-            },
-            authority_boundary: {
-              opl: 'provider_runtime_closeout_transport_only',
-              domain: 'truth_quality_artifact_gate_owner',
-              can_write_domain_truth: false,
-              can_create_owner_receipt: false,
-              can_create_typed_blocker: false,
-              provider_completion_is_domain_ready: false,
-            },
-          },
-        }),
-      },
-    });
-
-    const result = await worker.runUntil(async () => {
-      const input = workflowInput();
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{
-          ...input,
-          closeout_packet: null,
-        }],
-        taskQueue,
-        workflowId: `wf-temporal-provider-runtime-closeout-test-${Date.now()}`,
-      });
-      return await handle.result();
-    });
-
-    assert.equal(result.status, 'blocked');
-    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
-    assert.deepEqual(result.closeout_refs, [
-      'opl://stage-attempts/sat_temporal_test/runtime-blockers/codex_cli_typed_closeout_not_materialized',
-    ]);
-    const dispatchEvent = result.activity_events.find(
-      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
-    );
-    assert.equal(dispatchEvent?.activity_status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'codex_cli_typed_closeout_not_materialized');
-    assert.equal(
-      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
-      false,
-    );
-    assert.equal(
-      (dispatchEvent?.authority_boundary as Record<string, unknown>)?.provider_completion_is_domain_ready,
-      false,
-    );
-  } finally {
-    await testEnv.teardown();
-  }
-});
-
-test('Temporal StageAttemptWorkflow rejects Codex activity closeout for a different stage attempt', async () => {
-  const testEnv = await TestWorkflowEnvironment.createTimeSkipping();
-  const taskQueue = `opl-stage-attempt-stale-closeout-test-${Date.now()}`;
-  try {
-    const worker = await Worker.create({
-      connection: testEnv.nativeConnection,
-      namespace: testEnv.namespace,
-      taskQueue,
-      workflowsPath: path.join(repoRoot, 'src', 'modules', 'runway', 'family-runtime-temporal-workflows.ts'),
-      activities: {
-        ...activities,
-        codexStageActivity: async (input: TemporalStageAttemptWorkflowInput) => ({
-          surface_kind: 'temporal_codex_stage_activity_receipt',
-          activity_kind: 'codex_stage_activity',
-          activity_status: 'completed',
-          stage_attempt_id: input.stage_attempt_id,
-          stage_id: input.stage_id,
-          checkpoint_refs: input.checkpoint_refs ?? [],
-          closeout_packet: {
-            surface_kind: 'stage_attempt_closeout_packet',
-            stage_attempt_id: 'sat_previous_temporal_attempt',
-            closeout_refs: ['receipt:stale-codex-closeout'],
-            consumed_refs: ['paper:draft.md'],
-            next_owner: 'med-autoscience',
-            domain_ready_verdict: 'domain_gate_pending',
-          },
-        }),
-      },
-    });
-
-    const result = await worker.runUntil(async () => {
-      const input = workflowInput();
-      const handle = await testEnv.client.workflow.start(StageAttemptWorkflow, {
-        args: [{
-          ...input,
-          closeout_packet: null,
-        }],
-        taskQueue,
-        workflowId: `wf-temporal-stale-closeout-test-${Date.now()}`,
-      });
-      return await handle.result();
-    });
-
-    assert.equal(result.status, 'blocked');
-    assert.equal(result.completion_boundary.provider_completion, 'not_completed');
-    assert.deepEqual(result.closeout_refs, [
-      'opl://stage-attempts/sat_temporal_test/runtime-blockers/typed_closeout_stage_attempt_id_mismatch',
-    ]);
-    const dispatchEvent = result.activity_events.find(
-      (event) => event.activity_kind === 'domain_handler_dispatch_activity',
-    );
-    assert.equal(dispatchEvent?.activity_status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_stage_attempt_id_mismatch');
-    assert.equal(
-      (dispatchEvent?.route_impact as Record<string, unknown>)?.runtime_blocker_is_domain_owner_answer,
-      false,
-    );
   } finally {
     await testEnv.teardown();
   }

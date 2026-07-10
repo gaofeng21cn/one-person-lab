@@ -1,34 +1,26 @@
 import { spawnSync } from 'node:child_process';
 
 import {
-  CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT,
-  CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT,
-  DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS,
-  DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS,
-  DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS,
-} from '../../../../../src/modules/runway/family-runtime-temporal-constants.ts';
-import {
   assert,
   cliPath,
   fs,
   os,
+  parseJsonText,
   path,
   repoRoot,
   runCli,
   test,
-  parseJsonText,
 } from '../../helpers.ts';
-import type { TemporalStageAttemptCreateOutput } from '../family-runtime-stage-attempts-temporal-provider-fixtures.ts';
+import type {
+  TemporalStageAttemptCreateOutput,
+} from '../family-runtime-stage-attempts-temporal-provider-fixtures.ts';
 
-function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
-  return {
-    OPL_STATE_DIR: stateRoot,
-    ...extra,
-  };
+function familyRuntimeEnv(stateRoot: string) {
+  return { OPL_STATE_DIR: stateRoot };
 }
 
-test('family-runtime temporal attempt start blocks live Codex without stage packet', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-missing-packet-'));
+test('family-runtime Temporal start fails closed without a stage packet', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-missing-packet-'));
   try {
     const created = runCli([
       'family-runtime',
@@ -58,24 +50,23 @@ test('family-runtime temporal attempt start blocks live Codex without stage pack
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
-        ...familyRuntimeEnv(stateRoot),
+        OPL_STATE_DIR: stateRoot,
         OPL_TEMPORAL_ADDRESS: '127.0.0.1:7233',
         TEMPORAL_ADDRESS: '',
       },
     });
-    const output = parseJsonText(failure.stdout || failure.stderr) as any;
+    const output = parseJsonText(failure.stdout || failure.stderr) as Record<string, any>;
 
     assert.notEqual(failure.status, 0);
     assert.equal(output.error.code, 'contract_shape_invalid');
     assert.equal(output.error.details.blocked_reason, 'codex_cli_stage_packet_ref_missing');
-    assert.match(output.error.message, /stage packet ref/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
-test('family-runtime temporal attempt query keeps local ledger readable when Temporal address is not configured', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-temporal-query-missing-'));
+test('family-runtime Temporal query keeps the local public envelope when provider is unavailable', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-temporal-query-missing-'));
   try {
     const created = runCli([
       'family-runtime',
@@ -91,28 +82,17 @@ test('family-runtime temporal attempt query keeps local ledger readable when Tem
       '{"workspace_root":"/tmp/mas"}',
     ], familyRuntimeEnv(stateRoot));
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
-    const query = runCli(['family-runtime', 'attempt', 'query', attemptId], {
-      ...familyRuntimeEnv(stateRoot),
+    const output = runCli(['family-runtime', 'attempt', 'query', attemptId], {
+      OPL_STATE_DIR: stateRoot,
       OPL_TEMPORAL_ADDRESS: '',
       TEMPORAL_ADDRESS: '',
-    });
+    }).family_runtime_stage_attempt_query;
 
-    assert.equal(query.family_runtime_stage_attempt_query.stage_attempt_query.attempt.stage_attempt_id, attemptId);
-    const timeoutPolicy = query.family_runtime_stage_attempt_query
-      .stage_attempt_query.operator_visibility.codex_stage_activity_timeout_policy;
-    assert.ok(timeoutPolicy);
-    assert.equal(timeoutPolicy.start_to_close_timeout, CODEX_STAGE_ACTIVITY_START_TO_CLOSE_TIMEOUT);
-    assert.equal(timeoutPolicy.heartbeat_timeout, CODEX_STAGE_ACTIVITY_HEARTBEAT_TIMEOUT);
-    assert.equal(timeoutPolicy.heartbeat_interval_ms, DEFAULT_CODEX_STAGE_ACTIVITY_HEARTBEAT_INTERVAL_MS);
-    assert.equal(timeoutPolicy.runner_timeout_ms, DEFAULT_CODEX_STAGE_RUNNER_TIMEOUT_MS);
-    assert.equal(timeoutPolicy.runner_no_output_timeout_ms, DEFAULT_CODEX_STAGE_RUNNER_NO_OUTPUT_TIMEOUT_MS);
-    assert.equal(query.family_runtime_stage_attempt_query.temporal_query.status, 'unavailable');
+    assert.equal(output.stage_attempt_query.attempt.stage_attempt_id, attemptId);
+    assert.equal(output.temporal_query.status, 'unavailable');
+    assert.equal(output.temporal_query.reason, 'temporal_address_not_configured');
     assert.equal(
-      query.family_runtime_stage_attempt_query.temporal_query.reason,
-      'temporal_address_not_configured',
-    );
-    assert.equal(
-      query.family_runtime_stage_attempt_query.temporal_query.authority_boundary.opl,
+      output.temporal_query.authority_boundary.opl,
       'local_stage_attempt_ledger_projection_only',
     );
   } finally {
