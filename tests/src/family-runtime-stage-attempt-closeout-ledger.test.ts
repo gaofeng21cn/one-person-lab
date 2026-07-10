@@ -16,9 +16,7 @@ function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
   try {
     createStageAttemptTable(db);
     const attempt = createStageAttempt(db, {
-      domainId: 'redcube',
-      stageId: 'artifact_handoff',
-      providerKind: 'temporal',
+      domainId: 'redcube', stageId: 'artifact_handoff', providerKind: 'temporal',
       workspaceLocator: { workspace_root: '/tmp/redcube-runtime' },
       sourceFingerprint: 'sha256:handoff',
     }).attempt;
@@ -30,34 +28,23 @@ function withAttempt(fn: (db: DatabaseSync, attemptId: string) => void) {
 
 function closeoutPacket(closeoutRef = 'receipt:artifact-handoff') {
   return {
-    surface_kind: 'stage_attempt_closeout_packet',
-    closeout_id: 'closeout:artifact-handoff',
-    closeout_refs: [closeoutRef],
-    consumed_refs: ['evidence:handoff-ledger'],
-    next_owner: 'redcube',
-    domain_ready_verdict: 'domain_gate_pending',
+    surface_kind: 'stage_attempt_closeout_packet', closeout_id: 'closeout:artifact-handoff',
+    closeout_refs: [closeoutRef], consumed_refs: ['evidence:handoff-ledger'],
+    next_owner: 'redcube', domain_ready_verdict: 'domain_gate_pending',
   };
 }
 
 test('stage attempt closeout replay is idempotent and conflicting receipts fail closed', () => {
   withAttempt((db, attemptId) => {
-    const accepted = ingestStageAttemptCloseout(db, {
-      stageAttemptId: attemptId,
-      packet: closeoutPacket(),
-    });
-    const replay = ingestStageAttemptCloseout(db, {
-      stageAttemptId: attemptId,
-      packet: closeoutPacket(),
-    });
+    const accepted = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet: closeoutPacket() });
+    const replay = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet: closeoutPacket() });
 
     assert.equal(accepted.closeout.idempotent_noop, false);
     assert.equal(replay.closeout.idempotent_noop, true);
     assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
     assert.throws(
-      () => ingestStageAttemptCloseout(db, {
-        stageAttemptId: attemptId,
-        packet: closeoutPacket('receipt:conflicting'),
-      }),
+      () => ingestStageAttemptCloseout(db,
+        { stageAttemptId: attemptId, packet: closeoutPacket('receipt:conflicting') }),
       (error) => error instanceof FrameworkContractError
         && error.details?.receipt_conflict instanceof Object
         && (error.details.receipt_conflict as Record<string, unknown>).fail_closed === true,
@@ -68,20 +55,36 @@ test('stage attempt closeout replay is idempotent and conflicting receipts fail 
 
 test('stage attempt closeout replay repairs a persisted attempt missing closeout refs', () => {
   withAttempt((db, attemptId) => {
-    ingestStageAttemptCloseout(db, {
-      stageAttemptId: attemptId,
-      packet: closeoutPacket(),
-    });
+    ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet: closeoutPacket() });
     db.prepare("UPDATE stage_attempts SET closeout_refs_json = '[]' WHERE stage_attempt_id = ?").run(attemptId);
 
-    const replay = ingestStageAttemptCloseout(db, {
-      stageAttemptId: attemptId,
-      packet: closeoutPacket(),
-    });
+    const replay = ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet: closeoutPacket() });
 
     assert.equal(replay.closeout.idempotent_noop, true);
     assert.deepEqual(replay.attempt.closeout_refs, ['receipt:artifact-handoff']);
     assert.equal(replay.attempt.closeout_receipt_status, 'accepted_typed_closeout');
     assert.equal(listStageAttemptCloseouts(db, attemptId).length, 1);
+  });
+});
+
+test('stage attempt closeout replay backfills token usage projection', () => {
+  withAttempt((db, attemptId) => {
+    const packet = closeoutPacket('receipt:artifact-token-backfill');
+    ingestStageAttemptCloseout(db, { stageAttemptId: attemptId, packet });
+
+    const replay = ingestStageAttemptCloseout(db, {
+      stageAttemptId: attemptId,
+      packet,
+      costSummary: {
+        cost_status: 'observed',
+        usage_ref: 'codex_session_usage:backfill#sha256:usage',
+        token_usage: { input_tokens: 300, output_tokens: 90, total_tokens: 390 },
+      },
+    });
+
+    assert.equal(replay.closeout.idempotent_noop, true);
+    assert.equal((replay.attempt.provider_run.cost_summary as { token_usage: { total_tokens: number } }).token_usage.total_tokens, 390);
+    assert.equal(replay.attempt.usage_projection.telemetry_status, 'observed');
+    assert.equal(replay.attempt.usage_projection.token.total_tokens_observed, 390);
   });
 });

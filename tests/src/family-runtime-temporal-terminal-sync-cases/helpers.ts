@@ -68,7 +68,7 @@ export function insertMasDefaultExecutorTask(
   );
 }
 
-export function insertGenericDomainRouteTask(
+export function insertDomainRouteTask(
   db: DatabaseSync,
   input: {
     taskId: string;
@@ -112,13 +112,14 @@ type TerminalObservationIdentity = {
   nextOwner?: string;
 };
 
-function terminalObservation(input: {
+type TerminalObservationInput = TerminalObservationIdentity & {
   stageAttemptId: string;
   workflowId: string;
   createdAt: string;
-  status: 'blocked' | 'completed' | 'failed';
   blockedReason?: string;
-} & TerminalObservationIdentity) {
+};
+
+function terminalObservation(input: TerminalObservationInput & { status: 'blocked' | 'completed' | 'failed' }) {
   const completed = input.status === 'completed';
   const blockedReason = input.blockedReason ?? 'typed_closeout_packet_required';
   const closeoutRefs = completed ? ['receipt:domain-closeout'] : [];
@@ -150,11 +151,8 @@ function terminalObservation(input: {
       human_gate_refs: [],
       signals: [],
       closeout_packet: completed
-        ? {
-            surface_kind: 'temporal_domain_handler_dispatch_receipt',
-            closeout_packet_surface_kind: 'domain_stage_closeout_packet',
-            closeout_refs: closeoutRefs,
-          }
+        ? { surface_kind: 'temporal_domain_handler_dispatch_receipt',
+            closeout_packet_surface_kind: 'domain_stage_closeout_packet', closeout_refs: closeoutRefs }
         : input.status === 'blocked'
           ? { blocked_reason: blockedReason }
           : null,
@@ -171,28 +169,15 @@ function terminalObservation(input: {
   } as const;
 }
 
-export function blockedTemporalObservation(input: {
-  stageAttemptId: string;
-  workflowId: string;
-  createdAt: string;
-  blockedReason?: string;
-} & TerminalObservationIdentity) {
+export function blockedTemporalObservation(input: TerminalObservationInput) {
   return terminalObservation({ ...input, status: 'blocked' });
 }
 
-export function completedTemporalObservation(input: {
-  stageAttemptId: string;
-  workflowId: string;
-  createdAt: string;
-} & TerminalObservationIdentity) {
+export function completedTemporalObservation(input: TerminalObservationInput) {
   return terminalObservation({ ...input, status: 'completed' });
 }
 
-export function failedTemporalObservation(input: {
-  stageAttemptId: string;
-  workflowId: string;
-  createdAt: string;
-} & TerminalObservationIdentity) {
+export function failedTemporalObservation(input: TerminalObservationInput) {
   return terminalObservation({ ...input, status: 'failed' });
 }
 
@@ -247,24 +232,5 @@ export function createMasDefaultExecutorAttempt(
     executorKind: 'codex_cli',
     taskId: input.taskId,
     checkpointRefs: ['dispatch:mas-default-writer-start'],
-  }).attempt;
-}
-
-export function createGenericDomainHandlerAttempt(
-  db: DatabaseSync,
-  input: { taskId: string; sourceFingerprint?: string },
-) {
-  return createStageAttempt(db, {
-    domainId: 'redcube',
-    stageId: 'domain_route/stage-route',
-    providerKind: 'temporal',
-    workspaceLocator: {
-      workspace_root: '/tmp/redcube-runtime',
-      route_ref: 'domain_route/stage-route',
-    },
-    sourceFingerprint: input.sourceFingerprint ?? 'sha256:generic-domain-route',
-    executorKind: 'domain_handler',
-    taskId: input.taskId,
-    checkpointRefs: ['checkpoint:generic-domain-route'],
   }).attempt;
 }

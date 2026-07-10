@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  compactCloseoutPacketForTemporalResult,
+} from '../../../src/modules/runway/family-runtime-temporal-activities.ts';
+
+test('Temporal Codex activity compacts typed closeout packets before activity completion', () => {
+  const largeCloseout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    stage_attempt_id: 'sat_large_temporal_payload',
+    idempotency_key: 'idem-large-temporal-payload',
+    closeout_refs: [
+      'receipt:large-closeout',
+      {
+        ref_kind: 'stage_attempt_closeout_packet_ref',
+        uri: 'file:///tmp/redcube-runtime/artifacts/closeout.json',
+        sha256: 'sha256:closeout',
+        size_bytes: 2048,
+      },
+    ],
+    consumed_refs: ['artifact:draft'],
+    consumed_memory_refs: ['memory:route-policy'],
+    writeback_receipt_refs: ['memory-writeback:receipt-1'],
+    rejected_writes: [{ reason: 'domain_truth_write_forbidden', body: 'small ref-only reason' }],
+    domain_ready_verdict: 'domain_gate_pending',
+    paper_stage_log: {
+      stage_work_done: ['x'.repeat(2_000_000)],
+      paper_work_done: ['y'.repeat(2_000_000)],
+    },
+    user_stage_log: {
+      stage_work_done: ['z'.repeat(2_000_000)],
+    },
+    full_transcript: 'must-not-enter-temporal-completion',
+  };
+
+  const compacted = compactCloseoutPacketForTemporalResult(largeCloseout);
+  assert.ok(compacted);
+  assert.deepEqual(compacted.closeout_refs, [
+    'receipt:large-closeout',
+    'file:///tmp/redcube-runtime/artifacts/closeout.json',
+  ]);
+  assert.equal((compacted.route_impact as Record<string, { stage_work_done: string[] }>).user_stage_log.stage_work_done[0].endsWith('[omitted:2000000 chars]'), true);
+  const compactedRecord = compacted as Record<string, unknown>;
+  assert.equal(compactedRecord.paper_stage_log, undefined);
+  assert.equal(compactedRecord.user_stage_log, undefined);
+  assert.equal(compactedRecord.full_transcript, undefined);
+  assert.equal(compacted.temporal_payload_policy.full_closeout_body_omitted, true);
+  assert.equal(JSON.stringify(compacted).includes('must-not-enter-temporal-completion'), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(compacted), 'utf8') < 20_000);
+});
