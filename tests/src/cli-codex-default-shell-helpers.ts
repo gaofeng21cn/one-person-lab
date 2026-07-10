@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { STANDARD_AGENT_PACK_ABI } from '../../src/modules/pack/public/standard-agent-pack-abi.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.resolve(__dirname, '..', '..');
@@ -460,6 +461,7 @@ type GeneratedSurfaceStageFixture = {
 };
 
 type GeneratedSurfacePackFixture = {
+  canonicalAgentId: string;
   domainId: string;
   domainLabel: string;
   primarySkillBody: string;
@@ -494,10 +496,12 @@ const targetActionAuthorityBoundary = {
 };
 
 function writeJsonFixture(filePath: string, payload: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
 }
 
 function writeGeneratedSkillFixture(filePath: string, title: string, description: string) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, ['# Skill: ' + title, '', description, ''].join('\n'), 'utf8');
 }
 
@@ -521,6 +525,8 @@ function toGeneratedSurfaceAction(pack: GeneratedSurfacePackFixture, action: Gen
     },
     input_schema_ref: action.inputSchemaRef,
     output_schema_ref: action.outputSchemaRef,
+    required_fields: action.workspaceLocatorFields,
+    optional_fields: [],
     workspace_locator_fields: action.workspaceLocatorFields,
     human_gate_ids: action.humanGateIds,
     supported_surfaces: {
@@ -580,6 +586,65 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
     actions: pack.actions.map((action) => toGeneratedSurfaceAction(pack, action)),
     notes: [],
   });
+  for (const action of pack.actions) {
+    writeJsonFixture(path.join(repoRoot, action.inputSchemaRef), {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+      required: action.workspaceLocatorFields,
+      properties: Object.fromEntries(
+        action.workspaceLocatorFields.map((field) => [field, { type: 'string' }]),
+      ),
+    });
+    writeJsonFixture(path.join(repoRoot, action.outputSchemaRef), {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+    });
+  }
+  const stagePolicyRef = `agent/stages/${pack.stage.stageId}.md`;
+  const promptRef = `agent/prompts/${pack.stage.stageId}.md`;
+  const knowledgeRef = 'agent/knowledge/domain-boundary.md';
+  const qualityGateRef = `agent/quality_gates/${pack.stage.stageId}.md`;
+  const toolRef = 'agent/tools/domain-affordances.md';
+  for (const ref of [stagePolicyRef, promptRef, knowledgeRef, qualityGateRef, toolRef]) {
+    writeGeneratedSkillFixture(path.join(repoRoot, ref), pack.stage.title, pack.stage.goal);
+  }
+  writeJsonFixture(path.join(repoRoot, 'agent', 'stages', 'manifest.json'), {
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: pack.domainId,
+    owner: pack.domainId,
+    authority_boundary: {
+      domain_truth_owner: pack.domainId,
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+    stages: [{
+      stage_id: pack.stage.stageId,
+      stage_kind: pack.stage.stageKind,
+      title: pack.stage.title,
+      summary: pack.stage.summary,
+      goal: pack.stage.goal,
+      policy_ref: stagePolicyRef,
+      prompt_ref: promptRef,
+      knowledge_refs: [knowledgeRef],
+      quality_gate_refs: [qualityGateRef],
+      allowed_action_refs: pack.stage.allowedActionRefs,
+      requires: [`${pack.stage.stageId}_input_ref`],
+      ensures: [`${pack.stage.stageId}_owner_receipt_or_typed_blocker_ref`],
+      next_stage_refs: [],
+      trust_lane: 'codex_executor',
+    }],
+  });
+  writeJsonFixture(path.join(repoRoot, 'contracts', 'owner_receipt_contract.json'), {
+    surface_kind: 'owner_receipt_contract',
+    schema_version: 1,
+    owner: pack.domainId,
+  });
+  writeGeneratedSkillFixture(
+    path.join(repoRoot, 'runtime', 'authority_functions', 'README.md'),
+    'Authority Functions',
+    'Domain-owned authority functions return refs, receipts, or typed blockers.',
+  );
   writeJsonFixture(path.join(repoRoot, 'contracts', 'stage_control_plane.json'), {
     surface_kind: 'family_stage_control_plane',
     version: 'family-stage-control-plane.v1',
@@ -638,11 +703,22 @@ function writeGeneratedSurfacePackFixture(repoRoot: string, pack: GeneratedSurfa
     surface_kind: 'opl_domain_pack_compiler_input',
     schema_version: 1,
     domain_id: pack.domainId,
+    canonical_agent_id: pack.canonicalAgentId,
     domain_pack_owner: pack.domainId,
+    domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
     canonical_semantic_pack_root: 'agent/',
     generated_surface_owner: 'one-person-lab',
     domain_repo_can_own_generated_surface: false,
-    required_domain_pack_paths: [pack.skillPath],
+    standard_agent_pack_abi: STANDARD_AGENT_PACK_ABI,
+    required_domain_pack_paths: [
+      'agent/stages/manifest.json',
+      stagePolicyRef,
+      promptRef,
+      pack.skillPath,
+      toolRef,
+      knowledgeRef,
+      qualityGateRef,
+    ],
   });
   if (pack.authorityFile) {
     writeJsonFixture(
@@ -657,6 +733,7 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
     'npm run build-agent-baseline -- --output-dir <output_dir> --opl-bin <opl_bin> --ai-reviewer-evaluation <ai_reviewer_evaluation> --domain-id <domain_id> --domain-label <domain_label> --delivery-domain <delivery_domain> --target-brief <target_brief>';
 
   writeGeneratedSurfacePackFixture(repoRoot, {
+    canonicalAgentId: 'oma',
     domainId: 'opl-meta-agent',
     domainLabel: 'OPL Meta Agent',
     primarySkillBody: 'Use this rich primary skill to design, test, improve, or take over testing for OPL-compatible Foundry Agents. Generated action contracts may be appended by OPL, but they are not the primary skill source.',
@@ -728,6 +805,7 @@ export function writeFakeOmaGeneratedSurfacePack(repoRoot: string) {
 
 export function writeFakeBookForgeGeneratedSurfacePack(repoRoot: string) {
   writeGeneratedSurfacePackFixture(repoRoot, {
+    canonicalAgentId: 'obf',
     domainId: 'opl-bookforge',
     domainLabel: 'OPL Book Forge',
     primarySkillBody: 'Use this rich primary skill to shape book storylines, materialize chapters, plan figures and tables, run style checks, and prepare owner-gated export handoff. Generated action contracts may be appended by OPL, but they are not the primary skill source.',

@@ -514,6 +514,7 @@ test('modules projection treats Full runtime packaged overrides as launch source
     ['redcube', 'redcube-ai', 'rca'],
     ['oplmetaagent', 'opl-meta-agent', 'meta-agent'],
     ['oplbookforge', 'opl-bookforge', 'opl-bookforge'],
+    ['scholarskills', 'mas-scholar-skills', 'mas-scholar-skills'],
   ] as const;
 
   try {
@@ -542,8 +543,8 @@ test('modules projection treats Full runtime packaged overrides as launch source
 
     const output = runCli(['connect', 'modules'], env) as any;
 
-    assert.equal(output.modules.summary.installed_default_modules_count, 5);
-    assert.equal(output.modules.summary.healthy_default_modules_count, 5);
+    assert.equal(output.modules.summary.installed_default_modules_count, packagedModules.length);
+    assert.equal(output.modules.summary.healthy_default_modules_count, packagedModules.length);
     const modulesById = new Map<string, any>(output.modules.items.map((entry: any) => [entry.module_id, entry]));
     for (const [moduleId] of packagedModules) {
       const module = modulesById.get(moduleId);
