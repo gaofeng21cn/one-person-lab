@@ -234,7 +234,7 @@ test('module install creates an OPL-managed root even when a sibling checkout is
     executableFiles: ['scripts/verify.sh'],
   });
   writeFakeOmaGeneratedSurfacePack(metaRemote.sourceRoot);
-  runGitFixtureCommand(metaRemote.sourceRoot, ['add', 'agent', 'contracts', 'runtime']);
+  runGitFixtureCommand(metaRemote.sourceRoot, ['add', 'agent', 'contracts', 'plugins', 'runtime']);
   runGitFixtureCommand(metaRemote.sourceRoot, ['commit', '-m', 'Add OMA generated surface contract pack']);
   runGitFixtureCommand(metaRemote.sourceRoot, ['push', 'origin', 'main']);
 
@@ -426,9 +426,20 @@ test('module install materializes Full runtime payloads into standard managed mo
   const modulesRoot = path.join(homeRoot, 'opl-state', 'modules');
   const managedRcaRoot = path.join(modulesRoot, 'redcube-ai');
   const turnkeyLogPath = path.join(homeRoot, 'full-runtime-turnkey.log');
-  fs.mkdirSync(path.join(rcaRoot, 'plugins', 'rca', '.codex-plugin'), { recursive: true });
-  fs.mkdirSync(path.join(rcaRoot, 'plugins', 'rca', 'skills', 'rca'), { recursive: true });
+  const primarySkill = [
+    '---',
+    'name: rca',
+    'description: Operate RedCube AI through its OPL-managed product entry.',
+    '---',
+    '',
+    '# RCA Skill',
+    '',
+  ].join('\n');
+  fs.mkdirSync(path.join(rcaRoot, 'agent', 'primary_skill'), { recursive: true });
+  fs.mkdirSync(path.join(rcaRoot, 'plugins', 'redcube-ai', '.codex-plugin'), { recursive: true });
+  fs.mkdirSync(path.join(rcaRoot, 'plugins', 'redcube-ai', 'skills', 'redcube-ai'), { recursive: true });
   fs.mkdirSync(path.join(rcaRoot, 'scripts'), { recursive: true });
+  fs.writeFileSync(path.join(rcaRoot, 'agent', 'primary_skill', 'SKILL.md'), primarySkill);
   fs.writeFileSync(
     path.join(rcaRoot, 'opl-runtime-module.json'),
     JSON.stringify({
@@ -440,20 +451,12 @@ test('module install materializes Full runtime payloads into standard managed mo
     }),
   );
   fs.writeFileSync(
-    path.join(rcaRoot, 'plugins', 'rca', '.codex-plugin', 'plugin.json'),
+    path.join(rcaRoot, 'plugins', 'redcube-ai', '.codex-plugin', 'plugin.json'),
     JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2),
   );
   fs.writeFileSync(
-    path.join(rcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md'),
-    [
-      '---',
-      'name: redcube-ai',
-      'description: Operate RedCube AI through its OPL-managed product entry.',
-      '---',
-      '',
-      '# RCA Skill',
-      '',
-    ].join('\n'),
+    path.join(rcaRoot, 'plugins', 'redcube-ai', 'skills', 'redcube-ai', 'SKILL.md'),
+    primarySkill,
   );
   fs.writeFileSync(
     path.join(rcaRoot, 'scripts', 'install-codex-plugin.ts'),
@@ -499,7 +502,7 @@ git ls-files >/dev/null
     assert.equal(fs.existsSync(turnkeyLogPath), false);
     assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'rca', 'SKILL.md')), false);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'opl-runtime-module.json')), true);
-    assert.equal(fs.existsSync(path.join(managedRcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(managedRcaRoot, 'plugins', 'redcube-ai', 'skills', 'redcube-ai', 'SKILL.md')), true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
