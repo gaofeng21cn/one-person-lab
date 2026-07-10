@@ -4,6 +4,7 @@ import path from 'node:path';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../../kernel/local-codex-defaults.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from '../../../modules/foundry-lab/framework-semantic-hygiene.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
+import { installOplFlowPluginIfAvailable } from '../../../modules/connect/codexcont-intelligence-mode.ts';
 import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
 import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-installation/dependency-doctor.ts';
 import { buildOplDockerWebuiDoctor } from '../../../modules/connect/system-installation/docker-webui-doctor.ts';
@@ -194,10 +195,10 @@ export function buildPublicSystemCommandSpecs(
         });
       }
 
+      const oplFlowPlugin = installOplFlowPluginIfAvailable();
       const defaultProfile = readBundledCodexDefaultProfile();
       const bootstrap = bootstrapLocalCodexDefaults({
         provider_api_key: apiKey,
-        overwrite_existing: true,
       });
       const familySkillSync = syncFullRuntimeFamilyCodexPluginsIfAvailable();
       const companionSkillSync = syncPackagedFullCompanionSkillsIfAvailable();
@@ -215,9 +216,14 @@ export function buildPublicSystemCommandSpecs(
             reasoning_effort: bootstrap.reasoning_effort,
             provider_base_url: bootstrap.provider_base_url,
             api_key_present: bootstrap.api_key_present,
+            management_receipt: bootstrap.management_receipt,
+            management_receipt_path: 'management_receipt_path' in bootstrap
+              ? bootstrap.management_receipt_path
+              : null,
           },
           ...(familySkillSync ? { skill_sync: familySkillSync.skill_sync } : {}),
           ...(companionSkillSync ? { companion_skill_sync: companionSkillSync } : {}),
+          opl_flow_plugin: oplFlowPlugin,
         },
       };
     },

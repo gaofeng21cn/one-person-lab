@@ -34,6 +34,13 @@ test('system configure-codex writes the product endpoint default and current ini
           reasoning_effort: string;
           provider_base_url: string;
           api_key_present: boolean;
+          management_receipt: {
+            selection_mode: string;
+            provider_route: string;
+            owned_keys: string[];
+            backup_path: string | null;
+          };
+          management_receipt_path: string;
         };
       };
     };
@@ -46,6 +53,10 @@ test('system configure-codex writes the product endpoint default and current ini
     assert.equal(output.codex_config.default_profile.base_url_role, 'product_default_provider_endpoint');
     assert.equal(output.codex_config.default_profile.model_profile_role, 'maintainer_current_initial_profile');
     assert.equal(output.codex_config.bootstrap.api_key_present, true);
+    assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'auto');
+    assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'direct_gateway');
+    assert.equal(output.codex_config.bootstrap.management_receipt.backup_path, null);
+    assert.equal(fs.existsSync(output.codex_config.bootstrap.management_receipt_path), true);
     assert.equal(JSON.stringify(output).includes(apiKey), false);
 
     const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
@@ -97,7 +108,7 @@ test('system configure-codex keeps environment overrides over bundled model prof
   }
 });
 
-test('system configure-codex switches an existing custom provider to OPL Gateway when the user submits a key', () => {
+test('system configure-codex preserves an existing custom provider and registers OPL Gateway as inactive', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-switch-home-'));
   const codexHome = path.join(homeRoot, 'codex-home');
 
@@ -131,21 +142,153 @@ test('system configure-codex switches an existing custom provider to OPL Gateway
         status: string;
         config_path: string;
         bootstrap: {
+          model: string;
           provider_base_url: string;
           api_key_present: boolean;
+          management_receipt: {
+            selection_mode: string;
+            provider_route: string;
+            backup_path: string | null;
+          };
         };
       };
     };
 
     assert.equal(output.codex_config.status, 'completed');
+    assert.equal(output.codex_config.bootstrap.model, 'custom-model');
     assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.bootstrap.api_key_present, true);
+    assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'inactive_provider');
+    assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'inactive_provider');
+    assert.equal(fs.existsSync(output.codex_config.bootstrap.management_receipt.backup_path!), true);
 
     const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
-    assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /model_provider = "custom"/);
+    assert.match(config, /model = "custom-model"/);
+    assert.match(config, /\[model_providers\.custom\]/);
+    assert.match(config, /base_url = "https:\/\/custom-provider\.example\.test\/v1"/);
+    assert.match(config, /\[model_providers\.gflab\]/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "opl-gateway-key"/);
-    assert.match(config, /\[model_providers\.custom\]/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system configure-codex updates a legacy OPL model while preserving the intelligence proxy route', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-proxy-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      path.join(codexHome, 'config.toml'),
+      [
+        'model_provider = "gflab"',
+        'model = "gpt-5.5"',
+        'model_reasoning_effort = "xhigh"',
+        '',
+        '[model_providers.gflab]',
+        'name = "gflab"',
+        'base_url = "http://127.0.0.1:8787/v1"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    const codexContHome = path.join(homeRoot, '.codexcont');
+    fs.mkdirSync(codexContHome, { recursive: true });
+    fs.writeFileSync(
+      path.join(codexContHome, 'opl-flow-intelligence-enhancement.json'),
+      `${JSON.stringify({
+        surface_kind: 'opl_flow_intelligence_enhancement_receipt.v1',
+        status: 'enabled',
+        previous_provider_base_url: 'https://gflabtoken.cn/v1',
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'proxy-key\n',
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexHome,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      },
+    ) as {
+      codex_config: {
+        bootstrap: {
+          model: string;
+          reasoning_effort: string;
+          provider_base_url: string;
+          management_receipt: {
+            selection_mode: string;
+            provider_route: string;
+            backup_path: string | null;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6-sol');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'max');
+    assert.equal(output.codex_config.bootstrap.provider_base_url, 'http://127.0.0.1:8787/v1');
+    assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'auto');
+    assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'intelligence_proxy');
+    assert.equal(fs.existsSync(output.codex_config.bootstrap.management_receipt.backup_path!), true);
+
+    const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    assert.match(config, /model = "gpt-5\.6-sol"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
+    assert.match(config, /base_url = "http:\/\/127\.0\.0\.1:8787\/v1"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system configure-codex preserves model and reasoning values changed after the last OPL receipt', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-local-override-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const stateDir = path.join(homeRoot, 'opl-state');
+
+  try {
+    const env = {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: stateDir,
+    };
+    runCliWithStdin(['system', 'configure-codex', '--api-key-stdin'], 'first-key\n', env);
+    const configPath = path.join(codexHome, 'config.toml');
+    const managedConfig = fs.readFileSync(configPath, 'utf8');
+    fs.writeFileSync(
+      configPath,
+      managedConfig
+        .replace('model = "gpt-5.6-sol"', 'model = "user-fixed-model"')
+        .replace('model_reasoning_effort = "max"', 'model_reasoning_effort = "high"'),
+      'utf8',
+    );
+
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'second-key\n',
+      env,
+    ) as {
+      codex_config: {
+        bootstrap: {
+          model: string;
+          reasoning_effort: string;
+          management_receipt: { selection_mode: string };
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.bootstrap.model, 'user-fixed-model');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'high');
+    assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'local_override');
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model = "user-fixed-model"/);
+    assert.match(config, /model_reasoning_effort = "high"/);
+    assert.match(config, /experimental_bearer_token = "second-key"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -227,6 +370,10 @@ test('system configure-codex syncs packaged Full companion skills after API key 
       'officecli-docx',
       'officecli-pptx',
       'officecli-xlsx',
+      'officecli-academic-paper',
+      'officecli-data-dashboard',
+      'officecli-financial-model',
+      'officecli-pitch-deck',
       'ui-ux-pro-max',
       'mineru-document-extractor',
     ]) {
@@ -304,6 +451,10 @@ test('system configure-codex syncs packaged Full companion skills after API key 
       'officecli-docx',
       'officecli-pptx',
       'officecli-xlsx',
+      'officecli-academic-paper',
+      'officecli-data-dashboard',
+      'officecli-financial-model',
+      'officecli-pitch-deck',
       'ui-ux-pro-max',
       'mineru-document-extractor',
     ]) {

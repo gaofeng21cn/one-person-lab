@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
+import { installOplFlowPluginIfAvailable } from '../codexcont-intelligence-mode.ts';
 import { bootstrapLocalCodexDefaults } from '../../../kernel/local-codex-defaults.ts';
 import { runFamilyRuntime, runNativeHelperRepairAction, runRuntimeManagerAction } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -347,6 +348,7 @@ export async function runOplTurnkeyInstall(
   contracts: FrameworkContracts,
   input: OplTurnkeyInstallInput = {},
 ) {
+  const oplFlowPlugin = installOplFlowPluginIfAvailable();
   const modules = normalizeModuleSelection(input.modules);
   const selectedEngines: OplEngineId[] = input.noOnlineRuntime ? ['codex'] : [...DEFAULT_ENGINES];
   const firstRunLog = buildOplFirstRunLogSurface();
@@ -481,6 +483,7 @@ export async function runOplTurnkeyInstall(
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
         companion_skill_sync: companionSkillSync,
+        opl_flow_plugin: oplFlowPlugin,
         system_initialize: initialize.system_initialize,
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,

@@ -1,8 +1,8 @@
-import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
 import { OPL_GATEWAY_BASE_URL } from '../../../../src/kernel/local-codex-defaults.ts';
-import { createFakeCompanionInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
+import { createFakeCompanionInstallEnv, createFakeOplFlowInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
 
 function disableRemoteCompanionInstall() {
   return {
@@ -104,8 +104,20 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     );
     assert.equal(output.install.companion_skill_sync.summary.tools_ready, 2);
     assert.equal(output.install.companion_skill_sync.summary.tools_total, 2);
+    assert.equal(output.install.opl_flow_plugin.status, 'installed');
     assert.equal(output.install.runtime_manager_action.executed_actions.some((entry: any) => ['install_hermes_online_runtime', 'repair_hermes_legacy_provider'].includes(entry.action_id)), false);
-    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max', 'mineru-document-extractor']) {
+    for (const skillName of [
+      'officecli',
+      'officecli-docx',
+      'officecli-pptx',
+      'officecli-xlsx',
+      'officecli-academic-paper',
+      'officecli-data-dashboard',
+      'officecli-financial-model',
+      'officecli-pitch-deck',
+      'ui-ux-pro-max',
+      'mineru-document-extractor',
+    ]) {
       const item = output.install.companion_skill_sync.items.find((entry: any) => entry.skill_id === skillName);
       assert.equal(item?.status, 'synced');
       assert.equal(item?.action, 'symlink');
@@ -200,7 +212,17 @@ test('recommended companion skills require their skill payloads and companion bi
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-officecli-status-home-'));
   const codexHome = path.join(homeRoot, 'codex-home');
   const skillsRoot = path.join(codexHome, 'skills');
-  for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'mineru-document-extractor']) {
+  const officeSkillIds = [
+    'officecli',
+    'officecli-docx',
+    'officecli-pptx',
+    'officecli-xlsx',
+    'officecli-academic-paper',
+    'officecli-data-dashboard',
+    'officecli-financial-model',
+    'officecli-pitch-deck',
+  ];
+  for (const skillName of [...officeSkillIds, 'mineru-document-extractor']) {
     fs.mkdirSync(path.join(skillsRoot, skillName), { recursive: true });
     fs.writeFileSync(
       path.join(skillsRoot, skillName, 'SKILL.md'),
@@ -218,7 +240,7 @@ test('recommended companion skills require their skill payloads and companion bi
     const missingById = new Map(
       missingTool.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
     );
-    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+    for (const skillName of officeSkillIds) {
       assert.equal(missingById.get(skillName), 'missing');
     }
     assert.equal(missingById.get('mineru-document-extractor'), 'missing');
@@ -246,12 +268,51 @@ test('recommended companion skills require their skill payloads and companion bi
     const readyById = new Map(
       readyTool.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
     );
-    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+    for (const skillName of officeSkillIds) {
       assert.equal(readyById.get(skillName), 'ready');
     }
     assert.equal(readyById.get('mineru-document-extractor'), 'ready');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+  }
+});
+
+test('official Codex Office and PDF skills are discovered independently', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-primary-runtime-skills-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const documentsSkill = path.join(
+    codexHome,
+    'plugins',
+    'cache',
+    'openai-primary-runtime',
+    'documents',
+    'test-version',
+    'skills',
+    'documents',
+    'SKILL.md',
+  );
+
+  try {
+    fs.mkdirSync(path.dirname(documentsSkill), { recursive: true });
+    fs.writeFileSync(documentsSkill, '# documents\n', 'utf8');
+
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: '/usr/bin:/bin',
+    }) as any;
+    const statusById = new Map(
+      output.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
+    );
+
+    assert.equal(statusById.get('documents'), 'ready');
+    assert.equal(statusById.get('presentations'), 'missing');
+    assert.equal(statusById.get('spreadsheets'), 'missing');
+    assert.equal(statusById.get('pdf'), 'missing');
+    assert.equal(statusById.has('openai_primary_runtime_office_pdf'), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 
@@ -290,6 +351,10 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'officecli-docx',
       'officecli-pptx',
       'officecli-xlsx',
+      'officecli-academic-paper',
+      'officecli-data-dashboard',
+      'officecli-financial-model',
+      'officecli-pitch-deck',
       'ui-ux-pro-max',
       'mineru-document-extractor',
     ]) {
@@ -322,6 +387,7 @@ test('recommended system companion skills keep family domain skills plugin-only 
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+      ...createFakeOplFlowInstallEnv(homeRoot),
       PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
     }) as any;
 
@@ -338,6 +404,10 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'officecli-docx',
       'officecli-pptx',
       'officecli-xlsx',
+      'officecli-academic-paper',
+      'officecli-data-dashboard',
+      'officecli-financial-model',
+      'officecli-pitch-deck',
       'ui-ux-pro-max',
       'mineru-document-extractor',
     ]) {
@@ -363,6 +433,10 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'officecli-docx',
       'officecli-pptx',
       'officecli-xlsx',
+      'officecli-academic-paper',
+      'officecli-data-dashboard',
+      'officecli-financial-model',
+      'officecli-pitch-deck',
       'ui-ux-pro-max',
       'mineru-document-extractor',
     ]) {
@@ -443,6 +517,7 @@ printf 'native repair completed\\n'
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
+      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -470,6 +545,7 @@ test('install command can bootstrap Codex defaults from environment without leak
       OPL_CODEX_REASONING_EFFORT: 'xhigh',
       OPL_CODEX_BASE_URL: 'https://codex-provider.example.test/v1',
       OPL_CODEX_API_KEY: 'secret-test-key',
+      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -504,6 +580,7 @@ test('install command applies bundled Codex defaults when only the API key is pr
       OPL_CODEX_REASONING_EFFORT: '',
       CODEX_REASONING_EFFORT: '',
       OPL_CODEX_API_KEY: 'secret-test-key',
+      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -514,6 +591,285 @@ test('install command applies bundled Codex defaults when only the API key is pr
     const config = fs.readFileSync(bootstrap.config_path, 'utf8');
     assert.match(config, /model = "gpt-5\.6-sol"/);
     assert.match(config, /model_reasoning_effort = "max"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command upgrades an existing OPL Gateway alias while preserving its token', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-existing-opl-defaults-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const configPath = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        'model_provider = "company-opl"',
+        'model = "gpt-5.5"',
+        'model_reasoning_effort = "xhigh"',
+        'custom_user_setting = true',
+        '',
+        '[model_providers.company-opl]',
+        'name = "Company OPL Gateway"',
+        `base_url = "${OPL_GATEWAY_BASE_URL}"`,
+        'experimental_bearer_token = "existing-opl-key"',
+        'wire_api = "responses"',
+        'custom_header = "preserve-me"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPENAI_API_KEY: 'ambient-openai-key-must-not-replace-provider-token',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...createFakeOplFlowInstallEnv(homeRoot),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    const bootstrap = output.install.codex_config_bootstrap;
+    assert.equal(bootstrap.status, 'completed');
+    assert.equal(bootstrap.model, 'gpt-5.6-sol');
+    assert.equal(bootstrap.reasoning_effort, 'max');
+    assert.equal(bootstrap.management_receipt.provider_id, 'company-opl');
+    assert.equal(bootstrap.management_receipt.provider_route, 'direct_gateway');
+    assert.equal(bootstrap.management_receipt.selection_mode, 'auto');
+
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model_provider = "company-opl"/);
+    assert.match(config, /model = "gpt-5\.6-sol"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
+    assert.match(config, /custom_user_setting = true/);
+    assert.match(config, /name = "Company OPL Gateway"/);
+    assert.match(config, /experimental_bearer_token = "existing-opl-key"/);
+    assert.doesNotMatch(config, /ambient-openai-key-must-not-replace-provider-token/);
+    assert.match(config, /wire_api = "responses"/);
+    assert.match(config, /custom_header = "preserve-me"/);
+
+    runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPENAI_API_KEY: 'ambient-openai-key-must-not-replace-provider-token',
+      OPL_CODEX_API_KEY: 'explicit-opl-environment-key',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...createFakeOplFlowInstallEnv(homeRoot),
+      ...disableRemoteCompanionInstall(),
+    });
+    const updatedConfig = fs.readFileSync(configPath, 'utf8');
+    assert.match(updatedConfig, /experimental_bearer_token = "explicit-opl-environment-key"/);
+    assert.doesNotMatch(updatedConfig, /ambient-openai-key-must-not-replace-provider-token/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command upgrades an OPL Flow intelligence proxy without requiring a bearer token', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-existing-opl-proxy-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const codexContHome = path.join(homeRoot, 'codexcont-home');
+  const configPath = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.mkdirSync(codexContHome, { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        'model_provider = "proxy-alias"',
+        'model = "gpt-5.5"',
+        'model_reasoning_effort = "xhigh"',
+        '',
+        '[model_providers.proxy-alias]',
+        'name = "OPL Flow Proxy"',
+        'base_url = "http://127.0.0.1:8787/v1/"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(codexContHome, 'opl-flow-intelligence-enhancement.json'),
+      `${JSON.stringify({
+        surface_kind: 'opl_flow_intelligence_enhancement_receipt.v1',
+        status: 'enabled',
+        previous_provider_base_url: OPL_GATEWAY_BASE_URL,
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_CODEXCONT_HOME: codexContHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...createFakeOplFlowInstallEnv(homeRoot),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    const bootstrap = output.install.codex_config_bootstrap;
+    assert.equal(bootstrap.status, 'completed');
+    assert.equal(bootstrap.model, 'gpt-5.6-sol');
+    assert.equal(bootstrap.reasoning_effort, 'max');
+    assert.equal(bootstrap.api_key_present, false);
+    assert.equal(bootstrap.management_receipt.provider_route, 'intelligence_proxy');
+    assert.equal(output.install.system_initialize.core_engines.codex.opl_gateway_configured, true);
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model_provider = "proxy-alias"/);
+    assert.match(config, /model = "gpt-5\.6-sol"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
+    assert.doesNotMatch(config, /experimental_bearer_token/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command does not upgrade a direct OPL Gateway config without a bearer token', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-tokenless-direct-gateway-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const configPath = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        'model_provider = "gflab"',
+        'model = "gpt-5.5"',
+        'model_reasoning_effort = "xhigh"',
+        '',
+        '[model_providers.gflab]',
+        'name = "gflab"',
+        `base_url = "${OPL_GATEWAY_BASE_URL}"`,
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...createFakeOplFlowInstallEnv(homeRoot),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');
+    assert.equal(output.install.codex_config_bootstrap.api_key_present, false);
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model = "gpt-5\.5"/);
+    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.doesNotMatch(config, /experimental_bearer_token/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command does not overwrite a third-party provider using the gflab id', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gflab-collision-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const configPath = path.join(codexHome, 'config.toml');
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        'model_provider = "gflab"',
+        'model = "third-party-model"',
+        'model_reasoning_effort = "medium"',
+        '',
+        '[model_providers.gflab]',
+        'name = "Third Party"',
+        'base_url = "https://third-party.example.test/v1"',
+        'experimental_bearer_token = "third-party-key"',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      OPL_CODEX_API_KEY: 'new-opl-key',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...createFakeOplFlowInstallEnv(homeRoot),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    const bootstrap = output.install.codex_config_bootstrap;
+    assert.equal(bootstrap.status, 'completed');
+    assert.equal(bootstrap.model, 'third-party-model');
+    assert.equal(bootstrap.reasoning_effort, 'medium');
+    assert.equal(bootstrap.management_receipt.selection_mode, 'inactive_provider');
+    assert.equal(bootstrap.management_receipt.provider_id, 'opl_gateway');
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /model = "third-party-model"/);
+    assert.match(config, /\[model_providers\.gflab\]/);
+    assert.match(config, /base_url = "https:\/\/third-party\.example\.test\/v1"/);
+    assert.match(config, /experimental_bearer_token = "third-party-key"/);
+    assert.match(config, /\[model_providers\.opl_gateway\]/);
+    assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
+    assert.match(config, /experimental_bearer_token = "new-opl-key"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command fails when the mandatory OPL Flow plugin source is unavailable', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-missing-flow-home-'));
+
+  try {
+    const failure = runCliFailure(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FLOW_INSTALLER_SCRIPT: '',
+      OPL_FLOW_REPO_ROOT: '',
+      OPL_MODULES_ROOT: path.join(homeRoot, 'missing-modules'),
+      OPL_CODEX_API_KEY: 'must-not-be-written-before-flow-preflight',
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...disableRemoteCompanionInstall(),
+    });
+
+    assert.equal(failure.payload.error.code, 'surface_not_found');
+    assert.match(failure.payload.error.message, /OPL Flow plugin installer/);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
+    assert.equal(
+      fs.existsSync(path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl')),
+      false,
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command discovers the mandatory OPL Flow installer from the managed modules root', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-managed-flow-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const installerPath = path.join(modulesRoot, 'opl-flow', 'scripts', 'install_local_plugin.py');
+
+  try {
+    fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    fs.writeFileSync(
+      installerPath,
+      'import json\nprint(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))\n',
+      'utf8',
+    );
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_FLOW_INSTALLER_SCRIPT: '',
+      OPL_FLOW_REPO_ROOT: '',
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...disableRemoteCompanionInstall(),
+    }) as any;
+
+    assert.equal(output.install.opl_flow_plugin.status, 'installed');
+    assert.equal(output.install.opl_flow_plugin.installer_path, installerPath);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -711,6 +1067,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
     const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as any;
 
@@ -740,6 +1097,7 @@ test('install command reuses only the default Codex engine and reports Temporal 
         OPL_TEMPORAL_ADDRESS: '',
         TEMPORAL_ADDRESS: '',
         PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
+        ...createFakeOplFlowInstallEnv(homeRoot),
         ...disableRemoteCompanionInstall(),
       },
     ) as any;

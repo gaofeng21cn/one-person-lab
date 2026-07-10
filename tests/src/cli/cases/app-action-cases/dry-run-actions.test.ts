@@ -2,7 +2,13 @@ import { assert, fs, os, path, runCli, runCliFailure, test } from '../../helpers
 
 function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
   const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
+  const installerPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'install_local_plugin.py');
   fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(
+    installerPath,
+    'import json\nprint(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))\n',
+    'utf8',
+  );
   fs.writeFileSync(
     scriptPath,
     [
@@ -13,19 +19,21 @@ function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
     ].join('\n'),
     { mode: 0o755 },
   );
+  return installerPath;
 }
 
 test('app action execute dry-runs Codex, module, scheduler, and worker actions from one boundary', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-dry-run-home-'));
 
   try {
-    writeOplFlowIntelligenceEnhancementFixture(homeRoot);
+    const flowInstaller = writeOplFlowIntelligenceEnhancementFixture(homeRoot);
 
     const env = {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_MODULES_ROOT: path.join(homeRoot, 'opl-state', 'modules'),
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
+      OPL_FLOW_INSTALLER_SCRIPT: flowInstaller,
       PATH: '/usr/bin:/bin',
     };
 

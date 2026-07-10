@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import type { OplRecommendedSkill } from '../install-companions.ts';
@@ -15,6 +16,15 @@ function packagedSuperpowersPaths(packagedSkillsRoot: string | null): string[] {
       path.join(packagedSkillsRoot, 'superpowers', 'skills', 'verification-before-completion', 'SKILL.md'),
     ]
     : [];
+}
+
+function primaryRuntimeSkillPaths(codexHome: string, packageId: string, skillId: string): string[] {
+  const packageRoot = path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', packageId);
+  if (!fs.existsSync(packageRoot) || !fs.statSync(packageRoot).isDirectory()) return [];
+  return fs.readdirSync(packageRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(packageRoot, entry.name, 'skills', skillId, 'SKILL.md'))
+    .filter((candidate) => fs.existsSync(candidate));
 }
 
 export function buildOplRecommendedSkillSpecs(options: {
@@ -119,17 +129,70 @@ export function buildOplRecommendedSkillSpecs(options: {
       supports: ['xlsx', 'dashboard'],
     },
     {
-      skill_id: 'openai_primary_runtime_office',
-      label: 'Codex native Office skills',
+      skill_id: 'officecli-academic-paper',
+      label: 'officecli academic paper skill',
       required: false,
-      source: 'codex_builtin',
+      source: 'skills_manager',
       expected_paths: [
-        path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', 'documents', '26.423.10653', 'skills', 'documents', 'SKILL.md'),
-        path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', 'presentations', '26.423.10653', 'skills', 'presentations', 'SKILL.md'),
-        path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', 'spreadsheets', '26.423.10653', 'skills', 'spreadsheets', 'SKILL.md'),
+        path.join(skillsManagerHome, 'skills', 'officecli-academic-paper', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-academic-paper'),
       ],
-      install_hint: 'Use Codex bundled Documents, Presentations, and Spreadsheets skills when available.',
-      supports: ['documents', 'presentations', 'spreadsheets'],
+      required_tools: ['officecli'],
+      install_hint: 'Install the upstream-owned officecli-academic-paper skill for academic document workflows.',
+      supports: ['academic_paper', 'citations', 'thesis'],
     },
+    {
+      skill_id: 'officecli-data-dashboard',
+      label: 'officecli data dashboard skill',
+      required: false,
+      source: 'skills_manager',
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli-data-dashboard', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-data-dashboard'),
+      ],
+      required_tools: ['officecli'],
+      install_hint: 'Install the upstream-owned officecli-data-dashboard skill for Excel dashboard workflows.',
+      supports: ['xlsx', 'dashboard', 'charts'],
+    },
+    {
+      skill_id: 'officecli-financial-model',
+      label: 'officecli financial model skill',
+      required: false,
+      source: 'skills_manager',
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli-financial-model', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-financial-model'),
+      ],
+      required_tools: ['officecli'],
+      install_hint: 'Install the upstream-owned officecli-financial-model skill for financial modeling workflows.',
+      supports: ['xlsx', 'financial_model', 'valuation'],
+    },
+    {
+      skill_id: 'officecli-pitch-deck',
+      label: 'officecli pitch deck skill',
+      required: false,
+      source: 'skills_manager',
+      expected_paths: [
+        path.join(skillsManagerHome, 'skills', 'officecli-pitch-deck', 'SKILL.md'),
+        ...packagedSkillPath(packagedSkillsRoot, 'officecli-pitch-deck'),
+      ],
+      required_tools: ['officecli'],
+      install_hint: 'Install the upstream-owned officecli-pitch-deck skill for investor presentation workflows.',
+      supports: ['pptx', 'pitch_deck', 'fundraising'],
+    },
+    ...([
+      ['documents', 'Official Codex Documents capability'],
+      ['presentations', 'Official Codex Presentations capability'],
+      ['spreadsheets', 'Official Codex Spreadsheets capability'],
+      ['pdf', 'Official Codex PDF capability'],
+    ] as const).map(([skillId, label]) => ({
+      skill_id: skillId,
+      label,
+      required: false,
+      source: 'codex_builtin' as const,
+      expected_paths: primaryRuntimeSkillPaths(codexHome, skillId, skillId),
+      install_hint: `Install or enable the official OpenAI Primary Runtime ${label.replace('Official Codex ', '')}.`,
+      supports: [skillId],
+    })),
   ];
 }

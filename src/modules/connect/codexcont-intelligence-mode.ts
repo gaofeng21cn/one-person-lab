@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
+import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 type ModeAction = 'status' | 'enable' | 'disable' | 'repair' | 'uninstall';
@@ -29,10 +30,12 @@ function candidateScripts() {
 function candidateInstallers() {
   const configured = normalizeOptionalString(process.env.OPL_FLOW_INSTALLER_SCRIPT);
   const repoRoot = normalizeOptionalString(process.env.OPL_FLOW_REPO_ROOT);
+  const modulesRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT)
+    ?? path.join(resolveOplStatePaths().state_dir, 'modules');
   const candidates = [
     configured,
     repoRoot ? path.join(repoRoot, 'scripts', 'install_local_plugin.py') : null,
-    path.resolve(process.cwd(), '..', 'opl-flow', 'scripts', 'install_local_plugin.py'),
+    path.join(modulesRoot, 'opl-flow', 'scripts', 'install_local_plugin.py'),
   ];
   return candidates.filter((candidate): candidate is string => candidate !== null);
 }
@@ -45,31 +48,59 @@ function resolveOplFlowInstaller() {
   return candidateInstallers().find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile()) ?? null;
 }
 
-function ensureOplFlowPluginPayload(action: ModeAction) {
-  if (!PAYLOAD_PREFLIGHT_ACTIONS.has(action)) return;
-
+export function installOplFlowPluginIfAvailable() {
   const installerPath = resolveOplFlowInstaller();
-  if (!installerPath) return;
+  if (!installerPath) {
+    throw new FrameworkContractError(
+      'surface_not_found',
+      'Mandatory OPL Flow plugin installer was not found.',
+      {
+        expected: candidateInstallers(),
+        authority_boundary: {
+          owner: 'opl_flow',
+          one_person_lab_role: 'requires_installed_opl_flow_plugin',
+        },
+      },
+    );
+  }
 
   const command = normalizeOptionalString(process.env.OPL_FLOW_PYTHON) ?? 'python3';
-  const result = spawnSync(command, [installerPath, '--no-profile'], {
+  const result = spawnSync(command, [installerPath], {
     encoding: 'utf8',
     timeout: 240_000,
     env: process.env,
   });
   if (result.status !== 0) {
     throw new FrameworkContractError('codex_command_failed', 'OPL Flow plugin payload preflight failed.', {
-      command: [command, installerPath, '--no-profile'],
+      command: [command, installerPath],
       exit_code: result.status,
       stdout: result.stdout?.trim() ?? '',
       stderr: result.stderr?.trim() ?? '',
       authority_boundary: {
         owner: 'opl_flow',
         profile_mutation_allowed: false,
-        one_person_lab_role: 'delegates_payload_preflight_to_opl_flow_only',
+        profile_sync_policy: 'install_missing_or_emit_semantic_merge_packet',
+        one_person_lab_role: 'delegates_plugin_and_profile_sync_to_opl_flow_only',
       },
     });
   }
+  const payload = parseJsonText(result.stdout?.trim() ?? '');
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new FrameworkContractError('codex_command_failed', 'OPL Flow installer returned invalid JSON.', {
+      command: [command, installerPath],
+      stdout: result.stdout?.trim() ?? '',
+    });
+  }
+  return {
+    status: 'installed' as const,
+    installer_path: installerPath,
+    result: payload as JsonRecord,
+  };
+}
+
+function ensureOplFlowPluginPayload(action: ModeAction) {
+  if (!PAYLOAD_PREFLIGHT_ACTIONS.has(action)) return;
+  installOplFlowPluginIfAvailable();
 }
 
 function runOplFlowScript(scriptPath: string, action: ModeAction, payload: JsonRecord, dryRun: boolean) {

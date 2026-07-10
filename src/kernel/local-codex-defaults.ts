@@ -9,6 +9,13 @@ import {
   readCodexAuthState,
   resolveLocalCodexAccessState,
 } from './local-codex-defaults-parts/access-state.ts';
+import {
+  backupCodexConfig,
+  readCodexConfigManagementReceipt,
+  writeCodexConfigAtomically,
+  writeCodexConfigManagementReceipt,
+  type CodexConfigManagementReceipt,
+} from './local-codex-defaults-parts/management-receipt.ts';
 
 export type LocalCodexDefaults = {
   config_path: string;
@@ -52,7 +59,6 @@ export type BootstrapLocalCodexDefaultsInput = Partial<{
   provider_name: string;
   provider_base_url: string;
   provider_api_key: string;
-  overwrite_existing: boolean;
 }>;
 
 export type CodexDefaultProfile = {
@@ -69,6 +75,7 @@ export type CodexDefaultProfile = {
 };
 
 export const OPL_GATEWAY_BASE_URL = 'https://gflabtoken.cn/v1';
+export const OPL_CODEXCONT_PROXY_BASE_URL = 'http://127.0.0.1:8787/v1';
 
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -277,20 +284,39 @@ function removeRootTomlKeys(text: string, keys: Set<string>) {
   return kept.join('\n').trim();
 }
 
-function removeTomlTable(text: string, tableHeader: string) {
+function upsertTomlTableKeys(
+  text: string,
+  tableHeader: string,
+  replacements: Array<[key: string, renderedValue: string | null]>,
+) {
   const kept: string[] = [];
-  let skipping = false;
+  const replacementKeys = new Set(replacements.map(([key]) => key));
+  const replacementLines = replacements
+    .filter(([, renderedValue]) => renderedValue !== null)
+    .map(([key, renderedValue]) => `${key} = ${renderedValue}`);
+  let foundTable = false;
+  let inTargetTable = false;
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = stripTomlInlineComment(rawLine);
     if (/^\[[^\]]+\]$/.test(line)) {
-      skipping = line === tableHeader;
+      inTargetTable = line === tableHeader;
+      if (inTargetTable) {
+        foundTable = true;
+        kept.push(rawLine, ...replacementLines);
+        continue;
+      }
     }
-    if (!skipping) {
-      kept.push(rawLine);
-    }
+
+    const separatorIndex = line.indexOf('=');
+    const key = separatorIndex > 0 ? line.slice(0, separatorIndex).trim() : null;
+    if (inTargetTable && key && replacementKeys.has(key)) continue;
+    kept.push(rawLine);
   }
 
+  if (!foundTable) {
+    kept.push('', tableHeader, ...replacementLines);
+  }
   return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -302,7 +328,7 @@ function buildCodexConfigText(
     providerBaseUrl: string;
     model: string;
     reasoningEffort: string | null;
-    providerApiKey: string;
+    providerApiKey: string | null;
   },
 ) {
   const rootLines = [
@@ -311,26 +337,131 @@ function buildCodexConfigText(
     ...(input.reasoningEffort ? [`model_reasoning_effort = ${quoteTomlString(input.reasoningEffort)}`] : []),
   ];
   const providerHeader = `[model_providers.${input.providerId}]`;
-  const providerLines = [
+  const preserved = upsertTomlTableKeys(
+    removeRootTomlKeys(existingText, new Set(['model_provider', 'model', 'model_reasoning_effort'])),
     providerHeader,
-    `name = ${quoteTomlString(input.providerName)}`,
-    `base_url = ${quoteTomlString(input.providerBaseUrl)}`,
-    `experimental_bearer_token = ${quoteTomlString(input.providerApiKey)}`,
-  ];
-  const preserved = removeTomlTable(
-    removeRootTomlKeys(
-      existingText,
-      new Set(['model_provider', 'model', 'model_reasoning_effort']),
-    ),
-    providerHeader,
+    [
+      ['name', quoteTomlString(input.providerName)],
+      ['base_url', quoteTomlString(input.providerBaseUrl)],
+      ['experimental_bearer_token', input.providerApiKey ? quoteTomlString(input.providerApiKey) : null],
+    ],
   );
 
   return [
     rootLines.join('\n'),
     preserved,
-    providerLines.join('\n'),
     '',
   ].filter((block) => block.length > 0).join('\n\n');
+}
+
+function buildCodexProviderOnlyConfigText(
+  existingText: string,
+  input: {
+    providerId: string;
+    providerName: string;
+    providerBaseUrl: string;
+    providerApiKey: string | null;
+  },
+) {
+  const providerHeader = `[model_providers.${input.providerId}]`;
+  const preserved = upsertTomlTableKeys(
+    existingText,
+    providerHeader,
+    [
+      ['name', quoteTomlString(input.providerName)],
+      ['base_url', quoteTomlString(input.providerBaseUrl)],
+      ['experimental_bearer_token', input.providerApiKey ? quoteTomlString(input.providerApiKey) : null],
+    ],
+  );
+  return [preserved, '']
+    .filter((block) => block.length > 0)
+    .join('\n\n');
+}
+
+function providerRoute(baseUrl: string, active: boolean): CodexConfigManagementReceipt['provider_route'] {
+  if (!active) return 'inactive_provider';
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (normalized === normalizeBaseUrl(OPL_GATEWAY_BASE_URL)) return 'direct_gateway';
+  if (normalized === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL)) return 'intelligence_proxy';
+  return 'opl_custom_route';
+}
+
+function hasLocalOverride(existing: LocalCodexDefaults, receipt: CodexConfigManagementReceipt | null) {
+  if (!receipt || receipt.config_path !== existing.config_path || receipt.provider_id !== existing.model_provider) {
+    return false;
+  }
+  if (receipt.selection_mode === 'local_override') return true;
+  if (receipt.selection_mode !== 'auto') return false;
+  return existing.model !== receipt.last_applied_values.model
+    || existing.reasoning_effort !== receipt.last_applied_values.model_reasoning_effort;
+}
+
+function hasEnabledOplFlowIntelligenceReceipt() {
+  const homeDir = normalizeOptionalString(process.env.HOME) ?? os.homedir();
+  const codexContHome = normalizeOptionalString(process.env.OPL_CODEXCONT_HOME)
+    ?? path.join(homeDir, '.codexcont');
+  const receiptPath = path.join(codexContHome, 'opl-flow-intelligence-enhancement.json');
+  if (!fs.existsSync(receiptPath) || !fs.statSync(receiptPath).isFile()) return false;
+
+  try {
+    const value = readJsonPayloadFile(receiptPath) as Record<string, unknown>;
+    return value.surface_kind === 'opl_flow_intelligence_enhancement_receipt.v1'
+      && value.status === 'enabled'
+      && normalizeBaseUrl(typeof value.previous_provider_base_url === 'string'
+        ? value.previous_provider_base_url
+        : null) === normalizeBaseUrl(OPL_GATEWAY_BASE_URL);
+  } catch {
+    return false;
+  }
+}
+
+function hasMatchingIntelligenceManagementReceipt(
+  existing: LocalCodexDefaults,
+  receipt: CodexConfigManagementReceipt | null,
+) {
+  return Boolean(
+    receipt
+    && receipt.config_path === existing.config_path
+    && receipt.provider_id === existing.model_provider
+    && receipt.provider_route === 'intelligence_proxy'
+    && normalizeBaseUrl(receipt.last_applied_values.provider_base_url)
+      === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL),
+  );
+}
+
+function isOplManagedActiveProvider(
+  existing: LocalCodexDefaults | null,
+  receipt: CodexConfigManagementReceipt | null,
+) {
+  if (!existing?.model_provider) return false;
+  const baseUrl = normalizeBaseUrl(existing.provider_base_url);
+  if (baseUrl === normalizeBaseUrl(OPL_GATEWAY_BASE_URL)) return true;
+  if (baseUrl !== normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL)) return false;
+  return hasEnabledOplFlowIntelligenceReceipt()
+    || hasMatchingIntelligenceManagementReceipt(existing, receipt);
+}
+
+function selectInactiveProviderId(
+  desiredProviderId: string,
+  providerBaseUrl: string,
+  providerValues: Map<string, Map<string, string>>,
+) {
+  const desiredEntry = providerValues.get(desiredProviderId);
+  if (!desiredEntry || normalizeBaseUrl(desiredEntry.get('base_url')) === normalizeBaseUrl(providerBaseUrl)) {
+    return desiredProviderId;
+  }
+
+  const existingOplAlias = [...providerValues.entries()].find(([, entry]) => (
+    normalizeBaseUrl(entry.get('base_url')) === normalizeBaseUrl(providerBaseUrl)
+  ));
+  if (existingOplAlias) return existingOplAlias[0];
+
+  let suffix = 1;
+  while (true) {
+    const candidate = suffix === 1 ? 'opl_gateway' : `opl_gateway_${suffix}`;
+    if (!providerValues.has(candidate)) return candidate;
+    suffix += 1;
+  }
 }
 
 export function buildCodexDefaultProfileFromLocalConfig(
@@ -389,6 +520,7 @@ function readBootstrapInputFromEnv(): BootstrapLocalCodexDefaultsInput {
 export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsInput = {}) {
   const defaultProfile = readBundledCodexDefaultProfile();
   const explicitProviderApiKey = normalizeOptionalString(input.provider_api_key);
+  const oplEnvironmentProviderApiKey = normalizeOptionalString(process.env.OPL_CODEX_API_KEY);
   const merged = {
     ...buildBootstrapInputFromProfile(defaultProfile),
     ...compactBootstrapInput(readBootstrapInputFromEnv()),
@@ -400,8 +532,15 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const providerApiKey = normalizeOptionalString(merged.provider_api_key);
   const configPath = resolveLocalCodexConfigPath();
   const existing = readCompleteExistingCodexDefaultsForBootstrap(configPath);
+  const receipt = readCodexConfigManagementReceipt();
+  const oplProviderActive = isOplManagedActiveProvider(existing, receipt);
+  const selectedProviderApiKey = oplProviderActive
+    ? explicitProviderApiKey ?? oplEnvironmentProviderApiKey ?? existing?.provider_api_key ?? null
+    : providerApiKey;
+  const activeOplIntelligenceProxy = oplProviderActive
+    && normalizeBaseUrl(existing?.provider_base_url) === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL);
 
-  if (existing?.provider_api_key && !explicitProviderApiKey && !merged.overwrite_existing) {
+  if (existing && !oplProviderActive && !providerApiKey) {
     return {
       status: 'skipped_existing_config' as const,
       config_path: configPath,
@@ -409,12 +548,13 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
       provider_base_url: existing.provider_base_url,
       model: existing.model,
       reasoning_effort: existing.reasoning_effort,
-      api_key_present: true,
+      api_key_present: Boolean(existing.provider_api_key),
       default_profile: defaultProfile,
+      management_receipt: receipt,
     };
   }
 
-  if (!model || !providerBaseUrl || !providerApiKey) {
+  if (!model || !providerBaseUrl || (!selectedProviderApiKey && !activeOplIntelligenceProxy)) {
     return {
       status: 'skipped_missing_input' as const,
       config_path: configPath,
@@ -424,42 +564,108 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
       provider_base_url: providerBaseUrl,
       model,
       reasoning_effort: normalizeOptionalString(merged.reasoning_effort),
-      api_key_present: Boolean(providerApiKey),
+      api_key_present: Boolean(selectedProviderApiKey),
       default_profile: defaultProfile,
+      management_receipt: receipt,
     };
   }
 
-  const providerId = normalizeOptionalString(merged.model_provider) ?? defaultProfile.model_provider;
-  const providerName = normalizeOptionalString(merged.provider_name) ?? defaultProfile.provider_name;
+  const requestedProviderId = normalizeOptionalString(merged.model_provider) ?? defaultProfile.model_provider;
+  const requestedProviderName = normalizeOptionalString(merged.provider_name) ?? defaultProfile.provider_name;
   const reasoningEffort = normalizeOptionalString(merged.reasoning_effort);
-  const configDir = path.dirname(configPath);
-  fs.mkdirSync(configDir, { recursive: true });
   const existingText = fs.existsSync(configPath) && fs.statSync(configPath).isFile()
     ? fs.readFileSync(configPath, 'utf8')
     : '';
-  fs.writeFileSync(
-    configPath,
-    buildCodexConfigText(existingText, {
+  const providerValues = existingText
+    ? readLocalCodexConfigValues(configPath).providerValues
+    : new Map<string, Map<string, string>>();
+  const activeOplProvider = oplProviderActive && existing ? existing : null;
+  const providerId = activeOplProvider?.model_provider
+    ? activeOplProvider.model_provider
+    : selectInactiveProviderId(requestedProviderId, providerBaseUrl, providerValues);
+  const providerName = activeOplProvider
+    ? activeOplProvider.provider_name ?? requestedProviderName
+    : requestedProviderName;
+  const preserveLocalOverride = activeOplProvider
+    ? hasLocalOverride(activeOplProvider, receipt)
+    : false;
+  const selectedModel = existing && !oplProviderActive
+    ? existing.model
+    : preserveLocalOverride
+      ? activeOplProvider!.model
+      : model;
+  const selectedReasoningEffort = existing && !oplProviderActive
+    ? existing.reasoning_effort
+    : preserveLocalOverride
+      ? activeOplProvider!.reasoning_effort
+      : reasoningEffort;
+  const selectedProviderBaseUrl = activeOplProvider?.provider_base_url
+    ? activeOplProvider.provider_base_url
+    : providerBaseUrl;
+  const selectionMode = existing && !oplProviderActive
+    ? 'inactive_provider' as const
+    : preserveLocalOverride
+      ? 'local_override' as const
+      : 'auto' as const;
+  const nextText = existing && !oplProviderActive
+    ? buildCodexProviderOnlyConfigText(existingText, {
       providerId,
       providerName,
       providerBaseUrl,
-      model,
-      reasoningEffort,
-      providerApiKey,
-    }),
-    { mode: 0o600 },
-  );
-  fs.chmodSync(configPath, 0o600);
+      providerApiKey: selectedProviderApiKey,
+    })
+    : buildCodexConfigText(existingText, {
+      providerId,
+      providerName,
+      providerBaseUrl: selectedProviderBaseUrl,
+      model: selectedModel,
+      reasoningEffort: selectedReasoningEffort,
+      providerApiKey: selectedProviderApiKey,
+    });
+  const configDir = path.dirname(configPath);
+  fs.mkdirSync(configDir, { recursive: true });
+  const backupPath = existingText ? backupCodexConfig(configPath) : null;
+  writeCodexConfigAtomically(configPath, nextText);
+  const managementReceipt: CodexConfigManagementReceipt = {
+    surface_kind: 'opl_codex_config_management_receipt.v1',
+    config_path: configPath,
+    provider_id: providerId,
+    selection_mode: selectionMode,
+    provider_route: providerRoute(selectedProviderBaseUrl, !existing || Boolean(activeOplProvider)),
+    owned_keys: [
+      ...(selectionMode === 'auto' ? [
+        'model_provider',
+        'model',
+        'model_reasoning_effort',
+      ] : []),
+      `model_providers.${providerId}.name`,
+      `model_providers.${providerId}.base_url`,
+      ...(selectedProviderApiKey ? [`model_providers.${providerId}.experimental_bearer_token`] : []),
+    ],
+    last_applied_values: {
+      model_provider: selectionMode === 'auto' ? providerId : existing?.model_provider ?? null,
+      model: selectionMode === 'auto' ? selectedModel : existing?.model ?? null,
+      model_reasoning_effort: selectionMode === 'auto'
+        ? selectedReasoningEffort
+        : existing?.reasoning_effort ?? null,
+      provider_base_url: selectedProviderBaseUrl,
+    },
+    backup_path: backupPath,
+    updated_at: new Date().toISOString(),
+  };
+  const managementReceiptPath = writeCodexConfigManagementReceipt(managementReceipt);
 
   return {
     status: 'completed' as const,
     config_path: configPath,
     wrote_config: true,
-    provider_base_url: providerBaseUrl,
-    model,
-    reasoning_effort: reasoningEffort,
-    api_key_present: true,
+    provider_base_url: selectedProviderBaseUrl,
+    model: selectedModel,
+    reasoning_effort: selectedReasoningEffort,
+    api_key_present: Boolean(selectedProviderApiKey),
     default_profile: defaultProfile,
+    management_receipt: managementReceipt,
+    management_receipt_path: managementReceiptPath,
   };
 }
 
@@ -537,10 +743,14 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
   const providerEntry = providerId ? providerValues.get(providerId) ?? null : null;
   const providerBaseUrl = normalizeOptionalString(providerEntry?.get('base_url'));
   const providerApiKey = normalizeOptionalString(providerEntry?.get('experimental_bearer_token'));
-  const oplGatewayConfigured = [...providerValues.values()].some((entry) => (
+  const directOplGatewayConfigured = [...providerValues.values()].some((entry) => (
     isOplGatewayBaseUrl(entry.get('base_url'))
     && Boolean(normalizeOptionalString(entry.get('experimental_bearer_token')))
   ));
+  const selectedIntelligenceProxyConfigured = normalizeBaseUrl(providerBaseUrl)
+    === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL)
+    && hasEnabledOplFlowIntelligenceReceipt();
+  const oplGatewayConfigured = directOplGatewayConfigured || selectedIntelligenceProxyConfigured;
 
   return {
     config_path: configPath,

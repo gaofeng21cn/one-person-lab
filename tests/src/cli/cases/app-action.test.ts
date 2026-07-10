@@ -4,7 +4,13 @@ import './app-action-cases/settings-and-workspace-actions.test.ts';
 
 function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
   const scriptPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'intelligence_enhancement.py');
+  const installerPath = path.join(homeRoot, 'plugins', 'opl-flow', 'scripts', 'install_local_plugin.py');
   fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(
+    installerPath,
+    'import json\nprint(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))\n',
+    'utf8',
+  );
   fs.writeFileSync(
     scriptPath,
     [
@@ -58,7 +64,7 @@ function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {
     ].join('\n'),
     { mode: 0o755 },
   );
-  return scriptPath;
+  return { scriptPath, installerPath };
 }
 
 test('app action execute wraps runtime action dry-run as the App mutating boundary', () => {
@@ -361,7 +367,7 @@ test('app action execute enables and disables CodexCont intelligence enhancement
       ].join('\n'),
       'utf8',
     );
-    writeOplFlowIntelligenceEnhancementFixture(homeRoot);
+    const flowFixture = writeOplFlowIntelligenceEnhancementFixture(homeRoot);
 
     const env = {
       HOME: homeRoot,
@@ -369,6 +375,7 @@ test('app action execute enables and disables CodexCont intelligence enhancement
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_CODEXCONT_SERVICE_MODE: 'manual',
       OPL_CODEXCONT_SERVICE_SKIP: '1',
+      OPL_FLOW_INSTALLER_SCRIPT: flowFixture.installerPath,
       PATH: `${binDir}:/usr/bin:/bin`,
     };
 
@@ -434,7 +441,7 @@ test('app action execute enables and disables CodexCont intelligence enhancement
   }
 });
 
-test('app action execute preflights OPL Flow plugin payload without profile writes', () => {
+test('app action execute preflights required OPL Flow plugin and delegates existing profile merge policy', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-opl-flow-preflight-'));
   const flowRoot = path.join(homeRoot, 'opl-flow-source');
   const installerLog = path.join(homeRoot, 'installer.log');
@@ -449,13 +456,14 @@ test('app action execute preflights OPL Flow plugin payload without profile writ
       installerPath,
       [
         '#!/usr/bin/env python3',
-        'import os, pathlib, sys',
+        'import json, os, pathlib, sys',
         'home = pathlib.Path(os.environ["HOME"])',
         `pathlib.Path(${JSON.stringify(installerLog)}).write_text(" ".join(sys.argv[1:]))`,
         'script = home / "plugins" / "opl-flow" / "scripts" / "intelligence_enhancement.py"',
         'script.parent.mkdir(parents=True, exist_ok=True)',
         'script.write_text(\'#!/usr/bin/env python3\\nimport json\\nprint(json.dumps({"opl_flow_intelligence_enhancement": {"status": "disabled", "script_installed": True}}))\\n\')',
         'script.chmod(0o755)',
+        'print(json.dumps({"status": "installed", "profile": {"status": "requires_codex_semantic_merge"}}))',
         '',
       ].join('\n'),
       { mode: 0o755 },
@@ -477,7 +485,7 @@ test('app action execute preflights OPL Flow plugin payload without profile writ
 
     assert.equal(status.delegated_surface, 'opl flow intelligence-enhancement status');
     assert.equal(status.result.opl_flow_intelligence_enhancement.status, 'disabled');
-    assert.equal(fs.readFileSync(installerLog, 'utf8'), '--no-profile');
+    assert.equal(fs.readFileSync(installerLog, 'utf8'), '');
     assert.equal(fs.readFileSync(userProfilePath, 'utf8'), 'user profile must stay intact\n');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -517,7 +525,7 @@ test('app action execute installs CodexCont as a Linux systemd user service when
       ].join('\n'),
       'utf8',
     );
-    writeOplFlowIntelligenceEnhancementFixture(homeRoot);
+    const flowFixture = writeOplFlowIntelligenceEnhancementFixture(homeRoot);
 
     const enable = runCli([
       'app',
@@ -531,6 +539,7 @@ test('app action execute installs CodexCont as a Linux systemd user service when
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_CODEXCONT_SERVICE_MODE: 'systemd',
       OPL_CODEXCONT_SERVICE_SKIP: '1',
+      OPL_FLOW_INSTALLER_SCRIPT: flowFixture.installerPath,
       PATH: `${binDir}:/usr/bin:/bin`,
     }).app_action_execution;
 

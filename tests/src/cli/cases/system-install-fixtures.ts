@@ -3,6 +3,9 @@ import { spawnSync } from 'node:child_process';
 import { assert, cliPath, fs, parseJsonText, path, repoRoot } from '../helpers.ts';
 
 export function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<string, string>) {
+  const oplFlowEnv = envOverrides.OPL_FLOW_INSTALLER_SCRIPT === undefined && envOverrides.HOME
+    ? createFakeOplFlowInstallEnv(envOverrides.HOME)
+    : {};
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
@@ -13,6 +16,7 @@ export function runCliWithStdin(args: string[], stdin: string, envOverrides: Rec
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
+        ...oplFlowEnv,
         ...envOverrides,
       },
     },
@@ -29,7 +33,15 @@ function createFakeOfficeCliSource(root: string) {
     '---\nname: officecli\ndescription: Test OfficeCLI core skill.\n---\n\n# officecli\n',
     'utf8',
   );
-  for (const skillName of ['officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+  for (const skillName of [
+    'officecli-docx',
+    'officecli-pptx',
+    'officecli-xlsx',
+    'officecli-academic-paper',
+    'officecli-data-dashboard',
+    'officecli-financial-model',
+    'officecli-pitch-deck',
+  ]) {
     const skillRoot = path.join(root, 'skills', skillName);
     fs.mkdirSync(skillRoot, { recursive: true });
     fs.writeFileSync(
@@ -38,6 +50,21 @@ function createFakeOfficeCliSource(root: string) {
       'utf8',
     );
   }
+}
+
+export function createFakeOplFlowInstallEnv(homeRoot: string) {
+  const installerPath = path.join(homeRoot, 'opl-flow-fixture', 'scripts', 'install_local_plugin.py');
+  fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+  fs.writeFileSync(
+    installerPath,
+    [
+      'import json',
+      'print(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+  return { OPL_FLOW_INSTALLER_SCRIPT: installerPath };
 }
 
 function createFakeUiUxProMaxSource(root: string) {
@@ -120,6 +147,7 @@ export function createFakeCompanionInstallEnv(homeRoot: string) {
   createFakeUiUxProMaxSource(uiUxRoot);
   createFakeMineruDocumentExtractorSource(mineruRoot);
   return {
+    ...createFakeOplFlowInstallEnv(homeRoot),
     OPL_COMPANION_SOURCES_ROOT: sourceRoot,
     OPL_OFFICECLI_SOURCE_ROOT: officeCliRoot,
     OPL_UI_UX_PRO_MAX_SOURCE_ROOT: uiUxRoot,
