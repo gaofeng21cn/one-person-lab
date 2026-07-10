@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,15 +10,15 @@ import {
   buildAgentProfileInspect,
   buildAgentProfileSelection,
 } from '../../src/modules/foundry-lab/agent-profile-spine.ts';
+import {
+  buildReferenceBuildDigestTargets,
+  materializeReferenceBuildFileDigest,
+} from '../../src/modules/foundry-lab/reference-build-proof.ts';
 import { buildProfileCommandSpecs } from '../../src/entrypoints/cli/cases/public-command-specs-parts/profiles.ts';
 
 function writeJson(filePath: string, payload: unknown) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
-}
-
-function sha256File(filePath: string) {
-  return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
 const SOURCE_DERIVED_TYPED_OBJECT_FIELDS = [
@@ -340,10 +339,8 @@ function makeSourceDerivedAgentFixture() {
         status: 'passed',
         planned_stage_ids: [...sourceDerivedStageRefs.map((stage) => stage.stage_id), targetOnlyStage.stage_id],
         materialized_stage_ids: [...sourceDerivedStageRefs.map((stage) => stage.stage_id), targetOnlyStage.stage_id],
-        materialized_file_digests: allPlannedFileRefs.map((ref) => ({
-          ref,
-          sha256: sha256File(path.join(repoDir, ref)),
-        })),
+        materialized_file_digests: buildReferenceBuildDigestTargets(repoDir, agentPackPlan)
+          .map((target) => materializeReferenceBuildFileDigest(repoDir, target)),
         all_planned_stages_materialized_exactly_once: true,
         all_planned_stage_files_present: true,
       },
@@ -826,7 +823,7 @@ test('profile conformance recomputes complete planned file digests from the targ
   assert.equal(missingFile.status, 'blocked');
   assert.equal(
     missingFile.blockers.includes(
-      `source_derived_design_build_receipt_materialized_file_missing:${missingFileRef}`,
+      `reference_build_proof_materialized_file_missing:${missingFileRef}`,
     ),
     true,
   );
@@ -843,7 +840,7 @@ test('profile conformance recomputes complete planned file digests from the targ
   assert.equal(driftedFile.status, 'blocked');
   assert.equal(
     driftedFile.blockers.includes(
-      `source_derived_design_build_receipt_materialized_file_digest_mismatch:${driftedFileRef}`,
+      `source_derived_design_build_receipt_materialized_file_digest_mismatch:${driftedFileRef}:sha256`,
     ),
     true,
   );

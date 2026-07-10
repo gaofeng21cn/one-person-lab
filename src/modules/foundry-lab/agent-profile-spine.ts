@@ -6,9 +6,9 @@ import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { buildEvidenceGroundedDecisionAgentProfileReadback } from '../pack/index.ts';
 import {
   inspectSourceDerivedTypedObjectProjections,
-  validateBuildReceiptMaterialization,
   validateReferenceSourcePacketPolicy,
 } from './agent-profile-spine-conformance.ts';
+import { validateReferenceBuildReceiptMaterialization } from './reference-build-proof.ts';
 
 const EVIDENCE_PROFILE_ID = 'evidence_grounded_decision_agent_profile.v1';
 const EVIDENCE_PROFILE_REF = `opl-profile:${EVIDENCE_PROFILE_ID}`;
@@ -1188,7 +1188,7 @@ function buildSourceDerivedTypedObjectFloor(
   )) {
     blockers.push('source_derived_design_build_receipt_not_post_materialization_proof');
   }
-  blockers.push(...validateBuildReceiptMaterialization(repoDir, agentPackPlan, buildReceipt));
+  blockers.push(...validateReferenceBuildReceiptMaterialization(repoDir, agentPackPlan, buildReceipt));
 
   return {
     blockers: uniqueStrings(blockers),
