@@ -9,6 +9,14 @@ export interface FamilyActionSourceCommand {
   surface_kind: string;
 }
 
+export interface FamilyActionHandlerBinding {
+  binding_kind: 'python_callable';
+  callable_ref: string;
+  request: {
+    command: string;
+  };
+}
+
 export interface FamilyActionSurfaceDescriptor {
   command?: string;
   surface_kind?: string;
@@ -38,6 +46,8 @@ export interface FamilyActionCatalogAction {
   source_of_work?: FamilyActionSourceOfWork;
   input_schema_ref: string;
   output_schema_ref: string;
+  required_fields: string[];
+  optional_fields: string[];
   workspace_locator_fields: string[];
   human_gate_ids: string[];
   supported_surfaces: {
@@ -49,6 +59,7 @@ export interface FamilyActionCatalogAction {
     ai_sdk: FamilyActionSurfaceDescriptor | null;
   };
   authority_boundary: JsonRecord | null;
+  handler_binding: FamilyActionHandlerBinding | null;
 }
 
 export interface FamilyActionCatalog {
@@ -77,6 +88,30 @@ function requireString(value: unknown, field: string) {
     throw new Error(`Missing required string field: ${field}`);
   }
   return text;
+}
+
+const PYTHON_HANDLER_TARGET = /^(?<module>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*):(?<callable>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+)#(?<action>[A-Za-z_][A-Za-z0-9_-]*)$/;
+const PYTHON_HANDLER_PREFIX = /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*:[A-Za-z_]\w*\./;
+
+export function resolveFamilyActionHandlerBinding(
+  target: string,
+  actionId: string,
+): FamilyActionHandlerBinding | null {
+  const match = PYTHON_HANDLER_TARGET.exec(target);
+  if (!match?.groups) {
+    if (PYTHON_HANDLER_PREFIX.test(target) && target.includes('#')) {
+      throw new Error(`Invalid domain handler target: ${target}`);
+    }
+    return null;
+  }
+  if (match.groups.action !== actionId) {
+    throw new Error(`Domain handler target action ${match.groups.action} does not match ${actionId}.`);
+  }
+  return {
+    binding_kind: 'python_callable',
+    callable_ref: `${match.groups.module}:${match.groups.callable}`,
+    request: { command: actionId },
+  };
 }
 
 function normalizeSurfaceDescriptor(value: unknown): FamilyActionSurfaceDescriptor | null {
@@ -164,6 +199,24 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
   requireSupportedSurfaceSlots(supportedSurfaces, field);
 
   const actionId = requireString(value.action_id, `${field}.action_id`);
+  const workspaceLocatorFields = stringList(value.workspace_locator_fields);
+  const hasExplicitRequiredFields = Object.prototype.hasOwnProperty.call(value, 'required_fields');
+  const requiredFields = hasExplicitRequiredFields
+    ? stringList(value.required_fields)
+    : workspaceLocatorFields;
+  const optionalFields = stringList(value.optional_fields);
+  const overlappingFields = requiredFields.filter((entry) => optionalFields.includes(entry));
+  if (overlappingFields.length > 0) {
+    throw new Error(`${field}.required_fields and optional_fields overlap: ${overlappingFields.join(', ')}`);
+  }
+  if (hasExplicitRequiredFields) {
+    const parameterFields = new Set([...requiredFields, ...optionalFields]);
+    const missingLocatorFields = workspaceLocatorFields.filter((entry) => !parameterFields.has(entry));
+    if (missingLocatorFields.length > 0) {
+      throw new Error(`${field}.workspace_locator_fields are not declared parameters: ${missingLocatorFields.join(', ')}`);
+    }
+  }
+  const sourceCommandText = requireString(sourceCommand.command, `${field}.source_command.command`);
 
   return {
     action_id: actionId,
@@ -172,13 +225,15 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
     owner: requireString(value.owner, `${field}.owner`),
     effect: rawEffect,
     source_command: {
-      command: requireString(sourceCommand.command, `${field}.source_command.command`),
+      command: sourceCommandText,
       surface_kind: requireString(sourceCommand.surface_kind, `${field}.source_command.surface_kind`),
     },
     source_of_work: normalizeSourceOfWork(value.source_of_work, actionId, catalogId, field),
     input_schema_ref: requireString(value.input_schema_ref, `${field}.input_schema_ref`),
     output_schema_ref: requireString(value.output_schema_ref, `${field}.output_schema_ref`),
-    workspace_locator_fields: stringList(value.workspace_locator_fields),
+    required_fields: requiredFields,
+    optional_fields: optionalFields,
+    workspace_locator_fields: workspaceLocatorFields,
     human_gate_ids: stringList(value.human_gate_ids),
     supported_surfaces: {
       cli: normalizeSurfaceDescriptor(supportedSurfaces.cli),
@@ -189,6 +244,7 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
       ai_sdk: normalizeSurfaceDescriptor(supportedSurfaces.ai_sdk),
     },
     authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : null,
+    handler_binding: resolveFamilyActionHandlerBinding(sourceCommandText, actionId),
   };
 }
 

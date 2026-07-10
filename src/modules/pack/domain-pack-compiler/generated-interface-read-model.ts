@@ -444,7 +444,8 @@ function buildDomainHandlerDescriptors(catalog: FamilyActionCatalog | null) {
         action.supported_surfaces.mcp?.surface_kind,
         action.supported_surfaces.skill?.surface_kind,
       ].filter((entry): entry is string => Boolean(entry));
-      return surfaceKinds.some((surfaceKind) => surfaceKind.includes('domain_handler'));
+      return Boolean(action.handler_binding)
+        || surfaceKinds.some((surfaceKind) => surfaceKind.includes('domain_handler'));
     })
     .map((action) => ({
       action_id: action.action_id,
@@ -453,6 +454,10 @@ function buildDomainHandlerDescriptors(catalog: FamilyActionCatalog | null) {
       summary: action.summary,
       effect: action.effect,
       authority_boundary: action.authority_boundary ?? null,
+      required_fields: action.required_fields,
+      optional_fields: action.optional_fields,
+      workspace_locator_fields: action.workspace_locator_fields,
+      ...(action.handler_binding ?? {}),
       source_of_work: projectFamilyAction(action).product_entry.source_of_work,
     }));
 }

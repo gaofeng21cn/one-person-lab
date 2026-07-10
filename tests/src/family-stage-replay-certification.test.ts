@@ -48,7 +48,10 @@ function buildActionCatalog(): FamilyActionCatalog {
         },
         input_schema_ref: 'schemas/review.input.schema.json',
         output_schema_ref: 'schemas/review.output.schema.json',
+        required_fields: ['workspace_root'],
+        optional_fields: [],
         workspace_locator_fields: ['workspace_root'],
+        handler_binding: null,
         human_gate_ids: ['publication_quality_gate'],
         supported_surfaces: {
           cli: null,

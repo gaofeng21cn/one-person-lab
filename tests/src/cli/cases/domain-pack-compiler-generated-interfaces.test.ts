@@ -110,6 +110,11 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
   ] as const) {
     fs.writeFileSync(path.join(targetDir, 'contracts', file), `${JSON.stringify(payload)}\n`);
   }
+  for (const action of manifestSurface.family_action_catalog.actions) {
+    const schemaPath = path.join(targetDir, action.input_schema_ref);
+    fs.mkdirSync(path.dirname(schemaPath), { recursive: true });
+    fs.writeFileSync(schemaPath, `${JSON.stringify({ type: 'object' })}\n`);
+  }
   return manifestSurface;
 }
 
@@ -217,6 +222,91 @@ test('generated interfaces reject action catalogs missing generated default surf
 
   assert.equal(failure.payload.error.code, 'contract_shape_invalid');
   assert.ok(failure.payload.error.details.error.includes('family_action_catalog.actions[0].supported_surfaces.openai'));
+});
+
+test('generated interfaces preserve action fields and expose executable callable bindings', () => {
+  const repoDir = buildReadyAgentRepo();
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
+  const action = actionCatalog.actions[0];
+  action.source_command.command = 'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch#draft_brief';
+  action.supported_surfaces.cli.command = action.source_command.command;
+  action.supported_surfaces.product_entry.command = action.source_command.command;
+  action.required_fields = ['workspace_root', 'brief'];
+  action.optional_fields = ['audience'];
+  writeJson(actionCatalogPath, actionCatalog);
+  writeJson(path.join(repoDir, 'contracts', 'draft-brief.input.schema.json'), {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    required: ['workspace_root', 'brief'],
+    properties: {
+      workspace_root: { type: 'string' },
+      brief: { type: 'string' },
+      audience: { type: 'string' },
+    },
+  });
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  const descriptors = [
+    bundle.cli.descriptors[0],
+    bundle.mcp.descriptors[0],
+    bundle.skill.descriptors[0],
+    bundle.product_entry.descriptors[0],
+    bundle.openai_tool.descriptors[0],
+    bundle.ai_sdk.descriptors[0],
+  ];
+
+  assert.equal(bundle.status, 'ready');
+  for (const descriptor of descriptors) {
+    assert.deepEqual(descriptor.required_fields, ['workspace_root', 'brief']);
+    assert.deepEqual(descriptor.optional_fields, ['audience']);
+    assert.equal(descriptor.callable_ref, 'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch');
+    assert.deepEqual(descriptor.request, { command: 'draft_brief' });
+  }
+  assert.equal(bundle.domain_handler.descriptors[0].callable_ref,
+    'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch');
+  assert.deepEqual(bundle.domain_handler.descriptors[0].request, { command: 'draft_brief' });
+});
+
+test('repo compiler blocks missing repo-relative action input schemas', () => {
+  const repoDir = buildReadyAgentRepo();
+  fs.rmSync(path.join(repoDir, 'contracts', 'draft-brief.input.schema.json'));
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+
+  assert.equal(bundle.status, 'blocked');
+  assert.ok(bundle.blocker_reasons.includes(
+    'missing_action_input_schema:draft_brief:contracts/draft-brief.input.schema.json',
+  ));
+});
+
+test('repo compiler rejects mismatched handler actions and labels external schema resolution', () => {
+  const invalidRepoDir = buildReadyAgentRepo();
+  const invalidCatalogPath = path.join(invalidRepoDir, 'contracts', 'action_catalog.json');
+  const invalidCatalog = parseJsonText(fs.readFileSync(invalidCatalogPath, 'utf8')) as Record<string, any>;
+  invalidCatalog.actions[0].source_command.command =
+    'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch#another_action';
+  writeJson(invalidCatalogPath, invalidCatalog);
+
+  const failure = runCliFailure(['agents', 'interfaces', '--repo-dir', invalidRepoDir]);
+  assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+  assert.ok(failure.payload.error.details.error.includes(
+    'Domain handler target action another_action does not match draft_brief',
+  ));
+
+  const externalRepoDir = buildReadyAgentRepo();
+  const externalCatalogPath = path.join(externalRepoDir, 'contracts', 'action_catalog.json');
+  const externalCatalog = parseJsonText(fs.readFileSync(externalCatalogPath, 'utf8')) as Record<string, any>;
+  externalCatalog.actions[0].input_schema_ref = 'opl://schemas/domain-action-input.v1';
+  writeJson(externalCatalogPath, externalCatalog);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', externalRepoDir]).generated_agent_interfaces;
+  assert.equal(bundle.status, 'ready');
+  assert.deepEqual(bundle.source_contract_consumption.action_input_schema_resolutions[0], {
+    action_id: 'draft_brief',
+    input_schema_ref: 'opl://schemas/domain-action-input.v1',
+    resolution_scope: 'external_contract_ref',
+    status: 'external_resolution_explicit',
+  });
 });
 
 test('generated interfaces family-defaults expose product-entry feed and direct parity for all domains', () => {

@@ -137,6 +137,31 @@
         "lineage_can_claim_production_ready": false
       }
     },
+    "action_binding_contract": {
+      "source_contract": "contracts/action_catalog.json",
+      "parameter_fields": {
+        "required_fields": "required request properties",
+        "optional_fields": "accepted optional request properties",
+        "workspace_locator_fields": "workspace identity fields only; not a substitute for the complete request schema",
+        "legacy_compatibility": "catalog actions without required_fields temporarily project workspace_locator_fields as required_fields; new and scaffolded actions declare required_fields and optional_fields explicitly"
+      },
+      "python_callable_target": {
+        "syntax": "module.path:ClassOrCallable.method#action_id",
+        "generated_binding_fields": [
+          "binding_kind",
+          "callable_ref",
+          "request"
+        ],
+        "request_contract": {
+          "command": "action_id"
+        },
+        "validation": "callable target action suffix must exactly match action_id"
+      },
+      "input_schema_resolution": {
+        "repo_relative_refs": "resolved from the target repo root and blocked when missing, escaping the repo, or invalid JSON",
+        "external_refs": "URI-scheme refs are marked external_resolution_explicit and are not misreported as repo-local files"
+      }
+    },
     "generated_default_entry_no_resurrection_gate": {
       "surface_kind": "opl_generated_default_entry_no_resurrection_gate",
       "version": "opl-generated-default-entry-no-resurrection-gate.v1",
