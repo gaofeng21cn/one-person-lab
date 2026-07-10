@@ -10,7 +10,7 @@ import { runFamilyRuntimeDomainHandlerCommand } from '../../src/modules/runway/f
 import {
   reduceStageRunCycleState,
   STAGE_RUN_CANONICAL_LAUNCH_OWNER,
-  STAGE_RUN_CANONICAL_RUNNER_REFS,
+  STAGE_RUN_CANONICAL_RUNNER_REF,
   type StageRunCycleManifest,
   type StageRunCycleState,
 } from '../../src/modules/stagecraft/stage-run-orchestration.ts';
@@ -108,7 +108,7 @@ function realManifest(input: {
     input_refs: [input.inputRef],
     stage_bindings: input.stageIds.map((stageRef) => ({
       stage_ref: stageRef,
-      runner_ref: STAGE_RUN_CANONICAL_RUNNER_REFS.domain_handler_runner,
+      runner_ref: STAGE_RUN_CANONICAL_RUNNER_REF,
     })),
     max_cycles: 2,
     max_attempts_per_cycle: 2,
@@ -213,6 +213,19 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
     assert.equal(revision.command, 'execute-revision-pass');
     assert.equal(revision.output_path, revisedPath);
     assert.equal(fs.existsSync(revisedPath), true);
+    const forwardRoute = runMagJson(repoDir, [
+      'workspace',
+      'next-step',
+      '--input',
+      revisedPath,
+    ], env);
+    assert.equal(forwardRoute.surface_kind, 'mag_stage_transition_oracle_recommendation');
+    assert.equal(forwardRoute.current_stage, 'critique');
+    assert.equal(forwardRoute.recommended_stage, 'argument_building');
+    assert.equal(forwardRoute.quality_gate.action, 'rollback_required');
+    assert.equal(forwardRoute.transition_intent.target_stage, 'argument_building');
+    assert.equal(forwardRoute.transition_intent.return_shape, 'transition_intent_ref');
+    assert.equal(forwardRoute.requires_human_confirmation, false);
     const domainResultRef = pathToFileURL(revision.output_path).href;
     const resultManifest = realManifest({
       head: gitHead,

@@ -412,6 +412,9 @@ const lanes = {
       'tests/src/domain-definition-contract.test.ts',
     ]),
   ],
+  'stage-run-mag-integration': [
+    nodeTest(['tests/src/stage-run-mag-integration.test.ts']),
+  ],
   artifact: [
     { kind: 'npm', args: ['run', 'build'] },
     nodeTest(['tests/built/cli.test.mjs'], { stripTypes: false }),

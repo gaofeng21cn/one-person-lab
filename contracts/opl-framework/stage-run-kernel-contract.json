@@ -148,6 +148,12 @@
         "ordered_route_and_effect_events"
       ],
       "caller_mutable_state_accepted": false,
+      "persisted_state_validation": {
+        "api_ref": "src/modules/stagecraft/stage-run-orchestration.ts#validateStageRunPersistedState",
+        "canonical_event_replay_match_required": true,
+        "active_persistence_consumer": null,
+        "persistence_enforcement_claimed": false
+      },
       "filesystem_writes": false,
       "process_spawn": false,
       "callback_execution": false,
@@ -158,7 +164,7 @@
       "launch_owner": "one-person-lab",
       "runner_owner": "one-person-lab",
       "runner_ref": "src/modules/runway/family-runtime-codex-stage-runner.ts#runAgentStageRunner",
-      "domain_handler_runner_ref": "src/modules/runway/family-runtime-domain-handler-process.ts#runFamilyRuntimeDomainHandlerCommand",
+      "domain_effect_dispatch_ref": "src/modules/runway/family-runtime-domain-handler-process.ts#runFamilyRuntimeDomainHandlerCommand",
       "untrusted_runner_or_launch_owner_policy": "reject",
       "execution_authorization_ref": "src/modules/stagecraft/stage-run-execution-authorization-ledger.ts",
       "domain_effect_owner": "target_domain_agent",
@@ -197,6 +203,11 @@
       "required_effect_refs": [
         "typed_blocker_ref",
         "domain_result_ref"
+      ],
+      "required_behavior": [
+        "p3a_quality_aware_critique_route",
+        "domain_owned_typed_blocker_receipt",
+        "post_revision_forward_route"
       ]
     },
     "termination": {

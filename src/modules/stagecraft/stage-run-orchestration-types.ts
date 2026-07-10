@@ -1,13 +1,7 @@
 export const STAGE_RUN_CANONICAL_LAUNCH_OWNER = 'one-person-lab' as const;
 
-export const STAGE_RUN_CANONICAL_RUNNER_REFS = Object.freeze({
-  agent_stage_runner: 'src/modules/runway/family-runtime-codex-stage-runner.ts#runAgentStageRunner',
-  domain_handler_runner: 'src/modules/runway/family-runtime-domain-handler-process.ts#runFamilyRuntimeDomainHandlerCommand',
-} as const);
-
-export type StageRunCanonicalRunnerRef = (
-  typeof STAGE_RUN_CANONICAL_RUNNER_REFS[keyof typeof STAGE_RUN_CANONICAL_RUNNER_REFS]
-);
+export const STAGE_RUN_CANONICAL_RUNNER_REF =
+  'src/modules/runway/family-runtime-codex-stage-runner.ts#runAgentStageRunner' as const;
 
 export type StageRunCycleIdentityInput = {
   target_agent_ref: string;
@@ -37,7 +31,7 @@ export type StageRunCycleManifest = {
   input_refs: string[];
   stage_bindings: Array<{
     stage_ref: string;
-    runner_ref: StageRunCanonicalRunnerRef;
+    runner_ref: typeof STAGE_RUN_CANONICAL_RUNNER_REF;
   }>;
   max_cycles: number;
   max_attempts_per_cycle: number;

@@ -121,7 +121,7 @@ test('StageRun orchestration is a pure reducer over canonical runner and domain 
   assert.equal(manifest.launch_owner, module.STAGE_RUN_CANONICAL_LAUNCH_OWNER);
   assert.equal(
     manifest.stage_bindings[0].runner_ref,
-    module.STAGE_RUN_CANONICAL_RUNNER_REFS.agent_stage_runner,
+    module.STAGE_RUN_CANONICAL_RUNNER_REF,
   );
   assert.match(manifest.manifest_id, /^stage_run_manifest_/);
   assert.deepEqual(manifest.stage_bindings.map((binding: Record<string, any>) => binding.stage_ref), magStageIds);
@@ -284,6 +284,11 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     decision_refs: ['mag://routes/dispatch'],
   });
   const state = module.reduceStageRunCycleState({ manifest, events: [dispatch] });
+  assert.deepEqual(module.validateStageRunPersistedState({
+    manifest,
+    events: [dispatch],
+    state,
+  }), state);
   for (const tamperedState of [
     { ...state, completed_step_count: 99 },
     { ...state, checkpoint_refs: 'mag://forged-checkpoint' },
@@ -292,8 +297,8 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     { ...state, status: 'checkpoint_accepted' },
   ]) {
     assert.throws(
-      () => module.reduceStageRunCycleState({ manifest, events: [dispatch], state: tamperedState }),
-      /does not accept caller mutable state/,
+      () => module.validateStageRunPersistedState({ manifest, events: [dispatch], state: tamperedState }),
+      /does not match canonical event replay/,
     );
   }
   assert.throws(() => module.reduceStageRunCycleState({

@@ -6,7 +6,7 @@ import {
 } from './family-stage-control-plane-contract.ts';
 import {
   STAGE_RUN_CANONICAL_LAUNCH_OWNER,
-  STAGE_RUN_CANONICAL_RUNNER_REFS,
+  STAGE_RUN_CANONICAL_RUNNER_REF,
   type StageRunCycleManifest,
 } from './stage-run-orchestration-types.ts';
 
@@ -98,7 +98,7 @@ export function buildStageRunCycleManifestFromControlPlane(
     input_refs: uniqueRefs(input.input_refs, 'input_refs'),
     stage_bindings: plane.stages.map((stage) => ({
       stage_ref: stage.stage_id,
-      runner_ref: STAGE_RUN_CANONICAL_RUNNER_REFS.agent_stage_runner,
+      runner_ref: STAGE_RUN_CANONICAL_RUNNER_REF,
     })),
     max_cycles: positiveInteger(input.max_cycles, 'max_cycles'),
     max_attempts_per_cycle: positiveInteger(

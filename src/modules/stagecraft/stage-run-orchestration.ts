@@ -1,10 +1,10 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
+import { isDeepStrictEqual } from 'node:util';
 import {
   STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY,
   STAGE_RUN_CANONICAL_LAUNCH_OWNER,
-  STAGE_RUN_CANONICAL_RUNNER_REFS,
-  type StageRunCanonicalRunnerRef,
+  STAGE_RUN_CANONICAL_RUNNER_REF,
   type StageRunCycleEvent,
   type StageRunCycleIdentity,
   type StageRunCycleIdentityInput,
@@ -53,6 +53,7 @@ const ALLOWED_EFFECT_FIELDS = new Set([
 ]);
 
 const ALLOWED_REDUCER_INPUT_FIELDS = new Set(['manifest', 'events']);
+const ALLOWED_PERSISTED_STATE_INPUT_FIELDS = new Set(['manifest', 'events', 'state']);
 
 function contractError(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, details);
@@ -92,15 +93,15 @@ function unexpectedFields(value: Record<string, unknown>, allowed: Set<string>) 
   return Object.keys(value).filter((field) => !allowed.has(field));
 }
 
-function canonicalRunnerRef(value: unknown, field: string): StageRunCanonicalRunnerRef {
+function canonicalRunnerRef(value: unknown, field: string): typeof STAGE_RUN_CANONICAL_RUNNER_REF {
   const runnerRef = requiredRef(value, field);
-  if (!Object.values(STAGE_RUN_CANONICAL_RUNNER_REFS).includes(runnerRef as StageRunCanonicalRunnerRef)) {
+  if (runnerRef !== STAGE_RUN_CANONICAL_RUNNER_REF) {
     contractError('StageRun runner_ref must bind a canonical OPL runner owner.', {
       field,
       runner_ref: runnerRef,
     });
   }
-  return runnerRef as StageRunCanonicalRunnerRef;
+  return STAGE_RUN_CANONICAL_RUNNER_REF;
 }
 
 function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest {
@@ -520,12 +521,38 @@ export function reduceStageRunCycleState(input: {
   return state;
 }
 
+export function validateStageRunPersistedState(input: {
+  manifest: StageRunCycleManifest;
+  events: StageRunCycleEvent[];
+  state: unknown;
+}): StageRunCycleState {
+  if (!isRecord(input)) {
+    contractError('StageRun persisted state validation requires an input object.');
+  }
+  const unexpected = unexpectedFields(input, ALLOWED_PERSISTED_STATE_INPUT_FIELDS);
+  if (unexpected.length > 0) {
+    contractError('StageRun persisted state validation accepts manifest, events, and state only.', {
+      unexpected_fields: unexpected,
+    });
+  }
+  const canonicalState = reduceStageRunCycleState({
+    manifest: input.manifest,
+    events: input.events,
+  });
+  if (!isDeepStrictEqual(input.state, canonicalState)) {
+    contractError('StageRun persisted state does not match canonical event replay.', {
+      manifest_id: canonicalState.manifest_id,
+      stage_run_id: canonicalState.stage_run_id,
+    });
+  }
+  return canonicalState;
+}
+
 export { buildStageRunCycleManifestFromControlPlane } from './stage-run-orchestration-adapter.ts';
 export type { StageRunControlPlaneManifestInput } from './stage-run-orchestration-adapter.ts';
 export { STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY } from './stage-run-orchestration-types.ts';
-export { STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REFS } from './stage-run-orchestration-types.ts';
+export { STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF } from './stage-run-orchestration-types.ts';
 export type {
-  StageRunCanonicalRunnerRef,
   StageRunCycleEvent,
   StageRunCycleIdentity,
   StageRunCycleIdentityInput,
