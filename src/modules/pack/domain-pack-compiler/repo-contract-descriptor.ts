@@ -102,11 +102,17 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
   const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
   const generatedSurfaceHandoff = isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : null;
+  const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : null;
   const targetDomainId =
     actionCatalog?.target_domain_id
     ?? stageControlPlane?.target_domain_id
     ?? optionalString((domainDescriptor as JsonRecord).domain_id)
     ?? path.basename(repoDir);
+  const canonicalAgentId =
+    optionalString(packCompilerInputRecord?.canonical_agent_id)
+    ?? optionalString((domainDescriptor as JsonRecord).canonical_agent_id)
+    ?? optionalString((domainDescriptor as JsonRecord).domain_id)
+    ?? targetDomainId;
   const functionalAuditManifest = {
     target_domain_id: targetDomainId,
     functional_privatization_audit: functionalAuditRaw ?? undefined,
@@ -126,7 +132,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
       project_id: targetDomainId,
       project: optionalString((domainDescriptor as JsonRecord).domain_label) ?? targetDomainId,
       target_domain_id: targetDomainId,
-      agent_id: optionalString((domainDescriptor as JsonRecord).domain_id) ?? targetDomainId,
+      agent_id: canonicalAgentId,
       source_contract_consumption: {
         surface_kind: 'opl_repo_contract_consumption_projection',
         repo_dir: repoDir,

@@ -501,6 +501,7 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
   writeJson(path.join(contractsDir, 'pack_compiler_input.json'), {
     surface_kind: 'opl_domain_pack_compiler_input',
     domain_id: spec.targetDomainId,
+    canonical_agent_id: spec.agentId,
     domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
     generated_surface_owner: 'one-person-lab',
     domain_repo_can_own_generated_surface: false,
@@ -580,7 +581,7 @@ export function createFamilyDefaultContractWorkspace() {
     },
     {
       repoDirectory: 'opl-meta-agent',
-      agentId: 'opl-meta-agent',
+      agentId: 'oma',
       targetDomainId: 'opl-meta-agent',
       owner: 'OPLMetaAgent',
       actionId: 'agent_packet',

@@ -269,6 +269,8 @@ test('generated interfaces family-defaults expose product-entry feed and direct 
     for (const entry of report.reports) {
       const expectedDomain = expected.get(entry.requested_agent_id);
       assert.ok(expectedDomain, `unexpected generated interface report ${entry.requested_agent_id}`);
+      assert.equal(entry.generated_agent_interfaces.agent_id, entry.requested_agent_id);
+      assert.equal(entry.generated_agent_interfaces.target_domain_id, expectedDomain.domain);
       const parity = entry.generated_agent_interfaces.generated_direct_parity;
       assert.equal(parity.status, 'aligned');
       assert.equal(parity.domain_id, expectedDomain.domain);
