@@ -2,25 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { isRecord } from '../../../kernel/contract-validation.ts';
+import {
+  FrameworkContractError,
+  isRecord,
+} from '../../../kernel/contract-validation.ts';
 import {
   readJsonFileOrNull,
   writeJsonPayloadFile,
 } from '../../../kernel/json-file.ts';
-import { resolveDefaultFamilyWorkspaceRoot } from '../../workspace/index.ts';
 import { PACKAGED_MODULE_MARKER_FILE } from '../packaged-module-marker.ts';
-import {
-  buildMasScholarSkillsProfileManifest,
-  MAS_SCHOLAR_SKILLS_PROFILE_PACKS,
-  materializedMasScholarSkillsPackIds,
-  SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
-} from './scholarskills-profile.ts';
 import type {
   InspectFamilySkillPack,
   SkillPackSyncScope,
-  SkillPackTargetProject,
   SyncFamilySkillPack,
 } from './registry.ts';
+import { FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY } from './registry.ts';
 
 type MaterializedCodexPluginCarrier = {
   plugin_root: string;
@@ -30,7 +26,6 @@ type MaterializedCodexPluginCarrier = {
 type RunSkillPackInstallerOptions = {
   home?: string;
   scope: SkillPackSyncScope;
-  targetProject?: SkillPackTargetProject | null;
   targetRoot?: string | null;
   resolveCodexHome: (home: string) => string;
   writeMaterializedPluginCarrier: (
@@ -89,41 +84,25 @@ function syncCodexSkillMirror(
     return null;
   }
 
+  assertCapabilitySkillTargetReplaceable(
+    codexSkillDir,
+    inspected,
+    inspected.canonical_plugin_name,
+  );
   fs.rmSync(codexSkillDir, { recursive: true, force: true });
   fs.cpSync(path.dirname(inspected.skill_entry_path), codexSkillDir, { recursive: true });
+  writeJsonFile(path.join(codexSkillDir, '.opl-connect-skill-sync.json'), {
+    surface_kind: 'opl_connect_managed_framework_capability_skill_dir',
+    schema_version: 'g1',
+    capability_package_id: inspected.canonical_plugin_name,
+    skill_id: inspected.canonical_plugin_name,
+    source_skill_dir: path.dirname(inspected.skill_entry_path),
+  });
 
   return {
     skill_root: codexSkillDir,
     skill_entry_path: path.join(codexSkillDir, 'SKILL.md'),
   };
-}
-
-function normalizeOptionalString(value: string | undefined | null) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function targetProjectEnvKey(targetProject: SkillPackTargetProject) {
-  return `OPL_${targetProject.toUpperCase()}_REPO_ROOT`;
-}
-
-function targetProjectRepoName(targetProject: SkillPackTargetProject) {
-  return targetProject === 'medautoscience' ? 'med-autoscience' : targetProject;
-}
-
-function resolveProjectLocalTargetRepoRoot(
-  targetProject: SkillPackTargetProject,
-  inspected: InspectFamilySkillPack,
-) {
-  const envValue = normalizeOptionalString(process.env[targetProjectEnvKey(targetProject)]);
-  if (envValue) {
-    return path.resolve(envValue);
-  }
-
-  return path.join(
-    resolveDefaultFamilyWorkspaceRoot({ repoRootHint: inspected.repo_root }),
-    targetProjectRepoName(targetProject),
-  );
 }
 
 function resolveGitInfoExcludePath(repoRoot: string) {
@@ -185,42 +164,6 @@ function ensureManagedPathGitExclude(rootHint: string, managedPath: string, comm
 
   const prefix = existing.endsWith('\n') || existing.length === 0 ? '' : '\n';
   fs.appendFileSync(excludePath, `${prefix}${comment}\n${pattern}\n`, 'utf8');
-  return {
-    status: 'added',
-    exclude_path: excludePath,
-    pattern,
-  };
-}
-
-function ensureProjectLocalMirrorGitExclude(repoRoot: string, pluginRoot: string) {
-  const excludePath = resolveGitInfoExcludePath(repoRoot);
-  const relativePath = path.relative(repoRoot, pluginRoot).split(path.sep).join('/');
-  const pattern = `/${relativePath}/`;
-  if (!excludePath) {
-    return {
-      status: 'skipped_not_git_repo',
-      exclude_path: null,
-      pattern,
-    };
-  }
-
-  fs.mkdirSync(path.dirname(excludePath), { recursive: true });
-  const existing = fs.existsSync(excludePath) ? fs.readFileSync(excludePath, 'utf8') : '';
-  const lines = existing.split(/\r?\n/).map((line) => line.trim());
-  if (lines.includes(pattern)) {
-    return {
-      status: 'already_present',
-      exclude_path: excludePath,
-      pattern,
-    };
-  }
-
-  const prefix = existing.endsWith('\n') || existing.length === 0 ? '' : '\n';
-  fs.appendFileSync(
-    excludePath,
-    `${prefix}# OPL-managed project-local ScholarSkills mirror; not MAS source truth.\n${pattern}\n`,
-    'utf8',
-  );
   return {
     status: 'added',
     exclude_path: excludePath,
@@ -304,40 +247,6 @@ function copiedOptionalRoots(optionalCopied: Record<string, boolean>) {
     .map(([root]) => root);
 }
 
-function copyProjectLocalScholarSkillsSource(
-  inspected: InspectFamilySkillPack,
-  targetPluginRoot: string,
-): ScholarSkillsCopyPolicy {
-  fs.rmSync(targetPluginRoot, { recursive: true, force: true });
-  fs.mkdirSync(targetPluginRoot, { recursive: true });
-
-  fs.cpSync(
-    path.join(inspected.plugin_source_path, '.codex-plugin'),
-    path.join(targetPluginRoot, '.codex-plugin'),
-    { recursive: true },
-  );
-  fs.cpSync(
-    path.join(inspected.plugin_source_path, 'skills'),
-    path.join(targetPluginRoot, 'skills'),
-    { recursive: true },
-  );
-
-  const optionalCopied = copyScholarSkillsOptionalReferenceRoots(
-    inspected.plugin_source_path,
-    targetPluginRoot,
-  );
-
-  return {
-    copy_policy: 'scholarskills_project_local_filtered_copy',
-    copied_roots: [
-      '.codex-plugin',
-      'skills',
-      ...copiedOptionalRoots(optionalCopied),
-    ],
-    excluded_roots: SCHOLARSKILLS_EXCLUDED_ROOTS,
-  };
-}
-
 function resolveGitHead(repoRoot: string) {
   const result = spawnSync('git', ['-C', repoRoot, 'rev-parse', 'HEAD'], {
     encoding: 'utf8',
@@ -360,39 +269,100 @@ function resolvePackagedSourceHead(repoRoot: string) {
   return typeof head === 'string' && head.trim().length > 0 ? head.trim() : null;
 }
 
-function copyMaterializedMasScholarSkillsSpecialistDirs(
+function materializedCapabilitySkillIds(pluginSourcePath: string) {
+  const skillsRoot = path.join(pluginSourcePath, 'skills');
+  if (!isDirectory(skillsRoot)) {
+    return [];
+  }
+  return fs.readdirSync(skillsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((skillId) => fs.existsSync(path.join(skillsRoot, skillId, 'SKILL.md')))
+    .sort();
+}
+
+function assertCapabilitySkillTargetReplaceable(
+  targetSkillDir: string,
+  inspected: InspectFamilySkillPack,
+  skillId: string,
+) {
+  if (!fs.existsSync(targetSkillDir)) {
+    return;
+  }
+  const marker = readJsonFileOrNull(path.join(targetSkillDir, '.opl-connect-skill-sync.json'));
+  const receipt = readJsonFileOrNull(path.join(targetSkillDir, '.opl-install-receipt.json'));
+  const managedSpecialist = isRecord(marker) && (
+    (
+      marker.surface_kind === 'opl_connect_managed_framework_capability_skill_dir'
+      && marker.capability_package_id === inspected.canonical_plugin_name
+      && marker.skill_id === skillId
+    )
+    || marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir'
+  );
+  const managedAggregate = skillId === inspected.canonical_plugin_name
+    && isRecord(receipt)
+    && receipt.receipt_kind === 'opl_scholarskills_workspace_or_quest_local_install_receipt';
+  if (managedSpecialist || managedAggregate) {
+    return;
+  }
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Capability skill sync refuses to replace an unmanaged target directory.',
+    {
+      capability_package_id: inspected.canonical_plugin_name,
+      skill_id: skillId,
+      target_skill_dir: targetSkillDir,
+      required_owner_marker: '.opl-connect-skill-sync.json or .opl-install-receipt.json',
+    },
+    2,
+  );
+}
+
+function copyMaterializedCapabilitySkillDirs(
   inspected: InspectFamilySkillPack,
   targetCodexSkillsRoot: string,
 ) {
-  const installedPackIds = ['mas-scholar-skills'];
-  for (const pack of MAS_SCHOLAR_SKILLS_PROFILE_PACKS) {
-    if (pack.pack_id === 'mas-scholar-skills') {
+  const skillIds = materializedCapabilitySkillIds(inspected.plugin_source_path);
+  for (const skillId of skillIds) {
+    if (skillId === inspected.canonical_plugin_name) {
       continue;
     }
-    const sourceSkillDir = path.join(inspected.plugin_source_path, 'skills', pack.skill_dir);
-    const targetSkillDir = path.join(targetCodexSkillsRoot, pack.skill_dir);
+    const sourceSkillDir = path.join(inspected.plugin_source_path, 'skills', skillId);
+    const targetSkillDir = path.join(targetCodexSkillsRoot, skillId);
+    assertCapabilitySkillTargetReplaceable(targetSkillDir, inspected, skillId);
     if (copySkillDirectoryIfPresent(sourceSkillDir, targetSkillDir)) {
       writeJsonFile(path.join(targetSkillDir, '.opl-connect-skill-sync.json'), {
-        surface_kind: 'opl_connect_managed_mas_scholar_skills_specialist_dir',
+        surface_kind: 'opl_connect_managed_framework_capability_skill_dir',
         schema_version: 'g1',
-        pack_id: pack.pack_id,
+        capability_package_id: inspected.canonical_plugin_name,
+        skill_id: skillId,
         source_skill_dir: sourceSkillDir,
       });
-      installedPackIds.push(pack.pack_id);
-    } else if (isOplConnectManagedSpecialistDir(targetSkillDir)) {
-      fs.rmSync(targetSkillDir, { recursive: true, force: true });
     }
   }
-  return installedPackIds;
-}
 
-function isOplConnectManagedSpecialistDir(targetSkillDir: string) {
-  const markerPath = path.join(targetSkillDir, '.opl-connect-skill-sync.json');
-  if (!fs.existsSync(markerPath)) {
-    return false;
+  if (isDirectory(targetCodexSkillsRoot)) {
+    for (const entry of fs.readdirSync(targetCodexSkillsRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory() || skillIds.includes(entry.name)) {
+        continue;
+      }
+      const targetSkillDir = path.join(targetCodexSkillsRoot, entry.name);
+      const marker = readJsonFileOrNull(path.join(targetSkillDir, '.opl-connect-skill-sync.json'));
+      if (
+        isRecord(marker)
+        && (
+          (
+            marker.surface_kind === 'opl_connect_managed_framework_capability_skill_dir'
+            && marker.capability_package_id === inspected.canonical_plugin_name
+          )
+          || marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir'
+        )
+      ) {
+        fs.rmSync(targetSkillDir, { recursive: true, force: true });
+      }
+    }
   }
-  const marker = readJsonFileOrNull(markerPath);
-  return isRecord(marker) && marker.surface_kind === 'opl_connect_managed_mas_scholar_skills_specialist_dir';
+  return skillIds;
 }
 
 function writeJsonFile(filePath: string, value: unknown) {
@@ -412,6 +382,11 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     inspected.canonical_plugin_name,
   );
 
+  assertCapabilitySkillTargetReplaceable(
+    skillRoot,
+    inspected,
+    inspected.canonical_plugin_name,
+  );
   fs.rmSync(skillRoot, { recursive: true, force: true });
   fs.mkdirSync(skillRoot, { recursive: true });
   fs.copyFileSync(inspected.skill_entry_path, path.join(skillRoot, 'SKILL.md'));
@@ -428,21 +403,9 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     ],
     excluded_roots: SCHOLARSKILLS_EXCLUDED_ROOTS,
   };
-  const installedPackIds = copyMaterializedMasScholarSkillsSpecialistDirs(
+  const materializedSkillIds = copyMaterializedCapabilitySkillDirs(
     inspected,
     targetCodexSkillsRoot,
-  );
-  const masScholarSkillsProfile = buildMasScholarSkillsProfileManifest({
-    sourceRoot: inspected.repo_root,
-    pluginSourcePath: inspected.plugin_source_path,
-    targetScope,
-    targetRoot: resolvedTargetRoot,
-    installRoot: targetCodexSkillsRoot,
-    installedPackIds,
-  });
-  const masScholarSkillsProfileManifestPath = path.join(
-    skillRoot,
-    '.opl-mas-scholarskills-sync-manifest.json',
   );
   const receiptPath = path.join(skillRoot, '.opl-install-receipt.json');
   const gitExclude = ensureManagedPathGitExclude(
@@ -461,17 +424,15 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     skill_root: skillRoot,
     skill_entry: path.join(skillRoot, 'SKILL.md'),
     codex_discovery_kind: 'workspace_or_quest_local_skill',
-    project_mirror_deprecated_for_paper_execution: true,
-    project_mirror_non_default_paper_execution_path: true,
     copy_policy: copyPolicy.copy_policy,
     copied_roots: copyPolicy.copied_roots,
     excluded_roots: copyPolicy.excluded_roots,
     git_exclude: gitExclude,
-    mas_scholar_skills_profile_manifest_path: masScholarSkillsProfileManifestPath,
-    mas_scholar_skills_profile: masScholarSkillsProfile,
-    authority_flags: SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
+    materialized_skill_ids: materializedSkillIds,
+    content_owner: inspected.project,
+    framework_role: 'validation_install_sync_and_provenance_only',
+    authority_flags: FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY,
   };
-  writeJsonFile(masScholarSkillsProfileManifestPath, masScholarSkillsProfile);
   writeJsonFile(receiptPath, receipt);
 
   return {
@@ -485,85 +446,8 @@ function copyWorkspaceOrQuestLocalScholarSkillsSkill(
     codex_discovery_kind: 'workspace_or_quest_local_skill',
     copy: copyPolicy,
     workspace_or_quest_git_exclude: gitExclude,
-    mas_scholar_skills_profile_manifest_path: masScholarSkillsProfileManifestPath,
-    mas_scholar_skills_profile: masScholarSkillsProfile,
-    authority_boundary: SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
-  };
-}
-
-function syncProjectLocalSkillMirror(
-  inspected: InspectFamilySkillPack,
-  targetProject: SkillPackTargetProject,
-) {
-  if (inspected.domain_id !== 'scholarskills') {
-    return {
-      status: 'skipped',
-      skip_reason: 'project_local_scope_only_supported_for_scholarskills',
-      target_project: targetProject,
-    };
-  }
-
-  if (!inspected.plugin_manifest_found || !inspected.skill_entry_found || !inspected.skill_entry_valid) {
-    return {
-      status: 'skipped',
-      skip_reason: 'source_plugin_not_ready',
-      target_project: targetProject,
-      plugin_source_path: inspected.plugin_source_path,
-    };
-  }
-
-  const targetRepoRoot = resolveProjectLocalTargetRepoRoot(targetProject, inspected);
-  if (!fs.existsSync(targetRepoRoot) || !fs.statSync(targetRepoRoot).isDirectory()) {
-    return {
-      status: 'skipped',
-      skip_reason: 'target_project_repo_root_missing',
-      target_project: targetProject,
-      target_repo_root: targetRepoRoot,
-      expected_repo_root_env: targetProjectEnvKey(targetProject),
-    };
-  }
-
-  const targetPluginRoot = path.join(targetRepoRoot, 'plugins', inspected.canonical_plugin_name);
-  const mirrorCopy = copyProjectLocalScholarSkillsSource(inspected, targetPluginRoot);
-  const gitExclude = ensureProjectLocalMirrorGitExclude(targetRepoRoot, targetPluginRoot);
-  const masScholarSkillsProfile = buildMasScholarSkillsProfileManifest({
-    sourceRoot: inspected.repo_root,
-    pluginSourcePath: inspected.plugin_source_path,
-    targetScope: 'project',
-    targetProject,
-    targetRoot: targetRepoRoot,
-    installRoot: targetPluginRoot,
-    installedPackIds: materializedMasScholarSkillsPackIds(inspected.plugin_source_path),
-  });
-  const masScholarSkillsProfileManifestPath = path.join(
-    targetPluginRoot,
-    '.opl-mas-scholarskills-sync-manifest.json',
-  );
-  writeJsonFile(masScholarSkillsProfileManifestPath, masScholarSkillsProfile);
-
-  return {
-    status: 'installed',
-    target_scope: 'project',
-    target_project: targetProject,
-    target_repo_root: targetRepoRoot,
-    plugin_source_path: inspected.plugin_source_path,
-    project_local_copy: mirrorCopy,
-    project_local_plugin_root: targetPluginRoot,
-    project_local_plugin_manifest_path: path.join(targetPluginRoot, '.codex-plugin', 'plugin.json'),
-    project_local_skill_entry_path: path.join(
-      targetPluginRoot,
-      'skills',
-      inspected.canonical_plugin_name,
-      'SKILL.md',
-    ),
-    project_local_git_exclude: gitExclude,
-    project_mirror_deprecated_for_paper_execution: true,
-    project_mirror_non_default_paper_execution_path: true,
-    mas_scholar_skills_profile_manifest_path: masScholarSkillsProfileManifestPath,
-    mas_scholar_skills_profile: masScholarSkillsProfile,
-    authority_boundary: {
-      ...SCHOLARSKILLS_AUTHORITY_FALSE_FLAGS,
-    },
+    materialized_skill_ids: materializedSkillIds,
+    authority_boundary: FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY,
   };
 }
 
@@ -639,14 +523,7 @@ function codexDiscoveryKindForScope(scope: SkillPackSyncScope) {
   if (scope === 'codex') {
     return 'codex_home_plugin_registry';
   }
-  if (scope === 'project') {
-    return 'project_local_plugin_mirror';
-  }
   return 'workspace_or_quest_local_skill';
-}
-
-function projectMirrorDeprecatedForPaperExecution(scope: SkillPackSyncScope) {
-  return scope === 'project';
 }
 
 export function runSkillPackInstaller(
@@ -659,41 +536,10 @@ export function runSkillPackInstaller(
       sync_status: 'skipped',
       sync_scope: options.scope,
       target_scope: options.scope,
-      target_project: options.targetProject ?? null,
       target_root: options.targetRoot ? path.resolve(options.targetRoot) : null,
       workspace_or_quest_local_skill_root: null,
       codex_discovery_kind: codexDiscoveryKindForScope(options.scope),
-      project_mirror_deprecated_for_paper_execution: projectMirrorDeprecatedForPaperExecution(options.scope),
-      project_mirror_non_default_paper_execution_path: projectMirrorDeprecatedForPaperExecution(options.scope),
       installer_result: null,
-      registry_repo_root: null,
-      stdout: '',
-      stderr: '',
-    };
-  }
-
-  if (options.scope === 'project') {
-    const targetProject = options.targetProject ?? 'medautoscience';
-    const projectLocalSkillMirror = syncProjectLocalSkillMirror(inspected, targetProject);
-    const targetRoot = readTargetRootFromInstallerResult(projectLocalSkillMirror);
-    return {
-      ...inspected,
-      sync_status: projectLocalSkillMirror.status === 'installed' ? 'synced' : 'skipped',
-      sync_scope: 'project',
-      target_scope: 'project',
-      target_project: targetProject,
-      target_root: targetRoot,
-      workspace_or_quest_local_skill_root: null,
-      codex_discovery_kind: 'project_local_plugin_mirror',
-      project_mirror_deprecated_for_paper_execution: true,
-      project_mirror_non_default_paper_execution_path: true,
-      installer_result: {
-        source: 'project_local_capability_skill_mirror',
-        plugin_source_path: inspected.plugin_source_path,
-        plugin_manifest_path: inspected.plugin_manifest_path,
-        skill_entry_path: inspected.skill_entry_path,
-        project_local_skill_mirror: projectLocalSkillMirror,
-      },
       registry_repo_root: null,
       stdout: '',
       stderr: '',
@@ -711,12 +557,9 @@ export function runSkillPackInstaller(
       sync_status: localSkillInstall.status === 'installed' ? 'synced' : 'skipped',
       sync_scope: options.scope,
       target_scope: options.scope,
-      target_project: null,
       target_root: readTargetRootFromInstallerResult(localSkillInstall),
       workspace_or_quest_local_skill_root: readWorkspaceOrQuestSkillRootFromInstallerResult(localSkillInstall),
       codex_discovery_kind: 'workspace_or_quest_local_skill',
-      project_mirror_deprecated_for_paper_execution: false,
-      project_mirror_non_default_paper_execution_path: false,
       installer_result: {
         source: 'workspace_or_quest_local_codex_skill',
         plugin_source_path: inspected.plugin_source_path,
@@ -736,12 +579,9 @@ export function runSkillPackInstaller(
       sync_status: 'synced',
       sync_scope: 'codex',
       target_scope: 'codex',
-      target_project: null,
       target_root: null,
       workspace_or_quest_local_skill_root: null,
       codex_discovery_kind: 'codex_home_plugin_registry',
-      project_mirror_deprecated_for_paper_execution: false,
-      project_mirror_non_default_paper_execution_path: false,
       installer_result: {
         materialized_surface: 'repo_local_codex_plugin_carrier',
         materialized_codex_plugin_carrier: codexPluginCarrier,
@@ -760,12 +600,9 @@ export function runSkillPackInstaller(
     sync_status: 'synced',
     sync_scope: 'codex',
     target_scope: 'codex',
-    target_project: null,
     target_root: null,
     workspace_or_quest_local_skill_root: null,
     codex_discovery_kind: 'codex_home_plugin_registry',
-    project_mirror_deprecated_for_paper_execution: false,
-    project_mirror_non_default_paper_execution_path: false,
     installer_result: {
       source: 'tracked_codex_plugin_source',
       plugin_source_path: inspected.plugin_source_path,

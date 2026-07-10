@@ -33,14 +33,13 @@ import {
   resolveCodexHome,
   resolveRepoRoot,
 } from './opl-skills-parts/paths.ts';
-import { buildMasScholarSkillsProfileManifest } from './opl-skills-parts/scholarskills-profile.ts';
 import {
+  FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY,
   listFamilySkillPackSpecs,
   normalizeDomainSelection,
   type InspectFamilySkillPack,
   type InspectFamilySkillPackPluginTransport,
   type SkillPackSyncScope,
-  type SkillPackTargetProject,
   type SkillPackSpec,
   type SyncFamilySkillPack,
 } from './opl-skills-parts/registry.ts';
@@ -60,7 +59,6 @@ type ReadFamilySkillPacksOptions = {
 type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   home?: string;
   scope?: SkillPackSyncScope;
-  targetProject?: string;
   targetWorkspace?: string;
   targetQuest?: string;
   targetRoot?: string;
@@ -270,8 +268,9 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
       'mas-scholar-skills/.codex-plugin/plugin.json',
       'mas-scholar-skills/skills/mas-scholar-skills/SKILL.md',
       'mas-scholar-skills/contracts/scholar-skills-capability-modules.json',
-      'one-person-lab/contracts/opl-framework/scholar-skills-capability-modules.json',
     ],
+    content_owner: 'mas-scholar-skills',
+    framework_role: 'validation_install_sync_and_provenance_only',
     github_repo: 'gaofeng21cn/mas-scholar-skills',
     ordinary_install_update_source: 'ghcr_capability_packages_channel',
     package_channel_manifest_ref: 'ghcr.io/<owner>/one-person-lab-manifest:<tag>',
@@ -281,37 +280,16 @@ function buildCapabilityPluginDistribution(spec: SkillPackSpec) {
       'opl connect skills --domain mas-scholar-skills --json',
       'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
       'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
-      'opl connect sync-skills --domain mas-scholar-skills --scope project --target-project medautoscience --json',
       'opl connect sync-skills --domain mas-scholar-skills --scope codex --json',
     ],
     default_sync_scope: 'none_without_explicit_workspace_or_quest_target',
-    default_target_project: null,
     recommended_paper_execution_scopes: ['workspace', 'quest'],
-    project_mirror_deprecated_for_paper_execution: true,
-    project_mirror_non_default_paper_execution_path: true,
-    project_scope_requires_explicit_request: true,
     codex_scope_requires_explicit_request: true,
-    profile_driven_sync_model: {
-      surface_kind: 'opl_mas_scholar_skills_profile_sync_model',
-      profile_owner: 'MAS profile/overlay',
-      connect_role: 'install_sync_discovery_only',
-      manifest_projection_ref: 'skill_catalog.packs[].mas_scholar_skills_profile',
-      source_status_values: [
-        'materialized',
-        'available-but-not-materialized',
-        'source-missing',
-      ],
-    },
     framework_owned_capability: true,
     domain_module: false,
     brand_module: false,
-    authority_boundary: {
-      can_write_domain_truth: false,
-      can_sign_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_write_runtime_queue: false,
-    },
-    note: 'MAS Scholar Skills is an OPL-owned standalone capability plugin pack. It is not a MAS/MAG/RCA/BookForge domain module and is not an additional OPL brand module.',
+    authority_boundary: FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY,
+    note: 'MAS Scholar Skills owns professional capability content; OPL only validates, installs, syncs, and records package provenance.',
   };
 }
 
@@ -360,8 +338,11 @@ function validatePluginManifest(spec: SkillPackSpec, pluginManifestPath: string,
   if (spec.distribution_role === 'domain_agent_plugin_pack' && 'mcpServers' in manifest) {
     errors.push('standard_domain_agent_manifest_must_not_expose_standalone_mcp_servers');
   }
-  if (spec.distribution_role === 'domain_agent_plugin_pack' && manifest.name !== spec.plugin_name) {
+  if (manifest.name !== spec.plugin_name) {
     errors.push(`plugin_manifest_name_mismatch:${String(manifest.name ?? '<missing>')}`);
+  }
+  if (spec.source_kind === 'repo_plugin_installer' && manifest.skills !== './skills/') {
+    errors.push(`plugin_manifest_skills_root_mismatch:${String(manifest.skills ?? '<missing>')}`);
   }
 
   return {
@@ -595,16 +576,6 @@ function inspectFamilySkillPackAtRepoRoot(
     : trackedRepoPluginReady;
   const seriesProjection = buildFoundryAgentSeriesProjection(spec);
   const capabilityPluginDistribution = buildCapabilityPluginDistribution(spec);
-  const masScholarSkillsProfile = spec.domain_id === 'scholarskills'
-    ? buildMasScholarSkillsProfileManifest({
-        sourceRoot: repoRoot,
-        pluginSourcePath,
-        targetScope: 'inspect',
-        targetRoot: null,
-        installRoot: null,
-        installedPackIds: [],
-      })
-    : null;
   const pluginTransport: InspectFamilySkillPackPluginTransport = {
     surface_kind: 'opl_connect_plugin_transport',
     source_kind: spec.source_kind,
@@ -661,7 +632,6 @@ function inspectFamilySkillPackAtRepoRoot(
       : null,
     ...seriesProjection,
     capability_plugin_distribution: capabilityPluginDistribution,
-    mas_scholar_skills_profile: masScholarSkillsProfile,
     plugin_transport: pluginTransport,
     management_model: 'opl_managed_codex_plugin_surface',
     management_model_role: 'unified_management_semantics_transport_may_differ',
@@ -696,7 +666,6 @@ export function syncFamilySkillPackFromRepoRoot(
     home: string;
     registerPlugin?: boolean;
     scope: SkillPackSyncScope;
-    targetProject: string;
     targetRoot: string;
   }> = {},
 ) {
@@ -713,18 +682,6 @@ export function syncFamilySkillPackFromRepoRoot(
     );
   }
   const scope = options.scope ?? defaultSyncScopeForSpec(spec);
-  const targetProject = normalizeTargetProject(options.targetProject);
-  if (scope === 'project' && spec.domain_id !== 'scholarskills') {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      `Project-local skill sync is only supported for MAS Scholar Skills, not ${spec.domain_id}.`,
-      {
-        domain_id: spec.domain_id,
-        requested_scope: scope,
-        allowed_project_scope_domains: ['scholarskills'],
-      },
-    );
-  }
   const targetRoot = resolveSkillSyncTargetRoot(scope, {
     targetRoot: options.targetRoot,
   });
@@ -734,7 +691,6 @@ export function syncFamilySkillPackFromRepoRoot(
     {
       home: normalizeOptionalString(options.home) ?? undefined,
       scope,
-      targetProject: scope === 'project' ? targetProject : null,
       targetRoot,
       resolveCodexHome,
       writeMaterializedPluginCarrier: writeOplMaterializedPluginCarrier,
@@ -765,22 +721,6 @@ export function syncFamilySkillPackFromRepoRoot(
 
 function defaultSyncScopeForSpec(spec: SkillPackSpec): SkillPackSyncScope {
   return spec.domain_id === 'scholarskills' ? 'workspace' : 'codex';
-}
-
-function normalizeTargetProject(value: string | undefined | null): SkillPackTargetProject {
-  const key = normalizeOptionalString(value)?.toLowerCase().replace(/[-_]/g, '') ?? 'medautoscience';
-  if (key === 'mas' || key === 'medautoscience') {
-    return 'medautoscience';
-  }
-
-  throw new FrameworkContractError(
-    'cli_usage_error',
-    `Unknown skill sync target project: ${value}.`,
-    {
-      target_project: value,
-      allowed_target_projects: ['medautoscience', 'med-autoscience', 'mas'],
-    },
-  );
 }
 
 function resolveSkillSyncTargetRoot(
@@ -860,7 +800,6 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
   const inspectedPacks = listFamilySkillPackSpecs()
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => ({ spec, inspected: inspectFamilySkillPack(spec) }));
-  const targetProject = normalizeTargetProject(options.targetProject);
   const explicitTargetRoot = resolveSkillSyncTargetRoot(options.scope ?? 'workspace', {
     targetWorkspace: options.targetWorkspace,
     targetQuest: options.targetQuest,
@@ -871,17 +810,6 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
       continue;
     }
     const scope = options.scope ?? defaultSyncScopeForSpec(spec);
-    if (scope === 'project' && spec.domain_id !== 'scholarskills') {
-      throw new FrameworkContractError(
-        'cli_usage_error',
-        `Project-local skill sync is only supported for MAS Scholar Skills, not ${spec.domain_id}.`,
-        {
-          domain_id: spec.domain_id,
-          requested_scope: scope,
-          allowed_project_scope_domains: ['scholarskills'],
-        },
-      );
-    }
     if ((scope === 'workspace' || scope === 'quest') && spec.domain_id !== 'scholarskills') {
       throw new FrameworkContractError(
         'cli_usage_error',
@@ -908,14 +836,12 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
       if (shouldSkipImplicitScholarSkillsSync(spec, options)) {
         return {
           scope: 'workspace' as const,
-          targetProject: null,
           targetRoot: null,
         };
       }
       const scope = options.scope ?? defaultSyncScopeForSpec(spec);
       return {
         scope,
-        targetProject: scope === 'project' ? targetProject : null,
         targetRoot: resolveSkillSyncTargetRoot(scope, {
           targetWorkspace: options.targetWorkspace,
           targetQuest: options.targetQuest,

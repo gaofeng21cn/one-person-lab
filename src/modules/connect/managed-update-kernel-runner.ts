@@ -8,11 +8,6 @@ import {
 import { rollbackManagedModulePackageChannel } from './system-installation/module-package-channel.ts';
 import { runOplSystemAction } from './system-installation/system-actions.ts';
 import { runOplStartupMaintenance } from './system-installation/startup-maintenance.ts';
-import {
-  rollbackManagedScholarSkillsPackageChannel,
-  runScholarSkillsSourceMaintenance,
-  scholarSkillsStateForAgentPackageChannel,
-} from './system-installation/scholarskills-package-channel.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
@@ -348,28 +343,6 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
         });
       }
     }
-    try {
-      const result = rollbackManagedScholarSkillsPackageChannel() as unknown as Record<string, unknown>;
-      targets.push({
-        target_type: 'module',
-        target_id: 'scholarskills',
-        status: 'completed',
-        reason: 'package_channel_previous_root_restored',
-        action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
-        result,
-      });
-    } catch (error) {
-      const normalized = normalizeError(error);
-      targets.push({
-        target_type: 'module',
-        target_id: 'scholarskills',
-        status: 'manual_required',
-        reason: 'package_channel_rollback_unavailable',
-        action: MANAGED_UPDATE_OWNER_ACTIONS.revert,
-        result: null,
-        error: normalized,
-      });
-    }
     const manualCount = targets.filter((target) => target.status === 'manual_required').length;
     const completedCount = targets.filter((target) => target.status === 'completed').length;
     const status: AdapterExecutionResult['status'] = completedCount > 0 && manualCount === 0 ? 'completed' : 'manual_required';
@@ -460,46 +433,6 @@ function runAgentPackageAdapter(operation: ManagedUpdateKernelInput['operation']
       result,
     });
   }
-  const scholarSkillsState = scholarSkillsStateForAgentPackageChannel();
-  if (
-    scholarSkillsState.install_origin !== 'managed_root'
-    && scholarSkillsState.install_origin !== 'missing'
-  ) {
-    targets.push({
-      target_type: 'module',
-      target_id: 'scholarskills',
-      status: 'manual_required',
-      reason: 'developer_or_dirty_checkout_visible',
-      action: null,
-      result: null,
-    });
-  } else if (
-    scholarSkillsState.health_status === 'dirty'
-    || scholarSkillsState.health_status === 'invalid_checkout'
-    || scholarSkillsState.git?.dirty
-  ) {
-    targets.push({
-      target_type: 'module',
-      target_id: 'scholarskills',
-      status: 'manual_required',
-      reason: 'developer_or_dirty_checkout_visible',
-      action: null,
-      result: null,
-    });
-  } else {
-    const scholarSkillsResult = runScholarSkillsSourceMaintenance() as unknown as Record<string, unknown>;
-    targets.push({
-      target_type: 'module',
-      target_id: 'scholarskills',
-      status: moduleStatus(scholarSkillsResult),
-      reason: scholarSkillsState.install_origin === 'missing'
-        ? 'module_missing'
-        : 'capability_packages_refresh',
-      action: scholarSkillsState.install_origin === 'missing' ? 'install' : 'update',
-      result: scholarSkillsResult,
-    });
-  }
-
   const manualCount = targets.filter((target) => target.status === 'manual_required').length;
   const completedCount = targets.filter((target) => target.status === 'completed').length;
   const status: AdapterExecutionResult['status'] = manualCount > 0 ? 'manual_required' : 'completed';

@@ -37,7 +37,7 @@ Machine boundary: 本文是人读目标态参考。机器真相继续归 contrac
 | `agent_package_carrier_adapter` | Codex Plugin/local marketplace、OPL App shortcuts、workflow profile、runtime/app release、MCP/Web/native 等 carrier 投影；只提供可见面、route、readback、reload guidance 或 owner-specific action refs。 |
 | `external_source_connector` | PubMed 等外部资源的只读连接器，返回 normalized source refs、request/read receipt 和 no-authority boundary。 |
 | `generated_drift_manifest` | source input 与 generated artifact 的对齐状态。 |
-| `profile_driven_skill_sync_manifest` | 对 MAS Scholar Skills 等 profile/overlay 驱动的 skill pack，同步输出 required/default pack、安装落点、source status 与 false-authority boundary。 |
+| `capability_package_sync_receipt` | 从外部 package 实际 plugin/Skill 目录记录 source head、安装落点、materialized skill ids 与 false-authority boundary；不维护 domain capability catalog。 |
 
 Workspace 级 L4 的 Connect 对象模型必须把 semantic authority 与 transport/install evidence 拆开。最低模型如下：
 
@@ -100,9 +100,9 @@ Connect 暴露外部资源连接器时，必须保持“平台接入”和“领
 
 MAS Scholar Skills 同步模型：
 
-- `opl connect sync-skills --domain mas-scholar-skills` 是当前入口；旧 `--domain scholarskills` 只作为 legacy alias 兼容。无 workspace/quest target 时只输出 skipped/readback，不把 skill 写入 MAS repo 或系统 Codex。
-- MAS profile/overlay 决定 required/default skill pack；Connect 只按显式 registry/profile manifest 分发、安装、同步和发现，不判断 MAS 质量、paper truth、owner receipt、typed blocker 或 runtime queue。
-- 当前默认 medical-paper professional specialist pack 是 `medical-research-lit`、`medical-manuscript-writing`、`medical-manuscript-review`、`medical-figure-design`、`medical-figure-style`、`medical-figure-composer`、`medical-statistical-review`、`medical-table-design`、`medical-submission-prep`、`medical-data-governance`。`medical-figure-style` / `medical-figure-composer` 是 Display 子 Skill，不新增 active module。MAS 的 stage 主提示词不由 Connect 同步；Connect 只同步外部专业 Skill 和资源连接能力。source repo 若只有 `mas-scholar-skills` 总入口，所有未物化 specialist pack 必须在 manifest 中显示 `available-but-not-materialized` 或 `source-missing`，不得靠目录启发式猜测。`medical-data-governance` 可以消费 OPL locator/index/lifecycle/receipt primitives，但临床数据 body、source readiness verdict、不可逆数据 mutation、owner receipt、typed blocker 和 publication readiness 仍归 MAS / domain owner。
+- `opl connect sync-skills --domain mas-scholar-skills` 是 package owner-facing 入口；无 workspace/quest target 时只输出 skipped/readback，不把 Skill 写入 MAS repo 或系统 Codex。
+- Connect 按外部 plugin manifest 和实际 Skill 目录分发、安装、同步和发现，不维护 required/default profile，也不判断 MAS 质量、paper truth、owner receipt、typed blocker 或 runtime queue。
+- MAS Scholar Skills 的专业 Skill 清单和内容由外部 package 的 `.codex-plugin/plugin.json` 与实际 `skills/*/SKILL.md` 持有；Connect 不维护 required/default 医学列表，也不为未物化名称生成占位状态。MAS stage prompt 不由 Connect 同步；Connect 只校验并同步 package owner 已物化的 Skill，记录 target-bound receipt。临床数据 body、source readiness verdict、不可逆 mutation、owner receipt、typed blocker 和 publication readiness 仍归 MAS / domain owner。
 - workspace/quest scope 的默认落点是 `<target>/.codex/skills/`；project scope 仍是显式、非默认、deprecated-for-paper-execution 的 MAS project-local mirror；codex scope 仍需显式请求。
 - 这些 Skill 包是 MAS 可消费的同步能力源，不是 MAS domain truth、runtime owner gate、owner receipt、typed blocker、artifact authority 或 publication/export readiness。
 

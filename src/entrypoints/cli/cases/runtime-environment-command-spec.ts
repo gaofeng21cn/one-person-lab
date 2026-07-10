@@ -1,6 +1,6 @@
+import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import {
   buildRuntimeEnvironmentBuildReadback,
@@ -21,6 +21,7 @@ import {
   type RuntimeEnvironmentTargetInput,
   type RuntimeEnvironmentVerifyInput,
 } from '../../../modules/runway/runtime-environment-substrate.ts';
+import { buildOplModules } from '../../../modules/connect/index.ts';
 import {
   assertNoArgs,
   buildUsageError,
@@ -47,14 +48,22 @@ function currentPlatformId() {
   return `${process.platform}-${process.arch}`;
 }
 
-function builtInRequirementProfilePath(domainId?: string, profileId?: string) {
+function externalRequirementProfilePath(domainId?: string, profileId?: string) {
   if (domainId !== 'mas' || profileId !== 'display') {
     return null;
   }
-  return path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '../../../../contracts/opl-framework/runtime-environment-profiles/mas-display.json',
+  const scholarSkills = buildOplModules({ profile: 'fast' }).modules.modules
+    .find((module) => module.module_id === 'scholarskills');
+  if (!scholarSkills) {
+    return null;
+  }
+  const candidate = path.join(
+    scholarSkills.checkout_path,
+    'packs',
+    'medical-display-core',
+    'renderer_dependency_profile.json',
   );
+  return fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
 }
 
 function assignRootArg(
@@ -253,7 +262,7 @@ function parsePrepareArgs(
     parsed.platformId ??= currentPlatformId();
     parsed.artifactRoot ??= process.cwd();
     parsed.rootOption ??= '--artifact-root';
-    parsed.requirementProfilePath ??= builtInRequirementProfilePath(parsed.domainId, parsed.profileId) ?? undefined;
+    parsed.requirementProfilePath ??= externalRequirementProfilePath(parsed.domainId, parsed.profileId) ?? undefined;
   }
   const required: Array<keyof RuntimeEnvironmentPrepareInput> = [
     'domainId',

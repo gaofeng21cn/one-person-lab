@@ -259,7 +259,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `capability_map` 还必须为每个能力声明 `improvement_tokens`、`canonical_target_paths`、`verification_refs`、`forbidden_surfaces` 和 owner closeout boundary。这样 OMA / Agent Lab 可以把反馈和 suite failure 路由到单源文件与验证入口；命中不到时返回 developer work-order / typed blocker 路径，而不是靠宽泛关键词猜 patch target。
 - 默认归属是内置在 domain agent；只有跨 workspace 复用、体量大、引用/模板/脚本多、独立版本维护、多个 stage 反复调用或需要 Codex 原生 discovery 时，才外置为专业 pack、reference pack 或 connector。
 - Connector 只负责资源访问、source refs、invocation refs 和 receipt，不承接专业判断；contract module 只负责机器边界，不伪装成 true Skill。
-- MAS stage prompt / projection 继续归 MAS；八个医学论文 professional specialist skills 归 `mas-scholar-skills` 并通过 OPL Connect 同步；source / intake / omics 不作为 active 外置合同，按各自 owner 内置或后续稳定后再评估。
+- MAS stage prompt / projection 继续归 MAS；professional specialist skill 的清单与内容归 `mas-scholar-skills` 外部 package，通过 OPL Connect 从实际 `skills/*/SKILL.md` 校验并按需同步；OPL 不维护医学 Skill ID 列表、required/default profile 或内容镜像。
 
 ## 2026-07-02
 
@@ -348,7 +348,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：外部科学 Skill 库通过 OPL Connect 可发现和选择性同步，MAS 不全量装载
 
-原因：`K-Dense-AI/scientific-agent-skills` 这类大型 Agent Skills 库对 MAS 有参考价值，也能覆盖组学、单细胞、Nextflow、RDKit、PyHealth 等罕见专科任务。但全量安装会扩大上下文、混淆 MAS 默认八个医学论文专业 Skill 的单源维护边界，并把外部库误读成 MAS 权威。OPL Connect 应承接 source registry、manifest index、search/inspect 和 selective sync，MAS 仍决定何时请求外部能力以及是否采纳候选结果。
+原因：`K-Dense-AI/scientific-agent-skills` 这类大型 Agent Skills 库对 MAS 有参考价值，也能覆盖罕见专科任务。但全量安装会扩大上下文、混淆 `mas-scholar-skills` package owner 声明的专业能力边界，并把外部库误读成 MAS 权威。OPL Connect 应承接 source registry、manifest index、search/inspect 和 selective sync，MAS 仍决定何时请求外部能力以及是否采纳候选结果。
 
 影响：
 
@@ -454,7 +454,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：framework capability package 复用 GHCR capability packages channel，不新增专属 source manager
 
-原因：`MAS Scholar Skills` 是 OPL-owned 学术能力模块库，供 MAS/MAG/RCA/OMA 等 agent 同步到具体 workspace / quest 使用。它需要随普通 App / non-development 路径自动安装、更新、回滚和投影，但不能因此新建一套独立 git clone / pull / path manager；否则普通用户会出现 domain module package channel 与 capability skill source 两套维护路径，增加运维成本，也会让 App 更新与 daily package channel 的 source fingerprint 判断失真。
+原因：`MAS Scholar Skills` 是外部仓持有内容真相的 professional capability package；OPL 只负责通用 package 校验、安装、更新、回滚、workspace / quest 同步和 provenance receipt。它不能在 OPL 内复制医学 catalog、validator、artifact engine、profile 或 plugin mirror，也不能新建专属 git clone / pull / path manager。
 
 影响：
 
@@ -462,7 +462,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `.github/workflows/daily-package-channel.yml` 继续通过 `packages.yml` 发布统一 package channel；change detector 比较 package source fingerprint，覆盖 domain module、Foundry module 与 framework capability package。新增 capability package 必须复用这条 channel，而不是新建 daily job 或 source manager。
 - `opl update status/apply/rollback --component capability_packages --json` 与 `opl system startup-maintenance --json` 把 MAS Scholar Skills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
 - `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ... --json` 仍是论文工作目录的 Codex discovery skill 同步入口。同步来源是当前 managed package，落点是目标 workspace / quest 的 `.codex/skills/mas-scholar-skills/`，不是系统 Codex skill registry，也不是 MAS 程序仓默认 mirror。
-- 新增 framework capability package 的统一步骤是：加入 package distribution spec、archive / manifest / checksum 生成、release discipline gate、managed update/startup/workspace sync 测试和人读文档；不得把文档、gallery 中间产物、render cache 或 heavy generated assets 默认塞进 git/package。
+- 新增 framework capability package 的统一步骤是：声明通用 module/package spec、archive / manifest / checksum、release discipline gate、managed update/startup/workspace sync 测试和人读 owner route；专业 skill IDs、schema 与内容合同留在 package owner 仓，不复制进 OPL contract catalog。
 - 该决策不改变 domain authority。MAS Scholar Skills package channel readiness 不授权 MAS/MAG/RCA/OMA domain truth、quality verdict、artifact authority、owner receipt、typed blocker、runtime queue 或 publication/export readiness。
 
 ## 2026-06-26

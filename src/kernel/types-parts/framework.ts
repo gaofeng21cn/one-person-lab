@@ -16,7 +16,6 @@ import type {
 } from './brand-contracts.ts';
 import type { PackBundleContract } from './pack-bundle.ts';
 import type { PackOsContract } from './pack-os.ts';
-import type { ScholarSkillsCapabilityModulesContract } from './scholar-skills.ts';
 import type { TargetOperatingArchitectureContract } from './target-operating-architecture.ts';
 
 export interface WorkstreamsRegistry {
@@ -57,7 +56,6 @@ export interface FrameworkContracts {
   observabilitySemanticConventions: ObservabilitySemanticConventionsContract;
   packOs: PackOsContract;
   packBundle: PackBundleContract;
-  scholarSkillsCapabilityModules: ScholarSkillsCapabilityModulesContract;
   standardAgentPrinciples: StandardAgentPrinciplesContract;
 }
 
@@ -124,7 +122,6 @@ export interface ContractValidationEntry {
     | 'observability_semantic_conventions'
     | 'pack_os'
     | 'pack_bundle'
-    | 'scholarskills_capability_modules'
     | 'standard_agent_principles';
   file: string;
   schema_version: string;

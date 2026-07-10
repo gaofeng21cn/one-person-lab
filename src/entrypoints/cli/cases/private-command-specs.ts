@@ -278,12 +278,11 @@ export function buildInternalCommandSpecs(
       },
     },
     'skill-sync': {
-      usage: 'opl skill sync [--domain <domain_id>] [--scope <project|codex|workspace|quest>] [--target-project <project_id>] [--target-workspace <path>] [--target-quest <path>] [--target-root <path>] [--home <home_path>] [--quiet]',
+      usage: 'opl skill sync [--domain <domain_id>] [--scope <codex|workspace|quest>] [--target-workspace <path>] [--target-quest <path>] [--target-root <path>] [--home <home_path>] [--quiet]',
       summary: 'Sync family skill packs to their declared target scope without changing default Codex runtime semantics.',
       examples: [
         'opl skill sync',
         'opl skill sync --domain medautoscience',
-        'opl skill sync --domain mas-scholar-skills --scope project --target-project medautoscience',
         'opl skill sync --domain mas-scholar-skills --scope workspace --target-workspace /path/to/workspace',
         'opl skill sync --domain mas-scholar-skills --scope quest --target-quest /path/to/quest',
         'opl skill sync --domain mas-scholar-skills --scope codex',
@@ -296,7 +295,6 @@ export function buildInternalCommandSpecs(
           domains: parsed.domains,
           home: parsed.home,
           scope: parsed.scope,
-          targetProject: parsed.targetProject,
           targetWorkspace: parsed.targetWorkspace,
           targetQuest: parsed.targetQuest,
           targetRoot: parsed.targetRoot,

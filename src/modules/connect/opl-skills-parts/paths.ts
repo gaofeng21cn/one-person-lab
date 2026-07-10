@@ -114,11 +114,7 @@ export function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
     );
   }
 
-  return resolveFirstExistingPath([
-    path.join(repoRoot, '.codex-plugin', 'plugin.json'),
-    path.join(repoRoot, 'plugins', spec.canonical_plugin_name, '.codex-plugin', 'plugin.json'),
-    path.join(repoRoot, 'plugins', spec.plugin_name, '.codex-plugin', 'plugin.json'),
-  ]);
+  return path.join(repoRoot, '.codex-plugin', 'plugin.json');
 }
 
 export function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
@@ -126,11 +122,7 @@ export function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
     return path.join(repoRoot, 'agent', 'primary_skill', 'SKILL.md');
   }
 
-  return resolveFirstExistingPath([
-    path.join(repoRoot, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
-    path.join(repoRoot, 'plugins', spec.canonical_plugin_name, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
-    path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md'),
-  ]);
+  return path.join(repoRoot, 'skills', spec.canonical_plugin_name, 'SKILL.md');
 }
 
 export function buildStandardPluginCarrierSkillPath(spec: SkillPackSpec, repoRoot: string) {

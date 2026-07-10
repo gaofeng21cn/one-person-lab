@@ -175,14 +175,7 @@ export function createDomainModuleRemote(input: {
 export function createScholarSkillsRemote() {
   return createGitModuleRemoteFixture('mas-scholar-skills', {
     extraFiles: {
-      '.codex-plugin/plugin.json': fs.readFileSync(
-        path.join('plugins', 'mas-scholar-skills', '.codex-plugin', 'plugin.json'),
-        'utf8',
-      ),
-      'skills/mas-scholar-skills/SKILL.md': fs.readFileSync(
-        path.join('plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md'),
-        'utf8',
-      ),
+      ...scholarSkillsPluginFixtureFiles('startup-maintenance-managed-source'),
       'contracts/scholar-skills-capability-modules.json': JSON.stringify({
         fixture: 'startup-maintenance-managed-source',
       }, null, 2),
@@ -192,6 +185,35 @@ export function createScholarSkillsRemote() {
       'outputs/intermediate.json': '{}\n',
     },
   });
+}
+
+export function scholarSkillsPluginFixtureFiles(fixture: string) {
+  return {
+    '.codex-plugin/plugin.json': JSON.stringify({
+      name: 'mas-scholar-skills',
+      skills: './skills/',
+    }, null, 2),
+    'skills/mas-scholar-skills/SKILL.md': [
+      '---',
+      'name: mas-scholar-skills',
+      'description: Route professional capability tasks through the external package.',
+      '---',
+      '',
+      '# MAS Scholar Skills',
+      '',
+      `Fixture: ${fixture}`,
+      '',
+    ].join('\n'),
+    'skills/example-specialist/SKILL.md': [
+      '---',
+      'name: example-specialist',
+      'description: External package-owned specialist fixture.',
+      '---',
+      '',
+      '# Example Specialist',
+      '',
+    ].join('\n'),
+  };
 }
 
 export function createOmaGeneratedSurfaceRemote(input: {

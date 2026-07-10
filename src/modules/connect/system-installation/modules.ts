@@ -486,6 +486,10 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
     ['redcube-ai', 'redcube'],
     ['redcube_ai', 'redcube'],
     ['rca', 'redcube'],
+    ['mas-scholar-skills', 'scholarskills'],
+    ['mas_scholar_skills', 'scholarskills'],
+    ['scholar-skills', 'scholarskills'],
+    ['scholar_skills', 'scholarskills'],
   ]);
   const canonical = aliases.get(normalized) ?? normalized;
   const spec = DOMAIN_MODULE_SPECS.find((entry) => entry.module_id === canonical);

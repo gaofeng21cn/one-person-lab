@@ -100,7 +100,30 @@ test('runtime env CLI exposes dry-run projections and false-ready guards', () =>
 });
 
 test('ordinary opl env prepare supplies MAS display defaults without host fallback', () => {
-  const env = stateEnv('ordinary-default-');
+  const scholarSkillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-scholarskills-'));
+  const profilePath = path.join(
+    scholarSkillsRoot,
+    'packs',
+    'medical-display-core',
+    'renderer_dependency_profile.json',
+  );
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, JSON.stringify({
+    schema_version: 1,
+    surface_kind: 'opl_dependency_requirement_profile',
+    profiles: [{
+      profile_id: 'r_ggplot2_fixture_v1',
+      runtime_binaries: [],
+      language_packages: {
+        r: [{ name: 'ggplot2', required: true }],
+        python: [],
+      },
+    }],
+  }, null, 2), 'utf8');
+  const env = {
+    ...stateEnv('ordinary-default-'),
+    OPL_MODULE_PATH_SCHOLARSKILLS: scholarSkillsRoot,
+  };
   const paperRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-env-default-paper-'));
 
   try {
@@ -117,12 +140,13 @@ test('ordinary opl env prepare supplies MAS display defaults without host fallba
     assert.equal(readback.prepare.host_package_fallback_allowed, false);
     assert.match(
       readback.prepare.requirement_profile_identity.requirement_profile_ref,
-      /runtime-environment-profiles\/mas-display\.json$/,
+      /packs\/medical-display-core\/renderer_dependency_profile\.json$/,
     );
     assert.equal(readback.prepare.managed_required_r_packages.includes('ggplot2'), true);
     assert.equal(readback.prepare.run_context_ref, null);
   } finally {
     fs.rmSync(paperRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRoot, { recursive: true, force: true });
   }
 });
 

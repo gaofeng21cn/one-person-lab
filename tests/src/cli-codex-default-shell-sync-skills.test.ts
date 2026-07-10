@@ -351,9 +351,6 @@ test('opl connect sync-skills registers tracked family plugin sources without wr
     assert.ok(scholarSkillsPack);
     assert.equal(scholarSkillsPack.sync_status, 'skipped');
     assert.equal(scholarSkillsPack.sync_scope, 'workspace');
-    assert.equal(scholarSkillsPack.target_project, null);
-    assert.equal(scholarSkillsPack.target_root, null);
-    assert.equal(scholarSkillsPack.registry_repo_root, null);
     assert.equal(scholarSkillsPack.installer_result.source, 'workspace_or_quest_local_codex_skill');
     assert.equal(scholarSkillsPack.installer_result.workspace_or_quest_local_skill.status, 'skipped');
     assert.equal(
@@ -565,7 +562,6 @@ test('opl connect sync-skills follows Developer Mode sibling checkouts over mana
     const scholarSkillsPack = output.skill_sync.packs.find((entry: { domain_id: string }) => entry.domain_id === 'scholarskills');
     assert.equal(scholarSkillsPack.sync_status, 'skipped');
     assert.equal(scholarSkillsPack.sync_scope, 'workspace');
-    assert.equal(scholarSkillsPack.target_root, null);
     assert.equal(
       fs.existsSync(path.join(workspaceRoot, 'med-autoscience', 'plugins', 'mas-scholar-skills', 'skills', 'mas-scholar-skills', 'SKILL.md')),
       false,

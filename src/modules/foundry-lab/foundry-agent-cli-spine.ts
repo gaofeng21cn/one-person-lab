@@ -7,7 +7,6 @@ import {
   buildEvidenceGroundedConnectSubstrate,
   listDefaultOplDomainModuleSpecs,
   parseGithubRepoFromUrl,
-  SCHOLARSKILLS_PACKAGE_SPEC,
 } from '../connect/index.ts';
 import {
   buildEvidenceGroundedDecisionAgentProfileAtlasCatalog,
@@ -362,8 +361,7 @@ function buildFeedbackSelfEvolutionTrigger(peer: FoundryAgentPeer, contract: Jso
 }
 
 function resolveDeveloperModeRepoTarget(peer: FoundryAgentPeer) {
-  const moduleSpec = listDefaultOplDomainModuleSpecs().find((entry) => entry.module_id === peer.domain_id)
-    ?? (peer.domain_id === SCHOLARSKILLS_PACKAGE_SPEC.module_id ? SCHOLARSKILLS_PACKAGE_SPEC : null);
+  const moduleSpec = listDefaultOplDomainModuleSpecs().find((entry) => entry.module_id === peer.domain_id);
   if (!moduleSpec) {
     throw new FrameworkContractError(
       'contract_shape_invalid',

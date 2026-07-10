@@ -106,7 +106,7 @@ test('modules and module actions manage OPL-owned domain module installs and upd
 
   try {
     const initial = runCli(['connect', 'modules'], env) as any;
-    assert.equal(initial.modules.summary.total_modules_count, 6);
+    assert.equal(initial.modules.summary.total_modules_count, 7);
     const initialMasDependencyReadback = initial.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
     assert.deepEqual(
       initialMasDependencyReadback?.capability_dependencies.map((dependency: any) => ({

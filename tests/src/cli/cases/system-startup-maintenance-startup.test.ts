@@ -1,8 +1,9 @@
-import { assert, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { listManagedInstallUpdateReceipts } from '../../../../src/modules/connect/managed-install-update-ledger.ts';
 import {
   createStartupDomainModuleRemotes,
   removeStartupDomainModuleRemotes,
+  scholarSkillsPluginFixtureFiles,
   withCliTimeout,
   writeStartupPackageChannelFixture,
 } from './system-startup-maintenance-cases/shared.ts';
@@ -61,16 +62,20 @@ test('system startup-maintenance installs clean managed modules and returns App 
           }>;
           capability_targets: Array<{
             target_id: string;
-            capability_plugin_id: string;
             status: string;
             reason: string;
             action: string | null;
-            checkout_path: string;
-            managed_checkout_path: string;
-            git_after: { head_sha: string | null } | null;
-            source_policy: { configured_by: string; app_managed_auto_update: boolean };
-            workspace_sync_command_ref: string;
-            quest_sync_command_ref: string;
+            result: {
+              module: {
+                scope: string;
+                managed_checkout_path: string;
+                git: { head_sha: string | null } | null;
+                source_policy: { configured_by: string; package_channel_auto_update: boolean };
+              };
+              turnkey: {
+                skill_sync: { command_preview: string[] };
+              };
+            };
           }>;
           module_targets: Array<{
             target_id: string;
@@ -119,29 +124,25 @@ test('system startup-maintenance installs clean managed modules and returns App 
     assert.equal(output.system_action.details.capability_summary.manual_required_targets_count, 0);
     assert.deepEqual(output.system_action.details.capability_targets.map((target) => [
       target.target_id,
-      target.capability_plugin_id,
+      target.result.module.scope,
       target.status,
       target.reason,
       target.action,
-      target.source_policy.configured_by,
-      target.source_policy.app_managed_auto_update,
+      target.result.module.source_policy.configured_by,
+      target.result.module.source_policy.package_channel_auto_update,
     ]), [
-      ['scholarskills', 'mas-scholar-skills', 'completed', 'scholarskills_package_channel_missing', 'install', 'agent_latest_package_channel', true],
+      ['scholarskills', 'framework_capability_package', 'completed', 'module_missing', 'install', 'agent_latest_package_channel', true],
     ]);
-    assert.equal(
-      output.system_action.details.capability_targets[0].workspace_sync_command_ref,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
+    assert.deepEqual(
+      output.system_action.details.capability_targets[0].result.turnkey.skill_sync.command_preview,
+      ['opl', 'connect', 'sync-skills', '--domain', 'mas-scholar-skills', '--scope', 'workspace', '--target-workspace', '<workspace-root>'],
     );
     assert.equal(
-      output.system_action.details.capability_targets[0].quest_sync_command_ref,
-      'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
-    );
-    assert.equal(
-      output.system_action.details.capability_targets[0].managed_checkout_path,
+      output.system_action.details.capability_targets[0].result.module.managed_checkout_path,
       path.join(modulesRoot, 'mas-scholar-skills'),
     );
     assert.equal(
-      output.system_action.details.capability_targets[0].git_after?.head_sha,
+      output.system_action.details.capability_targets[0].result.module.git?.head_sha,
       'scholarskills-v1-sha',
     );
     assert.equal(
@@ -328,6 +329,13 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
   });
 
   try {
+    const retiredSkillRoot = path.join(workspaceRoot, '.codex', 'skills', 'retired-specialist');
+    fs.mkdirSync(retiredSkillRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(retiredSkillRoot, '.opl-connect-skill-sync.json'),
+      JSON.stringify({ surface_kind: 'opl_connect_managed_mas_scholar_skills_specialist_dir' }),
+      'utf8',
+    );
     const startup = withCliTimeout('120000', () => runCli(['system', 'startup-maintenance'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
@@ -348,8 +356,12 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
           capability_targets: Array<{
             status: string;
             action: string | null;
-            managed_checkout_path: string;
-            git_after: { head_sha: string | null } | null;
+            result: {
+              module: {
+                managed_checkout_path: string;
+                git: { head_sha: string | null } | null;
+              };
+            };
           }>;
         };
       };
@@ -358,8 +370,8 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
     assert.deepEqual(startup.system_action.details.capability_targets.map((target) => [
       target.status,
       target.action,
-      target.managed_checkout_path,
-      target.git_after?.head_sha,
+      target.result.module.managed_checkout_path,
+      target.result.module.git?.head_sha,
     ]), [
       ['completed', 'install', path.join(modulesRoot, 'mas-scholar-skills'), 'scholarskills-v1-sha'],
     ]);
@@ -399,8 +411,13 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
                 authority_flags: {
                   can_write_domain_truth: boolean;
                   can_write_runtime_queue: boolean;
+                  can_write_owner_receipt: boolean;
+                  can_write_paper_body: boolean;
+                  can_write_artifact_authority: boolean;
+                  can_authorize_publication_readiness: boolean;
                   can_install_system_codex_skill_by_default?: boolean;
                 };
+                materialized_skill_ids: string[];
               };
               copy: {
                 copied_roots: string[];
@@ -425,6 +442,8 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
       'gallery',
     ]);
     assert.equal(fs.existsSync(path.join(skillRoot, 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(workspaceRoot, '.codex', 'skills', 'example-specialist', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(retiredSkillRoot), false);
     assert.equal(fs.existsSync(path.join(skillRoot, 'contracts', 'scholar-skills-capability-modules.json')), true);
     assert.equal(fs.existsSync(path.join(skillRoot, 'docs', 'README.md')), true);
     assert.equal(fs.existsSync(path.join(skillRoot, 'gallery', 'medical-display', 'gallery_snapshot.json')), true);
@@ -436,11 +455,96 @@ test('system startup-maintenance makes managed ScholarSkills source available fo
     assert.equal(receipt.source_head, 'scholarskills-v1-sha');
     assert.equal(receipt.target_scope, 'workspace');
     assert.equal(receipt.target_root, workspaceRoot);
+    assert.deepEqual(receipt.materialized_skill_ids, ['example-specialist', 'mas-scholar-skills']);
     assert.equal(receipt.authority_flags.can_write_domain_truth, false);
     assert.equal(receipt.authority_flags.can_write_runtime_queue, false);
+    assert.equal(receipt.authority_flags.can_write_owner_receipt, false);
+    assert.equal(receipt.authority_flags.can_write_paper_body, false);
+    assert.equal(receipt.authority_flags.can_write_artifact_authority, false);
+    assert.equal(receipt.authority_flags.can_authorize_publication_readiness, false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
     removeStartupDomainModuleRemotes(remotes);
+  }
+});
+
+test('ScholarSkills sync rejects identity drift and unmanaged skill collisions', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-guard-home-'));
+  const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-guard-source-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-guard-workspace-'));
+  const fixtureFiles = scholarSkillsPluginFixtureFiles('sync-guard');
+  for (const [relativePath, content] of Object.entries(fixtureFiles)) {
+    const filePath = path.join(sourceRoot, relativePath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, content, 'utf8');
+  }
+  const manifestPath = path.join(sourceRoot, '.codex-plugin', 'plugin.json');
+  const env = {
+    HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, 'codex-home'),
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT: sourceRoot,
+  };
+
+  try {
+    fs.writeFileSync(manifestPath, JSON.stringify({
+      name: 'wrong-package',
+      skills: './wrong-skills/',
+    }), 'utf8');
+    const inspected = runCli(['connect', 'skills', '--domain', 'mas-scholar-skills'], env) as any;
+    const pack = inspected.skill_catalog.packs[0];
+    assert.equal(pack.plugin_manifest_valid, false);
+    assert.equal(pack.ready_to_sync, false);
+    assert.deepEqual(pack.plugin_manifest_errors, [
+      'plugin_manifest_name_mismatch:wrong-package',
+      'plugin_manifest_skills_root_mismatch:./wrong-skills/',
+    ]);
+
+    fs.writeFileSync(manifestPath, fixtureFiles['.codex-plugin/plugin.json'], 'utf8');
+    const collisionRoot = path.join(workspaceRoot, '.codex', 'skills', 'example-specialist');
+    fs.mkdirSync(collisionRoot, { recursive: true });
+    fs.writeFileSync(path.join(collisionRoot, 'USER.md'), 'preserve me\n', 'utf8');
+    const collision = runCliFailure([
+      'connect',
+      'sync-skills',
+      '--domain',
+      'mas-scholar-skills',
+      '--scope',
+      'workspace',
+      '--target-workspace',
+      workspaceRoot,
+    ], env);
+    assert.equal(collision.status, 2);
+    assert.equal(collision.payload.error.code, 'contract_shape_invalid');
+    assert.equal(collision.payload.error.details.skill_id, 'example-specialist');
+    assert.equal(fs.readFileSync(path.join(collisionRoot, 'USER.md'), 'utf8'), 'preserve me\n');
+
+    const codexCollisionRoot = path.join(homeRoot, 'codex-home', 'skills', 'mas-scholar-skills');
+    fs.mkdirSync(codexCollisionRoot, { recursive: true });
+    fs.writeFileSync(path.join(codexCollisionRoot, 'USER.md'), 'preserve codex skill\n', 'utf8');
+    const codexCollision = runCliFailure([
+      'connect',
+      'sync-skills',
+      '--domain',
+      'mas-scholar-skills',
+      '--scope',
+      'codex',
+    ], env);
+    assert.equal(codexCollision.status, 2);
+    assert.equal(codexCollision.payload.error.code, 'contract_shape_invalid');
+    assert.equal(codexCollision.payload.error.details.skill_id, 'mas-scholar-skills');
+    assert.equal(
+      fs.readFileSync(path.join(codexCollisionRoot, 'USER.md'), 'utf8'),
+      'preserve codex skill\n',
+    );
+
+    const retired = runCliFailure(['scholar-skills', 'catalog'], env);
+    assert.equal(retired.status, 2);
+    assert.equal(retired.payload.error.code, 'unknown_command');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

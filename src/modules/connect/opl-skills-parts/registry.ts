@@ -9,13 +9,23 @@ import {
 export type SkillPackInstallerKind = 'bash' | 'node';
 export type SkillPackSourceKind = 'opl_standard_codex_carrier' | 'repo_plugin_installer';
 export type SkillPackDistributionRole = 'domain_agent_plugin_pack' | 'framework_capability_plugin_pack';
-export type SkillPackSyncScope = 'project' | 'codex' | 'workspace' | 'quest';
-export type SkillPackTargetProject = 'medautoscience';
+export type SkillPackSyncScope = 'codex' | 'workspace' | 'quest';
 export type StandardAgentSeriesMembership = 'standard_domain_agent';
 export type SkillPackSourceKindRole =
   | 'standard_source_model_not_agent_membership_or_status'
   | 'transport_install_detail_not_agent_membership_or_status';
 export type SkillPackManagementModel = 'opl_managed_codex_plugin_surface';
+
+export const FRAMEWORK_CAPABILITY_PACKAGE_AUTHORITY_BOUNDARY = {
+  can_write_domain_truth: false,
+  can_sign_owner_receipt: false,
+  can_create_typed_blocker: false,
+  can_write_runtime_queue: false,
+  can_write_owner_receipt: false,
+  can_write_paper_body: false,
+  can_write_artifact_authority: false,
+  can_authorize_publication_readiness: false,
+} as const;
 
 export type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube' | 'oplmetaagent' | 'oplbookforge' | 'scholarskills';
@@ -74,7 +84,6 @@ export type InspectFamilySkillPack = {
   command_surface_spine: Record<string, unknown>;
   mcp_projection: Record<string, unknown>;
   capability_plugin_distribution: Record<string, unknown> | null;
-  mas_scholar_skills_profile: Record<string, unknown> | null;
   plugin_transport: InspectFamilySkillPackPluginTransport;
   management_model: SkillPackManagementModel;
   management_model_role: 'unified_management_semantics_transport_may_differ';
@@ -117,15 +126,11 @@ export type SyncFamilySkillPack = InspectFamilySkillPack & {
   sync_status: 'synced' | 'skipped';
   sync_scope: SkillPackSyncScope;
   target_scope: SkillPackSyncScope;
-  target_project: SkillPackTargetProject | null;
   target_root: string | null;
   workspace_or_quest_local_skill_root: string | null;
   codex_discovery_kind:
     | 'codex_home_plugin_registry'
-    | 'project_local_plugin_mirror'
     | 'workspace_or_quest_local_skill';
-  project_mirror_deprecated_for_paper_execution: boolean;
-  project_mirror_non_default_paper_execution_path: boolean;
   installer_result: Record<string, unknown> | null;
   registry_repo_root: string | null;
   stdout: string;
@@ -136,34 +141,20 @@ let cachedFamilySkillPackSpecs: SkillPackSpec[] | null = null;
 let cachedDomainAliasMap: Map<string, SkillPackSpec['domain_id']> | null = null;
 
 export function listFamilySkillPackSpecs(): SkillPackSpec[] {
-  cachedFamilySkillPackSpecs ??= [
-    ...STANDARD_AGENT_REGISTRY
-      .filter((entry) => entry.agent_id !== 'mas-scholar-skills')
-      .map((entry) => ({
-        domain_id: entry.domain_id,
-        module_id: entry.module_id,
-        project: entry.project,
-        label: entry.label,
-        plugin_name: entry.plugin_name,
-        canonical_plugin_name: entry.canonical_plugin_name,
-        source_kind: entry.source_kind,
-        distribution_role: 'domain_agent_plugin_pack' as const,
-        installer_kind: entry.installer_kind,
-        installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
-      })),
-    {
-      domain_id: 'scholarskills',
-      module_id: 'SCHOLARSKILLS',
-      project: 'mas-scholar-skills',
-      label: 'MAS Scholar Skills',
-      plugin_name: 'mas-scholar-skills',
-      canonical_plugin_name: 'mas-scholar-skills',
-      source_kind: 'repo_plugin_installer',
-      distribution_role: 'framework_capability_plugin_pack',
-      installer_kind: 'node',
-      installer_relative_paths: [],
-    },
-  ];
+  cachedFamilySkillPackSpecs ??= STANDARD_AGENT_REGISTRY.map((entry) => ({
+    domain_id: entry.domain_id,
+    module_id: entry.module_id,
+    project: entry.project,
+    label: entry.label,
+    plugin_name: entry.plugin_name,
+    canonical_plugin_name: entry.canonical_plugin_name,
+    source_kind: entry.source_kind,
+    distribution_role: entry.series_membership === 'framework_capability_package'
+      ? 'framework_capability_plugin_pack' as const
+      : 'domain_agent_plugin_pack' as const,
+    installer_kind: entry.installer_kind,
+    installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
+  }));
   return cachedFamilySkillPackSpecs;
 }
 
@@ -173,11 +164,6 @@ function domainAliasMap() {
       entry.alias,
       entry.domain_id as SkillPackSpec['domain_id'],
     ] as const),
-    ['scholarskills', 'scholarskills'],
-    ['scholar-skills', 'scholarskills'],
-    ['scholar_skills', 'scholarskills'],
-    ['mas-scholar-skills', 'scholarskills'],
-    ['mas_scholar_skills', 'scholarskills'],
   ]);
   return cachedDomainAliasMap;
 }

@@ -54,9 +54,6 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 | `opl-family-purpose-first-current-design-audit.md` | purpose-first audit 来源 | 不维护新计划。 | 审计分类折回 active gap register 或 history/provenance。 |
 | `standard-agent-private-platform-inventory.md` | private-platform 分类台账 | 不维护拆文件流水。 | cleanup / physical delete 只作为 refs-only owner decision lane 回 active gap register。 |
 | `opl-family-development-reference.md` | 系列开发参考 | 不维护 backlog。 | 新增/迁移按 owner 分层执行；当前 open gap 不在本文冻结。 |
-| `opl-scholar-skills-capability-modules.md` | MAS Scholar Skills capability package 支撑 | 不作为 standard domain agent、品牌模块或 MAS truth backlog。 | 能力模块、package channel、Connect sync 和 no-authority guard 回 OPL Pack / Connect / Atlas；真实论文证据回 MAS/domain owner。 |
-| `opl-scholar-skills-artifact-engines.md` | MAS Scholar Skills candidate engine 支撑 | 不维护 domain artifact authority。 | OPL-generated candidate bodies 只作为 owner-gate 输入；artifact truth、quality verdict 和 publication readiness 回 domain owner。 |
-| `opl-scholar-skills-display-gallery.md` | Scholar Display gallery 人审入口 | 不冻结 MAS Display Pack audit counters。 | OPL 只记录 MAS-owned gallery refs 和 fresh readback 命令；gallery truth、figure readiness 和 publication claim 回 MAS Display Pack / MAS owner。 |
 | `development-document-portfolio.md` | 文档组合治理支撑 | 不维护执行顺序。 | 只管文档归位、降级、归档规则；当前 active 缺口回唯一 active owner。 |
 | `standard-agent-repo-structure-audit.md` | 标准智能体 repo 结构审计支撑 | 不维护第二 active backlog。 | 只记录 MAS/MAG/RCA/OBF/OMA 的结构符合度、Stage Pack v2 advisory gap 和迁移建议；当前事实仍回 fresh conformance、owner repo source/contracts/tests/readback。 |
 
@@ -90,9 +87,6 @@ OPL 品牌模块的 L4 rollout 计划已退出 active path：当前十模块 `L4
 - `opl-family-purpose-first-current-design-audit.md`：active_support 审计来源；保留目的优先审计结论，不替代 active gap owner、domain active plan 或 live machine truth。
 - `opl-family-development-reference.md`：OPL 系列项目开发主参考；固定全局计划放 OPL、单仓计划回各 repo、通用能力上收 OPL、过时兼容面直接退役、docs 目录按同名 canonical taxonomy 对齐。
 - `standard-agent-private-platform-inventory.md`：private-platform inventory；按 owner subdomain、agent、surface group 和 migration gate 分类，不记录逐日拆文件流水或 line-count ledger。
-- `opl-scholar-skills-capability-modules.md`：MAS Scholar Skills capability package 支撑；说明 MAS Scholar Skills 是 OPL Pack / Connect / Atlas 管理的 capability library，不是 standard domain agent、品牌模块或 MAS truth owner。
-- `opl-scholar-skills-artifact-engines.md`：MAS Scholar Skills candidate artifact engine 支撑；说明八个 active module 的 OPL-generated candidate body、CLI、package shape 和 no-authority guard。
-- `opl-scholar-skills-display-gallery.md`：Scholar Display gallery 人审入口；只引用 MAS-owned Display Pack gallery refs 和 fresh readback 入口，不在 OPL active doc 冻结高漂移 gallery counters。
 - `development-document-portfolio.md`：开发文档组合整理入口；按内容判断旧文档应吸收、保留、降级、退役还是归档。
 - `standard-agent-repo-structure-audit.md`：标准智能体 repo 结构审计；按统一目录规范检查 MAS/MAG/RCA/OBF/OMA，明确 OBF 可作为 Stage Pack v2 模板，MAS/MAG/RCA/OMA 仍有 advisory 迁移 gap。
 

@@ -9,7 +9,6 @@ import {
 } from './install-companions-parts/tools.ts';
 import { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 import { buildOplModules } from './system-installation/modules.ts';
-import { scholarSkillsStateForAgentPackageChannel } from './system-installation/scholarskills-package-channel.ts';
 import {
   managedUpdateComponentReceiptLedgerFilePath,
 } from './managed-update-component-receipts.ts';
@@ -785,10 +784,7 @@ export async function buildManagedUpdateKernelProjection(
   }
   if (!requested || requested === 'capability_packages' || requested === 'codex_surface') {
     const modulesPayload = buildOplModules({ profile: 'fast' }).modules;
-    const modules = [
-      ...(modulesPayload.modules as Record<string, unknown>[]),
-      scholarSkillsStateForAgentPackageChannel() as unknown as Record<string, unknown>,
-    ];
+    const modules = modulesPayload.modules as Record<string, unknown>[];
     const capabilityPackages = buildCapabilityPackagesComponent(modules, channel);
     if (shouldBuildComponent(requested, 'capability_packages')) {
       components.push(capabilityPackages);

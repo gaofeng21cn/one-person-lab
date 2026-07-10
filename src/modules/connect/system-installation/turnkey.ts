@@ -17,7 +17,11 @@ import {
   buildOplFirstRunLogSurface,
 } from './first-run-contract.ts';
 import { buildOplInitialize } from './initialize.ts';
-import { DEFAULT_OPL_MODULE_IDS, runOplModuleAction } from './modules.ts';
+import {
+  DEFAULT_OPL_MODULE_IDS,
+  resolveOplDomainModuleSpec,
+  runOplModuleAction,
+} from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplEngineId, OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
@@ -34,47 +38,9 @@ function extractFamilyRuntimeBridge(payload: Awaited<ReturnType<typeof runFamily
   return null;
 }
 
-function normalizeModuleId(raw: string): OplModuleId {
-  const normalized = raw.trim().toLowerCase();
-  const aliases = new Map<string, OplModuleId>([
-    ['mas', 'medautoscience'],
-    ['med-autoscience', 'medautoscience'],
-    ['med_autoscience', 'medautoscience'],
-    ['medautoscience', 'medautoscience'],
-    ['mds', 'meddeepscientist'],
-    ['med-deepscientist', 'meddeepscientist'],
-    ['med_deepscientist', 'meddeepscientist'],
-    ['meddeepscientist', 'meddeepscientist'],
-    ['mag', 'medautogrant'],
-    ['med-autogrant', 'medautogrant'],
-    ['med_autogrant', 'medautogrant'],
-    ['medautogrant', 'medautogrant'],
-    ['opl-meta-agent', 'oplmetaagent'],
-    ['opl_meta_agent', 'oplmetaagent'],
-    ['oplmetaagent', 'oplmetaagent'],
-    ['meta-agent', 'oplmetaagent'],
-    ['meta_agent', 'oplmetaagent'],
-    ['bookforge', 'oplbookforge'],
-    ['book-forge', 'oplbookforge'],
-    ['book_forge', 'oplbookforge'],
-    ['opl-bookforge', 'oplbookforge'],
-    ['opl_bookforge', 'oplbookforge'],
-    ['oplbookforge', 'oplbookforge'],
-    ['rca', 'redcube'],
-    ['redcube-ai', 'redcube'],
-    ['redcube_ai', 'redcube'],
-    ['redcube', 'redcube'],
-  ]);
-  const resolved = aliases.get(normalized);
-  if (!resolved) {
-    throw new Error(`Unknown turnkey module id: ${raw}`);
-  }
-  return resolved;
-}
-
 function normalizeModuleSelection(modules?: string[]) {
   const selected = modules && modules.length > 0 ? modules : DEFAULT_MODULES;
-  return [...new Set(selected.map((moduleId) => normalizeModuleId(moduleId)))];
+  return [...new Set(selected.map((moduleId) => resolveOplDomainModuleSpec(moduleId).module_id))];
 }
 
 function frameworkErrorDetails(error: unknown) {

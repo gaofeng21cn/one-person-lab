@@ -11,7 +11,6 @@ import { resolveFrameworkUpdateTargetRoot, runOplFrameworkSelfUpdate } from './f
 import { buildOplModules, runOplModuleAction } from './modules.ts';
 import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
-import { runScholarSkillsSourceMaintenance } from './scholarskills-package-channel.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
@@ -44,7 +43,7 @@ type StartupMaintenanceEngineTarget = {
 
 type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintenanceEngineTarget;
 type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
-type StartupMaintenanceCapabilityTarget = ReturnType<typeof runScholarSkillsSourceMaintenance>;
+type StartupMaintenanceCapabilityTarget = StartupMaintenanceModuleTarget;
 type StartupMaintenanceScope = 'all' | 'runtime_substrate';
 type StartupMaintenanceIntelligenceEnhancementTarget = {
   target_type: 'opl_flow_intelligence_enhancement';
@@ -544,10 +543,12 @@ export async function runOplStartupMaintenance(
   const initialModules = scope === 'runtime_substrate'
     ? []
     : buildOplModules().modules.modules.filter((module) => module.default_install);
-  const moduleTargets = initialModules.map((module) => runModuleStartupMaintenance(module));
-  const capabilityTargets: StartupMaintenanceCapabilityTarget[] = scope === 'runtime_substrate'
-    ? []
-    : [runScholarSkillsSourceMaintenance()];
+  const moduleTargets = initialModules
+    .filter((module) => module.scope !== 'framework_capability_package')
+    .map((module) => runModuleStartupMaintenance(module));
+  const capabilityTargets: StartupMaintenanceCapabilityTarget[] = initialModules
+    .filter((module) => module.scope === 'framework_capability_package')
+    .map((module) => runModuleStartupMaintenance(module));
   const intelligenceEnhancementTargets = [await maybeRunIntelligenceEnhancementStartupMaintenance()];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);

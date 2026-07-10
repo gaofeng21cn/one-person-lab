@@ -25,7 +25,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- | --- |
 | OPL foundation support skills | 27 个 source skill，全部由 `plugins/opl-foundation-skills/exposure.json` 管理；当前分布为 `developer_codex=6`、`project_local=15`、`workspace_local=6`。 | 基本合理。它们是 framework support / reviewer / router，不是 domain professional pack，也没有默认 global user 暴露。 | 后续新增必须先填 admission record；优先复用 router/reviewer，避免为每个小任务新增 support Skill。 |
 | MAS | MAS 本仓无 repo-local `agent/professional_skills`；`contracts/capability_map.json` 声明 13 个能力，其中 8 个 professional skill 指向外置 `mas-scholar-skills`。 | 合理。MAS 保持 stage / runtime / owner authority，专业方法由外置包承接。 | 继续避免 MAS 仓内复制 MAS Scholar Skills 正文或 optional specialist catalog。 |
-| MAS Scholar Skills | 33 个真实 Codex Skill；默认 Codex exposure 为 false；默认 compact sync 只包含 aggregate + core skills，optional specialist 必须 named specialty / explicit developer。 | 合理。它是 OPL-owned 外置专业能力包，不是 MAS truth owner。 | optional skill 数量已大，新增 optional 必须证明 default core 覆盖不到，并保留 no-authority handoff。 |
+| MAS Scholar Skills | 外部 package owner 持有当前 plugin manifest、Skill 目录与内容合同；OPL 不冻结数量或 core/optional 分类。 | 合理。它是 external professional capability package，不是 MAS truth owner。 | 新增或分类调整在 package owner 仓完成；OPL 只验证、同步并保留 no-authority receipt。 |
 | MAG | 8 个 repo-local professional skills，全部进入 `contracts/capability_map.json`；另有 stage prompt、tool connector、reference pack、contract module。 | 合理。Grant 方法留 repo-local，authority 留 MAG。 | `agent/stages/manifest.json` 引用 `agent/skills/grant_authoring.md`，OPL Pack 将其编译进 generated stage plane；如未来需要 executor 直接按 specialist 注入，可从 capability map 投影，不另建新目录。 |
 | RCA | 7 个 repo-local professional skills，全部进入 capability map；stage prompts / control plane 对主要 PPT specialist 有直接 refs。 | 合理。视觉方法、template profiling、native PPT design 与 memory curation 分层清楚。 | `agent/skills/*.md` 作为 legacy policy ref 的边界要继续保持，不能退回成“又一套 professional skill”。 |
 | OMA | 9 个 repo-local professional skills，全部进入 capability map；`agent/skills/*.md` 明确是 domain skill declarations。 | 合理。OMA 的 target-agent improvement / work-order / suite design 等是元智能体专业方法。 | 继续防止把 action flow、target truth 或 takeover authority 写进 professional Skill。 |
@@ -40,23 +40,14 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- | --- | --- |
 | Framework support / reviewer / router pack | `plugins/opl-foundation-skills/skills/**/SKILL.md` | `plugins/opl-foundation-skills/exposure.json`；禁止默认 global / codex scope。 | `professional_skill` 风格的 support playbook + exposure manifest；authority 留 OPL/domain owner surface。 | 合理，但数量增长需要准入门控制。 |
 | External specialist routing | `opl-external-specialist-skill-router`；scientific 只是 query / trigger specialization，不再保留单独 compatibility entry | workspace / quest 按 manifest 暴露；真实外部 skill 通过 Connect 单个 sync。 | router 是薄 Skill；下载、索引、sync receipt 属于 OPL Connect。 | 合理。避免把 K-Dense / scientific-agent-skills 全量注册成默认 Codex context，也避免 compatibility alias 污染 metadata。 |
-| MAS Scholar Skills plugin pointer | `plugins/mas-scholar-skills/skills/mas-scholar-skills/SKILL.md` | package/plugin pointer；真实 source 在 `mas-scholar-skills` repo。 | thin entry + Connect sync；不承接 MAS authority。 | 合理。继续保持 `opl-scholarskills` tombstone-only。 |
+| MAS Scholar Skills capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json` 与 `skills/*/SKILL.md` | package owner 持有清单和正文；OPL 只保留 generic package spec。 | package validation + Connect target-bound sync + provenance receipt；不承接 MAS authority。 | OPL-local plugin pointer 已退役；`opl-scholarskills` 继续 tombstone-only。 |
 
 ### MAS / MAS Scholar Skills
 
-| 能力模块 | 对应 Skill / surface | 物理位置 | 暴露方式 | 合理性 |
-| --- | --- | --- | --- | --- |
-| MAS stage prompt / runtime / owner authority | stage pack、runtime readback、owner surfaces | `med-autoscience/agent/**`、`contracts/**`、runtime/controller surfaces | MAS plugin entry + OPL Runway/Stagecraft projection | 合理；不应新增 MAS 本仓 professional Skill。 |
-| Literature | `medical-research-lit` | `mas-scholar-skills/skills/medical-research-lit/SKILL.md` | core workspace / quest sync；default Codex exposure false | 合理；Connect 负责 PubMed/Crossref/OpenAlex 等 connector receipt，MAS 负责 citation acceptance。 |
-| Writing | `medical-manuscript-writing` | external pack | core workspace / quest sync | 合理；不写 manuscript truth 或 owner receipt。 |
-| Review | `medical-manuscript-review` | external pack | core workspace / quest sync | 合理；不签 final quality verdict。 |
-| Figure / Display | `medical-figure-design` + `medical-figure-style` + `medical-figure-composer` | external pack | core sync；style/composer 是 display 子 Skill | 合理；不新增 active module，不写 artifact authority。 |
-| Statistics | `medical-statistical-review` | external pack | core workspace / quest sync | 合理；analysis acceptance 留 MAS owner gate。 |
-| Tables | `medical-table-design` | external pack | core workspace / quest sync | 合理；table 是否进入 paper 留 MAS。 |
-| Submission | `medical-submission-prep` | external pack | core workspace / quest sync | 合理；不声明 submission-ready 或 irreversible submit。 |
-| Data governance | `medical-data-governance` | external pack | core workspace / quest sync | 合理；source readiness verdict 留 MAS/source owner。 |
-| Optional advanced specialists | structural biology、protein design、genomics FM、single-cell、indication dossier、PDF evidence、scientific compute | external pack optional skills | named specialty / explicit developer only | 合理但应收窄；不能挡住默认 paper progress。 |
-| Optional medical-method specialists | protocol/SAP、cohort、claim map、reference integrity、rebuttal、display QC、causal inference、survival、risk-model、registry atlas、owner gate handoff、display regression、data-freeze/readiness、publication memory、evidence-gap triage | external pack optional skills | named specialty / explicit developer only | 合理但数量增长最快；新增前必须证明不是现有 core review/stat/lit/data 的子流程。 |
+| 能力模块 | 物理位置 | 暴露方式 | 合理性 |
+| --- | --- | --- | --- |
+| MAS stage prompt / runtime / owner authority | `med-autoscience/agent/**`、contracts 与 runtime/controller owner surfaces | MAS plugin entry + OPL Runway/Stagecraft projection | 合理；不在 OPL 或外部 capability package 签 MAS owner truth。 |
+| MAS Scholar Skills professional capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json`、`skills/*/SKILL.md` 与 package-owned contracts | generic package channel + explicit workspace/quest Connect sync | OPL 不复制 Skill 清单、profile、validator 或正文；具体专业能力以 package owner 当前 source 为准。 |
 
 ### MAG
 

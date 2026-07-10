@@ -397,17 +397,16 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       continue;
     }
     if (spec.project === 'mas-scholar-skills') {
-      const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);
-      const skillRoot = path.join(pluginRoot, 'skills', spec.canonicalPlugin);
-      fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
+      const skillRoot = path.join(repoRoot, 'skills', spec.canonicalPlugin);
+      fs.mkdirSync(path.join(repoRoot, '.codex-plugin'), { recursive: true });
       fs.mkdirSync(skillRoot, { recursive: true });
       fs.writeFileSync(
-        path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
+        path.join(repoRoot, '.codex-plugin', 'plugin.json'),
         JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
       );
       fs.writeFileSync(
         path.join(skillRoot, 'SKILL.md'),
-        `---\nname: ${spec.canonicalPlugin}\ndescription: MAS Scholar Skills fixture capability plugin pack.\n---\n\n# MAS Scholar Skills\n\nThis fixture represents the OPL-owned ScholarSkills capability plugin pack.\n`,
+        `---\nname: ${spec.canonicalPlugin}\ndescription: MAS Scholar Skills fixture capability plugin pack.\n---\n\n# MAS Scholar Skills\n\nThis fixture represents the external ScholarSkills capability plugin pack.\n`,
       );
       continue;
     }
