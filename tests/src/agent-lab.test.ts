@@ -192,6 +192,127 @@ test('Agent Lab keeps empty evaluation provenance out of ordinary suite identity
   assert.equal(Object.hasOwn(explicitEmpty, 'evaluation_target_agent'), false);
 });
 
+test('Agent Lab public runner requires valid target identity for evaluation provenance', () => {
+  const suite = buildSampleAgentLabSuite();
+  assert.throws(
+    () => runAgentLabSuite({
+      ...suite,
+      evaluation_provenance_refs: ['evaluation-receipt:public-runner/without-target'],
+    }),
+    /evaluation_target_agent/,
+  );
+  assert.throws(
+    () => runAgentLabSuite({
+      ...suite,
+      evaluation_provenance_bindings: [{
+        receipt_role: 'evaluation_packet',
+        receipt_ref: 'evaluation-receipt:public-runner/without-target',
+      }],
+    }),
+    /evaluation_target_agent/,
+  );
+  for (const target of [
+    { domain_id: 'target-agent', target_agent_ref: 'domain-agent:target-agent' },
+    {
+      domain_id: 'target-agent',
+      target_agent_ref: '   ',
+      descriptor_ref: '/tmp/target-agent/contracts/domain_descriptor.json',
+    },
+  ]) {
+    assert.throws(
+      () => runAgentLabSuite({ ...suite, evaluation_target_agent: target } as any),
+      /evaluation_target_agent/,
+    );
+  }
+
+  const evaluationTarget = {
+    domain_id: 'target-agent',
+    target_agent_ref: 'domain-agent:target-agent',
+    descriptor_ref: '/tmp/target-agent/contracts/domain_descriptor.json',
+  };
+  for (const invalid of [
+    {
+      evaluation_target_agent: evaluationTarget,
+      evaluation_provenance_refs: ['evaluation-receipt:public-runner/paired'],
+    },
+    {
+      evaluation_target_agent: evaluationTarget,
+      evaluation_provenance_refs: ['evaluation-receipt:public-runner/paired'],
+      evaluation_provenance_bindings: [{
+        receipt_role: 'unknown_evaluation_role',
+        receipt_ref: 'evaluation-receipt:public-runner/paired',
+      }],
+    },
+    {
+      evaluation_target_agent: evaluationTarget,
+      evaluation_provenance_refs: ['evaluation-receipt:public-runner/raw'],
+      evaluation_provenance_bindings: [{
+        receipt_role: 'evaluation_packet',
+        receipt_ref: 'evaluation-receipt:public-runner/binding',
+      }],
+    },
+    {
+      evaluation_target_agent: evaluationTarget,
+      evaluation_provenance_refs: ['evaluation-receipt:public-runner/context'],
+      evaluation_provenance_bindings: [{
+        receipt_role: 'evaluation_packet',
+        receipt_ref: 'evaluation-receipt:public-runner/context',
+        task_id: ' ',
+      }],
+    },
+  ]) {
+    assert.throws(() => runAgentLabSuite({ ...suite, ...invalid } as any), /evaluation_provenance/);
+  }
+  const baseline = runAgentLabSuite(suite);
+  const targeted = runAgentLabSuite({ ...suite, evaluation_target_agent: evaluationTarget });
+  assert.notEqual(targeted.result_id, baseline.result_id);
+  assert.deepEqual(targeted.evaluation_target_agent, evaluationTarget);
+});
+
+test('Agent Lab canonicalizes evaluation provenance before stable identity and readback', () => {
+  const suite = buildSampleAgentLabSuite();
+  const evaluationTarget = {
+    domain_id: 'target-agent',
+    target_agent_ref: 'domain-agent:target-agent',
+    descriptor_ref: '/tmp/target-agent/contracts/domain_descriptor.json',
+  };
+  const packetRef = 'evaluation-receipt:public-runner/packet';
+  const probeARef = 'evaluation-receipt:public-runner/probe-a';
+  const probeBRef = 'evaluation-receipt:public-runner/probe-b';
+  const canonicalBindings = [
+    { receipt_role: 'evaluation_packet' as const, receipt_ref: packetRef },
+    {
+      receipt_role: 'recovery_probe_observation' as const,
+      receipt_ref: probeARef,
+      task_id: 'agent-lab-task:target-agent/a',
+      probe_ref: 'recovery-probe:target-agent/a',
+    },
+    {
+      receipt_role: 'recovery_probe_observation' as const,
+      receipt_ref: probeBRef,
+      task_id: 'agent-lab-task:target-agent/b',
+      probe_ref: 'recovery-probe:target-agent/b',
+    },
+  ];
+  const first = runAgentLabSuite({
+    ...suite,
+    evaluation_target_agent: evaluationTarget,
+    evaluation_provenance_refs: [probeBRef, packetRef, probeARef, packetRef],
+    evaluation_provenance_bindings: [...canonicalBindings].reverse(),
+  });
+  const reordered = runAgentLabSuite({
+    ...suite,
+    evaluation_target_agent: evaluationTarget,
+    evaluation_provenance_refs: [probeARef, probeBRef, packetRef],
+    evaluation_provenance_bindings: canonicalBindings,
+  });
+
+  assert.equal(first.result_id, reordered.result_id);
+  assert.deepEqual(first.refs.evaluation_provenance_refs, [packetRef, probeARef, probeBRef]);
+  assert.deepEqual(first.evaluation_provenance_bindings, canonicalBindings);
+  assert.deepEqual(reordered.evaluation_provenance_bindings, canonicalBindings);
+});
+
 test('Agent Lab separates fixture scorecard pass from independent AI review and promotion safety approval', () => {
   const result = runAgentLabSuite(buildSampleAgentLabSuite());
 
@@ -509,6 +630,18 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'claim_assurance_map_refs',
   ]);
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
+  assert.equal(
+    contract.external_suite_runner_surface.evaluation_target_guard.provenance_requires_target,
+    true,
+  );
+  assert.deepEqual(
+    contract.external_suite_runner_surface.evaluation_target_guard.binding_canonical_sort_keys,
+    ['receipt_role', 'task_id', 'probe_ref', 'receipt_ref'],
+  );
+  assert.equal(
+    contract.external_suite_runner_surface.evaluation_target_guard.reordered_semantics_preserve_result_identity,
+    true,
+  );
   assert.equal(
     contract.evaluation_work_order_consumer_surface.cli,
     'opl agent-lab evaluation-work-order execute --work-order <work-order.json> [--observations <observation-packet.json>] --output <dir>',

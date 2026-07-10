@@ -1,5 +1,5 @@
 import { stableId } from '../../kernel/stable-id.ts';
-import { isRecord } from '../../kernel/contract-validation.ts';
+import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { AGENT_LAB_AUTHORITY_BOUNDARY, FORBIDDEN_TRUE_AUTHORITY_FLAGS } from './agent-lab-authority.ts';
 import {
   isFixtureReviewReceipt,
@@ -20,6 +20,8 @@ import {
   REQUIRED_STAGE_CLOSEOUT_REF_FIELDS,
 } from './agent-lab-parts/model.ts';
 import type {
+  AgentLabEvaluationProvenanceBinding,
+  AgentLabEvaluationTargetAgent,
   AgentLabIndependentAiReviewAssessment,
   AgentLabIndependentAiReviewStatus,
   AgentLabImprovementCandidate,
@@ -89,6 +91,16 @@ function optionalRefs(values: string[] | undefined) {
   return unique(Array.isArray(values) ? values : []);
 }
 
+const EVALUATION_PROVENANCE_ROLES = new Set<AgentLabEvaluationProvenanceBinding['receipt_role']>([
+  'evaluation_packet',
+  'recovery_probe_observation',
+  'trajectory_observation',
+  'scorecard_observation',
+  'promotion_gate_observation',
+  'stage_completion_policy',
+  'production_evidence_gate_observation',
+]);
+
 function hasRefs(values: string[] | undefined) {
   return optionalRefs(values).length > 0;
 }
@@ -112,6 +124,112 @@ function textField(record: JsonRecord | null, key: string): string | null {
   }
   const value = record[key].trim();
   return value.length > 0 ? value : null;
+}
+
+function invalidEvaluationSuite(message: string, details: JsonRecord = {}): never {
+  throw new FrameworkContractError('contract_shape_invalid', message, details);
+}
+
+function validateEvaluationIdentity(input: AgentLabSuite) {
+  const refsInput: unknown = input.evaluation_provenance_refs;
+  if (refsInput !== undefined && !Array.isArray(refsInput)) {
+    invalidEvaluationSuite('Agent Lab evaluation_provenance_refs must be an array.');
+  }
+  const provenanceRefs = [...new Set((refsInput ?? []).map((ref, index) => {
+    if (typeof ref !== 'string' || ref.trim().length === 0) {
+      return invalidEvaluationSuite('Agent Lab evaluation_provenance_refs requires non-empty refs.', { index });
+    }
+    return ref.trim();
+  }))].sort();
+
+  const bindingsInput: unknown = input.evaluation_provenance_bindings;
+  if (bindingsInput !== undefined && !Array.isArray(bindingsInput)) {
+    invalidEvaluationSuite('Agent Lab evaluation_provenance_bindings must be an array.');
+  }
+  const provenanceBindings = (bindingsInput ?? [])
+    .map((value, index): AgentLabEvaluationProvenanceBinding => {
+      if (!isRecord(value)) {
+        return invalidEvaluationSuite('Agent Lab evaluation_provenance_bindings requires object entries.', { index });
+      }
+      const receiptRole = textField(value, 'receipt_role');
+      const receiptRef = textField(value, 'receipt_ref');
+      if (!receiptRole || !EVALUATION_PROVENANCE_ROLES.has(
+        receiptRole as AgentLabEvaluationProvenanceBinding['receipt_role'],
+      )) {
+        return invalidEvaluationSuite('Agent Lab evaluation_provenance_bindings has unsupported receipt_role.', {
+          index,
+          receipt_role: receiptRole,
+        });
+      }
+      if (!receiptRef) {
+        return invalidEvaluationSuite('Agent Lab evaluation_provenance_bindings requires non-empty receipt_ref.', {
+          index,
+        });
+      }
+      const binding: AgentLabEvaluationProvenanceBinding = {
+        receipt_role: receiptRole as AgentLabEvaluationProvenanceBinding['receipt_role'],
+        receipt_ref: receiptRef,
+      };
+      for (const field of ['task_id', 'probe_ref'] as const) {
+        if (value[field] === undefined) continue;
+        const contextRef = textField(value, field);
+        if (!contextRef) {
+          return invalidEvaluationSuite(`Agent Lab evaluation_provenance_bindings requires non-empty ${field}.`, {
+            index,
+          });
+        }
+        binding[field] = contextRef;
+      }
+      return binding;
+    })
+    .sort((left, right) => {
+      const leftKey = [left.receipt_role, left.task_id ?? '', left.probe_ref ?? '', left.receipt_ref].join('\0');
+      const rightKey = [right.receipt_role, right.task_id ?? '', right.probe_ref ?? '', right.receipt_ref].join('\0');
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
+
+  const hasProvenance = provenanceRefs.length > 0 || provenanceBindings.length > 0;
+  const targetInput: unknown = input.evaluation_target_agent;
+  if (hasProvenance && targetInput === undefined) {
+    invalidEvaluationSuite('Agent Lab evaluation provenance requires evaluation_target_agent.');
+  }
+  let targetAgent: AgentLabEvaluationTargetAgent | undefined;
+  if (targetInput !== undefined) {
+    if (!isRecord(targetInput)) {
+      invalidEvaluationSuite('Agent Lab evaluation_target_agent must be an object.');
+    }
+    const domainId = textField(targetInput, 'domain_id');
+    const targetAgentRef = textField(targetInput, 'target_agent_ref');
+    const descriptorRef = textField(targetInput, 'descriptor_ref');
+    if (!domainId || !targetAgentRef || !descriptorRef) {
+      invalidEvaluationSuite('Agent Lab evaluation_target_agent requires non-empty identity fields.', {
+        required_fields: ['domain_id', 'target_agent_ref', 'descriptor_ref'],
+      });
+    }
+    targetAgent = {
+      domain_id: domainId,
+      target_agent_ref: targetAgentRef,
+      descriptor_ref: descriptorRef,
+    };
+  }
+
+  if ((provenanceRefs.length > 0) !== (provenanceBindings.length > 0)) {
+    invalidEvaluationSuite(
+      'Agent Lab evaluation_provenance_refs and evaluation_provenance_bindings must be provided together.',
+    );
+  }
+  if (provenanceRefs.length > 0) {
+    const rawRefSet = new Set(provenanceRefs);
+    const bindingRefSet = new Set(provenanceBindings.map((binding) => binding.receipt_ref));
+    if (rawRefSet.size !== bindingRefSet.size
+      || [...rawRefSet].some((ref) => !bindingRefSet.has(ref))) {
+      invalidEvaluationSuite(
+        'Agent Lab evaluation_provenance_refs must match binding receipt_ref values.',
+      );
+    }
+  }
+
+  return { targetAgent, provenanceRefs, provenanceBindings };
 }
 
 function stringList(value: unknown): string[] {
@@ -500,8 +618,11 @@ function buildRun(task: AgentLabTaskManifest) {
   };
 }
 
-function buildObservations(input: AgentLabSuite, runs: ReturnType<typeof buildRun>[]) {
-  const evaluationProvenanceRefs = optionalRefs(input.evaluation_provenance_refs);
+function buildObservations(
+  input: AgentLabSuite,
+  runs: ReturnType<typeof buildRun>[],
+  evaluationProvenanceRefs = optionalRefs(input.evaluation_provenance_refs),
+) {
   const promotionSafetyAssessments = runs.map((run) => run.promotion_safety_assessment);
   const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
   const recoveryProbeRefs = unique(input.tasks.flatMap((task) =>
@@ -655,12 +776,13 @@ function domainSummary(runs: ReturnType<typeof buildRun>[]) {
 }
 
 export function runAgentLabSuite(input: AgentLabSuite) {
+  const evaluationIdentity = validateEvaluationIdentity(input);
   const runs = input.tasks.map(buildRun);
   const aheEvidence = buildAgentLabAheEvidenceReadModel({ suite: input, results: runs });
   const executorCapabilityAperture = buildAgentLabExecutorCapabilityApertureReadModel({ suite: input });
   const codexAttemptTraceFlywheel = buildAgentLabCodexAttemptTraceFlywheel({ suite: input, results: runs });
   const requiredObservations = input.required_observations ?? REQUIRED_OBSERVATIONS;
-  const observationResult = buildObservations(input, runs);
+  const observationResult = buildObservations(input, runs, evaluationIdentity.provenanceRefs);
   const productionEvidenceGateResult = buildProductionEvidenceGateResult(input, runs);
   const missingObservations = requiredObservations.filter(
     (observation) => !observationResult.observations[observation],
@@ -670,8 +792,8 @@ export function runAgentLabSuite(input: AgentLabSuite) {
     run.independent_ai_review_assessment.ai_review_approved).length;
   const promotionGatePassedCount = input.tasks.filter((task) => task.promotion_gate.gate_status === 'passed').length;
   const productionEvidenceGateBlocked = productionEvidenceGateResult?.status === 'blocked';
-  const evaluationProvenanceBindings = input.evaluation_provenance_bindings ?? [];
-  const evaluationTargetAgent = input.evaluation_target_agent;
+  const evaluationProvenanceBindings = evaluationIdentity.provenanceBindings;
+  const evaluationTargetAgent = evaluationIdentity.targetAgent;
   const status: AgentLabStatus = missingObservations.length === 0 && blockedRuns.length === 0 && !productionEvidenceGateBlocked
     ? 'passed'
     : 'blocked';

@@ -265,6 +265,73 @@ test('agent-lab run accepts external suites and blocks missing stage completion 
   }
 });
 
+test('agent-lab run rejects evaluation provenance without a complete target identity', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-public-target-guard-'));
+  try {
+    const suite = {
+      suite_id: 'public-evaluation-target-guard-suite',
+      suite_kind: 'agent_lab_external_suite',
+      tasks: [agentLabTask({
+        domain_id: 'opl-meta-agent',
+        task_id: 'agent-lab-task:opl-meta-agent/public-target-guard',
+      })],
+    };
+    const invalidCases: Array<Record<string, any>> = [
+      { evaluation_provenance_refs: ['evaluation-receipt:public-cli/without-target'] },
+      {
+        evaluation_provenance_bindings: [{
+          receipt_role: 'evaluation_packet',
+          receipt_ref: 'evaluation-receipt:public-cli/without-target',
+        }],
+      },
+      {
+        evaluation_target_agent: {
+          domain_id: 'target-agent',
+          target_agent_ref: 'domain-agent:target-agent',
+        },
+      },
+      {
+        evaluation_target_agent: {
+          domain_id: 'target-agent',
+          target_agent_ref: ' ',
+          descriptor_ref: '/tmp/target-agent/contracts/domain_descriptor.json',
+        },
+      },
+      {
+        evaluation_target_agent: {
+          domain_id: 'target-agent',
+          target_agent_ref: 'domain-agent:target-agent',
+          descriptor_ref: '/tmp/target-agent/contracts/domain_descriptor.json',
+        },
+        evaluation_provenance_refs: ['evaluation-receipt:public-cli/paired'],
+      },
+      {
+        evaluation_target_agent: {
+          domain_id: 'target-agent',
+          target_agent_ref: 'domain-agent:target-agent',
+          descriptor_ref: '/tmp/target-agent/contracts/domain_descriptor.json',
+        },
+        evaluation_provenance_refs: ['evaluation-receipt:public-cli/raw'],
+        evaluation_provenance_bindings: [{
+          receipt_role: 'evaluation_packet',
+          receipt_ref: 'evaluation-receipt:public-cli/binding',
+        }],
+      },
+    ];
+
+    for (const invalid of invalidCases) {
+      assert.throws(
+        () => runCli([
+          'agent-lab', 'run', '--suite', suitePathFor(tmpDir, { ...suite, ...invalid }), '--json',
+        ]),
+        /evaluation_(target_agent|provenance)/,
+      );
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('agent-lab run and optimize project evidence and candidate refs without owner authority', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-production-evidence-suite-'));
   try {
