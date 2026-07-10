@@ -1,4 +1,5 @@
-import { assert, fs, runCli, test } from '../helpers.ts';
+import { buildRepoGeneratedInterfaceBundle } from '../../../../src/modules/pack/index.ts';
+import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 test('real family-defaults pack compiler preserves JSON readback when individual repos are blocked', {
   skip: ![
@@ -28,18 +29,79 @@ test('real family-defaults pack compiler preserves JSON readback when individual
   }
 });
 
-test('generated interfaces expose RCA wrapper descriptor scope from real repo contracts when present', {
-  skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/domain_descriptor.json'),
+test('real family-defaults generated interfaces preserve JSON readback when individual repos are blocked', {
+  skip: ![
+    'med-autoscience',
+    'med-autogrant',
+    'redcube-ai',
+    'opl-meta-agent',
+    'opl-bookforge',
+  ].every((repo) => fs.existsSync(`/Users/gaofeng/workspace/${repo}/contracts/domain_descriptor.json`)),
 }, () => {
-  const bundle = runCli([
+  const report = runCli(['agents', 'interfaces', '--family-defaults']).generated_agent_interfaces;
+  const domains = new Map(report.reports.map((domain: { requested_agent_id: string }) => [
+    domain.requested_agent_id,
+    domain,
+  ]));
+
+  assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
+  assert.equal(report.summary.total_domain_count, 5);
+  assert.equal(report.summary.ready_domain_count + report.summary.blocked_domain_count, 5);
+  assert.equal(report.summary.blocked_domain_count >= 2, true);
+  for (const agentId of ['mas', 'rca']) {
+    const domain = domains.get(agentId) as Record<string, any>;
+    assert.equal(domain.compiler_status, 'blocked');
+    assert.equal(domain.generated_agent_interfaces.status, 'blocked');
+    assert.equal(domain.blocker_reasons.length > 0, true);
+    assert.equal(domain.repo_contract_error.code, 'contract_shape_invalid');
+  }
+});
+
+test('RCA forbidden generated authority blocks the real repo without losing canonical agent identity', {
+  skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/domain_descriptor.json'),
+}, (t) => {
+  const failure = runCliFailure([
     'agents',
     'interfaces',
     '--repo-dir',
     '/Users/gaofeng/workspace/redcube-ai',
-  ]).generated_agent_interfaces;
+  ]);
+
+  assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+  assert.deepEqual(failure.payload.error.details.forbidden_true_fields, [
+    'opl_can_compile_generated_surfaces_from_refs',
+  ]);
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-rca-canonical-agent-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.cpSync('/Users/gaofeng/workspace/redcube-ai/agent', path.join(root, 'agent'), { recursive: true });
+  for (const ref of [
+    'contracts/domain_descriptor.json',
+    'contracts/action_catalog.json',
+    'contracts/pack_compiler_input.json',
+    'contracts/functional_privatization_audit.json',
+    'contracts/generated_surface_handoff.json',
+    'contracts/memory_descriptor.json',
+    'contracts/owner_receipt_contract.json',
+  ]) {
+    fs.mkdirSync(path.dirname(path.join(root, ref)), { recursive: true });
+    fs.copyFileSync(path.join('/Users/gaofeng/workspace/redcube-ai', ref), path.join(root, ref));
+  }
+  fs.mkdirSync(path.join(root, 'runtime', 'authority_functions'), { recursive: true });
+  fs.copyFileSync(
+    '/Users/gaofeng/workspace/redcube-ai/runtime/authority_functions/README.md',
+    path.join(root, 'runtime', 'authority_functions', 'README.md'),
+  );
+  const inputRef = path.join(root, 'contracts', 'pack_compiler_input.json');
+  const input = JSON.parse(fs.readFileSync(inputRef, 'utf8')) as Record<string, any>;
+  delete input.authority_boundary.opl_can_compile_generated_surfaces_from_refs;
+  fs.writeFileSync(inputRef, `${JSON.stringify(input, null, 2)}\n`);
+
+  const bundle = buildRepoGeneratedInterfaceBundle(root).bundle as Record<string, any>;
 
   assert.equal(bundle.source_kind, 'standard_agent_repo_contracts');
   assert.equal(bundle.target_domain_id, 'redcube_ai');
+  assert.equal(bundle.agent_id, 'rca');
   assert.equal(bundle.status, 'ready');
   assert.equal(bundle.blocker_reasons.length, 0);
   assert.equal(bundle.generated_wrapper_bundle.status, 'ready');

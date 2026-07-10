@@ -266,6 +266,21 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
 
 export type StandardAgentRepoContractDescriptor = ReturnType<typeof buildRepoContractDescriptor>;
 
+export function repoContractFailureProjection(
+  repo: { requested_agent_id: string | null; repo_dir: string },
+  error: FrameworkContractError,
+) {
+  const details = isRecord(error.details) ? error.details : {};
+  return {
+    requested_agent_id: repo.requested_agent_id,
+    repo_dir: repo.repo_dir,
+    blocker_reasons: [
+      optionalString(details.blocker) ?? `repo_contract_descriptor_failed:${error.code}`,
+    ],
+    repo_contract_error: error.toJSON().error,
+  };
+}
+
 export type StandardAgentRepoContractReadout = {
   status: 'resolved' | 'blocked';
   repo_dir: string;

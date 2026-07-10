@@ -15,6 +15,7 @@ import {
   buildRepoContractDescriptor,
   descriptorWithRepoContractInputs,
   repoContractDescriptorForPackCompiler,
+  repoContractFailureProjection,
 } from './domain-pack-compiler/repo-contract-descriptor.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
@@ -533,17 +534,13 @@ function blockedRepoContractDescriptor(
   repo: StandardDomainAgentRepoInput,
   error: FrameworkContractError,
 ) {
-  const details = isRecord(error.details) ? error.details : {};
+  const failure = repoContractFailureProjection(repo, error);
   return {
-    requested_agent_id: repo.requested_agent_id,
-    repo_dir: repo.repo_dir,
+    ...failure,
     project_id: repo.requested_agent_id,
     source_kind: 'standard_agent_repo_contracts',
     manifest_status: 'repo_contracts_blocked',
-    repo_contract_blockers: [
-      optionalString(details.blocker) ?? `repo_contract_descriptor_failed:${error.code}`,
-    ],
-    repo_contract_error: error.toJSON().error,
+    repo_contract_blockers: failure.blocker_reasons,
   };
 }
 
@@ -677,10 +674,12 @@ export function buildDomainPackCompilerInspect(
 export function buildRepoGeneratedInterfaceBundle(
   repoDir: string,
   format: GeneratedInterfaceFormat | 'all' = 'all',
+  requestedAgentId: string | null = null,
 ) {
   const repoProjection = buildRepoContractDescriptor(repoDir);
+  const descriptor = repoContractDescriptorForPackCompiler(repoProjection, requestedAgentId);
   const bundle = {
-    ...buildGeneratedInterfaceBundle(repoProjection.descriptor, repoProjection.status, format),
+    ...buildGeneratedInterfaceBundle(descriptor, repoProjection.status, format),
     source_kind: 'standard_agent_repo_contracts',
     repo_dir: repoProjection.repoDir,
     blocker_reasons: repoProjection.blockerReasons,
@@ -723,18 +722,51 @@ export function buildGeneratedAgentInterfaces(
       });
     }
     const reports = repos.map((repo) => {
-      const generated = buildRepoGeneratedInterfaceBundle(repo.repo_dir, format);
-      const selected = generated.bundle;
-      return {
-        requested_agent_id: repo.requested_agent_id,
-        repo_dir: generated.repo_dir,
-        project_id: selected.project_id,
-        target_domain_id: selected.target_domain_id,
-        agent_id: selected.agent_id,
-        compiler_status: generated.status,
-        blocker_reasons: generated.blocker_reasons,
-        generated_agent_interfaces: selected,
-      };
+      try {
+        const generated = buildRepoGeneratedInterfaceBundle(
+          repo.repo_dir,
+          format,
+          repo.requested_agent_id,
+        );
+        const selected = generated.bundle;
+        return {
+          requested_agent_id: repo.requested_agent_id,
+          repo_dir: generated.repo_dir,
+          project_id: selected.project_id,
+          target_domain_id: selected.target_domain_id,
+          agent_id: selected.agent_id,
+          compiler_status: generated.status,
+          blocker_reasons: generated.blocker_reasons,
+          repo_contract_error: null,
+          generated_agent_interfaces: selected,
+        };
+      } catch (error) {
+        if (!(error instanceof FrameworkContractError)) {
+          throw error;
+        }
+        const failure = repoContractFailureProjection(repo, error);
+        return {
+          ...failure,
+          project_id: repo.requested_agent_id,
+          target_domain_id: null,
+          agent_id: null,
+          compiler_status: 'blocked',
+          generated_agent_interfaces: {
+            surface_kind: 'opl_generated_agent_interface_bundle',
+            status: 'blocked',
+            selected_format: format,
+            requested_agent_id: repo.requested_agent_id,
+            repo_dir: repo.repo_dir,
+            blocker_reasons: failure.blocker_reasons,
+            repo_contract_error: failure.repo_contract_error,
+            authority_boundary: {
+              opl_can_write_domain_truth: false,
+              opl_can_write_memory_body: false,
+              opl_can_authorize_quality_or_export: false,
+            },
+          },
+        };
+      }
     });
     const blockedCount = reports.filter((report) => report.generated_agent_interfaces.status !== 'ready').length;
     return {

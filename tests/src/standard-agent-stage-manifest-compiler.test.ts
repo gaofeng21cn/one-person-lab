@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildDomainPackCompilerList,
+  buildGeneratedAgentInterfaces,
   buildRepoGeneratedInterfaceBundle,
   buildStandardAgentRepoContractReadout,
   compileStandardAgentStageManifest,
@@ -306,13 +307,37 @@ test('pack compiler rejects requested Agent identity that differs from the repo 
     familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
   });
   const projection = report.domain_pack_compiler.domains[0];
+  const errorDetails = projection?.repo_contract_error?.details as JsonRecord;
 
   assert.equal(report.domain_pack_compiler.summary.blocked_domain_count, 1);
   assert.equal(projection?.compiler_status, 'blocked');
   assert.equal(projection?.blocker_reasons.includes('identity_mismatch'), true);
   assert.equal(projection?.repo_contract_error?.code, 'contract_shape_invalid');
-  assert.equal(projection?.repo_contract_error?.details.requested_agent_id, 'mag');
-  assert.equal(projection?.repo_contract_error?.details.canonical_agent_id, 'mas');
+  assert.equal(errorDetails.requested_agent_id, 'mag');
+  assert.equal(errorDetails.canonical_agent_id, 'mas');
+});
+
+test('generated interfaces family report blocks identity mismatch without aborting the report', () => {
+  const root = fixture('med-autoscience', 'mas');
+  const report = buildGeneratedAgentInterfaces({} as any, ['--family-defaults'], {
+    familyRepoInputs: [{ requested_agent_id: 'mag', repo_dir: root }],
+  }).generated_agent_interfaces as JsonRecord;
+  const projection = report.reports[0] as JsonRecord;
+  const error = projection.repo_contract_error as JsonRecord;
+  const details = error.details as JsonRecord;
+
+  assert.equal(report.status, 'blocked');
+  assert.deepEqual(report.summary, {
+    total_domain_count: 1,
+    ready_domain_count: 0,
+    blocked_domain_count: 1,
+  });
+  assert.equal(projection.compiler_status, 'blocked');
+  assert.deepEqual(projection.blocker_reasons, ['identity_mismatch']);
+  assert.equal(error.code, 'contract_shape_invalid');
+  assert.equal(details.requested_agent_id, 'mag');
+  assert.equal(details.canonical_agent_id, 'mas');
+  assert.equal(projection.generated_agent_interfaces.status, 'blocked');
 });
 
 test('OMA hosted descriptor consumes the generated stage plane without a legacy fallback', () => {
@@ -360,6 +385,37 @@ test('OMA hosted descriptor consumes the generated stage plane without a legacy 
     entry?.manifest?.family_transition_spec_descriptor?.spec_ref,
     'agent/stages/manifest.json#stages',
   );
+});
+
+test('OMA hosted descriptor rejects non-object normalized handoff and audit sources', async (t) => {
+  for (const ref of [
+    'contracts/generated_surface_handoff.json',
+    'contracts/functional_privatization_audit.json',
+  ]) {
+    await t.test(ref, () => {
+      const root = fixture('opl-meta-agent', 'oma');
+      writeJson(root, 'contracts/generated_surface_handoff.json', {
+        generated_surface_owner: 'one-person-lab',
+        domain_repo_can_own_generated_surface: false,
+      });
+      writeJson(root, 'contracts/functional_privatization_audit.json', {
+        surface_kind: 'functional_privatization_audit',
+        modules: [],
+      });
+      writeJson(root, ref, []);
+
+      const catalog = withOplMetaAgentDescriptorEntry({
+        summary: { total_projects_count: 0, resolved_count: 0, failed_count: 0 },
+        projects: [],
+        notes: [],
+        opl_meta_agent_registry: { repo_dir: root, summary: {} },
+      } as any);
+      const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
+
+      assert.equal(entry?.status, 'invalid_manifest');
+      assert.equal(entry?.manifest, null);
+    });
+  }
 });
 
 test('standard Agent repo contract readout blocks active private generic residue', () => {
@@ -563,6 +619,38 @@ test('stage manifest compiler rejects missing default receipt and authority-func
   }
 });
 
+test('stage manifest compiler rejects malformed or non-object owner receipt contracts', async (t) => {
+  for (const [name, source] of [
+    ['malformed', '{'],
+    ['non-object', '[]'],
+  ] as const) {
+    await t.test(name, () => {
+      const root = fixture(`target-owner-receipt-${name}`);
+      fs.writeFileSync(path.join(root, 'contracts/owner_receipt_contract.json'), source);
+      assert.throws(() => compileStandardAgentStageManifest(root));
+    });
+  }
+});
+
+test('stage manifest compiler requires canonical manifest kind, version, and truth owner', async (t) => {
+  const cases: Array<[string, (manifest: JsonRecord) => void]> = [
+    ['surface_kind', (manifest) => { manifest.surface_kind = 'foreign_stage_manifest'; }],
+    ['version', (manifest) => { manifest.version = 'opl-standard-agent-declarative-stage-manifest.v999'; }],
+    ['domain_truth_owner', (manifest) => {
+      manifest.authority_boundary.domain_truth_owner = 'foreign-owner';
+    }],
+  ];
+  for (const [name, mutate] of cases) {
+    await t.test(name, () => {
+      const root = fixture(`target-manifest-${name.replaceAll('_', '-')}`);
+      const manifest = readManifest(root);
+      mutate(manifest);
+      writeManifest(root, manifest);
+      assert.throws(() => compileStandardAgentStageManifest(root));
+    });
+  }
+});
+
 test('stage manifest compiler fails closed for an invalid required v2 declaration', () => {
   const root = fixture('target-invalid-stage-pack');
   const inputRef = path.join(root, 'contracts/pack_compiler_input.json');
@@ -592,6 +680,7 @@ test('stage manifest compiler honors an explicit v2 version with canonical Frame
   const l4EntryGate = stageContract.l4_entry_gate as JsonRecord;
   const l5EntryGate = stageContract.l5_entry_gate as JsonRecord;
   assert.equal(compilation.stage_control_plane.stage_pack_conformance_version, 'standard-stage-pack.v2');
+  assert.equal(compilation.stage_control_plane.authority_boundary.domain_truth_owner, 'target-stage-policy');
   assert.equal(stage.stage_pack_conformance_version, 'standard-stage-pack.v2');
   assert.equal(completionPolicy.surface_kind, 'domain_stage_completion_policy');
   assert.equal(completionPolicy.owner, 'one-person-lab');
@@ -631,6 +720,8 @@ test('stage manifest compiler fails closed on every Framework stage-contract flo
       owner: 'target-stage-policy',
       required: false,
     }],
+    ['progress_delta_policy', { surface_kind: 'domain_override' }],
+    ['typed_blocker_lineage_policy', { surface_kind: 'domain_override' }],
   ];
 
   for (const [field, value] of cases) {

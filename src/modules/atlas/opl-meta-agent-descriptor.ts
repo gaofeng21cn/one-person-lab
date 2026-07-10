@@ -407,10 +407,15 @@ function buildRawManifest(repoDir: string, registry: JsonRecord) {
   const actionCatalog = readJson(repoDir, OMA_CONTRACTS.actionCatalog);
   const repoContractReadout = buildStandardAgentRepoContractReadout(repoDir);
   const stageControlPlane = repoContractReadout.stage_control_plane as unknown as JsonRecord | null;
+  const repoDescriptor = repoContractReadout.repo_contract_descriptor?.descriptor;
   const canonicalAgentId = repoContractReadout.canonical_agent_id;
   const targetDomainId = repoContractReadout.target_domain_id;
-  const generatedSurfaceHandoff = readJson(repoDir, OMA_CONTRACTS.generatedSurfaceHandoff);
-  const functionalPrivatizationAudit = readJson(repoDir, OMA_CONTRACTS.functionalPrivatizationAudit);
+  const generatedSurfaceHandoff = isRecord(repoDescriptor?.generated_surface_handoff_contract)
+    ? repoDescriptor.generated_surface_handoff_contract
+    : null;
+  const functionalPrivatizationAudit = isRecord(repoDescriptor?.functional_privatization_audit)
+    ? repoDescriptor.functional_privatization_audit
+    : null;
   if (
     !actionCatalog
     || repoContractReadout.status !== 'resolved'
@@ -419,6 +424,7 @@ function buildRawManifest(repoDir: string, registry: JsonRecord) {
     || targetDomainId !== OMA_PROJECT_ID
     || !generatedSurfaceHandoff
     || !functionalPrivatizationAudit
+    || functionalPrivatizationAudit.status === 'missing'
   ) {
     return null;
   }

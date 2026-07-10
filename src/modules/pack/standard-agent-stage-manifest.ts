@@ -26,6 +26,8 @@ const ACTION_CATALOG_REF = 'contracts/action_catalog.json';
 const PACK_COMPILER_INPUT_REF = 'contracts/pack_compiler_input.json';
 const OWNER_RECEIPT_CONTRACT_REF = 'contracts/owner_receipt_contract.json';
 const AUTHORITY_FUNCTION_INVENTORY_REF = 'runtime/authority_functions/README.md';
+const STANDARD_STAGE_MANIFEST_SURFACE_KIND = 'opl_standard_agent_declarative_stage_manifest';
+const STANDARD_STAGE_MANIFEST_VERSION = 'opl-standard-agent-declarative-stage-manifest.v1';
 const TOOL_AFFORDANCE_CATALOG_ROLE = 'available_affordance_catalog_not_workflow_script';
 const EFFECT_BOUNDARY_TRUST_LANES = new Set(['ai_decision', 'human_gate', 'external_system']);
 
@@ -258,11 +260,12 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
   );
   const defaultSkillRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/skills/'));
   const defaultToolRefs = resolvedRequiredPackPaths.filter((entry) => entry.startsWith('agent/tools/'));
-  const ownerReceiptContractRef = repoFile(
+  const ownerReceiptContractRef = repoFile(repoDir, OWNER_RECEIPT_CONTRACT_REF, 'owner_receipt_contract_ref').ref;
+  record(
+    readJson(repoDir, ownerReceiptContractRef, 'owner_receipt_contract_ref').payload,
+    'owner_receipt_contract',
     repoDir,
-    OWNER_RECEIPT_CONTRACT_REF,
-    'owner_receipt_contract_ref',
-  ).ref;
+  );
   const authorityFunctionInventoryRef = repoFile(
     repoDir,
     AUTHORITY_FUNCTION_INVENTORY_REF,
@@ -288,8 +291,12 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     || declaredStagePackVersion === STANDARD_STAGE_PACK_CONFORMANCE_VERSION;
   const manifestRead = readJson(repoDir, STANDARD_AGENT_STAGE_MANIFEST_REF, 'stage_manifest_ref');
   const manifest = record(manifestRead.payload, 'stage_manifest', repoDir);
-  text(manifest.surface_kind, 'stage_manifest.surface_kind', repoDir);
-  text(manifest.version, 'stage_manifest.version', repoDir);
+  if (text(manifest.surface_kind, 'stage_manifest.surface_kind', repoDir) !== STANDARD_STAGE_MANIFEST_SURFACE_KIND) {
+    fail(`stage_manifest.surface_kind must be ${STANDARD_STAGE_MANIFEST_SURFACE_KIND}.`, { repo_dir: repoDir });
+  }
+  if (text(manifest.version, 'stage_manifest.version', repoDir) !== STANDARD_STAGE_MANIFEST_VERSION) {
+    fail(`stage_manifest.version must be ${STANDARD_STAGE_MANIFEST_VERSION}.`, { repo_dir: repoDir });
+  }
   if (text(manifest.target_domain_id, 'stage_manifest.target_domain_id', repoDir) !== domainId) {
     fail('Stage manifest target_domain_id must match domain_descriptor.domain_id.', { repo_dir: repoDir });
   }
@@ -301,6 +308,15 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     'stage_manifest.authority_boundary',
     repoDir,
   );
+  if (text(
+    manifestAuthority.domain_truth_owner,
+    'stage_manifest.authority_boundary.domain_truth_owner',
+    repoDir,
+  ) !== domainId) {
+    fail('stage_manifest.authority_boundary.domain_truth_owner must match domain_descriptor.domain_id.', {
+      repo_dir: repoDir,
+    });
+  }
   assertNoOplAuthority(manifestAuthority, 'stage_manifest.authority_boundary', repoDir);
   if (!Array.isArray(manifest.stages) || manifest.stages.length === 0) {
     fail('Stage manifest must declare at least one stage.', { repo_dir: repoDir });
@@ -350,6 +366,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       l5_entry_gate: STANDARD_AGENT_PACK_ABI.l5_entry_gate,
       stage_completion_policy: STANDARD_STAGE_COMPLETION_POLICY,
       user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
+      progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
+      typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
     };
     for (const [field, expected] of Object.entries(frameworkStageContract)) {
       const declared = declaredStageContract[field];
@@ -542,8 +560,6 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         artifact_scope_refs: [],
         workspace_scope_refs: [],
         ...frameworkStageContract,
-        progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
-        typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
       },
       trust_boundary: {
         lane: trustLane,
@@ -576,6 +592,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
       : undefined,
     authority_boundary: {
       ...manifestAuthority,
+      domain_truth_owner: domainId,
       opl_role: 'projection_consumer_only',
       opl_can_write_domain_truth: false,
       opl_can_authorize_quality_or_export: false,
