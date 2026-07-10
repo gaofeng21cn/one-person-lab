@@ -7,7 +7,6 @@ import {
 } from '../../../modules/foundry-lab/framework-operating-maturity.ts';
 import { buildFrameworkReadinessCompactReadback } from '../../../modules/foundry-lab/framework-readiness-compact-readback.ts';
 import { buildFrameworkReadinessSummary } from '../../../modules/foundry-lab/framework-readiness.ts';
-import { buildFrameworkTrancheBacklogReadback } from '../../../modules/foundry-lab/framework-tranche-backlog.ts';
 import { buildSourceStructureOperatorReadback } from '../../../modules/charter/source-structure-operator-readback.ts';
 import { buildOplAppState, parseAppActionExecuteArgs, parseAppStateArgs, runOplAppActionExecute } from '../../../modules/console/app-state.ts';
 import { buildRuntimeTraySnapshot } from '../../../modules/console/runtime-tray-snapshot.ts';
@@ -336,25 +335,6 @@ export function buildPublicCommandSpecs(
           return buildFrameworkOperatingMaturityCompactReadback(output.framework_operating_maturity);
         }
         return output;
-      },
-    },
-    'framework tranche-backlog': {
-      usage: 'opl framework tranche-backlog --family-defaults',
-      summary:
-        'Read the milestone/tranche execution index for functional-structure lanes without creating a second active backlog or completion claim.',
-      examples: ['opl framework tranche-backlog --family-defaults --json'],
-      group: 'framework',
-      handler: (args) => {
-        if (args.length !== 1 || args[0] !== '--family-defaults') {
-          throw buildUsageError(
-            'framework tranche-backlog requires --family-defaults.',
-            publicCommandSpecs['framework tranche-backlog'],
-            {
-              required: ['--family-defaults'],
-            },
-          );
-        }
-        return buildFrameworkTrancheBacklogReadback(getContracts());
       },
     },
     'framework source-structure': {

@@ -20,14 +20,6 @@ test('framework operating maturity exposes command-scoped help', () => {
   assert.match(scoped.help.usage, /framework operating-maturity --family-defaults/);
 });
 
-test('framework tranche backlog rejects non-default invocation to avoid a second active backlog', () => {
-  const failure = runCliFailure(['framework', 'tranche-backlog']);
-
-  assert.equal(failure.payload.error.code, 'cli_usage_error');
-  assert.match(failure.payload.error.message, /requires --family-defaults/);
-  assert.deepEqual(failure.payload.error.details.required, ['--family-defaults']);
-});
-
 test('framework source structure rejects non-default invocation to avoid a second structure truth', () => {
   const failure = runCliFailure(['framework', 'source-structure']);
 
