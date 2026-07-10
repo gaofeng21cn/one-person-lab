@@ -103,18 +103,6 @@ type LaunchDomainCliInput = {
   dryRun?: boolean;
 };
 
-type WorkspaceStatusCliInput = {
-  workspacePath?: string;
-};
-
-type RuntimeStatusCliInput = {
-  limit?: number;
-};
-
-type RuntimeManagerActionCliInput = {
-  mode: 'dry_run' | 'apply';
-};
-
 type SystemDependencyCliInput = {
   profile: string;
   apply?: boolean;
@@ -132,11 +120,6 @@ type SystemStartupMaintenanceCliInput = {
 
 type SessionLedgerCliInput = {
   limit?: number;
-};
-
-type DashboardCliInput = {
-  workspacePath?: string;
-  sessionsLimit?: number;
 };
 
 type StartCliInput = {
@@ -308,7 +291,6 @@ export type {
   CommandOptionValueKind,
   CommandRegistryMetadata,
   CommandSpec,
-  DashboardCliInput,
   DeveloperSupervisorCliInput,
   DomainLaunchStrategy,
   OplEngineCliInput,
@@ -319,8 +301,6 @@ export type {
   ParsedCliInput,
   ProductEntryCliInput,
   ResumeCliInput,
-  RuntimeManagerActionCliInput,
-  RuntimeStatusCliInput,
   SessionLedgerCliInput,
   SessionRuntimeCliInput,
   StartCliInput,
@@ -340,5 +320,4 @@ export type {
   WorkspaceValidationCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
-  WorkspaceStatusCliInput,
 };

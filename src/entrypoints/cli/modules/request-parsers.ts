@@ -2,17 +2,13 @@ import type { ResolveRequestInput } from '../../../kernel/types.ts';
 import type {
   AgentExecutorCliInput,
   CommandSpec,
-  DashboardCliInput,
   DomainLaunchStrategy,
   LaunchDomainCliInput,
   ProductEntryCliInput,
   ResumeCliInput,
-  RuntimeManagerActionCliInput,
-  RuntimeStatusCliInput,
   SessionLedgerCliInput,
   SkillPacksCliInput,
   StartCliInput,
-  WorkspaceStatusCliInput,
 } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 
@@ -289,123 +285,6 @@ function parseResumeArgs(
   };
 }
 
-function parseWorkspaceStatusArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): WorkspaceStatusCliInput {
-  const parsed: WorkspaceStatusCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for status workspace: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parseRuntimeStatusArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): RuntimeStatusCliInput {
-  const parsed: RuntimeStatusCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--limit':
-        parsed.limit = parsePositiveInteger(token, value, spec);
-        break;
-      default:
-        throw buildUsageError(`Unknown option for status runtime: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parseRuntimeManagerActionArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): RuntimeManagerActionCliInput {
-  let mode: RuntimeManagerActionCliInput['mode'] | null = null;
-
-  for (const token of args) {
-    if (token === '--dry-run') {
-      if (mode) {
-        throw buildUsageError('runtime manager action accepts exactly one of --dry-run or --apply.', spec, {
-          option: token,
-        });
-      }
-      mode = 'dry_run';
-      continue;
-    }
-
-    if (token === '--apply') {
-      if (mode) {
-        throw buildUsageError('runtime manager action accepts exactly one of --dry-run or --apply.', spec, {
-          option: token,
-        });
-      }
-      mode = 'apply';
-      continue;
-    }
-
-    throw buildUsageError(`Unknown option for runtime manager action: ${token}.`, spec, {
-      option: token,
-    });
-  }
-
-  if (!mode) {
-    throw buildUsageError('runtime manager action requires either --dry-run or --apply.', spec, {
-      required: ['--dry-run or --apply'],
-    });
-  }
-
-  return { mode };
-}
-
 function parseSessionLedgerArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -434,47 +313,6 @@ function parseSessionLedgerArgs(
         break;
       default:
         throw buildUsageError(`Unknown option for session ledger: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parseDashboardArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): DashboardCliInput {
-  const parsed: DashboardCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      default:
-        throw buildUsageError(`Unknown option for dashboard: ${token}.`, spec, {
           option: token,
         });
     }
