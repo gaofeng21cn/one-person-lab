@@ -1,6 +1,7 @@
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
 import { isDeepStrictEqual } from 'node:util';
+import { buildStageRunCycleManifestId } from './stage-run-orchestration-adapter.ts';
 import {
   STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY,
   STAGE_RUN_CANONICAL_LAUNCH_OWNER,
@@ -30,27 +31,31 @@ const ALLOWED_MANIFEST_FIELDS = new Set([
 
 const ALLOWED_STAGE_BINDING_FIELDS = new Set(['stage_ref', 'runner_ref']);
 
-const ALLOWED_ROUTE_DECISION_FIELDS = new Set([
-  'decision',
-  'stage_ref',
-  'decision_refs',
-  'accepted_checkpoint_ref',
-  'rollback_to_checkpoint_ref',
-  'typed_blocker_refs',
-  'human_gate_refs',
-  'runtime_blocker_refs',
-]);
+const ALLOWED_ROUTE_DECISION_FIELDS = {
+  dispatch: new Set(['decision', 'stage_ref', 'decision_refs']),
+  accepted: new Set(['decision', 'decision_refs', 'accepted_checkpoint_ref']),
+  rollback: new Set(['decision', 'decision_refs', 'rollback_to_checkpoint_ref']),
+  blocked: new Set([
+    'decision',
+    'decision_refs',
+    'typed_blocker_refs',
+    'human_gate_refs',
+    'runtime_blocker_refs',
+  ]),
+} as const;
 
-const ALLOWED_EFFECT_FIELDS = new Set([
-  'effect_status',
-  'stage_ref',
-  'domain_result_ref',
-  'typed_blocker_ref',
-  'runtime_blocker_ref',
-  'output_refs',
-  'checkpoint_ref',
-  'closeout_refs',
-]);
+const ALLOWED_EFFECT_FIELDS = {
+  domain_result: new Set([
+    'effect_status',
+    'stage_ref',
+    'domain_result_ref',
+    'output_refs',
+    'checkpoint_ref',
+    'closeout_refs',
+  ]),
+  typed_blocker: new Set(['effect_status', 'stage_ref', 'typed_blocker_ref', 'closeout_refs']),
+  runtime_blocker: new Set(['effect_status', 'stage_ref', 'runtime_blocker_ref', 'closeout_refs']),
+} as const;
 
 const ALLOWED_REDUCER_INPUT_FIELDS = new Set(['manifest', 'events']);
 const ALLOWED_PERSISTED_STATE_INPUT_FIELDS = new Set(['manifest', 'events', 'state']);
@@ -145,18 +150,29 @@ function normalizeManifest(value: StageRunCycleManifest): StageRunCycleManifest 
       launch_owner: value.launch_owner,
     });
   }
-  return {
-    surface_kind: 'opl_stage_run_cycle_manifest',
-    version: 'stage-run-cycle.v1',
-    manifest_id: requiredRef(value.manifest_id, 'manifest_id'),
+  const manifestIdentity = {
     target_agent_ref: requiredRef(value.target_agent_ref, 'target_agent_ref'),
     descriptor_ref: requiredRef(value.descriptor_ref, 'descriptor_ref'),
     run_ref: requiredRef(value.run_ref, 'run_ref'),
-    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
     input_refs: uniqueRefs(value.input_refs, 'input_refs', true),
     stage_bindings: stageBindings,
     max_cycles: positiveInteger(value.max_cycles, 'max_cycles'),
     max_attempts_per_cycle: positiveInteger(value.max_attempts_per_cycle, 'max_attempts_per_cycle'),
+  };
+  const manifestId = requiredRef(value.manifest_id, 'manifest_id');
+  const expectedManifestId = buildStageRunCycleManifestId(manifestIdentity);
+  if (manifestId !== expectedManifestId) {
+    contractError('StageRun manifest_id must match the canonical manifest identity.', {
+      manifest_id: manifestId,
+      expected_manifest_id: expectedManifestId,
+    });
+  }
+  return {
+    surface_kind: 'opl_stage_run_cycle_manifest',
+    version: 'stage-run-cycle.v1',
+    manifest_id: expectedManifestId,
+    ...manifestIdentity,
+    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
   };
 }
 
@@ -164,22 +180,42 @@ function normalizeRouteDecision(value: StageRunRouteDecision): StageRunRouteDeci
   if (!isRecord(value) || !['dispatch', 'accepted', 'rollback', 'blocked'].includes(String(value.decision))) {
     contractError('StageRun route oracle returned an invalid decision.');
   }
-  const unexpected = unexpectedFields(value, ALLOWED_ROUTE_DECISION_FIELDS);
+  const decision = value.decision as StageRunRouteDecision['decision'];
+  const unexpected = unexpectedFields(value, ALLOWED_ROUTE_DECISION_FIELDS[decision]);
   if (unexpected.length > 0) {
-    contractError('StageRun route oracle must return refs-only decision fields.', {
+    contractError('StageRun route oracle fields do not match its decision.', {
+      decision,
       unexpected_fields: unexpected,
     });
   }
+  const decisionRefs = uniqueRefs(value.decision_refs, 'route.decision_refs', true);
+  if (decision === 'dispatch') {
+    return {
+      decision,
+      stage_ref: requiredRef(value.stage_ref, 'route.stage_ref'),
+      decision_refs: decisionRefs,
+    };
+  }
+  if (decision === 'accepted') {
+    return {
+      decision,
+      decision_refs: decisionRefs,
+      accepted_checkpoint_ref: requiredRef(value.accepted_checkpoint_ref, 'accepted_checkpoint_ref'),
+    };
+  }
+  if (decision === 'rollback') {
+    return {
+      decision,
+      decision_refs: decisionRefs,
+      rollback_to_checkpoint_ref: requiredRef(
+        value.rollback_to_checkpoint_ref,
+        'rollback_to_checkpoint_ref',
+      ),
+    };
+  }
   return {
-    decision: value.decision,
-    ...(value.stage_ref ? { stage_ref: requiredRef(value.stage_ref, 'route.stage_ref') } : {}),
-    decision_refs: uniqueRefs(value.decision_refs, 'route.decision_refs', true),
-    ...(value.accepted_checkpoint_ref
-      ? { accepted_checkpoint_ref: requiredRef(value.accepted_checkpoint_ref, 'accepted_checkpoint_ref') }
-      : {}),
-    ...(value.rollback_to_checkpoint_ref
-      ? { rollback_to_checkpoint_ref: requiredRef(value.rollback_to_checkpoint_ref, 'rollback_to_checkpoint_ref') }
-      : {}),
+    decision,
+    decision_refs: decisionRefs,
     typed_blocker_refs: uniqueRefs(value.typed_blocker_refs ?? [], 'typed_blocker_refs'),
     human_gate_refs: uniqueRefs(value.human_gate_refs ?? [], 'human_gate_refs'),
     runtime_blocker_refs: uniqueRefs(value.runtime_blocker_refs ?? [], 'runtime_blocker_refs'),
@@ -194,50 +230,40 @@ function normalizeEffect(value: StageRunEffectObservation): StageRunEffectObserv
   ) {
     contractError('StageRun effect observation has an invalid status.');
   }
-  const unexpected = unexpectedFields(value, ALLOWED_EFFECT_FIELDS);
+  const effectStatus = value.effect_status as StageRunEffectObservation['effect_status'];
+  const unexpected = unexpectedFields(value, ALLOWED_EFFECT_FIELDS[effectStatus]);
   if (unexpected.length > 0) {
-    contractError('StageRun effect observation must contain refs-only fields.', {
+    contractError('StageRun effect observation fields do not match its effect status.', {
+      effect_status: effectStatus,
       unexpected_fields: unexpected,
     });
   }
-  const normalized = {
-    effect_status: value.effect_status,
-    stage_ref: requiredRef(value.stage_ref, 'effect.stage_ref'),
-    domain_result_ref: optionalRef(value.domain_result_ref, 'effect.domain_result_ref'),
-    typed_blocker_ref: optionalRef(value.typed_blocker_ref, 'effect.typed_blocker_ref'),
-    runtime_blocker_ref: optionalRef(value.runtime_blocker_ref, 'effect.runtime_blocker_ref'),
-    output_refs: uniqueRefs(value.output_refs ?? [], 'effect.output_refs'),
-    checkpoint_ref: optionalRef(value.checkpoint_ref, 'effect.checkpoint_ref'),
-    closeout_refs: uniqueRefs(value.closeout_refs ?? [], 'effect.closeout_refs'),
-  };
-  const carrierRefs = [
-    normalized.domain_result_ref,
-    normalized.typed_blocker_ref,
-    normalized.runtime_blocker_ref,
-  ].filter(Boolean);
-  if (carrierRefs.length !== 1) {
-    contractError('StageRun effect status must bind exactly its declared result or blocker ref.', {
-      effect_status: normalized.effect_status,
-    });
+  const stageRef = requiredRef(value.stage_ref, 'effect.stage_ref');
+  const closeoutRefs = uniqueRefs(value.closeout_refs ?? [], 'effect.closeout_refs');
+  if (effectStatus === 'domain_result') {
+    const checkpointRef = optionalRef(value.checkpoint_ref, 'effect.checkpoint_ref');
+    return {
+      effect_status: effectStatus,
+      stage_ref: stageRef,
+      domain_result_ref: requiredRef(value.domain_result_ref, 'effect.domain_result_ref'),
+      output_refs: uniqueRefs(value.output_refs ?? [], 'effect.output_refs'),
+      ...(checkpointRef ? { checkpoint_ref: checkpointRef } : {}),
+      closeout_refs: closeoutRefs,
+    };
   }
-  if (
-    (normalized.effect_status === 'domain_result' && !normalized.domain_result_ref)
-    || (normalized.effect_status === 'typed_blocker' && !normalized.typed_blocker_ref)
-    || (normalized.effect_status === 'runtime_blocker' && !normalized.runtime_blocker_ref)
-  ) {
-    contractError('StageRun effect status is missing its required carrier ref.', {
-      effect_status: normalized.effect_status,
-    });
+  if (effectStatus === 'typed_blocker') {
+    return {
+      effect_status: effectStatus,
+      stage_ref: stageRef,
+      typed_blocker_ref: requiredRef(value.typed_blocker_ref, 'effect.typed_blocker_ref'),
+      closeout_refs: closeoutRefs,
+    };
   }
   return {
-    effect_status: normalized.effect_status,
-    stage_ref: normalized.stage_ref,
-    ...(normalized.domain_result_ref ? { domain_result_ref: normalized.domain_result_ref } : {}),
-    ...(normalized.typed_blocker_ref ? { typed_blocker_ref: normalized.typed_blocker_ref } : {}),
-    ...(normalized.runtime_blocker_ref ? { runtime_blocker_ref: normalized.runtime_blocker_ref } : {}),
-    output_refs: normalized.output_refs,
-    ...(normalized.checkpoint_ref ? { checkpoint_ref: normalized.checkpoint_ref } : {}),
-    closeout_refs: normalized.closeout_refs,
+    effect_status: effectStatus,
+    stage_ref: stageRef,
+    runtime_blocker_ref: requiredRef(value.runtime_blocker_ref, 'effect.runtime_blocker_ref'),
+    closeout_refs: closeoutRefs,
   };
 }
 
@@ -548,7 +574,7 @@ export function validateStageRunPersistedState(input: {
   return canonicalState;
 }
 
-export { buildStageRunCycleManifestFromControlPlane } from './stage-run-orchestration-adapter.ts';
+export { buildStageRunCycleManifestFromControlPlane, buildStageRunCycleManifestId } from './stage-run-orchestration-adapter.ts';
 export type { StageRunControlPlaneManifestInput } from './stage-run-orchestration-adapter.ts';
 export { STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY } from './stage-run-orchestration-types.ts';
 export { STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF } from './stage-run-orchestration-types.ts';

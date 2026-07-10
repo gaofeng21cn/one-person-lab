@@ -54,12 +54,14 @@
       "can_claim_complete": false
     },
     {
-      "gate_id": "stage_route_arbiter_and_stop_loss",
+      "gate_id": "stage_route_currentness_and_advisory_no_progress",
       "required_status": "satisfied",
       "status": "satisfied",
       "evidence_refs": [
         "contracts/opl-framework/stage-route-scheduler-contract.json",
-        "tests/src/family-runtime-stage-run-currentness-identity.test.ts"
+        "contracts/opl-framework/stage-run-kernel-contract.json#cycle_orchestration.no_progress_policy",
+        "tests/src/family-runtime-stage-run-currentness-identity.test.ts",
+        "tests/src/family-runtime-attempt-contract.test.ts"
       ],
       "can_claim_complete": false
     },

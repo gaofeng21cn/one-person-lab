@@ -35,7 +35,7 @@ export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-re
 export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
 export { listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
-export { buildStageRunCycleIdentity, buildStageRunCycleManifestFromControlPlane, initializeStageRunCycleState, reduceStageRunCycleState, STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF, STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY, validateStageRunPersistedState } from './stage-run-orchestration.ts';
+export { buildStageRunCycleIdentity, buildStageRunCycleManifestFromControlPlane, buildStageRunCycleManifestId, initializeStageRunCycleState, reduceStageRunCycleState, STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF, STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY, validateStageRunPersistedState } from './stage-run-orchestration.ts';
 export type { StageRunControlPlaneManifestInput, StageRunCycleEvent, StageRunCycleIdentity, StageRunCycleIdentityInput, StageRunCycleManifest, StageRunCycleState, StageRunEffectObservation, StageRunRouteDecision } from './stage-run-orchestration.ts';
 export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection, MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE, OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY } from './mas-owner-answer-projection.ts';
 export type { OwnerAnswerProjectionProfile } from './mas-owner-answer-projection.ts';

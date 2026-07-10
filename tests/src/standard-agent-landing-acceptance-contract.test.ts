@@ -66,7 +66,7 @@ test('standard agent landing acceptance gates cover source shape generated surfa
     'generated_surface_production_consumption',
     'oma_target_agent_work_order_guard',
     'private_platform_residue_owner_decision',
-    'stage_route_arbiter_and_stop_loss',
+    'stage_route_currentness_and_advisory_no_progress',
   ]);
 
   for (const gate of contract.acceptance_gates) {
@@ -77,6 +77,16 @@ test('standard agent landing acceptance gates cover source shape generated surfa
   assert.ok(gates.generated_surface_production_consumption.cannot_be_satisfied_by.includes('generated interface ready alone'));
   assert.ok(gates.private_platform_residue_owner_decision.cannot_be_satisfied_by.includes('classification only'));
   assert.ok(gates.current_owner_delta_single_ordinary_route.cannot_be_satisfied_by.includes('provider completion'));
+  assert.ok(
+    gates.stage_route_currentness_and_advisory_no_progress.requires.includes(
+      'no-progress remains advisory while canonical admission consumer is null',
+    ),
+  );
+  assert.ok(
+    gates.stage_route_currentness_and_advisory_no_progress.cannot_be_satisfied_by.includes(
+      'same-identity no-progress counter or launch freeze without an active canonical owner consumer',
+    ),
+  );
   assert.ok(gates.oma_target_agent_work_order_guard.cannot_be_satisfied_by.includes('Agent Lab suite pass'));
   assert.ok(gates.cross_agent_negative_conformance.requires.includes('negative conformance rejects generated-ready as production caller migration'));
 });

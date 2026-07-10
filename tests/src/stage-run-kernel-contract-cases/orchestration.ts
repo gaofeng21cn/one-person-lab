@@ -110,6 +110,13 @@ test('StageRun orchestration is a pure reducer over canonical runner and domain 
 
   assert.equal(packageJson.exports['./stage-run-orchestration'], './dist/modules/stagecraft/stage-run-orchestration.js');
   assert.equal(contract.cycle_orchestration.execution_model, 'pure_refs_only_event_reducer');
+  assert.equal(
+    contract.cycle_orchestration.declarative_manifest.generated_control_plane_adapter
+      .manifest_id_recomputed_on_read,
+    true,
+  );
+  assert.equal(contract.cycle_orchestration.domain_route_oracle.irrelevant_decision_fields_policy, 'reject');
+  assert.equal(contract.cycle_orchestration.pure_state_reducer.irrelevant_effect_fields_policy, 'reject');
   assert.equal(contract.cycle_orchestration.second_scheduler_created, false);
   assert.equal(contract.cycle_orchestration.second_receipt_store_created, false);
   assert.equal(contract.cycle_orchestration.authority_boundary.opl_can_spawn_process, false);
@@ -265,6 +272,10 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
     /canonical OPL launch owner/,
   );
   assert.throws(
+    () => module.initializeStageRunCycleState({ ...manifest, manifest_id: 'stage_run_manifest_forged' }),
+    /must match the canonical manifest identity/,
+  );
+  assert.throws(
     () => module.initializeStageRunCycleState({
       ...manifest,
       stage_bindings: [{ stage_ref: 'proposal_authoring', runner_ref: 'mag://private-scheduler' }],
@@ -316,7 +327,37 @@ test('StageRun reducer rejects caller state, untrusted runners, invalid effects,
       stage_ref: 'proposal_authoring',
       typed_blocker_ref: 'mag://typed-blockers/wrong-carrier',
     })],
-  }), /required carrier ref/);
+  }), /fields do not match its effect status/);
+  assert.throws(() => module.reduceStageRunCycleState({
+    manifest,
+    events: [routeEvent({
+      decision: 'dispatch',
+      stage_ref: 'proposal_authoring',
+      decision_refs: ['mag://routes/forged-dispatch'],
+      accepted_checkpoint_ref: 'mag://checkpoints/forged',
+      rollback_to_checkpoint_ref: 'mag://checkpoints/forged',
+      typed_blocker_refs: ['mag://typed-blockers/forged'],
+    })],
+  }), /fields do not match its decision/);
+  for (const effect of [
+    {
+      effect_status: 'typed_blocker',
+      stage_ref: 'proposal_authoring',
+      typed_blocker_ref: 'mag://typed-blockers/quality',
+      checkpoint_ref: 'mag://checkpoints/forged',
+    },
+    {
+      effect_status: 'runtime_blocker',
+      stage_ref: 'proposal_authoring',
+      runtime_blocker_ref: 'opl://runtime-blockers/provider-exit',
+      output_refs: ['mag://outputs/forged'],
+    },
+  ]) {
+    assert.throws(() => module.reduceStageRunCycleState({
+      manifest,
+      events: [dispatch, effectEvent(effect)],
+    }), /fields do not match its effect status/);
+  }
   assert.throws(() => module.reduceStageRunCycleState({
     manifest,
     events: [dispatch, effectEvent({

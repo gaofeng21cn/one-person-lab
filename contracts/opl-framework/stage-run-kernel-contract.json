@@ -85,11 +85,15 @@
         "source_surface": "family-stage-control-plane.v1",
         "stage_binding_source": "stage_control_plane.stages[].stage_id",
         "manifest_id_source_fields": [
-          "stage_control_plane.plane_id",
           "target_agent_ref",
           "descriptor_ref",
-          "run_ref"
+          "run_ref",
+          "input_refs",
+          "stage_bindings",
+          "max_cycles",
+          "max_attempts_per_cycle"
         ],
+        "manifest_id_recomputed_on_read": true,
         "target_agent_ref_source": "explicit_canonical_agent_identity",
         "target_agent_ref_may_be_inferred_from_target_domain_id": false,
         "launch_owner_source": "injected_canonical_kernel_constant",
@@ -124,6 +128,8 @@
         "blocked"
       ],
       "decision_payload_role": "refs_only_route_decision",
+      "decision_specific_fields_required": true,
+      "irrelevant_decision_fields_policy": "reject",
       "opl_can_choose_domain_route": false,
       "accepted_requires_observed_checkpoint_ref": true,
       "rollback_requires_observed_checkpoint_ref": true
@@ -138,6 +144,8 @@
         "typed_blocker",
         "runtime_blocker"
       ],
+      "effect_status_specific_fields_required": true,
+      "irrelevant_effect_fields_policy": "reject",
       "required_effect_binding": [
         "pending_stage_ref",
         "stage_ref",

@@ -56,7 +56,7 @@ Domain Intent
 | [SLSA provenance](https://slsa.dev/spec/latest/) | provenance/attestation 让 artifact 的来源、构建输入和完整性可验证，但不替代业务验收。 | Stage Artifact Unit 的 manifest、hash、lineage、restore refs 是 artifact authority 的输入；它们不能单独声明 domain ready、publication-ready、package-ready 或 production-ready。 |
 | [Backstage Software Templates](https://backstage.io/docs/features/software-templates) 与 [Golden Paths](https://backstage.io/docs/golden-path/create-app/) | 平台用模板和 golden path 给用户一个默认可成功路径。 | 每个 Foundry Agent 只有一个 ordinary golden path；variants/proof/debug/cleanup 走显式 lane。 |
 | [CNCF Platform Engineering Maturity Model](https://tag-app-delivery.cncf.io/fr/whitepapers/platform-eng-maturity-model/) | 平台成熟度靠 self-service、paved road、feedback loop，而不是工具堆叠。 | OPL 应作为 thinnest viable agent platform，给 domain pack 自助接入和默认路径反馈，而不是把所有 evidence 暴露给用户。 |
-| [Google SRE Eliminating Toil](https://sre.google/sre-book/eliminating-toil/) | manual/repetitive/automatable/tactical/no enduring value/O(n) 工作是 toil。 | receipt-only、read-model reconcile-only、stale route redrive-only、typed-blocker accounting-only 是平台 toil，必须 stop-loss 或设计掉。 |
+| [Google SRE Eliminating Toil](https://sre.google/sre-book/eliminating-toil/) | manual/repetitive/automatable/tactical/no enduring value/O(n) 工作是 toil。 | receipt-only、read-model reconcile-only、stale route redrive-only、typed-blocker accounting-only 是平台 toil，应优先设计掉；没有 canonical admission consumer 时只记录 advisory diagnostic。 |
 | [OpenTelemetry signals](https://opentelemetry.io/docs/concepts/signals/) | traces、metrics、logs 等信号分层，用于理解系统。 | OPL 默认只给 broad owner signal；trace/log/metric/raw refs 全部进 drilldown。 |
 | [DORA continuous delivery capability](https://dora.dev/capabilities/continuous-delivery/) | 高质量快速反馈应对所有团队成员可见。 | Foundry Agent 默认反馈必须是用户能理解的 next owner / artifact delta / blocker，而不是内部计数。 |
 
@@ -88,7 +88,7 @@ Domain Intent
 | --- | --- | --- |
 | P0 | `owner_delta_contract_as_single_root` | 把 `current_owner_delta` 从 policy / projection 进一步提升成所有 default read surface 的唯一 canonical object；framework readiness、App fast state、runtime tray、evidence-worklist summary 和 Agent Lab improvement input 都从它派生。 |
 | P0 | `no_worklist_root_planning` | worklist、raw evidence envelope、stage replay、typed blocker group 和 private residue inventory 只能是 audit/detail；未 fold 成 owner delta、owner answer、typed blocker 或 hard gate 前，不得生成默认计划或 next action。 |
-| P0 | `lineage_stop_loss_default` | 同一 lineage 反复 receipt-only、platform-repair-only、read-model reconcile-only 或 stale-route redrive-only 时，默认冻结 launch，只接受 fresh domain owner delta 或 stable typed blocker。 |
+| P0 | `lineage_no_progress_advisory` | 同一 lineage 反复 receipt-only、platform-repair-only、read-model reconcile-only 或 stale-route redrive-only 时，只生成 advisory diagnostic；在 canonical admission consumer 存在前不得冻结 launch。 |
 | P0 | `domain_golden_path_single_default` | MAS/MAG/RCA/OMA 每个 agent 只有一个 ordinary golden path；proof lane、diagnostic lane、route variant、long-soak、cleanup 和 legacy provenance 必须显式进入。 |
 | P1 | `generated_surface_absorbs_wrappers` | CLI/MCP/App/status/workbench/default-caller shell 由 OPL generated/hosted surface 承担；domain repo 只保 semantic pack、authority functions、native helpers 和 direct skill path。 |
 | P1 | `app_cockpit_not_ledger_browser` | App 默认页只显示任务、stage、owner、缺什么 answer、artifact、hard blocker 和用户介入点；full ledger、raw count、provider trace 和 route menu 只在 drilldown。 |
@@ -119,7 +119,7 @@ Domain Intent
 
 1. 先固化 `current_owner_delta` canonical schema 和 default derivation，确保所有默认读面同源。
 2. 再关闭 worklist-root planning：所有 raw tail 必须通过 owner delta / hard gate / typed blocker fold 才能影响默认动作。
-3. 接着把 stop-loss 作为 control-plane primitive，优先覆盖 MAS stale dispatch / owner-payload tail。
+3. 接着删除 disconnected stop-loss control plane，只保留 no-progress advisory；未来只有出现 canonical admission consumer 与明确 owner contract 时才允许重新评估 enforcement。
 4. 然后逐 agent 固定唯一 ordinary golden path，并把 route variants、proof lane、diagnostic、cleanup、long-soak 下沉为 explicit lane。
 5. 最后推进 domain wrapper retirement：只在 replacement parity、no-active-caller、domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 全满足时物理删除。
 
@@ -406,10 +406,10 @@ stage cannot launch
 
 ```text
 same lineage repeats receipt-only/platform-repair/read-model-reconcile
-  -> increment stop_loss counter
-  -> freeze default launch
-  -> accept only fresh owner delta or stable typed blocker
-  -> append stop-loss decision as authority event
+  -> record advisory diagnostic ref
+  -> do not mutate launch, current pointer, or terminal state
+  -> route fresh owner delta or stable typed blocker through existing authority
+  -> do not append an authority event from the advisory alone
   -> move old attempts to audit lineage
 ```
 
@@ -630,7 +630,7 @@ domain-agent-repo/
 | --- | --- |
 | `default_owner_delta_derivation` | App fast state、framework readiness、evidence-worklist summary、runtime tray 同源。 |
 | `no_worklist_root_planning` | raw worklist item 不能绕过 owner delta 进入 default next action。 |
-| `lineage_stop_loss` | receipt-only/platform-repair-only/read-model-reconcile-only 重复 lineage 冻结默认 launch。 |
+| `lineage_no_progress_advisory` | 重复 lineage 只产生 audit/advisory refs；`canonical_admission_consumer=null` 时不得冻结默认 launch。 |
 | `cognitive_kernel_executor_first` | stage strategy refs 不写死认知流程；executor 能自主规划、调工具、生成候选、反思、修订和追问。 |
 | `tool_affordance_boundary` | 工具目录只标准化能力、权限、凭据、可写范围、side effect 和 forbidden authority；不能规定工具顺序、替代 executor 规划或授权 forbidden write。 |
 | `stage_artifact_progress_truth` | progress 必须同时具备 output、manifest、owner answer、current pointer。 |

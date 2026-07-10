@@ -30,6 +30,29 @@ export type StageRunControlPlaneManifestInput = {
   max_attempts_per_cycle: number;
 };
 
+type StageRunCycleManifestIdentityInput = Pick<
+  StageRunCycleManifest,
+  | 'target_agent_ref'
+  | 'descriptor_ref'
+  | 'run_ref'
+  | 'input_refs'
+  | 'stage_bindings'
+  | 'max_cycles'
+  | 'max_attempts_per_cycle'
+>;
+
+export function buildStageRunCycleManifestId(input: StageRunCycleManifestIdentityInput) {
+  return stableId('stage_run_manifest', [
+    input.target_agent_ref,
+    input.descriptor_ref,
+    input.run_ref,
+    input.input_refs,
+    input.stage_bindings,
+    input.max_cycles,
+    input.max_attempts_per_cycle,
+  ]);
+}
+
 function contractError(message: string, details: Record<string, unknown> = {}): never {
   throw new FrameworkContractError('contract_shape_invalid', message, details);
 }
@@ -82,19 +105,10 @@ export function buildStageRunCycleManifestFromControlPlane(
   const targetAgentRef = requiredRef(input.target_agent_ref, 'target_agent_ref');
   const descriptorRef = requiredRef(input.descriptor_ref, 'descriptor_ref');
   const runRef = requiredRef(input.run_ref, 'run_ref');
-  return {
-    surface_kind: 'opl_stage_run_cycle_manifest',
-    version: 'stage-run-cycle.v1',
-    manifest_id: stableId('stage_run_manifest', [
-      plane.plane_id,
-      targetAgentRef,
-      descriptorRef,
-      runRef,
-    ]),
+  const manifestIdentity = {
     target_agent_ref: targetAgentRef,
     descriptor_ref: descriptorRef,
     run_ref: runRef,
-    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
     input_refs: uniqueRefs(input.input_refs, 'input_refs'),
     stage_bindings: plane.stages.map((stage) => ({
       stage_ref: stage.stage_id,
@@ -105,5 +119,12 @@ export function buildStageRunCycleManifestFromControlPlane(
       input.max_attempts_per_cycle,
       'max_attempts_per_cycle',
     ),
+  };
+  return {
+    surface_kind: 'opl_stage_run_cycle_manifest',
+    version: 'stage-run-cycle.v1',
+    manifest_id: buildStageRunCycleManifestId(manifestIdentity),
+    ...manifestIdentity,
+    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
   };
 }

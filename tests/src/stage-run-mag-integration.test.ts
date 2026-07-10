@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../src/modules/runway/family-runtime-domain-handler-process.ts';
 import {
+  buildStageRunCycleManifestId,
   reduceStageRunCycleState,
   STAGE_RUN_CANONICAL_LAUNCH_OWNER,
   STAGE_RUN_CANONICAL_RUNNER_REF,
@@ -56,8 +57,9 @@ function runCommand(command: string[], cwd: string, env: NodeJS.ProcessEnv) {
     env,
     maxBuffer: 64 * 1024 * 1024,
   });
-  assert.equal(result.timed_out, false, result.stderr);
-  assert.equal(result.exit_code, 0, result.stderr);
+  const diagnostic = [result.stderr, result.stdout].filter((value) => value.trim()).join('\n');
+  assert.equal(result.timed_out, false, diagnostic);
+  assert.equal(result.exit_code, 0, diagnostic);
   return result.stdout.trim();
 }
 
@@ -91,20 +93,15 @@ function routeEvent(stageRef: string, decisionRef: string) {
 }
 
 function realManifest(input: {
-  head: string;
   repoDir: string;
   stageIds: string[];
   runRef: string;
   inputRef: string;
 }): StageRunCycleManifest {
-  return {
-    surface_kind: 'opl_stage_run_cycle_manifest',
-    version: 'stage-run-cycle.v1',
-    manifest_id: `mag-real-${input.head}`,
+  const manifestIdentity = {
     target_agent_ref: 'mag',
     descriptor_ref: pathToFileURL(path.join(input.repoDir, 'contracts/domain_descriptor.json')).href,
     run_ref: input.runRef,
-    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
     input_refs: [input.inputRef],
     stage_bindings: input.stageIds.map((stageRef) => ({
       stage_ref: stageRef,
@@ -113,9 +110,28 @@ function realManifest(input: {
     max_cycles: 2,
     max_attempts_per_cycle: 2,
   };
+  return {
+    surface_kind: 'opl_stage_run_cycle_manifest',
+    version: 'stage-run-cycle.v1',
+    manifest_id: buildStageRunCycleManifestId(manifestIdentity),
+    ...manifestIdentity,
+    launch_owner: STAGE_RUN_CANONICAL_LAUNCH_OWNER,
+  };
 }
 
 test('StageRun consumes real MAG quality route, single-pass result, and typed-blocker refs', () => {
+  const diagnostic = JSON.stringify({
+    reason: 'git_fetch_failed',
+    detail: 'Operation not permitted',
+  });
+  assert.throws(
+    () => runCommand([
+      process.execPath,
+      '-e',
+      `process.stdout.write(${JSON.stringify(diagnostic)}); process.exit(1);`,
+    ], process.cwd(), process.env),
+    /git_fetch_failed.*Operation not permitted/,
+  );
   const repoDir = requiredMagRepo();
   const expectedMagHead = requiredMagHead();
   const gitHead = runCommand(['git', 'rev-parse', 'HEAD'], repoDir, process.env);
@@ -174,7 +190,6 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
     assert.equal(fs.existsSync(typedBlocker.owner_receipt_evidence.receipt_instance_ref), true);
 
     const blockerManifest = realManifest({
-      head: gitHead,
       repoDir,
       stageIds,
       runRef: `mag://integration/${gitHead}/quality-route`,
@@ -228,7 +243,6 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
     assert.equal(forwardRoute.requires_human_confirmation, false);
     const domainResultRef = pathToFileURL(revision.output_path).href;
     const resultManifest = realManifest({
-      head: gitHead,
       repoDir,
       stageIds,
       runRef: `mag://integration/${gitHead}/revision-pass`,
