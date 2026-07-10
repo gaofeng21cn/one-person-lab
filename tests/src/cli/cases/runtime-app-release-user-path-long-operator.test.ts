@@ -51,6 +51,7 @@ test('App release long-operator retains start, event, finish, and minimum-durati
         earliest_finish_at: '2026-05-24T01:00:00.000Z',
       }, null, 2)}\n`,
     );
+    const logBeforeRejectedEvent = fs.readFileSync(start.operator_log_file, 'utf8');
     assert.throws(
       () => runCli([
         'runtime',
@@ -64,6 +65,7 @@ test('App release long-operator retains start, event, finish, and minimum-durati
       ], env),
       /event_kind must be one of:/,
     );
+    assert.equal(fs.readFileSync(start.operator_log_file, 'utf8'), logBeforeRejectedEvent);
     for (const [index, eventKind] of eventKinds.entries()) {
       const event = runCli([
         'runtime',
@@ -99,6 +101,21 @@ test('App release long-operator retains start, event, finish, and minimum-durati
     assert.equal(fs.existsSync(finish.record_payload_file), true);
     assert.equal(finish.authority_boundary.can_claim_release_ready, false);
     assert.equal(finish.authority_boundary.can_claim_production_ready, false);
+
+    const payload = parseJsonText(fs.readFileSync(finish.record_payload_file, 'utf8')) as any;
+    assert.deepEqual(payload.long_operator_evidence_refs, finish.long_operator_evidence_refs);
+    const recorded = runCli([
+      'runtime',
+      'app-release-evidence',
+      'record',
+      '--payload-file',
+      finish.record_payload_file,
+    ], env).app_release_user_path_evidence_ledger_record;
+    assert.deepEqual(
+      recorded.receipts[0].long_operator_evidence_refs,
+      finish.long_operator_evidence_refs,
+    );
+    assert.equal(recorded.receipts[0].authority_boundary.can_claim_production_ready, false);
 
     const short = startObservation(stateRoot, path.join(stateRoot, 'short'));
     fs.writeFileSync(

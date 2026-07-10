@@ -169,6 +169,7 @@ test('Codex App long-soak owner retains start, event, finish, and minimum-durati
         earliest_finish_at: '2026-05-24T01:00:00.000Z',
       }, null, 2)}\n`,
     );
+    const logBeforeRejectedEvent = fs.readFileSync(start.operator_log_file, 'utf8');
     assert.throws(
       () => runCli([
         'runtime',
@@ -182,6 +183,7 @@ test('Codex App long-soak owner retains start, event, finish, and minimum-durati
       ], env),
       /event_kind must be one of:/,
     );
+    assert.equal(fs.readFileSync(start.operator_log_file, 'utf8'), logBeforeRejectedEvent);
     const events = [
       ['temporal_hosted_stage_or_worker_window_observed', '2026-05-24T00:05:00.000Z'],
       ['provider_state_linkage_checked', '2026-05-24T00:15:00.000Z'],
@@ -220,6 +222,23 @@ test('Codex App long-soak owner retains start, event, finish, and minimum-durati
     assert.equal(finish.temporal_hosted_long_soak_refs.length, 1);
     assert.equal(fs.existsSync(finish.record_payload_file), true);
     assert.equal(finish.authority_boundary.can_close_long_soak, false);
+
+    const payload = parseJsonText(fs.readFileSync(finish.record_payload_file, 'utf8')) as any;
+    assert.deepEqual(payload.temporal_hosted_long_soak_refs, finish.temporal_hosted_long_soak_refs);
+    assert.deepEqual(payload.provider_state_linkage_refs, finish.provider_state_linkage_refs);
+    assert.deepEqual(payload.operator_evidence_refs, finish.operator_evidence_refs);
+    const recorded = runCli([
+      'runtime',
+      'codex-app-runtime-evidence',
+      'record',
+      '--payload-file',
+      finish.record_payload_file,
+    ], env).codex_app_runtime_evidence_ledger_record;
+    assert.deepEqual(recorded.receipts[0].temporal_hosted_long_soak_refs, finish.temporal_hosted_long_soak_refs);
+    assert.deepEqual(recorded.receipts[0].provider_state_linkage_refs, finish.provider_state_linkage_refs);
+    assert.deepEqual(recorded.receipts[0].operator_evidence_refs, finish.operator_evidence_refs);
+    assert.equal(recorded.receipts[0].authority_boundary.can_close_long_soak, false);
+    assert.equal(recorded.receipts[0].authority_boundary.can_claim_production_ready, false);
 
     const shortStart = runCli([
       'runtime',
