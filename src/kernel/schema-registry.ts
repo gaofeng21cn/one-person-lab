@@ -133,7 +133,10 @@ export function assertJsonSchemaPayload(
   );
 }
 
-export function assertJsonSchemaCompiles(entry: JsonSchemaRegistryEntry): void {
+export function assertJsonSchemaCompiles(
+  entry: JsonSchemaRegistryEntry,
+  relatedSchemas: JsonSchemaRegistryEntry[] = [],
+): void {
   const compiler = new Ajv2020({
     allErrors: true,
     strict: false,
@@ -146,6 +149,22 @@ export function assertJsonSchemaCompiles(entry: JsonSchemaRegistryEntry): void {
         schema_id: entry.schemaId,
         source_ref: entry.sourceRef,
         validation_errors: compiler.errors ?? [],
+      },
+    );
+  }
+  try {
+    for (const related of relatedSchemas) {
+      compiler.addSchema(related.schema, related.schemaId);
+    }
+    compiler.compile(entry.schema);
+  } catch (error) {
+    throw new FrameworkContractError(
+      'contract_shape_invalid',
+      'JSON Schema contract failed compilation.',
+      {
+        schema_id: entry.schemaId,
+        source_ref: entry.sourceRef,
+        compile_error: error instanceof Error ? error.message : String(error),
       },
     );
   }

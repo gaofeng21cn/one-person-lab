@@ -281,6 +281,19 @@ test('generated interfaces preserve action fields and expose executable callable
   assert.deepEqual(bundle.domain_handler.descriptors[0].request, { command: 'draft_brief' });
 });
 
+test('generated interfaces reject Python handler targets missing an action id', () => {
+  const repoDir = buildReadyAgentRepo();
+  const actionCatalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
+  actionCatalog.actions[0].source_command.command =
+    'sample_brief.domain_entry:SampleBriefDomainEntry.dispatch';
+  writeJson(actionCatalogPath, actionCatalog);
+
+  const failure = runCliFailure(['agents', 'interfaces', '--repo-dir', repoDir]);
+  assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+  assert.ok(failure.payload.error.details.error.includes('Invalid domain handler target'));
+});
+
 test('action catalog parameter lists reject non-arrays and non-string entries', () => {
   for (const [field, value] of [
     ['required_fields', 'workspace_root'],
@@ -341,6 +354,31 @@ test('repo compiler rejects uncompileable schemas and missing local fragments', 
     .generated_agent_interfaces;
   assert.equal(fragmentBundle.status, 'blocked');
   assert.equal(fragmentBundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'missing_fragment');
+});
+
+test('repo compiler rejects schemas with dangling local refs', () => {
+  const repoDir = buildReadyAgentRepo();
+  writeJson(path.join(repoDir, 'contracts', 'draft-brief.input.schema.json'), {
+    $ref: '#/$defs/missing',
+  });
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  assert.equal(bundle.status, 'blocked');
+  assert.equal(bundle.source_contract_consumption.action_input_schema_resolutions[0].status,
+    'invalid_schema');
+});
+
+test('repo compiler blocks malformed schema fragments without aborting readback', () => {
+  const repoDir = buildReadyAgentRepo();
+  const catalogPath = path.join(repoDir, 'contracts', 'action_catalog.json');
+  const catalog = parseJsonText(fs.readFileSync(catalogPath, 'utf8')) as Record<string, any>;
+  catalog.actions[0].input_schema_ref = 'contracts/draft-brief.input.schema.json#/%';
+  writeJson(catalogPath, catalog);
+
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  assert.equal(bundle.status, 'blocked');
+  assert.equal(bundle.source_contract_consumption.action_input_schema_resolutions[0].status,
     'missing_fragment');
 });
 

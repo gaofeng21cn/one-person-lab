@@ -83,7 +83,12 @@ function localSchemaFragment(schema: JsonRecord, fragment: string | null): unkno
   if (fragment === null || fragment === '') {
     return schema;
   }
-  const decodedFragment = decodeURIComponent(fragment);
+  let decodedFragment: string;
+  try {
+    decodedFragment = decodeURIComponent(fragment);
+  } catch {
+    return undefined;
+  }
   if (!decodedFragment.startsWith('/')) {
     const pending: unknown[] = [schema];
     while (pending.length > 0) {
@@ -122,6 +127,29 @@ function schemaFieldsMatchAction(schema: unknown, requiredFields: string[], opti
   return sameStringSet(requiredFields, schemaRequired)
     && sameStringSet(optionalFields, schemaOptional);
 }
+
+function siblingSchemaEntries(schemaPath: string) {
+  const schemaDir = path.dirname(schemaPath);
+  return fs.readdirSync(schemaDir)
+    .filter((name) => name.endsWith('.schema.json') && path.join(schemaDir, name) !== schemaPath)
+    .flatMap((name) => {
+      const siblingPath = path.join(schemaDir, name);
+      try {
+        const sibling = parseJsonText(fs.readFileSync(siblingPath, 'utf8'));
+        if (!isRecord(sibling)) return [];
+        return [{
+          schemaId: typeof sibling.$id === 'string' && sibling.$id.length > 0
+            ? sibling.$id
+            : name,
+          schema: sibling,
+          sourceRef: siblingPath,
+        }];
+      } catch {
+        return [];
+      }
+    });
+}
+
 function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof normalizeFamilyActionCatalog>) {
   return (catalog?.actions ?? []).map((action) => {
     const schemaRef = action.input_schema_ref;
@@ -193,7 +221,7 @@ function resolveActionInputSchemas(repoDir: string, catalog: ReturnType<typeof n
         schemaId: `${action.action_id}:input`,
         schema,
         sourceRef: schemaRef,
-      });
+      }, siblingSchemaEntries(containedFile.real_path));
     } catch {
       return {
         action_id: action.action_id,

@@ -110,7 +110,7 @@ export function resolveFamilyActionHandlerBinding(
 ): FamilyActionHandlerBinding | null {
   const match = PYTHON_HANDLER_TARGET.exec(target);
   if (!match?.groups) {
-    if (PYTHON_HANDLER_PREFIX.test(target) && target.includes('#')) {
+    if (PYTHON_HANDLER_PREFIX.test(target)) {
       throw new Error(`Invalid domain handler target: ${target}`);
     }
     return null;
