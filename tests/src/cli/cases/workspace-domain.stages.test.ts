@@ -46,6 +46,24 @@ test('family stage parity detects an allowed action ref missing from the action 
       parity.issues.some((issue: unknown) => String(issue).includes('missing_action')),
       true,
     );
+
+    const blocked = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'stage_1',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas-stage-drift"}',
+    ], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    }).family_runtime_stage_attempt;
+    assert.equal(blocked.attempt.status, 'blocked');
+    assert.equal(blocked.stage_launch_admission_gate.gate_action, 'block_stage_launch');
+    assert.match(blocked.attempt.blocked_reason, /missing_action_catalog_ref/);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

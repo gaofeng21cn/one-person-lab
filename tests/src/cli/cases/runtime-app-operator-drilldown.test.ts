@@ -77,6 +77,7 @@ test('runtime snapshot exposes the user-visible summary and stale Temporal worke
     assert.equal(restartRoute.provider_worker_lifecycle_status, 'worker_source_stale');
     assert.equal(restartRoute.provider_worker_repair_action_id, 'restart_temporal_worker');
     assert.equal(restartRoute.owner, 'opl');
+    assert.equal(restartRoute.authority_boundary.can_write_domain_truth, false);
     assert.equal(full.authority_boundary.can_write_domain_truth, false);
   } finally {
     if (workerProbe.pid) {

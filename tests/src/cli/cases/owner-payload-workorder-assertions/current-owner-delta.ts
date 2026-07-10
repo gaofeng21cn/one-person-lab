@@ -19,62 +19,6 @@ function assertFalseAuthority(boundary: JsonRecord, fields: string[] = FALSE_AUT
   }
 }
 
-export function assertCurrentOwnerDeltaReadModel(
-  readModel: JsonRecord,
-  expected: {
-    currentOwner?: unknown;
-    requiredDelta?: unknown;
-    acceptedReturnShapes?: unknown;
-    acceptedAnswerShapeIncludes?: string[];
-    openSafeActionCount?: unknown;
-    payloadRequiredCount?: unknown;
-    domainDispatchWorkorderCount?: unknown;
-    fullDetailRefKeys?: string[];
-  } = {},
-) {
-  assert.equal(readModel.surface_kind, 'opl_current_owner_delta_read_model');
-  assert.equal(readModel.schema_version, 'current-owner-delta-read-model.v1');
-  assert.equal(readModel.default_summary.default_path_root, 'current_owner_delta');
-  assert.deepEqual(readModel.current_owner_delta.current_owner, readModel.current_owner);
-  assert.deepEqual(readModel.current_owner_delta.desired_delta_description, readModel.required_delta);
-  assertCurrentOwnerDeltaProjection(readModel.current_owner_delta, {
-    currentOwner: expected.currentOwner ?? readModel.current_owner,
-    requiredDelta: expected.requiredDelta ?? readModel.required_delta,
-    acceptedAnswerShapeIncludes: expected.acceptedAnswerShapeIncludes,
-  });
-
-  assert.equal(Array.isArray(readModel.accepted_return_shapes), true);
-  if (Array.isArray(expected.acceptedReturnShapes)) {
-    assert.deepEqual(readModel.accepted_return_shapes, expected.acceptedReturnShapes);
-  }
-  assert.equal(readModel.owner_delta_audit_tail.audit_counts_are_first_screen, false);
-  assertFalseAuthority(readModel.owner_delta_audit_tail.readiness_false_flags);
-
-  const counts = readModel.owner_delta_audit_tail.count_summary;
-  if (expected.openSafeActionCount !== undefined) {
-    assert.equal(counts.open_safe_action_count, expected.openSafeActionCount);
-  }
-  if (expected.payloadRequiredCount !== undefined) {
-    assert.equal(counts.payload_required_count, expected.payloadRequiredCount);
-  }
-  if (expected.domainDispatchWorkorderCount !== undefined) {
-    assert.equal(counts.domain_dispatch_workorder_count, expected.domainDispatchWorkorderCount);
-  }
-  for (const key of expected.fullDetailRefKeys ?? []) {
-    assert.equal(typeof readModel.full_detail_refs[key], 'string', key);
-  }
-
-  const nextAction = readModel.next_safe_action_or_none;
-  if (nextAction) {
-    assert.equal(nextAction.derivation_source, 'current_owner_delta');
-    assert.equal(nextAction.current_owner, readModel.current_owner);
-    assertFalseAuthority(nextAction, [
-      ...FALSE_AUTHORITY_FIELDS,
-      'can_close_without_domain_or_app_payload',
-    ]);
-  }
-}
-
 export function assertCurrentOwnerDeltaToplineNextAction(surface: JsonRecord) {
   const delta = surface.current_owner_delta;
   const nextAction = surface.current_owner_delta_read_model.next_safe_action_or_none;
