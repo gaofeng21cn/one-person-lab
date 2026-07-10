@@ -29,13 +29,18 @@ export function hasStandardDomainAgentSurface(repoDir: string) {
   return fs.existsSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'));
 }
 
-function workspaceCandidatesFrom(seed: string) {
+function workspaceCandidatesFrom(seed: string, repoDefaults: readonly FamilyRepoDefault[]) {
   const resolvedSeed = path.resolve(seed);
-  const candidates = [resolvedSeed, path.dirname(resolvedSeed), resolveFamilyWorkspaceRootFromRepoRoot(resolvedSeed)];
+  const repoDirectories = repoDefaults.map((entry) => entry.directory);
+  const candidates = [
+    resolvedSeed,
+    path.dirname(resolvedSeed),
+    resolveFamilyWorkspaceRootFromRepoRoot(resolvedSeed, repoDirectories),
+  ];
   let current = resolvedSeed;
   while (current !== path.dirname(current)) {
     if (path.basename(current) === '.worktrees') {
-      candidates.push(resolveFamilyWorkspaceRootFromRepoRoot(seed));
+      candidates.push(resolveFamilyWorkspaceRootFromRepoRoot(seed, repoDirectories));
     }
     current = path.dirname(current);
   }
@@ -51,8 +56,8 @@ export function discoverFamilyRepoInputs(
     ...(configuredWorkspaceRoot
       ? [configuredWorkspaceRoot]
       : [
-          ...workspaceCandidatesFrom(process.cwd()),
-          ...workspaceCandidatesFrom(OPL_REPO_ROOT),
+          ...workspaceCandidatesFrom(process.cwd(), repoDefaults),
+          ...workspaceCandidatesFrom(OPL_REPO_ROOT, repoDefaults),
         ]),
   ].map((entry) => path.resolve(entry)));
 

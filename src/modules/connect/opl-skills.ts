@@ -45,12 +45,25 @@ import {
 } from './opl-skills-parts/registry.ts';
 import { runSkillPackInstaller } from './opl-skills-parts/sync.ts';
 import {
+  STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgentByCanonicalPluginName,
 } from '../atlas/public/standard-agent-registry.ts';
 
-export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
-export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
+const FAMILY_REPO_DIRECTORIES = STANDARD_AGENT_REGISTRY.map((entry) => entry.project);
+
+export function resolveDefaultFamilyWorkspaceRoot(
+  options: Parameters<typeof resolveDefaultFamilyWorkspaceRootImpl>[0] = {},
+) {
+  return resolveDefaultFamilyWorkspaceRootImpl({
+    ...options,
+    familyRepoDirectories: FAMILY_REPO_DIRECTORIES,
+  });
+}
+
+export function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {
+  return resolveFamilyWorkspaceRootFromRepoRootImpl(repoRoot, FAMILY_REPO_DIRECTORIES);
+}
 
 type ReadFamilySkillPacksOptions = {
   domains?: string[];

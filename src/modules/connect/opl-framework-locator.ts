@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../kernel/family-workspace-root.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type FrameworkLocatorSource =
@@ -38,23 +39,6 @@ function normalizeOptionalString(value: string | undefined | null) {
 
 function currentSourceRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-}
-
-function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {
-  let current = path.resolve(repoRoot);
-
-  while (true) {
-    const baseName = path.basename(current);
-    if (baseName === '.worktrees' || baseName === 'worktrees') {
-      return path.dirname(path.dirname(current));
-    }
-
-    const parent = path.dirname(current);
-    if (parent === current) {
-      return path.dirname(path.resolve(repoRoot));
-    }
-    current = parent;
-  }
 }
 
 function findOnPath(commandName: string) {
