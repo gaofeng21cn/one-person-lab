@@ -136,14 +136,20 @@ export function assertStageRunAuthorizationNextAction(action: JsonRecord) {
   assert.equal(Array.isArray(action.missing_input_refs), true);
   assert.equal(action.missing_input_refs.length > 0, true);
   assertFalseAuthority(action, [
+    'can_submit_to_safe_action_shell',
     'can_execute_domain_action',
     'can_write_domain_truth',
     'can_create_owner_receipt',
     'can_create_typed_blocker',
+    'can_close_owner_chain',
+    'can_close_domain_ready',
+    'can_claim_domain_ready',
+    'can_claim_production_ready',
     'domain_truth_changed',
     'owner_receipt_signed',
     'domain_typed_blocker_created',
     'execution_blocker_is_domain_typed_blocker',
+    'worklist_item_is_completion_claim',
   ]);
 }
 

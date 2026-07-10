@@ -62,11 +62,35 @@ function seedSummaryStageAttempts(count: number) {
   }
 }
 
+function seedRunningCurrentWorkUnit(workspaceRoot: string) {
+  const { db } = openQueueDb();
+  try {
+    const attempt = createStageAttempt(db, {
+      domainId: 'medautoscience',
+      stageId: 'submission_milestone_candidate',
+      providerKind: 'temporal',
+      workspaceLocator: {
+        workspace_root: workspaceRoot,
+        artifact_root: path.join(workspaceRoot, 'artifacts'),
+        source_refs: ['source:current-work-unit'],
+        work_unit_id: 'current-work-unit-from-study-progress',
+      },
+      taskId: 'task-current-work-unit-from-study-progress',
+      checkpointRefs: ['checkpoint:current-work-unit'],
+    }).attempt;
+    db.prepare("UPDATE stage_attempts SET status = 'running' WHERE stage_attempt_id = ?")
+      .run(attempt.stage_attempt_id);
+  } finally {
+    db.close();
+  }
+}
+
 function bindMasWorkspace(input: {
   stateRoot: string;
   fixtureContractsRoot: string;
   workspaceRoot: string;
   profilePath: string;
+  progressCommand: string;
 }) {
   const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience) as Record<string, any>;
   manifest.workspace_locator = {
@@ -79,6 +103,10 @@ function bindMasWorkspace(input: {
     ...((manifest.task_lifecycle as Record<string, unknown>) ?? {}),
     status: 'active',
     human_gate_ids: [],
+    progress_surface: {
+      ...((manifest.task_lifecycle?.progress_surface as Record<string, unknown>) ?? {}),
+      command: input.progressCommand,
+    },
   };
   manifest.progress_projection = {
     ...((manifest.progress_projection as Record<string, unknown>) ?? {}),
@@ -86,6 +114,17 @@ function bindMasWorkspace(input: {
     runtime_status: 'running',
     attention_items: [],
     human_gate_ids: [],
+    progress_surface: {
+      ...((manifest.progress_projection?.progress_surface as Record<string, unknown>) ?? {}),
+      command: input.progressCommand,
+    },
+  };
+  manifest.product_entry_overview = {
+    ...((manifest.product_entry_overview as Record<string, unknown>) ?? {}),
+    progress_surface: {
+      ...((manifest.product_entry_overview?.progress_surface as Record<string, unknown>) ?? {}),
+      command: input.progressCommand,
+    },
   };
   runCli([
     'workspace',
@@ -100,6 +139,42 @@ function bindMasWorkspace(input: {
     OPL_STATE_DIR: input.stateRoot,
     OPL_CONTRACTS_DIR: input.fixtureContractsRoot,
   });
+}
+
+function assertCurrentWorkUnitAuthority(drilldown: Record<string, any>) {
+  const boundaries = [
+    {
+      boundary: drilldown.current_work_unit_first_read_model.authority_boundary,
+      fields: [
+        'can_write_domain_truth',
+        'can_execute_domain_action',
+        'can_create_owner_receipt',
+        'can_create_typed_blocker',
+        'can_close_domain_ready',
+        'can_claim_production_ready',
+      ],
+    },
+    {
+      boundary: drilldown.domain_current_work_unit_projection.authority_boundary,
+      fields: [
+        'can_write_domain_truth',
+        'can_execute_domain_action',
+        'can_create_owner_receipt',
+        'can_create_typed_blocker',
+        'can_close_owner_chain',
+        'can_close_domain_ready',
+        'can_claim_domain_ready',
+        'can_claim_production_ready',
+        'provider_completion_is_domain_ready',
+      ],
+    },
+  ];
+  for (const { boundary, fields } of boundaries) {
+    for (const field of fields) {
+      assert.equal(Object.hasOwn(boundary, field), true, field + ' must be present');
+      assert.equal(boundary[field], false, field);
+    }
+  }
 }
 
 function portalPayloadWithoutCurrentWorkUnit(workspaceRoot: string) {
@@ -267,6 +342,7 @@ test('runtime app operator summary uses current-owner cache before workstream ba
       summaryDrilldown.current_work_unit_first_read_model.default_primary_source,
       'domain_current_work_unit_projection',
     );
+    assertCurrentWorkUnitAuthority(summaryDrilldown);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
@@ -294,12 +370,28 @@ test('runtime app operator summary prefers current work-unit over historical saf
   fs.mkdirSync(path.dirname(portalHtmlPath), { recursive: true });
   fs.writeFileSync(portalHtmlPath, '<!doctype html><title>MAS Progress Portal</title>\n');
   fs.writeFileSync(portalPayloadPath, `${JSON.stringify(portalPayloadWithoutCurrentWorkUnit(workspaceRoot), null, 2)}\n`);
-  writeStudyProgressProbe(workspaceRoot);
+  const progressCommand = writeStudyProgressProbe(workspaceRoot);
 
   try {
-    bindMasWorkspace({ stateRoot, fixtureContractsRoot, workspaceRoot, profilePath });
+    bindMasWorkspace({
+      stateRoot,
+      fixtureContractsRoot,
+      workspaceRoot,
+      profilePath,
+      progressCommand,
+    });
+    const boundManifest = runCli(['domain', 'manifests'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    }).domain_manifests.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    ).manifest;
+    assert.equal(boundManifest.task_lifecycle.progress_surface.command, progressCommand);
+    assert.equal(boundManifest.progress_projection.progress_surface.command, progressCommand);
+    assert.equal(boundManifest.product_entry_overview.progress_surface.command, progressCommand);
     process.env.OPL_STATE_DIR = stateRoot;
     seedSummaryStageAttempts(1);
+    seedRunningCurrentWorkUnit(workspaceRoot);
 
     const summaryDrilldown = runCli(SUMMARY_COMMAND, {
       OPL_STATE_DIR: stateRoot,
@@ -316,7 +408,7 @@ test('runtime app operator summary prefers current work-unit over historical saf
     );
     assert.equal(
       summaryDrilldown.current_owner_delta.work_unit_id,
-      'current-work-unit-from-study-progress',
+      'medautoscience:work-unit:current-work-unit-from-study-progress',
     );
     assert.equal(
       summaryDrilldown.operator_next_action.payload_requirement,
@@ -347,6 +439,7 @@ test('runtime app operator summary prefers current work-unit over historical saf
         .diagnostic_backlog_separation.historical_attempt_backlog_is_default_next_step,
       false,
     );
+    assertCurrentWorkUnitAuthority(summaryDrilldown);
   } finally {
     if (previousStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;

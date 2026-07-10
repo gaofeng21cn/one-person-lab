@@ -180,11 +180,22 @@ test('domain manifests owns transition matrix evaluation and domain mismatch blo
       bindManifest('medautoscience', withMasTransitions(fixtures.medautoscience, row.overrides), env);
       const transition = findDomainManifest(runCli(['domain', 'manifests'], env), 'medautoscience')
         .manifest.family_transition;
+      const descriptorTransition = runCli(['agents', 'descriptor', '--domain', 'mas'], env)
+        .family_agent_descriptor.family_transition;
       assert.equal(transition.status, row.expectedStatus);
       assert.equal(transition.matrix_result?.summary.transition_applied ?? null, row.expectedApplied);
       assert.equal(transition.non_authority_flags.opl_writes_domain_truth, false);
+      assert.equal(descriptorTransition.status, row.expectedStatus);
+      assert.equal(
+        descriptorTransition.matrix_summary?.transition_applied ?? null,
+        row.expectedApplied,
+      );
+      assert.equal(descriptorTransition.non_authority_flags.opl_writes_domain_truth, false);
+      assert.equal(descriptorTransition.non_authority_flags.opl_executes_domain_action, false);
+      assert.equal(descriptorTransition.non_authority_flags.opl_interprets_domain_quality, false);
       if (row.expectedStatus === 'blocked') {
         assert.equal(transition.blocked_reason, 'transition_spec_domain_mismatch');
+        assert.equal(descriptorTransition.blocked_reason, 'transition_spec_domain_mismatch');
       }
     } finally {
       fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -392,6 +403,16 @@ test('RCA visual transition specs adapt without granting OPL visual authority', 
     assert.equal(transition.matrix_result.summary.transition_applied, 1);
     assert.equal(transition.authority_boundary.visual_export_verdict_owner, 'redcube_ai');
     assert.equal(transition.non_authority_flags.opl_executes_domain_action, false);
+
+    const descriptorTransition = runCli(['agents', 'descriptor', '--domain', 'rca'], env)
+      .family_agent_descriptor.family_transition;
+    assert.equal(descriptorTransition.status, 'matrix_evaluated');
+    assert.equal(descriptorTransition.matrix_summary.transition_applied, 1);
+    assert.equal(descriptorTransition.authority_boundary.visual_export_verdict_owner, 'redcube_ai');
+    assert.equal(descriptorTransition.authority_boundary.opl_can_declare_visual_ready, false);
+    assert.equal(descriptorTransition.authority_boundary.opl_can_declare_exportable, false);
+    assert.equal(descriptorTransition.authority_boundary.opl_can_mutate_artifacts, false);
+    assert.equal(descriptorTransition.non_authority_flags.opl_executes_domain_action, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
