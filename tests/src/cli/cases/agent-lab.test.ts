@@ -320,3 +320,360 @@ test('agent-lab run and optimize project evidence and candidate refs without own
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('agent-lab evaluation-work-order execute consumes an OMA suite seed and fails closed without observations', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-evaluation-work-order-'));
+  try {
+    const suiteSeedPath = path.join(tmpDir, 'suite-seed.json');
+    const workOrderPath = path.join(tmpDir, 'foundry-lab-work-order.json');
+    const outputDir = path.join(tmpDir, 'foundry-lab-output');
+    const suiteSeed = {
+      surface_kind: 'opl_meta_agent_agent_lab_suite_seed',
+      version: 'opl-meta-agent.agent-lab-suite-seed.v1',
+      suite_id: 'agent-lab-suite-seed:target-agent/takeover',
+      suite_kind: 'agent_lab_external_suite',
+      seed_status: 'declarative_seed_candidate_waiting_for_foundry_lab_consumer',
+      execution_owner: 'one-person-lab/OPL Foundry Lab',
+      authority_boundary: {
+        refs_only: true,
+        oma_can_execute_suite: false,
+        oma_can_write_suite_result: false,
+        oma_can_write_owner_receipt_body: false,
+        oma_can_write_promotion_gate: false,
+        can_write_target_domain_truth: false,
+        can_authorize_target_quality_or_export: false,
+      },
+      tasks: [{
+        task_id: 'agent-lab-task:target-agent/takeover',
+        domain_id: 'target-agent',
+        task_family: 'target_agent_takeover_evaluation',
+        environment: {
+          environment_kind: 'external_repo_contract_intake',
+          workspace_locator_ref: '/tmp/target-agent',
+          sandbox_policy: 'refs_only_no_target_domain_mutation',
+          network_policy: 'target_owner_policy',
+        },
+        instructions_ref: 'instructions:opl-meta-agent/target-agent/takeover',
+        agent_entry_ref: 'target-agent-entry:target-agent',
+        stage_refs: ['stage:target-agent/foundry-lab-evaluation'],
+        oracle_refs: ['oracle:target-agent/owner-route'],
+        scorer_refs: ['scorer:target-agent/no-forbidden-write'],
+        recovery_probe_specs: [{
+          probe_ref: 'recovery-probe:target-agent/no-forbidden-write',
+          probe_kind: 'no_forbidden_authority_write',
+          expected_status: 'passed',
+          source_refs: ['contracts/domain_descriptor.json#/authority_boundary'],
+        }],
+        trajectory_plan: {
+          trajectory_ref: 'trajectory:target-agent/takeover',
+          requested_run_ref: 'run:opl-foundry-lab/target-agent/takeover',
+          agent_executor: 'codex_cli',
+          tool_affordance_refs: ['opl-action:agent-lab/run'],
+          expected_receipt_refs: ['target-owner-receipt-or-typed-blocker:target-agent'],
+        },
+        scorecard_spec: {
+          scorecard_ref: 'scorecard:target-agent/takeover',
+          target_agent_owned: true,
+          opl_scorecard_role: 'scorecard_ref_projection_only',
+          metric_refs: ['metric-ref:target-agent/no-forbidden-write'],
+          evidence_refs: ['evidence-ref:target-agent/takeover'],
+        },
+        improvement_candidate_seed: {
+          candidate_ref: 'improvement-candidate:target-agent/takeover',
+          candidate_kind: 'target_agent_takeover_gap',
+          target_ref: 'target-agent:target-agent/takeover',
+          allowed_change_scope: 'branch_only',
+        },
+        promotion_gate_request: {
+          gate_ref: 'promotion-gate:target-agent/takeover',
+          evaluation_owner: 'one-person-lab/OPL Foundry Lab',
+          required_refs: ['scorecard:target-agent/takeover'],
+        },
+      }],
+    };
+    const workOrder = {
+      surface_kind: 'opl_meta_agent_foundry_lab_work_order_candidate',
+      version: 'opl-meta-agent.foundry-lab-work-order-candidate.v1',
+      work_order_id: 'oma-foundry-lab-work-order:target-agent/takeover',
+      work_order_kind: 'target_agent_takeover_evaluation',
+      status: 'ready_for_opl_foundry_lab_evaluation',
+      execution_owner: 'one-person-lab/OPL Foundry Lab',
+      target_agent: { domain_id: 'target-agent', repo_dir: '/tmp/target-agent' },
+      suite_seed: {
+        ref: path.basename(suiteSeedPath),
+        suite_id: suiteSeed.suite_id,
+        suite_kind: suiteSeed.suite_kind,
+      },
+      source_refs: ['contracts/domain_descriptor.json'],
+      reviewer_refs: ['review:target-agent/takeover'],
+      candidate_refs: ['improvement-candidate:target-agent/takeover'],
+      expected_return_shapes: [
+        'agent_lab_suite_result_ref',
+        'foundry_lab_execution_receipt_ref',
+        'improvement_candidate_refs',
+        'mechanism_proposal_refs',
+        'promotion_gate_refs',
+        'scaleout_ledger_refs',
+        'target_owner_receipt_or_typed_blocker_ref',
+      ],
+      consumer_dependency: {
+        status: 'available',
+        owner: 'one-person-lab/OPL Foundry Lab',
+        required_consumer_role: 'compile_evaluation_work_order_to_agent_lab_suite_and_execute',
+      },
+      execution_aperture: {
+        action_ref: 'opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>',
+        work_order_lifecycle_owner: 'one-person-lab/OPL Foundry Lab',
+        result_ledger_owner: 'one-person-lab/OPL Foundry Lab',
+        target_owner_closeout_owner: 'target-domain',
+      },
+      authority_boundary: {
+        oma_can_execute_agent_lab_suite: false,
+        oma_can_write_agent_lab_result: false,
+        oma_can_write_owner_receipt_body: false,
+        oma_can_write_promotion_gate: false,
+        oma_can_write_target_domain_truth: false,
+        oma_can_authorize_target_domain_quality_or_export: false,
+      },
+    };
+    fs.writeFileSync(suiteSeedPath, `${JSON.stringify(suiteSeed, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(workOrderPath, `${JSON.stringify(workOrder, null, 2)}\n`, 'utf8');
+
+    const result = runCli([
+      'agent-lab',
+      'evaluation-work-order',
+      'execute',
+      '--work-order',
+      workOrderPath,
+      '--output',
+      outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+
+    assert.equal(result.status, 'blocked_missing_evaluation_observations');
+    assert.equal(result.evaluation_result.status, 'blocked_missing_evaluation_observations');
+    assert.equal(result.suite_result, null);
+    assert.equal(result.receipt.surface_kind, 'opl_foundry_lab_evaluation_work_order_execution_receipt');
+    assert.equal(result.receipt.consumer_dependency.status, 'satisfied');
+    assert.deepEqual(result.receipt.improvement_candidate_refs, [
+      'improvement-candidate:target-agent/takeover',
+    ]);
+    assert.deepEqual(result.receipt.promotion_gate_refs, []);
+    assert.deepEqual(result.receipt.mechanism_proposal_refs, []);
+    assert.deepEqual(result.receipt.scaleout_ledger_refs, []);
+    assert.deepEqual(result.receipt.downstream_pending_outputs.promotion_gate_request_refs, [
+      'promotion-gate:target-agent/takeover',
+    ]);
+    assert.equal(result.receipt.target_owner_receipt_or_typed_blocker_ref, null);
+    assert.equal(result.receipt.platform_blocker_ref, result.artifacts.typed_blocker_path);
+    assert.equal(result.typed_blocker.blocker_kind, 'foundry_lab_evaluation_observations_missing');
+    assert.deepEqual(result.typed_blocker.missing_observations, ['evaluation_observation_packet']);
+    assert.equal(result.authority_boundary.can_write_domain_truth, false);
+    assert.equal(result.authority_boundary.can_write_owner_receipt, false);
+    assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(result.authority_boundary.can_authorize_export_verdict, false);
+    assert.equal(result.authority_boundary.can_promote_default_agent_without_gate, false);
+    assert.equal(result.authority_boundary.can_create_target_typed_blocker, false);
+    assert.equal(result.artifacts.compiled_suite_path, null);
+    assert.equal(result.artifacts.suite_result_path, null);
+    assert.equal(fs.existsSync(result.artifacts.execution_receipt_path), true);
+    assert.equal(fs.existsSync(result.artifacts.typed_blocker_path), true);
+    assert.equal(JSON.parse(fs.readFileSync(workOrderPath, 'utf8')).status, workOrder.status);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order execute materializes only canonical authority-safe observations', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-observed-evaluation-'));
+  try {
+    const workOrderId = 'oma-foundry-lab-work-order:target-agent/observed';
+    const suiteId = 'agent-lab-suite-seed:target-agent/observed';
+    const taskId = 'agent-lab-task:target-agent/observed';
+    const suiteSeedPath = path.join(tmpDir, 'suite-seed.json');
+    const workOrderPath = path.join(tmpDir, 'foundry-lab-work-order.json');
+    const observationsPath = path.join(tmpDir, 'evaluation-observations.json');
+    const outputDir = path.join(tmpDir, 'foundry-lab-output');
+    fs.writeFileSync(suiteSeedPath, `${JSON.stringify({
+      surface_kind: 'opl_meta_agent_agent_lab_suite_seed',
+      version: 'opl-meta-agent.agent-lab-suite-seed.v1',
+      suite_id: suiteId,
+      suite_kind: 'agent_lab_external_suite',
+      tasks: [{
+        task_id: taskId,
+        domain_id: 'target-agent',
+        task_family: 'target_agent_takeover_evaluation',
+        environment: {
+          environment_kind: 'external_repo_contract_intake',
+          workspace_locator_ref: '/tmp/target-agent',
+          sandbox_policy: 'refs_only_no_target_domain_mutation',
+          network_policy: 'target_owner_policy',
+        },
+        instructions_ref: 'instructions:opl-meta-agent/target-agent/observed',
+        agent_entry_ref: 'target-agent-entry:target-agent',
+        stage_refs: ['stage:target-agent/foundry-lab-evaluation'],
+        oracle_refs: ['oracle:target-agent/owner-route'],
+        scorer_refs: ['scorer:target-agent/no-forbidden-write'],
+        recovery_probe_specs: [{
+          probe_ref: 'recovery-probe:target-agent/no-forbidden-write',
+          probe_kind: 'no_forbidden_authority_write',
+          expected_status: 'passed',
+          source_refs: ['contracts/domain_descriptor.json#/authority_boundary'],
+        }],
+        trajectory_plan: {
+          trajectory_ref: 'trajectory:target-agent/observed',
+          requested_run_ref: 'run:opl-foundry-lab/target-agent/observed',
+          agent_executor: 'codex_cli',
+          tool_affordance_refs: ['opl-action:agent-lab/run'],
+          expected_receipt_refs: ['target-owner-receipt-or-typed-blocker:target-agent'],
+        },
+        scorecard_spec: {
+          scorecard_ref: 'scorecard:target-agent/observed',
+          target_agent_owned: true,
+          opl_scorecard_role: 'scorecard_ref_projection_only',
+          metric_refs: ['metric-ref:target-agent/no-forbidden-write'],
+          evidence_refs: ['evidence-ref:target-agent/observed'],
+        },
+        improvement_candidate_seed: {
+          candidate_ref: 'improvement-candidate:target-agent/observed',
+          candidate_kind: 'target_agent_takeover_gap',
+          target_ref: 'target-agent:target-agent/observed',
+          allowed_change_scope: 'branch_only',
+        },
+        promotion_gate_request: {
+          gate_ref: 'promotion-gate:target-agent/observed',
+          required_refs: ['scorecard:target-agent/observed'],
+        },
+      }],
+    }, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(workOrderPath, `${JSON.stringify({
+      surface_kind: 'opl_meta_agent_foundry_lab_work_order_candidate',
+      version: 'opl-meta-agent.foundry-lab-work-order-candidate.v1',
+      work_order_id: workOrderId,
+      work_order_kind: 'target_agent_takeover_evaluation',
+      status: 'ready_for_opl_foundry_lab_evaluation',
+      target_agent: { domain_id: 'target-agent', repo_dir: '/tmp/target-agent' },
+      suite_seed: { ref: path.basename(suiteSeedPath), suite_id: suiteId, suite_kind: 'agent_lab_external_suite' },
+      candidate_refs: ['improvement-candidate:target-agent/observed'],
+      consumer_dependency: {
+        status: 'available',
+        required_consumer_role: 'compile_evaluation_work_order_to_agent_lab_suite_and_execute',
+      },
+      execution_aperture: {
+        action_ref: 'opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>',
+      },
+    }, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(observationsPath, `${JSON.stringify({
+      surface_kind: 'opl_foundry_lab_evaluation_observation_packet',
+      version: 'opl.foundry-lab-evaluation-observation-packet.v1',
+      work_order_id: workOrderId,
+      suite_id: suiteId,
+      authority_boundary: {
+        can_write_domain_truth: false,
+        can_write_memory_body: false,
+        can_write_owner_receipt: false,
+        can_authorize_quality_verdict: false,
+        can_authorize_export_verdict: false,
+      },
+      tasks: [{
+        task_id: taskId,
+        recovery_probe_observations: [{
+          probe_ref: 'recovery-probe:target-agent/no-forbidden-write',
+          observed_status: 'passed',
+          source_refs: ['no-forbidden-write-proof:target-agent/observed'],
+        }],
+        trajectory_observation: {
+          trajectory_ref: 'trajectory:target-agent/observed',
+          run_ref: 'run:opl-foundry-lab/target-agent/observed/actual',
+          stage_attempt_refs: ['stage-attempt:target-agent/observed'],
+          tool_call_refs: ['tool-call:target-agent/observed'],
+          artifact_refs: ['artifact-ref:target-agent/observed'],
+          receipt_refs: ['evaluation-receipt-ref:target-agent/observed'],
+          repair_refs: [],
+        },
+        scorecard_observation: {
+          scorecard_ref: 'scorecard:target-agent/observed',
+          passed: true,
+          evidence_refs: ['scorecard-evidence-ref:target-agent/observed'],
+          review_refs: ['review-ref:target-agent/observed'],
+          quality_gate_refs: ['quality-gate-ref:target-agent/observed'],
+        },
+        promotion_gate_observation: {
+          gate_ref: 'promotion-gate:target-agent/observed',
+          gate_status: 'passed',
+          regression_suite_refs: ['regression-suite-ref:target-agent/observed'],
+          no_forbidden_write_proof_refs: ['no-forbidden-write-proof:target-agent/observed'],
+        },
+        stage_completion_policy: stageCompletionPolicy('stage-completion-policy:target-agent/observed'),
+      }],
+    }, null, 2)}\n`, 'utf8');
+
+    const result = runCli([
+      'agent-lab',
+      'evaluation-work-order',
+      'execute',
+      '--work-order',
+      workOrderPath,
+      '--observations',
+      observationsPath,
+      '--output',
+      outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+
+    assert.equal(result.status, 'passed');
+    assert.equal(result.suite_result.status, 'passed');
+    assert.equal(result.suite_result.suite_id, suiteId);
+    assert.deepEqual(result.receipt.improvement_candidate_refs, [
+      'improvement-candidate:target-agent/observed',
+    ]);
+    assert.deepEqual(result.receipt.promotion_gate_refs, ['promotion-gate:target-agent/observed']);
+    assert.equal(result.receipt.target_owner_receipt_or_typed_blocker_ref, null);
+    assert.equal(result.receipt.downstream_pending_outputs.reason, 'target_owner_closeout_required');
+    assert.equal(result.typed_blocker, null);
+    assert.equal(result.artifacts.typed_blocker_path, null);
+    assert.equal(fs.existsSync(result.artifacts.compiled_suite_path), true);
+    assert.equal(fs.existsSync(result.artifacts.suite_result_path), true);
+    assert.equal(fs.existsSync(result.artifacts.execution_receipt_path), true);
+    assert.equal(result.authority_boundary.can_write_domain_truth, false);
+    assert.equal(result.authority_boundary.can_write_owner_receipt, false);
+
+    const forbiddenObservations = JSON.parse(fs.readFileSync(observationsPath, 'utf8'));
+    forbiddenObservations.authority_boundary.can_write_domain_truth = true;
+    fs.writeFileSync(observationsPath, `${JSON.stringify(forbiddenObservations, null, 2)}\n`, 'utf8');
+    assert.throws(
+      () => runCli([
+        'agent-lab',
+        'evaluation-work-order',
+        'execute',
+        '--work-order',
+        workOrderPath,
+        '--observations',
+        observationsPath,
+        '--output',
+        path.join(tmpDir, 'forbidden-output'),
+        '--json',
+      ]),
+      /forbidden authority claims/,
+    );
+
+    const staleWorkOrder = JSON.parse(fs.readFileSync(workOrderPath, 'utf8'));
+    staleWorkOrder.status = 'blocked_missing_opl_foundry_lab_evaluation_work_order_consumer';
+    fs.writeFileSync(workOrderPath, `${JSON.stringify(staleWorkOrder, null, 2)}\n`, 'utf8');
+    assert.throws(
+      () => runCli([
+        'agent-lab',
+        'evaluation-work-order',
+        'execute',
+        '--work-order',
+        workOrderPath,
+        '--output',
+        path.join(tmpDir, 'stale-output'),
+        '--json',
+      ]),
+      /unsupported status/,
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

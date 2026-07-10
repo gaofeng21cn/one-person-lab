@@ -493,6 +493,47 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'claim_assurance_map_refs',
   ]);
   assert.equal(contract.external_suite_runner_surface.cli, 'opl agent-lab run --suite <suite.json>');
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.cli,
+    'opl agent-lab evaluation-work-order execute --work-order <work-order.json> [--observations <observation-packet.json>] --output <dir>',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.accepted_work_order.status,
+    'ready_for_opl_foundry_lab_evaluation',
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.observation_packet.required_for_agent_lab_suite_materialization,
+    true,
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.no_observation_result.writes_agent_lab_suite_result,
+    false,
+  );
+  assert.deepEqual(
+    contract.evaluation_work_order_consumer_surface.immediate_output_fields,
+    [
+      'agent_lab_suite_result_ref',
+      'foundry_lab_execution_receipt_ref',
+      'improvement_candidate_refs',
+      'promotion_gate_refs',
+    ],
+  );
+  assert.deepEqual(
+    contract.evaluation_work_order_consumer_surface.downstream_conditional_output_fields,
+    [
+      'mechanism_proposal_refs',
+      'scaleout_ledger_refs',
+      'target_owner_receipt_or_typed_blocker_ref',
+    ],
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.authority_boundary.can_create_target_typed_blocker,
+    false,
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.authority_boundary.can_write_owner_receipt,
+    false,
+  );
   assert.equal(contract.production_evidence_gate_surface.refs_only, true);
   assert.equal(contract.production_evidence_gate_surface.domain_verdict_claimed, false);
   assert.equal(contract.promotion_safety_assessment_surface.high_risk_policy,

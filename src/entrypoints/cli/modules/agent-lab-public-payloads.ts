@@ -30,6 +30,7 @@ import {
   type AgentLabCostEstimatePreset,
   type AgentLabSuite,
 } from '../../../modules/foundry-lab/agent-lab.ts';
+import { executeAgentLabEvaluationWorkOrder } from '../../../modules/foundry-lab/agent-lab-evaluation-work-order.ts';
 import { buildLonglineAgentLabResult } from '../../../modules/foundry-lab/agent-lab-longline.ts';
 import { FrameworkContractError } from '../../../modules/charter/contracts.ts';
 import { buildUsageError } from './runtime-helpers.ts';
@@ -218,6 +219,40 @@ function parseAgentLabSuiteArgs(args: string[], spec: CommandSpec, commandName: 
 
 function parseAgentLabRunArgs(args: string[], spec: CommandSpec) {
   return parseAgentLabSuiteArgs(args, spec, 'run');
+}
+
+function parseAgentLabEvaluationWorkOrderArgs(args: string[], spec: CommandSpec) {
+  let workOrderPath: string | null = null;
+  let observationPacketPath: string | null = null;
+  let outputDir: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token !== '--work-order' && token !== '--observations' && token !== '--output') {
+      throw buildUsageError(`Unknown option for agent-lab evaluation-work-order execute: ${token}.`, spec, {
+        option: token,
+      });
+    }
+    const value = args[index + 1];
+    if (!value) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+    if (token === '--work-order') {
+      workOrderPath = value;
+    } else if (token === '--observations') {
+      observationPacketPath = value;
+    } else {
+      outputDir = value;
+    }
+    index += 1;
+  }
+  if (!workOrderPath || !outputDir) {
+    throw buildUsageError(
+      'agent-lab evaluation-work-order execute requires --work-order <work-order.json> and --output <dir>.',
+      spec,
+      { required: ['--work-order', '--output'] },
+    );
+  }
+  return { workOrderPath, observationPacketPath, outputDir };
 }
 
 function parseAgentLabWorkflowTemplateRunArgs(args: string[], spec: CommandSpec) {
@@ -409,6 +444,15 @@ function buildAgentLabRunPayload(args: string[], spec: CommandSpec) {
   };
 }
 
+function buildAgentLabEvaluationWorkOrderPayload(args: string[], spec: CommandSpec) {
+  return {
+    version: 'g2',
+    agent_lab_evaluation_work_order_execution: executeAgentLabEvaluationWorkOrder(
+      parseAgentLabEvaluationWorkOrderArgs(args, spec),
+    ),
+  };
+}
+
 function buildAgentLabExportPayload(args: string[], spec: CommandSpec) {
   const { target } = parseAgentLabExportArgs(args, spec);
   return {
@@ -475,6 +519,7 @@ function buildAgentLabCostEstimatePayload(args: string[], spec: CommandSpec) {
 export {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
+  buildAgentLabEvaluationWorkOrderPayload,
   buildAgentLabEvolvePayload,
   buildAgentLabEfficiencyPayload,
   buildAgentLabExportPayload,

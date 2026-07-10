@@ -8,6 +8,7 @@ import {
   buildAgentLabCompletePayload,
   buildAgentLabCostEstimatePayload,
   buildAgentLabEfficiencyPayload,
+  buildAgentLabEvaluationWorkOrderPayload,
   buildAgentLabEvolvePayload,
   buildAgentLabExportPayload,
   buildAgentLabLonglinePayload,
@@ -314,6 +315,20 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
       examples: ['opl agent-lab evolve --suite ./agent-lab-suite.json --json'],
       group: 'framework',
       handler: (args) => buildAgentLabEvolvePayload(args, specs['agent-lab evolve']),
+    },
+    'agent-lab evaluation-work-order execute': {
+      usage:
+        'opl agent-lab evaluation-work-order execute --work-order <work-order.json> [--observations <observation-packet.json>] --output <dir>',
+      summary:
+        'Consume a declarative Foundry Lab evaluation work order and fail closed until real evaluation observations are supplied.',
+      examples: [
+        'opl agent-lab evaluation-work-order execute --work-order ./foundry-lab-work-order.json --output ./foundry-lab-output --json',
+      ],
+      group: 'framework',
+      handler: (args) => buildAgentLabEvaluationWorkOrderPayload(
+        args,
+        specs['agent-lab evaluation-work-order execute'],
+      ),
     },
     'agent-lab run': {
       usage: 'opl agent-lab run --suite <suite.json>',
