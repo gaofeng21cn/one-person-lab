@@ -75,14 +75,13 @@ test('agents conformance exposes the frozen Standard Agent Pack ABI baseline', (
 
 test('agents conformance accepts Codex CLI variant stages with explicit non-default binding', () => {
   const repoDir = buildScaffoldRepo();
-  const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
-  const variantStage = structuredClone(stageControlPlane.stages[0]);
+  const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
+  const variantStage = structuredClone(stageManifest.stages[0]);
   variantStage.stage_id = 'domain_review_variant';
-  variantStage.selected_executor.default_executor = false;
-  variantStage.selected_executor.lane_kind = 'variant';
-  stageControlPlane.stages.push(variantStage);
-  writeJson(stageControlPlanePath, stageControlPlane);
+  variantStage.lane_kind = 'variant';
+  stageManifest.stages.push(variantStage);
+  writeJson(stageManifestPath, stageManifest);
 
   const report = runCli([
     'agents',
@@ -100,13 +99,16 @@ test('agents conformance accepts Codex CLI variant stages with explicit non-defa
 
 test('agents conformance blocks generated scaffold repos missing stage pack v2 obligations', () => {
   const repoDir = buildScaffoldRepo();
-  const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
-  delete stageControlPlane.stages[0].selected_executor.executor_binding_ref;
-  delete stageControlPlane.stages[0].tool_refs;
-  delete stageControlPlane.stages[0].tool_affordance_boundary;
-  delete stageControlPlane.stages[0].stage_contract.requires;
-  writeJson(stageControlPlanePath, stageControlPlane);
+  const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
+  stageManifest.stages[0].requires = [];
+  writeJson(stageManifestPath, stageManifest);
+  const packCompilerInputPath = path.join(repoDir, 'contracts/pack_compiler_input.json');
+  const packCompilerInput = parseJsonText(fs.readFileSync(packCompilerInputPath, 'utf8')) as any;
+  packCompilerInput.required_domain_pack_paths = packCompilerInput.required_domain_pack_paths.filter(
+    (entry: string) => !entry.startsWith('agent/tools/'),
+  );
+  writeJson(packCompilerInputPath, packCompilerInput);
 
   const report = runCli([
     'agents',
@@ -119,10 +121,6 @@ test('agents conformance blocks generated scaffold repos missing stage pack v2 o
   assert.equal(report.status, 'blocked');
   assert.equal(repo.status, 'blocked');
   assert.equal(repo.scaffold_validation.stage_pack_v2_validation.status, 'blocked');
-  assert.equal(
-    repo.blockers.includes('stage_pack_v2_invalid_default_executor_binding:domain_intake'),
-    true,
-  );
   assert.equal(
     repo.blockers.includes('stage_pack_v2_missing_stage_contract_requires:domain_intake'),
     true,
@@ -150,14 +148,6 @@ test('agents conformance blocks generated scaffold repos missing Standard Agent 
   delete packCompilerInput.source_refs.authority_functions_source_ref;
   writeJson(packCompilerInputPath, packCompilerInput);
 
-  const stageControlPlanePath = path.join(repoDir, 'contracts/stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
-  delete stageControlPlane.stages[0].stage_contract.receipt_schema_refs;
-  delete stageControlPlane.stages[0].stage_contract.authority_function_refs;
-  delete stageControlPlane.stages[0].stage_contract.l4_entry_gate;
-  delete stageControlPlane.stages[0].stage_contract.l5_entry_gate;
-  writeJson(stageControlPlanePath, stageControlPlane);
-
   const report = runCli([
     'agents',
     'conformance',
@@ -181,10 +171,6 @@ test('agents conformance blocks generated scaffold repos missing Standard Agent 
     repo.blockers.includes('pack_compiler_source_ref_missing:authority_functions_source_ref'),
     true,
   );
-  assert.equal(repo.blockers.includes('stage_pack_v2_missing_receipt_schema_refs:domain_intake'), true);
-  assert.equal(repo.blockers.includes('stage_pack_v2_missing_authority_function_refs:domain_intake'), true);
-  assert.equal(repo.blockers.includes('stage_pack_v2_missing_l4_entry_gate:domain_intake'), true);
-  assert.equal(repo.blockers.includes('stage_pack_v2_missing_l5_entry_gate:domain_intake'), true);
 });
 
 test('agents conformance blocks generated scaffold repos missing Standard Agent Pack ABI physical layout', () => {

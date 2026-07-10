@@ -486,7 +486,7 @@ test('agents scaffold emits domain-specific controlled StageRun canary evidence'
   }
 });
 
-test('agents scaffold validation blocks generated skeletons missing stage pack v2 fields', () => {
+test('agents scaffold validation blocks missing stage pack source declarations and Foundry contract', () => {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-pack-v2-missing-'));
 
   try {
@@ -498,17 +498,6 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
       '--domain-id',
       'stage-pack-v2-missing',
     ]);
-    const stageControlPlanePath = path.join(targetDir, 'contracts/stage_control_plane.json');
-    const stageControlPlane = readGeneratedJson(stageControlPlanePath);
-    delete stageControlPlane.stage_pack_conformance_version;
-    delete stageControlPlane.stages[0].selected_executor;
-    delete stageControlPlane.stages[0].stage_contract.expected_receipt_refs;
-    delete stageControlPlane.stages[0].stage_contract.user_stage_log_contract;
-    delete stageControlPlane.stages[0].stage_contract.progress_delta_policy;
-    delete stageControlPlane.stages[0].stage_contract.typed_blocker_lineage_policy;
-    stageControlPlane.stages[0].independent_gate_policy.execution_review_separation_required = false;
-    fs.writeFileSync(stageControlPlanePath, `${JSON.stringify(stageControlPlane, null, 2)}\n`);
-
     const packCompilerPath = path.join(targetDir, 'contracts/pack_compiler_input.json');
     const packCompilerInput = readGeneratedJson(packCompilerPath);
     delete packCompilerInput.source_refs.executor_policy_source_ref;
@@ -520,36 +509,10 @@ test('agents scaffold validation blocks generated skeletons missing stage pack v
     assert.equal(validated.state, 'validation_blocked');
     assert.equal(validated.validation.status, 'blocked');
     assert.equal(validated.validation.stage_pack_v2_validation.status, 'blocked');
-    assert.equal(validated.validation.user_stage_log_validation.status, 'blocked');
     assert.equal(validated.validation.foundry_agent_series_validation.status, 'blocked');
     assert.equal(validated.validation.stage_pack_v2_validation.required_for_repo, true);
-    assert.equal(validated.validation.blockers.includes('stage_pack_v2_plane_version_missing'), true);
     assert.equal(
       validated.validation.blockers.includes('pack_compiler_source_ref_missing:executor_policy_source_ref'),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes('stage_pack_v2_missing_selected_executor:domain_intake'),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes('stage_pack_v2_missing_expected_receipt_refs:domain_intake'),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes('stage_pack_v2_independent_gate_separation_required:domain_intake'),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes('stage_user_stage_log_contract_missing:domain_intake'),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes('stage_progress_delta_policy_missing:domain_intake'),
-      true,
-    );
-    assert.equal(
-      validated.validation.blockers.includes('stage_typed_blocker_lineage_policy_missing:domain_intake'),
       true,
     );
     assert.equal(validated.validation.blockers.includes('missing_contract:contracts/foundry_agent_series.json'), true);

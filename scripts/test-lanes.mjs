@@ -144,6 +144,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/domain-pack-compiler-active-caller-targets.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-generated-interfaces.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-standard-agent-contract-pack.test.ts',
+  'tests/src/standard-agent-stage-manifest-compiler.test.ts',
   'tests/src/family-domain-quality-projection-contract.test.ts',
   'tests/src/family-incident-learning-loop.test.ts',
   'tests/src/family-product-operator-projection.test.ts',

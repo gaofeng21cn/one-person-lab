@@ -37,4 +37,10 @@ export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
 export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection, MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE, OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY } from './mas-owner-answer-projection.ts';
 export type { OwnerAnswerProjectionProfile } from './mas-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
+export {
+  DEFAULT_STAGE_EXECUTOR_BINDING_REF,
+  STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
+} from './standard-stage-pack-identity.ts';
+export { STANDARD_STAGE_COMPLETION_POLICY } from './standard-stage-completion-policy.ts';
 export { STANDARD_TYPED_BLOCKER_LINEAGE_POLICY } from './standard-typed-blocker-lineage-policy.ts';
+export { STANDARD_USER_STAGE_LOG_CONTRACT } from './standard-user-stage-log-contract.ts';

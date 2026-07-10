@@ -18,6 +18,20 @@ export {
 } from './domain-pack-compiler.ts';
 export { buildGeneratedInterfaceBundle } from './domain-pack-compiler/generated-interface-read-model.ts';
 export {
+  buildRepoContractDescriptor,
+  buildStandardAgentRepoContractReadout,
+} from './domain-pack-compiler/repo-contract-descriptor.ts';
+export type {
+  StandardAgentRepoContractDescriptor,
+  StandardAgentRepoContractReadout,
+} from './domain-pack-compiler/repo-contract-descriptor.ts';
+export {
+  compileStandardAgentStageManifest,
+  STANDARD_AGENT_DESCRIPTOR_REF,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+} from './standard-agent-stage-manifest.ts';
+export type { StandardAgentStageManifestCompilation } from './standard-agent-stage-manifest.ts';
+export {
   buildFunctionalPrivatizationAudit,
   FUNCTIONAL_PRIVATIZATION_AUDIT_CONTRACT,
 } from './functional-privatization-audit.ts';

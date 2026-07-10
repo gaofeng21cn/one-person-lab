@@ -74,76 +74,54 @@ test('generated interfaces can compile a standard agent repo contract pack witho
       notes: [],
     })}\n`,
   );
+  const packRefs = [
+    'agent/stages/manifest.json',
+    'agent/stages/brief-draft.md',
+    'agent/prompts/brief-draft.md',
+    'agent/knowledge/domain.md',
+    'agent/quality_gates/domain.md',
+    'agent/skills/domain.md',
+    'agent/tools/domain.md',
+  ];
+  for (const ref of packRefs.filter((entry) => entry !== 'agent/stages/manifest.json')) {
+    const file = path.join(targetDir, ref);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `# ${ref}\n`);
+  }
+  fs.mkdirSync(path.join(targetDir, 'runtime', 'authority_functions'), { recursive: true });
+  fs.writeFileSync(path.join(targetDir, 'runtime', 'authority_functions', 'README.md'), '# Authority functions\n');
   fs.writeFileSync(
-    path.join(targetDir, 'contracts', 'stage_control_plane.json'),
+    path.join(targetDir, 'contracts', 'owner_receipt_contract.json'),
+    `${JSON.stringify({ surface_kind: 'domain_owner_receipt_contract' })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(targetDir, 'agent', 'stages', 'manifest.json'),
     `${JSON.stringify({
-      surface_kind: 'family_stage_control_plane',
-      version: 'family-stage-control-plane.v1',
-      plane_id: 'sample_brief_agent_stage_plane',
+      surface_kind: 'sample_brief_agent_declarative_stage_manifest',
+      version: 'sample-brief-agent-declarative-stage-manifest.v1',
       target_domain_id: 'sample-brief-agent',
-      owner: 'SampleBriefAgent',
+      owner: 'sample-brief-agent',
       authority_boundary: {
-        opl_role: 'projection_only',
+        domain_truth_owner: 'sample-brief-agent',
+        opl_can_write_domain_truth: false,
+        opl_can_authorize_quality_or_export: false,
       },
-      stages: [
-        {
-          stage_id: 'brief-draft',
-          stage_kind: 'creation',
-          title: 'Brief draft',
-          summary: 'Draft the brief.',
-          goal: 'Draft a source-grounded brief.',
-          owner: 'SampleBriefAgent',
-          domain_stage_refs: ['brief-draft'],
-          inputs: [],
-          knowledge_refs: [],
-          skills: [],
-          prompt_refs: [],
-          allowed_action_refs: ['draft_brief'],
-          outputs: [],
-          evaluation: [],
-          handoff: null,
-          stage_contract: {
-            requires: ['source_brief_ref'],
-            ensures: ['draft_brief_ref_or_typed_blocker_ref'],
-            boundary_assumptions: [],
-            properties: [],
-            progress_delta_policy: {
-              surface_kind: 'opl_stage_progress_delta_policy',
-              required_fields: [
-                'progress_delta_classification',
-                'deliverable_progress_delta',
-                'platform_repair_delta',
-                'next_forced_delta',
-              ],
-              platform_only_is_not_deliverable_progress: true,
-            },
-            typed_blocker_lineage_policy: {
-              surface_kind: 'family-stall-lineage.v1',
-              required_fields: [
-                'blocker_family',
-                'source_fingerprint',
-                'repeat_count',
-                'next_forced_delta',
-                'escalation_owner',
-              ],
-              repeat_budget: {
-                mechanism_repair_after_repeat_count: 2,
-                human_gate_or_stop_loss_after_repeat_count: 3,
-              },
-            },
-            runtime_assumptions: [],
-            monitor_refs: [],
-            source_scope_refs: [],
-            artifact_scope_refs: [],
-            workspace_scope_refs: [],
-          },
-          source_refs: [],
-          authority_boundary: {
-            domain_truth_owner: 'SampleBriefAgent',
-          },
-        },
-      ],
-      notes: [],
+      stages: [{
+        stage_id: 'brief-draft',
+        stage_kind: 'creation',
+        title: 'Brief draft',
+        summary: 'Draft the brief.',
+        goal: 'Draft a source-grounded brief.',
+        policy_ref: 'agent/stages/brief-draft.md',
+        prompt_ref: 'agent/prompts/brief-draft.md',
+        knowledge_refs: ['agent/knowledge/domain.md'],
+        quality_gate_refs: ['agent/quality_gates/domain.md'],
+        allowed_action_refs: ['draft_brief'],
+        requires: ['source_brief_ref'],
+        ensures: ['draft_brief_ref_or_typed_blocker_ref'],
+        next_stage_refs: [],
+        trust_lane: 'codex_executor',
+      }],
     })}\n`,
   );
   fs.writeFileSync(
@@ -302,6 +280,8 @@ test('generated interfaces can compile a standard agent repo contract pack witho
     `${JSON.stringify({
       surface_kind: 'opl_domain_pack_compiler_input',
       domain_id: 'sample-brief-agent',
+      canonical_agent_id: 'sample-agent',
+      required_domain_pack_paths: packRefs,
       domain_repo_runtime_role: 'domain_handler_target_and_authority_functions',
       generated_surface_owner: 'one-person-lab',
       domain_repo_can_own_generated_surface: false,
@@ -313,6 +293,8 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   assert.equal(bundle.repo_dir, targetDir);
   assert.equal(bundle.status, 'ready');
   assert.equal(bundle.owner, 'one-person-lab');
+  assert.equal(bundle.agent_id, 'sample-agent');
+  assert.equal(bundle.target_domain_id, 'sample-brief-agent');
   assert.equal(bundle.domain_repo_can_own_generated_surface, false);
   assert.equal(bundle.active_caller_cutover_proof.status, 'cutover_to_opl_generated_or_domain_handler_targets');
   assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
@@ -320,26 +302,33 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   assert.equal(bundle.cli.descriptors[0].action_id, 'draft_brief');
   assert.equal(bundle.mcp.descriptors[0].descriptor_only, true);
   assert.equal(bundle.product_entry.descriptors[0].command, 'sample-brief-agent product draft --workspace-root <workspace_root>');
-  assert.deepEqual(bundle.stage_routes[0], {
-    stage_id: 'brief-draft',
-    allowed_action_refs: ['draft_brief'],
-    authority_owner: 'SampleBriefAgent',
-    progress_delta_policy: {
-      surface_kind: 'opl_stage_progress_delta_policy',
-      required_fields: [
-        'progress_delta_classification',
-        'deliverable_progress_delta',
-        'platform_repair_delta',
-        'next_forced_delta',
-      ],
-      platform_only_is_not_deliverable_progress: true,
-    },
-    typed_blocker_lineage_policy: {
-      surface_kind: 'family-stall-lineage.v1',
-      repeat_budget: {
-        mechanism_repair_after_repeat_count: 2,
-        human_gate_or_stop_loss_after_repeat_count: 3,
-      },
+  assert.equal(bundle.stage_routes[0].stage_id, 'brief-draft');
+  assert.deepEqual(bundle.stage_routes[0].allowed_action_refs, ['draft_brief']);
+  assert.equal(bundle.stage_routes[0].authority_owner, 'sample-brief-agent');
+  assert.deepEqual(bundle.stage_routes[0].prompt_refs.map((entry: { ref: string }) => entry.ref), [
+    'agent/prompts/brief-draft.md',
+  ]);
+  assert.deepEqual(bundle.stage_routes[0].skills.map((entry: { ref: string }) => entry.ref), [
+    'agent/skills/domain.md',
+  ]);
+  assert.deepEqual(bundle.stage_routes[0].tool_refs.map((entry: { ref: string }) => entry.ref), [
+    'agent/tools/domain.md',
+  ]);
+  assert.deepEqual(bundle.stage_routes[0].progress_delta_policy, {
+    surface_kind: 'opl_stage_progress_delta_policy',
+    required_fields: [
+      'progress_delta_classification',
+      'deliverable_progress_delta',
+      'platform_repair_delta',
+      'next_forced_delta',
+    ],
+    platform_only_is_not_deliverable_progress: true,
+  });
+  assert.deepEqual(bundle.stage_routes[0].typed_blocker_lineage_policy, {
+    surface_kind: 'family-stall-lineage.v1',
+    repeat_budget: {
+      mechanism_repair_after_repeat_count: 2,
+      human_gate_or_stop_loss_after_repeat_count: 3,
     },
   });
   assert.deepEqual(bundle.product_session.session_routes[0].progress_delta_policy, bundle.stage_routes[0].progress_delta_policy);

@@ -4,7 +4,7 @@ import {
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('agents conformance blocks multiple ordinary default routes for a Foundry Agent', () => {
+test('agents conformance ignores legacy stage-plane default routes after manifest cutover', () => {
   const repoDir = buildReadyAgentRepo();
   const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
   const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
@@ -29,38 +29,25 @@ test('agents conformance blocks multiple ordinary default routes for a Foundry A
   ]).standard_domain_agent_conformance;
   const repo = report.reports[0];
 
-  assert.equal(report.status, 'blocked');
-  assert.equal(repo.status, 'blocked');
-  assert.equal(repo.golden_path_default_surface_budget_checks.status, 'blocked');
-  assert.equal(repo.golden_path_default_surface_budget_checks.default_route_count, 2);
-  assert.deepEqual(repo.golden_path_default_surface_budget_checks.default_route_stage_ids, [
-    'domain_intake',
-    'secondary_default_stage',
-  ]);
-  assert.equal(
-    repo.blockers.includes('golden_path_single_default_violation:default_route_count=2'),
-    true,
-  );
+  assert.equal(report.status, 'passed');
+  assert.equal(repo.status, 'passed');
+  assert.equal(repo.golden_path_default_surface_budget_checks.status, 'passed');
+  assert.equal(repo.golden_path_default_surface_budget_checks.default_route_count, 1);
+  assert.deepEqual(repo.golden_path_default_surface_budget_checks.default_route_stage_ids, ['domain_intake']);
 });
 
 test('agents conformance treats explicit Codex follow-on lanes as non-default route variants', () => {
   const repoDir = buildReadyAgentRepo();
-  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
+  const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
   const followOnStage = {
-    ...stageControlPlane.stages[0],
+    ...stageManifest.stages[0],
     stage_id: 'book_materialization_follow_on',
     lane_kind: 'variant',
-    route_classification: 'explicit_follow_on_stage',
     title: 'Book materialization follow-on',
-    selected_executor: {
-      ...stageControlPlane.stages[0].selected_executor,
-      default_executor: true,
-      lane_kind: 'variant',
-    },
   };
-  stageControlPlane.stages.push(followOnStage);
-  writeJson(stageControlPlanePath, stageControlPlane);
+  stageManifest.stages.push(followOnStage);
+  writeJson(stageManifestPath, stageManifest);
 
   const report = runCli([
     'agents',
@@ -80,45 +67,7 @@ test('agents conformance treats explicit Codex follow-on lanes as non-default ro
     checks.route_stages.find((stage: { stage_id: string }) =>
       stage.stage_id === 'book_materialization_follow_on'
     )?.executor_default_binding,
-    true,
-  );
-});
-
-test('agents conformance blocks explicit lanes that declare ordinary default route role', () => {
-  const repoDir = buildReadyAgentRepo();
-  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
-  const proofStage = {
-    ...stageControlPlane.stages[0],
-    stage_id: 'provider_proof_lane',
-    stage_kind: 'proof',
-    route_classification: 'ordinary_default',
-    title: 'Provider proof lane',
-    selected_executor: {
-      ...stageControlPlane.stages[0].selected_executor,
-      default_executor: true,
-      lane_kind: 'proof',
-    },
-  };
-  stageControlPlane.stages.push(proofStage);
-  writeJson(stageControlPlanePath, stageControlPlane);
-
-  const report = runCli([
-    'agents',
-    'conformance',
-    '--agent',
-    `sample=${repoDir}`,
-  ]).standard_domain_agent_conformance;
-  const repo = report.reports[0];
-  const checks = repo.golden_path_default_surface_budget_checks;
-
-  assert.equal(report.status, 'blocked');
-  assert.equal(checks.status, 'blocked');
-  assert.equal(checks.default_route_count, 1);
-  assert.deepEqual(checks.default_route_stage_ids, ['domain_intake']);
-  assert.equal(
-    repo.blockers.includes('golden_path_explicit_lane_declares_default:provider_proof_lane:proof'),
-    true,
+    false,
   );
 });
 
@@ -146,38 +95,26 @@ test('agents conformance reports the single ordinary route budget for ready Foun
 
 test('agents conformance requires proof diagnostic cleanup and long-soak route variants to be explicit', () => {
   const repoDir = buildReadyAgentRepo();
-  const stageControlPlanePath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControlPlane = parseJsonText(fs.readFileSync(stageControlPlanePath, 'utf8')) as any;
-  stageControlPlane.stages.push(
+  const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
+  const stageManifest = parseJsonText(fs.readFileSync(stageManifestPath, 'utf8')) as any;
+  stageManifest.stages.push(
     {
-      ...stageControlPlane.stages[0],
+      ...stageManifest.stages[0],
       stage_id: 'provider_proof_observation',
       title: 'Provider proof observation',
-      selected_executor: {
-        ...stageControlPlane.stages[0].selected_executor,
-        default_executor: false,
-      },
     },
     {
-      ...stageControlPlane.stages[0],
+      ...stageManifest.stages[0],
       stage_id: 'legacy_cleanup_sweep',
       title: 'Legacy cleanup sweep',
-      selected_executor: {
-        ...stageControlPlane.stages[0].selected_executor,
-        default_executor: false,
-      },
     },
     {
-      ...stageControlPlane.stages[0],
+      ...stageManifest.stages[0],
       stage_id: 'runtime_long_soak_window',
       title: 'Runtime long soak window',
-      selected_executor: {
-        ...stageControlPlane.stages[0].selected_executor,
-        default_executor: false,
-      },
     },
   );
-  writeJson(stageControlPlanePath, stageControlPlane);
+  writeJson(stageManifestPath, stageManifest);
 
   const report = runCli([
     'agents',

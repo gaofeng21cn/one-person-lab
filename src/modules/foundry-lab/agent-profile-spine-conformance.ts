@@ -1,5 +1,3 @@
-import { isDeepStrictEqual } from 'node:util';
-
 import { isRecord } from '../../kernel/contract-validation.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -29,49 +27,21 @@ function uniqueStrings(value: unknown): string[] {
   )).map((entry) => entry.trim()))];
 }
 
-function projectionSources(
-  capabilityMap: unknown,
-  stageControlPlane: unknown,
-  stages: JsonRecord[],
-) {
-  return [
-    { label: 'capability_map', payload: capabilityMap },
-    { label: 'stage_control_plane', payload: stageControlPlane },
-    ...stages.map((stage, index) => ({
-      label: `stage:${machineString(stage.stage_id) ?? index}`,
-      payload: stage,
-    })),
-  ];
-}
-
 export function inspectSourceDerivedTypedObjectProjections(
   capabilityMap: unknown,
-  stageControlPlane: unknown,
-  stages: JsonRecord[],
 ) {
   const blockers: string[] = [];
   const typedObjects = Object.fromEntries(
     TYPED_OBJECT_SPECS.map(([field]) => [field, null]),
   ) as SourceDerivedTypedObjects;
-  const sources = projectionSources(capabilityMap, stageControlPlane, stages);
-
   for (const [field, objectName] of TYPED_OBJECT_SPECS) {
-    let canonical: JsonRecord | null = null;
-    for (const source of sources) {
-      const value = isRecord(source.payload) && isRecord(source.payload[field])
-        ? source.payload[field]
-        : null;
-      if (!value) {
-        blockers.push(`source_derived_design_typed_object_projection_missing:${objectName}:${source.label}`);
-        continue;
-      }
-      if (!canonical) {
-        canonical = value;
-      } else if (!isDeepStrictEqual(value, canonical)) {
-        blockers.push(`source_derived_design_typed_object_projection_mismatch:${objectName}:${source.label}`);
-      }
+    const value = isRecord(capabilityMap) && isRecord(capabilityMap[field])
+      ? capabilityMap[field]
+      : null;
+    if (!value) {
+      blockers.push(`source_derived_design_typed_object_missing:${objectName}:capability_map`);
     }
-    typedObjects[field] = canonical;
+    typedObjects[field] = value;
   }
 
   return { typedObjects, blockers };

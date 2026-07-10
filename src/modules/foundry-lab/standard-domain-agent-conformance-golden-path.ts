@@ -1,5 +1,10 @@
 import { STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY } from './standard-domain-agent-scaffold-constants.ts';
 import {
+  buildStandardAgentRepoContractReadout,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+  type StandardAgentRepoContractReadout,
+} from '../pack/index.ts';
+import {
   isRecord,
   optionalString,
   readJsonFile,
@@ -349,14 +354,12 @@ function buildGoldenPathProfileChecks(repoDir: string, defaultRouteStageIds: str
   };
 }
 
-export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
-  const stageControlPlaneFile = readJsonFile(
-    repoDir,
-    STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.stage_control_plane_ref,
-  );
-  const stageControlPlane = isRecord(stageControlPlaneFile.payload)
-    ? stageControlPlaneFile.payload
-    : null;
+export function buildGoldenPathDefaultSurfaceBudgetChecks(
+  repoDir: string,
+  providedReadout?: StandardAgentRepoContractReadout,
+) {
+  const repoContractReadout = providedReadout ?? buildStandardAgentRepoContractReadout(repoDir);
+  const stageControlPlane = repoContractReadout.stage_control_plane;
   const stages = recordList(stageControlPlane?.stages);
   const routeStages = stages.map((stage, index) => {
     const selectedExecutor = isRecord(stage.selected_executor) ? stage.selected_executor : {};
@@ -396,9 +399,10 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
       `golden_path_variant_lane_not_explicit:${stage.stage_id}:${stage.inferred_variant_lane_kind}`
     );
   const blockers = [
-    stageControlPlaneFile.status === 'resolved'
+    repoContractReadout.status === 'resolved'
       ? null
-      : `golden_path_stage_control_plane_${stageControlPlaneFile.status}`,
+      : `golden_path_stage_manifest_${repoContractReadout.status}`,
+    ...repoContractReadout.blockers,
     stageControlPlane ? null : 'golden_path_stage_control_plane_not_declared',
     defaultRouteStageIds.length === STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.ordinary_default_route_budget
       ? null
@@ -419,7 +423,7 @@ export function buildGoldenPathDefaultSurfaceBudgetChecks(repoDir: string) {
     status: allBlockers.length === 0 ? 'passed' : 'blocked',
     policy_id: STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.policy_id,
     default_surface_budget_id: STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.default_surface_budget_id,
-    policy_source: STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.stage_control_plane_ref,
+    policy_source: STANDARD_AGENT_STAGE_MANIFEST_REF,
     ordinary_default_route_budget: STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY.ordinary_default_route_budget,
     default_route_count: defaultRouteStageIds.length,
     default_route_stage_ids: defaultRouteStageIds,

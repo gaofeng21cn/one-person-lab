@@ -1,8 +1,10 @@
 export const REQUIRED_REPO_SOURCE_DIRS = ['agent', 'contracts', 'runtime', 'docs'] as const;
 export const SCAFFOLD_MARKER = 'generated_by_opl_standard_domain_agent_scaffold_v1';
 export const STARTER_STAGE_ID = 'domain_intake';
-export const STANDARD_STAGE_PACK_CONFORMANCE_VERSION = 'standard-stage-pack.v2';
-export const DEFAULT_STAGE_EXECUTOR_BINDING_REF = 'default_codex_cli';
+export {
+  DEFAULT_STAGE_EXECUTOR_BINDING_REF,
+  STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
+} from '../../stagecraft/index.ts';
 
 export const DOCS_TAXONOMY = [
   'active',

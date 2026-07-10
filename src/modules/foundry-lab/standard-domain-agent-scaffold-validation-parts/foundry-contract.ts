@@ -479,7 +479,14 @@ export function validateFoundryAgentSeriesContract(foundryAgentSeries: unknown, 
     readOptionalString(contract?.domain_id) ? null : 'foundry_agent_series_missing_domain_id',
     readOptionalString(contract?.foundry_agent_id) ? null : 'foundry_agent_series_missing_foundry_agent_id',
     readOptionalString(contract?.authority_owner) ? null : 'foundry_agent_series_missing_authority_owner',
-    readOptionalString(contract?.stage_control_plane_ref) === 'contracts/stage_control_plane.json'
+    [
+      'agent/stages/manifest.json',
+      'contracts/stage_control_plane.json',
+    ].includes(
+      readOptionalString(contract?.stage_manifest_ref)
+        ?? readOptionalString(contract?.stage_control_plane_ref)
+        ?? '',
+    )
       ? null
       : 'foundry_agent_series_stage_control_plane_ref_invalid',
     requiredIdentityFields.includes('domain_id')

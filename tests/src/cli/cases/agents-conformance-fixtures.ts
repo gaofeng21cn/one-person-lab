@@ -130,6 +130,57 @@ export function writeJson(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
+function refString(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    && typeof (value as { ref?: unknown }).ref === 'string'
+    ? (value as { ref: string }).ref
+    : null;
+}
+
+function refStrings(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(refString).filter((entry): entry is string => Boolean(entry))
+    : [];
+}
+
+function syncStageManifestFromPlane(repoDir: string, stageControlPlane: Record<string, any>) {
+  const manifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
+  const manifest = readJson(manifestPath);
+  manifest.target_domain_id = stageControlPlane.target_domain_id;
+  manifest.owner = stageControlPlane.owner;
+  manifest.authority_boundary = {
+    domain_truth_owner: stageControlPlane.owner,
+    opl_can_write_domain_truth: false,
+    opl_can_authorize_quality_or_export: false,
+  };
+  manifest.stages = stageControlPlane.stages.map((stage: Record<string, any>, index: number) => {
+    const stageId = stage.stage_id;
+    const stageContract = stage.stage_contract ?? {};
+    const laneKind = stage.lane_kind ?? stage.selected_executor?.lane_kind;
+    return {
+      stage_id: stageId,
+      stage_kind: stage.stage_kind,
+      title: stage.title,
+      summary: stage.summary,
+      goal: stage.goal,
+      policy_ref: refStrings(stage.source_refs)[0] ?? `agent/stages/${stageId}.md`,
+      prompt_ref: refStrings(stage.prompt_refs)[0] ?? `agent/prompts/${stageId}.md`,
+      knowledge_refs: refStrings(stage.knowledge_refs),
+      quality_gate_refs: refStrings(stage.evaluation),
+      allowed_action_refs: stage.allowed_action_refs ?? [],
+      requires: stageContract.requires ?? [`${stageId}_input_refs`],
+      ensures: stageContract.ensures ?? [`${stageId}_owner_receipt_or_typed_blocker_ref`],
+      next_stage_refs: stage.handoff?.next_stage_refs ?? [],
+      trust_lane: index === 0 ? 'codex_executor' : 'domain_agent',
+      ...(laneKind ? { lane_kind: laneKind } : {}),
+    };
+  });
+  writeJson(manifestPath, manifest);
+}
+
 export function buildReadyAgentRepo() {
   const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-conformance-'));
   runCli([
@@ -200,6 +251,11 @@ export function buildReadyAgentRepo() {
     ],
     notes: [],
   });
+  const stageControlPlanePath = contractPath(targetDir, 'stage_control_plane.json');
+  const stageControlPlane = readJson(stageControlPlanePath);
+  stageControlPlane.stages[0].allowed_action_refs = ['draft_brief'];
+  writeJson(stageControlPlanePath, stageControlPlane);
+  syncStageManifestFromPlane(targetDir, stageControlPlane);
 
   writeJson(contractPath(targetDir, 'generated_surface_handoff.json'), {
     surface_kind: 'opl_generated_surface_handoff',
@@ -504,6 +560,12 @@ export function retargetReadyRepoToMag(repoDir: string) {
   const actionCatalog = readJson(actionCatalogPath);
   actionCatalog.target_domain_id = 'med-autogrant';
   writeJson(actionCatalogPath, actionCatalog);
+  const manifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
+  const manifest = readJson(manifestPath);
+  manifest.target_domain_id = 'med-autogrant';
+  manifest.owner = 'med-autogrant';
+  manifest.authority_boundary.domain_truth_owner = 'med-autogrant';
+  writeJson(manifestPath, manifest);
 }
 
 export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel: string) {
@@ -517,6 +579,12 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
   const actionCatalog = readJson(actionCatalogPath);
   actionCatalog.target_domain_id = domainId;
   writeJson(actionCatalogPath, actionCatalog);
+  const manifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
+  const manifest = readJson(manifestPath);
+  manifest.target_domain_id = domainId;
+  manifest.owner = domainId;
+  manifest.authority_boundary.domain_truth_owner = domainId;
+  writeJson(manifestPath, manifest);
 }
 
 function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {
@@ -707,6 +775,7 @@ export function configureReadyRcaMorphology(repoDir: string) {
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'redcube-ai', ...stage }));
   writeJson(stageControlPlanePath, stageControlPlane);
+  syncStageManifestFromPlane(repoDir, stageControlPlane);
 
   writeJson(path.join(repoDir, 'contracts', 'physical_source_morphology_policy.json'), {
     canonical_pack_root: 'agent/',
@@ -766,6 +835,7 @@ export function configureReadyMetaMorphology(repoDir: string) {
     },
   ].map((stage) => stageFromBase(baseStage, { owner: 'opl-meta-agent', ...stage }));
   writeJson(stageControlPlanePath, stageControlPlane);
+  syncStageManifestFromPlane(repoDir, stageControlPlane);
 
   fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
   const privateSurfacePolicyPath = contractPath(repoDir, 'private_functional_surface_policy.json');

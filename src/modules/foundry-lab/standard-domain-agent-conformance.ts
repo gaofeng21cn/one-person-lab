@@ -27,6 +27,7 @@ import { buildStandardAgentPrincipleAdoptionChecks } from './standard-agent-prin
 import { buildEvidenceTailClassification } from './standard-domain-agent-conformance-evidence-tail.ts';
 import { buildFamilyAgentLiveConformanceProbe } from './family-agent-conformance-probe.ts';
 import { buildGeneratedInterfaceCheck } from './standard-domain-agent-conformance-generated-interfaces.ts';
+import { buildStandardAgentRepoContractReadout, type StandardAgentRepoContractReadout } from '../pack/index.ts';
 import { buildGoldenPathDefaultSurfaceBudgetChecks } from './standard-domain-agent-conformance-golden-path.ts';
 import { buildPhysicalMorphologyChecks } from './standard-domain-agent-conformance-physical-morphology.ts';
 import { buildStandardAgentSourceBehaviorChecks } from './standard-domain-agent-source-behavior.ts';
@@ -298,10 +299,17 @@ function buildLegacyRuntimeResidueGuard(privateSurfaceChecks: ReturnType<typeof 
   };
 }
 
-function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
+function buildRepoConformance(
+  input: RepoInput,
+  contracts: FrameworkContracts,
+  repoContractReadout: StandardAgentRepoContractReadout,
+) {
   const repoDir = path.resolve(input.repo_dir);
   const domainId = readDomainId(repoDir, input.requested_agent_id);
-  const scaffoldValidation = validateStandardDomainAgentScaffold({ repoDir }).standard_domain_agent_scaffold_validation;
+  const scaffoldValidation = validateStandardDomainAgentScaffold({
+    repoDir,
+    repoContractReadout,
+  }).standard_domain_agent_scaffold_validation;
   const packCompilerChecks = buildPackCompilerChecks(repoDir);
   const generatedSurfaceHandoffChecks = buildGeneratedSurfaceHandoffChecks(repoDir);
   const privateSurfaceChecks = buildPrivateSurfaceChecks(repoDir);
@@ -317,7 +325,10 @@ function buildRepoConformance(input: RepoInput, contracts: FrameworkContracts) {
   const stageOperatingPrincipleChecks = buildStageOperatingPrincipleChecks(repoDir);
   const standardAgentPrincipleChecks = buildStandardAgentPrincipleAdoptionChecks(repoDir);
   const stateIndexKernelAdoptionChecks = buildStateIndexKernelAdoptionChecks(repoDir);
-  const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(repoDir);
+  const goldenPathDefaultSurfaceBudgetChecks = buildGoldenPathDefaultSurfaceBudgetChecks(
+    repoDir,
+    repoContractReadout,
+  );
   const workspaceNormChecks = buildAgentWorkspaceNormChecks(contracts.agentWorkspaceNorm);
   const workspaceNormProjection = buildAgentWorkspaceNormProjection({
     contract: contracts.agentWorkspaceNorm,
@@ -461,7 +472,15 @@ export function buildStandardDomainAgentConformanceReport(
   const standardAgentInputs = repos.filter((repo) => !frameworkCapabilityPackageInputs.includes(repo));
   const frameworkCapabilityPackages = frameworkCapabilityPackageInputs
     .map((repo) => buildFrameworkCapabilityPackageConformance(repo));
-  const reports = standardAgentInputs.map((repo) => buildRepoConformance(repo, contracts));
+  const repoContractReadouts = new Map(standardAgentInputs.map((repo) => {
+    const repoDir = path.resolve(repo.repo_dir);
+    return [repoDir, buildStandardAgentRepoContractReadout(repoDir)] as const;
+  }));
+  const reports = standardAgentInputs.map((repo) => buildRepoConformance(
+    repo,
+    contracts,
+    repoContractReadouts.get(path.resolve(repo.repo_dir))!,
+  ));
   const totalRepoCount = reports.length + frameworkCapabilityPackages.length;
   const passedCount = [
     ...reports,
@@ -485,7 +504,11 @@ export function buildStandardDomainAgentConformanceReport(
     typeof liveStageRunProgressEvidenceWorklist.open_domain_count === 'number'
       ? liveStageRunProgressEvidenceWorklist.open_domain_count
       : 0;
-  const familyLiveConformanceProbe = buildFamilyAgentLiveConformanceProbe(reports, contracts);
+  const familyLiveConformanceProbe = buildFamilyAgentLiveConformanceProbe(
+    reports,
+    contracts,
+    repoContractReadouts,
+  );
   const foundryAgentOsConformance = buildFoundryAgentOsConformance(
     reports,
     contracts,

@@ -3,7 +3,11 @@ import path from 'node:path';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
-import { buildEvidenceGroundedDecisionAgentProfileReadback } from '../pack/index.ts';
+import {
+  buildEvidenceGroundedDecisionAgentProfileReadback,
+  buildStandardAgentRepoContractReadout,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+} from '../pack/index.ts';
 import {
   inspectSourceDerivedTypedObjectProjections,
   validateReferenceSourcePacketPolicy,
@@ -215,11 +219,13 @@ const BUILD_RECEIPT_FORBIDDEN_CLAIM_FIELDS = [
 ];
 
 const STAGE_PATTERN_SOURCE_REF_FIELDS = [
+  'source_pattern_ref',
   'stage_pattern_source_refs',
   'stage_pattern_refs',
 ];
 
 const TARGET_ONLY_REQUIREMENT_FIELDS = [
+  'target_only_requirement_ref',
   'target_only_requirement',
   'target_only_requirements',
 ];
@@ -581,7 +587,6 @@ function builtinProfileRequirements(profile: ProfileCatalogEntry) {
 function conformanceProfileFor(
   profileId: string,
   capabilityMap: unknown,
-  stageControlPlane: unknown,
 ) {
   const builtin = catalogEntries().find((entry) => entry.profile_id === profileId || entry.profile_ref === profileId);
   if (builtin) {
@@ -590,7 +595,6 @@ function conformanceProfileFor(
   if (
     matchesSourceDerivedProfileId(profileId)
     || hasSourceDerivedRoute(capabilityMap)
-    || hasSourceDerivedRoute(stageControlPlane)
   ) {
     return sourceDerivedDesignProfileEntry();
   }
@@ -760,15 +764,10 @@ function hasTypedObjectIdentity(
 function buildSourceDerivedTypedObjectFloor(
   repoDir: string,
   capabilityMap: unknown,
-  stageControlPlane: unknown,
   stageEntries: Record<string, unknown>[],
   declaredReferenceSourceRefs: string[],
 ) {
-  const projectionIntegrity = inspectSourceDerivedTypedObjectProjections(
-    capabilityMap,
-    stageControlPlane,
-    stageEntries,
-  );
+  const projectionIntegrity = inspectSourceDerivedTypedObjectProjections(capabilityMap);
   const blockers = [...projectionIntegrity.blockers];
   const packet = projectionIntegrity.typedObjects.reference_design_packet;
   const transferMap = projectionIntegrity.typedObjects.transfer_map;
@@ -958,18 +957,8 @@ function buildSourceDerivedTypedObjectFloor(
     blockers.push('source_derived_design_agent_pack_plan_collapsed_workflow_stages');
   }
   uniqueStrings(plannedStageIds).forEach((stageId) => {
-    const actualStage = stageEntries.find((stage) => stage.stage_id === stageId);
-    if (!actualStage) {
+    if (!stageEntries.some((stage) => stage.stage_id === stageId)) {
       blockers.push(`source_derived_design_stage_control_plane_missing_planned_stage:${stageId}`);
-      return;
-    }
-    const plannedStage = workflowStagePlans.find((stage) => stage.stage_id === stageId);
-    if (
-      actualStage.pattern_id !== plannedStage?.pattern_id
-      || actualStage.step_id !== plannedStage?.step_id
-      || !uniqueStrings(actualStage.stage_pattern_source_refs).includes(String(plannedStage?.source_pattern_ref))
-    ) {
-      blockers.push(`source_derived_design_stage_control_plane_stage_provenance_mismatch:${stageId}`);
     }
   });
 
@@ -991,10 +980,6 @@ function buildSourceDerivedTypedObjectFloor(
       blockers.push(`source_derived_design_stage_control_plane_planned_stage_count_invalid:${stageId}`);
       return;
     }
-    const actualStage = actualStages[0];
-    if (actualStage.stage_origin !== origin) {
-      blockers.push(`source_derived_design_stage_control_plane_stage_origin_mismatch:${stageId}`);
-    }
     if (origin === 'target_only_requirement') {
       const targetOnlyRequirementRef = machineString(plannedStage.target_only_requirement_ref);
       if (!targetOnlyRequirementRef) {
@@ -1002,12 +987,6 @@ function buildSourceDerivedTypedObjectFloor(
         return;
       }
       targetOnlyRequirementRefs.push(targetOnlyRequirementRef);
-      if (
-        actualStage.target_only_requirement_ref !== targetOnlyRequirementRef
-        || uniqueStrings(actualStage.stage_pattern_source_refs).length > 0
-      ) {
-        blockers.push(`source_derived_design_stage_control_plane_target_only_requirement_mismatch:${stageId}`);
-      }
     } else if (origin !== 'source_pattern_ref') {
       blockers.push(`source_derived_design_agent_pack_plan_invalid_stage_origin:${stageId}`);
     }
@@ -1098,8 +1077,9 @@ function buildSourceDerivedTypedObjectFloor(
 export function buildAgentProfileConformance(args: string[]) {
   const { repoDir, profileId } = parseConformanceArgs(args);
   const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts', 'capability_map.json'));
-  const stageControlPlane = readJsonFileOrNull(path.join(repoDir, 'contracts', 'stage_control_plane.json'));
-  const profile = conformanceProfileFor(profileId, capabilityMap, stageControlPlane);
+  const repoContractReadout = buildStandardAgentRepoContractReadout(repoDir);
+  const stageControlPlane = repoContractReadout.stage_control_plane;
+  const profile = conformanceProfileFor(profileId, capabilityMap);
   if (!profile) {
     return {
       version: 'g2',
@@ -1116,14 +1096,9 @@ export function buildAgentProfileConformance(args: string[]) {
   const capabilities = capabilityEntries(capabilityMap);
   const stages = stageEntries(stageControlPlane);
   const capabilityProfileRefs = selectedProfileRefs(capabilityMap);
-  const stageProfileRefs = selectedProfileRefs(stageControlPlane);
-  const requirements = {
-    ...profileRequirements(capabilityMap),
-    ...profileRequirements(stageControlPlane),
-  };
+  const requirements = profileRequirements(capabilityMap);
   const sourceDerivedRoutePresent = matchesSourceDerivedProfileId(profileId)
-    || hasSourceDerivedRoute(capabilityMap)
-    || hasSourceDerivedRoute(stageControlPlane);
+    || hasSourceDerivedRoute(capabilityMap);
   const observedCapabilityKinds = uniqueStrings(capabilities.map((entry) => entry.capability_kind));
   const observedSurfaceRoles = uniqueStrings(capabilities.map((entry) => entry.surface_role));
   const requiredStageArchetypes = uniqueStrings((requirements as Record<string, unknown>).required_stage_archetypes);
@@ -1133,23 +1108,19 @@ export function buildAgentProfileConformance(args: string[]) {
   const stagesWithEvaluationRefs = stages.filter((stage) => Array.isArray(stage.evaluation) && stage.evaluation.length > 0).length;
   const sourceDerivedPayloads = [
     capabilityMap,
-    stageControlPlane,
     isRecord(capabilityMap) ? capabilityMap.source_derived_design_receipt : null,
-    isRecord(stageControlPlane) ? stageControlPlane.source_derived_design_receipt : null,
+    isRecord(capabilityMap) ? capabilityMap.reference_design_packet : null,
+    isRecord(capabilityMap) ? capabilityMap.transfer_map : null,
+    isRecord(capabilityMap) ? capabilityMap.agent_pack_plan : null,
     isRecord(capabilityMap) ? capabilityMap.design_admission_receipt : null,
-    isRecord(stageControlPlane) ? stageControlPlane.design_admission_receipt : null,
     isRecord(capabilityMap) ? capabilityMap.build_receipt : null,
-    isRecord(stageControlPlane) ? stageControlPlane.build_receipt : null,
-    ...stages,
-    ...stages.map((stage) => stage.design_admission_receipt),
-    ...stages.map((stage) => stage.build_receipt),
+    ...(isRecord(capabilityMap) && isRecord(capabilityMap.agent_pack_plan)
+      ? recordArray(capabilityMap.agent_pack_plan.planned_stage_refs)
+      : []),
   ];
   const sourceDerivedDeclarationPayloads = [
     capabilityMap,
-    stageControlPlane,
     isRecord(capabilityMap) ? capabilityMap.source_derived_design_receipt : null,
-    isRecord(stageControlPlane) ? stageControlPlane.source_derived_design_receipt : null,
-    ...stages.map((stage) => stage.source_derived_design_receipt),
   ];
   const declaredReferenceSourceRefs = collectDirectMachineFieldStrings(
     sourceDerivedDeclarationPayloads,
@@ -1159,7 +1130,6 @@ export function buildAgentProfileConformance(args: string[]) {
     ? buildSourceDerivedTypedObjectFloor(
         repoDir,
         capabilityMap,
-        stageControlPlane,
         stages,
         declaredReferenceSourceRefs,
       )
@@ -1245,13 +1215,13 @@ export function buildAgentProfileConformance(args: string[]) {
 
   const blockers = [
     fs.existsSync(path.join(repoDir, 'contracts', 'capability_map.json')) ? null : 'missing_contract:contracts/capability_map.json',
-    fs.existsSync(path.join(repoDir, 'contracts', 'stage_control_plane.json')) ? null : 'missing_contract:contracts/stage_control_plane.json',
+    fs.existsSync(path.join(repoDir, STANDARD_AGENT_STAGE_MANIFEST_REF))
+      ? null
+      : `missing_contract:${STANDARD_AGENT_STAGE_MANIFEST_REF}`,
+    ...repoContractReadout.blockers,
     includesProfileRef(capabilityProfileRefs, profile)
       ? null
       : `capability_map_missing_selected_profile_ref:${profile.profile_id}`,
-    includesProfileRef(stageProfileRefs, profile)
-      ? null
-      : `stage_control_plane_missing_selected_profile_ref:${profile.profile_id}`,
     ...missingRequired(observedCapabilityKinds, profile.required_capability_kinds)
       .map((kind) => `capability_map_missing_capability_kind:${kind}`),
     ...missingRequired(observedSurfaceRoles, profile.required_surface_roles)
@@ -1316,7 +1286,8 @@ export function buildAgentProfileConformance(args: string[]) {
       status: blockers.length === 0 ? 'passed' : 'blocked',
       observed: {
         capability_profile_refs: capabilityProfileRefs,
-        stage_profile_refs: stageProfileRefs,
+        profile_truth_source: 'contracts/capability_map.json',
+        stage_source_ref: STANDARD_AGENT_STAGE_MANIFEST_REF,
         capability_kinds: observedCapabilityKinds,
         surface_roles: observedSurfaceRoles,
         required_stage_archetypes: requiredStageArchetypes,

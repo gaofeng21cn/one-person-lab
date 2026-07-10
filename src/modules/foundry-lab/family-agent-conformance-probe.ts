@@ -5,9 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
-import { buildGeneratedAgentInterfaces } from '../pack/index.ts';
+import {
+  buildGeneratedAgentInterfaces,
+  buildStandardAgentRepoContractReadout,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+  type StandardAgentRepoContractReadout,
+} from '../pack/index.ts';
 import { normalizeFamilyActionCatalog } from '../../kernel/family-action-catalog-contract.ts';
-import { normalizeFamilyStageControlPlane } from '../stagecraft/index.ts';
 import {
   isRecord,
   optionalString,
@@ -291,56 +295,43 @@ function buildActionCatalogObservation(repoDir: string): ProbeObservation & Json
   }
 }
 
-function buildStagePlaneObservation(repoDir: string): ProbeObservation & JsonRecord {
-  const readout = readJsonFile(repoDir, 'contracts/stage_control_plane.json');
-  if (readout.status !== 'resolved') {
+function buildStagePlaneObservation(
+  repoDir: string,
+  providedReadout?: StandardAgentRepoContractReadout,
+): ProbeObservation & JsonRecord {
+  const readout = providedReadout ?? buildStandardAgentRepoContractReadout(repoDir);
+  const stagePlane = readout.stage_control_plane;
+  if (readout.status !== 'resolved' || !stagePlane) {
     return {
       status: 'blocked',
-      source_refs: ['contracts/stage_control_plane.json'],
+      source_refs: [STANDARD_AGENT_STAGE_MANIFEST_REF],
       contract_status: readout.status,
       plane_id: null,
       target_domain_id: null,
       stage_count: 0,
       stage_ids: [],
-      blockers: [`stage_plane_${readout.status}`],
+      blockers: readout.blockers.length > 0 ? readout.blockers : [`stage_plane_${readout.status}`],
       error: readout.error,
     };
   }
-  try {
-    const stagePlane = normalizeFamilyStageControlPlane(readout.payload);
-    const blockers = [
-      stagePlane ? null : 'stage_plane_missing_or_invalid',
-    ].filter((entry): entry is string => Boolean(entry));
-    return {
-      status: statusFromBlockers(blockers),
-      source_refs: ['contracts/stage_control_plane.json'],
-      contract_status: readout.status,
-      plane_id: stagePlane?.plane_id ?? null,
-      target_domain_id: stagePlane?.target_domain_id ?? null,
-      owner: stagePlane?.owner ?? null,
-      stage_pack_conformance_version: stagePlane?.stage_pack_conformance_version ?? null,
-      stage_count: stagePlane?.stages.length ?? 0,
-      stage_ids: stagePlane?.stages.map((stage) => stage.stage_id) ?? [],
-      blockers,
-    };
-  } catch (error) {
-    return {
-      status: 'blocked',
-      source_refs: ['contracts/stage_control_plane.json'],
-      contract_status: 'invalid_shape',
-      plane_id: null,
-      target_domain_id: null,
-      stage_count: 0,
-      stage_ids: [],
-      blockers: ['stage_plane_invalid_shape'],
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+  return {
+    status: 'passed',
+    source_refs: [STANDARD_AGENT_STAGE_MANIFEST_REF],
+    contract_status: 'compiled_from_standard_agent_stage_manifest',
+    plane_id: stagePlane.plane_id,
+    target_domain_id: stagePlane.target_domain_id,
+    owner: stagePlane.owner,
+    stage_pack_conformance_version: stagePlane.stage_pack_conformance_version ?? null,
+    stage_count: stagePlane.stages.length,
+    stage_ids: stagePlane.stages.map((stage) => stage.stage_id),
+    blockers: [],
+  };
 }
 
 function buildObservations(
   report: FamilyAgentConformanceProbeSourceReport,
   contracts: FrameworkContracts,
+  repoContractReadout?: StandardAgentRepoContractReadout,
 ) {
   return {
     scaffold_validation: observationFromReport(report, 'scaffold_validation'),
@@ -361,7 +352,7 @@ function buildObservations(
     workspace_norm_checks: observationFromReport(report, 'workspace_norm_checks'),
     generated_interfaces: buildGeneratedInterfacesObservation(report.repo_dir, contracts),
     action_catalog: buildActionCatalogObservation(report.repo_dir),
-    stage_plane: buildStagePlaneObservation(report.repo_dir),
+    stage_plane: buildStagePlaneObservation(report.repo_dir, repoContractReadout),
   };
 }
 
@@ -418,8 +409,9 @@ function buildDomainProbe(
   report: FamilyAgentConformanceProbeSourceReport,
   contracts: FrameworkContracts,
   admissionContract: AdmissionGateContract,
+  repoContractReadout?: StandardAgentRepoContractReadout,
 ) {
-  const observations = buildObservations(report, contracts);
+  const observations = buildObservations(report, contracts, repoContractReadout);
   const gateResults = buildGateResults(report, admissionContract, observations);
   const blockers = unique([
     ...stringList(report.blockers),
@@ -459,9 +451,15 @@ function buildDomainProbe(
 export function buildFamilyAgentLiveConformanceProbe(
   reports: FamilyAgentConformanceProbeSourceReport[],
   contracts: FrameworkContracts = loadFrameworkContracts(),
+  repoContractReadouts: ReadonlyMap<string, StandardAgentRepoContractReadout> = new Map(),
 ) {
   const admissionContract = readAdmissionGateContract();
-  const domains = reports.map((report) => buildDomainProbe(report, contracts, admissionContract));
+  const domains = reports.map((report) => buildDomainProbe(
+    report,
+    contracts,
+    admissionContract,
+    repoContractReadouts.get(path.resolve(report.repo_dir)),
+  ));
   const passedCount = domains.filter((domain) => domain.status === 'passed').length;
   const blockedCount = domains.length - passedCount;
   return {

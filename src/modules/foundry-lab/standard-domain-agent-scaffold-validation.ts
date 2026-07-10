@@ -6,6 +6,11 @@ import { isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonFileOrNull } from '../../kernel/json-file.ts';
 import { validateJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 import {
+  buildStandardAgentRepoContractReadout,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+  type StandardAgentRepoContractReadout,
+} from '../pack/index.ts';
+import {
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   REQUIRED_REPO_SOURCE_DIRS,
 } from './standard-domain-agent-scaffold-constants.ts';
@@ -20,6 +25,7 @@ import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaf
 
 interface ScaffoldValidateInput {
   repoDir: string;
+  repoContractReadout?: StandardAgentRepoContractReadout;
 }
 
 const REQUIRED_CAPABILITY_MAP_SURFACE_ROLES = [
@@ -176,7 +182,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/domain_descriptor.json',
     'contracts/pack_compiler_input.json',
     'contracts/generated_surface_handoff.json',
-    'contracts/stage_control_plane.json',
+    STANDARD_AGENT_STAGE_MANIFEST_REF,
     'contracts/action_catalog.json',
     'contracts/memory_descriptor.json',
     'contracts/artifact_locator_contract.json',
@@ -205,7 +211,9 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const generatedSurfaceHandoffRecord = isRecord(generatedSurfaceHandoff) ? generatedSurfaceHandoff : {};
   const capabilityMap = readJsonFileOrNull(path.join(repoDir, 'contracts/capability_map.json'));
   const foundryAgentSeries = readJsonFileOrNull(path.join(repoDir, 'contracts/foundry_agent_series.json'));
-  const stageControlPlane = readJsonFileOrNull(path.join(repoDir, 'contracts/stage_control_plane.json'));
+  const repoContractReadout = input.repoContractReadout
+    ?? buildStandardAgentRepoContractReadout(repoDir);
+  const stageControlPlane = repoContractReadout.stage_control_plane;
   const stagePackV2Required = requiresStagePackV2(packCompilerInput, stageControlPlane);
   const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput, stagePackV2Required);
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
@@ -236,6 +244,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...missingRequiredDirs.map((item) => `missing_required_dir:${item}`),
     ...forbiddenPresentDirs.map((item) => `forbidden_source_dir_present:${item}`),
     ...missingContractFiles.map((item) => `missing_contract:${item}`),
+    ...repoContractReadout.blockers,
     ...missingForbiddenRoleGuards.map((item) => `missing_forbidden_role_guard:${item}`),
     ...authorityViolations,
     ...agentPackValidation.blockers,

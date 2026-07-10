@@ -543,6 +543,7 @@ function buildWorkbenchDescriptorBlock(
 function formatDescriptorBlock(
   catalog: FamilyActionCatalog | null,
   format: GeneratedInterfaceFormat,
+  stageControlPlane: FamilyStageControlPlane | null,
 ) {
   if (!catalog) {
     return {
@@ -558,6 +559,7 @@ function formatDescriptorBlock(
       owner: 'one-person-lab',
       status: 'ready',
       descriptors: buildProductEntryDescriptors(catalog),
+      family_stage_control_plane: stageControlPlane,
     };
   }
   return {
@@ -805,7 +807,11 @@ export function buildGeneratedInterfaceBundle(
   const stageControlPlane = rawDescriptorSurface<FamilyStageControlPlane>(descriptor, 'family_stage_control_plane');
   const formats: GeneratedInterfaceFormat[] = ['cli', 'mcp', 'skill', 'product-entry', 'openai', 'ai-sdk'];
   const include = (format: GeneratedInterfaceFormat) => selectedFormat === 'all' || selectedFormat === format;
-  const block = (format: GeneratedInterfaceFormat) => formatDescriptorBlock(catalog, format);
+  const block = (format: GeneratedInterfaceFormat) => formatDescriptorBlock(
+    catalog,
+    format,
+    stageControlPlane,
+  );
   const blocks = Object.fromEntries(
     formats
       .filter(include)

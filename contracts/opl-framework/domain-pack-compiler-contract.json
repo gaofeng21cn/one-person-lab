@@ -31,6 +31,13 @@
       }
     }
   },
+  "standard_agent_identity_binding": {
+    "canonical_agent_id_source_ref": "contracts/pack_compiler_input.json#/canonical_agent_id",
+    "target_domain_id_source_ref": "contracts/domain_descriptor.json#/domain_id",
+    "generated_interface_agent_id_policy": "copy_explicit_canonical_agent_id_without_domain_or_alias_inference",
+    "stage_plane_identity_policy": "family_stage_control_plane_remains_domain_scoped_and_does_not_duplicate_canonical_agent_identity",
+    "missing_canonical_agent_id_policy": "fail_closed"
+  },
   "input_surfaces": [
     "family_agent_descriptor.entry",
     "family_agent_descriptor.family_action_catalog",
@@ -55,9 +62,9 @@
       "functional_privatization_audit_source_ref",
       "generated_surface_handoff_source_ref"
     ],
-    "stage_graph_source_ref": "contracts/stage_control_plane.json",
+    "stage_graph_source_ref": "agent/stages/manifest.json",
     "quality_gate_source_ref": "agent/quality_gates/domain_acceptance.md",
-    "executor_policy_source_ref": "contracts/stage_control_plane.json#/stages/*/selected_executor",
+    "executor_policy_source_ref": "opl-generated:family_stage_control_plane#/stages/*/selected_executor",
     "functional_privatization_audit_source_ref": "contracts/functional_privatization_audit.json",
     "generated_surface_handoff_source_ref": "contracts/generated_surface_handoff.json",
     "authority_boundary": {
@@ -281,7 +288,7 @@
       "product_entry_manifest_descriptor",
       "domain_handler_descriptor"
     ],
-    "repo_dir_mode": "reads standard contracts/action_catalog.json, contracts/stage_control_plane.json, contracts/generated_surface_handoff.json, contracts/pack_compiler_input.json, contracts/memory_descriptor.json, and contracts/functional_privatization_audit.json without executing target repo private wrappers",
+    "repo_dir_mode": "reads contracts/domain_descriptor.json, contracts/action_catalog.json, contracts/pack_compiler_input.json, agent/stages/manifest.json, contracts/generated_surface_handoff.json, contracts/memory_descriptor.json, and contracts/functional_privatization_audit.json; OPL Pack compiles the family stage control plane without executing target repo private wrappers or reading a tracked contracts/stage_control_plane.json fallback",
     "descriptor_blocks": [
       "cli",
       "mcp",

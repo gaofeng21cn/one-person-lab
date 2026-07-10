@@ -6,11 +6,13 @@ import {
   normalizeFamilyActionCatalog,
 } from '../../../kernel/family-action-catalog-contract.ts';
 import {
-  normalizeFamilyStageControlPlane,
-} from '../../stagecraft/index.ts';
-import {
   buildFunctionalPrivatizationAudit,
 } from '../functional-privatization-audit.ts';
+import {
+  compileStandardAgentStageManifest,
+  STANDARD_AGENT_DESCRIPTOR_REF,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+} from '../standard-agent-stage-manifest.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
 import { stringList } from '../../../kernel/json-record.ts';
 import {
@@ -68,21 +70,6 @@ function normalizeRepoActionCatalog(repoDir: string, value: unknown) {
   }
 }
 
-function normalizeRepoStageControlPlane(repoDir: string, value: unknown) {
-  if (!value) {
-    return null;
-  }
-  try {
-    return normalizeFamilyStageControlPlane(value);
-  } catch (error) {
-    throw new FrameworkContractError('contract_shape_invalid', 'contracts/stage_control_plane.json is not a valid family-stage-control-plane.v1 contract.', {
-      repo_dir: repoDir,
-      relative_path: 'contracts/stage_control_plane.json',
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
 export function buildRepoContractDescriptor(repoDirInput: string) {
   const repoDir = path.resolve(repoDirInput);
   if (!fs.existsSync(repoDir) || !fs.statSync(repoDir).isDirectory()) {
@@ -93,26 +80,19 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
 
   const domainDescriptor = readRepoJson(repoDir, 'contracts/domain_descriptor.json') ?? {};
   const actionCatalog = normalizeRepoActionCatalog(repoDir, readRepoJson(repoDir, 'contracts/action_catalog.json'));
-  const stageControlPlane = normalizeRepoStageControlPlane(
-    repoDir,
-    readRepoJson(repoDir, 'contracts/stage_control_plane.json'),
-  );
+  const stageCompilation = compileStandardAgentStageManifest(repoDir);
+  const stageControlPlane = stageCompilation.stage_control_plane;
   const functionalAuditRaw = readRepoJson(repoDir, 'contracts/functional_privatization_audit.json');
   const generatedSurfaceHandoffRaw = readRepoJson(repoDir, 'contracts/generated_surface_handoff.json');
   const packCompilerInput = readRepoJson(repoDir, 'contracts/pack_compiler_input.json');
   const memoryDescriptor = readRepoJson(repoDir, 'contracts/memory_descriptor.json');
   const generatedSurfaceHandoff = isRecord(generatedSurfaceHandoffRaw) ? generatedSurfaceHandoffRaw : null;
-  const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : null;
   const targetDomainId =
     actionCatalog?.target_domain_id
     ?? stageControlPlane?.target_domain_id
     ?? optionalString((domainDescriptor as JsonRecord).domain_id)
     ?? path.basename(repoDir);
-  const canonicalAgentId =
-    optionalString(packCompilerInputRecord?.canonical_agent_id)
-    ?? optionalString((domainDescriptor as JsonRecord).canonical_agent_id)
-    ?? optionalString((domainDescriptor as JsonRecord).domain_id)
-    ?? targetDomainId;
+  const canonicalAgentId = stageCompilation.source_binding.canonical_agent_id;
   const functionalAuditManifest = {
     target_domain_id: targetDomainId,
     functional_privatization_audit: functionalAuditRaw ?? undefined,
@@ -120,7 +100,6 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   const functionalAudit = buildFunctionalPrivatizationAudit(functionalAuditManifest);
   const blockerReasons = [
     actionCatalog ? null : 'missing_contract:contracts/action_catalog.json',
-    stageControlPlane ? null : 'missing_or_invalid_contract:contracts/stage_control_plane.json',
     genericResidueBlocked(functionalAudit.summary)
       ? 'functional_privatization_audit_has_generic_residue_or_blocker'
       : null,
@@ -133,6 +112,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
       project: optionalString((domainDescriptor as JsonRecord).domain_label) ?? targetDomainId,
       target_domain_id: targetDomainId,
       agent_id: canonicalAgentId,
+      canonical_agent_id: canonicalAgentId,
       source_contract_consumption: {
         surface_kind: 'opl_repo_contract_consumption_projection',
         repo_dir: repoDir,
@@ -149,9 +129,14 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
             status: actionCatalog ? 'resolved' : 'missing',
           },
           {
-            contract_id: 'stage_control_plane',
-            path: 'contracts/stage_control_plane.json',
-            status: stageControlPlane ? 'resolved' : 'missing',
+            contract_id: 'declarative_stage_manifest',
+            path: STANDARD_AGENT_STAGE_MANIFEST_REF,
+            status: 'resolved_and_compiled',
+          },
+          {
+            contract_id: 'family_stage_control_plane',
+            path: 'opl-generated:family_stage_control_plane',
+            status: 'generated_from_declarative_stage_manifest',
           },
           {
             contract_id: 'generated_surface_handoff',
@@ -185,17 +170,19 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
         raw_descriptor: actionCatalog,
       },
       family_stage_control_plane: {
-        status: stageControlPlane ? 'resolved' : 'missing',
+        status: 'resolved',
+        source_kind: 'generated_from_declarative_stage_manifest',
         raw_descriptor: stageControlPlane,
+        source_binding: stageCompilation.source_binding,
       },
       generated_surface_handoff_contract: generatedSurfaceHandoff,
       pack_compiler_input_contract: packCompilerInput,
       product_entry_manifest_descriptor: {
-        status: actionCatalog && stageControlPlane ? 'resolved_from_repo_contracts' : 'missing_required_repo_contract',
+        status: actionCatalog ? 'resolved_from_repo_contracts' : 'missing_required_repo_contract',
         source_refs: [
           'contracts/domain_descriptor.json',
           'contracts/action_catalog.json',
-          'contracts/stage_control_plane.json',
+          STANDARD_AGENT_STAGE_MANIFEST_REF,
           'contracts/functional_privatization_audit.json',
         ],
         product_entry_manifest_contract_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
@@ -244,6 +231,95 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   };
 }
 
+export type StandardAgentRepoContractDescriptor = ReturnType<typeof buildRepoContractDescriptor>;
+
+export type StandardAgentRepoContractReadout = {
+  status: 'resolved' | 'blocked';
+  repo_dir: string;
+  canonical_agent_id: string | null;
+  target_domain_id: string | null;
+  source_binding: ReturnType<typeof compileStandardAgentStageManifest>['source_binding'] | null;
+  required_source_refs: string[];
+  repo_contract_descriptor: StandardAgentRepoContractDescriptor | null;
+  stage_control_plane: ReturnType<typeof compileStandardAgentStageManifest>['stage_control_plane'] | null;
+  blockers: string[];
+  error: string | null;
+};
+
+function contractErrorRef(error: unknown) {
+  if (!(error instanceof FrameworkContractError)) {
+    return null;
+  }
+  const details = isRecord(error.details) ? error.details : {};
+  const direct = optionalString(details.relative_path) ?? optionalString(details.ref);
+  if (direct) {
+    return direct;
+  }
+  const field = optionalString(details.field) ?? '';
+  if (field.startsWith('domain_descriptor') || field === 'descriptor_ref') {
+    return STANDARD_AGENT_DESCRIPTOR_REF;
+  }
+  if (field.startsWith('action_catalog') || error.message.includes('action_catalog')) {
+    return 'contracts/action_catalog.json';
+  }
+  if (field.startsWith('pack_compiler_input') || error.message.includes('pack_compiler_input')) {
+    return 'contracts/pack_compiler_input.json';
+  }
+  if (field.startsWith('stage_manifest') || error.message.includes('Stage manifest')) {
+    return STANDARD_AGENT_STAGE_MANIFEST_REF;
+  }
+  return null;
+}
+
+export function buildStandardAgentRepoContractReadout(
+  repoDirInput: string,
+): StandardAgentRepoContractReadout {
+  const repoDir = path.resolve(repoDirInput);
+  const requiredSourceRefs = [
+    'contracts/domain_descriptor.json',
+    'contracts/action_catalog.json',
+    'contracts/pack_compiler_input.json',
+    STANDARD_AGENT_STAGE_MANIFEST_REF,
+  ];
+  try {
+    const repoContractDescriptor = buildRepoContractDescriptor(repoDir);
+    const stageSurface = repoContractDescriptor.descriptor.family_stage_control_plane;
+    const stageControlPlane = isRecord(stageSurface)
+      && isRecord(stageSurface.raw_descriptor)
+      ? stageSurface.raw_descriptor as ReturnType<typeof compileStandardAgentStageManifest>['stage_control_plane']
+      : null;
+    return {
+      status: stageControlPlane ? 'resolved' : 'blocked',
+      repo_dir: repoDir,
+      canonical_agent_id: repoContractDescriptor.descriptor.canonical_agent_id,
+      target_domain_id: repoContractDescriptor.descriptor.target_domain_id,
+      source_binding: repoContractDescriptor.descriptor.family_stage_control_plane.source_binding,
+      required_source_refs: requiredSourceRefs,
+      repo_contract_descriptor: repoContractDescriptor,
+      stage_control_plane: stageControlPlane,
+      blockers: stageControlPlane ? [] : ['standard_agent_stage_manifest_compilation_missing_stage_plane'],
+      error: null,
+    };
+  } catch (error) {
+    const failedRef = contractErrorRef(error);
+    const blocker = failedRef
+      ? `${fs.existsSync(path.join(repoDir, failedRef)) ? 'invalid' : 'missing'}_contract:${failedRef}`
+      : `repo_contract_descriptor_failed:${error instanceof FrameworkContractError ? error.code : 'unknown_error'}`;
+    return {
+      status: 'blocked',
+      repo_dir: repoDir,
+      canonical_agent_id: null,
+      target_domain_id: null,
+      source_binding: null,
+      required_source_refs: requiredSourceRefs,
+      repo_contract_descriptor: null,
+      stage_control_plane: null,
+      blockers: [blocker],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 function repoContractEntryProjection(descriptor: JsonRecord) {
   const productEntry = isRecord(descriptor.product_entry_manifest_descriptor)
     ? descriptor.product_entry_manifest_descriptor
@@ -283,7 +359,7 @@ function repoContractRuntimeSurfacesProjection(descriptor: JsonRecord) {
     },
     workbench: {
       status: statusOf(descriptor.family_stage_control_plane) === 'resolved' ? 'resolved' : 'missing',
-      source_ref: 'contracts/stage_control_plane.json',
+      source_ref: STANDARD_AGENT_STAGE_MANIFEST_REF,
     },
     generated_surface_handoff: {
       status: generatedSurfaceHandoff ? 'resolved' : 'missing',
@@ -303,7 +379,7 @@ function repoContractTransitionProjection(descriptor: JsonRecord) {
   return {
     status: statusOf(stageControlPlane) === 'resolved' ? 'descriptor_only' : 'missing',
     source_kind: 'standard_agent_repo_contracts',
-    source_ref: 'contracts/stage_control_plane.json',
+    source_ref: STANDARD_AGENT_STAGE_MANIFEST_REF,
     transition_count: stages.length,
     authority_boundary: {
       transition_projection_can_claim_domain_ready: false,

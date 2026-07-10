@@ -146,8 +146,17 @@ test('agents conformance live family probe covers pass and blocked admission pat
   assert.equal(readyReport.family_live_conformance_probe.status, 'passed');
   assert.equal(readyReport.family_live_conformance_probe.domains[0].false_authority_boundary.domain_ready_authorized, false);
 
+  fs.rmSync(path.join(readyRepo, 'contracts', 'stage_control_plane.json'));
+  const legacylessReport = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${readyRepo}`,
+  ]).standard_domain_agent_conformance;
+  assert.equal(legacylessReport.family_live_conformance_probe.status, 'passed');
+
   const blockedRepo = buildReadyAgentRepo();
-  fs.rmSync(path.join(blockedRepo, 'contracts', 'stage_control_plane.json'));
+  fs.rmSync(path.join(blockedRepo, 'agent', 'stages', 'manifest.json'));
   const blockedReport = runCli([
     'agents',
     'conformance',
@@ -159,7 +168,9 @@ test('agents conformance live family probe covers pass and blocked admission pat
   assert.equal(blockedProbe.status, 'blocked');
   assert.equal(blockedProbe.domains[0].live_inputs.stage_plane.status, 'blocked');
   assert.equal(
-    blockedProbe.domains[0].live_inputs.stage_plane.blockers.includes('stage_plane_missing'),
+    blockedProbe.domains[0].live_inputs.stage_plane.blockers.includes(
+      'missing_contract:agent/stages/manifest.json',
+    ),
     true,
   );
 });

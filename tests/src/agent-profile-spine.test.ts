@@ -21,6 +21,118 @@ function writeJson(filePath: string, payload: unknown) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+type ProfileStageSource = {
+  stage_id: string;
+  stage_kind: string;
+  title: string;
+  goal: string;
+  policy_ref: string;
+  prompt_ref: string;
+  knowledge_refs: string[];
+  quality_gate_refs: string[];
+  skill_ref: string;
+  tool_ref: string;
+};
+
+function writeProfileStageCompilerSources(
+  repoDir: string,
+  domainId: string,
+  stages: ProfileStageSource[],
+) {
+  const refs = [...new Set(stages.flatMap((stage) => [
+    stage.policy_ref,
+    stage.prompt_ref,
+    ...stage.knowledge_refs,
+    ...stage.quality_gate_refs,
+    stage.skill_ref,
+    stage.tool_ref,
+  ]))];
+  for (const ref of refs) {
+    const file = path.join(repoDir, ref);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    if (!fs.existsSync(file)) {
+      fs.writeFileSync(file, `materialized:${ref}\n`);
+    }
+  }
+  fs.mkdirSync(path.join(repoDir, 'runtime', 'authority_functions'), { recursive: true });
+  fs.writeFileSync(path.join(repoDir, 'runtime', 'authority_functions', 'README.md'), '# Authority functions\n');
+  writeJson(path.join(repoDir, 'contracts', 'owner_receipt_contract.json'), {
+    surface_kind: 'domain_owner_receipt_contract',
+  });
+  writeJson(path.join(repoDir, 'contracts', 'domain_descriptor.json'), {
+    surface_kind: 'domain_agent_descriptor',
+    domain_id: domainId,
+    domain_label: domainId,
+    authority_boundary: {
+      opl_can_write_domain_truth: false,
+      opl_can_write_memory_body: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+  });
+  writeJson(path.join(repoDir, 'contracts', 'action_catalog.json'), {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v1',
+    catalog_id: `${domainId}.profile-actions`,
+    target_domain_id: domainId,
+    owner: domainId,
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    actions: [{
+      action_id: 'inspect_profile',
+      title: 'Inspect profile',
+      summary: 'Inspect the selected profile inputs.',
+      owner: domainId,
+      effect: 'mutating',
+      source_command: { command: `${domainId} inspect-profile`, surface_kind: 'domain_cli' },
+      input_schema_ref: 'contracts/profile.input.schema.json',
+      output_schema_ref: 'contracts/profile.output.schema.json',
+      workspace_locator_fields: ['workspace_root'],
+      human_gate_ids: [],
+      supported_surfaces: {
+        cli: { command: `${domainId} inspect-profile`, surface_kind: 'domain_cli' },
+        mcp: { tool_name: 'inspect_profile', surface_kind: 'domain_mcp' },
+        skill: { command_contract_id: 'inspect_profile', surface_kind: 'domain_skill' },
+        product_entry: { action_key: 'inspect_profile', command: `${domainId} inspect-profile`, surface_kind: 'domain_product_entry' },
+        openai: { tool_name: 'inspect_profile' },
+        ai_sdk: { tool_name: 'inspect_profile' },
+      },
+    }],
+    notes: [],
+  });
+  writeJson(path.join(repoDir, 'contracts', 'pack_compiler_input.json'), {
+    surface_kind: 'opl_domain_pack_compiler_input',
+    domain_id: domainId,
+    canonical_agent_id: domainId,
+    required_domain_pack_paths: ['agent/stages/manifest.json', ...refs],
+  });
+  writeJson(path.join(repoDir, 'agent', 'stages', 'manifest.json'), {
+    surface_kind: 'opl_standard_agent_declarative_stage_manifest',
+    version: 'opl-standard-agent-declarative-stage-manifest.v1',
+    target_domain_id: domainId,
+    owner: domainId,
+    authority_boundary: {
+      domain_truth_owner: domainId,
+      opl_can_write_domain_truth: false,
+      opl_can_authorize_quality_or_export: false,
+    },
+    stages: stages.map((stage, index) => ({
+      stage_id: stage.stage_id,
+      stage_kind: stage.stage_kind,
+      title: stage.title,
+      summary: stage.title,
+      goal: stage.goal,
+      policy_ref: stage.policy_ref,
+      prompt_ref: stage.prompt_ref,
+      knowledge_refs: stage.knowledge_refs,
+      quality_gate_refs: stage.quality_gate_refs,
+      allowed_action_refs: ['inspect_profile'],
+      requires: [`${stage.stage_id}_input_ref`],
+      ensures: [`${stage.stage_id}_owner_receipt_or_typed_blocker_ref`],
+      next_stage_refs: stages[index + 1] ? [stages[index + 1].stage_id] : [],
+      trust_lane: index === 0 ? 'codex_executor' : 'domain_agent',
+    })),
+  });
+}
+
 const SOURCE_DERIVED_TYPED_OBJECT_FIELDS = [
   'reference_design_packet',
   'transfer_map',
@@ -131,6 +243,19 @@ function makeConformantAgentFixture() {
       },
     ],
   });
+
+  writeProfileStageCompilerSources(repoDir, 'colorectal-surgery-risk', [{
+    stage_id: 'risk-support',
+    stage_kind: 'creation',
+    title: 'Risk Support',
+    goal: 'Produce an evidence-grounded risk-support artifact.',
+    policy_ref: 'agent/stages/risk-support.md',
+    prompt_ref: 'agent/prompts/risk-support.md',
+    knowledge_refs: ['agent/knowledge/guidelines.md'],
+    quality_gate_refs: ['agent/quality_gates/evidence.md'],
+    skill_ref: 'agent/skills/risk-support.md',
+    tool_ref: 'agent/tools/retrieval.md',
+  }]);
 
   return { repoDir, profile };
 }
@@ -545,6 +670,28 @@ function makeSourceDerivedAgentFixture() {
     ],
   });
 
+  writeProfileStageCompilerSources(
+    repoDir,
+    'colorectal-surgery-risk-from-paper',
+    [...sourceDerivedStageRefs, targetOnlyStage].map((stage, index) => {
+      const stepId = 'step_id' in stage ? stage.step_id : null;
+      return {
+        stage_id: stage.stage_id,
+        stage_kind: index === sourceDerivedStageRefs.length ? 'review' : 'creation',
+        title: stepId ?? 'Owner gated closeout',
+        goal: index === sourceDerivedStageRefs.length
+          ? 'Route the candidate package to the target owner.'
+          : `Materialize ${stepId} from the admitted source workflow.`,
+        policy_ref: stage.stage_path,
+        prompt_ref: stage.prompt_ref,
+        knowledge_refs: stage.knowledge_refs,
+        quality_gate_refs: stage.quality_gate_refs,
+        skill_ref: stage.skill_ref,
+        tool_ref: stage.tool_refs[0],
+      };
+    }),
+  );
+
   return { repoDir };
 }
 
@@ -704,7 +851,7 @@ test('profile conformance checks selected profile refs, stage knowledge refs, an
 
   assert.ok(conformance.observed);
   assert.ok(conformance.authority_boundary);
-  assert.equal(conformance.status, 'passed');
+  assert.equal(conformance.status, 'passed', conformance.blockers.join('\n'));
   assert.deepEqual(conformance.blockers, []);
   assert.equal(conformance.observed.stages_with_knowledge_refs, 1);
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
@@ -719,7 +866,7 @@ test('profile conformance accepts source-derived design route receipts without a
     'source_derived_design_profile_route.v1',
   ]).profile_conformance;
 
-  assert.equal(conformance.status, 'passed');
+  assert.equal(conformance.status, 'passed', conformance.blockers.join('\n'));
   assert.deepEqual(conformance.blockers, []);
   assert.equal(conformance.profile_ref, 'opl-profile-route:source_derived_design_profile_route.v1');
   assert.ok(conformance.observed.capability_profile_refs.includes('opl-profile-route:source_derived_design_profile_route.v1'));
@@ -745,61 +892,6 @@ test('profile conformance accepts source-derived design route receipts without a
   assert.equal(typedObjectFloor.planned_stage_refs.length, 2);
   assert.equal(typedObjectFloor.admitted_design_stage_refs.length, 2);
   assert.equal(conformance.authority_boundary.conformance_can_claim_domain_ready, false);
-});
-
-test('profile conformance compares every typed object projection across capability map, control plane, and stages', () => {
-  const cases = [
-    ['reference_design_packet', 'ReferenceDesignPacket', 'packet_ref'],
-    ['transfer_map', 'TransferMap', 'transfer_map_ref'],
-    ['agent_pack_plan', 'AgentPackPlan', 'plan_ref'],
-    ['design_admission_receipt', 'DesignAdmissionReceipt', 'receipt_ref'],
-    ['build_receipt', 'AgentBuildReceipt', 'receipt_ref'],
-  ] as const;
-
-  for (const [field, objectName, identityField] of cases) {
-    const { repoDir } = makeSourceDerivedAgentFixture();
-    const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-    const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
-    stageControl.stages[0][field][identityField] += ':drifted-stage-copy';
-    writeJson(stageControlPath, stageControl);
-
-    const conformance = buildAgentProfileConformance([
-      '--repo-dir',
-      repoDir,
-      '--profile',
-      'source_derived_design_profile_route.v1',
-    ]).profile_conformance;
-
-    assert.equal(conformance.status, 'blocked', objectName);
-    assert.equal(
-      conformance.blockers.includes(
-        `source_derived_design_typed_object_projection_mismatch:${objectName}:stage:source-material-intake`,
-      ),
-      true,
-      objectName,
-    );
-  }
-
-  const { repoDir } = makeSourceDerivedAgentFixture();
-  const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
-  delete stageControl.stages[2].transfer_map;
-  writeJson(stageControlPath, stageControl);
-
-  const conformance = buildAgentProfileConformance([
-    '--repo-dir',
-    repoDir,
-    '--profile',
-    'source_derived_design_profile_route.v1',
-  ]).profile_conformance;
-  assert.equal(conformance.status, 'blocked');
-  assert.equal(
-    conformance.blockers.includes(
-      'source_derived_design_typed_object_projection_missing:TransferMap:stage:owner-gated-closeout',
-    ),
-    true,
-    conformance.blockers.join('\n'),
-  );
 });
 
 test('profile conformance recomputes complete planned file digests from the target agent root', () => {
@@ -998,10 +1090,10 @@ test('profile conformance binds workflow transfer mappings to planned stage refs
 
 test('profile conformance requires every source and target-only planned stage to be materialized', () => {
   const { repoDir } = makeSourceDerivedAgentFixture();
-  const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
-  const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
-  const removedStage = stageControl.stages.pop();
-  writeJson(stageControlPath, stageControl);
+  const stageManifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
+  const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8'));
+  const removedStage = stageManifest.stages.pop();
+  writeJson(stageManifestPath, stageManifest);
 
   const conformance = buildAgentProfileConformance([
     '--repo-dir',
@@ -1188,7 +1280,7 @@ test('profile conformance fails closed when source-derived requirements exist wi
     );
   assert.equal(
     conformance.blockers.includes('source_derived_design_missing_stage_pattern_source_refs_or_target_only_requirement'),
-    false,
+    true,
   );
 });
 
@@ -1265,14 +1357,13 @@ test('profile conformance blocks hollow source-derived typed objects', () => {
 test('profile conformance fails closed when profile refs and knowledge refs are missing', () => {
   const { repoDir, profile } = makeConformantAgentFixture();
   const capabilityMapPath = path.join(repoDir, 'contracts', 'capability_map.json');
-  const stageControlPath = path.join(repoDir, 'contracts', 'stage_control_plane.json');
+  const stageManifestPath = path.join(repoDir, 'agent', 'stages', 'manifest.json');
   const capabilityMap = JSON.parse(fs.readFileSync(capabilityMapPath, 'utf8'));
-  const stageControl = JSON.parse(fs.readFileSync(stageControlPath, 'utf8'));
+  const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8'));
   delete capabilityMap.selected_profile_refs;
-  delete stageControl.selected_profile_refs;
-  stageControl.stages[0].knowledge_refs = [];
+  stageManifest.stages[0].knowledge_refs = [];
   writeJson(capabilityMapPath, capabilityMap);
-  writeJson(stageControlPath, stageControl);
+  writeJson(stageManifestPath, stageManifest);
 
   const conformance = buildAgentProfileConformance([
     '--repo-dir',
