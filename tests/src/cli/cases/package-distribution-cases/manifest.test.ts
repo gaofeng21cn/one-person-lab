@@ -268,7 +268,7 @@ test('packages manifest exposes active package-channel coordinates for module in
   );
   assert.equal(output.packages_manifest.packages.codex_default_profile.model_provider, 'gflab');
   assert.equal(output.packages_manifest.packages.codex_default_profile.model, 'gpt-5.6-sol');
-  assert.equal(output.packages_manifest.packages.codex_default_profile.model_reasoning_effort, 'xhigh');
+  assert.equal(output.packages_manifest.packages.codex_default_profile.model_reasoning_effort, 'max');
   assert.equal(output.packages_manifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(
     output.packages_manifest.packages.codex_default_profile.base_url_role,

@@ -48,7 +48,7 @@ test('system configure-codex writes the product endpoint and App-owned install f
     assert.equal(output.codex_config.status, 'completed');
     assert.equal(output.codex_config.default_profile.model_provider, 'gflab');
     assert.equal(output.codex_config.default_profile.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.default_profile.model_reasoning_effort, 'xhigh');
+    assert.equal(output.codex_config.default_profile.model_reasoning_effort, 'max');
     assert.equal(output.codex_config.default_profile.base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.default_profile.base_url_role, 'product_default_provider_endpoint');
     assert.equal(output.codex_config.default_profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
@@ -62,7 +62,7 @@ test('system configure-codex writes the product endpoint and App-owned install f
     const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-stdin-key"/);
   } finally {
@@ -231,7 +231,7 @@ test('system configure-codex updates a legacy OPL model while preserving the int
     };
 
     assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'max');
     assert.equal(output.codex_config.bootstrap.provider_base_url, 'http://127.0.0.1:8787/v1');
     assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'auto');
     assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'intelligence_proxy');
@@ -239,7 +239,7 @@ test('system configure-codex updates a legacy OPL model while preserving the int
 
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.match(config, /base_url = "http:\/\/127\.0\.0\.1:8787\/v1"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -264,7 +264,7 @@ test('system configure-codex preserves model and reasoning values changed after 
       configPath,
       managedConfig
         .replace('model = "gpt-5.6-sol"', 'model = "user-fixed-model"')
-        .replace('model_reasoning_effort = "xhigh"', 'model_reasoning_effort = "high"'),
+        .replace('model_reasoning_effort = "max"', 'model_reasoning_effort = "high"'),
       'utf8',
     );
 
@@ -338,7 +338,7 @@ test('system configure-codex completes a plugin-only Codex config created during
 
     assert.equal(output.codex_config.status, 'completed');
     assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'max');
     assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.bootstrap.api_key_present, true);
     assert.equal(JSON.stringify(output).includes(apiKey), false);
@@ -346,7 +346,7 @@ test('system configure-codex completes a plugin-only Codex config created during
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-plugin-key"/);
     assert.match(config, /\[marketplaces\.med-autoscience-local\]/);

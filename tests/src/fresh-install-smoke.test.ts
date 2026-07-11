@@ -636,7 +636,7 @@ test('bundled Codex profile carries the App-owned install fallback without runti
   assert.equal(profile.generated_projection.runtime_source_checkout_required, false);
   assert.equal(profile.model_provider, 'gflab');
   assert.equal(profile.model, 'gpt-5.6-sol');
-  assert.equal(profile.model_reasoning_effort, 'xhigh');
+  assert.equal(profile.model_reasoning_effort, 'max');
   assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(profile.base_url_role, 'product_default_provider_endpoint');
   assert.equal(profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
@@ -657,15 +657,15 @@ test('Codex default profile exporter deterministically projects the App-owned fa
       provider: 'gflab',
       base_url: 'https://gflabtoken.cn/v1',
       model: 'gpt-5.6-sol',
-      reasoning_effort: 'xhigh',
+      reasoning_effort: 'max',
     },
     codex: {
       default_model: 'gpt-5.6-sol',
-      default_reasoning_effort: 'xhigh',
+      default_reasoning_effort: 'max',
       auto_model_policy: {
         catalog_unavailable_fallback: {
           model: 'gpt-5.6-sol',
-          reasoning_effort: 'xhigh',
+          reasoning_effort: 'max',
         },
       },
     },

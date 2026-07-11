@@ -25,7 +25,7 @@
   },
   "model_provider": "gflab",
   "model": "gpt-5.6-sol",
-  "model_reasoning_effort": "xhigh",
+  "model_reasoning_effort": "max",
   "provider_name": "gflab",
   "base_url": "https://gflabtoken.cn/v1",
   "base_url_role": "product_default_provider_endpoint",

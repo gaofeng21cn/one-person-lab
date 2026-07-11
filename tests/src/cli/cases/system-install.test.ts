@@ -586,11 +586,11 @@ test('install command applies bundled Codex defaults when only the API key is pr
 
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(bootstrap.reasoning_effort, 'max');
 
     const config = fs.readFileSync(bootstrap.config_path, 'utf8');
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -634,7 +634,7 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.status, 'completed');
     assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(bootstrap.reasoning_effort, 'max');
     assert.equal(bootstrap.management_receipt.provider_id, 'company-opl');
     assert.equal(bootstrap.management_receipt.provider_route, 'direct_gateway');
     assert.equal(bootstrap.management_receipt.selection_mode, 'auto');
@@ -642,7 +642,7 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "company-opl"/);
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.match(config, /custom_user_setting = true/);
     assert.match(config, /name = "Company OPL Gateway"/);
     assert.match(config, /experimental_bearer_token = "existing-opl-key"/);
@@ -712,14 +712,14 @@ test('install command upgrades an OPL Flow intelligence proxy without requiring 
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.status, 'completed');
     assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(bootstrap.reasoning_effort, 'max');
     assert.equal(bootstrap.api_key_present, false);
     assert.equal(bootstrap.management_receipt.provider_route, 'intelligence_proxy');
     assert.equal(output.install.system_initialize.core_engines.codex.opl_gateway_configured, true);
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "proxy-alias"/);
     assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /model_reasoning_effort = "max"/);
     assert.doesNotMatch(config, /experimental_bearer_token/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
