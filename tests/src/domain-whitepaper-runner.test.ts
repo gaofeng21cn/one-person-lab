@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -65,6 +66,26 @@ function writeCommand(binDir: string, name: string, body: string) {
   fs.writeFileSync(commandPath, `${body}\n`, { mode: 0o755 });
 }
 
+function fingerprint(filePath: string) {
+  const bytes = fs.readFileSync(filePath);
+  return {
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    size: bytes.byteLength,
+  };
+}
+
+function assertBoundFile(
+  domainRepo: string,
+  verification: Record<string, unknown>,
+  field: 'source_profile' | 'source_markdown' | 'generated_markdown' | 'generated_html' | 'generated_pdf',
+) {
+  const relativePath = verification[field];
+  assert.equal(typeof relativePath, 'string');
+  const actual = fingerprint(path.join(domainRepo, relativePath as string));
+  assert.equal(verification[`${field}_sha256`], actual.sha256);
+  assert.equal(verification[`${field}_size`], actual.size);
+}
+
 test('domain whitepaper runner renders a generic domain profile through the shared builder', (t) => {
   const { domainRepo, binDir } = makeDomainRepo(t);
   const result = runRunner([
@@ -76,8 +97,39 @@ test('domain whitepaper runner renders a generic domain profile through the shar
   const verification = JSON.parse(result.stdout) as Record<string, unknown>;
   assert.equal(verification.status, 'domain_whitepaper_ready');
   assert.equal(verification.pdf_pages, 1);
-  assert.equal(fs.existsSync(path.join(domainRepo, 'docs', 'site', 'latest', 'whitepapers', 'domain-whitepaper.pdf')), true);
-  assert.equal(fs.existsSync(path.join(domainRepo, 'docs', 'delivery', 'whitepapers', 'domain-whitepaper-verification.json')), true);
+  assert.equal(verification.source_profile, 'contracts/whitepaper_profile.json');
+  for (const field of ['source_profile', 'source_markdown', 'generated_markdown', 'generated_html', 'generated_pdf'] as const) {
+    assertBoundFile(domainRepo, verification, field);
+  }
+  const renderedPageHashes = verification.rendered_page_hashes as Array<Record<string, unknown>>;
+  assert.equal(renderedPageHashes.length, 1);
+  const renderedPage = path.join(domainRepo, verification.rendered_dir as string, renderedPageHashes[0].page as string);
+  assert.deepEqual(
+    { sha256: renderedPageHashes[0].sha256, size: renderedPageHashes[0].size },
+    fingerprint(renderedPage),
+  );
+  const verificationPath = path.join(domainRepo, 'docs', 'delivery', 'whitepapers', 'domain-whitepaper-verification.json');
+  assert.deepEqual(JSON.parse(fs.readFileSync(verificationPath, 'utf8')), verification);
+});
+
+test('domain whitepaper runner binds verification to profile bytes', (t) => {
+  const { domainRepo, binDir } = makeDomainRepo(t);
+  const args = ['--repo-root', domainRepo, '--profile', 'contracts/whitepaper_profile.json'];
+  const env = { PATH: `${binDir}:${process.env.PATH ?? ''}` };
+  const first = runRunner(args, env);
+  assert.equal(first.status, 0, first.stderr);
+  const firstVerification = JSON.parse(first.stdout) as Record<string, unknown>;
+
+  const profilePath = path.join(domainRepo, 'contracts', 'whitepaper_profile.json');
+  const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Record<string, unknown>;
+  profile.coverLine = 'Updated generic domain delivery profile';
+  fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+  const second = runRunner(args, env);
+  assert.equal(second.status, 0, second.stderr);
+  const secondVerification = JSON.parse(second.stdout) as Record<string, unknown>;
+
+  assert.notEqual(secondVerification.source_profile_sha256, firstVerification.source_profile_sha256);
+  assertBoundFile(domainRepo, secondVerification, 'source_profile');
 });
 
 test('domain whitepaper runner rejects malformed profile JSON before rendering', (t) => {

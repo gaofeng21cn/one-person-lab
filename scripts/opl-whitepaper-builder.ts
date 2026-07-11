@@ -13,6 +13,7 @@ type WhitepaperMetadata = {
 
 type WhitepaperConfig = {
   repoRoot: string;
+  sourceProfile?: string;
   sourceMarkdown: string;
   outputName: string;
   status: string;
@@ -227,8 +228,12 @@ function extractPdfText(config: WhitepaperConfig, pdfFile: string) {
   return run(config.repoRoot, 'pdftotext', [pdfFile, '-']).stdout;
 }
 
-function fileSha1(filePath: string) {
-  return crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
+function fileFingerprint(filePath: string) {
+  const bytes = fs.readFileSync(filePath);
+  return {
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    size: bytes.byteLength,
+  };
 }
 
 function parseMarkdownLinks(markdown: string) {
@@ -251,6 +256,7 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
   scanTextForSecrets(markdown);
   buildHtml(config, metadata, output.sourceMarkdownPath, output.htmlPath);
   buildPdf(config, metadata, markdown, output);
+  fs.copyFileSync(output.sourceMarkdownPath, output.generatedMarkdownPath);
 
   const render = renderPdf(config, output.pdfPath, path.join(output.tempDir, 'rendered'));
   const info = parsePdfInfo(config, output.pdfPath);
@@ -266,17 +272,34 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
   const missingTerms = config.requiredTerms.filter((term) => !text.includes(term));
   if (missingTerms.length > 0) throw new Error(`Generated PDF text is missing required terms: ${missingTerms.join(', ')}`);
 
+  const sourceProfile = config.sourceProfile ? path.join(config.repoRoot, config.sourceProfile) : null;
+  const sourceProfileFingerprint = sourceProfile ? fileFingerprint(sourceProfile) : null;
+  const sourceMarkdownFingerprint = fileFingerprint(output.sourceMarkdownPath);
+  const generatedMarkdownFingerprint = fileFingerprint(output.generatedMarkdownPath);
+  const generatedHtmlFingerprint = fileFingerprint(output.htmlPath);
+  const generatedPdfFingerprint = fileFingerprint(output.pdfPath);
   const verification = {
     status: config.status,
     generated_at: `${metadata.publicationDate}T00:00:00.000Z`,
+    source_profile: sourceProfile ? relativeToRepo(config, sourceProfile) : null,
+    source_profile_sha256: sourceProfileFingerprint?.sha256 ?? null,
+    source_profile_size: sourceProfileFingerprint?.size ?? null,
     source_markdown: relativeToRepo(config, output.sourceMarkdownPath),
+    source_markdown_sha256: sourceMarkdownFingerprint.sha256,
+    source_markdown_size: sourceMarkdownFingerprint.size,
     generated_markdown: relativeToRepo(config, output.generatedMarkdownPath),
+    generated_markdown_sha256: generatedMarkdownFingerprint.sha256,
+    generated_markdown_size: generatedMarkdownFingerprint.size,
     generated_html: relativeToRepo(config, output.htmlPath),
+    generated_html_sha256: generatedHtmlFingerprint.sha256,
+    generated_html_size: generatedHtmlFingerprint.size,
     generated_pdf: relativeToRepo(config, output.pdfPath),
+    generated_pdf_sha256: generatedPdfFingerprint.sha256,
+    generated_pdf_size: generatedPdfFingerprint.size,
     temp_markdown: relativeToRepo(config, output.tempMarkdownPath),
     rendered_dir: relativeToRepo(config, render.renderDir),
     rendered_pages: render.pages.length,
-    rendered_page_hashes: render.pages.map((page) => ({ page, sha1: fileSha1(path.join(render.renderDir, page)) })),
+    rendered_page_hashes: render.pages.map((page) => ({ page, ...fileFingerprint(path.join(render.renderDir, page)) })),
     pdf_pages: info.pages,
     pdf_page_size_pts: info.page_size_pts,
     required_terms: config.requiredTerms,
@@ -292,7 +315,6 @@ export function buildOplWhitepaper(config: WhitepaperConfig) {
     references: parseMarkdownLinks(markdown),
   };
 
-  fs.copyFileSync(output.sourceMarkdownPath, output.generatedMarkdownPath);
   fs.mkdirSync(path.dirname(output.verificationPath), { recursive: true });
   fs.writeFileSync(output.verificationPath, `${JSON.stringify(verification, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify(verification, null, 2));

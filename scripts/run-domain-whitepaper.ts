@@ -99,10 +99,10 @@ function sourceMarkdownPath(repoRoot: string, sourceMarkdown: string) {
   return sourceMarkdown;
 }
 
-function readProfile(repoRoot: string, profileArg: string): WhitepaperProfile {
+function readProfile(repoRoot: string, resolvedProfile: string): WhitepaperProfile {
   let raw: unknown;
   try {
-    raw = JSON.parse(fs.readFileSync(profilePath(repoRoot, profileArg), 'utf8'));
+    raw = JSON.parse(fs.readFileSync(resolvedProfile, 'utf8'));
   } catch (error) {
     fail(`Whitepaper profile must be valid JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -135,7 +135,12 @@ function main() {
     fail('Whitepaper repo root must be an existing directory.');
   }
   const repoRoot = fs.realpathSync(requestedRepoRoot);
-  buildOplWhitepaper({ ...readProfile(repoRoot, input.profile), repoRoot });
+  const resolvedProfile = profilePath(repoRoot, input.profile);
+  buildOplWhitepaper({
+    ...readProfile(repoRoot, resolvedProfile),
+    repoRoot,
+    sourceProfile: path.relative(repoRoot, resolvedProfile),
+  });
 }
 
 try {
