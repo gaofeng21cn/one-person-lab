@@ -73,6 +73,29 @@ test('runtime scope dedupes workspace options by workspace path', () => {
   );
 });
 
+test('runtime tasks derive standard-agent labels from the canonical registry', () => {
+  const operator = buildOperatorForRuntimeItems([
+    {
+      project_id: 'scholarskills',
+      item_id: 'scholarskills:capability:literature-review',
+      title: 'Literature review capability',
+      lane: 'running',
+    },
+  ]);
+
+  const task = operator.workbench.task_drilldowns.find(
+    (entry: Record<string, unknown>) => entry.task_id === 'scholarskills:capability:literature-review',
+  ) as Record<string, any>;
+  assert.equal(task.task_identity.agent.label, 'MAS Scholar Skills');
+  assert.equal(task.agent_display_name, 'MAS Scholar Skills');
+  assert.equal(
+    operator.workbench.runtime_scope.scope_options.find(
+      (entry: Record<string, unknown>) => entry.scope_kind === 'agent',
+    )?.label,
+    'MAS Scholar Skills',
+  );
+});
+
 test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspace study', () => {
   const workspacePath = '/Users/example/Yang/DM-CVD-Mortality-Risk';
   const operator = buildOperatorForRuntimeItems([
@@ -119,7 +142,7 @@ test('runtime task drilldowns dedupe duplicate MAS bindings for the same workspa
   assert.equal(operator.workbench.user_task_status_summary.active_project_count, 1);
 });
 
-test('MAS owner typed blocker without active automation is shown as paused waiting for direction', () => {
+test('attention-lane typed blockers require system handling without a generic pause signal', () => {
   const operator = buildOperatorForRuntimeItems([
     {
       domain_id: 'medautoscience',
@@ -147,14 +170,14 @@ test('MAS owner typed blocker without active automation is shown as paused waiti
     (entry: Record<string, unknown>) => entry.study_id === '001-dm-cvd-mortality-risk',
   ) as Record<string, unknown>;
   assert.ok(task);
-  assert.equal(task.primary_state, 'paused_waiting_for_direction');
-  assert.equal(task.primary_state_label, '已暂停，等待后续决定');
+  assert.equal(task.primary_state, 'system_attention_required');
+  assert.equal(task.primary_state_label, '需要系统处理');
   assert.equal(task.automation_state, 'automation_idle');
-  assert.equal(task.state, 'waiting_for_direction');
-  assert.equal(task.priority_bucket, 'recent');
-  assert.deepEqual(workbench.activity_center.needs_attention, []);
-  assert.equal(workbench.user_task_status_summary.system_attention_count, 0);
-  assert.equal(workbench.user_task_status_summary.paused_count, 1);
+  assert.equal(task.state, 'attention_needed');
+  assert.equal(task.priority_bucket, 'needs_attention');
+  assert.equal(workbench.activity_center.needs_attention.length, 1);
+  assert.equal(workbench.user_task_status_summary.system_attention_count, 1);
+  assert.equal(workbench.user_task_status_summary.paused_count, 0);
 });
 
 test('domain runtime closeout is delivered even when a stale attempt failed', () => {

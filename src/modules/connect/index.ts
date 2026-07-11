@@ -71,6 +71,7 @@ export { resolveCodexVersion } from './system-installation/engine-helpers.ts';
 export {
   buildOplModules,
   listDefaultOplDomainModuleSpecs,
+  resolveOplDomainModuleSpec,
   resolveOplModuleExecCommand,
   runOplModuleAction,
 } from './system-installation/modules.ts';

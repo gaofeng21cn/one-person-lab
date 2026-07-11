@@ -1,4 +1,5 @@
 import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
+import { resolveStandardAgent } from '../../kernel/standard-agent-registry.ts';
 import { buildTaskRunProjectionV2 } from './app-state-task-run-projection.ts';
 import {
   buildBrandExperienceProfile,
@@ -97,42 +98,11 @@ function projectLineKey(task: JsonRecord) {
     ?? 'runtime-project-line';
 }
 
-function normalizedTextKey(value: unknown) {
-  return asString(value)?.toLowerCase().replace(/[^a-z0-9]+/g, '') ?? '';
-}
-
-const DOMAIN_AGENT_DISPLAY_LABELS: Record<string, string> = {
-  mas: 'Med Auto Science',
-  medautoscience: 'Med Auto Science',
-  mag: 'Med Auto Grant',
-  medautogrant: 'Med Auto Grant',
-  rca: 'RedCube AI',
-  redcube: 'RedCube AI',
-  redcubeai: 'RedCube AI',
-  oma: 'OPL Meta Agent',
-  oplmetaagent: 'OPL Meta Agent',
-  bookforge: 'OPL Book Forge',
-  oplbookforge: 'OPL Book Forge',
-};
-
 function domainAgentDisplayLabel(domainId: string, label: string | null) {
-  return DOMAIN_AGENT_DISPLAY_LABELS[normalizedTextKey(label)]
-    ?? DOMAIN_AGENT_DISPLAY_LABELS[normalizedTextKey(domainId)]
+  return resolveStandardAgent(label ?? '')?.label
+    ?? resolveStandardAgent(domainId)?.label
     ?? label
     ?? domainId;
-}
-
-function isMedAutoScienceTask(task: JsonRecord) {
-  const text = lowerText(task.project_id, task.domain_id, task.domain_owner, task.project_label);
-  return includesAny(text, ['medautoscience', 'med-autoscience', 'mas']);
-}
-
-function isMasOwnerTypedBlockerObserved(task: JsonRecord) {
-  return (
-    isMedAutoScienceTask(task)
-      && normalizedTextKey(task.active_stage_id) === 'domainroutereconcileapply'
-      && normalizedTextKey(task.typed_blocker_summary) === 'masowneranswertypedblockerobserved'
-  );
 }
 
 function deriveUserFacingTaskState(task: JsonRecord) {
@@ -146,11 +116,9 @@ function deriveUserFacingTaskState(task: JsonRecord) {
     task.action_summary,
   );
   const runtimeCloseoutObserved = asBoolean(task.runtime_closeout_observed);
-  const masOwnerTypedBlockerObserved = isMasOwnerTypedBlockerObserved(task);
   const runtimeAttentionDemotedToDiagnostic = asBoolean(task.runtime_attention_demoted_to_diagnostic);
   const automationFailed = ['failed', 'dead_lettered'].includes(status ?? '')
     && !runtimeCloseoutObserved
-    && !masOwnerTypedBlockerObserved
     && !runtimeAttentionDemotedToDiagnostic;
   const ownerDecisionRequired = includesAny(text, [
     '需要你决定',
@@ -188,9 +156,7 @@ function deriveUserFacingTaskState(task: JsonRecord) {
 
   const primaryState = lane === 'running'
     ? 'in_progress'
-    : masOwnerTypedBlockerObserved
-      ? 'paused_waiting_for_direction'
-      : pausedWaiting
+    : pausedWaiting
       ? 'paused_waiting_for_direction'
       : ownerDecisionRequired
         ? 'owner_decision_required'

@@ -103,6 +103,20 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
     assert.equal(module.delegated_surface, 'opl connect reinstall --module oplmetaagent');
     assert.equal(module.result.module_action.status, 'dry_run');
 
+    const capabilityModule = runCli([
+      'app',
+      'action',
+      'execute',
+      '--action',
+      'module_install',
+      '--payload',
+      '{"module_id":"scholarskills"}',
+      '--dry-run',
+    ], env).app_action_execution;
+
+    assert.equal(capabilityModule.delegated_surface, 'opl connect install --module scholarskills');
+    assert.equal(capabilityModule.result.module_action.module_id, 'scholarskills');
+
     const moduleSync = runCli([
       'app',
       'action',

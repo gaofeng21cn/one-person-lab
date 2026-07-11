@@ -239,6 +239,12 @@ test('source module boundary reports current repo cross-module import summary', 
   assert.equal(summary.cross_module_imports.dependency_cycles.count, 0);
   assert.equal(summary.module_entrypoints.unexpected_module_roots.length, 0);
   assert.ok(summary.cross_module_imports.pair_counts.length > 0);
+  assert.equal(
+    summary.cross_module_imports.pair_counts.some(
+      (entry) => entry.from_module_id === 'connect' && entry.to_module_id === 'console',
+    ),
+    false,
+  );
 });
 
 test('source module boundary supports help and explicit json format', () => {

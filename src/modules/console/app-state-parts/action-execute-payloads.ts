@@ -2,6 +2,7 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { optionalString } from '../../../kernel/json-file.ts';
 import type { OplUpdateChannel } from '../../../kernel/system-preferences.ts';
 import {
+  resolveOplDomainModuleSpec,
   type OplEngineAction,
   type OplModuleAction,
   type OplModuleId,
@@ -119,20 +120,12 @@ export function modulePayload(payload: JsonRecord): OplModuleId {
   const moduleId = stringPayloadField(payload, 'module_id')
     ?? stringPayloadField(payload, 'moduleId')
     ?? stringPayloadField(payload, 'module');
-  if (
-    moduleId !== 'medautoscience'
-    && moduleId !== 'medautogrant'
-    && moduleId !== 'redcube'
-    && moduleId !== 'oplmetaagent'
-    && moduleId !== 'oplbookforge'
-    && moduleId !== 'meddeepscientist'
-  ) {
-    throw new FrameworkContractError('cli_usage_error', 'module action requires a known payload.module_id.', {
+  if (!moduleId) {
+    throw new FrameworkContractError('cli_usage_error', 'module action requires payload.module_id.', {
       required: ['module_id'],
-      allowed_module_ids: ['medautoscience', 'medautogrant', 'redcube', 'oplmetaagent', 'oplbookforge', 'meddeepscientist'],
     });
   }
-  return moduleId;
+  return resolveOplDomainModuleSpec(moduleId).module_id;
 }
 
 export function dockerWebuiSeedEnv(payload: JsonRecord) {
