@@ -336,18 +336,56 @@ function normalizeTimeoutMs(value: unknown) {
   return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
 }
 
+const TYPED_CLOSEOUT_SURFACE_KINDS = new Set([
+  'stage_attempt_closeout_packet',
+  'stage_memory_closeout_packet',
+  'domain_stage_closeout_packet',
+]);
+
+function parseTypedCloseoutCandidate(value: string): JsonRecord | null {
+  try {
+    const parsed = parseJsonText(value);
+    return isRecord(parsed)
+      && typeof parsed.surface_kind === 'string'
+      && TYPED_CLOSEOUT_SURFACE_KINDS.has(parsed.surface_kind)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function codexAgentMessageText(value: unknown) {
+  if (!isRecord(value) || !isRecord(value.item)) return null;
+  return value.item.type === 'agent_message' && typeof value.item.text === 'string'
+    ? value.item.text
+    : null;
+}
+
 function parseOptionalCloseout(stdout: string): JsonRecord | null {
-  for (const line of stdout.split(/\r?\n/).filter(Boolean).reverse()) {
+  const directCandidates: JsonRecord[] = [];
+  const agentMessages: string[] = [];
+  for (const line of stdout.split(/\r?\n/).filter(Boolean)) {
     try {
       const parsed = parseJsonText(line);
-      if (isRecord(parsed) && typeof parsed.surface_kind === 'string') {
-        return parsed;
-      }
+      const agentMessage = codexAgentMessageText(parsed);
+      if (agentMessage !== null) agentMessages.push(agentMessage);
+      const directCandidate = parseTypedCloseoutCandidate(line);
+      if (directCandidate) directCandidates.push(directCandidate);
     } catch {
       // Executor output may include ordinary text; keep scanning.
     }
   }
-  return null;
+  if (agentMessages.length > 0) {
+    const candidates = agentMessages
+      .map(parseTypedCloseoutCandidate)
+      .filter((candidate): candidate is JsonRecord => candidate !== null);
+    const finalCandidate = parseTypedCloseoutCandidate(agentMessages.at(-1) ?? '');
+    return candidates.length === 1 && finalCandidate !== null
+      ? finalCandidate
+      : null;
+  }
+  return directCandidates.length === 1 ? directCandidates[0] : null;
 }
 
 function parseReceiptPayload(stdout: string, executorKind: AgentExecutorKind) {

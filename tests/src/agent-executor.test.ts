@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createFakeCodexFixture } from './cli/helpers.ts';
+import { createFakeCodexFixture, shellSingleQuote } from './cli/helpers.ts';
 import {
   runAgentExecutor,
   runAgentExecutorDoctor,
@@ -20,6 +20,30 @@ function makeExecutable(name: string, body: string) {
   const file = path.join(fixtureRoot, name);
   fs.writeFileSync(file, body, { mode: 0o755 });
   return { fixtureRoot, file };
+}
+
+function runCodexJsonLines(lines: Record<string, unknown>[]) {
+  const output = lines.map((line) => shellSingleQuote(JSON.stringify(line))).join(' ');
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  printf '%s\\n' ${output}
+  exit 0
+fi
+exit 64
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    return runAgentExecutor({
+      executor_kind: 'codex_cli',
+      prompt: 'Return one typed closeout packet.',
+      cwd: repoRoot,
+    });
+  } finally {
+    if (previousCodexBin === undefined) delete process.env.OPL_CODEX_BIN;
+    else process.env.OPL_CODEX_BIN = previousCodexBin;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 }
 
 test('agent executor registry resolves explicit, stage-attempt, env, and default order through public runners', () => {
@@ -171,6 +195,53 @@ exit 64
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('codex_cli executor projects one final typed JSON agent message as closeout_packet', () => {
+  const closeout = {
+    surface_kind: 'stage_attempt_closeout_packet',
+    closeout_refs: ['receipt:codex-agent-message-json'],
+  };
+  const receipt = runCodexJsonLines([
+    { type: 'thread.started', thread_id: 'thread-codex-closeout-json' },
+    { item: { type: 'agent_message', text: 'Preparing closeout.' } },
+    { item: { type: 'agent_message', text: JSON.stringify(closeout) } },
+  ]);
+
+  assert.deepEqual(receipt.closeout_packet, closeout);
+});
+
+test('codex_cli executor rejects multiple or non-final typed JSON agent-message candidates', () => {
+  const first = { surface_kind: 'stage_attempt_closeout_packet', closeout_refs: ['receipt:first'] };
+  const second = { surface_kind: 'domain_stage_closeout_packet', closeout_refs: ['receipt:second'] };
+
+  assert.equal(runCodexJsonLines([
+    { item: { type: 'agent_message', text: JSON.stringify(first) } },
+    { item: { type: 'agent_message', text: JSON.stringify(second) } },
+  ]).closeout_packet, null);
+  assert.equal(runCodexJsonLines([
+    { item: { type: 'agent_message', text: JSON.stringify(first) } },
+    { item: { type: 'agent_message', text: 'Final ordinary text.' } },
+  ]).closeout_packet, null);
+});
+
+test('codex_cli executor keeps ordinary, non-object, non-typed, and event-envelope JSON as null closeout', () => {
+  const invalidMessages = [
+    'Ordinary final response.',
+    '[]',
+    JSON.stringify({ surface_kind: 'opl_agent_execution_receipt' }),
+    JSON.stringify({ type: 'turn.completed' }),
+  ];
+  for (const text of invalidMessages) {
+    assert.equal(runCodexJsonLines([
+      { item: { type: 'agent_message', text } },
+    ]).closeout_packet, null, text);
+  }
+
+  assert.equal(runCodexJsonLines([{
+    surface_kind: 'stage_attempt_closeout_packet',
+    item: { type: 'agent_message', text: 'Envelope text is not a closeout.' },
+  }]).closeout_packet, null);
 });
 
 test('codex_cli executor passes model, provider, and reasoning effort as explicit request policy', () => {
