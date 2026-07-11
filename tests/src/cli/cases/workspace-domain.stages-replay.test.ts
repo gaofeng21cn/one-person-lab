@@ -1,7 +1,7 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 import {
+  createAdmittedStagePackFixture,
   type JsonRecord,
-  withReplayEvidenceStagePack,
 } from './workspace-domain-test-helper.ts';
 import {
   buildReadyAgentRepo,
@@ -10,11 +10,11 @@ import {
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
-test('family stage replay drilldowns consume declared replay evidence refs by default', () => {
+test('family stage replay drilldowns expose missing runtime evidence from generated packs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-replay-drilldown-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
-  const manifest = withReplayEvidenceStagePack(fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience');
+  const stagePack = createAdmittedStagePackFixture(fixtures.medautoscience as JsonRecord, 'med-autoscience', 'MedAutoScience');
 
   try {
     runCli([
@@ -23,9 +23,9 @@ test('family stage replay drilldowns consume declared replay evidence refs by de
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      stagePack.repoDir,
       '--manifest-command',
-      buildManifestCommand(manifest),
+      buildManifestCommand(stagePack.manifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
     const replay = runCli(['stages', 'replay-certification', '--domain', 'mas'], {
@@ -37,22 +37,21 @@ test('family stage replay drilldowns consume declared replay evidence refs by de
       OPL_STATE_DIR: stateRoot,
     }).family_stage_pack_source_spec.source_spec;
 
-    assert.equal(replay.replay_status, 'replay_ready');
-    assert.equal(replay.summary.blocker_count, 0);
-    assert.equal(replay.summary.append_only_event_log_ref_count, 1);
-    assert.equal(replay.summary.attempt_ledger_ref_count, 1);
+    assert.equal(replay.replay_status, 'blocked');
+    assert.equal(replay.summary.blocker_count, 11);
+    assert.equal(replay.summary.append_only_event_log_ref_count, 0);
+    assert.equal(replay.summary.attempt_ledger_ref_count, 0);
     assert.equal(replay.summary.missing_runtime_event_ref_count, 0);
-    assert.equal(replay.summary.missing_receipt_ref_count, 0);
-    assert.equal(sourceSpec.diff_keys.replay_status, 'replay_ready');
-    assert.equal(sourceSpec.diff_keys.replay_evidence_refs.length, 12);
-    assert.equal(sourceSpec.diff_keys.replay_evidence_refs.includes('runtime_event:med-autoscience.stage_1'), true);
-    assert.equal(sourceSpec.diff_keys.replay_evidence_refs.includes('owner_receipt:stage_1'), true);
+    assert.equal(replay.summary.missing_receipt_ref_count, 6);
+    assert.equal(sourceSpec.diff_keys.replay_status, 'blocked');
+    assert.deepEqual(sourceSpec.diff_keys.replay_evidence_refs, []);
     assert.equal(replay.authority_boundary.can_write_domain_truth, false);
     assert.equal(replay.authority_boundary.can_authorize_quality_verdict, false);
     assert.equal(sourceSpec.body_policy.includes_artifact_body, false);
     assert.equal(sourceSpec.body_policy.executes_stage, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(stagePack.repoDir, { recursive: true, force: true });
   }
 });
 
@@ -60,7 +59,7 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-stage-human-gate-workorder-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
-  const manifest = withReplayEvidenceStagePack(
+  const stagePack = createAdmittedStagePackFixture(
     fixtures.medautoscience as JsonRecord,
     'med-autoscience',
     'MedAutoScience',
@@ -74,9 +73,9 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      stagePack.repoDir,
       '--manifest-command',
-      buildManifestCommand(manifest),
+      buildManifestCommand(stagePack.manifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
     const readiness = runCli(['stages', 'readiness', '--domain', 'mas', '--detail', 'full'], {
@@ -90,9 +89,11 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
 
     assert.equal(readiness.launch_readiness_status, 'launch_warning');
     assert.equal(readiness.summary.hard_blocker_count, 0);
-    assert.equal(readiness.summary.replay_evidence_warning_count, 1);
-    const replayWarning = readiness.warnings.find((entry: { code: string; stage_id: string }) => (
-      entry.code === 'expected_receipt_ref_missing' && entry.stage_id === 'stage_2'
+    assert.equal(readiness.summary.replay_evidence_warning_count, 13);
+    const replayWarning = readiness.warnings.find((entry: JsonRecord) => (
+      entry.code === 'expected_receipt_ref_missing'
+      && entry.stage_id === 'stage_2'
+      && (entry.payload_workorder as JsonRecord | undefined)?.missing_ref === 'human_gate:publication_quality_gate'
     ));
     assert.equal(replayWarning?.payload_workorder.surface_kind, 'opl_stage_replay_missing_receipt_workorder');
     assert.equal(replayWarning?.payload_workorder.missing_ref, 'human_gate:publication_quality_gate');
@@ -106,10 +107,14 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
     assert.equal(replayWarning?.payload_workorder.authority_boundary.can_requery_human, false);
     assert.equal(replayWarning?.payload_workorder.authority_boundary.can_create_owner_receipt, false);
     assert.equal(replay.replay_status, 'blocked');
-    assert.equal(replay.summary.missing_receipt_ref_count, 1);
-    assert.equal(replay.blockers[0]?.payload_workorder.required_success_ref, 'human_gate:publication_quality_gate');
+    assert.equal(replay.summary.missing_receipt_ref_count, 7);
+    assert.equal(replay.blockers.some((entry: JsonRecord) => (
+      (entry.payload_workorder as JsonRecord | undefined)?.required_success_ref
+        === 'human_gate:publication_quality_gate'
+    )), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(stagePack.repoDir, { recursive: true, force: true });
   }
 });
 

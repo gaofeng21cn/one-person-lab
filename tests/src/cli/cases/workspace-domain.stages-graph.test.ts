@@ -5,13 +5,11 @@ import {
   fs,
   loadFamilyManifestFixtures,
   os,
-  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
 import {
-  withAdmittedStagePack,
-  withReplayEvidenceStagePack,
+  createAdmittedStagePackFixture,
   type JsonRecord,
 } from './workspace-domain-test-helper.ts';
 
@@ -24,18 +22,22 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     ['medautogrant', fixtures.medautogrant as JsonRecord, 'med-autogrant', 'MedAutoGrant'],
     ['redcube', fixtures.redcube as JsonRecord, 'redcube_ai', 'RedCubeAI'],
   ];
+  const stagePacks = manifests.map(([project, fixture, targetDomainId, owner]) => [
+    project,
+    createAdmittedStagePackFixture(fixture, targetDomainId, owner),
+  ] as const);
 
   try {
-    for (const [project, fixture, targetDomainId, owner] of manifests) {
+    for (const [project, stagePack] of stagePacks) {
       runCli([
         'workspace',
         'bind',
         '--project',
         project,
         '--path',
-        repoRoot,
+        stagePack.repoDir,
         '--manifest-command',
-        buildManifestCommand(withAdmittedStagePack(fixture, targetDomainId, owner)),
+        buildManifestCommand(stagePack.manifest),
       ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     }
 
@@ -69,10 +71,10 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     );
     assert.equal(
       boundStages.every(
-        (stage: { admission_status: string; guarantee_mode: string; mode_tags: { durable_runtime_only: boolean } }) =>
+        (stage: { admission_status: string; guarantee_mode: string; mode_tags: { verified_core_eligible: boolean } }) =>
           stage.admission_status === 'admitted'
-          && stage.guarantee_mode === 'runtime_enforced'
-          && stage.mode_tags.durable_runtime_only === true,
+          && stage.guarantee_mode === 'static_admission_only'
+          && stage.mode_tags.verified_core_eligible === true,
       ),
       true,
     );
@@ -92,13 +94,14 @@ test('family stage list, proof bundle, and readiness stay refs-only without doma
     assert.equal(readiness.authority_boundary.can_authorize_quality_verdict, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    for (const [, stagePack] of stagePacks) fs.rmSync(stagePack.repoDir, { recursive: true, force: true });
   }
 });
 
-test('family stage readiness consumes replay refs while keeping warnings non-authoritative', () => {
+test('family stage readiness keeps missing replay refs as non-authoritative warnings', () => {
   const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-family-stage-readiness-replay-`);
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const manifest = withReplayEvidenceStagePack(
+  const stagePack = createAdmittedStagePackFixture(
     loadFamilyManifestFixtures().medautoscience as JsonRecord,
     'med-autoscience',
     'MedAutoScience',
@@ -111,9 +114,9 @@ test('family stage readiness consumes replay refs while keeping warnings non-aut
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      stagePack.repoDir,
       '--manifest-command',
-      buildManifestCommand(manifest),
+      buildManifestCommand(stagePack.manifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
     const readiness = runCli(['stages', 'readiness', '--domain', 'mas'], {
@@ -125,11 +128,12 @@ test('family stage readiness consumes replay refs while keeping warnings non-aut
     );
 
     assert.equal(readiness.status, 'launch_warning');
-    assert.equal(readiness.summary.replay_evidence_warning_count, 0);
-    assert.equal(replayCheck.status, 'ok');
+    assert.equal(readiness.summary.replay_evidence_warning_count, 11);
+    assert.equal(replayCheck.status, 'warning');
     assert.equal(readiness.authority_boundary.can_authorize_domain_ready, false);
     assert.equal(readiness.authority_boundary.can_claim_production_ready, false);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(stagePack.repoDir, { recursive: true, force: true });
   }
 });

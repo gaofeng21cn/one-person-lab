@@ -7,6 +7,11 @@ import {
   repoRoot,
   runCli,
 } from '../helpers.ts';
+import {
+  buildReadyAgentRepo,
+  retargetReadyRepo,
+  writeJson,
+} from './agents-conformance-fixtures.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -100,8 +105,8 @@ export function buildAdmittedActionCatalog(
       owner,
       effect: 'read_only',
       source_command: { command: `${owner} stage-${index + 1}`, surface_kind: 'domain_cli' },
-      input_schema_ref: `schemas/stage-${index + 1}.input.json`,
-      output_schema_ref: `schemas/stage-${index + 1}.output.json`,
+      input_schema_ref: `contracts/stage-${index + 1}.input.schema.json`,
+      output_schema_ref: `contracts/stage-${index + 1}.output.schema.json`,
       workspace_locator_fields: ['workspace_root'],
       human_gate_ids: options.stage2HumanGate && index === 1 ? ['publication_quality_gate'] : [],
       supported_surfaces: { cli: null, mcp: null, skill: null, product_entry: null, openai: null, ai_sdk: null },
@@ -114,7 +119,6 @@ export function buildAdmittedActionCatalog(
 export function buildAdmittedStagePlane(
   targetDomainId: string,
   owner: string,
-  options: { replayEvidenceRefs?: boolean } = {},
 ) {
   return {
     surface_kind: 'family_stage_control_plane',
@@ -123,13 +127,7 @@ export function buildAdmittedStagePlane(
     target_domain_id: targetDomainId,
     owner,
     authority_boundary: { opl_role: 'projection_consumer_only' },
-    replay_evidence_refs: options.replayEvidenceRefs ? [
-      { ref_kind: 'append_only_event_log_ref', ref: `event-log:${targetDomainId}/stages`, role: 'append_only_event_log_ref' },
-      { ref_kind: 'attempt_ledger_ref', ref: `attempt-ledger:opl/${targetDomainId}`, role: 'attempt_ledger_ref' },
-      { ref_kind: 'stage_manifest_ref', ref: `stage-manifest:${targetDomainId}/stages`, role: 'stage_manifest_ref' },
-      { ref_kind: 'current_pointer_ref', ref: `current-pointer:${targetDomainId}/stages`, role: 'current_pointer_ref' },
-      { ref_kind: 'owner_answer_binding_ref', ref: `owner-answer-binding:${targetDomainId}/stages`, role: 'owner_answer_binding_ref' },
-    ] : [],
+    replay_evidence_refs: [],
     stages: Array.from({ length: 6 }, (_entry, index) => {
       const stageNumber = index + 1;
       return {
@@ -158,12 +156,7 @@ export function buildAdmittedStagePlane(
           runtime_event_refs: [`runtime_event:${targetDomainId}.stage_${stageNumber}`],
           ...standardProgressFirstPolicies(),
           expected_receipt_refs: [{ ref_kind: 'receipt_ref', ref: `owner_receipt:stage_${stageNumber}`, role: 'domain_owner_receipt_ref' }],
-          replay_evidence_refs: options.replayEvidenceRefs
-            ? [
-                { role: 'recorded_runtime_event_ref', ref: `runtime_event:${targetDomainId}.stage_${stageNumber}` },
-                { ref_kind: 'receipt_ref', role: 'domain_owner_receipt_ref', ref: `owner_receipt:stage_${stageNumber}` },
-              ]
-            : [],
+          replay_evidence_refs: [],
           properties: [],
           runtime_assumptions: [],
           monitor_refs: [{ ref_kind: 'json_pointer', ref: `/runtime_inventory/stage_${stageNumber}`, role: 'runtime_assumption_monitor' }],
@@ -186,24 +179,58 @@ export function buildAdmittedStagePlane(
   };
 }
 
-export function withAdmittedStagePack(
-  payload: JsonRecord,
-  targetDomainId: string,
-  owner: string,
-  options: { replayEvidenceRefs?: boolean; stage2HumanGate?: boolean } = {},
-) {
-  return attachManifestSurface(
-    attachManifestSurface(payload, 'family_action_catalog', buildAdmittedActionCatalog(targetDomainId, owner, options)),
-    'family_stage_control_plane',
-    buildAdmittedStagePlane(targetDomainId, owner, options),
-  );
-}
-
-export function withReplayEvidenceStagePack(
+export function createAdmittedStagePackFixture(
   payload: JsonRecord,
   targetDomainId: string,
   owner: string,
   options: { stage2HumanGate?: boolean } = {},
 ) {
-  return withAdmittedStagePack(payload, targetDomainId, owner, { ...options, replayEvidenceRefs: true });
+  const repoDir = buildReadyAgentRepo();
+  retargetReadyRepo(repoDir, targetDomainId, owner);
+  const actionCatalog = buildAdmittedActionCatalog(targetDomainId, owner, options);
+  writeJson(path.join(repoDir, 'contracts/action_catalog.json'), actionCatalog);
+
+  const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
+  const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8')) as JsonRecord;
+  const baseStage = (stageManifest.stages as JsonRecord[])[0];
+  stageManifest.stages = (buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[])
+    .map((stage, index) => ({
+      ...baseStage,
+      stage_id: stage.stage_id,
+      stage_kind: stage.stage_kind,
+      title: stage.title,
+      summary: stage.summary,
+      goal: stage.goal,
+      allowed_action_refs: stage.allowed_action_refs,
+      requires: (stage.stage_contract as JsonRecord).requires,
+      ensures: (stage.stage_contract as JsonRecord).ensures,
+      next_stage_refs: [],
+      trust_lane: options.stage2HumanGate && index === 1 ? 'human_gate' : 'domain_agent',
+    }));
+  writeJson(stageManifestPath, stageManifest);
+  for (let index = 1; index <= 6; index += 1) {
+    const schema = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object' };
+    writeJson(path.join(repoDir, `contracts/stage-${index}.input.schema.json`), schema);
+    writeJson(path.join(repoDir, `contracts/stage-${index}.output.schema.json`), schema);
+  }
+
+  const ref = {
+    ref_kind: 'generated_surface',
+    ref: 'opl-generated:family_stage_control_plane',
+    source_ref: 'agent/stages/manifest.json',
+    label: `${owner} generated stage control plane`,
+  };
+  const manifest = attachManifestSurface(payload, 'family_action_catalog', actionCatalog) as JsonRecord;
+  if (manifest.product_entry_manifest && typeof manifest.product_entry_manifest === 'object') {
+    const { family_stage_control_plane: _inlinePlane, ...productEntryManifest } = manifest.product_entry_manifest as JsonRecord;
+    return {
+      manifest: {
+        ...manifest,
+        product_entry_manifest: { ...productEntryManifest, family_stage_control_plane_ref: ref },
+      },
+      repoDir,
+    };
+  }
+  const { family_stage_control_plane: _inlinePlane, ...refsOnlyManifest } = manifest;
+  return { manifest: { ...refsOnlyManifest, family_stage_control_plane_ref: ref }, repoDir };
 }

@@ -16,9 +16,11 @@ import { repoRoot } from './constants.ts';
 import { createContractsFixtureRoot, readJsonFixture, shellSingleQuote } from './fixtures.ts';
 
 export function loadFamilyManifestFixtures() {
+  const medautoscience = readJsonFixture<Record<string, unknown>>('med-autoscience-product-entry-manifest.json');
+  delete medautoscience.family_stage_control_plane;
   return {
     medautogrant: readJsonFixture<Record<string, unknown>>('med-autogrant-product-entry-manifest.json'),
-    medautoscience: readJsonFixture<Record<string, unknown>>('med-autoscience-product-entry-manifest.json'),
+    medautoscience,
     redcube: readJsonFixture<Record<string, unknown>>('redcube-product-entry-manifest.json'),
   };
 }
