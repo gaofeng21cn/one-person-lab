@@ -501,10 +501,10 @@ async function executeDirectAppAction(
 
   if (options.actionId === 'settings_install_docker_webui') {
     return {
-      delegatedSurface: 'opl install --skip-gui-open',
+      delegatedSurface: 'opl install --headless',
       result: options.dryRun
-        ? buildDockerWebuiSettingsManualAction(options.actionId, ['opl', 'install', '--skip-gui-open', '--json'], options.payload)
-        : await runOplTurnkeyInstall(contracts, { skipGuiOpen: true }),
+        ? buildDockerWebuiSettingsManualAction(options.actionId, ['opl', 'install', '--headless', '--json'], options.payload)
+        : await runOplTurnkeyInstall(contracts, { headless: true }),
     };
   }
 

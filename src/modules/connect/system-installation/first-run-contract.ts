@@ -69,7 +69,7 @@ export function buildOplGuiFirstRunAutomationContract() {
     surface_id: 'opl_gui_first_run_automation',
     command_flow: [
       'opl system initialize --json',
-      'opl install --skip-gui-open --skip-modules --skip-native-helper-repair --json',
+      'opl install --headless --skip-modules --json',
       'opl system configure-codex --api-key-stdin --json',
       'opl system startup-maintenance --json',
       'opl system reconcile-modules --json',

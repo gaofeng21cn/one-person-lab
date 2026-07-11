@@ -90,6 +90,7 @@ exit 1
   try {
     const output = runCli([
       'install',
+      '--with-app',
       '--skip-modules',
       '--skip-engines',
       '--skip-native-helper-repair',
@@ -204,6 +205,7 @@ printf '%s\n' "$*" > ${JSON.stringify(openCapturePath)}
   try {
     const output = runCli([
       'install',
+      '--with-app',
       '--skip-modules',
       '--skip-engines',
       '--skip-native-helper-repair',

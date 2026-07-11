@@ -170,7 +170,7 @@ OPL App 默认应该优先复用 Codex 的用户级 skill discovery 路径；是
 ## 验证
 
 ```bash
-opl install --skip-gui-open
+opl install --headless
 opl connect sync-skills
 opl skill companion status
 opl skill companion apply --mode managed --superpowers lite

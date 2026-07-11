@@ -19,7 +19,7 @@ exit 1
 
   try {
     const output = await runCliAsync(
-      ['install', '--skip-gui-open', '--skip-modules', '--skip-native-helper-repair'],
+      ['install', '--headless', '--skip-modules'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,

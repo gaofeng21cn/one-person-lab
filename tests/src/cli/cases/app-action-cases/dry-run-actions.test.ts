@@ -364,12 +364,12 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
       '--dry-run',
     ], env).app_action_execution;
 
-    assert.equal(webuiInstall.delegated_surface, 'opl install --skip-gui-open');
+    assert.equal(webuiInstall.delegated_surface, 'opl install --headless');
     assert.equal(webuiInstall.result.settings_control_center_action.status, 'manual_command_preview');
     assert.deepEqual(webuiInstall.result.settings_control_center_action.command_preview, [
       'opl',
       'install',
-      '--skip-gui-open',
+      '--headless',
       '--json',
     ]);
 

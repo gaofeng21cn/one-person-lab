@@ -24,13 +24,13 @@
       "owner": "OPL Framework",
       "parser_adapter": "node_util_parse_args",
       "options": [
-        { "name": "headless", "flag": "--headless", "value_kind": "boolean", "required": false, "summary": "Install the Framework runtime, provider, modules, skills, and native helpers without installing or opening the App." },
+        { "name": "headless", "flag": "--headless", "value_kind": "boolean", "required": false, "summary": "Explicitly select the default headless OPL base installation contract." },
+        { "name": "with-app", "flag": "--with-app", "value_kind": "boolean", "required": false, "summary": "Also install or open the optional One Person Lab desktop App." },
         { "name": "modules", "flag": "--modules", "value_kind": "string", "required": false, "summary": "Comma-separated family modules to install." },
         { "name": "module", "flag": "--module", "value_kind": "string", "required": false, "summary": "One family module to install; may be repeated." },
         { "name": "skip-modules", "flag": "--skip-modules", "value_kind": "boolean", "required": false, "summary": "Skip family module installation." },
         { "name": "skip-engines", "flag": "--skip-engines", "value_kind": "boolean", "required": false, "summary": "Skip execution engine installation." },
         { "name": "skip-native-helper-repair", "flag": "--skip-native-helper-repair", "value_kind": "boolean", "required": false, "summary": "Skip native helper repair." },
-        { "name": "skip-gui-open", "flag": "--skip-gui-open", "value_kind": "boolean", "required": false, "summary": "Skip the desktop App install/open action without selecting the headless installation contract." },
         { "name": "no-online-runtime", "flag": "--no-online-runtime", "value_kind": "boolean", "required": false, "summary": "Use the development/offline runtime diagnostic mode." }
       ],
       "output_schema": {

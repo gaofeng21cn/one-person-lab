@@ -98,7 +98,7 @@ Framework 侧默认 Settings read-model 通过 `opl app state --profile fast|ful
 
 | action_id | 现有委托入口 | 用户含义 |
 | --- | --- | --- |
-| `settings_install_docker_webui` | `opl install --skip-gui-open` | 执行 Framework 既有一键安装入口；不声明 App/WebUI release ready |
+| `settings_install_docker_webui` | `opl install --headless` | 执行 Framework 统一 headless 基座入口；不声明 App/WebUI release ready |
 | `settings_configure_webui_api_key` | `printf <api-key> \| opl system configure-codex --api-key-stdin --json` | 通过 stdin-only 路径写 Codex provider config；API key 不进入 Settings JSON payload |
 | `settings_select_webui_seed` | `OPL_IMAGE_MANIFEST_PATH=<manifest> OPL_IMAGE_SEED_DIR=<seed> opl system startup-maintenance --json` | 选择镜像 manifest / seed 输入并进入既有维护路径 |
 | `settings_run_webui_startup_maintenance` | `opl system startup-maintenance --json` | 执行 seed/materialization 和 managed-maintenance，返回 Docker WebUI startup readback |

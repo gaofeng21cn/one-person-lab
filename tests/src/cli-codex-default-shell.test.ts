@@ -238,7 +238,8 @@ exit 0
 
     const payload = parseJsonText(result.stdout) as Record<string, any>;
     assert.equal(payload.help.command, 'install');
-    assert.match(payload.help.usage, /--skip-gui-open/);
+    assert.match(payload.help.usage, /--with-app/);
+    assert.doesNotMatch(payload.help.usage, /--skip-gui-open/);
     assert.match(payload.help.usage, /--headless/);
     assert.equal(result.stderr, '');
     assert.equal(fs.existsSync(capturePath), false);

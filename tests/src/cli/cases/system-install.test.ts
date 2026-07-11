@@ -143,7 +143,7 @@ test('install --headless --modules rca installs the framework payload without in
   }
 });
 
-test('install command runs selected module installs and returns one-shot setup payload', () => {
+test('install defaults to headless and installs only explicitly selected modules', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
@@ -187,10 +187,11 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   };
 
   try {
-    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], env) as any;
+    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-native-helper-repair'], env) as any;
 
     assert.equal(output.install.surface_id, 'opl_install');
     assert.equal(output.install.status, 'completed');
+    assert.equal(output.install.install_mode, 'headless');
     assert.deepEqual(output.install.selected_engines, ['codex']);
     assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.selected_modules, ['medautoscience']);
@@ -263,7 +264,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
       'runtime_manager_repair_completed',
       'install_completed',
     ]);
-    assert.equal(firstRunEvents[0].payload.skip_gui_open, true);
+    assert.equal(firstRunEvents[0].payload.install_mode, 'headless');
     assert.equal(firstRunEvents[3].payload.status, 'completed');
     assert.equal(output.install.system_initialize.surface_id, 'opl_system_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
@@ -496,7 +497,7 @@ test('recommended system companion skills keep family domain skills plugin-only 
       }
     }
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -627,7 +628,7 @@ printf 'native repair completed\\n'
   );
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
@@ -652,7 +653,7 @@ test('install command can bootstrap Codex defaults from environment without leak
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-defaults-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -686,7 +687,7 @@ test('install command applies bundled Codex defaults when only the API key is pr
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-bundled-codex-defaults-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -733,7 +734,7 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPENAI_API_KEY: 'ambient-openai-key-must-not-replace-provider-token',
@@ -758,7 +759,7 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
     assert.match(config, /wire_api = "responses"/);
     assert.match(config, /custom_header = "preserve-me"/);
 
-    runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPENAI_API_KEY: 'ambient-openai-key-must-not-replace-provider-token',
@@ -808,7 +809,7 @@ test('install command upgrades an OPL Flow intelligence proxy without requiring 
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPL_CODEXCONT_HOME: codexContHome,
@@ -853,7 +854,7 @@ test('install command does not upgrade a direct OPL Gateway config without a bea
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -895,7 +896,7 @@ test('install command does not overwrite a third-party provider using the gflab 
       'utf8',
     );
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: codexHome,
       OPL_CODEX_API_KEY: 'new-opl-key',
@@ -928,7 +929,7 @@ test('install command fails when the mandatory OPL Flow plugin source is unavail
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-missing-flow-home-'));
 
   try {
-    const failure = runCliFailure(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const failure = runCliFailure(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_FLOW_INSTALLER_SCRIPT: '',
@@ -963,7 +964,7 @@ test('install command discovers the mandatory OPL Flow installer from the manage
       'import json\nprint(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))\n',
       'utf8',
     );
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_FLOW_INSTALLER_SCRIPT: '',
@@ -1169,7 +1170,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-webui-note-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       ...createFakeOplFlowInstallEnv(homeRoot),
@@ -1177,7 +1178,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
     }) as any;
 
     assert.doesNotMatch(output.install.notes.join('\n'), /serve-web|8787|Product API service/);
-    assert.match(output.install.notes.join('\n'), /GUI startup opens/);
+    assert.match(output.install.notes.join('\n'), /optional desktop App only with --with-app/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -1193,7 +1194,7 @@ test('install command reuses only the default Codex engine and reports Temporal 
 
   try {
     const output = runCli(
-      ['install', '--skip-modules', '--skip-gui-open', '--skip-native-helper-repair'],
+      ['install', '--skip-modules', '--headless', '--skip-native-helper-repair'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,

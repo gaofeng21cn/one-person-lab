@@ -19,7 +19,7 @@ npm -v
 git --version
 
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main/install.sh \
-  | bash -s -- --complete --modules mas,rca --skip-engines --skip-gui-open --skip-native-helper-repair --no-online-runtime
+  | bash -s -- --headless --modules mas,rca --skip-engines --skip-native-helper-repair --no-online-runtime
 
 opl help --text >/tmp/opl-help.txt
 opl system initialize --json >/tmp/opl-system.json

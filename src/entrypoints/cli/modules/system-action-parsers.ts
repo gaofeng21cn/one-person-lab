@@ -447,6 +447,7 @@ function parseTurnkeyInstallArgs(
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
 ): TurnkeyInstallCliInput {
   const parsed: TurnkeyInstallCliInput = { modules: [] };
+  let explicitHeadless = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -456,7 +457,12 @@ function parseTurnkeyInstallArgs(
       continue;
     }
     if (token === '--headless') {
+      explicitHeadless = true;
       parsed.headless = true;
+      continue;
+    }
+    if (token === '--with-app') {
+      parsed.withApp = true;
       continue;
     }
     if (token === '--skip-engines') {
@@ -465,10 +471,6 @@ function parseTurnkeyInstallArgs(
     }
     if (token === '--no-online-runtime') {
       parsed.noOnlineRuntime = true;
-      continue;
-    }
-    if (token === '--skip-gui-open') {
-      parsed.skipGuiOpen = true;
       continue;
     }
     if (token === '--skip-native-helper-repair') {
@@ -498,6 +500,12 @@ function parseTurnkeyInstallArgs(
 
     index += 1;
   }
+
+  if (explicitHeadless && parsed.withApp) {
+    throw buildUsageError('--headless and --with-app are mutually exclusive.', spec);
+  }
+  parsed.headless = !parsed.withApp;
+  if (parsed.modules.length === 0) parsed.skipModules = true;
 
   return parsed;
 }

@@ -322,6 +322,7 @@ export type OplSystemActionInput = Partial<{
 export type OplTurnkeyInstallInput = Partial<{
   modules: string[];
   headless: boolean;
+  withApp: boolean;
   host: string;
   port: number;
   workspacePath: string;
@@ -332,7 +333,6 @@ export type OplTurnkeyInstallInput = Partial<{
   noOnlineRuntime: boolean;
   skipNativeHelperRepair: boolean;
   skipWebOpen: boolean;
-  skipGuiOpen: boolean;
   serveWeb: boolean;
 }>;
 

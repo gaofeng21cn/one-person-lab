@@ -13,7 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `opl install --headless --modules <ids>` 复用 turnkey installer 的非 GUI 路径，并明确排除全部 App install/open 动作；`--skip-gui-open` 仍只是桌面流程动作开关。
+- `opl install` 与 `opl install --headless` 都进入同一个 headless base 合同；无显式 module 时不安装 Agent，只有 `--with-app` 才进入可选 GUI 安装路径。
 - release/channel manifest 的 `framework_core.homebrew_formula` 固定 `package_name=opl-framework`，并从 `framework_core.version` 与 `source_git.head_sha` 投影 immutable GitHub commit archive URL；旧 `opl-framework-shared` identity 必须被 tap fail closed 拒绝。
 - tap sync 下载该 immutable URL 后计算 formula sha256；Framework manifest 不伪造未下载 archive 的 hash，tap 不创建独立版本真相。
 
@@ -1545,9 +1545,9 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- App 首启继续通过 `opl system initialize` 读取状态，必要时通过 `opl install --skip-gui-open` 自动补齐环境
+- App 首启继续通过 `opl system initialize` 读取状态，必要时通过 `opl install --headless --skip-modules` 自动补齐同一基座
 - 设置里的环境管理继续通过 `opl doctor`、`opl install`、`opl connect modules`、`opl connect install|update|reinstall|remove|exec`、`opl engine *` 与 `opl workspace *` 完成动作
-- GUI fallback 只负责在找不到 `opl` 命令时调用 OPL 主仓安装脚本的 bootstrap-only 模式取得 CLI，然后回到 `opl ...` 命令面
+- GUI 在找不到 `opl` 时调用同一 OPL 主仓安装脚本的 `--headless --skip-modules` 基座合同，再回到 `opl ...` 命令面；`--carrier-only` 只供载体分阶段物化，不是另一套用户安装语义
 - 新增安装、修复或状态能力时，先落到 OPL CLI 与机器可读输出，再由 GUI 消费
 
 ## 2026-04-26

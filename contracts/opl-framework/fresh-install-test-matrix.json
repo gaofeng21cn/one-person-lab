@@ -27,7 +27,7 @@
   "cli_first_run_commands": [
     "opl system initialize --json",
     "opl install --headless --modules rca --json",
-    "opl install --skip-gui-open --skip-modules --skip-native-helper-repair --json",
+    "opl install --headless --skip-modules --json",
     "opl system configure-codex --api-key-stdin --json",
     "opl system startup-maintenance --json",
     "opl system reconcile-modules --json"

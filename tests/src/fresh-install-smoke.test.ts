@@ -16,7 +16,7 @@ const codexDefaultProfilePath = path.join(repoRoot, 'contracts', 'opl-framework'
 const codexDefaultProfileExporterPath = path.join(repoRoot, 'scripts', 'export-codex-default-profile.mjs');
 const installScript = path.join(repoRoot, 'install.sh');
 
-test('install bootstrap-only handles no forwarded args under nounset bash', () => {
+test('install carrier-only handles no forwarded args under nounset bash', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-bash-compat-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
@@ -44,7 +44,7 @@ test('install bootstrap-only handles no forwarded args under nounset bash', () =
     fs.chmodSync(path.join(fakeBin, command), 0o755);
   }
 
-  const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+  const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: {
@@ -56,10 +56,10 @@ test('install bootstrap-only handles no forwarded args under nounset bash', () =
   });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /OPL CLI is ready/);
+  assert.match(result.stdout, /OPL base carrier is ready/);
 });
 
-test('install bootstrap-only removes partial clone directories after clone failure', () => {
+test('install carrier-only removes partial clone directories after clone failure', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-clone-failure-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
@@ -92,7 +92,7 @@ test('install bootstrap-only removes partial clone directories after clone failu
   }
 
   try {
-    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+    const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
@@ -115,7 +115,7 @@ test('install bootstrap-only removes partial clone directories after clone failu
   }
 });
 
-test('install bootstrap-only can use an explicit source archive even when git is usable', () => {
+test('install carrier-only can use an explicit source archive even when git is usable', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-explicit-archive-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
@@ -187,7 +187,7 @@ test('install bootstrap-only can use an explicit source archive even when git is
   }
 
   try {
-    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+    const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
@@ -207,7 +207,7 @@ test('install bootstrap-only can use an explicit source archive even when git is
     ]);
     assert.equal(fs.existsSync(gitLog) ? fs.readFileSync(gitLog, 'utf8').includes('clone') : false, false);
     assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), [
-      'install --ignore-scripts',
+      'install --omit=dev --ignore-scripts',
       'link --ignore-scripts',
     ]);
   } finally {
@@ -215,7 +215,7 @@ test('install bootstrap-only can use an explicit source archive even when git is
   }
 });
 
-test('install bootstrap-only on macOS prepares managed Node and uses a source archive when git is unavailable', () => {
+test('install carrier-only on macOS prepares managed Node and uses a source archive when git is unavailable', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-managed-node-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
@@ -293,7 +293,7 @@ test('install bootstrap-only on macOS prepares managed Node and uses a source ar
   }
 
   try {
-    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+    const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
@@ -307,7 +307,7 @@ test('install bootstrap-only on macOS prepares managed Node and uses a source ar
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /Preparing One Person Lab managed Node\.js v22\.21\.1/);
     assert.match(result.stdout, /Downloading One Person Lab source archive/);
-    assert.match(result.stdout, /OPL CLI is ready/);
+    assert.match(result.stdout, /OPL base carrier is ready/);
     assert.equal(result.stderr.includes('Homebrew'), false);
     assert.equal(result.stderr.includes('brew install'), false);
     assert.equal(fs.existsSync(path.join(toolchainRoot, 'node-v22.21.1-darwin-arm64', 'bin', 'node')), true);
@@ -315,7 +315,7 @@ test('install bootstrap-only on macOS prepares managed Node and uses a source ar
     assert.equal(fs.existsSync(gitLog), true);
     assert.equal(fs.readFileSync(gitLog, 'utf8').includes('clone'), false);
     assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), [
-      'install --ignore-scripts',
+      'install --omit=dev --ignore-scripts',
       'link --ignore-scripts',
     ]);
   } finally {
@@ -323,7 +323,7 @@ test('install bootstrap-only on macOS prepares managed Node and uses a source ar
   }
 });
 
-test('install bootstrap-only on macOS uses an existing git checkout while Command Line Tools install', () => {
+test('install carrier-only on macOS uses an existing git checkout while Command Line Tools install', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-existing-checkout-no-clt-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const fakeUsrBin = path.join(homeRoot, 'usr-bin');
@@ -384,7 +384,7 @@ test('install bootstrap-only on macOS uses an existing git checkout while Comman
   }
 
   try {
-    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+    const result = spawnSync('/bin/bash', [installScript, '--carrier-only'], {
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
@@ -398,7 +398,7 @@ test('install bootstrap-only on macOS uses an existing git checkout while Comman
 
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /Using existing One Person Lab checkout/);
-    assert.match(result.stdout, /OPL CLI is ready/);
+    assert.match(result.stdout, /OPL base carrier is ready/);
     assert.match(result.stderr, /Command Line Tools installer/);
     assert.match(result.stderr, /continue using this existing One Person Lab checkout/);
     assert.match(result.stderr, /background maintenance will resume/);
@@ -409,7 +409,7 @@ test('install bootstrap-only on macOS uses an existing git checkout while Comman
     assert.deepEqual(fs.readFileSync(xcodeSelectLog, 'utf8').trim().split('\n'), ['-p', '--install']);
     assert.equal(fs.existsSync(gitLog), false);
     assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), [
-      'install --ignore-scripts',
+      'install --omit=dev --ignore-scripts',
       'link --ignore-scripts',
     ]);
   } finally {
@@ -417,7 +417,7 @@ test('install bootstrap-only on macOS uses an existing git checkout while Comman
   }
 });
 
-test('install complete prepares the mandatory OPL Flow payload before invoking opl install', () => {
+test('one-click installer defaults to the headless base contract before invoking opl install', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-complete-args-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
@@ -476,7 +476,7 @@ test('install complete prepares the mandatory OPL Flow payload before invoking o
   }
 
   try {
-    const result = spawnSync('/bin/bash', [installScript, '--complete', '--skip-modules'], {
+    const result = spawnSync('/bin/bash', [installScript], {
       cwd: repoRoot,
       encoding: 'utf8',
       env: {
@@ -494,10 +494,9 @@ test('install complete prepares the mandatory OPL Flow payload before invoking o
     assert.match(result.stdout, /One Person Lab is ready/);
     assert.deepEqual(fs.readFileSync(npmLog, 'utf8').trim().split('\n'), ['install', 'link']);
     assert.deepEqual(fs.readFileSync(oplLog, 'utf8').trim().split('\n'), [
-      'install --skip-modules',
+      'install --headless',
       'system initialize',
     ]);
-    assert.equal(fs.readFileSync(oplLog, 'utf8').includes('--complete'), false);
     assert.equal(fs.existsSync(flowInstallerPath), true);
     assert.match(fs.readFileSync(gitLog, 'utf8'), /clone --depth 1 https:\/\/example\.invalid\/opl-flow\.git/);
   } finally {

@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_URL=${OPL_REPO_URL:-https://github.com/gaofeng21cn/one-person-lab.git}
 INSTALL_DIR=${OPL_INSTALL_DIR:-$HOME/.opl/one-person-lab}
 BRANCH=${OPL_INSTALL_BRANCH:-main}
-BOOTSTRAP_ONLY=${OPL_BOOTSTRAP_ONLY:-0}
+CARRIER_ONLY=${OPL_CARRIER_ONLY:-0}
 INSTALL_SOURCE_MODE=${OPL_INSTALL_SOURCE_MODE:-auto}
 MANAGED_TOOLCHAIN_ROOT=${OPL_MANAGED_TOOLCHAIN_ROOT:-$HOME/.opl/toolchain}
 MANAGED_NODE_VERSION=${OPL_MANAGED_NODE_VERSION:-v22.21.1}
@@ -13,18 +13,28 @@ SYSTEM_GIT_PATH=${OPL_SYSTEM_GIT_PATH:-/usr/bin/git}
 XCODE_SELECT=${OPL_XCODE_SELECT:-/usr/bin/xcode-select}
 
 INSTALL_ARGS=()
+INSTALL_MODE_EXPLICIT=0
 for arg in "$@"; do
   case "$arg" in
-    --bootstrap-only)
-      BOOTSTRAP_ONLY=1
+    --carrier-only)
+      CARRIER_ONLY=1
       ;;
-    --complete)
+    --headless|--with-app)
+      INSTALL_MODE_EXPLICIT=1
+      INSTALL_ARGS+=("$arg")
       ;;
     *)
       INSTALL_ARGS+=("$arg")
       ;;
   esac
 done
+if [ "$CARRIER_ONLY" != "1" ] && [ "$INSTALL_MODE_EXPLICIT" != "1" ]; then
+  if [ "${#INSTALL_ARGS[@]}" -gt 0 ]; then
+    INSTALL_ARGS=(--headless "${INSTALL_ARGS[@]}")
+  else
+    INSTALL_ARGS=(--headless)
+  fi
+fi
 if [ "${#INSTALL_ARGS[@]}" -gt 0 ]; then
   set -- "${INSTALL_ARGS[@]}"
 else
@@ -305,16 +315,16 @@ fi
 cd "$INSTALL_DIR"
 
 log "Installing OPL CLI"
-if [ "$BOOTSTRAP_ONLY" = "1" ]; then
-  npm install --ignore-scripts
+if [ "$CARRIER_ONLY" = "1" ]; then
+  npm install --omit=dev --ignore-scripts
   npm link --ignore-scripts
 else
   npm install
   npm link
 fi
 
-if [ "$BOOTSTRAP_ONLY" = "1" ]; then
-  log "OPL CLI is ready"
+if [ "$CARRIER_ONLY" = "1" ]; then
+  log "OPL base carrier is ready"
   exit 0
 fi
 
@@ -332,6 +342,6 @@ fi
 
 log "One Person Lab is ready"
 printf '\nNext steps:\n'
-printf '  1. Open the One Person Lab App on macOS, or open the Docker/WebUI URL from your deployment.\n'
+printf '  1. Use OPL from Codex/CLI, or install the optional One Person Lab App as a GUI.\n'
 printf '  2. Choose a workspace root when the App asks for it.\n'
 printf '  3. Re-run "opl system initialize" any time you want to inspect Codex, modules, skills, runtime provider, and GUI state.\n'
