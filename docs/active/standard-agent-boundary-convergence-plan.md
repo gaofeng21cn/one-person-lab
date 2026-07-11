@@ -2,7 +2,7 @@
 
 - Owner: OPL Framework
 - Purpose: 关闭 MAS、MAG、RCA、OMA、BookForge 与 OPL 基座之间的通用 mechanics / domain authority 双向泄漏。
-- State: active
+- State: completed_structural_2026-07-12
 - Machine boundary: 本文是跨仓实施与验收入口；machine truth 仍由各仓 source、contracts、tests 与 `opl agents * --json` readback 持有。
 
 ## 验收边界
@@ -43,39 +43,54 @@
 | B9 | Console owner payload summary | MAS/MAG decoder 改为注册式 domain summary projection | MAS/MAG + Console | Console 无 paper/grant payload shape 分支 |
 | B10 | Temporal production proof | MAS vocabulary 改为 generic fixture | Runway | probe 使用 `example-domain`，不携带 publication semantics |
 
-## Lane 与写集
+## 吸收与清理结果
 
-- `codex/opl-agent-boundary-core-20260711`: OPL `src/modules/**` 中 B1-B10、对应 contracts/tests、本计划与核心 docs；禁止修改现有 dirty registry lane 的文件。
-- `codex/oma-boundary-materializer-20260711`: OMA `scripts/lib/**`、相关 contracts/tests/docs；不写其他仓。
-- `codex/obf-boundary-helper-20260711`: BookForge `runtime/native_helpers/**`、相关 contracts/tests/docs；不写 evidence/provenance dirty lane 文件。
-- MAS、MAG、RCA 后续 lane 只在 fresh gate 后创建；已有同写集脏 lane 优先 owner 协调，不并发覆盖。
+- OPL Framework `main=c39e2b347`：B1-B10 与 A1/A4/A7/A9/A10/A11 所需 shared primitives 已吸收；本轮 feature worktree/branch 均通过 `tree-equivalent` 或 `patch-equivalent` 后清理。现存 stable framework worktree 属于其他 owner，不在本轮清理范围。
+- MAS `main=b190e62a1`：A1-A3 与 domain-owned conformance profile 已吸收；submission/probe transport、StageRun projector、artifact-index 残片及 route-back retry substrate 已退役；本轮 worktree/branch 已清理。
+- MAG `main=43f8676`：A4-A6 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
+- RCA `main=bfd0e020`：A7-A8 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
+- OMA `main=99cdfb6`：A9-A10 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
+- BookForge `main=9c8fa2a`：A11-A12 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
 
-## 当前结构实施状态
+## Plan Completion Audit
 
-| ID | 状态 | Fresh 结构证据 |
-| --- | --- | --- |
-| B1 | `done_in_lane` | Console 的 progress surface 只消费 normalized runtime control/session/progress/artifact projection；旧 paper path、clinical question、study queue 和专用 gate 解释已删除。 |
-| B5 | `done_in_lane` | default executor receipt recovery 按 execution / stage packet / attempt owner 解析，并用 standard-agent registry 归一化；无 owner 返回 `owner_unresolved`，不再默认 MAS。 |
-| B10 | `done_in_lane` | Temporal production proof 使用 `example-domain`、generic memory ref 和 generic next owner；fixture 不再携带 MAS/publication vocabulary。 |
-| A11 transport prerequisite | `done_in_lane` | `AgentExecutionRequest.required_capabilities=["image_generation"]` 仅允许 `codex_cli`，未知 capability 或非 Codex executor fail closed；receipt 回读 requested/activated capabilities；`timeout_ms` 由 Codex process 实际执行并在超时时返回 typed fail-closed error；artifact authority 仍归 domain。 |
-| B2 | `done_in_lane` | OMA-only descriptor、consumption parts、app-live/production ledger、action、long-soak/stage-replay、Framework Readiness lens、Console helper/section、private CLI 与 runtime action kind 已物理删除；OMA 仅通过 standard-agent registry/conformance/template-consumption 等通用 surface 接入。 |
-| B3 | `engine_done_domain_foldback_required` | validator 统一读取 domain-owned `contracts/standard_agent_conformance_profile.json`；golden path、morphology、residue token 均由 profile 声明，缺失或无效明确 blocked，无 MAS/MAG/RCA/OMA domain-id branch fallback。 |
-| B4 | `done_in_lane` | longline 与 Developer Mode 均由外部 domain-owned eval manifest 驱动；Framework 只持 schema/loader/validation/generic renderer。未声明 manifest 返回空通用 projection，非法 manifest fail closed；active source 无 MAS/RCA 静态 route/drill 或 passed 结果。 |
-| B6 | `engine_done_domain_foldback_required` | Stagecraft/Atlas 仅接受 `domain_transition_oracle`；`mag_grant_transition_oracle`、Grant 类型和 adapter aliases 已从 OPL ABI 删除。MAG 必须改发 canonical oracle。 |
-| B7 | `engine_done_domain_foldback_required` | Agent Profile Spine typed-object identity 改为 `opl_foundry_*` generic ABI；OMA 必须通过 repo-owned adapter contract 输出 canonical objects。 |
-| B8 | `done_in_lane` | legacy research frontier decoder 与 carrier aliases 已删除；Runway/Console 仅消费并输出 `stage_candidate_portfolio` canonical refs projection。 |
-| B9 | `engine_done_domain_foldback_required` | Console 删除 MAS paper-line 与 MAG owner-response shape decoder，只消费 `operator_evidence_readiness_projection` 的统一 owner/stage summary；MAS/MAG 必须输出该 projection。 |
+### A. 智能体侧上收
 
-上述状态只表示当前 feature lane 的 source/contract/focused-test 结构完成；吸收 `main`、main 上 fresh 验证与 worktree cleanup 仍由 root closeout 执行。
+| ID | 状态 | 完成度 | Canonical 结构证据 |
+| --- | --- | ---: | --- |
+| A1 | `done` | 100% | MAS 删除本地 runtime submission 与 CLI live probe；只产出 typed handoff、消费 host 注入 readback。OPL 提供 `opl_framework.family_runtime_client` 通用 submit/query client。 |
+| A2 | `done` | 100% | MAS 旧 physical Stage Folder kernel/promotion runtime 已删除；现存 pointer 仅为 refs/shape validation，通用 lifecycle 归 OPL Workspace/Ledger/Runway。 |
+| A3 | `done` | 100% | MAS 删除 `stage_run_kernel.py` 与 `stage_artifact_index` 通用残片；医学 taxonomy、profile、receipt/typed-blocker validator 与 authority 保留。 |
+| A4 | `done` | 100% | MAG 六个 authoring stage、Codex critique 与 Hermes adapter 全部走 OPL `run_agent_execution_request`；私有 Codex transport/fallback 已删除。 |
+| A5 | `done` | 100% | MAG 私有 plugin installer/script 已删除；package lifecycle 归 OPL Connect。 |
+| A6 | `done` | 100% | MAG 六项退休门具备 no-active-caller/no-forbidden-write/provenance/owner refs；family default-caller gate 全闭合。 |
+| A7 | `done` | 100% | RCA helper 只声明 catalog/helper；catalog resolution、Python env、spawn、timeout、JSON receipt 归 `opl pack native-helper run`。 |
+| A8 | `done` | 100% | RCA `runtimeWatch` 仅返回 visual review/artifact/blocker/owner evidence refs；generic status/telemetry/lifecycle/resumable 归 OPL Console/Runway/Ledger。 |
+| A9 | `done` | 100% | OMA 只产出 scaffold semantic materialization request；目标 Agent 文件由 `opl agents scaffold --materialize-request` 物化。 |
+| A10 | `done` | 100% | OMA execution wrapper、文件 IO、receipt/lifecycle validation 已删除；OPL `work-order materialize-request` 全量 preflight、原子物化、schema binding 与 SHA receipt。 |
+| A11 | `done` | 100% | BookForge child Codex/imagegen 统一走 OPL AgentExecutionRequest capability transport；book prompt/figure manifest/image receipt 保留在 domain。 |
+| A12 | `done` | 100% | BookForge helper probe 走 `opl pack native-helper probe`；通用 dependency/byproduct lifecycle 归 OPL，PDF/publication/hygiene 领域规则保留。 |
 
-## 验证与停止条件
+### B. OPL 基座侧迁出或参数化
 
-每条 lane 必须通过 touched-surface focused tests、`git diff --check`、repo 默认 `scripts/verify.sh` 可适用入口，并提交到独立 branch。吸收前由 root 审查 diff；吸收后在 `main` 重跑相关验证与：
+| ID | 状态 | 完成度 | Canonical 结构证据 |
+| --- | --- | ---: | --- |
+| B1 | `done` | 100% | Console progress surface 只消费 normalized domain/operator projection，无 paper/clinical path 与专用 gate 解释。 |
+| B2 | `done` | 100% | OPL 中 OMA-only descriptor、consumption、ledger、long-soak、Console/CLI/runtime action 链物理删除；标准 identity/registry 保留。 |
+| B3 | `done` | 100% | golden path、morphology、residue 由各 domain `standard_agent_conformance_profile.json` 声明；validator 无 domain-id 分支，并移除 retired provenance exact-3 假设。 |
+| B4 | `done` | 100% | Developer Mode/longline 使用显式 domain-owned evaluation manifest；缺省为空或 generic blocked example，非法 manifest fail closed，无静态 MAS/RCA passed 注入。 |
+| B5 | `done` | 100% | default executor owner 从 attempt/pack/registry 解析；缺失返回 `owner_unresolved`，不再默认 MAS。 |
+| B6 | `done` | 100% | `mag_grant_transition_oracle` ABI 退役；OPL 仅保留通用 transition runner。 |
+| B7 | `done` | 100% | Agent profile selector 使用 generic/source-derived ABI，不要求 `opl_meta_agent_*` typed object。 |
+| B8 | `done` | 100% | legacy research-frontier decoder 已删除，替换为通用 candidate portfolio projection。 |
+| B9 | `done` | 100% | Console owner payload summary 改为注册式 domain summary refs，无 MAS/MAG payload-shape 分支。 |
+| B10 | `done` | 100% | Temporal production proof 使用 `example-domain` generic fixture，不携带 MAS/publication semantics。 |
 
-```text
-opl agents conformance --family-defaults --json
-opl agents default-callers --family-defaults --json
-opl agents residue-decisions --family-defaults --json
-```
+结构计划完成度：`22/22 = 100%`。该百分比只覆盖本计划冻结的 source/contract/caller/retirement 目标；Live Evidence、production readiness、long-soak、真实 owner acceptance 继续作为独立后置 lane，不计入也不被本结论替代。
 
-只有 A1-A12、B1-B10 全部具备 canonical `main` fresh evidence，且新 lane 获得 `exact-merged`、`tree-equivalent` 或 `patch-equivalent` 后，才能清理 worktree/branch 并声明结构完成。外部 owner 的未知 dirty write set、同写集冲突或无法满足的 domain authority 决策必须保持 typed blocker，不得以 docs 或测试绿替代。
+## Fresh Closeout
+
+- `opl agents conformance --family-defaults --json`：`6 passed / 0 blocked`，structural contract 与 conformance 均为 `passed`。
+- `opl agents default-callers --family-defaults --json`：`40/40` retirement gates closed，active deletion worklist `0`。
+- `opl agents residue-decisions --family-defaults --json`：五仓均为 `no_private_platform_residue_decisions`。
+- 上述结果是结构 readback，不构成 domain ready、production ready、quality/export ready 或 Live Evidence 完成声明。
