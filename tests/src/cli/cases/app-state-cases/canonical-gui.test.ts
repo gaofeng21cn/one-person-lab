@@ -60,6 +60,24 @@ exit 1
       output.app_state.settings_control_center.allowed_action_ids.includes('settings_rollback_runtime_substrate'),
       true,
     );
+    for (const actionId of [
+      'connection_list',
+      'connection_create',
+      'connection_update',
+      'connection_delete',
+      'connection_test',
+      'connection_set_default',
+    ]) {
+      assert.equal(output.app_state.settings_control_center.allowed_action_ids.includes(actionId), true);
+    }
+    assert.deepEqual(
+      output.app_state.settings_control_center.connection_registry.allowed_statuses,
+      ['untested', 'ready', 'attention_needed', 'disabled'],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.app_settings_read_model.connections.credential_policy,
+      'handle_only',
+    );
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_owner_receipt, false);
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_typed_blocker, false);

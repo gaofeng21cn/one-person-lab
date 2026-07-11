@@ -1,5 +1,7 @@
 import { assert, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
+import '../../connection-registry.test.ts';
 import './app-action-cases/dry-run-actions.test.ts';
+import './app-action-cases/connection-actions.test.ts';
 import './app-action-cases/settings-and-workspace-actions.test.ts';
 
 function writeOplFlowIntelligenceEnhancementFixture(homeRoot: string) {

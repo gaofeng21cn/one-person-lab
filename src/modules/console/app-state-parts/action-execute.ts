@@ -54,6 +54,7 @@ import {
   dryRunFamilyRuntimeResult,
   dryRunModuleAction,
 } from './action-execute-previews.ts';
+import { executeConnectionAppAction } from './action-execute-connections.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -182,6 +183,9 @@ async function executeDirectAppAction(
   contracts: FrameworkContracts,
   options: AppActionExecuteOptions,
 ) {
+  const connectionAction = await executeConnectionAppAction(options);
+  if (connectionAction) return connectionAction;
+
   const codexAction = parseCodexAction(options.actionId);
   if (codexAction) {
     return {

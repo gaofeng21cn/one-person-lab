@@ -5,6 +5,21 @@ export const OPL_CONNECT_SOURCE_MODULE = {
   physicalRoot: 'src/modules/connect',
 } as const;
 
+export {
+  createOplConnection,
+  deleteOplConnection,
+  listOplConnections,
+  setDefaultOplConnection,
+  testOplConnection,
+  updateOplConnection,
+} from './connection-registry.ts';
+export type {
+  CreateOplConnectionInput,
+  OplConnection,
+  OplConnectionStatus,
+  UpdateOplConnectionInput,
+} from './connection-registry.ts';
+
 // Public cross-module surface generated from existing module consumers.
 export { buildEvidenceGroundedConnectSubstrate } from './evidence-grounded-substrate.ts';
 export {
