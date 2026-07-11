@@ -18,6 +18,35 @@ export type { StageArtifactAttemptLocator, StageArtifactLocator } from './stage-
 
 export type DomainArtifactRole = 'output' | 'evidence' | 'receipt';
 
+export function buildDirectoryArtifactIndex(input: {
+  root: string;
+  required_paths?: string[];
+  exclude_paths?: string[];
+}) {
+  const root = path.resolve(input.root);
+  const excluded = new Set(input.exclude_paths ?? []);
+  const entries = listRelativeFiles(root)
+    .filter((relativePath) => !excluded.has(relativePath))
+    .map((relativePath) => {
+      const file = path.join(root, relativePath);
+      return { relative_path: relativePath, file, sha256: fileHash(file), bytes: fs.statSync(file).size };
+    });
+  const present = new Set(entries.map((entry) => entry.relative_path));
+  const missingRequired = (input.required_paths ?? []).filter((relativePath) => !present.has(relativePath));
+  return {
+    surface_kind: 'opl_directory_artifact_index',
+    root,
+    status: missingRequired.length === 0 ? 'passed' : 'failed',
+    missing_required_paths: missingRequired,
+    entries,
+    authority_boundary: {
+      index_is_refs_only: true,
+      index_is_not_quality_verdict: true,
+      index_is_not_owner_receipt: true,
+    },
+  };
+}
+
 function roleDir(opened: ReturnType<typeof openStageArtifactAttemptRuntime>, role: DomainArtifactRole) {
   if (role === 'output') return opened.attempt_workspace.outputs_dir;
   if (role === 'evidence') return opened.attempt_workspace.evidence_dir;

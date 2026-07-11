@@ -34,7 +34,7 @@ export { buildStagecraftDomainProfileRegistryReadback } from './domain-profile-r
 export { adaptVisualTransitionSpecToFamilyTransitionSpec, buildVisualTransitionAdapterProfileRegistryReadback, buildVisualTransitionMatrixCases, normalizeVisualTransitionAdapterProfileRegistry, normalizeVisualTransitionSpec, resolveVisualTransitionAdapterProfile } from './family-transition-visual-ingestion.ts';
 export type { VisualTransitionAdapterProfile, VisualTransitionAdapterProfileRegistry, VisualTransitionAdapterProfileRegistryEntry, VisualTransitionSpec } from './family-transition-visual-ingestion.ts';
 export { commitStageArtifactAttemptRuntime, conformanceStageArtifactRuntime, explainStageArtifactRuntime, gcStageArtifactRuntime, openStageArtifactAttemptRuntime, promoteStageArtifactRuntime, rebuildStageArtifactRuntime, restoreStageArtifactRuntime, statusStageArtifactRuntime, validateStageArtifactRuntime, workbenchStageArtifactRuntime } from './stage-artifact-runtime.ts';
-export { buildDomainArtifactIndex, readDomainArtifact, writeDomainArtifact } from './domain-artifact-runtime.ts';
+export { buildDirectoryArtifactIndex, buildDomainArtifactIndex, readDomainArtifact, writeDomainArtifact } from './domain-artifact-runtime.ts';
 export type { DomainArtifactRole } from './domain-artifact-runtime.ts';
 export { assertStageProductionEvidencePayloadReady, buildStageProductionEvidencePayloadWorkorder, preflightStageProductionEvidencePayload, STAGE_PRODUCTION_EVIDENCE_COVERAGE_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_OPTIONAL_PAYLOAD_REFS, STAGE_PRODUCTION_EVIDENCE_REQUIRED_PAYLOAD_REFS } from './stage-production-evidence-payload-preflight.ts';
 export { stageReplayMissingReceiptTargetKey } from './stage-replay-missing-receipt-ledger.ts';

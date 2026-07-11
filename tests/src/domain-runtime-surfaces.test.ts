@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { appendDomainRunEvent, createDomainRunRecord, dispatchDomainAction, readDomainRunEvents } from '../../src/modules/runway/domain-task-runtime.ts';
 import { resolveDomainPythonCommand } from '../../src/modules/runway/domain-helper-runtime.ts';
-import { buildDomainArtifactIndex, readDomainArtifact, writeDomainArtifact } from '../../src/modules/stagecraft/domain-artifact-runtime.ts';
+import { buildDirectoryArtifactIndex, buildDomainArtifactIndex, readDomainArtifact, writeDomainArtifact } from '../../src/modules/stagecraft/domain-artifact-runtime.ts';
 import { materializeDomainSources } from '../../src/modules/workspace/domain-source-runtime.ts';
 
 const identity = {
@@ -77,6 +77,19 @@ test('domain source runtime materializes refs without deciding source readiness'
     assert.equal(result.entries.length, 1);
     assert.equal(fs.readFileSync(result.entries[0]!.path, 'utf8'), 'brief body');
     assert.equal(result.authority_boundary.framework_can_decide_source_readiness, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('directory artifact index hashes files and reports missing required paths without a quality verdict', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-directory-index-'));
+  try {
+    fs.writeFileSync(path.join(root, 'proof.json'), '{}');
+    const index = buildDirectoryArtifactIndex({ root, required_paths: ['proof.json', 'missing.pdf'] });
+    assert.equal(index.entries[0]?.sha256.length, 64);
+    assert.deepEqual(index.missing_required_paths, ['missing.pdf']);
+    assert.equal(index.authority_boundary.index_is_not_quality_verdict, true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
