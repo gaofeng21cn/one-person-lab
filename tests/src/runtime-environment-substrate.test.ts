@@ -678,7 +678,7 @@ test('runtime env prepare preserves Bioconductor package source intent', () => {
   }]);
 });
 
-test('runtime env installs Bioconductor packages into the managed R library', () => {
+test('runtime env forces a host-visible Bioconductor package into the managed R library', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-env-bioc-install-'));
   const rscriptPath = path.join(tempRoot, 'Rscript');
   const commandLog = path.join(tempRoot, 'install-expression.txt');
@@ -701,6 +701,7 @@ test('runtime env installs Bioconductor packages into the managed R library', ()
   const expression = fs.readFileSync(commandLog, 'utf8');
   assert.match(expression, /install\.packages\("BiocManager"/);
   assert.match(expression, /BiocManager::install\(c\("ComplexHeatmap"\)/);
+  assert.match(expression, /force = TRUE/);
   assert.equal(expression.includes('repos = "https://cloud.r-project.org"'), true);
   assert.equal(expression.includes(`lib = ${JSON.stringify(libraryPath)}`), true);
 });

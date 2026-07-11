@@ -271,7 +271,7 @@ export function installRPackagesIntoManagedLibrary(
     bioconductorPackages.length > 0
       ? [
         `if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", lib = ${JSON.stringify(libraryPath)}, repos = "https://cloud.r-project.org", quiet = TRUE)`,
-        `BiocManager::install(${rCharacterVector(bioconductorPackages)}, lib = ${JSON.stringify(libraryPath)}, ask = FALSE, update = FALSE, quiet = TRUE)`,
+        `BiocManager::install(${rCharacterVector(bioconductorPackages)}, lib = ${JSON.stringify(libraryPath)}, ask = FALSE, update = FALSE, force = TRUE, quiet = TRUE)`,
       ].join('; ')
       : '',
     ...githubPackages.map((entry) => {
