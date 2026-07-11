@@ -1,20 +1,26 @@
 import { isRecord } from '../../kernel/contract-validation.ts';
+import {
+  resolveDomainOwnerAnswerProjectionProfiles,
+  type DomainOwnerAnswerProjectionProfile,
+} from '../../kernel/domain-owner-answer-projection-profile.ts';
 import { stringValue as optionalString, type JsonRecord } from '../../kernel/json-record.ts';
+import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
 import { preflightGitCheckoutCurrentness } from './family-runtime-domain-handler-process.ts';
 
-function normalizedDomainId(value: unknown) {
-  const raw = optionalString(value);
-  const normalized = raw?.toLowerCase().replace(/[-_]/g, '');
-  return normalized === 'mas' || normalized === 'medautoscience' ? 'medautoscience' : raw;
-}
-
-export function preflightMasWorkspaceCheckoutCurrentness(input: {
+export function preflightDomainWorkspaceCheckoutCurrentness(input: {
   domainId?: unknown;
   workspaceLocator?: JsonRecord | null;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
 }) {
   const locator = input.workspaceLocator ?? {};
-  const domainId = normalizedDomainId(input.domainId) ?? normalizedDomainId(locator.domain_id);
-  if (domainId !== 'medautoscience') {
+  const domainId = optionalString(input.domainId) ?? optionalString(locator.domain_id);
+  if (!domainId) {
+    return null;
+  }
+  const profile = (input.profiles ?? resolveDomainOwnerAnswerProjectionProfiles(input.repoInputs))
+    .find((entry) => entry.domainId === domainId);
+  if (!profile?.checkoutCurrentnessRequired) {
     return null;
   }
   const workspaceRoot = optionalString(locator.workspace_root) ?? optionalString(locator.repo_root);

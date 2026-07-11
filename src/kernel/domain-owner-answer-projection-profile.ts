@@ -28,6 +28,7 @@ export type DomainOwnerAnswerProjectionProfile = {
   domainId: string;
   bindingProjectId: string;
   sourceOwner: string;
+  checkoutCurrentnessRequired: boolean;
   workspaceRootProfileRef?: {
     profileDirName: string;
     domainDirName: string;
@@ -86,6 +87,19 @@ function requireStringList(value: unknown, field: string, sourceRef: string) {
     });
   }
   return value.map((entry, index) => requireString(entry, `${field}[${index}]`, sourceRef));
+}
+
+function optionalBoolean(value: unknown, field: string, sourceRef: string) {
+  if (value === undefined) {
+    return false;
+  }
+  if (typeof value !== 'boolean') {
+    throw contractError(`Domain owner-answer projection profile ${field} must be a boolean.`, {
+      source_ref: sourceRef,
+      field,
+    });
+  }
+  return value;
 }
 
 function normalizeWorkspaceRootProfileRef(value: unknown, sourceRef: string) {
@@ -195,6 +209,11 @@ export function normalizeDomainOwnerAnswerProjectionProfile(
     domainId,
     bindingProjectId: requireString(value.binding_project_id, 'binding_project_id', sourceRef),
     sourceOwner: requireString(value.source_owner, 'source_owner', sourceRef),
+    checkoutCurrentnessRequired: optionalBoolean(
+      value.checkout_currentness_required,
+      'checkout_currentness_required',
+      sourceRef,
+    ),
     workspaceRootProfileRef: normalizeWorkspaceRootProfileRef(value.workspace_root_profile_ref, sourceRef),
     studiesDirName: requireString(value.studies_dir_name, 'studies_dir_name', sourceRef),
     projectionRelativePath: requireStringList(

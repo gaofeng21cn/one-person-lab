@@ -1,6 +1,6 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../../kernel/local-codex-defaults.ts';
-import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
+import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   buildCodexExecResumeArgs,
   buildCodexExecArgs,
@@ -401,7 +401,7 @@ async function runCodexStageRunner(input: CodexStageRunnerInput): Promise<CodexS
       },
     );
   }
-  const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+  const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
     domainId: input.attempt.domain_id,
     workspaceLocator: isRecord(input.attempt.workspace_locator) ? input.attempt.workspace_locator : null,
   });

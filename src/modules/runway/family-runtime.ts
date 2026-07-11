@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { loadFrameworkContracts } from '../charter/index.ts';
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
-import { preflightMasWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
+import { preflightDomainWorkspaceCheckoutCurrentness } from './family-runtime-checkout-currentness.ts';
 import {
   parseFamilyRuntimeCommand,
 } from './family-runtime-command.ts';
@@ -375,7 +375,7 @@ export async function runFamilyRuntime(
             requireAdmission: true,
           })
         : null;
-      const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+      const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
         domainId: parsed.input.domainId,
         workspaceLocator: parsed.input.workspaceLocator,
       });
@@ -477,7 +477,7 @@ export async function runFamilyRuntime(
     }
     if (parsed.mode === 'attempt_start') {
       const attempt = inspectStageAttempt(db, parsed.stageAttemptId);
-      const checkoutCurrentnessPreflight = preflightMasWorkspaceCheckoutCurrentness({
+      const checkoutCurrentnessPreflight = preflightDomainWorkspaceCheckoutCurrentness({
         domainId: attempt.domain_id,
         workspaceLocator: attempt.workspace_locator,
       });

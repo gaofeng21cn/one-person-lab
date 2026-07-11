@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   normalizeDomainOwnerAnswerProjectionProfile,
 } from '../../src/kernel/domain-owner-answer-projection-profile.ts';
+import * as checkoutCurrentness from '../../src/modules/runway/family-runtime-checkout-currentness.ts';
 import * as stageNativeOwnerAnswer from '../../src/modules/runway/family-runtime-stage-native-owner-answer.ts';
 
 test('stage-native owner-answer guard consumes a generic domain profile', () => {
@@ -68,4 +72,46 @@ test('stage-native owner-answer guard consumes a generic domain profile', () => 
     },
     profiles: [profile],
   }), false);
+});
+
+test('checkout currentness is enabled only by a domain profile', () => {
+  const profile = normalizeDomainOwnerAnswerProjectionProfile({
+    surface_kind: 'opl_domain_owner_answer_projection_profile',
+    version: 'domain-owner-answer-projection-profile.v1',
+    profile_id: 'example-domain.owner-answer.v1',
+    profile_role: 'registry',
+    domain_id: 'example-domain',
+    binding_project_id: 'example-domain',
+    source_owner: 'example-domain',
+    studies_dir_name: 'cases',
+    projection_relative_path: ['owner-answer.json'],
+    checkout_currentness_required: true,
+    authority_boundary: {
+      refs_only: true,
+      can_write_domain_truth: false,
+      can_create_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_claim_domain_ready: false,
+      can_claim_production_ready: false,
+    },
+  }, 'contracts/example-owner-answer-profile.json');
+  const preflight = (checkoutCurrentness as Record<string, unknown>)
+    .preflightDomainWorkspaceCheckoutCurrentness;
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-checkout-currentness-'));
+
+  try {
+    assert.equal(typeof preflight, 'function');
+    assert.equal((preflight as (input: unknown) => Record<string, unknown> | null)({
+      domainId: 'example-domain',
+      workspaceLocator: { workspace_root: workspaceRoot },
+      profiles: [profile],
+    })?.currentness_status, 'not_git_checkout');
+    assert.equal((preflight as (input: unknown) => unknown)({
+      domainId: 'example-domain',
+      workspaceLocator: { workspace_root: workspaceRoot },
+      profiles: [{ ...profile, checkoutCurrentnessRequired: false }],
+    }), null);
+  } finally {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
 });

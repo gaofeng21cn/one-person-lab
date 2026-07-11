@@ -1,4 +1,4 @@
-import { preflightMasWorkspaceCheckoutCurrentness } from '../family-runtime-checkout-currentness.ts';
+import { preflightDomainWorkspaceCheckoutCurrentness } from '../family-runtime-checkout-currentness.ts';
 import type { DomainHandlerCheckoutCurrentnessPreflight } from '../family-runtime-domain-handler-process.ts';
 import type { FamilyRuntimeTaskRow } from '../family-runtime-store.ts';
 import type { buildStageAdmissionLaunchGate } from '../family-runtime-stage-admission-gate.ts';
@@ -7,7 +7,7 @@ export function providerHostedCheckoutCurrentnessPreflight(
   row: FamilyRuntimeTaskRow,
   workspaceLocator: Record<string, unknown>,
 ): DomainHandlerCheckoutCurrentnessPreflight | null {
-  return preflightMasWorkspaceCheckoutCurrentness({
+  return preflightDomainWorkspaceCheckoutCurrentness({
     domainId: row.domain_id,
     workspaceLocator,
   });

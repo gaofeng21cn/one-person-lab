@@ -36,12 +36,6 @@ export type FamilyRuntimeControlledApplyContract = {
   };
 };
 
-const CONTRACT_IDS: Partial<Record<FamilyRuntimeDomainId, string>> = {
-  medautoscience: 'opl_temporal_controlled_mas_owner_answer_apply_contract',
-  medautogrant: 'opl_temporal_controlled_stage_attempt_apply_contract',
-  redcube: 'opl_temporal_controlled_visual_stage_attempt_apply_contract',
-};
-
 const ALLOWED_RETURN_SHAPES = [
   'domain_owner_receipt_ref',
   'quality_gate_receipt_ref',
@@ -78,7 +72,6 @@ export function buildFamilyRuntimeControlledApplyContract(input: {
 }): FamilyRuntimeControlledApplyContract {
   const request = controlledApplyRequest(input.workspaceLocator);
   const contractId = stringValue(request?.contract_id)
-    ?? CONTRACT_IDS[input.domainId]
     ?? 'opl_temporal_controlled_domain_stage_attempt_apply_contract';
   const ownerReceiptRefs = [
     ...stringList(request?.owner_receipt_refs),

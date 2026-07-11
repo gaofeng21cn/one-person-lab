@@ -101,6 +101,7 @@ test('owner-answer projection lookup accepts an injected generic domain profile'
         domainId: 'example-domain',
         bindingProjectId: 'example-domain',
         sourceOwner: 'example-domain',
+        checkoutCurrentnessRequired: false,
         studiesDirName: 'cases',
         projectionRelativePath: ['owner-answer.json'],
       }],

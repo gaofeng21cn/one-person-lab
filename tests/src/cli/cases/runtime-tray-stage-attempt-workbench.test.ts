@@ -13,9 +13,9 @@ test('controlled apply projects one generic return contract across domains', () 
     'no_regression_evidence_ref',
   ];
   const domains = [
-    ['medautoscience', 'opl_temporal_controlled_mas_owner_answer_apply_contract'],
-    ['medautogrant', 'opl_temporal_controlled_stage_attempt_apply_contract'],
-    ['redcube', 'opl_temporal_controlled_visual_stage_attempt_apply_contract'],
+    ['medautoscience', 'opl_temporal_controlled_domain_stage_attempt_apply_contract'],
+    ['medautogrant', 'opl_temporal_controlled_domain_stage_attempt_apply_contract'],
+    ['redcube', 'opl_temporal_controlled_domain_stage_attempt_apply_contract'],
     ['opl-meta-agent', 'opl_temporal_controlled_domain_stage_attempt_apply_contract'],
   ] as const;
 

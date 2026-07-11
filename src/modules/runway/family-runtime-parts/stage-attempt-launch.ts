@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-import type { preflightMasWorkspaceCheckoutCurrentness } from '../family-runtime-checkout-currentness.ts';
+import type { preflightDomainWorkspaceCheckoutCurrentness } from '../family-runtime-checkout-currentness.ts';
 import { inspectStageAttempt, updateStageAttemptsForTask } from '../family-runtime-stage-attempts.ts';
 import { nowIso } from '../family-runtime-store.ts';
 
@@ -48,7 +48,7 @@ export function recordTemporalStartOnAttempt(
   `).run(JSON.stringify(providerRun), updatedAt, attempt.stage_attempt_id);
 }
 
-type CheckoutCurrentnessPreflight = ReturnType<typeof preflightMasWorkspaceCheckoutCurrentness>;
+type CheckoutCurrentnessPreflight = ReturnType<typeof preflightDomainWorkspaceCheckoutCurrentness>;
 
 export function combineLaunchGateWithCheckoutCurrentness<T extends object>(
   gate: T,
