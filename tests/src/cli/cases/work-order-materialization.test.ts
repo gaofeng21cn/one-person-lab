@@ -102,6 +102,11 @@ test('work-order materialize-request consumes the four-file agent evidence seman
     'owner-receipt-refs.json',
     'target-capability-improvement-candidate.json',
   ]);
+  assert.equal(receipt.materialized_files.every((file: { schema_ref: unknown }) => (
+    typeof file.schema_ref === 'string' && file.schema_ref.length > 0
+  )), true);
+  assert.equal(receipt.execution_command,
+    'opl agent-lab evaluation-work-order execute --work-order <target-dir>/foundry-lab-work-order.json --output <dir>');
   assert.equal(fs.existsSync(path.join(targetDir, 'owner-receipt-refs.json')), true);
 });
 

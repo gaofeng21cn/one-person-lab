@@ -280,6 +280,17 @@ function schemaRef(value: JsonRecord): string | null {
       : null;
 }
 
+const SEMANTIC_ARTIFACT_SCHEMA_REFS = {
+  foundry_evaluation_request:
+    'contracts/opl-framework/agent-lab-contract.json#evaluation_work_order_consumer_surface.accepted_evaluation_request',
+  owner_receipt_refs:
+    'contracts/opl-framework/work-order-materialization-request.schema.json#/$defs/omaSemanticEnvelope/properties/semantic_requests/properties/owner_receipt_refs',
+  target_capability_improvement_candidate:
+    'contracts/opl-framework/work-order-materialization-request.schema.json#/$defs/omaSemanticEnvelope/properties/agent_building_judgment',
+  foundry_lab_work_order:
+    'contracts/opl-framework/agent-lab-contract.json#evaluation_work_order_consumer_surface.accepted_work_order',
+} as const;
+
 function executableWorkOrderFromSemanticEnvelope(candidate: JsonRecord, requestOwner: string): JsonRecord {
   const workOrderId = requireString(candidate.work_order_id, 'semantic_requests.developer_patch_work_order.work_order_id');
   const targetAgent = requireObject(candidate.target_agent, 'semantic_requests.developer_patch_work_order.target_agent');
@@ -367,7 +378,7 @@ function semanticEnvelopeFiles(request: JsonRecord): MaterializedSemanticFile[] 
     return {
       fileName: safeFileName(requestedFileNames[key], `semantic_requests.requested_file_names.${key}`),
       role,
-      schemaRef: schemaRef(value),
+      schemaRef: schemaRef(value) ?? SEMANTIC_ARTIFACT_SCHEMA_REFS[role as keyof typeof SEMANTIC_ARTIFACT_SCHEMA_REFS],
       value,
     };
   });
@@ -434,7 +445,9 @@ export function materializeWorkOrderRequest(input: WorkOrderMaterializationInput
       : null,
     work_order_path: workOrderFile.fileName,
     closeout_receipt_schema_ref: WORK_ORDER_OWNER_CLOSEOUT_RECEIPT_SCHEMA_REF,
-    execution_command: 'opl work-order execute --work-order <target-dir>/developer-patch-work-order.json',
+    execution_command: executableWorkOrder
+      ? 'opl work-order execute --work-order <target-dir>/developer-patch-work-order.json'
+      : 'opl agent-lab evaluation-work-order execute --work-order <target-dir>/foundry-lab-work-order.json --output <dir>',
     authority_boundary: {
       receipt_proves_materialization_only: true,
       receipt_can_claim_patch_execution: false,
