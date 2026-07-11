@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { readJsonFileOrNull } from '../../../kernel/json-file.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
+import { resolveStandardAgent } from '../../../kernel/standard-agent-registry.ts';
 import {
   normalizeTypedStageCloseoutPacket,
   type TypedStageCloseoutPacket,
@@ -125,6 +126,7 @@ function oplExecutionAuthorizationMatchesCurrentAttempt(input: {
 function closeoutPacketFromDefaultExecutorExecution(input: {
   execution: JsonRecord;
   receiptRef: string;
+  nextOwner: string;
 }): TypedStageCloseoutPacket | null {
   const executionStatus = optionalString(input.execution.execution_status);
   if (!executionStatus || !['blocked', 'completed', 'succeeded', 'executed'].includes(executionStatus)) {
@@ -160,9 +162,7 @@ function closeoutPacketFromDefaultExecutorExecution(input: {
           }]
         : []),
     ],
-    next_owner: optionalString(input.execution.next_owner)
-      ?? optionalString((isRecord(input.execution.current_owner_route) ? input.execution.current_owner_route : {}).next_owner)
-      ?? 'med-autoscience',
+    next_owner: input.nextOwner,
     domain_ready_verdict: 'domain_gate_pending',
     route_impact: {
       decision: executionStatus,
@@ -190,6 +190,60 @@ function closeoutPacketFromDefaultExecutorExecution(input: {
   });
 }
 
+function explicitOwnerCandidate(value: unknown) {
+  const owner = optionalString(value);
+  if (!owner) {
+    return null;
+  }
+  return resolveStandardAgent(owner)?.plugin_name ?? owner;
+}
+
+function registeredDomainOwner(value: unknown) {
+  const domainId = optionalString(value);
+  return domainId ? resolveStandardAgent(domainId)?.plugin_name ?? null : null;
+}
+
+function resolveRecoveryOwner(input: {
+  execution: JsonRecord;
+  stagePacket: JsonRecord | null;
+  attempt: JsonRecord;
+}) {
+  const ownerResult = isRecord(input.execution.owner_result) ? input.execution.owner_result : {};
+  const currentOwnerRoute = isRecord(input.execution.current_owner_route)
+    ? input.execution.current_owner_route
+    : {};
+  const explicitCandidates = [
+    input.execution.next_owner,
+    currentOwnerRoute.next_owner,
+    ownerResult.next_owner,
+    input.stagePacket?.next_owner,
+    input.stagePacket?.owner,
+    input.stagePacket?.domain_owner,
+    input.attempt.next_owner,
+    input.attempt.owner,
+  ];
+  for (const candidate of explicitCandidates) {
+    const owner = explicitOwnerCandidate(candidate);
+    if (owner) {
+      return owner;
+    }
+  }
+
+  const domainCandidates = [
+    input.stagePacket?.target_domain_id,
+    input.stagePacket?.domain_id,
+    input.attempt.target_domain_id,
+    input.attempt.domain_id,
+  ];
+  for (const candidate of domainCandidates) {
+    const owner = registeredDomainOwner(candidate);
+    if (owner) {
+      return owner;
+    }
+  }
+  return null;
+}
+
 export function recoverDefaultExecutorDomainReceiptCloseout(input: {
   workspaceRoot: string;
   stagePacketRef: string;
@@ -215,9 +269,18 @@ export function recoverDefaultExecutorDomainReceiptCloseout(input: {
   })) {
     return { status: 'authorization_binding_mismatch' as const, closeoutPacket: null, receiptRef };
   }
+  const nextOwner = resolveRecoveryOwner({
+    execution: match.execution,
+    stagePacket,
+    attempt: input.attempt,
+  });
+  if (!nextOwner) {
+    return { status: 'owner_unresolved' as const, closeoutPacket: null, receiptRef };
+  }
   const closeoutPacket = closeoutPacketFromDefaultExecutorExecution({
     execution: match.execution,
     receiptRef: `${receiptRef}${match.receiptRefSuffix}`,
+    nextOwner,
   });
   return {
     status: closeoutPacket ? 'closeout_found' as const : 'execution_not_terminal' as const,

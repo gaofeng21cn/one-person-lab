@@ -69,6 +69,7 @@ test('Codex executor receipt exposes model route and local config provenance', (
     model: 'gpt-5.5',
     provider: 'gflab',
     reasoning_effort: 'xhigh',
+    required_capabilities: ['image_generation'],
   }));
 
   try {
@@ -79,6 +80,8 @@ test('Codex executor receipt exposes model route and local config provenance', (
     });
     const proof = run.agent_execution_receipt.proof;
     assert.equal(run.agent_execution_receipt.executor_kind, 'codex_cli');
+    assert.deepEqual(run.agent_execution_receipt.requested_capabilities, ['image_generation']);
+    assert.deepEqual(run.agent_execution_receipt.activated_capabilities, ['image_generation']);
     assert.equal(proof.model, 'gpt-5.5');
     assert.equal(proof.provider, 'gflab');
     assert.equal(proof.reasoning_effort, 'xhigh');
@@ -95,6 +98,7 @@ test('Codex executor receipt exposes model route and local config provenance', (
     ]);
     assert.equal(proof.command_preview.includes('--model'), true);
     assert.equal(proof.command_preview.includes('gpt-5.5'), true);
+    assert.equal(proof.command_preview.includes('image_generation'), true);
   } finally {
     fs.rmSync(fake.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });

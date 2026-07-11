@@ -35,6 +35,29 @@
       "codex_cli"
     ],
     "non_default_equivalence": "connectivity_lifecycle_receipt_audit_only",
+    "capability_activation": {
+      "supported_required_capabilities": [
+        "image_generation"
+      ],
+      "image_generation_executor": "codex_cli",
+      "unknown_capability_policy": "fail_closed",
+      "unsupported_executor_policy": "fail_closed",
+      "receipt_fields": [
+        "requested_capabilities",
+        "activated_capabilities"
+      ],
+      "artifact_authority": "domain_owned"
+    },
+    "request_runtime_controls": {
+      "timeout_ms": "process_deadline_fail_closed",
+      "timeout_error_fields": [
+        "timed_out",
+        "timeout_ms",
+        "timeout_reason",
+        "fallback_allowed"
+      ],
+      "timeout_success_receipt_forbidden": true
+    },
     "stage_level_policy_fields": [
       "executor_kind",
       "model",

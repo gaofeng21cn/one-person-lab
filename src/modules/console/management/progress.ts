@@ -15,7 +15,7 @@ import {
 import { buildCurrentReadinessProjection } from './readiness.ts';
 import { buildProgressFeedback, buildWorkspaceInbox } from './progress-feedback.ts';
 import {
-  buildStudyProgressSurface,
+  buildDomainOperatorProgressSurface,
   pickCurrentProjectEntry,
 } from './progress-study.ts';
 import { normalizeWorkspacePath } from './shared.ts';
@@ -41,7 +41,7 @@ export async function buildProjectProgressBrief(
   const overview = manifest?.product_entry_overview ?? null;
   const productStatus = manifest?.product_entry_status ?? null;
   const repoMainline = manifest?.repo_mainline ?? null;
-  const studySurface = buildStudyProgressSurface({
+  const operatorSurface = buildDomainOperatorProgressSurface({
     workspacePath,
     overview,
     manifest,
@@ -61,37 +61,37 @@ export async function buildProjectProgressBrief(
     overview,
     productStatus,
     readinessEntry,
-    studySurface,
+    operatorSurface,
   });
   const nextFocus = pickProgressNextFocus({
     overview,
     productStatus,
     readinessEntry,
     repoMainline,
-    studySurface,
+    operatorSurface,
   });
   const attentionItems = buildProgressAttentionItems({
     manifestEntry,
     readinessEntry,
-    studySurface,
+    operatorSurface,
   });
   const inspectPaths = buildProgressInspectPaths({
     currentProject,
     manifest,
     manifestEntry,
-    studySurface,
+    operatorSurface,
     workspacePath,
   });
   const configuredHumanGates = buildConfiguredHumanGates({ manifest, overview });
-  const { deliverableFiles, supportingFiles } = splitProgressWorkspaceFiles(studySurface.workspaceFiles);
+  const { deliverableFiles, supportingFiles } = splitProgressWorkspaceFiles(operatorSurface.workspaceFiles);
   const progressFeedback = buildProgressFeedback({
-    studySurface,
+    operatorSurface,
     progressSummary,
     nextFocus,
     recentSession,
   });
   const workspaceInbox = buildWorkspaceInbox({
-    studySurface,
+    operatorSurface,
     manifest,
     recentSession,
     deliverableFiles,
@@ -115,7 +115,7 @@ export async function buildProjectProgressBrief(
         active_binding_status: currentProject.activeBindingEntry?.active_binding?.status ?? null,
       },
       progress_summary: progressSummary,
-      current_study: studySurface.currentStudy,
+      current_study: null,
       next_focus: nextFocus,
       progress_feedback: progressFeedback,
       workspace_inbox: workspaceInbox,
@@ -126,7 +126,7 @@ export async function buildProjectProgressBrief(
             source: recentSession.source,
             preview: recentSession.preview,
           }
-        : studySurface.recentActivity,
+        : operatorSurface.recentActivity,
       workspace_files: {
         deliverable_files: deliverableFiles,
         supporting_files: supportingFiles,
@@ -141,15 +141,15 @@ export async function buildProjectProgressBrief(
       },
       inspect_paths: inspectPaths,
       attention_items: attentionItems,
-      user_options: studySurface.userOptions,
+      user_options: operatorSurface.userOptions,
       configured_human_gates: configuredHumanGates,
       recommended_commands: {
-        progress: studySurface.recommendedCommands.progress ?? overview?.progress_surface?.command ?? null,
-        resume: studySurface.recommendedCommands.resume ?? overview?.resume_surface?.command ?? null,
-        approval: studySurface.recommendedCommands.approval ?? manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
-        interrupt: studySurface.recommendedCommands.interrupt ?? manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
+        progress: operatorSurface.recommendedCommands.progress ?? overview?.progress_surface?.command ?? null,
+        resume: operatorSurface.recommendedCommands.resume ?? overview?.resume_surface?.command ?? null,
+        approval: operatorSurface.recommendedCommands.approval ?? manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
+        interrupt: operatorSurface.recommendedCommands.interrupt ?? manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
         artifacts:
-          studySurface.recommendedCommands.artifacts
+          operatorSurface.recommendedCommands.artifacts
           ?? manifest?.runtime_control?.control_surfaces.artifact_pickup?.command
           ?? manifest?.artifact_inventory?.artifact_surface?.command
           ?? null,
@@ -157,8 +157,8 @@ export async function buildProjectProgressBrief(
       },
       notes: [
         'This brief is a user-facing summary derived from workspace binding, domain manifest, product readiness, and runtime visibility.',
-        'When the current domain exposes study-level truth, this brief promotes the most active study into a paper-facing summary instead of stopping at project-level wording.',
-        'Configured human gates are capability hints from the domain manifest; they do not by themselves mean the system is currently waiting for user input.',
+        'Domain-specific progress meaning is supplied by the domain-owned progress projection; Console does not inspect domain artifact bodies or infer domain verdicts.',
+        'Configured human gates are identifiers from the domain manifest; their decision semantics and authority remain domain-owned.',
       ],
     },
   };

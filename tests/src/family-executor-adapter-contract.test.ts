@@ -111,6 +111,8 @@ test('family executor defaults split canonical name, stage-selection status, and
   const guardrails = contract.guardrails as JsonObject;
   const topologySplit = contract.topology_split as JsonObject;
   const executorRegistry = contract.executor_registry as JsonObject;
+  const capabilityActivation = executorRegistry.capability_activation as JsonObject;
+  const requestRuntimeControls = executorRegistry.request_runtime_controls as JsonObject;
 
   assert.equal(defaults.default_executor_name, 'codex_cli');
   assert.equal(defaults.default_executor_mode, 'autonomous');
@@ -137,6 +139,23 @@ test('family executor defaults split canonical name, stage-selection status, and
     'OPL_EXECUTOR_KIND',
     'codex_cli',
   ]);
+  assert.deepEqual(capabilityActivation.supported_required_capabilities, ['image_generation']);
+  assert.equal(capabilityActivation.image_generation_executor, 'codex_cli');
+  assert.equal(capabilityActivation.unknown_capability_policy, 'fail_closed');
+  assert.equal(capabilityActivation.unsupported_executor_policy, 'fail_closed');
+  assert.deepEqual(capabilityActivation.receipt_fields, [
+    'requested_capabilities',
+    'activated_capabilities',
+  ]);
+  assert.equal(capabilityActivation.artifact_authority, 'domain_owned');
+  assert.equal(requestRuntimeControls.timeout_ms, 'process_deadline_fail_closed');
+  assert.deepEqual(requestRuntimeControls.timeout_error_fields, [
+    'timed_out',
+    'timeout_ms',
+    'timeout_reason',
+    'fallback_allowed',
+  ]);
+  assert.equal(requestRuntimeControls.timeout_success_receipt_forbidden, true);
   assert.ok(!(retiredAliasField in contract));
   assert.deepEqual((executionShapes.structured_call as JsonObject).allowed_backends, expectedBackends);
   assert.deepEqual((executionShapes.agent_loop as JsonObject).allowed_backends, expectedBackends);

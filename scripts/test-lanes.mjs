@@ -160,6 +160,8 @@ const readModelGateTestFiles = [
   'tests/src/family-runtime-temporal-terminal-sync.test.ts',
   'tests/src/family-runtime-agent-stage-runner.test.ts',
   'tests/src/family-runtime-temporal-provider.test.ts',
+  'tests/src/temporal-production-proof-fixture.test.ts',
+  'tests/src/default-executor-recovery.test.ts',
   'tests/src/agent-executor.test.ts',
   'tests/src/cli/cases/system-seed-manifest.test.ts',
   'tests/src/cli/cases/system-startup-maintenance.test.ts',

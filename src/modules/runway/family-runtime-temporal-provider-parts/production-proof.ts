@@ -46,14 +46,14 @@ type TemporalProductionUpdateHandle = {
   ): Promise<unknown>;
 };
 
-function temporalProductionProbeInput(
+export function temporalProductionProbeInput(
   suffix: string,
   closeoutPacket: Record<string, unknown> | null,
 ): TemporalStageAttemptWorkflowInput {
   return {
     stage_attempt_id: `sat_temporal_production_${suffix}`,
     workflow_id: `wf_temporal_production_${suffix}`,
-    domain_id: 'medautoscience',
+    domain_id: 'example-domain' as TemporalStageAttemptWorkflowInput['domain_id'],
     stage_id: 'production-residency-proof',
     workspace_locator: {
       workspace_root: '/tmp/opl-temporal-production-residency-proof',
@@ -69,18 +69,18 @@ function temporalProductionProbeInput(
   };
 }
 
-function temporalProductionTypedCloseoutPacket() {
+export function temporalProductionTypedCloseoutPacket() {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
     closeout_refs: ['receipt:temporal-production-residency-domain-closeout'],
     consumed_refs: ['evidence:temporal-production-residency'],
-    consumed_memory_refs: ['memory:publication-route-production-residency'],
+    consumed_memory_refs: ['memory:example-domain-production-residency'],
     writeback_receipt_refs: ['memory-writeback:temporal-production-residency-receipt'],
-    next_owner: 'med-autoscience',
+    next_owner: 'example-domain',
     domain_ready_verdict: 'domain_gate_pending',
     route_impact: {
       decision: 'production_residency_transport_probe',
-      next_owner: 'med-autoscience',
+      next_owner: 'example-domain',
     },
   };
 }

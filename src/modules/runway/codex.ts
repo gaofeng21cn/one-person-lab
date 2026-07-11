@@ -61,6 +61,7 @@ export interface CodexPassthroughResult {
 
 export interface CodexCommandOptions {
   inheritStdio?: boolean;
+  timeoutMs?: number;
 }
 
 export interface CodexStreamingCommandOptions {
@@ -299,16 +300,24 @@ export function runCodexCommand(
     encoding: 'utf8',
     stdio: options.inheritStdio ? 'inherit' : 'pipe',
     env: process.env,
+    timeout: options.timeoutMs,
   });
 
   if (result.error) {
+    const timedOut = 'code' in result.error && result.error.code === 'ETIMEDOUT';
     throw new FrameworkContractError(
       'codex_command_failed',
-      `Failed to launch Codex for: codex ${args.join(' ')}`,
+      timedOut
+        ? `Codex execution exceeded the configured timeout for: codex ${args.join(' ')}`
+        : `Failed to launch Codex for: codex ${args.join(' ')}`,
       {
         codex_binary: codexBinary.path,
         args,
         cause: result.error.message,
+        timed_out: timedOut,
+        timeout_ms: timedOut ? options.timeoutMs ?? null : null,
+        timeout_reason: timedOut ? 'total_timeout' : null,
+        fallback_allowed: false,
       },
     );
   }

@@ -1,7 +1,7 @@
-import { humanizeProgressCode, readStatusNarrationContract, statusNarrationLatestUpdate, statusNarrationNextStep, statusNarrationStageSummary, statusNarrationSummary } from '../status-narration.ts';
+import { humanizeProgressCode } from '../status-narration.ts';
 import type { NormalizedDomainManifest } from '../../atlas/index.ts';
 
-import { buildStudyProgressSurface } from './progress-study.ts';
+import { buildDomainOperatorProgressSurface } from './progress-study.ts';
 import {
   isRecord,
   normalizeInlineText,
@@ -9,7 +9,7 @@ import {
 } from './shared.ts';
 
 export function buildProgressFeedback(options: {
-  studySurface: ReturnType<typeof buildStudyProgressSurface>;
+  operatorSurface: ReturnType<typeof buildDomainOperatorProgressSurface>;
   progressSummary: string;
   nextFocus: string | null;
   recentSession: {
@@ -19,73 +19,48 @@ export function buildProgressFeedback(options: {
     preview: string;
   } | null;
 }) {
-  const currentStudy = options.studySurface.currentStudy;
-  const continuitySession = isRecord(options.studySurface.continuity?.session)
-    ? options.studySurface.continuity.session
+  const continuitySession = isRecord(options.operatorSurface.continuity?.session)
+    ? options.operatorSurface.continuity.session
     : null;
-  const continuityProgress = isRecord(options.studySurface.continuity?.progress)
-    ? options.studySurface.continuity.progress
+  const continuityProgress = isRecord(options.operatorSurface.continuity?.progress)
+    ? options.operatorSurface.continuity.progress
     : null;
-  const preferContinuity = !currentStudy;
-  const monitoring = isRecord(currentStudy?.monitoring) ? currentStudy.monitoring : null;
-  const latestProgress = isRecord(currentStudy?.latest_progress) ? currentStudy.latest_progress : null;
-  const latestEvent = isRecord(currentStudy?.latest_event) ? currentStudy.latest_event : null;
-  const narrationContract = readStatusNarrationContract(currentStudy?.status_narration_contract);
-  const recentActivity = options.studySurface.recentActivity;
+  const recentActivity = options.operatorSurface.recentActivity;
   const currentStatus =
-    optionalString(currentStudy?.current_stage)
-    ?? optionalString(continuityProgress?.current_status)
+    optionalString(continuityProgress?.current_status)
     ?? optionalString(continuitySession?.status);
-  const runtimeStatus =
-    optionalString(monitoring?.health_status)
-    ?? optionalString(continuityProgress?.runtime_status);
+  const runtimeStatus = optionalString(continuityProgress?.runtime_status);
   const headline =
     normalizeInlineText(
-      (preferContinuity ? optionalString(continuityProgress?.headline) : null)
-      ?? (preferContinuity ? optionalString(continuitySession?.summary) : null)
-      ?? statusNarrationLatestUpdate(narrationContract)
-      ?? statusNarrationStageSummary(narrationContract)
-      ?? optionalString(currentStudy?.current_stage_summary)
-      ?? optionalString(latestProgress?.summary)
-      ?? optionalString(latestEvent?.summary)
+      optionalString(continuityProgress?.headline)
+      ?? optionalString(continuitySession?.summary)
       ?? options.progressSummary,
     )
-    ?? '当前还没有读到结构化的研究推进摘要。';
+    ?? '当前还没有读到结构化的任务推进摘要。';
   const latestUpdate =
     normalizeInlineText([
-      (preferContinuity ? optionalString(continuityProgress?.latest_update) : null)
-      ?? optionalString(latestProgress?.time_label)
-      ?? optionalString(latestEvent?.time_label)
+      optionalString(continuityProgress?.latest_update)
       ?? recentActivity?.last_active
       ?? options.recentSession?.last_active
       ?? null,
-      (preferContinuity ? optionalString(continuityProgress?.headline) : null)
-      ?? statusNarrationLatestUpdate(narrationContract)
-      ?? optionalString(latestProgress?.summary)
-      ?? optionalString(latestEvent?.summary)
+      optionalString(continuityProgress?.headline)
       ?? recentActivity?.preview
       ?? options.recentSession?.preview
-      ?? optionalString(currentStudy?.current_stage_summary)
-      ?? (preferContinuity ? optionalString(continuitySession?.summary) : null)
+      ?? optionalString(continuitySession?.summary)
       ?? null,
     ].filter(Boolean).join(' · '))
     ?? '当前还没有读到新的进度更新时间。';
   const nextStep =
     normalizeInlineText(
-      (preferContinuity ? optionalString(continuityProgress?.next_step) : null)
-      ?? (preferContinuity
-        ? optionalString((continuitySession?.restore_surface as Record<string, unknown> | undefined)?.summary)
-        : null)
-      ?? statusNarrationNextStep(narrationContract)
-      ?? optionalString(currentStudy?.next_system_action)
+      optionalString(continuityProgress?.next_step)
+      ?? optionalString((continuitySession?.restore_surface as Record<string, unknown> | undefined)?.summary)
       ?? options.nextFocus
       ?? '继续展开当前任务的详细进度。',
     )
     ?? '继续展开当前任务的详细进度。';
   const statusSummary =
     normalizeInlineText([
-      preferContinuity ? optionalString(continuityProgress?.status_summary) : null,
-      statusNarrationSummary(narrationContract),
+      optionalString(continuityProgress?.status_summary),
       currentStatus ? `当前状态：${humanizeProgressCode(currentStatus) ?? currentStatus}` : null,
       runtimeStatus ? `运行态：${humanizeProgressCode(runtimeStatus) ?? runtimeStatus}` : null,
     ].filter(Boolean).join('；'))
@@ -177,7 +152,6 @@ function buildRecentSessionInboxCard(options: {
 }
 
 function buildDeliverableInboxCard(options: {
-  currentStudy: ReturnType<typeof buildStudyProgressSurface>['currentStudy'];
   deliverableFiles: Array<{
     file_id: string;
     label: string;
@@ -193,30 +167,23 @@ function buildDeliverableInboxCard(options: {
   }
 
   const firstDeliverable = options.deliverableFiles[0];
-  const title =
-    optionalString(options.currentStudy?.title)
-    ?? optionalString(options.currentStudy?.study_id)
-    ?? 'Workspace deliverables';
-  const studyId = optionalString(options.currentStudy?.study_id);
 
   return {
-    task_id: studyId
-      ? `${studyId}:deliverables`
-      : 'workspace-deliverables',
-    title,
+    task_id: `artifact:${firstDeliverable.file_id}`,
+    title: 'Workspace deliverables',
     lane: 'delivered' as const,
     status_label: '已形成交付',
     summary: `已产出 ${options.deliverableFiles.length} 个 deliverable 文件，当前最值得先看的文件是 ${firstDeliverable.label}。`,
     latest_update: options.progressFeedback.latest_update,
     next_step: `优先检查 ${firstDeliverable.label}，确认交付面和当前进度保持一致。`,
-    inspect_path: firstDeliverable.path ?? optionalString(options.currentStudy?.study_root) ?? options.workspacePath,
+    inspect_path: firstDeliverable.path ?? options.workspacePath,
     deliverable_count: options.deliverableFiles.length,
     source_surface: 'workspace_files',
   };
 }
 
 export function buildWorkspaceInbox(options: {
-  studySurface: ReturnType<typeof buildStudyProgressSurface>;
+  operatorSurface: ReturnType<typeof buildDomainOperatorProgressSurface>;
   manifest: NormalizedDomainManifest | null;
   recentSession: {
     session_id: string;
@@ -246,30 +213,23 @@ export function buildWorkspaceInbox(options: {
     deliverable_count: number;
     source_surface: string;
   }> = [];
-  const studyQueue = options.studySurface.studyQueue ?? [];
+  const taskLifecycleCard = buildTaskLifecycleInboxCard({
+    taskLifecycle: options.manifest?.task_lifecycle ?? null,
+    workspacePath: options.workspacePath,
+  });
+  if (taskLifecycleCard) {
+    cards.push(taskLifecycleCard);
+  }
 
-  if (studyQueue.length > 0) {
-    cards.push(...studyQueue);
-  } else {
-    const taskLifecycleCard = buildTaskLifecycleInboxCard({
-      taskLifecycle: options.manifest?.task_lifecycle ?? null,
-      workspacePath: options.workspacePath,
-    });
-    if (taskLifecycleCard) {
-      cards.push(taskLifecycleCard);
-    }
-
-    const recentSessionCard = buildRecentSessionInboxCard({
-      recentSession: options.recentSession,
-      workspacePath: options.workspacePath,
-    });
-    if (recentSessionCard) {
-      cards.push(recentSessionCard);
-    }
+  const recentSessionCard = buildRecentSessionInboxCard({
+    recentSession: options.recentSession,
+    workspacePath: options.workspacePath,
+  });
+  if (recentSessionCard) {
+    cards.push(recentSessionCard);
   }
 
   const deliverableCard = buildDeliverableInboxCard({
-    currentStudy: options.studySurface.currentStudy,
     deliverableFiles: options.deliverableFiles,
     progressFeedback: options.progressFeedback,
     workspacePath: options.workspacePath,

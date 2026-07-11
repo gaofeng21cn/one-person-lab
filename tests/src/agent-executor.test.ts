@@ -225,6 +225,89 @@ exit 64
   }
 });
 
+test('codex_cli executor activates requested image generation and records it in the receipt', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-agent-executor-imagegen-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+printf '{"type":"thread.started","thread_id":"thread-agent-executor-imagegen"}\\n'
+exit 0
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    const receipt = runAgentExecutor({
+      executor_kind: 'codex_cli',
+      prompt: 'Generate an image through the executor capability.',
+      cwd: repoRoot,
+      required_capabilities: ['image_generation'],
+    });
+
+    assert.deepEqual(receipt.requested_capabilities, ['image_generation']);
+    assert.deepEqual(receipt.activated_capabilities, ['image_generation']);
+    assert.equal(receipt.capabilities.includes('image_generation'), true);
+    const args = fs.readFileSync(capturePath, 'utf8').trim().split('\n');
+    assert.deepEqual(args.slice(4, 6), ['--enable', 'image_generation']);
+  } finally {
+    previousCodexBin === undefined
+      ? delete process.env.OPL_CODEX_BIN
+      : process.env.OPL_CODEX_BIN = previousCodexBin;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('agent executor fails closed for unknown or unsupported required capabilities', () => {
+  assert.throws(
+    () => runAgentExecutor({
+      executor_kind: 'codex_cli',
+      prompt: 'Request an unknown capability.',
+      required_capabilities: ['unknown_capability'],
+    }),
+    /unsupported required capabilities/,
+  );
+  assert.throws(
+    () => runAgentExecutor({
+      executor_kind: 'claude_code',
+      prompt: 'Request image generation from a non-Codex executor.',
+      required_capabilities: ['image_generation'],
+    }),
+    /not supported by the selected executor/,
+  );
+});
+
+test('codex_cli executor enforces request timeout and fails closed', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+sleep 2
+printf '{"type":"thread.started","thread_id":"thread-too-late"}\\n'
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  try {
+    process.env.OPL_CODEX_BIN = codexPath;
+    assert.throws(
+      () => runAgentExecutor({
+        executor_kind: 'codex_cli',
+        prompt: 'This executor must time out.',
+        timeout_ms: 50,
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof FrameworkContractError);
+        assert.equal(error.code, 'codex_command_failed');
+        const details = error.details ?? {};
+        assert.equal(details.timed_out, true);
+        assert.equal(details.timeout_ms, 50);
+        assert.equal(details.timeout_reason, 'total_timeout');
+        assert.equal(details.fallback_allowed, false);
+        return true;
+      },
+    );
+  } finally {
+    previousCodexBin === undefined
+      ? delete process.env.OPL_CODEX_BIN
+      : process.env.OPL_CODEX_BIN = previousCodexBin;
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('hermes_agent execution requires full loop proof with tool events', () => {
   const helper = makeExecutable(
     'hermes-helper',

@@ -40,6 +40,7 @@ export type AgentExecutionRequest = {
   cwd?: string | null;
   timeout_ms?: number | null;
   context_refs?: string[];
+  required_capabilities?: string[];
   model?: string | null;
   provider?: string | null;
   reasoning_effort?: string | null;
@@ -63,6 +64,8 @@ export type AgentExecutionReceipt = {
   executor_contract?: JsonRecord | null;
   executor_envelope: JsonRecord;
   capabilities: string[];
+  requested_capabilities: string[];
+  activated_capabilities: string[];
   non_equivalence_notice: 'codex_cli_first_class_default' | 'connectivity_lifecycle_receipt_audit_only';
   proof: JsonRecord | null;
 };
@@ -218,7 +221,7 @@ function resolveBinary(input: {
 
 function capabilitiesFor(executorKind: AgentExecutorKind) {
   if (executorKind === 'codex_cli') {
-    return ['codex_exec', 'json_output', 'session_id'];
+    return ['codex_exec', 'json_output', 'session_id', 'image_generation'];
   }
   if (executorKind === 'hermes_agent') {
     return ['full_agent_loop_receipt', 'tool_event_proof', 'session_id'];
@@ -227,6 +230,31 @@ function capabilitiesFor(executorKind: AgentExecutorKind) {
     return ['cli_process_receipt', 'html_route_candidate', 'json_or_text_output'];
   }
   return ['cli_process_receipt', 'json_or_text_output'];
+}
+
+function requiredCapabilitiesFor(request: AgentExecutionRequest, executorKind: AgentExecutorKind) {
+  const requested = [...new Set((request.required_capabilities ?? [])
+    .map((entry) => entry.trim())
+    .filter(Boolean))];
+  const unsupported = requested.filter((entry) => entry !== 'image_generation');
+  if (unsupported.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent executor request contains unsupported required capabilities.', {
+      executor_kind: executorKind,
+      required_capabilities: requested,
+      unsupported_capabilities: unsupported,
+      supported_required_capabilities: ['image_generation'],
+      fallback_allowed: false,
+    });
+  }
+  if (requested.length > 0 && executorKind !== 'codex_cli') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Requested capabilities are not supported by the selected executor.', {
+      executor_kind: executorKind,
+      required_capabilities: requested,
+      supported_executor_kind: 'codex_cli',
+      fallback_allowed: false,
+    });
+  }
+  return requested;
 }
 
 function executorEnvelopeFor(executorKind: AgentExecutorKind) {
@@ -418,6 +446,8 @@ function normalizeReceipt(value: unknown, fallback: {
     capabilities: Array.isArray(payload.capabilities)
       ? payload.capabilities.filter((entry): entry is string => typeof entry === 'string')
       : capabilitiesFor(fallback.kind),
+    requested_capabilities: [],
+    activated_capabilities: [],
     non_equivalence_notice: fallback.kind === 'codex_cli'
       ? 'codex_cli_first_class_default'
       : 'connectivity_lifecycle_receipt_audit_only',
@@ -444,14 +474,18 @@ function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExe
     request.request_executor_policy?.reasoning_effort,
     request.stage_attempt_executor_policy?.reasoning_effort,
   );
+  const requestedCapabilities = requiredCapabilitiesFor(request, executorKind);
   const args = buildCodexExecArgs(request.prompt, {
     cwd: request.cwd ?? undefined,
     json,
     model: model ?? undefined,
     provider: provider ?? undefined,
     reasoningEffort: reasoningEffort ?? undefined,
+    enableImageGeneration: requestedCapabilities.includes('image_generation'),
   });
-  const result = runCodexCommand(args);
+  const result = runCodexCommand(args, {
+    timeoutMs: normalizeTimeoutMs(request.timeout_ms),
+  });
   const parsed = json ? parseCodexExecOutput(result.stdout) : null;
   return {
     surface_kind: 'opl_agent_execution_receipt',
@@ -468,6 +502,8 @@ function runCodexExecutor(request: AgentExecutionRequest, executorKind: AgentExe
     executor_contract: null,
     executor_envelope: executorEnvelopeFor(executorKind),
     capabilities: capabilitiesFor(executorKind),
+    requested_capabilities: requestedCapabilities,
+    activated_capabilities: requestedCapabilities,
     non_equivalence_notice: 'codex_cli_first_class_default',
     proof: {
       command_preview: buildCodexCliPreview(args),
@@ -590,6 +626,8 @@ function runExternalExecutor(request: AgentExecutionRequest, executorKind: Agent
     executor_contract: null,
     executor_envelope: executorEnvelopeFor(executorKind),
     capabilities: capabilitiesFor(executorKind),
+    requested_capabilities: [],
+    activated_capabilities: [],
     non_equivalence_notice: 'connectivity_lifecycle_receipt_audit_only',
     proof: {
       binary_path: doctor.binary_path,
@@ -616,6 +654,7 @@ export function runAgentExecutor(request: AgentExecutionRequest): AgentExecution
     });
   }
   assertNonDefaultPolicyBinding(request, executorKind);
+  requiredCapabilitiesFor(request, executorKind);
   if (executorKind === 'codex_cli') {
     return runCodexExecutor(request, executorKind);
   }
@@ -662,6 +701,9 @@ export function runAgentExecutorRequestFile(requestPath: string) {
     timeout_ms: typeof payload.timeout_ms === 'number' ? payload.timeout_ms : null,
     context_refs: Array.isArray(payload.context_refs)
       ? payload.context_refs.filter((entry): entry is string => typeof entry === 'string')
+      : [],
+    required_capabilities: Array.isArray(payload.required_capabilities)
+      ? payload.required_capabilities.filter((entry): entry is string => typeof entry === 'string')
       : [],
     model: stringValue(payload.model),
     provider: stringValue(payload.provider),

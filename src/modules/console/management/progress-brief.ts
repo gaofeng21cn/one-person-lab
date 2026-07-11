@@ -1,13 +1,13 @@
 import type { pickCurrentProjectEntry } from './progress-study.ts';
 import {
-  buildStudyProgressSurface,
+  buildDomainOperatorProgressSurface,
   describeHumanGate,
   explainManifestFailure,
 } from './progress-study.ts';
 import { uniqueStrings } from './shared.ts';
 
 type CurrentProjectEntry = ReturnType<typeof pickCurrentProjectEntry>;
-type StudyProgressSurface = ReturnType<typeof buildStudyProgressSurface>;
+type OperatorProgressSurface = ReturnType<typeof buildDomainOperatorProgressSurface>;
 type ReadinessEntry = {
   project_id: string;
   usable_now: boolean;
@@ -45,11 +45,10 @@ export function buildProgressSummary(options: {
   overview: ManifestOverview | null;
   productStatus: ProductStatus | null;
   readinessEntry: ReadinessEntry | null;
-  studySurface: StudyProgressSurface;
+  operatorSurface: OperatorProgressSurface;
 }) {
   return (
-    options.studySurface.progressSummary
-    ?? options.studySurface.currentStudy?.story_summary
+    options.operatorSurface.progressSummary
     ?? options.overview?.summary
     ?? options.productStatus?.summary
     ?? options.readinessEntry?.summary
@@ -66,10 +65,10 @@ export function pickProgressNextFocus(options: {
   productStatus: ProductStatus | null;
   readinessEntry: ReadinessEntry | null;
   repoMainline: RepoMainline | null;
-  studySurface: StudyProgressSurface;
+  operatorSurface: OperatorProgressSurface;
 }) {
   return [
-    options.studySurface.nextFocus,
+    options.operatorSurface.nextFocus,
     ...(options.overview?.next_focus ?? []),
     ...(options.productStatus?.next_focus ?? []),
     ...(Array.isArray(options.repoMainline?.next_focus)
@@ -82,10 +81,10 @@ export function pickProgressNextFocus(options: {
 export function buildProgressAttentionItems(options: {
   manifestEntry: ManifestEntry;
   readinessEntry: ReadinessEntry | null;
-  studySurface: StudyProgressSurface;
+  operatorSurface: OperatorProgressSurface;
 }) {
   return uniqueStrings([
-    ...options.studySurface.attentionItems,
+    ...options.operatorSurface.attentionItems,
     ...(options.readinessEntry?.usable_now === false ? options.readinessEntry.blocking_gaps : []),
     explainManifestFailure(options.manifestEntry?.error ?? null),
   ]);
@@ -95,7 +94,7 @@ export function buildProgressInspectPaths(options: {
   currentProject: CurrentProjectEntry;
   manifest: Manifest | null;
   manifestEntry: ManifestEntry;
-  studySurface: StudyProgressSurface;
+  operatorSurface: OperatorProgressSurface;
   workspacePath: string;
 }) {
   return uniqueStrings([
@@ -108,7 +107,7 @@ export function buildProgressInspectPaths(options: {
     typeof options.manifest?.workspace_locator?.profile_ref === 'string'
       ? options.manifest.workspace_locator.profile_ref
       : null,
-    ...options.studySurface.inspectPaths,
+    ...options.operatorSurface.inspectPaths,
   ]);
 }
 
@@ -123,7 +122,7 @@ export function buildConfiguredHumanGates(options: {
 }
 
 export function splitProgressWorkspaceFiles(
-  workspaceFiles: StudyProgressSurface['workspaceFiles'],
+  workspaceFiles: OperatorProgressSurface['workspaceFiles'],
 ) {
   return {
     deliverableFiles: workspaceFiles.filter((entry) => entry.kind === 'deliverable'),
