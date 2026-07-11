@@ -63,6 +63,112 @@ exit 1
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_write_domain_truth, false);
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_owner_receipt, false);
     assert.equal(output.app_state.settings_control_center.authority_boundary.can_create_typed_blocker, false);
+    assert.deepEqual(
+      Object.keys(output.app_state.settings_control_center.surface_policy),
+      ['configuration', 'status', 'diagnostic', 'action', 'app_product_truth_policy'],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.surface_policy.action.policy,
+      'one_time_actions_independent_from_persistent_configuration_catalog',
+    );
+
+    const configurationCatalog = output.app_state.settings_control_center.configuration_catalog;
+    assert.equal(configurationCatalog.surface_class, 'configuration');
+    assert.deepEqual(
+      configurationCatalog.items.map((entry: any) => [entry.configuration_id, entry.action_id]),
+      [
+        ['workspace_root', 'workspace_root_set'],
+        ['update_channel', 'update_channel'],
+        ['developer_supervisor', 'developer_supervisor'],
+      ],
+    );
+    assert.equal(
+      configurationCatalog.items.every((entry: any) =>
+        output.app_state.settings_control_center.allowed_action_ids.includes(entry.action_id)
+          && output.app_state.settings_control_center.app_settings_read_model.action_policy
+            .allowed_action_ids.includes(entry.action_id)
+      ),
+      true,
+    );
+    assert.equal(
+      configurationCatalog.items.every((entry: any) =>
+        entry.surface_class === 'configuration'
+          && entry.owner === 'one-person-lab'
+          && entry.lifecycle === 'persistent_configuration_mutation'
+          && entry.route === `opl app action execute --action ${entry.action_id}`
+          && entry.payload_required === true
+          && entry.dry_run_supported === true
+          && entry.authority_flags.can_write_domain_truth === false
+      ),
+      true,
+    );
+    const configurationExecutionMetadata = [
+      'stable_id',
+      'surface_class',
+      'owner',
+      'lifecycle',
+      'action_id',
+      'route',
+      'delegated_surface',
+      'payload_fields',
+      'payload_required',
+      'mutates',
+      'dry_run_supported',
+      'confirmation_required',
+      'danger_level',
+      'impact',
+      'rollback_action_id',
+      'follow_up_action_ids',
+      'verify_action_id',
+      'verify_route',
+      'authority_flags',
+    ];
+    assert.equal(
+      configurationCatalog.items.every((entry: any) =>
+        configurationExecutionMetadata.every((field) => field in entry)
+          && output.app_state.settings_control_center.app_settings_read_model.action_policy
+            .payload_required_action_ids.includes(entry.action_id)
+          && output.app_state.settings_control_center.app_settings_read_model.action_policy
+            .dry_run_supported_action_ids.includes(entry.action_id)
+      ),
+      true,
+    );
+    assert.deepEqual(
+      configurationCatalog.excluded_surfaces.map((entry: any) => entry.configuration_id),
+      [
+        'app_local_preferences',
+        'model_catalog',
+        'theme',
+        'notifications',
+        'data_retention',
+        'connection_credentials',
+      ],
+    );
+    assert.deepEqual(
+      configurationCatalog.items.map((entry: any) => entry.action_id).filter(
+        (actionId: string) => !output.app_state.settings_control_center.allowed_action_ids.includes(actionId),
+      ),
+      [],
+    );
+    assert.equal(
+      output.app_state.settings_control_center.action_catalog.every(
+        (entry: any) => entry.surface_class === 'action'
+          && entry.owner === 'one-person-lab'
+          && entry.lifecycle === 'one_time_action',
+      ),
+      true,
+    );
+    assert.equal(
+      Object.values(output.app_state.settings_control_center.settings_projection.sections).every(
+        (section: any) => ['status', 'diagnostic'].includes(section.surface_class)
+          && section.items.every((entry: any) => entry.surface_class === section.surface_class),
+      ),
+      true,
+    );
+    assert.equal(
+      output.app_state.settings_control_center.settings_projection.sections.diagnostics.surface_class,
+      'diagnostic',
+    );
 
     assert.equal(output.app_state.operator.default_read_surface_policy.profile, 'fast');
     assert.equal(

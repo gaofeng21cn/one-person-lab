@@ -13,6 +13,8 @@
     "ordinary_entry": "settings_control_center",
     "required_fields": [
       "settings_ia",
+      "surface_policy",
+      "configuration_catalog",
       "settings_projection",
       "app_settings_read_model",
       "app_aion_consumer_only_readback",
@@ -44,6 +46,65 @@
       "shell_must_not_infer_domain_truth": true,
       "shell_must_not_execute_unlisted_actions": true
     }
+  },
+  "surface_policy": {
+    "surface_classes": [
+      "configuration",
+      "status",
+      "diagnostic",
+      "action"
+    ],
+    "configuration": "Framework-owned persistent values backed by existing persistent actions only.",
+    "status": "Read-only source projections; status must not be inferred as editable configuration.",
+    "diagnostic": "Read-only troubleshooting refs kept distinct from ordinary status.",
+    "action": "One-time actions remain independent from persistent configuration.",
+    "app_product_truth_policy": "App-local preferences and App product truth are not owned or copied by Framework."
+  },
+  "configuration_catalog": {
+    "surface_kind": "opl_settings_configuration_catalog.v1",
+    "owner": "one-person-lab",
+    "required_configuration_ids": [
+      "workspace_root",
+      "update_channel",
+      "developer_supervisor"
+    ],
+    "persistent_action_map": {
+      "workspace_root": "workspace_root_set",
+      "update_channel": "update_channel",
+      "developer_supervisor": "developer_supervisor"
+    },
+    "execution_metadata_required": [
+      "stable_id",
+      "surface_class",
+      "owner",
+      "lifecycle",
+      "action_id",
+      "route",
+      "delegated_surface",
+      "payload_fields",
+      "payload_required",
+      "mutates",
+      "dry_run_supported",
+      "confirmation_required",
+      "danger_level",
+      "impact",
+      "rollback_action_id",
+      "follow_up_action_ids",
+      "verify_action_id",
+      "verify_route",
+      "authority_flags"
+    ],
+    "lifecycle": "persistent_configuration_mutation",
+    "allowlist_policy": "Every persistent_action_map value must be present in settings_control_center.allowed_action_ids.",
+    "excluded_configuration_ids": [
+      "app_local_preferences",
+      "model_catalog",
+      "theme",
+      "notifications",
+      "data_retention",
+      "connection_credentials"
+    ],
+    "policy": "No setting may be listed without an existing Framework-owned persistent implementation; excluded surfaces remain with their App, provider, connection, or domain owner."
   },
   "app_settings_read_model": {
     "surface_kind": "opl_app_settings_read_model.v1",
@@ -84,6 +145,7 @@
         "diagnostics"
       ],
       "item_required_fields": [
+        "surface_class",
         "scope",
         "owner",
         "risk",
@@ -92,6 +154,7 @@
         "details_ref",
         "editable_reason"
       ],
+      "section_surface_class_policy": "Every section and item declares status or diagnostic; configuration and one-time actions use their dedicated catalogs.",
       "authority_policy": "settings_projection_is_read_model_only_no_live_readiness_or_release_claim"
     },
     "capability_task_awareness_refs": {
@@ -184,7 +247,10 @@
     "settings_select_webui_seed",
     "settings_run_webui_startup_maintenance",
     "settings_open_docker_webui",
-    "settings_diagnose_docker_webui"
+    "settings_diagnose_docker_webui",
+    "workspace_root_set",
+    "update_channel",
+    "developer_supervisor"
   ],
   "action_taxonomy": {
     "settings_repair_model_access": "settings.model_access.repair",
@@ -221,6 +287,10 @@
     }
   },
   "action_catalog_required_metadata": {
+    "surface_class": "action",
+    "owner": "one-person-lab",
+    "lifecycle": "one_time_action",
+    "independence_policy": "one_time_actions_are_not_persistent_configuration_items",
     "stable_id": true,
     "impact": true,
     "confirmation_required": true,

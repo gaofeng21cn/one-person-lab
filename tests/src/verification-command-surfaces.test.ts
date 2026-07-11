@@ -270,10 +270,17 @@ test('Settings Control Center contract keeps App and Aion consumer-only', () => 
   const settingsControlCenter = readJson<Record<string, any>>(
     'contracts/opl-framework/settings-control-center-action-read-model-contract.json',
   );
+  const configurationActionIds = settingsControlCenter.configuration_catalog.required_configuration_ids.map(
+    (configurationId: string) =>
+      settingsControlCenter.configuration_catalog.persistent_action_map[configurationId],
+  );
 
   assert.deepEqual(
     settingsControlCenter.allowed_action_ids,
-    SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => action.action_id),
+    [
+      ...SETTINGS_CONTROL_CENTER_ACTIONS.map((action) => action.action_id),
+      ...configurationActionIds,
+    ],
   );
   assert.deepEqual(
     settingsControlCenter.action_taxonomy,

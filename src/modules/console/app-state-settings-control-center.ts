@@ -15,6 +15,16 @@ import {
 
 export { SETTINGS_CONTROL_CENTER_ACTIONS };
 
+const SETTINGS_CONFIGURATION_ACTION_IDS = [
+  'workspace_root_set',
+  'update_channel',
+  'developer_supervisor',
+] as const;
+const SETTINGS_ALLOWED_ACTION_IDS = [
+  ...SETTINGS_CONTROL_CENTER_ACTION_IDS,
+  ...SETTINGS_CONFIGURATION_ACTION_IDS,
+] as const;
+
 type JsonRecord = Record<string, unknown>;
 function asRecord(value: unknown): JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
@@ -38,6 +48,9 @@ function statusTone(status: string | null) {
 function actionCatalogEntry(action: SettingsAction) {
   return {
     stable_id: action.stable_id,
+    surface_class: 'action',
+    owner: 'one-person-lab',
+    lifecycle: 'one_time_action',
     action_id: action.action_id,
     label: action.label,
     section_id: action.section_id,
@@ -274,6 +287,7 @@ type SettingsProjectionItem = {
   item_id: string;
   label: string;
   state: string;
+  surface_class: 'status' | 'diagnostic';
   scope: string;
   owner: string;
   risk: string;
@@ -320,11 +334,13 @@ function settingsSection(
   role: string,
   items: SettingsProjectionItem[],
 ) {
+  const surfaceClasses = [...new Set(items.map((item) => item.surface_class))];
   return {
     section_id: sectionId,
     label,
     route_id: routeId,
     role,
+    surface_class: surfaceClasses.length === 1 ? surfaceClasses[0] : 'mixed_status_diagnostic',
     item_count: items.length,
     items,
   };
@@ -355,6 +371,7 @@ function buildSettingsProjection(
         item_id: 'settings_overview',
         label: 'Settings overview',
         state: issueQueue.length > 0 ? 'attention_needed' : 'available',
+        surface_class: 'status',
         scope: 'user',
         owner: 'one-person-lab',
         risk: 'read_only',
@@ -371,6 +388,7 @@ function buildSettingsProjection(
         item_id: 'codex_model_access',
         label: 'Codex model access',
         state: codexAccess.model_access_status,
+        surface_class: 'status',
         scope: 'user',
         owner: 'one-person-lab',
         risk: riskForTask(modelAccessTask),
@@ -387,6 +405,7 @@ function buildSettingsProjection(
         item_id: 'workspace_root',
         label: 'Workspace root',
         state: asString(workspaceRoot.health_status) ?? 'unknown',
+        surface_class: 'status',
         scope: 'workspace',
         owner: 'one-person-lab',
         risk: riskForTask(workspaceTask),
@@ -401,6 +420,7 @@ function buildSettingsProjection(
         item_id: 'managed_agent_packages',
         label: 'Managed agent packages',
         state: moduleSummary.healthy_default_modules_count === moduleSummary.default_modules_count ? 'ready' : 'attention_needed',
+        surface_class: 'status',
         scope: 'local_machine',
         owner: 'one-person-lab',
         risk: riskForTask(syncCapabilitiesTask),
@@ -417,6 +437,7 @@ function buildSettingsProjection(
         item_id: 'connect_fabric_external_resources',
         label: 'Connect, Fabric, Cloud, SSH, and HPC resources',
         state: 'refs_only',
+        surface_class: 'status',
         scope: 'resources',
         owner: 'one-person-lab',
         risk: 'read_only',
@@ -431,6 +452,7 @@ function buildSettingsProjection(
         item_id: 'maintenance_routes',
         label: 'Maintenance routes',
         state: asString(appUpdateTask?.state) ?? 'unknown',
+        surface_class: 'status',
         scope: 'local_machine',
         owner: 'one-person-lab',
         risk: riskForTask(appUpdateTask),
@@ -445,6 +467,7 @@ function buildSettingsProjection(
         item_id: 'runtime_roots_cleanup_plan',
         label: 'Runtime roots cleanup plan',
         state: 'plan_only',
+        surface_class: 'status',
         scope: 'local_machine',
         owner: 'one-person-lab',
         risk: riskForTask(cleanupTask),
@@ -459,6 +482,7 @@ function buildSettingsProjection(
         item_id: 'diagnostic_refs',
         label: 'Diagnostic refs',
         state: 'available',
+        surface_class: 'diagnostic',
         scope: 'developer',
         owner: 'one-person-lab',
         risk: 'read_only',
@@ -487,6 +511,7 @@ function buildSettingsProjection(
       'app_state.release',
     ],
     item_required_fields: [
+      'surface_class',
       'scope',
       'owner',
       'risk',
@@ -507,6 +532,146 @@ function buildSettingsProjection(
     ],
     sections,
     authority_boundary: settingsAuthorityFlags(),
+  };
+}
+
+function buildConfigurationCatalog(input: BuildSettingsControlCenterInput) {
+  const workspaceRoot = asRecord(input.paths.workspace_root);
+  const developerProfile = asRecord(asRecord(input.developerMode).developer_profile);
+
+  return {
+    surface_kind: 'opl_settings_configuration_catalog.v1',
+    surface_class: 'configuration',
+    owner: 'one-person-lab',
+    persistence_policy: 'listed_only_when_backed_by_existing_framework_owned_persistent_action',
+    items: [
+      {
+        configuration_id: 'workspace_root',
+        stable_id: 'settings.configuration.workspace_root',
+        label: 'Workspace root',
+        surface_class: 'configuration',
+        owner: 'one-person-lab',
+        lifecycle: 'persistent_configuration_mutation',
+        value_type: 'path',
+        current_value: asString(workspaceRoot.selected_path) ?? asString(input.paths.workspace_root_path),
+        source_ref: 'app_state.paths.workspace_root',
+        action_id: 'workspace_root_set',
+        route: routeFor('workspace_root_set'),
+        delegated_surface: 'opl workspace root set',
+        payload_fields: ['path'],
+        payload_required: true,
+        mutates: 'opl_workspace_root_config',
+        dry_run_supported: true,
+        confirmation_required: false,
+        danger_level: 'low',
+        impact: 'updates_framework_owned_default_workspace_root',
+        rollback_action_id: null,
+        follow_up_action_ids: ['settings_verify_workspace'],
+        verify_action_id: 'settings_verify_workspace',
+        verify_route: routeFor('settings_verify_workspace'),
+        persistence_target: 'opl_workspace_root_config',
+        authority_flags: settingsAuthorityFlags(),
+      },
+      {
+        configuration_id: 'update_channel',
+        stable_id: 'settings.configuration.update_channel',
+        label: 'Update channel',
+        surface_class: 'configuration',
+        owner: 'one-person-lab',
+        lifecycle: 'persistent_configuration_mutation',
+        value_type: 'enum',
+        allowed_values: ['stable', 'preview'],
+        current_value: asString(input.release.channel),
+        source_ref: 'app_state.release.channel',
+        action_id: 'update_channel',
+        route: routeFor('update_channel'),
+        delegated_surface: 'opl system update-channel',
+        payload_fields: ['channel'],
+        payload_required: true,
+        mutates: 'opl_update_channel_config',
+        dry_run_supported: true,
+        confirmation_required: false,
+        danger_level: 'low',
+        impact: 'updates_framework_owned_release_channel_preference',
+        rollback_action_id: null,
+        follow_up_action_ids: [],
+        verify_action_id: null,
+        verify_route: null,
+        verify_ref: 'app_state.release.channel',
+        persistence_target: 'opl_update_channel_config',
+        authority_flags: settingsAuthorityFlags(),
+      },
+      {
+        configuration_id: 'developer_supervisor',
+        stable_id: 'settings.configuration.developer_supervisor',
+        label: 'Developer supervisor',
+        surface_class: 'configuration',
+        owner: 'one-person-lab',
+        lifecycle: 'persistent_configuration_mutation',
+        value_type: 'object',
+        current_value: {
+          status: asString(developerProfile.status),
+          effective_state: asString(input.developerMode.effective_state),
+          mode: asString(input.developerMode.mode),
+        },
+        source_ref: 'app_state.developer_mode',
+        action_id: 'developer_supervisor',
+        route: routeFor('developer_supervisor'),
+        delegated_surface: 'opl system developer-supervisor',
+        payload_fields: [
+          'developerSupervisorEnabled',
+          'developerSupervisorMode',
+          'developerSupervisorAutoEnableGithubLogin',
+        ],
+        payload_required: true,
+        mutates: 'opl_developer_supervisor_config',
+        dry_run_supported: true,
+        confirmation_required: false,
+        danger_level: 'low',
+        impact: 'updates_framework_owned_developer_supervisor_policy',
+        rollback_action_id: null,
+        follow_up_action_ids: ['developer_supervisor_refresh'],
+        verify_action_id: 'developer_supervisor_refresh',
+        verify_route: routeFor('developer_supervisor_refresh'),
+        persistence_target: 'opl_developer_supervisor_config',
+        authority_flags: settingsAuthorityFlags(),
+      },
+    ],
+    excluded_surfaces: [
+      { configuration_id: 'app_local_preferences', owner: 'one-person-lab-app' },
+      { configuration_id: 'model_catalog', owner: 'one-person-lab-app_or_provider_owner' },
+      { configuration_id: 'theme', owner: 'one-person-lab-app' },
+      { configuration_id: 'notifications', owner: 'one-person-lab-app' },
+      { configuration_id: 'data_retention', owner: 'domain_or_app_owner' },
+      { configuration_id: 'connection_credentials', owner: 'provider_or_connection_owner' },
+    ],
+    exclusion_policy: 'framework_must_not_store_or_infer_app_product_truth_provider_secrets_or_domain_policy',
+  };
+}
+
+function settingsSurfacePolicy() {
+  return {
+    configuration: {
+      owner: 'one-person-lab',
+      surface_ref: 'app_state.settings_control_center.configuration_catalog',
+      policy: 'persistent_framework_owned_values_with_existing_actions_only',
+    },
+    status: {
+      owner: 'source_projection_owner',
+      surface_ref: 'app_state.settings_control_center.settings_projection.sections',
+      policy: 'read_only_summary_no_configuration_inference',
+    },
+    diagnostic: {
+      owner: 'one-person-lab',
+      surface_ref: 'app_state.settings_control_center.settings_projection.sections.diagnostics',
+      policy: 'read_only_refs_for_troubleshooting_not_ordinary_settings',
+    },
+    action: {
+      owner: 'one-person-lab',
+      surface_ref: 'app_state.settings_control_center.action_catalog',
+      policy: 'one_time_actions_independent_from_persistent_configuration_catalog',
+    },
+    app_product_truth_policy: 'not_owned_or_copied_by_framework',
   };
 }
 
@@ -666,13 +831,15 @@ function buildAppSettingsReadModel(
     action_policy: {
       source_ref: 'app_state.settings_control_center.action_catalog',
       action_surface: 'opl app action execute --json',
-      allowed_action_ids: [...SETTINGS_CONTROL_CENTER_ACTION_IDS],
+      allowed_action_ids: [...SETTINGS_ALLOWED_ACTION_IDS],
       payload_required_action_ids: taskEntries
         .filter((entry) => entry.payload_required)
-        .map((entry) => entry.action_id),
+        .map((entry) => entry.action_id)
+        .concat(SETTINGS_CONFIGURATION_ACTION_IDS),
       dry_run_supported_action_ids: taskEntries
         .filter((entry) => entry.dry_run_supported)
-        .map((entry) => entry.action_id),
+        .map((entry) => entry.action_id)
+        .concat(SETTINGS_CONFIGURATION_ACTION_IDS),
       issue_count: issueQueue.length,
       authority_flags: settingsAuthorityFlags(),
     },
@@ -802,6 +969,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     issueQueue,
     settingsIa,
   );
+  const configurationCatalog = buildConfigurationCatalog(input);
   const appSettingsReadModel = buildAppSettingsReadModel(
     input,
     taskEntries,
@@ -821,7 +989,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       ? 'opl app state --profile fast --json#settings_control_center'
       : 'opl app state --profile full --json#settings_control_center',
     action_surface: 'opl app action execute --json',
-    allowed_action_ids: [...SETTINGS_CONTROL_CENTER_ACTION_IDS],
+    allowed_action_ids: [...SETTINGS_ALLOWED_ACTION_IDS],
     status_summary: {
       model_access: codexAccess.model_access_status,
       codex_version: asString(codex.parsed_version) ?? asString(codex.version) ?? 'missing',
@@ -831,6 +999,8 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
       issue_count: issueQueue.length,
     },
     settings_ia: settingsIa,
+    surface_policy: settingsSurfacePolicy(),
+    configuration_catalog: configurationCatalog,
     settings_projection: settingsProjection,
     app_settings_read_model: appSettingsReadModel,
     app_aion_consumer_only_readback: appAionConsumerOnlyReadback,
