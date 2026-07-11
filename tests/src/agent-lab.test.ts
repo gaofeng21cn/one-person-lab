@@ -700,11 +700,11 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     'reject_before_agent_lab_execution',
   );
   assert.equal(
-    contract.evaluation_work_order_consumer_surface.seed_observation_policy.required_observations_owner,
+    contract.evaluation_work_order_consumer_surface.request_observation_policy.required_observations_owner,
     'opl_agent_lab_canonical_policy',
   );
   assert.equal(
-    contract.evaluation_work_order_consumer_surface.seed_observation_policy.seed_production_gate_is_observation,
+    contract.evaluation_work_order_consumer_surface.request_observation_policy.request_production_gate_is_observation,
     false,
   );
   assert.equal(
@@ -733,10 +733,10 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   );
   assert.equal(
     contract.evaluation_work_order_consumer_surface.candidate_ref_projection.immediate_improvement_source,
-    'suite_seed.tasks[].improvement_candidate_seed.candidate_ref',
+    'evaluation_request.task_intents[].improvement_candidate.candidate_ref',
   );
   assert.equal(
-    contract.evaluation_work_order_consumer_surface.production_evidence_gate_observation.seed_gate_refs_are_observations,
+    contract.evaluation_work_order_consumer_surface.production_evidence_gate_observation.request_gate_refs_are_observations,
     false,
   );
   assert.equal(

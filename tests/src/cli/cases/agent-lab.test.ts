@@ -441,47 +441,171 @@ test('agent-lab evaluation-work-order accepts OMA-owned takeover identity and ke
   }
 });
 
-test('agent-lab evaluation-work-order binds observed identity and ignores seed-supplied observation gates', () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-observation-binding-'));
+test('agent-lab evaluation-work-order compiles a thin OMA evaluation request into its own suite plan', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-oma-evaluation-request-'));
   try {
     const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
-    const suiteSeed = fixture.suiteSeed as Record<string, any>;
-    suiteSeed.required_observations = ['task_manifests_observed'];
-    suiteSeed.production_evidence_gate = {
-      gate_ids: ['seed-only-gate'],
-      no_forbidden_write_proof_refs: ['seed-only-proof-must-not-be-observed'],
+    const evaluationRequestPath = path.join(tmpDir, 'oma-evaluation-request.json');
+    const workOrder = fixture.workOrder as Record<string, any>;
+    const request = {
+      surface_kind: 'opl_meta_agent_foundry_evaluation_request',
+      version: 'opl-meta-agent.foundry-evaluation-request.v1',
+      request_id: 'oma-evaluation-request:target-agent/takeover',
+      suite_id: fixture.ids.suiteId,
+      suite_kind: 'agent_lab_external_suite',
+      task_intents: [{
+        task_id: fixture.ids.taskId,
+        domain_id: fixture.ids.taskDomainId,
+        task_family: 'agent_testing_takeover',
+        instructions_ref: 'instructions:opl-meta-agent/target-agent/takeover',
+        agent_entry_ref: 'domain-agent-entry:target-agent',
+        stage_refs: ['stage:target-agent/external-agent-lab-evaluation-request'],
+        oracle_refs: ['oracle:opl-meta-agent/target-agent/authority-boundary-preserved'],
+        scorer_refs: ['scorer:opl-meta-agent/target-agent/takeover-acceptance'],
+        metric_refs: ['metric-ref:descriptor-valid'],
+        evidence_refs: ['evidence-ref:target-agent/descriptor-contract-read'],
+        review_refs: ['review:target-agent/takeover'],
+        quality_gate_refs: ['quality-gate:opl-meta-agent/target-agent/domain-owner-boundary'],
+        trajectory_ref: fixture.ids.trajectoryRef,
+        requested_run_ref: 'run:opl-meta-agent/target-agent/testing-takeover',
+        artifact_refs: ['artifact-ref:target-agent/external-agent-package'],
+        receipt_refs: ['owner-receipt:opl-meta-agent/target-agent/testing-takeover'],
+        scorecard_ref: fixture.ids.scorecardRef,
+        improvement_candidate: {
+          candidate_ref: fixture.ids.improvementCandidateRef,
+          candidate_kind: 'gated_self_evolution',
+          target_ref: 'quality-gate:opl-meta-agent/target-agent/domain-owner-boundary',
+          allowed_change_scope: 'branch_only',
+        },
+        promotion_gate_ref: fixture.ids.gateRef,
+        regression_suite_refs: ['regression-suite:opl-meta-agent/target-agent/takeover'],
+      }],
+      authority_boundary: {
+        refs_only: true,
+        oma_can_execute_agent_lab_suite: false,
+        oma_can_write_agent_lab_result: false,
+        oma_can_write_owner_receipt_body: false,
+        oma_can_write_promotion_gate: false,
+        oma_can_claim_target_domain_ready: false,
+        oma_can_claim_target_production_ready: false,
+      },
     };
-    writeEvaluationJson(fixture.suiteSeedPath, suiteSeed);
+    workOrder.evaluation_request = {
+      ref: path.basename(evaluationRequestPath),
+      request_id: request.request_id,
+      suite_id: request.suite_id,
+      suite_kind: request.suite_kind,
+    };
+    writeEvaluationJson(evaluationRequestPath, request);
+    writeEvaluationJson(fixture.workOrderPath, workOrder);
 
     const result = runCli([
       'agent-lab',
       'evaluation-work-order',
       'execute',
       '--work-order', fixture.workOrderPath,
-      '--observations', fixture.observationsPath,
       '--output', fixture.outputDir,
       '--json',
     ]).agent_lab_evaluation_work_order_execution;
-    const compiledSuite = JSON.parse(fs.readFileSync(result.artifacts.compiled_suite_path, 'utf8'));
+    const suitePlan = JSON.parse(fs.readFileSync(result.artifacts.evaluation_suite_plan_path, 'utf8'));
 
-    assert.equal(result.status, 'passed');
-    assert.equal(compiledSuite.tasks[0].domain_id, fixture.ids.taskDomainId);
-    assert.deepEqual(compiledSuite.evaluation_provenance_refs, fixture.evaluationProvenanceRefs);
-    assert.deepEqual(compiledSuite.evaluation_provenance_bindings, fixture.evaluationProvenanceBindings);
-    assert.deepEqual(result.suite_result.refs.evaluation_provenance_refs, fixture.evaluationProvenanceRefs);
-    assert.deepEqual(result.suite_result.evaluation_provenance_bindings, fixture.evaluationProvenanceBindings);
-    assert.deepEqual(result.receipt.evaluation_provenance_refs, fixture.evaluationProvenanceRefs);
-    assert.deepEqual(result.receipt.evaluation_provenance_bindings, fixture.evaluationProvenanceBindings);
-    fixture.evaluationProvenanceRefs.forEach((ref) => assert.ok(result.receipt.source_refs.includes(ref)));
-    assert.equal(compiledSuite.required_observations, undefined);
-    assert.equal(compiledSuite.production_evidence_gate, undefined);
-    assert.equal(
-      compiledSuite.tasks[0].stage_completion_policy.authority_boundary.unknown_authority_capability,
-      undefined,
+    assert.equal(result.status, 'blocked_missing_evaluation_observations');
+    assert.equal(result.evaluation_request_path, evaluationRequestPath);
+    assert.equal(Object.hasOwn(result, 'suite_seed_path'), false);
+    assert.equal(suitePlan.surface_kind, 'opl_foundry_lab_evaluation_suite_plan');
+    assert.equal(suitePlan.producer, 'one-person-lab/OPL Foundry Lab');
+    assert.equal(suitePlan.tasks[0].task_id, fixture.ids.taskId);
+    assert.deepEqual(result.receipt.improvement_candidate_refs, [fixture.ids.improvementCandidateRef]);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects legacy producer suite seeds', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-legacy-suite-seed-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    (fixture.workOrder as Record<string, any>).suite_seed = {
+      ref: 'agent-lab-suite-seed.json',
+      suite_id: fixture.ids.suiteId,
+      suite_kind: 'agent_lab_external_suite',
+    };
+    writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
+
+    assert.throws(
+      () => runCli([
+        'agent-lab',
+        'evaluation-work-order',
+        'execute',
+        '--work-order', fixture.workOrderPath,
+        '--output', fixture.outputDir,
+        '--json',
+      ]),
+      /must not carry producer-owned suite seeds or suite plans/,
     );
-    assert.equal(
-      compiledSuite.tasks[0].stage_completion_policy.authority_boundary.can_write_owner_receipt,
-      false,
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects OMA request authority owner and unknown capability fields', async (t) => {
+  const cases: Array<[string, (request: Record<string, any>) => void]> = [
+    ['quality verdict owner', (request) => {
+      request.authority_boundary.quality_verdict_owner = 'opl-meta-agent';
+    }],
+    ['unknown false capability', (request) => {
+      request.authority_boundary.oma_can_read_future_ledger = false;
+    }],
+  ];
+
+  for (const [name, mutate] of cases) {
+    await t.test(name, () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-request-authority-'));
+      try {
+        const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+        mutate(fixture.evaluationRequest as Record<string, any>);
+        writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
+        assert.throws(
+          () => runCli([
+            'agent-lab',
+            'evaluation-work-order',
+            'execute',
+            '--work-order', fixture.workOrderPath,
+            '--output', fixture.outputDir,
+            '--json',
+          ]),
+          /authority_boundary/,
+        );
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects producer-supplied observation gate fields', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-observation-binding-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    const evaluationRequest = fixture.evaluationRequest as Record<string, any>;
+    evaluationRequest.required_observations = ['task_manifests_observed'];
+    evaluationRequest.production_evidence_gate = {
+      gate_ids: ['seed-only-gate'],
+      no_forbidden_write_proof_refs: ['seed-only-proof-must-not-be-observed'],
+    };
+    writeEvaluationJson(fixture.evaluationRequestPath, evaluationRequest);
+
+    assert.throws(
+      () => runCli([
+        'agent-lab',
+        'evaluation-work-order',
+        'execute',
+        '--work-order', fixture.workOrderPath,
+        '--observations', fixture.observationsPath,
+        '--output', fixture.outputDir,
+        '--json',
+      ]),
+      /unsupported fields at evaluation_request/,
     );
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -501,12 +625,12 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
     ['work-order descriptor mismatch', (fixture) => {
       (fixture.workOrder.target_agent as Record<string, any>).descriptor_ref = '/tmp/other/descriptor.json';
     }, /descriptor_ref/],
-    ['suite top-level target ref mismatch', (fixture) => {
-      (fixture.suiteSeed as Record<string, any>).target_agent_ref = 'domain-agent:other';
-    }, /suite_seed.*target_agent_ref/],
-    ['task descriptor mismatch', (fixture) => {
-      (fixture.suiteSeed.tasks[0] as Record<string, any>).target_agent_descriptor_ref = '/tmp/other/descriptor.json';
-    }, /target_agent_descriptor_ref/],
+    ['producer target ref is rejected', (fixture) => {
+      (fixture.evaluationRequest as Record<string, any>).target_agent_ref = 'domain-agent:other';
+    }, /producer-owned suite plan fields/],
+    ['producer task descriptor is rejected', (fixture) => {
+      (fixture.evaluationRequest.task_intents[0] as Record<string, any>).target_agent_descriptor_ref = '/tmp/other/descriptor.json';
+    }, /producer-owned suite plan fields/],
     ['packet target ref mismatch', (fixture) => {
       (fixture.observations as Record<string, any>).target_agent_ref = 'domain-agent:other';
     }, /observations.*target_agent_ref/],
@@ -515,14 +639,11 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
     }, /observations.*target_agent_descriptor_ref/],
     ['all evaluation owners drift together', (fixture) => {
       const workOrder = fixture.workOrder as Record<string, any>;
-      const suiteSeed = fixture.suiteSeed as Record<string, any>;
       const observations = fixture.observations as Record<string, any>;
       workOrder.execution_owner = otherOwner;
       workOrder.consumer_dependency.owner = otherOwner;
       workOrder.execution_aperture.work_order_lifecycle_owner = otherOwner;
       workOrder.execution_aperture.result_ledger_owner = otherOwner;
-      suiteSeed.execution_owner = otherOwner;
-      suiteSeed.tasks[0].promotion_gate_request.evaluation_owner = otherOwner;
       observations.evaluation_owner = otherOwner;
       observations.tasks[0].recovery_probe_observations[0].observation_owner = otherOwner;
       observations.tasks[0].trajectory_observation.observation_owner = otherOwner;
@@ -531,9 +652,9 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
     ['consumer owner mismatch', (fixture) => {
       (fixture.workOrder.consumer_dependency as Record<string, any>).owner = otherOwner;
     }, /consumer_dependency.owner/],
-    ['suite execution owner mismatch', (fixture) => {
-      (fixture.suiteSeed as Record<string, any>).execution_owner = otherOwner;
-    }, /suite_seed.execution_owner/],
+    ['producer suite execution owner is rejected', (fixture) => {
+      (fixture.evaluationRequest as Record<string, any>).execution_owner = otherOwner;
+    }, /producer-owned suite plan fields/],
     ['lifecycle owner mismatch', (fixture) => {
       (fixture.workOrder.execution_aperture as Record<string, any>).work_order_lifecycle_owner = otherOwner;
     }, /work_order_lifecycle_owner/],
@@ -543,10 +664,12 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
     ['target closeout owner mismatch', (fixture) => {
       (fixture.workOrder.execution_aperture as Record<string, any>).target_owner_closeout_owner = otherOwner;
     }, /target_owner_closeout_owner/],
-    ['promotion evaluator pair drifts together', (fixture) => {
-      (fixture.suiteSeed.tasks[0].promotion_gate_request as Record<string, any>).evaluation_owner = otherOwner;
+    ['producer promotion evaluator is rejected', (fixture) => {
+      (fixture.evaluationRequest.task_intents[0] as Record<string, any>).promotion_gate_request = {
+        evaluation_owner: otherOwner,
+      };
       (fixture.observations.tasks[0].promotion_gate_observation as Record<string, any>).evaluation_owner = otherOwner;
-    }, /promotion_gate_request.evaluation_owner/],
+    }, /producer-owned suite plan fields/],
   ];
 
   for (const [name, mutate, expected] of cases) {
@@ -555,7 +678,7 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
       try {
         const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
         mutate(fixture);
-        writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+        writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
         writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
         writeEvaluationJson(fixture.observationsPath, fixture.observations);
         assert.throws(
@@ -646,7 +769,7 @@ test('agent-lab consistent evaluation target swap changes compiled result and re
     const first = execute(path.join(tmpDir, 'first'));
     const target = retargetOmaTakeoverEvaluationFixture(fixture, 'other-target-agent');
     writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
-    writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
     writeEvaluationJson(fixture.observationsPath, fixture.observations);
     const second = execute(path.join(tmpDir, 'second'));
     const compiledSuite = JSON.parse(fs.readFileSync(second.artifacts.compiled_suite_path, 'utf8'));
@@ -675,7 +798,7 @@ test('agent-lab blocked evaluation target swap changes platform blocker and rece
     const first = execute(path.join(tmpDir, 'first'));
     const target = retargetOmaTakeoverEvaluationFixture(fixture, 'other-target-agent');
     writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
-    writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
     const second = execute(path.join(tmpDir, 'second'));
 
     assert.deepEqual(second.evaluation_result.evaluation_target_agent, target);
@@ -739,9 +862,9 @@ test('agent-lab evaluation-work-order rejects unknown improvement allowed_change
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-invalid-change-scope-'));
   try {
     const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
-    (fixture.suiteSeed.tasks[0].improvement_candidate_seed as Record<string, any>).allowed_change_scope =
+    (fixture.evaluationRequest.task_intents[0].improvement_candidate as Record<string, any>).allowed_change_scope =
       'future_automatic_scope';
-    writeEvaluationJson(fixture.suiteSeedPath, fixture.suiteSeed);
+    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
     assert.throws(
       () => runCli([
         'agent-lab', 'evaluation-work-order', 'execute',
@@ -829,17 +952,13 @@ test('agent-lab production evaluation materializes gate evidence only from the o
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-production-observation-'));
   try {
     const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
-    const suiteSeed = fixture.suiteSeed as Record<string, any>;
+    const evaluationRequest = fixture.evaluationRequest as Record<string, any>;
     const workOrder = fixture.workOrder as Record<string, any>;
     const observations = fixture.observations as Record<string, any>;
-    suiteSeed.suite_kind = 'agent_production_evidence_suite';
-    suiteSeed.production_evidence_gate = {
-      gate_ids: ['production_acceptance_contract_read'],
-      no_forbidden_write_proof_refs: ['seed-only-proof-must-not-be-observed'],
-      required_owner_receipt_refs: ['seed-only-owner-receipt-must-not-be-observed'],
-    };
-    workOrder.suite_seed.suite_kind = suiteSeed.suite_kind;
-    writeEvaluationJson(fixture.suiteSeedPath, suiteSeed);
+    evaluationRequest.suite_kind = 'agent_production_evidence_suite';
+    evaluationRequest.production_evidence_gate_ids = ['production_acceptance_contract_read'];
+    workOrder.evaluation_request.suite_kind = evaluationRequest.suite_kind;
+    writeEvaluationJson(fixture.evaluationRequestPath, evaluationRequest);
     writeEvaluationJson(fixture.workOrderPath, workOrder);
     assert.throws(
       () => runCli([

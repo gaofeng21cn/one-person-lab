@@ -7,9 +7,11 @@ export const OMA_EVALUATION_FIXTURE = {
   targetAgentRef: 'domain-agent:target-agent',
   targetDescriptorRef: '/tmp/target-agent/contracts/domain_descriptor.json',
   workOrderId: 'oma-foundry-lab-work-order:target-agent/takeover',
+  requestId: 'oma-evaluation-request:target-agent/takeover',
   suiteId: 'opl-meta-agent-takeover-suite:target-agent',
   taskId: 'agent-lab-task:opl-meta-agent/target-agent/takeover',
-  probeRef: 'recovery-probe:opl-meta-agent/target-agent/resume-after-interruption',
+  probeRef: 'recovery-probe:opl-foundry-lab/opl-meta-agent/agent-lab-task:opl-meta-agent/target-agent/takeover/resume-after-interruption',
+  retryProbeRef: 'recovery-probe:opl-foundry-lab/opl-meta-agent/agent-lab-task:opl-meta-agent/target-agent/takeover/retry-after-tool-failure',
   trajectoryRef: 'trajectory:opl-meta-agent/target-agent/testing-takeover',
   scorecardRef: 'quality-scorecard:opl-meta-agent/target-agent/takeover-acceptance',
   improvementCandidateRef: 'improvement-candidate:opl-meta-agent/target-agent/gated-self-evolution',
@@ -19,6 +21,7 @@ export const OMA_EVALUATION_FIXTURE = {
   evaluationOwner: 'one-person-lab/OPL Foundry Lab',
   packetReceiptRef: 'evaluation-receipt:opl-foundry-lab/target-agent/takeover',
   probeReceiptRef: 'probe-observation-receipt:opl-foundry-lab/target-agent/resume',
+  retryProbeReceiptRef: 'probe-observation-receipt:opl-foundry-lab/target-agent/retry',
   trajectoryReceiptRef: 'trajectory-observation-receipt:opl-foundry-lab/target-agent/takeover',
   scorecardReceiptRef: 'scorecard-receipt:opl-meta-agent/target-agent/takeover',
   promotionReceiptRef: 'promotion-gate-evaluation-receipt:opl-foundry-lab/target-agent/takeover',
@@ -31,79 +34,52 @@ export function writeEvaluationJson(filePath: string, payload: unknown) {
 
 export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
   const ids = OMA_EVALUATION_FIXTURE;
-  const suiteSeedPath = path.join(tmpDir, 'agent-lab-takeover-suite-seed.json');
+  const evaluationRequestPath = path.join(tmpDir, 'oma-evaluation-request.json');
   const workOrderPath = path.join(tmpDir, 'foundry-lab-work-order.json');
   const observationsPath = path.join(tmpDir, 'foundry-lab-evaluation-observations.json');
   const outputDir = path.join(tmpDir, 'foundry-lab-output');
-  const suiteSeed = {
-    surface_kind: 'opl_meta_agent_agent_lab_suite_seed',
-    version: 'opl-meta-agent.agent-lab-suite-seed.v1',
+  const evaluationRequest = {
+    surface_kind: 'opl_meta_agent_foundry_evaluation_request',
+    version: 'opl-meta-agent.foundry-evaluation-request.v1',
+    request_id: ids.requestId,
     suite_id: ids.suiteId,
     suite_kind: 'agent_lab_external_suite',
-    seed_status: 'declarative_seed_candidate_waiting_for_foundry_lab_consumer',
-    execution_owner: ids.evaluationOwner,
-    target_agent_ref: ids.targetAgentRef,
-    target_agent_descriptor_ref: ids.targetDescriptorRef,
-    authority_boundary: {
-      refs_only: true,
-      oma_can_execute_suite: false,
-      oma_can_write_suite_result: false,
-      oma_can_write_owner_receipt_body: false,
-      oma_can_write_promotion_gate: false,
-      can_write_domain_truth: false,
-      can_write_memory_body: false,
-      can_authorize_quality_verdict: false,
-      can_promote_default_agent_without_gate: false,
-    },
-    tasks: [{
+    task_intents: [{
       task_id: ids.taskId,
       domain_id: ids.taskDomainId,
       task_family: 'agent_testing_takeover',
-      target_agent_ref: ids.targetAgentRef,
-      target_agent_descriptor_ref: ids.targetDescriptorRef,
-      environment: {
-        environment_kind: 'fixture',
-        workspace_locator_ref: 'workspace-locator:/tmp/target-agent',
-        sandbox_policy: 'fixture_only_no_artifact_mutation',
-        network_policy: 'offline',
-      },
       instructions_ref: 'instructions:opl-meta-agent/target-agent/takeover',
       agent_entry_ref: 'domain-agent-entry:target-agent',
       stage_refs: ['stage:target-agent/external-agent-lab-evaluation-request'],
       oracle_refs: ['oracle:opl-meta-agent/target-agent/authority-boundary-preserved'],
       scorer_refs: ['scorer:opl-meta-agent/target-agent/takeover-acceptance'],
-      recovery_probe_specs: [{
-        probe_ref: ids.probeRef,
-        probe_kind: 'resume_after_interruption',
-        expected_status: 'passed',
-        source_refs: ['receipt-ref:opl-meta-agent/target-agent/resume-fixture'],
-      }],
-      trajectory_plan: {
-        trajectory_ref: ids.trajectoryRef,
-        requested_run_ref: 'run:opl-meta-agent/target-agent/testing-takeover',
-        agent_executor: 'codex_cli',
-        tool_affordance_refs: ['opl-action:agent-lab/run'],
-        expected_receipt_refs: ['owner-receipt:opl-meta-agent/target-agent/testing-takeover'],
-      },
-      scorecard_spec: {
-        scorecard_ref: ids.scorecardRef,
-        domain_owned: true,
-        opl_scorecard_role: 'scorecard_ref_projection_only',
-        metric_refs: ['metric-ref:descriptor-valid'],
-        evidence_refs: ['evidence-ref:target-agent/descriptor-contract-read'],
-      },
-      improvement_candidate_seed: {
+      metric_refs: ['metric-ref:descriptor-valid'],
+      evidence_refs: ['evidence-ref:target-agent/descriptor-contract-read'],
+      review_refs: ['review:target-agent/takeover'],
+      quality_gate_refs: ['quality-gate:opl-meta-agent/target-agent/domain-owner-boundary'],
+      trajectory_ref: ids.trajectoryRef,
+      requested_run_ref: 'run:opl-meta-agent/target-agent/testing-takeover',
+      artifact_refs: ['artifact-ref:target-agent/external-agent-package'],
+      receipt_refs: ['owner-receipt:opl-meta-agent/target-agent/testing-takeover'],
+      scorecard_ref: ids.scorecardRef,
+      improvement_candidate: {
         candidate_ref: ids.improvementCandidateRef,
         candidate_kind: 'gated_self_evolution',
         target_ref: 'quality-gate:opl-meta-agent/target-agent/domain-owner-boundary',
         allowed_change_scope: 'branch_only',
       },
-      promotion_gate_request: {
-        gate_ref: ids.gateRef,
-        evaluation_owner: ids.evaluationOwner,
-        required_refs: [ids.scorecardRef],
-      },
+      promotion_gate_ref: ids.gateRef,
+      regression_suite_refs: ['regression-suite:opl-meta-agent/target-agent/takeover'],
     }],
+    authority_boundary: {
+      refs_only: true,
+      oma_can_execute_agent_lab_suite: false,
+      oma_can_write_agent_lab_result: false,
+      oma_can_write_owner_receipt_body: false,
+      oma_can_write_promotion_gate: false,
+      oma_can_claim_target_domain_ready: false,
+      oma_can_claim_target_production_ready: false,
+    },
   };
   const workOrder = {
     surface_kind: 'opl_meta_agent_foundry_lab_work_order_candidate',
@@ -119,8 +95,9 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
       target_agent_ref: ids.targetAgentRef,
       descriptor_ref: ids.targetDescriptorRef,
     },
-    suite_seed: {
-      ref: path.basename(suiteSeedPath),
+    evaluation_request: {
+      ref: path.basename(evaluationRequestPath),
+      request_id: ids.requestId,
       suite_id: ids.suiteId,
       suite_kind: 'agent_lab_external_suite',
     },
@@ -141,6 +118,14 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
       work_order_lifecycle_owner: ids.evaluationOwner,
       result_ledger_owner: ids.evaluationOwner,
       target_owner_closeout_owner: 'target-domain',
+    },
+    authority_boundary: {
+      oma_can_execute_agent_lab_suite: false,
+      oma_can_write_agent_lab_result: false,
+      oma_can_write_owner_receipt_body: false,
+      oma_can_write_promotion_gate: false,
+      oma_can_claim_target_domain_ready: false,
+      oma_can_claim_target_production_ready: false,
     },
   };
   const observations = {
@@ -164,13 +149,22 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
       domain_id: ids.taskDomainId,
       target_agent_ref: ids.targetAgentRef,
       target_agent_descriptor_ref: ids.targetDescriptorRef,
-      recovery_probe_observations: [{
-        probe_ref: ids.probeRef,
-        observed_status: 'passed',
-        observation_owner: ids.evaluationOwner,
-        observation_receipt_ref: ids.probeReceiptRef,
-        source_refs: ['no-forbidden-write-proof:target-agent/observed'],
-      }],
+      recovery_probe_observations: [
+        {
+          probe_ref: ids.probeRef,
+          observed_status: 'passed',
+          observation_owner: ids.evaluationOwner,
+          observation_receipt_ref: ids.probeReceiptRef,
+          source_refs: ['no-forbidden-write-proof:target-agent/observed'],
+        },
+        {
+          probe_ref: ids.retryProbeRef,
+          observed_status: 'passed',
+          observation_owner: ids.evaluationOwner,
+          observation_receipt_ref: ids.retryProbeReceiptRef,
+          source_refs: ['no-forbidden-write-proof:target-agent/retry-observed'],
+        },
+      ],
       trajectory_observation: {
         trajectory_ref: ids.trajectoryRef,
         run_ref: 'run:opl-foundry-lab/target-agent/takeover/actual',
@@ -220,17 +214,18 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
     }],
   };
 
-  writeEvaluationJson(suiteSeedPath, suiteSeed);
+  writeEvaluationJson(evaluationRequestPath, evaluationRequest);
   writeEvaluationJson(workOrderPath, workOrder);
   writeEvaluationJson(observationsPath, observations);
   return {
     ids,
-    suiteSeed,
+    evaluationRequest,
     workOrder,
     observations,
     evaluationProvenanceRefs: [
       ids.packetReceiptRef,
       ids.probeReceiptRef,
+      ids.retryProbeReceiptRef,
       ids.trajectoryReceiptRef,
       ids.scorecardReceiptRef,
       ids.promotionReceiptRef,
@@ -245,11 +240,17 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
         task_id: ids.taskId,
         probe_ref: ids.probeRef,
       },
+      {
+        receipt_role: 'recovery_probe_observation',
+        receipt_ref: ids.retryProbeReceiptRef,
+        task_id: ids.taskId,
+        probe_ref: ids.retryProbeRef,
+      },
       { receipt_role: 'scorecard_observation', receipt_ref: ids.scorecardReceiptRef, task_id: ids.taskId },
       { receipt_role: 'stage_completion_policy', receipt_ref: ids.policyReceiptRef, task_id: ids.taskId },
       { receipt_role: 'trajectory_observation', receipt_ref: ids.trajectoryReceiptRef, task_id: ids.taskId },
     ],
-    suiteSeedPath,
+    evaluationRequestPath,
     workOrderPath,
     observationsPath,
     outputDir,
@@ -267,13 +268,6 @@ export function retargetOmaTakeoverEvaluationFixture(
   };
   const workOrder = fixture.workOrder as Record<string, any>;
   Object.assign(workOrder.target_agent, target);
-  const suiteSeed = fixture.suiteSeed as Record<string, any>;
-  suiteSeed.target_agent_ref = target.target_agent_ref;
-  suiteSeed.target_agent_descriptor_ref = target.descriptor_ref;
-  for (const task of suiteSeed.tasks) {
-    task.target_agent_ref = target.target_agent_ref;
-    task.target_agent_descriptor_ref = target.descriptor_ref;
-  }
   const observations = fixture.observations as Record<string, any>;
   observations.target_agent_ref = target.target_agent_ref;
   observations.target_agent_descriptor_ref = target.descriptor_ref;

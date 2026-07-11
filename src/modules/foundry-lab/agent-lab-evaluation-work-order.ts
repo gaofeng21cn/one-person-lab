@@ -19,6 +19,13 @@ import {
   AGENT_LAB_AUTHORITY_BOUNDARY,
   FORBIDDEN_TRUE_AUTHORITY_FLAGS,
 } from './agent-lab-authority.ts';
+import {
+  compileEvaluationSuitePlan,
+  EVALUATION_OWNER,
+  EVALUATION_SUITE_PLAN_SURFACE,
+  EVALUATION_SUITE_PLAN_VERSION,
+  validateEvaluationRequest,
+} from './agent-lab-evaluation-request.ts';
 import type {
   AgentLabImprovementCandidate,
   AgentLabEvaluationProvenanceBinding,
@@ -36,15 +43,13 @@ import { runAgentLabSuite } from './agent-lab.ts';
 const WORK_ORDER_SURFACE = 'opl_meta_agent_foundry_lab_work_order_candidate';
 const WORK_ORDER_VERSION = 'opl-meta-agent.foundry-lab-work-order-candidate.v1';
 const WORK_ORDER_STATUS = 'ready_for_opl_foundry_lab_evaluation';
-const SUITE_SEED_SURFACE = 'opl_meta_agent_agent_lab_suite_seed';
-const SUITE_SEED_VERSION = 'opl-meta-agent.agent-lab-suite-seed.v1';
 const OBSERVATION_PACKET_SURFACE = 'opl_foundry_lab_evaluation_observation_packet';
 const OBSERVATION_PACKET_VERSION = 'opl.foundry-lab-evaluation-observation-packet.v1';
 const CONSUMER_ROLE = 'compile_evaluation_work_order_to_agent_lab_suite_and_execute';
 const ACTION_REF = 'opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>';
-const EVALUATION_OWNER = 'one-person-lab/OPL Foundry Lab';
 const TARGET_OWNER_CLOSEOUT_ROLE = 'target-domain';
 const OUTPUT_ARTIFACT_NAMES = [
+  'foundry-lab-evaluation-suite-plan.json',
   'agent-lab-suite.json',
   'agent-lab-suite-result.json',
   'foundry-lab-execution-receipt.json',
@@ -119,10 +124,12 @@ function assertEvaluationOwner(actual: unknown, field: string) {
 
 function canonicalTargetAgent(workOrder: JsonRecord) {
   const targetAgent = record(workOrder.target_agent);
+  const repoDir = stringValue(targetAgent.repo_dir);
   return {
     domainId: requiredString(targetAgent.domain_id, 'work_order.target_agent.domain_id'),
     targetAgentRef: requiredString(targetAgent.target_agent_ref, 'work_order.target_agent.target_agent_ref'),
     descriptorRef: requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref'),
+    ...(repoDir ? { repoDir } : {}),
   };
 }
 
@@ -161,64 +168,77 @@ function validateWorkOrder(workOrder: JsonRecord) {
     TARGET_OWNER_CLOSEOUT_ROLE,
     'execution_aperture.target_owner_closeout_owner',
   );
+  if (workOrder.suite_seed !== undefined || workOrder.suite_plan !== undefined) {
+    invalid('Foundry Lab evaluation work orders must not carry producer-owned suite seeds or suite plans.', {
+      legacy_fields: [
+        ...(workOrder.suite_seed !== undefined ? ['suite_seed'] : []),
+        ...(workOrder.suite_plan !== undefined ? ['suite_plan'] : []),
+      ],
+    });
+  }
+  const evaluationRequest = record(workOrder.evaluation_request);
+  requiredString(evaluationRequest.ref, 'work_order.evaluation_request.ref');
+  requiredString(evaluationRequest.request_id, 'work_order.evaluation_request.request_id');
+  requiredString(evaluationRequest.suite_id, 'work_order.evaluation_request.suite_id');
+  requiredString(evaluationRequest.suite_kind, 'work_order.evaluation_request.suite_kind');
   canonicalTargetAgent(workOrder);
   assertNoForbiddenAuthorityClaims(workOrder, 'Foundry Lab evaluation work order');
 }
 
-function validateSuiteSeed(workOrder: JsonRecord, suiteSeed: JsonRecord) {
-  assertValue(suiteSeed.surface_kind, SUITE_SEED_SURFACE, 'suite_seed.surface_kind');
-  assertValue(suiteSeed.version, SUITE_SEED_VERSION, 'suite_seed.version');
-  const suiteRef = record(workOrder.suite_seed);
-  assertValue(suiteSeed.suite_id, requiredString(suiteRef.suite_id, 'work_order.suite_seed.suite_id'), 'suite_seed.suite_id');
+function validateSuitePlan(workOrder: JsonRecord, suitePlan: JsonRecord) {
+  assertValue(suitePlan.surface_kind, EVALUATION_SUITE_PLAN_SURFACE, 'suite_plan.surface_kind');
+  assertValue(suitePlan.version, EVALUATION_SUITE_PLAN_VERSION, 'suite_plan.version');
+  const requestRef = record(workOrder.evaluation_request);
+  assertValue(suitePlan.suite_id, requiredString(requestRef.suite_id, 'work_order.evaluation_request.suite_id'), 'suite_plan.suite_id');
   assertValue(
-    suiteSeed.suite_kind,
-    requiredString(suiteRef.suite_kind, 'work_order.suite_seed.suite_kind'),
-    'suite_seed.suite_kind',
+    suitePlan.suite_kind,
+    requiredString(requestRef.suite_kind, 'work_order.evaluation_request.suite_kind'),
+    'suite_plan.suite_kind',
   );
-  assertEvaluationOwner(suiteSeed.execution_owner, 'suite_seed.execution_owner');
+  assertEvaluationOwner(suitePlan.producer, 'suite_plan.producer');
   const targetAgent = canonicalTargetAgent(workOrder);
-  if (suiteSeed.target_agent_ref !== undefined) {
-    assertValue(suiteSeed.target_agent_ref, targetAgent.targetAgentRef, 'suite_seed.target_agent_ref');
+  if (suitePlan.target_agent_ref !== undefined) {
+    assertValue(suitePlan.target_agent_ref, targetAgent.targetAgentRef, 'suite_plan.target_agent_ref');
   }
-  if (suiteSeed.target_agent_descriptor_ref !== undefined) {
+  if (suitePlan.target_agent_descriptor_ref !== undefined) {
     assertValue(
-      suiteSeed.target_agent_descriptor_ref,
+      suitePlan.target_agent_descriptor_ref,
       targetAgent.descriptorRef,
-      'suite_seed.target_agent_descriptor_ref',
+      'suite_plan.target_agent_descriptor_ref',
     );
   }
-  const tasks = recordList(suiteSeed.tasks);
+  const tasks = recordList(suitePlan.tasks);
   if (tasks.length === 0) {
-    invalid('Foundry Lab evaluation suite seed requires at least one task.');
+    invalid('Foundry Lab evaluation suite plan requires at least one task.');
   }
-  const taskIds = tasks.map((task) => requiredString(task.task_id, 'suite_seed.tasks[].task_id'));
+  const taskIds = tasks.map((task) => requiredString(task.task_id, 'suite_plan.tasks[].task_id'));
   tasks.forEach((task) => {
-    requiredString(task.domain_id, 'suite_seed.tasks[].domain_id');
-    assertValue(task.target_agent_ref, targetAgent.targetAgentRef, 'suite_seed.tasks[].target_agent_ref');
+    requiredString(task.domain_id, 'suite_plan.tasks[].domain_id');
+    assertValue(task.target_agent_ref, targetAgent.targetAgentRef, 'suite_plan.tasks[].target_agent_ref');
     assertValue(
       task.target_agent_descriptor_ref,
       targetAgent.descriptorRef,
-      'suite_seed.tasks[].target_agent_descriptor_ref',
+      'suite_plan.tasks[].target_agent_descriptor_ref',
     );
     assertEvaluationOwner(
       record(task.promotion_gate_request).evaluation_owner,
-      'suite_seed.tasks[].promotion_gate_request.evaluation_owner',
+      'suite_plan.tasks[].promotion_gate_request.evaluation_owner',
     );
     allowedChangeScope(record(task.improvement_candidate_seed).allowed_change_scope);
   });
   if (new Set(taskIds).size !== taskIds.length) {
-    invalid('Foundry Lab evaluation suite seed task ids must be unique.', { task_ids: taskIds });
+    invalid('Foundry Lab evaluation suite plan task ids must be unique.', { task_ids: taskIds });
   }
-  assertNoForbiddenAuthorityClaims(suiteSeed, 'Foundry Lab evaluation suite seed');
+  assertNoForbiddenAuthorityClaims(suitePlan, 'Foundry Lab evaluation suite plan');
 }
 
-function promotionGateRequestRefs(suiteSeed: JsonRecord) {
-  return uniqueStringList(recordList(suiteSeed.tasks).map((task) =>
+function promotionGateRequestRefs(suitePlan: JsonRecord) {
+  return uniqueStringList(recordList(suitePlan.tasks).map((task) =>
     stringValue(record(task.promotion_gate_request).gate_ref)));
 }
 
-function candidateRefProjection(workOrder: JsonRecord, suiteSeed: JsonRecord) {
-  const improvementCandidateRefs = uniqueStringList(recordList(suiteSeed.tasks).map((task) =>
+function candidateRefProjection(workOrder: JsonRecord, suitePlan: JsonRecord) {
+  const improvementCandidateRefs = uniqueStringList(recordList(suitePlan.tasks).map((task) =>
     stringValue(record(task.improvement_candidate_seed).candidate_ref)));
   const inputCandidateRefs = stringList(workOrder.candidate_refs);
   const downstreamCandidateRefs = inputCandidateRefs.filter((ref) => !improvementCandidateRefs.includes(ref));
@@ -299,7 +319,7 @@ function assertNoForbiddenAuthorityClaims(value: unknown, label: string) {
 
 function validateObservationPacket(
   workOrder: JsonRecord,
-  suiteSeed: JsonRecord,
+  suitePlan: JsonRecord,
   observationPacket: JsonRecord,
 ) {
   assertValue(observationPacket.surface_kind, OBSERVATION_PACKET_SURFACE, 'observations.surface_kind');
@@ -311,7 +331,7 @@ function validateObservationPacket(
   );
   assertValue(
     observationPacket.suite_id,
-    requiredString(suiteSeed.suite_id, 'suite_seed.suite_id'),
+    requiredString(suitePlan.suite_id, 'suite_plan.suite_id'),
     'observations.suite_id',
   );
   const targetAgent = canonicalTargetAgent(workOrder);
@@ -324,13 +344,13 @@ function validateObservationPacket(
   assertEvaluationOwner(observationPacket.evaluation_owner, 'observations.evaluation_owner');
   requiredString(observationPacket.evaluation_receipt_ref, 'observations.evaluation_receipt_ref');
   assertNoForbiddenAuthorityClaims(observationPacket, 'Foundry Lab evaluation observation packet');
-  const seedTasks = recordList(suiteSeed.tasks);
+  const seedTasks = recordList(suitePlan.tasks);
   for (const seedTask of seedTasks) {
-    const taskId = requiredString(seedTask.task_id, 'suite_seed.tasks[].task_id');
+    const taskId = requiredString(seedTask.task_id, 'suite_plan.tasks[].task_id');
     const observationTask = observationTaskById(observationPacket, taskId);
     assertValue(
       observationTask.domain_id,
-      requiredString(seedTask.domain_id, 'suite_seed.tasks[].domain_id'),
+      requiredString(seedTask.domain_id, 'suite_plan.tasks[].domain_id'),
       'observations.tasks[].domain_id',
     );
     assertValue(
@@ -385,7 +405,7 @@ function compileRecoveryProbes(
   const observations = recordList(observationTask.recovery_probe_observations);
   const specs = recordList(seedTask.recovery_probe_specs);
   const declaredProbeRefs = specs.map((spec) =>
-    requiredString(spec.probe_ref, 'suite_seed.tasks[].recovery_probe_specs[].probe_ref'));
+    requiredString(spec.probe_ref, 'suite_plan.tasks[].recovery_probe_specs[].probe_ref'));
   const undeclaredProbeRefs = observations
     .map((observation) => stringValue(observation.probe_ref))
     .filter((probeRef): probeRef is string =>
@@ -398,7 +418,7 @@ function compileRecoveryProbes(
     });
   }
   return specs.map((spec) => {
-    const probeRef = requiredString(spec.probe_ref, 'suite_seed.tasks[].recovery_probe_specs[].probe_ref');
+    const probeRef = requiredString(spec.probe_ref, 'suite_plan.tasks[].recovery_probe_specs[].probe_ref');
     const matched = observations.filter((observation) => observation.probe_ref === probeRef);
     if (matched.length !== 1) {
       return invalid('Foundry Lab evaluation observation packet must observe every declared recovery probe.', {
@@ -418,10 +438,10 @@ function compileRecoveryProbes(
     );
     return {
       probe_ref: probeRef,
-      probe_kind: requiredString(spec.probe_kind, 'suite_seed.tasks[].recovery_probe_specs[].probe_kind'),
+      probe_kind: requiredString(spec.probe_kind, 'suite_plan.tasks[].recovery_probe_specs[].probe_kind'),
       expected_status: passBlockStatus(
         spec.expected_status,
-        'suite_seed.tasks[].recovery_probe_specs[].expected_status',
+        'suite_plan.tasks[].recovery_probe_specs[].expected_status',
       ),
       observed_status: passBlockStatus(
         observation.observed_status,
@@ -443,7 +463,7 @@ function compileTrajectory(
 ): AgentLabTrajectory {
   const plan = record(seedTask.trajectory_plan);
   const observation = record(observationTask.trajectory_observation);
-  const trajectoryRef = requiredString(plan.trajectory_ref, 'suite_seed.tasks[].trajectory_plan.trajectory_ref');
+  const trajectoryRef = requiredString(plan.trajectory_ref, 'suite_plan.tasks[].trajectory_plan.trajectory_ref');
   assertMatchingRef(observation.trajectory_ref, trajectoryRef, 'observations.tasks[].trajectory_observation.trajectory_ref');
   assertValue(
     observation.observation_owner,
@@ -457,7 +477,7 @@ function compileTrajectory(
   return {
     trajectory_ref: trajectoryRef,
     run_ref: requiredString(observation.run_ref, 'observations.tasks[].trajectory_observation.run_ref'),
-    agent_executor: requiredString(plan.agent_executor, 'suite_seed.tasks[].trajectory_plan.agent_executor'),
+    agent_executor: requiredString(plan.agent_executor, 'suite_plan.tasks[].trajectory_plan.agent_executor'),
     stage_attempt_refs: stringList(observation.stage_attempt_refs),
     tool_call_refs: stringList(observation.tool_call_refs),
     artifact_refs: stringList(observation.artifact_refs),
@@ -474,9 +494,9 @@ function compileTrajectory(
 function compileScorecard(seedTask: JsonRecord, observationTask: JsonRecord): AgentLabScorecard {
   const spec = record(seedTask.scorecard_spec);
   const observation = record(observationTask.scorecard_observation);
-  const scorecardRef = requiredString(spec.scorecard_ref, 'suite_seed.tasks[].scorecard_spec.scorecard_ref');
+  const scorecardRef = requiredString(spec.scorecard_ref, 'suite_plan.tasks[].scorecard_spec.scorecard_ref');
   assertMatchingRef(observation.scorecard_ref, scorecardRef, 'observations.tasks[].scorecard_observation.scorecard_ref');
-  const taskDomainId = requiredString(seedTask.domain_id, 'suite_seed.tasks[].domain_id');
+  const taskDomainId = requiredString(seedTask.domain_id, 'suite_plan.tasks[].domain_id');
   assertValue(
     observation.scorecard_owner,
     taskDomainId,
@@ -487,7 +507,7 @@ function compileScorecard(seedTask: JsonRecord, observationTask: JsonRecord): Ag
     'observations.tasks[].scorecard_observation.scorecard_receipt_ref',
   );
   if (spec.target_agent_owned !== true && spec.domain_owned !== true) {
-    invalid('Foundry Lab evaluation suite seed scorecard must remain domain owned.', {
+    invalid('Foundry Lab evaluation suite plan scorecard must remain domain owned.', {
       scorecard_ref: scorecardRef,
     });
   }
@@ -512,8 +532,8 @@ function allowedChangeScope(value: unknown): AgentLabImprovementCandidate['allow
   if (value === 'candidate_config_only' || value === 'branch_only' || value === 'manual_review_required') {
     return value;
   }
-  return invalid('Foundry Lab evaluation suite seed has unsupported allowed_change_scope.', {
-    field: 'suite_seed.tasks[].improvement_candidate_seed.allowed_change_scope',
+  return invalid('Foundry Lab evaluation suite plan has unsupported allowed_change_scope.', {
+    field: 'suite_plan.tasks[].improvement_candidate_seed.allowed_change_scope',
     value: value ?? null,
   });
 }
@@ -525,9 +545,9 @@ function compileImprovementCandidate(
 ): AgentLabImprovementCandidate {
   const seed = record(seedTask.improvement_candidate_seed);
   return {
-    candidate_ref: requiredString(seed.candidate_ref, 'suite_seed.tasks[].improvement_candidate_seed.candidate_ref'),
-    candidate_kind: requiredString(seed.candidate_kind, 'suite_seed.tasks[].improvement_candidate_seed.candidate_kind'),
-    target_ref: requiredString(seed.target_ref, 'suite_seed.tasks[].improvement_candidate_seed.target_ref'),
+    candidate_ref: requiredString(seed.candidate_ref, 'suite_plan.tasks[].improvement_candidate_seed.candidate_ref'),
+    candidate_kind: requiredString(seed.candidate_kind, 'suite_plan.tasks[].improvement_candidate_seed.candidate_kind'),
+    target_ref: requiredString(seed.target_ref, 'suite_plan.tasks[].improvement_candidate_seed.target_ref'),
     evidence_refs: uniqueStringList([
       ...stringList(seed.evidence_refs),
       ...scorecard.evidence_refs,
@@ -542,9 +562,9 @@ function compileImprovementCandidate(
 function compilePromotionGate(seedTask: JsonRecord, observationTask: JsonRecord): AgentLabPromotionGate {
   const request = record(seedTask.promotion_gate_request);
   const observation = record(observationTask.promotion_gate_observation);
-  const gateRef = requiredString(request.gate_ref, 'suite_seed.tasks[].promotion_gate_request.gate_ref');
+  const gateRef = requiredString(request.gate_ref, 'suite_plan.tasks[].promotion_gate_request.gate_ref');
   assertMatchingRef(observation.gate_ref, gateRef, 'observations.tasks[].promotion_gate_observation.gate_ref');
-  assertEvaluationOwner(request.evaluation_owner, 'suite_seed.tasks[].promotion_gate_request.evaluation_owner');
+  assertEvaluationOwner(request.evaluation_owner, 'suite_plan.tasks[].promotion_gate_request.evaluation_owner');
   assertEvaluationOwner(
     observation.evaluation_owner,
     'observations.tasks[].promotion_gate_observation.evaluation_owner',
@@ -580,7 +600,7 @@ function compileStageCompletionPolicy(
   const policy = record(observationTask.stage_completion_policy);
   assertValue(
     policy.policy_owner,
-    requiredString(seedTask.domain_id, 'suite_seed.tasks[].domain_id'),
+    requiredString(seedTask.domain_id, 'suite_plan.tasks[].domain_id'),
     'observations.tasks[].stage_completion_policy.policy_owner',
   );
   requiredString(
@@ -625,20 +645,20 @@ function compileObservedTask(
   const scorecard = compileScorecard(seedTask, observationTask);
   const environment = record(seedTask.environment);
   return {
-    task_id: requiredString(seedTask.task_id, 'suite_seed.tasks[].task_id'),
-    domain_id: requiredString(seedTask.domain_id, 'suite_seed.tasks[].domain_id'),
-    task_family: requiredString(seedTask.task_family, 'suite_seed.tasks[].task_family'),
+    task_id: requiredString(seedTask.task_id, 'suite_plan.tasks[].task_id'),
+    domain_id: requiredString(seedTask.domain_id, 'suite_plan.tasks[].domain_id'),
+    task_family: requiredString(seedTask.task_family, 'suite_plan.tasks[].task_family'),
     environment: {
-      environment_kind: requiredString(environment.environment_kind, 'suite_seed.tasks[].environment.environment_kind'),
+      environment_kind: requiredString(environment.environment_kind, 'suite_plan.tasks[].environment.environment_kind'),
       workspace_locator_ref: requiredString(
         environment.workspace_locator_ref,
-        'suite_seed.tasks[].environment.workspace_locator_ref',
+        'suite_plan.tasks[].environment.workspace_locator_ref',
       ),
-      sandbox_policy: requiredString(environment.sandbox_policy, 'suite_seed.tasks[].environment.sandbox_policy'),
-      network_policy: requiredString(environment.network_policy, 'suite_seed.tasks[].environment.network_policy'),
+      sandbox_policy: requiredString(environment.sandbox_policy, 'suite_plan.tasks[].environment.sandbox_policy'),
+      network_policy: requiredString(environment.network_policy, 'suite_plan.tasks[].environment.network_policy'),
     },
-    instructions_ref: requiredString(seedTask.instructions_ref, 'suite_seed.tasks[].instructions_ref'),
-    agent_entry_ref: requiredString(seedTask.agent_entry_ref, 'suite_seed.tasks[].agent_entry_ref'),
+    instructions_ref: requiredString(seedTask.instructions_ref, 'suite_plan.tasks[].instructions_ref'),
+    agent_entry_ref: requiredString(seedTask.agent_entry_ref, 'suite_plan.tasks[].agent_entry_ref'),
     stage_refs: stringList(seedTask.stage_refs),
     oracle_refs: stringList(seedTask.oracle_refs),
     scorer_refs: stringList(seedTask.scorer_refs),
@@ -653,17 +673,17 @@ function compileObservedTask(
 }
 
 function compileProductionEvidenceGate(
-  suiteSeed: JsonRecord,
+  suitePlan: JsonRecord,
   observationPacket: JsonRecord,
 ) {
-  if (suiteSeed.suite_kind !== 'agent_production_evidence_suite') {
+  if (suitePlan.suite_kind !== 'agent_production_evidence_suite') {
     return undefined;
   }
-  const seedGate = record(suiteSeed.production_evidence_gate);
+  const seedGate = record(suitePlan.production_evidence_gate);
   const observation = record(observationPacket.production_evidence_gate_observation);
   const expectedGateIds = requiredRefList(
     seedGate.gate_ids,
-    'suite_seed.production_evidence_gate.gate_ids',
+    'suite_plan.production_evidence_gate.gate_ids',
   );
   const observedGateIds = requiredRefList(
     observation.gate_ids,
@@ -671,7 +691,7 @@ function compileProductionEvidenceGate(
   );
   if (expectedGateIds.length !== observedGateIds.length
     || expectedGateIds.some((gateId) => !observedGateIds.includes(gateId))) {
-    invalid('Foundry Lab production evidence gate observation does not match the suite seed gate identity.', {
+    invalid('Foundry Lab production evidence gate observation does not match the suite plan gate identity.', {
       expected_gate_ids: expectedGateIds,
       observed_gate_ids: observedGateIds,
     });
@@ -712,13 +732,13 @@ function compileProductionEvidenceGate(
   };
 }
 
-function evaluationProvenance(suiteSeed: JsonRecord, observationPacket: JsonRecord) {
+function evaluationProvenance(suitePlan: JsonRecord, observationPacket: JsonRecord) {
   const bindings: AgentLabEvaluationProvenanceBinding[] = [{
     receipt_role: 'evaluation_packet',
     receipt_ref: requiredString(observationPacket.evaluation_receipt_ref, 'observations.evaluation_receipt_ref'),
   }];
-  for (const seedTask of recordList(suiteSeed.tasks)) {
-    const taskId = requiredString(seedTask.task_id, 'suite_seed.tasks[].task_id');
+  for (const seedTask of recordList(suitePlan.tasks)) {
+    const taskId = requiredString(seedTask.task_id, 'suite_plan.tasks[].task_id');
     const observationTask = observationTaskById(
       observationPacket,
       taskId,
@@ -770,7 +790,7 @@ function evaluationProvenance(suiteSeed: JsonRecord, observationPacket: JsonReco
       },
     );
   }
-  if (suiteSeed.suite_kind === 'agent_production_evidence_suite') {
+  if (suitePlan.suite_kind === 'agent_production_evidence_suite') {
     bindings.push({
       receipt_role: 'production_evidence_gate_observation',
       receipt_ref: requiredString(
@@ -792,13 +812,13 @@ function evaluationProvenance(suiteSeed: JsonRecord, observationPacket: JsonReco
 
 function compileObservedSuite(
   workOrder: JsonRecord,
-  suiteSeed: JsonRecord,
+  suitePlan: JsonRecord,
   observationPacket: JsonRecord,
 ): AgentLabSuite {
   assertEvaluationOwner(observationPacket.evaluation_owner, 'observations.evaluation_owner');
   const evaluationOwner = EVALUATION_OWNER;
-  const tasks = recordList(suiteSeed.tasks).map((seedTask) => {
-    const taskId = requiredString(seedTask.task_id, 'suite_seed.tasks[].task_id');
+  const tasks = recordList(suitePlan.tasks).map((seedTask) => {
+    const taskId = requiredString(seedTask.task_id, 'suite_plan.tasks[].task_id');
     return compileObservedTask(seedTask, observationTaskById(observationPacket, taskId), evaluationOwner);
   });
   if (recordList(observationPacket.tasks).length !== tasks.length) {
@@ -808,13 +828,13 @@ function compileObservedSuite(
     });
   }
   const productionEvidenceGate = compileProductionEvidenceGate(
-    suiteSeed,
+    suitePlan,
     observationPacket,
   );
-  const provenance = evaluationProvenance(suiteSeed, observationPacket);
+  const provenance = evaluationProvenance(suitePlan, observationPacket);
   return {
-    suite_id: requiredString(suiteSeed.suite_id, 'suite_seed.suite_id'),
-    suite_kind: requiredString(suiteSeed.suite_kind, 'suite_seed.suite_kind'),
+    suite_id: requiredString(suitePlan.suite_id, 'suite_plan.suite_id'),
+    suite_kind: requiredString(suitePlan.suite_kind, 'suite_plan.suite_kind'),
     tasks,
     evaluation_target_agent: evaluationTargetAgent(workOrder),
     evaluation_provenance_refs: provenance.refs,
@@ -827,13 +847,14 @@ function compileObservedSuite(
 function buildBlockedEvaluation(input: {
   workOrder: JsonRecord;
   workOrderPath: string;
-  suiteSeed: JsonRecord;
-  suiteSeedPath: string;
+  evaluationRequestPath: string;
+  suitePlan: JsonRecord;
+  suitePlanPath: string;
   outputDir: string;
 }) {
   const workOrderId = requiredString(input.workOrder.work_order_id, 'work_order.work_order_id');
   const targetAgent = evaluationTargetAgent(input.workOrder);
-  const candidateRefs = candidateRefProjection(input.workOrder, input.suiteSeed);
+  const candidateRefs = candidateRefProjection(input.workOrder, input.suitePlan);
   const executionReceiptPath = path.join(input.outputDir, 'foundry-lab-execution-receipt.json');
   const typedBlockerPath = path.join(input.outputDir, 'foundry-lab-evaluation-typed-blocker.json');
   const evaluationResult = {
@@ -842,7 +863,7 @@ function buildBlockedEvaluation(input: {
     status: 'blocked_missing_evaluation_observations',
     work_order_id: workOrderId,
     evaluation_target_agent: targetAgent,
-    suite_id: requiredString(input.suiteSeed.suite_id, 'suite_seed.suite_id'),
+    suite_id: requiredString(input.suitePlan.suite_id, 'suite_plan.suite_id'),
     missing_observations: ['evaluation_observation_packet'],
     suite_result_ref: null,
     authority_boundary: EVALUATION_AUTHORITY_BOUNDARY,
@@ -877,7 +898,7 @@ function buildBlockedEvaluation(input: {
     },
     source_refs: uniqueStringList([
       input.workOrderPath,
-      input.suiteSeedPath,
+      input.evaluationRequestPath,
       ...stringList(input.workOrder.source_refs),
       ...stringList(input.workOrder.reviewer_refs),
     ]),
@@ -891,7 +912,7 @@ function buildBlockedEvaluation(input: {
     target_owner_receipt_or_typed_blocker_ref: null,
     platform_blocker_ref: typedBlockerPath,
     downstream_pending_outputs: {
-      promotion_gate_request_refs: promotionGateRequestRefs(input.suiteSeed),
+      promotion_gate_request_refs: promotionGateRequestRefs(input.suitePlan),
       mechanism_candidate_refs: candidateRefs.mechanismCandidateRefs,
       other_candidate_refs: candidateRefs.otherCandidateRefs,
       mechanism_proposal_refs: [],
@@ -901,6 +922,7 @@ function buildBlockedEvaluation(input: {
     },
     authority_boundary: EVALUATION_AUTHORITY_BOUNDARY,
   };
+  writeJsonPayloadFile(input.suitePlanPath, input.suitePlan);
   writeJsonPayloadFile(typedBlockerPath, typedBlocker);
   writeJsonPayloadFile(executionReceiptPath, receipt);
 
@@ -909,9 +931,11 @@ function buildBlockedEvaluation(input: {
     version: 'opl.foundry-lab-evaluation-work-order-execution.v1',
     status: evaluationResult.status,
     work_order_path: input.workOrderPath,
-    suite_seed_path: input.suiteSeedPath,
+    evaluation_request_path: input.evaluationRequestPath,
+    suite_plan_path: input.suitePlanPath,
     observation_packet_path: null,
     artifacts: {
+      evaluation_suite_plan_path: input.suitePlanPath,
       compiled_suite_path: null,
       suite_result_path: null,
       execution_receipt_path: executionReceiptPath,
@@ -941,19 +965,20 @@ function platformMissingObservations(suiteResult: ReturnType<typeof runAgentLabS
 function buildObservedEvaluation(input: {
   workOrder: JsonRecord;
   workOrderPath: string;
-  suiteSeed: JsonRecord;
-  suiteSeedPath: string;
+  evaluationRequestPath: string;
+  suitePlan: JsonRecord;
+  suitePlanPath: string;
   observationPacket: JsonRecord;
   observationPacketPath: string;
   outputDir: string;
 }) {
   const workOrderId = requiredString(input.workOrder.work_order_id, 'work_order.work_order_id');
-  const candidateRefs = candidateRefProjection(input.workOrder, input.suiteSeed);
+  const candidateRefs = candidateRefProjection(input.workOrder, input.suitePlan);
   const compiledSuitePath = path.join(input.outputDir, 'agent-lab-suite.json');
   const suiteResultPath = path.join(input.outputDir, 'agent-lab-suite-result.json');
   const executionReceiptPath = path.join(input.outputDir, 'foundry-lab-execution-receipt.json');
   const typedBlockerPath = path.join(input.outputDir, 'foundry-lab-evaluation-typed-blocker.json');
-  const compiledSuite = compileObservedSuite(input.workOrder, input.suiteSeed, input.observationPacket);
+  const compiledSuite = compileObservedSuite(input.workOrder, input.suitePlan, input.observationPacket);
   const suiteResult = runAgentLabSuite(compiledSuite);
   const platformMissing = platformMissingObservations(suiteResult);
   const productionPlatformMissing = suiteResult.production_evidence_gate_result?.missing_required_refs ?? [];
@@ -1003,7 +1028,7 @@ function buildObservedEvaluation(input: {
     },
     source_refs: uniqueStringList([
       input.workOrderPath,
-      input.suiteSeedPath,
+      input.evaluationRequestPath,
       input.observationPacketPath,
       ...evaluationProvenance,
       ...stringList(input.workOrder.source_refs),
@@ -1021,7 +1046,7 @@ function buildObservedEvaluation(input: {
     target_owner_receipt_or_typed_blocker_ref: null,
     platform_blocker_ref: typedBlocker ? typedBlockerPath : null,
     downstream_pending_outputs: {
-      promotion_gate_request_refs: promotionGateRequestRefs(input.suiteSeed),
+      promotion_gate_request_refs: promotionGateRequestRefs(input.suitePlan),
       mechanism_candidate_refs: candidateRefs.mechanismCandidateRefs,
       other_candidate_refs: candidateRefs.otherCandidateRefs,
       mechanism_proposal_refs: [],
@@ -1047,6 +1072,7 @@ function buildObservedEvaluation(input: {
     authority_boundary: EVALUATION_AUTHORITY_BOUNDARY,
   };
 
+  writeJsonPayloadFile(input.suitePlanPath, input.suitePlan);
   writeJsonPayloadFile(compiledSuitePath, compiledSuite);
   writeJsonPayloadFile(suiteResultPath, suiteResult);
   if (typedBlocker) {
@@ -1059,9 +1085,11 @@ function buildObservedEvaluation(input: {
     version: 'opl.foundry-lab-evaluation-work-order-execution.v1',
     status: suiteResult.status,
     work_order_path: input.workOrderPath,
-    suite_seed_path: input.suiteSeedPath,
+    evaluation_request_path: input.evaluationRequestPath,
+    suite_plan_path: input.suitePlanPath,
     observation_packet_path: input.observationPacketPath,
     artifacts: {
+      evaluation_suite_plan_path: input.suitePlanPath,
       compiled_suite_path: compiledSuitePath,
       suite_result_path: suiteResultPath,
       execution_receipt_path: executionReceiptPath,
@@ -1080,27 +1108,45 @@ export function executeAgentLabEvaluationWorkOrder(options: AgentLabEvaluationWo
   const outputDir = path.resolve(options.outputDir);
   const workOrder = readRecord(workOrderPath, 'Foundry Lab evaluation work order');
   validateWorkOrder(workOrder);
-  const suiteSeedRef = requiredString(record(workOrder.suite_seed).ref, 'work_order.suite_seed.ref');
-  const suiteSeedPath = path.resolve(path.dirname(workOrderPath), suiteSeedRef);
-  const suiteSeed = readRecord(suiteSeedPath, 'Foundry Lab evaluation suite seed');
-  validateSuiteSeed(workOrder, suiteSeed);
+  const evaluationRequestRef = requiredString(
+    record(workOrder.evaluation_request).ref,
+    'work_order.evaluation_request.ref',
+  );
+  const evaluationRequestPath = path.resolve(path.dirname(workOrderPath), evaluationRequestRef);
+  const evaluationRequest = readRecord(evaluationRequestPath, 'Foundry Lab evaluation request');
+  validateEvaluationRequest(workOrder, evaluationRequest);
+  const suitePlan = compileEvaluationSuitePlan({
+    workOrder,
+    request: evaluationRequest,
+    targetAgent: canonicalTargetAgent(workOrder),
+  });
+  validateSuitePlan(workOrder, suitePlan);
   assertOutputArtifactsAbsent(outputDir);
   fs.mkdirSync(outputDir, { recursive: true });
+  const suitePlanPath = path.join(outputDir, 'foundry-lab-evaluation-suite-plan.json');
 
   if (!options.observationPacketPath) {
-    return buildBlockedEvaluation({ workOrder, workOrderPath, suiteSeed, suiteSeedPath, outputDir });
+    return buildBlockedEvaluation({
+      workOrder,
+      workOrderPath,
+      evaluationRequestPath,
+      suitePlan,
+      suitePlanPath,
+      outputDir,
+    });
   }
   const observationPacketPath = path.resolve(options.observationPacketPath);
   const observationPacket = readRecord(
     observationPacketPath,
     'Foundry Lab evaluation observation packet',
   );
-  validateObservationPacket(workOrder, suiteSeed, observationPacket);
+  validateObservationPacket(workOrder, suitePlan, observationPacket);
   return buildObservedEvaluation({
     workOrder,
     workOrderPath,
-    suiteSeed,
-    suiteSeedPath,
+    evaluationRequestPath,
+    suitePlan,
+    suitePlanPath,
     observationPacket,
     observationPacketPath,
     outputDir,

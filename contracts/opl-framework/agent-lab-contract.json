@@ -91,7 +91,7 @@
     "owner_closeout_boundary_refs",
     "self_evolution_work_order_candidate_refs",
     "foundry_lab_evaluation_work_order_candidate_refs",
-    "agent_lab_suite_seed_refs",
+    "foundry_lab_evaluation_request_refs",
     "foundry_lab_evaluation_observation_packet_refs"
   ],
   "required_observations": [
@@ -754,20 +754,46 @@
     },
     "canonical_evaluation_owner": "one-person-lab/OPL Foundry Lab",
     "canonical_target_owner_closeout_owner": "target-domain",
-    "accepted_suite_seed": {
-      "surface_kind": "opl_meta_agent_agent_lab_suite_seed",
-      "version": "opl-meta-agent.agent-lab-suite-seed.v1",
-      "role": "declarative_spec_and_request_only",
+    "accepted_evaluation_request": {
+      "surface_kind": "opl_meta_agent_foundry_evaluation_request",
+      "version": "opl-meta-agent.foundry-evaluation-request.v1",
+      "producer_abi_owner": "opl-meta-agent",
+      "producer_abi_scope": "OMA-owned domain evaluation intent and refs only; this is not an OPL generic request identity",
+      "role": "thin_domain_evaluation_intent_only",
+      "work_order_binding_fields": [
+        "request_id",
+        "suite_id",
+        "suite_kind"
+      ],
       "task_identity_policy": {
         "task_domain_owner_may_differ_from_target_agent": true,
         "required_task_fields": [
           "domain_id",
-          "target_agent_ref",
-          "target_agent_descriptor_ref"
+          "task_id",
+          "task_family"
         ],
-        "oma_takeover_identity": "domain_id=opl-meta-agent with target_agent_ref bound to the target agent"
+        "target_identity_owner": "work_order.target_agent"
       },
-      "spec_fields": [
+      "domain_intent_fields": [
+        "instructions_ref",
+        "agent_entry_ref",
+        "stage_refs",
+        "oracle_refs",
+        "scorer_refs",
+        "metric_refs",
+        "evidence_refs",
+        "review_refs",
+        "quality_gate_refs",
+        "trajectory_ref",
+        "requested_run_ref",
+        "artifact_refs",
+        "receipt_refs",
+        "scorecard_ref",
+        "improvement_candidate",
+        "promotion_gate_ref"
+      ],
+      "opl_compiled_suite_plan_fields": [
+        "environment",
         "recovery_probe_specs",
         "trajectory_plan",
         "scorecard_spec",
@@ -775,19 +801,35 @@
         "promotion_gate_request",
         "production_evidence_gate.gate_ids"
       ],
-      "must_not_be_treated_as_observed_fields": [
-        "recovery_probes[].observed_status",
-        "trajectory.run_ref",
-        "trajectory.stage_attempt_refs",
-        "scorecard.passed",
-        "promotion_gate.gate_status"
+      "producer_owned_fields_rejected": [
+        "suite_seed",
+        "suite_plan",
+        "target_agent_ref",
+        "target_agent_descriptor_ref",
+        "evaluation_target_agent",
+        "execution_owner",
+        "required_observations",
+        "production_evidence_gate",
+        "task_intents[].environment",
+        "task_intents[].recovery_probe_specs",
+        "task_intents[].trajectory_plan",
+        "task_intents[].scorecard_spec",
+        "task_intents[].promotion_gate_request",
+        "task_intents[].stage_completion_policy"
       ]
     },
-    "seed_observation_policy": {
+    "opl_compiled_suite_plan": {
+      "surface_kind": "opl_foundry_lab_evaluation_suite_plan",
+      "version": "opl.foundry-lab-evaluation-suite-plan.v1",
+      "owner": "one-person-lab/OPL Foundry Lab",
+      "role": "generic OPL-owned compilation output; it is never accepted from a producer work order",
+      "output_artifact": "foundry-lab-evaluation-suite-plan.json"
+    },
+    "request_observation_policy": {
       "required_observations_owner": "opl_agent_lab_canonical_policy",
-      "seed_required_observations_can_narrow_canonical_gate": false,
-      "seed_production_gate_is_observation": false,
-      "production_gate_seed_role": "gate_identity_spec_only"
+      "request_required_observations_can_narrow_canonical_gate": false,
+      "request_production_gate_is_observation": false,
+      "production_gate_request_role": "gate_identity_spec_only"
     },
     "observation_packet": {
       "surface_kind": "opl_foundry_lab_evaluation_observation_packet",
@@ -847,8 +889,8 @@
     },
     "production_evidence_gate_observation": {
       "required_for_suite_kind": "agent_production_evidence_suite",
-      "seed_gate_refs_are_observations": false,
-      "seed_gate_ids_are_identity_spec_only": true,
+      "request_gate_refs_are_observations": false,
+      "request_gate_ids_are_identity_spec_only": true,
       "required_provenance_fields": [
         "evaluation_owner",
         "evaluation_receipt_ref"
@@ -866,6 +908,7 @@
       "status": "blocked_missing_evaluation_observations",
       "writes_platform_typed_blocker": true,
       "writes_execution_receipt": true,
+      "writes_evaluation_suite_plan": true,
       "writes_agent_lab_suite_result": false,
       "writes_owner_receipt": false,
       "writes_target_typed_blocker": false
@@ -933,7 +976,7 @@
     ],
     "candidate_ref_projection": {
       "input_candidate_refs_are_output_results": false,
-      "immediate_improvement_source": "suite_seed.tasks[].improvement_candidate_seed.candidate_ref",
+      "immediate_improvement_source": "evaluation_request.task_intents[].improvement_candidate.candidate_ref",
       "mechanism_candidate_refs_remain_downstream_pending": true,
       "unclassified_input_candidate_refs_remain_non_result_inputs": true
     },
