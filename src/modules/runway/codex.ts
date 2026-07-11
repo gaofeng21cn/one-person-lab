@@ -64,6 +64,7 @@ export interface CodexCommandOptions {
 }
 
 export interface CodexStreamingCommandOptions {
+  binaryPath?: string;
   onStdoutLine?: (line: string) => void;
   onStderrLine?: (line: string) => void;
   onStdoutEvent?: (event: CodexExecEvent) => void;
@@ -311,7 +312,9 @@ export async function runCodexCommandStreaming(
   args: string[],
   options: CodexStreamingCommandOptions = {},
 ): Promise<CodexCommandResult> {
-  const codexBinary = resolveCodexBinary();
+  const codexBinary = options.binaryPath
+    ? { path: options.binaryPath, source: 'env' as const }
+    : resolveCodexBinary();
 
   if (!codexBinary) {
     throw new FrameworkContractError(

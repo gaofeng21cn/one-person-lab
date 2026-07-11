@@ -5,6 +5,15 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { runAgentExecutor } from './agent-executor.ts';
 import type { AgentExecutionRequest, AgentExecutionReceipt } from './agent-executor.ts';
 
+export {
+  buildCodexExecArgs,
+  parseCodexExecOutput,
+  resolveCodexBinary,
+  runCodexCommand,
+  runCodexCommandStreaming,
+} from './codex.ts';
+export type { CodexCommandResult, CodexExecEvent, CodexExecOptions, CodexStreamingCommandOptions } from './codex.ts';
+
 type JsonRecord = Record<string, unknown>;
 
 export type DomainRunIdentity = {
