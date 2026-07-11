@@ -86,6 +86,99 @@ function minimalManifest(targetDomainId = 'med-autoscience') {
   };
 }
 
+function canonicalActionCatalog() {
+  return {
+    surface_kind: 'family_action_catalog',
+    version: 'family-action-catalog.v1',
+    catalog_id: 'redcube_action_catalog',
+    target_domain_id: 'redcube_ai',
+    owner: 'redcube_ai',
+    authority_boundary: {
+      domain_truth_owner: 'redcube_ai',
+      opl_role: 'projection_consumer_only',
+    },
+    actions: ['start_deliverable', 'review_deliverable'].map((actionId) => ({
+      action_id: actionId,
+      title: actionId,
+      summary: `${actionId} through the canonical RedCube contract.`,
+      owner: 'redcube_ai',
+      effect: 'mutating',
+      source_command: {
+        command: `redcube ${actionId}`,
+        surface_kind: 'product_entry',
+      },
+      input_schema_ref: `schema:redcube.${actionId}.request.v1`,
+      output_schema_ref: `schema:redcube.${actionId}.response.v1`,
+      workspace_locator_fields: ['workspace_root'],
+      human_gate_ids: [],
+      supported_surfaces: {
+        cli: { command: `redcube ${actionId}`, surface_kind: 'product_entry' },
+        mcp: null,
+        skill: null,
+        product_entry: { action_key: actionId, surface_kind: 'product_entry' },
+        openai: null,
+        ai_sdk: null,
+      },
+    })),
+  };
+}
+
+function canonicalStageControlPlane() {
+  return {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'redcube_stage_control_plane',
+    target_domain_id: 'redcube_ai',
+    owner: 'redcube_ai',
+    authority_boundary: {
+      opl_can_write_visual_truth: false,
+    },
+    stages: [
+      ['source_intake', 'start_deliverable'],
+      ['artifact_creation', 'start_deliverable'],
+      ['review_and_revision', 'review_deliverable'],
+    ].map(([stageId, actionId]) => ({
+      stage_id: stageId,
+      stage_kind: 'domain_specific',
+      title: stageId,
+      goal: `${stageId} is ordered by the canonical stage contract.`,
+      owner: 'redcube_ai',
+      allowed_action_refs: [actionId],
+      authority_boundary: {
+        opl_can_write_visual_truth: false,
+      },
+    })),
+  };
+}
+
+function canonicalRefManifest() {
+  const manifest = structuredClone(loadFamilyManifestFixtures().redcube) as Record<string, unknown>;
+  manifest.family_action_catalog_ref = {
+    ref_kind: 'repo_path',
+    ref: 'contracts/action_catalog.json',
+    label: 'canonical RedCube action catalog',
+  };
+  manifest.family_stage_control_plane_ref = {
+    ref_kind: 'repo_path',
+    ref: 'contracts/stage_control_plane.json',
+    label: 'canonical RedCube stage control plane',
+  };
+  return manifest;
+}
+
+function writeCanonicalManifestContracts(workspacePath: string) {
+  const contractsDir = path.join(workspacePath, 'contracts');
+  fs.mkdirSync(contractsDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(contractsDir, 'action_catalog.json'),
+    `${JSON.stringify(canonicalActionCatalog())}\n`,
+  );
+  fs.writeFileSync(
+    path.join(contractsDir, 'stage_control_plane.json'),
+    `${JSON.stringify(canonicalStageControlPlane())}\n`,
+  );
+}
+
 function rcaVisualManifest() {
   return {
     ...loadFamilyManifestFixtures().redcube,
@@ -217,6 +310,87 @@ test('resolveBindingManifest resolves a configured command with env timeout poli
     assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
     assert.equal(entry.error, null);
     assert.equal(entry.manifest?.target_domain_id, 'med-autoscience');
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('resolveBindingManifest hydrates canonical action and stage contracts from refs without accepting a body/ref mirror', () => {
+  const workspacePath = createWorkspace();
+  try {
+    writeCanonicalManifestContracts(workspacePath);
+    const manifest = canonicalRefManifest();
+    const scriptPath = writeScript(
+      workspacePath,
+      'manifest.cjs',
+      `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
+    );
+
+    const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+
+    assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
+    assert.equal(entry.manifest?.family_action_catalog_source_ref?.ref, 'contracts/action_catalog.json');
+    assert.equal(entry.manifest?.family_stage_control_plane_source_ref?.ref, 'contracts/stage_control_plane.json');
+    assert.deepEqual(
+      entry.manifest?.family_action_catalog?.actions.map((action) => action.action_id),
+      ['start_deliverable', 'review_deliverable'],
+    );
+    assert.deepEqual(
+      entry.manifest?.family_stage_control_plane?.stages.map((stage) => stage.stage_id),
+      ['source_intake', 'artifact_creation', 'review_and_revision'],
+    );
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('resolveBindingManifest rejects non-canonical or duplicated family contract sources', () => {
+  const workspacePath = createWorkspace();
+  try {
+    writeCanonicalManifestContracts(workspacePath);
+    const cases: Array<[string, Record<string, unknown>, RegExp]> = [
+      [
+        'body-and-ref',
+        {
+          ...canonicalRefManifest(),
+          family_action_catalog: canonicalActionCatalog(),
+        },
+        /either an inline body or family_action_catalog_ref, not both/i,
+      ],
+      [
+        'path-traversal',
+        {
+          ...canonicalRefManifest(),
+          family_stage_control_plane_ref: {
+            ref_kind: 'repo_path',
+            ref: '../stage_control_plane.json',
+          },
+        },
+        /family_stage_control_plane_ref\.ref must be contracts\/stage_control_plane\.json/i,
+      ],
+      [
+        'external-uri',
+        {
+          ...canonicalRefManifest(),
+          family_action_catalog_ref: {
+            ref_kind: 'external_url',
+            ref: 'https://example.invalid/action_catalog.json',
+          },
+        },
+        /family_action_catalog_ref\.ref_kind must be repo_path/i,
+      ],
+    ];
+
+    for (const [name, manifest, message] of cases) {
+      const scriptPath = writeScript(
+        workspacePath,
+        `${name}.cjs`,
+        `process.stdout.write(${JSON.stringify(`${JSON.stringify(manifest)}\n`)});\n`,
+      );
+      const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
+      assert.equal(entry.status, 'invalid_manifest');
+      assert.match(entry.error?.message ?? '', message);
+    }
   } finally {
     fs.rmSync(workspacePath, { recursive: true, force: true });
   }

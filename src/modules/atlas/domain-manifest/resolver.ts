@@ -236,7 +236,7 @@ function buildResolvedManifestEntry(
     workspace_path: binding.workspace_path,
     manifest_command: manifestCommand,
     status: 'resolved',
-    manifest: normalizeManifest(materialized),
+    manifest: normalizeManifest(materialized, { repoDir: binding.workspace_path }),
     error: null,
   };
 }

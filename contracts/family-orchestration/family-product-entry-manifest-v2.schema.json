@@ -273,6 +273,15 @@
     "family_action_catalog": {
       "$ref": "family-action-catalog.schema.json"
     },
+    "family_action_catalog_ref": {
+      "$ref": "#/$defs/actionCatalogContractRef"
+    },
+    "family_stage_control_plane": {
+      "$ref": "family-stage-control-plane.schema.json"
+    },
+    "family_stage_control_plane_ref": {
+      "$ref": "#/$defs/stageControlPlaneContractRef"
+    },
     "family_stage_integrity_metadata": {
       "$ref": "family-stage-integrity-metadata.schema.json"
     },
@@ -292,6 +301,24 @@
       }
     }
   },
+  "allOf": [
+    {
+      "not": {
+        "required": [
+          "family_action_catalog",
+          "family_action_catalog_ref"
+        ]
+      }
+    },
+    {
+      "not": {
+        "required": [
+          "family_stage_control_plane",
+          "family_stage_control_plane_ref"
+        ]
+      }
+    }
+  ],
   "$defs": {
     "shellCommand": {
       "type": "object",
@@ -442,6 +469,46 @@
         "ref": {
           "type": "string",
           "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "actionCatalogContractRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "const": "repo_path"
+        },
+        "ref": {
+          "const": "contracts/action_catalog.json"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stageControlPlaneContractRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "const": "repo_path"
+        },
+        "ref": {
+          "const": "contracts/stage_control_plane.json"
         },
         "label": {
           "type": "string",

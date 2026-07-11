@@ -498,7 +498,9 @@ export interface NormalizedDomainManifest {
     checkpoint_lineage_surface: JsonRecord | null;
   } | null;
   family_action_catalog: FamilyActionCatalog | null;
+  family_action_catalog_source_ref: NormalizedSurfaceRef | null;
   family_stage_control_plane: FamilyStageControlPlane | null;
+  family_stage_control_plane_source_ref: NormalizedSurfaceRef | null;
   family_transition_spec_descriptor: JsonRecord | null;
   family_transition_spec: FamilyTransitionSpec | null;
   family_transition_matrix_cases: FamilyTransitionMatrixCase[];

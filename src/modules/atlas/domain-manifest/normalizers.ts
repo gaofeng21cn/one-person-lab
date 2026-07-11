@@ -1,9 +1,13 @@
+import fs from 'node:fs';
+
 import {
   validateFamilyDomainEntryContract,
   validateUserInteractionContract,
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
 import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-catalog-contract.ts';
+import { parseJsonText } from '../../../kernel/json-file.ts';
+import { resolveContainedRepoJsonFile } from '../../../kernel/repo-contained-json-file.ts';
 import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../../../kernel/managed-runtime-contract.ts';
@@ -61,6 +65,60 @@ import {
 } from './shared-utils.ts';
 
 type JsonRecord = Record<string, unknown>;
+
+type ManifestNormalizationOptions = {
+  repoDir?: string;
+};
+
+type CanonicalManifestSurface<T> = {
+  value: T | null;
+  sourceRef: NormalizedSurfaceRef | null;
+};
+
+function hasOwn(record: JsonRecord, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, field);
+}
+
+function resolveCanonicalManifestSurface<T>(
+  manifest: JsonRecord,
+  bodyField: string,
+  refField: string,
+  expectedRef: string,
+  repoDir: string | undefined,
+  normalize: (value: unknown, field?: string) => T | null,
+): CanonicalManifestSurface<T> {
+  if (hasOwn(manifest, bodyField) && hasOwn(manifest, refField)) {
+    throw new Error(`${bodyField} must provide either an inline body or ${refField}, not both.`);
+  }
+  if (!hasOwn(manifest, refField)) {
+    return { value: normalize(manifest[bodyField], bodyField), sourceRef: null };
+  }
+  if (!repoDir) {
+    throw new Error(`${refField} requires a bound domain repository path.`);
+  }
+
+  const ref = requireRecord(manifest[refField], refField);
+  if (requireString(ref.ref_kind, `${refField}.ref_kind`) !== 'repo_path') {
+    throw new Error(`${refField}.ref_kind must be repo_path.`);
+  }
+  if (requireString(ref.ref, `${refField}.ref`) !== expectedRef) {
+    throw new Error(`${refField}.ref must be ${expectedRef}.`);
+  }
+
+  const resolved = resolveContainedRepoJsonFile(repoDir, expectedRef, refField, 'domain repo');
+  const payload = parseJsonText(fs.readFileSync(resolved.real_path, 'utf8'));
+  if (!isRecord(payload)) {
+    throw new Error(`${refField} must resolve to a JSON object.`);
+  }
+  return {
+    value: normalize(payload, refField),
+    sourceRef: {
+      ref_kind: 'repo_path',
+      ref: resolved.repo_relative_ref,
+      label: optionalString(ref.label) ?? bodyField,
+    },
+  };
+}
 
 function normalizeRuntimeInventory(value: unknown): NormalizedRuntimeInventory | null {
   if (!isRecord(value)) {
@@ -741,7 +799,10 @@ function normalizeProgressProjection(
   };
 }
 
-export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
+export function normalizeManifest(
+  payload: JsonRecord,
+  options: ManifestNormalizationOptions = {},
+): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const manifestWrapper = isRecord(payload.product_entry_manifest) ? payload : {};
   const manifestWithWrapperSidecars = {
@@ -805,8 +866,22 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
     : null;
-  const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
-  const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
+  const familyActionCatalogSurface = resolveCanonicalManifestSurface(
+    manifest,
+    'family_action_catalog',
+    'family_action_catalog_ref',
+    'contracts/action_catalog.json',
+    options.repoDir,
+    normalizeFamilyActionCatalog,
+  );
+  const familyStageControlPlaneSurface = resolveCanonicalManifestSurface(
+    manifest,
+    'family_stage_control_plane',
+    'family_stage_control_plane_ref',
+    'contracts/stage_control_plane.json',
+    options.repoDir,
+    normalizeFamilyStageControlPlane,
+  );
   const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
   const familyTransitionSurfaces = normalizeFamilyTransitionSurfaces(manifest, manifestTargetDomainId);
   const grantTransitionOracle = normalizeGrantTransitionOracleSurface(manifest.grant_transition_oracle);
@@ -940,8 +1015,10 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
             : null,
         }
       : null,
-    family_action_catalog: familyActionCatalog,
-    family_stage_control_plane: familyStageControlPlane,
+    family_action_catalog: familyActionCatalogSurface.value,
+    family_action_catalog_source_ref: familyActionCatalogSurface.sourceRef,
+    family_stage_control_plane: familyStageControlPlaneSurface.value,
+    family_stage_control_plane_source_ref: familyStageControlPlaneSurface.sourceRef,
     ...familyTransitionSurfaces,
     family_transition_materialization: isRecord(manifest.family_transition_materialization)
       ? manifest.family_transition_materialization

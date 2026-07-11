@@ -155,6 +155,8 @@ For `MAS` v2, the consumable projection anchors are domain-owned `study_charter`
 - `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
 - `descriptor_refs`, parity, readiness, and authority boundaries
 
+An admitted domain may expose `family_action_catalog_ref` and `family_stage_control_plane_ref` instead of embedding those two contract bodies in its product-entry manifest. OPL accepts only the fixed repo-local paths `contracts/action_catalog.json` and `contracts/stage_control_plane.json`, materializes them for its generated read model, and rejects body-plus-ref payloads, URLs, and alternate paths.
+
 This read model is for CLI/App discovery, maintainer inspection, admission gates, and operator drilldown. It carries only refs, status, locators, parity, and forbidden-authority flags. It does not carry memory body text, long prompt/skill bodies, domain route judgments, quality verdicts, publication/fundability/visual verdicts, or artifact authority.
 
 For MAS, this means `mas_publication_route_memory` can be discovered as a `domain_memory_descriptor` through the unified descriptor, while the actual paper-route memory body remains Markdown-first in MAS. OPL only routes operators and agents to the right refs.
