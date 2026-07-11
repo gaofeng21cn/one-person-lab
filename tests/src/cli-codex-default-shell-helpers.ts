@@ -484,6 +484,30 @@ const generatedSurfaceRefs = [
   { surface_id: 'mcp', owner: 'one-person-lab', status: 'descriptor_source_available' },
   { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
   { surface_id: 'product_entry_manifest', owner: 'one-person-lab', status: 'descriptor_source_available' },
+  {
+    surface_id: 'domain_handler',
+    owner: 'one-person-lab',
+    target_role: 'opl_generated_surface',
+    status: 'descriptor_source_available',
+  },
+  {
+    surface_id: 'status_read_model',
+    owner: 'one-person-lab',
+    target_role: 'opl_generated_surface',
+    status: 'descriptor_source_available',
+  },
+  {
+    surface_id: 'workbench_drilldown',
+    owner: 'one-person-lab',
+    target_role: 'opl_hosted_surface',
+    status: 'descriptor_source_available',
+  },
+  {
+    surface_id: 'functional_harness_cases',
+    owner: 'one-person-lab',
+    target_role: 'opl_generated_surface',
+    status: 'descriptor_source_available',
+  },
 ];
 
 const targetActionAuthorityBoundary = {
