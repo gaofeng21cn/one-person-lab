@@ -120,6 +120,7 @@ const fastTestFiles = [
   'tests/src/cli/cases/runtime-environment-substrate-command-surface.test.ts',
   'tests/src/cli/cases/pack-bundle-command-surface.test.ts',
   'tests/src/cli/cases/pack-native-helper-probe.test.ts',
+  'tests/src/cli/cases/pack-native-helper-run.test.ts',
   'tests/src/cli/cases/opl-foundation-skills-plugin-surface.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/connect-scientific.test.ts', 'tests/src/cli/cases/connect-reference-verification.test.ts', 'tests/src/cli/cases/connect-external-skills.test.ts', 'tests/src/cli/cases/connect-foundation-skills.test.ts', 'tests/src/cli/cases/connect-agent-packages.test.ts']),
   'tests/src/standard-agent-framework-link.test.ts',
@@ -208,6 +209,7 @@ const readModelGateTestFiles = [
   ...expandTestFiles([
     'tests/src/cli/cases/agents-scaffold-progress-first.test.ts', 'tests/src/cli/cases/agents-scaffold.test.ts',
     'tests/src/cli/cases/agents-scaffold-consumption-evidence.test.ts', 'tests/src/cli/cases/agents-scaffold-generation.test.ts',
+    'tests/src/cli/cases/agents-scaffold-materialization.test.ts',
     'tests/src/cli/cases/agents-check.test.ts',
     'tests/src/cli/cases/agents-scaffold-validation-failures.test.ts',
   ]),

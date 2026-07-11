@@ -70,6 +70,20 @@ function sha256(bytes: Buffer) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
+function targetSnapshot(root: string) {
+  if (!fs.existsSync(root)) return null;
+  const files: Record<string, string> = {};
+  const visit = (current: string) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolute = path.join(current, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      if (entry.isFile()) files[path.relative(root, absolute)] = sha256(fs.readFileSync(absolute));
+    }
+  };
+  visit(root);
+  return files;
+}
+
 test('agents scaffold materializes only declared files and OPL-signs byte digests', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-materialize-'));
   const target = path.join(root, 'target');
@@ -118,6 +132,50 @@ test('agents scaffold rejects traversal, duplicate paths, and OMA final-receipt 
       ]).payload.error.code, 'contract_shape_invalid');
       fs.rmSync(target, { recursive: true, force: true });
     }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('agents scaffold preflights malformed contracts, projections, and candidates before any target write', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scaffold-preflight-'));
+  const target = path.join(root, 'target');
+  const requestPath = path.join(root, 'request.json');
+  fs.mkdirSync(target);
+  fs.writeFileSync(path.join(target, 'owner-file.txt'), 'must remain byte-identical\n');
+  const baseline = targetSnapshot(target);
+  const expectedReceiptRef = 'build-receipt-ref:opl-meta-agent/fixture-agent';
+  const invalidRequests = [
+    request({
+      contracts: [{ path: 'contracts/action_catalog.json', value: {}, write_policy: 'append' }],
+    }),
+    request({
+      build_receipt_installation: {
+        expected_build_receipt_ref: expectedReceiptRef,
+        receipt_path: 'contracts/agent_build_receipt.json',
+        projection_paths: ['contracts/domain_descriptor.json'],
+      },
+    }),
+    request({
+      build_receipt_candidate: {
+        surface_kind: 'opl_meta_agent_build_receipt',
+        receipt_ref: expectedReceiptRef,
+        receipt_timing: 'post_materialization',
+      },
+    }),
+  ];
+  try {
+    for (const invalid of invalidRequests) {
+      fs.writeFileSync(requestPath, JSON.stringify(invalid));
+      assert.equal(runCliFailure([
+        'agents', 'scaffold', '--materialize-request', requestPath, '--target-dir', target,
+      ]).payload.error.code, 'contract_shape_invalid');
+      assert.deepEqual(targetSnapshot(target), baseline);
+    }
+    const absentTarget = path.join(root, 'absent-target');
+    fs.writeFileSync(requestPath, JSON.stringify(invalidRequests[2]));
+    runCliFailure(['agents', 'scaffold', '--materialize-request', requestPath, '--target-dir', absentTarget]);
+    assert.equal(fs.existsSync(absentTarget), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

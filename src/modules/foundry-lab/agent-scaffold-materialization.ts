@@ -183,6 +183,196 @@ function validateHeader(request: Record<string, unknown>) {
   });
 }
 
+function parseJsonObjectText(raw: string, field: string) {
+  try {
+    return requireObject(parseJsonText(raw), field);
+  } catch (error) {
+    if (error instanceof FrameworkContractError) throw error;
+    fail(`${field} must contain valid JSON.`, {
+      field,
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function inspectTargetBeforeWrite(targetDir: string) {
+  const resolved = path.resolve(targetDir);
+  if (!fs.existsSync(resolved)) return resolved;
+  if (fs.lstatSync(resolved).isSymbolicLink()) {
+    fail('Materialization target directory must not be a symlink.', { target_dir: resolved });
+  }
+  if (!fs.statSync(resolved).isDirectory()) {
+    fail('Materialization target must be a directory.', { target_dir: resolved });
+  }
+  const real = fs.realpathSync(resolved);
+  assertNoExistingSymlinks(real);
+  return real;
+}
+
+function preflightMaterializationRequest(request: Record<string, unknown>, targetDir: string) {
+  validateHeader(request);
+  const target = requireObject(request.target_identity, 'target_identity');
+  const domainId = requireString(target.domain_id, 'target_identity.domain_id');
+  const domainLabel = requireString(target.domain_label, 'target_identity.domain_label');
+  if (target.target_agent_ref !== `domain-agent:${domainId}`) {
+    fail('target_identity.target_agent_ref must match domain_id.');
+  }
+
+  const targetRoot = inspectTargetBeforeWrite(targetDir);
+  const declaredPaths = new Set<string>();
+  const declaredBodies = new Map<string, string>();
+  const addDeclaredPath = (relativePath: string, field: string) => {
+    if (declaredPaths.has(relativePath)) {
+      fail('Scaffold materialization request declares a path more than once.', { path: relativePath, field });
+    }
+    declaredPaths.add(relativePath);
+  };
+
+  if (!Array.isArray(request.files) || request.files.length === 0) fail('files must be a non-empty array.');
+  request.files.forEach((value, index) => {
+    const file = requireObject(value, `files[${index}]`);
+    const relativePath = safeRelativePath(file.path, `files[${index}].path`);
+    const body = requireString(file.body, `files[${index}].body`);
+    requireString(file.role, `files[${index}].role`);
+    addDeclaredPath(relativePath, `files[${index}].path`);
+    declaredBodies.set(relativePath, body);
+  });
+
+  if (!Array.isArray(request.json_projections) || request.json_projections.length !== 2) {
+    fail('json_projections must contain the two allowed merge-object projections.');
+  }
+  const projectionMergePaths = new Set<string>();
+  request.json_projections.forEach((value, index) => {
+    const projection = requireObject(value, `json_projections[${index}]`);
+    const relativePath = safeRelativePath(projection.path, `json_projections[${index}].path`);
+    if (!MERGE_PATHS.includes(relativePath as typeof MERGE_PATHS[number]) || projection.merge_policy !== 'merge_object') {
+      fail('json_projections may only shallow-merge the two declared OPL paths.', { path: relativePath });
+    }
+    if (projectionMergePaths.has(relativePath)) {
+      fail('json_projections must declare each allowed merge path exactly once.', { path: relativePath });
+    }
+    projectionMergePaths.add(relativePath);
+    requireObject(projection.value, `json_projections[${index}].value`);
+    const pendingBody = declaredBodies.get(relativePath);
+    if (pendingBody !== undefined) {
+      parseJsonObjectText(pendingBody, `${relativePath} declared body`);
+    } else {
+      const existingPath = path.join(targetRoot, relativePath);
+      if (fs.existsSync(existingPath)) {
+        parseJsonObjectText(fs.readFileSync(existingPath, 'utf8'), `${relativePath} existing file`);
+      }
+    }
+  });
+  if (projectionMergePaths.size !== MERGE_PATHS.length
+    || MERGE_PATHS.some((relativePath) => !projectionMergePaths.has(relativePath))) {
+    fail('json_projections must declare both allowed merge paths exactly once.');
+  }
+
+  const replacements: Array<[unknown, string]> = [[request.stage_manifest, 'stage_manifest']];
+  if (!Array.isArray(request.contracts) || request.contracts.length === 0) fail('contracts must be a non-empty array.');
+  request.contracts.forEach((value, index) => replacements.push([value, `contracts[${index}]`]));
+  for (const [value, field] of replacements) {
+    const replacement = requireObject(value, field);
+    if (replacement.write_policy !== 'replace_declared_files_only') fail(`${field}.write_policy is invalid.`);
+    const relativePath = safeRelativePath(replacement.path, `${field}.path`);
+    requireObject(replacement.value, `${field}.value`);
+    addDeclaredPath(relativePath, `${field}.path`);
+  }
+
+  const compilerInput = requireObject(request.pack_compiler_input, 'pack_compiler_input');
+  const additions = compilerInput.required_domain_pack_path_additions;
+  if (!Array.isArray(additions) || additions.some((entry) => typeof entry !== 'string')) {
+    fail('pack_compiler_input.required_domain_pack_path_additions must be a string array.');
+  }
+  additions.forEach((entry, index) => safeRelativePath(entry, `required_domain_pack_path_additions[${index}]`));
+  if (new Set(additions).size !== additions.length) {
+    fail('pack_compiler_input.required_domain_pack_path_additions must be unique.');
+  }
+  const packPath = 'contracts/pack_compiler_input.json';
+  const declaredPackBody = declaredBodies.get(packPath);
+  if (declaredPackBody !== undefined) {
+    const pack = parseJsonObjectText(declaredPackBody, packPath);
+    if (!Array.isArray(pack.required_domain_pack_paths)
+      || pack.required_domain_pack_paths.some((entry) => typeof entry !== 'string')) {
+      fail('contracts/pack_compiler_input.json requires required_domain_pack_paths.');
+    }
+  } else {
+    const existingPackPath = path.join(targetRoot, packPath);
+    if (fs.existsSync(existingPackPath)) {
+      const pack = parseJsonObjectText(fs.readFileSync(existingPackPath, 'utf8'), `${packPath} existing file`);
+      if (!Array.isArray(pack.required_domain_pack_paths)
+        || pack.required_domain_pack_paths.some((entry) => typeof entry !== 'string')) {
+        fail('contracts/pack_compiler_input.json requires required_domain_pack_paths.');
+      }
+    }
+  }
+
+  const installation = requireObject(request.build_receipt_installation, 'build_receipt_installation');
+  const receiptPath = safeRelativePath(installation.receipt_path, 'build_receipt_installation.receipt_path');
+  if (receiptPath !== 'contracts/agent_build_receipt.json' || declaredPaths.has(receiptPath)) {
+    fail('build_receipt_installation.receipt_path must be the OPL-owned undeclared final receipt path.');
+  }
+  const expectedReceiptRef = requireString(
+    installation.expected_build_receipt_ref,
+    'build_receipt_installation.expected_build_receipt_ref',
+  );
+  const projectionPaths = installation.projection_paths;
+  const expectedProjectionPaths = [
+    'contracts/domain_descriptor.json',
+    'contracts/capability_map.json',
+    'contracts/stage_control_plane.json',
+  ];
+  if (!Array.isArray(projectionPaths)
+    || projectionPaths.some((entry) => typeof entry !== 'string')
+    || !isDeepStrictEqual(projectionPaths, expectedProjectionPaths)) {
+    fail('build_receipt_installation.projection_paths is invalid.');
+  }
+  for (const relativePath of projectionPaths as string[]) {
+    if (!declaredPaths.has(relativePath) && !fs.existsSync(path.join(targetRoot, relativePath))) {
+      if (!MERGE_PATHS.includes(relativePath as typeof MERGE_PATHS[number])) {
+        fail('build receipt projection target must exist or be declared by the request.', { path: relativePath });
+      }
+      continue;
+    }
+    const declaredBody = declaredBodies.get(relativePath);
+    if (declaredBody !== undefined) parseJsonObjectText(declaredBody, `${relativePath} declared body`);
+  }
+
+  const candidate = requireObject(request.build_receipt_candidate, 'build_receipt_candidate');
+  if (candidate.receipt_ref !== expectedReceiptRef) {
+    fail('build_receipt_candidate.receipt_ref does not match the expected build receipt ref.');
+  }
+  if (!['opl_meta_agent_build_receipt', 'opl_meta_agent_build_receipt_candidate'].includes(String(candidate.surface_kind))
+    || Object.hasOwn(candidate, 'materialized_file_digests')
+    || Object.hasOwn(candidate, 'materialization_receipt')
+    || Object.hasOwn(candidate, 'materialization')
+    || Object.hasOwn(candidate, 'receipt_timing')) {
+    fail('OMA build receipt input must remain a candidate and cannot self-sign final materialization evidence.');
+  }
+
+  const validationRequests = request.validation_requests;
+  const expectedValidationRequests = [
+    'standard_domain_agent_scaffold',
+    'domain_pack_compiler',
+    'agent_profile_conformance',
+  ];
+  if (!isDeepStrictEqual(validationRequests, expectedValidationRequests)) {
+    fail('validation_requests does not match the OPL materialization validation boundary.');
+  }
+
+  return {
+    target,
+    domainId,
+    domainLabel,
+    candidate,
+    installation,
+    receiptPath,
+    expectedReceiptRef,
+    projectionPaths: projectionPaths as string[],
+    validationRequests: validationRequests as string[],
+  };
+}
+
 function parseWrites(request: Record<string, unknown>, root: string) {
   const writes = new Map<string, WriteEntry>();
   const add = (entry: WriteEntry) => {
@@ -276,37 +466,24 @@ function parseWrites(request: Record<string, unknown>, root: string) {
 
 export function materializeAgentScaffold(input: { requestPath: string; targetDir: string }) {
   const request = readRequest(input.requestPath);
-  validateHeader(request.value);
-  const target = requireObject(request.value.target_identity, 'target_identity');
-  const domainId = requireString(target.domain_id, 'target_identity.domain_id');
-  requireString(target.domain_label, 'target_identity.domain_label');
-  if (target.target_agent_ref !== `domain-agent:${domainId}`) fail('target_identity.target_agent_ref must match domain_id.');
+  const preflight = preflightMaterializationRequest(request.value, input.targetDir);
   const root = prepareTargetRoot(input.targetDir);
   assertNoExistingSymlinks(root);
   buildStandardDomainAgentScaffold({
     targetDir: root,
-    domainId,
-    domainLabel: requireString(target.domain_label, 'target_identity.domain_label'),
+    domainId: preflight.domainId,
+    domainLabel: preflight.domainLabel,
     force: false,
   });
   const writes = parseWrites(request.value, root);
-  const installation = requireObject(request.value.build_receipt_installation, 'build_receipt_installation');
-  const receiptPath = safeRelativePath(installation.receipt_path, 'build_receipt_installation.receipt_path');
-  if (receiptPath !== 'contracts/agent_build_receipt.json' || writes.has(receiptPath)) {
-    fail('build_receipt_installation.receipt_path must be the OPL-owned undeclared final receipt path.');
-  }
-  const expectedReceiptRef = requireString(installation.expected_build_receipt_ref, 'build_receipt_installation.expected_build_receipt_ref');
-  const candidate = requireObject(request.value.build_receipt_candidate, 'build_receipt_candidate');
-  if (candidate.receipt_ref !== undefined && candidate.receipt_ref !== expectedReceiptRef) {
-    fail('build_receipt_candidate.receipt_ref does not match the expected build receipt ref.');
-  }
-  if (candidate.surface_kind === 'opl_agent_build_receipt'
-    || Object.hasOwn(candidate, 'materialized_file_digests')
-    || Object.hasOwn(candidate, 'materialization_receipt')
-    || Object.hasOwn(candidate, 'materialization')
-    || Object.hasOwn(candidate, 'receipt_timing')) {
-    fail('OMA build receipt input must remain a candidate and cannot self-sign final materialization evidence.');
-  }
+  const {
+    candidate,
+    expectedReceiptRef,
+    projectionPaths,
+    receiptPath,
+    target,
+    validationRequests,
+  } = preflight;
   for (const entry of writes.values()) atomicWrite(root, entry);
   const capabilityMapPath = path.join(root, 'contracts/capability_map.json');
   const capabilityMap = requireObject(parseJsonText(fs.readFileSync(capabilityMapPath, 'utf8')), 'contracts/capability_map.json');
@@ -353,17 +530,7 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
       opl_can_authorize_quality_or_export: false,
     },
   };
-  const projectionPaths = installation.projection_paths;
-  if (!Array.isArray(projectionPaths)
-    || projectionPaths.some((entry) => typeof entry !== 'string')
-    || JSON.stringify(projectionPaths) !== JSON.stringify([
-      'contracts/domain_descriptor.json',
-      'contracts/capability_map.json',
-      'contracts/stage_control_plane.json',
-    ])) {
-    fail('build_receipt_installation.projection_paths is invalid.');
-  }
-  for (const relativePath of projectionPaths as string[]) {
+  for (const relativePath of projectionPaths) {
     const filePath = prepareContainedFile(root, relativePath);
     const surface = requireObject(parseJsonText(fs.readFileSync(filePath, 'utf8')), relativePath);
     const projected = {
@@ -392,10 +559,6 @@ export function materializeAgentScaffold(input: { requestPath: string; targetDir
     })),
     { path: receiptPath, role: 'opl_final_build_receipt', sha256: sha256(fs.readFileSync(path.join(root, receiptPath))) },
   ].sort((left, right) => left.path.localeCompare(right.path));
-  const validationRequests = request.value.validation_requests;
-  if (!Array.isArray(validationRequests) || validationRequests.some((entry) => typeof entry !== 'string')) {
-    fail('validation_requests must be a string array.');
-  }
   return {
     version: 'g2',
     standard_domain_agent_scaffold: {
