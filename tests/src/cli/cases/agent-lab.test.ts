@@ -397,9 +397,6 @@ test('agent-lab evaluation-work-order accepts OMA-owned takeover identity and ke
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-oma-producer-'));
   try {
     const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
-    (fixture.workOrder.target_agent as Record<string, any>).authority_boundary = {
-      unknown_authority_capability: false,
-    };
     writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
     const result = runCli([
       'agent-lab',
@@ -438,6 +435,52 @@ test('agent-lab evaluation-work-order accepts OMA-owned takeover identity and ke
     );
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects producer authority, locator, and ledger drift before compilation', async (t) => {
+  const cases: Array<[
+    string,
+    (fixture: ReturnType<typeof buildOmaTakeoverEvaluationFixture>) => void,
+    RegExp,
+  ]> = [
+    ['unknown authority owner', (fixture) => {
+      (fixture.workOrder.authority_boundary as Record<string, any>).quality_verdict_owner = 'opl-meta-agent';
+    }, /authority_boundary/],
+    ['unknown false authority capability', (fixture) => {
+      (fixture.workOrder.authority_boundary as Record<string, any>).oma_can_read_future_ledger = false;
+    }, /authority_boundary/],
+    ['escaped target repository locator', (fixture) => {
+      (fixture.workOrder.target_agent as Record<string, any>).repo_dir = '/tmp/untrusted-second-scheduler';
+    }, /repo_dir/],
+    ['alternate result ledger', (fixture) => {
+      (fixture.workOrder as Record<string, any>).result_ledger = { ref: 'untrusted://second-ledger' };
+    }, /unsupported fields at work_order/],
+    ['alternate suite alias', (fixture) => {
+      (fixture.workOrder as Record<string, any>).agent_lab_suite = { ref: 'untrusted://second-suite' };
+    }, /unsupported fields at work_order/],
+  ];
+
+  for (const [name, mutate, expected] of cases) {
+    await t.test(name, () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-work-order-boundary-'));
+      try {
+        const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+        mutate(fixture);
+        writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
+        assert.throws(
+          () => runCli([
+            'agent-lab', 'evaluation-work-order', 'execute',
+            '--work-order', fixture.workOrderPath,
+            '--output', fixture.outputDir,
+            '--json',
+          ]),
+          expected,
+        );
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
   }
 });
 
@@ -515,6 +558,10 @@ test('agent-lab evaluation-work-order compiles a thin OMA evaluation request int
     assert.equal(suitePlan.surface_kind, 'opl_foundry_lab_evaluation_suite_plan');
     assert.equal(suitePlan.producer, 'one-person-lab/OPL Foundry Lab');
     assert.equal(suitePlan.tasks[0].task_id, fixture.ids.taskId);
+    assert.equal(
+      suitePlan.tasks[0].environment.workspace_locator_ref,
+      'workspace-locator:/tmp/target-agent',
+    );
     assert.deepEqual(result.receipt.improvement_candidate_refs, [fixture.ids.improvementCandidateRef]);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

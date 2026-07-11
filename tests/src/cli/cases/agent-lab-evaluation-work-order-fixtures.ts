@@ -123,9 +123,17 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
       oma_can_execute_agent_lab_suite: false,
       oma_can_write_agent_lab_result: false,
       oma_can_write_owner_receipt_body: false,
+      oma_can_write_learning_candidate_ledger: false,
       oma_can_write_promotion_gate: false,
+      oma_can_write_mechanism_or_scaleout_ledger: false,
+      oma_can_manage_work_order_lifecycle: false,
+      oma_can_write_target_domain_truth: false,
+      oma_can_write_target_domain_memory_body: false,
+      oma_can_mutate_target_domain_artifact_body: false,
+      oma_can_authorize_target_domain_quality_or_export: false,
       oma_can_claim_target_domain_ready: false,
       oma_can_claim_target_production_ready: false,
+      oma_can_promote_default_agent_without_gate: false,
     },
   };
   const observations = {
@@ -267,7 +275,7 @@ export function retargetOmaTakeoverEvaluationFixture(
     descriptor_ref: `/tmp/${domainId}/contracts/domain_descriptor.json`,
   };
   const workOrder = fixture.workOrder as Record<string, any>;
-  Object.assign(workOrder.target_agent, target);
+  Object.assign(workOrder.target_agent, target, { repo_dir: `/tmp/${domainId}` });
   const observations = fixture.observations as Record<string, any>;
   observations.target_agent_ref = target.target_agent_ref;
   observations.target_agent_descriptor_ref = target.descriptor_ref;

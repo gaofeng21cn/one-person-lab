@@ -48,6 +48,41 @@ const OBSERVATION_PACKET_VERSION = 'opl.foundry-lab-evaluation-observation-packe
 const CONSUMER_ROLE = 'compile_evaluation_work_order_to_agent_lab_suite_and_execute';
 const ACTION_REF = 'opl agent-lab evaluation-work-order execute --work-order <work-order.json> --output <dir>';
 const TARGET_OWNER_CLOSEOUT_ROLE = 'target-domain';
+const WORK_ORDER_FIELDS = new Set([
+  'surface_kind',
+  'version',
+  'work_order_id',
+  'work_order_kind',
+  'status',
+  'product_id',
+  'execution_owner',
+  'target_agent',
+  'evaluation_request',
+  'source_refs',
+  'reviewer_refs',
+  'candidate_refs',
+  'requested_operations',
+  'expected_return_shapes',
+  'consumer_dependency',
+  'execution_aperture',
+  'authority_boundary',
+]);
+const OMA_WORK_ORDER_AUTHORITY_BOUNDARY = {
+  oma_can_execute_agent_lab_suite: false,
+  oma_can_write_agent_lab_result: false,
+  oma_can_write_owner_receipt_body: false,
+  oma_can_write_learning_candidate_ledger: false,
+  oma_can_write_promotion_gate: false,
+  oma_can_write_mechanism_or_scaleout_ledger: false,
+  oma_can_manage_work_order_lifecycle: false,
+  oma_can_write_target_domain_truth: false,
+  oma_can_write_target_domain_memory_body: false,
+  oma_can_mutate_target_domain_artifact_body: false,
+  oma_can_authorize_target_domain_quality_or_export: false,
+  oma_can_claim_target_domain_ready: false,
+  oma_can_claim_target_production_ready: false,
+  oma_can_promote_default_agent_without_gate: false,
+} as const;
 const OUTPUT_ARTIFACT_NAMES = [
   'foundry-lab-evaluation-suite-plan.json',
   'agent-lab-suite.json',
@@ -122,14 +157,74 @@ function assertEvaluationOwner(actual: unknown, field: string) {
   }
 }
 
+function assertAllowedFields(value: JsonRecord, allowed: Set<string>, field: string) {
+  const unknownFields = Object.keys(value).filter((key) => !allowed.has(key));
+  if (unknownFields.length > 0) {
+    invalid(`Foundry Lab evaluation work order has unsupported fields at ${field}.`, {
+      field,
+      unknown_fields: unknownFields.sort(),
+    });
+  }
+}
+
+function assertExactWorkOrderAuthorityBoundary(value: unknown) {
+  if (!isRecord(value)) {
+    invalid('Foundry Lab evaluation work order requires an exact authority_boundary object.', {
+      field: 'work_order.authority_boundary',
+    });
+  }
+  const expectedEntries = Object.entries(OMA_WORK_ORDER_AUTHORITY_BOUNDARY);
+  const unknownFields = Object.keys(value)
+    .filter((key) => !(key in OMA_WORK_ORDER_AUTHORITY_BOUNDARY));
+  const missingFields = expectedEntries
+    .filter(([key]) => value[key] === undefined)
+    .map(([key]) => key);
+  const mismatchedFields = expectedEntries
+    .filter(([key, expected]) => value[key] !== expected)
+    .map(([key]) => key);
+  if (unknownFields.length > 0 || missingFields.length > 0 || mismatchedFields.length > 0) {
+    invalid('Foundry Lab evaluation work order has an unsupported authority_boundary.', {
+      field: 'work_order.authority_boundary',
+      unknown_fields: unknownFields.sort(),
+      missing_fields: missingFields.sort(),
+      mismatched_fields: mismatchedFields.sort(),
+    });
+  }
+}
+
 function canonicalTargetAgent(workOrder: JsonRecord) {
   const targetAgent = record(workOrder.target_agent);
-  const repoDir = stringValue(targetAgent.repo_dir);
+  const descriptorRef = requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref');
+  if (!path.isAbsolute(descriptorRef)) {
+    invalid('Foundry Lab evaluation work order requires an absolute target descriptor_ref.', {
+      field: 'work_order.target_agent.descriptor_ref',
+      actual: descriptorRef,
+    });
+  }
+  const canonicalDescriptorRef = path.resolve(descriptorRef);
+  if (path.basename(canonicalDescriptorRef) !== 'domain_descriptor.json'
+    || path.basename(path.dirname(canonicalDescriptorRef)) !== 'contracts') {
+    invalid('Foundry Lab evaluation work order requires contracts/domain_descriptor.json as target descriptor_ref.', {
+      field: 'work_order.target_agent.descriptor_ref',
+      actual: descriptorRef,
+    });
+  }
+  const repoDir = path.dirname(path.dirname(canonicalDescriptorRef));
+  if (targetAgent.repo_dir !== undefined) {
+    const declaredRepoDir = requiredString(targetAgent.repo_dir, 'work_order.target_agent.repo_dir');
+    if (!path.isAbsolute(declaredRepoDir) || path.resolve(declaredRepoDir) !== repoDir) {
+      invalid('Foundry Lab evaluation work order target_agent.repo_dir must match the canonical descriptor parent.', {
+        field: 'work_order.target_agent.repo_dir',
+        expected: repoDir,
+        actual: declaredRepoDir,
+      });
+    }
+  }
   return {
     domainId: requiredString(targetAgent.domain_id, 'work_order.target_agent.domain_id'),
     targetAgentRef: requiredString(targetAgent.target_agent_ref, 'work_order.target_agent.target_agent_ref'),
-    descriptorRef: requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref'),
-    ...(repoDir ? { repoDir } : {}),
+    descriptorRef: canonicalDescriptorRef,
+    repoDir,
   };
 }
 
@@ -176,12 +271,14 @@ function validateWorkOrder(workOrder: JsonRecord) {
       ],
     });
   }
+  assertAllowedFields(workOrder, WORK_ORDER_FIELDS, 'work_order');
   const evaluationRequest = record(workOrder.evaluation_request);
   requiredString(evaluationRequest.ref, 'work_order.evaluation_request.ref');
   requiredString(evaluationRequest.request_id, 'work_order.evaluation_request.request_id');
   requiredString(evaluationRequest.suite_id, 'work_order.evaluation_request.suite_id');
   requiredString(evaluationRequest.suite_kind, 'work_order.evaluation_request.suite_kind');
   canonicalTargetAgent(workOrder);
+  assertExactWorkOrderAuthorityBoundary(workOrder.authority_boundary);
   assertNoForbiddenAuthorityClaims(workOrder, 'Foundry Lab evaluation work order');
 }
 
@@ -385,6 +482,7 @@ function observationTaskById(observationPacket: JsonRecord, taskId: string) {
 
 function targetAgentProjection(workOrder: JsonRecord) {
   const targetAgent = record(workOrder.target_agent);
+  const canonicalTarget = canonicalTargetAgent(workOrder);
   const canonical = evaluationTargetAgent(workOrder);
   const optional = (field: string) => {
     const value = stringValue(targetAgent[field]);
@@ -393,7 +491,7 @@ function targetAgentProjection(workOrder: JsonRecord) {
   return {
     ...canonical,
     ...optional('domain_label'),
-    ...optional('repo_dir'),
+    repo_dir: canonicalTarget.repoDir,
   };
 }
 
