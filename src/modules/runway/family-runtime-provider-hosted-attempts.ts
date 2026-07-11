@@ -28,7 +28,7 @@ import {
   buildStageRunCurrentnessIdentity,
   sameStageRunRouteCurrentnessIdentity,
 } from './family-runtime-stage-run-currentness-identity.ts';
-import { providerAdmissionCurrentnessIdentity } from './family-runtime-mas-current-control-admission-currentness.ts';
+import { providerAdmissionCurrentnessIdentity } from './family-runtime-provider-admission-currentness.ts';
 import {
   buildStageAdmissionLaunchGate,
   capabilityRegistryLaunchGateInputFromPayload,
