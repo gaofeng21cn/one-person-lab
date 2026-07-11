@@ -8,6 +8,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliInCwd,
   shellSingleQuote,
   test,
   writeMasCleanRunnerFixture,
@@ -62,6 +63,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
   const env = {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
     PATH: `${commandFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
   };
 
@@ -239,7 +241,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
       '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
     );
 
-    const manifestOutput = runCli(['domain', 'manifests'], env);
+    const manifestOutput = runCliInCwd(['domain', 'manifests'], fixtureRoot, env);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant')?.manifest_command,
@@ -254,7 +256,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
       expectedRedcubeManifestCommand,
     );
 
-    const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
+    const dashboardOutput = runCliInCwd(
+      ['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'],
+      fixtureRoot,
+      env,
+    );
     assert.equal(
       dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.aligned_projects_count,
       3,

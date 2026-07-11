@@ -8,6 +8,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliInCwd,
   test,
 } from '../helpers.ts';
 import {
@@ -21,20 +22,24 @@ import {
 } from './domain-pack-compiler-assertions.ts';
 
 test('domain pack compiler emits aligned generated artifact drift manifests for admitted packs', () => {
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-drift-state-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
 
-  bindFamilyManifests(env);
+  bindFamilyManifests(env, { includeOma: false });
 
-  const list = runCli(['agents', 'pack-compiler'], env);
+  const list = runCliInCwd(['agents', 'pack-compiler'], fixtureRoot, env);
   assert.equal(
     list.domain_pack_compiler.summary.generated_artifact_drift_aligned_count,
     PACK_COMPILER_DEFAULT_DOMAIN_ALIASES.length,
   );
   assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_detected_count, 0);
 
-  const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+  const mas = runCliInCwd(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], fixtureRoot, env);
   const driftManifest = mas.domain_pack_compiler.generated_artifact_drift_manifest;
   assert.equal(driftManifest.surface_kind, 'opl_generated_artifact_drift_manifest');
   assert.equal(driftManifest.status, 'aligned');
@@ -48,16 +53,20 @@ test('domain pack compiler emits aligned generated artifact drift manifests for 
 });
 
 test('default domain pack compiler surface treats admitted generated artifacts as aligned', () => {
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-default-state-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
 
-  bindFamilyManifests(env);
+  bindFamilyManifests(env, { includeOma: false });
 
-  const list = runCli(['agents', 'pack-compiler'], env);
+  const list = runCliInCwd(['agents', 'pack-compiler'], fixtureRoot, env);
   assertReadyPackCompilerSummary(list.domain_pack_compiler.summary);
 
-  const mag = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mag'], env);
+  const mag = runCliInCwd(['agents', 'pack-compiler', 'inspect', '--domain', 'mag'], fixtureRoot, env);
   assert.equal(mag.domain_pack_compiler.compiler_status, 'ready');
   assert.deepEqual(mag.domain_pack_compiler.blocker_reasons, []);
   assert.equal(

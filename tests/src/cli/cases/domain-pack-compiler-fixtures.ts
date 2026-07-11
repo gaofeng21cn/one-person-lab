@@ -686,9 +686,14 @@ function createPackCompilerOmaContractFixture() {
   return repoDir;
 }
 
-export function bindFamilyManifests(env: Record<string, string>) {
+export function bindFamilyManifests(
+  env: Record<string, string>,
+  options: { includeOma?: boolean } = {},
+) {
   const fixtures = loadFamilyManifestFixtures();
-  env.OPL_META_AGENT_REPO_DIR ??= createPackCompilerOmaContractFixture();
+  if (options.includeOma !== false) {
+    env.OPL_META_AGENT_REPO_DIR ??= createPackCompilerOmaContractFixture();
+  }
   const manifests = {
     medautoscience: withPackCompilerReadySurfaces(fixtures.medautoscience, {
       agentId: 'mas',

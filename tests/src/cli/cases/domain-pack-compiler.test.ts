@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, shellSingleQuote, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, runCliInCwd, shellSingleQuote, test } from '../helpers.ts';
 import { buildFamilyAgentDescriptorList } from '../../../../src/modules/atlas/family-domain-agent-descriptor.ts';
 import {
   assertReadyPackCompilerSummary,
@@ -19,13 +19,17 @@ function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: 
 }
 
 test('domain pack compiler projects OPL-owned generated surfaces for admitted domain packs', () => {
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-state-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
 
-  bindFamilyManifests(env);
+  bindFamilyManifests(env, { includeOma: false });
 
-  const list = runCli(['agents', 'pack-compiler'], env);
+  const list = runCliInCwd(['agents', 'pack-compiler'], fixtureRoot, env);
   assert.equal(list.domain_pack_compiler.surface_kind, 'opl_domain_pack_compiler_index');
   assert.equal(list.domain_pack_compiler.owner, 'one-person-lab');
   assertReadyPackCompilerSummary(list.domain_pack_compiler.summary);
@@ -33,7 +37,7 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
   assert.equal(list.domain_pack_compiler.authority_boundary.opl_can_write_domain_truth, false);
 
-  const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+  const mas = runCliInCwd(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], fixtureRoot, env);
   assert.equal(mas.domain_pack_compiler.surface_kind, 'opl_domain_pack_compiler_inspection');
   assert.equal(mas.domain_pack_compiler.compiler_status, 'ready');
   assert.deepEqual(mas.domain_pack_compiler.blocker_reasons, []);
@@ -96,20 +100,24 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
 });
 
 test('domain pack compiler index keeps generated surfaces ready, aligned, and OPL-owned', () => {
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-compiler-readiness-state-'));
-  const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
 
   try {
-    bindFamilyManifests(env);
+    bindFamilyManifests(env, { includeOma: false });
 
-    const list = runCli(['agents', 'pack-compiler'], env);
+    const list = runCliInCwd(['agents', 'pack-compiler'], fixtureRoot, env);
     assertReadyPackCompilerSummary(list.domain_pack_compiler.summary);
     assert.equal(list.domain_pack_compiler.authority_boundary.opl_owns_generated_surfaces, true);
     assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
 
     for (const domain of PACK_COMPILER_DEFAULT_DOMAIN_ALIASES) {
-      const inspection = runCli(['agents', 'pack-compiler', 'inspect', '--domain', domain], env)
+      const inspection = runCliInCwd(['agents', 'pack-compiler', 'inspect', '--domain', domain], fixtureRoot, env)
         .domain_pack_compiler;
       assert.equal(inspection.compiler_status, 'ready');
       assert.equal(inspection.generated_interface_bundle.owner, 'one-person-lab');
