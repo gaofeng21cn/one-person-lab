@@ -8,7 +8,7 @@ export type DomainSourceInput =
   | { kind: 'file'; source_path: string; role?: string; label?: string }
   | { kind: 'text'; text: string; role?: string; label?: string };
 
-function digest(body: string | Buffer) {
+export function fingerprintDomainSource(body: string | Buffer) {
   return crypto.createHash('sha256').update(body).digest('hex');
 }
 function safeSegment(value: string) {
@@ -28,7 +28,7 @@ export function materializeDomainSources(input: {
   const entries = input.sources.map((source, index) => {
     const role = safeSegment(source.role ?? 'source_material');
     const body = source.kind === 'file' ? fs.readFileSync(path.resolve(source.source_path)) : source.text;
-    const sha256 = digest(body);
+    const sha256 = fingerprintDomainSource(body);
     const sourceName = source.kind === 'file' ? path.basename(source.source_path) : `${source.label ?? `text-${index + 1}`}.txt`;
     const relativePath = path.posix.join(role, `${sha256.slice(0, 16)}-${safeSegment(sourceName)}`);
     const target = path.join(root, relativePath);

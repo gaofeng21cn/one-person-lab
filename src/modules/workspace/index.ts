@@ -19,7 +19,7 @@ export {
 export { ensureWorkspace, initializeWorkspace } from './workspace-initializer.ts';
 export { archiveWorkspaceProject, deleteWorkspaceProject, exportWorkspaceMap, inspectWorkspace, updateWorkspaceProjectLifecycle, upgradeWorkspace, workspaceFleetReport, workspaceHealth, workspaceInventory, workspaceReport } from './workspace-lifecycle.ts';
 export { ingestWorkspaceSourceMaterial } from './workspace-source-material.ts';
-export { materializeDomainSources } from './domain-source-runtime.ts';
+export { fingerprintDomainSource, materializeDomainSources } from './domain-source-runtime.ts';
 export type { DomainSourceInput } from './domain-source-runtime.ts';
 export { assertRepoSourceByproductsClean, inspectRepoSourceByproducts } from './repo-source-byproduct-guard.ts';
 export { buildWorkspaceCatalog, getActiveWorkspaceBinding, listWorkspaceBindings, resolveWorkspaceLocator } from './workspace-registry.ts';
