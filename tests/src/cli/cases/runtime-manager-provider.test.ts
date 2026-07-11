@@ -3,7 +3,11 @@ import net from 'node:net';
 
 import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
-import { FAMILY_RUNTIME_DOMAIN_IDS } from '../../../../src/modules/runway/family-runtime-types.ts';
+import {
+  FAMILY_RUNTIME_DOMAIN_IDS,
+  runtimeDomainOwnerProfiles,
+  runtimeManagerDomainProfiles,
+} from '../../../../src/modules/runway/family-runtime-types.ts';
 import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
@@ -27,6 +31,7 @@ test('runtime manager reports OPL control plane over provider-backed family runt
       output.runtime_manager.owner_split.domain_truth_owners.map((owner: { domain_id: string }) => owner.domain_id),
       FAMILY_RUNTIME_DOMAIN_IDS,
     );
+    assert.deepEqual(output.runtime_manager.owner_split.domain_truth_owners, runtimeDomainOwnerProfiles());
     assert.equal(output.runtime_manager.family_runtime_stage_attempt_index.provider_model, 'provider_backed_stage_attempt_runtime');
     assert.equal(output.runtime_manager.family_runtime_stage_attempt_index.configured_provider, 'temporal');
     assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.allowed_providers, [
@@ -113,9 +118,23 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.daemon_policy.opl_domain_daemon_installation_allowed, false);
     assert.equal(output.runtime_manager.daemon_policy.cadence_owner, 'provider_backed_family_runtime');
     assert.equal(output.runtime_manager.daemon_policy.domain_launchagent_policy.medautoscience, 'legacy_diagnostic_cleanup_only');
+    assert.deepEqual(
+      output.runtime_manager.daemon_policy.domain_launchagent_policy,
+      Object.fromEntries(runtimeManagerDomainProfiles().map((profile) => [
+        profile.domain_id,
+        profile.scheduler.daemon_policy,
+      ])),
+    );
     assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
     assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_stage_runtime_registration_registry');
     assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
+    assert.deepEqual(
+      output.runtime_manager.registration_registry.domains,
+      runtimeManagerDomainProfiles().map((profile) => {
+        const { scheduler: _scheduler, ...registration } = profile;
+        return registration;
+      }),
+    );
     assert.equal(
       output.runtime_manager.registration_registry.domains[0].expected_registration_surface.ref,
       '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
@@ -189,6 +208,16 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     ) as any;
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
+    assert.equal(Object.hasOwn(runtimeManagerContract.owner_split, 'domain_truth_owners'), false);
+    assert.equal(
+      runtimeManagerContract.owner_split.domain_truth_owners_projection.runtime_projection,
+      'runtimeDomainOwnerProfiles',
+    );
+    assert.equal(Object.hasOwn(runtimeManagerContract.domain_registration_registry, 'registered_domains'), false);
+    assert.equal(
+      runtimeManagerContract.domain_registration_registry.registered_domains_projection.runtime_projection,
+      'runtimeManagerDomainProfiles',
+    );
     assert.equal(
       runtimeManagerContract.family_scheduler_replacement.managed_domains_projection.source_of_truth_ref,
       'src/kernel/standard-agent-registry.ts#family_runtime_profile.runtime_manager_registration',

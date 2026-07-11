@@ -7,6 +7,7 @@ import {
 import {
   buildAppDrilldownRefsOnlyAuthorityBoundary,
 } from './authority-boundary.ts';
+import { runtimeDomainDaemonReplacementSurfaces } from '../../runway/index.ts';
 
 function uniqueRefs<T extends { ref: string; role?: string | null }>(values: T[]) {
   const seen = new Set<string>();
@@ -167,11 +168,7 @@ export function periodicExecutionRefs(providerActionRefs: ReturnType<typeof prov
         can_execute: false,
       })),
     ]),
-    replaces_domain_daemon_surface: {
-      medautoscience: 'MAS LaunchAgent / local supervision tick is cleanup-only legacy residue.',
-      medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
-      redcube: 'RCA repo-local sidecar/session supervision is handler diagnostic only.',
-    },
+    replaces_domain_daemon_surface: runtimeDomainDaemonReplacementSurfaces(),
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }

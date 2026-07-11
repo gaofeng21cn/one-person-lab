@@ -5,9 +5,11 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
+  FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS,
   FAMILY_RUNTIME_PROVIDER_KINDS,
   TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS,
   resolveFamilyRuntimeDomainId,
+  resolveFamilyRuntimeSchedulerDomainId,
   type FamilyRuntimeDomainId,
   type FamilyRuntimeProviderKind,
   type TemporalStageAttemptSignalKind,
@@ -62,6 +64,17 @@ export function assertDomainId(value: string | undefined): FamilyRuntimeDomainId
   throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime domain id.', {
     domain_id: value ?? null,
     allowed_domain_ids: [...FAMILY_RUNTIME_DOMAIN_IDS],
+  });
+}
+
+export function assertSchedulerDomainId(value: string | undefined): FamilyRuntimeDomainId {
+  const resolvedDomainId = value ? resolveFamilyRuntimeSchedulerDomainId(value) : null;
+  if (resolvedDomainId) {
+    return resolvedDomainId;
+  }
+  throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime scheduler domain id.', {
+    domain_id: value ?? null,
+    allowed_domain_ids: [...FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS],
   });
 }
 

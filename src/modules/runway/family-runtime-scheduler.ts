@@ -14,10 +14,12 @@ import {
 import { runTemporalProviderSloTick } from './family-runtime-provider-slo-executor.ts';
 import {
   FAMILY_RUNTIME_PROVIDER_KINDS,
+  runtimeDomainDaemonReplacementSurfaces,
   type FamilyRuntimeProviderKind,
 } from './family-runtime-types.ts';
 import type { FamilyRuntimeDomainProfiles, FamilyRuntimeTaskScope } from './family-runtime-command.ts';
 import { readManagedProviderProjectionSummary } from './family-runtime-managed-provider-projection.ts';
+import { resolveFamilyRuntimeDomainProfiles } from './family-runtime-domain-profiles.ts';
 import {
   familyRuntimePaths,
   insertEvent,
@@ -211,6 +213,7 @@ export async function runTemporalSchedulerCadenceCommand(
     domainProfiles?: FamilyRuntimeDomainProfiles;
   },
 ) {
+  const domainProfiles = resolveFamilyRuntimeDomainProfiles(input.domainProfiles);
   const providerKind = resolveSchedulerFamilyRuntimeProviderKind(input.providerKind);
   if (providerKind !== 'temporal') {
     throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler cadence supports only --provider temporal.', {
@@ -250,7 +253,7 @@ export async function runTemporalSchedulerCadenceCommand(
     };
   }
   const action = input.mode === 'scheduler_install'
-    ? await ensureTemporalSchedulerCadence(paths, { domainProfiles: input.domainProfiles })
+    ? await ensureTemporalSchedulerCadence(paths, { domainProfiles })
     : input.mode === 'scheduler_remove'
       ? await removeTemporalSchedulerCadence(paths)
       : input.mode === 'scheduler_trigger'
@@ -280,11 +283,7 @@ export async function runTemporalSchedulerCadenceCommand(
       repair_action: health.repair_action ?? null,
     } : {}),
     provider_runtime: provider,
-    replaces_domain_daemon_surface: {
-      medautoscience: 'local LaunchAgent / supervision tick is cleanup-only legacy residue',
-      medautogrant: 'repo-local runtime journal cadence is not a production scheduler',
-      redcube: 'repo-local session supervision is handler diagnostic only',
-    },
+    replaces_domain_daemon_surface: runtimeDomainDaemonReplacementSurfaces(),
     authority_boundary: {
       can_install_domain_daemon: false,
       can_write_domain_truth: false,

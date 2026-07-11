@@ -82,6 +82,24 @@ export function runtimeManagerDomainProfiles() {
   });
 }
 
+export const FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS = runtimeManagerDomainProfiles().map((profile) => (
+  profile.domain_id
+));
+
+export function resolveFamilyRuntimeSchedulerDomainId(value: string) {
+  const domainId = resolveFamilyRuntimeDomainId(value);
+  return domainId && FAMILY_RUNTIME_SCHEDULER_DOMAIN_IDS.includes(domainId)
+    ? domainId
+    : null;
+}
+
+export function runtimeDomainDaemonReplacementSurfaces() {
+  return Object.fromEntries(runtimeManagerDomainProfiles().map((profile) => [
+    profile.domain_id,
+    profile.scheduler.daemon_replacement_surface,
+  ])) as Partial<Record<FamilyRuntimeDomainId, string>>;
+}
+
 export function runtimeDomainAdapterProfiles() {
   return runtimeEnabledStandardAgents().flatMap((entry) => {
     const profile = entry.family_runtime_profile;

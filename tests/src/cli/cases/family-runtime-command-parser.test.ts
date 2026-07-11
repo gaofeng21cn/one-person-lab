@@ -2,6 +2,7 @@ import { assert, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/kernel/contract-validation.ts';
 import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/modules/runway/family-runtime-command-parts/registry.ts';
 import { parseSchedulerLifecycleArgs } from '../../../../src/modules/runway/family-runtime-command-parts/scheduler.ts';
+import { buildTemporalSchedulerTickWorkflowArgs } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/scheduler-cadence.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   resolveFamilyRuntimeDomainId,
@@ -49,6 +50,42 @@ test('family-runtime scheduler parser binds a profile to an explicit registry ru
       redcube: '/tmp/profile.toml',
     },
   });
+});
+
+test('family-runtime scheduler rejects runtime-only domains without a scheduler registration', () => {
+  assert.throws(
+    () => parseSchedulerLifecycleArgs([
+      'status',
+      '--provider',
+      'temporal',
+      '--domain',
+      'oma',
+      '--profile',
+      '/tmp/oma.toml',
+    ]),
+    (error) => {
+      assert.equal(error instanceof FrameworkContractError, true);
+      const contractError = error as FrameworkContractError;
+      assert.equal(contractError.code, 'cli_usage_error');
+      assert.deepEqual(contractError.details?.allowed_domain_ids, [
+        'medautoscience',
+        'medautogrant',
+        'redcube',
+      ]);
+      return true;
+    },
+  );
+
+  assert.throws(
+    () => buildTemporalSchedulerTickWorkflowArgs({
+      domainProfiles: { 'opl-meta-agent': '/tmp/oma.toml' },
+    }),
+    (error) => {
+      assert.equal(error instanceof FrameworkContractError, true);
+      assert.equal((error as FrameworkContractError).code, 'contract_shape_invalid');
+      return true;
+    },
+  );
 });
 
 test('family-runtime registry parser reuses shared option walking without changing command payloads', () => {

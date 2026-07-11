@@ -20,6 +20,9 @@ export { familyRuntimePaths, listEvents } from './family-runtime-store.ts';
 export { resolveOplStatePaths } from './runtime-state-paths.ts';
 export { deriveCurrentControlStateForAttempt, deriveCurrentControlStateForTask } from './family-runtime-current-control-state.ts';
 export { latestStageAttemptCloseoutPacketsByAttempt, listStageAttemptRows, stageAttemptSignalsByAttempt } from './family-runtime-stage-attempt-ledger.ts';
+export {
+  runtimeDomainDaemonReplacementSurfaces,
+} from './family-runtime-types.ts';
 export type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
 export {
   projectionFromDomainManifestEntry,

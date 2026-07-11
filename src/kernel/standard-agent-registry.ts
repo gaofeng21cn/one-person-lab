@@ -26,6 +26,7 @@ export type StandardAgentRuntimeManagerRegistration = {
     replacement_role: string;
     required_domain_refs: readonly string[];
     daemon_policy: string;
+    daemon_replacement_surface: string;
   };
 };
 
@@ -139,6 +140,8 @@ export const STANDARD_AGENT_REGISTRY = [
             'no_forbidden_write_evidence',
           ],
           daemon_policy: 'legacy_diagnostic_cleanup_only',
+          daemon_replacement_surface:
+            'local LaunchAgent / supervision tick is cleanup-only legacy residue',
         },
       },
     },
@@ -216,6 +219,8 @@ export const STANDARD_AGENT_REGISTRY = [
             'no_forbidden_write_evidence',
           ],
           daemon_policy: 'not_installed_or_maintained_by_opl',
+          daemon_replacement_surface:
+            'repo-local runtime journal cadence is not a production scheduler',
         },
       },
     },
@@ -297,6 +302,8 @@ export const STANDARD_AGENT_REGISTRY = [
             'no_forbidden_write_evidence',
           ],
           daemon_policy: 'not_installed_or_maintained_by_opl',
+          daemon_replacement_surface:
+            'repo-local session supervision is handler diagnostic only',
         },
       },
     },

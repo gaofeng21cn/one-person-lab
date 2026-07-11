@@ -4,7 +4,7 @@ import type {
   FamilyRuntimeCommandInput,
   FamilyRuntimeDomainProfiles,
 } from '../family-runtime-command.ts';
-import { assertDomainId, assertProviderKind, parseCliOptions } from './shared.ts';
+import { assertProviderKind, assertSchedulerDomainId, parseCliOptions } from './shared.ts';
 
 export function parseSchedulerLifecycleArgs(rest: string[]): FamilyRuntimeCommandInput {
   const action = rest[0];
@@ -16,7 +16,7 @@ export function parseSchedulerLifecycleArgs(rest: string[]): FamilyRuntimeComman
       providerKind = assertProviderKind(value);
       return true;
     } else if (token === '--domain' && value) {
-      domainId = assertDomainId(value);
+      domainId = assertSchedulerDomainId(value);
       return true;
     } else if (token === '--profile' && value) {
       if (!domainId) {

@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import { DOMAIN_ADAPTERS } from './family-runtime-command.ts';
+import { runtimeDomainDaemonReplacementSurfaces } from './family-runtime-types.ts';
 import {
   inspectSelectedFamilyRuntimeProvidersWithLifecycle,
   resolveFamilyRuntimeProviderKind,
@@ -109,11 +110,7 @@ export async function buildFamilyRuntimeStatusPayload(
         trigger_command: 'opl family-runtime scheduler trigger --provider temporal',
         provider_slo_tick_command: 'opl family-runtime provider-slo tick --provider temporal',
         local_sqlite_role: 'retired_runtime_provider',
-        replaces_domain_daemon_surface: {
-          medautoscience: 'MAS LaunchAgent / local supervision tick must remain absent, tombstone, or explicit cleanup diagnostic only.',
-          medautogrant: 'MAG repo-local runtime journal cadence is not a production scheduler.',
-          redcube: 'RCA repo-local session supervision is handler diagnostic only.',
-        },
+        replaces_domain_daemon_surface: runtimeDomainDaemonReplacementSurfaces(),
         blocker: providerLivenessBlocker
           ? providerLivenessBlocker
           : null,
