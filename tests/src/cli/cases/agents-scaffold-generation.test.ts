@@ -109,6 +109,11 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'generated_surface_handoff_source_ref',
       'capability_map_source_ref',
     ]);
+    assert.equal(
+      Object.hasOwn(packCompilerInput.source_refs, 'functional_privatization_audit_source_ref'),
+      false,
+    );
+    assert.equal(Object.hasOwn(packCompilerInput.source_refs, 'functional_audit'), false);
 
     assert.equal(fs.existsSync(path.join(targetDir, 'contracts/stage_control_plane.json')), false);
     const stageControlPlane = compileStandardAgentStageManifest(targetDir).stage_control_plane;

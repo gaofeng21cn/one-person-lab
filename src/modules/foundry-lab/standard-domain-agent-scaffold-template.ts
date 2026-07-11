@@ -477,7 +477,6 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
           executor_policy_source_ref: 'opl-generated:family_stage_control_plane#/stages/0/selected_executor',
           owner_receipt_schema_source_ref: 'contracts/owner_receipt_contract.json',
           authority_functions_source_ref: 'runtime/authority_functions/README.md',
-          functional_privatization_audit_source_ref: 'contracts/functional_privatization_audit.json',
           generated_surface_handoff_source_ref: 'contracts/generated_surface_handoff.json',
           capability_map_source_ref: CAPABILITY_MAP_REF,
           standard_agent_principles_source_ref:

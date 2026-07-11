@@ -85,13 +85,11 @@
       "executor_policy_source_ref",
       "owner_receipt_schema_source_ref",
       "authority_functions_source_ref",
-      "functional_privatization_audit_source_ref",
       "generated_surface_handoff_source_ref"
     ],
     "stage_graph_source_ref": "agent/stages/manifest.json",
     "quality_gate_source_ref": "agent/quality_gates/domain_acceptance.md",
     "executor_policy_source_ref": "opl-generated:family_stage_control_plane#/stages/*/selected_executor",
-    "functional_privatization_audit_source_ref": "contracts/functional_privatization_audit.json",
     "generated_surface_handoff_source_ref": "contracts/generated_surface_handoff.json",
     "authority_boundary": {
       "cross_refs_can_claim_domain_ready": false,

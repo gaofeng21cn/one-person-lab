@@ -111,6 +111,30 @@ test('generated interfaces derive compact functional audit inventory from the co
   assert.equal(sourceConsumption.status, 'resolved');
 });
 
+test('generated interfaces consume compact functional audits directly without source-ref aliases', (t) => {
+  const repoDir = buildReadyAgentRepo();
+  t.after(() => fs.rmSync(repoDir, { recursive: true, force: true }));
+  writeCompactAudit(repoDir, ['agent/cli.ts']);
+
+  const packInputPath = path.join(repoDir, 'contracts', 'pack_compiler_input.json');
+  const packInput = JSON.parse(fs.readFileSync(packInputPath, 'utf8')) as {
+    source_refs: Record<string, unknown>;
+  };
+  delete packInput.source_refs.functional_audit;
+  delete packInput.source_refs.functional_privatization_audit_source_ref;
+  writeJson(packInputPath, packInput);
+
+  const validation = runCli(['agents', 'scaffold', '--validate', repoDir]).standard_domain_agent_scaffold;
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  const sourceConsumption = bundle.source_contract_consumption.consumed_contracts.find(
+    (contract: { contract_id: string }) => contract.contract_id === 'functional_privatization_audit',
+  );
+
+  assert.equal(validation.validation.status, 'passed');
+  assert.equal(bundle.status, 'ready');
+  assert.equal(sourceConsumption.status, 'resolved');
+});
+
 test('generated interfaces block a compact audit when a declared source path is absent', (t) => {
   const repoDir = buildReadyAgentRepo();
   t.after(() => fs.rmSync(repoDir, { recursive: true, force: true }));
