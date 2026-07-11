@@ -627,7 +627,7 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
     }, /descriptor_ref/],
     ['producer target ref is rejected', (fixture) => {
       (fixture.evaluationRequest as Record<string, any>).target_agent_ref = 'domain-agent:other';
-    }, /producer-owned suite plan fields/],
+    }, /unsupported fields at evaluation_request/],
     ['producer task descriptor is rejected', (fixture) => {
       (fixture.evaluationRequest.task_intents[0] as Record<string, any>).target_agent_descriptor_ref = '/tmp/other/descriptor.json';
     }, /producer-owned suite plan fields/],
@@ -654,7 +654,7 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
     }, /consumer_dependency.owner/],
     ['producer suite execution owner is rejected', (fixture) => {
       (fixture.evaluationRequest as Record<string, any>).execution_owner = otherOwner;
-    }, /producer-owned suite plan fields/],
+    }, /unsupported fields at evaluation_request/],
     ['lifecycle owner mismatch', (fixture) => {
       (fixture.workOrder.execution_aperture as Record<string, any>).work_order_lifecycle_owner = otherOwner;
     }, /work_order_lifecycle_owner/],
