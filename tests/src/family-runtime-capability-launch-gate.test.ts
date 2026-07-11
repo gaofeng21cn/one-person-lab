@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
@@ -532,7 +535,15 @@ test('malformed current-owner-delta with optional-only requirements remains fail
   );
 });
 
-test('provider-hosted attempt launch consumes typed capability readout and records blocking gate receipt', () => {
+test('provider-hosted attempt launch consumes typed capability readout and records blocking gate receipt', (t) => {
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-launch-family-'));
+  const previousFamilyRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  process.env.OPL_FAMILY_WORKSPACE_ROOT = familyRoot;
+  t.after(() => {
+    if (previousFamilyRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyRoot;
+    fs.rmSync(familyRoot, { recursive: true, force: true });
+  });
   const db = new DatabaseSync(':memory:');
   createFamilyRuntimeQueueTables(db);
   const now = new Date().toISOString();

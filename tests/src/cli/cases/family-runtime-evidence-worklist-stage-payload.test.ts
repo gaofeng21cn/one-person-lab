@@ -6,7 +6,6 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
@@ -14,6 +13,7 @@ import {
   familyRuntimeEnv,
   withEvidenceWorklistSurfaces,
 } from './family-runtime-evidence-worklist-helpers.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 const requestId = 'stage_production_evidence:medautoscience:review';
 const actionId = 'stage-production-evidence:medautoscience:review:record';
@@ -23,16 +23,18 @@ function bindReviewStage(stateRoot: string, fixtureContractsRoot: string) {
     loadFamilyManifestFixtures().medautoscience,
     ['review'],
   );
+  const masPack = createAdmittedStagePackFixture(manifest, 'med-autoscience', 'MedAutoScience');
   runCli([
     'workspace',
     'bind',
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    masPack.repoDir,
     '--manifest-command',
-    buildManifestCommand(manifest),
+    buildManifestCommand(masPack.manifest),
   ], familyRuntimeEnv(stateRoot, fixtureContractsRoot));
+  return masPack.repoDir;
 }
 
 function applyAndVerify(
@@ -90,8 +92,9 @@ function readWorklist(stateRoot: string, fixtureContractsRoot: string) {
 test('evidence worklist keeps stage record open until domain refs cover source and runtime obligations', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-worklist-open-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  let repoDir: string | null = null;
   try {
-    bindReviewStage(stateRoot, fixtureContractsRoot);
+    repoDir = bindReviewStage(stateRoot, fixtureContractsRoot);
     applyAndVerify(
       stateRoot,
       fixtureContractsRoot,
@@ -130,14 +133,16 @@ test('evidence worklist keeps stage record open until domain refs cover source a
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 
 test('evidence worklist closes a stage requirement only with a verified domain typed blocker', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-worklist-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  let repoDir: string | null = null;
   try {
-    bindReviewStage(stateRoot, fixtureContractsRoot);
+    repoDir = bindReviewStage(stateRoot, fixtureContractsRoot);
     const blockerRef = 'mas-stage-typed-blocker:review:owner-receipt-or-monitor-freshness-pending';
     applyAndVerify(
       stateRoot,
@@ -171,5 +176,6 @@ test('evidence worklist closes a stage requirement only with a verified domain t
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });

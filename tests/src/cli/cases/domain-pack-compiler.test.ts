@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, repoRoot, runCli, runCliInCwd, shellSingleQuote, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, loadFrameworkContracts, os, path, runCli, runCliInCwd, shellSingleQuote, test } from '../helpers.ts';
 import { buildFamilyAgentDescriptorList } from '../../../../src/modules/atlas/family-domain-agent-descriptor.ts';
 import {
   assertReadyPackCompilerSummary,
@@ -10,7 +10,9 @@ import {
   bindFamilyManifests,
   createFamilyDefaultContractWorkspace,
   withPackCompilerReadySurfaces,
+  writeManifestContractOverrides,
 } from './domain-pack-compiler-fixtures.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 function buildDelayedManifestCommand(payload: Record<string, unknown>, delayMs: number) {
   return `${process.execPath} -e ${
@@ -67,14 +69,11 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
     mas.domain_pack_compiler.generated_interface_bundle.openai_tool.descriptors[0].function.name,
     'study_packet',
   );
-  assert.deepEqual(
-    mas.domain_pack_compiler.generated_interface_bundle.stage_routes[0],
-    {
-      stage_id: 'study_stage',
-      allowed_action_refs: ['study_packet'],
-      authority_owner: 'MedAutoScience',
-    },
-  );
+  const stageRoute = mas.domain_pack_compiler.generated_interface_bundle.stage_routes[0];
+  assert.equal(stageRoute.stage_id, 'study_stage');
+  assert.deepEqual(stageRoute.allowed_action_refs, ['study_packet']);
+  assert.equal(stageRoute.authority_owner, 'med-autoscience');
+  assert.equal(stageRoute.tool_affordance_boundary.status, 'declared');
   assert.equal(
     mas.domain_pack_compiler.generated_interface_bundle.authority_boundary.generated_interface_can_write_domain_truth,
     false,
@@ -204,6 +203,7 @@ test('domain pack compiler uses an extended manifest discovery budget without ch
     stageId: 'study_stage',
     memoryRefId: 'mas_publication_route_memory',
   });
+  const masPack = createAdmittedStagePackFixture(slowMas, 'med-autoscience', 'MedAutoScience');
 
   try {
     runCli([
@@ -212,9 +212,9 @@ test('domain pack compiler uses an extended manifest discovery budget without ch
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildDelayedManifestCommand(slowMas, 500),
+      buildDelayedManifestCommand(masPack.manifest, 500),
     ], env);
 
     const previousContractsDir = process.env.OPL_CONTRACTS_DIR;
@@ -249,6 +249,7 @@ test('domain pack compiler uses an extended manifest discovery budget without ch
     assert.deepEqual(packCompiler.domain_pack_compiler.blocker_reasons, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 
@@ -275,7 +276,7 @@ test('domain pack compiler blocks generated handoff when a domain still declares
           module_id: 'repo_owned_generic_scheduler',
           classification: 'generic_scheduler_or_daemon',
           owner: 'med-autoscience',
-          code_paths: ['docs/history/runtime-substrate/mas-supervision-scheduler-tombstone.md'],
+          code_paths: ['agent/stages/manifest.json'],
           active_callers: ['legacy negative guard fixture'],
           active_caller_status: 'legacy_negative_guard_active_fixture',
           migration_action: 'must stay tombstone/provenance and never re-enter active generated surface',
@@ -283,29 +284,35 @@ test('domain pack compiler blocks generated handoff when a domain still declares
       ],
     },
   );
+  const masPack = createAdmittedStagePackFixture(blockedMas, 'med-autoscience', 'MedAutoScience');
+  writeManifestContractOverrides(masPack.repoDir, blockedMas);
 
-  runCli([
-    'workspace',
-    'bind',
-    '--project',
-    'medautoscience',
-    '--path',
-    repoRoot,
-    '--manifest-command',
-    buildManifestCommand(blockedMas),
-  ], env);
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      masPack.repoDir,
+      '--manifest-command',
+      buildManifestCommand(masPack.manifest),
+    ], env);
 
-  const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
-  assert.equal(mas.domain_pack_compiler.compiler_status, 'blocked');
-  assert.equal(
-    mas.domain_pack_compiler.blocker_reasons.includes(
-      'functional_privatization_audit_has_generic_residue_or_blocker',
-    ),
-    true,
-  );
-  assert.equal(
-    mas.domain_pack_compiler.pack_compiler_input_projection.functional_privatization_summary
-      .active_private_generic_residue_count,
-    1,
-  );
+    const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+    assert.equal(mas.domain_pack_compiler.compiler_status, 'blocked');
+    assert.equal(
+      mas.domain_pack_compiler.blocker_reasons.includes(
+        'functional_privatization_audit_has_generic_residue_or_blocker',
+      ),
+      true,
+    );
+    assert.equal(
+      mas.domain_pack_compiler.pack_compiler_input_projection.functional_privatization_summary
+        .active_private_generic_residue_count,
+      1,
+    );
+  } finally {
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
+  }
 });

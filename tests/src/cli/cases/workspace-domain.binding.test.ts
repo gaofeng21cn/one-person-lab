@@ -237,7 +237,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
 
     const manifestOutput = runCliInCwd(['domain', 'manifests'], fixtureRoot, env);
-    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 4);
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant')?.manifest_command,
       expectedMagManifestCommand,

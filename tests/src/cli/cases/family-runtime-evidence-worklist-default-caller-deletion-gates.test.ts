@@ -6,7 +6,6 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
@@ -14,6 +13,7 @@ import {
   familyRuntimeEnv,
   withEvidenceWorklistSurfaces,
 } from './family-runtime-evidence-worklist-helpers.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 test('evidence worklist carries default-caller deletion gates without delete authority', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-default-caller-evidence-'));
@@ -24,6 +24,7 @@ test('evidence worklist carries default-caller deletion gates without delete aut
     { defaultCallerDeletionEvidence: true },
   );
   const env = familyRuntimeEnv(stateRoot, fixtureContractsRoot);
+  const masPack = createAdmittedStagePackFixture(manifest, 'med-autoscience', 'MedAutoScience');
 
   try {
     runCli([
@@ -32,9 +33,9 @@ test('evidence worklist carries default-caller deletion gates without delete aut
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(manifest),
+      buildManifestCommand(masPack.manifest),
     ], env);
     const worklist = runCli([
       'family-runtime',
@@ -84,5 +85,6 @@ test('evidence worklist carries default-caller deletion gates without delete aut
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });

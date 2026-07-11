@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
+import { compileStandardAgentStageManifest } from '../../src/modules/pack/index.ts';
 import { loadFamilyManifestFixtures } from './cli/helpers.ts';
+import { createAdmittedStagePackFixture } from './cli/cases/workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -17,20 +20,19 @@ function records(value: unknown): JsonRecord[] {
   return value as JsonRecord[];
 }
 
-function stringRefs(value: unknown) {
-  return records(value).map((entry) => String(entry.ref));
+function buildGeneratedPlane(
+  payload: JsonRecord,
+  targetDomainId: string,
+  owner: string,
+) {
+  const fixture = createAdmittedStagePackFixture(payload, targetDomainId, owner);
+  return {
+    fixture,
+    plane: compileStandardAgentStageManifest(fixture.repoDir).stage_control_plane as unknown as JsonRecord,
+  };
 }
 
-function loadMasStagePlane() {
-  return record(loadFamilyManifestFixtures().medautoscience.family_stage_control_plane);
-}
-
-function loadMagStagePlane() {
-  const payload = record(loadFamilyManifestFixtures().medautogrant.product_entry_manifest);
-  return record(payload.family_stage_control_plane);
-}
-
-function assertCognitiveKernelStage(stage: JsonRecord) {
+function assertGeneratedCognitiveStage(stage: JsonRecord) {
   const selectedExecutor = record(stage.selected_executor);
   assert.equal(selectedExecutor.executor_kind, 'codex_cli');
   assert.equal(selectedExecutor.default_executor, true);
@@ -47,12 +49,14 @@ function assertCognitiveKernelStage(stage: JsonRecord) {
 
   const boundary = record(stage.tool_affordance_boundary);
   assert.equal(boundary.catalog_role, 'available_affordance_catalog_not_workflow_script');
-  assert.ok(records(boundary.capability_refs).length > 0);
-  assert.ok(records(boundary.permission_scope_refs).length > 0);
-  assert.ok(records(boundary.credential_boundary_refs).length > 0);
-  assert.ok(records(boundary.write_scope_refs).length > 0);
-  assert.ok(records(boundary.side_effect_risk_refs).length > 0);
-  assert.ok(records(boundary.forbidden_authority_refs).length > 0);
+  for (const field of [
+    'capability_refs',
+    'permission_scope_refs',
+    'credential_boundary_refs',
+    'write_scope_refs',
+    'side_effect_risk_refs',
+    'forbidden_authority_refs',
+  ]) assert.ok(records(boundary[field]).length > 0);
 
   const autonomy = record(boundary.executor_autonomy);
   assert.equal(autonomy.executor_can_choose_tools, true);
@@ -70,64 +74,44 @@ function assertCognitiveKernelStage(stage: JsonRecord) {
   assert.equal(authorityBoundary.opl_can_sign_owner_receipt, false);
 }
 
-test('MAS fixture declares cognitive-kernel stage refs without defaulting domain dispatch evidence', () => {
-  const plane = loadMasStagePlane();
-  const stages = records(plane.stages);
-  const defaultStages = stages.filter((stage) => record(stage.selected_executor).default_executor === true);
+function assertGeneratedPlane(payload: JsonRecord, targetDomainId: string, owner: string) {
+  const { fixture, plane } = buildGeneratedPlane(payload, targetDomainId, owner);
+  try {
+    const stages = records(plane.stages);
+    const defaultStages = stages.filter((stage) => record(stage.selected_executor).default_executor === true);
 
-  assert.equal(plane.target_domain_id, 'med-autoscience');
-  assert.equal(defaultStages.length, 1);
-  assert.equal(defaultStages[0]?.stage_id, 'paper_evidence_reviewer_human_gate_delta');
-  assertCognitiveKernelStage(defaultStages[0] as JsonRecord);
+    assert.equal(plane.target_domain_id, targetDomainId);
+    assert.equal(stages.length, 6);
+    assert.equal(defaultStages.length, 1);
+    assert.equal(defaultStages[0]?.stage_id, 'stage_1');
+    assertGeneratedCognitiveStage(defaultStages[0] as JsonRecord);
 
-  const planeAuthority = record(plane.authority_boundary);
-  assert.equal(planeAuthority.opl_can_interpret_medical_semantics, false);
-  assert.equal(planeAuthority.domain_dispatch_evidence_can_be_default_worklist_root, false);
+    const planeAuthority = record(plane.authority_boundary);
+    assert.equal(planeAuthority.opl_can_write_domain_truth, false);
+    assert.equal(planeAuthority.opl_can_authorize_quality_or_export, false);
 
-  const stage = defaultStages[0] as JsonRecord;
-  assert.deepEqual(records(stage.domain_stage_refs), [
-    'paper_delta',
-    'evidence_delta',
-    'reviewer_delta',
-    'human_gate_delta',
-  ]);
-  const stageContract = record(stage.stage_contract);
-  const progressPolicy = record(stageContract.progress_delta_policy);
-  assert.equal(progressPolicy.progress_unit, 'paper_evidence_reviewer_human_gate_delta');
-  assert.equal(progressPolicy.domain_dispatch_evidence_counts_as_progress, false);
-  assert.equal(progressPolicy.open_worklist_count_counts_as_progress, false);
-  assert.equal(stringRefs(stageContract.expected_receipt_refs).length, 1);
+    const stageContract = record((defaultStages[0] as JsonRecord).stage_contract);
+    const progressPolicy = record(stageContract.progress_delta_policy);
+    assert.equal(progressPolicy.platform_only_is_not_deliverable_progress, true);
+    assert.equal(records(stageContract.expected_receipt_refs).length, 1);
+    assert.equal(records(stageContract.expected_receipt_refs)[0]?.ref, 'domain_owner_receipt_or_typed_blocker_ref');
+  } finally {
+    fs.rmSync(fixture.repoDir, { recursive: true, force: true });
+  }
+}
+
+test('MAS fixture compiles its cognitive stage refs from the canonical generated surface', () => {
+  assertGeneratedPlane(
+    loadFamilyManifestFixtures().medautoscience,
+    'med-autoscience',
+    'MedAutoScience',
+  );
 });
 
-test('MAG fixture keeps one ordinary authoring path with domain or human owner gates', () => {
-  const plane = loadMagStagePlane();
-  const stages = records(plane.stages);
-  const defaultStages = stages.filter((stage) => record(stage.selected_executor).default_executor === true);
-
-  assert.equal(plane.target_domain_id, 'med-autogrant');
-  assert.equal(defaultStages.length, 1);
-  assert.equal(defaultStages[0]?.stage_id, 'grant_authoring_fundability_export_submission_delta');
-  assertCognitiveKernelStage(defaultStages[0] as JsonRecord);
-
-  const planeAuthority = record(plane.authority_boundary);
-  assert.equal(planeAuthority.opl_can_interpret_grant_semantics, false);
-  assert.equal(planeAuthority.opl_can_authorize_fundability_or_export, false);
-
-  const stage = defaultStages[0] as JsonRecord;
-  assert.deepEqual(records(stage.domain_stage_refs), [
-    'authoring_delta',
-    'fundability_review',
-    'export_gate',
-    'submission_gate',
-  ]);
-  const stageContract = record(stage.stage_contract);
-  const progressPolicy = record(stageContract.progress_delta_policy);
-  assert.equal(progressPolicy.progress_unit, 'grant_authoring_fundability_export_submission_delta');
-  assert.equal(progressPolicy.submission_ready_export_gate_owner, 'domain_or_human_owner');
-  assert.equal(progressPolicy.shell_or_manifest_diagnostic_counts_as_progress, false);
-  assert.equal(progressPolicy.hermes_proof_lane_counts_as_default_progress, false);
-  assert.deepEqual(stringRefs(stageContract.expected_receipt_refs), [
-    'receipt:mag/authoring-fundability-export-submission/domain-owner-or-typed-blocker',
-    'human_gate:mag_route_gate_revision',
-  ]);
+test('MAG fixture compiles its authoring stages from the canonical generated surface', () => {
+  assertGeneratedPlane(
+    loadFamilyManifestFixtures().medautogrant,
+    'med-autogrant',
+    'MedAutoGrant',
+  );
 });

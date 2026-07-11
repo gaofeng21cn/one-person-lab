@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -270,6 +271,11 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       ],
     },
   };
+  const masPack = createAdmittedStagePackFixture(
+    masManifest,
+    'med-autoscience',
+    'MedAutoScience',
+  );
 
   try {
     runCli([
@@ -278,9 +284,9 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(masManifest),
+      buildManifestCommand(masPack.manifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     runCli([
       'workspace',
@@ -386,6 +392,7 @@ test('domain-agent skeleton inspection accepts only the canonical MAS MAG RCA su
     assert.equal(rca.family_agent.artifact_boundary.artifact_roots_are_locators, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 

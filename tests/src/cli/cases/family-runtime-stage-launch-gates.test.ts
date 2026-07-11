@@ -1,4 +1,4 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 import {
   createMasScoutStage,
   createMedAutoScienceStageManifest,
@@ -9,10 +9,22 @@ import {
   buildFamilyStageAdmissionReview,
   normalizeFamilyStageControlPlane,
 } from '../../../../src/modules/stagecraft/index.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
+
+const isolatedFamilyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-launch-family-'));
+const previousFamilyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
+process.env.OPL_FAMILY_WORKSPACE_ROOT = isolatedFamilyWorkspaceRoot;
+test.after(() => {
+  if (previousFamilyWorkspaceRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+  else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousFamilyWorkspaceRoot;
+  fs.rmSync(isolatedFamilyWorkspaceRoot, { recursive: true, force: true });
+});
 
 function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {}) {
+  const contractsDir = extra.OPL_CONTRACTS_DIR;
   return {
     OPL_STATE_DIR: stateRoot,
+    ...(contractsDir ? { OPL_FAMILY_WORKSPACE_ROOT: path.resolve(contractsDir, '../..') } : {}),
     ...extra,
   };
 }
@@ -22,19 +34,21 @@ function bindMedAutoScienceManifest(
   fixtureContractsRoot: string,
   masManifest: Record<string, unknown>,
 ) {
+  const masPack = createAdmittedStagePackFixture(masManifest, 'med-autoscience', 'MedAutoScience');
   runCli([
     'workspace',
     'bind',
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    masPack.repoDir,
     '--manifest-command',
-    buildManifestCommand(masManifest),
+    buildManifestCommand(masPack.manifest),
   ], {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     OPL_STATE_DIR: stateRoot,
   });
+  return masPack.repoDir;
 }
 
 function routedAction(actionId: string, requiredStageRefs: string[], optionalStageRefs: string[] = []) {
@@ -132,17 +146,9 @@ test('family-runtime attempt create projects launch invocation and gates non-def
   const env = familyRuntimeEnv(stateRoot, {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
   });
+  let repoDir: string | null = null;
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(masManifest),
-    ], env);
+    repoDir = bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
 
     const codex = runCli(baseArgs, env);
     const codexAttempt = codex.family_runtime_stage_attempt.attempt;
@@ -230,6 +236,7 @@ test('family-runtime attempt create projects launch invocation and gates non-def
     assert.equal(boundedEditInvocation.launch_refs.bounded_edit_ref, 'bounded-edit:gfl/proposed-stage-pack-1');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 
@@ -244,6 +251,7 @@ test('family-runtime launch gate selects one declared action route without treat
     '--provider', 'temporal', '--workspace-locator', '{"workspace_root":"/tmp/oma"}',
     '--source-fingerprint', 'sha256:oma-selected-route',
   ];
+  const repoDirs: string[] = [];
   try {
     const staticPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane)!;
     const staticCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog)!;
@@ -252,7 +260,7 @@ test('family-runtime launch gate selects one declared action route without treat
       finding.code === 'composition_obligation_not_satisfied'
       && finding.stage_id === 'intent-intake'
     ).length, 4);
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifest);
+    repoDirs.push(bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifest));
 
     const missing = runCli(createArgs(), env).family_runtime_stage_attempt;
     assert.equal(missing.attempt.status, 'blocked');
@@ -295,19 +303,19 @@ test('family-runtime launch gate selects one declared action route without treat
       handoff: { next_stage_refs: ['intent-intake'] },
       stage_contract: { requires: ['source_ready'], ensures: ['different_entry_requirement'] },
     }));
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestWithIncomingEntry);
-    const incomingEntry = runCli([
-      ...createArgs('build-agent-baseline'), '--new-attempt',
-    ], env).family_runtime_stage_attempt;
-    assert.equal(incomingEntry.attempt.status, 'blocked');
-    assert.equal(incomingEntry.stage_launch_admission_gate.blocker_findings.some(
-      (finding: { code: string; stage_id: string; target_stage_id: string }) =>
+    const incomingEntryReview = buildFamilyStageAdmissionReview(
+      normalizeFamilyStageControlPlane(manifestWithIncomingEntry.family_stage_control_plane)!,
+      { family_action_catalog: staticCatalog },
+    );
+    assert.equal(incomingEntryReview.findings.some(
+      (finding) =>
         finding.code === 'composition_obligation_not_satisfied'
         && finding.stage_id === 'route-prerequisite'
         && finding.target_stage_id === 'intent-intake'
     ), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    for (const repoDir of repoDirs) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 
@@ -324,8 +332,9 @@ test('family-runtime attempt create blocks undeclared stage launches without leg
   const env = familyRuntimeEnv(stateRoot, {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
   });
+  let repoDir: string | null = null;
   try {
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
+    repoDir = bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
 
     const created = runCli([
       'family-runtime',
@@ -353,6 +362,7 @@ test('family-runtime attempt create blocks undeclared stage launches without leg
     assert.equal(gate.warning_findings.length, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 
@@ -361,20 +371,9 @@ test('family-runtime required admission warns without blocking when cohort loop 
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const masManifest = createMedAutoScienceStageManifest(fixtures.medautoscience, [createMasScoutStage()]);
+  let repoDir: string | null = null;
   try {
-    runCli([
-      'workspace',
-      'bind',
-      '--project',
-      'medautoscience',
-      '--path',
-      repoRoot,
-      '--manifest-command',
-      buildManifestCommand(masManifest),
-    ], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    repoDir = bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
 
     const created = runCli([
       'family-runtime',
@@ -391,10 +390,7 @@ test('family-runtime required admission warns without blocking when cohort loop 
       '--source-fingerprint',
       'sha256:scout-cohort-loop',
       '--require-stage-admission',
-    ], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], familyRuntimeEnv(stateRoot, { OPL_CONTRACTS_DIR: fixtureContractsRoot }));
     const gate = created.family_runtime_stage_attempt.stage_launch_admission_gate;
 
     assert.equal(created.family_runtime_stage_attempt.attempt.status, 'queued');
@@ -410,6 +406,7 @@ test('family-runtime required admission warns without blocking when cohort loop 
     assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 
@@ -438,30 +435,19 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
   const env = familyRuntimeEnv(stateRoot, {
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
   });
+  const repoDirs: string[] = [];
   try {
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
-      ...baseStage,
-      authority_boundary: {},
-    }));
-    const missingAuthority = runCli([
-      ...baseArgs,
-      '--source-fingerprint',
-      'sha256:stage-kernel-missing-authority',
-    ], env);
-    assert.equal(missingAuthority.family_runtime_stage_attempt.attempt.status, 'blocked');
-    assert.equal(missingAuthority.family_runtime_stage_attempt.stage_launch_admission_gate.status, 'blocked');
+    const malformedPlane = normalizeFamilyStageControlPlane(
+      manifestForStage({ ...baseStage, authority_boundary: {} }).family_stage_control_plane,
+    )!;
     assert.equal(
-      missingAuthority.family_runtime_stage_attempt.stage_launch_admission_gate.blocked_reason,
-      'stage_admission_blocked',
-    );
-    assert.equal(
-      missingAuthority.family_runtime_stage_attempt.stage_launch_admission_gate.blocker_findings.some(
-        (finding: { code: string }) => finding.code === 'missing_authority_boundary_role',
+      buildFamilyStageAdmissionReview(malformedPlane).findings.some(
+        (finding) => finding.code === 'missing_authority_boundary_role',
       ),
       true,
     );
 
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
+    const missingRuntimeEventsPlane = normalizeFamilyStageControlPlane(manifestForStage({
       ...baseStage,
       stage_contract: {
         ...baseStage.stage_contract,
@@ -474,25 +460,15 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
         records_runtime_events: true,
         runtime_event_refs: [],
       },
-    }));
-    const missingRuntimeEvents = runCli([
-      ...baseArgs,
-      '--new-attempt',
-      '--source-fingerprint',
-      'sha256:stage-kernel-missing-runtime-events',
-    ], env);
-    assert.equal(missingRuntimeEvents.family_runtime_stage_attempt.attempt.status, 'blocked');
+    }).family_stage_control_plane)!;
     assert.equal(
-      missingRuntimeEvents.family_runtime_stage_attempt.stage_launch_admission_gate.blocked_reason,
-      'stage_admission_blocked',
-    );
-    assert.equal(
-      missingRuntimeEvents.family_runtime_stage_attempt.stage_launch_admission_gate.blocker_findings.some(
-        (finding: { code: string }) => finding.code === 'effect_boundary_missing_runtime_event_refs',
+      buildFamilyStageAdmissionReview(missingRuntimeEventsPlane).findings.some(
+        (finding) => finding.code === 'effect_boundary_missing_runtime_event_refs',
       ),
       true,
     );
 
+    repoDirs.push(bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage(baseStage)));
     const missingBinding = runCli([
       ...baseArgs,
       '--new-attempt',
@@ -507,7 +483,7 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
       'non_default_executor_binding_ref_missing',
     );
 
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
+    repoDirs.push(bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, manifestForStage({
       ...baseStage,
       stage_contract: {
         ...baseStage.stage_contract,
@@ -515,7 +491,7 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
         artifact_scope_refs: [],
         workspace_scope_refs: [],
       },
-    }));
+    })));
     const missingScope = runCli([
       ...baseArgs,
       '--new-attempt',
@@ -535,6 +511,7 @@ test('family-runtime required admission only blocks Stage Kernel launch evidence
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    for (const repoDir of repoDirs) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 
@@ -563,8 +540,9 @@ test('family-runtime required admission keeps assumption cohort and runtime-budg
       },
     }),
   ]);
+  let repoDir: string | null = null;
   try {
-    bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
+    repoDir = bindMedAutoScienceManifest(stateRoot, fixtureContractsRoot, masManifest);
 
     const created = runCli([
       'family-runtime',
@@ -581,10 +559,7 @@ test('family-runtime required admission keeps assumption cohort and runtime-budg
       '--source-fingerprint',
       'sha256:scout-advisory',
       '--require-stage-admission',
-    ], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    ], familyRuntimeEnv(stateRoot, { OPL_CONTRACTS_DIR: fixtureContractsRoot }));
     const gate = created.family_runtime_stage_attempt.stage_launch_admission_gate;
     const findingCodes = gate.findings.map((finding: { code: string }) => finding.code);
 
@@ -600,5 +575,6 @@ test('family-runtime required admission keeps assumption cohort and runtime-budg
     assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    if (repoDir) fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });

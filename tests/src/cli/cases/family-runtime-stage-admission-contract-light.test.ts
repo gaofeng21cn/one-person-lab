@@ -1,11 +1,13 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, runCli, test } from '../helpers.ts';
 import { createMasScoutStage, createMedAutoScienceStageManifest } from './family-runtime-stage-fixtures.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 test('family-runtime required admission warns but does not block launch without advisory lens refs', () => {
   const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-family-runtime-cohort-loop-warning-`);
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   const masManifest = createMedAutoScienceStageManifest(fixtures.medautoscience, [createMasScoutStage()]);
+  const masPack = createAdmittedStagePackFixture(masManifest, 'med-autoscience', 'MedAutoScience');
 
   try {
     const env = {
@@ -18,9 +20,9 @@ test('family-runtime required admission warns but does not block launch without 
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(masManifest),
+      buildManifestCommand(masPack.manifest),
     ], env);
 
     const created = runCli([
@@ -64,5 +66,6 @@ test('family-runtime required admission warns but does not block launch without 
     assert.deepEqual(created.family_runtime_stage_attempt.conflict_or_blocker_envelopes, []);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });

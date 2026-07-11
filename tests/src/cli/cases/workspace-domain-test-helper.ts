@@ -183,30 +183,61 @@ export function createAdmittedStagePackFixture(
   payload: JsonRecord,
   targetDomainId: string,
   owner: string,
-  options: { stage2HumanGate?: boolean } = {},
+  options: { stage2HumanGate?: boolean; stageCount?: number } = {},
 ) {
   const repoDir = buildReadyAgentRepo();
   retargetReadyRepo(repoDir, targetDomainId, owner);
-  const actionCatalog = buildAdmittedActionCatalog(targetDomainId, owner, options);
+  const productEntryManifest = payload.product_entry_manifest as JsonRecord | undefined;
+  const inlineStagePlane = (
+    productEntryManifest?.family_stage_control_plane ?? payload.family_stage_control_plane
+  ) as JsonRecord | undefined;
+  const actionCatalog = (
+    productEntryManifest?.family_action_catalog ?? payload.family_action_catalog
+  ) as JsonRecord | undefined ?? buildAdmittedActionCatalog(targetDomainId, owner, options);
+  const actionIds = (actionCatalog.actions as JsonRecord[]).map((action) => String(action.action_id));
   writeJson(path.join(repoDir, 'contracts/action_catalog.json'), actionCatalog);
 
   const stageManifestPath = path.join(repoDir, 'agent/stages/manifest.json');
   const stageManifest = JSON.parse(fs.readFileSync(stageManifestPath, 'utf8')) as JsonRecord;
   const baseStage = (stageManifest.stages as JsonRecord[])[0];
-  stageManifest.stages = (buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[])
-    .map((stage, index) => ({
-      ...baseStage,
-      stage_id: stage.stage_id,
-      stage_kind: stage.stage_kind,
-      title: stage.title,
-      summary: stage.summary,
-      goal: stage.goal,
-      allowed_action_refs: stage.allowed_action_refs,
-      requires: (stage.stage_contract as JsonRecord).requires,
-      ensures: (stage.stage_contract as JsonRecord).ensures,
-      next_stage_refs: [],
-      trust_lane: options.stage2HumanGate && index === 1 ? 'human_gate' : 'domain_agent',
-    }));
+  const sourceStages = inlineStagePlane
+    ? inlineStagePlane.stages as JsonRecord[]
+    : buildAdmittedStagePlane(targetDomainId, owner).stages as JsonRecord[];
+  stageManifest.stages = sourceStages
+    .slice(0, options.stageCount ?? sourceStages.length)
+    .map((stage, index) => {
+      const contract = stage.stage_contract as JsonRecord;
+      const trustBoundary = stage.trust_boundary as JsonRecord | undefined;
+      const extensionFields = [
+        'runtime_assumptions', 'monitor_refs', 'source_scope_refs', 'cohort_query_refs',
+        'trigger_refs', 'metric_refs', 'dashboard_metric_refs', 'artifact_scope_refs',
+        'workspace_scope_refs',
+      ];
+      return {
+        ...baseStage,
+        stage_id: stage.stage_id,
+        stage_kind: stage.stage_kind,
+        title: stage.title,
+        summary: stage.summary,
+        goal: stage.goal,
+        allowed_action_refs: (stage.allowed_action_refs as string[] | undefined)?.filter((ref) => actionIds.includes(ref)).length
+          ? stage.allowed_action_refs
+          : [actionIds[index % actionIds.length]],
+        requires: contract.requires,
+        ensures: contract.ensures,
+        next_stage_refs: (stage.handoff as JsonRecord | undefined)?.next_stage_refs ?? [],
+        trust_lane: options.stage2HumanGate && index === 1
+          ? 'human_gate'
+          : trustBoundary?.effect_boundary === true
+            ? 'ai_decision'
+            : trustBoundary?.lane ?? 'domain_agent',
+        stage_contract_extension: Object.fromEntries(
+          extensionFields
+            .filter((field) => contract[field] !== undefined)
+            .map((field) => [field, contract[field]]),
+        ),
+      };
+    });
   writeJson(stageManifestPath, stageManifest);
   for (let index = 1; index <= 6; index += 1) {
     const schema = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object' };

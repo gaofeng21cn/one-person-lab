@@ -1,5 +1,6 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, parseJsonText, path, runCli, runCliFailure, test } from '../helpers.ts';
 import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 function createNativeHelperRepairScript(root: string, helperBinDir: string) {
   const repairScript = path.join(root, 'repair-native.sh');
@@ -307,6 +308,12 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     ...(runningManifest.product_entry_start as Record<string, unknown>),
     human_gate_ids: [],
   };
+  const masPack = createAdmittedStagePackFixture(
+    runningManifest,
+    'med-autoscience',
+    'MedAutoScience',
+  );
+  t.after(() => removeTempRoots(masPack.repoDir));
 
   const attentionManifest = structuredClone(fixtures.redcube);
   attentionManifest.task_lifecycle = {
@@ -360,13 +367,14 @@ test('runtime snapshot projects active domain manifests into tray lanes without 
     },
   };
 
-    bindWorkspaceProject('medautoscience', path.join(workspaceRoot, 'mas'), runningManifest, stateRoot, fixtureContractsRoot);
+    bindWorkspaceProject('medautoscience', masPack.repoDir, masPack.manifest, stateRoot, fixtureContractsRoot);
     bindWorkspaceProject('redcube', path.join(workspaceRoot, 'redcube'), attentionManifest, stateRoot, fixtureContractsRoot);
     bindWorkspaceProject('medautogrant', path.join(workspaceRoot, 'mag'), recentManifest, stateRoot, fixtureContractsRoot);
     const output = runCli(['runtime', 'snapshot'], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];
@@ -464,6 +472,7 @@ test('runtime snapshot keeps demo and descriptor-only domain manifests out of cu
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_FAMILY_RUNTIME_PROVIDER: 'temporal',
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.running_items, ...snapshot.attention_items, ...snapshot.recent_items];

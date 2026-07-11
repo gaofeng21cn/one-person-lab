@@ -6,7 +6,6 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   runCliInCwd,
   test,
@@ -15,11 +14,13 @@ import {
   attachManifestSurface,
   bindFamilyManifests,
   withPackCompilerReadySurfaces,
+  writeManifestContractOverrides,
 } from './domain-pack-compiler-fixtures.ts';
 import {
   assertReadyPackCompilerSummary,
   PACK_COMPILER_DEFAULT_DOMAIN_ALIASES,
 } from './domain-pack-compiler-assertions.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 test('domain pack compiler emits aligned generated artifact drift manifests for admitted packs', () => {
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -104,7 +105,7 @@ test('domain pack compiler marks generated artifact drift when blockers remain',
           module_id: 'repo_owned_generic_scheduler',
           classification: 'generic_scheduler_or_daemon',
           owner: 'med-autoscience',
-          code_paths: ['docs/history/runtime-substrate/mas-supervision-scheduler-tombstone.md'],
+          code_paths: ['agent/stages/manifest.json'],
           active_callers: ['legacy negative guard fixture'],
           active_caller_status: 'legacy_negative_guard_active_fixture',
           migration_action: 'must stay tombstone/provenance and never re-enter active generated surface',
@@ -112,24 +113,30 @@ test('domain pack compiler marks generated artifact drift when blockers remain',
       ],
     },
   );
+  const masPack = createAdmittedStagePackFixture(blockedMas, 'med-autoscience', 'MedAutoScience');
+  writeManifestContractOverrides(masPack.repoDir, blockedMas);
 
-  runCli([
-    'workspace',
-    'bind',
-    '--project',
-    'medautoscience',
-    '--path',
-    repoRoot,
-    '--manifest-command',
-    buildManifestCommand(blockedMas),
-  ], env);
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      masPack.repoDir,
+      '--manifest-command',
+      buildManifestCommand(masPack.manifest),
+    ], env);
 
-  const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
-  assert.equal(mas.domain_pack_compiler.generated_artifact_drift_manifest.status, 'drift_detected');
-  assert.equal(
-    mas.domain_pack_compiler.generated_artifact_drift_manifest.drift_findings.includes(
-      'compiler_blocker:functional_privatization_audit_has_generic_residue_or_blocker',
-    ),
-    true,
-  );
+    const mas = runCli(['agents', 'pack-compiler', 'inspect', '--domain', 'mas'], env);
+    assert.equal(mas.domain_pack_compiler.generated_artifact_drift_manifest.status, 'drift_detected');
+    assert.equal(
+      mas.domain_pack_compiler.generated_artifact_drift_manifest.drift_findings.includes(
+        'compiler_blocker:functional_privatization_audit_has_generic_residue_or_blocker',
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
+  }
 });

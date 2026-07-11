@@ -5,7 +5,6 @@ import {
   loadFrameworkContracts,
   os,
   path,
-  repoRoot,
   runCli,
   test,
 } from '../helpers.ts';
@@ -13,6 +12,7 @@ import { buildFrameworkReadinessSummary } from '../../../../src/modules/foundry-
 import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
 import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 import { createFamilyWorkspaceFixture } from './runtime-app-operator-drilldown-helpers.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 test('framework readiness keeps domain manifest live refresh bounded and uses projection cache on slow manifests', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-readiness-cache-state-'));
@@ -20,13 +20,16 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const { omaRepoDir, workspaceRoot } = createFamilyWorkspaceFixture(familyWorkspaceRoot);
   const manifest = buildManyStageManifest(2);
+  const masPack = createAdmittedStagePackFixture(manifest, 'med-autoscience', 'MedAutoScience', {
+    stageCount: 2,
+  });
   const manifestPath = path.join(stateRoot, 'manifest.json');
   const invocationPath = path.join(stateRoot, 'manifest-invocations.log');
   const slowCommandPath = path.join(stateRoot, 'slow-readiness-manifest.cjs');
 
   try {
     fs.mkdirSync(stateRoot, { recursive: true });
-    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, 'utf8');
+    fs.writeFileSync(manifestPath, `${JSON.stringify(masPack.manifest)}\n`, 'utf8');
     fs.writeFileSync(
       slowCommandPath,
       `const fs = require('node:fs');\n`
@@ -40,7 +43,7 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
       `${process.execPath} ${slowCommandPath}`,
     ], {
@@ -85,6 +88,7 @@ test('framework readiness keeps domain manifest live refresh bounded and uses pr
     fs.rmSync(familyWorkspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 
@@ -92,12 +96,15 @@ test('runtime tray full detail keeps manifest live refresh bounded and uses proj
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-full-cache-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const manifest = buildManyStageManifest(3);
+  const masPack = createAdmittedStagePackFixture(manifest, 'med-autoscience', 'MedAutoScience', {
+    stageCount: 3,
+  });
   const manifestPath = path.join(stateRoot, 'manifest.json');
   const slowCommandPath = path.join(stateRoot, 'slow-full-manifest.cjs');
 
   try {
     fs.mkdirSync(stateRoot, { recursive: true });
-    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, 'utf8');
+    fs.writeFileSync(manifestPath, `${JSON.stringify(masPack.manifest)}\n`, 'utf8');
     fs.writeFileSync(
       slowCommandPath,
       `const fs = require('node:fs');\n`
@@ -110,7 +117,7 @@ test('runtime tray full detail keeps manifest live refresh bounded and uses proj
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
       `${process.execPath} ${slowCommandPath}`,
     ], {
@@ -152,6 +159,7 @@ test('runtime tray full detail keeps manifest live refresh bounded and uses proj
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 

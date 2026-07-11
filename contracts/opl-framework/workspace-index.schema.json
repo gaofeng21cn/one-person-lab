@@ -259,7 +259,7 @@
           "const": "workspace-topology-profile.v2"
         },
         "profile_contract_ref": {
-          "const": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/foundry_agent_series_contract/workspace_topology_profile"
+          "const": "contracts/opl-framework/foundry-agent-series-contract.json#/workspace_topology_profile"
         },
         "profile_fingerprint": {
           "const": "opl-workspace-topology-profile-v2-projects-stage-outputs"

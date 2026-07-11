@@ -1,4 +1,5 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -188,6 +189,11 @@ test('family action catalog is resolved from domain manifests and exported as de
       },
     ),
   );
+  const masPack = createAdmittedStagePackFixture(
+    masManifest,
+    'med-autoscience',
+    'MedAutoScience',
+  );
   const magManifest = withFamilyActionCatalog(
     fixtures.medautogrant,
     buildActionCatalog(
@@ -221,9 +227,9 @@ test('family action catalog is resolved from domain manifests and exported as de
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(masManifest),
+      buildManifestCommand(masPack.manifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     runCli([
       'workspace',
@@ -283,6 +289,7 @@ test('family action catalog is resolved from domain manifests and exported as de
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 

@@ -1,4 +1,6 @@
 import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { createMasScoutStage } from './family-runtime-stage-fixtures.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -131,6 +133,11 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
       can_write_artifacts: false,
     },
   });
+  const masPack = createAdmittedStagePackFixture(
+    masManifest,
+    'med-autoscience',
+    'MedAutoScience',
+  );
 
   try {
     runCli([
@@ -139,9 +146,9 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(masManifest),
+      buildManifestCommand(masPack.manifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
     runCli([
       'workspace',
@@ -266,12 +273,18 @@ test('domain memory descriptors are indexed without granting OPL memory or verdi
     assert.equal(migrationPlan.family_domain_memory_migration_plan.runtime_receipt_evidence.summary.closeout_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
 
 test('domain memory read model projects runtime receipt refs without applying memory writes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-domain-memory-runtime-evidence-'));
-  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    OPL_FAMILY_WORKSPACE_ROOT: fixtureRoot,
+    OPL_STATE_DIR: stateRoot,
+  };
   const fixtures = loadFamilyManifestFixtures();
   const masManifest = withDomainMemoryDescriptor(fixtures.medautoscience);
   const magManifest = withDomainMemoryDescriptor(fixtures.medautogrant, {
@@ -280,6 +293,26 @@ test('domain memory read model projects runtime receipt refs without applying me
     owner: 'MedAutoGrant',
     memory_family: 'grant_strategy_memory',
   });
+  ((magManifest as JsonRecord).product_entry_manifest as JsonRecord).family_stage_control_plane = {
+    surface_kind: 'family_stage_control_plane',
+    version: 'family-stage-control-plane.v1',
+    plane_id: 'med_autogrant_stage_control_plane',
+    target_domain_id: 'med-autogrant',
+    owner: 'MedAutoGrant',
+    authority_boundary: { opl_role: 'projection_consumer_only' },
+    stages: [createMasScoutStage({ stage_id: 'review_and_rebuttal' })],
+    notes: [],
+  };
+  const masPack = createAdmittedStagePackFixture(
+    masManifest,
+    'med-autoscience',
+    'MedAutoScience',
+  );
+  const magPack = createAdmittedStagePackFixture(
+    magManifest,
+    'med-autogrant',
+    'MedAutoGrant',
+  );
 
   try {
     runCli([
@@ -288,20 +321,20 @@ test('domain memory read model projects runtime receipt refs without applying me
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      masPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(masManifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+      buildManifestCommand(masPack.manifest),
+    ], env);
     runCli([
       'workspace',
       'bind',
       '--project',
       'medautogrant',
       '--path',
-      repoRoot,
+      magPack.repoDir,
       '--manifest-command',
-      buildManifestCommand(magManifest),
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+      buildManifestCommand(magPack.manifest),
+    ], env);
 
     const created = runCli([
       'family-runtime',
@@ -317,7 +350,7 @@ test('domain memory read model projects runtime receipt refs without applying me
       '{"workspace_root":"/tmp/mag","runtime_root":"/tmp/mag/runtime"}',
       '--source-fingerprint',
       'sha256:mag-memory',
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], env);
     const attemptId = created.family_runtime_stage_attempt.attempt.stage_attempt_id;
     runCli([
       'family-runtime',
@@ -326,12 +359,9 @@ test('domain memory read model projects runtime receipt refs without applying me
       attemptId,
       '--closeout-packet',
       '{"surface_kind":"stage_memory_closeout_packet","closeout_refs":["receipt:mag-review-closeout"],"consumed_refs":["evidence:critique"],"consumed_memory_refs":["mag-memory:strategy:accepted"],"writeback_receipt_refs":["mag-memory-writeback:accepted","mag-memory-writeback:rejected"],"rejected_writes":[{"target":"memory","reason":"domain_router_rejected"}],"next_owner":"med-autogrant","domain_ready_verdict":"domain_gate_pending"}',
-    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+    ], env);
 
-    const list = runCli(['domain-memory', 'list'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-      OPL_STATE_DIR: stateRoot,
-    });
+    const list = runCli(['domain-memory', 'list'], env);
     const listedMag = list.family_domain_memory.memories.find((entry: { project_id: string }) => (
       entry.project_id === 'medautogrant'
     ));
@@ -392,6 +422,9 @@ test('domain memory read model projects runtime receipt refs without applying me
     assert.equal(inspectedMas.family_domain_memory.runtime_receipt_evidence.summary.closeout_count, 0);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
+    fs.rmSync(magPack.repoDir, { recursive: true, force: true });
   }
 });
 

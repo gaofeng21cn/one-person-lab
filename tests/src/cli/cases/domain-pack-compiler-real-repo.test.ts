@@ -1,8 +1,8 @@
 import { buildRepoGeneratedInterfaceBundle } from '../../../../src/modules/pack/index.ts';
-import { assert, fs, runCli, runCliFailure, test } from '../helpers.ts';
+import { assert, fs, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, retargetReadyRepo } from './agents-conformance-fixtures.ts';
 
-test('real family-defaults pack compiler preserves JSON readback when individual repos are blocked', {
+test('real family-defaults pack compiler preserves JSON readback when all standard agents are ready', {
   skip: ![
     'med-autoscience',
     'med-autogrant',
@@ -24,22 +24,16 @@ test('real family-defaults pack compiler preserves JSON readback when individual
     blocked_domain_count: report.summary.blocked_domain_count,
   }, {
     total_domain_count: 5,
-    ready_domain_count: 3,
-    blocked_domain_count: 2,
+    ready_domain_count: 5,
+    blocked_domain_count: 0,
   });
-  for (const agentId of ['mag', 'mas', 'oma']) {
+  for (const agentId of ['mag', 'mas', 'obf', 'oma', 'rca']) {
     assert.equal(domains.get(agentId)?.compiler_status, 'ready');
-  }
-  for (const agentId of ['obf', 'rca']) {
-    const domain = domains.get(agentId) as Record<string, any>;
-    assert.equal(domain.compiler_status, 'blocked');
-    assert.equal(domain.blocker_reasons.length > 0, true);
-    assert.equal(domain.repo_contract_error.code, 'contract_shape_invalid');
-    assert.equal(typeof domain.repo_contract_error.message, 'string');
+    assert.deepEqual(domains.get(agentId)?.blocker_reasons, []);
   }
 });
 
-test('real family-defaults generated interfaces preserve JSON readback when individual repos are blocked', {
+test('real family-defaults generated interfaces preserve JSON readback when all standard agents are ready', {
   skip: ![
     'med-autoscience',
     'med-autogrant',
@@ -57,36 +51,30 @@ test('real family-defaults generated interfaces preserve JSON readback when indi
   assert.deepEqual([...domains.keys()].sort(), ['mag', 'mas', 'obf', 'oma', 'rca']);
   assert.deepEqual(report.summary, {
     total_domain_count: 5,
-    ready_domain_count: 3,
-    blocked_domain_count: 2,
+    ready_domain_count: 5,
+    blocked_domain_count: 0,
   });
-  for (const agentId of ['mag', 'mas', 'oma']) {
+  for (const agentId of ['mag', 'mas', 'obf', 'oma', 'rca']) {
     assert.equal(domains.get(agentId)?.compiler_status, 'ready');
     assert.equal(domains.get(agentId)?.generated_agent_interfaces.status, 'ready');
-  }
-  for (const agentId of ['obf', 'rca']) {
-    const domain = domains.get(agentId) as Record<string, any>;
-    assert.equal(domain.compiler_status, 'blocked');
-    assert.equal(domain.generated_agent_interfaces.status, 'blocked');
-    assert.equal(domain.blocker_reasons.length > 0, true);
-    assert.equal(domain.repo_contract_error.code, 'contract_shape_invalid');
+    assert.deepEqual(domains.get(agentId)?.blocker_reasons, []);
   }
 });
 
-test('RCA forbidden generated authority blocks the real repo without losing canonical agent identity', {
+test('RCA real repo exposes canonical agent identity through ready generated interfaces', {
   skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/domain_descriptor.json'),
 }, (t) => {
-  const failure = runCliFailure([
+  const interfaces = runCli([
     'agents',
     'interfaces',
     '--repo-dir',
     '/Users/gaofeng/workspace/redcube-ai',
-  ]);
+  ]).generated_agent_interfaces;
 
-  assert.equal(failure.payload.error.code, 'contract_shape_invalid');
-  assert.deepEqual(failure.payload.error.details.forbidden_true_fields, [
-    'opl_can_compile_generated_surfaces_from_refs',
-  ]);
+  assert.equal(interfaces.status, 'ready');
+  assert.equal(interfaces.target_domain_id, 'redcube_ai');
+  assert.equal(interfaces.agent_id, 'rca');
+  assert.deepEqual(interfaces.blocker_reasons, []);
 
   const root = buildReadyAgentRepo();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

@@ -12,7 +12,7 @@ import {
   runCli,
   test,
 } from '../helpers.ts';
-import { attachManifestSurface } from './workspace-domain-test-helper.ts';
+import { attachManifestSurface, createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 function insertFreshTemporalProviderProof(stateRoot: string) {
   const db = new DatabaseSync(path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
@@ -73,6 +73,12 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
     medautoscience: withStandardSkeleton(fixtures.medautoscience, 'mas'),
     redcube: withStandardSkeleton(fixtures.redcube, 'rca'),
   };
+  const masPack = createAdmittedStagePackFixture(
+    manifests.medautoscience,
+    'med-autoscience',
+    'MedAutoScience',
+  );
+  manifests.medautoscience = masPack.manifest;
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
 
   try {
@@ -85,7 +91,7 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
         '--project',
         project,
         '--path',
-        repoRoot,
+        project === 'medautoscience' ? masPack.repoDir : repoRoot,
         '--manifest-command',
         buildManifestCommand(manifest),
       ], env);
@@ -101,7 +107,7 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
     const descriptor = runCli(['agents', 'descriptor', '--domain', 'mas'], env).family_agent_descriptor;
     assert.equal(descriptor.descriptor_status, 'descriptor_surfaces_partial');
     assert.equal(descriptor.family_stage_control_plane.status, 'resolved');
-    assert.equal(descriptor.family_action_catalog.status, 'missing');
+    assert.equal(descriptor.family_action_catalog.status, 'resolved');
     assert.equal(descriptor.domain_memory_descriptor.status, 'missing');
     assert.equal(descriptor.non_authority_flags.opl_owns_domain_truth, false);
     assert.deepEqual(
@@ -118,5 +124,6 @@ test('agent descriptor commands keep partial domain surfaces discoverable and no
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(masPack.repoDir, { recursive: true, force: true });
   }
 });
