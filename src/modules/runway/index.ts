@@ -43,6 +43,10 @@ export type { MemoryTraceProjection } from './stage-attempt-projections/memory-l
 
 // Public cross-module surface generated from existing module consumers.
 export { runAgentExecutor } from './agent-executor.ts';
+export { appendDomainRunEvent, createDomainRunRecord, dispatchDomainAction, executeDomainTask, readDomainRunEvents } from './domain-task-runtime.ts';
+export type { DomainActionHandler, DomainRunIdentity } from './domain-task-runtime.ts';
+export { resolveDomainPythonCommand, runDomainPythonHelper } from './domain-helper-runtime.ts';
+export type { DomainHelperCommand } from './domain-helper-runtime.ts';
 export { buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolveCodexBinary, runCodexCommand, runCodexCommandStreaming } from './codex.ts';
 export type { CodexExecEvent } from './codex.ts';
 export { listCodexAppRuntimeEvidenceReceipts } from './codex-app-runtime-evidence-ledger.ts';

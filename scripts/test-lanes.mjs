@@ -46,6 +46,8 @@ function expandTestFiles(patterns, options = {}) {
 }
 
 const fastTestFiles = [
+  'tests/src/domain-runtime-surfaces.test.ts',
+  'tests/src/family-runtime-domain-task-runtime-context.test.ts',
   'tests/src/domain-agent-admission-gates.test.ts',
   'tests/src/domain-whitepaper-runner.test.ts',
   'tests/src/verification-command-surfaces.test.ts',

@@ -7,6 +7,18 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-11
 
+### 决策：Foundry Agent 的通用 task/artifact/helper/source 机制由 OPL 公共 runtime surface 承载
+
+原因：RCA 等 domain repo 已各自实现 executor、run/event、Stage Folder、Python 环境和 source materialization，造成 Framework 机制重复。缺少公共 API 不是保留私有平台的理由；Framework 应先提供少数深接口，domain repo 再只保留领域 request builder、quality/readiness verdict、artifact mutation authorization、owner receipt 与 native helper body。
+
+影响：
+
+- `opl-framework/domain-task-runtime` 统一 run/event、executor invocation 与 action dispatch。
+- `opl-framework/domain-artifact-runtime` 统一 Stage Artifact Unit 字节读写和 refs-only index。
+- `opl-framework/domain-helper-runtime` 只解析 OPL-managed Python 并执行 helper；domain repo 不再自行安装 uv/venv/browser runtime。
+- `opl-framework/domain-source-runtime` 只复制、哈希和索引材料，不解释材料语义，也不裁决 source readiness。
+- 四个入口的机器边界由 `contracts/opl-framework/domain-runtime-surfaces-contract.json` 固定；它们不能生成 domain verdict、owner receipt、typed blocker 或未经 domain 授权的 artifact mutation。
+
 ### 决策：Foundry Agent 系列 policy body 只由 OPL canonical contracts 持有
 
 原因：domain agent 为消费 series design、stage closeout、progress、typed blocker、workspace 与 public projection policy，不应复制 Framework canonical JSON body。release pin 与 domain delta 足以表达 consumer 绑定。
