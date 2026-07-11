@@ -9,6 +9,7 @@ import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 export type JsonRecord = Record<string, unknown>;
 
 export type StageArtifactLocator = {
+  state_dir?: string;
   domain_id: string;
   program_id: string;
   topic_id: string;
@@ -370,7 +371,10 @@ export function writeLineageGraph(root: string, status: { locator: StageArtifact
 }
 
 export function stageArtifactDeliverableRoot(locator: StageArtifactLocator) {
-  const paths = ensureOplStateDir();
+  const paths = locator.state_dir
+    ? { state_dir: path.resolve(locator.state_dir) }
+    : ensureOplStateDir();
+  fs.mkdirSync(paths.state_dir, { recursive: true });
   return path.join(
     paths.state_dir,
     'runtime-state',

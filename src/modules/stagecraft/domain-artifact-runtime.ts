@@ -9,6 +9,13 @@ import {
   type StageArtifactAttemptLocator,
 } from './stage-artifact-runtime-core.ts';
 
+export {
+  commitStageArtifactAttemptRuntime,
+  statusStageArtifactRuntime,
+} from './stage-artifact-runtime.ts';
+export { openStageArtifactAttemptRuntime, stageArtifactAttemptPaths } from './stage-artifact-runtime-core.ts';
+export type { StageArtifactAttemptLocator, StageArtifactLocator } from './stage-artifact-runtime-core.ts';
+
 export type DomainArtifactRole = 'output' | 'evidence' | 'receipt';
 
 function roleDir(opened: ReturnType<typeof openStageArtifactAttemptRuntime>, role: DomainArtifactRole) {
