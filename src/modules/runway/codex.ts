@@ -75,6 +75,7 @@ export interface CodexStreamingCommandOptions {
   timeoutMs?: number;
   noOutputTimeoutMs?: number;
   commandNoProgressTimeoutMs?: number;
+  stdin?: string;
 }
 
 export interface CodexCommandActivity {
@@ -96,6 +97,7 @@ export interface CodexExecOptions {
   outputSchemaPath?: string;
   ephemeral?: boolean;
   enableImageGeneration?: boolean;
+  promptViaStdin?: boolean;
 }
 
 export interface ParsedCodexExecOutput {
@@ -234,7 +236,7 @@ export function buildCodexExecArgs(
     args.push('--output-last-message', options.outputLastMessagePath);
   }
 
-  args.push(prompt);
+  args.push(options.promptViaStdin ? '-' : prompt);
   return args;
 }
 
@@ -618,7 +620,7 @@ export async function runCodexCommandStreaming(
       });
     });
 
-    child.stdin.end();
+    child.stdin.end(options.stdin ?? '');
   });
 }
 
