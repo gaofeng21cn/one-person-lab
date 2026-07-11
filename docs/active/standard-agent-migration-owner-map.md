@@ -7,9 +7,9 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 ## 本轮边界
 
-本计划只把本轮审计结论折回 canonical docs，作为后续 Plan Completion Audit 的验收源。当前落地类型是 source / contract / docs / readback 的结构性迁移计划，不声明 production readiness、runtime ready、domain ready、owner acceptance、App release ready、Brand L5 或 live owner-chain scaleout。
+本文既是本轮结构迁移的原始验收源，也是终局 Plan Completion Audit。落地范围包括 OPL 与各 domain repo 的 source / contract / tests / docs / generated surfaces / caller cutover；本文本身仍是人读支持面，不取代 machine contract 或 runtime evidence。任何结构完成结论都不声明 production readiness、runtime ready、domain ready、owner acceptance、App release ready、Brand L5 或 live owner-chain scaleout。
 
-涉及的 OPL 主模块是 `OPL Pack`、`OPL Runway`、`OPL Stagecraft`、`OPL Console`、`OPL Ledger`、`OPL Workspace`、`OPL Connect`、`OPL Atlas` 和 `OPL Foundry Lab`。协同 owner 是 MAS、MAG、RCA、OMA、OBF 各自 domain repo。本文不触碰 App runtime、contracts、tests、domain repo、owner receipts、typed blockers 或 runtime state。
+涉及的 OPL 主模块是 `OPL Pack`、`OPL Runway`、`OPL Stagecraft`、`OPL Console`、`OPL Ledger`、`OPL Workspace`、`OPL Connect`、`OPL Atlas` 和 `OPL Foundry Lab`。协同 owner 是 MAS、MAG、RCA、OMA、OBF 各自 domain repo。不触碰范围是 App runtime、domain truth、quality/export/review verdict、artifact body、memory body、owner receipt、typed blocker、human gate 与 live runtime state。
 
 ## 目标态
 
@@ -92,24 +92,36 @@ Machine boundary: 本文是人读迁移验收源。机器真相继续归 `contra
 
 ## 2026-07-11 Fresh Readback
 
-`opl agents default-callers --family-defaults --json` 当前返回：
+排除 Live Evidence 后，本轮功能/结构迁移已经达到 terminal 状态：原始 `26/26` 项均为 `done / 100%`。这里的 `100%` 只表示能力 owner、active caller、generated/hosted surface 和旧实现退役/收薄四项已经有 fresh executable evidence；不表示 production readiness、domain readiness、quality/export ready、owner acceptance、Brand L5、provider long-soak 或真实用户路径完成。
 
-- `blocked_count=2`
-- `active_deletion_evidence_worklist_count=8`
-- `closed_surface_retirement_gate_count=16`
-- `default_caller_delete_ready=false`
-- `physical_delete_authorized=false`
-- `no_further_opl_default_caller_delete_work=false`
+`opl agents interfaces --family-defaults` 当前返回：
 
-`opl agents conformance --family-defaults --json` 当前返回：
+- `status=ready`
+- `total_domain_count=5`
+- `ready_domain_count=5`
+- `blocked_domain_count=0`
+- MAS / MAG / RCA / OMA / OBF 均由 OPL generated default surfaces 承载；canonical agent id 分别为 `mas`、`mag`、`rca`、`oma`、`obf`。
 
-- `passed_count=3`
-- `blocked_count=3`
-- `structural_conformance_status=blocked`
-- `structural_contract_status=blocked`
-- `family_live_conformance_probe_status=blocked`
+`opl agents conformance --family-defaults` 当前返回：
 
-MAS、MAG 当前 structural adoption row 为 `passed`；RCA、OMA、OBF 为 `blocked`。所有 domain 的 live progress 仍是 owner evidence / typed blocker readback，不授权 OPL 声称 domain ready、quality/export ready、production ready 或 owner acceptance。
+- `passed_count=6`
+- `blocked_count=0`
+- `structural_conformance_status=passed`
+- `structural_contract_status=passed`
+- `ordinary_path_guard_status=passed`
+- 五个 domain report 均为 `passed`；计数中的第六项是 family aggregate。
+
+`opl agents default-callers --family-defaults` 当前返回：
+
+- `total_repo_count=5`
+- `blocked_count=0`
+- `blocked_surface_count=0`
+- `missing_no_active_caller_proof_count=0`
+- `status=ready_domain_evidence_required`
+
+remaining retirement worklist 只负责 domain owner receipt / typed blocker、no-forbidden-write、tombstone/provenance 和 physical-delete owner decision。它不构成 generated caller 结构 blocker，也不授权 OPL 删除仍被 domain owner保留的最小 authority adapter。
+
+Live Evidence 继续单列：`live_domain_progress_status=owner_evidence_recorded_not_ready_claim`、`live_stage_run_progress_evidence_status=owner_evidence_recorded_not_ready_claim`。OPL 不能据此声称 domain ready、quality/export ready、production ready 或 owner acceptance。
 
 ## 原始 26 项 Plan Completion Audit
 
@@ -117,27 +129,27 @@ MAS、MAG 当前 structural adoption row 为 `passed`；RCA、OMA、OBF 为 `blo
 
 | # | 验收项 | 状态 | 完成度 | Fresh evidence / 缺口 / 后续动作 |
 | ---: | --- | --- | ---: | --- |
-| 1 | MAS workspace cockpit | partial | 80% | OPL Console/current-owner-delta/operator action refs已落地；MAS refs-only compatibility仍有 active caller，default-caller worklist未关闭。等待 MAS owner no-active-caller / keep decision。 |
+| 1 | MAS workspace cockpit | done | 100% | MAS私有cockpit/current-work-unit/portal已物理退役；Console从registry、runtime activity与current-owner-delta构建domain-neutral refs-only projection。MAS generated default-caller 8/8 closed、worklist=0。 |
 | 2 | MAS execution admission | done | 100% | Runway 持有 StageRun、provider admission、currentness与no-forbidden-write；MAS保留owner/human gate。此项只声明功能结构完成，不声明live paper/runtime ready。 |
-| 3 | MAS artifact lifecycle | partial | 80% | Workspace/Ledger locator、restore/cleanup refs已落地；artifact body与删除授权仍归MAS，physical delete未授权。 |
+| 3 | MAS artifact lifecycle | done | 100% | OPL Stagecraft/Workspace/Ledger持有artifact write/index/lifecycle primitive；MAS只输出opaque artifact refs并保留artifact body/删除授权。无production caller的`workspace_target_state_cleanup`私有递归扫描/archive/move shell及专用测试已物理删除。 |
 | 4 | MAS source / memory transport | done | 100% | Connect/Workspace/Ledger只传source/memory refs与receipt；医学相关性、evidence judgment、memory accept/reject仍归MAS。 |
 | 5 | MAG receipt observability | done | 100% | Generic owner-evidence ledger与Console projection已替代MAG专用shell；fundability/export verdict留MAG。 |
 | 6 | MAG workspace / schema engine | done | 100% | standard-agent scaffold、schema subset、workspace validation由OPL通用实现和declarative profile提供。 |
 | 7 | MAG product / runtime shell | done | 100% | Pack/Runway/Console generated shell已落地，MAG structural adoption为passed；不把此项写成grant/submission ready。 |
-| 8 | RCA entry / status / session shell | partial | 75% | generated Pack/Console surface已落地，但fresh conformance中RCA仍blocked；等待RCA owner关闭当前结构/owner evidence blocker。 |
+| 8 | RCA entry / status / session shell | done | 100% | RCA tracked stage plane、手写generic product/status/workbench shell已退役；product manifest只投影generated session/stage refs与RCA authority refs。fresh interfaces ready、conformance blockers=0。 |
 | 9 | RCA executor envelope | done | 100% | timeout、attempt、telemetry、blocker envelope归Runway；PPT invocation与视觉失败解释留RCA。 |
-| 10 | RCA lifecycle / operator transport | partial | 80% | Workspace/Ledger/Stagecraft/Pack generic transport与native-helper receipt已落地；RCA conformance/live owner evidence未闭合。 |
-| 11 | OMA Agent Lab ledger | done | 100% | OPL Foundry Lab已消费suite seed/work order并输出OPL-owned result/receipt/blocker refs；OMA只保留agent-building judgment。 |
-| 12 | OMA takeover materializer | partial | 80% | OPL work-order compiler/executor已落地；OMA fresh conformance仍blocked，不能声明target-agent promotion/production ready。 |
-| 13 | OBF project hygiene | blocked | 60% | OPL Workspace source-byproduct guard已落地；`opl-bookforge/scripts/verify.sh`仍两处直接调用私有`bookforge_project_hygiene.py --source-byproduct-check`。由OBF owner切caller后重验。 |
-| 14 | OBF native-helper shell | partial | 70% | `opl pack native-helper probe`及SHA绑定receipt已落地；OBF默认caller/私有通用shell尚未退役，renderer/export authority继续留OBF。 |
+| 10 | RCA lifecycle / operator transport | done | 100% | Workspace/Ledger/Stagecraft/Pack持有generic transport；RCA domain-handler已收薄为约3.4KB refs-only projection，generic operator/evidence/workorder/lifecycle builders删除，renderer、visual memory judgment与artifact mutation仍归RCA。 |
+| 11 | OMA Agent Lab ledger | done | 100% | OPL Foundry Lab从thin evaluation request编译suite并拥有execution/result/ledger；OMA不再生产suite seed/plan，只保留agent-building judgment与candidate refs。 |
+| 12 | OMA takeover materializer | done | 100% | OMA只写raw-byte digest绑定的evaluation request与Foundry work order；OPL在parse/write前校验digest/task/target/provenance并执行suite。legacy suite body被strict schema拒绝。 |
+| 13 | OBF project hygiene | done | 100% | OBF默认verify前后调用`opl workspace source-hygiene`；旧hygiene helper已收薄为无default caller的书稿领域诊断，不再承担source byproduct/lifecycle遍历。 |
+| 14 | OBF native-helper shell | done | 100% | OBF默认caller使用`opl pack native-helper probe`验证PDF/imagegen descriptor与helper SHA；保留代码仅负责BookForge renderer、publication proof与export authority。 |
 
 ### List 2：OPL 基座迁出 / 通用化
 
 | # | 验收项 | 状态 | 完成度 | Fresh evidence / 边界 |
 | ---: | --- | --- | ---: | --- |
-| 1 | MAS paper-mission runtime stack通用化 | partial | 80% | canonical route/runtime主链已使用`domain_route`与通用StageRun identity；但`family-runtime-mas-stage-native-owner-answer.ts`及Stagecraft publication-handoff compatibility profile仍被linked-task/provider/cockpit真实消费。需迁为MAS-owned profile或generic registry input后才可关闭；整个`DomainProgressTransitionRuntime`也不可删除，因为MAS仍消费其live-readback ABI。 |
-| 2 | MAS Console portal通用化 | partial | 80% | generic current-work-unit与registry-driven projection已落地；但Console仍有active MAS payload/display/currentness adapter及medautoscience-only locator repair。需迁为MAS-owned profile或generic registry input后才可关闭。 |
+| 1 | MAS paper-mission runtime stack通用化 | done | 100% | OPL canonical runtime为generic `domain_route`与StageRun attempt/runtime substrate；MAS命名只留在MAS-owned route profile/compatibility mapping。旧OPL `family-runtime-mas-*` implementation和MAS私有generic study runtime chain已退役。 |
+| 2 | MAS Console portal通用化 | done | 100% | 旧MAS portal/cockpit implementation物理不存在；Console只做registry-driven current-owner-delta/operator projection，MAS payload只作为domain data，不拥有portal/current-work-unit控制面。 |
 | 3 | ScholarSkills医学catalog迁出 | done | 100% | OPL私有catalog、validator、artifact engines、plugin mirror已删除；只消费外部package/provenance。 |
 | 4 | MAS Display Pack v2迁出 | done | 100% | Pack descriptor已provider/domain-neutral，MAS conversion由domain adapter拥有。 |
 | 5 | RCA visual transition迁出 | done | 100% | Stagecraft从RCA-owned profile ref读取，内置REDCUBE registry/default已删除。 |
@@ -147,11 +159,11 @@ MAS、MAG 当前 structural adoption row 为 `passed`；RCA、OMA、OBF 为 `blo
 | 9 | BookForge dependency默认值移除 | done | 100% | dependency doctor使用显式domain/package profile，不再以publication-proof作为基座默认。 |
 | 10 | PubMed provider迁出 | done | 100% | OPL私有PubMed command/client已删除；Connect保provider-neutral metadata/receipt transport，医学client/normalization归MAS。 |
 | 11 | kernel first-party hardcode移除 | done | 100% | workspace root/runtime/evidence/repo discovery从registry/profile派生；Connect局部目录数组由registry映射生成，不是第二份手写family列表。 |
-| 12 | conformance source-behavior hard gate | done | 100% | diagnostic cleanup存在active caller时会阻断；fresh conformance现在真实返回3个blocked，而不是被旧advisory错误放行。 |
+| 12 | conformance source-behavior hard gate | done | 100% | source behavior与functional audit逐项比对并进入blocking blockers；负向探针覆盖未声明generic surface、audit声明active residue、diagnostic仍有active caller。修复后fresh family conformance为0 blocked。 |
 
 ## 明确拒绝与停止条件
 
-- `DomainProgressTransitionRuntime` retirement candidate `0ca2c3a85` 为 `rejected`。MAS contract与`provider_readbacks.py`仍消费`opl_domain_progress_transition_runtime_live_readback`；不得吸收该删除候选。List 2 #1 的MAS compatibility profile也仍有active caller，迁为MAS-owned profile或generic registry input前保持`partial`。
-- OBF #13/#14 只有在默认caller切到OPL primitive、私有通用shell无active caller且OBF owner给出no-forbidden-write/tombstone或keep decision后才能变为done。
-- fresh default-caller/conformance readback仍有blocked项时，不得用docs、focused tests、queue empty或refs-only ledger声称标准化迁移全部ready。
-- Live Evidence、provider long-soak、真实App/user path、release、Brand L5与owner acceptance继续后置分账。
+- 本次 `26/26 done` 是功能/结构 completion，不是 runtime/domain/production readiness。任何文档、focused/full tests、queue empty、refs-only ledger或generated bundle都不能替代 Live Evidence。
+- `default-callers` 的 remaining owner-evidence/physical-delete worklist继续fail-closed；OPL projection不授权物理删除domain authority adapter。domain owner可返回owner receipt、typed blocker或keep decision。
+- Live Evidence、provider long-soak、真实App/user path、release、Brand L5、quality/export verdict和owner acceptance继续后置分账；其 canonical状态仍为`owner_evidence_recorded_not_ready_claim`。
+- 不恢复tracked `contracts/stage_control_plane.json`、repo-local generic scheduler/session/workbench/status shell、OPL内置RCA/MAS/MAG ontology或OMA suite body。
