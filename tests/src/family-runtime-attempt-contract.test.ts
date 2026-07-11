@@ -89,6 +89,16 @@ test('family runtime attempt contract keeps Temporal attempt, typed closeout, an
   assertFalseAuthority(contract.stage_progress_log_contract.authority_boundary);
   assert.equal(Object.hasOwn(contract.current_control_state_projection, 'stop_loss_state_contract_ref'), false);
   assert.equal(Object.hasOwn(contract.current_control_state_projection, 'no_progress_budget_exhaustion_effect'), false);
+  assert.deepEqual(contract.current_control_state_projection.forbidden_derivation_sources, [
+    'domain_latest',
+    'domain_dispatch_latest',
+    'domain_readiness_verdict',
+    'domain_artifact_ready_verdict',
+  ]);
+  assert.equal(
+    Object.hasOwn(contract.current_control_state_projection.authority_boundary, 'can_claim_publication_ready'),
+    false,
+  );
   assertFalseAuthority(contract.current_control_state_projection.authority_boundary);
   assertFalseAuthority(contract.stability_projection_authority_boundary);
 });

@@ -1,12 +1,15 @@
 import {
   buildOwnerAnswerProjectionProfileRegistryReadback,
-} from './mas-owner-answer-projection.ts';
+  type OwnerAnswerProjectionProfile,
+} from './domain-owner-answer-projection.ts';
 import {
   buildVisualTransitionAdapterProfileRegistryReadback,
 } from './family-transition-visual-ingestion.ts';
 
-export function buildStagecraftDomainProfileRegistryReadback() {
-  const ownerAnswerProjection = buildOwnerAnswerProjectionProfileRegistryReadback();
+export function buildStagecraftDomainProfileRegistryReadback(
+  profiles?: ReadonlyArray<OwnerAnswerProjectionProfile>,
+) {
+  const ownerAnswerProjection = buildOwnerAnswerProjectionProfileRegistryReadback(profiles);
   const transitionAdapter = buildVisualTransitionAdapterProfileRegistryReadback();
   return {
     surface_kind: 'opl_stagecraft_domain_profile_registry_readback',

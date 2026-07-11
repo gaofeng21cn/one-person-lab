@@ -1,23 +1,22 @@
 import type { DatabaseSync } from 'node:sqlite';
 
+import {
+  resolveDomainOwnerAnswerProjectionProfiles,
+  type DomainOwnerAnswerProjectionProfile,
+} from '../../kernel/domain-owner-answer-projection-profile.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { record, stringValue } from '../../kernel/json-record.ts';
+import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 
-const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 
-export const MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON =
+export const STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON =
   'stage_native_owner_answer_missing_after_default_executor_completion';
 
 export type StageNativeOwnerAnswerProfile = {
   profile_id: string;
-  profile_role: 'domain_owned_compatibility_profile';
-  source_domain: string;
-  domain_truth_owner: string;
-  runtime_owner: string;
-  compatibility_only: true;
   canonical_projection: 'domain_stage_native_owner_answer';
   domain_id: string;
   dispatch_task_kind: string;
@@ -33,30 +32,40 @@ export type StageNativeOwnerAnswerProfile = {
   relative_typed_blocker_ref: string;
 };
 
-export const MAS_PUBLICATION_HANDOFF_STAGE_NATIVE_OWNER_ANSWER_PROFILE = {
-  profile_id: 'medautoscience.publication_handoff.stage_native_owner_answer.v1',
-  profile_role: 'domain_owned_compatibility_profile',
-  source_domain: 'medautoscience',
-  domain_truth_owner: 'med-autoscience',
-  runtime_owner: 'one-person-lab',
-  compatibility_only: true,
-  canonical_projection: 'domain_stage_native_owner_answer',
-  domain_id: 'medautoscience',
-  dispatch_task_kind: DEFAULT_EXECUTOR_DISPATCH_TASK_KIND,
-  action_type: 'complete_medical_paper_readiness_surface',
-  work_unit_id: 'complete_medical_paper_readiness_surface',
-  next_executable_owner: 'medautoscience',
-  closeout_surface_kind: 'medical_paper_readiness_stage_native_closeout',
-  stage_id: '08-publication_package_handoff',
-  stage_outputs_fragment: 'artifacts/stage_outputs/08-publication_package_handoff',
-  owner_receipt_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/owner_receipt.json',
-  typed_blocker_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/typed_blocker.json',
-  relative_owner_receipt_ref: 'receipts/owner_receipt.json',
-  relative_typed_blocker_ref: 'receipts/typed_blocker.json',
-} as const satisfies StageNativeOwnerAnswerProfile;
+function stageNativeOwnerAnswerProfile(
+  profile: DomainOwnerAnswerProjectionProfile,
+): StageNativeOwnerAnswerProfile | null {
+  const stageNative = profile.stageNativeOwnerAnswer;
+  if (!stageNative) {
+    return null;
+  }
+  return {
+    profile_id: profile.profileId,
+    canonical_projection: stageNative.canonicalProjection,
+    domain_id: profile.domainId,
+    dispatch_task_kind: stageNative.dispatchTaskKind,
+    action_type: stageNative.actionType,
+    work_unit_id: stageNative.workUnitId,
+    next_executable_owner: stageNative.nextExecutableOwner,
+    closeout_surface_kind: stageNative.closeoutSurfaceKind,
+    stage_id: stageNative.stageId,
+    stage_outputs_fragment: stageNative.stageOutputsFragment,
+    owner_receipt_ref: stageNative.ownerReceiptRef,
+    typed_blocker_ref: stageNative.typedBlockerRef,
+    relative_owner_receipt_ref: stageNative.relativeOwnerReceiptRef,
+    relative_typed_blocker_ref: stageNative.relativeTypedBlockerRef,
+  };
+}
 
-const DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE: StageNativeOwnerAnswerProfile =
-  MAS_PUBLICATION_HANDOFF_STAGE_NATIVE_OWNER_ANSWER_PROFILE;
+function stageNativeOwnerAnswerProfileForDomain(
+  domainId: string,
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[],
+  repoInputs?: readonly StandardDomainAgentRepoInput[],
+) {
+  const profile = (profiles ?? resolveDomainOwnerAnswerProjectionProfiles(repoInputs))
+    .find((entry) => entry.domainId === domainId);
+  return profile ? stageNativeOwnerAnswerProfile(profile) : null;
+}
 
 type StageAttemptPayload = {
   stage_attempt_id: string;
@@ -102,7 +111,7 @@ function refsFrom(record: Record<string, unknown>, keys: string[]) {
 
 function hasStageNativeContext(
   record: Record<string, unknown>,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ) {
   return Boolean(stringValue(record.stage_id) === profile.stage_id
     || stringValue(record.stage_manifest_ref)?.includes(profile.stage_outputs_fragment)
@@ -114,7 +123,7 @@ function hasStageNativeContext(
 function isStageNativeOwnerAnswerRef(
   ref: string,
   allowRelative: boolean,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ) {
   return ref.includes(profile.owner_receipt_ref)
     || ref.includes(profile.typed_blocker_ref)
@@ -124,7 +133,7 @@ function isStageNativeOwnerAnswerRef(
     ));
 }
 
-function stageNativeRefCandidates(ref: string, profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE) {
+function stageNativeRefCandidates(ref: string, profile: StageNativeOwnerAnswerProfile) {
   const trimmed = ref.trim();
   const studiesIndex = trimmed.indexOf('studies/');
   const artifactsIndex = trimmed.indexOf(profile.stage_outputs_fragment);
@@ -170,9 +179,9 @@ function fingerprintsMatch(answer: Record<string, unknown>, currentPayload: Reco
 function stageNativeCloseoutRefMatchesCurrentPayload(
   ref: string,
   currentPayload: Record<string, unknown>,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ) {
-  // Scoped to MAS default-executor owner-answer currentness repair only.
+  // Scoped to an explicit domain-owned default-executor owner-answer profile.
   // StageRun closeout admission still requires the separate idempotency-bound owner receipt / typed blocker gate.
   if (!isStageNativeOwnerAnswerRef(ref, true, profile)) {
     return false;
@@ -190,7 +199,7 @@ function stageNativeCloseoutRefMatchesCurrentPayload(
 function closeoutRefsHaveCurrentStageNativeOwnerAnswer(
   refs: string[],
   currentPayload: Record<string, unknown>,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ) {
   return refs.some((ref) => stageNativeCloseoutRefMatchesCurrentPayload(ref, currentPayload, profile));
 }
@@ -198,7 +207,7 @@ function closeoutRefsHaveCurrentStageNativeOwnerAnswer(
 function directStageNativeAnswer(
   record: Record<string, unknown>,
   currentPayload: Record<string, unknown>,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ) {
   if (
     stringValue(record.surface_kind) === profile.closeout_surface_kind
@@ -231,7 +240,7 @@ function directStageNativeAnswer(
 function hasStageNativeAnswerInRecord(
   record: Record<string, unknown>,
   currentPayload: Record<string, unknown>,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ): boolean {
   if (directStageNativeAnswer(record, currentPayload, profile)) {
     return true;
@@ -271,7 +280,7 @@ function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
 function stageAttemptHasStageNativeAnswer(
   attempt: StageAttemptPayload,
   currentPayload: Record<string, unknown>,
-  profile = DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+  profile: StageNativeOwnerAnswerProfile,
 ) {
   if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(attempt.closeout_refs, currentPayload, profile)) {
     return true;
@@ -283,13 +292,6 @@ function stageAttemptHasStageNativeAnswer(
     const record = recordValue(event);
     return Boolean(record && hasStageNativeAnswerInRecord(record, currentPayload, profile));
   });
-}
-
-export function isMasReadinessStageNativeOwnerAction(
-  row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>,
-  payload: Record<string, unknown>,
-) {
-  return isDomainStageNativeOwnerAction(row, payload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
 }
 
 export function isDomainStageNativeOwnerAction(
@@ -308,6 +310,20 @@ export function isDomainStageNativeOwnerAction(
 }
 
 export const stageNativeOwnerActionMatchesProfile = isDomainStageNativeOwnerAction;
+
+export function isStageNativeOwnerActionFromDomainProfile(input: {
+  row: Pick<FamilyRuntimeTaskRow, 'domain_id' | 'task_kind'>;
+  payload: Record<string, unknown>;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
+}) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(
+    input.row.domain_id,
+    input.profiles,
+    input.repoInputs,
+  );
+  return Boolean(profile && isDomainStageNativeOwnerAction(input.row, input.payload, profile));
+}
 
 function sourceRefRecords(payload: Record<string, unknown>) {
   return Array.isArray(payload.source_refs)
@@ -362,8 +378,18 @@ export function payloadReferencesStageNativeOwnerAnswer(
   return refs.some((ref) => isStageNativeOwnerAnswerRef(ref, true, profile));
 }
 
-export function masReadinessPayloadReferencesStageNativeOwnerAnswer(payload: Record<string, unknown>) {
-  return payloadReferencesStageNativeOwnerAnswer(payload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
+export function payloadReferencesStageNativeOwnerAnswerFromDomainProfile(input: {
+  domainId: string;
+  payload: Record<string, unknown>;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
+}) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(
+    input.domainId,
+    input.profiles,
+    input.repoInputs,
+  );
+  return Boolean(profile && payloadReferencesStageNativeOwnerAnswer(input.payload, profile));
 }
 
 export function hasStageNativeOwnerAnswer(
@@ -374,34 +400,45 @@ export function hasStageNativeOwnerAnswer(
   return Boolean(value && hasStageNativeAnswerInRecord(value, currentPayload, profile));
 }
 
-export function hasMasStageNativeOwnerAnswer(
-  value: Record<string, unknown> | null,
-  currentPayload: Record<string, unknown>,
-) {
-  return hasStageNativeOwnerAnswer(value, currentPayload, DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE);
-}
-
-export function stageAttemptRowHasMasStageNativeOwnerAnswer(
-  row: StageAttemptRow,
-  currentPayload: Record<string, unknown>,
-) {
-  const closeoutRefs = jsonStringList(row.closeout_refs_json);
+export function stageAttemptRowHasStageNativeOwnerAnswerFromDomainProfile(input: {
+  row: StageAttemptRow;
+  currentPayload: Record<string, unknown>;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
+}) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(
+    input.row.domain_id,
+    input.profiles,
+    input.repoInputs,
+  );
+  if (!profile) {
+    return false;
+  }
+  const closeoutRefs = jsonStringList(input.row.closeout_refs_json);
   if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(
     closeoutRefs,
-    currentPayload,
-    DEFAULT_STAGE_NATIVE_OWNER_ANSWER_PROFILE,
+    input.currentPayload,
+    profile,
   )) {
     return true;
   }
-  const routeImpact = jsonRecord(row.route_impact_json);
-  return hasMasStageNativeOwnerAnswer(routeImpact, currentPayload);
+  const routeImpact = jsonRecord(input.row.route_impact_json);
+  return hasStageNativeOwnerAnswer(routeImpact, input.currentPayload, profile);
 }
 
-export function stageAttemptPayloadHasMasStageNativeOwnerAnswer(
-  attempt: StageAttemptPayload,
-  currentPayload: Record<string, unknown>,
-) {
-  return stageAttemptHasStageNativeAnswer(attempt, currentPayload);
+export function stageAttemptPayloadHasStageNativeOwnerAnswerFromDomainProfile(input: {
+  domainId: string;
+  attempt: StageAttemptPayload;
+  currentPayload: Record<string, unknown>;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
+}) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(
+    input.domainId,
+    input.profiles,
+    input.repoInputs,
+  );
+  return Boolean(profile && stageAttemptHasStageNativeAnswer(input.attempt, input.currentPayload, profile));
 }
 
 export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(input: {
@@ -411,16 +448,18 @@ export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(inpu
   nextPayload: Record<string, unknown>;
   stageAttempts: StageAttemptPayload[];
 }) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(input.existing.domain_id);
   if (
     !['succeeded', 'blocked'].includes(input.existing.status)
-    || !isMasReadinessStageNativeOwnerAction(input.existing, input.existingPayload)
-    || !isMasReadinessStageNativeOwnerAction(input.existing, input.nextPayload)
+    || !profile
+    || !isDomainStageNativeOwnerAction(input.existing, input.existingPayload, profile)
+    || !isDomainStageNativeOwnerAction(input.existing, input.nextPayload, profile)
   ) {
     return null;
   }
   if (
     input.existing.status === 'blocked'
-    && input.existing.dead_letter_reason !== MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON
+    && input.existing.dead_letter_reason !== STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON
   ) {
     return null;
   }
@@ -433,14 +472,14 @@ export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(inpu
     input.nextPayload,
     latestDispatchSucceededPayload(input.db, input.existing.task_id),
   ];
-  if (evidenceRecords.some((record) => hasMasStageNativeOwnerAnswer(record, input.nextPayload))) {
+  if (evidenceRecords.some((record) => hasStageNativeOwnerAnswer(record, input.nextPayload, profile))) {
     return null;
   }
-  if (input.stageAttempts.some((attempt) => stageAttemptHasStageNativeAnswer(attempt, input.nextPayload))) {
+  if (input.stageAttempts.some((attempt) => stageAttemptHasStageNativeAnswer(attempt, input.nextPayload, profile))) {
     return null;
   }
   return {
-    reason: MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    reason: STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
     previous_source_fingerprint: stringValue(input.existingPayload.source_fingerprint),
     next_source_fingerprint: stringValue(input.nextPayload.source_fingerprint),
     previous_work_unit_fingerprint: stringValue(recordValue(input.existingPayload.owner_route_currentness_basis)?.work_unit_fingerprint),

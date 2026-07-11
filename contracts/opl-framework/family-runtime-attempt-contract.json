@@ -585,9 +585,9 @@
       "typed_stage_closeout_ledger"
     ],
     "forbidden_derivation_sources": [
-      "mas_latest",
-      "mas_dispatch_latest",
-      "domain_publication_ready_verdict",
+      "domain_latest",
+      "domain_dispatch_latest",
+      "domain_readiness_verdict",
       "domain_artifact_ready_verdict"
     ],
     "fail_closed_reasons": [
@@ -600,7 +600,6 @@
     "temporal_ordering_policy": "newest_queue_or_stage_attempt_wins_over_older_terminal_attempt",
     "authority_boundary": {
       "can_claim_domain_ready": false,
-      "can_claim_publication_ready": false,
       "can_claim_artifact_ready": false,
       "can_sign_domain_owner_receipt": false,
       "provider_completion_is_domain_ready": false

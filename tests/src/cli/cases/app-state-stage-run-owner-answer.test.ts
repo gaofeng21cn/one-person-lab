@@ -8,9 +8,59 @@ import {
   writeStageRunAuthorizationLedgerFixture,
 } from './app-state-cases/fixtures.ts';
 
+function createMasRepoWithOwnerAnswerProfile(familyRoot: string) {
+  const repoRoot = path.join(familyRoot, 'med-autoscience');
+  const contractsRoot = path.join(repoRoot, 'contracts');
+  fs.mkdirSync(contractsRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(contractsRoot, 'domain_descriptor.json'),
+    `${JSON.stringify({
+      standard_contract_refs: {
+        domain_owner_answer_projection_profile:
+          'contracts/domain_owner_answer_projection_profile.json',
+      },
+    }, null, 2)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(contractsRoot, 'domain_owner_answer_projection_profile.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_domain_owner_answer_projection_profile',
+      version: 'domain-owner-answer-projection-profile.v1',
+      profile_id: 'medautoscience.publication_handoff.owner_answer_projection.v1',
+      profile_role: 'registry',
+      domain_id: 'medautoscience',
+      binding_project_id: 'medautoscience',
+      source_owner: 'med-autoscience',
+      workspace_root_profile_ref: {
+        profile_dir_name: 'profiles',
+        domain_dir_name: 'medautoscience',
+        ops_dir_name: 'ops',
+      },
+      studies_dir_name: 'studies',
+      projection_relative_path: [
+        'artifacts',
+        'stage_outputs',
+        '08-publication_package_handoff',
+        'projection',
+        'current_owner_delta.json',
+      ],
+      authority_boundary: {
+        refs_only: true,
+        can_write_domain_truth: false,
+        can_create_owner_receipt: false,
+        can_create_typed_blocker: false,
+        can_claim_domain_ready: false,
+        can_claim_production_ready: false,
+      },
+    }, null, 2)}\n`,
+  );
+  return repoRoot;
+}
+
 test('app state fast folds MAS publication handoff owner answer projection into StageRun cockpit', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-home-'));
-  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-repo-'));
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-family-'));
+  const masRepoRoot = createMasRepoWithOwnerAnswerProfile(familyRoot);
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-mas-owner-answer-workspace-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
@@ -35,6 +85,7 @@ test('app state fast folds MAS publication handoff owner answer projection into 
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
       OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_FAMILY_WORKSPACE_ROOT: familyRoot,
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
       PATH: '/usr/bin:/bin',
     }) as {
@@ -68,11 +119,11 @@ test('app state fast folds MAS publication handoff owner answer projection into 
     );
     assert.equal(
       cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.profile_id,
-      'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',
+      'medautoscience.publication_handoff.owner_answer_projection.v1',
     );
     assert.equal(
       cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.profile_role,
-      'compatibility',
+      'registry',
     );
     assert.equal(
       cockpit.stage_run_current_owner_delta.owner_answer_binding_projection.closeout_binding_source,
@@ -93,14 +144,15 @@ test('app state fast folds MAS publication handoff owner answer projection into 
     );
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(familyRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 
 test('app state fast prefers legal StageRun closeout owner answer over stale current owner attempt receipt', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-home-'));
-  const masRepoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-repo-'));
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-family-'));
+  const masRepoRoot = createMasRepoWithOwnerAnswerProfile(familyRoot);
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-state-stale-owner-attempt-workspace-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const profilePath = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles', 'dm.workspace.toml');
@@ -139,6 +191,7 @@ test('app state fast prefers legal StageRun closeout owner answer over stale cur
       HOME: homeRoot,
       OPL_STATE_DIR: stateDir,
       OPL_MODULES_ROOT: path.join(stateDir, 'modules'),
+      OPL_FAMILY_WORKSPACE_ROOT: familyRoot,
       OPL_DEVELOPER_MODE_GH_BINARY: path.join(homeRoot, 'missing-gh'),
       PATH: '/usr/bin:/bin',
     }) as {
@@ -194,7 +247,7 @@ test('app state fast prefers legal StageRun closeout owner answer over stale cur
     assert.equal(output.app_state.operator.stage_run_cockpit_summary.execution_authorized, true);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(masRepoRoot, { recursive: true, force: true });
+    fs.rmSync(familyRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

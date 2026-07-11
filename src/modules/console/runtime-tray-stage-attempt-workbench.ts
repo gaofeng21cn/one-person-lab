@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import type { DatabaseSync } from 'node:sqlite';
 
 import { isRecord } from '../../kernel/contract-validation.ts';
+import { resolveDomainOwnerAnswerProjectionProfile } from '../../kernel/domain-owner-answer-projection-profile.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import { QUEUE_PROJECTION_VOCABULARY } from '../../kernel/queue-projection-vocabulary.ts';
@@ -747,9 +748,10 @@ function normalizedWorkspaceLocator(
   workspaceLocator: JsonRecord,
   taskPayload: JsonRecord | null,
 ) {
+  const profile = resolveDomainOwnerAnswerProjectionProfile(row.domain_id);
   if (
-    row.domain_id !== 'medautoscience'
-    || row.stage_id !== 'domain_owner/default-executor-dispatch'
+    !profile?.stageNativeOwnerAnswer
+    || row.stage_id !== profile.stageNativeOwnerAnswer.dispatchTaskKind
     || optionalString(workspaceLocator.domain_source_fingerprint)
   ) {
     return workspaceLocator;

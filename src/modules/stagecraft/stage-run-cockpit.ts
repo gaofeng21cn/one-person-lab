@@ -9,7 +9,7 @@ import {
 } from './stage-run-execution-authorization-ledger.ts';
 import {
   findOwnerAnswerProjection,
-} from './mas-owner-answer-projection.ts';
+} from './domain-owner-answer-projection.ts';
 
 function strings(value: unknown) {
   return Array.isArray(value)

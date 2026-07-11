@@ -4,12 +4,12 @@ import { stringList } from '../../kernel/json-record.ts';
 
 export const OPL_ATTEMPT_ADMISSION_REQUESTED_REASON = 'opl_attempt_admission_requested';
 export const OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON = 'provider_attempt_start_pending';
-export const MAS_DOMAIN_OWNER_ANSWER_OBSERVED_REASON = 'mas_domain_owner_answer_observed';
-export const MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON = 'mas_owner_answer_typed_blocker_observed';
+export const DOMAIN_OWNER_ANSWER_OBSERVED_REASON = 'domain_owner_answer_observed';
+export const DOMAIN_TYPED_BLOCKER_OBSERVED_REASON = 'domain_typed_blocker_observed';
 export { optionalString };
 
-export type MasDomainOwnerAnswerObservation = {
-  reason: typeof MAS_DOMAIN_OWNER_ANSWER_OBSERVED_REASON | typeof MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON;
+export type DomainOwnerAnswerObservation = {
+  reason: typeof DOMAIN_OWNER_ANSWER_OBSERVED_REASON | typeof DOMAIN_TYPED_BLOCKER_OBSERVED_REASON;
   answer_kind: string;
   refs: string[];
   evidence_paths: string[];
@@ -96,14 +96,14 @@ function normalizeOwnerAnswerKind(value: unknown) {
 
 function observationReason(answerKind: string) {
   return answerKind === 'typed_blocker_ref'
-    ? MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON
-    : MAS_DOMAIN_OWNER_ANSWER_OBSERVED_REASON;
+    ? DOMAIN_TYPED_BLOCKER_OBSERVED_REASON
+    : DOMAIN_OWNER_ANSWER_OBSERVED_REASON;
 }
 
 function observationFromRecord(
   record: Record<string, unknown>,
   path: string,
-): MasDomainOwnerAnswerObservation | null {
+): DomainOwnerAnswerObservation | null {
   const currentWorkUnitStatus = optionalString(record.status);
   if (currentWorkUnitStatus === 'typed_blocker') {
     const refs = [
@@ -115,7 +115,7 @@ function observationFromRecord(
       return null;
     }
     return {
-      reason: MAS_DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
+      reason: DOMAIN_TYPED_BLOCKER_OBSERVED_REASON,
       answer_kind: 'typed_blocker_ref',
       refs,
       evidence_paths: [`${path}.status`],
@@ -165,9 +165,9 @@ function observationFromRecord(
 }
 
 function mergeObservation(
-  left: MasDomainOwnerAnswerObservation | null,
-  right: MasDomainOwnerAnswerObservation | null,
-): MasDomainOwnerAnswerObservation | null {
+  left: DomainOwnerAnswerObservation | null,
+  right: DomainOwnerAnswerObservation | null,
+): DomainOwnerAnswerObservation | null {
   if (!left) {
     return right;
   }
@@ -189,7 +189,7 @@ function ownerAnswerObservationInValue(
   value: unknown,
   path: string,
   depth: number,
-): MasDomainOwnerAnswerObservation | null {
+): DomainOwnerAnswerObservation | null {
   if (depth > 6) {
     return null;
   }
@@ -211,10 +211,10 @@ function ownerAnswerObservationInValue(
   return observed;
 }
 
-export function masDomainOwnerAnswerObservationFromRecords(
+export function domainOwnerAnswerObservationFromRecords(
   records: Array<{ source: string; value: Record<string, unknown> | null | undefined }>,
-): MasDomainOwnerAnswerObservation | null {
-  return records.reduce<MasDomainOwnerAnswerObservation | null>((observed, record) => (
+): DomainOwnerAnswerObservation | null {
+  return records.reduce<DomainOwnerAnswerObservation | null>((observed, record) => (
     mergeObservation(observed, ownerAnswerObservationInValue(record.value, record.source, 0))
   ), null);
 }

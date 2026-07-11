@@ -4,6 +4,11 @@ import path from 'node:path';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { readJsonPayloadFile } from '../../kernel/json-file.ts';
 import { record, stringValue } from '../../kernel/json-record.ts';
+import {
+  resolveDomainOwnerAnswerProjectionProfiles,
+  type DomainOwnerAnswerProjectionProfile,
+} from '../../kernel/domain-owner-answer-projection-profile.ts';
+import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
 import type {
   StageRunExecutionAuthorizationReceipt,
 } from './stage-run-execution-authorization-ledger.ts';
@@ -20,48 +25,10 @@ const OWNER_ANSWER_PROJECTION_POLICY =
 const OWNER_ANSWER_PROJECTION_REGISTRY_READBACK_SURFACE_KIND =
   'opl_domain_owner_answer_projection_profile_registry_readback';
 
-export type OwnerAnswerProjectionProfile = {
-  profileId: string;
-  profileRole: 'registry' | 'compatibility';
-  domainId: string;
-  bindingProjectId: string;
-  sourceOwner: string;
-  workspaceRootProfileRef?: {
-    profileDirName: string;
-    domainDirName: string;
-    opsDirName: string;
-  };
-  studiesDirName: string;
-  projectionRelativePath: string[];
-};
-
-export const MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE: OwnerAnswerProjectionProfile = {
-  profileId: 'medautoscience.publication_handoff.owner_answer_projection.compatibility.v1',
-  profileRole: 'compatibility',
-  domainId: 'medautoscience',
-  bindingProjectId: 'medautoscience',
-  sourceOwner: 'medautoscience',
-  workspaceRootProfileRef: {
-    profileDirName: 'profiles',
-    domainDirName: 'medautoscience',
-    opsDirName: 'ops',
-  },
-  studiesDirName: 'studies',
-  projectionRelativePath: [
-    'artifacts',
-    'stage_outputs',
-    '08-publication_package_handoff',
-    'projection',
-    'current_owner_delta.json',
-  ],
-};
-
-export const OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY = [
-  MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE,
-] as const;
+export type OwnerAnswerProjectionProfile = DomainOwnerAnswerProjectionProfile;
 
 export function buildOwnerAnswerProjectionProfileRegistryReadback(
-  profiles: ReadonlyArray<OwnerAnswerProjectionProfile> = OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY,
+  profiles: ReadonlyArray<OwnerAnswerProjectionProfile> = resolveDomainOwnerAnswerProjectionProfiles(),
 ) {
   const entries = profiles.map((profile) => {
     const projectionRole = profileProjectionRole(profile);
@@ -176,11 +143,12 @@ function bindingMatchesReceipt(
 export function findOwnerAnswerProjection(input: {
   receipt: StageRunExecutionAuthorizationReceipt | null;
   profiles?: ReadonlyArray<OwnerAnswerProjectionProfile>;
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
 }) {
   if (!input.receipt) {
     return null;
   }
-  const profiles = input.profiles ?? OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY;
+  const profiles = input.profiles ?? resolveDomainOwnerAnswerProjectionProfiles(input.repoInputs);
   const profile = profiles.find((entry) => entry.domainId === input.receipt?.domain_id);
   if (!profile) {
     return null;

@@ -29,7 +29,7 @@ import {
   isDomainRouteStageRouteTask,
 } from './family-runtime-domain-route-terminal-sync.ts';
 import {
-  masDomainOwnerAnswerObservationFromRecords,
+  domainOwnerAnswerObservationFromRecords,
   OPL_ATTEMPT_ADMISSION_PROVIDER_START_PENDING_REASON,
   OPL_ATTEMPT_ADMISSION_REQUESTED_REASON,
 } from './family-runtime-opl-attempt-admission-receipt.ts';
@@ -162,7 +162,6 @@ function currentControlAuthorityBoundary() {
     reads_domain_latest_or_dispatch_latest: false,
     provider_completion_is_domain_ready: false,
     opl_can_authorize_domain_ready: false,
-    opl_can_authorize_publication_ready: false,
     opl_can_authorize_artifact_ready: false,
     opl_can_sign_domain_owner_receipt: false,
     can_write_domain_truth: false,
@@ -624,7 +623,7 @@ function deriveCurrentControlStateFromRows(
   ]);
   const ownerAnswerObservation = task
     && isDomainRouteTask(task.domain_id, task.task_kind, taskPayload)
-    ? masDomainOwnerAnswerObservationFromRecords([
+    ? domainOwnerAnswerObservationFromRecords([
         { source: 'task_payload', value: taskPayload },
         { source: 'stage_attempt_route_impact', value: routeImpact },
         { source: 'latest_closeout', value: latestCloseout },
@@ -677,9 +676,9 @@ function deriveCurrentControlStateFromRows(
       'typed_stage_closeout_ledger',
     ],
     forbidden_derivation_sources: [
-      'mas_latest',
-      'mas_dispatch_latest',
-      'domain_publication_ready_verdict',
+      'domain_latest',
+      'domain_dispatch_latest',
+      'domain_readiness_verdict',
       'domain_artifact_ready_verdict',
     ],
     authority_boundary: currentControlAuthorityBoundary(),

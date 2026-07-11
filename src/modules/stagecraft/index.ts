@@ -37,8 +37,8 @@ export { listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuth
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
 export { buildStageRunCycleIdentity, buildStageRunCycleManifestFromControlPlane, reduceStageRunCycleState, STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF, STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY } from './stage-run-orchestration.ts';
 export type { StageRunControlPlaneManifestInput, StageRunCycleEvent, StageRunCycleIdentity, StageRunCycleIdentityInput, StageRunCycleManifest, StageRunCycleState, StageRunEffectObservation, StageRunRouteDecision } from './stage-run-orchestration.ts';
-export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection, MEDAUTOSCIENCE_PUBLICATION_HANDOFF_OWNER_ANSWER_COMPATIBILITY_PROFILE, OWNER_ANSWER_PROJECTION_PROFILE_REGISTRY } from './mas-owner-answer-projection.ts';
-export type { OwnerAnswerProjectionProfile } from './mas-owner-answer-projection.ts';
+export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection } from './domain-owner-answer-projection.ts';
+export type { OwnerAnswerProjectionProfile } from './domain-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';
 export {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,

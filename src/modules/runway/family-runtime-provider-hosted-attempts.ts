@@ -14,9 +14,9 @@ import {
   isDomainRouteTask,
 } from './family-runtime-domain-route.ts';
 import {
-  isMasReadinessStageNativeOwnerAction,
-  masReadinessPayloadReferencesStageNativeOwnerAnswer,
-} from './family-runtime-mas-stage-native-owner-answer.ts';
+  isStageNativeOwnerActionFromDomainProfile,
+  payloadReferencesStageNativeOwnerAnswerFromDomainProfile,
+} from './family-runtime-stage-native-owner-answer.ts';
 import { DOMAIN_AUTONOMY_TASK_KINDS } from './family-runtime-domain-autonomy.ts';
 import { resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
@@ -178,14 +178,17 @@ function liveDefaultExecutorAttemptBlocksCandidate(
   }
   if (
     optionalString(candidatePayload.action_type) === 'run_quality_repair_batch'
-    && isMasReadinessStageNativeOwnerAction(
-      {
+    && isStageNativeOwnerActionFromDomainProfile({
+      row: {
         domain_id: attempt.domain_id,
         task_kind: attempt.stage_id,
       },
-      attempt.workspace_locator,
-    )
-    && masReadinessPayloadReferencesStageNativeOwnerAnswer(attempt.workspace_locator)
+      payload: attempt.workspace_locator,
+    })
+    && payloadReferencesStageNativeOwnerAnswerFromDomainProfile({
+      domainId: attempt.domain_id,
+      payload: attempt.workspace_locator,
+    })
   ) {
     return false;
   }
@@ -209,14 +212,17 @@ function blockingLiveDefaultExecutorAttemptBlocksCandidate(
   }
   if (
     optionalString(candidatePayload.action_type) === 'run_quality_repair_batch'
-    && isMasReadinessStageNativeOwnerAction(
-      {
+    && isStageNativeOwnerActionFromDomainProfile({
+      row: {
         domain_id: attempt.domain_id,
         task_kind: attempt.stage_id,
       },
-      attempt.workspace_locator,
-    )
-    && masReadinessPayloadReferencesStageNativeOwnerAnswer(attempt.workspace_locator)
+      payload: attempt.workspace_locator,
+    })
+    && payloadReferencesStageNativeOwnerAnswerFromDomainProfile({
+      domainId: attempt.domain_id,
+      payload: attempt.workspace_locator,
+    })
   ) {
     return false;
   }

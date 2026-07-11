@@ -46,7 +46,7 @@ Temporal-backed attempt 必须把 durable history、activity heartbeat、workflo
 
 `user_stage_log` 是用户透明度投影，不是 domain truth。OPL 负责时间、usage、refs、observed/missing/null 和 authority boundary；domain closeout 负责 `stage_name`、`problem_summary`、`stage_goal`、`stage_work_done`、`changed_stage_surfaces`、`outcome`、`remaining_blockers` 和 evidence refs。标准 OPL Agent 使用 `stage_work_done` / `changed_stage_surfaces`；缺少 domain 人话语义时必须显示 `missing_domain_semantic_summary`，不得补写或猜测。
 
-`current_control_state` 是 OPL-only reconciled projection。它只从 family queue、stage attempt ledger、provider run projection 和 typed stage closeout ledger 派生；不得从 `mas_latest`、`mas_dispatch_latest`、publication-ready verdict 或 artifact-ready verdict 派生。missing identity、stale route/source/truth epoch、provider completed without typed closeout 等状态必须 fail-closed。若存在新 queue / stage attempt 或更新 closeout，旧 terminal attempt 不能覆盖 task-level currentness。没有 canonical admission consumer 的 no-progress 观察只能进入 advisory/readback，不能冻结默认 redrive、耗尽 StageRun 或伪造 typed blocker。
+`current_control_state` 是 OPL-only reconciled projection。它只从 family queue、stage attempt ledger、provider run projection 和 typed stage closeout ledger 派生；不得从 `domain_latest`、`domain_dispatch_latest`、domain-ready verdict 或 artifact-ready verdict 派生。missing identity、stale route/source/truth epoch、provider completed without typed closeout 等状态必须 fail-closed。若存在新 queue / stage attempt 或更新 closeout，旧 terminal attempt 不能覆盖 task-level currentness。没有 canonical admission consumer 的 no-progress 观察只能进入 advisory/readback，不能冻结默认 redrive、耗尽 StageRun 或伪造 typed blocker。
 
 ## State Semantics
 

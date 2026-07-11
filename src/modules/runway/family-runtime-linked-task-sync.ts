@@ -15,17 +15,16 @@ import {
 } from './family-runtime-queue-projection-boundary.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
-  MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
-  isMasReadinessStageNativeOwnerAction,
-  stageAttemptRowHasMasStageNativeOwnerAnswer,
-} from './family-runtime-mas-stage-native-owner-answer.ts';
+  STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+  isStageNativeOwnerActionFromDomainProfile,
+  stageAttemptRowHasStageNativeOwnerAnswerFromDomainProfile,
+} from './family-runtime-stage-native-owner-answer.ts';
 
 type LinkedTask = Pick<
   FamilyRuntimeTaskRow,
   'task_id' | 'domain_id' | 'task_kind' | 'payload_json' | 'status' | 'last_error' | 'dead_letter_reason'
 >;
 
-const DEFAULT_EXECUTOR_DISPATCH_TASK_KIND = 'domain_owner/default-executor-dispatch';
 const PROVIDER_ONLY_TASK_DEAD_LETTER_REASONS = new Set([
   'temporal_stage_attempt_start_failed',
   'temporal_stage_attempt_not_completed',
@@ -45,11 +44,10 @@ function linkedDefaultExecutorTask(
     FROM tasks
     WHERE task_id = ?
   `).get(row.task_id) as LinkedTask | undefined;
-  if (
-    !task
-    || task.domain_id !== 'medautoscience'
-    || task.task_kind !== DEFAULT_EXECUTOR_DISPATCH_TASK_KIND
-  ) {
+  if (!task || !isStageNativeOwnerActionFromDomainProfile({
+    row: task,
+    payload: parseTaskPayload(task),
+  })) {
     return null;
   }
   return task;
@@ -140,8 +138,11 @@ function parseTaskPayload(task: LinkedTask) {
 
 function shouldBlockMissingStageNativeOwnerAnswer(task: LinkedTask, row: StageAttemptRow) {
   const payload = parseTaskPayload(task);
-  return isMasReadinessStageNativeOwnerAction(task, payload)
-    && !stageAttemptRowHasMasStageNativeOwnerAnswer(row, payload);
+  return isStageNativeOwnerActionFromDomainProfile({ row: task, payload })
+    && !stageAttemptRowHasStageNativeOwnerAnswerFromDomainProfile({
+      row,
+      currentPayload: payload,
+    });
 }
 
 function blockMissingStageNativeOwnerAnswer(
@@ -158,8 +159,8 @@ function blockMissingStageNativeOwnerAnswer(
     WHERE task_id = ?
   `).run(
     FAMILY_RUNTIME_TASK_STATUS.blocked,
-    MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
-    MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
     input.observedAt,
     input.task.task_id,
   );
@@ -171,7 +172,7 @@ function blockMissingStageNativeOwnerAnswer(
     payload: {
       stage_attempt_id: input.row.stage_attempt_id,
       workflow_id: input.row.workflow_id,
-      reason: MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+      reason: STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
       previous_status: input.task.status,
       cleared_dead_letter_reason: input.task.dead_letter_reason,
       authority_boundary: {
@@ -192,7 +193,7 @@ function blockMissingStageNativeOwnerAnswer(
     body: input.row.stage_attempt_id,
     payload: {
       stage_attempt_id: input.row.stage_attempt_id,
-      reason: MAS_STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+      reason: STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
     },
   });
 }
