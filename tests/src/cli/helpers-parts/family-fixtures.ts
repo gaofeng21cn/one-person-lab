@@ -538,7 +538,7 @@ if [[ "$*" == *${shellSingleQuote(`run python -m med_autoscience.cli product man
   exit 0
 fi
 
-if [[ "$*" == run\\ --directory\\ *\\ python\\ -c* && "$*" == *med_autoscience.controllers.product_entry* && "$*" == *${path.resolve(options.masProfile)}* ]]; then
+if [[ "$*" == run\\ --isolated\\ --frozen\\ --project\\ *\\ python\\ -c* && "$*" == *med_autoscience.controllers.product_entry* && "$*" == *${path.resolve(options.masProfile)}* ]]; then
   cat ${shellSingleQuote(masManifestPath)}
   exit 0
 fi

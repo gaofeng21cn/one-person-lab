@@ -374,6 +374,42 @@ test('opl connect sync-skills refuses to mirror legacy test skill stubs', () => 
   }
 });
 
+test('opl connect sync-skills materializes MAS without an overlay or repo installer', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-carrier-only-'));
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+  const homeDir = path.join(captureDir, 'home');
+  const codexHome = path.join(homeDir, '.codex');
+  const masRoot = path.join(workspaceRoot, 'med-autoscience');
+
+  fs.rmSync(path.join(masRoot, 'scripts', 'install-codex-plugin.sh'), { force: true });
+  fs.rmSync(path.join(masRoot, 'overlay'), { recursive: true, force: true });
+  fs.mkdirSync(codexHome, { recursive: true });
+
+  try {
+    const output = runCli(['connect', 'sync-skills', '--domain', 'mas'], {
+      HOME: homeDir,
+      CODEX_HOME: codexHome,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    });
+    const pack = output.skill_sync.packs[0];
+
+    assert.equal(pack.domain_id, 'medautoscience');
+    assert.equal(pack.installer_found, false);
+    assert.equal(pack.installer_path, '');
+    assert.equal(pack.sync_status, 'synced');
+    assert.equal(pack.installer_result.materialized_surface, 'repo_local_codex_plugin_carrier');
+    assert.equal(
+      fs.realpathSync(pack.installer_result.materialized_codex_plugin_carrier.primary_skill_source_path),
+      fs.realpathSync(path.join(masRoot, 'agent', 'primary_skill', 'SKILL.md')),
+    );
+    assert.equal(fs.existsSync(path.join(masRoot, 'overlay')), false);
+    assert.equal(fs.existsSync(path.join(masRoot, 'scripts', 'install-codex-plugin.sh')), false);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('opl connect sync-skills registers tracked family plugin sources without writing domain repo marketplaces', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);

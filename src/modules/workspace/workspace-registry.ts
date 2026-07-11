@@ -284,14 +284,18 @@ function buildMasGeneratedProductEntryMaterializer(
   profileRef: string,
   methodName: 'build_product_entry_status' | 'build_product_entry_manifest',
 ) {
-  const cleanRunnerPath = path.join(workspaceRoot, 'scripts', 'run-python-clean.sh');
-  if (!fs.existsSync(cleanRunnerPath) || !fs.statSync(cleanRunnerPath).isFile()) {
+  if (
+    !fs.existsSync(workspaceRoot)
+    || !fs.statSync(workspaceRoot).isDirectory()
+    || !fs.existsSync(profileRef)
+    || !fs.statSync(profileRef).isFile()
+  ) {
     throw new FrameworkContractError(
       'cli_usage_error',
-      'MAS generated product-entry materializer requires scripts/run-python-clean.sh in the bound workspace.',
+      'MAS generated product-entry materializer requires an existing bound workspace root and profile.',
       {
         workspace_root: workspaceRoot,
-        required_path: cleanRunnerPath,
+        profile_ref: profileRef,
       },
     );
   }
@@ -303,7 +307,13 @@ function buildMasGeneratedProductEntryMaterializer(
     `print(json.dumps(${methodName}(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
   ].join('; ');
   return [
-    shellSingleQuote(cleanRunnerPath),
+    'uv',
+    'run',
+    '--isolated',
+    '--frozen',
+    '--project',
+    shellSingleQuote(workspaceRoot),
+    'python',
     '-c',
     shellSingleQuote(python),
   ].join(' ');
@@ -527,7 +537,7 @@ function isStaleMasLocatorOnlyBinding(binding: WorkspaceBinding, error: unknown)
   return (
     error instanceof FrameworkContractError
     && error.code === 'cli_usage_error'
-    && String(error.message).includes('run-python-clean.sh')
+    && String(error.message).includes('bound workspace root and profile')
   );
 }
 
@@ -566,9 +576,9 @@ function buildProjectBindingContract(
       required_locator_fields: ['profile_ref'],
       optional_locator_fields: ['workspace_root'],
       derived_entry_command_template:
-        '<workspace_root>/scripts/run-python-clean.sh -c <mas_generated_product_status_materializer>',
+        'uv run --isolated --frozen --project <workspace_root> python -c <mas_generated_product_status_materializer>',
       derived_manifest_command_template:
-        '<workspace_root>/scripts/run-python-clean.sh -c <mas_generated_product_entry_manifest_materializer>',
+        'uv run --isolated --frozen --project <workspace_root> python -c <mas_generated_product_entry_manifest_materializer>',
       quick_bind_hint: '绑定 MAS 课题 workspace_path 与 profile_ref；如果 MAS 代码仓不在课题目录内，用 workspace_root 指向 MAS 代码仓来派生 direct entry 与 manifest surface。',
     };
   }

@@ -14,7 +14,7 @@ import {
   STANDARD_AGENT_STAGE_MANIFEST_REF,
 } from '../standard-agent-stage-manifest.ts';
 import { isRecord } from '../../../kernel/contract-validation.ts';
-import { stringList } from '../../../kernel/json-record.ts';
+import { stringList, stringValue } from '../../../kernel/json-record.ts';
 import { resolveContainedRepoJsonFile } from '../../../kernel/repo-contained-json-file.ts';
 import { assertJsonSchemaCompiles } from '../../../kernel/schema-registry.ts';
 import {
@@ -39,6 +39,121 @@ function genericResidueBlocked(summary: JsonRecord) {
     || numberField(summary, 'retire_tombstone_count') > 0
     || numberField(summary, 'active_private_generic_residue_count') > 0
     || numberField(summary, 'blocker_count') > 0;
+}
+
+function isCompactFunctionalAudit(value: unknown): value is JsonRecord & { modules: unknown[] } {
+  return isRecord(value)
+    && value.surface_kind === 'functional_privatization_audit'
+    && typeof value.schema_version === 'number'
+    && Boolean(stringValue(value.owner))
+    && Array.isArray(value.modules)
+    && !isRecord(value.functional_consumer_boundary);
+}
+
+function sourceFileRef(value: string) {
+  return value.split('::', 1)[0].split('#', 1)[0].trim();
+}
+
+function repoFileReadback(repoDir: string, sourceRef: string) {
+  const fileRef = sourceFileRef(sourceRef);
+  if (!fileRef || path.isAbsolute(fileRef)) {
+    return {
+      source_ref: sourceRef,
+      resolved_path: null,
+      status: 'invalid_repo_relative_ref',
+    };
+  }
+  const absolutePath = path.resolve(repoDir, fileRef);
+  const relativePath = path.relative(repoDir, absolutePath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    return {
+      source_ref: sourceRef,
+      resolved_path: null,
+      status: 'invalid_repo_relative_ref',
+    };
+  }
+  return {
+    source_ref: sourceRef,
+    resolved_path: relativePath,
+    status: fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()
+      ? 'resolved'
+      : 'missing',
+  };
+}
+
+function buildCompactFunctionalAuditReadback(
+  repoDir: string,
+  functionalAuditRaw: unknown,
+  packCompilerInput: unknown,
+) {
+  if (!isCompactFunctionalAudit(functionalAuditRaw)) {
+    return null;
+  }
+
+  const packInventory = isRecord(packCompilerInput) ? stringList(packCompilerInput.declarative_domain_pack) : [];
+  const packReadback = [
+    'agent/stages/manifest.json',
+    'agent/primary_skill/SKILL.md',
+    'contracts/action_catalog.json',
+    'contracts/pack_compiler_input.json',
+  ].map((sourceRef) => repoFileReadback(repoDir, sourceRef));
+  const moduleReadback = (functionalAuditRaw.modules as unknown[])
+    .filter(isRecord)
+    .map((module) => ({
+      module_id: stringValue(module.module_id) ?? 'unknown_functional_module',
+      code_paths: stringList(module.code_paths).map((sourceRef) => repoFileReadback(repoDir, sourceRef)),
+    }));
+  const retiredProvenance = Array.isArray(functionalAuditRaw.retired_generated_surface_provenance)
+    ? functionalAuditRaw.retired_generated_surface_provenance.filter(isRecord).map((entry) => ({
+        surface_id: stringValue(entry.surface_id),
+        replacement_ref: stringValue(entry.replacement_ref),
+        provenance_refs: stringList(entry.provenance_refs),
+      }))
+    : [];
+  const modulePathChecks = moduleReadback.flatMap((entry) => entry.code_paths);
+  const missingModulePaths = moduleReadback.flatMap((entry) => (
+    entry.code_paths.length === 0
+      ? [`compact_functional_audit_module_has_no_code_path:${entry.module_id}`]
+      : entry.code_paths
+        .filter((check) => check.status !== 'resolved')
+        .map((check) => `compact_functional_audit_code_path_${check.status}:${entry.module_id}:${check.source_ref}`)
+  ));
+  const blockers = [
+    packInventory.length > 0 ? null : 'compact_functional_audit_pack_inventory_empty',
+    ...packReadback
+      .filter((check) => check.status !== 'resolved')
+      .map((check) => `compact_functional_audit_pack_readback_${check.status}:${check.source_ref}`),
+    ...missingModulePaths,
+    ...(retiredProvenance.length === 3
+      ? []
+      : ['compact_functional_audit_retired_provenance_count_invalid']),
+    ...retiredProvenance.flatMap((entry, index) => [
+      entry.surface_id ? null : `compact_functional_audit_retired_provenance_surface_id_missing:${index}`,
+      entry.replacement_ref ? null : `compact_functional_audit_retired_provenance_replacement_ref_missing:${index}`,
+      entry.provenance_refs.length > 0 ? null : `compact_functional_audit_retired_provenance_refs_missing:${index}`,
+    ]),
+  ].filter((entry): entry is string => Boolean(entry));
+
+  return {
+    surface_kind: 'opl_compact_functional_privatization_audit_readback',
+    status: blockers.length === 0 ? 'resolved' : 'blocked',
+    source_ref: 'contracts/functional_privatization_audit.json',
+    morphology: {
+      declared_module_count: moduleReadback.length,
+      resolved_code_path_count: modulePathChecks.filter((check) => check.status === 'resolved').length,
+      missing_code_path_count: modulePathChecks.filter((check) => check.status !== 'resolved').length,
+      retired_generated_surface_provenance_count: retiredProvenance.length,
+      declared_pack_inventory_count: packInventory.length,
+    },
+    pack_inventory: {
+      source_ref: 'contracts/pack_compiler_input.json#declarative_domain_pack',
+      declared_module_ids: packInventory,
+      readback: packReadback,
+    },
+    module_code_path_readback: moduleReadback,
+    retired_generated_surface_provenance: retiredProvenance,
+    blockers,
+  };
 }
 
 function readRepoJson(repoDir: string, relativePath: string) {
@@ -319,8 +434,24 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
   const functionalAuditManifest = {
     target_domain_id: targetDomainId,
     functional_privatization_audit: functionalAuditRaw ?? undefined,
+    pack_inventory: {
+      source_ref: 'contracts/pack_compiler_input.json#declarative_domain_pack',
+      declarative_domain_pack: isRecord(packCompilerInput)
+        ? stringList(packCompilerInput.declarative_domain_pack)
+        : [],
+    },
   };
   const functionalAudit = buildFunctionalPrivatizationAudit(functionalAuditManifest);
+  const compactFunctionalAuditReadback = buildCompactFunctionalAuditReadback(
+    repoDir,
+    functionalAuditRaw,
+    packCompilerInput,
+  );
+  const functionalAuditConsumptionStatus = compactFunctionalAuditReadback
+    ? functionalAudit.blockers.length === 0 && compactFunctionalAuditReadback.status === 'resolved'
+      ? 'resolved'
+      : 'blocked'
+    : functionalAudit.status;
   const actionInputSchemaResolutions = resolveActionInputSchemas(repoDir, actionCatalog);
   const actionInputSchemaBlockers = actionInputSchemaResolutions.flatMap((resolution) => {
     if (resolution.status === 'resolved' || resolution.status === 'external_resolution_explicit') {
@@ -336,6 +467,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
     genericResidueBlocked(functionalAudit.summary)
       ? 'functional_privatization_audit_has_generic_residue_or_blocker'
       : null,
+    ...(compactFunctionalAuditReadback?.blockers ?? []),
     ...actionInputSchemaBlockers,
   ].filter((reason): reason is string => Boolean(reason));
   const status = blockerReasons.length === 0 ? 'ready' : 'blocked';
@@ -396,7 +528,7 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
           {
             contract_id: 'functional_privatization_audit',
             path: 'contracts/functional_privatization_audit.json',
-            status: functionalAudit.status,
+            status: functionalAuditConsumptionStatus,
           },
         ],
       },
@@ -458,6 +590,9 @@ export function buildRepoContractDescriptor(repoDirInput: string) {
         external_evidence_request_pack: functionalAudit.external_evidence_request_pack,
         authority_boundary: functionalAudit.authority_boundary,
         blockers: functionalAudit.blockers,
+        ...(compactFunctionalAuditReadback
+          ? { contract_readback: compactFunctionalAuditReadback }
+          : {}),
       },
     },
     repoDir,

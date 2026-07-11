@@ -219,6 +219,7 @@ const readModelGateTestFiles = [
   ...expandTestFiles([
     'tests/src/cli/cases/domain-pack-compiler-active-caller-targets.test.ts', 'tests/src/cli/cases/domain-pack-compiler-oma-fixture.test.ts',
     'tests/src/cli/cases/domain-pack-compiler-drift-manifest.test.ts', 'tests/src/cli/cases/domain-pack-compiler-generated-interfaces.test.ts',
+    'tests/src/cli/cases/domain-pack-compiler-compact-functional-audit.test.ts',
     'tests/src/cli/cases/domain-pack-compiler-standard-agent-contract-pack.test.ts', 'tests/src/cli/cases/domain-pack-compiler.test.ts',
     'tests/src/cli/cases/domain-pack-compiler-real-repo.test.ts',
   ]),

@@ -359,6 +359,97 @@ function selectedAuditSource(manifest: JsonRecord) {
   };
 }
 
+function isCompactCanonicalAudit(source: JsonRecord) {
+  return source.surface_kind === 'functional_privatization_audit'
+    && typeof source.schema_version === 'number'
+    && Boolean(stringValue(source.owner))
+    && Array.isArray(source.modules);
+}
+
+function compactAuditSchemaBlockers(source: JsonRecord) {
+  if (!isCompactCanonicalAudit(source)) {
+    return [];
+  }
+
+  const blockers = [
+    stringValue(source.domain_id) ? null : 'compact_functional_audit_missing_domain_id',
+    stringValue(source.target_domain_id) ? null : 'compact_functional_audit_missing_target_domain_id',
+    isRecord(source.authority_boundary) ? null : 'compact_functional_audit_missing_authority_boundary',
+    Array.isArray(source.retired_generated_surface_provenance)
+      ? null
+      : 'compact_functional_audit_missing_retired_generated_surface_provenance',
+    Array.isArray(source.retired_generated_surface_provenance)
+      && source.retired_generated_surface_provenance.length === 3
+        ? null
+        : 'compact_functional_audit_requires_three_retired_generated_surface_provenance_entries',
+    isRecord(source.bridge_exit_gate) ? null : 'compact_functional_audit_missing_bridge_exit_gate',
+  ].filter((entry): entry is string => Boolean(entry));
+  const expectedLayers: Record<string, FunctionalPrivatizationStandardizationLayer> = {
+    minimal_authority_function: 'authority_function_inventory',
+    refs_only_domain_adapter: 'private_platform_residue_inventory',
+  };
+
+  for (const [index, module] of recordList(source.modules).entries()) {
+    const classification = stringValue(module.classification);
+    const expectedLayer = classification ? expectedLayers[classification] : undefined;
+    if (!expectedLayer) {
+      blockers.push(`compact_functional_audit_invalid_module_classification:${index}`);
+      continue;
+    }
+    if (!stringValue(module.module_id)) {
+      blockers.push(`compact_functional_audit_missing_module_id:${index}`);
+    }
+    if (!Array.isArray(module.code_paths)) {
+      blockers.push(`compact_functional_audit_missing_code_paths:${index}`);
+    }
+    if (!Array.isArray(module.active_callers)) {
+      blockers.push(`compact_functional_audit_missing_active_callers:${index}`);
+    }
+    if (!stringValue(module.migration_action)) {
+      blockers.push(`compact_functional_audit_missing_migration_action:${index}`);
+    }
+    if (!stringValue(module.retention_reason)) {
+      blockers.push(`compact_functional_audit_missing_retention_reason:${index}`);
+    }
+    if (stringValue(module.standardization_layer) !== expectedLayer) {
+      blockers.push(`compact_functional_audit_standardization_layer_mismatch:${index}`);
+    }
+  }
+
+  const bridgeExitGate = isRecord(source.bridge_exit_gate) ? source.bridge_exit_gate : null;
+  if (bridgeExitGate) {
+    const allowedBridgeFields = new Set([
+      'physical_delete_authorization_refs',
+      'no_forbidden_write_refs',
+      'provenance_refs',
+    ]);
+    for (const field of Object.keys(bridgeExitGate)) {
+      if (!allowedBridgeFields.has(field)) {
+        blockers.push(`compact_functional_audit_bridge_exit_gate_unsupported_field:${field}`);
+      }
+    }
+    for (const field of allowedBridgeFields) {
+      if (!Array.isArray(bridgeExitGate[field])) {
+        blockers.push(`compact_functional_audit_bridge_exit_gate_missing_ref_list:${field}`);
+      }
+    }
+  }
+
+  for (const [index, provenance] of recordList(source.retired_generated_surface_provenance).entries()) {
+    if (!stringValue(provenance.surface_id)) {
+      blockers.push(`compact_functional_audit_retired_provenance_missing_surface_id:${index}`);
+    }
+    if (!stringValue(provenance.replacement_ref)) {
+      blockers.push(`compact_functional_audit_retired_provenance_missing_replacement_ref:${index}`);
+    }
+    if (!Array.isArray(provenance.provenance_refs)) {
+      blockers.push(`compact_functional_audit_retired_provenance_missing_provenance_refs:${index}`);
+    }
+  }
+
+  return unique(blockers);
+}
+
 function migrationClass(value: unknown): FunctionalPrivatizationMigrationClass {
   const text = stringValue(value);
   if (
@@ -621,6 +712,8 @@ function itemFromRecord(
     current_surface_refs: unique([
       ...stringList(record.current_surface_refs),
       stringValue(record.surface_ref),
+      stringValue(record.replacement_ref),
+      ...stringList(record.provenance_refs),
     ].filter((entry): entry is string => Boolean(entry))),
     expected_opl_primitives: expectedOplPrimitives,
     retained_domain_authority: retainedDomainAuthority,
@@ -669,6 +762,9 @@ function itemFromRecord(
       ...stringList(record.no_regression_evidence_refs),
       ...stringList(record.no_forbidden_write_refs),
       ...stringList(record.no_forbidden_write_evidence_refs),
+      ...stringList(isRecord(record.bridge_exit_gate)
+        ? record.bridge_exit_gate.no_forbidden_write_refs
+        : []),
     ]),
     private_platform_residue_gate: privatePlatformResidueGateFromRecord(record),
     bridge_exit_gate: isRecord(record.bridge_exit_gate) ? record.bridge_exit_gate : null,
@@ -750,6 +846,44 @@ function itemsFromStructuredAudit(source: JsonRecord) {
       itemFromRecord(entry, 'retire_or_tombstone_surfaces', 'provenance_or_fixture')),
   ];
   return modules;
+}
+
+function itemsFromRetiredGeneratedSurfaceProvenance(source: JsonRecord) {
+  const bridgeExitGate = isRecord(source.bridge_exit_gate) ? source.bridge_exit_gate : null;
+  return recordList(source.retired_generated_surface_provenance).map((entry) => itemFromRecord(
+    {
+      module_id: stringValue(entry.surface_id) ?? 'unknown_retired_generated_surface',
+      classification: 'provenance_or_fixture',
+      active_caller_allowed: false,
+      tombstone_required: true,
+      current_surface_refs: unique([
+        stringValue(entry.replacement_ref) ?? '',
+        ...stringList(entry.provenance_refs),
+      ]),
+      retention_reason: 'retired_generated_surface_provenance',
+      bridge_exit_gate: bridgeExitGate,
+    },
+    'retired_generated_surface_provenance',
+    'provenance_or_fixture',
+  ));
+}
+
+function itemsFromPackInventory(manifest: JsonRecord) {
+  const inventory = isRecord(manifest.pack_inventory) ? manifest.pack_inventory : null;
+  if (!inventory) {
+    return [];
+  }
+  const sourceRef = stringValue(inventory.source_ref) ?? 'pack_inventory.declarative_domain_pack';
+  return stringList(inventory.declarative_domain_pack).map((moduleId) => itemFromRecord(
+    {
+      module_id: moduleId,
+      classification: 'declarative_pack',
+      current_surface_refs: [sourceRef],
+      retention_reason: 'declared_domain_pack_inventory',
+    },
+    'pack_inventory.declarative_domain_pack',
+    'declarative_pack',
+  ));
 }
 
 function summarize(items: FunctionalPrivatizationAuditItem[]) {
@@ -911,10 +1045,18 @@ export function buildFunctionalPrivatizationAudit(
       },
     };
   }
-  const modules =
+  const compactCanonicalAudit = isCompactCanonicalAudit(source);
+  const sourceModules =
     sourceField === 'functional_consumer_boundary'
       ? itemsFromMasBoundary(source)
       : itemsFromStructuredAudit(source);
+  const modules = compactCanonicalAudit
+    ? [
+        ...sourceModules,
+        ...itemsFromRetiredGeneratedSurfaceProvenance(source),
+        ...itemsFromPackInventory(manifest),
+      ]
+    : sourceModules;
   const requiredOplReplacementPrimitives = unique([
     ...modules.flatMap((item) => item.expected_opl_primitives),
     ...stringList(source.opl_must_absorb_code_surfaces),
@@ -927,6 +1069,14 @@ export function buildFunctionalPrivatizationAudit(
     authorityFunctionItems,
     privatePlatformResidueItems,
   } = summarize(modules);
+  const allBlockers = unique([
+    ...blockers,
+    ...compactAuditSchemaBlockers(source),
+  ]);
+  const normalizedSummary = {
+    ...summary,
+    blocker_count: allBlockers.length,
+  };
   const evidencePack = externalEvidenceRequestPack(source, manifest);
   const gates = evidenceGateProjection(source);
   const replacementExpectations = oplReplacementExpectations(source, manifest);
@@ -941,18 +1091,18 @@ export function buildFunctionalPrivatizationAudit(
       sourceFieldRole,
       legacyImportSourceFields,
       targetDomainId,
-      summary,
+        summary: normalizedSummary,
       evidenceGateProjection: gates,
       externalEvidenceRequestPack: evidencePack,
       replacementExpectations,
-      blockers,
+        blockers: allBlockers,
     }),
     source_field: sourceField,
     source_field_role: sourceFieldRole,
     legacy_import_source_fields: legacyImportSourceFields,
     target_domain_id: targetDomainId,
-    summary,
-    source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(summary),
+    summary: normalizedSummary,
+    source_purity_tail_read_model: buildFunctionalSourcePurityTailReadModel(normalizedSummary),
     modules,
     standard_domain_pack_inventory: standardDomainPackItems,
     authority_function_inventory: authorityFunctionItems,
@@ -961,7 +1111,7 @@ export function buildFunctionalPrivatizationAudit(
     external_evidence_request_pack: evidencePack,
     evidence_gate_projection: gates,
     opl_replacement_expectations: replacementExpectations,
-    blockers,
+    blockers: allBlockers,
     authority_boundary: {
       opl_can_write_domain_truth: false,
       opl_can_write_memory_body: false,

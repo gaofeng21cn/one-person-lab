@@ -48,7 +48,7 @@ export const STANDARD_AGENT_REGISTRY = [
     module_id: 'MEDAUTOSCIENCE',
     source_kind: 'opl_standard_codex_carrier',
     installer_kind: 'bash',
-    installer_relative_paths: ['scripts/install-codex-plugin.sh'],
+    installer_relative_paths: [],
     domain_alias: 'study',
     work_alias: 'study',
     aliases: ['mas', 'medautoscience', 'med-autoscience', 'med_auto_science', 'study'],
