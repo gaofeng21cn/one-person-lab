@@ -6,7 +6,7 @@ import { isRecord } from '../../../kernel/contract-validation.ts';
 import {
   DEFAULT_STAGE_EXECUTOR_BINDING_REF,
   STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
-} from '../../stagecraft/standard-stage-pack-identity.ts';
+} from '../../stagecraft/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
