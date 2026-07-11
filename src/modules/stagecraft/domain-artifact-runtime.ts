@@ -29,7 +29,7 @@ export function buildDirectoryArtifactIndex(input: {
     .filter((relativePath) => !excluded.has(relativePath))
     .map((relativePath) => {
       const file = path.join(root, relativePath);
-      return { relative_path: relativePath, file, sha256: fileHash(file), bytes: fs.statSync(file).size };
+      return { relative_path: relativePath, file, ...fileHash(file) };
     });
   const present = new Set(entries.map((entry) => entry.relative_path));
   const missingRequired = (input.required_paths ?? []).filter((relativePath) => !present.has(relativePath));
@@ -63,13 +63,13 @@ export function writeDomainArtifact(input: StageArtifactAttemptLocator & {
   const file = path.join(roleDir(opened, input.role), relativePath);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, input.body);
+  const hash = fileHash(file);
   return {
     surface_kind: 'opl_domain_artifact_write_receipt',
     role: input.role,
     relative_path: relativePath,
     file,
-    sha256: fileHash(file),
-    bytes: fs.statSync(file).size,
+    ...hash,
     attempt: opened,
     authority_boundary: {
       write_requires_domain_authorization: true,
@@ -88,7 +88,7 @@ export function readDomainArtifact(input: StageArtifactAttemptLocator & {
   const relativePath = safeRelativePath(input.relative_path, 'relative_path');
   const file = path.join(roleDir(opened, input.role), relativePath);
   const body = input.encoding === null ? fs.readFileSync(file) : fs.readFileSync(file, input.encoding ?? 'utf8');
-  return { file, relative_path: relativePath, role: input.role, body, sha256: fileHash(file) };
+  return { file, relative_path: relativePath, role: input.role, body, ...fileHash(file) };
 }
 
 export function buildDomainArtifactIndex(locator: StageArtifactAttemptLocator) {
@@ -97,7 +97,7 @@ export function buildDomainArtifactIndex(locator: StageArtifactAttemptLocator) {
     const root = roleDir(opened, role);
     return listRelativeFiles(root).map((relativePath) => {
       const file = path.join(root, relativePath);
-      return { role, relative_path: relativePath, file, sha256: fileHash(file), bytes: fs.statSync(file).size };
+      return { role, relative_path: relativePath, file, ...fileHash(file) };
     });
   });
   return {
