@@ -172,7 +172,7 @@ OPL 保留 authority model、stage/owner/receipt/typed blocker 语义和 domain 
 | 审计项 | 状态 | 完成度 | 当前证据类型 | 缺口 / 后续动作 |
 | --- | --- | ---: | --- | --- |
 | active reuse-first 文档去流水账化 | `done` | 100% | 本文入口压缩为 current status / exclusions / landable items / audit；历史流水移到 history archive。 | 后续不得在本文继续追加 dated closeout ledger。 |
-| Reuse-first governance gate | `partial` | 98% | contract/support doc、scan/diff gate、policy、history archive 指针；`reuse-first-scan --help/--format json/--summary` 已落。 | 继续按 fresh scan/worklist 消化新增 hard finding；不能声明历史风险清零。 |
+| Reuse-first governance gate | `partial` | 98% | contract/support doc、strict diff gate、policy、history archive 指针；`reuse-first-scan --help` 与 `reuse-first:scan:diff` 已落。 | 继续按 fresh diff gate 消化新增 hard finding；不能声明历史风险清零。 |
 | Schema boundary consolidation | `partial` | 88% | shared schema/JSON helper、focused tests、typecheck、diff gate；receipt ledger 和 scalar handling 的当前 owner 是 `src/kernel/json-file.ts`、`json-record.ts` 与实际 consumer imports。 | 继续禁止新增分散 validator；receipt helper 不改变 payload semantics 或 owner receipt shape；legacy alias 随 caller 迁移逐步退休。 |
 | CLI parser/command registry | `partial` | 92% | command registry、parser adapter、protected/required command set，以及 maintainer scripts / runtime command 的 fresh help/json readback。 | 继续迁 remaining public/runtime diagnostic commands；避免新增 parser dependency。 |
 | Runway Temporal-first runtime | `blocked` | 88% | local/test-server proof、readback contract、queue projection boundary。 | 需要 external Temporal history/query、managed worker、真实 executor closeout、owner/domain refs。 |

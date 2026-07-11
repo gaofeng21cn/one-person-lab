@@ -25,9 +25,7 @@ const patterns = contract.patterns.map((entry) => ({
 const allowMarkers = contract.allow_markers ?? [];
 const strictHardCategories = new Set(contract.strict_mode?.hard_categories ?? []);
 
-const findings = args.mode === 'diff'
-  ? scanDiffAddedLines()
-  : scanFiles();
+const findings = scanDiffAddedLines();
 const visibleFindings = findings.slice(0, args.maxFindings);
 const hardGateFindingCount = findings.filter((finding) => finding.gate_mode === 'hard').length;
 const advisoryFindingCount = findings.length - hardGateFindingCount;
@@ -41,9 +39,9 @@ const summary = {
   surface_kind: 'opl_reuse_first_scan',
   status: findings.length === 0 ? 'ok' : 'attention',
   gate_status: gateStatus,
-  mode: args.mode,
-  strict: args.strict,
-  diff_ref: args.mode === 'diff' ? args.diffRef : null,
+  mode: 'strict_diff',
+  strict: true,
+  diff_ref: args.diffRef,
   contract: path.relative(root, contractPath),
   finding_count: findings.length,
   hard_gate_finding_count: hardGateFindingCount,
@@ -52,19 +50,14 @@ const summary = {
   omitted_finding_count: findings.length - visibleFindings.length,
   findings: visibleFindings,
   false_ready_guard: [
-    'reuse-first scan findings are implementation candidates, not proof of readiness failure',
-    'clean scan does not prove release-ready, production-ready, domain-ready, or owner acceptance',
-    'full scan is advisory inventory; only strict diff mode guards changed lines',
+    'reuse-first diff findings are implementation candidates, not proof of readiness failure',
+    'a clean diff gate does not prove historical risk is empty, release-ready, production-ready, domain-ready, or owner acceptance',
   ],
 };
 
-const output = args.format === 'summary'
-  ? buildCompactSummary(summary)
-  : summary;
+process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 
-process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-
-if (args.strict && hardGateFindingCount > 0) {
+if (hardGateFindingCount > 0) {
   process.exit(1);
 }
 
@@ -74,13 +67,9 @@ function parseCliOptions(argv) {
     options: {
       root: { type: 'string' },
       contract: { type: 'string' },
-      mode: { type: 'string', default: 'full' },
       'diff-ref': { type: 'string', default: 'origin/main' },
       'max-findings': { type: 'string', default: '200' },
-      format: { type: 'string', default: 'json' },
-      summary: { type: 'boolean', default: false },
       help: { type: 'boolean', default: false },
-      strict: { type: 'boolean', default: false },
     },
     strict: true,
     allowPositionals: false,
@@ -88,19 +77,10 @@ function parseCliOptions(argv) {
   const parsed = {
     root: values.root ?? null,
     contract: values.contract ?? null,
-    mode: values.mode,
     diffRef: values['diff-ref'],
-    strict: values.strict === true,
     help: values.help === true,
-    format: values.summary === true ? 'summary' : values.format,
     maxFindings: readPositiveInteger(values['max-findings'], '--max-findings'),
   };
-  if (!['full', 'diff'].includes(parsed.mode)) {
-    fail('reuse-first scan: --mode must be full or diff');
-  }
-  if (!['json', 'summary'].includes(parsed.format)) {
-    fail('reuse-first scan: --format must be json or summary');
-  }
   return parsed;
 }
 
@@ -109,35 +89,13 @@ function printHelp() {
     'Usage: node scripts/reuse-first-scan.mjs [options]',
     '',
     'Options:',
-    '  --root <path>                  Repo root to scan.',
+    '  --root <path>                  Repo root whose changed lines are checked.',
     '  --contract <path>              Reuse-first governance contract.',
-    '  --mode <full|diff>             Scan full tree or git diff. Default: full.',
-    '  --diff-ref <ref>               Base ref for diff mode. Default: origin/main.',
+    '  --diff-ref <ref>               Base ref for the strict diff gate. Default: origin/main.',
     '  --max-findings <n>             Number of findings included in json output. Default: 200.',
-    '  --format <json|summary>        Output full machine JSON or compact machine summary.',
-    '  --summary                      Alias for --format summary.',
-    '  --strict                       Exit non-zero when the applicable hard gate blocks.',
     '  --help                         Print this help.',
     '',
   ].join('\n'));
-}
-
-function buildCompactSummary(full) {
-  return {
-    surface_kind: 'opl_reuse_first_scan_summary',
-    status: full.status,
-    gate_status: full.gate_status,
-    mode: full.mode,
-    strict: full.strict,
-    diff_ref: full.diff_ref,
-    contract: full.contract,
-    finding_count: full.finding_count,
-    hard_gate_finding_count: full.hard_gate_finding_count,
-    advisory_finding_count: full.advisory_finding_count,
-    returned_finding_count: 0,
-    omitted_finding_count: full.finding_count,
-    false_ready_guard: full.false_ready_guard,
-  };
 }
 
 function readPositiveInteger(value, flag) {
@@ -162,44 +120,6 @@ function readContract(file) {
     fail(`reuse-first scan: ${file} patterns must be an array`);
   }
   return parsed;
-}
-
-function scanFiles() {
-  const findings = [];
-  for (const relativePath of listScanFiles()) {
-    const lines = fs.readFileSync(path.join(root, relativePath), 'utf8').split('\n');
-    lines.forEach((line, index) => {
-      findings.push(...findLineMatches(relativePath, index + 1, line));
-    });
-  }
-  return findings;
-}
-
-function listScanFiles() {
-  const files = [];
-  for (const scanRoot of contract.scan.roots) {
-    walk(scanRoot, files);
-  }
-  return files.sort();
-}
-
-function walk(relativeRoot, files) {
-  const absoluteRoot = path.join(root, relativeRoot);
-  if (!fs.existsSync(absoluteRoot)) {
-    return;
-  }
-  for (const entry of fs.readdirSync(absoluteRoot, { withFileTypes: true })) {
-    if (contract.scan.ignored_parts.includes(entry.name)) {
-      continue;
-    }
-    const relativePath = path.join(relativeRoot, entry.name).replaceAll('\\', '/');
-    const absolutePath = path.join(root, relativePath);
-    if (entry.isDirectory()) {
-      walk(relativePath, files);
-    } else if (entry.isFile() && shouldScanPath(relativePath)) {
-      files.push(relativePath);
-    }
-  }
 }
 
 function scanDiffAddedLines() {
