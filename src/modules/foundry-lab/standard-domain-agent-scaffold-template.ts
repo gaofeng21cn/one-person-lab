@@ -681,6 +681,10 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         ...STAGE_ARTIFACT_KERNEL_ADOPTION_POLICY,
         owner: domainId,
         domain_id: domainId,
+        opl_state_index_kernel_adoption: {
+          ...STATE_INDEX_KERNEL_ADOPTION_POLICY,
+          consumer: domainId,
+        },
         marker: SCAFFOLD_MARKER,
       }),
     },
@@ -704,15 +708,6 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
       path: 'contracts/stage_operating_principles.json',
       content: json({
         ...STAGE_OPERATING_PRINCIPLES_POLICY,
-        owner: domainId,
-        domain_id: domainId,
-        marker: SCAFFOLD_MARKER,
-      }),
-    },
-    {
-      path: 'contracts/state_index_kernel_adoption.json',
-      content: json({
-        ...STATE_INDEX_KERNEL_ADOPTION_POLICY,
         owner: domainId,
         domain_id: domainId,
         marker: SCAFFOLD_MARKER,

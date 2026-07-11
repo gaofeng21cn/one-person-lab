@@ -47,7 +47,7 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'contracts/functional_privatization_audit.json',
       'contracts/private_functional_surface_policy.json',
       'contracts/workspace_lifecycle_policy.json',
-      'contracts/state_index_kernel_adoption.json',
+      'contracts/stage_artifact_kernel_adoption.json',
       'agent/principles/opl-standard-agent-principles.md',
       'agent/stages/domain_intake.md',
       'agent/prompts/domain_intake.md',
@@ -58,6 +58,14 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
       'runtime/native_helpers/README.md',
     ]);
     assert.equal(fs.existsSync(path.join(targetDir, 'runtime/sidecar/README.md')), false);
+    assert.equal(fs.existsSync(path.join(targetDir, 'contracts/state_index_kernel_adoption.json')), false);
+
+    const stageArtifactAdoption = readJsonFile(
+      path.join(targetDir, 'contracts/stage_artifact_kernel_adoption.json'),
+    );
+    assert.equal(stageArtifactAdoption.opl_state_index_kernel_adoption.owner, 'one-person-lab');
+    assert.equal(stageArtifactAdoption.opl_state_index_kernel_adoption.consumer, 'award-foundry');
+    assert.equal(stageArtifactAdoption.opl_state_index_kernel_adoption.sqlite_enabled_now, false);
 
     const descriptor = readJsonFile(path.join(targetDir, 'contracts/domain_descriptor.json'));
     assert.equal(descriptor.domain_id, 'award-foundry');

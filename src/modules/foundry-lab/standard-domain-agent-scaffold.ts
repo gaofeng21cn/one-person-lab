@@ -433,7 +433,10 @@ export function buildStandardDomainAgentScaffold(input: ScaffoldInput = {}) {
       workspace_file_lifecycle_policy: WORKSPACE_FILE_LIFECYCLE_POLICY,
       stage_run_kernel_profile: STAGE_RUN_KERNEL_PROFILE,
       stage_run_canary_evidence: buildStageRunCanaryEvidence(domainId, 'domain_intake'),
-      state_index_kernel_adoption_policy: STATE_INDEX_KERNEL_ADOPTION_POLICY,
+      state_index_kernel_adoption_policy: {
+        ...STATE_INDEX_KERNEL_ADOPTION_POLICY,
+        consumer: domainId,
+      },
       required_verification: REQUIRED_VERIFICATION,
       ...(targetDir ? { template_files: templateFiles.map((file) => file.path) } : {}),
       write_plan: writePlan,

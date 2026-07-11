@@ -4,6 +4,37 @@ import {
   writeJson,
 } from './agents-conformance-fixtures.ts';
 
+function replaceLegacyStateIndexContractWithOplSidecar(repoDir: string) {
+  fs.rmSync(path.join(repoDir, 'contracts', 'state_index_kernel_adoption.json'));
+  const adoptionPath = path.join(repoDir, 'contracts', 'stage_artifact_kernel_adoption.json');
+  const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
+  adoption.opl_state_index_kernel_adoption = {
+    surface_kind: 'opl_state_index_kernel_sidecar_adoption',
+    version: 'opl-state-index-kernel-sidecar-adoption.v1',
+    owner: 'one-person-lab',
+    consumer: 'sample',
+    adoption_status: 'deferred_until_measured_trigger',
+    sqlite_enabled_now: false,
+    index_backend: 'sqlite_sidecar_index',
+    sidecar_owner: 'one-person-lab',
+    sidecar_is_domain_runtime: false,
+    rebuild_policy: {
+      rebuildable: true,
+      delete_safe: true,
+    },
+    authority_boundary: {
+      opl_owns_state_index_kernel: true,
+      opl_can_store_refs_hashes_provenance: true,
+      opl_can_rebuild_sidecar_index: true,
+      sqlite_can_be_truth_source: false,
+      sqlite_can_store_visual_artifact_body: false,
+      sqlite_can_store_review_export_judgment: false,
+    },
+  };
+  writeJson(adoptionPath, adoption);
+  return adoption.opl_state_index_kernel_adoption;
+}
+
 test('agents conformance requires State Index Kernel adoption as refs-only SQLite sidecar policy', () => {
   const repoDir = buildReadyAgentRepo();
   const report = runCli([
@@ -84,4 +115,53 @@ test('agents conformance blocks domain repos that turn SQLite sidecar into truth
     report.reports[0].blockers.includes('state_index_kernel_large_payload_strategy_invalid'),
     true,
   );
+});
+
+test('agents conformance accepts an OPL-owned deferred sidecar declared by Stage Artifact adoption', () => {
+  const repoDir = buildReadyAgentRepo();
+  replaceLegacyStateIndexContractWithOplSidecar(repoDir);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+  const repo = report.reports[0];
+
+  assert.equal(report.status, 'passed');
+  assert.equal(repo.state_index_kernel_adoption_checks.status, 'passed');
+  assert.equal(
+    repo.state_index_kernel_adoption_checks.policy_source,
+    'contracts/stage_artifact_kernel_adoption.json#/opl_state_index_kernel_adoption',
+  );
+});
+
+test('agents conformance blocks an OPL sidecar that claims domain truth, artifact body, or verdict authority', () => {
+  const repoDir = buildReadyAgentRepo();
+  const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
+  sidecar.authority_boundary.sqlite_can_be_truth_source = true;
+  sidecar.authority_boundary.sqlite_can_store_visual_artifact_body = true;
+  sidecar.authority_boundary.sqlite_can_store_review_export_judgment = true;
+  const adoptionPath = path.join(repoDir, 'contracts', 'stage_artifact_kernel_adoption.json');
+  const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
+  adoption.opl_state_index_kernel_adoption = sidecar;
+  writeJson(adoptionPath, adoption);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.includes('state_index_kernel_sidecar_truth_authority_must_be_false'),
+    true,
+  );
+  assert.equal(
+    report.reports[0].blockers.includes('state_index_kernel_sidecar_artifact_body_authority_must_be_false'), true);
+  assert.equal(
+    report.reports[0].blockers.includes('state_index_kernel_sidecar_verdict_authority_must_be_false'), true);
 });

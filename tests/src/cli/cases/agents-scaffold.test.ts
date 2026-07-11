@@ -99,6 +99,12 @@ test('agents scaffold exposes the reusable agent scaffold contract without domai
   ]);
   assert.equal(scaffold.typed_blocker_lineage_policy.surface_kind, 'family-stall-lineage.v1');
   assert.equal(scaffold.stage_operating_principles_policy.default_read_surface.root, 'current_owner_delta');
+  assert.equal(
+    scaffold.state_index_kernel_adoption_policy.surface_kind,
+    'opl_state_index_kernel_sidecar_adoption',
+  );
+  assert.equal(scaffold.state_index_kernel_adoption_policy.owner, 'one-person-lab');
+  assert.equal(scaffold.state_index_kernel_adoption_policy.sqlite_enabled_now, false);
 
   const series = scaffold.foundry_agent_series_contract;
   assert.equal(series.surface_kind, 'opl_foundry_agent_series_contract');
