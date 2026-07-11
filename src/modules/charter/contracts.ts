@@ -32,7 +32,6 @@ import { validateBrandSystemProfile } from './brand-system-profile-contract.ts';
 import { validateDomainsRegistry } from './contract-validators/domain-contracts.ts';
 import { validatePackBundleContract } from './contract-validators/pack-bundle-contract.ts';
 import { validatePackOsContract } from './contract-validators/pack-os-contract.ts';
-import { validateScholarSkillsCapabilityModules } from './contract-validators/scholar-skills-contract.ts';
 import { validateTargetOperatingArchitecture } from './target-operating-architecture-contract.ts';
 import { REQUIRED_CONTRACT_FILES } from './contracts-manifest.ts';
 import {
@@ -726,10 +725,6 @@ export function loadFrameworkContracts(
       standardAgentPrinciples: validateStandardAgentPrinciples(
         path.join(contractsDir, 'standard-agent-principles.json'),
         parseJsonFile(path.join(contractsDir, 'standard-agent-principles.json')),
-      ),
-      scholarSkillsCapabilityModules: validateScholarSkillsCapabilityModules(
-        path.join(contractsDir, 'scholar-skills-capability-modules.json'),
-        parseJsonFile(path.join(contractsDir, 'scholar-skills-capability-modules.json')),
       ),
       packBundle: validatePackBundleContract(
         path.join(contractsDir, 'pack-bundle-contract.json'),

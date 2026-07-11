@@ -1290,7 +1290,7 @@
       {
         "agent_id": "mas-scholar-skills",
         "package_scope": "framework_capability_package",
-        "capability_contract_ref": "contracts/opl-framework/scholar-skills-capability-modules.json",
+        "capability_contract_ref": "mas-scholar-skills/contracts/scholar-skills-capability-modules.json",
         "public_projection": "opl_foundry_agent_series_refs_only_capability_package",
         "authority_boundary": {
           "can_claim_domain_ready": false,
@@ -1305,10 +1305,9 @@
         },
         "capability_pack_example": "Scholar Capability Pack",
         "authority_ref_examples": [
-          "candidate scientific capability refs",
-          "unsigned execution receipt candidate refs",
-          "non-authoritative candidate artifact bodies",
-          "module-level no-authority guard",
+          "professional skill source refs",
+          "package manifest and lock refs",
+          "workspace or quest sync receipts",
           "domain owner consumption handoff refs"
         ]
       }

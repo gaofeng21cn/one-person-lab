@@ -5,7 +5,6 @@ import {
   resolveStandardAgent,
 } from '../atlas/index.ts';
 import { listDefaultOplDomainModuleSpecs } from './system-installation/modules.ts';
-import { SCHOLARSKILLS_PACKAGE_SPEC } from './system-installation/scholarskills-package-channel.ts';
 import {
   type DeveloperModeGhFixture,
   detectDeveloperModeGithubIdentity,
@@ -84,7 +83,6 @@ function defaultRepoUrlForRepoId(repoId: string) {
 }
 
 function buildRepoTargets(): RepoAuthorityTarget[] {
-  const scholarSkillsRepo = parseGithubRepoFromUrl(SCHOLARSKILLS_PACKAGE_SPEC.repo_url);
   return [
     OPL_FRAMEWORK_REPO_TARGET,
     ...listDefaultOplDomainModuleSpecs().map((entry) => {
@@ -94,16 +92,11 @@ function buildRepoTargets(): RepoAuthorityTarget[] {
         label: entry.label,
         repo: repo ?? `unknown/${entry.repo_name}`,
         repo_url: entry.repo_url,
-        source: 'domain_module_spec' as const,
+        source: entry.scope === 'framework_capability_package'
+          ? 'framework_capability_package_spec' as const
+          : 'domain_module_spec' as const,
       };
     }),
-    {
-      target_id: SCHOLARSKILLS_PACKAGE_SPEC.module_id,
-      label: SCHOLARSKILLS_PACKAGE_SPEC.label,
-      repo: scholarSkillsRepo ?? `unknown/${SCHOLARSKILLS_PACKAGE_SPEC.repo_name}`,
-      repo_url: SCHOLARSKILLS_PACKAGE_SPEC.repo_url,
-      source: 'framework_capability_package_spec' as const,
-    },
   ];
 }
 

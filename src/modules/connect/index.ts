@@ -72,7 +72,6 @@ export {
   runOplModuleAction,
 } from './system-installation/modules.ts';
 export type { OplEngineAction, OplModuleAction, OplModuleId } from './system-installation/shared.ts';
-export { SCHOLARSKILLS_PACKAGE_SPEC } from './system-installation/scholarskills-package-channel.ts';
 export { runOplSystemAction } from './system-installation/system-actions.ts';
 export { runOplTurnkeyInstall } from './system-installation/turnkey.ts';
 export { writeOplWorkspaceRootSurface } from './system-installation/workspace-root.ts';

@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import {
   buildRuntimeEnvironmentBuildReadback,
@@ -45,16 +44,6 @@ function currentPlatformId() {
   if (process.platform === 'linux' && process.arch === 'arm64') return 'linux-arm64';
   if (process.platform === 'linux') return 'linux-x64';
   return `${process.platform}-${process.arch}`;
-}
-
-function builtInRequirementProfilePath(domainId?: string, profileId?: string) {
-  if (domainId !== 'mas' || profileId !== 'display') {
-    return null;
-  }
-  return path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '../../../../contracts/opl-framework/runtime-environment-profiles/mas-display.json',
-  );
 }
 
 function assignRootArg(
@@ -253,7 +242,6 @@ function parsePrepareArgs(
     parsed.platformId ??= currentPlatformId();
     parsed.artifactRoot ??= process.cwd();
     parsed.rootOption ??= '--artifact-root';
-    parsed.requirementProfilePath ??= builtInRequirementProfilePath(parsed.domainId, parsed.profileId) ?? undefined;
   }
   const required: Array<keyof RuntimeEnvironmentPrepareInput> = [
     'domainId',

@@ -17,7 +17,6 @@ export const REQUIRED_CONTRACT_FILE_NAMES = [
   'target-operating-architecture-contract.json',
   'observability-semantic-conventions-contract.json',
   'standard-agent-principles.json',
-  'scholar-skills-capability-modules.json',
   'pack-bundle-contract.json',
   'pack-os-contract.json',
 ] as const;
@@ -103,11 +102,6 @@ export const REQUIRED_CONTRACT_FILES = [
     contract_id: 'standard_agent_principles',
     file_name: 'standard-agent-principles.json',
     schema_version: (contracts: FrameworkContracts) => contracts.standardAgentPrinciples.version,
-  },
-  {
-    contract_id: 'scholarskills_capability_modules',
-    file_name: 'scholar-skills-capability-modules.json',
-    schema_version: (contracts: FrameworkContracts) => String(contracts.scholarSkillsCapabilityModules.schema_version),
   },
   {
     contract_id: 'pack_os',

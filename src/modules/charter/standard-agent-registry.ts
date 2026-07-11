@@ -213,10 +213,9 @@ export const STANDARD_AGENT_REGISTRY = [
       'capability request -> candidate scientific capability refs -> domain owner consumption or typed blocker',
     domain_pack_example: 'Scholar Capability Pack',
     domain_authority_kernel_examples: [
-      'candidate scientific capability refs',
-      'unsigned execution receipt candidate refs',
-      'non-authoritative candidate artifact bodies',
-      'module-level no-authority guard',
+      'professional skill source refs',
+      'package manifest and lock refs',
+      'workspace or quest sync receipts',
       'domain owner consumption handoff refs',
     ],
   },
