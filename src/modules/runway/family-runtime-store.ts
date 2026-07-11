@@ -14,6 +14,7 @@ import {
   deriveCurrentControlStateForTask,
   latestProviderActivityHeartbeat,
 } from './family-runtime-current-control-state.ts';
+import { queryStageAttempt } from './family-runtime-stage-attempt-query.ts';
 import { createStageAttemptTable, listStageAttemptsForTask } from './family-runtime-stage-attempt-ledger.ts';
 import { openFamilyRuntimeSqlite } from './family-runtime-sqlite.ts';
 import type { FamilyRuntimeDomainId, FamilyRuntimeProviderKind } from './family-runtime-types.ts';
@@ -834,6 +835,12 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
   `).all(taskId) as FamilyRuntimeNotificationRow[]).map(notificationToPayload);
   const taskPayload = taskToPayload(task);
   const currentControlState = deriveCurrentControlStateForTask(db, taskId);
+  const currentStageAttemptId = typeof currentControlState.current_stage_attempt_id === 'string'
+    ? currentControlState.current_stage_attempt_id
+    : null;
+  const currentAttemptQuery = currentStageAttemptId
+    ? queryStageAttempt(db, currentStageAttemptId).stage_attempt_query
+    : null;
   const transitionReceipt = latestDomainRouteTransitionReceipt(events);
   const receiptProjection = transitionReceipt
     ? {
@@ -851,6 +858,8 @@ export function inspectTask(db: DatabaseSync, taskId: string) {
         ...currentControlState,
         ...receiptProjection,
       },
+      opl_runtime_context: currentAttemptQuery?.opl_runtime_context ?? null,
+      opl_runtime_context_consumer_ref: currentAttemptQuery?.opl_runtime_context_consumer_ref ?? null,
     },
     stage_attempts: listStageAttemptsForTask(db, taskId),
     events,

@@ -36,6 +36,8 @@ import {
   FAMILY_RUNTIME_STAGE_ATTEMPT_STATUS,
   FAMILY_RUNTIME_TASK_COLUMNS,
 } from './family-runtime-queue-projection-boundary.ts';
+import { deriveCurrentControlStateForAttempt } from './family-runtime-current-control-state.ts';
+import { projectOplDomainTaskRuntimeContext } from './family-runtime-domain-task-runtime-context.ts';
 
 type QueryStageAttemptOptions = {
   temporalVisibilityReadiness?: TemporalStageAttemptVisibilityReadiness | null;
@@ -298,6 +300,15 @@ export function queryStageAttempt(
     closeoutRefs,
     closeoutReceiptStatus: attempt.closeout_receipt_status,
   });
+  const oplRuntimeContext = projectOplDomainTaskRuntimeContext({
+    currentControlState: deriveCurrentControlStateForAttempt(db, stageAttemptId),
+    stageAttemptQuery: {
+      attempt,
+      canonical_outcome: canonicalOutcome,
+      resume_ledger: resumeLedger,
+      domain_output: domainOutput,
+    },
+  });
   const workflowContract = attempt.provider_kind === 'temporal'
     ? buildTemporalStageAttemptWorkflowContract()
     : null;
@@ -394,6 +405,9 @@ export function queryStageAttempt(
       lifecycle_primitives: lifecyclePrimitives,
       controlled_apply_contract: controlledApplyContract,
       canonical_outcome: canonicalOutcome,
+      opl_runtime_context: oplRuntimeContext,
+      opl_runtime_context_consumer_ref:
+        `opl://stage-attempts/${encodeURIComponent(stageAttemptId)}/opl-runtime-context`,
       conflict_or_blocker_envelopes: conflictOrBlockerEnvelopes,
       operator_conflicts: conflictOrBlockerEnvelopes,
       ...genericProjections,
