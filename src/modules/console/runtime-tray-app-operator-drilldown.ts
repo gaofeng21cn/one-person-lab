@@ -32,7 +32,6 @@ import {
   buildOwnerEvidenceSustainedConsumptionFollowthroughRefs,
   buildMemoryArtifactLifecycleEvidence,
   buildMemoryTraceProjection,
-  buildOmaProductionConsumptionActionRoutes,
   buildProviderActionRoutes,
   buildRuntimeVisualizationProjection,
   buildStageProductionAttemptRoutes,
@@ -74,9 +73,6 @@ import {
   uniqueRefs,
   uniqueStrings,
 } from './runtime-tray-app-operator-drilldown-parts/index.ts'; // reuse-first: allow stable legacy file path
-import {
-  buildOplMetaAgentRegistryExtension,
-} from '../foundry-lab/index.ts';
 import {
   buildEvidenceEnvelopeProjection,
 } from '../ledger/index.ts';
@@ -193,13 +189,8 @@ export function buildAppOperatorDrilldown(input: {
     input.domainManifestProjects,
     input.providerContinuousProof,
   );
-  const oplMetaAgentRegistry = buildOplMetaAgentRegistryExtension();
   const standardAgentTemplateConsumption =
     buildStandardAgentTemplateConsumptionProjection();
-  const oplMetaAgentProjection = record(oplMetaAgentRegistry as JsonRecord);
-  const oplMetaAgentProductionConsumption = record(
-    oplMetaAgentProjection.production_consumption_followthrough,
-  );
   const productionEvidenceTailLedger = buildAppDrilldownProductionEvidenceTailLedger({
     providerContinuousProof: input.providerContinuousProof,
     stageAttempts: attempts,
@@ -231,7 +222,6 @@ export function buildAppOperatorDrilldown(input: {
     ),
     ...buildCodexAppRuntimeEvidenceActionRoutes(record(appRuntimeRole)),
     ...buildAppReleaseUserPathEvidenceActionRoutes(record(appReleaseUserPathEvidence)),
-    ...buildOmaProductionConsumptionActionRoutes(oplMetaAgentProductionConsumption),
     ...buildProviderActionRoutes({
       periodicRefs: record(periodicRefs),
       stageAttemptWorkbench: input.stageAttemptWorkbench,
@@ -374,7 +364,6 @@ export function buildAppOperatorDrilldown(input: {
       ownerEvidenceSustainedConsumptionFollowthroughRefs,
       productionEvidenceTailLedger,
       legacyCleanupPlans,
-      oplMetaAgentRegistry,
       standardAgentTemplateConsumption,
       evidenceEnvelope,
       codexAppRuntimeRole: appRuntimeRole,
@@ -675,8 +664,6 @@ export function buildAppOperatorDrilldown(input: {
     domain_legacy_cleanup_plan_refs: legacyCleanupPlans,
     cleanup_retirement: cleanupRetirement,
     standard_agent_template_consumption_refs: standardAgentTemplateConsumption,
-    opl_meta_agent_workbench_refs: oplMetaAgentRegistry,
-    oma_sections: record(oplMetaAgentRegistry.oma_sections),
     functional_privatization_audit_summary: functionalSummary,
     functional_privatization_audit_refs: functionalAuditRefs,
     default_caller_deletion_evidence_refs: defaultCallerDeletionEvidenceRefs,

@@ -2,7 +2,6 @@ import { buildAgentReadinessSummary } from './agent-readiness.ts';
 import { buildCurrentOwnerDeltaTopline } from '../ledger/index.ts';
 import {
   buildDomainManifestCatalog,
-  withOplMetaAgentDescriptorEntry,
 } from '../atlas/index.ts';
 import { buildDomainPackCompilerList } from '../pack/index.ts';
 import {
@@ -30,7 +29,6 @@ import {
   stringValue,
 } from './framework-readiness-values.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from './framework-semantic-hygiene.ts';
-import { withOplMetaAgentRegistryExtension } from './opl-meta-agent-consumption.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import {
   requireRuntimeTraySnapshotProvider,
@@ -118,16 +116,12 @@ async function buildFrameworkReadinessCompactCoreModel(
   const agentReadiness = agentReadinessDiagnostic.readiness;
   const generatedDefaultEntrySourceOfWork =
     record(record(agentReadiness).generated_default_entry_source_of_work);
-  const domainManifests = withOplMetaAgentDescriptorEntry(
-    withOplMetaAgentRegistryExtension(
-      buildDomainManifestCatalog(contracts, {
+  const domainManifests = buildDomainManifestCatalog(contracts, {
         manifestCommandTimeoutMs: FRAMEWORK_READINESS_MANIFEST_COMMAND_TIMEOUT_MS,
         manifestCommandTimeoutPolicy: 'fixed',
         materializeFamilyTransitions: false,
         useProjectionCacheOnFailure: true,
-      }).domain_manifests,
-    ),
-  );
+      }).domain_manifests;
   const packCompiler = record(
     buildDomainPackCompilerList(contracts, { familyDefaults: true }).domain_pack_compiler,
   );

@@ -1,6 +1,5 @@
 import {
   buildDomainManifestCatalog,
-  withOplMetaAgentDescriptorEntry,
 } from '../../atlas/index.ts';
 import { buildFamilyStageReadinessInspect } from '../../stagecraft/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -26,14 +25,12 @@ export function domainManifestsForWorklist(
   if (input.runtimeSnapshot && input.stageReadiness) {
     return null;
   }
-  return withOplMetaAgentDescriptorEntry(
-    buildDomainManifestCatalog(contracts, {
+  return buildDomainManifestCatalog(contracts, {
       manifestCommandTimeoutMs: EVIDENCE_WORKLIST_MANIFEST_COMMAND_TIMEOUT_MS,
       manifestCommandTimeoutPolicy: 'fixed',
       materializeFamilyTransitions: false,
       useProjectionCacheOnFailure: true,
-    }).domain_manifests,
-  );
+    }).domain_manifests;
 }
 
 export function stageReadinessForWorklist(

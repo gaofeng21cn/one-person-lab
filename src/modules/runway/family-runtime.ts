@@ -54,7 +54,6 @@ import { buildStageAdmissionLaunchGate } from './family-runtime-stage-admission-
 import { buildFamilyStageLaunchAdmissionGate } from '../stagecraft/index.ts';
 import {
   buildDomainManifestCatalog,
-  withOplMetaAgentDescriptorEntry,
 } from '../atlas/index.ts';
 import { runFamilyRuntimeEvidenceWorklistCommand } from './family-runtime-evidence-worklist-command.ts';
 import { runFamilyRuntimeStageArtifactCommand } from './family-runtime-stage-artifact-command.ts';
@@ -361,9 +360,7 @@ export async function runFamilyRuntime(
         actionId: parsed.input.actionId,
       }, {
         loadDomainManifests: (contracts, options) =>
-          withOplMetaAgentDescriptorEntry(
-            buildDomainManifestCatalog(contracts, options).domain_manifests,
-          ),
+          buildDomainManifestCatalog(contracts, options).domain_manifests,
       });
       const requiredStageAdmissionGate = parsed.input.requireStageAdmission
         ? buildStageAdmissionLaunchGate({

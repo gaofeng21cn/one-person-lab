@@ -13,7 +13,6 @@ import {
 } from '../../../../modules/stagecraft/family-stage-control-plane.ts';
 import {
   buildDomainManifestCatalog,
-  withOplMetaAgentDescriptorEntry,
 } from '../../../../modules/atlas/index.ts';
 import {
   familyStageDiagnosticLensCommands,
@@ -109,9 +108,7 @@ export function buildStageCommandSpecs(
   const loadDomainManifests = (
     contracts: FrameworkContracts,
     options: Parameters<typeof buildDomainManifestCatalog>[1],
-  ) => withOplMetaAgentDescriptorEntry(
-    buildDomainManifestCatalog(contracts, options).domain_manifests,
-  );
+  ) => buildDomainManifestCatalog(contracts, options).domain_manifests;
   const stageCommandSpecs: Record<string, CommandSpec> = {
     'stages list': {
       usage: 'opl stages list',

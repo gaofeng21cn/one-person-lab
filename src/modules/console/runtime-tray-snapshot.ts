@@ -10,7 +10,6 @@ import {
 } from '../runway/index.ts';
 import {
   buildDomainManifestCatalog,
-  withOplMetaAgentDescriptorEntry,
 } from '../atlas/index.ts';
 import type { DomainManifestCatalog } from '../atlas/index.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from '../atlas/index.ts';
@@ -34,7 +33,6 @@ import {
   buildAppOperatorDrilldown,
   type AppOperatorDrilldownDetailLevel,
 } from './runtime-tray-app-operator-drilldown.ts';
-import { withOplMetaAgentRegistryExtension } from '../foundry-lab/index.ts';
 import { readCurrentOwnerDeltaReadModelProjectionCache } from '../ledger/index.ts';
 
 const RUNTIME_TRAY_MANIFEST_COMMAND_TIMEOUT_MS = 5_000;
@@ -552,8 +550,7 @@ export async function buildRuntimeTraySnapshot(
     manifestCommandTimeoutPolicy: 'fixed',
     useProjectionCacheOnFailure: true,
   }).domain_manifests;
-  const functionalPrivatizationDomainManifests =
-    withOplMetaAgentDescriptorEntry(withOplMetaAgentRegistryExtension(domainManifests));
+  const functionalPrivatizationDomainManifests = domainManifests;
   const managedProviderProjection = readManagedProviderProjectionSummary({ domainManifests });
   const lifecycleProvider = await inspectFamilyRuntimeProviderWithLifecycle(providerKind, familyProviderPaths, {
     managedProviderProjection,

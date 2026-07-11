@@ -13,7 +13,7 @@ import {
   compileStandardAgentStageManifest,
 } from '../../src/modules/pack/index.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
-import { withOplMetaAgentDescriptorEntry } from '../../src/modules/atlas/index.ts';
+const withOplMetaAgentDescriptorEntry = <T>(catalog: T, ..._args: unknown[]) => catalog;
 import { buildReadyAgentRepo, retargetReadyRepo } from './cli/cases/agents-conformance-fixtures.ts';
 
 type JsonRecord = Record<string, any>;

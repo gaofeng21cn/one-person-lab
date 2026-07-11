@@ -48,7 +48,6 @@ type AppOperatorDrilldownSummaryInput = {
   ownerEvidenceSustainedConsumptionFollowthroughRefs: JsonRecord;
   productionEvidenceTailLedger: JsonRecord;
   legacyCleanupPlans: JsonRecord;
-  oplMetaAgentRegistry: JsonRecord;
   standardAgentTemplateConsumption: JsonRecord;
   evidenceEnvelope: JsonRecord;
   runtimeManagerRouteSupport: JsonRecord;
@@ -98,10 +97,6 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
   );
   const productionTailSummary = record(input.productionEvidenceTailLedger.summary);
   const legacyCleanupSummary = record(input.legacyCleanupPlans.summary);
-  const oplMetaAgentSummary = record(input.oplMetaAgentRegistry.summary);
-  const oplMetaAgentProductionConsumptionSummary = record(
-    record(input.oplMetaAgentRegistry.production_consumption_followthrough).summary,
-  );
   const standardAgentTemplateSummary = record(input.standardAgentTemplateConsumption.summary);
   const standardAgentTemplateLedger = record(
     input.standardAgentTemplateConsumption.ledger_projection,
@@ -354,9 +349,6 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       countBy(input.actionRefs, (ref) =>
         ref.action_kind === 'codex_app_runtime_evidence_receipt_verify'
       ),
-    oma_production_consumption_action_route_count: countBy(input.actionRefs, (ref) => (
-      ref.action_kind === 'oma_production_consumption_receipt_record'
-    )),
     freshness_signal_count: input.freshness.length,
     source_ref_count: refFamilySummary.source_ref_count,
     artifact_ref_count: refFamilySummary.artifact_ref_count,
@@ -603,27 +595,6 @@ export function buildAppOperatorDrilldownSummary(input: AppOperatorDrilldownSumm
       numberValue(standardAgentTemplateLedger.verified_receipt_ref_count),
     standard_agent_template_consumption_pending_verify_receipt_ref_count:
       numberValue(standardAgentTemplateLedger.pending_verify_receipt_ref_count),
-    opl_meta_agent_registry_status: input.oplMetaAgentRegistry.status ?? null,
-    opl_meta_agent_consumed_contract_count: numberValue(oplMetaAgentSummary.consumed_contract_count),
-    opl_meta_agent_resolved_contract_count: numberValue(oplMetaAgentSummary.resolved_contract_count),
-    opl_meta_agent_app_workbench_section_count: numberValue(oplMetaAgentSummary.app_workbench_section_count),
-    opl_meta_agent_scaleout_target_count: numberValue(oplMetaAgentSummary.scaleout_target_count),
-    opl_meta_agent_patch_loop_ref_count: numberValue(oplMetaAgentSummary.patch_loop_ref_count),
-    opl_meta_agent_patch_loop_target_count: numberValue(oplMetaAgentSummary.patch_loop_target_count),
-    opl_meta_agent_patch_loop_closed_count: numberValue(oplMetaAgentSummary.patch_loop_closed_count),
-    opl_meta_agent_self_evolution_cockpit_target_count:
-      numberValue(oplMetaAgentSummary.self_evolution_cockpit_target_count),
-    opl_meta_agent_self_evolution_cockpit_six_question_ready_count:
-      numberValue(oplMetaAgentSummary.self_evolution_cockpit_six_question_ready_count),
-    opl_meta_agent_production_consumption_followthrough_open_gate_count:
-      numberValue(oplMetaAgentSummary.production_consumption_followthrough_open_gate_count),
-    opl_meta_agent_production_consumption_gate_count:
-      numberValue(oplMetaAgentProductionConsumptionSummary.gate_count),
-    opl_meta_agent_production_consumption_ready:
-      oplMetaAgentSummary.production_consumption_ready === true,
-    opl_meta_agent_claims_domain_ready: oplMetaAgentSummary.claims_domain_ready === true,
-    opl_meta_agent_claims_quality_verdict: oplMetaAgentSummary.claims_quality_verdict === true,
-    opl_meta_agent_claims_default_promotion: oplMetaAgentSummary.claims_default_promotion === true,
     app_release_user_path_evidence_gate_count: appReleaseUserPathSummary.gate_count,
     app_release_user_path_evidence_open_gate_count:
       appReleaseUserPathSummary.open_gate_count,

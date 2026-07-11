@@ -19,7 +19,6 @@ export { validateFamilyDomainEntryContract, validateSharedHandoff, validateShare
 export type { FamilySharedHandoffSurface, SharedHandoffBuilderSurface } from './family-entry-contracts.ts';
 export { explainDomainBoundary, selectDomainAgentEntry } from './resolver.ts';
 export { resolveStandardAgent, STANDARD_AGENT_REGISTRY, STANDARD_AGENT_REGISTRY_REF } from '../../kernel/standard-agent-registry.ts';
-export { withOplMetaAgentDescriptorEntry } from './opl-meta-agent-descriptor.ts';
 export {
   DEFAULT_FAMILY_REPOS,
   DEFAULT_STANDARD_DOMAIN_AGENT_REPOS,

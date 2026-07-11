@@ -2,11 +2,9 @@ import { FrameworkContractError, findDomainOrThrow, findSurfaceOrThrow, findWork
 import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../../modules/connect/system-installation/workspace-root.ts';
 import { buildProductEntryHandoffEnvelope } from '../../../modules/console/product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor } from '../../../modules/console/product-entry-runtime.ts';
-import { withOplMetaAgentRegistryExtension } from '../../../modules/foundry-lab/index.ts';
 import { runAgentExecutor, runAgentExecutorDoctor, runAgentExecutorRequestFile } from '../../../modules/runway/agent-executor.ts';
 import { launchDomainEntry } from '../../../modules/atlas/domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../../modules/atlas/domain-manifest/catalog-builder.ts';
-import { withOplMetaAgentDescriptorEntry } from '../../../modules/atlas/index.ts';
 import { buildOplDashboard, buildOplStart, buildProjectsOverview } from '../../../modules/console/management/runtime-dashboard.ts';
 import { runAcpStdioBridge } from '../../../modules/connect/opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
@@ -347,9 +345,7 @@ export function buildInternalCommandSpecs(
         const catalog = buildDomainManifestCatalog(getContracts());
         return {
           ...catalog,
-          domain_manifests: withOplMetaAgentDescriptorEntry(
-            withOplMetaAgentRegistryExtension(catalog.domain_manifests),
-          ),
+          domain_manifests: catalog.domain_manifests,
         };
       },
     },
