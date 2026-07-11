@@ -54,8 +54,6 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "build:static-contracts": "npm run build --prefix packages/static-contracts",
-    "pack:static-contracts": "npm pack ./packages/static-contracts",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
     "native:build": "cargo build --workspace",
@@ -94,7 +92,6 @@
     "test:artifact": "node ./scripts/test-lanes.mjs run artifact",
     "test:fresh-install": "node ./scripts/test-lanes.mjs run fresh-install",
     "test:stage-run-mag-integration": "node ./scripts/test-lanes.mjs run stage-run-mag-integration",
-    "test:static-contracts": "node --experimental-strip-types --test tests/src/static-contract-package.test.ts",
     "test:native": "./scripts/verify.sh native",
     "test:structure": "./scripts/verify.sh structure",
     "test:full": "node ./scripts/test-lanes.mjs run full",

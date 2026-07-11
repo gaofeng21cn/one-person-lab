@@ -50,7 +50,6 @@ const fastTestFiles = [
   'tests/src/domain-whitepaper-runner.test.ts',
   'tests/src/verification-command-surfaces.test.ts',
   'tests/src/verification-package-surfaces.test.ts',
-  'tests/src/static-contract-package.test.ts',
   'tests/src/foundry-agent-series-policy.test.ts',
   'tests/src/target-architecture-schema-contracts.test.ts',
   'tests/src/evidence-grounded-catalog-eval.test.ts',

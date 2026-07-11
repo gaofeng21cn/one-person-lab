@@ -13,8 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `foundry-agent-series-policy` public consumer 从 `foundry-agent-series-contract.json` 与 `standard-domain-agent-skeleton-contract.json` 读取 canonical policy，并由完整 Framework package 与 lightweight static-contracts package 同名导出。
-- static-contracts tarball 携带这两份 canonical contracts，但不复制或改写 policy body；consumer 返回值保留全部 no-authority flags。
+- `foundry-agent-series-policy` public consumer 从 `foundry-agent-series-contract.json` 与 `standard-domain-agent-skeleton-contract.json` 读取 canonical policy，并由 `opl-framework-shared` 直接导出；consumer 返回值保留全部 no-authority flags。
 - domain agent 只保留 release pin、canonical contract/export refs、identity 与 domain delta；不得再把 canonical series/public/workspace/stage policy body当成本仓 authority。
 
 ### 决策：source-only Agent Package manifest 不声明发布 payload
@@ -27,15 +26,15 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 只有存在真实发布元数据时才声明 `distribution_payload`；一旦声明，完整字段、SHA-256 格式、rolling `latest`、immutable tag、digest lock 与 proof false-claim 约束继续 fail closed。
 - 带 `ordinary_user_source` 的 published registry entry 必须同时提供合法 `distribution_payload`；不能用 source-only manifest 绕过已发布安装路径的 digest/immutable-tag 校验。
 
-### 决策：静态 Foundry Agent 合同与完整 CLI/runtime 使用不同安装单元
+### 决策：JavaScript Framework surface 只保留一个 npm package
 
-原因：OMA 只消费五个静态 subpath，却因 `opl-framework-shared` 单一 manifest 被迫安装 Temporal 与 E2B。源码 owner 仍应唯一归 OPL，但安装图无需把静态 validator/build primitive 与完整 provider runtime 绑在一起。
+原因：第二个只镜像根包公开 subpath 的 package 会额外引入 manifest、build copy、pack/test lane 和安装叙事，却没有独立 authority 或不可替代的运行边界。
 
 影响：
 
-- `opl-framework-static-contracts` 从本仓 canonical source 编译五个静态 exports，唯一运行依赖为 `ajv`；不复制 policy body、不发布 `opl` bin、不携带 Temporal/E2B。
-- `opl-framework-shared` 保持现有 `opl` CLI、完整 exports、Temporal dependencies 与 E2B optional dependency，CLI/runtime consumer 路径不变。
-- OMA 将 dependency/import package prefix 改为 `opl-framework-static-contracts`，subpath 名保持不变；pack/install readback 必须证明五个 exports 可加载且 dependency tree 不含 Temporal/E2B。
+- 不创建或保留第二个静态 package、build copy、pack/test scripts、alias、tombstone 或兼容 wrapper。
+- `opl-framework-shared` 保持现有六个同名公开 exports、`opl` CLI、Temporal dependencies 与 E2B optional dependency。
+- JavaScript family consumer 继续通过 `contracts/family-release/shared-owner-release.json` 声明的 Git `latest-stable` locator 安装 `opl-framework-shared`；本决策不更新 channel 或发布版本。
 
 ### 决策：Stage attempt domain output 只运输 domain-owned ref
 
