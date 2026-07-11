@@ -514,9 +514,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     const sourceBehaviorChecks = buildStandardAgentSourceBehaviorChecks(resolvedRepoDir);
     const defaultSurfaceRetirementSourceBehaviorBlocked = declaredRetiredDefaultSurfaceIds.size > 0
       && sourceBehaviorChecks.status !== 'passed';
-    const retiredDefaultSurfaceIds = defaultSurfaceRetirementSourceBehaviorBlocked
-      ? new Set<string>()
-      : declaredRetiredDefaultSurfaceIds;
+    const retiredDefaultSurfaceIds = declaredRetiredDefaultSurfaceIds;
     const surfaceGates = defaultCallerSurfaceGates(bundle);
     const surfaceBlockers = surfaceGates
       .filter((gate) => gate.status !== 'ready_for_default_caller_cutover')
@@ -587,7 +585,8 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
-    const physicalDeleteAuthorized = applicableSurfaceRetirementGates.length > 0
+    const physicalDeleteAuthorized = replacementReady
+      && applicableSurfaceRetirementGates.length > 0
       && applicableSurfaceRetirementGates.every((worklist) => worklist.physical_delete_authorized === true);
     const physicalDeleteBlockedBy = physicalDeleteAuthorized
       ? []
