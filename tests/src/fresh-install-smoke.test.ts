@@ -416,10 +416,12 @@ test('install bootstrap-only on macOS uses an existing git checkout while Comman
   }
 });
 
-test('install complete consumes installer-only flag before invoking opl install', () => {
+test('install complete prepares the mandatory OPL Flow payload before invoking opl install', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-complete-args-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const flowInstallerPath = path.join(stateDir, 'modules', 'opl-flow', 'scripts', 'install_local_plugin.py');
   const gitLog = path.join(homeRoot, 'git.log');
   const npmLog = path.join(homeRoot, 'npm.log');
   const oplLog = path.join(homeRoot, 'opl.log');
@@ -435,7 +437,16 @@ test('install complete consumes installer-only flag before invoking opl install'
       `printf '%s\\n' "$*" >> ${JSON.stringify(gitLog)}`,
       'if [ "${1:-}" = "--version" ]; then',
       '  printf "git version 2.50.0\\n"',
+      '  exit 0',
       'fi',
+      'if [ "${1:-}" = "clone" ]; then',
+      '  target=""',
+      '  for arg in "$@"; do target="$arg"; done',
+      '  mkdir -p "$target/scripts"',
+      "  printf 'import json\\nprint(json.dumps({\\\"surface_kind\\\": \\\"opl_flow_plugin_install_receipt.v1\\\", \\\"status\\\": \\\"installed\\\"}))\\n' > \"$target/scripts/install_local_plugin.py\"",
+      '  exit 0',
+      'fi',
+      'exit 0',
     ].join('\n'),
   );
   fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
@@ -451,6 +462,10 @@ test('install complete consumes installer-only flag before invoking opl install'
     path.join(fakeBin, 'opl'),
     [
       '#!/usr/bin/env bash',
+      'if [ "${1:-}" = "install" ] && [ ! -f "$OPL_STATE_DIR/modules/opl-flow/scripts/install_local_plugin.py" ]; then',
+      '  echo "OPL Flow payload missing before opl install" >&2',
+      '  exit 91',
+      'fi',
       `printf '%s\\n' "$*" >> ${JSON.stringify(oplLog)}`,
       'exit 0',
     ].join('\n'),
@@ -467,6 +482,8 @@ test('install complete consumes installer-only flag before invoking opl install'
         HOME: homeRoot,
         OPL_INSTALL_DIR: installDir,
         OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
+        OPL_FLOW_REPO_URL: 'https://example.invalid/opl-flow.git',
+        OPL_STATE_DIR: stateDir,
         PATH: `${fakeBin}:/usr/bin:/bin`,
       },
     });
@@ -480,6 +497,8 @@ test('install complete consumes installer-only flag before invoking opl install'
       'system initialize',
     ]);
     assert.equal(fs.readFileSync(oplLog, 'utf8').includes('--complete'), false);
+    assert.equal(fs.existsSync(flowInstallerPath), true);
+    assert.match(fs.readFileSync(gitLog, 'utf8'), /clone --depth 1 https:\/\/example\.invalid\/opl-flow\.git/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

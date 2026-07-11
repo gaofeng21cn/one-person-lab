@@ -141,6 +141,53 @@ request_command_line_tools() {
   fi
 }
 
+resolve_opl_modules_root() {
+  local data_dir
+  if [ -n "${OPL_MODULES_ROOT:-}" ]; then
+    printf '%s\n' "$OPL_MODULES_ROOT"
+  elif [ -n "${OPL_STATE_DIR:-}" ]; then
+    printf '%s/modules\n' "$OPL_STATE_DIR"
+  else
+    data_dir=${OPL_DATA_DIR:-${AIONUI_DATA_DIR:-}}
+    if [ -n "$data_dir" ]; then
+      printf '%s/opl/state/modules\n' "$data_dir"
+    else
+      printf '%s/Library/Application Support/OPL/state/modules\n' "$HOME"
+    fi
+  fi
+}
+
+materialize_opl_flow_source() {
+  local modules_root flow_dir flow_tmp flow_url installer_path
+  modules_root=$(resolve_opl_modules_root)
+  flow_dir="$modules_root/opl-flow"
+  installer_path="$flow_dir/scripts/install_local_plugin.py"
+  if [ -f "$installer_path" ]; then
+    return 0
+  fi
+  if [ -e "$flow_dir" ]; then
+    printf 'Mandatory OPL Flow source is incomplete: %s\n' "$flow_dir" >&2
+    printf 'Expected: %s\n' "$installer_path" >&2
+    exit 1
+  fi
+
+  flow_url=${OPL_FLOW_REPO_URL:-https://github.com/gaofeng21cn/opl-flow.git}
+  flow_tmp="${flow_dir}.tmp.$$"
+  mkdir -p "$modules_root"
+  rm -rf "$flow_tmp"
+  log "Preparing mandatory OPL Flow source"
+  if ! git clone --depth 1 "$flow_url" "$flow_tmp"; then
+    rm -rf "$flow_tmp"
+    exit 1
+  fi
+  if [ ! -f "$flow_tmp/scripts/install_local_plugin.py" ]; then
+    rm -rf "$flow_tmp"
+    printf 'Downloaded OPL Flow source is missing scripts/install_local_plugin.py\n' >&2
+    exit 1
+  fi
+  mv "$flow_tmp" "$flow_dir"
+}
+
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     printf 'Missing required command: %s\n' "$1" >&2
@@ -272,6 +319,7 @@ if [ "$BOOTSTRAP_ONLY" = "1" ]; then
 fi
 
 log "Running complete One Person Lab setup"
+materialize_opl_flow_source
 if command -v opl >/dev/null 2>&1; then
   opl install "$@"
   log "Inspecting OPL system state"
