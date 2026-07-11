@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-11
 
+### 决策：Foundry Agent 系列 policy body 只由 OPL canonical contracts 持有
+
+原因：domain agent 为消费 series design、stage closeout、progress、typed blocker、workspace 与 public projection policy，不应复制 Framework canonical JSON body。release pin 与 domain delta 足以表达 consumer 绑定。
+
+影响：
+
+- `foundry-agent-series-policy` public consumer 从 `foundry-agent-series-contract.json` 与 `standard-domain-agent-skeleton-contract.json` 读取 canonical policy，并由完整 Framework package 与 lightweight static-contracts package 同名导出。
+- static-contracts tarball 携带这两份 canonical contracts，但不复制或改写 policy body；consumer 返回值保留全部 no-authority flags。
+- domain agent 只保留 release pin、canonical contract/export refs、identity 与 domain delta；不得再把 canonical series/public/workspace/stage policy body当成本仓 authority。
+
 ### 决策：source-only Agent Package manifest 不声明发布 payload
 
 原因：first-party standard Agent 的 source manifest 过去为满足 schema 必填项而写入 `non_live_contract_fixture`、预设 OCI `latest` 和重复数字 SHA-256。这些值不是 release authority，也不应进入 package/channel readback。

@@ -5,6 +5,7 @@
     "rootDir": "../../src"
   },
   "files": [
+    "../../src/modules/foundry-lab/public/foundry-agent-series-policy.ts",
     "../../src/kernel/schema-registry.ts",
     "../../src/modules/foundry-lab/reference-build-proof.ts",
     "../../src/modules/workspace/reference-design-pattern-packet.ts",

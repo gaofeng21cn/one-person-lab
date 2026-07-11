@@ -12,9 +12,14 @@ if (process.argv.includes('--clean')) {
   process.exit(0);
 }
 
-const schemaRef = 'contracts/opl-framework/reference-design-pattern-packet.schema.json';
-const source = path.join(repoRoot, schemaRef);
-const target = path.join(buildRoot, schemaRef);
+const contractRefs = [
+  'contracts/opl-framework/foundry-agent-series-contract.json',
+  'contracts/opl-framework/reference-design-pattern-packet.schema.json',
+  'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+];
 
-fs.mkdirSync(path.dirname(target), { recursive: true });
-fs.copyFileSync(source, target);
+for (const contractRef of contractRefs) {
+  const target = path.join(buildRoot, contractRef);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.join(repoRoot, contractRef), target);
+}

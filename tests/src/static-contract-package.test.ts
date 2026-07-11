@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const packageRoot = path.join(repoRoot, 'packages', 'static-contracts');
 const exportRefs = [
+  'foundry-agent-series-policy',
   'json-schema-registry',
   'reference-build-proof',
   'reference-design-pattern-packet',
@@ -42,6 +43,9 @@ test('static contract package installs without Temporal or E2B and exposes all O
     const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
     assert.deepEqual(Object.keys(manifest.dependencies), ['ajv']);
     assert.equal(manifest.bin, undefined);
+    assert.equal(manifest.license, 'Apache-2.0');
+    assert.equal(manifest.repository.directory, 'packages/static-contracts');
+    assert.equal(manifest.publishConfig.access, 'public');
     assert.deepEqual(Object.keys(manifest.exports).sort(), exportRefs.map((ref) => `./${ref}`).sort());
 
     const packOutput = JSON.parse(run(
@@ -72,7 +76,14 @@ test('static contract package installs without Temporal or E2B and exposes all O
       const modules = await Promise.all(${JSON.stringify(exportRefs)}.map(
         (ref) => import('opl-framework-static-contracts/' + ref),
       ));
-      const referenceDesign = modules[2];
+      const foundryPolicy = modules[0].canonicalFoundryAgentSeriesPolicy();
+      if (foundryPolicy.series_design_profile.profile_id !== 'opl_foundry_agent_series_design_profile.v1') {
+        process.exit(1);
+      }
+      if (foundryPolicy.stage_completion_policy.authority_boundary.opl_can_decide_domain_completion !== false) {
+        process.exit(1);
+      }
+      const referenceDesign = modules[3];
       if (referenceDesign.referenceDesignPatternPacketSchemaEntry().schemaId !== 'opl.reference_design_pattern_packet.v1') {
         process.exit(1);
       }

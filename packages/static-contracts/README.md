@@ -2,7 +2,8 @@
 
 This package is the lightweight carrier for Foundry Agent consumers that only
 need OPL contract validation, standard Agent Pack ABI, reference-design/build
-proof, or action-stage readback. Its only runtime dependency is `ajv`.
+proof, canonical Foundry series policy, or action-stage readback. Its only
+runtime dependency is `ajv`.
 
 Use the existing `opl-framework-shared` package when the `opl` CLI, Temporal
 provider runtime, E2B adapter, or other complete Framework surfaces are needed.

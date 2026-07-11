@@ -22,6 +22,7 @@
     "./family-shared-release": "./dist/modules/atlas/family-shared-release.js",
     "./family-domain-catalog": "./dist/modules/atlas/family-domain-catalog.js",
     "./family-entry-contracts": "./dist/modules/atlas/family-entry-contracts.js",
+    "./foundry-agent-series-policy": "./dist/modules/foundry-lab/public/foundry-agent-series-policy.js",
     "./family-orchestration": "./dist/modules/runway/family-orchestration.js",
     "./managed-runtime-contract": "./dist/modules/runway/managed-runtime-contract.js",
     "./product-entry-companions": "./dist/modules/console/product-entry-companions.js",
