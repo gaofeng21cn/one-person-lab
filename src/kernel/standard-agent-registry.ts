@@ -9,6 +9,33 @@ export type StandardAgentWorkspaceProfile = {
   default_project_id: string;
 };
 
+export type StandardAgentRuntimeManagerRegistration = {
+  domain_owner: string;
+  registration_id: string;
+  expected_registration_surface: {
+    surface_kind: string;
+    ref: string;
+    command: string;
+  };
+  consumable_projection_refs: readonly string[];
+  state_index_inputs: Record<string, string>;
+  scheduler: {
+    migration_priority: string;
+    legacy_scheduler_owner: null;
+    legacy_scheduler_residue_policy: string;
+    replacement_role: string;
+    required_domain_refs: readonly string[];
+    daemon_policy: string;
+  };
+};
+
+export type StandardAgentFamilyRuntimeProfile = {
+  supported: boolean;
+  runtime_domain_id: string;
+  dispatch_command?: readonly string[];
+  runtime_manager_registration?: StandardAgentRuntimeManagerRegistration;
+};
+
 export type StandardAgentRegistryEntry = {
   agent_id: string;
   domain_id: string;
@@ -29,6 +56,7 @@ export type StandardAgentRegistryEntry = {
   domain_pack_example: string;
   domain_authority_kernel_examples: string[];
   workspace_profile?: StandardAgentWorkspaceProfile;
+  family_runtime_profile?: StandardAgentFamilyRuntimeProfile;
 };
 
 export const STANDARD_AGENT_REGISTRY_REF = 'src/kernel/standard-agent-registry.ts';
@@ -71,6 +99,49 @@ export const STANDARD_AGENT_REGISTRY = [
       default_workspace_id: 'research-workspace',
       default_project_id: 'study-001',
     },
+    family_runtime_profile: {
+      supported: true,
+      runtime_domain_id: 'medautoscience',
+      dispatch_command: ['medautosci', 'domain-handler', 'dispatch'],
+      runtime_manager_registration: {
+        domain_owner: 'med-autoscience',
+        registration_id: 'mas.opl_runtime_manager.registration.v1',
+        expected_registration_surface: {
+          surface_kind: 'opl_runtime_manager_domain_registration',
+          ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+          command: 'uv run python -m med_autoscience.cli skill-catalog --profile <profile> --format json',
+        },
+        consumable_projection_refs: [
+          '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+          '/progress_projection/domain_projection/research_runtime_control_projection',
+          '/artifact_inventory/artifact_surface',
+          '/automation/automations/0',
+        ],
+        state_index_inputs: {
+          workspace_registry_index: '/workspace_locator',
+          managed_session_ledger_index: '/session_continuity',
+          artifact_projection_index: '/artifact_inventory',
+          attention_queue_index: '/automation/automations/0',
+          runtime_health_snapshot_index: '/runtime_inventory',
+        },
+        scheduler: {
+          migration_priority: 'p0',
+          legacy_scheduler_owner: null,
+          legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
+          replacement_role:
+            'OPL owns scheduler cadence, provider SLO tick, Temporal attempt ledger, and projection; the selected domain owner keeps progress semantics, owner receipts, typed blockers, and safe action refs.',
+          required_domain_refs: [
+            'domain_runtime_owner_route_handoff',
+            'opl_runtime_owner_route',
+            'domain_route/reconcile-apply',
+            'mas_opl_runtime_workbench_projection',
+            'sidecar_owner_receipt_or_typed_blocker',
+            'no_forbidden_write_evidence',
+          ],
+          daemon_policy: 'legacy_diagnostic_cleanup_only',
+        },
+      },
+    },
   },
   {
     agent_id: 'mag',
@@ -106,6 +177,47 @@ export const STANDARD_AGENT_REGISTRY = [
       project_collection_label: 'deliverables',
       default_workspace_id: 'grant-workspace',
       default_project_id: 'grant-001',
+    },
+    family_runtime_profile: {
+      supported: true,
+      runtime_domain_id: 'medautogrant',
+      dispatch_command: ['medautogrant', 'domain-handler', 'dispatch'],
+      runtime_manager_registration: {
+        domain_owner: 'med-autogrant',
+        registration_id: 'mag.opl_runtime_manager.registration.v1',
+        expected_registration_surface: {
+          surface_kind: 'opl_runtime_manager_domain_registration',
+          ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+          command: 'uv run python -m med_autogrant skill-catalog --input <workspace.json> --format json',
+        },
+        consumable_projection_refs: [
+          '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+          '/runtime_control/semantic_closure',
+          '/artifact_inventory',
+          '/automation/automations/1',
+        ],
+        state_index_inputs: {
+          workspace_registry_index: '/workspace_locator',
+          managed_session_ledger_index: '/session_continuity',
+          artifact_projection_index: '/artifact_inventory',
+          attention_queue_index: '/automation/automations/1',
+          runtime_health_snapshot_index: '/runtime_inventory',
+        },
+        scheduler: {
+          migration_priority: 'p1',
+          legacy_scheduler_owner: null,
+          legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
+          replacement_role:
+            'MAG consumes the OPL scheduler replacement through refs, owner receipts, typed blockers, and guarded grant actions without adding a repo-owned daemon.',
+          required_domain_refs: [
+            'product_entry_manifest',
+            'grant_owner_receipt_or_typed_blocker',
+            'grant_memory_ref',
+            'no_forbidden_write_evidence',
+          ],
+          daemon_policy: 'not_installed_or_maintained_by_opl',
+        },
+      },
     },
   },
   {
@@ -145,6 +257,48 @@ export const STANDARD_AGENT_REGISTRY = [
       project_collection_label: 'deliverables',
       default_workspace_id: 'visual-workspace',
       default_project_id: 'deck-001',
+    },
+    family_runtime_profile: {
+      supported: true,
+      runtime_domain_id: 'redcube',
+      dispatch_command: ['redcube', 'domain-handler', 'dispatch'],
+      runtime_manager_registration: {
+        domain_owner: 'redcube-ai',
+        registration_id: 'rca.opl_runtime_manager.registration.v1',
+        expected_registration_surface: {
+          surface_kind: 'opl_runtime_manager_domain_registration',
+          ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
+          command: 'redcube product manifest --workspace-root <workspace_root>',
+        },
+        consumable_projection_refs: [
+          '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+          '/product_entry_shell/opl_bridge',
+          '/artifact_inventory',
+          '/review_state',
+          '/publication_projection',
+        ],
+        state_index_inputs: {
+          workspace_registry_index: '/workspace_locator',
+          managed_session_ledger_index: '/session_continuity',
+          artifact_projection_index: '/artifact_inventory',
+          attention_queue_index: '/automation/automations/0',
+          runtime_health_snapshot_index: '/runtime_inventory',
+        },
+        scheduler: {
+          migration_priority: 'p2',
+          legacy_scheduler_owner: null,
+          legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
+          replacement_role:
+            'RCA consumes the OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable sequencing inside domain execution.',
+          required_domain_refs: [
+            'product_entry_manifest',
+            'visual_owner_receipt_or_typed_blocker',
+            'visual_memory_ref',
+            'no_forbidden_write_evidence',
+          ],
+          daemon_policy: 'not_installed_or_maintained_by_opl',
+        },
+      },
     },
   },
   {
@@ -188,6 +342,10 @@ export const STANDARD_AGENT_REGISTRY = [
       project_collection_label: 'deliverables',
       default_workspace_id: 'agent-foundry-workspace',
       default_project_id: 'agent-001',
+    },
+    family_runtime_profile: {
+      supported: true,
+      runtime_domain_id: 'opl-meta-agent',
     },
   },
   {

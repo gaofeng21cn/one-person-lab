@@ -4,6 +4,7 @@ import {
 import type { DomainAutonomySupervisorCommandInput } from './family-runtime-command-parts/domain-autonomy.ts';
 import {
   FAMILY_RUNTIME_DOMAIN_IDS,
+  runtimeDomainAdapterProfiles,
   type FamilyRuntimeDomainId,
   type FamilyRuntimeProviderKind,
   type TemporalStageAttemptSignalKind,
@@ -176,23 +177,15 @@ export type FamilyRuntimeDomainAdapter = {
   dispatch_command: string[];
 };
 
-export const DOMAIN_ADAPTERS: Partial<Record<FamilyRuntimeDomainId, FamilyRuntimeDomainAdapter>> = {
-  medautoscience: {
-    repo_id: 'med-autoscience',
-    truth_owner: 'med-autoscience',
-    dispatch_command: ['medautosci', 'domain-handler', 'dispatch'],
-  },
-  medautogrant: {
-    repo_id: 'med-autogrant',
-    truth_owner: 'med-autogrant',
-    dispatch_command: ['medautogrant', 'domain-handler', 'dispatch'],
-  },
-  redcube: {
-    repo_id: 'redcube-ai',
-    truth_owner: 'redcube-ai',
-    dispatch_command: ['redcube', 'domain-handler', 'dispatch'],
-  },
-};
+export const DOMAIN_ADAPTERS: Partial<Record<FamilyRuntimeDomainId, FamilyRuntimeDomainAdapter>> =
+  Object.fromEntries(runtimeDomainAdapterProfiles().map((profile) => [
+    profile.domain_id,
+    {
+      repo_id: profile.repo_id,
+      truth_owner: profile.truth_owner,
+      dispatch_command: profile.dispatch_command,
+    },
+  ]));
 
 export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandInput {
   return parseRegisteredFamilyRuntimeCommand(args);

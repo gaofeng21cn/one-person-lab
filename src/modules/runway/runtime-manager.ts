@@ -4,9 +4,6 @@ import {
 } from './public/runtime-manager-support.ts';
 import { OBSERVABILITY_ATTEMPT_LEDGER_LABEL } from '../../kernel/observability-projection-vocabulary.ts';
 import {
-  DOMAIN_ROUTE_RECONCILE_APPLY_TASK_KIND,
-  DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
-  OPL_RUNTIME_OWNER_ROUTE,
   buildDomainRouteSupportProjection,
   readManagedProviderProjectionSummary,
   familyRuntimePaths,
@@ -14,97 +11,10 @@ import {
   buildNativeHelperProjection,
   runNativeHelperRepairAction,
 } from './public/runtime-manager-support.ts';
-
-const ADMITTED_DOMAIN_OWNERS = [
-  {
-    domain_id: 'medautoscience',
-    domain_owner: 'med-autoscience',
-    executor_owner: 'codex_cli_or_stage_selected_executor',
-  },
-  {
-    domain_id: 'medautogrant',
-    domain_owner: 'med-autogrant',
-    executor_owner: 'codex_cli_or_stage_selected_executor',
-  },
-  {
-    domain_id: 'redcube',
-    domain_owner: 'redcube-ai',
-    executor_owner: 'codex_cli_or_stage_selected_executor',
-  },
-] as const;
-
-const DOMAIN_REGISTRATION_REGISTRY = [
-  {
-    domain_id: 'medautoscience',
-    project: 'med-autoscience',
-    registration_id: 'mas.opl_runtime_manager.registration.v1',
-    expected_registration_surface: {
-      surface_kind: 'opl_runtime_manager_domain_registration',
-      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
-      command: 'uv run python -m med_autoscience.cli skill-catalog --profile <profile> --format json',
-    },
-    consumable_projection_refs: [
-      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
-      '/progress_projection/domain_projection/research_runtime_control_projection',
-      '/artifact_inventory/artifact_surface',
-      '/automation/automations/0',
-    ],
-    state_index_inputs: {
-      workspace_registry_index: '/workspace_locator',
-      managed_session_ledger_index: '/session_continuity',
-      artifact_projection_index: '/artifact_inventory',
-      attention_queue_index: '/automation/automations/0',
-      runtime_health_snapshot_index: '/runtime_inventory',
-    },
-  },
-  {
-    domain_id: 'medautogrant',
-    project: 'med-autogrant',
-    registration_id: 'mag.opl_runtime_manager.registration.v1',
-    expected_registration_surface: {
-      surface_kind: 'opl_runtime_manager_domain_registration',
-      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
-      command: 'uv run python -m med_autogrant skill-catalog --input <workspace.json> --format json',
-    },
-    consumable_projection_refs: [
-      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
-      '/runtime_control/semantic_closure',
-      '/artifact_inventory',
-      '/automation/automations/1',
-    ],
-    state_index_inputs: {
-      workspace_registry_index: '/workspace_locator',
-      managed_session_ledger_index: '/session_continuity',
-      artifact_projection_index: '/artifact_inventory',
-      attention_queue_index: '/automation/automations/1',
-      runtime_health_snapshot_index: '/runtime_inventory',
-    },
-  },
-  {
-    domain_id: 'redcube',
-    project: 'redcube-ai',
-    registration_id: 'rca.opl_runtime_manager.registration.v1',
-    expected_registration_surface: {
-      surface_kind: 'opl_runtime_manager_domain_registration',
-      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
-      command: 'redcube product manifest --workspace-root <workspace_root>',
-    },
-    consumable_projection_refs: [
-      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
-      '/product_entry_shell/opl_bridge',
-      '/artifact_inventory',
-      '/review_state',
-      '/publication_projection',
-    ],
-    state_index_inputs: {
-      workspace_registry_index: '/workspace_locator',
-      managed_session_ledger_index: '/session_continuity',
-      artifact_projection_index: '/artifact_inventory',
-      attention_queue_index: '/automation/automations/0',
-      runtime_health_snapshot_index: '/runtime_inventory',
-    },
-  },
-] as const;
+import {
+  runtimeDomainOwnerProfiles,
+  runtimeManagerDomainProfiles,
+} from './family-runtime-types.ts';
 
 function buildFamilySchedulerReplacement() {
   return {
@@ -132,53 +42,14 @@ function buildFamilySchedulerReplacement() {
       stage_attempt_ledger: '${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts',
       events_ledger: '${OPL_STATE_DIR}/family-runtime/events.jsonl',
     },
-    managed_domains: [
-      {
-        domain_id: 'medautoscience',
-        domain_owner: 'med-autoscience',
-        migration_priority: 'p0',
-        legacy_scheduler_owner: null,
-        legacy_scheduler_residue_policy: 'history_tombstone_or_negative_guard_only',
-        replacement_role:
-          `OPL owns scheduler cadence, provider SLO tick, Temporal attempt ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection; the selected domain owner keeps progress semantics, owner receipts, typed blockers, and safe action refs.`,
-        required_domain_refs: [
-          DOMAIN_RUNTIME_OWNER_ROUTE_HANDOFF,
-          OPL_RUNTIME_OWNER_ROUTE,
-          DOMAIN_ROUTE_RECONCILE_APPLY_TASK_KIND,
-          'mas_opl_runtime_workbench_projection',
-          'sidecar_owner_receipt_or_typed_blocker',
-          'no_forbidden_write_evidence',
-        ],
-      },
-      {
-        domain_id: 'medautogrant',
-        domain_owner: 'med-autogrant',
-        migration_priority: 'p1',
-        legacy_scheduler_owner: null,
-        replacement_role:
-          'MAG consumes OPL scheduler replacement through refs, owner receipts, typed blockers, and guarded grant actions without adding a repo-owned daemon.',
-        required_domain_refs: [
-          'product_entry_manifest',
-          'grant_owner_receipt_or_typed_blocker',
-          'grant_memory_ref',
-          'no_forbidden_write_evidence',
-        ],
-      },
-      {
-        domain_id: 'redcube',
-        domain_owner: 'redcube-ai',
-        migration_priority: 'p2',
-        legacy_scheduler_owner: null,
-        replacement_role:
-          'RCA consumes OPL scheduler replacement through sidecar/action/status refs while keeping visual deliverable sequencing inside domain execution.',
-        required_domain_refs: [
-          'product_entry_manifest',
-          'visual_owner_receipt_or_typed_blocker',
-          'visual_memory_ref',
-          'no_forbidden_write_evidence',
-        ],
-      },
-    ],
+    managed_domains: runtimeManagerDomainProfiles().map((profile) => {
+      const { daemon_policy: _daemonPolicy, ...scheduler } = profile.scheduler;
+      return {
+        domain_id: profile.domain_id,
+        domain_owner: profile.domain_owner,
+        ...scheduler,
+      };
+    }),
     authority_boundary: {
       can_write_domain_truth: false,
       can_write_domain_memory_body: false,
@@ -198,29 +69,34 @@ function buildFamilySchedulerReplacement() {
   } as const;
 }
 
-const DAEMON_POLICY = {
-  surface_kind: 'opl_runtime_manager_daemon_policy',
-  local_daemon_added: false,
-  opl_domain_daemon_installation_allowed: false,
-  cadence_owner: 'provider_backed_family_runtime',
-  runtime_kernel_owner: 'provider_backed_family_runtime',
-  provider_backed_cadence_surface: 'opl family-runtime provider-slo tick --provider temporal',
-  domain_launchagent_policy: {
-    medautoscience: 'legacy_diagnostic_cleanup_only',
-    medautogrant: 'not_installed_or_maintained_by_opl',
-    redcube: 'not_installed_or_maintained_by_opl',
-  },
-  allowed_domain_daemon_role: 'legacy_diagnostic_cleanup_only',
-  sidecar_promotion_gate:
-    'Only promote beyond provider adapters if configured providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
-  authority_boundary: {
-    can_install_opl_daemon: false,
-    can_install_domain_daemon: false,
-    can_maintain_domain_daemon: false,
-    can_start_legacy_domain_launchagent: false,
-    can_record_provider_cadence_receipt: true,
-  },
-} as const;
+function buildDaemonPolicy() {
+  const domainLaunchagentPolicy = Object.fromEntries(
+    runtimeManagerDomainProfiles().map((profile) => [
+      profile.domain_id,
+      profile.scheduler.daemon_policy,
+    ]),
+  );
+
+  return {
+    surface_kind: 'opl_runtime_manager_daemon_policy',
+    local_daemon_added: false,
+    opl_domain_daemon_installation_allowed: false,
+    cadence_owner: 'provider_backed_family_runtime',
+    runtime_kernel_owner: 'provider_backed_family_runtime',
+    provider_backed_cadence_surface: 'opl family-runtime provider-slo tick --provider temporal',
+    domain_launchagent_policy: domainLaunchagentPolicy,
+    allowed_domain_daemon_role: 'legacy_diagnostic_cleanup_only',
+    sidecar_promotion_gate:
+      'Only promote beyond provider adapters if configured providers cannot express required task, wakeup, approval, audit, or product isolation contracts.',
+    authority_boundary: {
+      can_install_opl_daemon: false,
+      can_install_domain_daemon: false,
+      can_maintain_domain_daemon: false,
+      can_start_legacy_domain_launchagent: false,
+      can_record_provider_cadence_receipt: true,
+    },
+  } as const;
+}
 
 const NATIVE_HELPER_PROTOCOL = {
   version: 'opl_native_helper.v1',
@@ -399,7 +275,7 @@ export async function buildRuntimeManager(
       owner_split: {
         product_control_plane_owner: 'one-person-lab',
         online_runtime_substrate_owner: 'provider_backed_family_runtime',
-        domain_truth_owners: ADMITTED_DOMAIN_OWNERS,
+        domain_truth_owners: runtimeDomainOwnerProfiles(),
         concrete_executor_owner: 'stage_selected_by_domain_contract',
       },
       responsibilities: [
@@ -438,7 +314,7 @@ export async function buildRuntimeManager(
         configured_provider: selectedProvider,
         allowed_providers: providers.allowed_providers,
       },
-      daemon_policy: DAEMON_POLICY,
+      daemon_policy: buildDaemonPolicy(),
       provider_runtime: providers,
       reconcile,
       registration_registry: {
@@ -447,7 +323,10 @@ export async function buildRuntimeManager(
         registration_status: 'declared_projection_contracts',
         source_of_truth_rule:
           'OPL indexes declared domain registration surfaces and must dereference domain-owned durable truth before acting.',
-        domains: DOMAIN_REGISTRATION_REGISTRY,
+        domains: runtimeManagerDomainProfiles().map((profile) => {
+          const { scheduler: _scheduler, ...registration } = profile;
+          return registration;
+        }),
         required_domain_registration_fields: [
           'surface_kind',
           'registration_id',
@@ -501,7 +380,7 @@ export async function buildRuntimeManager(
         'Family runtime provider is Temporal-only; local_sqlite is retired as a provider and SQLite sidecars are projection/readback indexes only.',
         'external_sandbox is an agent_sandbox_execution_substrate readback for E2B/Daytona/Modal-style adapters; it is not a Temporal durable workflow substrate replacement.',
         `OPL Runtime Manager is the product control plane, stage ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, and projection layer.`,
-        'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
+        'Registered domain agents keep domain-owned truth and route-selected executor semantics.',
       ],
     },
   };

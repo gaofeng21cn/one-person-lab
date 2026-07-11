@@ -6,7 +6,11 @@ import { FrameworkContractError, isRecord } from '../../kernel/contract-validati
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { runFamilyRuntime } from './family-runtime.ts';
-import type { FamilyRuntimeDomainId } from './family-runtime-command.ts';
+import {
+  FAMILY_RUNTIME_DOMAIN_IDS,
+  resolveFamilyRuntimeDomainId,
+  type FamilyRuntimeDomainId,
+} from './family-runtime-types.ts';
 import {
   parseExternalEvidenceApplyArgs,
   runExternalEvidenceApply,
@@ -549,12 +553,13 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
 
 function domainIdFromRoute(route: JsonRecord): FamilyRuntimeDomainId {
   const domainId = stringValue(route.domain_id);
-  if (domainId === 'medautoscience' || domainId === 'medautogrant' || domainId === 'redcube') {
-    return domainId;
+  const resolvedDomainId = domainId ? resolveFamilyRuntimeDomainId(domainId) : null;
+  if (resolvedDomainId) {
+    return resolvedDomainId;
   }
   throw new FrameworkContractError('contract_shape_invalid', 'Unsupported domain route id.', {
     domain_id: domainId,
-    allowed_domain_ids: ['medautoscience', 'medautogrant', 'redcube'],
+    allowed_domain_ids: FAMILY_RUNTIME_DOMAIN_IDS,
   });
 }
 

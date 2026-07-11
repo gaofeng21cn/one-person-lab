@@ -2,6 +2,11 @@ import { assert, test } from '../helpers.ts';
 import { FrameworkContractError } from '../../../../src/kernel/contract-validation.ts';
 import { parseRegisteredFamilyRuntimeCommand } from '../../../../src/modules/runway/family-runtime-command-parts/registry.ts';
 import { parseSchedulerLifecycleArgs } from '../../../../src/modules/runway/family-runtime-command-parts/scheduler.ts';
+import {
+  FAMILY_RUNTIME_DOMAIN_IDS,
+  resolveFamilyRuntimeDomainId,
+  runtimeDomainProfileFor,
+} from '../../../../src/modules/runway/family-runtime-types.ts';
 
 function assertUsageError(error: unknown, message: RegExp, option: string) {
   assert.equal(error instanceof FrameworkContractError, true);
@@ -11,18 +16,37 @@ function assertUsageError(error: unknown, message: RegExp, option: string) {
   assert.equal(usageError.details?.option, option);
 }
 
-test('family-runtime scheduler parser preserves lifecycle options and retires manual tick', () => {
+test('family runtime support and aliases derive from standard-agent runtime profiles', () => {
+  assert.deepEqual(FAMILY_RUNTIME_DOMAIN_IDS, [
+    'medautoscience',
+    'medautogrant',
+    'redcube',
+    'opl-meta-agent',
+  ]);
+  assert.equal(resolveFamilyRuntimeDomainId('mas'), 'medautoscience');
+  assert.equal(resolveFamilyRuntimeDomainId('redcube-ai'), 'redcube');
+  assert.equal(resolveFamilyRuntimeDomainId('obf'), null);
+
+  const mas = runtimeDomainProfileFor('medautoscience');
+  assert.ok(mas);
+  assert.deepEqual(mas.dispatch_command, ['medautosci', 'domain-handler', 'dispatch']);
+  assert.equal(mas.runtime_manager_registration?.domain_owner, 'med-autoscience');
+});
+
+test('family-runtime scheduler parser binds a profile to an explicit registry runtime domain', () => {
   assert.deepEqual(parseSchedulerLifecycleArgs([
     'status',
     '--provider',
     'temporal',
+    '--domain',
+    'rca',
     '--profile',
     '/tmp/profile.toml',
   ]), {
     mode: 'scheduler_status',
     providerKind: 'temporal',
     domainProfiles: {
-      medautoscience: '/tmp/profile.toml',
+      redcube: '/tmp/profile.toml',
     },
   });
 });

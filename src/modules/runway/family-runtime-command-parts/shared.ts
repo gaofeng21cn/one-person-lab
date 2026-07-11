@@ -7,6 +7,7 @@ import {
   FAMILY_RUNTIME_DOMAIN_IDS,
   FAMILY_RUNTIME_PROVIDER_KINDS,
   TEMPORAL_STAGE_ATTEMPT_SIGNAL_KINDS,
+  resolveFamilyRuntimeDomainId,
   type FamilyRuntimeDomainId,
   type FamilyRuntimeProviderKind,
   type TemporalStageAttemptSignalKind,
@@ -54,8 +55,9 @@ export function parseCliOptions(
 }
 
 export function assertDomainId(value: string | undefined): FamilyRuntimeDomainId {
-  if (FAMILY_RUNTIME_DOMAIN_IDS.includes(value as FamilyRuntimeDomainId)) {
-    return value as FamilyRuntimeDomainId;
+  const resolvedDomainId = value ? resolveFamilyRuntimeDomainId(value) : null;
+  if (resolvedDomainId) {
+    return resolvedDomainId;
   }
   throw new FrameworkContractError('cli_usage_error', 'Unsupported family-runtime domain id.', {
     domain_id: value ?? null,

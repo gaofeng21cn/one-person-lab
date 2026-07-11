@@ -30,7 +30,10 @@ import {
   nowIso,
   type FamilyRuntimeTaskRow,
 } from './family-runtime-store.ts';
-import type { FamilyRuntimeDomainId } from './family-runtime-types.ts';
+import {
+  runtimeDomainAliases,
+  type FamilyRuntimeDomainId,
+} from './family-runtime-types.ts';
 
 type CapabilityHardBoundary = import('../connect/index.ts').CapabilityHardBoundary;
 type CapabilityRegistryReadout = import('../connect/index.ts').CapabilityRegistryReadout;
@@ -637,16 +640,7 @@ function normalize(value: string) {
 }
 
 function domainAliases(domainId: FamilyRuntimeDomainId) {
-  if (domainId === 'medautoscience') {
-    return new Set(['medautoscience', 'med-autoscience', 'mas']);
-  }
-  if (domainId === 'medautogrant') {
-    return new Set(['medautogrant', 'med-autogrant', 'mag']);
-  }
-  if (domainId === 'redcube') {
-    return new Set(['redcube', 'redcube-ai', 'rca']);
-  }
-  return new Set(['opl-meta-agent', 'oplmetaagent', 'oma']);
+  return new Set(runtimeDomainAliases(domainId).map(normalize));
 }
 
 function resolvePlane(entry: DomainManifestCatalogEntry): FamilyStageControlPlane | null {

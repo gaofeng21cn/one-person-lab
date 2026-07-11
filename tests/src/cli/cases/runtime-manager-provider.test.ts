@@ -3,6 +3,7 @@ import net from 'node:net';
 
 import { assert, fs, os, parseJsonText, path, repoRoot, runCli, test } from '../helpers.ts';
 import { resolveTemporalWorkerTaskQueue } from '../../../../src/modules/runway/family-runtime-temporal-provider-parts/worker-task-queue.ts';
+import { FAMILY_RUNTIME_DOMAIN_IDS } from '../../../../src/modules/runway/family-runtime-types.ts';
 import { writeNativeHelperFixtureScripts } from './native-helper-fixtures.ts';
 
 test('runtime manager reports OPL control plane over provider-backed family runtime', () => {
@@ -22,6 +23,10 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     assert.equal(output.runtime_manager.status, 'provider_code_landed_unconfigured');
     assert.equal(output.runtime_manager.owner_split.online_runtime_substrate_owner, 'provider_backed_family_runtime');
     assert.equal(output.runtime_manager.owner_split.product_control_plane_owner, 'one-person-lab');
+    assert.deepEqual(
+      output.runtime_manager.owner_split.domain_truth_owners.map((owner: { domain_id: string }) => owner.domain_id),
+      FAMILY_RUNTIME_DOMAIN_IDS,
+    );
     assert.equal(output.runtime_manager.family_runtime_stage_attempt_index.provider_model, 'provider_backed_stage_attempt_runtime');
     assert.equal(output.runtime_manager.family_runtime_stage_attempt_index.configured_provider, 'temporal');
     assert.deepEqual(output.runtime_manager.family_runtime_stage_attempt_index.allowed_providers, [
@@ -184,6 +189,14 @@ test('runtime manager reports OPL control plane over provider-backed family runt
     ) as any;
     assert.equal(runtimeManagerContract.family_scheduler_replacement.surface_kind, output.runtime_manager.family_scheduler_replacement.surface_kind);
     assert.equal(runtimeManagerContract.family_scheduler_replacement.scheduler_owner, output.runtime_manager.family_scheduler_replacement.scheduler_owner);
+    assert.equal(
+      runtimeManagerContract.family_scheduler_replacement.managed_domains_projection.source_of_truth_ref,
+      'src/kernel/standard-agent-registry.ts#family_runtime_profile.runtime_manager_registration',
+    );
+    assert.equal(
+      runtimeManagerContract.daemon_policy.domain_launchagent_policy_projection.source_of_truth_ref,
+      'src/kernel/standard-agent-registry.ts#family_runtime_profile.runtime_manager_registration.scheduler.daemon_policy',
+    );
     assert.deepEqual(
       runtimeManagerContract.family_runtime_stage_attempt_index.domain_route_projection.canonical_task_kinds,
       output.runtime_manager.family_runtime_stage_attempt_index.domain_route_projection.canonical_task_kinds,

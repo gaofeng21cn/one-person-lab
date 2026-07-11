@@ -4,41 +4,33 @@ import type {
   FamilyRuntimeCommandInput,
   FamilyRuntimeDomainProfiles,
 } from '../family-runtime-command.ts';
-import { assertProviderKind, parseCliOptions } from './shared.ts';
-
-function parseDomainProfileOption(
-  profiles: FamilyRuntimeDomainProfiles,
-  domainId: FamilyRuntimeDomainId | undefined,
-  token: string,
-  value: string | undefined,
-) {
-  if (token !== '--profile' || !value) {
-    return false;
-  }
-  const targetDomain = domainId ?? 'medautoscience';
-  if (targetDomain !== 'medautoscience') {
-    throw new FrameworkContractError('cli_usage_error', 'family-runtime --profile is currently supported only for medautoscience.', {
-      domain: targetDomain,
-    });
-  }
-  profiles[targetDomain] = value;
-  return true;
-}
+import { assertDomainId, assertProviderKind, parseCliOptions } from './shared.ts';
 
 export function parseSchedulerLifecycleArgs(rest: string[]): FamilyRuntimeCommandInput {
   const action = rest[0];
   let providerKind: FamilyRuntimeProviderKind | undefined;
+  let domainId: FamilyRuntimeDomainId | undefined;
   const domainProfiles: FamilyRuntimeDomainProfiles = {};
   parseCliOptions(rest, 1, (token, value) => {
     if (token === '--provider' && value) {
       providerKind = assertProviderKind(value);
       return true;
-    } else if (parseDomainProfileOption(domainProfiles, undefined, token, value)) {
+    } else if (token === '--domain' && value) {
+      domainId = assertDomainId(value);
+      return true;
+    } else if (token === '--profile' && value) {
+      if (!domainId) {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime scheduler --profile requires --domain first.', {
+          option: '--profile',
+          usage: `opl family-runtime scheduler ${action} --provider temporal --domain <domain> --profile <file>`,
+        });
+      }
+      domainProfiles[domainId] = value;
       return true;
     } else {
       throw new FrameworkContractError('cli_usage_error', `Unknown family-runtime scheduler ${action} option: ${token}.`, {
         option: token,
-        usage: `opl family-runtime scheduler ${action} --provider temporal [--profile <file>]`,
+        usage: `opl family-runtime scheduler ${action} --provider temporal [--domain <domain> --profile <file>]`,
       });
     }
   });
