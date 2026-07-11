@@ -94,6 +94,8 @@ export interface CodexExecOptions {
   reasoningEffort?: string;
   outputLastMessagePath?: string;
   outputSchemaPath?: string;
+  ephemeral?: boolean;
+  enableImageGeneration?: boolean;
 }
 
 export interface ParsedCodexExecOutput {
@@ -198,6 +200,14 @@ export function buildCodexExecArgs(
 
   if (options.json) {
     args.push('--json');
+  }
+
+  if (options.ephemeral) {
+    args.push('--ephemeral');
+  }
+
+  if (options.enableImageGeneration) {
+    args.push('--enable', 'image_generation');
   }
 
   if (options.cwd) {
