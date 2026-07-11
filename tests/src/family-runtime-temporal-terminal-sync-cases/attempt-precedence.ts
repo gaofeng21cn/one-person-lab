@@ -71,7 +71,7 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
             surface_kind: 'medical_paper_readiness_stage_native_closeout',
             status: 'materialized',
             source_fingerprint: 'sha256:newer-completed-dispatch',
-            written_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/owner_receipt.json',
+            written_ref: 'artifacts/medical_paper/readiness_owner_receipt.json',
           },
         },
         human_gate_refs: [],

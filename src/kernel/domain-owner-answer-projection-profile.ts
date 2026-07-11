@@ -44,7 +44,7 @@ export type DomainOwnerAnswerProjectionProfile = {
     nextExecutableOwner: string;
     closeoutSurfaceKind: string;
     stageId: string;
-    stageOutputsFragment: string;
+    stageOutputsFragment?: string;
     ownerReceiptRef: string;
     typedBlockerRef: string;
     relativeOwnerReceiptRef: string;
@@ -143,7 +143,7 @@ function normalizeStageNativeOwnerAnswer(value: unknown, sourceRef: string) {
     nextExecutableOwner: requireString(value.next_executable_owner, 'stage_native_owner_answer.next_executable_owner', sourceRef),
     closeoutSurfaceKind: requireString(value.closeout_surface_kind, 'stage_native_owner_answer.closeout_surface_kind', sourceRef),
     stageId: requireString(value.stage_id, 'stage_native_owner_answer.stage_id', sourceRef),
-    stageOutputsFragment: requireString(value.stage_outputs_fragment, 'stage_native_owner_answer.stage_outputs_fragment', sourceRef),
+    stageOutputsFragment: optionalString(value.stage_outputs_fragment) ?? undefined,
     ownerReceiptRef: requireString(value.owner_receipt_ref, 'stage_native_owner_answer.owner_receipt_ref', sourceRef),
     typedBlockerRef: requireString(value.typed_blocker_ref, 'stage_native_owner_answer.typed_blocker_ref', sourceRef),
     relativeOwnerReceiptRef: requireString(value.relative_owner_receipt_ref, 'stage_native_owner_answer.relative_owner_receipt_ref', sourceRef),

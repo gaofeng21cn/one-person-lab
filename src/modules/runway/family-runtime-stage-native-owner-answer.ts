@@ -25,7 +25,7 @@ export type StageNativeOwnerAnswerProfile = {
   next_executable_owner: string;
   closeout_surface_kind: string;
   stage_id: string;
-  stage_outputs_fragment: string;
+  stage_outputs_fragment?: string;
   owner_receipt_ref: string;
   typed_blocker_ref: string;
   relative_owner_receipt_ref: string;
@@ -113,11 +113,12 @@ function hasStageNativeContext(
   record: Record<string, unknown>,
   profile: StageNativeOwnerAnswerProfile,
 ) {
+  const fragment = profile.stage_outputs_fragment;
   return Boolean(stringValue(record.stage_id) === profile.stage_id
-    || stringValue(record.stage_manifest_ref)?.includes(profile.stage_outputs_fragment)
-    || stringValue(record.current_pointer_ref)?.includes(profile.stage_outputs_fragment)
-    || stringValue(record.written_ref)?.includes(profile.stage_outputs_fragment)
-    || stringValue(record.terminal_outcome_ref)?.includes(profile.stage_outputs_fragment));
+    || (fragment && stringValue(record.stage_manifest_ref)?.includes(fragment))
+    || (fragment && stringValue(record.current_pointer_ref)?.includes(fragment))
+    || (fragment && stringValue(record.written_ref)?.includes(fragment))
+    || (fragment && stringValue(record.terminal_outcome_ref)?.includes(fragment)));
 }
 
 function isStageNativeOwnerAnswerRef(
@@ -136,7 +137,9 @@ function isStageNativeOwnerAnswerRef(
 function stageNativeRefCandidates(ref: string, profile: StageNativeOwnerAnswerProfile) {
   const trimmed = ref.trim();
   const studiesIndex = trimmed.indexOf('studies/');
-  const artifactsIndex = trimmed.indexOf(profile.stage_outputs_fragment);
+  const artifactsIndex = profile.stage_outputs_fragment
+    ? trimmed.indexOf(profile.stage_outputs_fragment)
+    : -1;
   return [...new Set([
     trimmed,
     studiesIndex >= 0 ? trimmed.slice(studiesIndex) : null,
