@@ -434,6 +434,12 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `src/agent-lab-control-read-models.ts` 的 `buildAgentLabDomainFeedbackSelfEvolutionReadModel` 是 canonical builder；`agent-lab complete`、`agent-lab workbench` 和 `opl app state` 只消费同一 read-model。
 - `runnable` 只表示已有 developer work-order candidate 可交给现有 `opl work-order execute` 原语；Agent Lab 不新增 runner/queue，不写 runtime DB/provider queue，不执行 MAS truth mutation。
 - `opl work-order execute --dry-run` 只做 no-write 计划与形状检查，输出 execution plan / dry-run receipt，不打开 target worktree、不启动 Codex、不吸收 patch；它用于 operator/OMA 在真实执行前确认 target repo、verification command、forbidden surface 和 closeout boundary。
+
+### 决策：work-order 物理物化和 Python family-runtime transport 统一归 OPL
+
+- `opl work-order materialize-request --request <semantic-request.json> --target-dir <new-dir> --json` 是 canonical work-order 物化入口。它直接消费 domain-neutral request 或 OMA stdout 的 `semantic_requests`，在创建目标目录前完成全部 shape/authority/path preflight，再以 staging directory rename 原子写入 canonical JSON 和逐文件 SHA256 receipt。
+- OMA 继续拥有 agent-building judgment、evaluation/developer work-order semantics 与 refs；OPL 只拥有物理 JSON、schema binding、digest 和 materialization receipt。该 receipt 不证明 patch 已执行、target owner 已 closeout、domain ready 或 production ready。
+- Python domain consumer 统一通过 `opl_framework.family_runtime_client` submit/query Temporal stage attempt；bin resolution、subprocess lifecycle、timeout 和 canonical JSON envelope validation 归 OPL Runway，domain repo 不再保留自己的 OPL CLI transport wrapper。
 - `completed_or_blocker` 只携带 completion ref 或 domain-owned typed blocker ref；OPL 不创建 owner receipt、typed blocker body、human gate body、quality/export verdict、paper progress 或 domain-ready claim。
 
 ## 2026-07-01

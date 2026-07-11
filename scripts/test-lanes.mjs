@@ -103,6 +103,7 @@ const fastTestFiles = [
   'tests/src/agent-lab.test.ts',
   ...expandTestFiles(['tests/src/agent-lab-mechanism-evolution.test.ts', 'tests/src/agent-lab-developer-mode-contract.test.ts', 'tests/src/agent-lab-executor-aperture.test.ts', 'tests/src/agent-lab-efficiency-nonregression.test.ts', 'tests/src/agent-lab-rho-workflow-contract.test.ts']),
   'tests/src/cli/cases/agent-lab-rho-workflow-run.test.ts',
+  'tests/src/cli/cases/work-order-materialization.test.ts',
   'tests/src/agent-lab-complete.test.ts',
   'tests/src/agent-lab-complete-cases/developer-mode.test.ts',
   ...expandTestFiles(['tests/src/agent-lab-ahe-evidence.test.ts', 'tests/src/agent-lab-maturity-controls.test.ts', 'tests/src/agent-lab-feedbackops.test.ts']),

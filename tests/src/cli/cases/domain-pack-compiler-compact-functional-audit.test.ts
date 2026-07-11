@@ -65,6 +65,11 @@ function writeCompactAudit(repoDir: string, codePaths: string[]) {
         replacement_ref: 'contracts/generated_surface_handoff.json#workbench_drilldown',
         provenance_refs: ['docs/history/legacy-workbench-wrapper.md'],
       },
+      {
+        surface_id: 'legacy_runtime_probe',
+        replacement_ref: 'contracts/generated_surface_handoff.json#domain_handler',
+        provenance_refs: ['docs/history/legacy-runtime-probe.md'],
+      },
     ],
     bridge_exit_gate: {
       physical_delete_authorization_refs: ['owner-receipt:retirement'],
@@ -96,7 +101,7 @@ test('generated interfaces derive compact functional audit inventory from the co
 
   assert.equal(audit.source_field_role, 'standard_contract_source');
   assert.equal((audit.summary as Record<string, unknown>).authority_function_inventory_count, 1);
-  assert.equal((audit.summary as Record<string, unknown>).private_platform_residue_inventory_count, 4);
+  assert.equal((audit.summary as Record<string, unknown>).private_platform_residue_inventory_count, 5);
   assert.equal((audit.summary as Record<string, unknown>).standard_domain_pack_inventory_count, 2);
   assert.equal((audit.contract_readback as Record<string, unknown>).status, 'resolved');
   assert.equal(
@@ -105,11 +110,78 @@ test('generated interfaces derive compact functional audit inventory from the co
   );
   assert.equal(
     ((audit.contract_readback as Record<string, unknown>).morphology as Record<string, unknown>).retired_generated_surface_provenance_count,
-    3,
+    4,
   );
   assert.deepEqual((audit.contract_readback as Record<string, unknown>).blockers, []);
   assert.equal(sourceConsumption.status, 'resolved');
 });
+
+test('compact functional audit accepts a domain-declared non-empty retired provenance list without fixed cardinality', (t) => {
+  const repoDir = buildReadyAgentRepo();
+  t.after(() => fs.rmSync(repoDir, { recursive: true, force: true }));
+  writeCompactAudit(repoDir, ['agent/cli.ts']);
+  const auditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+  const audit = JSON.parse(fs.readFileSync(auditPath, 'utf8')) as Record<string, unknown>;
+  audit.retired_generated_surface_provenance = (audit.retired_generated_surface_provenance as unknown[]).slice(0, 1);
+  writeJson(auditPath, audit);
+
+  const descriptor = buildRepoContractDescriptor(repoDir).descriptor;
+  const readback = descriptor.functional_privatization_audit as Record<string, any>;
+
+  assert.equal(readback.contract_readback.status, 'resolved');
+  assert.equal(readback.contract_readback.morphology.retired_generated_surface_provenance_count, 1);
+  assert.deepEqual(readback.contract_readback.blockers, []);
+});
+
+for (const invalidCase of [
+  {
+    name: 'missing list',
+    mutate(audit: Record<string, unknown>) {
+      delete audit.retired_generated_surface_provenance;
+    },
+    blocker: 'compact_functional_audit_missing_retired_generated_surface_provenance',
+  },
+  {
+    name: 'empty list',
+    mutate(audit: Record<string, unknown>) {
+      audit.retired_generated_surface_provenance = [];
+    },
+    blocker: 'compact_functional_audit_requires_retired_generated_surface_provenance_entry',
+  },
+  {
+    name: 'non-object entry',
+    mutate(audit: Record<string, unknown>) {
+      audit.retired_generated_surface_provenance = ['legacy-wrapper'];
+    },
+    blocker: 'compact_functional_audit_retired_provenance_invalid_entry:0',
+  },
+  {
+    name: 'entry missing replacement ref',
+    mutate(audit: Record<string, unknown>) {
+      audit.retired_generated_surface_provenance = [{
+        surface_id: 'legacy-wrapper',
+        provenance_refs: ['docs/history/legacy-wrapper.md'],
+      }];
+    },
+    blocker: 'compact_functional_audit_retired_provenance_missing_replacement_ref:0',
+  },
+]) {
+  test(`compact functional audit fails closed for ${invalidCase.name}`, (t) => {
+    const repoDir = buildReadyAgentRepo();
+    t.after(() => fs.rmSync(repoDir, { recursive: true, force: true }));
+    writeCompactAudit(repoDir, ['agent/cli.ts']);
+    const auditPath = path.join(repoDir, 'contracts', 'functional_privatization_audit.json');
+    const audit = JSON.parse(fs.readFileSync(auditPath, 'utf8')) as Record<string, unknown>;
+    invalidCase.mutate(audit);
+    writeJson(auditPath, audit);
+
+    const descriptor = buildRepoContractDescriptor(repoDir).descriptor;
+    const readback = descriptor.functional_privatization_audit as Record<string, any>;
+
+    assert.equal(readback.contract_readback.status, 'blocked');
+    assert.equal(readback.contract_readback.blockers.includes(invalidCase.blocker), true);
+  });
+}
 
 test('generated interfaces consume compact functional audits directly without source-ref aliases', (t) => {
   const repoDir = buildReadyAgentRepo();

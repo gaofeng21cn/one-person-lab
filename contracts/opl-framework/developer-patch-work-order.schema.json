@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/developer-patch-work-order.schema.json",
+  "title": "OPL Developer Patch Work Order",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind", "version", "canonical_schema_ref", "canonical_closeout_receipt_schema_ref",
+    "work_order_id", "status", "target_agent", "executor_lease_ref", "allowed_editable_surfaces",
+    "required_verification_refs", "owner_route_refs", "source_morphology_proof_ref",
+    "private_residue_decision_ref", "no_forbidden_write_proof", "machine_closeout_refs",
+    "implementation_controls", "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_developer_patch_work_order" },
+    "version": { "const": "opl.developer-patch-work-order.v1" },
+    "canonical_schema_ref": { "const": "contracts/opl-framework/developer-patch-work-order.schema.json" },
+    "canonical_closeout_receipt_schema_ref": { "const": "contracts/opl-framework/work-order-owner-closeout-receipt.schema.json" },
+    "work_order_id": { "type": "string", "minLength": 1 },
+    "status": { "const": "ready_for_target_agent_source_patch" },
+    "target_agent": {
+      "type": "object",
+      "required": ["domain_id", "repo_dir"],
+      "properties": {
+        "domain_id": { "type": "string", "minLength": 1 },
+        "repo_dir": { "type": "string", "minLength": 1 }
+      }
+    },
+    "executor_lease_ref": { "type": "string", "pattern": "^executor-lease:codex-cli/" },
+    "allowed_editable_surfaces": { "type": "array", "minItems": 1 },
+    "required_verification_refs": { "type": "array", "minItems": 1 },
+    "owner_route_refs": { "type": "array", "minItems": 1 },
+    "source_morphology_proof_ref": { "type": "string", "minLength": 1 },
+    "private_residue_decision_ref": { "type": "string", "minLength": 1 },
+    "no_forbidden_write_proof": { "type": "object" },
+    "machine_closeout_refs": { "type": "object" },
+    "implementation_controls": { "type": "object" },
+    "authority_boundary": {
+      "type": "object",
+      "required": [
+        "can_write_target_domain_truth", "can_authorize_target_domain_quality_or_export",
+        "can_sign_target_owner_receipt", "can_create_target_typed_blocker"
+      ],
+      "properties": {
+        "can_write_target_domain_truth": { "const": false },
+        "can_authorize_target_domain_quality_or_export": { "const": false },
+        "can_sign_target_owner_receipt": { "const": false },
+        "can_create_target_typed_blocker": { "const": false }
+      }
+    }
+  }
+}

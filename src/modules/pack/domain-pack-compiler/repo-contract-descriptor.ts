@@ -121,13 +121,15 @@ function buildCompactFunctionalAuditReadback(
       module_id: stringValue(module.module_id) ?? 'unknown_functional_module',
       code_paths: stringList(module.code_paths).map((sourceRef) => repoFileReadback(repoDir, sourceRef)),
     }));
-  const retiredProvenance = Array.isArray(functionalAuditRaw.retired_generated_surface_provenance)
-    ? functionalAuditRaw.retired_generated_surface_provenance.filter(isRecord).map((entry) => ({
+  const retiredProvenanceRaw = Array.isArray(functionalAuditRaw.retired_generated_surface_provenance)
+    ? functionalAuditRaw.retired_generated_surface_provenance
+    : [];
+  const retiredProvenance = retiredProvenanceRaw
+    .filter(isRecord).map((entry) => ({
         surface_id: stringValue(entry.surface_id),
         replacement_ref: stringValue(entry.replacement_ref),
         provenance_refs: stringList(entry.provenance_refs),
-      }))
-    : [];
+      }));
   const modulePathChecks = moduleReadback.flatMap((entry) => entry.code_paths);
   const missingModulePaths = moduleReadback.flatMap((entry) => (
     entry.code_paths.length === 0
@@ -142,13 +144,19 @@ function buildCompactFunctionalAuditReadback(
       .filter((check) => check.status !== 'resolved')
       .map((check) => `compact_functional_audit_pack_readback_${check.status}:${check.source_ref}`),
     ...missingModulePaths,
-    ...(retiredProvenance.length === 3
+    ...(Array.isArray(functionalAuditRaw.retired_generated_surface_provenance)
       ? []
-      : ['compact_functional_audit_retired_provenance_count_invalid']),
+      : ['compact_functional_audit_missing_retired_generated_surface_provenance']),
+    ...(retiredProvenanceRaw.length > 0
+      ? []
+      : ['compact_functional_audit_requires_retired_generated_surface_provenance_entry']),
+    ...retiredProvenanceRaw.flatMap((entry, index) => (
+      isRecord(entry) ? [] : [`compact_functional_audit_retired_provenance_invalid_entry:${index}`]
+    )),
     ...retiredProvenance.flatMap((entry, index) => [
       entry.surface_id ? null : `compact_functional_audit_retired_provenance_surface_id_missing:${index}`,
-      entry.replacement_ref ? null : `compact_functional_audit_retired_provenance_replacement_ref_missing:${index}`,
-      entry.provenance_refs.length > 0 ? null : `compact_functional_audit_retired_provenance_refs_missing:${index}`,
+      entry.replacement_ref ? null : `compact_functional_audit_retired_provenance_missing_replacement_ref:${index}`,
+      entry.provenance_refs.length > 0 ? null : `compact_functional_audit_retired_provenance_missing_provenance_refs:${index}`,
     ]),
   ].filter((entry): entry is string => Boolean(entry));
 
@@ -160,7 +168,7 @@ function buildCompactFunctionalAuditReadback(
       declared_module_count: moduleReadback.length,
       resolved_code_path_count: modulePathChecks.filter((check) => check.status === 'resolved').length,
       missing_code_path_count: modulePathChecks.filter((check) => check.status !== 'resolved').length,
-      retired_generated_surface_provenance_count: retiredProvenance.length,
+      retired_generated_surface_provenance_count: retiredProvenanceRaw.length,
       declared_pack_inventory_count: packInventory.length,
     },
     pack_inventory: {

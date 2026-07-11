@@ -18,3 +18,11 @@ export { buildStandardDomainAgentSkeletonInspection } from './family-domain-agen
 export { splitOperatorAttentionCounts } from './framework-readiness-attention-counts.ts';
 export { buildFunctionalSourcePurityTailReadModel, compactFunctionalPrivatizationAuditEnvelope } from './functional-privatization-envelope.ts';
 export { buildStandardDomainAgentTemplateConsumptionReadModel } from './standard-domain-agent-scaffold.ts';
+export {
+  DEVELOPER_PATCH_WORK_ORDER_SCHEMA_REF,
+  materializeWorkOrderRequest,
+  WORK_ORDER_MATERIALIZATION_RECEIPT_SCHEMA_REF,
+  WORK_ORDER_MATERIALIZATION_REQUEST_SCHEMA_REF,
+  WORK_ORDER_OWNER_CLOSEOUT_RECEIPT_SCHEMA_REF,
+} from './work-order-request-materialization.ts';
+export type { WorkOrderMaterializationInput } from './work-order-request-materialization.ts';

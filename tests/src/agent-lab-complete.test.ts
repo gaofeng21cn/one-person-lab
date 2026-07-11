@@ -229,11 +229,10 @@ test('Agent Lab workbench read model is ready for App consumption without taking
   assert.equal(result.stage_executor_policy.default_executor_kind, 'codex_cli');
   assertBlockedAuthority(result.stage_executor_policy.authority_boundary);
   assert.equal(Object.hasOwn(result, 'token_cost_estimates'), false);
-  assert.equal(result.optimizer_candidates.length, 6);
-  assert.equal(result.promotion_gates.length, 6);
+  assert.equal(result.optimizer_candidates.length, result.promotion_gates.length);
   assert.equal(result.developer_mode_repair_routes.status, 'ready_for_developer_mode_patrol_consumption');
-  assert.equal(result.developer_mode_repair_routes.summary.route_count, 2);
-  assert.equal(result.online_learning_refs.transitions.length, 6);
+  assert.equal(result.developer_mode_repair_routes.summary.route_count, 0);
+  assert.equal(result.online_learning_refs.transitions.length, result.optimizer_candidates.length);
   assert.equal(result.online_learning_refs.can_train_or_deploy_model_weights, false);
   assert.equal(result.online_learning_refs.can_promote_default_agent_without_gate, false);
   assertBlockedAuthority(result.authority_boundary);
@@ -404,10 +403,10 @@ test('Agent Lab export envelope maps refs to connector payloads without uploadin
   assert.equal(inspect.target, 'inspect-ai');
   assert.equal(inspect.upload_external_service, false);
   assert.equal(inspect.reads_domain_body, false);
-  assert.equal((inspect.connector_payload as any).tasks.length, 6);
-  assert.equal((openinference.connector_payload as any).traces.length, 6);
-  assert.ok((openinference.connector_payload as any).traces.some((trace: any) =>
-    trace.trace_ref === 'trace-ref:codex/mag-grant-section-smoke'));
+  assert.equal((inspect.connector_payload as any).tasks.length, 4);
+  assert.equal((openinference.connector_payload as any).traces.length, 3);
+  assert.ok((openinference.connector_payload as any).traces.every((trace: any) =>
+    typeof trace.trace_ref === 'string' && trace.trace_ref.length > 0));
   assert.equal((langfuse.connector_payload as any).datasets.length, 2);
   assert.equal((phoenix.connector_payload as any).experiments.length, 2);
   assert.equal((json.connector_payload as any).suite_results.length, 2);

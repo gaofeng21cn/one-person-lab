@@ -136,6 +136,7 @@ from .runtime_task_companions import (
 )
 from .runtime_registration import build_stage_runtime_registration
 from .executor_client import run_agent_execution_request, run_opl_json
+from .family_runtime_client import query_family_runtime_readback, submit_stage_attempt_request
 from .schema_validation import SchemaSubsetValidator, SchemaValidationIssue
 from .status_narration import (
     PAPER_MILESTONE_ANSWER_CHECKLIST,
@@ -180,6 +181,8 @@ __all__ = [
     "build_stage_runtime_registration",
     "run_agent_execution_request",
     "run_opl_json",
+    "submit_stage_attempt_request",
+    "query_family_runtime_readback",
     "build_checkpoint_summary",
     "build_family_lifecycle_ledger",
     "build_family_owner_route",

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/work-order-owner-closeout-receipt.schema.json",
+  "title": "Target Owner Work Order Closeout Receipt",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "surface_kind", "version", "owner", "work_order_id", "return_shape", "refs_only",
+    "writes_visual_truth", "writes_artifact_body", "writes_memory_body", "authorizes_quality_or_export"
+  ],
+  "properties": {
+    "surface_kind": { "const": "target_domain_owner_work_order_closeout" },
+    "version": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "minLength": 1 },
+    "work_order_id": { "type": "string", "minLength": 1 },
+    "return_shape": { "enum": ["domain_receipt", "typed_blocker", "no_regression_evidence"] },
+    "refs_only": { "const": true },
+    "writes_visual_truth": { "const": false },
+    "writes_artifact_body": { "const": false },
+    "writes_memory_body": { "const": false },
+    "authorizes_quality_or_export": { "const": false }
+  }
+}

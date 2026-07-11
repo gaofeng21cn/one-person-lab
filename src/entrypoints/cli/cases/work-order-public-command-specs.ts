@@ -1,4 +1,7 @@
-import { buildWorkOrderExecutePayload } from '../modules/work-order-public-payloads.ts';
+import {
+  buildWorkOrderExecutePayload,
+  buildWorkOrderMaterializeRequestPayload,
+} from '../modules/work-order-public-payloads.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicWorkOrderCommandSpecs(): Record<string, CommandSpec> {
@@ -14,6 +17,20 @@ export function buildPublicWorkOrderCommandSpecs(): Record<string, CommandSpec> 
       ],
       group: 'work-order',
       handler: (args) => buildWorkOrderExecutePayload(args, specs['work-order execute']),
+    },
+    'work-order materialize-request': {
+      usage:
+        'opl work-order materialize-request --request <semantic-request.json> --target-dir <new-dir>',
+      summary:
+        'Validate a refs-only semantic work-order request, atomically materialize canonical JSON files, and emit a digest-bound receipt without writing domain truth or owner receipts.',
+      examples: [
+        'opl work-order materialize-request --request ./oma-output.json --target-dir ./materialized-work-order --json',
+      ],
+      group: 'work-order',
+      handler: (args) => buildWorkOrderMaterializeRequestPayload(
+        args,
+        specs['work-order materialize-request'],
+      ),
     },
   };
 

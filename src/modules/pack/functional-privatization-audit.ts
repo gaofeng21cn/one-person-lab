@@ -379,9 +379,9 @@ function compactAuditSchemaBlockers(source: JsonRecord) {
       ? null
       : 'compact_functional_audit_missing_retired_generated_surface_provenance',
     Array.isArray(source.retired_generated_surface_provenance)
-      && source.retired_generated_surface_provenance.length === 3
+      && source.retired_generated_surface_provenance.length > 0
         ? null
-        : 'compact_functional_audit_requires_three_retired_generated_surface_provenance_entries',
+        : 'compact_functional_audit_requires_retired_generated_surface_provenance_entry',
     isRecord(source.bridge_exit_gate) ? null : 'compact_functional_audit_missing_bridge_exit_gate',
   ].filter((entry): entry is string => Boolean(entry));
   const expectedLayers: Record<string, FunctionalPrivatizationStandardizationLayer> = {
@@ -435,7 +435,15 @@ function compactAuditSchemaBlockers(source: JsonRecord) {
     }
   }
 
-  for (const [index, provenance] of recordList(source.retired_generated_surface_provenance).entries()) {
+  const retiredProvenance = Array.isArray(source.retired_generated_surface_provenance)
+    ? source.retired_generated_surface_provenance
+    : [];
+  for (const [index, value] of retiredProvenance.entries()) {
+    if (!isRecord(value)) {
+      blockers.push(`compact_functional_audit_retired_provenance_invalid_entry:${index}`);
+      continue;
+    }
+    const provenance = value;
     if (!stringValue(provenance.surface_id)) {
       blockers.push(`compact_functional_audit_retired_provenance_missing_surface_id:${index}`);
     }

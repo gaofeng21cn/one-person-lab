@@ -1,4 +1,5 @@
 import { executeOplDeveloperWorkOrder } from '../../../modules/foundry-lab/agent-lab-work-order-execution.ts';
+import { materializeWorkOrderRequest } from '../../../modules/foundry-lab/work-order-request-materialization.ts';
 import { parseCommandOptions } from './command-registry.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 import type { CommandSpec } from './types.ts';
@@ -57,6 +58,24 @@ async function buildWorkOrderExecutePayload(args: string[], spec: CommandSpec) {
   return await executeOplDeveloperWorkOrder(parseWorkOrderExecuteArgs(args, spec, 'work-order execute'));
 }
 
+function buildWorkOrderMaterializeRequestPayload(args: string[], spec: CommandSpec) {
+  const values = parseCommandOptions(args, spec, {
+    request: { type: 'string' },
+    'target-dir': { type: 'string' },
+  });
+  const requestPath = values.request as string | undefined;
+  const targetDir = values['target-dir'] as string | undefined;
+  if (!requestPath || !targetDir) {
+    throw buildUsageError(
+      'work-order materialize-request requires --request <request.json> and --target-dir <new-dir>.',
+      spec,
+      { required: ['--request', '--target-dir'] },
+    );
+  }
+  return materializeWorkOrderRequest({ requestPath, targetDir });
+}
+
 export {
   buildWorkOrderExecutePayload,
+  buildWorkOrderMaterializeRequestPayload,
 };

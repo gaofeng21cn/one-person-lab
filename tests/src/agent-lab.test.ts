@@ -848,67 +848,18 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
   ]);
 });
 
-test('Agent Lab longline suite centralizes planned MAS, MAG, and RCA soak tests into OPL-owned read-model gates', () => {
+test('Agent Lab default longline suite remains a generic blocked example without domain-owned manifests', () => {
   const result = buildLonglineAgentLabResult();
 
-  assert.equal(result.status, 'passed');
+  assert.equal(result.status, 'blocked');
   assert.equal(result.suite_kind, 'agent_lab_longline_suite');
-  assert.equal(result.summary.task_count, 3);
-  assert.equal(result.summary.recovery_probe_count, 7);
-  assert.equal(result.longline_summary.longline_task_count, 3);
-  assert.equal(result.longline_summary.repo_test_replacement_candidate_count, 3);
-  assert.equal(result.longline_summary.ready_to_reduce_domain_longline_tests, true);
-  assert.deepEqual(result.longline_summary.domain_ids, [
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-  ]);
-
-  assert.deepEqual(result.longline_summary.recommended_repo_test_disposition, [
-    {
-      domain_id: 'med-autoscience',
-      keep_in_domain_repo: [
-        'publication-quality scorer',
-        'owner receipt fixture',
-        'paper artifact authority checks',
-      ],
-      move_to_opl_agent_lab: [
-        'provider-hosted guarded apply soak orchestration',
-        'resume/retry/dead-letter recovery probe',
-        'no-forbidden-write cross-domain regression',
-      ],
-    },
-    {
-      domain_id: 'med-autogrant',
-      keep_in_domain_repo: [
-        'fundability scorer',
-        'grant owner receipt fixture',
-        'proposal artifact authority checks',
-      ],
-      move_to_opl_agent_lab: [
-        'controlled grant-stage soak orchestration',
-        'receipt reconciliation projection',
-        'no-forbidden-write cross-domain regression',
-      ],
-    },
-    {
-      domain_id: 'redcube-ai',
-      keep_in_domain_repo: [
-        'visual quality scorer',
-        'render/export owner receipt fixture',
-        'artifact authority checks',
-      ],
-      move_to_opl_agent_lab: [
-        'controlled visual-stage soak orchestration',
-        'hosted-attempt reconciliation projection',
-        'no-forbidden-write cross-domain regression',
-      ],
-    },
-  ]);
-
-  assert.ok(result.refs.recovery_probe_refs.includes('recovery-probe:longline/temporal-worker-restart-requery'));
-  assert.ok(result.refs.promotion_gate_refs.includes('promotion-gate:longline/mas-paper-owner-chain'));
-  assert.ok(result.refs.domain_quality_scorecard_refs.includes('quality-scorecard:longline/rca-visual-no-regression'));
+  assert.equal(result.summary.task_count, 1);
+  assert.equal(result.summary.recovery_probe_count, 1);
+  assert.equal(result.longline_summary.longline_task_count, 1);
+  assert.equal(result.longline_summary.repo_test_replacement_candidate_count, 0);
+  assert.equal(result.longline_summary.ready_to_reduce_domain_longline_tests, false);
+  assert.deepEqual(result.longline_summary.domain_ids, ['example-domain']);
+  assert.deepEqual(result.longline_summary.recommended_repo_test_disposition, []);
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.authority_boundary.can_mutate_domain_artifact, false);
 });

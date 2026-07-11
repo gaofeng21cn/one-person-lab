@@ -54,7 +54,7 @@ export function assertExecutableWorkOrder(workOrder: JsonRecord): void {
   }
 }
 
-function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): string[] {
+export function missingOmaTargetAgentWorkOrderGuardFields(workOrder: JsonRecord): string[] {
   const machineCloseoutRefs = isRecord(workOrder.machine_closeout_refs) ? workOrder.machine_closeout_refs : {};
   const noForbiddenWriteProof = isRecord(workOrder.no_forbidden_write_proof)
     ? workOrder.no_forbidden_write_proof
