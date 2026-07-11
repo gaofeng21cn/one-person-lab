@@ -147,6 +147,35 @@ test('agents default-callers treats observed structural evidence as refs-only un
   assert.equal('surface_retirement_gates' in readout.reports[0], false);
 });
 
+test('agents default-callers does not recreate worklists for canonically absent default surfaces', () => {
+  const repoDir = buildReadyAgentRepo();
+  const audit = readAudit(repoDir);
+  audit.retired_default_surface_ids = [
+    'cli',
+    'mcp',
+    'skill',
+    'product_entry',
+    'product_status',
+    'product_session',
+    'domain_handler',
+    'workbench',
+  ];
+  audit.default_surface_boundary = {
+    state: 'physically_absent',
+    owner: 'one-person-lab',
+    domain_repo_can_own_default_surface: false,
+  };
+  writeAudit(repoDir, audit);
+
+  const readout = runDefaultCallers(repoDir);
+
+  assert.equal(readout.deletion_evidence_worklist_count, 0);
+  assert.equal(readout.surface_retirement_gate_count, 8);
+  assert.equal(readout.closed_surface_retirement_gate_count, 8);
+  assert.equal(readout.reports[0].summary.retired_default_surface_count, 8);
+  assert.equal(readout.physical_delete_authorized, false);
+});
+
 test('agents default-callers consumes explicit domain owner physical delete authorization refs', () => {
   const repoDir = buildReadyAgentRepo();
   installBridgeGate(repoDir, bridgeGate({

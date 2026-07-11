@@ -496,6 +496,13 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         functional_privatization_audit: functionalAudit.payload,
       }
     : null);
+  const declaredFunctionalAudit = isRecord(functionalAudit.payload) ? functionalAudit.payload : {};
+  const defaultSurfaceBoundary = record(declaredFunctionalAudit.default_surface_boundary);
+  const retiredDefaultSurfaceIds = new Set(
+    optionalString(defaultSurfaceBoundary.state) === 'physically_absent'
+      ? stringList(declaredFunctionalAudit.retired_default_surface_ids)
+      : [],
+  );
   const privatePlatformResidueDeletionGate =
     buildPrivatePlatformResidueDeletionGate(normalizedFunctionalAudit.modules);
   try {
@@ -539,36 +546,39 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     ].filter((entry): entry is string => Boolean(entry));
     const replacementReady = blockers.length === 0;
     const surfaceRetirementGates = surfaceGates.map((gate) => gate.deletion_evidence_worklist);
-    const deletionEvidenceWorklists = surfaceRetirementGates.filter((worklist) =>
+    const applicableSurfaceRetirementGates = surfaceRetirementGates.filter((worklist) => (
+      !retiredDefaultSurfaceIds.has(optionalString(worklist.surface_id) ?? '')
+    ));
+    const deletionEvidenceWorklists = applicableSurfaceRetirementGates.filter((worklist) =>
       worklist.active_deletion_worklist_item !== false
     );
-    const missingDomainEvidenceCount = surfaceRetirementGates.filter((worklist) => (
+    const missingDomainEvidenceCount = applicableSurfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.domain_owner_receipt_or_typed_blocker)
       && optionalString(worklist.domain_owner_receipt_or_typed_blocker.status) !== 'observed'
     )).length;
-    const missingNoActiveCallerProofCount = surfaceRetirementGates.filter((worklist) => (
+    const missingNoActiveCallerProofCount = applicableSurfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.no_active_caller_proof)
       && optionalString(worklist.no_active_caller_proof.status) !== 'observed'
     )).length;
-    const missingNoForbiddenWriteCount = surfaceRetirementGates.filter((worklist) => (
+    const missingNoForbiddenWriteCount = applicableSurfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.no_forbidden_write_proof)
       && optionalString(worklist.no_forbidden_write_proof.status) !== 'observed'
     )).length;
-    const missingTombstoneOrProvenanceCount = surfaceRetirementGates.filter((worklist) => (
+    const missingTombstoneOrProvenanceCount = applicableSurfaceRetirementGates.filter((worklist) => (
       isRecord(worklist.tombstone_or_provenance_ref)
       && optionalString(worklist.tombstone_or_provenance_ref.status) !== 'observed'
     )).length;
-    const allDeletionEvidenceRequirementsObserved = surfaceRetirementGates.length > 0
+    const allDeletionEvidenceRequirementsObserved = applicableSurfaceRetirementGates.length > 0
       && missingDomainEvidenceCount === 0
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
-    const deleteOrKeepPrerequisitesObserved = surfaceRetirementGates.length > 0
+    const deleteOrKeepPrerequisitesObserved = applicableSurfaceRetirementGates.length > 0
       && missingNoActiveCallerProofCount === 0
       && missingNoForbiddenWriteCount === 0
       && missingTombstoneOrProvenanceCount === 0;
-    const physicalDeleteAuthorized = surfaceRetirementGates.length > 0
-      && surfaceRetirementGates.every((worklist) => worklist.physical_delete_authorized === true);
+    const physicalDeleteAuthorized = applicableSurfaceRetirementGates.length > 0
+      && applicableSurfaceRetirementGates.every((worklist) => worklist.physical_delete_authorized === true);
     const physicalDeleteBlockedBy = physicalDeleteAuthorized
       ? []
       : [...DEFAULT_CALLER_PHYSICAL_DELETE_BLOCKERS];
@@ -621,6 +631,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
         surface_retirement_gate_count: surfaceRetirementGates.length,
         closed_surface_retirement_gate_count:
           surfaceRetirementGates.length - deletionEvidenceWorklists.length,
+        retired_default_surface_count: retiredDefaultSurfaceIds.size,
+        retired_default_surface_source_ref:
+          'contracts/functional_privatization_audit.json#retired_default_surface_ids',
         missing_domain_owner_receipt_or_typed_blocker_count: missingDomainEvidenceCount,
         missing_no_active_caller_proof_count: missingNoActiveCallerProofCount,
         missing_no_forbidden_write_proof_count: missingNoForbiddenWriteCount,

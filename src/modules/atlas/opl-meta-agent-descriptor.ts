@@ -201,7 +201,9 @@ function buildStandardSkeleton(
       forbidden_moves: ['workspace_runtime_artifacts', 'receipt_instances', 'memory_content_body'],
       direct_skill_parity_refs: ['contracts/generated_surface_handoff.json#generated_surfaces/skill'],
       opl_hosted_parity_refs: ['contracts/opl_domain_manifest_registration.json#discovery_receipt'],
-      replacement_parity_refs: ['contracts/default_caller_deletion_evidence.json'],
+      replacement_parity_refs: [
+        'contracts/functional_privatization_audit.json#default_surface_boundary',
+      ],
       provenance_refs: ['docs/status.md', 'docs/architecture.md'],
       legacy_active_path_policy: 'opl_generated_or_history_tombstone_only',
       legacy_active_path_residue: [],
