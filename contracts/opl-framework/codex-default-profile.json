@@ -10,9 +10,9 @@
     "source_repo": "gaofeng21cn/one-person-lab-app",
     "source_ref": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy",
     "source_field_refs": {
-      "model": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.catalog_unavailable_fallback.model",
+      "model": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.configured_default.model",
       "model_consistency": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.default_model",
-      "reasoning_effort": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort",
+      "reasoning_effort": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.configured_default.reasoning_effort",
       "reasoning_effort_consistency": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.default_reasoning_effort",
       "session_model_consistency": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#default_session_profile.model",
       "session_reasoning_effort_consistency": "gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#default_session_profile.reasoning_effort",

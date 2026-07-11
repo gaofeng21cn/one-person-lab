@@ -268,9 +268,9 @@ function readGeneratedProjection(profile: Record<string, unknown>): CodexDefault
   }
   const sourcePrefix = 'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json';
   const expectedSourceFieldRefs = {
-    model: `${sourcePrefix}#codex.auto_model_policy.catalog_unavailable_fallback.model`,
+    model: `${sourcePrefix}#codex.auto_model_policy.configured_default.model`,
     model_consistency: `${sourcePrefix}#codex.default_model`,
-    reasoning_effort: `${sourcePrefix}#codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort`,
+    reasoning_effort: `${sourcePrefix}#codex.auto_model_policy.configured_default.reasoning_effort`,
     reasoning_effort_consistency: `${sourcePrefix}#codex.default_reasoning_effort`,
     session_model_consistency: `${sourcePrefix}#default_session_profile.model`,
     session_reasoning_effort_consistency: `${sourcePrefix}#default_session_profile.reasoning_effort`,

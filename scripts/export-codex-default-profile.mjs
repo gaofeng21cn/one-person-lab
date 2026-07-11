@@ -70,6 +70,10 @@ function buildProfile(appProfile) {
   const autoPolicy = codex.auto_model_policy == null
     ? null
     : record(codex.auto_model_policy, 'codex.auto_model_policy');
+  const configuredDefault = record(
+    autoPolicy?.configured_default,
+    'codex.auto_model_policy.configured_default',
+  );
   const fallback = autoPolicy?.catalog_unavailable_fallback == null
     ? null
     : record(
@@ -81,20 +85,31 @@ function buildProfile(appProfile) {
     codex.default_reasoning_effort,
     'codex.default_reasoning_effort',
   );
-  const model = fallback
-    ? requiredString(fallback.model, 'codex.auto_model_policy.catalog_unavailable_fallback.model')
-    : defaultModel;
-  const reasoningEffort = fallback
-    ? requiredString(
-      fallback.reasoning_effort,
-      'codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort',
-    )
-    : defaultReasoningEffort;
+  const model = requiredString(
+    configuredDefault.model,
+    'codex.auto_model_policy.configured_default.model',
+  );
+  const reasoningEffort = requiredString(
+    configuredDefault.reasoning_effort,
+    'codex.auto_model_policy.configured_default.reasoning_effort',
+  );
   const provider = requiredString(session.provider, 'default_session_profile.provider');
   const baseUrl = requiredString(session.base_url, 'default_session_profile.base_url');
 
   assertEqual(model, defaultModel, 'fallback model', 'codex.default_model');
   assertEqual(reasoningEffort, defaultReasoningEffort, 'fallback reasoning effort', 'codex.default_reasoning_effort');
+  assertEqual(
+    requiredString(fallback?.model, 'codex.auto_model_policy.catalog_unavailable_fallback.model'),
+    model,
+    'catalog fallback model',
+    'configured default model',
+  );
+  assertEqual(
+    requiredString(fallback?.reasoning_effort, 'codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort'),
+    reasoningEffort,
+    'catalog fallback reasoning effort',
+    'configured default reasoning effort',
+  );
   assertEqual(
     requiredString(session.model, 'default_session_profile.model'),
     model,
@@ -108,12 +123,8 @@ function buildProfile(appProfile) {
     'Codex fallback reasoning effort',
   );
 
-  const modelSource = fallback
-    ? `${appSourcePrefix}#codex.auto_model_policy.catalog_unavailable_fallback.model`
-    : `${appSourcePrefix}#codex.default_model`;
-  const reasoningSource = fallback
-    ? `${appSourcePrefix}#codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort`
-    : `${appSourcePrefix}#codex.default_reasoning_effort`;
+  const modelSource = `${appSourcePrefix}#codex.auto_model_policy.configured_default.model`;
+  const reasoningSource = `${appSourcePrefix}#codex.auto_model_policy.configured_default.reasoning_effort`;
 
   return {
     surface_id: 'opl_codex_default_profile',

@@ -649,7 +649,7 @@ test('bundled Codex profile carries the App-owned install fallback without runti
   );
   assert.equal(
     profile.generated_projection.source_field_refs.model,
-    'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.catalog_unavailable_fallback.model',
+    'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.configured_default.model',
   );
   assert.equal(profile.generated_projection.generator, 'scripts/export-codex-default-profile.mjs');
   assert.equal(profile.generated_projection.generation_stage, 'development_or_release_sync');
@@ -690,6 +690,10 @@ test('Codex default profile exporter deterministically projects the App-owned fa
       default_model: bundledProfile.model,
       default_reasoning_effort: bundledProfile.model_reasoning_effort,
       auto_model_policy: {
+        configured_default: {
+          model: bundledProfile.model,
+          reasoning_effort: bundledProfile.model_reasoning_effort,
+        },
         catalog_unavailable_fallback: {
           model: bundledProfile.model,
           reasoning_effort: bundledProfile.model_reasoning_effort,
@@ -722,6 +726,8 @@ test('Codex default profile exporter deterministically projects the App-owned fa
     appProfile.default_session_profile.reasoning_effort = futureReasoningEffort;
     appProfile.codex.default_model = futureModel;
     appProfile.codex.default_reasoning_effort = futureReasoningEffort;
+    appProfile.codex.auto_model_policy.configured_default.model = futureModel;
+    appProfile.codex.auto_model_policy.configured_default.reasoning_effort = futureReasoningEffort;
     appProfile.codex.auto_model_policy.catalog_unavailable_fallback.model = futureModel;
     appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = futureReasoningEffort;
     fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
@@ -752,7 +758,7 @@ test('Codex default profile exporter deterministically projects the App-owned fa
       encoding: 'utf8',
     });
     assert.notEqual(mismatch.status, 0);
-    assert.match(mismatch.stderr, /fallback reasoning effort must match codex\.default_reasoning_effort/);
+    assert.match(mismatch.stderr, /catalog fallback reasoning effort must match configured default reasoning effort/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
