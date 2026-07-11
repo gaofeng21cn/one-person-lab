@@ -514,136 +514,35 @@ test('runtime snapshot ignores retired Hermes cron residue', (t) => {
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
 });
 
-test('runtime snapshot projects MAS live study artifacts from domain manifest workspace locator', (t) => {
+test('runtime snapshot keeps MAS manifest projections non-authoritative without scanning study artifacts', (t) => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-mas-workspace-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   t.after(() => removeTempRoots(stateRoot, workspaceRoot, fixtureRoot));
-  const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
-  const profilePath = path.join(profileDir, 'dm.workspace.toml');
   const manifest = structuredClone(fixtures.medautoscience);
 
-  fs.mkdirSync(profileDir, { recursive: true });
-  fs.writeFileSync(profilePath, 'workspace_name = "dm"\n');
-  manifest.workspace_locator = {
-    ...((manifest.workspace_locator as Record<string, unknown>) ?? {}),
-    workspace_root: workspaceRoot,
-    profile_ref: profilePath,
-    profile_name: 'dm',
+  manifest.task_lifecycle = {
+    ...(manifest.task_lifecycle as Record<string, unknown>),
+    status: 'running',
+    session_id: 'mas-manifest-only-session',
+    run_id: 'mas-manifest-only-run',
+    human_gate_ids: [],
+    summary: 'Manifest-only runtime projection.',
   };
-
-  const writeStudy = (
-    studyId: string,
-    input: {
-      activeRunId: string | null;
-      healthStatus: string;
-      questStatus: string;
-      runtimeDecision: string;
-      recoveryActionMode: string;
-      currentRequiredAction: string;
-      publicationVerdict: string;
-      needsHumanIntervention?: boolean;
+  manifest.progress_projection = {
+    ...(manifest.progress_projection as Record<string, unknown>),
+    current_status: 'in_progress',
+    runtime_status: 'ready',
+    session_id: 'mas-manifest-only-session',
+    headline: 'Manifest-only runtime projection.',
+    attention_items: [],
+    human_gate_ids: [],
+    domain_projection: {
+      surface_kind: 'mas_progress_projection',
+      source_refs: ['mas://runtime/projection/latest.json'],
     },
-  ) => {
-    const studyRoot = path.join(workspaceRoot, 'studies', studyId);
-    const runtimeDir = path.join(studyRoot, 'artifacts', 'runtime');
-    fs.mkdirSync(path.join(runtimeDir, 'runtime_supervision'), { recursive: true });
-    fs.mkdirSync(path.join(studyRoot, 'artifacts', 'controller_decisions'), { recursive: true });
-    fs.mkdirSync(path.join(studyRoot, 'artifacts', 'publication_eval'), { recursive: true });
-    writeJsonFile(
-      path.join(runtimeDir, 'runtime_status_summary.json'),
-      {
-        study_id: studyId,
-        generated_at: '2026-04-29T12:00:00+00:00',
-        health_status: input.healthStatus,
-        runtime_decision: input.runtimeDecision,
-        recovery_action_mode: input.recoveryActionMode,
-        current_required_action: input.currentRequiredAction,
-        status_summary: 'Managed runtime is live.',
-        next_action_summary: 'Continue supervision.',
-        needs_human_intervention: input.needsHumanIntervention ?? false,
-        supervisor_tick_status: 'fresh',
-      },
-    );
-    writeJsonFile(
-      path.join(runtimeDir, 'runtime_supervision', 'latest.json'),
-      {
-        study_id: studyId,
-        recorded_at: '2026-04-29T12:00:00+00:00',
-        quest_status: input.questStatus,
-        active_run_id: input.activeRunId,
-        health_status: input.healthStatus,
-        runtime_decision: input.runtimeDecision,
-        next_action_summary: 'Continue supervision.',
-        needs_human_intervention: input.needsHumanIntervention ?? false,
-        worker_running: Boolean(input.activeRunId),
-      },
-    );
-    writeJsonFile(
-      path.join(studyRoot, 'artifacts', 'controller_decisions', 'latest.json'),
-      {
-        study_id: studyId,
-        emitted_at: '2026-04-29T12:00:00+00:00',
-        decision_type: 'bounded_analysis',
-        route_target: 'analysis-campaign',
-        route_key_question: 'close current evidence gaps',
-        reason: 'Continue same-line quality repair.',
-        requires_human_confirmation: false,
-      },
-    );
-    writeJsonFile(
-      path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json'),
-      {
-        study_id: studyId,
-        emitted_at: '2026-04-29T12:00:00+00:00',
-        verdict: {
-          overall_verdict: input.publicationVerdict,
-          summary: 'publication quality gate summary',
-        },
-        gaps: [{ summary: 'stale_submission_minimal_authority' }],
-        recommended_actions: [{ reason: 'refresh the current delivery bundle' }],
-      },
-    );
   };
-
-  writeStudy('002-dm-china-us-mortality-attribution', {
-    activeRunId: 'run-002',
-    healthStatus: 'live',
-    questStatus: 'running',
-    runtimeDecision: 'noop',
-    recoveryActionMode: 'inspect_progress',
-    currentRequiredAction: 'supervise_managed_runtime',
-    publicationVerdict: 'blocked',
-  });
-  writeStudy('003-dpcc-primary-care-phenotype-treatment-gap', {
-    activeRunId: 'run-003',
-    healthStatus: 'live',
-    questStatus: 'running',
-    runtimeDecision: 'noop',
-    recoveryActionMode: 'inspect_progress',
-    currentRequiredAction: 'supervise_managed_runtime',
-    publicationVerdict: 'pass',
-  });
-  writeStudy('004-invasive-architecture', {
-    activeRunId: null,
-    healthStatus: 'inactive',
-    questStatus: 'stopped',
-    runtimeDecision: 'blocked',
-    recoveryActionMode: 'auto_runtime_parked',
-    currentRequiredAction: 'stop_runtime',
-    publicationVerdict: 'blocked',
-  });
-  writeStudy('005-package-ready-handoff', {
-    activeRunId: null,
-    healthStatus: 'escalated',
-    questStatus: 'active',
-    runtimeDecision: 'blocked',
-    recoveryActionMode: 'auto_runtime_parked',
-    currentRequiredAction: 'continue_bundle_stage',
-    publicationVerdict: 'blocked',
-    needsHumanIntervention: true,
-  });
 
     bindWorkspaceProject('medautoscience', workspaceRoot, manifest, stateRoot, fixtureContractsRoot);
     const output = runCli(['runtime', 'snapshot'], {
@@ -653,35 +552,37 @@ test('runtime snapshot projects MAS live study artifacts from domain manifest wo
     });
     const snapshot = output.runtime_tray_snapshot;
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
+    const projection = snapshot.domain_projection_ingestion;
+    const masItem = findItem(snapshot.running_items, 'project_id', 'medautoscience');
+
+    assert.equal(fs.existsSync(path.join(workspaceRoot, 'studies')), false);
     assertPathValues(snapshot, [
       ['runtime_health.status', 'offline'],
-      ['attention_items.length', 2],
       ['running_items.length', 1],
-      ['running_items.0.item_id', 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap'],
       ['running_items.0.action_owner', 'none'],
       ['running_items.0.action_kind', 'running'],
-      ['recent_items.length', 1],
-      ['recent_items.0.item_id', 'medautoscience:study:005-package-ready-handoff'],
-      ['recent_items.0.action_owner', 'user'],
-      ['recent_items.0.requires_user_action', true],
-      ['recent_items.0.action_kind', 'handoff_review'],
-      ['recent_items.0.blockers', []],
-      ['action_counts', { user: 1, opl: 1, infrastructure: 1 }],
+      ['recent_items.length', 0],
     ]);
-    const dm002Item = findItem(snapshot.attention_items, 'item_id', 'medautoscience:study:002-dm-china-us-mortality-attribution');
-    assertPathValues(dm002Item, [
-      ['active_run_id', 'run-002'],
-      ['action_owner', 'opl'],
-      ['requires_user_action', false],
-      ['action_kind', 'publication_gate'],
-      ['recommended_commands.0.surface_kind', 'study_progress'],
-      ['recommended_commands.0.command', `uv run python -m med_autoscience.cli study progress --profile ${profilePath} --study-id 002-dm-china-us-mortality-attribution --format json`],
-      ['recommended_commands.length', 1],
-    ]);
-    assert.doesNotMatch(JSON.stringify(dm002Item.recommended_commands), /progress-projection/);
+    assert.equal(masItem.item_id.startsWith('medautoscience:study:'), false);
+    assert.equal(masItem.source_refs.some((ref: { role: string }) => ref.role === 'domain_manifest'), true);
+    assert.equal(projection.summary.domain_count, 1);
+    assert.equal(
+      projection.items.some((item: { pointer: string; source_refs: string[] }) =>
+        item.pointer === '/progress_projection/domain_projection'
+          && item.source_refs.includes('mas://runtime/projection/latest.json')
+      ),
+      true,
+    );
+    assert.equal(projection.authority_boundary.can_read_domain_truth_body, false);
+    assert.equal(projection.authority_boundary.can_write_domain_truth, false);
+    assert.equal(projection.authority_boundary.can_authorize_domain_ready, false);
+    assert.equal(projection.authority_boundary.can_authorize_quality_verdict, false);
+    assert.equal(projection.authority_boundary.can_authorize_export_verdict, false);
+    assert.equal(projection.authority_boundary.can_mutate_domain_artifact, false);
+    assert.equal(projection.authority_boundary.provider_completion_is_domain_ready, false);
     assert.equal(snapshot.attention_items.some((item: { item_id: string }) => item.item_id === 'opl:provider-continuous-proof:temporal'), true);
-    assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('004-invasive-architecture')), false);
-    assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
+    assert.equal(allItems.some((item: { item_id: string }) => item.item_id.startsWith('medautoscience:study:')), false);
+    assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'domain_projection_ingestion'), true);
 });
 
 test('runtime manager rejects retired Hermes legacy provider selection', () => {

@@ -17,7 +17,7 @@ import {
 } from './domain-pack-compiler-fixtures.ts';
 import {
   assertReadyPackCompilerSummary,
-  PACK_COMPILER_READY_DOMAIN_ALIASES,
+  PACK_COMPILER_DEFAULT_DOMAIN_ALIASES,
 } from './domain-pack-compiler-assertions.ts';
 
 test('domain pack compiler emits aligned generated artifact drift manifests for admitted packs', () => {
@@ -30,7 +30,7 @@ test('domain pack compiler emits aligned generated artifact drift manifests for 
   const list = runCli(['agents', 'pack-compiler'], env);
   assert.equal(
     list.domain_pack_compiler.summary.generated_artifact_drift_aligned_count,
-    PACK_COMPILER_READY_DOMAIN_ALIASES.length,
+    PACK_COMPILER_DEFAULT_DOMAIN_ALIASES.length,
   );
   assert.equal(list.domain_pack_compiler.summary.generated_artifact_drift_detected_count, 0);
 

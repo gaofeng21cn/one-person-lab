@@ -3,7 +3,7 @@ import { buildFamilyAgentDescriptorList } from '../../../../src/modules/atlas/fa
 import {
   assertReadyPackCompilerSummary,
   PACK_COMPILER_GENERATED_SURFACE_COUNT_PER_DOMAIN,
-  PACK_COMPILER_READY_DOMAIN_ALIASES,
+  PACK_COMPILER_DEFAULT_DOMAIN_ALIASES,
 } from './domain-pack-compiler-assertions.ts';
 import {
   attachManifestSurface,
@@ -42,7 +42,6 @@ test('domain pack compiler projects OPL-owned generated surfaces for admitted do
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.surface_kind, 'opl_generated_agent_interface_bundle');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.owner, 'one-person-lab');
   assert.equal(mas.domain_pack_compiler.generated_interface_bundle.domain_repo_can_own_generated_surface, false);
-  assert.equal(mas.domain_pack_compiler.generated_interface_bundle.status, 'ready');
   assert.deepEqual(mas.domain_pack_compiler.generated_interface_bundle.generated_from, [
     'family_action_catalog',
     'family_stage_control_plane',
@@ -109,12 +108,11 @@ test('domain pack compiler index keeps generated surfaces ready, aligned, and OP
     assert.equal(list.domain_pack_compiler.authority_boundary.opl_owns_generated_surfaces, true);
     assert.equal(list.domain_pack_compiler.authority_boundary.domain_repo_can_own_generated_surface, false);
 
-    for (const domain of PACK_COMPILER_READY_DOMAIN_ALIASES) {
+    for (const domain of PACK_COMPILER_DEFAULT_DOMAIN_ALIASES) {
       const inspection = runCli(['agents', 'pack-compiler', 'inspect', '--domain', domain], env)
         .domain_pack_compiler;
       assert.equal(inspection.compiler_status, 'ready');
       assert.equal(inspection.generated_interface_bundle.owner, 'one-person-lab');
-      assert.equal(inspection.generated_interface_bundle.status, 'ready');
       assert.equal(inspection.generated_interface_bundle.domain_repo_can_own_generated_surface, false);
       assert.equal(
         inspection.generated_surface_handoff.generated_surfaces.length,

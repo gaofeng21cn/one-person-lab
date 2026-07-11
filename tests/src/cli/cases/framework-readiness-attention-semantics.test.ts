@@ -265,7 +265,7 @@ test('framework readiness separates operator-actionable and domain-blocked atten
   }
 });
 
-test('framework readiness keeps mutation-guarded provider SLO tail out of operator-actionable attention', async () => {
+test('framework readiness keeps mutation-guarded provider SLO tail separate from independent operator attention', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-provider-slo-guard-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const familyWorkspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-framework-provider-slo-guard-family-'));
@@ -299,8 +299,11 @@ test('framework readiness keeps mutation-guarded provider SLO tail out of operat
       summary.app_live_evidence_tail_open_count
         + summary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
     );
-    assert.equal(summary.app_live_evidence_tail_open_count, 0);
-    assert.equal(attentionSummary.app_live_evidence_tail_open_count, 0);
+    assert.equal(summary.app_live_evidence_tail_open_count, 1);
+    assert.equal(
+      attentionSummary.app_live_evidence_tail_open_count,
+      summary.app_live_evidence_tail_open_count,
+    );
     assert.equal(
       attentionSummary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
       summary.app_live_evidence_tail_guarded_by_provider_worker_mutation_count,
@@ -333,7 +336,7 @@ test('framework readiness keeps mutation-guarded provider SLO tail out of operat
     assert.equal(
       readiness.app_operator_production_tail
         .app_operator_production_evidence_tail_operator_actionable_open_item_count,
-      0,
+      summary.app_live_evidence_tail_open_count,
     );
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
