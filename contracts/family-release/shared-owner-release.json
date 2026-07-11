@@ -1,10 +1,10 @@
 {
   "contract_kind": "family_shared_owner_release.v2",
   "owner_repo": "one-person-lab",
-  "owner_commit": "875805b212fe3aa52f79d8ecfcaea030deebec94",
+  "owner_commit": "1bf8af46bca9c09631540e49730890272cb3cebe",
   "latest_stable": {
     "ref": "latest-stable",
-    "commit": "875805b212fe3aa52f79d8ecfcaea030deebec94"
+    "commit": "1bf8af46bca9c09631540e49730890272cb3cebe"
   },
   "consumer_policy": {
     "manifest_channel": "latest-stable",
