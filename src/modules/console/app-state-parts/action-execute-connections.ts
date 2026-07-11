@@ -2,12 +2,12 @@ import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   createOplConnection,
   deleteOplConnection,
+  assertCredentialHandleOnlyPayload,
   listOplConnections,
   setDefaultOplConnection,
   testOplConnection,
   updateOplConnection,
 } from '../../connect/index.ts';
-import { assertCredentialHandleOnlyPayload } from '../../connect/connection-registry-parts/credential-handle.ts';
 
 type JsonRecord = Record<string, unknown>;
 

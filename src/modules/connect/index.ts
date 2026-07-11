@@ -19,6 +19,7 @@ export type {
   OplConnectionStatus,
   UpdateOplConnectionInput,
 } from './connection-registry.ts';
+export { assertCredentialHandleOnlyPayload } from './connection-registry-parts/credential-handle.ts';
 
 // Public cross-module surface generated from existing module consumers.
 export { buildEvidenceGroundedConnectSubstrate } from './evidence-grounded-substrate.ts';
