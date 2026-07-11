@@ -100,7 +100,7 @@ export function buildPublicAgentLabCommandSpecs(): Record<string, CommandSpec> {
     },
     'agent-lab longline': {
       usage: 'opl agent-lab longline',
-      summary: 'Show the central Agent Lab longline suite for MAS/MAG/RCA soak and recovery test consolidation.',
+      summary: 'Run the manifest-backed Agent Lab longline engine against the generic framework fixture.',
       examples: ['opl agent-lab longline', 'opl agent-lab longline --json'],
       group: 'framework',
       handler: (args) => {

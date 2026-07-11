@@ -134,12 +134,9 @@
   "oracle_ingestion": {
     "purpose": "adapt domain-owned transition oracle surfaces into the generic family transition spec without moving domain verdict authority into OPL",
     "supported_surfaces": [
-      "domain_transition_oracle",
-      "mag_grant_transition_oracle"
+      "domain_transition_oracle"
     ],
-    "compatibility_surfaces": [
-      "mag_grant_transition_oracle"
-    ],
+    "compatibility_surfaces": [],
     "adapter_boundary": {
       "opl": [
         "validate oracle table shape",

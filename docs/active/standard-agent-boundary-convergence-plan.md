@@ -58,6 +58,13 @@
 | B5 | `done_in_lane` | default executor receipt recovery 按 execution / stage packet / attempt owner 解析，并用 standard-agent registry 归一化；无 owner 返回 `owner_unresolved`，不再默认 MAS。 |
 | B10 | `done_in_lane` | Temporal production proof 使用 `example-domain`、generic memory ref 和 generic next owner；fixture 不再携带 MAS/publication vocabulary。 |
 | A11 transport prerequisite | `done_in_lane` | `AgentExecutionRequest.required_capabilities=["image_generation"]` 仅允许 `codex_cli`，未知 capability 或非 Codex executor fail closed；receipt 回读 requested/activated capabilities；`timeout_ms` 由 Codex process 实际执行并在超时时返回 typed fail-closed error；artifact authority 仍归 domain。 |
+| B2 | `partial_in_lane` | 私有 runtime CLI 已停止注册 OMA app-live/production-consumption 与 OMA replay/record hooks；synthetic descriptor、Framework Readiness、Console summary/action caller 仍需在允许修改公共 command registry 的后续 lane 切到 standard-agent extension profile。 |
+| B3 | `engine_done_domain_foldback_required` | validator 统一读取 domain-owned `contracts/standard_agent_conformance_profile.json`；golden path、morphology、residue token 均由 profile 声明，缺失或无效明确 blocked，无 MAS/MAG/RCA/OMA domain-id branch fallback。 |
+| B4 | `partial_in_lane` | longline runner 已从外部 suite manifest 加载，active TypeScript 不再内置 MAS/MAG/RCA scenario/oracle/static passed；Developer Mode 的旧内置 route drill 尚待迁到 eval suite manifest。 |
+| B6 | `engine_done_domain_foldback_required` | Stagecraft/Atlas 仅接受 `domain_transition_oracle`；`mag_grant_transition_oracle`、Grant 类型和 adapter aliases 已从 OPL ABI 删除。MAG 必须改发 canonical oracle。 |
+| B7 | `engine_done_domain_foldback_required` | Agent Profile Spine typed-object identity 改为 `opl_foundry_*` generic ABI；OMA 必须通过 repo-owned adapter contract 输出 canonical objects。 |
+| B8 | `done_in_lane` | legacy research frontier decoder 与 carrier aliases 已删除；Runway/Console 仅消费并输出 `stage_candidate_portfolio` canonical refs projection。 |
+| B9 | `engine_done_domain_foldback_required` | Console 删除 MAS paper-line 与 MAG owner-response shape decoder，只消费 `operator_evidence_readiness_projection` 的统一 owner/stage summary；MAS/MAG 必须输出该 projection。 |
 
 上述状态只表示当前 feature lane 的 source/contract/focused-test 结构完成；吸收 `main`、main 上 fresh 验证与 worktree cleanup 仍由 root closeout 执行。
 

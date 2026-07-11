@@ -356,8 +356,8 @@ function makeSourceDerivedAgentFixture() {
     fs.writeFileSync(filePath, `materialized:${fileRef}\n`);
   }
   const referenceDesignPacket = {
-    surface_kind: 'opl_meta_agent_reference_design_packet',
-    version: 'opl-meta-agent.reference-design-packet.v1',
+    surface_kind: 'opl_foundry_reference_design_packet',
+    version: 'opl.foundry.reference-design-packet.v1',
     packet_ref: referenceDesignPacketRefs[0],
     reference_source_refs: referenceDesignSourceRefs,
     reference_design_pattern_packet_refs: referenceDesignPacketRefs,
@@ -383,8 +383,8 @@ function makeSourceDerivedAgentFixture() {
     ],
   };
   const transferMap = {
-    surface_kind: 'opl_meta_agent_transfer_map',
-    version: 'opl-meta-agent.transfer-map.v1',
+    surface_kind: 'opl_foundry_transfer_map',
+    version: 'opl.foundry.transfer-map.v1',
     transfer_map_ref: transferMapRefs[0],
     reference_design_packet_ref: referenceDesignPacketRefs[0],
     mappings: [
@@ -411,8 +411,8 @@ function makeSourceDerivedAgentFixture() {
     ],
   };
   const agentPackPlan = {
-    surface_kind: 'opl_meta_agent_agent_pack_plan',
-    version: 'opl-meta-agent.agent-pack-plan.v1',
+    surface_kind: 'opl_foundry_agent_pack_plan',
+    version: 'opl.foundry.agent-pack-plan.v1',
     plan_ref: agentPackPlanRefs[0],
     reference_design_packet_ref: referenceDesignPacketRefs[0],
     transfer_map_ref: transferMapRefs[0],
@@ -433,7 +433,7 @@ function makeSourceDerivedAgentFixture() {
     'owner_accepted',
   ];
     const buildReceipt = {
-      surface_kind: 'opl_meta_agent_build_receipt',
+      surface_kind: 'opl_foundry_agent_build_receipt',
       receipt_kind: 'AgentBuildReceipt',
       version: 'opl-meta-agent.agent-build-receipt.v1',
       receipt_ref: buildReceiptRefs[0],
@@ -469,8 +469,8 @@ function makeSourceDerivedAgentFixture() {
       },
     };
     const designAdmissionReceipt = {
-      surface_kind: 'opl_meta_agent_design_admission_receipt',
-      version: 'opl-meta-agent.design-admission-receipt.v1',
+      surface_kind: 'opl_foundry_design_admission_receipt',
+      version: 'opl.foundry.design-admission-receipt.v1',
       receipt_ref: designAdmissionReceiptRefs[0],
       design_basis_kind: 'source_derived_design',
       source_derived_design_receipt_ref: 'source-derived-design-receipt-ref:colorectal-surgery-risk-from-paper',
@@ -1233,29 +1233,29 @@ test('profile conformance blocks hollow source-derived typed objects', () => {
   const capabilityMap = JSON.parse(fs.readFileSync(capabilityMapPath, 'utf8'));
 
   capabilityMap.reference_design_packet = {
-      surface_kind: 'opl_meta_agent_reference_design_packet',
-      version: 'opl-meta-agent.reference-design-packet.v1',
+      surface_kind: 'opl_foundry_reference_design_packet',
+      version: 'opl.foundry.reference-design-packet.v1',
       packet_ref: capabilityMap.reference_design_packet_ref,
       transferable_design_patterns: [{ pattern_id: 'generic-pattern' }],
   };
   capabilityMap.transfer_map = {
-      surface_kind: 'opl_meta_agent_transfer_map',
-      version: 'opl-meta-agent.transfer-map.v1',
+      surface_kind: 'opl_foundry_transfer_map',
+      version: 'opl.foundry.transfer-map.v1',
       transfer_map_ref: capabilityMap.transfer_map_ref,
       reference_design_packet_ref: capabilityMap.reference_design_packet_ref,
       mappings: [{ source_anchor_ref: 'ref-only' }],
   };
   capabilityMap.agent_pack_plan = {
-      surface_kind: 'opl_meta_agent_agent_pack_plan',
-      version: 'opl-meta-agent.agent-pack-plan.v1',
+      surface_kind: 'opl_foundry_agent_pack_plan',
+      version: 'opl.foundry.agent-pack-plan.v1',
       plan_ref: capabilityMap.agent_pack_plan_ref,
       reference_design_packet_ref: capabilityMap.reference_design_packet_ref,
       transfer_map_ref: capabilityMap.transfer_map_ref,
       planned_stage_refs: [{ stage_ref: 'stage:generic' }],
   };
   capabilityMap.design_admission_receipt = {
-      surface_kind: 'opl_meta_agent_design_admission_receipt',
-      version: 'opl-meta-agent.design-admission-receipt.v1',
+      surface_kind: 'opl_foundry_design_admission_receipt',
+      version: 'opl.foundry.design-admission-receipt.v1',
       receipt_ref: capabilityMap.design_admission_receipt_ref,
       reference_design_packet_ref: capabilityMap.reference_design_packet_ref,
       transfer_map_ref: capabilityMap.transfer_map_ref,

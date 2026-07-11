@@ -7,8 +7,8 @@ import { buildFamilyActionCatalogParity } from '../../kernel/family-action-catal
 import { pickSkillActivationProjection } from './family-domain-catalog.ts';
 import { buildFamilyStageControlPlaneParity } from '../stagecraft/index.ts';
 import {
-  adaptGrantTransitionOracleToFamilyTransitionSpec,
-  buildGrantTransitionOracleMatrixCases,
+  adaptDomainTransitionOracleToFamilyTransitionSpec,
+  buildDomainTransitionOracleMatrixCases,
 } from '../stagecraft/index.ts';
 import {
   runFamilyTransitionMatrix,
@@ -119,10 +119,10 @@ function buildDescriptorRefs(manifest: NormalizedDomainManifest | null) {
           ? 'resolved'
           : 'missing',
     },
-    grant_transition_oracle: {
+    domain_transition_oracle: {
       ref_kind: 'json_pointer',
-      ref: '/grant_transition_oracle',
-      status: manifest?.grant_transition_oracle ? 'resolved' : 'missing',
+      ref: '/domain_transition_oracle',
+      status: manifest?.domain_transition_oracle ? 'resolved' : 'missing',
     },
     visual_transition_spec: {
       ref_kind: 'json_pointer',
@@ -385,8 +385,8 @@ function buildFamilyTransitionProjection(entry: DomainManifestCatalogEntry) {
   };
 }
 
-function buildGrantTransitionOracleProjection(entry: DomainManifestCatalogEntry) {
-  const oracle = entry.manifest?.grant_transition_oracle ?? null;
+function buildDomainTransitionOracleProjection(entry: DomainManifestCatalogEntry) {
+  const oracle = entry.manifest?.domain_transition_oracle ?? null;
   if (!oracle) {
     return {
       status: componentStatus(entry, false),
@@ -403,8 +403,8 @@ function buildGrantTransitionOracleProjection(entry: DomainManifestCatalogEntry)
       authority_boundary: null,
     };
   }
-  const spec = adaptGrantTransitionOracleToFamilyTransitionSpec(oracle);
-  const cases = buildGrantTransitionOracleMatrixCases(oracle);
+  const spec = adaptDomainTransitionOracleToFamilyTransitionSpec(oracle);
+  const cases = buildDomainTransitionOracleMatrixCases(oracle);
   const matrix = runFamilyTransitionMatrix({ spec, cases });
   return {
     status: componentStatus(entry, true),
@@ -654,7 +654,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
   const actionCatalog = buildActionCatalogProjection(entry);
   const stageControlPlane = buildStageControlPlaneProjection(entry);
   const familyTransition = buildFamilyTransitionProjection(entry);
-  const grantTransitionOracle = buildGrantTransitionOracleProjection(entry);
+  const domainTransitionOracle = buildDomainTransitionOracleProjection(entry);
   const domainMemory = buildDomainMemoryProjection(entry);
   const skillCatalog = buildSkillProjection(manifest, entry);
   const runtimeSurfaces = buildRuntimeProjection(manifest, entry);
@@ -694,7 +694,7 @@ function buildDescriptor(entry: DomainManifestCatalogEntry) {
     family_action_catalog: actionCatalog,
     family_stage_control_plane: stageControlPlane,
     family_transition: familyTransition,
-    grant_transition_oracle: grantTransitionOracle,
+    domain_transition_oracle: domainTransitionOracle,
     domain_memory_descriptor: domainMemory,
     generated_surface_handoff_contract: manifest?.generated_surface_handoff ?? null,
     skill_catalog: skillCatalog,

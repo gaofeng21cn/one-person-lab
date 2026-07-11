@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/standard-agent-conformance-profile.schema.json",
+  "title": "OPL Standard Agent Conformance Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surface_kind", "version", "profile_id", "target_domain_id", "golden_path", "physical_morphology"],
+  "properties": {
+    "surface_kind": {"const": "opl_standard_agent_conformance_profile"},
+    "version": {"const": "opl.standard-agent-conformance-profile.v1"},
+    "profile_id": {"type": "string", "minLength": 1},
+    "target_domain_id": {"type": "string", "minLength": 1},
+    "golden_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_stage_ids", "allowed_stage_ids", "default_stage_id", "forbidden_owner_tokens"],
+      "properties": {
+        "required_stage_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "allowed_stage_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "default_stage_id": {"type": "string", "minLength": 1},
+        "forbidden_owner_tokens": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "physical_morphology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scan_roots", "allowed_residue_prefixes", "required_surface_ids", "surface_classifications", "forbidden_name_tokens", "required_parity_gates"],
+      "properties": {
+        "scan_roots": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "allowed_residue_prefixes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "required_surface_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "surface_classifications": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+        "forbidden_name_tokens": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "required_parity_gates": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    }
+  }
+}

@@ -14,8 +14,6 @@ import { buildNativeIndexSummary } from '../../../../modules/runway/native-index
 import { runFamilyRuntime } from '../../../../modules/runway/family-runtime.ts';
 import { buildStandardDomainAgentScaffold } from '../../../../modules/foundry-lab/standard-domain-agent-scaffold.ts';
 import { runFamilyAgentLegacyCleanupApply } from '../../../../modules/foundry-lab/family-domain-agent-skeleton.ts';
-import { recordOmaProductionConsumptionReceipts } from '../../../../modules/foundry-lab/oma-production-consumption-ledger.ts';
-import { repoTrackedOmaStageReplayMissingReceiptReceipts } from '../../../../modules/foundry-lab/oma-stage-replay-receipts.ts';
 import type { FrameworkContracts } from '../../../../kernel/types.ts';
 import { buildRuntimeAppReleaseEvidenceCommandSpecs } from '../runtime-app-release-evidence-command-spec.ts';
 import {
@@ -27,8 +25,6 @@ import {
   buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs,
 } from '../runtime-owner-evidence-sustained-consumption-command-spec.ts';
 import { buildRuntimeDeveloperModeCloseoutCommandSpecs } from '../runtime-developer-mode-closeout-command-spec.ts';
-import { buildRuntimeOmaAppLivePathCommandSpecs } from '../runtime-oma-app-live-path-command-spec.ts';
-import { buildRuntimeOmaProductionConsumptionCommandSpecs } from '../runtime-oma-production-consumption-command-spec.ts';
 import { buildIndexCommandSpec } from '../index-command-spec.ts';
 import { buildRuntimeStageRunEvidencePackCommandSpecs } from '../runtime-stage-run-evidence-pack-command-spec.ts';
 import {
@@ -322,8 +318,6 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeStageRunAuthorizationCommandSpecs(),
     ...buildRuntimeStageTransitionAuthorityCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
-    ...buildRuntimeOmaAppLivePathCommandSpecs(),
-    ...buildRuntimeOmaProductionConsumptionCommandSpecs(),
     ...buildRuntimeStageRunEvidencePackCommandSpecs(),
     ...buildRuntimeStageCandidatePortfolioCommandSpecs(),
     ...buildRuntimeEnvironmentCommandSpecs(),
@@ -338,7 +332,6 @@ export function buildPrivateRuntimeCommandSpecs({
       handler: (args) => runRuntimeOperatorActionExecute(getContracts(), args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,
         runFamilyAgentLegacyCleanupApply,
-        recordOmaProductionConsumptionReceipts,
       }),
     },
     'runtime lifecycle apply': {
@@ -678,7 +671,6 @@ export function buildPrivateRuntimeCommandSpecs({
       ],
       handler: (args) => runFamilyRuntime(args, {
         runtimeSnapshotProvider: buildRuntimeTraySnapshot,
-        stageReplayMissingReceiptExtraReceipts: repoTrackedOmaStageReplayMissingReceiptReceipts(),
       }),
     },
     'stage-artifact': {

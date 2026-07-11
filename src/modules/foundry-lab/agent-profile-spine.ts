@@ -790,8 +790,8 @@ function buildSourceDerivedTypedObjectFloor(
   const packetRef = machineString(packet?.packet_ref);
   if (packet && !hasTypedObjectIdentity(
     packet,
-    'opl_meta_agent_reference_design_packet',
-    'opl-meta-agent.reference-design-packet.v1',
+    'opl_foundry_reference_design_packet',
+    'opl.foundry.reference-design-packet.v1',
     'packet_ref',
   )) {
     blockers.push('source_derived_design_typed_object_identity_invalid:ReferenceDesignPacket');
@@ -836,8 +836,8 @@ function buildSourceDerivedTypedObjectFloor(
   if (transferMap && (
     !hasTypedObjectIdentity(
       transferMap,
-      'opl_meta_agent_transfer_map',
-      'opl-meta-agent.transfer-map.v1',
+      'opl_foundry_transfer_map',
+      'opl.foundry.transfer-map.v1',
       'transfer_map_ref',
     )
     || !packetRef
@@ -896,8 +896,8 @@ function buildSourceDerivedTypedObjectFloor(
   if (agentPackPlan && (
     !hasTypedObjectIdentity(
       agentPackPlan,
-      'opl_meta_agent_agent_pack_plan',
-      'opl-meta-agent.agent-pack-plan.v1',
+      'opl_foundry_agent_pack_plan',
+      'opl.foundry.agent-pack-plan.v1',
       'plan_ref',
     )
     || !packetRef
@@ -1029,8 +1029,8 @@ function buildSourceDerivedTypedObjectFloor(
   if (admissionReceipt && (
     !hasTypedObjectIdentity(
       admissionReceipt,
-      'opl_meta_agent_design_admission_receipt',
-      'opl-meta-agent.design-admission-receipt.v1',
+      'opl_foundry_design_admission_receipt',
+      'opl.foundry.design-admission-receipt.v1',
       'receipt_ref',
     )
     || !packetRef
@@ -1065,7 +1065,7 @@ function buildSourceDerivedTypedObjectFloor(
   const materializedReceiptStageIds = uniqueStrings(materialization?.materialized_stage_ids);
   const materializedFileDigests = recordArray(materialization?.materialized_file_digests);
   if (!buildReceipt || (
-    buildReceipt.surface_kind !== 'opl_meta_agent_build_receipt'
+    buildReceipt.surface_kind !== 'opl_foundry_agent_build_receipt'
     || buildReceipt.receipt_kind !== 'AgentBuildReceipt'
     || !buildReceiptRef
     || buildReceipt.receipt_timing !== 'post_materialization'

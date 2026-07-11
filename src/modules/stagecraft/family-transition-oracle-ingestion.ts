@@ -8,7 +8,7 @@ import type {
 
 type JsonRecord = Record<string, unknown>;
 
-export type DomainTransitionOracleSurfaceKind = 'domain_transition_oracle' | 'mag_grant_transition_oracle';
+export type DomainTransitionOracleSurfaceKind = 'domain_transition_oracle';
 
 export type DomainTransitionOracle = {
   surface_kind: DomainTransitionOracleSurfaceKind;
@@ -43,10 +43,6 @@ export type DomainTransitionOracle = {
   validation?: JsonRecord;
 };
 
-export type GrantTransitionOracle = DomainTransitionOracle & {
-  surface_kind: 'mag_grant_transition_oracle';
-};
-
 const DEFAULT_AUTHORITY_BOUNDARY = {
   opl: 'transition_runner_transport_projection_only',
   domain: 'truth_quality_artifact_gate_owner',
@@ -76,7 +72,7 @@ function requireOracleRecordList(value: unknown, field: string) {
 
 function normalizeOracleSurfaceKind(value: unknown): DomainTransitionOracleSurfaceKind {
   const surfaceKind = optionalString(value);
-  if (surfaceKind === 'domain_transition_oracle' || surfaceKind === 'mag_grant_transition_oracle') {
+  if (surfaceKind === 'domain_transition_oracle') {
     return surfaceKind;
   }
   throw new Error(`Unsupported domain transition oracle surface_kind: ${surfaceKind ?? '<missing>'}`);
@@ -85,9 +81,7 @@ function normalizeOracleSurfaceKind(value: unknown): DomainTransitionOracleSurfa
 function normalizeTransitionOracle(value: unknown): DomainTransitionOracle {
   const oracle = requireOracleRecord(value, 'domain_transition_oracle');
   const surfaceKind = normalizeOracleSurfaceKind(oracle.surface_kind);
-  const fieldPrefix = surfaceKind === 'mag_grant_transition_oracle'
-    ? 'grant_transition_oracle'
-    : 'domain_transition_oracle';
+  const fieldPrefix = 'domain_transition_oracle';
   const transitionTable = requireOracleRecordList(oracle.transition_table, `${fieldPrefix}.transition_table`)
     .map((entry, index) => ({
       transition_id: requireOracleString(entry.transition_id, `${fieldPrefix}.transition_table[${index}].transition_id`),
@@ -141,20 +135,8 @@ export function normalizeDomainTransitionOracle(value: unknown): DomainTransitio
   return normalizeTransitionOracle(value);
 }
 
-export function normalizeGrantTransitionOracle(value: unknown): GrantTransitionOracle {
-  const oracle = normalizeTransitionOracle(value);
-  if (oracle.surface_kind !== 'mag_grant_transition_oracle') {
-    throw new Error(`Expected mag_grant_transition_oracle but received ${oracle.surface_kind}.`);
-  }
-  return oracle as GrantTransitionOracle;
-}
-
-function oracleRefPrefix(oracle: DomainTransitionOracle) {
-  return oracle.surface_kind === 'mag_grant_transition_oracle' ? 'mag' : 'domain';
-}
-
 function adaptNormalizedTransitionOracleToFamilyTransitionSpec(oracle: DomainTransitionOracle): FamilyTransitionSpec {
-  const refPrefix = oracleRefPrefix(oracle);
+  const refPrefix = 'domain';
   const guards: Record<string, FamilyTransitionGuardDefinition> = {};
   for (const transition of oracle.transition_table) {
     guards[transition.guard_id] = {
@@ -255,10 +237,6 @@ export function adaptDomainTransitionOracleToFamilyTransitionSpec(value: unknown
   return adaptNormalizedTransitionOracleToFamilyTransitionSpec(normalizeDomainTransitionOracle(value));
 }
 
-export function adaptGrantTransitionOracleToFamilyTransitionSpec(value: unknown): FamilyTransitionSpec {
-  return adaptNormalizedTransitionOracleToFamilyTransitionSpec(normalizeGrantTransitionOracle(value));
-}
-
 function buildTransitionOracleMatrixCases(oracle: DomainTransitionOracle): FamilyTransitionMatrixCase[] {
   const transitionById = new Map(oracle.transition_table.map((entry) => [entry.transition_id, entry]));
   return oracle.oracle_fixtures.map((fixture) => {
@@ -285,8 +263,4 @@ function buildTransitionOracleMatrixCases(oracle: DomainTransitionOracle): Famil
 
 export function buildDomainTransitionOracleMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
   return buildTransitionOracleMatrixCases(normalizeDomainTransitionOracle(value));
-}
-
-export function buildGrantTransitionOracleMatrixCases(value: unknown): FamilyTransitionMatrixCase[] {
-  return buildTransitionOracleMatrixCases(normalizeGrantTransitionOracle(value));
 }

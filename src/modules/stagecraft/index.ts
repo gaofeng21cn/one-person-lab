@@ -26,8 +26,8 @@ export { normalizeFamilyStageControlPlane } from './family-stage-control-plane-c
 export type { FamilyStageControlPlane, FamilyStageDescriptor, FamilyStageSurfaceRef } from './family-stage-control-plane-contract.ts';
 export { buildFamilyStageProofBundle } from './family-stage-proof-bundle.ts';
 export { buildFamilyStageRuntimeBudgetProjection } from './family-stage-runtime-budget.ts';
-export { adaptDomainTransitionOracleToFamilyTransitionSpec, adaptGrantTransitionOracleToFamilyTransitionSpec, buildDomainTransitionOracleMatrixCases, buildGrantTransitionOracleMatrixCases, normalizeDomainTransitionOracle, normalizeGrantTransitionOracle } from './family-transition-oracle-ingestion.ts';
-export type { DomainTransitionOracle, DomainTransitionOracleSurfaceKind, GrantTransitionOracle } from './family-transition-oracle-ingestion.ts';
+export { adaptDomainTransitionOracleToFamilyTransitionSpec, buildDomainTransitionOracleMatrixCases, normalizeDomainTransitionOracle } from './family-transition-oracle-ingestion.ts';
+export type { DomainTransitionOracle, DomainTransitionOracleSurfaceKind } from './family-transition-oracle-ingestion.ts';
 export { runFamilyTransitionMatrix } from './family-transition-runner.ts';
 export type { FamilyTransitionInput, FamilyTransitionMatrixCase, FamilyTransitionMatrixResult, FamilyTransitionResult, FamilyTransitionSpec } from './family-transition-runner.ts';
 export { buildStagecraftDomainProfileRegistryReadback } from './domain-profile-registry.ts';

@@ -1,0 +1,77 @@
+{
+  "suite_id": "opl-agent-lab-example-domain-longline-suite",
+  "suite_kind": "agent_lab_longline_suite",
+  "tasks": [
+    {
+      "task_id": "agent-lab-longline-task:example-domain/transport-recovery",
+      "domain_id": "example-domain",
+      "task_family": "framework_transport_recovery_fixture",
+      "environment": {
+        "environment_kind": "fixture",
+        "workspace_locator_ref": "workspace-locator:example-domain/fixture",
+        "sandbox_policy": "fixture_only_no_domain_write",
+        "network_policy": "offline"
+      },
+      "instructions_ref": "instructions:example-domain/transport-recovery",
+      "agent_entry_ref": "domain-agent-entry:example-domain",
+      "stage_refs": ["stage:example-domain/transport-recovery"],
+      "oracle_refs": ["oracle:example-domain/fixture-owner"],
+      "scorer_refs": ["scorer:example-domain/fixture-owner"],
+      "recovery_probes": [
+        {
+          "probe_ref": "recovery-probe:example-domain/not-observed",
+          "probe_kind": "resume_after_interruption",
+          "expected_status": "passed",
+          "observed_status": "blocked",
+          "source_refs": ["typed-blocker-ref:example-domain/no-live-observation"]
+        }
+      ],
+      "trajectory": {
+        "trajectory_ref": "trajectory:example-domain/fixture",
+        "run_ref": "run:example-domain/fixture",
+        "agent_executor": "codex_cli",
+        "stage_attempt_refs": ["stage-attempt:example-domain/fixture"],
+        "tool_call_refs": ["tool-call:opl/fixture"],
+        "artifact_refs": ["artifact-ref:example-domain/fixture-locator-only"],
+        "receipt_refs": ["typed-blocker-ref:example-domain/no-owner-receipt"],
+        "repair_refs": ["repair-ref:example-domain/fixture"]
+      },
+      "scorecard": {
+        "scorecard_ref": "quality-scorecard:example-domain/not-observed",
+        "domain_owned": true,
+        "opl_scorecard_role": "scorecard_ref_projection_only",
+        "passed": false,
+        "metric_refs": ["metric-ref:example-domain/not-observed"],
+        "evidence_refs": ["typed-blocker-ref:example-domain/no-live-observation"],
+        "review_refs": [],
+        "quality_gate_refs": ["quality-gate:example-domain/owner"]
+      },
+      "improvement_candidate": {
+        "candidate_ref": "improvement-candidate:example-domain/fixture",
+        "candidate_kind": "stage_policy",
+        "target_ref": "stage-policy-ref:example-domain/fixture",
+        "evidence_refs": ["typed-blocker-ref:example-domain/no-live-observation"],
+        "allowed_change_scope": "manual_review_required",
+        "promotion_gate_ref": "promotion-gate:example-domain/fixture"
+      },
+      "promotion_gate": {
+        "gate_ref": "promotion-gate:example-domain/fixture",
+        "gate_status": "blocked",
+        "required_refs": ["quality-scorecard:example-domain/not-observed"],
+        "regression_suite_refs": ["regression-suite:example-domain/fixture"],
+        "no_forbidden_write_proof_refs": ["no-forbidden-write:example-domain/fixture"]
+      },
+      "stage_completion_policy": {
+        "surface_kind": "domain_stage_completion_policy",
+        "policy_ref": "stage-completion-policy:example-domain/fixture",
+        "completion_judgment_owner": "domain_stage",
+        "closeout_packet_required": true,
+        "provider_completion_is_domain_completion": false,
+        "opl_content_judgment_allowed": false,
+        "next_stage_transition_owner": "opl_runtime",
+        "required_closeout_outcomes": ["completed_and_continue", "completed_and_wait_owner", "route_back", "blocked", "rejected"],
+        "accepted_closeout_ref_fields": ["owner_receipt_ref", "typed_blocker_ref", "human_gate_ref", "route_back_ref"]
+      }
+    }
+  ]
+}

@@ -63,5 +63,7 @@ test('standard domain-agent conformance keeps physical morphology in scoped modu
   assert.ok(morphologyLines <= 700, `physical morphology checks should remain reviewable, got ${morphologyLines}`);
   assert.match(entrySource, /buildPhysicalMorphologyChecks/);
   assert.equal(entrySource.includes('ACTIVE_MORPHOLOGY_SCAN_ROOTS'), false);
-  assert.equal(morphologySource.includes('ACTIVE_MORPHOLOGY_SCAN_ROOTS'), true);
+  assert.equal(morphologySource.includes('readStandardAgentConformanceProfile'), true);
+  assert.equal(morphologySource.includes('med-autogrant'), false);
+  assert.equal(morphologySource.includes('redcube-ai'), false);
 });

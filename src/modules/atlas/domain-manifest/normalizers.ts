@@ -44,7 +44,7 @@ import {
 } from './surface-utils.ts';
 import {
   buildStandardDomainAgentSkeletonCandidate,
-  normalizeGrantTransitionOracleSurface,
+  normalizeDomainTransitionOracleSurface,
   normalizeProductEntryStatus,
 } from './status-skeleton-normalizers.ts';
 import type {
@@ -947,7 +947,7 @@ export function normalizeManifest(
   );
   const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
   const familyTransitionSurfaces = normalizeFamilyTransitionSurfaces(manifest, manifestTargetDomainId);
-  const grantTransitionOracle = normalizeGrantTransitionOracleSurface(manifest.grant_transition_oracle);
+  const domainTransitionOracle = normalizeDomainTransitionOracleSurface(manifest.domain_transition_oracle);
   const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
   const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
@@ -1086,7 +1086,7 @@ export function normalizeManifest(
     family_transition_materialization: isRecord(manifest.family_transition_materialization)
       ? manifest.family_transition_materialization
       : null,
-    grant_transition_oracle: grantTransitionOracle,
+    domain_transition_oracle: domainTransitionOracle,
     visual_transition_spec: familyTransitionSurfaces.visual_transition_spec,
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,

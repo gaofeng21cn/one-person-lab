@@ -7,9 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import {
   adaptDomainTransitionOracleToFamilyTransitionSpec,
-  adaptGrantTransitionOracleToFamilyTransitionSpec,
   buildDomainTransitionOracleMatrixCases,
-  buildGrantTransitionOracleMatrixCases,
 } from '../../src/modules/stagecraft/family-transition-oracle-ingestion.ts';
 import {
   adaptVisualTransitionSpecToFamilyTransitionSpec,
@@ -131,8 +129,8 @@ const masLikeTransitionSpec = {
   ],
 } satisfies FamilyTransitionSpec;
 
-const magLikeGrantTransitionOracle = {
-  surface_kind: 'mag_grant_transition_oracle',
+const domainTransitionOracle = {
+  surface_kind: 'domain_transition_oracle',
   version: 'mag-grant-transition-oracle.v1',
   oracle_id: 'mag.grant_transition.oracle.v1',
   target_domain_id: 'med-autogrant',
@@ -528,11 +526,8 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.equal(contract.runner_model, 'domain_declared_transition_table');
   assert.equal(contract.contract_version, 'family-transition-runner.v1');
   assert.equal(packageJson.exports['./family-transition-runner'], './dist/modules/stagecraft/family-transition-runner.js');
-  assert.deepEqual(contract.oracle_ingestion.supported_surfaces, [
-    'domain_transition_oracle',
-    'mag_grant_transition_oracle',
-  ]);
-  assert.deepEqual(contract.oracle_ingestion.compatibility_surfaces, ['mag_grant_transition_oracle']);
+  assert.deepEqual(contract.oracle_ingestion.supported_surfaces, ['domain_transition_oracle']);
+  assert.deepEqual(contract.oracle_ingestion.compatibility_surfaces, []);
   assert.ok((contract.oracle_ingestion.adapter_boundary.opl as string[]).includes('adapt oracle fixtures into matrix cases'));
   assert.ok((contract.oracle_ingestion.adapter_boundary.domain_agent as string[]).includes('fundability verdict'));
   assert.ok((contract.runner_execution_boundary.opl_executes as string[]).includes('domain-declared transition spec'));
@@ -595,9 +590,9 @@ test('family transition runner contract keeps generic execution in OPL and domai
   assert.ok((contract.authority_boundary.domain_agent as string[]).includes('oracle fixtures'));
 });
 
-test('grant transition oracle adapts MAG-owned table and fixtures into the generic matrix runner', () => {
-  const spec = adaptGrantTransitionOracleToFamilyTransitionSpec(magLikeGrantTransitionOracle);
-  const cases = buildGrantTransitionOracleMatrixCases(magLikeGrantTransitionOracle);
+test('domain transition oracle adapts a domain-owned table and fixtures into the generic matrix runner', () => {
+  const spec = adaptDomainTransitionOracleToFamilyTransitionSpec(domainTransitionOracle);
+  const cases = buildDomainTransitionOracleMatrixCases(domainTransitionOracle);
   const matrix = runFamilyTransitionMatrix({ spec, cases });
 
   assert.equal(spec.surface_kind, 'family_transition_spec');
@@ -614,7 +609,7 @@ test('grant transition oracle adapts MAG-owned table and fixtures into the gener
   assert.equal(spec.transitions[0].event, 'domain_tick');
   assert.deepEqual(spec.transitions[0].required_guards, ['call_materials_and_profile_selected']);
   assert.deepEqual(spec.transitions[0].next_work_unit, {
-    work_unit_ref: 'mag-work-unit:fundability_strategy',
+    work_unit_ref: 'domain-work-unit:fundability_strategy',
     action_refs: ['open_grant_user_loop'],
     metadata: {
       owner_action: 'open_grant_user_loop',
@@ -624,10 +619,10 @@ test('grant transition oracle adapts MAG-owned table and fixtures into the gener
     },
   });
   assert.deepEqual(spec.transitions[0].receipt?.receipt_refs, [
-    'mag-transition-receipt:intake_handoff_receipt',
+    'domain-transition-receipt:intake_handoff_receipt',
   ]);
   assert.equal(spec.transitions[1].typed_blocker?.blocker_code, 'human_gate_receipt');
-  assert.equal(spec.transitions[1].human_gate?.gate_ref, 'mag-human-gate:fundability_blocked_to_human_gate');
+  assert.equal(spec.transitions[1].human_gate?.gate_ref, 'domain-human-gate:fundability_blocked_to_human_gate');
   assert.equal(spec.authority_boundary.opl_can_infer_fundability_ready, false);
 
   assert.equal(cases.length, 3);
@@ -668,7 +663,7 @@ test('grant transition oracle adapts MAG-owned table and fixtures into the gener
 
 test('domain transition oracle adapts non-MAG domain tables through the same generic runner', () => {
   const domainOracle = {
-    ...magLikeGrantTransitionOracle,
+    ...domainTransitionOracle,
     surface_kind: 'domain_transition_oracle',
     oracle_id: 'domain.transition.oracle.v1',
     target_domain_id: 'example-domain',
