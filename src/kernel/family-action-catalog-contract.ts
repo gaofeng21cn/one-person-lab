@@ -37,6 +37,7 @@ export interface FamilyActionSourceOfWork {
 }
 
 export type FamilyActionStageRoutePolicy = 'ordered_stage_attempts_no_skip';
+export type FamilyActionStageRouteExemption = 'domain_handler_target_only';
 
 export interface FamilyActionStageRoute {
   entry_stage_ref: string;
@@ -62,6 +63,7 @@ export interface FamilyActionCatalogAction {
   workspace_locator_fields: string[];
   human_gate_ids: string[];
   stage_route?: FamilyActionStageRoute;
+  stage_route_exempt?: FamilyActionStageRouteExemption;
   supported_surfaces: {
     cli: FamilyActionSurfaceDescriptor | null;
     mcp: FamilyActionSurfaceDescriptor | null;
@@ -256,6 +258,46 @@ function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRo
   };
 }
 
+function normalizeStageRouteExemption(
+  value: unknown,
+  effect: FamilyActionEffect,
+  stageRoute: FamilyActionStageRoute | null,
+  supportedSurfaces: FamilyActionCatalogAction['supported_surfaces'],
+  field: string,
+): FamilyActionStageRouteExemption | null {
+  if (value === undefined) {
+    return null;
+  }
+  const exemption = requireString(value, `${field}.stage_route_exempt`);
+  if (exemption !== 'domain_handler_target_only') {
+    throw new Error(`${field}.stage_route_exempt must be domain_handler_target_only.`);
+  }
+  if (effect !== 'mutating') {
+    throw new Error(`${field}.stage_route_exempt=domain_handler_target_only requires effect=mutating.`);
+  }
+  if (stageRoute) {
+    throw new Error(`${field}.stage_route_exempt=domain_handler_target_only must not declare stage_route.`);
+  }
+  const mcpTarget = supportedSurfaces.mcp;
+  const hasPublicDirectSurface = [
+    supportedSurfaces.cli,
+    supportedSurfaces.skill,
+    supportedSurfaces.openai,
+    supportedSurfaces.ai_sdk,
+  ].some((surface) => surface !== null);
+  if (
+    !mcpTarget
+    || mcpTarget.descriptor_only !== true
+    || mcpTarget.public_runtime !== false
+    || hasPublicDirectSurface
+  ) {
+    throw new Error(
+      `${field}.stage_route_exempt=domain_handler_target_only requires a descriptor-only non-public MCP target.`,
+    );
+  }
+  return 'domain_handler_target_only';
+}
+
 function normalizeFamilyAction(value: unknown, field: string, catalogId: string | null): FamilyActionCatalogAction {
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
@@ -297,6 +339,21 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
   }
   const sourceCommandText = requireString(sourceCommand.command, `${field}.source_command.command`);
   const stageRoute = normalizeStageRoute(value.stage_route, `${field}.stage_route`);
+  const normalizedSupportedSurfaces = {
+    cli: normalizeSurfaceDescriptor(supportedSurfaces.cli),
+    mcp: normalizeSurfaceDescriptor(supportedSurfaces.mcp),
+    skill: normalizeSurfaceDescriptor(supportedSurfaces.skill),
+    product_entry: normalizeSurfaceDescriptor(supportedSurfaces.product_entry),
+    openai: normalizeSurfaceDescriptor(supportedSurfaces.openai),
+    ai_sdk: normalizeSurfaceDescriptor(supportedSurfaces.ai_sdk),
+  };
+  const stageRouteExemption = normalizeStageRouteExemption(
+    value.stage_route_exempt,
+    rawEffect,
+    stageRoute,
+    normalizedSupportedSurfaces,
+    field,
+  );
 
   return {
     action_id: actionId,
@@ -317,14 +374,8 @@ function normalizeFamilyAction(value: unknown, field: string, catalogId: string 
     workspace_locator_fields: workspaceLocatorFields,
     human_gate_ids: stringList(value.human_gate_ids),
     ...(stageRoute ? { stage_route: stageRoute } : {}),
-    supported_surfaces: {
-      cli: normalizeSurfaceDescriptor(supportedSurfaces.cli),
-      mcp: normalizeSurfaceDescriptor(supportedSurfaces.mcp),
-      skill: normalizeSurfaceDescriptor(supportedSurfaces.skill),
-      product_entry: normalizeSurfaceDescriptor(supportedSurfaces.product_entry),
-      openai: normalizeSurfaceDescriptor(supportedSurfaces.openai),
-      ai_sdk: normalizeSurfaceDescriptor(supportedSurfaces.ai_sdk),
-    },
+    ...(stageRouteExemption ? { stage_route_exempt: stageRouteExemption } : {}),
+    supported_surfaces: normalizedSupportedSurfaces,
     authority_boundary: isRecord(value.authority_boundary) ? value.authority_boundary : null,
     handler_binding: resolveFamilyActionHandlerBinding(sourceCommandText, actionId),
   };

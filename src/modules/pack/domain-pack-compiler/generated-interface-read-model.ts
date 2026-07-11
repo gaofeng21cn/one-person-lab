@@ -219,9 +219,12 @@ function buildSupportedDerivedSurfaces() {
 }
 
 function buildActionStageRoutes(catalog: FamilyActionCatalog | null) {
-  return catalog?.actions.flatMap((action) => action.stage_route
+  return catalog?.actions.flatMap((action) => (
+    action.stage_route
+    && action.stage_route_exempt !== 'domain_handler_target_only'
     ? [{ action_id: action.action_id, ...action.stage_route }]
-    : []) ?? [];
+    : []
+  )) ?? [];
 }
 
 function buildSourceOfWorkLineage(catalog: FamilyActionCatalog | null, stageControlPlane: FamilyStageControlPlane | null) {
@@ -573,11 +576,17 @@ function formatDescriptorBlock(
       family_stage_control_plane: stageControlPlane,
     };
   }
+  const publicCatalog = format === 'mcp'
+    ? catalog
+    : {
+      ...catalog,
+      actions: catalog.actions.filter((action) => action.stage_route_exempt !== 'domain_handler_target_only'),
+    };
   return {
     format,
     owner: 'one-person-lab',
     status: 'ready',
-    descriptors: projectFamilyActionCatalog(catalog, format),
+    descriptors: projectFamilyActionCatalog(publicCatalog, format),
   };
 }
 

@@ -18,6 +18,8 @@ Action 不能再只声明“哪些 Stage 允许它”，还可以声明一条可
 
 declarative manifest 可以从 route-free Pack 渐进迁移：没有 mutating Action 声明 route 时维持既有 launch；一旦任一 mutating Action 声明 route，全部 mutating Action 都必须声明。read-only Action 只观察当前 Stage，不伪装成要执行的多 Stage workflow，其可观察范围继续由 Stage `allowed_action_refs` 表达。OPL 会校验 Stage 存在性、action allow-list 双向一致、required 顺序可达性和 optional 分支的 entry-to-terminal 可达性，并把 route 投影到 generated interfaces。
 
+唯一例外是 `stage_route_exempt=domain_handler_target_only`：它只适用于 mutating 的内部 domain handler target，必须没有 `stage_route`、不得被任何 Stage 的 `allowed_action_refs` 引用，并且只能声明 `descriptor_only=true`、`public_runtime=false` 的 MCP target。它保留在 family action catalog 和 product-entry 元数据中，供 OPL-hosted handler 定位；不会进入 Stage admission、`action_stage_routes` 或生成的 CLI、Skill、OpenAI、AI SDK 执行入口。
+
 ## Progress-first 边界
 
 route 合同不是第二套 scheduler，也不引入独立 reviewer、人工审批或新的运行时状态机。普通 Stage closeout 满足原有 receipt/typed output 合同后直接进入下一个 required Stage；只有原 Stage 自身已经声明的 human gate、authority mutation 或 quality/export closeout 才能形成合法 gate。

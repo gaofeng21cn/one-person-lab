@@ -104,6 +104,17 @@ export function buildFamilyActionStageRouteParity(
   const issues: string[] = [];
   const stagesById = new Map(plane.stages.map((stage) => [stage.stage_id, stage]));
   for (const action of catalog.actions) {
+    if (action.stage_route_exempt === 'domain_handler_target_only') {
+      const executableStages = plane.stages
+        .filter((stage) => stage.allowed_action_refs.includes(action.action_id))
+        .map((stage) => stage.stage_id);
+      if (executableStages.length > 0) {
+        issues.push(
+          `${action.action_id}: target-only action must not be allowed by a stage: ${executableStages.join(', ')}`,
+        );
+      }
+      continue;
+    }
     if (!action.stage_route) {
       if (options.require_declared_routes === true && action.effect === 'mutating') {
         issues.push(`${action.action_id}: missing required stage_route`);
@@ -118,7 +129,10 @@ export function buildFamilyActionStageRouteParity(
     status: issues.length === 0 ? 'aligned' : 'drift_detected',
     route_policy: 'ordered_stage_attempts_no_skip',
     declared_route_count: catalog.actions.filter((action) => Boolean(action.stage_route)).length,
-    required_route_action_count: catalog.actions.filter((action) => action.effect === 'mutating').length,
+    required_route_action_count: catalog.actions.filter((action) => (
+      action.effect === 'mutating'
+      && action.stage_route_exempt !== 'domain_handler_target_only'
+    )).length,
     action_count: catalog.actions.length,
     issues,
   };

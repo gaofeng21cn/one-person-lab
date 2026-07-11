@@ -23,6 +23,12 @@ const GENERATED_DESCRIPTOR_SURFACES: GeneratedSurfaceId[] = [
   'ai_sdk',
 ];
 
+function expectedGeneratedSurfaces(action: FamilyActionCatalogAction) {
+  return action.stage_route_exempt === 'domain_handler_target_only'
+    ? ['mcp', 'product_entry'] as GeneratedSurfaceId[]
+    : GENERATED_DESCRIPTOR_SURFACES;
+}
+
 function sourceActionId(action: FamilyActionCatalogAction) {
   return action.source_of_work?.source_action_id ?? action.action_id;
 }
@@ -138,6 +144,7 @@ export function buildGeneratedDirectParityProof(
   const issues: string[] = [];
   const acceptedAnswerShapeRoundtrip: Record<string, unknown>[] = [];
   const actionParity = catalog.actions.map((action) => {
+    const expectedSurfaces = expectedGeneratedSurfaces(action);
     const expectedSourceActionId = sourceActionId(action);
     const generatedAcceptedAnswerShapeRefs: Record<GeneratedSurfaceId, string | null> = {
       cli: null,
@@ -148,6 +155,16 @@ export function buildGeneratedDirectParityProof(
       ai_sdk: null,
     };
     const surfaceParity = GENERATED_DESCRIPTOR_SURFACES.map((surface) => {
+      if (!expectedSurfaces.includes(surface)) {
+        return {
+          surface_id: surface,
+          status: 'not_applicable' as const,
+          source_action_id: expectedSourceActionId,
+          generated_descriptor_id: null,
+          output_schema_ref: action.output_schema_ref,
+          accepted_answer_shape_ref: action.output_schema_ref,
+        };
+      }
       const block = blocks[surface];
       const descriptors = block
         && typeof block === 'object'
@@ -178,7 +195,7 @@ export function buildGeneratedDirectParityProof(
         accepted_answer_shape_ref: action.output_schema_ref,
       };
     });
-    const roundtripAligned = GENERATED_DESCRIPTOR_SURFACES.every(
+    const roundtripAligned = expectedSurfaces.every(
       (surface) => generatedAcceptedAnswerShapeRefs[surface] === action.output_schema_ref,
     );
     acceptedAnswerShapeRoundtrip.push({
@@ -196,8 +213,11 @@ export function buildGeneratedDirectParityProof(
       source_action_id: expectedSourceActionId,
       direct_target_command: action.source_command.command,
       accepted_answer_shape_ref: action.output_schema_ref,
+      expected_generated_surface_ids: expectedSurfaces,
       generated_surfaces: surfaceParity,
-      status: surfaceParity.every((surface) => surface.status === 'aligned') ? 'aligned' : 'drift_detected',
+      status: surfaceParity.every(
+        (surface) => surface.status === 'aligned' || surface.status === 'not_applicable',
+      ) ? 'aligned' : 'drift_detected',
     };
   });
 

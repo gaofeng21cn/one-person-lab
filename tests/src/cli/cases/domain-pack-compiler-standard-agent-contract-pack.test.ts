@@ -43,6 +43,13 @@ test('generated interfaces can compile a standard agent repo contract pack witho
           output_schema_ref: 'contracts/draft-brief.output.schema.json',
           workspace_locator_fields: ['workspace_root'],
           human_gate_ids: ['brief_owner_review'],
+          stage_route: {
+            entry_stage_ref: 'brief-draft',
+            required_stage_refs: ['brief-draft'],
+            optional_stage_refs: [],
+            terminal_stage_refs: ['brief-draft'],
+            route_policy: 'ordered_stage_attempts_no_skip',
+          },
           supported_surfaces: {
             cli: {
               command: 'sample-brief-agent draft --workspace-root <workspace_root>',
@@ -65,6 +72,41 @@ test('generated interfaces can compile a standard agent repo contract pack witho
             },
             openai: { tool_name: 'sample_brief_agent_draft_brief' },
             ai_sdk: { tool_name: 'sample_brief_agent_draft_brief' },
+          },
+          authority_boundary: {
+            opl_can_write_domain_truth: false,
+          },
+        },
+        {
+          action_id: 'invoke_internal_handler',
+          title: 'Invoke internal handler',
+          summary: 'Route only to a domain handler target without becoming a stage action.',
+          owner: 'SampleBriefAgent',
+          effect: 'mutating',
+          stage_route_exempt: 'domain_handler_target_only',
+          source_command: {
+            command: 'sample-brief-agent internal-handler --workspace-root <workspace_root>',
+            surface_kind: 'domain_handler_target',
+          },
+          input_schema_ref: 'contracts/draft-brief.input.schema.json',
+          output_schema_ref: 'contracts/draft-brief.output.schema.json',
+          workspace_locator_fields: ['workspace_root'],
+          human_gate_ids: [],
+          supported_surfaces: {
+            cli: null,
+            mcp: {
+              tool_name: 'sample_brief_agent_internal_handler',
+              surface_kind: 'domain_mcp_descriptor',
+              descriptor_only: true,
+              public_runtime: false,
+            },
+            skill: null,
+            product_entry: {
+              action_key: 'invoke_internal_handler',
+              surface_kind: 'domain_handler_target_metadata',
+            },
+            openai: null,
+            ai_sdk: null,
           },
           authority_boundary: {
             opl_can_write_domain_truth: false,
@@ -316,10 +358,44 @@ test('generated interfaces can compile a standard agent repo contract pack witho
   assert.equal(bundle.active_caller_cutover_proof.generated_blocks_ready, true);
   assert.equal(bundle.active_caller_cutover_proof.domain_handler_targets_only, true);
   assert.equal(bundle.cli.descriptors[0].action_id, 'draft_brief');
+  assert.deepEqual(bundle.cli.descriptors.map((descriptor: { action_id: string }) => descriptor.action_id), ['draft_brief']);
   assert.equal(bundle.mcp.descriptors[0].descriptor_only, true);
+  assert.equal(
+    bundle.mcp.descriptors.some((descriptor: { name: string }) => descriptor.name === 'sample_brief_agent_internal_handler'),
+    true,
+  );
+  assert.deepEqual(bundle.skill.descriptors.map((descriptor: { action_id: string }) => descriptor.action_id), ['draft_brief']);
+  assert.deepEqual(
+    bundle.openai_tool.descriptors.map((descriptor: { function: { name: string } }) => descriptor.function.name),
+    ['sample_brief_agent_draft_brief'],
+  );
+  assert.deepEqual(
+    bundle.ai_sdk.descriptors.map((descriptor: { name: string }) => descriptor.name),
+    ['sample_brief_agent_draft_brief'],
+  );
   assert.equal(bundle.product_entry.descriptors[0].command, 'sample-brief-agent product draft --workspace-root <workspace_root>');
+  assert.equal(
+    bundle.product_entry.descriptors.some((descriptor: { action_key: string }) => descriptor.action_key === 'invoke_internal_handler'),
+    true,
+  );
+  const handlerParity = bundle.generated_direct_parity.action_parity.find(
+    (entry: { action_id: string }) => entry.action_id === 'invoke_internal_handler',
+  );
+  assert.deepEqual(handlerParity.expected_generated_surface_ids, ['mcp', 'product_entry']);
+  assert.equal(
+    handlerParity.generated_surfaces.find((entry: { surface_id: string }) => entry.surface_id === 'cli').status,
+    'not_applicable',
+  );
   assert.equal(bundle.stage_routes[0].stage_id, 'brief-draft');
   assert.deepEqual(bundle.stage_routes[0].allowed_action_refs, ['draft_brief']);
+  assert.deepEqual(bundle.action_stage_routes, [{
+    action_id: 'draft_brief',
+    entry_stage_ref: 'brief-draft',
+    required_stage_refs: ['brief-draft'],
+    optional_stage_refs: [],
+    terminal_stage_refs: ['brief-draft'],
+    route_policy: 'ordered_stage_attempts_no_skip',
+  }]);
   assert.equal(bundle.stage_routes[0].authority_owner, 'sample-brief-agent');
   assert.deepEqual(bundle.stage_routes[0].prompt_refs.map((entry: { ref: string }) => entry.ref), [
     'agent/prompts/brief-draft.md',
