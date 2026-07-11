@@ -1,0 +1,110 @@
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import test, { type TestContext } from 'node:test';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const runner = path.join(repoRoot, 'scripts', 'run-domain-whitepaper.ts');
+const fixtureProfile = path.join(repoRoot, 'tests', 'fixtures', 'domain-whitepaper', 'whitepaper_profile.json');
+
+function runRunner(args: string[], env: NodeJS.ProcessEnv = {}) {
+  return spawnSync(process.execPath, ['--experimental-strip-types', runner, ...args], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: { ...process.env, ...env },
+  });
+}
+
+function makeDomainRepo(t: TestContext) {
+  const domainRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-whitepaper-'));
+  const binDir = path.join(domainRepo, 'bin');
+  fs.mkdirSync(path.join(domainRepo, 'contracts'), { recursive: true });
+  fs.mkdirSync(path.join(domainRepo, 'docs', 'whitepapers'), { recursive: true });
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.copyFileSync(fixtureProfile, path.join(domainRepo, 'contracts', 'whitepaper_profile.json'));
+  fs.writeFileSync(path.join(domainRepo, 'docs', 'whitepapers', 'domain-whitepaper.md'), [
+    '# Domain Whitepaper',
+    '',
+    '> A generic domain profile rendered by OPL.',
+    '',
+    '发布日期：2026-07-11',
+    '',
+    '核心判断：The shared renderer owns delivery mechanics.',
+    '',
+    '## Summary',
+    '',
+    'One Person Lab keeps domain truth in the domain repository.',
+    '',
+  ].join('\n'));
+  writeCommand(binDir, 'pandoc', [
+    '#!/bin/sh',
+    'output=""',
+    'while [ "$#" -gt 0 ]; do',
+    '  if [ "$1" = "-o" ]; then output="$2"; shift; fi',
+    '  shift',
+    'done',
+    'mkdir -p "$(dirname "$output")"',
+    'printf "rendered\\n" > "$output"',
+  ].join('\n'));
+  writeCommand(binDir, 'pdfinfo', '#!/bin/sh\nprintf "Pages: 1\\nPage size: 595 x 842 pts\\n"\n');
+  writeCommand(binDir, 'pdftoppm', [
+    '#!/bin/sh',
+    'for value; do output="$value"; done',
+    'printf "page\\n" > "${output}-1.png"',
+  ].join('\n'));
+  writeCommand(binDir, 'pdftotext', '#!/bin/sh\nprintf "Domain Whitepaper\\nOne Person Lab\\n"\n');
+  t.after(() => fs.rmSync(domainRepo, { recursive: true, force: true }));
+  return { domainRepo, binDir };
+}
+
+function writeCommand(binDir: string, name: string, body: string) {
+  const commandPath = path.join(binDir, name);
+  fs.writeFileSync(commandPath, `${body}\n`, { mode: 0o755 });
+}
+
+test('domain whitepaper runner renders a generic domain profile through the shared builder', (t) => {
+  const { domainRepo, binDir } = makeDomainRepo(t);
+  const result = runRunner([
+    '--repo-root', domainRepo,
+    '--profile', 'contracts/whitepaper_profile.json',
+  ], { PATH: `${binDir}:${process.env.PATH ?? ''}` });
+
+  assert.equal(result.status, 0, result.stderr);
+  const verification = JSON.parse(result.stdout) as Record<string, unknown>;
+  assert.equal(verification.status, 'domain_whitepaper_ready');
+  assert.equal(verification.pdf_pages, 1);
+  assert.equal(fs.existsSync(path.join(domainRepo, 'docs', 'site', 'latest', 'whitepapers', 'domain-whitepaper.pdf')), true);
+  assert.equal(fs.existsSync(path.join(domainRepo, 'docs', 'delivery', 'whitepapers', 'domain-whitepaper-verification.json')), true);
+});
+
+test('domain whitepaper runner rejects malformed profile JSON before rendering', (t) => {
+  const { domainRepo } = makeDomainRepo(t);
+  fs.writeFileSync(path.join(domainRepo, 'contracts', 'whitepaper_profile.json'), '{invalid json\n');
+
+  const result = runRunner([
+    '--repo-root', domainRepo,
+    '--profile', 'contracts/whitepaper_profile.json',
+  ]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Whitepaper profile must be valid JSON/);
+});
+
+test('domain whitepaper runner rejects a non-array requiredTerms field', (t) => {
+  const { domainRepo } = makeDomainRepo(t);
+  const profilePath = path.join(domainRepo, 'contracts', 'whitepaper_profile.json');
+  const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Record<string, unknown>;
+  profile.requiredTerms = 'Domain Whitepaper';
+  fs.writeFileSync(profilePath, `${JSON.stringify(profile)}\n`);
+
+  const result = runRunner([
+    '--repo-root', domainRepo,
+    '--profile', 'contracts/whitepaper_profile.json',
+  ]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Whitepaper profile requires requiredTerms as a non-empty string array/);
+});

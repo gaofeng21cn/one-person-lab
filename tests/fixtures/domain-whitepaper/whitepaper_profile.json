@@ -1,0 +1,17 @@
+{
+  "sourceMarkdown": "docs/whitepapers/domain-whitepaper.md",
+  "outputName": "domain-whitepaper",
+  "status": "domain_whitepaper_ready",
+  "owner": "Domain Owner",
+  "coverLine": "Domain Research / Evidence / Delivery",
+  "headerTitle": "Domain Whitepaper",
+  "minSections": 1,
+  "minPdfPages": 1,
+  "requiredSections": [
+    "## Summary"
+  ],
+  "requiredTerms": [
+    "Domain Whitepaper",
+    "One Person Lab"
+  ]
+}

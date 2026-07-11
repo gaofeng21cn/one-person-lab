@@ -47,6 +47,7 @@ function expandTestFiles(patterns, options = {}) {
 
 const fastTestFiles = [
   'tests/src/domain-agent-admission-gates.test.ts',
+  'tests/src/domain-whitepaper-runner.test.ts',
   'tests/src/verification-command-surfaces.test.ts',
   'tests/src/verification-package-surfaces.test.ts',
   'tests/src/static-contract-package.test.ts',
