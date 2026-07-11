@@ -141,7 +141,7 @@ MAS、MAG 当前 structural adoption row 为 `passed`；RCA、OMA、OBF 为 `blo
 | 3 | ScholarSkills医学catalog迁出 | done | 100% | OPL私有catalog、validator、artifact engines、plugin mirror已删除；只消费外部package/provenance。 |
 | 4 | MAS Display Pack v2迁出 | done | 100% | Pack descriptor已provider/domain-neutral，MAS conversion由domain adapter拥有。 |
 | 5 | RCA visual transition迁出 | done | 100% | Stagecraft从RCA-owned profile ref读取，内置REDCUBE registry/default已删除。 |
-| 6 | RCA cost preset迁出 | done | 100% | Foundry estimator只接受profile输入；`rca-ppt-40`只出现在RCA profile/fixture级输入。 |
+| 6 | RCA cost preset迁出 | done | 100% | Foundry estimator只接受profile输入；通用fixture不含RCA preset，真实RCA profile经standard-agent registry发现；`rca-ppt-40`只出现在RCA owner profile/fixture级输入。 |
 | 7 | MAG sustained-consumption shell合并 | done | 100% | MAG alias/projection删除，统一到owner-evidence ledger/action route。 |
 | 8 | Workspace norm去硬编码 | done | 100% | supported agents、topology与workspace defaults从standard-agent registry/profile派生。 |
 | 9 | BookForge dependency默认值移除 | done | 100% | dependency doctor使用显式domain/package profile，不再以publication-proof作为基座默认。 |

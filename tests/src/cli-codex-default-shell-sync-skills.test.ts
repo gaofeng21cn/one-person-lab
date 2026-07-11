@@ -167,7 +167,15 @@ test('nested worktree repo roots resolve the family workspace root without OPL_F
     '/tmp/workspace',
   );
   assert.equal(
+    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/_worktrees/codex-opl-turnkey'),
+    '/tmp/workspace',
+  );
+  assert.equal(
     resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/unrelated/.worktrees/candidate'),
+    '/tmp/workspace/unrelated',
+  );
+  assert.equal(
+    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/unrelated/_worktrees/candidate'),
     '/tmp/workspace/unrelated',
   );
   assert.equal(

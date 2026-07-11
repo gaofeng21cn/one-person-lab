@@ -7,6 +7,8 @@ export type ResolveFamilyWorkspaceRootOptions = {
   familyRepoDirectories?: readonly string[];
 };
 
+const WORKTREE_CONTAINER_DIRECTORY_NAMES = new Set(['.worktrees', 'worktrees', '_worktrees']);
+
 function normalizeOptionalString(value: string | undefined | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -44,7 +46,7 @@ export function resolveFamilyWorkspaceRootFromRepoRoot(
 
   while (true) {
     const baseName = path.basename(current);
-    if (baseName === '.worktrees' || baseName === 'worktrees') {
+    if (WORKTREE_CONTAINER_DIRECTORY_NAMES.has(baseName)) {
       const parent = path.dirname(current);
       return familyRepoDirectories.includes(path.basename(parent))
         || fs.existsSync(path.join(parent, '.git'))
