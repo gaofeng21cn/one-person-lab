@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from importlib import resources
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -72,8 +71,8 @@ def read_managed_runtime_three_layer_contract(path: str | Path) -> ManagedRuntim
 
 
 def read_bundled_managed_runtime_three_layer_contract() -> ManagedRuntimeThreeLayerContract:
-    resource = resources.files("opl_harness_shared.contracts").joinpath("managed-runtime-three-layer-contract.json")
-    return read_managed_runtime_three_layer_contract(resource)
+    framework_root = Path(__file__).resolve().parents[2]
+    return read_managed_runtime_three_layer_contract(framework_root / MANAGED_RUNTIME_THREE_LAYER_CONTRACT_REF)
 
 
 def validate_managed_runtime_contract(

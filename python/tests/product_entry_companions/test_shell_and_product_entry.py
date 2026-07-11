@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from opl_harness_shared.product_entry_companions import (
+from opl_framework.product_entry_companions import (
     build_operator_loop_action_catalog,
     build_family_product_entry_surfaces,
     build_family_product_entry_surface_from_manifest,

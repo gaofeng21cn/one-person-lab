@@ -17,12 +17,17 @@ function readJson(filePath: string) {
 
 function frameworkCompatibility(repoDir: string) {
   const packageJson = readJson(path.join(repoDir, 'package.json'));
+  const pyprojectPath = path.join(repoDir, 'pyproject.toml');
+  const pyproject = fs.existsSync(pyprojectPath) ? fs.readFileSync(pyprojectPath, 'utf8') : '';
   const dependencies = {
     ...(isRecord(packageJson?.dependencies) ? packageJson.dependencies : {}),
     ...(isRecord(packageJson?.devDependencies) ? packageJson.devDependencies : {}),
   };
   const dependencyRef = typeof dependencies['opl-framework'] === 'string'
     ? dependencies['opl-framework']
+    : null;
+  const pythonDependencyRef = pyproject.includes('git+https://github.com/gaofeng21cn/one-person-lab.git')
+    ? 'git_owned_framework_dependency'
     : null;
   const sourceFiles = fs.globSync('**/*.{ts,tsx,js,mjs,cjs}', {
     cwd: repoDir,
@@ -33,7 +38,15 @@ function frameworkCompatibility(repoDir: string) {
     return [...source.matchAll(/(?:from\s+|import\s*\()(['"])opl-framework(\/[^'"\)]+)?\1/g)]
       .map((match) => match[2] ? `.${match[2]}` : '.');
   }))].sort();
-  if (!dependencyRef && requiredExports.length === 0) {
+  const pythonSourceFiles = fs.globSync('**/*.py', {
+    cwd: repoDir,
+    exclude: ['.venv/**', 'build/**', 'dist/**', 'src/opl_framework/**'],
+  });
+  const requiresPythonFramework = pythonSourceFiles.some((file) => {
+    const source = fs.readFileSync(path.join(repoDir, file), 'utf8');
+    return /(?:from|import)\s+opl_framework(?:\.|\s|$)/m.test(source);
+  });
+  if (!dependencyRef && !pythonDependencyRef && requiredExports.length === 0 && !requiresPythonFramework) {
     return { status: 'not_applicable', dependency_ref: null, required_exports: [], missing_exports: [] };
   }
   const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -48,15 +61,29 @@ function frameworkCompatibility(repoDir: string) {
   } catch {
     managedLink = false;
   }
+  const pythonFrameworkLink = path.join(repoDir, 'src', 'opl_framework');
+  const pythonFrameworkTarget = path.join(frameworkRoot, 'python', 'opl_framework');
+  let managedPythonLink = false;
+  try {
+    managedPythonLink = fs.lstatSync(pythonFrameworkLink).isSymbolicLink()
+      && fs.realpathSync(pythonFrameworkLink) === fs.realpathSync(pythonFrameworkTarget);
+  } catch {
+    managedPythonLink = false;
+  }
   const blockers = [
     dependencyRef ? 'agent_manifest_must_not_own_opl_framework_dependency' : null,
+    pythonDependencyRef ? 'agent_manifest_must_not_own_opl_framework_python_dependency' : null,
     requiredExports.length > 0 && !managedLink ? 'opl_managed_framework_link_missing' : null,
+    requiresPythonFramework && !managedPythonLink ? 'opl_managed_framework_python_link_missing' : null,
     ...missingExports.map((entry) => `current_opl_export_missing:${entry}`),
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'compatible' : 'blocked',
     dependency_ref: dependencyRef,
+    python_dependency_ref: pythonDependencyRef,
     managed_link: managedLink,
+    managed_python_link: managedPythonLink,
+    requires_python_framework: requiresPythonFramework,
     required_exports: requiredExports,
     missing_exports: missingExports,
     blockers,

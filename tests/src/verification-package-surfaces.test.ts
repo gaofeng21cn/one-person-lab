@@ -32,11 +32,10 @@ test('new-machine bootstrap smoke uses Foundry Agent command surface fields', ()
   assert.doesNotMatch(smokeScript, /Foundry Agent series frontdoor/);
 });
 
-test('OPL harness pytest cache defaults outside the checkout', () => {
-  const pyproject = read('python/opl-harness-shared/pyproject.toml');
-
-  assert.match(pyproject, /\[tool\.pytest\.ini_options\]/);
-  assert.match(pyproject, /cache_dir = "\/tmp\/opl-harness-shared-pytest-cache"/);
+test('OPL Python helpers are part of Framework and have no package manifest', () => {
+  assert.equal(fs.existsSync(path.join(repoRoot, 'python', 'opl_framework', '__init__.py')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'python', 'pyproject.toml')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'python', 'uv.lock')), false);
 });
 
 test('node test lanes propagate Python cache isolation to spawned tests', () => {

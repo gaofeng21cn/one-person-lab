@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from opl_harness_shared.artifact_lifecycle import build_refs_only_artifact_lifecycle_handoff
-from opl_harness_shared.owner_evidence import (
+from opl_framework.artifact_lifecycle import build_refs_only_artifact_lifecycle_handoff
+from opl_framework.owner_evidence import (
     build_owner_evidence_observability_summary,
     build_owner_evidence_reconciliation_inventory,
     build_owner_evidence_reconciliation_proof,
 )
-from opl_harness_shared.runtime_registration import build_stage_runtime_registration
-from opl_harness_shared.schema_validation import SchemaSubsetValidator
+from opl_framework.runtime_registration import build_stage_runtime_registration
+from opl_framework.schema_validation import SchemaSubsetValidator
 
 
 class MemorySchemaStore:

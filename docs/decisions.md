@@ -26,16 +26,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 只有存在真实发布元数据时才声明 `distribution_payload`；一旦声明，完整字段、SHA-256 格式、rolling `latest`、immutable tag、digest lock 与 proof false-claim 约束继续 fail closed。
 - 带 `ordinary_user_source` 的 published registry entry 必须同时提供合法 `distribution_payload`；不能用 source-only manifest 绕过已发布安装路径的 digest/immutable-tag 校验。
 
-### 决策：JavaScript Framework surface 只保留 OPL 根 Node package
+### 决策：Framework surface 只保留 OPL 根 package 与内置 Python namespace
 
 原因：第二个只镜像根包公开 subpath 的 package 会额外引入 manifest、build copy、pack/test lane 和安装叙事，却没有独立 authority 或不可替代的运行边界。
 
 影响：
 
-- 不创建或保留第二个静态 package、build copy、pack/test scripts、alias、tombstone 或兼容 wrapper。
+- 不创建或保留第二个静态 package、Python distribution、build copy、独立 lock、alias、tombstone 或兼容 wrapper。
 - `opl-framework` 保持现有六个同名公开 exports、`opl` CLI、Temporal dependencies 与 E2B optional dependency。
 - 标准 Foundry Agent 的 manifest / lock 不再声明或安装 `opl-framework`；OPL module workflow 在 agent checkout 中维护到当前 resolved OPL root 的 package link，避免复制 package 或安装第二份 Temporal tree。
-- `opl connect agent-packages link-framework --agent-root <repo> [--check|--dry-run] --json` 复用同一 OPL-owned link helper，作为诊断 / 修复入口；它不创建第二个 package、publication channel 或 runtime authority。
+- `opl connect agent-packages link-framework --agent-root <repo> [--check|--dry-run] --json` 复用同一 OPL-owned link helper，同时托管 JavaScript package link 与 Python source carrier；它不创建第二个 package、publication channel 或 runtime authority。
 
 ### 决策：Stage attempt domain output 只运输 domain-owned ref
 

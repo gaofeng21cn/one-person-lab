@@ -39,6 +39,7 @@
     "bin/opl",
     "dist",
     "contracts/opl-framework",
+    "python/opl_framework",
     "Cargo.toml",
     "Cargo.lock",
     "native/opl-native-helper/Cargo.toml",

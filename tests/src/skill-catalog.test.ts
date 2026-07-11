@@ -53,7 +53,7 @@ test('skill catalog helpers normalize shared command and skill descriptors', () 
   });
 
   const catalog = buildSkillCatalog({
-    summary: 'Family-shared skill catalog for current domain entry surfaces.',
+    summary: 'OPL Framework skill catalog for current domain entry surfaces.',
     skills: [masSkill, magSkill],
     supported_commands: [
       'workspace-cockpit',

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import unittest
 
-from opl_harness_shared.managed_runtime import (
+from opl_framework.managed_runtime import (
     MANAGED_RUNTIME_THREE_LAYER_CONTRACT_REF,
     build_managed_runtime_contract,
     read_bundled_managed_runtime_three_layer_contract,
@@ -13,7 +13,7 @@ from opl_harness_shared.managed_runtime import (
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PACKAGE_ROOT.parents[1]
+REPO_ROOT = PACKAGE_ROOT.parent
 
 
 class ManagedRuntimeContractTest(unittest.TestCase):

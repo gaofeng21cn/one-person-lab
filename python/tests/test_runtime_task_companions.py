@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from opl_harness_shared.runtime_task_companions import (
+from opl_framework.runtime_task_companions import (
     build_artifact_file_descriptor,
     build_artifact_inventory,
     build_checkpoint_summary,

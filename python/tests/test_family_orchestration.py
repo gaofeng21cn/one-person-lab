@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from opl_harness_shared.family_orchestration import (
+from opl_framework.family_orchestration import (
     buildFamilyIntakeEvidenceCompanion,
     buildFamilyProjectProfileCompanion,
     build_family_human_gate,

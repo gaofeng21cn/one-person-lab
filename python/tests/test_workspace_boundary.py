@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-from opl_harness_shared.workspace_boundary import (
+from opl_framework.workspace_boundary import (
     WorkspaceScaffoldFile,
     materialize_directory_workspace,
     resolve_workspace_document_path,

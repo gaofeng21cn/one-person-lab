@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from opl_harness_shared.family_action_catalog import (
+from opl_framework.family_action_catalog import (
     build_family_action,
     build_family_action_catalog,
     project_family_action_catalog,

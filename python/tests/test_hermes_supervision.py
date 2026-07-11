@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from opl_harness_shared.hermes_supervision import (
+from opl_framework.hermes_supervision import (
     ensure_script_file,
     job_drift,
     load_jobs,

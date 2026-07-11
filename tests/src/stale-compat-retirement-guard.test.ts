@@ -15,8 +15,8 @@ const scannedRoots = [
   'examples',
   'tests/src',
   'tests/fixtures/family-manifests',
-  'python/opl-harness-shared/src',
-  'python/opl-harness-shared/tests',
+  'python/opl_framework',
+  'python/tests',
 ];
 
 const textFileExtensions = new Set([

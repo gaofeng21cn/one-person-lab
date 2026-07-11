@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from opl_harness_shared.automation_companions import (
+from opl_framework.automation_companions import (
     build_automation_catalog,
     build_automation_descriptor,
 )

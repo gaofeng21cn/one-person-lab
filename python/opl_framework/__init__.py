@@ -1,4 +1,4 @@
-"""Family-shared harness substrate helpers."""
+"""Python helpers owned by OPL Framework."""
 
 from .automation_companions import (
     build_automation_catalog,
@@ -7,9 +7,6 @@ from .automation_companions import (
 from .artifact_lifecycle import (
     build_refs_only_artifact_lifecycle_handoff,
     build_refs_only_lifecycle_handoff,
-)
-from .editable_consumer_launcher import (
-    ensure_repo_editable_dependency_paths,
 )
 from .family_orchestration import (
     buildFamilyIntakeEvidenceCompanion,
@@ -256,7 +253,6 @@ __all__ = [
     "build_task_lifecycle",
     "build_task_surface_descriptor",
     "collect_family_human_gate_ids",
-    "ensure_repo_editable_dependency_paths",
     "ensure_script_file",
     "ensure_workspace_git_boundary",
     "job_drift",

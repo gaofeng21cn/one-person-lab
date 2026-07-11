@@ -6,10 +6,12 @@ import { parseJsonText } from '../../kernel/json-file.ts';
 import { buildOplFrameworkLocator } from './opl-framework-locator.ts';
 
 const FRAMEWORK_PACKAGE_NAME = 'opl-framework';
-const SOURCE_GLOBS = [
+const JAVASCRIPT_SOURCE_GLOBS = [
   '*.{js,mjs,cjs,ts,mts,cts}',
   '{src,scripts,packages}/**/*.{js,mjs,cjs,ts,mts,cts}',
 ];
+const PYTHON_SOURCE_GLOBS = ['*.py', '{src,scripts}/**/*.py'];
+const PYTHON_IMPORT_NAME = 'opl_framework';
 
 export type StandardAgentFrameworkLinkInput = {
   agentRoot: string;
@@ -37,11 +39,28 @@ function declaresFrameworkDependency(manifest: Record<string, unknown>) {
   });
 }
 
-function hasStaticFrameworkImport(agentRoot: string) {
-  return fs.globSync(SOURCE_GLOBS, {
+function sourceContains(agentRoot: string, globs: string[], importName: string) {
+  return fs.globSync(globs, {
     cwd: agentRoot,
     exclude: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
-  }).some((relativePath) => fs.readFileSync(path.join(agentRoot, relativePath), 'utf8').includes(FRAMEWORK_PACKAGE_NAME));
+  }).some((relativePath) => fs.readFileSync(path.join(agentRoot, relativePath), 'utf8').includes(importName));
+}
+
+function readLinkTarget(linkPath: string) {
+  try {
+    const stat = fs.lstatSync(linkPath);
+    if (!stat.isSymbolicLink()) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Framework link path is not a symlink.', {
+        failure_code: 'framework_link_conflict',
+        link_path: linkPath,
+        repair_action: 'remove_the_agent_owned_conflict_then_rerun_opl_link_or_repair',
+      });
+    }
+    return path.resolve(path.dirname(linkPath), fs.readlinkSync(linkPath));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 function authorityBoundary() {
@@ -59,25 +78,33 @@ export function materializeStandardAgentFrameworkLink(input: StandardAgentFramew
   const agentRoot = fs.realpathSync.native(path.resolve(input.agentRoot));
   const packageReadout = readPackageManifest(agentRoot);
   const frameworkRoot = buildOplFrameworkLocator().framework_locator.resolved.root;
-  const linkPath = path.join(agentRoot, 'node_modules', FRAMEWORK_PACKAGE_NAME);
+  const hasJavaScriptImport = sourceContains(agentRoot, JAVASCRIPT_SOURCE_GLOBS, FRAMEWORK_PACKAGE_NAME);
+  const hasPythonImport = sourceContains(agentRoot, PYTHON_SOURCE_GLOBS, PYTHON_IMPORT_NAME);
+  const javascriptLinkPath = path.join(agentRoot, 'node_modules', FRAMEWORK_PACKAGE_NAME);
+  const pythonLinkPath = path.join(agentRoot, 'src', PYTHON_IMPORT_NAME);
+  const pythonTargetRoot = path.join(frameworkRoot, 'python', PYTHON_IMPORT_NAME);
   const base = {
     surface_kind: 'opl_standard_agent_framework_link',
     agent_root: agentRoot,
-    link_path: linkPath,
+    link_path: hasJavaScriptImport ? javascriptLinkPath : pythonLinkPath,
     target_root: frameworkRoot,
     import_specifier: FRAMEWORK_PACKAGE_NAME,
+    javascript_link_path: hasJavaScriptImport ? javascriptLinkPath : null,
+    python_link_path: hasPythonImport ? pythonLinkPath : null,
+    python_target_root: hasPythonImport ? pythonTargetRoot : null,
+    python_import_name: hasPythonImport ? PYTHON_IMPORT_NAME : null,
     authority_boundary: authorityBoundary(),
   } as const;
 
-  if (!packageReadout || !hasStaticFrameworkImport(agentRoot)) {
+  if (!hasJavaScriptImport && !hasPythonImport) {
     return {
       ...base,
       status: 'not_applicable',
-      reason: packageReadout ? 'no_static_opl_framework_imports' : 'package_manifest_absent',
+      reason: 'no_static_opl_framework_imports',
       writes_performed: false,
     } as const;
   }
-  if (declaresFrameworkDependency(packageReadout.manifest)) {
+  if (hasJavaScriptImport && packageReadout && declaresFrameworkDependency(packageReadout.manifest)) {
     if (input.checkOnly) {
       throw new FrameworkContractError('contract_shape_invalid', 'Standard Agent manifest still owns the OPL Framework dependency.', {
         failure_code: 'framework_dependency_manifest_owned',
@@ -94,32 +121,24 @@ export function materializeStandardAgentFrameworkLink(input: StandardAgentFramew
     } as const;
   }
 
-  let existingTarget: string | null = null;
-  try {
-    const stat = fs.lstatSync(linkPath);
-    if (!stat.isSymbolicLink()) {
-      throw new FrameworkContractError('contract_shape_invalid', 'Framework link path is not a symlink.', {
-        failure_code: 'framework_link_conflict',
-        agent_root: agentRoot,
-        link_path: linkPath,
-        repair_action: 'remove_the_agent_owned_conflict_then_rerun_opl_link_or_repair',
-      });
-    }
-    existingTarget = path.resolve(path.dirname(linkPath), fs.readlinkSync(linkPath));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-  }
+  const links = [
+    ...(hasJavaScriptImport ? [{ path: javascriptLinkPath, target: frameworkRoot }] : []),
+    ...(hasPythonImport ? [{ path: pythonLinkPath, target: pythonTargetRoot }] : []),
+  ];
+  const unresolvedLinks = links.filter((link) => readLinkTarget(link.path) !== link.target);
 
-  if (existingTarget === frameworkRoot) {
+  if (unresolvedLinks.length === 0) {
     return { ...base, status: 'already_linked', reason: null, writes_performed: false } as const;
   }
   if (input.checkOnly) {
     throw new FrameworkContractError('contract_shape_invalid', 'Standard Agent framework link is missing or points to another root.', {
       failure_code: 'framework_link_missing',
       agent_root: agentRoot,
-      link_path: linkPath,
-      expected_target_root: frameworkRoot,
-      existing_target_root: existingTarget,
+      unresolved_links: unresolvedLinks.map((link) => ({
+        link_path: link.path,
+        expected_target_root: link.target,
+        existing_target_root: readLinkTarget(link.path),
+      })),
       repair_command: `opl connect agent-packages link-framework --agent-root ${agentRoot} --json`,
     });
   }
@@ -127,8 +146,10 @@ export function materializeStandardAgentFrameworkLink(input: StandardAgentFramew
     return { ...base, status: 'validated_no_write', reason: null, writes_performed: false } as const;
   }
 
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-  if (existingTarget) fs.unlinkSync(linkPath);
-  fs.symlinkSync(frameworkRoot, linkPath, process.platform === 'win32' ? 'junction' : 'dir');
+  for (const link of unresolvedLinks) {
+    fs.mkdirSync(path.dirname(link.path), { recursive: true });
+    if (readLinkTarget(link.path)) fs.unlinkSync(link.path);
+    fs.symlinkSync(link.target, link.path, process.platform === 'win32' ? 'junction' : 'dir');
+  }
   return { ...base, status: 'linked', reason: null, writes_performed: true } as const;
 }

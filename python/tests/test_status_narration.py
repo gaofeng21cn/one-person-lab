@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from opl_harness_shared.status_narration import (
+from opl_framework.status_narration import (
     PAPER_MILESTONE_ANSWER_CHECKLIST,
     PROGRESS_ANSWER_CHECKLIST,
     STATUS_NARRATION_CONTRACT_KIND,

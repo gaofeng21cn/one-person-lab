@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from opl_harness_shared.family_entry_contracts import (
+from opl_framework.family_entry_contracts import (
     build_domain_agent_entry_spec,
     build_domain_entry_command_contract,
     build_domain_entry_command_catalog,

@@ -30,6 +30,20 @@ function withAgent(run: (agentRoot: string) => void) {
   }
 }
 
+function withPythonAgent(run: (agentRoot: string) => void) {
+  const agentRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-python-framework-link-'));
+  try {
+    fs.mkdirSync(path.join(agentRoot, 'src'));
+    fs.writeFileSync(
+      path.join(agentRoot, 'src', 'consumer.py'),
+      'from opl_framework.schema_validation import SchemaSubsetValidator\n',
+    );
+    run(agentRoot);
+  } finally {
+    fs.rmSync(agentRoot, { recursive: true, force: true });
+  }
+}
+
 test('Standard Agent framework link is OPL-owned, checkable, and does not install a local runtime tree', () => {
   withAgent((agentRoot) => {
     assert.throws(
@@ -77,6 +91,35 @@ test('managed module workflow automatically links JavaScript Standard Agent chec
     assert.equal(workflow.framework_link.status, 'completed');
     assert.equal(workflow.framework_link.result?.status, 'linked');
     assert.equal(fs.existsSync(path.join(agentRoot, 'node_modules', '@temporalio')), false);
+  });
+});
+
+test('Python-only Standard Agents receive the OPL-owned Framework source carrier', () => {
+  withPythonAgent((agentRoot) => {
+    assert.throws(
+      () => materializeStandardAgentFrameworkLink({ agentRoot, checkOnly: true }),
+      (error: unknown) => error instanceof FrameworkContractError
+        && error.details?.failure_code === 'framework_link_missing',
+    );
+
+    const linked = materializeStandardAgentFrameworkLink({ agentRoot });
+    assert.equal(linked.status, 'linked');
+    assert.equal(linked.javascript_link_path, null);
+    assert.equal(fs.realpathSync(linked.python_link_path!), fs.realpathSync(linked.python_target_root!));
+    assert.equal(fs.existsSync(path.join(agentRoot, 'node_modules')), false);
+
+    const imported = spawnSync(
+      'python3',
+      ['-c', 'from opl_framework.schema_validation import SchemaSubsetValidator; print(SchemaSubsetValidator.__name__)'],
+      {
+        cwd: agentRoot,
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONPATH: path.join(agentRoot, 'src') },
+      },
+    );
+    assert.equal(imported.status, 0, imported.stderr);
+    assert.equal(imported.stdout.trim(), 'SchemaSubsetValidator');
+    assert.equal(materializeStandardAgentFrameworkLink({ agentRoot, checkOnly: true }).status, 'already_linked');
   });
 });
 

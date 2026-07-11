@@ -52,11 +52,7 @@ case "$lane" in
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPYCACHEPREFIX="${PYTHONPYCACHEPREFIX:-${family_tmp_root}/pycache}" \
     PYTEST_ADDOPTS="${PYTEST_ADDOPTS:-} -p no:cacheprovider -o cache_dir=${family_tmp_root}/pytest-cache" \
-    PYTHONPATH=python/opl-harness-shared/src \
-      pytest \
-      python/opl-harness-shared/tests/test_editable_dependency_bootstrap.py \
-      python/opl-harness-shared/tests/test_editable_consumer_bootstrap.py \
-      python/opl-harness-shared/tests/test_editable_consumer_launcher.py
+    PYTHONPATH=python pytest python/tests
     ;;
   fresh-install)
     npm run test:fresh-install

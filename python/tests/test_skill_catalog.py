@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from opl_harness_shared.skill_catalog import (
+from opl_framework.skill_catalog import (
     build_skill_catalog,
     build_skill_descriptor,
 )
@@ -33,7 +33,7 @@ def test_skill_catalog_helpers_normalize_shared_descriptors() -> None:
     )
 
     catalog = build_skill_catalog(
-        summary="Family-shared skill catalog for current domain entry surfaces.",
+        summary="OPL Framework skill catalog for current domain entry surfaces.",
         skills=[mas_skill, mag_skill],
         supported_commands=["workspace-cockpit", "grant-user-loop"],
         command_contracts=[

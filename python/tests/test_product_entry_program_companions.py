@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from opl_harness_shared.product_entry_program_companions import (
+from opl_framework.product_entry_program_companions import (
     build_clearance_lane,
     build_clearance_target,
     build_detailed_readiness,
