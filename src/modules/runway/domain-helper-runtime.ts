@@ -36,12 +36,20 @@ function probePython(command: string, modules: string[], env: NodeJS.ProcessEnv)
   return spawnSync(command, ['-c', expression], { encoding: 'utf8', env });
 }
 
+type DomainPythonProbe = (
+  command: string,
+  modules: string[],
+  env: NodeJS.ProcessEnv,
+) => { status: number | null };
+
 export function resolveDomainPythonCommand(input: {
   command_env?: string;
   env?: NodeJS.ProcessEnv;
   managed_python_path?: string;
   required_modules?: string[];
   cache_root?: string;
+  file_exists?: (file: string) => boolean;
+  probe_python?: DomainPythonProbe;
 } = {}): DomainHelperCommand {
   const env = { ...process.env, ...(input.env ?? {}) };
   const requiredModules = [...new Set(input.required_modules ?? [])];
@@ -52,6 +60,8 @@ export function resolveDomainPythonCommand(input: {
     PYTHONPYCACHEPREFIX: path.join(cacheRoot, 'pycache'),
     PLAYWRIGHT_BROWSERS_PATH: env.PLAYWRIGHT_BROWSERS_PATH ?? path.join(cacheRoot, 'playwright-browsers'),
   };
+  const fileExists = input.file_exists ?? fs.existsSync;
+  const probe = input.probe_python ?? probePython;
   const candidates: Array<{ command: string; args: string[]; source: DomainHelperCommand['source'] }> = [];
   if (explicitValue?.trim()) {
     return { ...parseCommand(explicitValue), source: 'explicit_env', runtime_env: runtimeEnv };
@@ -61,9 +71,9 @@ export function resolveDomainPythonCommand(input: {
   candidates.push({ command: 'python3', args: [], source: 'host_python' });
 
   for (const candidate of candidates) {
-    if (candidate.command.includes(path.sep) && !fs.existsSync(candidate.command)) continue;
-    const probe = probePython(candidate.command, requiredModules, { ...env, ...runtimeEnv });
-    if (probe.status === 0) return { ...candidate, runtime_env: runtimeEnv };
+    if (candidate.command.includes(path.sep) && !fileExists(candidate.command)) continue;
+    const result = probe(candidate.command, requiredModules, { ...env, ...runtimeEnv });
+    if (result.status === 0) return { ...candidate, runtime_env: runtimeEnv };
   }
   throw new FrameworkContractError('surface_not_found', 'No OPL-managed Python runtime satisfies the domain helper requirements.', {
     required_modules: requiredModules,
@@ -81,6 +91,8 @@ export function runDomainPythonHelper(input: {
   managed_python_path?: string;
   required_modules?: string[];
   timeout_ms?: number;
+  file_exists?: (file: string) => boolean;
+  probe_python?: DomainPythonProbe;
 }) {
   const resolved = resolveDomainPythonCommand(input);
   const result = spawnSync(resolved.command, [

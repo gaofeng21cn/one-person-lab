@@ -45,6 +45,22 @@ test('domain helper runtime accepts explicit command arrays without installing a
   assert.equal(command.runtime_env.PYTHONDONTWRITEBYTECODE, '1');
 });
 
+test('domain helper runtime accepts a deterministic Python probe for managed runtime resolution', () => {
+  const probes: string[] = [];
+  const command = resolveDomainPythonCommand({
+    env: { OPL_MANAGED_PYTHON: '/managed/python', PATH: '' },
+    required_modules: ['playwright'],
+    file_exists: () => true,
+    probe_python: (candidate) => {
+      probes.push(candidate);
+      return { status: candidate === '/managed/python' ? 0 : 1 };
+    },
+  });
+  assert.equal(command.command, '/managed/python');
+  assert.equal(command.source, 'managed_runtime');
+  assert.deepEqual(probes, ['/managed/python']);
+});
+
 test('domain artifact runtime writes, reads, and indexes generic stage bytes', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-artifact-'));
   const locator = {
