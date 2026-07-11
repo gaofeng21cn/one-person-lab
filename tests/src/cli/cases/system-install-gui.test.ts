@@ -1,4 +1,5 @@
 import { assert, createFakeOpenFixture, fs, os, path, runCli, test } from '../helpers.ts';
+import { createFakeOplFlowInstallEnv } from './system-install-fixtures.ts';
 
 function disableRemoteCompanionInstall() {
   return {
@@ -101,6 +102,7 @@ exit 1
       OPL_HDIUTIL_BIN: hdiutilPath,
       OPL_OPEN_BIN: openFixture.openPath,
       OPL_RELEASE_VERSION: '26.4.25',
+      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as {
       install: {
@@ -215,6 +217,7 @@ printf '%s\n' "$*" > ${JSON.stringify(openCapturePath)}
       OPL_OPEN_BIN: openPath,
       OPL_RELEASE_VERSION: '26.4.25',
       TMPDIR: tempRoot,
+      ...createFakeOplFlowInstallEnv(homeRoot),
       ...disableRemoteCompanionInstall(),
     }) as {
       install: {

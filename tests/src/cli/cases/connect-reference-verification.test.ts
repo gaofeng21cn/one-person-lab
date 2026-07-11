@@ -523,7 +523,7 @@ test('connect references verify defers one failed provider while matched provide
       {
         id: 'ref-1',
         doi: '10.1234/example',
-        pmid: '987654',
+        pmid: '123456',
         title: 'Provider receipt cache and retry evidence',
       },
     ]), 'utf8');

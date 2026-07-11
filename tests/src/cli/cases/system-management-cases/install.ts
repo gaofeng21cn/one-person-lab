@@ -1,4 +1,5 @@
 import { assert, createCodexConfigFixture, createFakeCodexFixture, fs, os, path, runCli, runCliAsync, test } from './shared.ts';
+import { createFakeOplFlowInstallEnv } from '../system-install-fixtures.ts';
 
 test('opl install keeps retired gateway repair out of the default Codex install path', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-retired-gateway-home-'));
@@ -30,6 +31,7 @@ exit 1
         TEMPORAL_ADDRESS: '',
         PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
         OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+        ...createFakeOplFlowInstallEnv(homeRoot),
       },
     ) as {
       install: {
