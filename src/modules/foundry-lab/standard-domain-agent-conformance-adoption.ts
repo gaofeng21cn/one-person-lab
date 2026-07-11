@@ -889,6 +889,13 @@ function isDomainSidecarStorageAuthority(field: string) {
   return /^sqlite_can_store_[a-z0-9_]+_(body|judgment|verdict)$/.test(field);
 }
 
+function isDomainOwnershipDeclaration(field: string, value: unknown) {
+  return value === true
+    && !field.startsWith('opl_')
+    && !field.startsWith('sqlite_')
+    && /^[a-z][a-z0-9_]*_owns_[a-z0-9_]+$/.test(field);
+}
+
 function buildOplStateIndexKernelSidecarChecks(adoption: JsonRecord, adoptionFileStatus: string) {
   const authority = isRecord(adoption.authority_boundary) ? adoption.authority_boundary : {};
   const rebuildPolicy = isRecord(adoption.rebuild_policy) ? adoption.rebuild_policy : {};
@@ -901,7 +908,8 @@ function buildOplStateIndexKernelSidecarChecks(adoption: JsonRecord, adoptionFil
   );
   const unsupportedAuthorityFields = Object.keys(authority).filter((field) =>
     !Object.hasOwn(OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY, field)
-      && !isDomainSidecarStorageAuthority(field),
+      && !isDomainSidecarStorageAuthority(field)
+      && !isDomainOwnershipDeclaration(field, authority[field]),
   );
   const blockers = [
     adoptionFileStatus === 'resolved' ? null : `state_index_kernel_sidecar_adoption_${adoptionFileStatus}`,
