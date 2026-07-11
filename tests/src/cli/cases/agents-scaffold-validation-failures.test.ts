@@ -200,3 +200,59 @@ test('agents scaffold validation blocks capability maps that cannot route self-e
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
 });
+
+test('agents scaffold validation expands capability policy profiles and blocks unresolved refs', () => {
+  const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-map-policy-profiles-'));
+
+  try {
+    runCli([
+      'agents',
+      'scaffold',
+      '--target-dir',
+      targetDir,
+      '--domain-id',
+      'capability-policy-profiles',
+    ]);
+    const capabilityMapPath = path.join(targetDir, 'contracts', 'capability_map.json');
+    const capabilityMap = parseJsonText(fs.readFileSync(capabilityMapPath, 'utf8')) as {
+      capability_policy_profiles?: Record<string, Record<string, unknown>>;
+      capabilities: Array<Record<string, unknown>>;
+    };
+    const first = capabilityMap.capabilities[0];
+    capabilityMap.capability_policy_profiles = {
+      standard: {
+        authority_boundary: first.authority_boundary,
+        forbidden_surfaces: first.forbidden_surfaces,
+        verification_refs: first.verification_refs,
+        owner_closeout_boundary: first.owner_closeout_boundary,
+      },
+    };
+    capabilityMap.capabilities.forEach((capability) => {
+      capability.capability_policy_profile_ref = '#/capability_policy_profiles/standard';
+      delete capability.authority_boundary;
+      delete capability.forbidden_surfaces;
+      delete capability.verification_refs;
+      delete capability.owner_closeout_boundary;
+    });
+    fs.writeFileSync(capabilityMapPath, `${JSON.stringify(capabilityMap, null, 2)}\n`);
+
+    const validated = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(validated.validation.capability_map_validation.status, 'passed');
+
+    capabilityMap.capabilities[0].capability_policy_profile_ref = '#/capability_policy_profiles/missing';
+    fs.writeFileSync(capabilityMapPath, `${JSON.stringify(capabilityMap, null, 2)}\n`);
+    const blocked = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(blocked.validation.capability_map_validation.status, 'blocked');
+    assert.equal(
+      blocked.validation.blockers.some((entry: string) => entry.startsWith('capability_map_policy_profile_unresolved:')),
+      true,
+    );
+
+    capabilityMap.capabilities[0].capability_policy_profile_ref = '#/capability_policy_profiles/__proto__';
+    fs.writeFileSync(capabilityMapPath, `${JSON.stringify(capabilityMap, null, 2)}\n`);
+    const inherited = runCli(['agents', 'scaffold', '--validate', targetDir]).standard_domain_agent_scaffold;
+    assert.equal(inherited.validation.capability_map_validation.status, 'blocked');
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});

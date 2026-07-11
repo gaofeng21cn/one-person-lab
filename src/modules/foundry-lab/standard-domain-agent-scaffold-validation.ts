@@ -22,6 +22,7 @@ import { validateAgentPackFiles } from './standard-domain-agent-scaffold-validat
 import { validateStageRefs } from './standard-domain-agent-scaffold-validation-parts/stage-refs.ts';
 import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-validation-parts/user-stage-log.ts';
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
+import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
 
 interface ScaffoldValidateInput {
   repoDir: string;
@@ -156,7 +157,22 @@ function validateCapabilityMap(capabilityMap: unknown) {
       ),
     };
   }
-  const capabilities = (capabilityMap as CapabilityMapPayload).capabilities;
+  const normalized = normalizeStandardAgentCapabilityMapPolicies(capabilityMap);
+  if (normalized.blockers.length > 0) {
+    return {
+      status: 'blocked',
+      observed_roles: [],
+      missing_roles: REQUIRED_CAPABILITY_MAP_SURFACE_ROLES,
+      self_evolution_routing_validation: {
+        status: 'blocked',
+        checked_capability_count: 0,
+        self_evolution_ready_capability_count: 0,
+        blockers: normalized.blockers,
+      },
+      blockers: normalized.blockers,
+    };
+  }
+  const capabilities = (normalized.capabilityMap as CapabilityMapPayload).capabilities;
   const observedRoles = [...new Set(capabilities
     .map((entry) => entry.surface_role))];
   const missingRoles = REQUIRED_CAPABILITY_MAP_SURFACE_ROLES.filter((role) => !observedRoles.includes(role));

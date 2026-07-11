@@ -127,6 +127,46 @@ test('capability-map audit blocks unresolved capability paths', () => {
   }
 });
 
+test('capability-map audit expands shared policy profiles', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-profiles-'));
+  try {
+    const repo = path.join(fixtureRoot, 'profile-agent');
+    writeCapabilityRepo(repo);
+    const mapPath = path.join(repo, 'contracts', 'capability_map.json');
+    const map = readJson(mapPath);
+    const capability = map.capabilities[0];
+    map.capability_policy_profiles = {
+      standard: {
+        authority_boundary: { can_write_domain_truth: false },
+        verification_refs: capability.verification_refs,
+        forbidden_surfaces: capability.forbidden_surfaces,
+        owner_closeout_boundary: {
+          owner: 'demo-owner',
+          required_return_shapes: ['owner_receipt_ref'],
+          can_write_owner_receipt_body: false,
+          can_create_typed_blocker: false,
+        },
+      },
+    };
+    capability.capability_policy_profile_ref = '#/capability_policy_profiles/standard';
+    delete capability.verification_refs;
+    delete capability.forbidden_surfaces;
+    delete capability.owner_closeout_boundary_ref;
+    writeJson(mapPath, map);
+
+    const result = spawnSync('node', [
+      path.join(repoRoot, 'scripts', 'capability-map-audit.mjs'),
+      repo,
+      '--json',
+    ], { encoding: 'utf8' });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.equal(readJsonPayload(result.stdout).status, 'passed');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 function readJsonPayload(stdout: string): Record<string, any> {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-capability-audit-output-'));
   try {

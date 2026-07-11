@@ -287,6 +287,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `capability_kind` 固定六类：`stage_prompt`、`stage_projection/runtime_projection`、`professional_skill`、`tool_connector`、`reference_pack`、`contract_module`。
 - 标准 scaffold 必须生成 `contracts/capability_map.json`，作为 OMA / Agent Lab / Pack compiler 定位 stage prompt、professional skill、tool connector、knowledge pack、quality gate 和 eval suite 的 refs-only resolver 索引；它不是 domain truth、owner receipt、typed blocker、quality verdict 或 readiness 证据。
 - `capability_map` 还必须为每个能力声明 `improvement_tokens`、`canonical_target_paths`、`verification_refs`、`forbidden_surfaces` 和 owner closeout boundary。这样 OMA / Agent Lab 可以把反馈和 suite failure 路由到单源文件与验证入口；命中不到时返回 developer work-order / typed blocker 路径，而不是靠宽泛关键词猜 patch target。
+- 重复 policy 可以收敛到顶层 `capability_policy_profiles`，capability 通过本地 `capability_policy_profile_ref` 引用；Framework 在 conformance 与 capability-plan 消费前展开 profile。现有 per-capability expanded fields 继续有效；profile ref 缺失或无法解析必须 fail closed，不能回退到空 authority 或宽泛默认值。
 - 默认归属是内置在 domain agent；只有跨 workspace 复用、体量大、引用/模板/脚本多、独立版本维护、多个 stage 反复调用或需要 Codex 原生 discovery 时，才外置为专业 pack、reference pack 或 connector。
 - Connector 只负责资源访问、source refs、invocation refs 和 receipt，不承接专业判断；contract module 只负责机器边界，不伪装成 true Skill。
 - MAS stage prompt / projection 继续归 MAS；professional specialist skill 的清单与内容归 `mas-scholar-skills` 外部 package，通过 OPL Connect 从实际 `skills/*/SKILL.md` 校验并按需同步；OPL 不维护医学 Skill ID 列表、required/default profile 或内容镜像。

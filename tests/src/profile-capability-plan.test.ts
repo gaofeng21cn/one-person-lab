@@ -553,6 +553,40 @@ test('profiles capability-plan accepts only the Framework-owned fixed projection
   });
 });
 
+test('profile capability plan normalizes shared capability policy profiles', () => {
+  withTempDir((root) => {
+    const catalogRepo = path.join(root, 'agent-repo');
+    const selectionFile = path.join(root, 'profile-selection.json');
+    const { mapPath, map } = writeStandardCatalog(catalogRepo);
+    const first = map.capabilities[0];
+    map.capability_policy_profiles = {
+      standard: {
+        authority_boundary: first.authority_boundary,
+        forbidden_surfaces: first.forbidden_surfaces,
+        verification_refs: first.verification_refs,
+        owner_closeout_boundary: first.owner_closeout_boundary,
+      },
+    };
+    map.capabilities.forEach((capability) => {
+      capability.capability_policy_profile_ref = '#/capability_policy_profiles/standard';
+      delete capability.authority_boundary;
+      delete capability.forbidden_surfaces;
+      delete capability.verification_refs;
+      delete capability.owner_closeout_boundary;
+    });
+    writeJson(mapPath, map);
+    const capabilityRef = String(first.capability_id);
+    writeSelection(selectionFile, [capabilityRef]);
+
+    const readback = buildProfileCapabilityPlan({
+      selectionFile,
+      catalogRepos: [catalogRepo],
+    }).capability_plan;
+
+    assert.deepEqual(readback.exact_capability_readout.capability_refs, [capabilityRef]);
+  });
+});
+
 test('profiles select real CLI accepts documented source and pattern aliases and emits canonical plan input', () => {
   const result = spawnSync('./bin/opl', [
     'profiles',

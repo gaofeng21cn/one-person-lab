@@ -16,6 +16,7 @@ import {
   type CurrentOwnerDeltaCapabilityBinding,
   type CurrentOwnerDeltaCapabilityRequirement,
 } from '../connect/index.ts';
+import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -453,7 +454,7 @@ function standardAgentCatalog(
   filePath: string,
   loaded: LoadedJsonRecord,
 ): LoadedCatalog {
-  const payload = loaded.payload;
+  let payload = loaded.payload;
   const standardAgentMap = payload.surface_kind === 'opl_standard_agent_capability_map';
   if (standardAgentMap) {
     assertJsonSchemaPayload({
@@ -461,6 +462,11 @@ function standardAgentCatalog(
       schema: standardAgentCapabilityMapSchema,
       sourceRef: 'contracts/opl-framework/standard-agent-capability-map.schema.json',
     }, payload);
+    const normalized = normalizeStandardAgentCapabilityMapPolicies(payload);
+    if (normalized.blockers.length > 0) {
+      throw new Error(`${filePath}: ${normalized.blockers.join(',')}`);
+    }
+    payload = normalized.capabilityMap as JsonRecord;
     assertUniqueCapabilityIds(records(payload.capabilities), filePath);
   } else {
     validateOwnerCapabilityMap(filePath, payload);
