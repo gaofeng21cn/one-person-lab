@@ -195,14 +195,14 @@ exit 1
     assert.equal(domainModulesItem.action_command_ref, 'opl system startup-maintenance');
     assert.equal(typeof domainModulesItem.last_attempt?.observed_at, 'string');
     assert.match(domainModulesItem.next_visible_step, /Core workflows/);
-    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 6);
+    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 7);
     assert.deepEqual(output.system_initialize.module_summary, output.system_initialize.domain_modules.summary);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
       output.system_initialize.domain_modules.modules.length,
     );
     assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
-    assert.equal(output.system_initialize.domain_modules.modules.length, 6);
+    assert.equal(output.system_initialize.domain_modules.modules.length, 7);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
     assertBlockedDeveloperModeSurface(output.system_initialize.settings.developer_mode);

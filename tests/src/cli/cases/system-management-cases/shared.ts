@@ -24,7 +24,7 @@ import {
 } from '../../helpers.ts';
 
 export function createManagedDomainModuleFixtures(modulesRoot: string) {
-  for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge']) {
+  for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai', 'opl-meta-agent', 'opl-bookforge', 'mas-scholar-skills']) {
     const repoPath = path.join(modulesRoot, repoName);
     fs.mkdirSync(repoPath, { recursive: true });
     const result = spawnSync('git', ['init', '-q'], {

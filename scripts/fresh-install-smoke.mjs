@@ -110,6 +110,7 @@ function createGitModuleFixtures(modulesRoot) {
     'redcube-ai',
     'opl-meta-agent',
     'opl-bookforge',
+    'mas-scholar-skills',
   ];
 
   for (const repoName of repoNames) {

@@ -94,6 +94,7 @@ EOF
   });
   const metaAgentRemote = createGitModuleRemoteFixture('opl-meta-agent');
   const bookForgeRemote = createGitModuleRemoteFixture('opl-bookforge');
+  const scholarSkillsRemote = createGitModuleRemoteFixture('mas-scholar-skills');
   writeFrameworkFixtureRoot(frameworkSourceRoot, 'framework source fixture');
   writeFrameworkFixtureRoot(frameworkTargetRoot, 'old framework target fixture');
   runGitFixtureCommand(frameworkSourceRoot, ['init', '--initial-branch', 'main']);
@@ -114,6 +115,7 @@ EOF
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: medAutoGrantRemote.remoteRoot,
     OPL_MODULE_REPO_URL_OPLMETAAGENT: metaAgentRemote.remoteRoot,
     OPL_MODULE_REPO_URL_OPLBOOKFORGE: bookForgeRemote.remoteRoot,
+    OPL_MODULE_REPO_URL_SCHOLARSKILLS: scholarSkillsRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     OPL_FRAMEWORK_UPDATE_SOURCE: frameworkSourceRoot,
     OPL_FRAMEWORK_UPDATE_TARGET_ROOT: frameworkTargetRoot,
@@ -142,9 +144,9 @@ EOF
     );
     assert.equal(output.system_action.action, 'update');
     assert.equal(output.system_action.status, 'completed');
-    assert.equal(output.system_action.details.summary.total_targets_count, 8);
+    assert.equal(output.system_action.details.summary.total_targets_count, 9);
     assert.equal(output.system_action.details.summary.completed_targets_count, 2);
-    assert.equal(output.system_action.details.summary.skipped_targets_count, 6);
+    assert.equal(output.system_action.details.summary.skipped_targets_count, 7);
     assert.equal(output.system_action.details.summary.manual_required_targets_count, 0);
     assert.equal(targets.get('framework:opl-framework')?.status, 'completed');
     assert.equal(targets.get('framework:opl-framework')?.reason, 'framework_runtime_source_refreshed');
@@ -156,6 +158,7 @@ EOF
     assert.equal(targets.get('module:medautogrant')?.reason, 'dirty_checkout');
     assert.equal(targets.get('module:meddeepscientist')?.reason, 'module_missing');
     assert.equal(targets.get('module:oplbookforge')?.reason, 'module_missing');
+    assert.equal(targets.get('module:scholarskills')?.reason, 'module_missing');
 
     const updatedMas = (
       runCli(['connect', 'modules'], env) as any
@@ -169,6 +172,7 @@ EOF
     fs.rmSync(medAutoGrantRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(metaAgentRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(bookForgeRemote.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(scholarSkillsRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -267,6 +271,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     redcube: createGitModuleRemoteFixture('redcube-ai', { extraFiles: buildModuleFiles('rca') }),
     oplmetaagent: createGitModuleRemoteFixture('opl-meta-agent', { extraFiles: buildModuleFiles('oma') }),
     oplbookforge: createGitModuleRemoteFixture('opl-bookforge', { extraFiles: buildModuleFiles('bookforge') }),
+    scholarskills: createGitModuleRemoteFixture('mas-scholar-skills'),
   };
   writeFakeBookForgeGeneratedSurfacePack(remotes.oplbookforge.sourceRoot);
   runGitFixtureCommand(remotes.oplbookforge.sourceRoot, ['add', 'agent', 'contracts']);
@@ -286,6 +291,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     OPL_MODULE_REPO_URL_REDCUBE: remotes.redcube.remoteRoot,
     OPL_MODULE_REPO_URL_OPLMETAAGENT: remotes.oplmetaagent.remoteRoot,
     OPL_MODULE_REPO_URL_OPLBOOKFORGE: remotes.oplbookforge.remoteRoot,
+    OPL_MODULE_REPO_URL_SCHOLARSKILLS: remotes.scholarskills.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 
@@ -305,8 +311,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(output.system_action.action, 'reconcile_modules');
     assert.equal(output.system_action.status, 'manual_required');
     assert.deepEqual(output.system_action.details.summary, {
-      total_targets_count: 6,
-      completed_targets_count: 4,
+      total_targets_count: 7,
+      completed_targets_count: 5,
       skipped_targets_count: 1,
       manual_required_targets_count: 1,
     });
@@ -320,6 +326,8 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(targets.get('oplmetaagent')?.reason, 'module_missing');
     assert.equal(targets.get('oplbookforge')?.status, 'completed');
     assert.equal(targets.get('oplbookforge')?.reason, 'module_missing');
+    assert.equal(targets.get('scholarskills')?.status, 'completed');
+    assert.equal(targets.get('scholarskills')?.reason, 'module_missing');
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
     assert.equal(targets.get('medautogrant')?.reason, 'dirty_checkout');
     const turnkeyLog = fs.readFileSync(turnkeyLogPath, 'utf8');
