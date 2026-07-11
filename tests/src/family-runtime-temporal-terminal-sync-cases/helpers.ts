@@ -37,6 +37,7 @@ export function insertMasDefaultExecutorTask(
     createdAt: string;
     lastError?: string | null;
     deadLetterReason?: string | null;
+    payload?: Record<string, unknown>;
   },
 ) {
   db.prepare(`
@@ -50,7 +51,12 @@ export function insertMasDefaultExecutorTask(
     input.taskId,
     'medautoscience',
     'domain_owner/default-executor-dispatch',
-    '{}',
+    JSON.stringify({
+      action_type: 'complete_medical_paper_readiness_surface',
+      work_unit_id: 'complete_medical_paper_readiness_surface',
+      next_executable_owner: 'medautoscience',
+      ...input.payload,
+    }),
     null,
     0,
     input.status,

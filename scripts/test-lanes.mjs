@@ -413,6 +413,7 @@ const lanes = {
     nodeTest(['tests/src/fresh-install-smoke.test.ts']),
   ],
   full: [
+    { kind: 'npm', args: ['run', 'test:artifact'] },
     { kind: 'npm', args: ['run', 'test:fast'] },
     { kind: 'npm', args: ['run', 'test:fresh-install'] },
     { kind: 'npm', args: ['run', 'test:structure'] },
@@ -422,7 +423,6 @@ const lanes = {
     { kind: 'npm', args: ['run', 'test:meta'] },
     { kind: 'npm', args: ['run', 'test:regression'] },
     { kind: 'npm', args: ['run', 'test:integration'] },
-    { kind: 'npm', args: ['run', 'test:artifact'] },
     { kind: 'npm', args: ['run', 'test:native'] },
   ],
 };

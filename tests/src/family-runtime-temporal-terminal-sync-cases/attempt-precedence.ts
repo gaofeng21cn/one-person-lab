@@ -25,6 +25,7 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
       createdAt,
       lastError: 'temporal_workflow_failed',
       deadLetterReason: 'temporal_stage_attempt_failed',
+      payload: { source_fingerprint: 'sha256:newer-completed-dispatch' },
     });
     const olderAttempt = createMasDefaultExecutorAttempt(db, {
       taskId: 'task-mas-default-newer-closeout-wins',
@@ -65,7 +66,14 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
         writeback_receipt_refs: ['receipt:writer-handoff'],
         rejected_writes: [],
         next_owner: 'medautoscience',
-        route_impact: {},
+        route_impact: {
+          stage_native_closeout: {
+            surface_kind: 'medical_paper_readiness_stage_native_closeout',
+            status: 'materialized',
+            source_fingerprint: 'sha256:newer-completed-dispatch',
+            written_ref: 'artifacts/stage_outputs/08-publication_package_handoff/receipts/owner_receipt.json',
+          },
+        },
         human_gate_refs: [],
         signals: [],
         closeout_packet: {

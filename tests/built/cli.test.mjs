@@ -10,7 +10,7 @@ import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const cliEntrypoint = path.join(repoRoot, 'dist', 'cli.js');
+const cliEntrypoint = path.join(repoRoot, 'dist', 'entrypoints', 'cli.js');
 
 function runBuiltCli(args, envOverrides = {}) {
   const result = spawnSync(process.execPath, [cliEntrypoint, ...args], {
@@ -50,7 +50,7 @@ ${handlerBody}
 
 test('built CLI entrypoint loads the emitted main module', () => {
   assert.equal(fs.existsSync(cliEntrypoint), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'dist', 'cli', 'main.js')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'dist', 'entrypoints', 'cli', 'main.js')), true);
 
   const result = runBuiltCli(['contract', 'validate']);
   const output = parseJsonOutput(result);
