@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.build.json",
+  "compilerOptions": {
+    "outDir": "./build/dist",
+    "rootDir": "../../src"
+  },
+  "files": [
+    "../../src/kernel/schema-registry.ts",
+    "../../src/modules/foundry-lab/reference-build-proof.ts",
+    "../../src/modules/workspace/reference-design-pattern-packet.ts",
+    "../../src/modules/stagecraft/standard-agent-action-stage-run.ts",
+    "../../src/modules/pack/public/standard-agent-pack-abi.ts"
+  ],
+  "include": []
+}

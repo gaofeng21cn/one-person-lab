@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-11
 
+### 决策：静态 Foundry Agent 合同与完整 CLI/runtime 使用不同安装单元
+
+原因：OMA 只消费五个静态 subpath，却因 `opl-framework-shared` 单一 manifest 被迫安装 Temporal 与 E2B。源码 owner 仍应唯一归 OPL，但安装图无需把静态 validator/build primitive 与完整 provider runtime 绑在一起。
+
+影响：
+
+- `opl-framework-static-contracts` 从本仓 canonical source 编译五个静态 exports，唯一运行依赖为 `ajv`；不复制 policy body、不发布 `opl` bin、不携带 Temporal/E2B。
+- `opl-framework-shared` 保持现有 `opl` CLI、完整 exports、Temporal dependencies 与 E2B optional dependency，CLI/runtime consumer 路径不变。
+- OMA 将 dependency/import package prefix 改为 `opl-framework-static-contracts`，subpath 名保持不变；pack/install readback 必须证明五个 exports 可加载且 dependency tree 不含 Temporal/E2B。
+
 ### 决策：Stage attempt domain output 只运输 domain-owned ref
 
 原因：domain stage 的可消费构建结果属于 domain workspace；若把结果 body 放入 Temporal activity result、workflow state 或 OPL ledger，会让 Framework 持有第二份 domain truth。只保留普通 `closeout_refs` 又无法标识哪个 ref 是 stage 的主输出。
