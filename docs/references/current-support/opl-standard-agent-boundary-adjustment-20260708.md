@@ -15,7 +15,7 @@ Machine boundary: 本文是人读排查与调整说明。机器真相继续归 s
 - `contracts/opl-framework/domain-private-platform-tail-matrix.json`
 - `opl agents conformance --family-defaults --json`
 - `opl agents default-callers --family-defaults --json`
-- 五个标准 domain repo 的 `contracts/domain_descriptor.json`、`contracts/pack_compiler_input.json`、`contracts/stage_control_plane.json`、`contracts/capability_map.json`、`agent/primary_skill/SKILL.md`
+- 五个标准 domain repo 的 `contracts/domain_descriptor.json`、`contracts/pack_compiler_input.json`、`agent/stages/manifest.json`、`contracts/capability_map.json`、`agent/primary_skill/SKILL.md`；`family_stage_control_plane` 由 OPL Pack 从该 manifest 生成，不是 domain repo tracked contract
 
 当前标准 domain agent 是 `mas`、`mag`、`rca`、`oma`、`obf`。`opl-meta-agent` 与 `opl-bookforge` 只保留为 OMA / BookForge 的 repo、package、plugin、alias 或 carrier 名，不再作为 standard-agent canonical id。`mas-scholar-skills` 是 `framework_capability_package`，不是 standard domain agent，不进入 default-caller deletion gate 或 domain physical-delete 判断。
 

@@ -9,6 +9,10 @@ import { normalizeFamilyActionCatalog } from '../../../kernel/family-action-cata
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { resolveContainedRepoJsonFile } from '../../../kernel/repo-contained-json-file.ts';
 import { normalizeFamilyStageControlPlane } from '../../stagecraft/index.ts';
+import {
+  compileStandardAgentStageManifest,
+  STANDARD_AGENT_STAGE_MANIFEST_REF,
+} from '../../pack/index.ts';
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../../../kernel/managed-runtime-contract.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
@@ -75,6 +79,15 @@ type CanonicalManifestSurface<T> = {
   sourceRef: NormalizedSurfaceRef | null;
 };
 
+const GENERATED_STAGE_CONTROL_PLANE_REF = 'opl-generated:family_stage_control_plane';
+const GENERATED_STAGE_CONTROL_PLANE_REF_FIELDS = new Set([
+  'ref_kind',
+  'ref',
+  'source_ref',
+  'label',
+]);
+const REPO_CONTRACT_REF_FIELDS = new Set(['ref_kind', 'ref', 'label']);
+
 function hasOwn(record: JsonRecord, field: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, field);
 }
@@ -98,6 +111,12 @@ function resolveCanonicalManifestSurface<T>(
   }
 
   const ref = requireRecord(manifest[refField], refField);
+  const unsupportedFields = Object.keys(ref)
+    .filter((field) => !REPO_CONTRACT_REF_FIELDS.has(field))
+    .sort();
+  if (unsupportedFields.length > 0) {
+    throw new Error(`${refField} contains unsupported fields: ${unsupportedFields.join(', ')}.`);
+  }
   if (requireString(ref.ref_kind, `${refField}.ref_kind`) !== 'repo_path') {
     throw new Error(`${refField}.ref_kind must be repo_path.`);
   }
@@ -116,6 +135,54 @@ function resolveCanonicalManifestSurface<T>(
       ref_kind: 'repo_path',
       ref: resolved.repo_relative_ref,
       label: optionalString(ref.label) ?? bodyField,
+    },
+  };
+}
+
+function resolveGeneratedStageControlPlaneSurface(
+  manifest: JsonRecord,
+  repoDir: string | undefined,
+): CanonicalManifestSurface<NonNullable<NormalizedDomainManifest['family_stage_control_plane']>> {
+  const bodyField = 'family_stage_control_plane';
+  const refField = 'family_stage_control_plane_ref';
+  if (hasOwn(manifest, bodyField)) {
+    throw new Error(`${bodyField} must not be supplied; use ${refField}.`);
+  }
+  if (!hasOwn(manifest, refField)) {
+    return { value: null, sourceRef: null };
+  }
+  if (!repoDir) {
+    throw new Error(`${refField} requires a bound domain repository path.`);
+  }
+
+  const ref = requireRecord(manifest[refField], refField);
+  const unsupportedFields = Object.keys(ref)
+    .filter((field) => !GENERATED_STAGE_CONTROL_PLANE_REF_FIELDS.has(field))
+    .sort();
+  if (unsupportedFields.length > 0) {
+    throw new Error(`${refField} contains unsupported fields: ${unsupportedFields.join(', ')}.`);
+  }
+  if (requireString(ref.ref_kind, `${refField}.ref_kind`) !== 'generated_surface') {
+    throw new Error(`${refField}.ref_kind must be generated_surface.`);
+  }
+  if (requireString(ref.ref, `${refField}.ref`) !== GENERATED_STAGE_CONTROL_PLANE_REF) {
+    throw new Error(`${refField}.ref must be ${GENERATED_STAGE_CONTROL_PLANE_REF}.`);
+  }
+  if (requireString(ref.source_ref, `${refField}.source_ref`) !== STANDARD_AGENT_STAGE_MANIFEST_REF) {
+    throw new Error(`${refField}.source_ref must be ${STANDARD_AGENT_STAGE_MANIFEST_REF}.`);
+  }
+  const label = hasOwn(ref, 'label')
+    ? requireString(ref.label, `${refField}.label`)
+    : bodyField;
+  const compiled = compileStandardAgentStageManifest(repoDir);
+
+  return {
+    value: normalizeFamilyStageControlPlane(compiled.stage_control_plane, refField),
+    sourceRef: {
+      ref_kind: 'generated_surface',
+      ref: GENERATED_STAGE_CONTROL_PLANE_REF,
+      source_ref: STANDARD_AGENT_STAGE_MANIFEST_REF,
+      label,
     },
   };
 }
@@ -874,13 +941,9 @@ export function normalizeManifest(
     options.repoDir,
     normalizeFamilyActionCatalog,
   );
-  const familyStageControlPlaneSurface = resolveCanonicalManifestSurface(
+  const familyStageControlPlaneSurface = resolveGeneratedStageControlPlaneSurface(
     manifest,
-    'family_stage_control_plane',
-    'family_stage_control_plane_ref',
-    'contracts/stage_control_plane.json',
     options.repoDir,
-    normalizeFamilyStageControlPlane,
   );
   const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
   const familyTransitionSurfaces = normalizeFamilyTransitionSurfaces(manifest, manifestTargetDomainId);

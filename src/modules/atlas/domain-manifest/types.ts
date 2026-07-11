@@ -25,6 +25,7 @@ type JsonRecord = Record<string, unknown>;
 export interface NormalizedSurfaceRef {
   ref_kind: string;
   ref: string;
+  source_ref?: string;
   role?: string;
   label?: string;
 }

@@ -317,6 +317,13 @@
           "family_stage_control_plane_ref"
         ]
       }
+    },
+    {
+      "not": {
+        "required": [
+          "family_stage_control_plane"
+        ]
+      }
     }
   ],
   "$defs": {
@@ -501,14 +508,18 @@
       "additionalProperties": false,
       "required": [
         "ref_kind",
-        "ref"
+        "ref",
+        "source_ref"
       ],
       "properties": {
         "ref_kind": {
-          "const": "repo_path"
+          "const": "generated_surface"
         },
         "ref": {
-          "const": "contracts/stage_control_plane.json"
+          "const": "opl-generated:family_stage_control_plane"
+        },
+        "source_ref": {
+          "const": "agent/stages/manifest.json"
         },
         "label": {
           "type": "string",

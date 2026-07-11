@@ -1,9 +1,10 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, runCliFailure, test } from '../../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, runCliFailure, test } from '../../helpers.ts';
 import { buildReadyAgentRepo, writeJson } from '../agents-conformance-fixtures.ts';
 import {
   attachManifestSurface,
   bindFamilyManifests,
   createFamilyDefaultContractWorkspace,
+  writeManifestContractOverrides,
   withPackCompilerReadySurfaces,
 } from '../domain-pack-compiler-fixtures.ts';
 
@@ -11,6 +12,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-bridge-blocked-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   const fixtures = loadFamilyManifestFixtures();
   const bridgeMas = attachManifestSurface(
     attachManifestSurface(
@@ -56,6 +58,8 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
       ],
     },
   );
+  const repoDir = path.join(workspaceRoot, 'med-autoscience');
+  writeManifestContractOverrides(repoDir, bridgeMas);
 
   runCli([
     'workspace',
@@ -63,7 +67,7 @@ test('generated interfaces keep active caller cutover blocked while repo-local m
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    repoDir,
     '--manifest-command',
     buildManifestCommand(bridgeMas),
   ], env);
@@ -84,6 +88,7 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-no-wrapper-alias-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   const fixtures = loadFamilyManifestFixtures();
   const wrapperOnlyMas = attachManifestSurface(
     attachManifestSurface(
@@ -130,6 +135,8 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
       ],
     },
   );
+  const repoDir = path.join(workspaceRoot, 'med-autoscience');
+  writeManifestContractOverrides(repoDir, wrapperOnlyMas);
 
   runCli([
     'workspace',
@@ -137,7 +144,7 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    repoDir,
     '--manifest-command',
     buildManifestCommand(wrapperOnlyMas),
   ], env);
@@ -167,6 +174,7 @@ test('generated interfaces expose active legacy caller deletion gate refs withou
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-delete-gate-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   const fixtures = loadFamilyManifestFixtures();
   const bridgeExitGate = {
     no_forbidden_write_refs: ['no-forbidden-write:mas/status-read-model'],
@@ -220,6 +228,8 @@ test('generated interfaces expose active legacy caller deletion gate refs withou
       ],
     },
   );
+  const repoDir = path.join(workspaceRoot, 'med-autoscience');
+  writeManifestContractOverrides(repoDir, bridgedMas);
 
   runCli([
     'workspace',
@@ -227,7 +237,7 @@ test('generated interfaces expose active legacy caller deletion gate refs withou
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    repoDir,
     '--manifest-command',
     buildManifestCommand(bridgedMas),
   ], env);

@@ -4,11 +4,10 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
 } from '../helpers.ts';
 import { STANDARD_AGENT_PACK_ABI } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
-import { buildReadyAgentRepo, retargetReadyRepo } from './agents-conformance-fixtures.ts';
+import { buildReadyAgentRepo } from './agents-conformance-fixtures.ts';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -132,42 +131,27 @@ function withActionCatalog(payload: JsonRecord, targetDomainId: string, owner: s
 }
 
 function withStageControlPlane(payload: JsonRecord, targetDomainId: string, owner: string, stageId: string, actionId: string) {
-  return attachManifestSurface(payload, 'family_stage_control_plane', {
-    surface_kind: 'family_stage_control_plane',
-    version: 'family-stage-control-plane.v1',
-    plane_id: `${targetDomainId.replace(/[^a-z0-9]+/gi, '_')}_stage_plane`,
-    target_domain_id: targetDomainId,
-    owner,
-    authority_boundary: {
-      domain_truth_owner: owner,
-      opl_role: 'projection_consumer_only',
-    },
-    stages: [
-      {
-        stage_id: stageId,
-        stage_kind: 'creation',
-        title: stageId,
-        summary: `${stageId} stage descriptor.`,
-        goal: `Expose ${stageId} as a family descriptor.`,
-        owner,
-        domain_stage_refs: [stageId],
-        inputs: [],
-        knowledge_refs: [{ ref_kind: 'domain_memory_ref', ref: `${targetDomainId}.domain_memory` }],
-        skills: [],
-        prompt_refs: [],
-        allowed_action_refs: [actionId],
-        outputs: [],
-        evaluation: [],
-        handoff: null,
-        source_refs: [],
-        authority_boundary: {
-          domain_truth_owner: owner,
-          opl_role: 'projection_consumer_only',
-        },
+  const ref = {
+    ref_kind: 'generated_surface',
+    ref: 'opl-generated:family_stage_control_plane',
+    source_ref: 'agent/stages/manifest.json',
+    label: `${owner} ${stageId} generated stage plane for ${actionId}`,
+  };
+  if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
+    const {
+      family_stage_control_plane: _retiredInlinePlane,
+      ...manifest
+    } = payload.product_entry_manifest as JsonRecord;
+    return {
+      ...payload,
+      product_entry_manifest: {
+        ...manifest,
+        family_stage_control_plane_ref: ref,
       },
-    ],
-    notes: [],
-  });
+    };
+  }
+  const { family_stage_control_plane: _retiredInlinePlane, ...manifest } = payload;
+  return { ...manifest, family_stage_control_plane_ref: ref };
 }
 
 function withMemoryDescriptor(payload: JsonRecord, targetDomainId: string, owner: string, memoryRefId: string) {
@@ -320,6 +304,23 @@ function withFunctionalAudit(payload: JsonRecord, targetDomainId: string, owner:
 function writeJson(filePath: string, value: JsonRecord) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+export function writeManifestContractOverrides(repoDir: string, payload: JsonRecord) {
+  const surface = payload.product_entry_manifest
+    && typeof payload.product_entry_manifest === 'object'
+    && !Array.isArray(payload.product_entry_manifest)
+    ? payload.product_entry_manifest as JsonRecord
+    : payload;
+  for (const [field, file] of [
+    ['functional_privatization_audit', 'functional_privatization_audit.json'],
+    ['generated_surface_handoff', 'generated_surface_handoff.json'],
+  ] as const) {
+    const value = surface[field];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      writeJson(path.join(repoDir, 'contracts', file), value as JsonRecord);
+    }
+  }
 }
 
 function writeMagProductionAcceptanceFixture(contractsDir: string) {
@@ -500,7 +501,6 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
     required: ['workspace_root'],
     properties: { workspace_root: { type: 'string' } },
   });
-  writeJson(path.join(contractsDir, 'stage_control_plane.json'), manifest.family_stage_control_plane as JsonRecord);
   writeJson(path.join(contractsDir, 'memory_descriptor.json'), manifest.domain_memory_descriptor as JsonRecord);
   writeJson(path.join(contractsDir, 'functional_privatization_audit.json'), manifest.functional_privatization_audit as JsonRecord);
   writeJson(path.join(contractsDir, 'generated_surface_handoff.json'), generatedSurfaceHandoff(spec.targetDomainId));
@@ -522,7 +522,13 @@ function writeFamilyDefaultContractRepo(workspaceRoot: string, spec: FamilyDefau
   stageManifest.target_domain_id = spec.targetDomainId;
   stageManifest.owner = spec.targetDomainId;
   (stageManifest.authority_boundary as JsonRecord).domain_truth_owner = spec.targetDomainId;
-  ((stageManifest.stages as JsonRecord[])[0]!).allowed_action_refs = [spec.actionId];
+  const stage = (stageManifest.stages as JsonRecord[])[0]!;
+  stage.stage_id = spec.stageId;
+  stage.title = spec.stageId;
+  stage.summary = `${spec.stageId} stage descriptor.`;
+  stage.goal = `Expose ${spec.stageId} as a family descriptor.`;
+  stage.allowed_action_refs = [spec.actionId];
+  stage.next_stage_refs = [];
   writeJson(stageManifestRef, stageManifest);
   if (spec.targetDomainId === 'med-autogrant') {
     writeMagProductionAcceptanceFixture(contractsDir);
@@ -680,19 +686,14 @@ export function withPackCompilerReadySurfaces(payload: JsonRecord, options: {
   );
 }
 
-function createPackCompilerOmaContractFixture() {
-  const repoDir = buildReadyAgentRepo();
-  retargetReadyRepo(repoDir, 'opl-meta-agent', 'OPL Meta Agent');
-  return repoDir;
-}
-
 export function bindFamilyManifests(
   env: Record<string, string>,
   options: { includeOma?: boolean } = {},
 ) {
   const fixtures = loadFamilyManifestFixtures();
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   if (options.includeOma !== false) {
-    env.OPL_META_AGENT_REPO_DIR ??= createPackCompilerOmaContractFixture();
+    env.OPL_META_AGENT_REPO_DIR ??= path.join(workspaceRoot, 'opl-meta-agent');
   }
   const manifests = {
     medautoscience: withPackCompilerReadySurfaces(fixtures.medautoscience, {
@@ -720,6 +721,11 @@ export function bindFamilyManifests(
       memoryRefId: 'rca_visual_pattern_memory',
     }),
   };
+  const repoDirectories: Record<string, string> = {
+    medautoscience: 'med-autoscience',
+    medautogrant: 'med-autogrant',
+    redcube: 'redcube-ai',
+  };
 
   for (const [project, manifest] of Object.entries(manifests)) {
     runCli([
@@ -728,9 +734,10 @@ export function bindFamilyManifests(
       '--project',
       project,
       '--path',
-      repoRoot,
+      path.join(workspaceRoot, repoDirectories[project]!),
       '--manifest-command',
       buildManifestCommand(manifest),
     ], env);
   }
+  return workspaceRoot;
 }

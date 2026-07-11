@@ -1,6 +1,8 @@
-import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 import {
   attachManifestSurface,
+  createFamilyDefaultContractWorkspace,
+  writeManifestContractOverrides,
   withPackCompilerReadySurfaces,
 } from './domain-pack-compiler-fixtures.ts';
 
@@ -8,6 +10,7 @@ test('generated interfaces fail closed when active caller target kind is not pro
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generated-interfaces-unknown-target-'));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
   const fixtures = loadFamilyManifestFixtures();
   const unknownTargetMas = attachManifestSurface(
     attachManifestSurface(
@@ -48,11 +51,13 @@ test('generated interfaces fail closed when active caller target kind is not pro
           surface_id: 'status_read_model',
           current_paths: ['src/med_autoscience/status.py'],
           current_role: 'declared active caller',
-          target_role: 'status descriptor',
+          target_role: 'unclassified_status_sink',
         },
       ],
     },
   );
+  const repoDir = path.join(workspaceRoot, 'med-autoscience');
+  writeManifestContractOverrides(repoDir, unknownTargetMas);
 
   runCli([
     'workspace',
@@ -60,7 +65,7 @@ test('generated interfaces fail closed when active caller target kind is not pro
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    repoDir,
     '--manifest-command',
     buildManifestCommand(unknownTargetMas),
   ], env);

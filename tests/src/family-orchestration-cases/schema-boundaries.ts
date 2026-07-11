@@ -239,6 +239,29 @@ export function registerFamilyOrchestrationSchemaBoundaryTests(): void {
     assert.equal((properties.persistence_policy as Json).$ref, '#/$defs/persistencePolicySurface');
     assert.equal((properties.lifecycle_ledger as Json).$ref, '#/$defs/lifecycleLedgerSurface');
     assert.equal((properties.owner_route as Json).$ref, '#/$defs/ownerRouteSurface');
+
+    const stageControlPlaneRef = (schema.$defs as Json).stageControlPlaneContractRef as Json;
+    assert.equal(stageControlPlaneRef.additionalProperties, false);
+    assert.deepEqual(stageControlPlaneRef.required, ['ref_kind', 'ref', 'source_ref']);
+    assert.deepEqual(Object.keys(stageControlPlaneRef.properties as Json).sort(), [
+      'label',
+      'ref',
+      'ref_kind',
+      'source_ref',
+    ]);
+    assert.deepEqual((stageControlPlaneRef.properties as Json).ref_kind, {
+      const: 'generated_surface',
+    });
+    assert.deepEqual((stageControlPlaneRef.properties as Json).ref, {
+      const: 'opl-generated:family_stage_control_plane',
+    });
+    assert.deepEqual((stageControlPlaneRef.properties as Json).source_ref, {
+      const: 'agent/stages/manifest.json',
+    });
+    assert.ok((schema.allOf as Json[]).some((entry) => {
+      const required = ((entry.not as Json | undefined)?.required ?? []) as string[];
+      return required.length === 1 && required[0] === 'family_stage_control_plane';
+    }));
   });
 
   test('family persistence lifecycle owner-route and supervision schemas freeze shared control surfaces', () => {

@@ -8,9 +8,9 @@ import {
   buildManifestCommand,
   createFamilyContractsFixtureRoot,
   loadFamilyManifestFixtures,
-  repoRoot,
   runCli,
 } from './cli/helpers.ts';
+import { createFamilyDefaultContractWorkspace } from './cli/cases/domain-pack-compiler-fixtures.ts';
 import {
   buildWorkspaceArtifactLocatorProjection,
   buildWorkspaceReceiptInventory,
@@ -32,6 +32,25 @@ function attachManifestSurface(payload: JsonRecord, field: string, value: unknow
     ...payload,
     [field]: value,
   };
+}
+
+function withGeneratedStageControlPlaneRef(payload: JsonRecord, label: string) {
+  const ref = {
+    ref_kind: 'generated_surface',
+    ref: 'opl-generated:family_stage_control_plane',
+    source_ref: 'agent/stages/manifest.json',
+    label,
+  };
+  if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
+    const { family_stage_control_plane: _retiredInlinePlane, ...manifest } =
+      payload.product_entry_manifest as JsonRecord;
+    return {
+      ...payload,
+      product_entry_manifest: { ...manifest, family_stage_control_plane_ref: ref },
+    };
+  }
+  const { family_stage_control_plane: _retiredInlinePlane, ...manifest } = payload;
+  return { ...manifest, family_stage_control_plane_ref: ref };
 }
 
 function withMasLikeMemoryDescriptor(payload: JsonRecord) {
@@ -256,7 +275,11 @@ test('generic substrate projection indexes MAS-like workspace, source, artifact,
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
-  const masManifest = withMasLikeMemoryDescriptor(fixtures.medautoscience);
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const masManifest = withGeneratedStageControlPlaneRef(
+    withMasLikeMemoryDescriptor(fixtures.medautoscience),
+    'MAS generated stage plane',
+  );
 
   try {
     runCli([
@@ -265,7 +288,7 @@ test('generic substrate projection indexes MAS-like workspace, source, artifact,
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      path.join(workspaceRoot, 'med-autoscience'),
       '--manifest-command',
       buildManifestCommand(masManifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
@@ -384,6 +407,11 @@ test('generic substrate projection consumes MAS domain handler opaque substrate 
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-domain-handler-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const masManifest = withGeneratedStageControlPlaneRef(
+    fixtures.medautoscience,
+    'MAS generated stage plane',
+  );
   const domainHandler = createDomainHandlerExportFixture(masSubstrateDomainHandlerPayload());
 
   try {
@@ -393,9 +421,9 @@ test('generic substrate projection consumes MAS domain handler opaque substrate 
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      path.join(workspaceRoot, 'med-autoscience'),
       '--manifest-command',
-      buildManifestCommand(fixtures.medautoscience),
+      buildManifestCommand(masManifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
     const inspect = runCli(['substrate', 'projection', '--domain', 'medautoscience'], {
@@ -434,6 +462,11 @@ test('generic substrate projection list reports partial substrate when memory re
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-partial-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const masManifest = withGeneratedStageControlPlaneRef(
+    fixtures.medautoscience,
+    'MAS generated stage plane',
+  );
 
   try {
     runCli([
@@ -442,9 +475,9 @@ test('generic substrate projection list reports partial substrate when memory re
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      path.join(workspaceRoot, 'med-autoscience'),
       '--manifest-command',
-      buildManifestCommand(fixtures.medautoscience),
+      buildManifestCommand(masManifest),
     ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
 
     const list = runCli(['substrate', 'projections'], {
@@ -470,7 +503,11 @@ test('generic substrate workbench groups family refs for App and operator drilld
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-generic-substrate-workbench-state-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
-  const masManifest = withMasLikeMemoryDescriptor(fixtures.medautoscience);
+  const workspaceRoot = createFamilyDefaultContractWorkspace();
+  const masManifest = withGeneratedStageControlPlaneRef(
+    withMasLikeMemoryDescriptor(fixtures.medautoscience),
+    'MAS generated stage plane',
+  );
   const masDomainHandler = createDomainHandlerExportFixture(masSubstrateDomainHandlerPayload());
   const magDomainHandler = createDomainHandlerExportFixture(genericSubstrateDomainHandlerPayload({
     surfaceKind: 'mag_opl_generic_substrate_adapter',
@@ -499,17 +536,20 @@ test('generic substrate workbench groups family refs for App and operator drilld
 
   try {
     [
-      ['medautoscience', masManifest],
-      ['medautogrant', fixtures.medautogrant],
-      ['redcube', fixtures.redcube],
-    ].forEach(([project, manifest]) => {
+      ['medautoscience', 'med-autoscience', masManifest],
+      ['medautogrant', 'med-autogrant', withGeneratedStageControlPlaneRef(
+        fixtures.medautogrant,
+        'MAG generated stage plane',
+      )],
+      ['redcube', 'redcube-ai', fixtures.redcube],
+    ].forEach(([project, repoDirectory, manifest]) => {
       runCli([
         'workspace',
         'bind',
         '--project',
         project as string,
         '--path',
-        repoRoot,
+        path.join(workspaceRoot, repoDirectory as string),
         '--manifest-command',
         buildManifestCommand(manifest as JsonRecord),
       ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });

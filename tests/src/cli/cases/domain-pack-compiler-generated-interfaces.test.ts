@@ -47,8 +47,8 @@ function boundFamilyEnv(prefix: string) {
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   const env = { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot };
-  bindFamilyManifests(env);
-  return { env, stateRoot };
+  const workspaceRoot = bindFamilyManifests(env);
+  return { env, stateRoot, workspaceRoot };
 }
 
 function writeDomainRepoContracts(targetDir: string, manifest: Record<string, any>) {
@@ -73,7 +73,6 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
       },
     }],
     ['action_catalog.json', manifestSurface.family_action_catalog],
-    ['stage_control_plane.json', manifestSurface.family_stage_control_plane],
     ['memory_descriptor.json', manifestSurface.domain_memory_descriptor],
     ['functional_privatization_audit.json', manifestSurface.functional_privatization_audit],
     ['generated_surface_handoff.json', {
@@ -132,7 +131,13 @@ function writeDomainRepoContracts(targetDir: string, manifest: Record<string, an
 }
 
 test('generated interfaces block default cutover without handoff proof but keep authority false', () => {
-  const { env } = boundFamilyEnv('opl-generated-interfaces-state-');
+  const { env, workspaceRoot } = boundFamilyEnv('opl-generated-interfaces-state-');
+  fs.rmSync(path.join(
+    workspaceRoot,
+    'med-autoscience',
+    'contracts',
+    'generated_surface_handoff.json',
+  ));
   const bundle = runCli(['agents', 'interfaces', '--domain', 'mas'], env).generated_agent_interfaces;
 
   assert.equal(bundle.surface_kind, 'opl_generated_agent_interface_bundle');

@@ -466,7 +466,12 @@ function buildRawManifest(repoDir: string, registry: JsonRecord) {
     }),
     shared_handoff: buildSharedHandoff(),
     family_action_catalog: actionCatalog,
-    family_stage_control_plane: stageControlPlane,
+    family_stage_control_plane_ref: {
+      ref_kind: 'generated_surface',
+      ref: 'opl-generated:family_stage_control_plane',
+      source_ref: 'agent/stages/manifest.json',
+      label: 'OPL generated OMA stage control plane',
+    },
     family_transition_spec_descriptor: buildTransitionDescriptor(),
     domain_memory_descriptor: buildDomainMemoryDescriptor(memoryDescriptor, stageControlPlane),
     standard_domain_agent_skeleton: buildStandardSkeleton(
@@ -525,7 +530,7 @@ function buildOplMetaAgentDescriptorEntry(
     workspace_path: repoDir,
     manifest_command: null,
     status: 'resolved',
-    manifest: normalizeManifest(rawManifest),
+    manifest: normalizeManifest(rawManifest, { repoDir }),
     error: null,
   };
 }
