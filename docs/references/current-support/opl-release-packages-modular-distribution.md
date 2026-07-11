@@ -41,7 +41,7 @@ Agent package 与 capability dependency 采用双形态单源：MAS、MAS Schola
 
 本地完整工作树大小不能代表分发体积。分发时不带 `.git`、未跟踪文件、缓存、虚拟环境和构建产物；浅克隆工作树仍会包含 `.git` 元数据，适合作为开发安装方式，不适合作为 App 内置体积估算。
 
-源码归档大小是 release-time manifest fact：`scripts/package-module-archives.mjs` 以每个 module checkout 的 `git archive --format=tar.gz HEAD` 生成 tarball，并把 `source_archive.size`、`source_archive.sha256` 和 `source_git.head_sha` 写入 `opl-release-manifest.json` / `opl-channel-manifest.json` / `SHA256SUMS`。长期文档只保留这个读取规则，不保留某次本地 archive 的 MB 快照。
+源码归档大小是 release-time manifest fact：`scripts/package-module-archives.mjs` 以每个 module checkout 的 `git archive --format=tar.gz HEAD` 生成 tarball，并把 `source_archive.size`、`source_archive.sha256` 和 `source_git.head_sha` 写入 `opl-release-manifest.json` / `opl-channel-manifest.json` / `SHA256SUMS`。`framework_core.homebrew_formula` 同时从 `framework_core.version` 与 `source_git.head_sha` 投影 immutable GitHub commit archive URL；Homebrew tap sync 下载该 URL 后计算并写入 formula sha256，不能自行推断版本或改用 moving branch/tag。长期文档只保留这个读取规则，不保留某次本地 archive 的 MB 快照。
 
 ## Packages 适用方式
 
@@ -53,7 +53,7 @@ Agent package 与 capability dependency 采用双形态单源：MAS、MAS Schola
 - Source-only 或尚未发布的 first-party agent package manifest 不携带 `distribution_payload`，package/channel compiler 也不投影空值、预设 `latest` 或 fixture digest。只有真实发布元数据存在时才声明该对象；published registry 的 ordinary-user source 必须绑定合法 distribution payload、immutable tag 与 digest lock。
 - Manifest 同时投影 bundled Codex default profile；该 profile 只表达产品默认 provider/model endpoint 与 profile role，不包含 secret，也不替代用户本地 Codex 配置或 executor policy。
 - `.github/workflows/release-package-channel.yml` 是自动 release gate：GitHub Release `published` 后调用 packages reusable workflow；`.github/workflows/daily-package-channel.yml` 是 daily change-detected package gate：每天生成候选 manifest，和当前 `latest` channel 的 module / capability package source fingerprint 比较，有变化才默认发布当前 UTC `<YY.M.D>` 不可变版本并移动 `latest`，无变化不推 GHCR；`.github/workflows/packages.yml` 是 Framework package source archive / manifest publish workflow，保留手动 `workflow_dispatch` 做修复。它发布 `one-person-lab-modules/*` 和 `one-person-lab-manifest` 到 GHCR，同时上传 workflow artifact；它不代表 MAS/MAG/RCA/OPL Meta Agent/MAS Scholar Skills 各 repo 已经各自维护独立 GHCR/Packages 发布面。
-- `scripts/package-module-archives.mjs` 会生成 `opl-release-manifest.json`、`opl-channel-manifest.json` 与 `SHA256SUMS`，并把每个模块的 `source_git.head_sha`、源码包大小和 `sha256` 写入 manifest。
+- `scripts/package-module-archives.mjs` 会生成 `opl-release-manifest.json`、`opl-channel-manifest.json` 与 `SHA256SUMS`，并把每个模块的 `source_git.head_sha`、源码包大小和 `sha256` 写入 manifest；Framework core 另投影 Homebrew 所需的 manifest-owned version、source head 与 immutable commit archive URL，tap 只负责下载后计算 sha256。
 - `scripts/package-release-discipline.mjs` 是 CI gate：检查 channel manifest、artifact build、checksum、rollback、旧版本清理策略与 active package channel、release-gated `workflow_call` / manual dispatch repair 语义是否齐全。缺 checksum、缺回退策略、缺清理策略，或误称 tag push 自动发布 / Framework-owned WebUI publish 时，package workflow 应直接失败。
 - Native helper 预构建 workflow 会继续上传 CI artifact，同时把 tar.gz archive 推送到 GHCR，并在 workflow 内验证 native helper package retention/status policy。
 - 默认 latest/App install/update 从 GHCR channel manifest 解析目标模块包；Developer Mode `enabled=on` 且 `mode=developer_apply_safe` 时，模块 source policy 切到 Git checkout，并优先使用本地 sibling repo。`OPL_MODULE_SOURCE_MODE=git_checkout`、`OPL_MODULE_PATH_<MODULE_ID>` 和 `OPL_MODULE_REPO_URL_<MODULE_ID>` 继续作为低层诊断/CI override。

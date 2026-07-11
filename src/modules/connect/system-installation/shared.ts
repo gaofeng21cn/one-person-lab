@@ -321,6 +321,7 @@ export type OplSystemActionInput = Partial<{
 
 export type OplTurnkeyInstallInput = Partial<{
   modules: string[];
+  headless: boolean;
   host: string;
   port: number;
   workspacePath: string;

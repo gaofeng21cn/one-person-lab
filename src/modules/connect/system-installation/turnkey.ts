@@ -320,6 +320,7 @@ export async function runOplTurnkeyInstall(
   const firstRunLog = buildOplFirstRunLogSurface();
   const firstRunLogEvents = [
     appendOplFirstRunLogEvent('install_started', {
+      install_mode: input.headless ? 'headless' : 'desktop',
       selected_modules: input.skipModules ? [] : modules,
       selected_engines: input.skipEngines ? [] : selectedEngines,
       skip_gui_open: Boolean(input.skipGuiOpen),
@@ -366,7 +367,7 @@ export async function runOplTurnkeyInstall(
     );
     const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
     const serviceAction: null = null;
-    const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
+    const guiOpenAction = input.headless || input.skipGuiOpen ? null : installOrOpenOplGui();
     const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('runtime_manager_repair_started', {
@@ -420,6 +421,7 @@ export async function runOplTurnkeyInstall(
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('install_completed', {
         status: 'completed',
+        install_mode: input.headless ? 'headless' : 'desktop',
         selected_modules: modules,
         engine_actions_count: engineActions.length,
         module_actions_count: moduleActions.length,
@@ -434,6 +436,7 @@ export async function runOplTurnkeyInstall(
       opl_install: {
         surface_id: 'opl_install',
         status: 'completed',
+        install_mode: input.headless ? 'headless' : 'desktop',
         selected_engines: selectedEngines,
         selected_modules: modules,
         codex_config_bootstrap: codexConfigBootstrap,
@@ -454,10 +457,14 @@ export async function runOplTurnkeyInstall(
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,
         notes: [
-          'This command is the user-facing one-shot path for OPL + Codex CLI + configured family runtime provider + family modules + recommended Codex skills + desktop GUI.',
+          input.headless
+            ? 'Headless mode installs the OPL Framework runtime, Codex CLI, configured family runtime provider, selected family modules, recommended skills, and native helpers without installing or opening the desktop App.'
+            : 'This command is the user-facing one-shot path for OPL + Codex CLI + configured family runtime provider + family modules + recommended Codex skills + desktop GUI.',
           'Full online family readiness requires the configured family runtime provider. --no-online-runtime is a development/offline diagnostic mode and reports degraded readiness.',
           'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
-          'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab-app release asset before opening the app.',
+          input.headless
+            ? 'Headless mode excludes the GUI install/open path. --skip-gui-open only skips that path for an otherwise desktop-oriented install and is not the headless installation contract.'
+            : 'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab-app release asset before opening the app.',
         ],
       },
     };

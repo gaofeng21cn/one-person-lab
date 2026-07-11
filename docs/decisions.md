@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-11
 
+### 决策：Headless 基座安装是独立公开合同，Homebrew 版本真相来自 Framework manifest
+
+原因：服务器/CI 需要完整 OPL Framework runtime、provider、module、skills 与 native helpers，但不应下载、安装或打开桌面 App；Homebrew tap 也不应自行推导 Framework 版本或 source ref。
+
+影响：
+
+- `opl install --headless --modules <ids>` 复用 turnkey installer 的非 GUI 路径，并明确排除全部 App install/open 动作；`--skip-gui-open` 仍只是桌面流程动作开关。
+- release/channel manifest 的 `framework_core.homebrew_formula` 固定 `package_name=opl-framework`，并从 `framework_core.version` 与 `source_git.head_sha` 投影 immutable GitHub commit archive URL；旧 `opl-framework-shared` identity 必须被 tap fail closed 拒绝。
+- tap sync 下载该 immutable URL 后计算 formula sha256；Framework manifest 不伪造未下载 archive 的 hash，tap 不创建独立版本真相。
+
 ### 决策：Foundry Agent 的通用 task/artifact/helper/source 机制由 OPL 公共 runtime surface 承载
 
 原因：RCA 等 domain repo 已各自实现 executor、run/event、Stage Folder、Python 环境和 source materialization，造成 Framework 机制重复。缺少公共 API 不是保留私有平台的理由；Framework 应先提供少数深接口，domain repo 再只保留领域 request builder、quality/readiness verdict、artifact mutation authorization、owner receipt 与 native helper body。

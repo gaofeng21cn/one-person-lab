@@ -97,6 +97,12 @@ function validateFrameworkCore(entry, failures) {
   assertCondition(entry?.checksum?.algorithm === 'sha256', 'framework_core: checksum algorithm must be sha256', failures);
   assertCondition(isSha256(entry?.checksum?.value), 'framework_core: checksum value is invalid', failures);
   assertCondition(isGitSha(entry?.source_git?.head_sha), 'framework_core: source git head sha is invalid', failures);
+  assertCondition(entry?.homebrew_formula?.package_name === 'opl-framework', 'framework_core: Homebrew projection package name must be opl-framework', failures);
+  assertCondition(entry?.homebrew_formula?.version === entry?.version, 'framework_core: Homebrew projection version must come from framework core version', failures);
+  assertCondition(entry?.homebrew_formula?.source_head === entry?.source_git?.head_sha, 'framework_core: Homebrew projection source head must come from source_git', failures);
+  assertCondition(entry?.homebrew_formula?.archive_url === `https://github.com/gaofeng21cn/one-person-lab/archive/${entry?.source_git?.head_sha}.tar.gz`, 'framework_core: Homebrew projection archive URL must be the immutable GitHub commit archive', failures);
+  assertCondition(entry?.homebrew_formula?.archive_kind === 'immutable_github_commit_archive', 'framework_core: Homebrew projection archive kind is invalid', failures);
+  assertCondition(entry?.homebrew_formula?.sha256_source === 'tap_sync_download_and_hash', 'framework_core: Homebrew projection sha256 ownership must stay with tap sync', failures);
 }
 
 function validateManifest(manifest) {

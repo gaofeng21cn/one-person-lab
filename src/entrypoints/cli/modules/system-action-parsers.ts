@@ -455,6 +455,10 @@ function parseTurnkeyInstallArgs(
       parsed.skipModules = true;
       continue;
     }
+    if (token === '--headless') {
+      parsed.headless = true;
+      continue;
+    }
     if (token === '--skip-engines') {
       parsed.skipEngines = true;
       continue;

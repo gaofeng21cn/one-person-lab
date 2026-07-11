@@ -118,10 +118,11 @@ export function buildPublicCommandSpecs(
 
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--skip-gui-open] [--no-online-runtime]',
-    summary: 'One-shot install for Codex, the configured family runtime provider, family modules, Codex skills, and the OPL GUI app.',
+      'opl install [--headless] [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--skip-gui-open] [--no-online-runtime]',
+    summary: 'One-shot install for the OPL Framework runtime, Codex, configured family runtime provider, family modules, skills, native helpers, and optionally the OPL GUI app.',
     examples: [
       'opl install',
+      'opl install --headless --modules rca',
       'opl install --modules mas,mag,rca',
       'opl install --modules mas --skip-engines --skip-gui-open',
     ],

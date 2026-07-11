@@ -222,6 +222,14 @@ const options = parseCliOptions(process.argv.slice(2));
     branch: frameworkArchive.branch,
     head_sha: frameworkArchive.head_sha,
   };
+  manifest.packages.framework_core.homebrew_formula = {
+    package_name: 'opl-framework',
+    version: manifest.packages.framework_core.version,
+    source_head: frameworkArchive.head_sha,
+    archive_url: `https://github.com/gaofeng21cn/one-person-lab/archive/${frameworkArchive.head_sha}.tar.gz`,
+    archive_kind: 'immutable_github_commit_archive',
+    sha256_source: 'tap_sync_download_and_hash',
+  };
 
   for (const spec of getOplPackageModuleSpecs()) {
     const repoPath = resolveModuleRepo(spec, options.cloneRoot);

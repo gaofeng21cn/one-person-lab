@@ -118,6 +118,22 @@ test('package archive builder writes channel manifest checksums git source and r
   assert.equal(manifest.release_automation.package_lifecycle_status, 'active_release_channel');
   assert.equal(manifest.release_automation.workflow_trigger_policy, 'release_gate_workflow_call_or_manual_dispatch');
   assert.equal(manifest.release_automation.remote_publish_status, 'release_gate_or_manual_dispatch_publishes_ghcr_packages');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.package_name, 'opl-framework');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.version, '26.4.31');
+  assert.equal(
+    manifest.packages.framework_core.homebrew_formula.source_head,
+    manifest.packages.framework_core.source_git.head_sha,
+  );
+  assert.equal(
+    manifest.packages.framework_core.homebrew_formula.archive_url,
+    `https://github.com/gaofeng21cn/one-person-lab/archive/${manifest.packages.framework_core.source_git.head_sha}.tar.gz`,
+  );
+  assert.equal(manifest.packages.framework_core.homebrew_formula.archive_kind, 'immutable_github_commit_archive');
+  assert.equal(manifest.packages.framework_core.homebrew_formula.sha256_source, 'tap_sync_download_and_hash');
+  assert.deepEqual(
+    channelManifest.packages.framework_core.homebrew_formula,
+    manifest.packages.framework_core.homebrew_formula,
+  );
   assert.equal(manifest.release_automation.release_manifest_publication_status, 'active_ghcr_channel_manifest');
   assert.equal(manifest.release_automation.release_manifest_package.package_channel_status, 'active_release_channel');
   assert.equal(manifest.release_automation.daily_package_channel.status, 'active_change_detected_daily_publish');

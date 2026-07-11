@@ -10,6 +10,36 @@ function disableRemoteCompanionInstall() {
   };
 }
 
+function createFakeNativeHelperRepairEnv(homeRoot: string) {
+  const helperBinDir = path.join(homeRoot, 'native-bin');
+  const repairScript = path.join(homeRoot, 'repair-native.sh');
+  fs.writeFileSync(
+    repairScript,
+    `#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p ${JSON.stringify(helperBinDir)}
+for binary in opl-doctor-native opl-runtime-watch opl-artifact-indexer opl-state-indexer; do
+  cat > ${JSON.stringify(helperBinDir)}/$binary <<'EOS'
+#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native) printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","ok":true,"request_id":"headless-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}' ;;
+  opl-runtime-watch) printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","ok":true,"request_id":"headless-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}' ;;
+  opl-artifact-indexer) printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","ok":true,"request_id":"headless-artifacts","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":0},"files":[]},"errors":[]}' ;;
+  opl-state-indexer) printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","ok":true,"request_id":"headless-state","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}' ;;
+esac
+EOS
+  chmod +x ${JSON.stringify(helperBinDir)}/$binary
+done
+`,
+    { mode: 0o755 },
+  );
+  return {
+    OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+    OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
+  };
+}
+
 const codexDefaultProfile = readBundledCodexDefaultProfile();
 
 function assertBundledCodexModel(bootstrap: any, config: string) {
@@ -40,6 +70,77 @@ test('public command specs expose the one-shot install command', () => {
   const publicSpecs = buildPublicCommandSpecs(internalSpecs, () => contracts);
 
   assert.equal(typeof publicSpecs.install.handler, 'function');
+});
+
+test('install --headless --modules rca installs the framework payload without installing or opening the App', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-headless-install-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const guiToolLogPath = path.join(homeRoot, 'gui-tools.log');
+  const forbiddenGuiTool = path.join(homeRoot, 'forbidden-gui-tool');
+  const redcubeRemote = createGitModuleRemoteFixture('redcube-ai', {
+    extraFiles: {
+      'plugins/redcube-ai/.codex-plugin/plugin.json': JSON.stringify({ name: 'redcube-ai', skills: './skills/' }, null, 2),
+      'plugins/redcube-ai/skills/redcube-ai/SKILL.md': [
+        '---',
+        'name: redcube-ai',
+        'description: Use RCA through its OPL-managed product entry.',
+        '---',
+        '',
+        '# RCA Skill',
+        '',
+      ].join('\n'),
+      'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+      'scripts/opl-module-healthcheck.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+    },
+  });
+  fs.writeFileSync(
+    forbiddenGuiTool,
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> ${JSON.stringify(guiToolLogPath)}\nexit 97\n`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli([
+      'install',
+      '--headless',
+      '--modules',
+      'rca',
+      '--skip-engines',
+      '--no-online-runtime',
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_MODULES_ROOT: modulesRoot,
+      OPL_MODULE_REPO_URL_REDCUBE: redcubeRemote.remoteRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_GUI_INSTALL_PLATFORM: 'darwin',
+      OPL_APPLICATIONS_DIR: path.join(homeRoot, 'Applications'),
+      OPL_CURL_BIN: forbiddenGuiTool,
+      OPL_HDIUTIL_BIN: forbiddenGuiTool,
+      OPL_OPEN_BIN: forbiddenGuiTool,
+      PATH: '/usr/bin:/bin',
+      ...createFakeNativeHelperRepairEnv(homeRoot),
+      ...createFakeCompanionInstallEnv(homeRoot),
+      ...createFakeOplFlowInstallEnv(homeRoot),
+    }) as any;
+
+    assert.equal(output.install.status, 'completed');
+    assert.equal(output.install.install_mode, 'headless');
+    assert.deepEqual(output.install.selected_modules, ['redcube']);
+    assert.equal(output.install.module_actions[0].module.module_id, 'redcube');
+    assert.equal(output.install.module_actions[0].module.installed, true);
+    assert.equal(output.install.codex_plugin_registry.summary.registered, 1);
+    assert.equal(output.install.gui_open_action, null);
+    assert.equal(output.install.native_helper_action.action, 'repair_native_helpers');
+    assert.equal(output.install.native_helper_action.status, 'completed');
+    assert.equal(output.install.native_helper_action.after.runtime.status, 'available');
+    assert.equal(output.install.companion_skill_sync.mode, 'managed');
+    assert.equal(fs.existsSync(guiToolLogPath), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'Applications')), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(redcubeRemote.fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('install command runs selected module installs and returns one-shot setup payload', () => {

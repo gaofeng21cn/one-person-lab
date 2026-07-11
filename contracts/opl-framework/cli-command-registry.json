@@ -19,6 +19,43 @@
     "runtime observability"
   ],
   "commands": {
+    "install": {
+      "command_id": "install",
+      "owner": "OPL Framework",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        { "name": "headless", "flag": "--headless", "value_kind": "boolean", "required": false, "summary": "Install the Framework runtime, provider, modules, skills, and native helpers without installing or opening the App." },
+        { "name": "modules", "flag": "--modules", "value_kind": "string", "required": false, "summary": "Comma-separated family modules to install." },
+        { "name": "module", "flag": "--module", "value_kind": "string", "required": false, "summary": "One family module to install; may be repeated." },
+        { "name": "skip-modules", "flag": "--skip-modules", "value_kind": "boolean", "required": false, "summary": "Skip family module installation." },
+        { "name": "skip-engines", "flag": "--skip-engines", "value_kind": "boolean", "required": false, "summary": "Skip execution engine installation." },
+        { "name": "skip-native-helper-repair", "flag": "--skip-native-helper-repair", "value_kind": "boolean", "required": false, "summary": "Skip native helper repair." },
+        { "name": "skip-gui-open", "flag": "--skip-gui-open", "value_kind": "boolean", "required": false, "summary": "Skip the desktop App install/open action without selecting the headless installation contract." },
+        { "name": "no-online-runtime", "flag": "--no-online-runtime", "value_kind": "boolean", "required": false, "summary": "Use the development/offline runtime diagnostic mode." }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "install"],
+        "additionalProperties": true,
+        "properties": {
+          "version": { "const": "g2" },
+          "install": {
+            "type": "object",
+            "required": ["surface_id", "status", "install_mode", "selected_engines", "selected_modules", "module_actions", "runtime_manager_action", "native_helper_action", "companion_skill_sync", "gui_open_action"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Framework",
+        "surface": "framework_system_installation"
+      }
+    },
     "stages_list": {
       "command_id": "stages list",
       "owner": "OPL Stagecraft",
