@@ -22,7 +22,71 @@ import {
   normalizeManifest,
   normalizeRegistry,
 } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
+import { defaultHomeShortcutPreferences } from '../../../../../src/modules/connect/agent-package-registry-parts/home-shortcuts.ts';
 import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
+
+test('default Home shortcut visibility follows registry starter_default', () => {
+  const registry = normalizeRegistry({
+    ...registryPayload('https://registry.example'),
+    entries: [{
+      ...registryPayload('https://registry.example').entries[0],
+      package_id: 'opl-meta-agent',
+      starter_default: false,
+      home_shortcut_ids: ['oma'],
+    }],
+  }, 'https://registry.example/registry.json', 'fixture-sha256');
+
+  const preferences = defaultHomeShortcutPreferences(registry, {
+    surface_kind: 'opl_agent_package_lock_index',
+    version: 'opl-agent-package-lock-index.v1',
+    packages: [],
+  });
+
+  assert.equal(preferences[0].shortcut_id, 'oma');
+  assert.equal(preferences[0].visible, false);
+  assert.equal(preferences[0].installed, false);
+});
+
+test('Home shortcut preferences can be changed before the package is installed', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-home-preference-state-'));
+  try {
+    const result = runCli([
+      'connect',
+      'agent-packages',
+      'home-shortcut-preferences',
+      'set',
+      '--package-id',
+      'opl-meta-agent',
+      '--shortcut-id',
+      'oma',
+      '--visible',
+    ], { OPL_STATE_DIR: stateDir }) as {
+      opl_agent_package_home_shortcut_preferences: {
+        preference: {
+          package_id: string;
+          shortcut_id: string;
+          visible: boolean;
+          sort_order: number | null;
+          source: string;
+          updated_at: string;
+          installed: boolean;
+        };
+      };
+    };
+
+    assert.deepEqual(result.opl_agent_package_home_shortcut_preferences.preference, {
+      package_id: 'opl-meta-agent',
+      shortcut_id: 'oma',
+      visible: true,
+      sort_order: null,
+      source: 'user_preference',
+      updated_at: result.opl_agent_package_home_shortcut_preferences.preference.updated_at,
+      installed: false,
+    });
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
 
 test('published registry entry rejects a source-only manifest without distribution payload', () => {
   const manifestUrl = 'https://registry.example/manifest.json';

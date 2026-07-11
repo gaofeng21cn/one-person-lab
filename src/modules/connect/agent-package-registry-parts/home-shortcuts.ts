@@ -65,7 +65,7 @@ export function defaultHomeShortcutPreferences(
     return stringList(entry.home_shortcut_ids).map((shortcutId, shortcutIndex) => ({
       shortcut_id: shortcutId,
       package_id: packageId,
-      visible: true,
+      visible: entry.starter_default === true,
       sort_order: entryIndex * 100 + shortcutIndex,
       source: 'default' as const,
       updated_at: timestamp,

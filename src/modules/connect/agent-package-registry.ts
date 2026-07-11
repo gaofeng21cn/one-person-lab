@@ -493,7 +493,6 @@ export function runOplAgentPackageHomeShortcutPreferencesSet(input: AgentPackage
     });
   }
   const lockIndex = readLockIndex();
-  requireInstalledPackage(lockIndex, packageId, 'home_shortcut_preferences_set');
   const stored = readHomeShortcutPreferenceFile();
   const updatedAt = nowIso();
   const nextEntry: AgentPackageHomeShortcutPreference = {
@@ -503,7 +502,7 @@ export function runOplAgentPackageHomeShortcutPreferencesSet(input: AgentPackage
     sort_order: typeof input.sortOrder === 'number' && Number.isFinite(input.sortOrder) ? input.sortOrder : null,
     source: 'user_preference',
     updated_at: updatedAt,
-    installed: true,
+    installed: lockIndex.packages.some((entry) => entry.package_id === packageId),
   };
   const nextPreferences = [
     nextEntry,
