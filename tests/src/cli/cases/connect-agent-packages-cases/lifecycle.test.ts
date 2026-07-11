@@ -364,7 +364,7 @@ test('connect agent-packages fetches registry URL, validates manifest, and write
       })), [{
         package_id: 'third.party.research',
         shortcut_id: 'research',
-        visible: true,
+        visible: false,
         source: 'default',
         installed: true,
       }]);
