@@ -45,8 +45,8 @@
 
 ## 吸收与清理结果
 
-- OPL Framework `main=c39e2b347`：B1-B10 与 A1/A4/A7/A9/A10/A11 所需 shared primitives 已吸收；本轮 feature worktree/branch 均通过 `tree-equivalent` 或 `patch-equivalent` 后清理。现存 stable framework worktree 属于其他 owner，不在本轮清理范围。
-- MAS `main=b190e62a1`：A1-A3 与 domain-owned conformance profile 已吸收；submission/probe transport、StageRun projector、artifact-index 残片及 route-back retry substrate 已退役；本轮 worktree/branch 已清理。
+- OPL Framework boundary closeout `c39e2b347`，plan closeout `9929b98`：B1-B10 与 A1/A4/A7/A9/A10/A11 所需 shared primitives 已吸收；本轮 feature worktree/branch 均通过 `tree-equivalent` 或 `patch-equivalent` 后清理。现存 stable framework worktree 属于其他 owner，不在本轮清理范围。
+- MAS boundary closeout `b190e62a1`：A1-A3 与 domain-owned conformance profile 已吸收；submission/probe transport、StageRun projector、artifact-index 残片及 route-back retry substrate 已退役；本轮 worktree/branch 已清理。后续 stage-surface 文档整理提交不改变本计划边界。
 - MAG `main=43f8676`：A4-A6 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
 - RCA `main=bfd0e020`：A7-A8 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
 - OMA `main=99cdfb6`：A9-A10 与 conformance profile 已吸收；本轮 worktree/branch 已清理。
