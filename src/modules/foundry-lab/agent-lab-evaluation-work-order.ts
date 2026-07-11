@@ -67,6 +67,19 @@ const WORK_ORDER_FIELDS = new Set([
   'execution_aperture',
   'authority_boundary',
 ]);
+const TARGET_AGENT_FIELDS = new Set([
+  'domain_id',
+  'domain_label',
+  'repo_dir',
+  'target_agent_ref',
+  'descriptor_ref',
+]);
+const EVALUATION_REQUEST_REF_FIELDS = new Set([
+  'ref',
+  'request_id',
+  'suite_id',
+  'suite_kind',
+]);
 const OMA_WORK_ORDER_AUTHORITY_BOUNDARY = {
   oma_can_execute_agent_lab_suite: false,
   oma_can_write_agent_lab_result: false,
@@ -194,6 +207,7 @@ function assertExactWorkOrderAuthorityBoundary(value: unknown) {
 
 function canonicalTargetAgent(workOrder: JsonRecord) {
   const targetAgent = record(workOrder.target_agent);
+  assertAllowedFields(targetAgent, TARGET_AGENT_FIELDS, 'work_order.target_agent');
   const descriptorRef = requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref');
   if (!path.isAbsolute(descriptorRef)) {
     invalid('Foundry Lab evaluation work order requires an absolute target descriptor_ref.', {
@@ -273,6 +287,11 @@ function validateWorkOrder(workOrder: JsonRecord) {
   }
   assertAllowedFields(workOrder, WORK_ORDER_FIELDS, 'work_order');
   const evaluationRequest = record(workOrder.evaluation_request);
+  assertAllowedFields(
+    evaluationRequest,
+    EVALUATION_REQUEST_REF_FIELDS,
+    'work_order.evaluation_request',
+  );
   requiredString(evaluationRequest.ref, 'work_order.evaluation_request.ref');
   requiredString(evaluationRequest.request_id, 'work_order.evaluation_request.request_id');
   requiredString(evaluationRequest.suite_id, 'work_order.evaluation_request.suite_id');

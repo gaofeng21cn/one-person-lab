@@ -450,6 +450,11 @@ test('agent-lab evaluation-work-order rejects producer authority, locator, and l
     ['unknown false authority capability', (fixture) => {
       (fixture.workOrder.authority_boundary as Record<string, any>).oma_can_read_future_ledger = false;
     }, /authority_boundary/],
+    ['nested target authority owner', (fixture) => {
+      (fixture.workOrder.target_agent as Record<string, any>).authority_boundary = {
+        quality_verdict_owner: 'opl-meta-agent',
+      };
+    }, /unsupported fields at work_order\.target_agent/],
     ['escaped target repository locator', (fixture) => {
       (fixture.workOrder.target_agent as Record<string, any>).repo_dir = '/tmp/untrusted-second-scheduler';
     }, /repo_dir/],
@@ -459,6 +464,16 @@ test('agent-lab evaluation-work-order rejects producer authority, locator, and l
     ['alternate suite alias', (fixture) => {
       (fixture.workOrder as Record<string, any>).agent_lab_suite = { ref: 'untrusted://second-suite' };
     }, /unsupported fields at work_order/],
+    ['nested request result ledger', (fixture) => {
+      (fixture.workOrder.evaluation_request as Record<string, any>).result_ledger = {
+        owner: 'opl-meta-agent',
+      };
+    }, /unsupported fields at work_order\.evaluation_request/],
+    ['nested target result ledger', (fixture) => {
+      (fixture.workOrder.target_agent as Record<string, any>).result_ledger = {
+        owner: 'opl-meta-agent',
+      };
+    }, /unsupported fields at work_order\.target_agent/],
   ];
 
   for (const [name, mutate, expected] of cases) {
