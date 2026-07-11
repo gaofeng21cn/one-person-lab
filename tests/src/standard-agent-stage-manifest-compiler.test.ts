@@ -754,6 +754,9 @@ test('stage manifest compiler rejects invalid stage-contract extensions', async 
     ['non_object', []],
     ['stage_semantics_override', { requires: ['overridden_requirement'] }],
     ['framework_floor_override', { stage_completion_policy: { closeout_packet_required: false } }],
+    ['opl_quality_owner', { quality_verdict_owner: 'one-person-lab' }],
+    ['opl_authority_flag', { opl_can_sign_owner_receipt: true }],
+    ['runtime_event_override', { runtime_event_refs: [] }],
   ];
   for (const [name, extension] of cases) {
     await t.test(name, () => {
@@ -765,6 +768,17 @@ test('stage manifest compiler rejects invalid stage-contract extensions', async 
       assert.throws(() => compileStandardAgentStageManifest(root), FrameworkContractError);
     });
   }
+});
+
+test('stage manifest compiler rejects OPL authority claims in declared stage contracts', () => {
+  const root = fixture('target-stage-contract-opl-authority');
+  const manifest = readManifest(root);
+  manifest.stages[0].stage_contract = {
+    quality_verdict_owner: 'one-person-lab',
+  };
+  writeManifest(root, manifest);
+
+  assert.throws(() => compileStandardAgentStageManifest(root), FrameworkContractError);
 });
 
 test('stage manifest compiler fails closed for an invalid required v2 declaration', () => {
@@ -919,6 +933,22 @@ test('real MAG canonical manifest compiles while the legacy kind remains blocked
       fs.mkdirSync(path.dirname(path.join(root, ref)), { recursive: true });
       fs.copyFileSync(source, path.join(root, ref));
     }
+  }
+  const functionalAudit = JSON.parse(
+    fs.readFileSync(path.join(root, 'contracts/functional_privatization_audit.json'), 'utf8'),
+  ) as JsonRecord;
+  const auditCodePaths = Array.isArray(functionalAudit.modules)
+    ? functionalAudit.modules.flatMap((module: unknown) => (
+      module && typeof module === 'object' && Array.isArray((module as JsonRecord).code_paths)
+        ? (module as JsonRecord).code_paths.filter((entry: unknown): entry is string => typeof entry === 'string')
+        : []
+    ))
+    : [];
+  for (const ref of auditCodePaths) {
+    const source = path.join(magRepo, ref);
+    assert.equal(fs.existsSync(source), true, `MAG compact audit source path is missing: ${ref}`);
+    fs.mkdirSync(path.dirname(path.join(root, ref)), { recursive: true });
+    fs.copyFileSync(source, path.join(root, ref));
   }
   fs.mkdirSync(path.join(root, 'runtime', 'authority_functions'), { recursive: true });
   fs.copyFileSync(

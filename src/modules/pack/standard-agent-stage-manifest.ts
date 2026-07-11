@@ -45,6 +45,7 @@ const STAGE_CONTRACT_EXTENSION_FORBIDDEN_FIELDS = new Set([
   'user_stage_log_contract',
   'progress_delta_policy',
   'typed_blocker_lineage_policy',
+  'runtime_event_refs',
 ]);
 
 export interface StandardAgentStageManifestCompilation {
@@ -389,6 +390,8 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     const stageContractExtension = stage.stage_contract_extension === undefined
       ? {}
       : record(stage.stage_contract_extension, 'stage.stage_contract_extension', repoDir);
+    assertNoOplAuthority(declaredStageContract, 'stage.stage_contract', repoDir);
+    assertNoOplAuthority(stageContractExtension, 'stage.stage_contract_extension', repoDir);
     const forbiddenExtensionFields = Object.keys(stageContractExtension)
       .filter((field) => STAGE_CONTRACT_EXTENSION_FORBIDDEN_FIELDS.has(field));
     if (forbiddenExtensionFields.length > 0) {

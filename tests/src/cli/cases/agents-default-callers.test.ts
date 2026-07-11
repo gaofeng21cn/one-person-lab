@@ -176,6 +176,41 @@ test('agents default-callers does not recreate worklists for canonically absent 
   assert.equal(readout.physical_delete_authorized, false);
 });
 
+test('agents default-callers rejects an absent-surface audit claim when source behavior is still generic', () => {
+  const repoDir = buildReadyAgentRepo();
+  const audit = readAudit(repoDir);
+  audit.retired_default_surface_ids = [
+    'cli',
+    'mcp',
+    'skill',
+    'product_entry',
+    'product_status',
+    'product_session',
+    'domain_handler',
+    'workbench',
+  ];
+  audit.default_surface_boundary = {
+    state: 'physically_absent',
+    owner: 'one-person-lab',
+    domain_repo_can_own_default_surface: false,
+  };
+  writeAudit(repoDir, audit);
+  fs.writeFileSync(
+    path.join(repoDir, 'runtime', 'legacy-workbench.py'),
+    'attention_queue = []\noperator_brief = "legacy"\n',
+    'utf8',
+  );
+
+  const readout = runDefaultCallers(repoDir);
+
+  assert.equal(readout.status, 'blocked');
+  assert.equal(
+    readout.reports[0].blockers.includes('default_surface_retirement_source_behavior_not_passed'),
+    true,
+  );
+  assert.equal(readout.deletion_evidence_worklist_count, 8);
+});
+
 test('agents default-callers consumes explicit domain owner physical delete authorization refs', () => {
   const repoDir = buildReadyAgentRepo();
   installBridgeGate(repoDir, bridgeGate({

@@ -22,6 +22,7 @@ import {
 import { buildDefaultCallerPhysicalDeleteAuthorityReadModel } from './agent-default-caller-delete-read-model.ts';
 import { buildFunctionalPrivatizationAudit } from './functional-privatization-audit.ts';
 import { buildPrivatePlatformResidueDeletionGate } from './private-platform-residue-deletion-gate.ts';
+import { buildStandardAgentSourceBehaviorChecks } from './standard-domain-agent-source-behavior.ts';
 import {
   DEFAULT_CALLER_OWNER_DECISION_ACCEPTED_RESULT_SHAPES,
   DEFAULT_CALLER_OWNER_DECISION_NEXT_REQUIRED_ACTION,
@@ -498,7 +499,7 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     : null);
   const declaredFunctionalAudit = isRecord(functionalAudit.payload) ? functionalAudit.payload : {};
   const defaultSurfaceBoundary = record(declaredFunctionalAudit.default_surface_boundary);
-  const retiredDefaultSurfaceIds = new Set(
+  const declaredRetiredDefaultSurfaceIds = new Set(
     optionalString(defaultSurfaceBoundary.state) === 'physically_absent'
       ? stringList(declaredFunctionalAudit.retired_default_surface_ids)
       : [],
@@ -510,6 +511,12 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
     const cutoverProof = isRecord(bundle.active_caller_cutover_proof) ? bundle.active_caller_cutover_proof : {};
     const targetProof = isRecord(bundle.active_caller_target_proof) ? bundle.active_caller_target_proof : {};
     const wrapperBundle = isRecord(bundle.generated_wrapper_bundle) ? bundle.generated_wrapper_bundle : {};
+    const sourceBehaviorChecks = buildStandardAgentSourceBehaviorChecks(resolvedRepoDir);
+    const defaultSurfaceRetirementSourceBehaviorBlocked = declaredRetiredDefaultSurfaceIds.size > 0
+      && sourceBehaviorChecks.status !== 'passed';
+    const retiredDefaultSurfaceIds = defaultSurfaceRetirementSourceBehaviorBlocked
+      ? new Set<string>()
+      : declaredRetiredDefaultSurfaceIds;
     const surfaceGates = defaultCallerSurfaceGates(bundle);
     const surfaceBlockers = surfaceGates
       .filter((gate) => gate.status !== 'ready_for_default_caller_cutover')
@@ -542,6 +549,9 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       platformSurfaceOwnership.status === 'passed'
         ? null
         : 'platform_surface_ownership_blocked',
+      defaultSurfaceRetirementSourceBehaviorBlocked
+        ? 'default_surface_retirement_source_behavior_not_passed'
+        : null,
       ...surfaceBlockers,
     ].filter((entry): entry is string => Boolean(entry));
     const replacementReady = blockers.length === 0;
@@ -663,6 +673,12 @@ export function buildAgentDefaultCallerReadinessForRepo(repoDir: string, request
       generated_wrapper_bundle_status: optionalString(wrapperBundle.status),
       active_caller_target_proof_status: optionalString(targetProof.status),
       active_caller_cutover_proof_status: optionalString(cutoverProof.status),
+      default_surface_retirement_source_behavior: {
+        status: sourceBehaviorChecks.status,
+        blocker_count: sourceBehaviorChecks.blockers.length,
+        blockers: sourceBehaviorChecks.blockers,
+        declared_retired_surface_count: declaredRetiredDefaultSurfaceIds.size,
+      },
       deletion_evidence_worklists: deletionEvidenceWorklists,
       private_platform_residue_deletion_gate: privatePlatformResidueDeletionGate,
       blockers,
