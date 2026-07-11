@@ -78,7 +78,7 @@ npm run codex:export-default-profile -- \
   --app-product-profile /absolute/path/to/one-person-lab-app/contracts/app-product-profile.json
 ```
 
-生成器优先读取 `codex.auto_model_policy.catalog_unavailable_fallback`，并校验它与 `codex.default_*`、`default_session_profile` 一致；provider 与 base URL 继续来自 `default_session_profile`。生成结果携带 App owner/source/ref 与字段 refs，且声明 runtime 不需要 App checkout。`bootstrapLocalCodexDefaults` 只消费仓内结果，继续尊重显式环境输入、用户固定模型/推理档位和已有非 OPL Codex 配置。
+默认模型和推理档的唯一人工维护入口是 App 仓 `contracts/app-product-profile.json#codex.auto_model_policy.configured_default`。先在 App 仓运行 `npm run codex:model-policy:sync`，再运行上面的 exporter；不要手改本仓生成结果、`codex.default_*`、`default_session_profile` 或 `catalog_unavailable_fallback`。生成器读取 `configured_default`，并校验这些兼容投影一致；provider 与 base URL 继续来自 `default_session_profile`。生成结果携带 App owner/source/ref 与字段 refs，且声明 runtime 不需要 App checkout。`bootstrapLocalCodexDefaults` 只消费仓内结果，继续尊重显式环境输入、用户固定模型/推理档位和已有非 OPL Codex 配置。完整策略和消费者维护顺序见 App 仓 `docs/product/gui/codex-auto-model-policy.md#维护默认模型`。
 
 ### 2. 安装 One Person Lab App
 
