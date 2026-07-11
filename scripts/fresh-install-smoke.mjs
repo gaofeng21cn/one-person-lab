@@ -6,9 +6,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseJsonText } from './script-json-boundary.mjs';
+import { renderCodexConfigFixture } from './fresh-install-codex-config-fixture.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(repoRoot, 'src', 'entrypoints', 'cli.ts');
+const codexDefaultProfile = parseJsonText(
+  fs.readFileSync(
+    path.join(repoRoot, 'contracts', 'opl-framework', 'codex-default-profile.json'),
+    'utf8',
+  ),
+);
 const args = new Set(process.argv.slice(2));
 
 function writeJson(payload) {
@@ -88,17 +95,7 @@ function createCodexConfig(homeDir) {
   fs.mkdirSync(codexHome, { recursive: true });
   fs.writeFileSync(
     path.join(codexHome, 'config.toml'),
-    [
-      'model_provider = "gflab"',
-      'model = "gpt-5.6-sol"',
-      'model_reasoning_effort = "max"',
-      '',
-      '[model_providers.gflab]',
-      'name = "gflab"',
-      'base_url = "https://gflabtoken.cn/v1"',
-      'experimental_bearer_token = "test-fresh-install-key"',
-      '',
-    ].join('\n'),
+    renderCodexConfigFixture(codexDefaultProfile),
     'utf8',
   );
 }

@@ -1,13 +1,27 @@
 import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, parseJsonText, path, repoRoot, runCli, runCliFailure, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/entrypoints/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/entrypoints/cli/cases/public-command-specs.ts';
-import { OPL_GATEWAY_BASE_URL } from '../../../../src/kernel/local-codex-defaults.ts';
+import { OPL_GATEWAY_BASE_URL, readBundledCodexDefaultProfile } from '../../../../src/kernel/local-codex-defaults.ts';
 import { createFakeCompanionInstallEnv, createFakeOplFlowInstallEnv, writeFakeCompanionToolBinaries } from './system-install-fixtures.ts';
 
 function disableRemoteCompanionInstall() {
   return {
     OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
   };
+}
+
+const codexDefaultProfile = readBundledCodexDefaultProfile();
+
+function assertBundledCodexModel(bootstrap: any, config: string) {
+  assert.equal(bootstrap.model, codexDefaultProfile.model);
+  assert.equal(bootstrap.reasoning_effort, codexDefaultProfile.model_reasoning_effort);
+  assert.equal(config.includes(`model = ${JSON.stringify(codexDefaultProfile.model)}`), true);
+  assert.equal(
+    config.includes(
+      `model_reasoning_effort = ${JSON.stringify(codexDefaultProfile.model_reasoning_effort)}`,
+    ),
+    true,
+  );
 }
 
 test('public command specs expose the one-shot install command', () => {
@@ -585,12 +599,8 @@ test('install command applies bundled Codex defaults when only the API key is pr
     }) as any;
 
     const bootstrap = output.install.codex_config_bootstrap;
-    assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'max');
-
     const config = fs.readFileSync(bootstrap.config_path, 'utf8');
-    assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "max"/);
+    assertBundledCodexModel(bootstrap, config);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -633,16 +643,13 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
 
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.status, 'completed');
-    assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'max');
     assert.equal(bootstrap.management_receipt.provider_id, 'company-opl');
     assert.equal(bootstrap.management_receipt.provider_route, 'direct_gateway');
     assert.equal(bootstrap.management_receipt.selection_mode, 'auto');
 
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "company-opl"/);
-    assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "max"/);
+    assertBundledCodexModel(bootstrap, config);
     assert.match(config, /custom_user_setting = true/);
     assert.match(config, /name = "Company OPL Gateway"/);
     assert.match(config, /experimental_bearer_token = "existing-opl-key"/);
@@ -711,15 +718,12 @@ test('install command upgrades an OPL Flow intelligence proxy without requiring 
 
     const bootstrap = output.install.codex_config_bootstrap;
     assert.equal(bootstrap.status, 'completed');
-    assert.equal(bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(bootstrap.reasoning_effort, 'max');
     assert.equal(bootstrap.api_key_present, false);
     assert.equal(bootstrap.management_receipt.provider_route, 'intelligence_proxy');
     assert.equal(output.install.system_initialize.core_engines.codex.opl_gateway_configured, true);
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "proxy-alias"/);
-    assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "max"/);
+    assertBundledCodexModel(bootstrap, config);
     assert.doesNotMatch(config, /experimental_bearer_token/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

@@ -1,8 +1,26 @@
 import { assert, fs, os, parseJsonText, path, test } from '../helpers.ts';
 import { createFakeFamilySkillWorkspace } from '../../cli-codex-default-shell-helpers.ts';
+import { readBundledCodexDefaultProfile } from '../../../../src/kernel/local-codex-defaults.ts';
 import {
   runCliWithStdin,
 } from './system-install-fixtures.ts';
+
+const codexDefaultProfile = readBundledCodexDefaultProfile();
+
+function assertBundledCodexModel(
+  bootstrap: { model: string; reasoning_effort: string },
+  config: string,
+) {
+  assert.equal(bootstrap.model, codexDefaultProfile.model);
+  assert.equal(bootstrap.reasoning_effort, codexDefaultProfile.model_reasoning_effort);
+  assert.equal(config.includes(`model = ${JSON.stringify(codexDefaultProfile.model)}`), true);
+  assert.equal(
+    config.includes(
+      `model_reasoning_effort = ${JSON.stringify(codexDefaultProfile.model_reasoning_effort)}`,
+    ),
+    true,
+  );
+}
 
 test('system configure-codex writes the product endpoint and App-owned install fallback without leaking the API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-home-'));
@@ -47,8 +65,11 @@ test('system configure-codex writes the product endpoint and App-owned install f
 
     assert.equal(output.codex_config.status, 'completed');
     assert.equal(output.codex_config.default_profile.model_provider, 'gflab');
-    assert.equal(output.codex_config.default_profile.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.default_profile.model_reasoning_effort, 'max');
+    assert.equal(output.codex_config.default_profile.model, codexDefaultProfile.model);
+    assert.equal(
+      output.codex_config.default_profile.model_reasoning_effort,
+      codexDefaultProfile.model_reasoning_effort,
+    );
     assert.equal(output.codex_config.default_profile.base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.default_profile.base_url_role, 'product_default_provider_endpoint');
     assert.equal(output.codex_config.default_profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
@@ -61,8 +82,7 @@ test('system configure-codex writes the product endpoint and App-owned install f
 
     const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
-    assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "max"/);
+    assertBundledCodexModel(output.codex_config.bootstrap, config);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-stdin-key"/);
   } finally {
@@ -230,16 +250,13 @@ test('system configure-codex updates a legacy OPL model while preserving the int
       };
     };
 
-    assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'max');
     assert.equal(output.codex_config.bootstrap.provider_base_url, 'http://127.0.0.1:8787/v1');
     assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'auto');
     assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'intelligence_proxy');
     assert.equal(fs.existsSync(output.codex_config.bootstrap.management_receipt.backup_path!), true);
 
     const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
-    assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "max"/);
+    assertBundledCodexModel(output.codex_config.bootstrap, config);
     assert.match(config, /base_url = "http:\/\/127\.0\.0\.1:8787\/v1"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -263,8 +280,14 @@ test('system configure-codex preserves model and reasoning values changed after 
     fs.writeFileSync(
       configPath,
       managedConfig
-        .replace('model = "gpt-5.6-sol"', 'model = "user-fixed-model"')
-        .replace('model_reasoning_effort = "max"', 'model_reasoning_effort = "high"'),
+        .replace(
+          `model = ${JSON.stringify(codexDefaultProfile.model)}`,
+          'model = "user-fixed-model"',
+        )
+        .replace(
+          `model_reasoning_effort = ${JSON.stringify(codexDefaultProfile.model_reasoning_effort)}`,
+          'model_reasoning_effort = "high"',
+        ),
       'utf8',
     );
 
@@ -337,16 +360,13 @@ test('system configure-codex completes a plugin-only Codex config created during
     };
 
     assert.equal(output.codex_config.status, 'completed');
-    assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6-sol');
-    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'max');
     assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
     assert.equal(output.codex_config.bootstrap.api_key_present, true);
     assert.equal(JSON.stringify(output).includes(apiKey), false);
 
     const config = fs.readFileSync(configPath, 'utf8');
     assert.match(config, /model_provider = "gflab"/);
-    assert.match(config, /model = "gpt-5\.6-sol"/);
-    assert.match(config, /model_reasoning_effort = "max"/);
+    assertBundledCodexModel(output.codex_config.bootstrap, config);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "secret-plugin-key"/);
     assert.match(config, /\[marketplaces\.med-autoscience-local\]/);

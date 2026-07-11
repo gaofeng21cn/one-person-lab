@@ -12,6 +12,9 @@ import {
   runCli,
   test,
 } from './helpers.ts';
+import { readBundledCodexDefaultProfile } from '../../../../../src/kernel/local-codex-defaults.ts';
+
+const codexDefaultProfile = readBundledCodexDefaultProfile();
 
 test('packages manifest exposes active package-channel coordinates for module install updates', () => {
   const output = runCli(['connect', 'packages', 'manifest'], {
@@ -267,8 +270,11 @@ test('packages manifest exposes active package-channel coordinates for module in
     true,
   );
   assert.equal(output.packages_manifest.packages.codex_default_profile.model_provider, 'gflab');
-  assert.equal(output.packages_manifest.packages.codex_default_profile.model, 'gpt-5.6-sol');
-  assert.equal(output.packages_manifest.packages.codex_default_profile.model_reasoning_effort, 'max');
+  assert.equal(output.packages_manifest.packages.codex_default_profile.model, codexDefaultProfile.model);
+  assert.equal(
+    output.packages_manifest.packages.codex_default_profile.model_reasoning_effort,
+    codexDefaultProfile.model_reasoning_effort,
+  );
   assert.equal(output.packages_manifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(
     output.packages_manifest.packages.codex_default_profile.base_url_role,

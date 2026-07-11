@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseJsonText } from '../../src/kernel/json-file.ts';
+import { renderCodexConfigFixture } from '../../scripts/fresh-install-codex-config-fixture.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const smokeScript = path.join(repoRoot, 'scripts', 'fresh-install-smoke.mjs');
@@ -654,8 +655,8 @@ test('bundled Codex profile carries the App-owned install fallback without runti
   assert.equal(profile.generated_projection.generation_stage, 'development_or_release_sync');
   assert.equal(profile.generated_projection.runtime_source_checkout_required, false);
   assert.equal(profile.model_provider, 'gflab');
-  assert.equal(profile.model, 'gpt-5.6-sol');
-  assert.equal(profile.model_reasoning_effort, 'max');
+  assert.equal(profile.model.length > 0, true);
+  assert.equal(profile.model_reasoning_effort.length > 0, true);
   assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(profile.base_url_role, 'product_default_provider_endpoint');
   assert.equal(profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
@@ -669,22 +670,29 @@ test('Codex default profile exporter deterministically projects the App-owned fa
   const sourcePath = path.join(tempRoot, 'app-product-profile.json');
   const firstOutputPath = path.join(tempRoot, 'first.json');
   const secondOutputPath = path.join(tempRoot, 'second.json');
+  const bundledProfile = parseJsonText(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
+    model_provider: string;
+    model: string;
+    model_reasoning_effort: string;
+    provider_name: string;
+    base_url: string;
+  };
   const appProfile = {
     owner: 'one-person-lab-app',
     purpose: 'app_owned_product_profile',
     default_session_profile: {
       provider: 'gflab',
       base_url: 'https://gflabtoken.cn/v1',
-      model: 'gpt-5.6-sol',
-      reasoning_effort: 'max',
+      model: bundledProfile.model,
+      reasoning_effort: bundledProfile.model_reasoning_effort,
     },
     codex: {
-      default_model: 'gpt-5.6-sol',
-      default_reasoning_effort: 'max',
+      default_model: bundledProfile.model,
+      default_reasoning_effort: bundledProfile.model_reasoning_effort,
       auto_model_policy: {
         catalog_unavailable_fallback: {
-          model: 'gpt-5.6-sol',
-          reasoning_effort: 'max',
+          model: bundledProfile.model,
+          reasoning_effort: bundledProfile.model_reasoning_effort,
         },
       },
     },
@@ -708,7 +716,32 @@ test('Codex default profile exporter deterministically projects the App-owned fa
     assert.equal(first, fs.readFileSync(secondOutputPath, 'utf8'));
     assert.equal(first, fs.readFileSync(codexDefaultProfilePath, 'utf8'));
 
-    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = 'high';
+    const futureModel = 'future-model';
+    const futureReasoningEffort = 'future-effort';
+    appProfile.default_session_profile.model = futureModel;
+    appProfile.default_session_profile.reasoning_effort = futureReasoningEffort;
+    appProfile.codex.default_model = futureModel;
+    appProfile.codex.default_reasoning_effort = futureReasoningEffort;
+    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.model = futureModel;
+    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = futureReasoningEffort;
+    fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
+    const changed = spawnSync(process.execPath, [
+      codexDefaultProfileExporterPath,
+      '--app-product-profile', sourcePath,
+      '--out', firstOutputPath,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(changed.status, 0, changed.stderr || changed.stdout);
+    const changedProfile = parseJsonText(
+      fs.readFileSync(firstOutputPath, 'utf8'),
+    ) as typeof bundledProfile;
+    const changedFixture = renderCodexConfigFixture(changedProfile);
+    assert.match(changedFixture, /model = "future-model"/);
+    assert.match(changedFixture, /model_reasoning_effort = "future-effort"/);
+
+    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = 'mismatch';
     fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
     const mismatch = spawnSync(process.execPath, [
       codexDefaultProfileExporterPath,
