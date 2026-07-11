@@ -366,11 +366,16 @@ export function shouldUseManagedShellScratchCwd(
     return false;
   }
 
-  if (isReadOnlyProductEntryCommand(value, registry)) {
+  if (isNativeIsolatedProjectCommand(value) || isReadOnlyProductEntryCommand(value, registry)) {
     return false;
   }
 
   return Boolean(value.match(/(?:^|[;&|]\s*)uv\s+run\b/));
+}
+
+function isNativeIsolatedProjectCommand(command: string) {
+  const normalized = command.replace(/\s+/g, ' ');
+  return /(?:^|[;&|]\s*)uv\s+run\s+--isolated\s+--frozen\s+--project\s+(?:'[^']*'|"[^"]*"|\S+)\s+python\s+-c\b/.test(normalized);
 }
 
 function isReadOnlyProductEntryCommand(

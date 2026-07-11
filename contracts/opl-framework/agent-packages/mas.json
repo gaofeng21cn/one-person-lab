@@ -68,31 +68,6 @@
     "dependency_update_policy": "independent_package_target",
     "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
   },
-  "managed_shell": {
-    "clean_runner_profile": {
-      "profile_role": "domain_compatibility_clean_runner",
-      "legacy_env_roots": [
-        {
-          "env_name": "MAS_CLEAN_RUNNER_TMP_ROOT",
-          "fallback_subdir": "mas"
-        }
-      ],
-      "read_only_command_patterns": [
-        {
-          "pattern_id": "python_module_product_manifest_or_status",
-          "regex": "(?:^|(?:&&|\\|\\||[;&|])\\s*)uv\\s+run\\s+(?:python|python3)\\s+-m\\s+med_autoscience\\.cli\\s+product\\s+(?:manifest|status)\\b"
-        },
-        {
-          "pattern_id": "python_module_study_state_matrix",
-          "regex": "(?:^|(?:&&|\\|\\||[;&|])\\s*)uv\\s+run\\s+(?:python|python3)\\s+-m\\s+med_autoscience\\.cli\\s+study-state-matrix\\b"
-        },
-        {
-          "pattern_id": "directory_inline_product_entry",
-          "regex": "(?:^|(?:&&|\\|\\||[;&|])\\s*)uv\\s+run\\s+--directory\\s+\\S+\\s+(?:python|python3)\\s+-c\\s+.*med_autoscience\\.controllers\\.product_entry"
-        }
-      ]
-    }
-  },
   "capability_dependencies": [
     {
       "module_id": "scholarskills",

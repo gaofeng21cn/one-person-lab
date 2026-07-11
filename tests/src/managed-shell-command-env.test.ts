@@ -45,7 +45,6 @@ test('managed shell command env routes python, uv, and pytest artifacts outside 
     'XDG_CACHE_HOME',
     'PIP_CACHE_DIR',
     'OPL_DOMAIN_COMMAND_TMP_ROOT',
-    'MAS_CLEAN_RUNNER_TMP_ROOT',
     'MAG_CLEAN_RUNNER_TMP_ROOT',
     'RCA_CLEAN_RUNNER_TMP_ROOT',
     'MED_AUTOGRANT_EDITABLE_SHARED_ENV_ROOT',
@@ -89,19 +88,17 @@ test('managed shell command env isolates project venvs per bound workspace', () 
   }
 });
 
-test('managed shell command env derives legacy clean runner roots from domain profiles', () => {
+test('managed shell command env derives remaining legacy clean runner roots from domain profiles', () => {
   const checkoutRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-profile-checkout-'));
   const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-managed-shell-profile-root-'));
-  const externalMasRoot = path.join(externalRoot, 'external-mas');
   try {
     const env: Record<string, string | undefined> = buildManagedShellCommandEnv(checkoutRoot, {
       OPL_DOMAIN_COMMAND_TMP_ROOT: externalRoot,
-      MAS_CLEAN_RUNNER_TMP_ROOT: externalMasRoot,
       MAG_CLEAN_RUNNER_TMP_ROOT: path.join(checkoutRoot, 'mag-inside-checkout'),
     });
 
     const tmpRoot = path.join(externalRoot, path.basename(checkoutRoot));
-    assert.equal(env.MAS_CLEAN_RUNNER_TMP_ROOT, externalMasRoot);
+    assert.equal(env.MAS_CLEAN_RUNNER_TMP_ROOT, undefined);
     assert.equal(env.MAG_CLEAN_RUNNER_TMP_ROOT, path.join(tmpRoot, 'mag'));
     assert.equal(env.RCA_CLEAN_RUNNER_TMP_ROOT, path.join(tmpRoot, 'rca'));
     assert.equal(
@@ -121,15 +118,11 @@ test('managed shell command env labels built-in domain roots as compatibility ca
 
   assert.deepEqual(
     [...profilesByDomain.keys()].sort(),
-    ['med-autogrant', 'med-autoscience', 'redcube-ai'],
+    ['med-autogrant', 'redcube-ai'],
   );
   for (const profile of profilesByDomain.values()) {
     assert.equal(profile.profileRole, 'domain_compatibility_clean_runner');
   }
-  assert.deepEqual(
-    profilesByDomain.get('med-autoscience')?.legacyEnvRoots,
-    [{ envName: 'MAS_CLEAN_RUNNER_TMP_ROOT', fallbackSubdir: 'mas' }],
-  );
   assert.deepEqual(
     profilesByDomain.get('med-autogrant')?.legacyEnvRoots,
     [
@@ -273,23 +266,29 @@ test('managed shell command cwd uses scratch copies for uv run commands only', (
       shouldUseManagedShellScratchCwd(
         'uv run python -m med_autoscience.cli product manifest --profile /tmp/profile.toml --format json',
       ),
-      false,
+      true,
     );
     assert.equal(
       shouldUseManagedShellScratchCwd(
         "uv run --directory '/tmp/mas' python -c 'from med_autoscience.profiles import load_profile; from med_autoscience.controllers.product_entry import build_product_entry_manifest; import json; profile_ref = \"/tmp/profile.toml\"; print(json.dumps(build_product_entry_manifest(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))'",
       ),
-      false,
+      true,
     );
     assert.equal(
       shouldUseManagedShellScratchCwd(
         "source '/tmp/manifest-shell-guard.sh' && uv run python -m med_autoscience.cli product manifest --profile /tmp/profile.toml --format json",
       ),
-      false,
+      true,
     );
     assert.equal(
       shouldUseManagedShellScratchCwd(
         'uv run python -m med_autoscience.cli study-state-matrix --profile /tmp/profile.toml --format json',
+      ),
+      true,
+    );
+    assert.equal(
+      shouldUseManagedShellScratchCwd(
+        "uv run --isolated --frozen --project '/tmp/mas' python -c 'import json; print(json.dumps({}))'",
       ),
       false,
     );
