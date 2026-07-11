@@ -16,7 +16,7 @@ type FirstPartyAgentPackageManifest = {
   source: string;
   carrier_source_role: 'codex_plugin_default_carrier_not_package_truth';
   package_core: Record<string, unknown> | null;
-  distribution_payload: {
+  distribution_payload: null | {
     payload_kind: string;
     payload_ref: string;
     payload_digest_ref: string;
@@ -92,14 +92,24 @@ function requireLiteral<T extends string>(value: unknown, expected: T, field: st
 }
 
 function normalizeDistributionPayload(value: unknown) {
+  if (value === undefined || value === null) {
+    return null;
+  }
   if (!isRecord(value)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare distribution_payload.', {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload must be a JSON object.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
       field: 'distribution_payload',
     });
   }
   const rollingTag = requireLiteral(value.rolling_tag, 'latest', 'distribution_payload.rolling_tag');
   const installTruth = requireLiteral(value.install_truth, 'resolved_digest_lock', 'distribution_payload.install_truth');
+  const payloadDigestRef = requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref');
+  if (!/^sha256:[0-9a-f]{64}$/.test(payloadDigestRef)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload.payload_digest_ref must be a SHA-256 digest ref.', {
+      contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+      field: 'distribution_payload.payload_digest_ref',
+    });
+  }
   if (value.live_download_proof !== false || value.installed_reload_proof !== false) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution_payload must not claim live download or installed reload proof.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -109,7 +119,7 @@ function normalizeDistributionPayload(value: unknown) {
   return {
     payload_kind: requiredString(value.payload_kind, 'distribution_payload.payload_kind'),
     payload_ref: requiredString(value.payload_ref, 'distribution_payload.payload_ref'),
-    payload_digest_ref: requiredString(value.payload_digest_ref, 'distribution_payload.payload_digest_ref'),
+    payload_digest_ref: payloadDigestRef,
     required_skill_pack_lock_refs: normalizeStringList(
       value.required_skill_pack_lock_refs,
       'distribution_payload.required_skill_pack_lock_refs',

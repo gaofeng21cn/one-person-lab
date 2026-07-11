@@ -10,7 +10,6 @@
     "version",
     "source",
     "carrier_source_role",
-    "distribution_payload",
     "codex_surface",
     "capability_dependencies"
   ],
@@ -135,6 +134,7 @@
       "additionalProperties": true
     },
     "distribution_payload": {
+      "description": "Optional published distribution metadata. Source-only or unpublished packages omit this property.",
       "type": "object",
       "required": [
         "payload_kind",
@@ -162,7 +162,7 @@
         },
         "payload_digest_ref": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "required_skill_pack_lock_refs": {
           "type": "array",

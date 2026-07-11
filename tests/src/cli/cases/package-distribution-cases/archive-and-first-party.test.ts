@@ -12,6 +12,25 @@ import {
   runCli,
   test,
 } from './helpers.ts';
+import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
+
+const publishedDistributionPayload = {
+  payload_kind: 'ghcr_oci_agent_package',
+  payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+  payload_digest_ref: `sha256:${'a'.repeat(64)}`,
+  required_skill_pack_lock_refs: [
+    'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
+  ],
+  proof_status: 'published_release_receipt_bound',
+  live_download_proof: false,
+  installed_reload_proof: false,
+  oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
+  oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
+  immutable_tag: '0.1.0a4',
+  rolling_tag: 'latest',
+  promotion_policy: 'daily_candidate_gates_then_promote_latest',
+  install_truth: 'resolved_digest_lock',
+};
 
 test('package archive builder writes channel manifest checksums git source and release discipline gate', () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-package-out-'));
@@ -203,10 +222,10 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifest.agent_id, 'med-autoscience');
   assert.equal(manifest.version, '0.1.0a4');
   assert.equal(manifest.carrier_source_role, 'codex_plugin_default_carrier_not_package_truth');
-  assert.equal(manifest.distribution_payload.rolling_tag, 'latest');
-  assert.equal(manifest.distribution_payload.install_truth, 'resolved_digest_lock');
-  assert.equal(manifest.distribution_payload.live_download_proof, false);
-  assert.equal(manifest.distribution_payload.installed_reload_proof, false);
+  assert.equal(schema.required.includes('distribution_payload'), false);
+  assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
+  assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
+  assert.equal(schema.properties.distribution_payload.properties.payload_digest_ref.pattern, '^sha256:[0-9a-f]{64}$');
   assert.equal(manifest.package_core.core_kind, 'opl_agent_package_core');
   assert.equal(manifest.package_core.dependency_source, 'manifest_declared_capability_dependencies');
   assert.equal(manifest.carrier_adapters[0].carrier, 'codex_plugin');
@@ -215,8 +234,6 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(schema.properties.codex_surface.properties.standalone_distribution.const, 'repo_carrier_source');
   assert.equal(schema.properties.package_core.properties.core_kind.const, 'opl_agent_package_core');
   assert.equal(schema.properties.carrier_adapters.items.properties.carrier.const, 'codex_plugin');
-  assert.equal(schema.properties.distribution_payload.properties.rolling_tag.const, 'latest');
-  assert.equal(schema.properties.distribution_payload.properties.install_truth.const, 'resolved_digest_lock');
   assert.deepEqual(manifest.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
   assert.deepEqual(manifest.codex_surface.bundled_capability_package_ids, ['mas-scholar-skills']);
   assert.equal(manifests.mag.codex_surface.standalone_distribution, 'repo_carrier_source');
@@ -225,7 +242,15 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   assert.equal(manifests.bookforge.codex_surface.standalone_distribution, 'repo_carrier_source');
   assert.deepEqual(manifests.mag.capability_dependencies, []);
   assert.deepEqual(manifests.rca.capability_dependencies, []);
-  assert.deepEqual(manifests.oma.distribution_payload.required_skill_pack_lock_refs, []);
+  Object.values(manifests).forEach((sourceManifest) => {
+    assert.equal(Object.hasOwn(sourceManifest, 'distribution_payload'), false);
+    assert.doesNotThrow(() => assertJsonSchemaPayload({
+      schemaId: schema.$id,
+      schema,
+      sourceRef: 'contracts/opl-framework/agent-package-manifest.schema.json',
+    }, sourceManifest));
+    assert.equal(normalizeFirstPartyAgentPackageManifest(sourceManifest).distribution_payload, null);
+  });
   assert.equal(manifest.opl_managed_surface.package_shape, 'thin_agent_package');
   assert.equal(manifest.opl_managed_surface.dependency_resolution, 'managed_dependency_graph');
   assert.deepEqual(
@@ -255,23 +280,6 @@ test('first-party agent package manifest canonicalizes legacy package and assist
     version: '0.1.0a4',
     source: 'first_party',
     carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
-    distribution_payload: {
-      payload_kind: 'ghcr_oci_agent_package',
-      payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
-      payload_digest_ref: 'sha256:1111111111111111111111111111111111111111111111111111111111111111',
-      required_skill_pack_lock_refs: [
-        'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
-      ],
-      proof_status: 'non_live_contract_fixture',
-      live_download_proof: false,
-      installed_reload_proof: false,
-      oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
-      oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
-      immutable_tag: '0.1.0a4',
-      rolling_tag: 'latest',
-      promotion_policy: 'daily_candidate_gates_then_promote_latest',
-      install_truth: 'resolved_digest_lock',
-    },
     codex_surface: {
       plugin_id: 'med-autoscience',
       standalone_distribution: 'repo_carrier_source',
@@ -304,6 +312,7 @@ test('first-party agent package manifest canonicalizes legacy package and assist
   assert.equal(normalized.codex_surface.plugin_id, 'med-autoscience');
   assert.deepEqual(normalized.codex_surface.required_skill_ids, ['med-autoscience', 'mas-scholar-skills']);
   assert.equal(normalized.package_core, null);
+  assert.equal(normalized.distribution_payload, null);
   assert.deepEqual(normalized.carrier_adapters, []);
   assert.equal(canonicalAgentPackageId('obf'), 'opl-bookforge');
 });
@@ -316,20 +325,34 @@ test('MAS first-party agent package manifest fails closed for unsafe dependency 
   assert.deepEqual(normalizeFirstPartyAgentPackageManifest({
     ...manifest,
     capability_dependencies: [],
-    distribution_payload: {
-      ...manifest.distribution_payload,
-      required_skill_pack_lock_refs: [],
-    },
+    distribution_payload: publishedDistributionPayload,
   }).capability_dependencies, []);
+  assert.equal(
+    normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      distribution_payload: publishedDistributionPayload,
+    }).distribution_payload?.install_truth,
+    'resolved_digest_lock',
+  );
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({
       ...manifest,
       distribution_payload: {
-        ...manifest.distribution_payload,
+        ...publishedDistributionPayload,
         install_truth: 'latest',
       },
     }),
     /distribution_payload.install_truth must be resolved_digest_lock/,
+  );
+  assert.throws(
+    () => normalizeFirstPartyAgentPackageManifest({
+      ...manifest,
+      distribution_payload: {
+        ...publishedDistributionPayload,
+        payload_digest_ref: 'sha256:not-a-digest',
+      },
+    }),
+    /payload_digest_ref must be a SHA-256 digest ref/,
   );
   assert.throws(
     () => normalizeFirstPartyAgentPackageManifest({

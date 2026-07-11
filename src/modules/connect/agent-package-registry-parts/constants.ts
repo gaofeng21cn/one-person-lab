@@ -18,7 +18,6 @@ export const MANIFEST_REQUIRED_FIELDS = [
   'source',
   'carrier_source_role',
   'codex_surface',
-  'distribution_payload',
   'capability_dependencies',
 ] as const;
 

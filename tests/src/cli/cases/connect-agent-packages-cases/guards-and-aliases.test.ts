@@ -18,6 +18,31 @@ import {
   withAgentPackageServer,
   withRemotePayloadAgentPackageServer,
 } from './helpers.ts';
+import {
+  normalizeManifest,
+  normalizeRegistry,
+} from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
+import { assertManifestMatchesRegistrySelection } from '../../../../../src/modules/connect/agent-package-registry-parts/selection.ts';
+
+test('published registry entry rejects a source-only manifest without distribution payload', () => {
+  const manifestUrl = 'https://registry.example/manifest.json';
+  const registryEntry = normalizeRegistry(
+    registryPayload('https://registry.example'),
+    'https://registry.example/registry.json',
+    'fixture-sha256',
+  ).entries[0];
+  const manifest = normalizeManifest(agentPackageManifest({ distributionPayload: null }), manifestUrl);
+
+  assert.throws(
+    () => assertManifestMatchesRegistrySelection(manifest, {
+      packageId: manifest.package_id,
+      registryEntry,
+      registryUrl: 'https://registry.example/registry.json',
+      manifestUrl,
+    }),
+    /Published registry entries require a distribution payload/,
+  );
+});
 
 test('connect agent-packages rejects registry manifest identity drift before writing locks', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-drift-state-'));
@@ -307,7 +332,7 @@ test('connect agent-packages validates first-party agent package manifest shape'
         package_id: string;
         codex_visible_entry: string;
         bundled_required_skill_ids: string[];
-        distribution_payload: { required_skill_pack_lock_refs: string[] };
+        distribution_payload: null;
         rollback_ref: string;
       };
     };
@@ -316,7 +341,7 @@ test('connect agent-packages validates first-party agent package manifest shape'
     assert.equal(validation.opl_agent_package_manifest.package_id, 'opl-meta-agent');
     assert.equal(validation.opl_agent_package_manifest.codex_visible_entry, 'opl-meta-agent');
     assert.deepEqual(validation.opl_agent_package_manifest.bundled_required_skill_ids, ['opl-meta-agent']);
-    assert.deepEqual(validation.opl_agent_package_manifest.distribution_payload.required_skill_pack_lock_refs, []);
+    assert.equal(validation.opl_agent_package_manifest.distribution_payload, null);
     assert.equal(validation.opl_agent_package_manifest.rollback_ref, 'rollback-ref:opl-meta-agent/unavailable'); // reuse-first: allow owner-routed package provenance assertion.
   } finally {
     fs.rmSync(stateDir, { recursive: true, force: true });

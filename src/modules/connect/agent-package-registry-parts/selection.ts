@@ -96,6 +96,14 @@ export function assertManifestMatchesRegistrySelection(
     });
   }
   const ordinaryUserSource = selection.registryEntry.ordinary_user_source;
+  if (ordinaryUserSource && !manifest.distribution_payload) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Published registry entries require a distribution payload.', {
+      registry_url: selection.registryUrl,
+      manifest_url: selection.manifestUrl,
+      package_id: manifest.package_id,
+      failure_code: 'registry_manifest_distribution_payload_required',
+    });
+  }
   if (ordinaryUserSource && manifest.distribution_payload) {
     if (manifest.distribution_payload.rolling_tag !== 'latest' || manifest.distribution_payload.install_truth !== 'resolved_digest_lock') {
       throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest distribution payload must keep latest as a rolling pointer and digest lock as install truth.', {

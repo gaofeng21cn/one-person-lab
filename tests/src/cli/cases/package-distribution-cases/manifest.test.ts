@@ -108,7 +108,7 @@ test('packages manifest exposes active package-channel coordinates for module in
             bundled_capability_package_ids: string[];
             carrier_source_role: string;
             package_manifest_ref: string;
-            distribution_payload: {
+            distribution_payload?: {
               oci_ref: string;
               payload_digest_ref: string;
               rolling_tag: string;
@@ -392,23 +392,6 @@ test('packages manifest exposes active package-channel coordinates for module in
       bundled_capability_package_ids: ['mas-scholar-skills'],
       carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
       package_manifest_ref: 'contracts/opl-framework/agent-packages/mas.json',
-      distribution_payload: {
-        payload_kind: 'ghcr_oci_agent_package',
-        payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
-        payload_digest_ref: 'sha256:1111111111111111111111111111111111111111111111111111111111111111',
-        required_skill_pack_lock_refs: [
-          'opl://agent-package-lock/mas-scholar-skills/0.1.0a4/managed-ghcr-capability-package',
-        ],
-        proof_status: 'non_live_contract_fixture',
-        live_download_proof: false,
-        installed_reload_proof: false,
-        oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-med-autoscience:latest',
-        oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
-        immutable_tag: '0.1.0a4',
-        rolling_tag: 'latest',
-        promotion_policy: 'daily_candidate_gates_then_promote_latest',
-        install_truth: 'resolved_digest_lock',
-      },
       user_install_action_count: 1,
     },
   );
@@ -426,21 +409,6 @@ test('packages manifest exposes active package-channel coordinates for module in
       bundled_capability_package_ids: [],
       carrier_source_role: 'codex_plugin_default_carrier_not_package_truth',
       package_manifest_ref: 'contracts/opl-framework/agent-packages/rca.json',
-      distribution_payload: {
-        payload_kind: 'ghcr_oci_agent_package',
-        payload_ref: 'ghcr.io/gaofeng21cn/opl-agent-redcube-ai:latest',
-        payload_digest_ref: 'sha256:3333333333333333333333333333333333333333333333333333333333333333',
-        required_skill_pack_lock_refs: [],
-        proof_status: 'non_live_contract_fixture',
-        live_download_proof: false,
-        installed_reload_proof: false,
-        oci_ref: 'ghcr.io/gaofeng21cn/opl-agent-redcube-ai:latest',
-        oci_media_type: 'application/vnd.oci.image.manifest.v1+json',
-        immutable_tag: '0.1.0',
-        rolling_tag: 'latest',
-        promotion_policy: 'daily_candidate_gates_then_promote_latest',
-        install_truth: 'resolved_digest_lock',
-      },
       user_install_action_count: 1,
     },
   );

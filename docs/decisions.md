@@ -7,6 +7,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ## 2026-07-11
 
+### 决策：source-only Agent Package manifest 不声明发布 payload
+
+原因：first-party standard Agent 的 source manifest 过去为满足 schema 必填项而写入 `non_live_contract_fixture`、预设 OCI `latest` 和重复数字 SHA-256。这些值不是 release authority，也不应进入 package/channel readback。
+
+影响：
+
+- source-only 或尚未发布的 manifest 省略 `distribution_payload`；compiler 也不输出该 key，source/package identity、Codex carrier 和 capability dependency graph 保持有效。
+- 只有存在真实发布元数据时才声明 `distribution_payload`；一旦声明，完整字段、SHA-256 格式、rolling `latest`、immutable tag、digest lock 与 proof false-claim 约束继续 fail closed。
+- 带 `ordinary_user_source` 的 published registry entry 必须同时提供合法 `distribution_payload`；不能用 source-only manifest 绕过已发布安装路径的 digest/immutable-tag 校验。
+
 ### 决策：静态 Foundry Agent 合同与完整 CLI/runtime 使用不同安装单元
 
 原因：OMA 只消费五个静态 subpath，却因 `opl-framework-shared` 单一 manifest 被迫安装 Temporal 与 E2B。源码 owner 仍应唯一归 OPL，但安装图无需把静态 validator/build primitive 与完整 provider runtime 绑在一起。

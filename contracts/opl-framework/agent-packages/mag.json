@@ -40,21 +40,6 @@
     "lifecycle_receipt_owner": "opl_connect_agent_package_registry",
     "exposure_owner": "opl_connect_agent_package_registry"
   },
-  "distribution_payload": {
-    "payload_kind": "ghcr_oci_agent_package",
-    "payload_ref": "ghcr.io/gaofeng21cn/opl-agent-med-autogrant:latest",
-    "payload_digest_ref": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
-    "required_skill_pack_lock_refs": [],
-    "proof_status": "non_live_contract_fixture",
-    "live_download_proof": false,
-    "installed_reload_proof": false,
-    "oci_ref": "ghcr.io/gaofeng21cn/opl-agent-med-autogrant:latest",
-    "oci_media_type": "application/vnd.oci.image.manifest.v1+json",
-    "immutable_tag": "0.1.0",
-    "rolling_tag": "latest",
-    "promotion_policy": "daily_candidate_gates_then_promote_latest",
-    "install_truth": "resolved_digest_lock"
-  },
   "codex_surface": {
     "plugin_id": "med-autogrant",
     "standalone_distribution": "repo_carrier_source",

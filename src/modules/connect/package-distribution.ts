@@ -242,7 +242,9 @@ function buildCodexStandaloneDistribution(spec: PackageModuleSpec) {
     bundled_capability_package_ids: agentPackageManifest.codex_surface.bundled_capability_package_ids ?? [],
     carrier_source_role: agentPackageManifest.carrier_source_role,
     package_manifest_ref: spec.agent_package_manifest_ref,
-    distribution_payload: agentPackageManifest.distribution_payload,
+    ...(agentPackageManifest.distribution_payload
+      ? { distribution_payload: agentPackageManifest.distribution_payload }
+      : {}),
     user_install_action_count: 1,
   };
 }

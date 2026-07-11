@@ -46,8 +46,8 @@ function normalizeDistributionPayload(value: unknown): AgentPackageDistributionP
     });
   }
   const payloadDigestRef = assertStringValue(value.payload_digest_ref, 'distribution_payload.payload_digest_ref');
-  if (payloadDigestRef === 'latest' || payloadDigestRef === 'registry.latest_version') {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package install truth must be a digest ref, not latest or registry.latest_version.', {
+  if (!/^sha256:[0-9a-f]{64}$/.test(payloadDigestRef)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package install truth must be a SHA-256 digest ref.', {
       failure_code: 'agent_package_distribution_digest_required',
       payload_digest_ref: payloadDigestRef,
     });
