@@ -2,6 +2,7 @@ import {
   DECLARATIVE_DOMAIN_PACK,
   DOMAIN_RETAINED_THIN_SURFACES,
   FOUNDRY_AGENT_SERIES_CONSUMER_KIND,
+  FOUNDRY_AGENT_SERIES_CONSUMER_REQUIRED_AUTHORITY_BOUNDARY_FIELDS,
   FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,
   FOUNDRY_AGENT_SERIES_POLICY_EXPORT,
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
@@ -131,13 +132,9 @@ function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
       deliverable: ['deliverable_progress_delta'],
       platform: ['platform_repair_delta'],
     },
-    authority_boundary: {
-      domain_can_write_other_domain_truth: false,
-      domain_can_write_other_domain_memory_body: false,
-      domain_can_mutate_other_domain_artifact_body: false,
-      domain_can_authorize_other_domain_quality_or_export: false,
-      generated_surface_can_claim_domain_ready: false,
-    },
+    authority_boundary: Object.fromEntries(
+      FOUNDRY_AGENT_SERIES_CONSUMER_REQUIRED_AUTHORITY_BOUNDARY_FIELDS.map((field) => [field, false]),
+    ),
   };
 }
 

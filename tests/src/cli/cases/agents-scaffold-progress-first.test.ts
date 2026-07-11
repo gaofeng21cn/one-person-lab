@@ -78,6 +78,25 @@ test('agents scaffold validation blocks stale Foundry policy release pins', () =
   }
 });
 
+test('agents scaffold validation blocks missing required Foundry authority boundary fields', () => {
+  const targetDir = generateTarget('opl-foundry-missing-boundary-');
+  try {
+    const contractPath = path.join(targetDir, 'contracts/foundry_agent_series.json');
+    const contract = readJson(contractPath);
+    delete contract.authority_boundary.domain_can_write_other_domain_truth;
+    writeJson(contractPath, contract);
+
+    const validation = runCli(['agents', 'scaffold', '--validate', targetDir])
+      .standard_domain_agent_scaffold.validation.foundry_agent_series_validation;
+    assert.equal(validation.status, 'blocked');
+    assert.ok(validation.blockers.includes(
+      'foundry_agent_series_authority_boundary_missing:domain_can_write_other_domain_truth',
+    ));
+  } finally {
+    fs.rmSync(targetDir, { recursive: true, force: true });
+  }
+});
+
 test('agents scaffold validation rejects copied canonical Foundry policy bodies', () => {
   const targetDir = generateTarget('opl-foundry-legacy-body-');
   try {

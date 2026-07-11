@@ -426,6 +426,14 @@ export const FOUNDRY_AGENT_SERIES_LEGACY_POLICY_BODY_FIELDS = [
   'workspace_topology_profile',
 ] as const;
 
+export const FOUNDRY_AGENT_SERIES_CONSUMER_REQUIRED_AUTHORITY_BOUNDARY_FIELDS = [
+  'domain_can_write_other_domain_truth',
+  'domain_can_write_other_domain_memory_body',
+  'domain_can_mutate_other_domain_artifact_body',
+  'domain_can_authorize_other_domain_quality_or_export',
+  'generated_surface_can_claim_domain_ready',
+] as const;
+
 export const STANDARD_FOUNDRY_AGENT_SERIES_CONSUMER_CONTRACT = {
   surface_kind: FOUNDRY_AGENT_SERIES_CONSUMER_KIND,
   version: FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,

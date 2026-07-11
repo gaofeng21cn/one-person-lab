@@ -7,6 +7,7 @@ import {
 } from '../public/foundry-agent-series-policy.ts';
 import {
   FOUNDRY_AGENT_SERIES_CONSUMER_KIND,
+  FOUNDRY_AGENT_SERIES_CONSUMER_REQUIRED_AUTHORITY_BOUNDARY_FIELDS,
   FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,
   FOUNDRY_AGENT_SERIES_LEGACY_POLICY_BODY_FIELDS,
   FOUNDRY_AGENT_SERIES_POLICY_EXPORT,
@@ -37,8 +38,11 @@ function falseAuthorityBlockers(authorityBoundary: unknown) {
     return ['foundry_agent_series_authority_boundary_missing_or_invalid'];
   }
   const entries = Object.entries(authorityBoundary);
+  const missingRequiredFields = FOUNDRY_AGENT_SERIES_CONSUMER_REQUIRED_AUTHORITY_BOUNDARY_FIELDS
+    .filter((field) => !Object.hasOwn(authorityBoundary, field));
   return [
     entries.length > 0 ? null : 'foundry_agent_series_authority_boundary_empty',
+    ...missingRequiredFields.map((field) => `foundry_agent_series_authority_boundary_missing:${field}`),
     ...entries.map(([field, value]) => value === false
       ? null
       : `foundry_agent_series_authority_boundary_must_be_false:${field}`),
