@@ -683,6 +683,20 @@ test('Agent Lab contract is tracked and exported as an OPL framework surface', (
     contract.evaluation_work_order_consumer_surface.accepted_work_order.canonical_target_agent_fields,
     ['domain_id', 'target_agent_ref', 'descriptor_ref'],
   );
+  assert.deepEqual(
+    contract.evaluation_work_order_consumer_surface.accepted_work_order.evaluation_request_ref_fields,
+    ['ref', 'sha256', 'request_id', 'suite_id', 'suite_kind'],
+  );
+  assert.equal(
+    contract.evaluation_work_order_consumer_surface.accepted_work_order
+      .evaluation_request_digest_policy.mismatch_policy,
+    'contract_shape_invalid_before_output_or_ledger_write',
+  );
+  assertIncludesAll(
+    contract.evaluation_work_order_consumer_surface.accepted_work_order
+      .canonical_work_order_identity_fields,
+    ['evaluation_request.ref', 'evaluation_request.sha256', 'evaluation_request.task_ids'],
+  );
   assert.equal(
     contract.evaluation_work_order_consumer_surface.observation_packet.required_for_agent_lab_suite_materialization,
     true,

@@ -750,6 +750,41 @@
         "domain_id",
         "target_agent_ref",
         "descriptor_ref"
+      ],
+      "evaluation_request_ref_fields": [
+        "ref",
+        "sha256",
+        "request_id",
+        "suite_id",
+        "suite_kind"
+      ],
+      "evaluation_request_digest_policy": {
+        "algorithm": "sha256",
+        "encoding": "64_lowercase_hex",
+        "input": "referenced_evaluation_request_raw_bytes",
+        "validation_order": [
+          "read_raw_bytes",
+          "verify_sha256",
+          "parse_json",
+          "validate_request",
+          "compile_suite_plan"
+        ],
+        "mismatch_policy": "contract_shape_invalid_before_output_or_ledger_write"
+      },
+      "canonical_work_order_identity_fields": [
+        "work_order_kind",
+        "target_agent.domain_id",
+        "target_agent.target_agent_ref",
+        "target_agent.descriptor_ref",
+        "evaluation_request.ref",
+        "evaluation_request.sha256",
+        "evaluation_request.request_id",
+        "evaluation_request.suite_id",
+        "evaluation_request.suite_kind",
+        "evaluation_request.task_ids",
+        "source_refs",
+        "reviewer_refs",
+        "candidate_refs"
       ]
     },
     "canonical_evaluation_owner": "one-person-lab/OPL Foundry Lab",
@@ -761,6 +796,8 @@
       "producer_abi_scope": "OMA-owned domain evaluation intent and refs only; this is not an OPL generic request identity",
       "role": "thin_domain_evaluation_intent_only",
       "work_order_binding_fields": [
+        "ref",
+        "sha256",
         "request_id",
         "suite_id",
         "suite_kind"

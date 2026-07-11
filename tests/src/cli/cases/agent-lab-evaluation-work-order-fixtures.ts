@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -6,7 +7,6 @@ export const OMA_EVALUATION_FIXTURE = {
   taskDomainId: 'opl-meta-agent',
   targetAgentRef: 'domain-agent:target-agent',
   targetDescriptorRef: '/tmp/target-agent/contracts/domain_descriptor.json',
-  workOrderId: 'oma-foundry-lab-work-order:target-agent/takeover',
   requestId: 'oma-evaluation-request:target-agent/takeover',
   suiteId: 'opl-meta-agent-takeover-suite:target-agent',
   taskId: 'agent-lab-task:opl-meta-agent/target-agent/takeover',
@@ -28,12 +28,51 @@ export const OMA_EVALUATION_FIXTURE = {
   policyReceiptRef: 'stage-policy-receipt:opl-meta-agent/target-agent/takeover',
 } as const;
 
+function evaluationRequestBytes(payload: unknown) {
+  return `${JSON.stringify(payload, null, 2)}\n`;
+}
+
+function evaluationRequestSha256(payload: unknown) {
+  return crypto.createHash('sha256').update(evaluationRequestBytes(payload)).digest('hex');
+}
+
+function canonicalRefs(value: unknown) {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((entry): entry is string => typeof entry === 'string').map((entry) => entry.trim()).filter(Boolean))].sort()
+    : [];
+}
+
+function canonicalWorkOrderId(workOrder: Record<string, any>, evaluationRequest: Record<string, any>) {
+  const payload = {
+    work_order_kind: workOrder.work_order_kind,
+    target_identity: {
+      domain_id: workOrder.target_agent.domain_id,
+      target_agent_ref: workOrder.target_agent.target_agent_ref,
+      descriptor_ref: workOrder.target_agent.descriptor_ref,
+    },
+    evaluation_request: {
+      request_id: workOrder.evaluation_request.request_id,
+      suite_id: workOrder.evaluation_request.suite_id,
+      suite_kind: workOrder.evaluation_request.suite_kind,
+      ref: workOrder.evaluation_request.ref,
+      sha256: workOrder.evaluation_request.sha256,
+      task_ids: evaluationRequest.task_intents.map((task: Record<string, any>) => task.task_id).sort(),
+    },
+    source_refs: canonicalRefs(workOrder.source_refs),
+    reviewer_refs: canonicalRefs(workOrder.reviewer_refs),
+    candidate_refs: canonicalRefs(workOrder.candidate_refs),
+  };
+  const digest = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 12);
+  return `oma_foundry_lab_work_order_${digest}`;
+}
+
 export function writeEvaluationJson(filePath: string, payload: unknown) {
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(filePath, evaluationRequestBytes(payload), 'utf8');
 }
 
 export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
-  const ids = OMA_EVALUATION_FIXTURE;
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const ids = { ...OMA_EVALUATION_FIXTURE, workOrderId: '' };
   const evaluationRequestPath = path.join(tmpDir, 'oma-evaluation-request.json');
   const workOrderPath = path.join(tmpDir, 'foundry-lab-work-order.json');
   const observationsPath = path.join(tmpDir, 'foundry-lab-evaluation-observations.json');
@@ -97,6 +136,7 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
     },
     evaluation_request: {
       ref: path.basename(evaluationRequestPath),
+      sha256: evaluationRequestSha256(evaluationRequest),
       request_id: ids.requestId,
       suite_id: ids.suiteId,
       suite_kind: 'agent_lab_external_suite',
@@ -136,6 +176,8 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
       oma_can_promote_default_agent_without_gate: false,
     },
   };
+  ids.workOrderId = canonicalWorkOrderId(workOrder, evaluationRequest);
+  workOrder.work_order_id = ids.workOrderId;
   const observations = {
     surface_kind: 'opl_foundry_lab_evaluation_observation_packet',
     version: 'opl.foundry-lab-evaluation-observation-packet.v1',
@@ -265,6 +307,20 @@ export function buildOmaTakeoverEvaluationFixture(tmpDir: string) {
   };
 }
 
+export function writeBoundEvaluationRequest(
+  fixture: ReturnType<typeof buildOmaTakeoverEvaluationFixture>,
+) {
+  const workOrder = fixture.workOrder as Record<string, any>;
+  const evaluationRequest = fixture.evaluationRequest as Record<string, any>;
+  workOrder.evaluation_request.sha256 = evaluationRequestSha256(evaluationRequest);
+  workOrder.work_order_id = canonicalWorkOrderId(workOrder, evaluationRequest);
+  fixture.ids.workOrderId = workOrder.work_order_id;
+  (fixture.observations as Record<string, any>).work_order_id = workOrder.work_order_id;
+  writeEvaluationJson(fixture.evaluationRequestPath, evaluationRequest);
+  writeEvaluationJson(fixture.workOrderPath, workOrder);
+  writeEvaluationJson(fixture.observationsPath, fixture.observations);
+}
+
 export function retargetOmaTakeoverEvaluationFixture(
   fixture: ReturnType<typeof buildOmaTakeoverEvaluationFixture>,
   domainId: string,
@@ -283,5 +339,6 @@ export function retargetOmaTakeoverEvaluationFixture(
     task.target_agent_ref = target.target_agent_ref;
     task.target_agent_descriptor_ref = target.descriptor_ref;
   }
+  writeBoundEvaluationRequest(fixture);
   return target;
 }

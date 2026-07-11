@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { after } from 'node:test';
 
 import { assert, fs, os, path, repoRoot, runCli, test } from '../helpers.ts';
@@ -6,6 +7,7 @@ import './agent-lab-loop-risk.test.ts';
 import {
   buildOmaTakeoverEvaluationFixture,
   retargetOmaTakeoverEvaluationFixture,
+  writeBoundEvaluationRequest,
   writeEvaluationJson,
 } from './agent-lab-evaluation-work-order-fixtures.ts';
 
@@ -469,6 +471,12 @@ test('agent-lab evaluation-work-order rejects producer authority, locator, and l
         owner: 'opl-meta-agent',
       };
     }, /unsupported fields at work_order\.evaluation_request/],
+    ['missing request digest', (fixture) => {
+      delete (fixture.workOrder.evaluation_request as Record<string, any>).sha256;
+    }, /evaluation_request\.sha256/],
+    ['non-canonical request digest', (fixture) => {
+      (fixture.workOrder.evaluation_request as Record<string, any>).sha256 = 'A'.repeat(64);
+    }, /evaluation_request\.sha256/],
     ['nested target result ledger', (fixture) => {
       (fixture.workOrder.target_agent as Record<string, any>).result_ledger = {
         owner: 'opl-meta-agent',
@@ -554,8 +562,8 @@ test('agent-lab evaluation-work-order compiles a thin OMA evaluation request int
       suite_id: request.suite_id,
       suite_kind: request.suite_kind,
     };
-    writeEvaluationJson(evaluationRequestPath, request);
-    writeEvaluationJson(fixture.workOrderPath, workOrder);
+    Object.assign(fixture.evaluationRequest, request);
+    writeBoundEvaluationRequest(fixture);
 
     const result = runCli([
       'agent-lab',
@@ -578,6 +586,80 @@ test('agent-lab evaluation-work-order compiles a thin OMA evaluation request int
       'workspace-locator:/tmp/target-agent',
     );
     assert.deepEqual(result.receipt.improvement_candidate_refs, [fixture.ids.improvementCandidateRef]);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order binds canonical identity to request raw bytes', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-request-byte-identity-'));
+  try {
+    const firstFixture = buildOmaTakeoverEvaluationFixture(path.join(tmpDir, 'first'));
+    const secondFixture = buildOmaTakeoverEvaluationFixture(path.join(tmpDir, 'second'));
+    (secondFixture.evaluationRequest.task_intents[0] as Record<string, any>).instructions_ref =
+      'instructions:opl-meta-agent/target-agent/takeover/revised';
+    writeBoundEvaluationRequest(secondFixture);
+
+    const execute = (fixture: ReturnType<typeof buildOmaTakeoverEvaluationFixture>) => runCli([
+      'agent-lab', 'evaluation-work-order', 'execute',
+      '--work-order', fixture.workOrderPath,
+      '--output', fixture.outputDir,
+      '--json',
+    ]).agent_lab_evaluation_work_order_execution;
+    const first = execute(firstFixture);
+    const second = execute(secondFixture);
+
+    assert.notEqual(firstFixture.workOrder.work_order_id, secondFixture.workOrder.work_order_id);
+    assert.notEqual(first.receipt.receipt_id, second.receipt.receipt_id);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects request byte drift before parsing or output writes', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-request-digest-mismatch-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    fs.writeFileSync(fixture.evaluationRequestPath, '{ invalid-json-after-signed-bytes\n', 'utf8');
+
+    assert.throws(
+      () => runCli([
+        'agent-lab', 'evaluation-work-order', 'execute',
+        '--work-order', fixture.workOrderPath,
+        '--output', fixture.outputDir,
+        '--json',
+      ]),
+      /evaluation request sha256 mismatch/,
+    );
+    assert.equal(fs.existsSync(fixture.outputDir), false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('agent-lab evaluation-work-order rejects a refreshed digest with a stale work-order identity', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-lab-stale-request-identity-'));
+  try {
+    const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
+    (fixture.evaluationRequest.task_intents[0] as Record<string, any>).instructions_ref =
+      'instructions:opl-meta-agent/target-agent/takeover/revised';
+    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
+    (fixture.workOrder.evaluation_request as Record<string, any>).sha256 = crypto
+      .createHash('sha256')
+      .update(fs.readFileSync(fixture.evaluationRequestPath))
+      .digest('hex');
+    writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
+
+    assert.throws(
+      () => runCli([
+        'agent-lab', 'evaluation-work-order', 'execute',
+        '--work-order', fixture.workOrderPath,
+        '--output', fixture.outputDir,
+        '--json',
+      ]),
+      /canonical work_order_id must bind/,
+    );
+    assert.equal(fs.existsSync(fixture.outputDir), false);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -626,7 +708,7 @@ test('agent-lab evaluation-work-order rejects OMA request authority owner and un
       try {
         const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
         mutate(fixture.evaluationRequest as Record<string, any>);
-        writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
+        writeBoundEvaluationRequest(fixture);
         assert.throws(
           () => runCli([
             'agent-lab',
@@ -655,7 +737,7 @@ test('agent-lab evaluation-work-order rejects producer-supplied observation gate
       gate_ids: ['seed-only-gate'],
       no_forbidden_write_proof_refs: ['seed-only-proof-must-not-be-observed'],
     };
-    writeEvaluationJson(fixture.evaluationRequestPath, evaluationRequest);
+    writeBoundEvaluationRequest(fixture);
 
     assert.throws(
       () => runCli([
@@ -740,9 +822,7 @@ test('agent-lab evaluation-work-order rejects canonical target identity and fram
       try {
         const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
         mutate(fixture);
-        writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
-        writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
-        writeEvaluationJson(fixture.observationsPath, fixture.observations);
+        writeBoundEvaluationRequest(fixture);
         assert.throws(
           () => runCli([
             'agent-lab', 'evaluation-work-order', 'execute',
@@ -830,9 +910,6 @@ test('agent-lab consistent evaluation target swap changes compiled result and re
     ]).agent_lab_evaluation_work_order_execution;
     const first = execute(path.join(tmpDir, 'first'));
     const target = retargetOmaTakeoverEvaluationFixture(fixture, 'other-target-agent');
-    writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
-    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
-    writeEvaluationJson(fixture.observationsPath, fixture.observations);
     const second = execute(path.join(tmpDir, 'second'));
     const compiledSuite = JSON.parse(fs.readFileSync(second.artifacts.compiled_suite_path, 'utf8'));
 
@@ -859,8 +936,6 @@ test('agent-lab blocked evaluation target swap changes platform blocker and rece
     ]).agent_lab_evaluation_work_order_execution;
     const first = execute(path.join(tmpDir, 'first'));
     const target = retargetOmaTakeoverEvaluationFixture(fixture, 'other-target-agent');
-    writeEvaluationJson(fixture.workOrderPath, fixture.workOrder);
-    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
     const second = execute(path.join(tmpDir, 'second'));
 
     assert.deepEqual(second.evaluation_result.evaluation_target_agent, target);
@@ -926,7 +1001,7 @@ test('agent-lab evaluation-work-order rejects unknown improvement allowed_change
     const fixture = buildOmaTakeoverEvaluationFixture(tmpDir);
     (fixture.evaluationRequest.task_intents[0].improvement_candidate as Record<string, any>).allowed_change_scope =
       'future_automatic_scope';
-    writeEvaluationJson(fixture.evaluationRequestPath, fixture.evaluationRequest);
+    writeBoundEvaluationRequest(fixture);
     assert.throws(
       () => runCli([
         'agent-lab', 'evaluation-work-order', 'execute',
@@ -1020,8 +1095,7 @@ test('agent-lab production evaluation materializes gate evidence only from the o
     evaluationRequest.suite_kind = 'agent_production_evidence_suite';
     evaluationRequest.production_evidence_gate_ids = ['production_acceptance_contract_read'];
     workOrder.evaluation_request.suite_kind = evaluationRequest.suite_kind;
-    writeEvaluationJson(fixture.evaluationRequestPath, evaluationRequest);
-    writeEvaluationJson(fixture.workOrderPath, workOrder);
+    writeBoundEvaluationRequest(fixture);
     assert.throws(
       () => runCli([
         'agent-lab',

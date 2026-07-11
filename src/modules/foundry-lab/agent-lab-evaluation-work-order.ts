@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -76,6 +77,7 @@ const TARGET_AGENT_FIELDS = new Set([
 ]);
 const EVALUATION_REQUEST_REF_FIELDS = new Set([
   'ref',
+  'sha256',
   'request_id',
   'suite_id',
   'suite_kind',
@@ -104,6 +106,7 @@ const OUTPUT_ARTIFACT_NAMES = [
   'foundry-lab-evaluation-typed-blocker.json',
 ] as const;
 const SAFE_TRUE_AUTHORITY_FLAGS = new Set(['refs_only']);
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 const EVALUATION_AUTHORITY_BOUNDARY = {
   ...AGENT_LAB_AUTHORITY_BOUNDARY,
@@ -148,6 +151,99 @@ function requiredString(value: unknown, field: string) {
     return invalid(`Foundry Lab evaluation work order requires ${field}.`, { field });
   }
   return resolved;
+}
+
+function requiredSha256(value: unknown, field: string) {
+  const resolved = requiredString(value, field);
+  if (!SHA256_PATTERN.test(resolved)) {
+    invalid(`Foundry Lab evaluation work order requires lowercase raw-byte SHA-256 at ${field}.`, {
+      field,
+      actual: resolved,
+    });
+  }
+  return resolved;
+}
+
+function readDigestBoundEvaluationRequest(filePath: string, expectedSha256: string) {
+  let rawBytes: Buffer;
+  try {
+    rawBytes = fs.readFileSync(filePath);
+  } catch (error) {
+    invalid(`Foundry Lab evaluation request is missing: ${filePath}.`, {
+      file: filePath,
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+  const actualSha256 = crypto.createHash('sha256').update(rawBytes).digest('hex');
+  if (actualSha256 !== expectedSha256) {
+    invalid('Foundry Lab evaluation request sha256 mismatch.', {
+      file: filePath,
+      expected_sha256: expectedSha256,
+      actual_sha256: actualSha256,
+    });
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBytes.toString('utf8'));
+  } catch (error) {
+    invalid(`Foundry Lab evaluation request contains invalid JSON: ${filePath}.`, {
+      file: filePath,
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
+  if (!isRecord(parsed)) {
+    invalid(`Foundry Lab evaluation request must contain a JSON object: ${filePath}.`, {
+      file: filePath,
+    });
+  }
+  return parsed;
+}
+
+function canonicalIdentityRefs(value: unknown, field: string) {
+  if (!Array.isArray(value)
+    || value.some((entry) => typeof entry !== 'string' || entry.trim().length === 0)) {
+    invalid(`Foundry Lab evaluation work order requires a string ref list at ${field}.`, { field });
+  }
+  return uniqueStringList(value.map((entry) => entry.trim())).sort();
+}
+
+function assertCanonicalWorkOrderIdentity(workOrder: JsonRecord, evaluationRequest: JsonRecord) {
+  const targetAgent = record(workOrder.target_agent);
+  const requestRef = record(workOrder.evaluation_request);
+  const taskIds = recordList(evaluationRequest.task_intents)
+    .map((task) => requiredString(task.task_id, 'evaluation_request.task_intents[].task_id'))
+    .sort();
+  const identityPayload = {
+    work_order_kind: requiredString(workOrder.work_order_kind, 'work_order.work_order_kind'),
+    target_identity: {
+      domain_id: requiredString(targetAgent.domain_id, 'work_order.target_agent.domain_id'),
+      target_agent_ref: requiredString(targetAgent.target_agent_ref, 'work_order.target_agent.target_agent_ref'),
+      descriptor_ref: requiredString(targetAgent.descriptor_ref, 'work_order.target_agent.descriptor_ref'),
+    },
+    evaluation_request: {
+      request_id: requiredString(requestRef.request_id, 'work_order.evaluation_request.request_id'),
+      suite_id: requiredString(requestRef.suite_id, 'work_order.evaluation_request.suite_id'),
+      suite_kind: requiredString(requestRef.suite_kind, 'work_order.evaluation_request.suite_kind'),
+      ref: requiredString(requestRef.ref, 'work_order.evaluation_request.ref'),
+      sha256: requiredSha256(requestRef.sha256, 'work_order.evaluation_request.sha256'),
+      task_ids: taskIds,
+    },
+    source_refs: canonicalIdentityRefs(workOrder.source_refs, 'work_order.source_refs'),
+    reviewer_refs: canonicalIdentityRefs(workOrder.reviewer_refs, 'work_order.reviewer_refs'),
+    candidate_refs: canonicalIdentityRefs(workOrder.candidate_refs, 'work_order.candidate_refs'),
+  };
+  const digest = crypto.createHash('sha256')
+    .update(JSON.stringify(identityPayload))
+    .digest('hex')
+    .slice(0, 12);
+  const expected = `oma_foundry_lab_work_order_${digest}`;
+  const actual = requiredString(workOrder.work_order_id, 'work_order.work_order_id');
+  if (actual !== expected) {
+    invalid(
+      'Foundry Lab evaluation work order canonical work_order_id must bind target_agent domain_id/target_agent_ref/descriptor_ref, evaluation_request ref/sha256/request_id/suite_id/suite_kind/task_ids, and provenance refs.',
+      { expected_work_order_id: expected, actual_work_order_id: actual },
+    );
+  }
 }
 
 function assertValue(actual: unknown, expected: string, field: string) {
@@ -293,6 +389,7 @@ function validateWorkOrder(workOrder: JsonRecord) {
     'work_order.evaluation_request',
   );
   requiredString(evaluationRequest.ref, 'work_order.evaluation_request.ref');
+  requiredSha256(evaluationRequest.sha256, 'work_order.evaluation_request.sha256');
   requiredString(evaluationRequest.request_id, 'work_order.evaluation_request.request_id');
   requiredString(evaluationRequest.suite_id, 'work_order.evaluation_request.suite_id');
   requiredString(evaluationRequest.suite_kind, 'work_order.evaluation_request.suite_kind');
@@ -1230,8 +1327,16 @@ export function executeAgentLabEvaluationWorkOrder(options: AgentLabEvaluationWo
     'work_order.evaluation_request.ref',
   );
   const evaluationRequestPath = path.resolve(path.dirname(workOrderPath), evaluationRequestRef);
-  const evaluationRequest = readRecord(evaluationRequestPath, 'Foundry Lab evaluation request');
+  const evaluationRequestSha256 = requiredSha256(
+    record(workOrder.evaluation_request).sha256,
+    'work_order.evaluation_request.sha256',
+  );
+  const evaluationRequest = readDigestBoundEvaluationRequest(
+    evaluationRequestPath,
+    evaluationRequestSha256,
+  );
   validateEvaluationRequest(workOrder, evaluationRequest);
+  assertCanonicalWorkOrderIdentity(workOrder, evaluationRequest);
   const suitePlan = compileEvaluationSuitePlan({
     workOrder,
     request: evaluationRequest,
