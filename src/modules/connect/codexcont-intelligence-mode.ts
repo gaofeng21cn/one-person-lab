@@ -9,7 +9,6 @@ import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 
 type JsonRecord = Record<string, unknown>;
 type ModeAction = 'status' | 'enable' | 'disable' | 'repair' | 'uninstall';
-const PAYLOAD_PREFLIGHT_ACTIONS = new Set<ModeAction>(['status', 'enable', 'repair']);
 
 function normalizeOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -98,11 +97,6 @@ export function installOplFlowPluginIfAvailable() {
   };
 }
 
-function ensureOplFlowPluginPayload(action: ModeAction) {
-  if (!PAYLOAD_PREFLIGHT_ACTIONS.has(action)) return;
-  installOplFlowPluginIfAvailable();
-}
-
 function runOplFlowScript(scriptPath: string, action: ModeAction, payload: JsonRecord, dryRun: boolean) {
   const command = normalizeOptionalString(process.env.OPL_FLOW_PYTHON) ?? 'python3';
   const args = [scriptPath, action];
@@ -140,7 +134,6 @@ export async function runOplFlowIntelligenceEnhancementAction(
   payload: JsonRecord,
   dryRun: boolean,
 ) {
-  ensureOplFlowPluginPayload(action);
   const scriptPath = resolveOplFlowScript();
   if (!scriptPath) {
     throw new FrameworkContractError('codex_command_failed', 'OPL Flow intelligence enhancement script is not installed.', {

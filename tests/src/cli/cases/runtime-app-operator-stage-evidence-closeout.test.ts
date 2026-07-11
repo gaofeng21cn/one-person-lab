@@ -6,7 +6,6 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   runCliFailure,
   test,
@@ -15,6 +14,7 @@ import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
 } from '../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
 
 function manifestWithStageEvidenceRequest() {
   const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
@@ -91,19 +91,26 @@ function manifestWithStageEvidenceRequest() {
 }
 
 function bindStageEvidenceManifest(stateRoot: string, fixtureContractsRoot: string) {
+  const stagePack = createAdmittedStagePackFixture(
+    manifestWithStageEvidenceRequest(),
+    'med-autoscience',
+    'med-autoscience',
+    { stageCount: 1 },
+  );
   runCli([
     'workspace',
     'bind',
     '--project',
     'medautoscience',
     '--path',
-    repoRoot,
+    stagePack.repoDir,
     '--manifest-command',
-    buildManifestCommand(manifestWithStageEvidenceRequest()),
+    buildManifestCommand(stagePack.manifest),
   ], {
     OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
   });
+  return stagePack.repoDir;
 }
 
 function readFullAppOperatorProjection(stateRoot: string, fixtureContractsRoot: string) {
@@ -116,8 +123,8 @@ function readFullAppOperatorProjection(stateRoot: string, fixtureContractsRoot: 
 test('stage production evidence record routes expose fail-closed workorder and copyable runtime commands', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-route-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stageRepo = bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
   try {
-    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
     const projection = readFullAppOperatorProjection(stateRoot, fixtureContractsRoot);
     const route = projection.operator_action_routing_refs.refs.find(
       (ref: { action_id: string }) =>
@@ -177,14 +184,15 @@ test('stage production evidence record routes expose fail-closed workorder and c
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stageRepo, { recursive: true, force: true });
   }
 });
 
 test('stage production evidence preflight rejects empty templates and placeholder refs', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-preflight-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stageRepo = bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
   try {
-    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
     const emptyTemplate = runCliFailure([
       'runtime',
       'action',
@@ -232,14 +240,15 @@ test('stage production evidence preflight rejects empty templates and placeholde
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stageRepo, { recursive: true, force: true });
   }
 });
 
 test('stage production evidence verify route reuses recorded receipt ref', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-verify-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stageRepo = bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
   try {
-    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
     runCli([
       'runtime',
       'action',
@@ -250,8 +259,11 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
       JSON.stringify({
         receipt_ref: 'mas-stage-review-current-receipt',
         evidence_refs: ['metric:review/declared-freshness'],
-        domain_receipt_refs: ['mas:review-receipt', 'mas://receipts/review-owner-instance.json'],
-        runtime_event_refs: ['runtime_event:review.receipt_recorded'],
+        domain_receipt_refs: [
+          'domain_owner_receipt_or_typed_blocker_ref',
+          'mas://receipts/review-owner-instance.json',
+        ],
+        runtime_event_refs: ['runtime_event:review.owner_receipt_recorded'],
       }),
     ], {
       OPL_STATE_DIR: stateRoot,
@@ -287,14 +299,15 @@ test('stage production evidence verify route reuses recorded receipt ref', () =>
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stageRepo, { recursive: true, force: true });
   }
 });
 
 test('stage production evidence verify route prefers pending recorded receipt when verified history exists', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-pending-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stageRepo = bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
   try {
-    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
     runCli([
       'agents',
       'evidence',
@@ -381,14 +394,15 @@ test('stage production evidence verify route prefers pending recorded receipt wh
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stageRepo, { recursive: true, force: true });
   }
 });
 
 test('stage production evidence typed blocker receipt closes App production tail without readiness claim', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-evidence-closeout-blocker-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stageRepo = bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
   try {
-    bindStageEvidenceManifest(stateRoot, fixtureContractsRoot);
     runCli([
       'runtime',
       'action',
@@ -454,5 +468,6 @@ test('stage production evidence typed blocker receipt closes App production tail
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stageRepo, { recursive: true, force: true });
   }
 });

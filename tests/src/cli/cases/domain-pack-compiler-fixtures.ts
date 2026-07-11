@@ -627,24 +627,28 @@ function withGrantOraclePackCompilerReadySurfaces(payload: JsonRecord, options: 
   memoryRefId: string;
 }) {
   return withFunctionalAudit(
-    withGrantTransitionOracle(
-      withMemoryDescriptor(
-        withStageControlPlane(
-          withActionCatalog(
-            withStandardSkeleton(payload, options.agentId),
+    withTransitionDescriptor(
+      withGrantTransitionOracle(
+        withMemoryDescriptor(
+          withStageControlPlane(
+            withActionCatalog(
+              withStandardSkeleton(payload, options.agentId),
+              options.targetDomainId,
+              options.owner,
+              options.actionId,
+            ),
             options.targetDomainId,
             options.owner,
+            options.stageId,
             options.actionId,
           ),
           options.targetDomainId,
           options.owner,
-          options.stageId,
-          options.actionId,
+          options.memoryRefId,
         ),
-        options.targetDomainId,
-        options.owner,
-        options.memoryRefId,
       ),
+      options.targetDomainId,
+      options.owner,
     ),
     options.targetDomainId,
     options.owner,

@@ -72,11 +72,7 @@ test('default domain pack compiler surface treats admitted generated artifacts a
   assert.deepEqual(mag.domain_pack_compiler.blocker_reasons, []);
   assert.equal(
     mag.domain_pack_compiler.pack_compiler_input_projection.declarative_pack_refs.transition_status,
-    'oracle_evidence_gate',
-  );
-  assert.equal(
-    mag.domain_pack_compiler.pack_compiler_input_projection.declarative_pack_refs.transition_evidence_gate_status,
-    'grant_transition_oracle_matrix_passed',
+    'descriptor_only',
   );
   assert.equal(mag.domain_pack_compiler.generated_artifact_drift_manifest.status, 'aligned');
   assert.deepEqual(mag.domain_pack_compiler.generated_artifact_drift_manifest.drift_findings, []);

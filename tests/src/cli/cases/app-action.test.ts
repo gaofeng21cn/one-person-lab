@@ -443,29 +443,22 @@ test('app action execute enables and disables CodexCont intelligence enhancement
   }
 });
 
-test('app action execute preflights required OPL Flow plugin and delegates existing profile merge policy', () => {
+test('app action execute delegates to the installed OPL Flow script without reapplying the plugin', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-opl-flow-preflight-'));
   const flowRoot = path.join(homeRoot, 'opl-flow-source');
-  const installerLog = path.join(homeRoot, 'installer.log');
-  const installerPath = path.join(flowRoot, 'scripts', 'install_local_plugin.py');
+  const scriptPath = path.join(flowRoot, 'scripts', 'intelligence_enhancement.py');
   const userProfilePath = path.join(homeRoot, '.codex', 'AGENTS.md');
 
   try {
-    fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
     fs.mkdirSync(path.dirname(userProfilePath), { recursive: true });
     fs.writeFileSync(userProfilePath, 'user profile must stay intact\n', 'utf8');
     fs.writeFileSync(
-      installerPath,
+      scriptPath,
       [
         '#!/usr/bin/env python3',
-        'import json, os, pathlib, sys',
-        'home = pathlib.Path(os.environ["HOME"])',
-        `pathlib.Path(${JSON.stringify(installerLog)}).write_text(" ".join(sys.argv[1:]))`,
-        'script = home / "plugins" / "opl-flow" / "scripts" / "intelligence_enhancement.py"',
-        'script.parent.mkdir(parents=True, exist_ok=True)',
-        'script.write_text(\'#!/usr/bin/env python3\\nimport json\\nprint(json.dumps({"opl_flow_intelligence_enhancement": {"status": "disabled", "script_installed": True}}))\\n\')',
-        'script.chmod(0o755)',
-        'print(json.dumps({"status": "installed", "profile": {"status": "requires_codex_semantic_merge"}}))',
+        'import json',
+        'print(json.dumps({"opl_flow_intelligence_enhancement": {"status": "disabled", "script_installed": True}}))',
         '',
       ].join('\n'),
       { mode: 0o755 },
@@ -487,7 +480,6 @@ test('app action execute preflights required OPL Flow plugin and delegates exist
 
     assert.equal(status.delegated_surface, 'opl flow intelligence-enhancement status');
     assert.equal(status.result.opl_flow_intelligence_enhancement.status, 'disabled');
-    assert.equal(fs.readFileSync(installerLog, 'utf8'), '');
     assert.equal(fs.readFileSync(userProfilePath, 'utf8'), 'user profile must stay intact\n');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });

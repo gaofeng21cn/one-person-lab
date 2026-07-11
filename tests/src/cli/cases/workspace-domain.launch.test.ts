@@ -36,7 +36,7 @@ test('domain manifests resolves bound manifests and reports owner-action configu
       OPL_STATE_DIR: resolvedState,
       OPL_FAMILY_WORKSPACE_ROOT: resolvedState,
     }).domain_manifests;
-    assert.equal(resolved.summary.resolved_count, 2);
+    assert.equal(resolved.summary.resolved_count, 1);
     assert.equal(resolved.projects.find((entry: { project_id: string }) =>
       entry.project_id === 'medautoscience'
     ).manifest.target_domain_id, 'med-autoscience');
@@ -130,7 +130,7 @@ test('domain manifests fail closed on stalled command but accept complete stdout
       OPL_DOMAIN_MANIFEST_COMMAND_TIMEOUT_MS: '1000',
       OPL_FAMILY_WORKSPACE_ROOT: stdoutState,
     }).domain_manifests;
-    assert.equal(stdout.summary.resolved_count, 2);
+    assert.equal(stdout.summary.resolved_count, 1);
     assert.equal(stdout.summary.failed_count, 0);
   } finally {
     fs.rmSync(timeoutState, { recursive: true, force: true });

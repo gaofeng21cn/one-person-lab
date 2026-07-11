@@ -118,8 +118,8 @@ exit 1
       'waiting_for_base_live_route_closeout_refs',
     );
     assert.equal(evidence.scaleout_followthrough.open_gate_count, 0);
-    assert.equal(evidence.summary.fixture_drill_owner_acceptance_open_count, 1);
-    assert.equal(evidence.summary.fixture_drill_external_owner_acceptance_missing_count, 1);
+    assert.equal(evidence.summary.fixture_drill_owner_acceptance_open_count, 0);
+    assert.equal(evidence.summary.fixture_drill_external_owner_acceptance_missing_count, 0);
     assert.equal(evidence.summary.external_owner_acceptance_missing_count, 0);
     assert.equal(evidence.summary.forbidden_owner_receipt_write_count, 0);
     assert.equal(evidence.authority_boundary.refs_only, true);

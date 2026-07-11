@@ -82,11 +82,18 @@ exit 1
       action.blocking,
     ]), [
       ['configure_temporal_provider', 'blocked_manual_configuration_required', true],
+      ['refresh_native_indexes', 'completed', false],
     ]);
-    assert.deepEqual(output.install.runtime_manager_action.non_blocking_actions, []);
-    assert.deepEqual(output.install.runtime_manager_action.background_actions, []);
-    assert.deepEqual(output.install.non_blocking_actions, []);
-    assert.deepEqual(output.install.background_actions, []);
+    for (const actions of [
+      output.install.runtime_manager_action.non_blocking_actions,
+      output.install.runtime_manager_action.background_actions,
+      output.install.non_blocking_actions,
+      output.install.background_actions,
+    ]) {
+      assert.deepEqual(actions.map((action) => [action.action_id, action.status]), [
+        ['refresh_native_indexes', 'completed'],
+      ]);
+    }
     assert.equal(
       output.install.runtime_manager_action.after.reconcile.checked_surfaces.provider_runtime,
       'provider_code_landed_unconfigured',

@@ -316,6 +316,30 @@ function physicalSourceMorphologyPolicy(domainId: string) {
   };
 }
 
+function standardAgentConformanceProfile(domainId: string) {
+  const morphology = physicalSourceMorphologyPolicy(domainId);
+  return {
+    surface_kind: 'opl_standard_agent_conformance_profile',
+    version: 'opl.standard-agent-conformance-profile.v1',
+    profile_id: `${domainId}.standard-agent-conformance.v1`,
+    target_domain_id: domainId,
+    golden_path: {
+      required_stage_ids: [STARTER_STAGE_ID],
+      allowed_stage_ids: [STARTER_STAGE_ID],
+      default_stage_id: STARTER_STAGE_ID,
+      forbidden_owner_tokens: [],
+    },
+    physical_morphology: {
+      scan_roots: ['agent/', 'contracts/', 'runtime/'],
+      allowed_residue_prefixes: ['docs/history/'],
+      required_surface_ids: morphology.required_surface_ids,
+      surface_classifications: morphology.surface_classifications,
+      forbidden_name_tokens: [],
+      required_parity_gates: ['generated_surface_consumption'],
+    },
+  };
+}
+
 export function buildScaffoldFiles(domainId: string, domainLabel: string): ScaffoldFile[] {
   const json = (payload: unknown) => `${JSON.stringify(payload, null, 2)}\n`;
   return [
@@ -676,6 +700,13 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         ...PRIVATE_FUNCTIONAL_SURFACE_ADMISSION_POLICY,
         domain_id: domainId,
         physical_source_morphology_policy: physicalSourceMorphologyPolicy(domainId),
+        marker: SCAFFOLD_MARKER,
+      }),
+    },
+    {
+      path: 'contracts/standard_agent_conformance_profile.json',
+      content: json({
+        ...standardAgentConformanceProfile(domainId),
         marker: SCAFFOLD_MARKER,
       }),
     },

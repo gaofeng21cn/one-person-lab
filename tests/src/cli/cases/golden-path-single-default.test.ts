@@ -49,6 +49,10 @@ test('agents conformance treats explicit Codex follow-on lanes as non-default ro
   };
   stageManifest.stages.push(followOnStage);
   writeJson(stageManifestPath, stageManifest);
+  const profilePath = path.join(repoDir, 'contracts', 'standard_agent_conformance_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as any;
+  profile.golden_path.allowed_stage_ids.push('book_materialization_follow_on');
+  writeJson(profilePath, profile);
 
   const report = runCli([
     'agents',
@@ -143,33 +147,12 @@ test('agents conformance requires proof diagnostic cleanup and long-soak route v
   );
 });
 
-test('agents conformance consumes golden path profile as the ordinary default route contract', () => {
+test('agents conformance consumes the standard agent profile as the ordinary default route contract', () => {
   const repoDir = buildReadyAgentRepo();
-  writeJson(path.join(repoDir, 'contracts', 'golden_path_profile.json'), {
-    surface_kind: 'opl_golden_path_profile',
-    schema_version: 'golden-path-profile.v1',
-    profile_id: 'sample-brief-agent.golden-path',
-    domain: 'sample-brief-agent',
-    ordinary_path: {
-      path_id: 'sample_secondary_default',
-      path_role: 'ordinary_default',
-      stage_refs: ['secondary_default_stage'],
-    },
-    explicit_variants: [],
-    default_surface_policy: {
-      ordinary_route_count: 1,
-      variants_hidden_by_default: true,
-      raw_evidence_hidden_by_default: true,
-    },
-    authority_boundary: {
-      ordinary_path_count_must_be_one: true,
-      variant_can_be_default_without_explicit_selection: false,
-      opl_can_write_domain_truth: false,
-      opl_can_authorize_domain_ready: false,
-      opl_can_authorize_quality_verdict: false,
-      opl_can_mutate_artifact_body: false,
-    },
-  });
+  const profilePath = path.join(repoDir, 'contracts', 'standard_agent_conformance_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as any;
+  profile.golden_path.default_stage_id = 'secondary_default_stage';
+  writeJson(profilePath, profile);
 
   const report = runCli([
     'agents',
@@ -180,12 +163,10 @@ test('agents conformance consumes golden path profile as the ordinary default ro
   const checks = report.reports[0].golden_path_default_surface_budget_checks;
 
   assert.equal(report.status, 'blocked');
-  assert.equal(checks.golden_path_profile.status, 'blocked');
-  assert.deepEqual(checks.golden_path_profile.ordinary_stage_refs, ['secondary_default_stage']);
+  assert.equal(checks.mvp_cognitive_kernel_alignment.status, 'blocked');
+  assert.equal(checks.mvp_cognitive_kernel_alignment.default_stage_id, 'secondary_default_stage');
   assert.equal(
-    checks.blockers.includes(
-      'golden_path_profile_ordinary_path_mismatch:profile=secondary_default_stage:stage_control_plane=domain_intake',
-    ),
+    checks.blockers.includes('golden_path_default_stage_mismatch:secondary_default_stage'),
     true,
   );
 });

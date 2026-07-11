@@ -10,7 +10,10 @@ import {
   unique,
   type JsonRecord,
 } from './standard-domain-agent-conformance-utils.ts';
-import { readStandardAgentConformanceProfile } from './standard-agent-conformance-profile.ts';
+import {
+  readStandardAgentConformanceProfile,
+  STANDARD_AGENT_CONFORMANCE_PROFILE_REF,
+} from './standard-agent-conformance-profile.ts';
 
 export function buildPhysicalMorphologyChecks(repoDir: string, _domainId?: string) {
   const profileReadout = readStandardAgentConformanceProfile(repoDir);
@@ -63,7 +66,8 @@ function scanForbiddenNameResidue(
 ) {
   if (tokens.length === 0) return [];
   const activeFiles = gitTrackedOrWalkedFiles(repoDir).filter((relativePath) =>
-    scanRoots.some((root) => root.endsWith('/')
+    relativePath !== STANDARD_AGENT_CONFORMANCE_PROFILE_REF
+    && scanRoots.some((root) => root.endsWith('/')
       ? relativePath.startsWith(root)
       : relativePath === root));
   return activeFiles.flatMap((relativePath) => {

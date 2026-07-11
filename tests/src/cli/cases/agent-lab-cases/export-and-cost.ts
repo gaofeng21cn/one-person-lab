@@ -13,10 +13,10 @@ test('agent-lab export emits refs-only connector envelopes for optional targets'
   assert.equal(inspect.agent_lab_export.target, 'inspect-ai');
   assert.equal(inspect.agent_lab_export.upload_external_service, false);
   assert.equal(inspect.agent_lab_export.reads_domain_body, false);
-  assert.equal(inspect.agent_lab_export.connector_payload.tasks.length, 6);
-  assert.equal(openinference.agent_lab_export.connector_payload.traces.length, 6);
-  assert.ok(openinference.agent_lab_export.connector_payload.traces.some((trace: any) =>
-    trace.trace_ref === 'trace-ref:codex/mag-grant-section-smoke'));
+  assert.equal(inspect.agent_lab_export.connector_payload.tasks.length, 4);
+  assert.equal(openinference.agent_lab_export.connector_payload.traces.length, 3);
+  assert.ok(openinference.agent_lab_export.connector_payload.traces.every((trace: any) =>
+    typeof trace.trace_ref === 'string' && trace.trace_ref.length > 0));
   assert.equal(langfuse.agent_lab_export.connector_payload.datasets.length, 2);
   assert.equal(phoenix.agent_lab_export.connector_payload.experiments.length, 2);
   assert.equal(json.agent_lab_export.connector_payload.suite_results.length, 2);

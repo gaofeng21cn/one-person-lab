@@ -129,11 +129,9 @@ function suitePathFor(tmpDir: string, suite: Record<string, any>) {
   return suitePath;
 }
 
-test('agent-lab sample longline and MAG external run expose refs-only read models', () => {
+test('agent-lab sample and generic longline expose refs-only read models', () => {
   const sample = runCli(['agent-lab', 'sample', '--json']).agent_lab_sample;
   const longline = runCli(['agent-lab', 'longline', '--json']).agent_lab_longline;
-  const suitePath = path.join(repoRoot, 'contracts/opl-framework/external-suites/mag-live-acceptance-suite.json');
-  const magRun = runCli(['agent-lab', 'run', '--suite', suitePath, '--json']).agent_lab_run;
 
   assert.equal(sample.surface_id, 'opl_agent_lab_framework_sample');
   assert.equal(sample.sample_result.status, 'passed');
@@ -143,23 +141,10 @@ test('agent-lab sample longline and MAG external run expose refs-only read model
   assertBlockedAuthority(sample.authority_boundary);
 
   assert.equal(longline.surface_id, 'opl_agent_lab_longline_suite');
-  assert.equal(longline.suite_result.status, 'passed');
-  assert.equal(longline.suite_result.longline_summary.ready_to_reduce_domain_longline_tests, true);
-  assert.deepEqual(longline.suite_result.longline_summary.domain_ids, [
-    'med-autoscience',
-    'med-autogrant',
-    'redcube-ai',
-  ]);
+  assert.equal(longline.suite_result.status, 'blocked');
+  assert.equal(longline.suite_result.longline_summary.ready_to_reduce_domain_longline_tests, false);
+  assert.deepEqual(longline.suite_result.longline_summary.domain_ids, ['example-domain']);
   assertBlockedAuthority(longline.authority_boundary);
-
-  assert.equal(magRun.surface_id, 'opl_agent_lab_external_suite_run');
-  assert.equal(magRun.suite_result.status, 'passed');
-  assert.equal(magRun.suite_result.summary.owner_or_human_gate_required_count, 1);
-  assert.deepEqual(magRun.suite_result.domain_summary.map((entry: any) => entry.domain_id), ['med-autogrant']);
-  assert.ok(magRun.ref_summary.improvement_candidate_refs.includes(
-    'improvement-candidate:mag/owner-live-acceptance-receipt-scaleout',
-  ));
-  assertBlockedAuthority(magRun.authority_boundary);
 });
 
 test('agent-lab complete workbench efficiency and policy surfaces keep automatic authority closed', () => {

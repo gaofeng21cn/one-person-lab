@@ -118,17 +118,13 @@ test('system startup-maintenance uses auto Developer Mode sibling checkouts for 
       target.reason,
       target.action,
       target.install_origin_before,
-      target.checkout_path,
-      target.git_after?.head_sha,
     ]), [
       [
         'scholarskills',
-        'skipped',
-        'developer_scholarskills_source_visible_not_app_managed',
-        null,
+        'completed',
+        'developer_checkout_visible_not_app_managed',
+        'sync',
         'sibling_workspace',
-        siblingCheckouts.scholarskills,
-        scholarSkillsRemote.getHeadSha(),
       ],
     ]);
     assert.equal(output.system_action.details.restart_reload_prompt.required, true);

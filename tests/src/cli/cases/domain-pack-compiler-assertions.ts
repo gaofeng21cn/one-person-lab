@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export const PACK_COMPILER_DEFAULT_DOMAIN_ALIASES = ['mas', 'mag', 'rca', 'oma'];
+export const PACK_COMPILER_DEFAULT_DOMAIN_ALIASES = ['mas', 'mag', 'rca'];
 export const PACK_COMPILER_GENERATED_SURFACE_COUNT_PER_DOMAIN = 8;
 
 export function assertReadyPackCompilerSummary(summary: {

@@ -9,6 +9,13 @@ import {
   writeProductionAcceptance,
 } from '../agents-conformance-fixtures.ts';
 
+function setForbiddenNameTokens(repoDir: string, tokens: string[]) {
+  const profilePath = path.join(repoDir, 'contracts', 'standard_agent_conformance_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as any;
+  profile.physical_morphology.forbidden_name_tokens = tokens;
+  writeJson(profilePath, profile);
+}
+
 test('agents conformance reads production acceptance evidence as domain-owned refs only', () => {
   const masRepo = buildReadyAgentRepo();
   retargetReadyRepo(masRepo, 'med-autoscience', 'Med Auto Science');
@@ -69,6 +76,7 @@ test('agents conformance reads production acceptance evidence as domain-owned re
 test('agents conformance blocks active forbidden-role residue but allows explicit policy tombstones', () => {
   const metaRepo = buildReadyAgentRepo();
   retargetReadyRepo(metaRepo, 'opl-meta-agent', 'OPL Meta Agent');
+  setForbiddenNameTokens(metaRepo, ['generic_runtime_owner']);
   writeJson(path.join(metaRepo, 'contracts', 'unexpected_active_policy.json'), {
     forbidden_roles: ['generic_runtime_owner'],
   });
@@ -90,6 +98,7 @@ test('agents conformance blocks active forbidden-role residue but allows explici
   const magRepo = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepo);
   configureReadyMagMorphology(magRepo);
+  setForbiddenNameTokens(magRepo, ['attempt_ledger']);
   const actionCatalogPath = path.join(magRepo, 'contracts', 'action_catalog.json');
   const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as any;
   actionCatalog.notes.push('OPL replacement consumes stage_attempt_ledger refs only.');
@@ -107,10 +116,7 @@ test('agents conformance blocks active forbidden-role residue but allows explici
 
 test('agents conformance keeps required morphology and lifecycle policies as structural gates', () => {
   const morphologyRepo = buildReadyAgentRepo();
-  const privateSurfacePolicyPath = path.join(morphologyRepo, 'contracts', 'private_functional_surface_policy.json');
-  const privateSurfacePolicy = parseJsonText(fs.readFileSync(privateSurfacePolicyPath, 'utf8')) as any;
-  delete privateSurfacePolicy.physical_source_morphology_policy;
-  writeJson(privateSurfacePolicyPath, privateSurfacePolicy);
+  fs.rmSync(path.join(morphologyRepo, 'contracts', 'standard_agent_conformance_profile.json'));
 
   const lifecycleRepo = buildReadyAgentRepo();
   fs.rmSync(path.join(lifecycleRepo, 'contracts', 'workspace_lifecycle_policy.json'));
@@ -119,24 +125,19 @@ test('agents conformance keeps required morphology and lifecycle policies as str
   const lifecycle = runCli(['agents', 'conformance', '--repo-dir', lifecycleRepo]).standard_domain_agent_conformance;
 
   assert.equal(morphology.status, 'blocked');
-  assert.equal(morphology.reports[0].blockers.includes('physical_morphology_policy_not_declared'), true);
+  assert.equal(morphology.reports[0].blockers.includes('standard_agent_conformance_profile_missing'), true);
   assert.equal(lifecycle.status, 'blocked');
   assert.equal(lifecycle.reports[0].blockers.includes('workspace_file_lifecycle_policy_not_declared'), true);
 });
 
-test('agents conformance blocks legacy sidecar aliases as active morphology surfaces', () => {
+test('agents conformance blocks required morphology surfaces without a classification', () => {
   const magRepoDir = buildReadyAgentRepo();
   retargetReadyRepoToMag(magRepoDir);
   configureReadyMagMorphology(magRepoDir);
-  const policyPath = path.join(magRepoDir, 'contracts', 'private_functional_surface_policy.json');
+  const policyPath = path.join(magRepoDir, 'contracts', 'standard_agent_conformance_profile.json');
   const policy = parseJsonText(fs.readFileSync(policyPath, 'utf8')) as any;
-  policy.physical_source_morphology_policy.required_surface_ids = (
-    policy.physical_source_morphology_policy.required_surface_ids.map((surfaceId: string) =>
-      surfaceId === 'domain_handler' ? 'sidecar' : surfaceId
-    )
-  );
-  policy.physical_source_morphology_policy.surface_classifications = (
-    policy.physical_source_morphology_policy.surface_classifications.map((entry: { surface_id: string }) => ({
+  policy.physical_morphology.surface_classifications = (
+    policy.physical_morphology.surface_classifications.map((entry: { surface_id: string }) => ({
       ...entry,
       surface_id: entry.surface_id === 'domain_handler' ? 'sidecar' : entry.surface_id,
     }))
@@ -153,7 +154,9 @@ test('agents conformance blocks legacy sidecar aliases as active morphology surf
   assert.equal(report.status, 'blocked');
   assert.equal(report.reports[0].physical_morphology_checks.status, 'blocked');
   assert.equal(
-    report.reports[0].physical_morphology_checks.blockers.includes('mag_physical_surface_missing:domain_handler'),
+    report.reports[0].physical_morphology_checks.blockers.includes(
+      'physical_morphology_surface_unclassified:domain_handler',
+    ),
     true,
   );
 });

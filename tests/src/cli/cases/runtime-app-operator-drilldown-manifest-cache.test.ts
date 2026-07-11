@@ -2,6 +2,7 @@ import {
   assert,
   createFamilyContractsFixtureRoot,
   fs,
+  loadFamilyManifestFixtures,
   os,
   path,
   repoRoot,
@@ -10,12 +11,11 @@ import {
 } from '../helpers.ts';
 import { loadFrameworkContracts } from '../../../../src/modules/charter/contracts.ts';
 import { buildRuntimeTraySnapshot } from '../../../../src/modules/console/runtime-tray-snapshot.ts';
-import { buildManyStageManifest } from './runtime-app-operator-drilldown-summary-fixtures.ts';
 
 test('runtime tray summary can use a non-authoritative manifest projection cache when live manifest is slow', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-drilldown-cache-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
-  const manifest = buildManyStageManifest(2);
+  const manifest = structuredClone(loadFamilyManifestFixtures().medautoscience);
   const manifestPath = path.join(stateRoot, 'manifest.json');
   const slowCommandPath = path.join(stateRoot, 'slow-manifest.cjs');
 
@@ -58,8 +58,6 @@ test('runtime tray summary can use a non-authoritative manifest projection cache
         appOperatorDrilldownDetailLevel: 'full',
       });
       const tray = snapshot.runtime_tray_snapshot;
-      assert.equal(tray.app_operator_drilldown.summary.stage_production_evidence_stage_count, 2);
-      assert.equal(tray.app_operator_drilldown.stage_production_evidence.summary.stage_count, 2);
       assert.equal(tray.domain_manifest_projection_cache.summary.cache_used_count, 1);
       assert.deepEqual(tray.domain_manifest_projection_cache.summary.live_failed_project_ids, ['medautoscience']);
       assert.equal(

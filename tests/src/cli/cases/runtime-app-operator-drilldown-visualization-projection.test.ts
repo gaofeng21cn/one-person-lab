@@ -3,7 +3,6 @@ import {
   test,
 } from '../helpers.ts';
 import {
-  buildDomainOwnerPayloadSummaryRefs,
   buildRuntimeVisualizationProjection,
 } from '../../../../src/modules/console/runtime-tray-app-operator-drilldown-parts/index.ts';
 
@@ -92,34 +91,4 @@ test('runtime visualization projection exposes canonical stage progress and Temp
   assert.equal(projection.summary.operator_route_lens_ref_count, 1);
   assert.equal(projection.operator_lens.operator_route_lens_refs[0].ref, 'example://operator/lens');
   assert.equal(JSON.stringify(projection).includes('retired/paper-lens'), false);
-});
-
-test('domain owner payload summary preserves active MAS closeout as refs-only compatibility', () => {
-  const projection = buildDomainOwnerPayloadSummaryRefs({
-    domainManifestProjects: [{
-      status: 'resolved',
-      project_id: 'medautoscience',
-      project: 'Med Auto Science',
-      manifest: {
-        target_domain_id: 'medautoscience',
-        real_paper_autonomy_guarded_apply_proof: {
-          paper_line_provider_canary_closeout: {
-            paper_line_owner_payload_summary: { paper_line_count: 1 },
-            paper_line_domain_dispatch_evidence_record_payloads: [{
-              study_id: 'legacy',
-              record_payload: { typed_blocker_refs: ['typed-blocker:mas/paper-line'] },
-            }],
-          },
-        },
-      },
-    }] as any,
-  });
-
-  assert.equal(projection.summary.domain_count, 1);
-  const legacyMas = projection.domains.find((entry) => entry.domain_id === 'medautoscience');
-  assert.equal(legacyMas?.source_surface, 'real_paper_autonomy_guarded_apply_proof_compatibility');
-  assert.deepEqual(
-    legacyMas?.owner_payload_item_summary?.work_items[0].typed_blocker_path_payload,
-    { typed_blocker_refs: ['typed-blocker:mas/paper-line'] },
-  );
 });

@@ -209,7 +209,7 @@ export function createAdmittedStagePackFixture(
       const contract = stage.stage_contract as JsonRecord;
       const trustBoundary = stage.trust_boundary as JsonRecord | undefined;
       const extensionFields = [
-        'runtime_assumptions', 'monitor_refs', 'source_scope_refs', 'cohort_query_refs',
+        'runtime_assumptions', 'monitor_refs', 'monitor_freshness_refs', 'source_scope_refs', 'cohort_query_refs',
         'trigger_refs', 'metric_refs', 'dashboard_metric_refs', 'artifact_scope_refs',
         'workspace_scope_refs',
       ];

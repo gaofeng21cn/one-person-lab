@@ -46,21 +46,8 @@ test('system startup-maintenance silently updates package-channel modules and sy
       repoName: 'opl-meta-agent' as const,
       sourceHeadSha: `oma-${versionLabel}-sha`,
       files: {
-        'agent/interfaces/generated-interface-bundle.json': JSON.stringify({
-          generated_interface_bundle_version: 1,
-          plugin_manifest: {
-            name: 'opl-meta-agent',
-            skills: './skills/',
-          },
-          skill: {
-            id: 'opl-meta-agent',
-            frontmatter: {
-              name: 'opl-meta-agent',
-              description: `OMA ${versionLabel}.`,
-            },
-            body_markdown: `# OMA ${versionLabel}\n`,
-          },
-        }, null, 2),
+        'plugins/opl-meta-agent/.codex-plugin/plugin.json': JSON.stringify({ name: 'opl-meta-agent', skills: './skills/' }, null, 2),
+        'plugins/opl-meta-agent/skills/opl-meta-agent/SKILL.md': `---\nname: opl-meta-agent\ndescription: OMA ${versionLabel}.\n---\n\n# OMA ${versionLabel}\n`,
         'scripts/verify.sh': '#!/usr/bin/env bash\nset -euo pipefail\ntest "${1:-}" = "fast"\n',
       },
     },
@@ -69,13 +56,8 @@ test('system startup-maintenance silently updates package-channel modules and sy
       repoName: 'opl-bookforge' as const,
       sourceHeadSha: `bookforge-${versionLabel}-sha`,
       files: {
-        'agent/skills/book-production.md': `# Book Production ${versionLabel}\n`,
-        'contracts/domain_descriptor.json': JSON.stringify({
-          surface_kind: 'domain_agent_descriptor',
-          schema_version: 1,
-          domain_id: 'opl-bookforge',
-          domain_label: 'OPL Book Forge',
-        }, null, 2),
+        'plugins/opl-bookforge/.codex-plugin/plugin.json': JSON.stringify({ name: 'opl-bookforge', skills: './skills/' }, null, 2),
+        'plugins/opl-bookforge/skills/opl-bookforge/SKILL.md': `---\nname: opl-bookforge\ndescription: OPL Book Forge ${versionLabel}.\n---\n\n# OPL Book Forge ${versionLabel}\n`,
         'scripts/verify.sh': '#!/usr/bin/env bash\nset -euo pipefail\ntest "${1:-}" = "smoke"\n',
       },
     },

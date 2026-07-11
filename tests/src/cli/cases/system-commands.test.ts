@@ -311,7 +311,7 @@ test('help keeps JSON output available through explicit flag for machine readers
 
   const scoped = runCli(['help', 'install', '--json']);
   assert.equal(scoped.help.command, 'install');
-  assert.match(scoped.help.summary, /One-shot install/);
+  assert.match(scoped.help.usage, /^opl install/);
 });
 
 test('help supports explicit text output for human readers', () => {
@@ -331,7 +331,7 @@ test('help supports explicit text output for human readers', () => {
 
   const scoped = runCliRaw(['help', 'install', '--text']);
   assert.match(scoped.stdout, /One Person Lab command: install/);
-  assert.match(scoped.stdout, /One-shot install/);
+  assert.match(scoped.stdout, /Usage:\n  opl install/);
 });
 
 test('default help surface recommends stages readiness and hides diagnostic stage lenses', () => {

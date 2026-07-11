@@ -209,6 +209,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     'contracts/stage_operating_principles.json',
     'contracts/functional_privatization_audit.json',
     'contracts/private_functional_surface_policy.json',
+    'contracts/standard_agent_conformance_profile.json',
     'contracts/workspace_lifecycle_policy.json',
   ];
   const missingContractFiles = requiredContractFiles.filter((file) => !fs.existsSync(path.join(repoDir, file)));

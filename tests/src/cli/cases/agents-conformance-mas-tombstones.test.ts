@@ -29,6 +29,17 @@ test('agents conformance allows MAS legacy active path tombstone contract marker
       },
     },
   });
+  const profilePath = path.join(repoDir, 'contracts', 'standard_agent_conformance_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
+  profile.physical_morphology.forbidden_name_tokens = [
+    'runtime_supervisor',
+    'supervision_scheduler',
+    'mas_supervision_scheduler',
+  ];
+  profile.physical_morphology.allowed_residue_prefixes.push(
+    'contracts/runtime/legacy-active-path-tombstones.json',
+  );
+  writeJson(profilePath, profile);
 
   const report = runCli([
     'agents',
@@ -76,6 +87,10 @@ test('agents conformance blocks exact MAG legacy residue tokens', () => {
   const actionCatalog = parseJsonText(fs.readFileSync(actionCatalogPath, 'utf8')) as Record<string, any>;
   actionCatalog.notes.push('old attempt_ledger exact token must stay out of active paths');
   writeJson(actionCatalogPath, actionCatalog);
+  const profilePath = path.join(repoDir, 'contracts', 'standard_agent_conformance_profile.json');
+  const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
+  profile.physical_morphology.forbidden_name_tokens = ['attempt_ledger'];
+  writeJson(profilePath, profile);
 
   const report = runCli([
     'agents',

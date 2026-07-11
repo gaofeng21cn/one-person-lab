@@ -6,7 +6,6 @@ import {
   loadFamilyManifestFixtures,
   os,
   path,
-  repoRoot,
   runCli,
   test,
 } from '../../helpers.ts';
@@ -14,6 +13,7 @@ import {
   STANDARD_PROGRESS_DELTA_POLICY,
   STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
 } from '../../../../../src/modules/foundry-lab/standard-domain-agent-scaffold-constants.ts';
+import { createAdmittedStagePackFixture } from '../workspace-domain-test-helper.ts';
 
 test('runtime action execute can execute OPL-owned attempt query routes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-action-execute-query-'));
@@ -128,6 +128,12 @@ test('runtime action execute can create OPL-owned stage production attempt reque
     ],
     notes: [],
   };
+  const stagePack = createAdmittedStagePackFixture(
+    masManifest,
+    'med-autoscience',
+    'med-autoscience',
+    { stageCount: 1 },
+  );
   try {
     runCli([
       'workspace',
@@ -135,9 +141,9 @@ test('runtime action execute can create OPL-owned stage production attempt reque
       '--project',
       'medautoscience',
       '--path',
-      repoRoot,
+      stagePack.repoDir,
       '--manifest-command',
-      buildManifestCommand(masManifest),
+      buildManifestCommand(stagePack.manifest),
     ], {
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
@@ -238,5 +244,6 @@ test('runtime action execute can create OPL-owned stage production attempt reque
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stagePack.repoDir, { recursive: true, force: true });
   }
 });
