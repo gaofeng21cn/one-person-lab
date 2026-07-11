@@ -234,7 +234,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const agentPackValidation = validateAgentPackFiles(repoDir, packCompilerInput, stagePackV2Required);
   const stageRefValidation = validateStageRefs(repoDir, stageControlPlane, stagePackV2Required);
   const userStageLogValidation = validateUserStageLogContracts(stageControlPlane);
-  const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries, stagePackV2Required);
+  const foundryAgentSeriesValidation = validateFoundryAgentSeriesContract(foundryAgentSeries);
   const capabilityMapValidation = validateCapabilityMap(capabilityMap);
   const stagePackV2Validation = validateStagePackV2(stageControlPlane, packCompilerInput, stagePackV2Required, {
     repoDir,

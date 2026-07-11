@@ -76,24 +76,16 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     assert.equal(descriptor.authority_boundary.opl_can_write_domain_truth, false);
 
     const foundryAgentSeries = readJsonFile(path.join(targetDir, 'contracts/foundry_agent_series.json'));
-    assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_contract');
-    assert.equal(foundryAgentSeries.version, 'foundry-agent-series.v1');
+    assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_consumer');
+    assert.equal(foundryAgentSeries.version, 'foundry-agent-series-consumer.v1');
+    assert.equal(foundryAgentSeries.canonical_policy_export, 'opl-framework-shared/foundry-agent-series-policy');
     assert.equal(foundryAgentSeries.domain_id, 'award-foundry');
     assert.equal(foundryAgentSeries.stage_manifest_ref, 'agent/stages/manifest.json');
     assert.equal(foundryAgentSeries.stage_control_plane_ref, 'opl-generated:family_stage_control_plane');
-    assert.equal(foundryAgentSeries.agent_cli_command_surface_policy.policy_id, 'foundry_agent_series_spine_public_command_surface');
-    assertIncludesAll(foundryAgentSeries.agent_cli_command_surface_policy.ordinary_public_command_surface_spine, [
-      'workspace',
-      'stage',
-      'run',
-      'ledger',
-      'connect',
-    ]);
-    assert.equal(foundryAgentSeries.skill_mcp_surface_policy.skill_pack_must_delegate_to_series_spine, true);
     assert.equal(foundryAgentSeries.shared_policy_release.domain_adapter_must_not_copy_policy_body_as_authority, true);
     assert.match(foundryAgentSeries.shared_policy_release.policy_bundle_fingerprint, /^sha256:[0-9a-f]{64}$/);
-    assert.equal(foundryAgentSeries.workspace_topology_profile.default_profiles.one_off.series_capable_skeleton, true);
-    assert.equal(foundryAgentSeries.domain_adapter_policy.no_parallel_progress_schema, true);
+    assert.equal(Object.hasOwn(foundryAgentSeries, 'series_design_profile'), false);
+    assert.equal(Object.hasOwn(foundryAgentSeries, 'workspace_topology_profile'), false);
 
     const packCompilerInput = readJsonFile(path.join(targetDir, 'contracts/pack_compiler_input.json'));
     assert.equal(packCompilerInput.surface_kind, 'opl_domain_pack_compiler_input');

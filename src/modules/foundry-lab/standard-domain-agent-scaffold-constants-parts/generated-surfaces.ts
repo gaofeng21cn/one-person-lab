@@ -1,7 +1,7 @@
 import { STANDARD_STAGE_PACK_CONFORMANCE_VERSION } from './identity-and-primitives.ts';
 import {
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
-  STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
+  STANDARD_FOUNDRY_AGENT_SERIES_CONSUMER_CONTRACT,
 } from './foundry-series.ts';
 import { STANDARD_PROGRESS_DELTA_POLICY } from './progress-delta.ts';
 import { STANDARD_STAGE_COMPLETION_POLICY } from './stage-completion.ts';
@@ -146,7 +146,7 @@ export const AGENT_PACK_CONTRACT = {
   user_stage_log_contract: STANDARD_USER_STAGE_LOG_CONTRACT,
   progress_delta_policy: STANDARD_PROGRESS_DELTA_POLICY,
   typed_blocker_lineage_policy: STANDARD_TYPED_BLOCKER_LINEAGE_POLICY,
-  foundry_agent_series_contract: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
+  foundry_agent_series_contract: STANDARD_FOUNDRY_AGENT_SERIES_CONSUMER_CONTRACT,
   foundry_agent_series_policy_release: FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
   conformance_version: STANDARD_STAGE_PACK_CONFORMANCE_VERSION,
   validator: 'opl agents scaffold --validate <repo-dir>',

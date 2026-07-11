@@ -6,6 +6,12 @@ import { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from '../../workspace/index.ts';
 
 export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF =
   'contracts/opl-framework/foundry-agent-series-policy-release.json';
+export const FOUNDRY_AGENT_SERIES_POLICY_EXPORT =
+  'opl-framework-shared/foundry-agent-series-policy';
+export const FOUNDRY_AGENT_SERIES_CONSUMER_KIND =
+  'opl_foundry_agent_series_consumer';
+export const FOUNDRY_AGENT_SERIES_CONSUMER_VERSION =
+  'foundry-agent-series-consumer.v1';
 export const FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT = 'sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5';
 
 export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
@@ -402,6 +408,45 @@ export const STANDARD_FOUNDRY_AGENT_GOLDEN_PATH_POLICY = {
     guard_can_write_memory_body: false,
     guard_can_authorize_quality_or_export: false,
     guard_can_claim_domain_ready: false,
+  },
+} as const;
+
+export const FOUNDRY_AGENT_SERIES_LEGACY_POLICY_BODY_FIELDS = [
+  'agent_membership_projection_policy',
+  'app_projection_policy',
+  'contract_version_policy',
+  'domain_adapter_policy',
+  'required_identity_fields',
+  'required_stage_packets',
+  'series_design_profile',
+  'shared_progress_projection_fields',
+  'shared_release_pin_strategy',
+  'standard_feedback_self_evolution_trigger_policy',
+  'standard_public_projection_policy',
+  'workspace_topology_profile',
+] as const;
+
+export const STANDARD_FOUNDRY_AGENT_SERIES_CONSUMER_CONTRACT = {
+  surface_kind: FOUNDRY_AGENT_SERIES_CONSUMER_KIND,
+  version: FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,
+  canonical_policy_export: FOUNDRY_AGENT_SERIES_POLICY_EXPORT,
+  canonical_series_contract_ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
+  canonical_skeleton_contract_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+  shared_policy_release: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.shared_policy_release,
+  required_domain_fields: [
+    'domain_id',
+    'foundry_agent_id',
+    'product_layer',
+    'authority_owner',
+    'stage_manifest_ref',
+    'stage_control_plane_ref',
+    'authority_boundary',
+  ],
+  legacy_policy_body_fields_forbidden: FOUNDRY_AGENT_SERIES_LEGACY_POLICY_BODY_FIELDS,
+  authority_boundary: {
+    consumer_contract_can_write_domain_truth: false,
+    consumer_contract_can_authorize_quality_or_export: false,
+    consumer_contract_can_replace_canonical_policy: false,
   },
 } as const;
 

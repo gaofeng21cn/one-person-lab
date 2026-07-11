@@ -1,6 +1,5 @@
 import { assert, fs, path, repoRoot, runCli, test } from '../helpers.ts';
 import { parseAgentsScaffoldArgs } from '../../../../src/entrypoints/cli/cases/private-command-specs-parts/agents-scaffold.ts';
-import { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from '../../../../src/modules/workspace/workspace-topology.ts';
 
 function assertIncludesAll(values: unknown[], expected: unknown[]) {
   for (const value of expected) assert.ok(values.includes(value), String(value));
@@ -107,13 +106,12 @@ test('agents scaffold exposes the reusable agent scaffold contract without domai
   assert.equal(scaffold.state_index_kernel_adoption_policy.sqlite_enabled_now, false);
 
   const series = scaffold.foundry_agent_series_contract;
-  assert.equal(series.surface_kind, 'opl_foundry_agent_series_contract');
-  assert.equal(series.contract_version_policy.current_version, 'foundry-agent-series.v1');
-  assert.equal(series.agent_membership_projection_policy.default_membership, 'standard_domain_agent');
-  assert.equal(series.primary_skill_carrier_projection_policy.canonical_primary_skill_path, 'agent/primary_skill/SKILL.md');
-  assert.deepEqual(series.workspace_topology_profile, WORKSPACE_TOPOLOGY_PROFILE_CONTRACT);
+  assert.equal(series.surface_kind, 'opl_foundry_agent_series_consumer');
+  assert.equal(series.version, 'foundry-agent-series-consumer.v1');
+  assert.equal(series.canonical_policy_export, 'opl-framework-shared/foundry-agent-series-policy');
+  assert.equal(series.canonical_series_contract_ref, 'contracts/opl-framework/foundry-agent-series-contract.json');
   assert.equal(series.shared_policy_release.domain_adapter_must_not_copy_policy_body_as_authority, true);
-  assert.equal(series.app_projection_policy.app_consumes_shared_progress_projection_only, true);
+  assert.ok(series.legacy_policy_body_fields_forbidden.includes('series_design_profile'));
 
   const privatePolicy = scaffold.private_functional_surface_admission_policy;
   assert.equal(privatePolicy.default_posture, 'forbidden_until_classified_and_receipted');

@@ -103,7 +103,7 @@ export type WorkspaceSharedResourceEntry = {
 };
 
 export const WORKSPACE_TOPOLOGY_CONTRACT_REF =
-  'contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/foundry_agent_series_contract/workspace_topology_profile';
+  'contracts/opl-framework/foundry-agent-series-contract.json#/workspace_topology_profile';
 export const WORKSPACE_PROFILE_VERSION = 'workspace-topology-profile.v2';
 export const WORKSPACE_PROFILE_FINGERPRINT = 'opl-workspace-topology-profile-v2-projects-stage-outputs';
 export const OPL_GENERATED_ROOT = 'control/opl';

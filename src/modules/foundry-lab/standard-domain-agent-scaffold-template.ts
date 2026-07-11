@@ -1,6 +1,9 @@
 import {
   DECLARATIVE_DOMAIN_PACK,
   DOMAIN_RETAINED_THIN_SURFACES,
+  FOUNDRY_AGENT_SERIES_CONSUMER_KIND,
+  FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,
+  FOUNDRY_AGENT_SERIES_POLICY_EXPORT,
   FOUNDRY_AGENT_SERIES_POLICY_RELEASE,
   FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES,
   MINIMAL_AUTHORITY_FUNCTIONS,
@@ -107,9 +110,16 @@ function generatedSurfaceHandoffSurfaces() {
 
 function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
   return {
-    ...STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT,
+    surface_kind: FOUNDRY_AGENT_SERIES_CONSUMER_KIND,
+    version: FOUNDRY_AGENT_SERIES_CONSUMER_VERSION,
+    owner: domainId,
+    canonical_policy_export: FOUNDRY_AGENT_SERIES_POLICY_EXPORT,
+    canonical_series_contract_ref: 'contracts/opl-framework/foundry-agent-series-contract.json',
+    canonical_skeleton_contract_ref: 'contracts/opl-framework/standard-domain-agent-skeleton-contract.json',
+    shared_policy_release: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.shared_policy_release,
     domain_id: domainId,
     foundry_agent_id: domainId,
+    product_layer: 'foundry_agent',
     domain_label: domainLabel,
     domain_aliases: [domainId],
     authority_owner: domainId,
@@ -121,7 +131,13 @@ function foundryAgentSeriesContract(domainId: string, domainLabel: string) {
       deliverable: ['deliverable_progress_delta'],
       platform: ['platform_repair_delta'],
     },
-    shared_policy_release: STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT.shared_policy_release,
+    authority_boundary: {
+      domain_can_write_other_domain_truth: false,
+      domain_can_write_other_domain_memory_body: false,
+      domain_can_mutate_other_domain_artifact_body: false,
+      domain_can_authorize_other_domain_quality_or_export: false,
+      generated_surface_can_claim_domain_ready: false,
+    },
   };
 }
 
