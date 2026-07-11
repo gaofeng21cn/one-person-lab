@@ -31,6 +31,21 @@ const STANDARD_STAGE_MANIFEST_SURFACE_KIND = 'opl_standard_agent_declarative_sta
 const STANDARD_STAGE_MANIFEST_VERSION = 'opl-standard-agent-declarative-stage-manifest.v1';
 const TOOL_AFFORDANCE_CATALOG_ROLE = 'available_affordance_catalog_not_workflow_script';
 const EFFECT_BOUNDARY_TRUST_LANES = new Set(['ai_decision', 'human_gate', 'external_system']);
+const STAGE_CONTRACT_EXTENSION_FORBIDDEN_FIELDS = new Set([
+  'requires',
+  'ensures',
+  'boundary_assumptions',
+  'properties',
+  'expected_receipt_refs',
+  'receipt_schema_refs',
+  'authority_function_refs',
+  'l4_entry_gate',
+  'l5_entry_gate',
+  'stage_completion_policy',
+  'user_stage_log_contract',
+  'progress_delta_policy',
+  'typed_blocker_lineage_policy',
+]);
 
 export interface StandardAgentStageManifestCompilation {
   stage_control_plane: FamilyStageControlPlane;
@@ -371,6 +386,19 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     const declaredStageContract = stage.stage_contract === undefined
       ? {}
       : record(stage.stage_contract, 'stage.stage_contract', repoDir);
+    const stageContractExtension = stage.stage_contract_extension === undefined
+      ? {}
+      : record(stage.stage_contract_extension, 'stage.stage_contract_extension', repoDir);
+    const forbiddenExtensionFields = Object.keys(stageContractExtension)
+      .filter((field) => STAGE_CONTRACT_EXTENSION_FORBIDDEN_FIELDS.has(field));
+    if (forbiddenExtensionFields.length > 0) {
+      fail('Stage manifest stage_contract_extension cannot override compiler-owned or Framework floor fields.', {
+        repo_dir: repoDir,
+        stage_id: stageId,
+        blocker: 'standard_agent_stage_contract_extension_forbidden_field',
+        forbidden_fields: forbiddenExtensionFields,
+      });
+    }
     const frameworkStageContract = {
       expected_receipt_refs: [repoSurfaceRef(
         'domain_owner_receipt_or_typed_blocker_ref',
@@ -579,6 +607,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
         source_scope_refs: [surfaceRef(repoDir, policyRef, 'stage.policy_ref', 'stage_policy_source')],
         artifact_scope_refs: [],
         workspace_scope_refs: [],
+        ...stageContractExtension,
         ...frameworkStageContract,
       },
       trust_boundary: {

@@ -726,6 +726,47 @@ test('stage manifest compiler rejects present non-object stage contracts', async
   }
 });
 
+test('stage manifest compiler projects generic stage-contract extensions', () => {
+  const root = fixture('target-stage-contract-extension');
+  const manifest = readManifest(root);
+  const extension = {
+    domain_gate: {
+      surface_kind: 'domain_stage_gate',
+      fail_closed: true,
+    },
+    monitor_refs: [{
+      ref_kind: 'surface_kind',
+      ref: 'domain_stage_monitor',
+      role: 'domain_stage_monitor',
+    }],
+  };
+  manifest.stages[0].stage_contract_extension = extension;
+  writeManifest(root, manifest);
+
+  const stageContract = compileStandardAgentStageManifest(root).stage_control_plane.stages[0]
+    ?.stage_contract as JsonRecord;
+  assert.deepEqual(stageContract.domain_gate, extension.domain_gate);
+  assert.deepEqual(stageContract.monitor_refs, extension.monitor_refs);
+});
+
+test('stage manifest compiler rejects invalid stage-contract extensions', async (t) => {
+  const cases: Array<[string, unknown]> = [
+    ['non_object', []],
+    ['stage_semantics_override', { requires: ['overridden_requirement'] }],
+    ['framework_floor_override', { stage_completion_policy: { closeout_packet_required: false } }],
+  ];
+  for (const [name, extension] of cases) {
+    await t.test(name, () => {
+      const root = fixture(`target-stage-contract-extension-${name}`);
+      const manifest = readManifest(root);
+      manifest.stages[0].stage_contract_extension = extension;
+      writeManifest(root, manifest);
+
+      assert.throws(() => compileStandardAgentStageManifest(root), FrameworkContractError);
+    });
+  }
+});
+
 test('stage manifest compiler fails closed for an invalid required v2 declaration', () => {
   const root = fixture('target-invalid-stage-pack');
   const inputRef = path.join(root, 'contracts/pack_compiler_input.json');
