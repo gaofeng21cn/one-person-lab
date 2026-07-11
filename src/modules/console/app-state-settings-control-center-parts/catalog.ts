@@ -17,6 +17,11 @@ export type SettingsActionTaskKind =
   | 'refresh'
   | 'install'
   | 'uninstall'
+  | 'create'
+  | 'update'
+  | 'delete'
+  | 'test'
+  | 'set_default'
   | typeof MANAGED_UPDATE_OWNER_ACTIONS.revert;
 
 export type SettingsAction = {
@@ -224,7 +229,7 @@ export const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Overview',
     role: 'control_center_summary',
     route_id: 'general',
-    action_section_ids: ['model_access', 'docker_webui', 'workspace', 'capabilities', 'packages', 'updates', 'runtime_roots'],
+    action_section_ids: ['model_access', 'connections', 'docker_webui', 'workspace', 'capabilities', 'packages', 'updates', 'runtime_roots'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -232,7 +237,7 @@ export const SETTINGS_CONTROL_CENTER_GROUPS: SettingsControlCenterGroup[] = [
     label: 'Setup & Access',
     role: 'connect_models_accounts_workspace_web_remote',
     route_id: 'access',
-    action_section_ids: ['model_access', 'docker_webui', 'workspace', 'codex_surface'],
+    action_section_ids: ['model_access', 'connections', 'docker_webui', 'workspace', 'codex_surface'],
     ordinary_entry_policy: 'top_level_control_center_route',
   },
   {
@@ -341,6 +346,13 @@ export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
     source_ref: 'app_state.paths + app_state.actions#workspace_health',
   },
   {
+    section_id: 'connections',
+    label: 'Connections',
+    description: 'Framework-owned connection registry with credential handles and typed configuration status.',
+    state: 'available',
+    source_ref: 'app_state.settings_control_center.connection_registry',
+  },
+  {
     section_id: 'capabilities',
     label: 'Agents and capabilities',
     description: 'Managed OPL modules, generated assistants, and capability sync actions.',
@@ -385,6 +397,107 @@ export const SETTINGS_CONTROL_CENTER_ACTION_SECTIONS: SettingsSection[] = [
 ];
 
 export const SETTINGS_CONTROL_CENTER_ACTIONS: SettingsAction[] = [
+  {
+    action_id: 'connection_list',
+    stable_id: 'connection_list',
+    label: 'List connections',
+    section_id: 'connections',
+    task_kind: 'read',
+    taxonomy: 'settings.connections.list',
+    delegated_surface: 'opl connect connections list',
+    payload_fields: [],
+    mutates: 'none_read_only',
+    dry_run_supported: true,
+    confirmation_required: false,
+    danger_level: 'none',
+    impact: 'Reads the Framework-owned connection registry without resolving credential values.',
+    follow_up_action_ids: [],
+  },
+  {
+    action_id: 'connection_create',
+    stable_id: 'connection_create',
+    label: 'Create connection',
+    section_id: 'connections',
+    task_kind: 'create',
+    taxonomy: 'settings.connections.create',
+    delegated_surface: 'opl connect connections create',
+    payload_fields: ['connection_id', 'name', 'connection_type', 'endpoint', 'credential_handle', 'disabled'],
+    mutates: 'opl_connection_registry',
+    dry_run_supported: false,
+    confirmation_required: true,
+    danger_level: 'low',
+    impact: 'Stores connection metadata and an owner-backed credential handle; secret values are forbidden.',
+    follow_up_action_ids: ['connection_test'],
+    verify_action_id: 'connection_list',
+  },
+  {
+    action_id: 'connection_update',
+    stable_id: 'connection_update',
+    label: 'Update connection',
+    section_id: 'connections',
+    task_kind: 'update',
+    taxonomy: 'settings.connections.update',
+    delegated_surface: 'opl connect connections update',
+    payload_fields: ['connection_id', 'name', 'connection_type', 'endpoint', 'credential_handle', 'disabled'],
+    mutates: 'opl_connection_registry',
+    dry_run_supported: false,
+    confirmation_required: true,
+    danger_level: 'low',
+    impact: 'Updates connection metadata and resets configuration status without resolving credential values.',
+    follow_up_action_ids: ['connection_test'],
+    verify_action_id: 'connection_list',
+  },
+  {
+    action_id: 'connection_delete',
+    stable_id: 'connection_delete',
+    label: 'Delete connection',
+    section_id: 'connections',
+    task_kind: 'delete',
+    taxonomy: 'settings.connections.delete',
+    delegated_surface: 'opl connect connections delete',
+    payload_fields: ['connection_id'],
+    mutates: 'opl_connection_registry',
+    dry_run_supported: false,
+    confirmation_required: true,
+    danger_level: 'medium',
+    impact: 'Deletes non-default connection metadata only; credential owner state is not modified.',
+    follow_up_action_ids: ['connection_list'],
+    verify_action_id: 'connection_list',
+  },
+  {
+    action_id: 'connection_test',
+    stable_id: 'connection_test',
+    label: 'Test connection configuration',
+    section_id: 'connections',
+    task_kind: 'test',
+    taxonomy: 'settings.connections.test',
+    delegated_surface: 'opl connect connections test',
+    payload_fields: ['connection_id'],
+    mutates: 'opl_connection_registry_status',
+    dry_run_supported: false,
+    confirmation_required: false,
+    danger_level: 'none',
+    impact: 'Checks endpoint syntax and credential-owner availability without returning request or secret material.',
+    follow_up_action_ids: [],
+    verify_action_id: 'connection_list',
+  },
+  {
+    action_id: 'connection_set_default',
+    stable_id: 'connection_set_default',
+    label: 'Set default connection',
+    section_id: 'connections',
+    task_kind: 'set_default',
+    taxonomy: 'settings.connections.set_default',
+    delegated_surface: 'opl connect connections set_default',
+    payload_fields: ['connection_id'],
+    mutates: 'opl_connection_registry',
+    dry_run_supported: false,
+    confirmation_required: true,
+    danger_level: 'low',
+    impact: 'Selects a non-disabled registry entry as the Framework default connection.',
+    follow_up_action_ids: ['connection_list'],
+    verify_action_id: 'connection_list',
+  },
   {
     action_id: 'settings_repair_model_access',
     stable_id: 'repair_model_access',

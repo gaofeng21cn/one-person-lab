@@ -17,6 +17,7 @@
       "configuration_catalog",
       "settings_projection",
       "app_settings_read_model",
+      "connection_registry",
       "app_aion_consumer_only_readback",
       "control_center_groups",
       "action_sections",
@@ -114,6 +115,7 @@
       "codex_model_policy",
       "access_api_key",
       "workspace_services",
+      "connections",
       "capability_task_awareness_refs",
       "docker_webui",
       "local_environment",
@@ -201,6 +203,40 @@
       "shell_must_not_execute_unlisted_actions": true
     }
   },
+  "connection_registry": {
+    "surface_kind": "opl_connection_registry.v1",
+    "owner": "one-person-lab",
+    "source_ref": "app_state.settings_control_center.connection_registry",
+    "state_file": "OPL_STATE_DIR/connection-registry.json",
+    "credential_policy": "handle_only",
+    "allowed_credential_handles": [
+      "env:NAME",
+      "codex:selected_provider"
+    ],
+    "forbidden_payload_fields": [
+      "api_key",
+      "token",
+      "secret",
+      "password"
+    ],
+    "allowed_statuses": [
+      "untested",
+      "ready",
+      "attention_needed",
+      "disabled"
+    ],
+    "default_delete_policy": "default_connection_delete_forbidden",
+    "test_policy": {
+      "env_handle_missing_code": "credential_env_missing",
+      "configuration_ready_requires_handle_owner_available_and_valid_endpoint": true,
+      "runtime_readiness_claimed": false,
+      "response_must_not_include": [
+        "body",
+        "headers",
+        "secret_values"
+      ]
+    }
+  },
   "control_center_groups": [
     "overview",
     "setup_access",
@@ -213,6 +249,7 @@
   "action_sections": [
     "model_access",
     "workspace",
+    "connections",
     "capabilities",
     "packages",
     "codex_surface",
@@ -228,6 +265,12 @@
     "developer_profile_active"
   ],
   "allowed_action_ids": [
+    "connection_list",
+    "connection_create",
+    "connection_update",
+    "connection_delete",
+    "connection_test",
+    "connection_set_default",
     "settings_repair_model_access",
     "settings_verify_workspace",
     "settings_sync_capabilities",
@@ -253,6 +296,12 @@
     "developer_supervisor"
   ],
   "action_taxonomy": {
+    "connection_list": "settings.connections.list",
+    "connection_create": "settings.connections.create",
+    "connection_update": "settings.connections.update",
+    "connection_delete": "settings.connections.delete",
+    "connection_test": "settings.connections.test",
+    "connection_set_default": "settings.connections.set_default",
     "settings_repair_model_access": "settings.model_access.repair",
     "settings_verify_workspace": "settings.workspace.verify",
     "settings_sync_capabilities": "settings.capabilities.sync",

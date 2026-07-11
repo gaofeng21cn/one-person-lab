@@ -1,5 +1,6 @@
 import { buildDockerWebuiSettingsReadModel } from './app-state-settings-control-center-parts/docker-webui-read-model.ts';
 import { resolveSettingsCodexAccess } from './app-state-settings-control-center-parts/codex-access-read-model.ts';
+import { listOplConnections } from '../connect/index.ts';
 import {
   SETTINGS_CONTROL_CENTER_ACTION_IDS,
   SETTINGS_CONTROL_CENTER_ACTION_SECTIONS,
@@ -351,6 +352,7 @@ function buildSettingsProjection(
   taskEntries: ReturnType<typeof buildTaskEntries>,
   issueQueue: Array<Record<string, unknown>>,
   settingsIa: ReturnType<typeof buildSettingsIa>,
+  connectionRegistry: ReturnType<typeof listOplConnections>,
 ) {
   const moduleSummary = asRecord(asRecord(input.modules).summary);
   const temporal = asRecord(asRecord(input.provider).temporal);
@@ -436,15 +438,17 @@ function buildSettingsProjection(
       settingsItem({
         item_id: 'connect_fabric_external_resources',
         label: 'Connect, Fabric, Cloud, SSH, and HPC resources',
-        state: 'refs_only',
+        state: connectionRegistry.connections.some((entry) => entry.status === 'attention_needed')
+          ? 'attention_needed'
+          : 'available',
         surface_class: 'status',
         scope: 'resources',
         owner: 'one-person-lab',
         risk: 'read_only',
-        normal_summary: 'External resource refs are surfaced only when an owned read model supplies them.',
-        next_action: 'none',
-        details_ref: 'app_state.settings_control_center.app_settings_read_model.workspace_services',
-        editable_reason: 'read_only_no_owned_resource_credentials_in_settings_projection',
+        normal_summary: `${connectionRegistry.connections.length} Framework connection(s) registered; credentials remain owner-backed handles.`,
+        next_action: 'connection_list',
+        details_ref: 'app_state.settings_control_center.connection_registry',
+        editable_reason: 'editable_via_listed_connection_actions_handle_only',
       }),
     ]),
     maintenance: settingsSection('maintenance', 'Maintenance', 'environment', 'updates_repairs_runtime_fabric_package_sync_and_local_services', [
@@ -681,6 +685,7 @@ function buildAppSettingsReadModel(
   issueQueue: Array<Record<string, unknown>>,
   settingsIa: ReturnType<typeof buildSettingsIa>,
   consumerOnlyReadback: ReturnType<typeof buildAppAionConsumerOnlyReadback>,
+  connectionRegistry: ReturnType<typeof listOplConnections>,
 ) {
   const codex = asRecord(asRecord(input.core).codex);
   const defaultProfile = asRecord(codex.default_profile);
@@ -710,6 +715,7 @@ function buildAppSettingsReadModel(
       'app_state.settings_control_center.settings_ia',
       'app_state.settings_control_center.action_catalog',
       'app_state.settings_control_center.capability_task_awareness_refs',
+      'app_state.settings_control_center.connection_registry',
     ],
     shell_policy: {
       app_consumes_read_model_only: true,
@@ -717,6 +723,23 @@ function buildAppSettingsReadModel(
       shell_must_not_rewrite_model_or_reasoning_policy: true,
       shell_must_not_infer_api_key_or_workspace_service_truth: true,
       shell_must_not_execute_unlisted_actions: true,
+    },
+    connections: {
+      surface_kind: 'opl_settings_connections_read_model.v1',
+      source_ref: 'app_state.settings_control_center.connection_registry',
+      credential_policy: 'handle_only',
+      allowed_statuses: connectionRegistry.allowed_statuses,
+      default_connection_id: connectionRegistry.default_connection_id,
+      connections: connectionRegistry.connections,
+      action_ids: [
+        'connection_list',
+        'connection_create',
+        'connection_update',
+        'connection_delete',
+        'connection_test',
+        'connection_set_default',
+      ],
+      runtime_readiness_claimed: false,
     },
     page_structure: {
       ordinary_entry: settingsIa.ordinary_entry,
@@ -963,11 +986,13 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
   const settingsIa = buildSettingsIa(taskEntries);
   const capabilityTaskAwarenessRefs = buildCapabilityTaskAwarenessRefs(input);
   const appAionConsumerOnlyReadback = buildAppAionConsumerOnlyReadback();
+  const connectionRegistry = listOplConnections();
   const settingsProjection = buildSettingsProjection(
     input,
     taskEntries,
     issueQueue,
     settingsIa,
+    connectionRegistry,
   );
   const configurationCatalog = buildConfigurationCatalog(input);
   const appSettingsReadModel = buildAppSettingsReadModel(
@@ -976,6 +1001,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     issueQueue,
     settingsIa,
     appAionConsumerOnlyReadback,
+    connectionRegistry,
   );
 
   return {
@@ -1005,6 +1031,7 @@ export function buildSettingsControlCenter(input: BuildSettingsControlCenterInpu
     app_settings_read_model: appSettingsReadModel,
     app_aion_consumer_only_readback: appAionConsumerOnlyReadback,
     capability_task_awareness_refs: capabilityTaskAwarenessRefs,
+    connection_registry: connectionRegistry,
     control_center_groups: SETTINGS_CONTROL_CENTER_GROUPS.map((group) => ({
       ...group,
       state: groupState(group, input),
