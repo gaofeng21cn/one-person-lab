@@ -885,15 +885,32 @@ const OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY: Record<string, boolean>
   sqlite_can_be_truth_source: false,
 };
 
+const OPL_STATE_INDEX_KERNEL_DOMAIN_OWNERSHIP_KINDS = new Set([
+  'artifact_authority',
+  'artifact_body',
+  'artifact_index_truth',
+  'domain_truth',
+  'export_verdict',
+  'file_authority',
+  'memory_body',
+  'owner_receipt',
+  'quality_verdict',
+  'review_export_verdict',
+  'visual_truth',
+]);
+
 function isDomainSidecarStorageAuthority(field: string) {
   return /^sqlite_can_store_[a-z0-9_]+_(body|judgment|verdict)$/.test(field);
 }
 
 function isDomainOwnershipDeclaration(field: string, value: unknown) {
+  const match = /^([a-z][a-z0-9_]*)_owns_([a-z][a-z0-9_]*)$/.exec(field);
+  // Domain declarations describe domain-held truth; they cannot claim OPL substrate ownership.
   return value === true
     && !field.startsWith('opl_')
     && !field.startsWith('sqlite_')
-    && /^[a-z][a-z0-9_]*_owns_[a-z0-9_]+$/.test(field);
+    && match !== null
+    && OPL_STATE_INDEX_KERNEL_DOMAIN_OWNERSHIP_KINDS.has(match[2]);
 }
 
 function buildOplStateIndexKernelSidecarChecks(adoption: JsonRecord, adoptionFileStatus: string) {
