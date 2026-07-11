@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { record, recordList, stringList, stringValue, type JsonRecord } from '../../kernel/json-record.ts';
+import { resolveContainedRepoJsonFile } from '../../kernel/repo-contained-json-file.ts';
 
 export type StandardAgentActionStageRunCloseout = {
   stage_id: string;
@@ -58,8 +59,13 @@ function readJson(filePath: string) {
   }
 }
 
+function readRepoJson(repoDir: string, ref: string, label: string) {
+  const resolved = resolveContainedRepoJsonFile(repoDir, ref, label, 'domain repo');
+  return readJson(resolved.real_path);
+}
+
 function routeFromRepo(repoDir: string, actionId: string) {
-  const catalog = readJson(path.join(repoDir, 'contracts', 'action_catalog.json'));
+  const catalog = readRepoJson(repoDir, 'contracts/action_catalog.json', 'family_action_catalog_ref');
   const targetDomainId = requiredString(catalog.target_domain_id, 'action_catalog.target_domain_id');
   const action = recordList(catalog.actions).find((entry) => entry.action_id === actionId);
   const rawRoute = record(action?.stage_route);
@@ -91,7 +97,7 @@ function routeFromRepo(repoDir: string, actionId: string) {
 }
 
 function stageGraph(repoDir: string) {
-  const manifest = readJson(path.join(repoDir, 'agent', 'stages', 'manifest.json'));
+  const manifest = readRepoJson(repoDir, 'agent/stages/manifest.json', 'family_stage_control_plane_ref.source_ref');
   return new Map(recordList(manifest.stages).map((stage) => [
     requiredString(stage.stage_id, 'agent/stages/manifest.json stages[].stage_id'),
     stringList(stage.next_stage_refs),

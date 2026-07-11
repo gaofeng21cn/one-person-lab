@@ -27,9 +27,9 @@ function stageRunFixture() {
       action_id: 'build',
       stage_route: {
         entry_stage_ref: 'intake',
-        required_stage_refs: ['intake', 'build'],
+        required_stage_refs: ['intake', 'build', 'review'],
         optional_stage_refs: [],
-        terminal_stage_refs: ['build'],
+        terminal_stage_refs: ['review'],
         route_policy: 'ordered_stage_attempts_no_skip',
       },
     }],
@@ -37,7 +37,8 @@ function stageRunFixture() {
   writeJson(path.join(repoDir, 'agent', 'stages', 'manifest.json'), {
     stages: [
       { stage_id: 'intake', next_stage_refs: ['build'] },
-      { stage_id: 'build', next_stage_refs: [] },
+      { stage_id: 'build', next_stage_refs: ['review'] },
+      { stage_id: 'review', next_stage_refs: [] },
     ],
   });
 
@@ -104,24 +105,26 @@ test('standard Agent StageRun consumer returns canonical route progress and doma
   t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
   const intake = fixture.readback('intake', []);
   const build = fixture.readback('build', [intake.closeoutRef]);
+  const review = fixture.readback('review', [build.closeoutRef]);
 
   const progress = evaluateStandardAgentActionStageRun({
     repoDir: fixture.repoDir,
     actionId: 'build',
-    stageRunReadbackPaths: [intake.path, build.path],
+    stageRunReadbackPaths: [intake.path, build.path, review.path],
   });
 
   assert.equal(progress.complete, true);
   assert.equal(progress.next_stage_ref, null);
-  assert.deepEqual(progress.completed_stage_refs, ['intake', 'build']);
-  assert.equal(progress.stage_closeouts[1]?.domain_output_packet.stage_id, 'build');
+  assert.deepEqual(progress.completed_stage_refs, ['intake', 'build', 'review']);
+  assert.equal(progress.stage_closeouts[2]?.domain_output_packet.stage_id, 'review');
 });
 
-test('standard Agent StageRun consumer rejects skipped or unconsumed predecessor closeouts', (t) => {
+test('standard Agent StageRun consumer rejects skipped, reversed, or unconsumed predecessor closeouts', (t) => {
   const fixture = stageRunFixture();
   t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
   const intake = fixture.readback('intake', []);
-  const build = fixture.readback('build', []);
+  const build = fixture.readback('build', [intake.closeoutRef]);
+  const review = fixture.readback('review', [intake.closeoutRef]);
 
   assert.throws(() => evaluateStandardAgentActionStageRun({
     repoDir: fixture.repoDir,
@@ -131,6 +134,28 @@ test('standard Agent StageRun consumer rejects skipped or unconsumed predecessor
   assert.throws(() => evaluateStandardAgentActionStageRun({
     repoDir: fixture.repoDir,
     actionId: 'build',
-    stageRunReadbackPaths: [intake.path, build.path],
+    stageRunReadbackPaths: [intake.path, review.path, build.path],
+  }), /closeout order is unreachable: review -> build/);
+  assert.throws(() => evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [intake.path, build.path, review.path],
   }), /must consume preceding accepted closeout ref/);
+});
+
+test('standard Agent StageRun consumer rejects canonical manifest refs that escape the domain repo', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-external-'));
+  t.after(() => fs.rmSync(externalRoot, { recursive: true, force: true }));
+  const externalCatalog = path.join(externalRoot, 'action_catalog.json');
+  fs.copyFileSync(path.join(fixture.repoDir, 'contracts', 'action_catalog.json'), externalCatalog);
+  fs.rmSync(path.join(fixture.repoDir, 'contracts', 'action_catalog.json'));
+  fs.symlinkSync(externalCatalog, path.join(fixture.repoDir, 'contracts', 'action_catalog.json'));
+
+  assert.throws(() => evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [],
+  }), /family_action_catalog_ref escapes its domain repo/);
 });
