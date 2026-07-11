@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/opl-framework/agent-scaffold-materialization-request.schema.json",
+  "title": "OPL Agent Scaffold Materialization Request",
+  "type": "object",
+  "required": [
+    "surface_kind", "version", "canonical_schema_ref", "request_owner", "execution_owner",
+    "target_identity", "overwrite_policy", "files", "json_projections", "stage_manifest",
+    "contracts", "pack_compiler_input", "build_receipt_candidate", "build_receipt_installation",
+    "validation_requests", "authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": { "const": "opl_agent_scaffold_materialization_request" },
+    "version": { "const": "opl-agent-scaffold-materialization-request.v1" },
+    "canonical_schema_ref": { "const": "contracts/opl-framework/agent-scaffold-materialization-request.schema.json" },
+    "request_owner": { "const": "opl-meta-agent" },
+    "execution_owner": { "const": "one-person-lab/OPL Foundry Lab" },
+    "target_identity": {
+      "type": "object",
+      "required": ["domain_id", "domain_label", "target_agent_ref"],
+      "properties": {
+        "domain_id": { "$ref": "#/$defs/nonEmptyString" },
+        "domain_label": { "$ref": "#/$defs/nonEmptyString" },
+        "target_agent_ref": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": false
+    },
+    "overwrite_policy": {
+      "type": "object",
+      "required": ["mode", "allow_existing_target_dir", "reject_absolute_paths", "reject_parent_traversal", "reject_symlink_escape", "allowed_merge_object_paths"],
+      "properties": {
+        "mode": { "const": "replace_declared_files_only" },
+        "allow_existing_target_dir": { "const": true },
+        "reject_absolute_paths": { "const": true },
+        "reject_parent_traversal": { "const": true },
+        "reject_symlink_escape": { "const": true },
+        "allowed_merge_object_paths": { "const": ["contracts/domain_descriptor.json", "contracts/capability_map.json"] }
+      },
+      "additionalProperties": false
+    },
+    "files": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/file" } },
+    "json_projections": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "required": ["path", "value", "merge_policy"],
+        "properties": {
+          "path": { "enum": ["contracts/domain_descriptor.json", "contracts/capability_map.json"] },
+          "value": { "type": "object" },
+          "merge_policy": { "const": "merge_object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "stage_manifest": { "$ref": "#/$defs/jsonReplacement" },
+    "contracts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/jsonReplacement" } },
+    "pack_compiler_input": {
+      "type": "object", "required": ["required_domain_pack_path_additions"],
+      "properties": { "required_domain_pack_path_additions": { "type": "array", "items": { "$ref": "#/$defs/safeRelativePath" }, "uniqueItems": true } },
+      "additionalProperties": false
+    },
+    "build_receipt_candidate": { "type": "object" },
+    "build_receipt_installation": {
+      "type": "object", "required": ["expected_build_receipt_ref", "receipt_path", "projection_paths"],
+      "properties": {
+        "expected_build_receipt_ref": { "$ref": "#/$defs/nonEmptyString" },
+        "receipt_path": { "const": "contracts/agent_build_receipt.json" },
+        "projection_paths": { "const": ["contracts/domain_descriptor.json", "contracts/capability_map.json", "contracts/stage_control_plane.json"] }
+      },
+      "additionalProperties": false
+    },
+    "validation_requests": { "const": ["standard_domain_agent_scaffold", "domain_pack_compiler", "agent_profile_conformance"] },
+    "authority_boundary": {
+      "type": "object",
+      "required": ["oma_authors_agent_building_semantics", "oma_writes_target_agent_files", "opl_owns_physical_scaffold_materialization", "opl_owns_materialized_file_digests", "opl_owns_final_build_receipt", "build_receipt_candidate_is_final_receipt", "opl_can_write_target_domain_truth", "opl_can_authorize_quality_or_export"],
+      "properties": {
+        "oma_authors_agent_building_semantics": { "const": true },
+        "oma_writes_target_agent_files": { "const": false },
+        "opl_owns_physical_scaffold_materialization": { "const": true },
+        "opl_owns_materialized_file_digests": { "const": true },
+        "opl_owns_final_build_receipt": { "const": true },
+        "build_receipt_candidate_is_final_receipt": { "const": false },
+        "opl_can_write_target_domain_truth": { "const": false },
+        "opl_can_authorize_quality_or_export": { "const": false }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "safeRelativePath": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$" },
+    "file": {
+      "type": "object", "required": ["path", "body", "role"],
+      "properties": { "path": { "$ref": "#/$defs/safeRelativePath" }, "body": { "$ref": "#/$defs/nonEmptyString" }, "role": { "$ref": "#/$defs/nonEmptyString" } },
+      "additionalProperties": false
+    },
+    "jsonReplacement": {
+      "type": "object", "required": ["path", "value", "write_policy"],
+      "properties": { "path": { "$ref": "#/$defs/safeRelativePath" }, "value": { "type": "object" }, "write_policy": { "const": "replace_declared_files_only" } },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

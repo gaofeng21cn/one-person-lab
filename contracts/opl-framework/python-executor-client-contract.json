@@ -1,0 +1,20 @@
+{
+  "surface_kind": "opl_python_executor_client_contract",
+  "version": "opl-python-executor-client-contract.v1",
+  "owner": "one-person-lab/OPL Runway",
+  "module": "opl_framework.executor_client",
+  "apis": {
+    "run_opl_json": "run one OPL command with bounded process-group lifecycle and strict JSON object parsing",
+    "run_agent_execution_request": "materialize one temporary request, invoke opl executor run, remove the request, validate the wrapper, and return AgentExecutionReceipt body"
+  },
+  "command_resolution_order": ["explicit opl_command", "OPL_COMMAND", "OPL_BIN", "PATH opl", "repository bin/opl"],
+  "fail_closed_on": ["invalid_command", "timeout", "nonzero_exit", "empty_executor_response", "invalid_json", "non_object_json", "missing_receipt", "invalid_receipt_kind"],
+  "authority_boundary": {
+    "client_owns_transport_process_lifecycle": true,
+    "client_owns_executor_semantics": false,
+    "client_can_write_domain_truth": false,
+    "client_can_sign_owner_receipt": false,
+    "client_can_claim_domain_ready": false,
+    "client_can_claim_production_ready": false
+  }
+}

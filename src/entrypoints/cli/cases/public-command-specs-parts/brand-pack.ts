@@ -4,6 +4,7 @@ import {
   runPackBundleWriteCommand,
 } from '../../../../modules/pack/pack-bundle.ts';
 import { runPackNativeHelperProbeCommand } from '../../../../modules/pack/native-helper-probe.ts';
+import { runPackNativeHelperExecutionCommand } from '../../../../modules/runway/index.ts';
 import {
   runGenericPackCheckCommand,
   runGenericPackGalleryCommand,
@@ -127,15 +128,23 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       handler: runPackBundleCheckCommand,
     },
     'pack native-helper': {
-      usage: 'opl pack native-helper <probe> --descriptor <path>',
-      summary: 'Probe a domain-owned native helper descriptor without executing the helper or claiming domain authority.',
-      examples: ['opl pack native-helper probe --descriptor contracts/native-helper.json --json'],
+      usage: 'opl pack native-helper <probe|run>',
+      summary: 'Probe or execute a declared domain-owned native helper without claiming domain authority.',
+      examples: [
+        'opl pack native-helper probe --descriptor contracts/native-helper.json --json',
+        'opl pack native-helper run --catalog contracts/runtime-program/python-native-helper-catalog.json --helper deck_review --request request.json --json',
+      ],
       group: 'brand-pack',
       subcommands: [
         {
           command: 'pack native-helper probe',
           usage: 'opl pack native-helper probe --descriptor <path>',
           summary: 'Resolve declared helper content and required commands into a content-bound no-authority receipt.',
+        },
+        {
+          command: 'pack native-helper run',
+          usage: 'opl pack native-helper run --catalog <catalog.json> --helper <id> --request <request.json>',
+          summary: 'Execute one catalog-declared Python helper through the OPL-owned process carrier.',
         },
       ],
       handler: (args) => {
@@ -149,6 +158,13 @@ export function buildBrandPackCommandSpecs(packInspectFallback?: CommandSpec): R
       examples: ['opl pack native-helper probe --descriptor contracts/native-helper.json --json'],
       group: 'brand-pack',
       handler: runPackNativeHelperProbeCommand,
+    },
+    'pack native-helper run': {
+      usage: 'opl pack native-helper run --catalog <catalog.json> --helper <id> --request <request.json>',
+      summary: 'Execute one catalog-declared Python helper through the OPL-owned process carrier.',
+      examples: ['opl pack native-helper run --catalog contracts/runtime-program/python-native-helper-catalog.json --helper deck_review --request request.json --json'],
+      group: 'brand-pack',
+      handler: runPackNativeHelperExecutionCommand,
     },
     'pack os inspect': {
       usage: 'opl pack os inspect --descriptor <path>',

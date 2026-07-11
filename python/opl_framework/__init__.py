@@ -135,6 +135,7 @@ from .runtime_task_companions import (
     build_task_surface_descriptor,
 )
 from .runtime_registration import build_stage_runtime_registration
+from .executor_client import run_agent_execution_request, run_opl_json
 from .schema_validation import SchemaSubsetValidator, SchemaValidationIssue
 from .status_narration import (
     PAPER_MILESTONE_ANSWER_CHECKLIST,
@@ -177,6 +178,8 @@ __all__ = [
     "build_owner_evidence_reconciliation_inventory",
     "build_owner_evidence_reconciliation_proof",
     "build_stage_runtime_registration",
+    "run_agent_execution_request",
+    "run_opl_json",
     "build_checkpoint_summary",
     "build_family_lifecycle_ledger",
     "build_family_owner_route",

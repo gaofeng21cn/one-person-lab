@@ -12,6 +12,7 @@ export function parseAgentsScaffoldArgs(
     force: { type: 'boolean' },
     validate: { type: 'string' },
     'consumption-evidence': { type: 'boolean' },
+    'materialize-request': { type: 'string' },
   });
   const parsed = {
     targetDir: values['target-dir'] as string | undefined,
@@ -20,6 +21,7 @@ export function parseAgentsScaffoldArgs(
     force: values.force === true,
     validateRepoDir: values.validate as string | undefined,
     consumptionEvidence: values['consumption-evidence'] === true,
+    materializeRequestPath: values['materialize-request'] as string | undefined,
   };
 
   if (parsed.validateRepoDir && (parsed.targetDir || parsed.domainId || parsed.domainLabel || parsed.force)) {
@@ -37,6 +39,17 @@ export function parseAgentsScaffoldArgs(
   if (parsed.force && !parsed.targetDir) {
     throw buildUsageError('--force requires --target-dir.', spec, {
       required: ['--target-dir'],
+    });
+  }
+
+  if (parsed.materializeRequestPath && !parsed.targetDir) {
+    throw buildUsageError('--materialize-request requires --target-dir.', spec, { required: ['--target-dir'] });
+  }
+  if (parsed.materializeRequestPath && (
+    parsed.domainId || parsed.domainLabel || parsed.force || parsed.validateRepoDir || parsed.consumptionEvidence
+  )) {
+    throw buildUsageError('--materialize-request can only be combined with --target-dir.', spec, {
+      mutually_exclusive: ['--materialize-request', '--domain-id', '--domain-label', '--force', '--validate', '--consumption-evidence'],
     });
   }
 

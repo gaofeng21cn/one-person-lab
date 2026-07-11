@@ -1,0 +1,30 @@
+{
+  "surface_kind": "opl_pack_native_helper_execution_contract",
+  "version": "opl-pack-native-helper-execution-contract.v1",
+  "owner": "one-person-lab/OPL Pack + Runway",
+  "command": "opl pack native-helper run --catalog <catalog.json> --helper <id> --request <request.json> --json",
+  "catalog_boundary": {
+    "helper_id_field": "helpers[].helper_id",
+    "module_field": "helpers[].package_module",
+    "source_root_field": "package.source_root",
+    "source_root_resolution": "nearest catalog ancestor containing the declared relative directory",
+    "python_module_pattern": "Python dotted module only"
+  },
+  "request_boundary": {
+    "argv_fields": ["args", "argv"],
+    "default_timeout_seconds": 300,
+    "stdout_contract": "exactly one JSON value"
+  },
+  "fail_closed_on": ["unknown_helper", "source_root_escape", "source_root_symlink_escape", "invalid_module", "nonzero_exit", "timeout", "invalid_json_stdout"],
+  "authority_boundary": {
+    "framework_owns_helper_process_lifecycle": true,
+    "framework_owns_domain_helper_body": false,
+    "can_write_domain_truth": false,
+    "can_sign_owner_receipt": false,
+    "can_create_typed_blocker": false,
+    "can_authorize_quality_verdict": false,
+    "can_authorize_export_readiness": false,
+    "can_claim_domain_ready": false,
+    "can_claim_production_ready": false
+  }
+}

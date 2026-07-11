@@ -1,0 +1,34 @@
+{
+  "surface_kind": "opl_agent_scaffold_materialization_contract",
+  "version": "opl-agent-scaffold-materialization-contract.v1",
+  "owner": "one-person-lab/OPL Foundry Lab",
+  "command": "opl agents scaffold --materialize-request <request.json> --target-dir <dir> --json",
+  "request_schema_ref": "contracts/opl-framework/agent-scaffold-materialization-request.schema.json",
+  "write_policy": {
+    "mode": "replace_declared_files_only",
+    "standard_scaffold_lower_bound_is_materialized_when_missing": true,
+    "allowed_merge_object_paths": ["contracts/domain_descriptor.json", "contracts/capability_map.json"],
+    "reject_absolute_paths": true,
+    "reject_parent_traversal": true,
+    "reject_symlink_escape": true,
+    "preserve_undeclared_files": true
+  },
+  "receipt": {
+    "surface_kind": "opl_agent_scaffold_materialization_receipt",
+    "digest_algorithm": "sha256",
+    "digest_source": "post_write_target_bytes",
+    "final_build_receipt_owner": "one-person-lab/OPL Foundry Lab",
+    "validation_refs_are_requests_not_pass_claims": true
+  },
+  "authority_boundary": {
+    "oma_authors_agent_building_semantics": true,
+    "oma_writes_target_agent_files": false,
+    "opl_owns_physical_scaffold_materialization": true,
+    "opl_owns_materialized_file_digests": true,
+    "opl_owns_final_build_receipt": true,
+    "opl_can_write_target_domain_truth": false,
+    "opl_can_authorize_quality_or_export": false,
+    "receipt_can_claim_domain_ready": false,
+    "receipt_can_claim_production_ready": false
+  }
+}

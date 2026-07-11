@@ -46,6 +46,11 @@ export { runAgentExecutor } from './agent-executor.ts';
 export { appendDomainRunEvent, createDomainRunRecord, dispatchDomainAction, executeDomainTask, readDomainRunEvents } from './domain-task-runtime.ts';
 export type { DomainActionHandler, DomainRunIdentity } from './domain-task-runtime.ts';
 export { resolveDomainPythonCommand, runDomainPythonHelper } from './domain-helper-runtime.ts';
+export {
+  PACK_NATIVE_HELPER_EXECUTION_CONTRACT_REF,
+  runPackNativeHelper,
+  runPackNativeHelperExecutionCommand,
+} from './pack-native-helper-execution.ts';
 export type { DomainHelperCommand } from './domain-helper-runtime.ts';
 export { buildCodexCliPreview, buildCodexExecArgs, parseCodexExecOutput, resolveCodexBinary, runCodexCommand, runCodexCommandStreaming } from './codex.ts';
 export type { CodexExecEvent } from './codex.ts';
