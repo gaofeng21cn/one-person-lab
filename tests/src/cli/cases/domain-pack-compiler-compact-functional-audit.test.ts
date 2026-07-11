@@ -1,4 +1,4 @@
-import { assert, fs, path, runCli, test } from '../helpers.ts';
+import { assert, fs, os, path, runCli, test } from '../helpers.ts';
 import { buildRepoContractDescriptor } from '../../../../src/modules/pack/domain-pack-compiler/repo-contract-descriptor.ts';
 import { buildReadyAgentRepo, writeJson } from './agents-conformance-fixtures.ts';
 
@@ -128,6 +128,38 @@ test('generated interfaces block a compact audit when a declared source path is 
   assert.equal(
     ((audit.contract_readback as Record<string, unknown>).blockers as string[]).includes(
       'compact_functional_audit_code_path_missing:sample_brief_refs_projection:src/missing-domain-adapter.py',
+    ),
+    true,
+  );
+  assert.equal(sourceConsumption.status, 'blocked');
+});
+
+test('generated interfaces block a compact audit source symlink that escapes the repository', (t) => {
+  const repoDir = buildReadyAgentRepo();
+  const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-compact-audit-external-'));
+  t.after(() => {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+    fs.rmSync(externalDir, { recursive: true, force: true });
+  });
+  const sourceRef = 'runtime/escaped-domain-adapter.ts';
+  writeCompactAudit(repoDir, ['agent/cli.ts', sourceRef]);
+  const linkedPath = path.join(repoDir, sourceRef);
+  fs.rmSync(linkedPath, { force: true });
+  const externalPath = path.join(externalDir, 'escaped-domain-adapter.ts');
+  fs.writeFileSync(externalPath, '# external source\n');
+  fs.symlinkSync(externalPath, linkedPath);
+
+  const descriptor = buildRepoContractDescriptor(repoDir).descriptor;
+  const audit = descriptor.functional_privatization_audit as Record<string, unknown>;
+  const bundle = runCli(['agents', 'interfaces', '--repo-dir', repoDir]).generated_agent_interfaces;
+  const sourceConsumption = bundle.source_contract_consumption.consumed_contracts.find(
+    (contract: { contract_id: string }) => contract.contract_id === 'functional_privatization_audit',
+  );
+
+  assert.equal((audit.contract_readback as Record<string, unknown>).status, 'blocked');
+  assert.equal(
+    ((audit.contract_readback as Record<string, unknown>).blockers as string[]).includes(
+      `compact_functional_audit_code_path_escaped_repo:sample_brief_refs_projection:${sourceRef}`,
     ),
     true,
   );

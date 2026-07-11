@@ -72,12 +72,30 @@ function repoFileReadback(repoDir: string, sourceRef: string) {
       status: 'invalid_repo_relative_ref',
     };
   }
+  let repoRealPath: string;
+  let realPath: string;
+  try {
+    repoRealPath = fs.realpathSync.native(repoDir);
+    realPath = fs.realpathSync.native(absolutePath);
+  } catch {
+    return {
+      source_ref: sourceRef,
+      resolved_path: relativePath,
+      status: 'missing',
+    };
+  }
+  const realRelativePath = path.relative(repoRealPath, realPath);
+  if (realRelativePath.startsWith('..') || path.isAbsolute(realRelativePath)) {
+    return {
+      source_ref: sourceRef,
+      resolved_path: null,
+      status: 'escaped_repo',
+    };
+  }
   return {
     source_ref: sourceRef,
     resolved_path: relativePath,
-    status: fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()
-      ? 'resolved'
-      : 'missing',
+    status: fs.statSync(realPath).isFile() ? 'resolved' : 'missing',
   };
 }
 

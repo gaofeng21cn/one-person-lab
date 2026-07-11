@@ -876,21 +876,41 @@ export function buildStateIndexKernelAdoptionChecks(repoDir: string) {
   };
 }
 
+const OPL_STATE_INDEX_KERNEL_SIDECAR_VERSION = 'opl-state-index-kernel-sidecar-adoption.v1';
+
+const OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY: Record<string, boolean> = {
+  opl_owns_state_index_kernel: true,
+  opl_can_store_refs_hashes_provenance: true,
+  opl_can_rebuild_sidecar_index: true,
+  sqlite_can_be_truth_source: false,
+};
+
+function isDomainSidecarStorageAuthority(field: string) {
+  return /^sqlite_can_store_[a-z0-9_]+_(body|judgment|verdict)$/.test(field);
+}
+
 function buildOplStateIndexKernelSidecarChecks(adoption: JsonRecord, adoptionFileStatus: string) {
   const authority = isRecord(adoption.authority_boundary) ? adoption.authority_boundary : {};
   const rebuildPolicy = isRecord(adoption.rebuild_policy) ? adoption.rebuild_policy : {};
-  const storageAuthorityEntries = Object.entries(authority).filter(([flag]) =>
-    flag.startsWith('sqlite_can_store_'),
+  const domainStorageAuthorityEntries = Object.entries(authority).filter(([field]) =>
+    isDomainSidecarStorageAuthority(field),
   );
-  const bodyStorageAuthorityEntries = storageAuthorityEntries.filter(([flag]) => flag.endsWith('_body'));
-  const verdictStorageAuthorityEntries = storageAuthorityEntries.filter(([flag]) =>
+  const bodyStorageAuthorityEntries = domainStorageAuthorityEntries.filter(([flag]) => flag.endsWith('_body'));
+  const verdictStorageAuthorityEntries = domainStorageAuthorityEntries.filter(([flag]) =>
     flag.endsWith('_judgment') || flag.endsWith('_verdict'),
+  );
+  const unsupportedAuthorityFields = Object.keys(authority).filter((field) =>
+    !Object.hasOwn(OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY, field)
+      && !isDomainSidecarStorageAuthority(field),
   );
   const blockers = [
     adoptionFileStatus === 'resolved' ? null : `state_index_kernel_sidecar_adoption_${adoptionFileStatus}`,
     optionalString(adoption.surface_kind) === 'opl_state_index_kernel_sidecar_adoption'
       ? null
       : 'state_index_kernel_sidecar_surface_kind_invalid',
+    optionalString(adoption.version) === OPL_STATE_INDEX_KERNEL_SIDECAR_VERSION
+      ? null
+      : 'state_index_kernel_sidecar_version_invalid',
     optionalString(adoption.owner) === 'one-person-lab'
       ? null
       : 'state_index_kernel_sidecar_owner_must_be_opl',
@@ -918,16 +938,19 @@ function buildOplStateIndexKernelSidecarChecks(adoption: JsonRecord, adoptionFil
     rebuildPolicy.delete_safe === true
       ? null
       : 'state_index_kernel_sidecar_delete_safety_missing',
-    authority.opl_owns_state_index_kernel === true
+    authority.opl_owns_state_index_kernel === OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY.opl_owns_state_index_kernel
       ? null
       : 'state_index_kernel_sidecar_opl_owner_missing',
-    authority.opl_can_store_refs_hashes_provenance === true
+    authority.opl_can_store_refs_hashes_provenance
+      === OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY.opl_can_store_refs_hashes_provenance
       ? null
       : 'state_index_kernel_sidecar_refs_only_policy_missing',
-    authority.opl_can_rebuild_sidecar_index === true
+    authority.opl_can_rebuild_sidecar_index
+      === OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY.opl_can_rebuild_sidecar_index
       ? null
       : 'state_index_kernel_sidecar_opl_rebuild_authority_missing',
-    authority.sqlite_can_be_truth_source === false
+    authority.sqlite_can_be_truth_source
+      === OPL_STATE_INDEX_KERNEL_SIDECAR_REQUIRED_AUTHORITY.sqlite_can_be_truth_source
       ? null
       : 'state_index_kernel_sidecar_truth_authority_must_be_false',
     bodyStorageAuthorityEntries.length > 0 && bodyStorageAuthorityEntries.every(([, value]) => value === false)
@@ -936,6 +959,9 @@ function buildOplStateIndexKernelSidecarChecks(adoption: JsonRecord, adoptionFil
     verdictStorageAuthorityEntries.length > 0 && verdictStorageAuthorityEntries.every(([, value]) => value === false)
       ? null
       : 'state_index_kernel_sidecar_verdict_authority_must_be_false',
+    ...unsupportedAuthorityFields.map(
+      (field) => `state_index_kernel_sidecar_authority_field_unsupported:${field}`,
+    ),
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'passed' : 'blocked',
