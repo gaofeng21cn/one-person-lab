@@ -158,6 +158,31 @@ test('agents conformance permits explicit domain ownership declarations in an OP
   assert.equal(report.reports[0].state_index_kernel_adoption_checks.status, 'passed');
 });
 
+test('agents conformance blocks malformed domain ownership declarations in an OPL sidecar', () => {
+  const repoDir = buildReadyAgentRepo();
+  const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
+  sidecar.authority_boundary.sample_owns_domain_truth = false;
+  const adoptionPath = path.join(repoDir, 'contracts', 'stage_artifact_kernel_adoption.json');
+  const adoption = parseJsonText(fs.readFileSync(adoptionPath, 'utf8')) as Record<string, any>;
+  adoption.opl_state_index_kernel_adoption = sidecar;
+  writeJson(adoptionPath, adoption);
+
+  const report = runCli([
+    'agents',
+    'conformance',
+    '--agent',
+    `sample=${repoDir}`,
+  ]).standard_domain_agent_conformance;
+
+  assert.equal(report.status, 'blocked');
+  assert.equal(
+    report.reports[0].blockers.includes(
+      'state_index_kernel_sidecar_authority_field_unsupported:sample_owns_domain_truth',
+    ),
+    true,
+  );
+});
+
 test('agents conformance blocks an OPL sidecar that claims domain truth, artifact body, or verdict authority', () => {
   const repoDir = buildReadyAgentRepo();
   const sidecar = replaceLegacyStateIndexContractWithOplSidecar(repoDir);
