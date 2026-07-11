@@ -54,7 +54,7 @@ export function resolveDomainPythonCommand(input: {
   };
   const candidates: Array<{ command: string; args: string[]; source: DomainHelperCommand['source'] }> = [];
   if (explicitValue?.trim()) {
-    candidates.push({ ...parseCommand(explicitValue), source: 'explicit_env' });
+    return { ...parseCommand(explicitValue), source: 'explicit_env', runtime_env: runtimeEnv };
   }
   const managed = input.managed_python_path ?? env.OPL_MANAGED_PYTHON;
   if (managed?.trim()) candidates.push({ command: path.resolve(managed), args: [], source: 'managed_runtime' });

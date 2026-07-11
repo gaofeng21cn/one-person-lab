@@ -37,10 +37,11 @@ test('domain task runtime owns generic run records, events, and action dispatch 
 test('domain helper runtime accepts explicit command arrays without installing a domain-local runtime', () => {
   const command = resolveDomainPythonCommand({
     command_env: 'TEST_DOMAIN_PYTHON',
-    env: { ...process.env, TEST_DOMAIN_PYTHON: JSON.stringify(['python3']) },
-    required_modules: ['json'],
+    env: { ...process.env, TEST_DOMAIN_PYTHON: JSON.stringify(['node', '--experimental-strip-types']) },
+    required_modules: ['module-that-explicit-carrier-does-not-need'],
   });
   assert.equal(command.source, 'explicit_env');
+  assert.deepEqual(command.args, ['--experimental-strip-types']);
   assert.equal(command.runtime_env.PYTHONDONTWRITEBYTECODE, '1');
 });
 
