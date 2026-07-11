@@ -43,6 +43,7 @@ import {
 } from '../../../modules/foundry-lab/private-platform-residue-owner-decisions.ts';
 import { buildAgentReadinessSummary } from '../../../modules/foundry-lab/agent-readiness.ts';
 import { buildStandardDomainAgentConformanceReport } from '../../../modules/foundry-lab/standard-domain-agent-conformance.ts';
+import { buildStandardAgentCheck } from '../../../modules/foundry-lab/standard-agent-check.ts';
 import { agentsEvidenceApplySpec } from './agent-evidence-command-spec.ts';
 import {
   buildFamilyAgentInspect,
@@ -603,6 +604,19 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
     }),
+    'agents check': {
+      usage: 'opl agents check --repo <agent_repo> [--profile <profile_id>]',
+      summary: 'Aggregate existing scaffold, generated-interface, optional profile, and local framework-export compatibility checks for one standard Agent repo.',
+      examples: [
+        'opl agents check --repo /path/to/agent',
+        'opl agents check --repo /path/to/agent --profile evidence_grounded_decision_agent_profile.v1',
+      ],
+      group: 'domain',
+      handler: (args) => buildStandardAgentCheck(getContracts(), args, {
+        loadAgentDescriptors: loadAgentDescriptorsForPackCompiler,
+        ...standardAgentPackCompilerInputs(),
+      }),
+    },
     'agents descriptors': {
       usage: 'opl agents descriptors',
       summary: 'List unified domain-agent descriptors projected from entry, stage, action, memory, skill, runtime, and artifact refs.',

@@ -126,6 +126,7 @@ const fastTestFiles = [
   'tests/src/substrate-provenance-surface.test.ts',
   ...expandTestFiles(['tests/src/family-stage-pack-registry.test.ts', 'tests/src/family-stage-integrity-metadata-contract.test.ts', 'tests/src/family-stage-admission.test.ts']),
   'tests/src/family-action-stage-route.test.ts',
+  'tests/src/standard-agent-action-stage-run.test.ts',
   'tests/src/cli/cases/system-semantic-hygiene.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-active-caller-targets.test.ts',
   'tests/src/cli/cases/domain-pack-compiler-generated-interfaces.test.ts',
@@ -201,6 +202,7 @@ const readModelGateTestFiles = [
   ...expandTestFiles([
     'tests/src/cli/cases/agents-scaffold-progress-first.test.ts', 'tests/src/cli/cases/agents-scaffold.test.ts',
     'tests/src/cli/cases/agents-scaffold-consumption-evidence.test.ts', 'tests/src/cli/cases/agents-scaffold-generation.test.ts',
+    'tests/src/cli/cases/agents-check.test.ts',
     'tests/src/cli/cases/agents-scaffold-validation-failures.test.ts',
   ]),
   'tests/src/cli/cases/standard-agent-template-consumption-read-model.test.ts',

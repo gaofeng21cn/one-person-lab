@@ -17,6 +17,7 @@
     "./json-schema-registry": "./dist/kernel/schema-registry.js",
     "./family-transition-runner": "./dist/modules/stagecraft/family-transition-runner.js",
     "./stage-run-orchestration": "./dist/modules/stagecraft/stage-run-orchestration.js",
+    "./standard-agent-action-stage-run": "./dist/modules/stagecraft/standard-agent-action-stage-run.js",
     "./stage-transition-authority": "./dist/modules/stagecraft/stage-transition-authority.js",
     "./family-shared-release": "./dist/modules/atlas/family-shared-release.js",
     "./family-domain-catalog": "./dist/modules/atlas/family-domain-catalog.js",
