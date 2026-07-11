@@ -62,10 +62,6 @@ test('framework readiness exposes stage replay missing receipt guidance without 
       open_gate_count: 0,
       pending_verify_receipt_ref_count: 0,
     },
-    omaProductionConsumptionFollowthrough: {
-      open_gate_count: 0,
-      pending_verify_long_soak_receipt_ref_count: 0,
-    },
     domainDispatchEvidenceWorkorderGroupAttentionItems: [],
     stageReplayMissingReceiptWorkorderAttentionItems: [replayAttention],
     itemLimit: 5,

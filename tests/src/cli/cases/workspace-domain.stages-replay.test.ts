@@ -119,8 +119,8 @@ test('family stage readiness exposes missing human gate replay refs as refs-only
 });
 
 test('OMA stage projection consumes the declarative manifest without a hardcoded fallback plane', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-stage-replay-state-'));
-  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-oma-stage-replay-family-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-stage-replay-state-'));
+  const familyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-agent-stage-replay-family-'));
   const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const generatedRepo = buildReadyAgentRepo();
   const omaRepo = path.join(familyRoot, 'opl-meta-agent');

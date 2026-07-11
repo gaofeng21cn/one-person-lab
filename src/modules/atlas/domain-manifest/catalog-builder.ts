@@ -35,7 +35,6 @@ export type DomainManifestCatalog = {
     items: DomainManifestCurrentnessOwnerAction[];
     authority_boundary: Record<string, unknown>;
   };
-  opl_meta_agent_registry?: Record<string, unknown>;
   notes: string[];
 };
 

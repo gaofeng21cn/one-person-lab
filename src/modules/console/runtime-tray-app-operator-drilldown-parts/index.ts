@@ -22,7 +22,6 @@ export {
   buildCodexAppRuntimeEvidenceActionRoutes,
   buildCodexAppRuntimeRole,
 } from './codex-app-runtime-role.ts';
-export { buildOmaProductionConsumptionActionRoutes } from './oma-production-consumption.ts';
 export {
   appReleaseUserPathEvidenceSourceRef,
   buildAppReleaseUserPathEvidenceActionRoutes,

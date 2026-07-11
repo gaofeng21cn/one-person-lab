@@ -27,11 +27,9 @@ function buildOmaScaleoutTarget(domainId: string, receiptKind: 'owner_receipt' |
 
 export function createOmaContractFixture(
   fixtureRoot: string,
-  options: { productionAcceptance?: boolean } = {},
 ) {
   const repoDir = path.join(fixtureRoot, 'opl-meta-agent');
   const contractsDir = path.join(repoDir, 'contracts');
-  const productionAcceptanceDir = path.join(contractsDir, 'production_acceptance');
   fs.mkdirSync(contractsDir, { recursive: true });
   writeFakeOmaGeneratedSurfacePack(repoDir);
   writeJson(path.join(contractsDir, 'opl_domain_manifest_registration.json'), {
@@ -106,75 +104,11 @@ export function createOmaContractFixture(
       ],
     },
   });
-  if (options.productionAcceptance) {
-    fs.mkdirSync(productionAcceptanceDir, { recursive: true });
-    writeJson(path.join(productionAcceptanceDir, 'meta-agent-production-acceptance.json'), {
-      surface_kind: 'opl_meta_agent_production_acceptance_evidence',
-      schema_version: 1,
-      domain_id: 'opl-meta-agent',
-      owner: 'opl-meta-agent',
-      evidence_status: 'closed_by_domain_owned_acceptance_receipt',
-      receipt_ref: 'production-acceptance-receipt:opl-meta-agent/fixture',
-      refs: {
-        production_consumption_receipt_refs: ['opl://oma-production-consumption/fixture-long-soak'],
-        long_soak_refs: ['long_soak_ref://opl-meta-agent/production-consumption/fixture-window'],
-        historical_typed_blocker_refs: ['typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending-fixture'],
-      },
-      stage_replay_human_gate_blocker_summary: {
-        surface_kind: 'opl_meta_agent_stage_replay_human_gate_blocker_summary',
-        owner: 'opl-meta-agent',
-        role: 'domain_owned_body_free_typed_blocker_for_stage_replay_missing_receipt',
-        target_identity: {
-          domain_id: 'opl-meta-agent',
-          stage_id: 'stage-decomposition',
-          missing_ref: 'human_gate:oma_baseline_owner_review',
-        },
-        missing_ref_kind: 'human_gate_ref',
-        payload_path: 'typed_blocker_path',
-        typed_blocker_refs: [
-          'oma-typed-blocker:stage-replay-human-gate:stage-decomposition:oma_baseline_owner_review/baseline-owner-review-receipt-pending',
-        ],
-        source_ref:
-          'contracts/production_acceptance/meta-agent-production-acceptance.json#/stage_replay_human_gate_blocker_summary',
-        success_claimed: false,
-        human_gate_approval_claimed: false,
-        domain_ready_claimed: false,
-        production_ready_claimed: false,
-        authority_boundary: {
-          refs_only: true,
-          can_requery_human: false,
-          can_write_owner_receipt: false,
-          can_write_target_domain_truth: false,
-          can_promote_default_agent_without_gate: false,
-          can_close_replay_success_path: false,
-        },
-      },
-      production_consumption_followthrough: {
-        status: 'production_consumption_refs_projected',
-        production_consumption_ready: true,
-        production_consumption_ready_semantics:
-          'refs_only_current_cohort_consumption_gate_ready_not_production_readiness_verdict',
-        production_readiness_verdict_claimed: false,
-        long_soak_refs: ['long_soak_ref://opl-meta-agent/production-consumption/fixture-window'],
-        verified_receipt_refs: ['opl://oma-production-consumption/fixture-long-soak'],
-        historical_typed_blocker_refs: ['typed_blocker_ref://opl-meta-agent/production-consumption/long-soak-pending-fixture'],
-        authority_boundary: {
-          refs_only: true,
-          can_claim_domain_ready: false,
-          can_claim_production_ready: false,
-          can_close_long_soak_gate: false,
-          can_write_opl_runtime_state: false,
-          can_promote_default_agent_without_gate: false,
-        },
-      },
-    });
-  }
   return repoDir;
 }
 
 export function createFamilyWorkspaceFixture(
   fixtureRoot: string,
-  options: { omaProductionAcceptance?: boolean } = {},
 ) {
   for (const [project, domain_id, domain_label] of [
     ['med-autoscience', 'med-autoscience', 'MedAutoScience'],
@@ -188,8 +122,6 @@ export function createFamilyWorkspaceFixture(
       domain_label,
     });
   }
-  const omaRepoDir = createOmaContractFixture(fixtureRoot, {
-    productionAcceptance: options.omaProductionAcceptance,
-  });
+  const omaRepoDir = createOmaContractFixture(fixtureRoot);
   return { workspaceRoot: fixtureRoot, omaRepoDir };
 }

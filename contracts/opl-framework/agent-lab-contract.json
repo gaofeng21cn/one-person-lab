@@ -1318,6 +1318,14 @@
     "status": "ready_for_developer_mode_patrol_consumption",
     "developer_mode_required": true,
     "refs_only": true,
+    "evaluation_manifest_loading": {
+      "schema_ref": "contracts/opl-framework/standard-agent-evaluation-manifest.schema.json",
+      "source_policy": "explicit_domain_owned_manifest_paths_only",
+      "absence_policy": "no_manifest_declared_yields_empty_generic_projection",
+      "invalid_manifest_policy": "fail_closed_contract_shape_invalid",
+      "framework_role": "schema_loader_validation_and_generic_renderer_only",
+      "domain_role": "scenario_oracle_scorecard_route_and_drill_owner"
+    },
     "input_refs": [
       "developer_mode_projection_ref",
       "repo_permission_ref",

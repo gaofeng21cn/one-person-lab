@@ -13,7 +13,6 @@ import {
   compileStandardAgentStageManifest,
 } from '../../src/modules/pack/index.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
-const withOplMetaAgentDescriptorEntry = <T>(catalog: T, ..._args: unknown[]) => catalog;
 import { buildReadyAgentRepo, retargetReadyRepo } from './cli/cases/agents-conformance-fixtures.ts';
 
 type JsonRecord = Record<string, any>;
@@ -381,85 +380,6 @@ test('family reports isolate unsupported stage fields as typed repo blockers', a
   }
 });
 
-test('OMA hosted descriptor consumes the generated stage plane without a legacy fallback', () => {
-  const root = fixture('opl-meta-agent', 'oma');
-  writeJson(root, 'contracts/generated_surface_handoff.json', {
-    generated_surface_owner: 'one-person-lab',
-    domain_repo_can_own_generated_surface: false,
-  });
-  writeJson(root, 'contracts/functional_privatization_audit.json', {
-    surface_kind: 'functional_privatization_audit',
-    modules: [],
-  });
-
-  const catalog = withOplMetaAgentDescriptorEntry({
-    summary: {
-      total_projects_count: 0,
-      resolved_count: 0,
-      failed_count: 0,
-    },
-    projects: [],
-    notes: [],
-    opl_meta_agent_registry: {
-      repo_dir: root,
-      summary: {},
-    },
-  } as any);
-  const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
-  assert.equal(entry?.status, 'resolved');
-  assert.equal(entry?.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id, 'oma');
-  assert.equal(entry?.manifest?.session_continuity?.domain_agent_id, 'oma');
-  assert.equal(entry?.manifest?.standard_domain_agent_skeleton?.agent_id, 'oma');
-  assert.equal(entry?.manifest?.family_stage_control_plane?.plane_id, 'opl_meta_agent_stage_control_plane');
-  assert.equal(
-    entry?.manifest?.standard_domain_agent_skeleton?.contracts?.descriptor_refs?.includes(
-      'agent/stages/manifest.json',
-    ),
-    true,
-  );
-  assert.equal(
-    entry?.manifest?.standard_domain_agent_skeleton?.contracts?.descriptor_refs?.includes(
-      'contracts/stage_control_plane.json',
-    ),
-    false,
-  );
-  assert.equal(
-    entry?.manifest?.family_transition_spec_descriptor?.spec_ref,
-    'agent/stages/manifest.json#stages',
-  );
-});
-
-test('OMA hosted descriptor rejects non-object normalized handoff and audit sources', async (t) => {
-  for (const ref of [
-    'contracts/generated_surface_handoff.json',
-    'contracts/functional_privatization_audit.json',
-  ]) {
-    await t.test(ref, () => {
-      const root = fixture('opl-meta-agent', 'oma');
-      writeJson(root, 'contracts/generated_surface_handoff.json', {
-        generated_surface_owner: 'one-person-lab',
-        domain_repo_can_own_generated_surface: false,
-      });
-      writeJson(root, 'contracts/functional_privatization_audit.json', {
-        surface_kind: 'functional_privatization_audit',
-        modules: [],
-      });
-      writeJson(root, ref, []);
-
-      const catalog = withOplMetaAgentDescriptorEntry({
-        summary: { total_projects_count: 0, resolved_count: 0, failed_count: 0 },
-        projects: [],
-        notes: [],
-        opl_meta_agent_registry: { repo_dir: root, summary: {} },
-      } as any);
-      const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
-
-      assert.equal(entry?.status, 'invalid_manifest');
-      assert.equal(entry?.manifest, null);
-    });
-  }
-});
-
 test('standard Agent repo contract readout blocks active private generic residue', () => {
   const root = fixture('target-private-residue');
   writeJson(root, 'contracts/functional_privatization_audit.json', {
@@ -483,32 +403,6 @@ test('standard Agent repo contract readout blocks active private generic residue
   assert.deepEqual(readout.blockers, [
     'functional_privatization_audit_has_generic_residue_or_blocker',
   ]);
-});
-
-test('OMA hosted descriptor rejects a repo with non-OMA canonical identity', () => {
-  const root = fixture('med-autogrant', 'mag');
-  writeJson(root, 'contracts/generated_surface_handoff.json', {
-    generated_surface_owner: 'one-person-lab',
-    domain_repo_can_own_generated_surface: false,
-  });
-  writeJson(root, 'contracts/functional_privatization_audit.json', {
-    surface_kind: 'functional_privatization_audit',
-    modules: [],
-  });
-
-  const catalog = withOplMetaAgentDescriptorEntry({
-    summary: {
-      total_projects_count: 0,
-      resolved_count: 0,
-      failed_count: 0,
-    },
-    projects: [],
-    notes: [],
-  } as any, [{ requested_agent_id: 'oma', repo_dir: root }]);
-  const entry = catalog.projects.find((candidate: JsonRecord) => candidate.project_id === 'opl-meta-agent');
-
-  assert.equal(entry?.status, 'invalid_manifest');
-  assert.equal(entry?.manifest, null);
 });
 
 test('standard Agent repo contracts reject generated-surface authority escalation', async (t) => {

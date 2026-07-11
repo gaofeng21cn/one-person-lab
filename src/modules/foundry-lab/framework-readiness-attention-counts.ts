@@ -15,7 +15,6 @@ export function splitOperatorAttentionCounts(input: {
   stageSourceScopeMissingWorkorderCount?: number;
   stageRuntimeEventMissingWorkorderCount?: number;
   appReleaseUserPathAttentionCount?: number;
-  omaProductionConsumptionAttentionCount?: number;
   developerModeLiveCloseoutAttentionCount?: number;
   operatorPayloadRequiredAttentionCount?: number;
 }) {
@@ -24,7 +23,6 @@ export function splitOperatorAttentionCounts(input: {
     + numberValue(input.stageSourceScopeMissingWorkorderCount)
     + numberValue(input.stageRuntimeEventMissingWorkorderCount)
     + numberValue(input.appReleaseUserPathAttentionCount)
-    + numberValue(input.omaProductionConsumptionAttentionCount)
     + numberValue(input.developerModeLiveCloseoutAttentionCount);
   const operatorActionableAttentionCount =
     numberValue(input.openTailCount)
@@ -32,7 +30,6 @@ export function splitOperatorAttentionCounts(input: {
     + numberValue(input.stageSourceScopeMissingWorkorderCount)
     + numberValue(input.stageRuntimeEventMissingWorkorderCount)
     + numberValue(input.appReleaseUserPathAttentionCount)
-    + numberValue(input.omaProductionConsumptionAttentionCount)
     + numberValue(input.developerModeLiveCloseoutAttentionCount);
   const domainBlockedAttentionCount =
     numberValue(input.evidenceEnvelopeBlockedCount)

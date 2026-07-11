@@ -44,10 +44,6 @@ test('framework readiness keeps raw domain dispatch workorders out of default ne
       open_gate_count: 0,
       pending_verify_receipt_ref_count: 0,
     },
-    omaProductionConsumptionFollowthrough: {
-      open_gate_count: 0,
-      pending_verify_long_soak_receipt_ref_count: 0,
-    },
     domainDispatchEvidenceWorkorderGroupAttentionItems: [{
       owner: 'med-autoscience',
       canonical_domain_id: 'med-autoscience',
@@ -100,10 +96,6 @@ test('framework readiness keeps raw stage replay receipt workorders out of defau
     appReleaseUserPathEvidence: {
       open_gate_count: 0,
       pending_verify_receipt_ref_count: 0,
-    },
-    omaProductionConsumptionFollowthrough: {
-      open_gate_count: 0,
-      pending_verify_long_soak_receipt_ref_count: 0,
     },
     domainDispatchEvidenceWorkorderGroupAttentionItems: [],
     stageReplayMissingReceiptWorkorderAttentionItems: [{
@@ -169,10 +161,6 @@ test('framework readiness keeps blocked refs-only attention out of executable ne
     appReleaseUserPathEvidence: {
       open_gate_count: 0,
       pending_verify_receipt_ref_count: 0,
-    },
-    omaProductionConsumptionFollowthrough: {
-      open_gate_count: 0,
-      pending_verify_long_soak_receipt_ref_count: 0,
     },
     familyStallLineage: {
       surface_kind: 'opl_family_stall_lineage',

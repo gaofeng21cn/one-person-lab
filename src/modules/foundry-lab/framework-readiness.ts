@@ -248,9 +248,6 @@ export async function buildFrameworkReadinessSummary(
   const developerModeLiveCloseoutEvidence = record(
     appEvidenceAfterContract.developer_mode_live_closeout_evidence,
   );
-  const omaProductionConsumptionFollowthrough = record(
-    appEvidenceAfterContract.oma_production_consumption_followthrough,
-  );
   const workstreamOperatingLoop = record(
     record(appOperatorDrilldown.attention_first_payload).workstream_operating_loop,
   );
@@ -446,7 +443,6 @@ export async function buildFrameworkReadinessSummary(
     memoryArtifactLifecycleEvidence,
     appReleaseUserPathEvidence,
     developerModeLiveCloseoutEvidence,
-    omaProductionConsumptionFollowthrough,
     workstreamOperatingLoop,
     familyStallLineage,
     domainDispatchEvidenceWorkorderGroupAttentionItems,
@@ -884,10 +880,6 @@ export async function buildFrameworkReadinessSummary(
       developer_mode_live_closeout_evidence: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,
         ...developerModeLiveCloseoutEvidence,
-      },
-      oma_production_consumption_followthrough: {
-        source_command: SOURCE_COMMANDS.app_operator_drilldown,
-        ...omaProductionConsumptionFollowthrough,
       },
       workstream_operating_loop: {
         source_command: SOURCE_COMMANDS.app_operator_drilldown,

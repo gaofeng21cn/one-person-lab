@@ -22,6 +22,15 @@ test('Agent Lab Developer Mode contract requires verified risk-tier promotion re
   const contract = readAgentLabContract();
   const routeSurface = contract.developer_mode_repair_route_surface;
 
+  assert.deepEqual(routeSurface.evaluation_manifest_loading, {
+    schema_ref: 'contracts/opl-framework/standard-agent-evaluation-manifest.schema.json',
+    source_policy: 'explicit_domain_owned_manifest_paths_only',
+    absence_policy: 'no_manifest_declared_yields_empty_generic_projection',
+    invalid_manifest_policy: 'fail_closed_contract_shape_invalid',
+    framework_role: 'schema_loader_validation_and_generic_renderer_only',
+    domain_role: 'scenario_oracle_scorecard_route_and_drill_owner',
+  });
+
   assert.equal(
     routeSurface.dynamic_route_builder.risk_tier_auto_promotion_ref_policy,
     'verified_agent_lab_risk_tier_promotion_ledger_receipt_required',

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.local/contracts/standard-agent-evaluation-manifest.schema.json",
+  "title": "Standard Agent Evaluation Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["surface_kind", "version", "domain_id", "developer_mode"],
+  "properties": {
+    "surface_kind": {
+      "const": "opl_standard_agent_evaluation_manifest"
+    },
+    "version": {
+      "const": "opl-standard-agent-evaluation-manifest.v1"
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "developer_mode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repair_routes", "closeout_drills"],
+      "properties": {
+        "repair_routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "route_ref",
+              "route_mode",
+              "route_status",
+              "repo_ref",
+              "issue_ref",
+              "blocker_ref",
+              "owner_route_ref",
+              "repo_developer_match_required",
+              "candidate_fix_ref",
+              "repo_worktree_ref",
+              "branch_ref",
+              "pr_ref",
+              "acceptance_evidence_ref",
+              "follow_up_queue_item_ref"
+            ],
+            "properties": {
+              "route_ref": { "type": "string", "minLength": 1 },
+              "route_mode": { "enum": ["repo_developer_direct_fix", "fork_pull_request", "observe_only"] },
+              "route_status": { "type": "string", "minLength": 1 },
+              "repo_ref": { "type": "string", "minLength": 1 },
+              "issue_ref": { "type": "string", "minLength": 1 },
+              "blocker_ref": { "type": "string", "minLength": 1 },
+              "owner_route_ref": { "type": "string", "minLength": 1 },
+              "github_actor_ref": { "type": ["string", "null"] },
+              "repo_developer_match_required": { "type": "boolean" },
+              "candidate_fix_ref": { "type": "string", "minLength": 1 },
+              "repo_worktree_ref": { "type": "string", "minLength": 1 },
+              "branch_ref": { "type": "string", "minLength": 1 },
+              "pr_ref": { "type": "string", "minLength": 1 },
+              "acceptance_evidence_ref": { "type": "string", "minLength": 1 },
+              "follow_up_queue_item_ref": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "closeout_drills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["developer_mode_projection", "repo_permission", "patrol_observation_refs"],
+            "properties": {
+              "developer_mode_projection": { "type": "object" },
+              "repo_permission": { "type": "object" },
+              "target_authority": { "type": ["object", "null"] },
+              "patrol_observation_refs": { "oneOf": [{ "type": "array" }, { "type": "object" }] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -6,10 +6,6 @@ import {
 } from '../../ledger/index.ts';
 import { buildOwnerHandoffPacket } from './owner-handoff-packet.ts';
 import {
-  buildOmaProductionConsumptionFollowthroughAttention,
-  omaProductionConsumptionNextStep,
-} from './oma-production-consumption.ts';
-import {
   appReleaseUserPathEvidenceNextStep,
 } from './app-release-user-path.ts';
 import {
@@ -140,8 +136,6 @@ function evidenceAfterContractAttention(operatorProjection: JsonRecord) {
   const domainOwnerPayloadSummary =
     buildDomainOwnerPayloadSummaryAttention(operatorProjection);
   const domainDispatchWorkorders = domainDispatchEvidenceWorkorders(operatorProjection);
-  const omaProductionConsumption =
-    buildOmaProductionConsumptionFollowthroughAttention(operatorProjection);
   const appReleaseUserPathEvidence = appReleaseUserPathEvidenceSurface(operatorProjection);
   const developerModeLiveCloseoutEvidence =
     buildDeveloperModeLiveCloseoutEvidenceAttention(operatorProjection);
@@ -150,8 +144,6 @@ function evidenceAfterContractAttention(operatorProjection: JsonRecord) {
     + numberValue(summary.evidence_envelope_blocked_count)
   );
   const domainDispatchAttentionCount = numberValue(summary.domain_dispatch_attention_count);
-  const omaProductionConsumptionAttentionCount =
-    numberValue(omaProductionConsumption.open_gate_count);
   const appReleaseUserPathOpenGateCount =
     numberValue(appReleaseUserPathEvidence.open_gate_count);
   const appReleaseUserPathPendingVerifyCount =
@@ -165,11 +157,9 @@ function evidenceAfterContractAttention(operatorProjection: JsonRecord) {
     evidenceEnvelopeBlockedCount: numberValue(summary.evidence_envelope_blocked_count),
     domainDispatchAttentionCount,
     appReleaseUserPathAttentionCount,
-    omaProductionConsumptionAttentionCount,
     operatorPayloadRequiredAttentionCount:
       numberValue(summary.evidence_envelope_open_count)
       + appReleaseUserPathAttentionCount
-      + omaProductionConsumptionAttentionCount
       + developerModeLiveCloseoutAttentionCount,
     developerModeLiveCloseoutAttentionCount,
   });
@@ -219,9 +209,6 @@ function evidenceAfterContractAttention(operatorProjection: JsonRecord) {
     developer_mode_live_closeout_evidence: developerModeLiveCloseoutEvidence,
     developer_mode_live_closeout_attention_count:
       developerModeLiveCloseoutAttentionCount,
-    oma_production_consumption_followthrough: omaProductionConsumption,
-    oma_production_consumption_followthrough_open_gate_count:
-      omaProductionConsumptionAttentionCount,
     domain_dispatch_attention_count: domainDispatchAttentionCount,
     domain_dispatch_typed_blocker_stage_count:
       numberValue(summary.domain_dispatch_attention_typed_blocker_stage_count),
@@ -252,7 +239,6 @@ function evidenceAfterContractAttention(operatorProjection: JsonRecord) {
       'domain_dispatch_evidence',
       'stage_production_evidence',
       'runtime_manager_route_support',
-      'opl_meta_agent_workbench_refs',
       'app_release_user_path_evidence',
       'developer_mode_live_closeout_evidence',
     ],
@@ -413,7 +399,6 @@ function evidenceNextSteps(operatorProjection: JsonRecord) {
   const appReleaseUserPathEvidence = record(attention.app_release_user_path_evidence);
   const developerModeLiveCloseoutEvidence =
     record(attention.developer_mode_live_closeout_evidence);
-  const omaProductionConsumption = record(attention.oma_production_consumption_followthrough);
   const codexAppRuntimeRole = record(operatorProjection.codex_app_runtime_role);
   const codexAppRuntimeFollowthrough =
     record(codexAppRuntimeRole.production_evidence_followthrough);
@@ -431,12 +416,6 @@ function evidenceNextSteps(operatorProjection: JsonRecord) {
     || numberValue(appReleaseUserPathEvidence.pending_verify_receipt_ref_count) > 0
   ) {
     steps.push(appReleaseUserPathEvidenceNextStep(appReleaseUserPathEvidence));
-  }
-  if (
-    numberValue(omaProductionConsumption.open_gate_count) > 0
-    || numberValue(omaProductionConsumption.pending_verify_long_soak_receipt_ref_count) > 0
-  ) {
-    steps.push(omaProductionConsumptionNextStep(omaProductionConsumption));
   }
   if (numberValue(developerModeLiveCloseoutEvidence.attention_count) > 0) {
     steps.push(developerModeLiveCloseoutEvidenceNextStep(developerModeLiveCloseoutEvidence));

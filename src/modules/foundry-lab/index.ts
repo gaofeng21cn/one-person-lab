@@ -7,7 +7,8 @@ export const OPL_FOUNDRY_LAB_SOURCE_MODULE = {
 
 // Public cross-module surface generated from existing module consumers.
 export { buildAgentLabDomainFeedbackSelfEvolutionReadModel } from './agent-lab-control-read-models.ts';
-export { buildDeveloperModeAgentLabRepairRouteReadModel } from './agent-lab-developer-mode.ts';
+export { buildDeveloperModeAgentLabRepairRoute, buildDeveloperModeAgentLabRepairRouteReadModel } from './agent-lab-developer-mode.ts';
+export { loadStandardAgentEvaluationManifest, loadStandardAgentEvaluationManifests, validateStandardAgentEvaluationManifest } from './standard-agent-evaluation-manifest.ts';
 export { buildEvidenceGroundedDecisionAgentProfileFoundryLabEvalSurface } from './evidence-grounded-profile-eval.ts';
 export { buildFeedbackOpsReadModel } from './agent-lab-feedbackops.ts';
 export { buildAgentDefaultCallerReadinessForRepo } from './agent-platform-surface-ownership.ts';
@@ -16,9 +17,4 @@ export { defaultCallerSurfaceGates } from './default-caller-surface-gates.ts';
 export { buildStandardDomainAgentSkeletonInspection } from './family-domain-agent-skeleton.ts';
 export { splitOperatorAttentionCounts } from './framework-readiness-attention-counts.ts';
 export { buildFunctionalSourcePurityTailReadModel, compactFunctionalPrivatizationAuditEnvelope } from './functional-privatization-envelope.ts';
-export { OMA_PRODUCTION_CONSUMPTION_ACTION_ID, OMA_PRODUCTION_CONSUMPTION_ACTION_KIND, omaProductionConsumptionPayloadRefHints, omaProductionConsumptionPayloadTemplate, omaProductionConsumptionPayloadWorkorder, omaProductionConsumptionRuntimeActionExecuteCommand } from './oma-production-consumption-action.ts';
-export {
-  buildOplMetaAgentRegistryExtension,
-  withOplMetaAgentRegistryExtension,
-} from './opl-meta-agent-consumption.ts';
 export { buildStandardDomainAgentTemplateConsumptionReadModel } from './standard-domain-agent-scaffold.ts';

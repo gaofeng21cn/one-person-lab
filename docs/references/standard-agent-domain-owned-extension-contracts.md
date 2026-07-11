@@ -21,6 +21,14 @@ OPL Foundry Lab 只解释和验证这些字段。文件缺失、结构无效或 
 
 仓内 `example-domain-longline-suite.json` 是 blocked framework fixture，只验证 engine shape，不是 MAS/MAG/RCA 的 live、quality 或 acceptance evidence。
 
+Developer Mode route/drill 由 domain/eval pack 的
+`opl_standard_agent_evaluation_manifest` 提供，Framework schema 位于
+`contracts/opl-framework/standard-agent-evaluation-manifest.schema.json`。调用方必须显式传入
+domain-owned manifest 路径；未声明 manifest 时通用 read-model 返回空 routes/drills，不注入默认 domain
+样例；路径不可读或结构无效时以 `contract_shape_invalid` fail closed。OPL 只持 loader、shape
+validation、通用 route classifier 与 renderer，不持 MAS/RCA/OMA 的 scenario、oracle、scorecard 或静态
+passed 结果。
+
 ## Transition oracle
 
 唯一 canonical ABI 是 `domain_transition_oracle`。Domain repo 持有 transition semantics、guard meaning、owner action 与质量/领域判断；OPL Stagecraft 只把表格和 fixture 适配到通用 matrix runner。MAG 旧 `mag_grant_transition_oracle` 不再是 OPL compatibility surface。

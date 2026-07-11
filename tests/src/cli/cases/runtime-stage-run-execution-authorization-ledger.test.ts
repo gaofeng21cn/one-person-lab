@@ -66,8 +66,6 @@ function recordAuthorization(
 
 test('single-source runtime payload commands reject repeated payload flags', () => {
   const commands = [
-    ['runtime', 'oma-app-live-path', 'record'],
-    ['runtime', 'oma-production-consumption', 'record'],
     ['runtime', 'stage-candidate-portfolio', 'summary'],
     ['runtime', 'stage-replay-missing-receipt', 'record'],
     ['runtime', 'stage-run-authorization', 'record'],

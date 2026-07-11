@@ -29,7 +29,6 @@ export const SUMMARY_DRILLDOWN_KEYS = [
   'runtime_visualization_projection',
   'domain_legacy_cleanup_plan_refs',
   'standard_agent_template_consumption_refs',
-  'opl_meta_agent_workbench_refs',
   'codex_app_runtime_role',
   'app_release_user_path_evidence',
   'developer_mode_live_closeout_evidence',

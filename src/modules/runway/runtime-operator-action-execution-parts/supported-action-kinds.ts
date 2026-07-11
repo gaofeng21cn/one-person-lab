@@ -19,7 +19,6 @@ export const SUPPORTED_OPL_ACTION_ROUTE_KINDS = [
   'domain_owner_payload_summary_receipt_verify',
   'owner_evidence_sustained_consumption_receipt_record',
   'owner_evidence_sustained_consumption_receipt_verify',
-  'oma_production_consumption_receipt_record',
   'provider_worker_start',
   'provider_worker_restart',
   'progress_first_attempt_supervision',

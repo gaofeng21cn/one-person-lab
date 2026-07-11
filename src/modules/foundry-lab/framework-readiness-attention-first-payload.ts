@@ -51,7 +51,6 @@ export function frameworkAttentionFirstPayload(input: {
   memoryArtifactLifecycleEvidence: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
   developerModeLiveCloseoutEvidence: JsonRecord;
-  omaProductionConsumptionFollowthrough: JsonRecord;
   workstreamOperatingLoop: JsonRecord;
   familyStallLineage: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
@@ -86,9 +85,6 @@ export function frameworkAttentionFirstPayload(input: {
     openSafeActionPayloadRequiredCount: input.openSafeActionPayloadRequiredCount,
     openSafeActionPayloadFreeCount: input.openSafeActionPayloadFreeCount,
   });
-  const omaOpenGateCount = numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count);
-  const omaPendingVerifyLongSoakCount =
-    numberValue(input.omaProductionConsumptionFollowthrough.pending_verify_long_soak_receipt_ref_count);
   const domainOwnerPayloadSummaryNamingHygieneBlockerCount =
     numberValue(input.domainOwnerPayloadSummaryAttention.naming_hygiene_blocker_count);
   const blockers = frameworkReadinessBlockers(input);
@@ -162,15 +158,6 @@ export function frameworkAttentionFirstPayload(input: {
           drilldown_ref: '/framework_readiness/app_release_user_path_evidence',
         }]
       : []),
-    ...(omaOpenGateCount + omaPendingVerifyLongSoakCount > 0
-      ? [{
-          warning_id: 'oma_production_consumption_followthrough',
-          count: omaOpenGateCount + omaPendingVerifyLongSoakCount,
-          open_gate_count: omaOpenGateCount,
-          pending_verify_long_soak_receipt_ref_count: omaPendingVerifyLongSoakCount,
-          drilldown_ref: '/framework_readiness/oma_production_consumption_followthrough',
-        }]
-      : []),
   ];
   const nextSafeActions = frameworkAttentionNextSafeActions({
     blockers,
@@ -181,7 +168,6 @@ export function frameworkAttentionFirstPayload(input: {
     ownerHandoffPacket: input.ownerHandoffPacket,
     appReleaseUserPathEvidence: input.appReleaseUserPathEvidence,
     developerModeLiveCloseoutEvidence: input.developerModeLiveCloseoutEvidence,
-    omaProductionConsumptionFollowthrough: input.omaProductionConsumptionFollowthrough,
     familyStallLineage: input.familyStallLineage,
     domainDispatchEvidenceWorkorderGroupAttentionItems:
       input.domainDispatchEvidenceWorkorderGroupAttentionItems,
@@ -313,8 +299,6 @@ export function frameworkAttentionFirstPayload(input: {
       input.appReleaseUserPathEvidence,
     developer_mode_live_closeout_evidence:
       input.developerModeLiveCloseoutEvidence,
-    oma_production_consumption_followthrough:
-      input.omaProductionConsumptionFollowthrough,
     workstream_operating_loop:
       input.workstreamOperatingLoop,
     family_stall_lineage: input.familyStallLineage,

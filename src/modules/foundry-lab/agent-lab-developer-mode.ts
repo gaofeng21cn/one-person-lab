@@ -2,6 +2,7 @@ import { AGENT_LAB_AUTHORITY_BOUNDARY } from './agent-lab-authority.ts';
 import { listDeveloperModeCloseoutReceipts, type DeveloperModeCloseoutReceipt } from './developer-mode-closeout-ledger.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { stableId } from '../../kernel/stable-id.ts';
+import { loadStandardAgentEvaluationManifests } from './standard-agent-evaluation-manifest.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -707,119 +708,36 @@ export function buildDeveloperModeAgentLabRepairRoute(input: DeveloperModeAgentL
   };
 }
 
-export function buildDeveloperModeAgentLabRepairRouteReadModel() {
-  const routes = [
-    {
-      route_ref: 'developer-mode-repair-route:mas/repo-developer-direct-fix',
-      route_mode: 'repo_developer_direct_fix',
-      route_status: 'candidate_fix_ref_ready',
-      domain_id: 'med-autoscience',
-      repo_ref: 'github-repo:gaofeng21cn/med-autoscience',
-      issue_ref: 'issue-ref:mas/agent-call-interface-blocker',
-      blocker_ref: 'blocker-ref:mas/agent-call-interface-regression',
-      owner_route_ref: 'owner-route:med-autoscience/repo-developer',
-      github_actor_ref: 'github-user:gaofeng21cn',
-      repo_developer_match_required: true,
-      candidate_fix_ref: 'candidate-fix-ref:mas/agent-call-interface-blocker',
-      repo_worktree_ref: 'repo-worktree-ref:med-autoscience/codex/developer-mode-repair',
-      branch_ref: 'git-branch-ref:med-autoscience/codex/developer-mode-repair',
-      pr_ref: 'github-pr-ref:med-autoscience/developer-mode-repair-review',
-      acceptance_evidence_ref: 'acceptance-evidence-ref:mas/agent-call-interface-tests',
-      follow_up_queue_item_ref: 'queue-item-ref:agent-lab/developer-mode/mas-agent-call-interface-blocker',
+export function buildDeveloperModeAgentLabRepairRouteReadModel(input: {
+  evaluationManifestPaths?: string[];
+} = {}) {
+  const evaluationManifests = loadStandardAgentEvaluationManifests(
+    input.evaluationManifestPaths ?? [],
+  );
+  const routes = evaluationManifests.flatMap((manifest) =>
+    manifest.repair_routes.map((route) => ({
+      ...route,
+      domain_id: manifest.domain_id,
+      evaluation_manifest_ref: manifest.manifest_ref,
       authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
-    },
-    {
-      route_ref: 'developer-mode-repair-route:rca/fork-pr',
-      route_mode: 'fork_pull_request',
-      route_status: 'pull_request_ref_ready',
-      domain_id: 'redcube-ai',
-      repo_ref: 'github-repo:redcube-ai/redcube-ai',
-      issue_ref: 'issue-ref:rca/patrol-render-blocker',
-      blocker_ref: 'blocker-ref:rca/render-review-regression',
-      owner_route_ref: 'owner-route:redcube-ai/fork-pr',
-      github_actor_ref: 'github-user:developer-mode-operator',
-      repo_developer_match_required: false,
-      candidate_fix_ref: 'candidate-fix-ref:rca/patrol-render-blocker',
-      repo_worktree_ref: 'repo-worktree-ref:redcube-ai/fork/codex/developer-mode-patrol',
-      branch_ref: 'git-branch-ref:fork/redcube-ai/codex/developer-mode-patrol',
-      pr_ref: 'github-pr-ref:redcube-ai/patrol-render-blocker',
-      acceptance_evidence_ref: 'acceptance-evidence-ref:rca/render-review-regression-tests',
-      follow_up_queue_item_ref: 'queue-item-ref:agent-lab/developer-mode/rca-render-review-regression',
-      authority_boundary: DEVELOPER_MODE_REPAIR_AUTHORITY_BOUNDARY,
-    },
-  ];
-  const staticCloseoutDrills: DeveloperModeLiveCloseoutRoute[] = [
-    buildDeveloperModeAgentLabRepairRoute({
-      developer_mode_projection: {
-        surface_id: 'opl_developer_mode',
-        status: 'limited',
-        effective_state: 'active_mixed_routes',
-        allowed_route: 'mixed_direct_and_pr',
-        mode: 'developer_apply_safe',
-      },
-      repo_permission: {
-        target_id: 'med-autoscience',
-        repo: 'gaofeng21cn/med-autoscience',
-        repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
-        status: 'ready',
-        permission: 'write',
-        direct_write_allowed: true,
-        allowed_route: 'direct_repo_fix',
-      },
-      patrol_observation_refs: {
-        patrol_observation_ref: 'patrol-observation-ref:mas/developer-mode-direct-fix-drill',
-        issue_ref: 'issue-ref:mas/developer-mode-direct-fix-drill',
-        blocker_ref: 'blocker-ref:mas/agent-call-interface-regression',
-        diff_ref: 'diff-ref:mas/developer-mode-direct-fix-drill',
-        verification_refs: [
-          'test-result-ref:mas/developer-mode-direct-fix-focused',
-          'test-result-ref:mas/no-forbidden-write-focused',
-        ],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:mas/developer-mode-direct-fix-drill',
-        commit_ref: 'git-commit-ref:mas/developer-mode-direct-fix-drill',
-        owner_acceptance_ref: 'external-owner-ref:mas/developer-mode-direct-fix-accepted',
-      },
-    }),
-    buildDeveloperModeAgentLabRepairRoute({
-      developer_mode_projection: {
-        surface_id: 'opl_developer_mode',
-        status: 'limited',
-        effective_state: 'active_mixed_routes',
-        allowed_route: 'mixed_direct_and_pr',
-        mode: 'developer_apply_safe',
-      },
-      repo_permission: {
-        target_id: 'redcube-ai',
-        repo: 'fixture:redcube-ai/fork-pr-drill',
-        repo_url: 'fixture://redcube-ai/developer-mode-fork-pr-drill',
-        status: 'limited',
-        permission: 'read',
-        direct_write_allowed: false,
-        allowed_route: 'fork_pull_request',
-      },
-      patrol_observation_refs: {
-        patrol_observation_ref: 'patrol-observation-ref:rca/developer-mode-fork-pr-drill',
-        issue_ref: 'issue-ref:rca/developer-mode-fork-pr-drill',
-        blocker_ref: 'blocker-ref:rca/render-review-regression',
-        diff_ref: 'diff-ref:rca/developer-mode-fork-pr-drill',
-        verification_refs: [
-          'test-result-ref:rca/developer-mode-fork-pr-focused',
-          'test-result-ref:rca/no-forbidden-write-focused',
-        ],
-        no_forbidden_write_ref: 'no-forbidden-write-ref:rca/developer-mode-fork-pr-drill',
-        fork_repo_ref: 'repo-contract-fixture-ref:rca/developer-mode-fork-repo-drill',
-        pr_review_ref: 'repo-contract-fixture-ref:rca/developer-mode-pr-review-drill',
-        owner_acceptance_ref: 'repo-contract-fixture-ref:rca/developer-mode-fork-pr-owner-gate-drill',
-      },
-    }),
-  ];
+    }))
+  );
+  const manifestCloseoutDrills: DeveloperModeLiveCloseoutRoute[] = evaluationManifests
+    .flatMap((manifest) => manifest.closeout_drills.map((drill) => ({
+      ...buildDeveloperModeAgentLabRepairRoute(
+        drill as unknown as DeveloperModeAgentLabRepairRouteInput,
+      ),
+      evidence_source: 'domain_owned_evaluation_manifest',
+      evaluation_manifest_ref: manifest.manifest_ref,
+      evaluation_domain_id: manifest.domain_id,
+    })));
   const ledgerReceipts = listDeveloperModeCloseoutReceipts();
   const verifiedLedgerReceipts = ledgerReceipts.filter((receipt) =>
     receipt.receipt_status === 'verified');
   const recordedLedgerReceipts = ledgerReceipts.filter((receipt) =>
     receipt.receipt_status === 'recorded');
   const liveCloseoutEvidenceDrills = [
-    ...staticCloseoutDrills,
+    ...manifestCloseoutDrills,
     ...verifiedLedgerReceipts.map(routeForLedgerReceipt),
   ];
   const liveExternalOwnerAcceptanceMissingDrills = liveCloseoutEvidenceDrills.filter((drill) =>
@@ -942,6 +860,16 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
     status: 'ready_for_developer_mode_patrol_consumption',
     developer_mode_required: true,
     refs_only: true,
+    evaluation_manifest_loading: {
+      schema_ref:
+        'contracts/opl-framework/standard-agent-evaluation-manifest.schema.json',
+      source_policy: 'explicit_domain_owned_manifest_paths_only',
+      absence_policy: 'no_manifest_declared_yields_empty_generic_projection',
+      invalid_manifest_policy: 'fail_closed_contract_shape_invalid',
+      manifest_count: evaluationManifests.length,
+      manifest_refs: evaluationManifests.map((manifest) => manifest.manifest_ref),
+      domain_ids: evaluationManifests.map((manifest) => manifest.domain_id),
+    },
     dynamic_route_builder: DEVELOPER_MODE_DYNAMIC_ROUTE_BUILDER,
     inputs: {
       issue_or_blocker_ref: 'issue_ref | blocker_ref',
@@ -976,6 +904,7 @@ export function buildDeveloperModeAgentLabRepairRouteReadModel() {
     live_closeout_evidence: liveCloseoutEvidence,
     summary: {
       route_count: routes.length,
+      evaluation_manifest_count: evaluationManifests.length,
       direct_owner_route_count: routes.filter((route) => route.route_mode === 'repo_developer_direct_fix').length,
       fork_pr_route_count: routes.filter((route) => route.route_mode === 'fork_pull_request').length,
       live_closeout_drill_count: liveCloseoutEvidence.summary.drill_count,

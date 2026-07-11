@@ -177,7 +177,7 @@ const readModelGateTestFiles = [
   'tests/src/cli/cases/system-install-superpowers.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/framework-readiness-binding-cases.test.ts', 'tests/src/cli/cases/framework-readiness.test.ts', 'tests/src/cli/cases/framework-readiness-stage-run-adoption.test.ts', 'tests/src/cli/cases/framework-readiness-stage-replay-guidance.test.ts']),
   'tests/src/cli/cases/runtime-manifest-cache-timeout.test.ts',
-  ...expandTestFiles(['tests/src/cli/cases/framework-readiness-attention-semantics.test.ts', 'tests/src/cli/cases/framework-readiness-app-release-user-path-ledger.test.ts', 'tests/src/cli/cases/framework-readiness-oma-managed-install.test.ts', 'tests/src/cli/cases/framework-readiness-oma-app-live-path.test.ts', 'tests/src/cli/cases/framework-readiness-oma-production-consumption-ledger.test.ts']),
+  ...expandTestFiles(['tests/src/cli/cases/framework-readiness-attention-semantics.test.ts', 'tests/src/cli/cases/framework-readiness-app-release-user-path-ledger.test.ts']),
   'tests/src/cli/cases/family-runtime-managed-state.test.ts',
   'tests/src/framework-readiness-owner-delta-handoff-summary.test.ts',
   ...expandTestFiles(['tests/src/cli/cases/workspace-domain.initializer-rca-series.test.ts', 'tests/src/cli/cases/workspace-domain.initializer.test.ts']),
@@ -266,7 +266,6 @@ const readModelGateTestFiles = [
   ...expandTestFiles([
     'tests/src/cli/cases/runtime-app-operator-drilldown-summary.test.ts',
     'tests/src/cli/cases/runtime-app-operator-drilldown-manifest-cache.test.ts',
-    'tests/src/cli/cases/runtime-app-operator-drilldown-oma-manual-required.test.ts',
     'tests/src/cli/cases/runtime-app-operator-drilldown-owner-handoff.test.ts',
   ]),
   ...expandTestFiles([
@@ -361,9 +360,6 @@ const lanes = {
       'tests/src/cli/cases/runtime-manifest-cache-timeout.test.ts',
       'tests/src/cli/cases/framework-readiness-attention-semantics.test.ts',
       'tests/src/cli/cases/framework-readiness-cli-surface.test.ts',
-      'tests/src/cli/cases/framework-readiness-oma-managed-install.test.ts',
-      'tests/src/cli/cases/framework-readiness-oma-app-live-path.test.ts',
-      'tests/src/cli/cases/framework-readiness-oma-production-consumption-ledger.test.ts',
       'tests/src/framework-readiness-attention-actions.test.ts',
       'tests/src/family-runtime-domain-autonomy.test.ts',
       'tests/src/cli/cases/agents-conformance-stage-pack-v2.test.ts',

@@ -411,46 +411,6 @@ function frameworkOwnerHandoffNextSafeAction(packet: JsonRecord) {
   };
 }
 
-function frameworkOmaProductionConsumptionNextSafeAction(followthrough: JsonRecord) {
-  return {
-    action_id: 'review_oma_production_consumption_followthrough',
-    action_kind: 'oma_production_consumption_followthrough_review',
-    step_kind: 'oma_production_consumption_followthrough',
-    evidence_closure_gate: 'oma_managed_install_app_live_owner_receipt_long_soak_gate',
-    owner: stringValue(followthrough.owner) ?? 'one-person-lab',
-    target_agent: stringValue(followthrough.target_agent) ?? 'opl-meta-agent',
-    target_repo: stringValue(followthrough.target_repo) ?? 'opl-meta-agent',
-    status: stringValue(followthrough.status),
-    structural_consumption_ready: followthrough.structural_consumption_ready === true,
-    production_consumption_ready: followthrough.production_consumption_ready === true,
-    open_gate_count: numberValue(followthrough.open_gate_count),
-    open_gate_ids: stringList(followthrough.open_gate_ids),
-    pending_verify_long_soak_receipt_ref_count:
-      numberValue(followthrough.pending_verify_long_soak_receipt_ref_count),
-    pending_verify_long_soak_receipt_refs:
-      stringList(followthrough.pending_verify_long_soak_receipt_refs),
-    manual_required_gates: recordList(followthrough.gate_items)
-      .filter((gate) => gate.manual_required === true)
-      .map((gate) => ({
-        gate_id: stringValue(gate.gate_id),
-        reason: stringValue(gate.manual_required_reason),
-        blockers: stringList(gate.manual_required_blockers),
-        next_safe_action: record(gate.next_safe_action),
-      })),
-    required_return_shapes: stringList(followthrough.required_return_shapes),
-    full_detail_section: 'attention_first_payload.evidence_after_contract.oma_production_consumption_followthrough',
-    authority: 'operator_attention_only',
-    can_execute_domain_action: false,
-    can_write_domain_truth: false,
-    can_create_owner_receipt: false,
-    can_create_typed_blocker: false,
-    can_close_domain_ready: false,
-    can_claim_production_ready: false,
-    can_authorize_quality_or_export: false,
-    can_promote_default_agent_without_gate: false,
-  };
-}
-
 function frameworkStageReplayMissingReceiptNextSafeAction(item: JsonRecord) {
   const guidance = record(item.default_next_action_guidance);
   return {
@@ -564,7 +524,6 @@ export function frameworkAttentionNextSafeActions(input: {
   ownerHandoffPacket: JsonRecord;
   appReleaseUserPathEvidence: JsonRecord;
   developerModeLiveCloseoutEvidence?: JsonRecord;
-  omaProductionConsumptionFollowthrough: JsonRecord;
   familyStallLineage?: JsonRecord;
   domainDispatchEvidenceWorkorderGroupAttentionItems: JsonRecord[];
   stageReplayMissingReceiptWorkorderAttentionItems?: JsonRecord[];
@@ -630,19 +589,6 @@ export function frameworkAttentionNextSafeActions(input: {
         ? [
             frameworkDeveloperModeLiveCloseoutNextSafeAction(
               record(input.developerModeLiveCloseoutEvidence),
-            ),
-          ]
-        : []
-    ),
-    ...(
-      numberValue(input.omaProductionConsumptionFollowthrough.open_gate_count) > 0
-        || numberValue(
-          input.omaProductionConsumptionFollowthrough
-            .pending_verify_long_soak_receipt_ref_count,
-        ) > 0
-        ? [
-            frameworkOmaProductionConsumptionNextSafeAction(
-              input.omaProductionConsumptionFollowthrough,
             ),
           ]
         : []

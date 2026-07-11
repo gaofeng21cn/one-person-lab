@@ -29,8 +29,79 @@ function assertStringRef(value: unknown, pattern: RegExp) {
   assert.match(value, pattern);
 }
 
+function writeEvaluationManifestFixture() {
+  const manifestPath = path.join(agentLabStateRoot, 'domain-evaluation-manifest.json');
+  const route = (mode: 'repo_developer_direct_fix' | 'fork_pull_request', suffix: string) => ({
+    route_ref: `developer-mode-repair-route:fixture-domain/${suffix}`,
+    route_mode: mode,
+    route_status: 'candidate_refs_ready',
+    repo_ref: `github-repo:example/${suffix}`,
+    issue_ref: `issue-ref:fixture-domain/${suffix}`,
+    blocker_ref: `blocker-ref:fixture-domain/${suffix}`,
+    owner_route_ref: `owner-route:fixture-domain/${suffix}`,
+    github_actor_ref: 'github-user:fixture-operator',
+    repo_developer_match_required: mode === 'repo_developer_direct_fix',
+    candidate_fix_ref: `candidate-fix-ref:fixture-domain/${suffix}`,
+    repo_worktree_ref: `repo-worktree-ref:fixture-domain/${suffix}`,
+    branch_ref: `git-branch-ref:fixture-domain/${suffix}`,
+    pr_ref: `github-pr-ref:fixture-domain/${suffix}`,
+    acceptance_evidence_ref: `acceptance-evidence-ref:fixture-domain/${suffix}`,
+    follow_up_queue_item_ref: `queue-item-ref:fixture-domain/${suffix}`,
+  });
+  const drill = (direct: boolean) => ({
+    developer_mode_projection: {
+      surface_id: 'opl_developer_mode',
+      status: 'limited',
+      effective_state: 'active_mixed_routes',
+      allowed_route: 'mixed_direct_and_pr',
+      mode: 'developer_apply_safe',
+    },
+    repo_permission: {
+      target_id: 'fixture-domain',
+      repo: direct ? 'example/fixture-domain' : 'fixture:example/fixture-domain',
+      status: direct ? 'ready' : 'limited',
+      permission: direct ? 'write' : 'read',
+      direct_write_allowed: direct,
+      allowed_route: direct ? 'direct_repo_fix' : 'fork_pull_request',
+    },
+    patrol_observation_refs: {
+      patrol_observation_ref: `patrol-observation-ref:fixture-domain/${direct ? 'direct' : 'fork'}`,
+      issue_ref: `issue-ref:fixture-domain/${direct ? 'direct' : 'fork'}`,
+      blocker_ref: `blocker-ref:fixture-domain/${direct ? 'direct' : 'fork'}`,
+      diff_ref: `diff-ref:fixture-domain/${direct ? 'direct' : 'fork'}`,
+      verification_refs: [`test-result-ref:fixture-domain/${direct ? 'direct' : 'fork'}`],
+      no_forbidden_write_ref: `no-forbidden-write-ref:fixture-domain/${direct ? 'direct' : 'fork'}`,
+      ...(direct
+        ? {
+            commit_ref: 'git-commit-ref:fixture-domain/direct',
+            owner_acceptance_ref: 'external-owner-ref:fixture-domain/direct-accepted',
+          }
+        : {
+            fork_repo_ref: 'repo-contract-fixture-ref:fixture-domain/fork',
+            pr_review_ref: 'repo-contract-fixture-ref:fixture-domain/pr-review',
+            owner_acceptance_ref: 'repo-contract-fixture-ref:fixture-domain/owner-gate',
+          }),
+    },
+  });
+  fs.writeFileSync(manifestPath, JSON.stringify({
+    surface_kind: 'opl_standard_agent_evaluation_manifest',
+    version: 'opl-standard-agent-evaluation-manifest.v1',
+    domain_id: 'fixture-domain',
+    developer_mode: {
+      repair_routes: [
+        route('repo_developer_direct_fix', 'direct'),
+        route('fork_pull_request', 'fork'),
+      ],
+      closeout_drills: [drill(true), drill(false)],
+    },
+  }));
+  return manifestPath;
+}
+
 test('Agent Lab Developer Mode repair route projects patrol fixes as refs only', () => {
-  const result = buildDeveloperModeAgentLabRepairRouteReadModel();
+  const result = buildDeveloperModeAgentLabRepairRouteReadModel({
+    evaluationManifestPaths: [writeEvaluationManifestFixture()],
+  });
 
   assert.equal(result.surface_kind, 'opl_agent_lab_developer_mode_repair_route_read_model');
   assert.equal(result.status, 'ready_for_developer_mode_patrol_consumption');
@@ -151,7 +222,7 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
     forkPrDrill.fixture_repo_currentness.reason,
     'fixture_repo_ref_requires_real_external_fork_pr_before_closeout',
   );
-  assert.equal(forkPrDrill.repo_permission.repo, 'fixture:redcube-ai/fork-pr-drill');
+  assert.equal(forkPrDrill.repo_permission.repo, 'fixture:example/fixture-domain');
   assert.equal(forkPrDrill.closeout_refs.owner_acceptance_ref_is_external_owner_ref, false);
   assert.ok(forkPrDrill.missing_closeout_refs.includes('external_owner_acceptance_ref'));
   assert.equal(result.live_closeout_evidence.non_authority_outputs.writes_owner_receipt, false);
@@ -167,6 +238,30 @@ test('Agent Lab Developer Mode repair route projects patrol fixes as refs only',
   assert.equal(result.authority_boundary.can_authorize_quality_verdict, false);
   assert.equal(result.authority_boundary.can_write_owner_receipt, false);
   assert.equal(result.authority_boundary.can_modify_managed_runtime, false);
+});
+
+test('Agent Lab Developer Mode keeps absent manifests empty and rejects invalid manifests', () => {
+  const empty = buildDeveloperModeAgentLabRepairRouteReadModel();
+  assert.equal(empty.evaluation_manifest_loading.manifest_count, 0);
+  assert.equal(
+    empty.evaluation_manifest_loading.absence_policy,
+    'no_manifest_declared_yields_empty_generic_projection',
+  );
+  assert.deepEqual(empty.routes, []);
+
+  const invalidPath = path.join(agentLabStateRoot, 'invalid-domain-evaluation-manifest.json');
+  fs.writeFileSync(invalidPath, JSON.stringify({
+    surface_kind: 'opl_standard_agent_evaluation_manifest',
+    version: 'opl-standard-agent-evaluation-manifest.v1',
+    domain_id: 'invalid-fixture',
+    developer_mode: { repair_routes: [{}], closeout_drills: [] },
+  }));
+  assert.throws(
+    () => buildDeveloperModeAgentLabRepairRouteReadModel({
+      evaluationManifestPaths: [invalidPath],
+    }),
+    /Payload failed JSON Schema validation/,
+  );
 });
 
 test('Agent Lab Developer Mode repair route builder classifies live closeout routes from projection and repo permission', () => {

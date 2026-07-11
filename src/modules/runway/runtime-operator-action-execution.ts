@@ -41,12 +41,6 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
-type OmaProductionConsumptionReceiptInput = {
-  long_soak_refs: string[];
-  typed_blocker_refs: string[];
-  operator_evidence_refs: string[];
-};
-
 type RuntimeActionExecuteOptions = {
   actionId: string;
   payload: JsonRecord;
@@ -57,7 +51,6 @@ type RuntimeActionExecuteOptions = {
 type RuntimeOperatorActionExecuteDependencies = {
   runtimeSnapshotProvider?: RuntimeTraySnapshotProvider;
   runFamilyAgentLegacyCleanupApply?: (contracts: FrameworkContracts, args: string[]) => JsonRecord;
-  recordOmaProductionConsumptionReceipts?: (inputs: OmaProductionConsumptionReceiptInput[]) => JsonRecord;
 };
 
 function parseJsonObject(value: string, context: string): JsonRecord {
@@ -231,106 +224,6 @@ function stringList(value: unknown) {
     : [];
 }
 
-function refsFromPayload(payload: JsonRecord, keys: string[]) {
-  return keys.flatMap((key) => {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return [value.trim()];
-    }
-    return stringList(value);
-  });
-}
-
-function omaProductionConsumptionPayload(payload: JsonRecord): OmaProductionConsumptionReceiptInput {
-  return {
-    long_soak_refs: [
-      ...refsFromPayload(payload, ['long_soak_refs', 'long_soak_ref']),
-      ...refsFromPayload(payload, ['operator_long_soak_refs', 'operator_long_soak_ref']),
-      ...refsFromPayload(payload, ['production_soak_refs', 'production_soak_ref']),
-      ...refsFromPayload(payload, [
-        'agent_lab_rerun_long_soak_refs',
-        'agent_lab_rerun_long_soak_ref',
-      ]),
-    ],
-    typed_blocker_refs: refsFromPayload(payload, ['typed_blocker_refs', 'typed_blocker_ref']),
-    operator_evidence_refs: refsFromPayload(payload, [
-      'operator_evidence_refs',
-      'operator_evidence_ref',
-    ]),
-  };
-}
-
-function omaProductionConsumptionRefCount(input: OmaProductionConsumptionReceiptInput) {
-  return [
-    ...(input.long_soak_refs ?? []),
-    ...(input.typed_blocker_refs ?? []),
-    ...(input.operator_evidence_refs ?? []),
-  ].length;
-}
-
-function omaProductionConsumptionDryRunPreflight(input: OmaProductionConsumptionReceiptInput) {
-  return {
-    surface_kind: 'opl_oma_production_consumption_payload_preflight',
-    status: omaProductionConsumptionRefCount(input) > 0
-      ? 'payload_refs_observed'
-      : 'payload_required',
-    required_any: [
-      'long_soak_refs',
-      'typed_blocker_refs',
-      'operator_evidence_refs',
-    ],
-    empty_payload_template_is_success_evidence: false,
-    payload_owner: 'app_live_operator_or_oma_owner',
-    authority_boundary: {
-      refs_only: true,
-      can_write_domain_truth: false,
-      can_create_owner_receipt: false,
-      can_claim_domain_ready: false,
-      can_claim_production_ready: false,
-      can_promote_default_agent_without_gate: false,
-    },
-  };
-}
-
-function omaProductionConsumptionExecution(
-  payload: JsonRecord,
-  options: { dryRun: boolean },
-  dependencies: RuntimeOperatorActionExecuteDependencies,
-) {
-  const input = omaProductionConsumptionPayload(payload);
-  if (!options.dryRun && omaProductionConsumptionRefCount(input) === 0) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'OMA production-consumption record action requires refs-only payload evidence.',
-      {
-        required_any: omaProductionConsumptionDryRunPreflight(input).required_any,
-      },
-    );
-  }
-  return {
-    executionKind: 'opl_cli_oma_production_consumption_apply',
-    runtimeArgs: ['runtime', 'oma-production-consumption', 'record'],
-    result: options.dryRun
-      ? {
-          oma_production_consumption_payload_preflight:
-            omaProductionConsumptionDryRunPreflight(input),
-        }
-      : {
-          oma_production_consumption_ledger_record:
-            requireOmaProductionConsumptionRecorder(dependencies)([input]),
-        },
-  };
-}
-
-function requireOmaProductionConsumptionRecorder(dependencies: RuntimeOperatorActionExecuteDependencies) {
-  if (!dependencies.recordOmaProductionConsumptionReceipts) {
-    throw new FrameworkContractError('contract_shape_invalid', 'OMA production-consumption recorder is not injected.', {
-      required_dependency: 'recordOmaProductionConsumptionReceipts',
-    });
-  }
-  return dependencies.recordOmaProductionConsumptionReceipts;
-}
-
 function requireLegacyCleanupApply(dependencies: RuntimeOperatorActionExecuteDependencies) {
   if (!dependencies.runFamilyAgentLegacyCleanupApply) {
     throw new FrameworkContractError('contract_shape_invalid', 'Legacy cleanup apply handler is not injected.', {
@@ -487,7 +380,6 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
     || actionKind === 'domain_owner_payload_summary_receipt_verify'
     || actionKind === 'owner_evidence_sustained_consumption_receipt_record'
     || actionKind === 'owner_evidence_sustained_consumption_receipt_verify'
-    || actionKind === 'oma_production_consumption_receipt_record'
   ) {
     if (
       actionKind === 'app_release_user_path_evidence_receipt_record'
@@ -498,12 +390,9 @@ function oplCliRuntimeArgs(route: JsonRecord, commandOrSurfaceRef: string) {
       || actionKind === 'domain_owner_payload_summary_receipt_verify'
       || actionKind === 'owner_evidence_sustained_consumption_receipt_record'
       || actionKind === 'owner_evidence_sustained_consumption_receipt_verify'
-      || actionKind === 'oma_production_consumption_receipt_record'
     ) {
       return {
-        executionKind: actionKind === 'oma_production_consumption_receipt_record'
-          ? 'opl_cli_oma_production_consumption_apply'
-          : actionKind.startsWith('owner_evidence_sustained_consumption_')
+        executionKind: actionKind.startsWith('owner_evidence_sustained_consumption_')
             ? 'opl_cli_owner_evidence_sustained_consumption_apply'
           : actionKind.startsWith('domain_owner_payload_summary_')
             ? 'opl_cli_domain_owner_payload_summary_apply'
@@ -622,8 +511,6 @@ async function executeRoute(
     const ownerEvidenceSustainedConsumptionAction =
       actionKind === 'owner_evidence_sustained_consumption_receipt_record'
       || actionKind === 'owner_evidence_sustained_consumption_receipt_verify';
-    const omaProductionConsumptionAction =
-      actionKind === 'oma_production_consumption_receipt_record';
     const legacyCleanupAction = actionKind === 'legacy_cleanup_apply'
       || actionKind === 'legacy_cleanup_verify';
     const stageEvidenceRecordAction = actionKind === 'stage_production_evidence_receipt_record';
@@ -653,9 +540,6 @@ async function executeRoute(
           dryRun: options.dryRun,
         })
       : null;
-    const omaProductionConsumption = omaProductionConsumptionAction
-      ? omaProductionConsumptionExecution(options.payload, { dryRun: options.dryRun }, dependencies)
-      : null;
     const providerWorkerRepair = actionKind === 'provider_worker_start'
       || actionKind === 'provider_worker_restart'
       ? providerWorkerArgs(route, commandOrSurfaceRef)
@@ -679,11 +563,6 @@ async function executeRoute(
       ? {
           executionKind: ownerEvidenceSustainedConsumption.executionKind,
           runtimeArgs: ownerEvidenceSustainedConsumption.runtimeArgs,
-        }
-      : omaProductionConsumption
-      ? {
-          executionKind: omaProductionConsumption.executionKind,
-          runtimeArgs: omaProductionConsumption.runtimeArgs,
         }
       : externalEvidenceAction
       ? {
@@ -709,7 +588,6 @@ async function executeRoute(
         || codexAppRuntimeEvidenceAction
         || domainOwnerPayloadSummaryAction
         || ownerEvidenceSustainedConsumptionAction
-        || omaProductionConsumptionAction
         ? `opl ${runtimeArgs.join(' ')}`
         : providerWorkerRepair
           ? providerWorkerCommand(providerWorkerRepair)
@@ -726,8 +604,6 @@ async function executeRoute(
           ? domainOwnerPayloadSummary.result
         : ownerEvidenceSustainedConsumption
           ? ownerEvidenceSustainedConsumption.result
-        : omaProductionConsumption
-          ? omaProductionConsumption.result
         : options.dryRun
         ? (stageEvidenceRecord
             ? {
