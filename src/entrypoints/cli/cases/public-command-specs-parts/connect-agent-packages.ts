@@ -1,6 +1,7 @@
 import {
   listOplAgentPackages,
   runOplAgentPackageExposureAction,
+  runOplAgentPackageFrameworkLink,
   runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
@@ -61,6 +62,7 @@ function parseAgentPackageInstallArgs(command: string, args: string[], spec: Com
     trustTier: readOptionalString(parsed['trust-tier']),
     sourceKind: readOptionalString(parsed['source-kind']) as AgentPackageInstallArgs['sourceKind'],
     dryRun: parsed['dry-run'] === true,
+    agentRoot: readOptionalString(parsed['agent-root']),
   };
 }
 
@@ -75,6 +77,27 @@ function parseAgentPackagePackageActionArgs(command: string, args: string[], spe
   return {
     packageId,
     dryRun: parsed['dry-run'] === true,
+    agentRoot: readOptionalString(parsed['agent-root']),
+  };
+}
+
+function parseFrameworkLinkArgs(args: string[], spec: CommandSpec) {
+  const parsed = parseRegisteredCommandOptions('connect agent-packages link-framework', args, spec);
+  const agentRoot = String(parsed['agent-root'] ?? '').trim();
+  if (!agentRoot) {
+    throw buildUsageError('connect agent-packages link-framework requires --agent-root.', spec, {
+      required: ['--agent-root'],
+    });
+  }
+  if (parsed.check === true && parsed['dry-run'] === true) {
+    throw buildUsageError('connect agent-packages link-framework accepts only one of --check or --dry-run.', spec, {
+      conflicting: ['--check', '--dry-run'],
+    });
+  }
+  return {
+    agentRoot,
+    dryRun: parsed['dry-run'] === true,
+    checkOnly: parsed.check === true,
   };
 }
 
@@ -135,7 +158,7 @@ export function buildAgentPackageCommandSpecs(
         ),
     },
     'connect agent-packages install': {
-      usage: 'opl connect agent-packages install (--manifest-url <url>|--registry-url <url> --package-id <id>) --trust-tier <tier> [--source-kind <kind>] [--dry-run]',
+      usage: 'opl connect agent-packages install (--manifest-url <url>|--registry-url <url> --package-id <id>) --trust-tier <tier> [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
       summary: 'Validate an OPL Agent Package manifest and write the Framework-owned package lock plus lifecycle receipt.',
       examples: [
         'opl connect agent-packages install --manifest-url https://example.com/agent/manifest.json --trust-tier third_party_verified --json',
@@ -153,7 +176,7 @@ export function buildAgentPackageCommandSpecs(
         ),
     },
     'connect agent-packages update': {
-      usage: 'opl connect agent-packages update (--manifest-url <url>|--registry-url <url> --package-id <id>) [--trust-tier <tier>] [--source-kind <kind>] [--dry-run]',
+      usage: 'opl connect agent-packages update (--manifest-url <url>|--registry-url <url> --package-id <id>) [--trust-tier <tier>] [--source-kind <kind>] [--agent-root <repo>] [--dry-run]',
       summary: 'Validate an installed OPL Agent Package manifest and replace its Framework-owned package lock plus lifecycle receipt.',
       examples: [
         'opl connect agent-packages update --registry-url https://example.com/registry.json --package-id mas --json',
@@ -170,7 +193,7 @@ export function buildAgentPackageCommandSpecs(
         ),
     },
     'connect agent-packages repair': {
-      usage: 'opl connect agent-packages repair --package-id <id> [--dry-run]',
+      usage: 'opl connect agent-packages repair --package-id <id> [--agent-root <repo>] [--dry-run]',
       summary: 'Re-record the Framework-owned lock and lifecycle receipt for an installed OPL Agent Package.',
       examples: ['opl connect agent-packages repair --package-id mas --json'],
       group: 'connect',
@@ -183,6 +206,19 @@ export function buildAgentPackageCommandSpecs(
             getCommandSpec('connect agent-packages repair'),
           ),
         ),
+    },
+    'connect agent-packages link-framework': {
+      usage: 'opl connect agent-packages link-framework --agent-root <repo> [--check|--dry-run]',
+      summary: 'Link a Standard Agent checkout to the resolved OPL Framework installation without installing a second runtime dependency tree.',
+      examples: [
+        'opl connect agent-packages link-framework --agent-root /path/to/agent --json',
+        'opl connect agent-packages link-framework --agent-root /path/to/agent --check --json',
+      ],
+      group: 'connect',
+      help_surface: 'default',
+      handler: (args) => runOplAgentPackageFrameworkLink(
+        parseFrameworkLinkArgs(args, getCommandSpec('connect agent-packages link-framework')),
+      ),
     },
     'connect agent-packages uninstall': {
       usage: 'opl connect agent-packages uninstall --package-id <id> [--dry-run]',

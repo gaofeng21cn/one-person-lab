@@ -24,6 +24,7 @@ export type {
 export {
   listOplAgentPackages,
   runOplAgentPackageExposureAction,
+  runOplAgentPackageFrameworkLink,
   runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,

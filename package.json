@@ -1,5 +1,5 @@
 {
-  "name": "opl-framework-shared",
+  "name": "opl-framework",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,6 @@
     "./stage-run-orchestration": "./dist/modules/stagecraft/stage-run-orchestration.js",
     "./standard-agent-action-stage-run": "./dist/modules/stagecraft/standard-agent-action-stage-run.js",
     "./stage-transition-authority": "./dist/modules/stagecraft/stage-transition-authority.js",
-    "./family-shared-release": "./dist/modules/atlas/family-shared-release.js",
     "./family-domain-catalog": "./dist/modules/atlas/family-domain-catalog.js",
     "./family-entry-contracts": "./dist/modules/atlas/family-entry-contracts.js",
     "./foundry-agent-series-policy": "./dist/modules/foundry-lab/public/foundry-agent-series-policy.js",
@@ -68,7 +67,6 @@
     "native:test": "RUSTC=\"$(rustup which --toolchain stable rustc)\" RUSTDOC=\"$(rustup which --toolchain stable rustdoc)\" \"$(rustup which --toolchain stable cargo)\" test --workspace",
     "native:family-smoke": "node ./scripts/native-helper-family-smoke.mjs",
     "family:structure-advisory": "node ./scripts/family-structure-advisory.mjs",
-    "family:shared-release": "node ./scripts/family-shared-release.mjs",
     "packages:manifest": "node --experimental-strip-types ./scripts/package-module-archives.mjs",
     "packages:release-discipline": "node ./scripts/package-release-discipline.mjs",
     "packages:daily-check": "node ./scripts/package-channel-daily-check.mjs",

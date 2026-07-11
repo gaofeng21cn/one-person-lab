@@ -2,6 +2,7 @@ import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { stringValue } from '../../kernel/json-record.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
+import { materializeStandardAgentFrameworkLink } from './standard-agent-framework-link.ts';
 import { FORBIDDEN_AGENT_PACKAGE_FIELDS, MANIFEST_REQUIRED_FIELDS } from './agent-package-registry-parts/constants.ts';
 import {
   assertManifestMatchesRegistrySelection,
@@ -122,6 +123,9 @@ async function applyManifestPackageLock(
   const previousLock = existingIndex >= 0 ? index.packages[existingIndex] : null;
   assertPermissionScopeUnchanged(previousLock, manifest, action);
   const physicalSurface = materializePhysicalCodexSurface(manifest, input.dryRun === true);
+  const frameworkLink = input.agentRoot
+    ? materializeStandardAgentFrameworkLink({ agentRoot: input.agentRoot, dryRun: input.dryRun })
+    : null;
   const receipt = lifecycleReceipt({
     action,
     actionStatus: input.dryRun ? 'validated' : 'completed',
@@ -165,6 +169,7 @@ async function applyManifestPackageLock(
     receipt,
     registryEntry: selection.registryEntry,
     physicalSurface,
+    frameworkLink,
   };
 }
 
@@ -287,6 +292,7 @@ export async function runOplAgentPackageInstall(input: AgentPackageInstallInput)
       dry_run: input.dryRun === true,
       package_lock: result.lock,
       physical_surface: result.physicalSurface,
+      framework_link: result.frameworkLink,
       lifecycle_receipt: result.receipt,
       owner_route_readback: ownerRouteReadback({
         selectedPackageId: result.lock.package_id,
@@ -310,6 +316,7 @@ export async function runOplAgentPackageUpdate(input: AgentPackageInstallInput) 
       dry_run: input.dryRun === true,
       package_lock: result.lock,
       physical_surface: result.physicalSurface,
+      framework_link: result.frameworkLink,
       lifecycle_receipt: result.receipt,
       owner_route_readback: ownerRouteReadback({
         selectedPackageId: result.lock.package_id,
@@ -328,6 +335,9 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
   const index = readLockIndex();
   const { lockIndex, lock } = requireInstalledPackage(index, packageId, 'repair');
   const physicalSurface = rematerializePhysicalCodexSurfaceFromLock(lock, input.dryRun === true);
+  const frameworkLink = input.agentRoot
+    ? materializeStandardAgentFrameworkLink({ agentRoot: input.agentRoot, dryRun: input.dryRun })
+    : null;
   const receipt = lifecycleReceipt({
     action: 'repair',
     actionStatus: input.dryRun ? 'validated' : 'completed',
@@ -361,6 +371,7 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
       dry_run: input.dryRun === true,
       package_lock: repairedLock,
       physical_surface: physicalSurface,
+      framework_link: frameworkLink,
       lifecycle_receipt: receipt,
       owner_route_readback: ownerRouteReadback({
         selectedPackageId: repairedLock.package_id,
@@ -368,6 +379,13 @@ export function runOplAgentPackageRepair(input: AgentPackagePackageActionInput) 
       }),
       authority_boundary: refsOnlyAuthorityBoundary(),
     },
+  };
+}
+
+export function runOplAgentPackageFrameworkLink(input: { agentRoot: string; dryRun?: boolean; checkOnly?: boolean }) {
+  return {
+    version: 'g2',
+    opl_agent_package_framework_link: materializeStandardAgentFrameworkLink(input),
   };
 }
 

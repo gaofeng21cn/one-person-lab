@@ -7,7 +7,7 @@ import { WORKSPACE_TOPOLOGY_PROFILE_CONTRACT } from '../../workspace/index.ts';
 export const FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF =
   'contracts/opl-framework/foundry-agent-series-policy-release.json';
 export const FOUNDRY_AGENT_SERIES_POLICY_EXPORT =
-  'opl-framework-shared/foundry-agent-series-policy';
+  'opl-framework/foundry-agent-series-policy';
 export const FOUNDRY_AGENT_SERIES_CONSUMER_KIND =
   'opl_foundry_agent_series_consumer';
 export const FOUNDRY_AGENT_SERIES_CONSUMER_VERSION =
@@ -315,20 +315,6 @@ export const STANDARD_FOUNDRY_AGENT_SERIES_CONTRACT = {
     breaking_change_requires_new_version: true,
     domain_descriptor_must_reference_domain_contract: true,
   },
-  shared_release_pin_strategy: {
-    owner_release_contract_ref: 'contracts/family-release/shared-owner-release.json',
-    owner_managed_latest_stable_channel_required: true,
-    lockfile_resolved_commit_receipt_required: true,
-    consumer_exact_commit_equality_gate: false,
-    supported_pin_sources: [
-      'pyproject.toml',
-      'uv.lock',
-      'package.json',
-      'package-lock.json',
-    ],
-    consumer_alignment_check: 'family:shared-release',
-    domain_contract_version_pin_does_not_authorize_domain_truth: true,
-  },
   shared_policy_release: {
     policy_release_contract_ref: FOUNDRY_AGENT_SERIES_POLICY_RELEASE_REF,
     policy_bundle_fingerprint: FOUNDRY_AGENT_SERIES_POLICY_BUNDLE_FINGERPRINT,
@@ -420,7 +406,6 @@ export const FOUNDRY_AGENT_SERIES_LEGACY_POLICY_BODY_FIELDS = [
   'required_stage_packets',
   'series_design_profile',
   'shared_progress_projection_fields',
-  'shared_release_pin_strategy',
   'standard_feedback_self_evolution_trigger_policy',
   'standard_public_projection_policy',
   'workspace_topology_profile',

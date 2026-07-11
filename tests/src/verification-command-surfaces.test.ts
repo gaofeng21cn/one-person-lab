@@ -334,11 +334,9 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run test:fast/);
   assert.match(verifyScript, /npm run test:regression/);
   assert.match(verifyScript, /npm run test:integration/);
-  assert.match(verifyScript, /npm run family:shared-release -- check/);
   assert.match(verifyScript, /PYTHONDONTWRITEBYTECODE=1/);
   assert.match(verifyScript, /PYTHONPYCACHEPREFIX="\$\{PYTHONPYCACHEPREFIX:-\$\{family_tmp_root\}\/pycache\}"/);
   assert.match(verifyScript, /PYTEST_ADDOPTS="\$\{PYTEST_ADDOPTS:-\} -p no:cacheprovider -o cache_dir=\$\{family_tmp_root\}\/pytest-cache"/);
-  assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_family_shared_release\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_dependency_bootstrap\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_bootstrap\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_launcher\.py/);

@@ -148,16 +148,16 @@ function buildCandidateList(): FrameworkLocatorCandidate[] {
       required: Object.hasOwn(process.env, 'OPL_BIN'),
     },
     {
-      source: 'PATH:opl',
-      kind: 'bin',
-      value: findOnPath('opl'),
-      required: false,
-    },
-    {
       source: 'current_cli_entry',
       kind: 'root',
       value: currentRoot,
       required: true,
+    },
+    {
+      source: 'PATH:opl',
+      kind: 'bin',
+      value: findOnPath('opl'),
+      required: false,
     },
     {
       source: 'sibling_checkout',
@@ -223,12 +223,18 @@ function buildAgentContract() {
     app_required: false,
     app_role: 'optional_projection_consumer',
     recommended_agent_shape: [
-      'independent_repo_or_package',
+      'domain_repo_or_package_without_embedded_framework_runtime',
       'declares_opl_compatible_contract',
-      'uses_opl_framework_locator_before_framework_runtime_calls',
+      'framework_static_imports_resolve_through_opl_owned_link',
+      'framework_runtime_calls_execute_from_resolved_opl_installation',
       'may_register_projection_with_one_person_lab_app',
-      'may_expose_direct_skill_or_cli_entry_without_app',
+      'domain_skill_or_thin_cli_entry_does_not_own_framework_runtime',
     ],
+    authority_boundary: {
+      opl_owns_framework_install_runtime_and_generated_surfaces: true,
+      agent_owns_domain_truth_artifacts_verdicts_memory_and_owner_receipts: true,
+      agent_can_host_independent_framework_runtime: false,
+    },
   };
 }
 

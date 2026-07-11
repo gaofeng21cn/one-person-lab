@@ -56,7 +56,7 @@
     "version": "stage-run-cycle.v1",
     "contract_ref": "contracts/opl-framework/stage-run-kernel-contract.json",
     "module_ref": "src/modules/stagecraft/stage-run-orchestration.ts",
-    "package_export": "opl-framework-shared/stage-run-orchestration",
+    "package_export": "opl-framework/stage-run-orchestration",
     "brand_modules": {
       "primary": "stagecraft",
       "collaborating": [

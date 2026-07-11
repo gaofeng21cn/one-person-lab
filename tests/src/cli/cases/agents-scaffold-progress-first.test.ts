@@ -27,7 +27,7 @@ test('agents scaffold emits and validates one refs-only Foundry policy consumer'
     const contract = readJson(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     assert.equal(contract.surface_kind, 'opl_foundry_agent_series_consumer');
     assert.equal(contract.version, 'foundry-agent-series-consumer.v1');
-    assert.equal(contract.canonical_policy_export, 'opl-framework-shared/foundry-agent-series-policy');
+    assert.equal(contract.canonical_policy_export, 'opl-framework/foundry-agent-series-policy');
     assert.equal(
       contract.canonical_series_contract_ref,
       'contracts/opl-framework/foundry-agent-series-contract.json',
@@ -40,7 +40,6 @@ test('agents scaffold emits and validates one refs-only Foundry policy consumer'
       'agent_membership_projection_policy',
       'contract_version_policy',
       'series_design_profile',
-      'shared_release_pin_strategy',
       'standard_public_projection_policy',
       'workspace_topology_profile',
     ]) assert.equal(Object.hasOwn(contract, legacyBodyField), false, legacyBodyField);

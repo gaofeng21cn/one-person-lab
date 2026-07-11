@@ -13,7 +13,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 影响：
 
-- `foundry-agent-series-policy` public consumer 从 `foundry-agent-series-contract.json` 与 `standard-domain-agent-skeleton-contract.json` 读取 canonical policy，并由 `opl-framework-shared` 直接导出；consumer 返回值保留全部 no-authority flags。
+- `foundry-agent-series-policy` public consumer 从 `foundry-agent-series-contract.json` 与 `standard-domain-agent-skeleton-contract.json` 读取 canonical policy，并由 `opl-framework` 直接导出；consumer 返回值保留全部 no-authority flags。
 - domain agent 只保留 release pin、canonical contract/export refs、identity 与 domain delta；不得再把 canonical series/public/workspace/stage policy body当成本仓 authority。
 
 ### 决策：source-only Agent Package manifest 不声明发布 payload
@@ -26,15 +26,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - 只有存在真实发布元数据时才声明 `distribution_payload`；一旦声明，完整字段、SHA-256 格式、rolling `latest`、immutable tag、digest lock 与 proof false-claim 约束继续 fail closed。
 - 带 `ordinary_user_source` 的 published registry entry 必须同时提供合法 `distribution_payload`；不能用 source-only manifest 绕过已发布安装路径的 digest/immutable-tag 校验。
 
-### 决策：JavaScript Framework surface 只保留一个 npm package
+### 决策：JavaScript Framework surface 只保留 OPL 根 Node package
 
 原因：第二个只镜像根包公开 subpath 的 package 会额外引入 manifest、build copy、pack/test lane 和安装叙事，却没有独立 authority 或不可替代的运行边界。
 
 影响：
 
 - 不创建或保留第二个静态 package、build copy、pack/test scripts、alias、tombstone 或兼容 wrapper。
-- `opl-framework-shared` 保持现有六个同名公开 exports、`opl` CLI、Temporal dependencies 与 E2B optional dependency。
-- JavaScript family consumer 继续通过 `contracts/family-release/shared-owner-release.json` 声明的 Git `latest-stable` locator 安装 `opl-framework-shared`；本决策不更新 channel 或发布版本。
+- `opl-framework` 保持现有六个同名公开 exports、`opl` CLI、Temporal dependencies 与 E2B optional dependency。
+- 标准 Foundry Agent 的 manifest / lock 不再声明或安装 `opl-framework`；OPL module workflow 在 agent checkout 中维护到当前 resolved OPL root 的 package link，避免复制 package 或安装第二份 Temporal tree。
+- `opl connect agent-packages link-framework --agent-root <repo> [--check|--dry-run] --json` 复用同一 OPL-owned link helper，作为诊断 / 修复入口；它不创建第二个 package、publication channel 或 runtime authority。
 
 ### 决策：Stage attempt domain output 只运输 domain-owned ref
 
@@ -1016,7 +1017,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `contracts/opl-framework/foundry-agent-series-policy-release.json` 成为 OPL-owned policy release surface，记录 Progress-First policy bundle、`sha256:stable-json` fingerprint、domain pin contract ref 和 authority boundary。
 - `contracts/opl-framework/foundry-agent-series-contract.json`、standard scaffold 和 generated `contracts/foundry_agent_series.json` 都必须带 `shared_policy_release`，并要求 exact release ref、exact policy bundle fingerprint、`foundry:policy-release` alignment check。
 - Domain repo 只能 pin release ref/fingerprint 和映射 domain alias；不能把 OPL policy body 复制成 domain truth、quality/export verdict、artifact authority、memory authority 或 owner receipt authority。
-- `family:shared-release` 由 OPL owner 管理 `latest-stable` channel：consumer manifest 跟随 channel，lockfile 仅记录本次解析的精确 commit 以供复现，不再把 consumer 与 owner commit 的逐日相等作为门禁；`foundry:policy-release` 继续负责 Progress-First policy bundle pin。任一对齐都不授权 domain ready、production ready、App release ready 或 quality/export verdict。
+- 标准智能体不再安装或锁定 OPL Framework 实现；OPL 安装、更新并托管唯一 Framework 根包。Progress-First 只保留独立的机器合同 fingerprint，由 `foundry:policy-release` 校验语义版本，不形成第二个实现发布 channel。
 
 ### 决策：Progress-First 成为 OPL family shared stage contract
 

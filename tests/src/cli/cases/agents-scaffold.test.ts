@@ -108,7 +108,7 @@ test('agents scaffold exposes the reusable agent scaffold contract without domai
   const series = scaffold.foundry_agent_series_contract;
   assert.equal(series.surface_kind, 'opl_foundry_agent_series_consumer');
   assert.equal(series.version, 'foundry-agent-series-consumer.v1');
-  assert.equal(series.canonical_policy_export, 'opl-framework-shared/foundry-agent-series-policy');
+  assert.equal(series.canonical_policy_export, 'opl-framework/foundry-agent-series-policy');
   assert.equal(series.canonical_series_contract_ref, 'contracts/opl-framework/foundry-agent-series-contract.json');
   assert.equal(series.shared_policy_release.domain_adapter_must_not_copy_policy_body_as_authority, true);
   assert.ok(series.legacy_policy_body_fields_forbidden.includes('series_design_profile'));

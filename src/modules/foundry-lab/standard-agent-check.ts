@@ -21,8 +21,8 @@ function frameworkCompatibility(repoDir: string) {
     ...(isRecord(packageJson?.dependencies) ? packageJson.dependencies : {}),
     ...(isRecord(packageJson?.devDependencies) ? packageJson.devDependencies : {}),
   };
-  const dependencyRef = typeof dependencies['opl-framework-shared'] === 'string'
-    ? dependencies['opl-framework-shared']
+  const dependencyRef = typeof dependencies['opl-framework'] === 'string'
+    ? dependencies['opl-framework']
     : null;
   const sourceFiles = fs.globSync('**/*.{ts,tsx,js,mjs,cjs}', {
     cwd: repoDir,
@@ -30,7 +30,7 @@ function frameworkCompatibility(repoDir: string) {
   });
   const requiredExports = [...new Set(sourceFiles.flatMap((file) => {
     const source = fs.readFileSync(path.join(repoDir, file), 'utf8');
-    return [...source.matchAll(/(?:from\s+|import\s*\()(['"])opl-framework-shared(\/[^'"\)]+)?\1/g)]
+    return [...source.matchAll(/(?:from\s+|import\s*\()(['"])opl-framework(\/[^'"\)]+)?\1/g)]
       .map((match) => match[2] ? `.${match[2]}` : '.');
   }))].sort();
   if (!dependencyRef && requiredExports.length === 0) {
@@ -40,13 +40,23 @@ function frameworkCompatibility(repoDir: string) {
   const frameworkPackage = readJson(path.join(frameworkRoot, 'package.json'));
   const availableExports = isRecord(frameworkPackage?.exports) ? Object.keys(frameworkPackage.exports) : [];
   const missingExports = requiredExports.filter((entry) => !availableExports.includes(entry));
+  const frameworkLink = path.join(repoDir, 'node_modules', 'opl-framework');
+  let managedLink = false;
+  try {
+    managedLink = fs.lstatSync(frameworkLink).isSymbolicLink()
+      && fs.realpathSync(frameworkLink) === fs.realpathSync(frameworkRoot);
+  } catch {
+    managedLink = false;
+  }
   const blockers = [
-    !dependencyRef ? 'opl_framework_dependency_not_declared' : null,
+    dependencyRef ? 'agent_manifest_must_not_own_opl_framework_dependency' : null,
+    requiredExports.length > 0 && !managedLink ? 'opl_managed_framework_link_missing' : null,
     ...missingExports.map((entry) => `current_opl_export_missing:${entry}`),
   ].filter((entry): entry is string => Boolean(entry));
   return {
     status: blockers.length === 0 ? 'compatible' : 'blocked',
     dependency_ref: dependencyRef,
+    managed_link: managedLink,
     required_exports: requiredExports,
     missing_exports: missingExports,
     blockers,

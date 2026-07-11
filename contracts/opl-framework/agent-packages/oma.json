@@ -61,9 +61,26 @@
   ],
   "opl_managed_surface": {
     "package_shape": "thin_agent_package",
-    "dependency_resolution": "managed_dependency_graph",
-    "dependency_update_policy": "independent_package_target",
-    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
+    "dependency_resolution": "opl_owned_framework_link",
+    "dependency_update_policy": "opl_managed_framework_installation_target",
+    "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request",
+    "framework_link": {
+      "install_owner": "opl_module_action_workflow",
+      "link_path_pattern": "<agent-root>/node_modules/opl-framework",
+      "target_owner": "resolved_opl_framework_installation_root",
+      "automatic_action_refs": [
+        "opl install --module <module-id>",
+        "opl connect install --module <module-id>",
+        "opl connect update --module <module-id>",
+        "opl connect reinstall --module <module-id>",
+        "opl system startup-maintenance --json"
+      ],
+      "repair_command_ref": "opl connect agent-packages link-framework --agent-root <repo> --json",
+      "check_command_ref": "opl connect agent-packages link-framework --agent-root <repo> --check --json",
+      "agent_manifest_framework_dependency_forbidden": true,
+      "copies_framework_package": false,
+      "installs_second_temporal_tree": false
+    }
   },
   "capability_dependencies": []
 }

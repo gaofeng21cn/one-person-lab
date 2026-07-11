@@ -35,7 +35,6 @@ case "$lane" in
     npm run reuse-first:scan:diff
     ;;
   family)
-    npm run family:shared-release -- check
     family_tmp_cleanup=0
     if [ -n "${OPL_FAMILY_PYTHON_TMP_ROOT:-}" ]; then
       family_tmp_root="${OPL_FAMILY_PYTHON_TMP_ROOT}"
@@ -55,7 +54,6 @@ case "$lane" in
     PYTEST_ADDOPTS="${PYTEST_ADDOPTS:-} -p no:cacheprovider -o cache_dir=${family_tmp_root}/pytest-cache" \
     PYTHONPATH=python/opl-harness-shared/src \
       pytest \
-      python/opl-harness-shared/tests/test_family_shared_release.py \
       python/opl-harness-shared/tests/test_editable_dependency_bootstrap.py \
       python/opl-harness-shared/tests/test_editable_consumer_bootstrap.py \
       python/opl-harness-shared/tests/test_editable_consumer_launcher.py

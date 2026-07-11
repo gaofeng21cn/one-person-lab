@@ -69,19 +69,6 @@ test('native helper prebuild script handles platform executable names', () => {
   assert.match(runtime, /nativeHelperExecutableName/);
 });
 
-test('package.json exposes the canonical family shared release maintenance command', () => {
-  assert.equal(packageJson.scripts?.['family:shared-release'], 'node ./scripts/family-shared-release.mjs');
-  assert.equal(packageJson.exports?.['./family-shared-release'], './dist/modules/atlas/family-shared-release.js');
-  assert.equal(
-    fs.existsSync(path.join(repoRoot, 'scripts/family-shared-release.mjs')),
-    true,
-  );
-  assert.equal(
-    fs.existsSync(path.join(repoRoot, 'src/modules/atlas/family-shared-release.ts')),
-    true,
-  );
-});
-
 test('package.json exports the unified domain-agent descriptor read model', () => {
   assert.equal(
     packageJson.exports?.['./family-domain-agent-descriptor'],

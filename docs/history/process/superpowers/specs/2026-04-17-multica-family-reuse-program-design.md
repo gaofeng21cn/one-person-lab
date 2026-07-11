@@ -197,7 +197,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 #### `RCA`
 
-- 先把 `product entry` manifest 里的 shared companion payload 改为直接消费 `opl-framework-shared/product-entry-companions`
+- 先把 `product entry` manifest 里的 shared companion payload 改为直接消费 `opl-framework/product-entry-companions`
 - 再把 `session continuity / rerun linkage / review state / runtime watch` 接入共享 runtime/task/skill/automation companion
 - 保留 deliverable domain truth
 
@@ -238,7 +238,7 @@ Machine boundary: 本文是早期 worker spec 归档。机器真相继续归 `co
 
 ### `RCA`
 
-- `product-entry manifest` 的 `quickstart / overview / readiness` 改为直接复用 `opl-framework-shared/product-entry-companions`
+- `product-entry manifest` 的 `quickstart / overview / readiness` 改为直接复用 `opl-framework/product-entry-companions`
 - conformance tests
 
 ## 历史验证

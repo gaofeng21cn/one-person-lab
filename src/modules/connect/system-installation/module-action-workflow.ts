@@ -11,6 +11,7 @@ import {
   runCommand,
 } from './shared.ts';
 import type { PackagedModuleMarker } from './module-packaged.ts';
+import { materializeStandardAgentFrameworkLink } from '../standard-agent-framework-link.ts';
 
 export type DomainModuleRuntimeSpec = DomainModuleSpec & {
   default_install: boolean;
@@ -32,6 +33,7 @@ export type ModuleActionStepResult = {
 
 export type ModuleActionWorkflow = {
   bootstrap: ModuleActionStepResult;
+  framework_link: ModuleActionStepResult;
   skill_sync: ModuleActionStepResult;
   health_check: ModuleActionStepResult;
 };
@@ -196,6 +198,30 @@ function runModuleSkillSync(spec: DomainModuleRuntimeSpec, checkoutPath: string)
   } satisfies ModuleActionStepResult;
 }
 
+function runFrameworkLink(checkoutPath: string, bootstrap: ModuleActionStepResult) {
+  if (bootstrap.status === 'blocked') {
+    return {
+      status: 'skipped',
+      summary: 'Framework link waits for successful module bootstrap.',
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    } satisfies ModuleActionStepResult;
+  }
+  const result = materializeStandardAgentFrameworkLink({ agentRoot: checkoutPath });
+  return {
+    status: result.status === 'not_applicable' ? 'skipped' : 'completed',
+    summary: result.status === 'not_applicable'
+      ? 'Module does not consume OPL Framework JavaScript imports.'
+      : 'Linked the Standard Agent to the OPL-owned Framework installation.',
+    command_preview: null,
+    stdout: '',
+    stderr: '',
+    result,
+  } satisfies ModuleActionStepResult;
+}
+
 function runModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
   return runModuleStep(
     spec,
@@ -251,6 +277,7 @@ export function runManagedModuleWorkflow(
       result: null,
     } satisfies ModuleActionStepResult
     : runModuleBootstrap(spec, checkoutPath);
+  const framework_link = runFrameworkLink(checkoutPath, bootstrap);
   const skill_sync = runModuleSkillSync(spec, checkoutPath);
   const health_check = packagedModule
     ? runPackagedModuleHealthCheck(spec, checkoutPath, deps)
@@ -258,24 +285,28 @@ export function runManagedModuleWorkflow(
 
   return {
     bootstrap,
+    framework_link,
     skill_sync,
     health_check,
   } satisfies ModuleActionWorkflow;
 }
 
 export function runExternalModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  const bootstrap = {
+    status: 'skipped',
+    summary: 'External developer checkouts are not bootstrapped by OPL.',
+    command_preview: null,
+    stdout: '',
+    stderr: '',
+    result: null,
+  } satisfies ModuleActionStepResult;
+  const framework_link = runFrameworkLink(checkoutPath, bootstrap);
   const skill_sync = runModuleSkillSync(spec, checkoutPath);
   const health_check = runModuleHealthCheck(spec, checkoutPath);
 
   return {
-    bootstrap: {
-      status: 'skipped',
-      summary: 'External developer checkouts are not bootstrapped by OPL.',
-      command_preview: null,
-      stdout: '',
-      stderr: '',
-      result: null,
-    },
+    bootstrap,
+    framework_link,
     skill_sync,
     health_check,
   } satisfies ModuleActionWorkflow;
@@ -284,6 +315,14 @@ export function runExternalModuleWorkflow(spec: DomainModuleRuntimeSpec, checkou
 export function buildSkippedWorkflow(summary: string): ModuleActionWorkflow {
   return {
     bootstrap: {
+      status: 'skipped',
+      summary,
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    },
+    framework_link: {
       status: 'skipped',
       summary,
       command_preview: null,

@@ -68,11 +68,13 @@ export type AgentPackageManifestValidateInput = {
 
 export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
   dryRun?: boolean;
+  agentRoot?: string | null;
 };
 
 export type AgentPackagePackageActionInput = {
   packageId: string;
   dryRun?: boolean;
+  agentRoot?: string | null;
 };
 
 export type AgentPackageHomeShortcutPreferencesSetInput = {

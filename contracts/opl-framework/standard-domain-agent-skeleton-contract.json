@@ -978,20 +978,6 @@
           "breaking_change_requires_new_version": true,
           "domain_descriptor_must_reference_domain_contract": true
         },
-        "shared_release_pin_strategy": {
-          "owner_release_contract_ref": "contracts/family-release/shared-owner-release.json",
-          "owner_managed_latest_stable_channel_required": true,
-          "lockfile_resolved_commit_receipt_required": true,
-          "consumer_exact_commit_equality_gate": false,
-          "supported_pin_sources": [
-            "pyproject.toml",
-            "uv.lock",
-            "package.json",
-            "package-lock.json"
-          ],
-          "consumer_alignment_check": "family:shared-release",
-          "domain_contract_version_pin_does_not_authorize_domain_truth": true
-        },
         "shared_policy_release": {
           "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
           "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
@@ -1918,20 +1904,6 @@
         ],
         "breaking_change_requires_new_version": true,
         "domain_descriptor_must_reference_domain_contract": true
-      },
-      "shared_release_pin_strategy": {
-        "owner_release_contract_ref": "contracts/family-release/shared-owner-release.json",
-        "owner_managed_latest_stable_channel_required": true,
-        "lockfile_resolved_commit_receipt_required": true,
-        "consumer_exact_commit_equality_gate": false,
-        "supported_pin_sources": [
-          "pyproject.toml",
-          "uv.lock",
-          "package.json",
-          "package-lock.json"
-        ],
-        "consumer_alignment_check": "family:shared-release",
-        "domain_contract_version_pin_does_not_authorize_domain_truth": true
       },
       "shared_policy_release": {
         "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",

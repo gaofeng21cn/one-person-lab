@@ -183,7 +183,7 @@ function isOplFlowScriptMissing(error: unknown) {
 
 function readBlockedWorkflowStep(target: StartupMaintenanceModuleTarget) {
   const turnkey = readNestedRecord(target.result, 'turnkey');
-  for (const stepId of ['bootstrap', 'skill_sync', 'health_check'] as const) {
+  for (const stepId of ['bootstrap', 'framework_link', 'skill_sync', 'health_check'] as const) {
     const step = readNestedRecord(turnkey, stepId);
     if (readNestedRecord(step, 'status') === 'blocked') {
       return { stepId, step };

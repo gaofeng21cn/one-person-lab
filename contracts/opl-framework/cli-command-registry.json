@@ -1930,6 +1930,13 @@
           "summary": "Package source kind for the package lock receipt."
         },
         {
+          "name": "agent-root",
+          "flag": "--agent-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
@@ -2920,6 +2927,13 @@
           "summary": "Package source kind for the package lock receipt."
         },
         {
+          "name": "agent-root",
+          "flag": "--agent-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
@@ -2977,6 +2991,13 @@
           "summary": "Installed OPL Agent Package id to repair."
         },
         {
+          "name": "agent-root",
+          "flag": "--agent-root",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
@@ -3019,6 +3040,71 @@
         "can_claim_production_ready": false,
         "owner": "OPL Connect",
         "surface": "agent_package_registry_and_manifest_lifecycle"
+      }
+    },
+    "connect_agent_packages_link_framework": {
+      "command_id": "connect agent-packages link-framework",
+      "owner": "OPL Connect",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "agent-root",
+          "flag": "--agent-root",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
+          "name": "check",
+          "flag": "--check",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Fail closed when the Framework link is missing or points to another installation."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate and preview the Framework link without writing the agent checkout."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_framework_link"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_framework_link": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "reason",
+              "agent_root",
+              "link_path",
+              "target_root",
+              "import_specifier",
+              "writes_performed",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Connect",
+        "surface": "standard_agent_framework_link_lifecycle"
       }
     },
     "connect_agent_packages_uninstall": {

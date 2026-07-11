@@ -78,7 +78,7 @@ test('agents scaffold generates and validates a standard domain-agent skeleton',
     const foundryAgentSeries = readJsonFile(path.join(targetDir, 'contracts/foundry_agent_series.json'));
     assert.equal(foundryAgentSeries.surface_kind, 'opl_foundry_agent_series_consumer');
     assert.equal(foundryAgentSeries.version, 'foundry-agent-series-consumer.v1');
-    assert.equal(foundryAgentSeries.canonical_policy_export, 'opl-framework-shared/foundry-agent-series-policy');
+    assert.equal(foundryAgentSeries.canonical_policy_export, 'opl-framework/foundry-agent-series-policy');
     assert.equal(foundryAgentSeries.domain_id, 'award-foundry');
     assert.equal(foundryAgentSeries.stage_manifest_ref, 'agent/stages/manifest.json');
     assert.equal(foundryAgentSeries.stage_control_plane_ref, 'opl-generated:family_stage_control_plane');
