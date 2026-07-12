@@ -1,12 +1,9 @@
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
+import { requireAgentPackageReadinessPort } from '../../kernel/agent-package-readiness-port.ts';
 import {
   resolveStandardAgent,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
-import {
-  ensureOplAgentPackageScopeActivation,
-  runOplAgentPackageStatus,
-} from '../connect/index.ts';
 
 type PackageScope = {
   scope: 'workspace' | 'quest';
@@ -58,16 +55,17 @@ export async function ensureFamilyRuntimePackageLaunchReady(input: {
 
   const packageId = agent.agent_id;
   const scope = packageScope(input.workspaceLocator);
-  const initialStatus = runOplAgentPackageStatus({ packageId }).opl_agent_package_status;
+  const packageReadiness = requireAgentPackageReadinessPort();
+  const initialStatus = packageReadiness.readStatus({ packageId }).opl_agent_package_status;
   const activation = input.activateMissingScope !== false && initialStatus.installed_package_count > 0 && scope
-    ? await ensureOplAgentPackageScopeActivation({
+    ? await packageReadiness.ensureScopeActivation({
       packageId,
       ...scope,
       useBoundaryId: input.useBoundaryId,
       pinnedUseBinding: input.pinnedUseBinding,
     })
     : null;
-  const packageStatus = runOplAgentPackageStatus({
+  const packageStatus = packageReadiness.readStatus({
     packageId,
     ...scope,
   }).opl_agent_package_status;
