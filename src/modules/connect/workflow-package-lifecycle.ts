@@ -216,17 +216,33 @@ export function resolveOplFlowDependencyClosure(
 
 function removeTomlTables(text: string, markers: string[]) {
   const lines = text.split('\n');
-  const kept: string[] = [];
-  let remove = false;
-  let removed = false;
+  const blocks: string[][] = [];
+  let current: string[] = [];
+  const isTableHeader = (line: string) => /^\[\[?[^\]]+\]\]?\s*$/.test(line.trim());
   for (const line of lines) {
-    const header = line.trim();
-    if (/^\[[^\]]+\]$/.test(header)) {
-      remove = markers.some((marker) => header.toLowerCase().includes(marker.toLowerCase()));
-      removed ||= remove;
+    if (isTableHeader(line) && current.length > 0) {
+      blocks.push(current);
+      current = [];
     }
-    if (!remove) kept.push(line);
+    current.push(line);
   }
+  if (current.length > 0) blocks.push(current);
+
+  const normalizedMarkers = markers.map((marker) => marker.toLowerCase());
+  let removed = false;
+  const kept = blocks.flatMap((block) => {
+    const header = block[0]?.trim().toLowerCase() ?? '';
+    const headerMatch = normalizedMarkers.some((marker) => header.includes(marker));
+    const skillPathMatch = header === '[[skills.config]]' && block.some((line) => {
+      const pathValue = line.match(/^\s*path\s*=\s*["']([^"']+)["']\s*$/i)?.[1]?.toLowerCase();
+      return Boolean(pathValue && normalizedMarkers.some((marker) => pathValue.includes(marker)));
+    });
+    if (headerMatch || skillPathMatch) {
+      removed = true;
+      return [];
+    }
+    return block;
+  });
   if (!removed) return text;
   return `${kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd()}\n`;
 }

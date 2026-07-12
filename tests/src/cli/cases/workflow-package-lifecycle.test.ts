@@ -203,6 +203,14 @@ test('OPL Flow install archives declared conflicts and rollback restores exact c
     '[mcp_servers.codexcont]',
     'command = "codexcont"',
     '',
+    '[[skills.config]]',
+    'path = "/tmp/talk-normal/SKILL.md"',
+    'enabled = false',
+    '',
+    '[[skills.config]]',
+    'path = "/tmp/superpowers/skills/using-superpowers/SKILL.md"',
+    'enabled = false',
+    '',
   ].join('\n');
 
   try {
@@ -243,6 +251,7 @@ test('OPL Flow install archives declared conflicts and rollback restores exact c
     assert.equal(installed.service_actions.length, 2);
     assert.equal(fs.existsSync(installed.receipt_path), true);
     assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /superpowers|ponytail|codexcont/i);
+    assert.match(fs.readFileSync(configPath, 'utf8'), /talk-normal/);
 
     const repeated = runCli(['packages', 'install', 'opl-flow'], env).workflow_package;
     assert.deepEqual(repeated.migration_actions, []);
