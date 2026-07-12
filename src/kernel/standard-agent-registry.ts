@@ -84,7 +84,7 @@ export const STANDARD_AGENT_REGISTRY = [
     work_alias: 'study',
     aliases: ['mas', 'medautoscience', 'med-autoscience', 'med_auto_science', 'study'],
     ordinary_golden_path:
-      'study -> stage -> domain owner receipt or typed blocker -> research artifact handoff',
+      'study -> stage -> consumable artifact progress or legal hard stop -> research artifact handoff',
     domain_pack_example: 'Medical Research Pack',
     domain_authority_kernel_examples: [
       'medical research truth',
@@ -166,7 +166,7 @@ export const STANDARD_AGENT_REGISTRY = [
     work_alias: 'grant',
     aliases: ['mag', 'medautogrant', 'med-autogrant', 'med_auto_grant', 'grant'],
     ordinary_golden_path:
-      'grant -> stage -> domain owner receipt or typed blocker -> grant deliverable handoff',
+      'grant -> stage -> consumable artifact progress or legal hard stop -> grant deliverable handoff',
     domain_pack_example: 'Grant Pack',
     domain_authority_kernel_examples: [
       'grant truth',
@@ -249,7 +249,7 @@ export const STANDARD_AGENT_REGISTRY = [
     work_alias: 'deck',
     aliases: ['rca', 'redcube', 'redcube-ai', 'redcube_ai', 'redcubeai', 'deck'],
     ordinary_golden_path:
-      'deck -> stage -> domain owner receipt or typed blocker -> visual deliverable handoff',
+      'deck -> stage -> consumable artifact progress or legal hard stop -> visual deliverable handoff',
     domain_pack_example: 'Visual Deliverable Pack',
     domain_authority_kernel_examples: [
       'visual truth',
@@ -338,7 +338,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'agent',
     ],
     ordinary_golden_path:
-      'target agent -> stage -> target owner answer -> mechanism or work-order handoff',
+      'target agent -> stage -> consumable artifact progress or legal hard stop -> mechanism or work-order handoff',
     domain_pack_example: 'Agent-Building Pack',
     domain_authority_kernel_examples: [
       'agent-building semantics',
@@ -387,7 +387,7 @@ export const STANDARD_AGENT_REGISTRY = [
       'book',
     ],
     ordinary_golden_path:
-      'book -> stage -> domain owner receipt or typed blocker -> manuscript package handoff',
+      'book -> stage -> consumable artifact progress or legal hard stop -> manuscript package handoff',
     domain_pack_example: 'Book Manuscript Pack',
     domain_authority_kernel_examples: [
       'book manuscript truth',

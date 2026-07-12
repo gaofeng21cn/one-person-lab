@@ -106,9 +106,10 @@ export type FamilyRuntimeCommandInput =
       stage_id?: string;
       stage_order?: number;
       attempt_id?: string;
-      terminal_status?: 'success' | 'blocked' | 'skipped' | 'deferred';
+      terminal_status?: 'success' | 'completed_with_quality_debt' | 'blocked' | 'skipped' | 'deferred';
       required_outputs?: string[];
       owner_receipt_refs?: string[];
+      quality_debt_refs?: string[];
       typed_blocker_refs?: string[];
       decision_receipt_refs?: string[];
       artifact_ref?: string;

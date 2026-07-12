@@ -7,10 +7,11 @@ import test from 'node:test';
 import {
   normalizeDomainOwnerAnswerProjectionProfile,
 } from '../../src/kernel/domain-owner-answer-projection-profile.ts';
+import { buildProgressDeltaReceipt } from '../../src/modules/ledger/progress-delta-receipt.ts';
 import * as checkoutCurrentness from '../../src/modules/runway/family-runtime-checkout-currentness.ts';
 import * as stageNativeOwnerAnswer from '../../src/modules/runway/family-runtime-stage-native-owner-answer.ts';
 
-test('stage-native owner-answer guard consumes a generic domain profile', () => {
+test('stage-native progress-or-owner-answer guard consumes a generic domain profile', () => {
   const profile = normalizeDomainOwnerAnswerProjectionProfile({
     surface_kind: 'opl_domain_owner_answer_projection_profile',
     version: 'domain-owner-answer-projection-profile.v1',
@@ -72,6 +73,64 @@ test('stage-native owner-answer guard consumes a generic domain profile', () => 
     },
     profiles: [profile],
   }), false);
+
+  const progressGuard = (stageNativeOwnerAnswer as Record<string, unknown>)
+    .stageAttemptPayloadHasStageNativeProgressOrOwnerAnswerFromDomainProfile;
+  const progressReceipt = buildProgressDeltaReceipt({
+    receipt_id: 'progress-delta:example-domain/close-example/attempt-001',
+    domain_id: 'example-domain',
+    task_or_study_ref: 'example://case/001',
+    stage_ref: 'close-example',
+    producer: 'example-domain',
+    delta_classification: 'deliverable_progress_delta',
+    changed_surfaces: ['example://case/001/draft'],
+    produced_refs: ['example://artifacts/draft-001'],
+    consumed_refs: ['example://inputs/source-001'],
+    next_owner: 'example-domain',
+    next_required_delta: 'continue_to_next_stage_with_quality_debt',
+  });
+  const attempt = {
+    stage_attempt_id: 'sat_example_001',
+    status: 'completed',
+    closeout_refs: [],
+    route_impact: { progress_delta_receipt: progressReceipt },
+    activity_events: [],
+  };
+  assert.equal(typeof progressGuard, 'function');
+  assert.equal((progressGuard as (input: unknown) => boolean)({
+    domainId: 'example-domain',
+    attempt,
+    currentPayload: {},
+    profiles: [profile],
+  }), true);
+  assert.equal((progressGuard as (input: unknown) => boolean)({
+    domainId: 'example-domain',
+    attempt: {
+      ...attempt,
+      route_impact: {
+        progress_delta_receipt: {
+          ...progressReceipt,
+          delta_classification: 'platform_repair_delta',
+        },
+      },
+    },
+    currentPayload: {},
+    profiles: [profile],
+  }), false);
+
+  const rowProgressGuard = (stageNativeOwnerAnswer as Record<string, unknown>)
+    .stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile;
+  assert.equal(typeof rowProgressGuard, 'function');
+  assert.equal((rowProgressGuard as (input: unknown) => boolean)({
+    row: {
+      domain_id: 'example-domain',
+      closeout_refs_json: '[]',
+      route_impact_json: JSON.stringify({ progress_delta_receipt: progressReceipt }),
+      activity_events_json: '[]',
+    },
+    currentPayload: {},
+    profiles: [profile],
+  }), true);
 });
 
 test('checkout currentness is enabled only by a domain profile', () => {

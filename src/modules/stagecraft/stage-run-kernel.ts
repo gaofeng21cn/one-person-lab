@@ -80,6 +80,9 @@ export type StageRunAdmissionReport = {
   route_back_recommendations: string[];
   audit_drilldown_refs: string[];
   forbidden_authority_flags: string[];
+  consumable_artifact_refs: string[];
+  quality_debt_reasons: string[];
+  transition_outcome: 'blocked' | 'completed' | 'completed_with_quality_debt' | 'hard_stopped';
   default_blocked: boolean;
   authority_boundary: typeof AUTHORITY_BOUNDARY;
 };
@@ -123,6 +126,8 @@ export type StageRunExecutionAuthorizationReport = {
   execution_authorized: boolean;
   launch_blockers: string[];
   closeout_binding_blockers: string[];
+  quality_debt_reasons: string[];
+  transition_authorized_with_quality_debt: boolean;
   closeout_binding: StageRunCloseoutBinding;
   opl_runtime_blocker: StageRunExecutionAuthorizationBlocker | null;
   authority_boundary: typeof AUTHORITY_BOUNDARY;
@@ -312,6 +317,8 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
     .map((entry) => `route_back_missing:${entry}`);
   const auditDrilldownRefs = stringRefs(input.audit_drilldown_refs);
   const forbiddenAuthorityFlags: string[] = [];
+  const consumableArtifactRefs = stringRefs(input.consumable_artifact_refs);
+  const qualityDebtReasons = stringRefs(input.quality_debt_refs);
 
   if (phase === 'launch') {
     launchBlockers.push(...stageRunIdentityBlockers(input));
@@ -357,12 +364,17 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
     if (requiredRoles.length === 0) {
       closeoutBlockers.push('required_role_artifacts_missing');
     }
-    if (
-      stringRefs(input.owner_receipt_refs).length === 0
-      && stringRefs(input.typed_blocker_refs).length === 0
-      && stringRefs(input.quality_gate_receipt_refs).length === 0
-    ) {
-      closeoutBlockers.push('owner_receipt_or_typed_blocker_missing');
+    const ownerReceiptRefs = stringRefs(input.owner_receipt_refs);
+    const typedBlockerRefs = stringRefs(input.typed_blocker_refs);
+    const qualityGateReceiptRefs = stringRefs(input.quality_gate_receipt_refs);
+    const ownerAnswerObserved = ownerReceiptRefs.length > 0
+      || typedBlockerRefs.length > 0
+      || qualityGateReceiptRefs.length > 0;
+    if (!ownerAnswerObserved && consumableArtifactRefs.length === 0) {
+      closeoutBlockers.push('consumable_artifact_or_owner_answer_missing');
+    } else if (!ownerAnswerObserved) {
+      advisoryWarnings.push('owner_answer_missing_transition_continues_with_quality_debt');
+      qualityDebtReasons.push('owner_answer_missing_for_quality_or_ready_claim');
     }
     if (stringRefs(input.content_hashes).length === 0) {
       closeoutBlockers.push('content_hashes_missing');
@@ -371,20 +383,29 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
       closeoutBlockers.push('lineage_refs_missing');
     }
     if (input.provider_completed === true) {
-      forbiddenAuthorityFlags.push('provider_completed_cannot_close_stage');
+      advisoryWarnings.push('provider_completed_alone_cannot_authorize_quality_or_ready');
     }
     if (input.read_model_refreshed === true) {
-      forbiddenAuthorityFlags.push('read_model_refreshed_cannot_close_stage');
+      advisoryWarnings.push('read_model_refreshed_alone_cannot_authorize_quality_or_ready');
     }
     if (input.file_presence === true) {
-      forbiddenAuthorityFlags.push('file_presence_cannot_close_stage');
+      advisoryWarnings.push('file_presence_alone_cannot_authorize_quality_or_ready');
     }
     if (input.conformance_passed === true) {
-      forbiddenAuthorityFlags.push('conformance_passed_cannot_close_stage');
+      advisoryWarnings.push('conformance_passed_alone_cannot_authorize_quality_or_ready');
     }
   }
 
-  const base = {
+  const defaultBlocked = launchBlockers.length > 0
+    || closeoutBlockers.length > 0
+    || forbiddenAuthorityFlags.length > 0;
+  const typedHardStopObserved = phase === 'closeout' && stringRefs(input.typed_blocker_refs).length > 0;
+  const ownerOrQualityReceiptObserved = phase === 'closeout' && (
+    stringRefs(input.owner_receipt_refs).length > 0
+    || stringRefs(input.quality_gate_receipt_refs).length > 0
+  );
+
+  const base: Omit<StageRunAdmissionReport, 'status'> = {
     surface_kind: 'opl_stage_run_admission_report' as const,
     version: 'stage-run-admission.v1' as const,
     phase,
@@ -394,10 +415,16 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
     route_back_recommendations: [...new Set(routeBackRecommendations)],
     audit_drilldown_refs: [...new Set(auditDrilldownRefs)],
     forbidden_authority_flags: [...new Set(forbiddenAuthorityFlags)],
-    default_blocked:
-      launchBlockers.length > 0
-      || closeoutBlockers.length > 0
-      || forbiddenAuthorityFlags.length > 0,
+    consumable_artifact_refs: [...new Set(consumableArtifactRefs)],
+    quality_debt_reasons: [...new Set(qualityDebtReasons)],
+    transition_outcome: defaultBlocked
+      ? 'blocked'
+      : typedHardStopObserved
+        ? 'hard_stopped'
+        : ownerOrQualityReceiptObserved || phase === 'launch'
+          ? 'completed'
+          : 'completed_with_quality_debt',
+    default_blocked: defaultBlocked,
     authority_boundary: AUTHORITY_BOUNDARY,
   };
   return {
@@ -537,9 +564,32 @@ export function evaluateStageRunExecutionAuthorization(input: JsonRecord): Stage
   const phase: StageRunExecutionAuthorizationReport['phase'] = input.phase === 'closeout' ? 'closeout' : 'launch';
   const launchBlockers = [...new Set(launchAuthorizationBlockers(input))];
   const closeoutBinding = buildCloseoutBinding(input);
-  const closeoutBindingBlockerList = phase === 'closeout'
+  const consumableArtifactRefs = stringRefs(input.consumable_artifact_refs);
+  const rawCloseoutBindingBlockers = phase === 'closeout'
     ? [...new Set(closeoutBindingBlockers(closeoutBinding))]
     : [];
+  const qualityOnlyBindingBlockers = new Set([
+    'quality_gate_independent_attempt_binding_missing',
+    'quality_gate_same_attempt_self_review_forbidden',
+  ]);
+  const transitionWithoutOwnerAnswer = phase === 'closeout'
+    && closeoutBinding.owner_answer_ref === null
+    && consumableArtifactRefs.length > 0;
+  const qualityGateDebtForward = phase === 'closeout'
+    && consumableArtifactRefs.length > 0
+    && rawCloseoutBindingBlockers.some((reason) => qualityOnlyBindingBlockers.has(reason));
+  const closeoutBindingBlockerList = transitionWithoutOwnerAnswer
+    ? []
+    : rawCloseoutBindingBlockers.filter((reason) => !(
+        qualityGateDebtForward && qualityOnlyBindingBlockers.has(reason)
+      ));
+  const qualityDebtReasons = [
+    ...(transitionWithoutOwnerAnswer ? ['owner_answer_missing_for_quality_or_ready_claim'] : []),
+    ...rawCloseoutBindingBlockers.filter((reason) => (
+      qualityGateDebtForward && qualityOnlyBindingBlockers.has(reason)
+    )),
+    ...stringRefs(input.quality_debt_refs),
+  ];
   const runtimeBlocker = executionAuthorizationBlocker(launchBlockers, closeoutBindingBlockerList);
   const executionAuthorized = runtimeBlocker === null;
   return {
@@ -550,6 +600,9 @@ export function evaluateStageRunExecutionAuthorization(input: JsonRecord): Stage
     execution_authorized: executionAuthorized,
     launch_blockers: launchBlockers,
     closeout_binding_blockers: closeoutBindingBlockerList,
+    quality_debt_reasons: [...new Set(qualityDebtReasons)],
+    transition_authorized_with_quality_debt:
+      phase === 'closeout' && executionAuthorized && qualityDebtReasons.length > 0,
     closeout_binding: closeoutBinding,
     opl_runtime_blocker: runtimeBlocker,
     authority_boundary: AUTHORITY_BOUNDARY,

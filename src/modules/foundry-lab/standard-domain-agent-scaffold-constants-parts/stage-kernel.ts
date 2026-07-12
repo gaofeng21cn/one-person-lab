@@ -71,11 +71,12 @@ export const STAGE_RUN_KERNEL_PROFILE = {
     'stage_folder',
     'stage_manifest',
     'role_artifacts',
-    'owner_receipt_or_typed_blocker',
+    'progress_receipt_or_owner_answer_or_hard_stop',
   ],
   required_object_models: [
     'StageRun',
     'RoleArtifactRef',
+    'ProgressDeltaReceipt',
     'OwnerReceipt',
     'TypedBlocker',
     'ReadModel',
@@ -85,6 +86,8 @@ export const STAGE_RUN_KERNEL_PROFILE = {
     file_presence_counts_as_stage_complete: false,
     latest_json_counts_as_domain_accepted: false,
     read_model_counts_as_transition_authority: false,
+    validated_consumable_artifact_progress_counts_as_transition: true,
+    quality_debt_counts_as_quality_acceptance: false,
   },
   launch_admission_policy: {
     hard_blockers: [
@@ -115,9 +118,11 @@ export const STAGE_RUN_KERNEL_PROFILE = {
     replay_packet_default: false,
   },
   transition_authority: {
-    terminal_transition_authority: 'owner_receipt_or_typed_blocker',
+    terminal_transition_authority: 'consumable_artifact_progress_or_owner_answer_or_hard_stop',
     provider_completion_counts_as_transition: false,
     file_presence_counts_as_transition: false,
+    quality_budget_exhaustion_blocks_transition: false,
+    owner_receipt_required_for_quality_or_ready_claim: true,
   },
   authority_boundary: {
     opl_can_write_domain_truth: false,

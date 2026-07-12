@@ -10,7 +10,7 @@ export function assertStageOperatingPrincipleChecksPassed(repo: any) {
     'input_refs',
     'current_owner',
     'accepted_answer_shape',
-    'owner_receipt_or_typed_blocker',
+    'progress_receipt_or_owner_answer_or_hard_stop',
     'handoff_packet',
     'current_pointer',
     'authority_boundary',
@@ -18,6 +18,11 @@ export function assertStageOperatingPrincipleChecksPassed(repo: any) {
   assert.equal(checks.speed_policy.executor_autonomy_inside_stage, true);
   assert.equal(checks.speed_policy.strategy_refs_block_launch_by_default, false);
   assert.equal(checks.speed_policy.quality_gaps_block_ordinary_progress_by_default, false);
+  assert.equal(checks.speed_policy.consumable_artifact_advances_stage, true);
+  assert.equal(checks.speed_policy.retry_review_and_repair_limits_are_quality_budgets, true);
+  assert.equal(checks.speed_policy.quality_budget_exhaustion_status, 'completed_with_quality_debt');
+  assert.equal(checks.speed_policy.quality_debt_blocks_stage_transition, false);
+  assert.equal(checks.speed_policy.quality_debt_blocks_quality_export_or_ready_claims, true);
   assert.equal(checks.default_read_surface.root, 'current_owner_delta');
   assert.deepEqual(checks.demoted_default_surfaces, [
     'raw_worklist',

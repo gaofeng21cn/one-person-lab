@@ -73,7 +73,7 @@
       "workspace_group",
       "project_unit",
       "stage_artifact_unit",
-      "owner_receipt_or_typed_blocker"
+      "progress_receipt_or_owner_answer_or_hard_stop"
     ],
     "canonical_project_collection_role": "project_units",
     "canonical_project_unit_semantics": {
@@ -81,7 +81,7 @@
       "project_collection_role": "project_units",
       "project_unit_kind": "project_unit",
       "stage_artifact_unit": "stage_artifact_unit",
-      "owner_answer_unit": "owner_receipt_or_typed_blocker"
+      "owner_answer_unit": "progress_receipt_or_owner_answer_or_hard_stop"
     },
     "project_stage_outputs_root": "artifacts/stage_outputs",
     "stage_output_root_protocol": {

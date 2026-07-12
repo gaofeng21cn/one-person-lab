@@ -40,6 +40,18 @@
       "required_outputs_present",
       "owner_receipt_ref_and_receipt_file"
     ],
+    "completed_with_quality_debt_requires": [
+      "valid_manifest",
+      "required_outputs_present",
+      "content_hashes_match",
+      "quality_debt_ref_and_evidence_file"
+    ],
+    "progress_first_policy": {
+      "consumable_artifact_advances_stage": true,
+      "quality_budget_exhaustion_blocks_stage_transition": false,
+      "quality_debt_blocks_quality_export_or_ready_claims": true,
+      "owner_receipt_required_for_quality_acceptance_not_basic_progress": true
+    },
     "blocked_requires": [
       "typed_blocker_ref",
       "blocker_evidence_file"
@@ -92,6 +104,7 @@
       "stage_status",
       "attempt_manifest_refs",
       "owner_receipt_refs",
+      "quality_debt_refs",
       "typed_blocker_refs",
       "decision_receipt_refs",
       "content_hashes",
@@ -135,7 +148,7 @@
     "legacy_alias": "opl stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench",
     "family_runtime": "opl family-runtime stage-artifact open|commit|status|explain|rebuild|promote|gc|restore|validate|conformance|workbench",
     "open": "create a stage attempt workspace with inputs outputs evidence receipts and stage/deliverable descriptors",
-    "commit": "validate manifest terminal status against required outputs and receipt or blocker evidence, write manifest with sha256 content hashes, then atomically advance latest/current pointers",
+    "commit": "validate manifest terminal status against required outputs and owner receipt, quality debt, decision, or blocker evidence; completed_with_quality_debt advances artifact progress without claiming quality or readiness",
     "status": "derive stage and attempt state from physical folders",
     "explain": "explain current incomplete stage, blocker, orphan, or missing receipt/output state",
     "rebuild": "refresh derived index and lineage graph from physical folders",
@@ -172,6 +185,7 @@
   "forbidden_semantics": [
     "stale_index_as_primary_truth",
     "orphan_output_counts_as_success",
+    "quality_debt_counts_as_quality_export_or_ready_acceptance",
     "provider_completion_as_domain_owner_receipt",
     "opl_generated_owner_receipt",
     "stage_artifact_projection_as_current_owner_delta",

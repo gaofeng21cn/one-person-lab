@@ -94,7 +94,10 @@ function assertGeneratedPlane(payload: JsonRecord, targetDomainId: string, owner
     const progressPolicy = record(stageContract.progress_delta_policy);
     assert.equal(progressPolicy.platform_only_is_not_deliverable_progress, true);
     assert.equal(records(stageContract.expected_receipt_refs).length, 1);
-    assert.equal(records(stageContract.expected_receipt_refs)[0]?.ref, 'domain_owner_receipt_or_typed_blocker_ref');
+    assert.equal(
+      records(stageContract.expected_receipt_refs)[0]?.ref,
+      'domain_progress_receipt_or_owner_receipt_or_typed_hard_blocker_ref',
+    );
   } finally {
     fs.rmSync(fixture.repoDir, { recursive: true, force: true });
   }

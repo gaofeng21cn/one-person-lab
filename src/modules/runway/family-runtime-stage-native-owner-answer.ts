@@ -7,13 +7,14 @@ import {
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { record, stringValue } from '../../kernel/json-record.ts';
 import type { StandardDomainAgentRepoInput } from '../../kernel/standard-domain-agent-family-repos.ts';
+import { validateProgressDeltaReceipt } from '../ledger/index.ts';
 import type { FamilyRuntimeTaskRow } from './family-runtime-store.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 
 const LIVE_ATTEMPT_STATUSES = new Set(['queued', 'running', 'checkpointed', 'human_gate']);
 
-export const STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON =
-  'stage_native_owner_answer_missing_after_default_executor_completion';
+export const STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON =
+  'stage_native_consumable_progress_or_owner_answer_missing_after_default_executor_completion';
 
 export type StageNativeOwnerAnswerProfile = {
   profile_id: string;
@@ -91,6 +92,17 @@ function jsonRecord(value: string) {
 function jsonStringList(value: string) {
   try {
     return stringList(parseJsonText(value));
+  } catch {
+    return [];
+  }
+}
+
+function jsonRecordList(value: string) {
+  try {
+    const parsed = parseJsonText(value);
+    return Array.isArray(parsed)
+      ? parsed.map(recordValue).filter((entry): entry is Record<string, unknown> => Boolean(entry))
+      : [];
   } catch {
     return [];
   }
@@ -269,6 +281,60 @@ function hasStageNativeAnswerInRecord(
   return Boolean(evidence && hasStageNativeAnswerInRecord(evidence, currentPayload, profile));
 }
 
+function isConsumableProgressReceipt(value: unknown) {
+  try {
+    const receipt = validateProgressDeltaReceipt(value);
+    return ['paper_progress_delta', 'deliverable_progress_delta'].includes(
+      receipt.delta_classification,
+    ) && receipt.produced_refs.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function hasConsumableArtifactProgressInRecord(record: Record<string, unknown>): boolean {
+  if (isConsumableProgressReceipt(record)) {
+    return true;
+  }
+  const receipt = recordValue(record.progress_delta_receipt);
+  if (receipt && isConsumableProgressReceipt(receipt)) {
+    return true;
+  }
+  if (
+    ['completed', 'completed_with_quality_debt'].includes(stringValue(record.transition_outcome) ?? '')
+    && stringList(record.consumable_artifact_refs).length > 0
+  ) {
+    return true;
+  }
+  for (const key of [
+    'stage_native_closeout',
+    'current_owner_delta',
+    'owner_delta_result',
+    'owner_result',
+    'route_handoff',
+    'route_impact',
+    'output',
+    'dispatch',
+    'result',
+    'record_payload',
+  ]) {
+    const nested = recordValue(record[key]);
+    if (nested && hasConsumableArtifactProgressInRecord(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasStageNativeProgressOrOwnerAnswerInRecord(
+  record: Record<string, unknown>,
+  currentPayload: Record<string, unknown>,
+  profile: StageNativeOwnerAnswerProfile,
+) {
+  return hasStageNativeAnswerInRecord(record, currentPayload, profile)
+    || hasConsumableArtifactProgressInRecord(record);
+}
+
 function latestDispatchSucceededPayload(db: DatabaseSync, taskId: string) {
   const row = db.prepare(`
     SELECT payload_json
@@ -429,6 +495,45 @@ export function stageAttemptRowHasStageNativeOwnerAnswerFromDomainProfile(input:
   return hasStageNativeOwnerAnswer(routeImpact, input.currentPayload, profile);
 }
 
+export function stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile(input: {
+  row: StageAttemptRow;
+  currentPayload: Record<string, unknown>;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
+}) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(
+    input.row.domain_id,
+    input.profiles,
+    input.repoInputs,
+  );
+  if (!profile) {
+    return false;
+  }
+  const closeoutRefs = jsonStringList(input.row.closeout_refs_json);
+  if (closeoutRefsHaveCurrentStageNativeOwnerAnswer(
+    closeoutRefs,
+    input.currentPayload,
+    profile,
+  )) {
+    return true;
+  }
+  const routeImpact = jsonRecord(input.row.route_impact_json);
+  if (routeImpact && hasStageNativeProgressOrOwnerAnswerInRecord(
+    routeImpact,
+    input.currentPayload,
+    profile,
+  )) {
+    return true;
+  }
+  return jsonRecordList(input.row.activity_events_json).some((activity) =>
+    hasStageNativeProgressOrOwnerAnswerInRecord(
+      activity,
+      input.currentPayload,
+      profile,
+    )
+  );
+}
+
 export function stageAttemptPayloadHasStageNativeOwnerAnswerFromDomainProfile(input: {
   domainId: string;
   attempt: StageAttemptPayload;
@@ -444,7 +549,29 @@ export function stageAttemptPayloadHasStageNativeOwnerAnswerFromDomainProfile(in
   return Boolean(profile && stageAttemptHasStageNativeAnswer(input.attempt, input.currentPayload, profile));
 }
 
-export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(input: {
+export function stageAttemptPayloadHasStageNativeProgressOrOwnerAnswerFromDomainProfile(input: {
+  domainId: string;
+  attempt: StageAttemptPayload;
+  currentPayload: Record<string, unknown>;
+  profiles?: readonly DomainOwnerAnswerProjectionProfile[];
+  repoInputs?: readonly StandardDomainAgentRepoInput[];
+}) {
+  const profile = stageNativeOwnerAnswerProfileForDomain(
+    input.domainId,
+    input.profiles,
+    input.repoInputs,
+  );
+  return Boolean(profile && (
+    stageAttemptHasStageNativeAnswer(input.attempt, input.currentPayload, profile)
+    || hasConsumableArtifactProgressInRecord(input.attempt.route_impact)
+    || input.attempt.activity_events.some((event) => {
+      const activity = recordValue(event);
+      return Boolean(activity && hasConsumableArtifactProgressInRecord(activity));
+    })
+  ));
+}
+
+export function defaultExecutorMissingStageNativeProgressOrOwnerAnswerRedriveDecision(input: {
   db: DatabaseSync;
   existing: FamilyRuntimeTaskRow;
   existingPayload: Record<string, unknown>;
@@ -462,7 +589,7 @@ export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(inpu
   }
   if (
     input.existing.status === 'blocked'
-    && input.existing.dead_letter_reason !== STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON
+    && input.existing.dead_letter_reason !== STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON
   ) {
     return null;
   }
@@ -475,14 +602,25 @@ export function defaultExecutorMissingStageNativeOwnerAnswerRedriveDecision(inpu
     input.nextPayload,
     latestDispatchSucceededPayload(input.db, input.existing.task_id),
   ];
-  if (evidenceRecords.some((record) => hasStageNativeOwnerAnswer(record, input.nextPayload, profile))) {
+  if (evidenceRecords.some((record) => record && hasStageNativeProgressOrOwnerAnswerInRecord(
+    record,
+    input.nextPayload,
+    profile,
+  ))) {
     return null;
   }
-  if (input.stageAttempts.some((attempt) => stageAttemptHasStageNativeAnswer(attempt, input.nextPayload, profile))) {
+  if (input.stageAttempts.some((attempt) => (
+    stageAttemptHasStageNativeAnswer(attempt, input.nextPayload, profile)
+    || hasConsumableArtifactProgressInRecord(attempt.route_impact)
+    || attempt.activity_events.some((event) => {
+      const activity = recordValue(event);
+      return Boolean(activity && hasConsumableArtifactProgressInRecord(activity));
+    })
+  ))) {
     return null;
   }
   return {
-    reason: STAGE_NATIVE_OWNER_ANSWER_MISSING_REASON,
+    reason: STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
     previous_source_fingerprint: stringValue(input.existingPayload.source_fingerprint),
     next_source_fingerprint: stringValue(input.nextPayload.source_fingerprint),
     previous_work_unit_fingerprint: stringValue(recordValue(input.existingPayload.owner_route_currentness_basis)?.work_unit_fingerprint),

@@ -404,7 +404,7 @@ export function compileStandardAgentStageManifest(repoDirInput: string): Standar
     }
     const frameworkStageContract = {
       expected_receipt_refs: [repoSurfaceRef(
-        'domain_owner_receipt_or_typed_blocker_ref',
+        'domain_progress_receipt_or_owner_receipt_or_typed_hard_blocker_ref',
         'domain_stage_closeout',
         'domain_ref',
       )],

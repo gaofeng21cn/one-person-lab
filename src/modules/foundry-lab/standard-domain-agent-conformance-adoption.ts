@@ -47,12 +47,13 @@ const REQUIRED_STAGE_RUN_NATIVE_UNITS = [
   'stage_folder',
   'stage_manifest',
   'role_artifacts',
-  'owner_receipt_or_typed_blocker',
+  'progress_receipt_or_owner_answer_or_hard_stop',
 ];
 
 const REQUIRED_STAGE_RUN_OBJECT_MODELS = [
   'StageRun',
   'RoleArtifactRef',
+  'ProgressDeltaReceipt',
   'OwnerReceipt',
   'TypedBlocker',
   'ReadModel',
@@ -63,6 +64,11 @@ const REQUIRED_STAGE_RUN_STATE_FLAGS = [
   'file_presence_counts_as_stage_complete',
   'latest_json_counts_as_domain_accepted',
   'read_model_counts_as_transition_authority',
+  'quality_debt_counts_as_quality_acceptance',
+];
+
+const REQUIRED_STAGE_RUN_STATE_TRUE_FLAGS = [
+  'validated_consumable_artifact_progress_counts_as_transition',
 ];
 
 const REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS = [
@@ -625,6 +631,9 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     ...REQUIRED_STAGE_RUN_STATE_FLAGS
       .filter((flag) => stateFlagValue(flag) !== false)
       .map((flag) => `stage_run_kernel_profile_state_flag_must_be_false:${flag}`),
+    ...REQUIRED_STAGE_RUN_STATE_TRUE_FLAGS
+      .filter((flag) => stateFlagValue(flag) !== true)
+      .map((flag) => `stage_run_kernel_profile_state_flag_must_be_true:${flag}`),
     ...REQUIRED_STAGE_RUN_LAUNCH_HARD_BLOCKERS
       .filter((field) => !launchHardBlockers.includes(field))
       .map((field) => `stage_run_kernel_profile_launch_hard_blocker_missing:${field}`),
@@ -649,9 +658,10 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     defaultReadSurface.replay_packet_default === false
       ? null
       : 'stage_run_kernel_profile_replay_packet_default_forbidden',
-    ['owner_receipt_or_typed_blocker', 'mas_owner_receipt_or_typed_blocker_only'].includes(
-      optionalString(transitionAuthority.terminal_transition_authority) ?? optionalString(profile?.transition_authority) ?? '',
-    )
+    (
+      optionalString(transitionAuthority.terminal_transition_authority)
+      ?? optionalString(profile?.transition_authority)
+    ) === 'consumable_artifact_progress_or_owner_answer_or_hard_stop'
       ? null
       : 'stage_run_kernel_profile_terminal_transition_authority_invalid',
     (transitionAuthority.provider_completion_counts_as_transition ?? stateMachine.provider_completion_counts_as_domain_accepted) === false
@@ -660,6 +670,12 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     (transitionAuthority.file_presence_counts_as_transition ?? stateFlagValue('file_presence_counts_as_stage_complete')) === false
       ? null
       : 'stage_run_kernel_profile_file_presence_transition_invalid',
+    transitionAuthority.quality_budget_exhaustion_blocks_transition === false
+      ? null
+      : 'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_transition',
+    transitionAuthority.owner_receipt_required_for_quality_or_ready_claim === true
+      ? null
+      : 'stage_run_kernel_profile_owner_receipt_required_for_quality_or_ready_claim',
     ...REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS
       .filter((flag) => authorityValue(flag) !== false)
       .map((flag) => `stage_run_kernel_profile_authority_flag_must_be_false:${flag}`),
@@ -673,7 +689,8 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
     stage_native_unit: stageNativeUnit,
     required_object_models: requiredObjectModels,
     stage_run_state_machine: Object.fromEntries(
-      REQUIRED_STAGE_RUN_STATE_FLAGS.map((flag) => [flag, stateFlagValue(flag) ?? null]),
+      [...REQUIRED_STAGE_RUN_STATE_FLAGS, ...REQUIRED_STAGE_RUN_STATE_TRUE_FLAGS]
+        .map((flag) => [flag, stateFlagValue(flag) ?? null]),
     ),
     launch_admission_policy: {
       hard_blockers: launchHardBlockers,
@@ -688,11 +705,21 @@ export function buildStageRunKernelProfileChecks(repoDir: string) {
       replay_packet_default: defaultReadSurface.replay_packet_default ?? null,
     },
     transition_authority: {
-      terminal_transition_authority: optionalString(transitionAuthority.terminal_transition_authority),
+      terminal_transition_authority:
+        optionalString(transitionAuthority.terminal_transition_authority)
+        ?? optionalString(profile?.transition_authority),
       provider_completion_counts_as_transition:
-        transitionAuthority.provider_completion_counts_as_transition ?? null,
+        transitionAuthority.provider_completion_counts_as_transition
+        ?? stateMachine.provider_completion_counts_as_domain_accepted
+        ?? null,
       file_presence_counts_as_transition:
-        transitionAuthority.file_presence_counts_as_transition ?? null,
+        transitionAuthority.file_presence_counts_as_transition
+        ?? stateFlagValue('file_presence_counts_as_stage_complete')
+        ?? null,
+      quality_budget_exhaustion_blocks_transition:
+        transitionAuthority.quality_budget_exhaustion_blocks_transition ?? null,
+      owner_receipt_required_for_quality_or_ready_claim:
+        transitionAuthority.owner_receipt_required_for_quality_or_ready_claim ?? null,
     },
     authority_boundary: Object.fromEntries(
       REQUIRED_STAGE_RUN_AUTHORITY_FALSE_FLAGS.map((flag) => [flag, authorityValue(flag) ?? null]),

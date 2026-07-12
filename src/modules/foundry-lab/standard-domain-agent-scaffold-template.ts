@@ -184,7 +184,8 @@ function starterAction(domainId: string) {
       opl_can_write_domain_truth: false,
       opl_can_write_memory_body: false,
       opl_can_authorize_quality_or_export: false,
-      domain_owner_receipt_or_typed_blocker_required: true,
+      domain_owner_receipt_or_typed_blocker_required_for_quality_or_ready_claim: true,
+      consumable_artifact_progress_receipt_allowed: true,
     },
   };
 }

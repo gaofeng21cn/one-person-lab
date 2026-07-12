@@ -318,10 +318,13 @@
     "required_for_closeout": [
       "current_generation_role_artifacts",
       "stage_manifest_validity",
-      "owner_receipt_or_typed_blocker",
+      "consumable_artifact_progress_or_owner_answer",
       "current_pointer",
       "content_hashes",
-      "lineage_refs",
+      "lineage_refs"
+    ],
+    "required_for_quality_or_ready_closeout": [
+      "owner_receipt_or_quality_gate_receipt",
       "closeout_receipt_ref",
       "closeout_receipt_stage_run_binding",
       "closeout_receipt_stage_manifest_binding",
@@ -380,13 +383,19 @@
     "closeout_hard_blockers": [
       "required_role_artifacts",
       "manifest_validity",
-      "owner_receipt_or_typed_blocker",
+      "zero_consumable_artifact_without_owner_answer_or_hard_stop",
       "current_pointer",
       "content_hash",
       "generation",
       "lineage_refs",
       "closeout_receipt_binding"
-    ]
+    ],
+    "progress_first_closeout": {
+      "consumable_artifact_without_owner_answer_status": "completed_with_quality_debt",
+      "quality_budget_exhaustion_blocks_transition": false,
+      "owner_answer_required_for_quality_or_ready_claim": true,
+      "typed_blocker_reserved_for_hard_stop": true
+    }
   },
   "execution_authorization_policy": {
     "surface_kind": "opl_stage_run_execution_authorization_policy",
@@ -449,6 +458,8 @@
       "closeout_blockers",
       "execution_authorization",
       "closeout_binding_blockers",
+      "transition_outcome",
+      "quality_debt_reasons",
       "advisory_warnings",
       "route_back_recommendations",
       "audit_drilldown_refs",
@@ -459,6 +470,8 @@
       "closeout_blockers",
       "execution_authorization",
       "closeout_binding_blockers",
+      "transition_outcome",
+      "quality_debt_reasons",
       "advisory_warnings",
       "route_back_recommendations",
       "audit_drilldown_refs",
@@ -477,6 +490,7 @@
       "closeout_binding_blockers"
     ],
     "non_blocking_default_sections": [
+      "quality_debt_reasons",
       "advisory_warnings",
       "route_back_recommendations",
       "audit_drilldown_refs"

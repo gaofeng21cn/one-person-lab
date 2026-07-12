@@ -391,6 +391,7 @@ function buildConstructedTransitionSpec(): FamilyTransitionSpec {
       retryable_failure_observed: { owner: 'one-person-lab' },
       retry_budget_available: { owner: 'one-person-lab' },
       retry_budget_exhausted: { owner: 'one-person-lab' },
+      consumable_artifact_progress_observed: { owner: 'constructed-domain-agent' },
       repair_requested: { owner: 'human_operator' },
     },
     transitions: [
@@ -497,10 +498,31 @@ function buildConstructedTransitionSpec(): FamilyTransitionSpec {
         },
       },
       {
+        transition_id: 'retry-queued-to-completed-with-quality-debt',
+        current_state: 'retry_queued',
+        event: 'provider_failure',
+        required_guards: ['retry_budget_exhausted', 'consumable_artifact_progress_observed'],
+        next_state: 'completed',
+        owner_route: {
+          owner: 'constructed-domain-agent',
+          route_ref: 'domain-route:advance-consumable-artifact-with-quality-debt',
+        },
+        receipt: {
+          receipt_refs: ['progress-delta-receipt:constructed-domain/quality-budget-exhausted'],
+        },
+        projection: {
+          transition_outcome: 'completed_with_quality_debt',
+          consumable_artifact_refs: ['artifact:constructed-domain/best-available'],
+          quality_debt_refs: ['quality-debt:constructed-domain/retry-budget-exhausted'],
+          quality_or_ready_claim_authorized: false,
+        },
+      },
+      {
         transition_id: 'retry-queued-to-dead-lettered',
         current_state: 'retry_queued',
         event: 'provider_failure',
         required_guards: ['retry_budget_exhausted'],
+        forbidden_guards: ['consumable_artifact_progress_observed'],
         next_state: 'dead_lettered',
         owner_route: {
           owner: 'one-person-lab',
@@ -589,6 +611,19 @@ function constructedHarnessCases(): FamilyTransitionMatrixCase[] {
       expected_status: 'transition_applied',
       expected_next_state: 'retry_queued',
       expected_transition_id: 'running-to-retry-queued',
+    }),
+    transitionCase({
+      case_id: 'retry-exhaustion-advances-consumable-artifact-with-quality-debt',
+      domain_id: 'constructed-domain-agent',
+      current_state: 'retry_queued',
+      event: 'provider_failure',
+      guards: {
+        retry_budget_exhausted: true,
+        consumable_artifact_progress_observed: true,
+      },
+      expected_status: 'transition_applied',
+      expected_next_state: 'completed',
+      expected_transition_id: 'retry-queued-to-completed-with-quality-debt',
     }),
     transitionCase({
       case_id: 'retry-exhaustion-projects-dead-letter',

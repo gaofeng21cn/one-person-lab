@@ -4,7 +4,7 @@
   "schema_id": "opl.workspace_topology_profile.v1",
   "surface_kind": "opl_workspace_topology_profile_schema",
   "owner": "one-person-lab",
-  "purpose": "Define the OPL-owned workspace topology template shared by standard domain agents: Workspace Group -> Project Unit -> Stage Artifact Unit -> owner receipt or typed blocker, with runtime-state kept as backing/provenance.",
+  "purpose": "Define the OPL-owned workspace topology template shared by standard domain agents: Workspace Group -> Project Unit -> Stage Artifact Unit -> progress receipt, owner answer, or legal hard stop, with runtime-state kept as backing/provenance.",
   "state": "active_contract",
   "machine_boundary": "OPL owns the topology envelope, workspace modes, default profile templates, generated projection boundary, and runtime-state boundary. Domain repositories own domain truth, workspace instances, product views, artifact bodies, owner receipts, typed blockers, quality verdicts, and export verdicts.",
   "type": "object",
@@ -47,7 +47,7 @@
           "const": "stage_artifact_unit"
         },
         {
-          "const": "owner_receipt_or_typed_blocker"
+          "const": "progress_receipt_or_owner_answer_or_hard_stop"
         }
       ],
       "minItems": 4
@@ -409,7 +409,7 @@
         "workspace_group",
         "project_unit",
         "stage_artifact_unit",
-        "owner_receipt_or_typed_blocker"
+        "progress_receipt_or_owner_answer_or_hard_stop"
       ],
       "workspace_modes": [
         "one_off",

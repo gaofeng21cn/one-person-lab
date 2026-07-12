@@ -33,6 +33,8 @@ export type DomainTransitionOracle = {
     return_shape: string;
     receipt_requirement: string;
     blocked_shape?: string;
+    guard_kind?: 'hard' | 'quality_budget';
+    quality_debt_code?: string;
   }>;
   oracle_fixtures: Array<{
     fixture_id: string;
@@ -92,6 +94,10 @@ function normalizeTransitionOracle(value: unknown): DomainTransitionOracle {
       return_shape: requireOracleString(entry.return_shape, `${fieldPrefix}.transition_table[${index}].return_shape`),
       receipt_requirement: requireOracleString(entry.receipt_requirement, `${fieldPrefix}.transition_table[${index}].receipt_requirement`),
       blocked_shape: optionalString(entry.blocked_shape) ?? undefined,
+      guard_kind: optionalString(entry.guard_kind) === 'quality_budget'
+        ? 'quality_budget' as const
+        : 'hard' as const,
+      quality_debt_code: optionalString(entry.quality_debt_code) ?? undefined,
     }));
   const transitionIds = new Set(transitionTable.map((entry) => entry.transition_id));
   const oracleFixtures = requireOracleRecordList(oracle.oracle_fixtures, `${fieldPrefix}.oracle_fixtures`)
@@ -143,6 +149,8 @@ function adaptNormalizedTransitionOracleToFamilyTransitionSpec(oracle: DomainTra
       description: `Domain-owned guard for transition ${transition.transition_id}.`,
       owner: oracle.owner,
       source_ref: `${oracle.oracle_id}:guard:${transition.guard_id}`,
+      gate_kind: transition.guard_kind,
+      quality_debt_code: transition.quality_debt_code,
       authority_boundary: oracle.authority_boundary,
     };
   }

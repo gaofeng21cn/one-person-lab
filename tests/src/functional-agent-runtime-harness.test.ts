@@ -17,19 +17,19 @@ function readJson(relativePath: string) {
   return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
-test('functional agent runtime harness proves constructed state machine, memory refs, retry, dead-letter, repair, and human gate chain', () => {
+test('functional agent runtime harness proves progress-first retry, dead-letter, repair, and human gate paths', () => {
   const result = runFunctionalAgentRuntimeHarness(buildConstructedFunctionalAgentRuntimeHarnessInput());
 
   assert.equal(result.surface_kind, 'opl_functional_agent_runtime_harness');
   assert.equal(result.version, 'opl-functional-agent-runtime-harness.v1');
   assert.equal(result.harness_status, 'passed');
   assert.deepEqual(result.missing_observations, []);
-  assert.equal(result.summary.total_transition_cases, 9);
-  assert.equal(result.summary.transition_applied_count, 7);
+  assert.equal(result.summary.total_transition_cases, 10);
+  assert.equal(result.summary.transition_applied_count, 8);
   assert.equal(result.summary.blocked_count, 1);
   assert.equal(result.summary.dead_letter_intended_count, 1);
   assert.equal(result.summary.stage_attempt_count, 7);
-  assert.equal(result.summary.expectation_match_count, 9);
+  assert.equal(result.summary.expectation_match_count, 10);
   assert.equal(result.summary.expectation_mismatch_count, 0);
   assert.equal(result.summary.memory_body_observed, false);
   assert.equal(result.summary.forbidden_authority_flag_count, 0);
@@ -55,6 +55,16 @@ test('functional agent runtime harness proves constructed state machine, memory 
   assert.equal(byCase.get('owner-receipt-completes-memory-writeback-chain')?.next_state, 'completed');
   assert.equal(byCase.get('domain-blocker-projects-human-gate')?.human_gate?.owner, 'human_operator');
   assert.equal(byCase.get('retryable-failure-projects-retry-queued')?.next_state, 'retry_queued');
+  assert.equal(
+    byCase.get('retry-exhaustion-advances-consumable-artifact-with-quality-debt')?.projection
+      ?.transition_outcome,
+    'completed_with_quality_debt',
+  );
+  assert.equal(
+    byCase.get('retry-exhaustion-advances-consumable-artifact-with-quality-debt')?.projection
+      ?.quality_or_ready_claim_authorized,
+    false,
+  );
   assert.equal(byCase.get('retry-exhaustion-projects-dead-letter')?.dead_letter_intent?.reason, 'retry_budget_exhausted');
   assert.equal(byCase.get('operator-repair-projects-domain-owner-route')?.next_state, 'repair_queued');
   assert.equal(byCase.get('unknown-guard-fails-closed-before-dispatch')?.typed_blocker?.blocker_code, 'unknown_guard_id');

@@ -201,7 +201,7 @@ export function buildStageOutputsIndex(input: {
       stage_folder_pattern: `${input.project.stage_outputs_root}/<stage-id>/`,
       required_directories: [...STAGE_OUTPUT_REQUIRED_DIRECTORIES],
       required_files: [...STAGE_OUTPUT_REQUIRED_FILES],
-      closeout_answer_unit: 'owner_receipt_or_typed_blocker',
+      closeout_answer_unit: 'progress_receipt_or_owner_answer_or_hard_stop',
     },
     stages: [],
     authority_boundary: {

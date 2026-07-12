@@ -38,6 +38,7 @@ export function runFamilyRuntimeStageArtifactCommand(input: StageArtifactInput):
         terminal_status: input.terminal_status ?? 'success',
         required_outputs: input.required_outputs ?? [],
         owner_receipt_refs: input.owner_receipt_refs ?? [],
+        quality_debt_refs: input.quality_debt_refs ?? [],
         typed_blocker_refs: input.typed_blocker_refs ?? [],
         decision_receipt_refs: input.decision_receipt_refs ?? [],
       }),

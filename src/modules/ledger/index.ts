@@ -31,7 +31,7 @@ export { buildMemoryArtifactLifecycleEvidenceProjection, memoryArtifactLifecycle
 export { OPL_OBSERVABILITY_SEMANTIC_CONVENTIONS, appOperatorProjectionCommand, appOperatorProjectionRef, appOperatorProjectionTestRef, buildObservabilitySemanticConventionExportSeed, buildObservabilitySemanticConventionReadback, renderObservabilitySemanticConventionOpenMetrics } from './observability-semantic-conventions.ts';
 export type { ObservabilityMetricInstrument, ObservabilitySemanticConventionInput } from './observability-semantic-conventions.ts';
 export { buildAppDrilldownProductionEvidenceTailLedger, buildConformanceProductionEvidenceTailLedger, buildProductionTailNextActionLedger } from './production-evidence-tail-ledger.ts';
-export { buildProgressDeltaReceipt, progressDeltaReceiptDeltaClassFromStageClassification } from './progress-delta-receipt.ts';
+export { buildProgressDeltaReceipt, progressDeltaReceiptDeltaClassFromStageClassification, validateProgressDeltaReceipt } from './progress-delta-receipt.ts';
 export type { StageProgressDeltaClassification } from './progress-delta-receipt.ts';
 export { buildProviderLongSoakEvidenceProjection, listProviderLongSoakEvidenceReceipts } from './provider-long-soak-evidence-ledger.ts';
 export { listStandardAgentTemplateConsumptionReceipts } from './standard-agent-template-consumption-ledger.ts';
