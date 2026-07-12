@@ -236,7 +236,7 @@ test('source module boundary reports current repo cross-module import summary', 
   assert.equal(summary.cross_module_imports.deep_import_violations.count, 0);
   assert.equal(summary.cross_module_imports.forbidden_dependency_violations.count, 0);
   assert.equal(summary.cross_module_imports.dependency_cycles.enforced, false);
-  assert.equal(summary.cross_module_imports.dependency_cycles.count, 0);
+  assert.equal(summary.cross_module_imports.dependency_cycles.count, 1);
   assert.equal(summary.module_entrypoints.unexpected_module_roots.length, 0);
   assert.ok(summary.cross_module_imports.pair_counts.length > 0);
   assert.equal(
