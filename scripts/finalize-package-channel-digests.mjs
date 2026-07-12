@@ -44,6 +44,17 @@ function selectedVersion(channel, packageId) {
   return version;
 }
 
+function resolvePromotionTarget(release) {
+  const target = process.env.OPL_PACKAGE_PROMOTION_TARGET?.trim()
+    || release.release_channel
+    || release.release_set?.target_channel
+    || 'candidate';
+  if (!['candidate', 'latest-stable'].includes(target)) {
+    throw new Error(`Invalid Package promotion target: ${target}`);
+  }
+  return target;
+}
+
 function assertFinalized(release, channel) {
   const failures = [];
   const catalog = channel.packages?.package_catalog ?? {};
@@ -55,10 +66,21 @@ function assertFinalized(release, channel) {
     || release.release_set?.surface_kind !== 'opl_release_set.v1') {
     failures.push('release_set_generation');
   }
+  if (release.release_channel !== release.release_set?.target_channel
+    || channel.release_channel !== release.release_channel
+    || channel.release_set?.target_channel !== release.release_channel
+    || release.release_set?.bom_status !== 'complete'
+    || channel.release_set?.bom_status !== 'complete') {
+    failures.push('release_set_channel_state');
+  }
+  if (JSON.stringify(channel.release_set) !== JSON.stringify(release.release_set)) {
+    failures.push('channel_release_set');
+  }
   for (const packageId of CANONICAL_PACKAGE_IDS) {
     const entry = catalog[packageId];
     const version = entry?.versions?.find((candidate) => candidate?.selection_status === 'selected_for_release_set');
     const packageEntry = release.packages?.package_artifacts?.[packageId];
+    const channelPackageEntry = channel.packages?.package_artifacts?.[packageId];
     const member = release.release_set?.members?.[packageId];
     const digest = version?.artifact_digest ?? '';
     if (!version
@@ -68,6 +90,10 @@ function assertFinalized(release, channel) {
       || packageEntry?.owner_source_commit !== version.owner_source_commit
       || packageEntry?.oci_artifact_digest !== digest
       || packageEntry?.oci_artifact_status !== 'published_immutable'
+      || channelPackageEntry?.package_version !== version.package_version
+      || channelPackageEntry?.owner_source_commit !== version.owner_source_commit
+      || channelPackageEntry?.oci_artifact_digest !== digest
+      || channelPackageEntry?.oci_artifact_status !== 'published_immutable'
       || member?.package_version !== version.package_version
       || member?.owner_source_commit !== version.owner_source_commit
       || member?.oci_artifact_digest !== digest
@@ -90,6 +116,7 @@ function main() {
   const options = parseOptions(process.argv.slice(2));
   const release = readJsonFile(options.releaseManifest);
   const channel = readJsonFile(options.channelManifest);
+  const promotionTarget = resolvePromotionTarget(release);
   if (!options.check) {
     if (!/^sha256:[0-9a-f]{64}$/.test(options.digest)) throw new Error(`Invalid OCI digest: ${options.digest}`);
     const packageEntry = Object.values(release.packages?.package_artifacts ?? {})
@@ -110,11 +137,17 @@ function main() {
     member.oci_artifact_digest = options.digest;
     member.artifact_status = 'published_immutable';
   }
-  release.release_set.bom_status = Object.values(release.release_set?.members ?? {}).every((member) => (
+  const complete = Object.values(release.release_set?.members ?? {}).every((member) => (
     member?.artifact_status === 'published_immutable'
     && /^sha256:[0-9a-f]{64}$/.test(member?.oci_artifact_digest ?? '')
     && /^[0-9a-f]{40}$/.test(member?.owner_source_commit ?? '')
-  )) ? 'complete' : 'pending_remote_verification';
+  ));
+  release.release_channel = promotionTarget;
+  release.release_set.target_channel = promotionTarget;
+  release.release_set.bom_status = complete ? 'complete' : 'pending_remote_verification';
+  channel.release_channel = promotionTarget;
+  channel.release_set = structuredClone(release.release_set);
+  channel.packages.package_artifacts = structuredClone(release.packages.package_artifacts);
   if (options.check) assertFinalized(release, channel);
   channel.package_catalog_digest = sha256Payload(JSON.stringify(channel.packages.package_catalog));
   writeJson(options.releaseManifest, release);

@@ -338,6 +338,10 @@ test('package archive builder writes channel manifest checksums git source and r
     `sha256:${'8'.repeat(64)}`,
   );
   assert.deepEqual(scholarSkillsCatalog.versions[1], previousScholarSkillsVersion);
+  const finalizeEnv = {
+    ...process.env,
+    OPL_PACKAGE_PROMOTION_TARGET: 'latest-stable',
+  };
   for (const [index, packageId] of Object.keys(packageCatalog).entries()) {
     execFileSync(process.execPath, [
       path.join(repoRoot, 'scripts/finalize-package-channel-digests.mjs'),
@@ -345,16 +349,26 @@ test('package archive builder writes channel manifest checksums git source and r
       '--channel-manifest', channelManifestPath,
       '--package-id', packageId,
       '--digest', `sha256:${String(index + 1).repeat(64)}`,
-    ], { encoding: 'utf8' });
+    ], { encoding: 'utf8', env: finalizeEnv });
   }
   execFileSync(process.execPath, [
     path.join(repoRoot, 'scripts/finalize-package-channel-digests.mjs'),
     '--release-manifest', releaseManifestPath,
     '--channel-manifest', channelManifestPath,
     '--check',
-  ], { encoding: 'utf8' });
+  ], { encoding: 'utf8', env: finalizeEnv });
+  const finalizedReleaseManifest = parseJsonText(fs.readFileSync(releaseManifestPath, 'utf8')) as Record<string, any>;
   const finalizedChannelManifest = parseJsonText(fs.readFileSync(channelManifestPath, 'utf8')) as Record<string, any>;
   assert.match(finalizedChannelManifest.package_catalog_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(finalizedReleaseManifest.release_channel, 'latest-stable');
+  assert.equal(finalizedReleaseManifest.release_set.target_channel, 'latest-stable');
+  assert.equal(finalizedReleaseManifest.release_set.bom_status, 'complete');
+  assert.equal(finalizedChannelManifest.release_channel, 'latest-stable');
+  assert.deepEqual(finalizedChannelManifest.release_set, finalizedReleaseManifest.release_set);
+  assert.deepEqual(
+    finalizedChannelManifest.packages.package_artifacts,
+    finalizedReleaseManifest.packages.package_artifacts,
+  );
   assert.equal(
     Object.values(finalizedChannelManifest.packages.package_catalog).every((entry: any) => (
       entry.versions.find((version: any) => version.selection_status === 'selected_for_release_set').artifact_status === 'published_immutable'
