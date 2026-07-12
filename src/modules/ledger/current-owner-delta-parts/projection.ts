@@ -169,7 +169,6 @@ function progressDeltaReceiptPolicy() {
     schema_ref: 'contracts/opl-framework/progress-delta-receipt.schema.json',
     ordinary_receipt_kind: 'ProgressDeltaReceipt',
     ordinary_delta_classes: [
-      'paper_progress_delta',
       'deliverable_progress_delta',
       'platform_repair_delta',
       'advisory_delta',

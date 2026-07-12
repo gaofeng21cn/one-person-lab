@@ -27,7 +27,6 @@ test('progress delta receipt schema is an OPL-owned ordinary progress contract w
   assert.equal(schema.properties.surface_kind.const, 'opl_progress_delta_receipt');
   assert.equal(schema.properties.schema_version.const, 'progress-delta-receipt.v1');
   assert.deepEqual(schema.properties.delta_classification.enum, [
-    'paper_progress_delta',
     'deliverable_progress_delta',
     'platform_repair_delta',
     'advisory_delta',
@@ -60,7 +59,6 @@ test('progress delta receipt schema is an OPL-owned ordinary progress contract w
 
 test('progress delta receipt helper normalizes refs and rejects missing required refs', () => {
   assert.deepEqual([...PROGRESS_DELTA_RECEIPT_DELTA_CLASSES], [
-    'paper_progress_delta',
     'deliverable_progress_delta',
     'platform_repair_delta',
     'advisory_delta',

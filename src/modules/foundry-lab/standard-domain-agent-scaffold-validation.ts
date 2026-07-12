@@ -24,6 +24,7 @@ import { validateUserStageLogContracts } from './standard-domain-agent-scaffold-
 import { validateFoundryAgentSeriesContract } from './standard-domain-agent-scaffold-validation-parts/foundry-contract.ts';
 import { normalizeStandardAgentCapabilityMapPolicies } from './standard-agent-capability-map.ts';
 import { validateStandardAgentImplementationProfileRefs } from '../pack/public/standard-agent-implementation-profile.ts';
+import { readStandardAgentInterface } from '../../kernel/standard-agent-interface.ts';
 
 interface ScaffoldValidateInput {
   repoDir: string;
@@ -222,6 +223,28 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
   const missingForbiddenRoleGuards = FORBIDDEN_DOMAIN_GENERIC_OWNER_ROLES.filter((role) => !forbiddenRoles.includes(role));
   const descriptor = readJsonFileOrNull(path.join(repoDir, 'contracts/domain_descriptor.json'));
   const descriptorRecord = isRecord(descriptor) ? descriptor : {};
+  let standardAgentInterfaceValidation: {
+    status: 'passed' | 'blocked';
+    interface_version: string | null;
+    blocker: string | null;
+  };
+  try {
+    const standardAgentInterface = readStandardAgentInterface(repoDir);
+    if (!standardAgentInterface) {
+      throw new Error('contracts/domain_descriptor.json#/standard_agent_interface is missing');
+    }
+    standardAgentInterfaceValidation = {
+      status: 'passed',
+      interface_version: standardAgentInterface.version,
+      blocker: null,
+    };
+  } catch (error) {
+    standardAgentInterfaceValidation = {
+      status: 'blocked',
+      interface_version: null,
+      blocker: `standard_agent_interface_invalid:${error instanceof Error ? error.message : 'unknown_error'}`,
+    };
+  }
   const authority = isRecord(descriptorRecord.authority_boundary) ? descriptorRecord.authority_boundary : {};
   const packCompilerInput = readJsonFileOrNull(path.join(repoDir, 'contracts/pack_compiler_input.json'));
   const packCompilerInputRecord = isRecord(packCompilerInput) ? packCompilerInput : {};
@@ -275,13 +298,14 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
     ...repoContractReadout.blockers,
     ...missingForbiddenRoleGuards.map((item) => `missing_forbidden_role_guard:${item}`),
     ...authorityViolations,
+    standardAgentInterfaceValidation.blocker,
     ...agentPackValidation.blockers,
     ...stageRefValidation.blockers,
     ...userStageLogValidation.blockers,
     ...foundryAgentSeriesValidation.blockers,
     ...capabilityMapValidation.blockers,
     ...stagePackV2Validation.blockers,
-  ];
+  ].filter((entry): entry is string => Boolean(entry));
   const advisoryFindings = [
     ...agentPackValidation.advisory_findings,
     ...stageRefValidation.advisory_findings,
@@ -309,6 +333,7 @@ export function validateStandardDomainAgentScaffold(input: ScaffoldValidateInput
       capability_map_validation: capabilityMapValidation,
       stage_pack_v2_validation: stagePackV2Validation,
       implementation_profile_validation: implementationProfileValidation,
+      standard_agent_interface_validation: standardAgentInterfaceValidation,
       functional_privatization_audit_required: true,
       blockers,
       advisory_findings: advisoryFindings,

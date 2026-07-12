@@ -284,9 +284,8 @@ function hasStageNativeAnswerInRecord(
 function isConsumableProgressReceipt(value: unknown) {
   try {
     const receipt = validateProgressDeltaReceipt(value);
-    return ['paper_progress_delta', 'deliverable_progress_delta'].includes(
-      receipt.delta_classification,
-    ) && receipt.produced_refs.length > 0;
+    return receipt.delta_classification === 'deliverable_progress_delta'
+      && receipt.produced_refs.length > 0;
   } catch {
     return false;
   }

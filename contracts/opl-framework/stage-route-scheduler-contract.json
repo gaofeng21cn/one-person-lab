@@ -350,7 +350,7 @@
             "current_control_action_status": "transition_non_advancing_apply_recorded",
             "provider_admission_allowed": false,
             "current_executable_owner_action_allowed": false,
-            "paper_progress_delta": false,
+            "deliverable_progress_delta": false,
             "stale_default_executor_pending_suppressed": true,
             "authority_boundary": {
               "opl_can_write_mas_truth": false,
@@ -804,10 +804,8 @@
     "purpose": "Define how OPL treats domain-provided user stage logs when projecting terminal StageRun progress and advisory repeated-route signals; this policy cannot authorize or block launch.",
     "canonical_projection_surface": "stage_progress_log.user_stage_log",
     "accepted_domain_sources": [
-      "typed_closeout_packet.paper_stage_log",
       "typed_closeout_packet.user_stage_log",
       "typed_closeout_packet.stage_log_summary",
-      "route_impact.paper_stage_log",
       "route_impact.user_stage_log",
       "route_impact.stage_log_summary"
     ],

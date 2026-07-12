@@ -1,333 +1,230 @@
 import { findDomainOrThrow, findWorkstreamOrThrow } from '../charter/index.ts';
+import {
+  assertStandardAgentDescriptorIdentity,
+  readPackageManagedStandardAgentDescriptor,
+  readStandardAgentDescriptorInterface,
+  type StandardAgentInterface,
+} from '../../kernel/standard-agent-interface.ts';
 import type {
   BoundaryExplanation,
+  DomainContract,
   FrameworkContracts,
   ResolveRequestInput,
   ResolutionResult,
+  WorkstreamContract,
 } from '../../kernel/types.ts';
 
-type CandidateKind = 'grant_ops' | 'thesis_ops' | 'review_ops' | 'ip_ops' | 'award_ops';
-
-const RESEARCH_KEYWORDS = [
-  'research',
-  'manuscript',
-  'submission',
-  'journal',
-  'study',
-  'dataset',
-  'data governance',
-];
-
-const PRESENTATION_KEYWORDS = [
-  'presentation',
-  'slide',
-  'deck',
-  'slides',
-  'lecture',
-  'committee',
-  'speaker notes',
-  'ppt',
-];
-
-const GRANT_KEYWORDS = ['grant', 'proposal'];
-const IP_KEYWORDS = [
-  'patent',
-  'invention disclosure',
-  'claims',
-  'embodiment',
-  'office action',
-  'intellectual property',
-  '专利',
-  '技术交底',
-  '权利要求',
-  '实施例',
-  '知识产权',
-];
-const AWARD_KEYWORDS = [
-  'award',
-  'science and technology award',
-  'achievement summary',
-  'contribution ranking',
-  'impact evidence',
-  'recommendation materials',
-  '报奖',
-  '科技进步奖',
-  '自然科学奖',
-  '成果奖',
-  '成果总结',
-  '贡献排序',
-];
-const THESIS_KEYWORDS = ['thesis', 'chapter', 'defense preparation'];
-const REVIEW_KEYWORDS = ['peer review', 'reviewer', 'rebuttal', 'revision route'];
-
-function normalizedText(input: ResolveRequestInput): string {
-  return [
-    input.intent,
-    input.target,
-    input.goal,
-    input.preferredFamily ?? '',
-    input.requestKind ?? '',
-  ]
-    .join(' ')
-    .toLowerCase();
-}
-
-function hasKeyword(text: string, keywords: string[]): boolean {
-  return keywords.some((keyword) => text.includes(keyword));
-}
-
-function detectCandidateWorkstream(text: string): CandidateKind | null {
-  if (hasKeyword(text, IP_KEYWORDS)) {
-    return 'ip_ops';
-  }
-
-  if (hasKeyword(text, AWARD_KEYWORDS)) {
-    return 'award_ops';
-  }
-
-  if (hasKeyword(text, GRANT_KEYWORDS)) {
-    return 'grant_ops';
-  }
-
-  if (hasKeyword(text, THESIS_KEYWORDS) && !hasKeyword(text, ['slide deck', 'deck', 'slides', 'ppt'])) {
-    return 'thesis_ops';
-  }
-
-  if (hasKeyword(text, REVIEW_KEYWORDS)) {
-    return 'review_ops';
-  }
-
-  return null;
+function normalizedSignal(value: string | null | undefined) {
+  return value?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') ?? '';
 }
 
 function requestKind(input: ResolveRequestInput): string {
   return input.requestKind ?? 'discover';
 }
 
+function explicitSignals(input: ResolveRequestInput) {
+  return [...new Set([
+    normalizedSignal(input.preferredFamily),
+    normalizedSignal(input.intent),
+    normalizedSignal(input.target),
+    normalizedSignal(input.requestKind),
+  ].filter(Boolean))];
+}
+
+function normalizedSet(values: readonly string[]) {
+  return new Set(values.map(normalizedSignal).filter(Boolean));
+}
+
+function domainIdentitySignals(domain: DomainContract) {
+  return normalizedSet([
+    domain.domain_id,
+    domain.project,
+    domain.label,
+    domain.independent_domain_agent.agent_id,
+    domain.single_app_skill.skill_id,
+    domain.single_app_skill.plugin_name,
+  ]);
+}
+
+function domainStandardInterface(domain: DomainContract): StandardAgentInterface | null {
+  const configuredRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim();
+  const packageManaged = readPackageManagedStandardAgentDescriptor([
+    domain.independent_domain_agent.agent_id,
+    domain.project,
+    domain.single_app_skill.skill_id,
+  ]);
+  if (packageManaged) {
+    return assertStandardAgentDescriptorIdentity(packageManaged, {
+      project: domain.project,
+      domain_id: domain.domain_id,
+    }).interface;
+  }
+  if (configuredRoot) {
+    const descriptor = readStandardAgentDescriptorInterface(`${configuredRoot}/${domain.project}`);
+    if (descriptor) {
+      return assertStandardAgentDescriptorIdentity(descriptor, {
+        project: domain.project,
+        domain_id: domain.domain_id,
+      }).interface;
+    }
+  }
+  return null;
+}
+
+function workstreamSignals(workstream: WorkstreamContract) {
+  return normalizedSet([
+    workstream.workstream_id,
+    ...workstream.primary_families,
+    ...workstream.top_level_intents,
+  ]);
+}
+
+function matchingWorkstreams(
+  signals: string[],
+  goal: string,
+  contracts: FrameworkContracts,
+  domainInterfaces: Map<string, StandardAgentInterface | null>,
+) {
+  return contracts.workstreams.workstreams.filter((workstream) => {
+    if (workstream.status !== 'active') return false;
+    const accepted = workstreamSignals(workstream);
+    const domainRouting = domainInterfaces.get(workstream.domain_id)?.routing;
+    for (const signal of [
+      ...(domainRouting?.workstream_ids ?? []),
+      ...(domainRouting?.intent_signals ?? []),
+    ]) accepted.add(normalizedSignal(signal));
+    const normalizedGoal = `_${normalizedSignal(goal)}_`;
+    const declaredGoalSignals = domainRouting?.intent_signals.map(normalizedSignal) ?? [];
+    return signals.some((signal) => accepted.has(signal))
+      || declaredGoalSignals.some((signal) => signal && normalizedGoal.includes(`_${signal}_`));
+  });
+}
+
+function selectedWorkstream(
+  input: ResolveRequestInput,
+  workstream: WorkstreamContract,
+  evidence: string[],
+): ResolutionResult {
+  return {
+    status: 'selected_domain_agent_entry',
+    request_kind: requestKind(input),
+    workstream_id: workstream.workstream_id,
+    domain_id: workstream.domain_id,
+    entry_surface: 'domain_agent_entry',
+    recommended_family: input.preferredFamily ?? workstream.primary_families[0] ?? null,
+    confidence: 'high',
+    reason: `The normalized routing signal selects admitted workstream ${workstream.workstream_id}.`,
+    selection_evidence: evidence,
+  };
+}
+
 export function resolveRequestSurface(
   input: ResolveRequestInput,
   contracts: FrameworkContracts,
 ): ResolutionResult {
-  const text = normalizedText(input);
-  const preferredFamily = input.preferredFamily?.toLowerCase() ?? null;
-  const explicitMas = preferredFamily === 'mas';
-  const explicitMag = preferredFamily === 'mag';
-  const explicitRca = preferredFamily === 'rca';
-  const research = hasKeyword(text, RESEARCH_KEYWORDS);
-  const presentation =
-    preferredFamily === 'ppt_deck' || explicitRca || hasKeyword(text, PRESENTATION_KEYWORDS);
-  const xiaohongshu = preferredFamily === 'xiaohongshu' || text.includes('xiaohongshu');
-  const candidateWorkstream = detectCandidateWorkstream(text);
+  const signals = explicitSignals(input);
+  const domainInterfaces = new Map(contracts.domains.domains.map((domain) => [
+    domain.domain_id,
+    domainStandardInterface(domain),
+  ]));
+  const workstreamMatches = matchingWorkstreams(signals, input.goal, contracts, domainInterfaces);
 
-  if (explicitMas) {
-    const workstream = findWorkstreamOrThrow(contracts, 'research_ops');
-    return {
-      status: 'selected_domain_agent_entry',
-      request_kind: requestKind(input),
-      workstream_id: workstream.workstream_id,
-      domain_id: workstream.domain_id,
-      entry_surface: 'domain_agent_entry',
-      recommended_family: null,
-      confidence: 'high',
-      reason:
-        'The explicit @mas handle pins the request to Research Foundry inside the MedAutoScience domain-agent entry.',
-      selection_evidence: [
-        'preferred_family_alias=mas',
-        'explicit agent handle',
-        'research_ops registered ownership',
-      ],
-    };
+  if (workstreamMatches.length === 1) {
+    const workstream = workstreamMatches[0];
+    return selectedWorkstream(input, workstream, [
+      `normalized_signal=${signals.find((signal) => {
+        const accepted = workstreamSignals(workstream);
+        const routing = domainInterfaces.get(workstream.domain_id)?.routing;
+        for (const candidate of [...(routing?.workstream_ids ?? []), ...(routing?.intent_signals ?? [])]) {
+          accepted.add(normalizedSignal(candidate));
+        }
+        return accepted.has(signal);
+      })}`,
+      `workstream=${workstream.workstream_id}`,
+      `domain=${workstream.domain_id}`,
+    ]);
   }
 
-  if (explicitMag) {
-    const workstream = findWorkstreamOrThrow(contracts, 'grant_ops');
-    return {
-      status: 'selected_domain_agent_entry',
-      request_kind: requestKind(input),
-      workstream_id: workstream.workstream_id,
-      domain_id: workstream.domain_id,
-      entry_surface: 'domain_agent_entry',
-      recommended_family: null,
-      confidence: 'high',
-      reason:
-        'The explicit @mag handle pins the request to Grant Foundry inside the MedAutoGrant domain-agent entry.',
-      selection_evidence: [
-        'preferred_family_alias=mag',
-        'explicit agent handle',
-        'grant_ops registered ownership',
-      ],
-    };
-  }
-
-  if (explicitRca) {
-    const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
-    return {
-      status: 'selected_domain_agent_entry',
-      request_kind: requestKind(input),
-      workstream_id: workstream.workstream_id,
-      domain_id: workstream.domain_id,
-      entry_surface: 'domain_agent_entry',
-      recommended_family: 'ppt_deck',
-      confidence: 'high',
-      reason:
-        'The explicit @rca handle pins the request to Presentation Foundry inside the RedCube domain-agent entry.',
-      selection_evidence: [
-        'preferred_family_alias=rca',
-        'explicit agent handle',
-        'presentation_ops registered ownership',
-      ],
-    };
-  }
-
-  if (preferredFamily === 'ppt_deck') {
-    const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
-    return {
-      status: 'selected_domain_agent_entry',
-      request_kind: requestKind(input),
-      workstream_id: workstream.workstream_id,
-      domain_id: workstream.domain_id,
-      entry_surface: 'domain_agent_entry',
-      recommended_family: 'ppt_deck',
-      confidence: 'high',
-      reason:
-        'ppt_deck is a direct top-level family map to Presentation Foundry and must stay inside the RedCube domain-agent entry.',
-      selection_evidence: [
-        'preferred_family=ppt_deck',
-        'ppt_deck direct map to presentation_ops',
-        'domain-agent entry only',
-      ],
-    };
-  }
-
-  if (xiaohongshu && !presentation) {
-    const specialCase = contracts.stageSelectionVocabulary.special_cases.find(
-      (entry) => entry.family === 'xiaohongshu',
-    );
-
-    return {
-      status: 'domain_boundary',
-      request_kind: requestKind(input),
-      domain_id: specialCase?.domain_id ?? 'redcube',
-      workstream_id: null,
-      recommended_family: 'xiaohongshu',
-      reason:
-        'xiaohongshu stays at the RedCube family boundary and is not automatically equal to Presentation Foundry without explicit presentation-delivery semantics.',
-      selection_evidence: [
-        'preferred_family=xiaohongshu',
-        'redcube family boundary',
-        'presentation_ops auto-mapping withheld',
-      ],
-    };
-  }
-
-  if (candidateWorkstream) {
-    if (candidateWorkstream === 'grant_ops') {
-      const workstream = findWorkstreamOrThrow(contracts, 'grant_ops');
-      return {
-        status: 'selected_domain_agent_entry',
-        request_kind: requestKind(input),
-        workstream_id: workstream.workstream_id,
-        domain_id: workstream.domain_id,
-        entry_surface: 'domain_agent_entry',
-        recommended_family: null,
-        confidence: 'high',
-        reason:
-          'The requested output is a formal grant-authoring delivery owned by Grant Ops inside the MedAutoGrant domain-agent entry.',
-        selection_evidence: [
-          'grant delivery semantics',
-          'grant_ops registered ownership',
-          'domain-agent entry only',
-        ],
-      };
-    }
-
-    return {
-      status: 'unknown_domain',
-      request_kind: requestKind(input),
-      candidate_workstream_id: candidateWorkstream,
-      reason:
-        `${candidateWorkstream} semantics are recognizable, but that workstream remains under definition and has no admitted domain-agent entry yet.`,
-      selection_evidence: [
-        `candidate_workstream=${candidateWorkstream}`,
-        'under_definition workstream',
-        'no registered domain owner',
-      ],
-    };
-  }
-
-  if (research && presentation) {
+  if (workstreamMatches.length > 1) {
     return {
       status: 'ambiguous_task',
       request_kind: requestKind(input),
-      candidate_workstreams: ['research_ops', 'presentation_ops'],
-      candidate_domains: ['medautoscience', 'redcube'],
-      reason:
-        'The request mixes research-submission and presentation-delivery semantics without a single primary deliverable.',
-      selection_evidence: [
-        'research delivery semantics',
-        'presentation delivery semantics',
-        'missing primary deliverable',
-      ],
-      required_clarification: [
-        'Is the primary goal a formal research deliverable or a presentation deliverable?',
-        'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
-      ],
+      candidate_workstreams: workstreamMatches.map((entry) => entry.workstream_id),
+      candidate_domains: [...new Set(workstreamMatches.map((entry) => entry.domain_id))],
+      reason: 'Multiple admitted workstreams match the explicit normalized routing signals.',
+      selection_evidence: signals.map((signal) => `normalized_signal=${signal}`),
+      required_clarification: ['Select one admitted workstream or one Standard Agent explicitly.'],
     };
   }
 
-  if (research) {
-    const workstream = findWorkstreamOrThrow(contracts, 'research_ops');
-    return {
-      status: 'selected_domain_agent_entry',
-      request_kind: requestKind(input),
-      workstream_id: workstream.workstream_id,
-      domain_id: workstream.domain_id,
-      entry_surface: 'domain_agent_entry',
-      recommended_family: null,
-      confidence: 'high',
-      reason:
-        'The requested output is a formal research delivery owned by Research Foundry inside the MedAutoScience domain-agent entry.',
-      selection_evidence: [
-        'research delivery semantics',
-        'research_ops registered ownership',
-        'domain-agent entry only',
-      ],
-    };
-  }
-
-  if (presentation) {
-    const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
-    return {
-      status: 'selected_domain_agent_entry',
-      request_kind: requestKind(input),
-      workstream_id: workstream.workstream_id,
-      domain_id: workstream.domain_id,
-      entry_surface: 'domain_agent_entry',
-      recommended_family: preferredFamily ?? 'ppt_deck',
-      confidence: preferredFamily ? 'high' : 'medium',
-      reason:
-        'The requested output is a visual deliverable owned by Presentation Foundry inside the RedCube domain-agent entry.',
-      selection_evidence: [
-        'presentation delivery semantics',
-        'presentation_ops registered ownership',
-        'visual deliverable boundary',
-      ],
-    };
-  }
-
-  if (xiaohongshu) {
+  const domainMatches = contracts.domains.domains.filter((domain) => {
+    const identities = domainIdentitySignals(domain);
+    for (const alias of domainInterfaces.get(domain.domain_id)?.routing.explicit_aliases ?? []) {
+      identities.add(normalizedSignal(alias));
+    }
+    return signals.some((signal) => identities.has(signal));
+  });
+  if (domainMatches.length === 1) {
+    const domain = domainMatches[0];
+    const activeOwnedWorkstreams = domain.owned_workstreams
+      .map((workstreamId) => contracts.workstreams.workstreams.find((entry) =>
+        entry.workstream_id === workstreamId && entry.status === 'active'
+      ))
+      .filter((entry): entry is WorkstreamContract => Boolean(entry));
+    if (activeOwnedWorkstreams.length === 1) {
+      return selectedWorkstream(input, activeOwnedWorkstreams[0], [
+        `explicit_domain=${domain.domain_id}`,
+        `agent_id=${domain.independent_domain_agent.agent_id}`,
+        `workstream=${activeOwnedWorkstreams[0].workstream_id}`,
+      ]);
+    }
     return {
       status: 'domain_boundary',
       request_kind: requestKind(input),
-      domain_id: 'redcube',
+      domain_id: domain.domain_id,
       workstream_id: null,
-      recommended_family: 'xiaohongshu',
-      reason:
-        'xiaohongshu stays discoverable through RedCube AI, but it does not automatically become Presentation Foundry.',
+      recommended_family: input.preferredFamily ?? null,
+      reason: `The explicit signal selects domain ${domain.domain_id}, but no single active workstream can be inferred.`,
+      selection_evidence: [`explicit_domain=${domain.domain_id}`, 'single_workstream_inference=withheld'],
+    };
+  }
+
+  const preferredFamily = normalizedSignal(input.preferredFamily);
+  if (preferredFamily) {
+    const familyOwners = contracts.domains.domains.filter((domain) =>
+      normalizedSet(domain.non_opl_families).has(preferredFamily)
+    );
+    if (familyOwners.length === 1) {
+      return {
+        status: 'domain_boundary',
+        request_kind: requestKind(input),
+        domain_id: familyOwners[0].domain_id,
+        workstream_id: null,
+        recommended_family: input.preferredFamily ?? null,
+        reason: `The requested family is owned by ${familyOwners[0].domain_id} but is not an admitted workstream alias.`,
+        selection_evidence: [
+          `preferred_family=${preferredFamily}`,
+          `family_owner=${familyOwners[0].domain_id}`,
+          'workstream_auto_mapping=withheld',
+        ],
+      };
+    }
+  }
+
+  const unadmittedWorkstream = contracts.taskTopology.workstreams.find((workstream) => {
+    if (workstream.selection_state === 'domain_agent_entry_ready') return false;
+    const accepted = normalizedSet([workstream.workstream_id, ...workstream.typical_tasks]);
+    return signals.some((signal) => accepted.has(signal));
+  });
+  if (unadmittedWorkstream) {
+    return {
+      status: 'unknown_domain',
+      request_kind: requestKind(input),
+      candidate_workstream_id: unadmittedWorkstream.workstream_id,
+      reason: `${unadmittedWorkstream.workstream_id} is recognized by the task topology but has no active admitted workstream owner.`,
       selection_evidence: [
-        'xiaohongshu family signal',
-        'redcube ownership',
-        'presentation_ops auto-mapping withheld',
+        `candidate_workstream=${unadmittedWorkstream.workstream_id}`,
+        'active_workstream_owner=missing',
       ],
     };
   }
@@ -337,12 +234,12 @@ export function resolveRequestSurface(
     request_kind: requestKind(input),
     candidate_workstreams: [],
     candidate_domains: [],
-    reason:
-      'The request does not contain enough top-level stage-selection evidence to resolve a workstream or domain safely.',
-    selection_evidence: ['insufficient stage-selection evidence'],
+    reason: 'No explicit normalized routing signal selects an admitted workstream or Standard Agent.',
+    selection_evidence: signals.length > 0
+      ? signals.map((signal) => `unmatched_normalized_signal=${signal}`)
+      : ['normalized_routing_signal=missing'],
     required_clarification: [
-      'What is the primary deliverable you want OPL to route?',
-      'Should OPL prefer a research deliverable, a presentation deliverable, or another explicit family boundary?',
+      'Select a Standard Agent, admitted workstream, primary family, or top-level intent.',
     ],
   };
 }
@@ -352,136 +249,69 @@ export function explainDomainBoundary(
   contracts: FrameworkContracts,
 ): BoundaryExplanation {
   const resolution = resolveRequestSurface(input, contracts);
-  const summary = input.goal;
+  const base = {
+    request_summary: input.goal,
+    boundary_status: resolution.status,
+    boundary_evidence: resolution.selection_evidence,
+  } as const;
 
   switch (resolution.status) {
-    case 'selected_domain_agent_entry':
-      if (resolution.workstream_id === 'grant_ops') {
-        return {
-          request_summary: summary,
-          boundary_status: resolution.status,
-          boundary_evidence: resolution.selection_evidence,
-          resolved_domain: 'medautogrant',
-          resolved_workstream_id: 'grant_ops',
-          reason:
-            'The primary output is a formal grant-authoring delivery, so the request belongs to the MedAutoGrant domain-agent entry.',
-          rejected_domains: [
-            {
-              domain_id: 'medautoscience',
-              reason:
-                'Research evidence can support a grant, but the requested deliverable is a grant-authoring output.',
-            },
-            {
-              domain_id: 'redcube',
-              reason:
-                'Presentation artifacts can support the proposal later, while the current deliverable is still grant authoring.',
-            },
-          ],
-        };
-      }
-
-      if (resolution.workstream_id === 'research_ops') {
-        return {
-          request_summary: summary,
-          boundary_status: resolution.status,
-          boundary_evidence: resolution.selection_evidence,
-          resolved_domain: 'medautoscience',
-          resolved_workstream_id: 'research_ops',
-          reason:
-            'The primary output is a formal research delivery, so the request belongs to the MedAutoScience domain-agent entry rather than the visual-deliverable lane.',
-          rejected_domains: [
-            {
-              domain_id: 'redcube',
-              reason:
-                'RedCube may visualize research outputs later, but the requested deliverable here is not a visual presentation artifact.',
-            },
-          ],
-        };
-      }
-
+    case 'selected_domain_agent_entry': {
+      const domain = findDomainOrThrow(contracts, resolution.domain_id);
+      const workstream = findWorkstreamOrThrow(contracts, resolution.workstream_id);
       return {
-        request_summary: summary,
-        boundary_status: resolution.status,
-        boundary_evidence: resolution.selection_evidence,
-        resolved_domain: 'redcube',
-        resolved_workstream_id: 'presentation_ops',
-        reason:
-          'The requested output is a visual deliverable, so the request belongs to RedCube AI rather than the Research Foundry execution lane.',
-        rejected_domains: [
-          {
-            domain_id: 'medautoscience',
-            reason:
-              'Research evidence may feed the task, but the requested output is a visual deliverable rather than a research runtime deliverable.',
-          },
-        ],
+        ...base,
+        resolved_domain: domain.domain_id,
+        resolved_workstream_id: workstream.workstream_id,
+        reason: `${workstream.label} is the admitted workstream selected by the explicit routing signal; ${domain.label} owns its domain truth and authority.`,
+        rejected_domains: contracts.domains.domains
+          .filter((entry) => entry.domain_id !== domain.domain_id)
+          .map((entry) => ({
+            domain_id: entry.domain_id,
+            reason: 'No explicit normalized routing signal selected this domain.',
+          })),
       };
-
-    case 'domain_boundary':
+    }
+    case 'domain_boundary': {
+      const domain = findDomainOrThrow(contracts, resolution.domain_id);
       return {
-        request_summary: summary,
-        boundary_status: resolution.status,
-        boundary_evidence: resolution.selection_evidence,
-        resolved_domain: resolution.domain_id,
+        ...base,
+        resolved_domain: domain.domain_id,
         resolved_workstream_id: null,
-        reason:
-          'xiaohongshu is a RedCube-owned family boundary, but it is not automatically equal Presentation Foundry until the request explicitly becomes a presentation deliverable.',
-        rejected_domains: [
-          {
-            domain_id: 'medautoscience',
-            reason:
-              'The request is not asking for a formal research delivery owned by MedAutoScience.',
-          },
-        ],
+        reason: `${domain.label} owns the selected family or domain boundary, but OPL cannot infer one active workstream.`,
+        rejected_domains: contracts.domains.domains
+          .filter((entry) => entry.domain_id !== domain.domain_id)
+          .map((entry) => ({
+            domain_id: entry.domain_id,
+            reason: 'This domain does not declare ownership of the selected explicit family boundary.',
+          })),
       };
-
+    }
     case 'unknown_domain':
       return {
-        request_summary: summary,
-        boundary_status: resolution.status,
-        boundary_evidence: resolution.selection_evidence,
+        ...base,
         resolved_domain: null,
         resolved_workstream_id: null,
         candidate_workstream_id: resolution.candidate_workstream_id,
-        reason:
-          `${resolution.candidate_workstream_id} remains under definition, so OPL may describe the boundary but cannot hand the request to an admitted domain yet.`,
-        rejected_domains: [
-          {
-            domain_id: 'medautoscience',
-            reason:
-              'The current request does not match the frozen Research Foundry boundary.',
-          },
-          {
-            domain_id: 'redcube',
-            reason:
-              'The current request does not match the frozen Presentation Foundry boundary.',
-          },
-        ],
+        reason: `${resolution.candidate_workstream_id} has no active admitted domain owner.`,
+        rejected_domains: contracts.domains.domains.map((entry) => ({
+          domain_id: entry.domain_id,
+          reason: 'The domain registry does not assign this candidate workstream to the domain.',
+        })),
       };
-
     case 'ambiguous_task':
       return {
-        request_summary: summary,
-        boundary_status: resolution.status,
-        boundary_evidence: resolution.selection_evidence,
+        ...base,
         resolved_domain: null,
         resolved_workstream_id: null,
         candidate_workstreams: resolution.candidate_workstreams,
         candidate_domains: resolution.candidate_domains,
-        reason:
-          'The request combines multiple top-level semantics, so OPL must stop before inventing a single domain owner.',
+        reason: 'OPL stops before inventing domain semantics when normalized routing signals are absent or ambiguous.',
         required_clarification: resolution.required_clarification,
-        rejected_domains: [
-          {
-            domain_id: 'medautoscience',
-            reason:
-              'Research semantics are present, but not as a single unambiguous primary deliverable.',
-          },
-          {
-            domain_id: 'redcube',
-            reason:
-              'Presentation semantics are present, but not as a single unambiguous primary deliverable.',
-          },
-        ],
+        rejected_domains: contracts.domains.domains.map((entry) => ({
+          domain_id: entry.domain_id,
+          reason: 'No unique explicit normalized routing signal selected this domain.',
+        })),
       };
   }
 }

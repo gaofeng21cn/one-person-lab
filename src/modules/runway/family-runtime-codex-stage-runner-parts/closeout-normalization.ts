@@ -269,7 +269,6 @@ export function normalizeTypedStageCloseoutPacket(value: unknown): TypedStageClo
     ...(readStringList(value.usage_refs).length > 0 ? { usage_refs: readStringList(value.usage_refs) } : {}),
     ...(isRecord(value.session_usage_refs) ? { session_usage_refs: value.session_usage_refs } : {}),
     ...(isRecord(value.cost_summary) ? { cost_summary: value.cost_summary } : {}),
-    ...(isRecord(value.paper_stage_log) ? { paper_stage_log: value.paper_stage_log } : {}),
     ...(isRecord(value.user_stage_log) ? { user_stage_log: value.user_stage_log } : {}),
     ...(isRecord(value.stage_log_summary) ? { stage_log_summary: value.stage_log_summary } : {}),
     ...(isRecord(value.human_stage_log) ? { human_stage_log: value.human_stage_log } : {}),

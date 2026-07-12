@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://one-person-lab.dev/contracts/standard-agent-interface.schema.json",
+  "title": "OPL Standard Agent Interface",
+  "type": "object",
+  "required": ["version", "workspace_binding", "runtime", "progress", "routing"],
+  "properties": {
+    "version": { "const": "opl_standard_agent_interface.v1" },
+    "workspace_binding": {
+      "type": "object",
+      "required": ["locator_surface_kind", "default_profile_id", "workspace_kind", "project_kind", "project_collection_label", "default_workspace_id", "default_project_id", "required_locator_fields", "optional_locator_fields", "entry_command_template", "manifest_command_template"],
+      "properties": {
+        "locator_surface_kind": { "type": "string", "minLength": 1 },
+        "default_profile_id": { "enum": ["one_off", "series", "portfolio"] },
+        "workspace_kind": { "type": "string", "minLength": 1 },
+        "project_kind": { "type": "string", "minLength": 1 },
+        "project_collection_label": { "type": "string", "minLength": 1 },
+        "default_workspace_id": { "type": "string", "minLength": 1 },
+        "default_project_id": { "type": "string", "minLength": 1 },
+        "required_locator_fields": { "$ref": "#/$defs/locatorFields" },
+        "optional_locator_fields": { "$ref": "#/$defs/locatorFields" },
+        "entry_command_template": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/commandTemplate" }] },
+        "manifest_command_template": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/commandTemplate" }] }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["runtime_domain_id", "dispatch_command", "registration_ref"],
+      "properties": {
+        "runtime_domain_id": { "type": "string", "minLength": 1 },
+        "dispatch_command": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/commandTemplate" }] },
+        "registration_ref": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "progress": {
+      "type": "object",
+      "required": ["deliverable_delta_aliases", "platform_delta_aliases"],
+      "properties": {
+        "deliverable_delta_aliases": { "$ref": "#/$defs/stringList" },
+        "platform_delta_aliases": { "$ref": "#/$defs/stringList" }
+      },
+      "additionalProperties": false
+    },
+    "routing": {
+      "type": "object",
+      "required": ["explicit_aliases", "workstream_ids", "intent_signals", "ambiguity_policy"],
+      "properties": {
+        "explicit_aliases": { "$ref": "#/$defs/stringList" },
+        "workstream_ids": {
+          "allOf": [{ "$ref": "#/$defs/stringList" }, { "maxItems": 1 }]
+        },
+        "intent_signals": { "$ref": "#/$defs/stringList" },
+        "ambiguity_policy": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "locatorFields": {
+      "type": "array",
+      "items": { "enum": ["workspace_root", "workspace_path", "profile_ref", "input_path"] },
+      "uniqueItems": true
+    },
+    "commandTemplate": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

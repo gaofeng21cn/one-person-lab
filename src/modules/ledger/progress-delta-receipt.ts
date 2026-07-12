@@ -2,7 +2,6 @@ import progressDeltaReceiptSchema from '../../../contracts/opl-framework/progres
 import { assertJsonSchemaPayload } from '../../kernel/schema-registry.ts';
 
 export const PROGRESS_DELTA_RECEIPT_DELTA_CLASSES = [
-  'paper_progress_delta',
   'deliverable_progress_delta',
   'platform_repair_delta',
   'advisory_delta',

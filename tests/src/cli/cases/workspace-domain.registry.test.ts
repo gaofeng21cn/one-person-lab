@@ -6,6 +6,7 @@ import {
   path,
   repoRoot,
   runCli,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 import { createWorkspaceFixture } from './workspace-domain-test-helper.ts';
@@ -51,7 +52,7 @@ test('workspace registry owns bind, list, and archive lifecycle only', () => {
   }
 });
 
-test('workspace registry derives entries only for valid locator-backed bindings', () => {
+test('workspace registry does not reconstruct domain commands from legacy locator kinds', () => {
   const staleMasRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stale-mas-binding-'));
   const cases = [
     {
@@ -64,7 +65,7 @@ test('workspace registry derives entries only for valid locator-backed bindings'
         profile_ref: null,
         input_path: null,
       },
-      expectedReady: 1,
+      expectedReady: 0,
     },
     {
       projectId: 'medautoscience',
@@ -122,9 +123,44 @@ test('workspace bind replaces an active stale MAS locator binding', () => {
   const profilePath = path.join(currentRoot, 'profiles', 'local.toml');
   try {
     fs.mkdirSync(path.join(currentRoot, 'scripts'), { recursive: true });
+    fs.mkdirSync(path.join(currentRoot, 'contracts'), { recursive: true });
     fs.mkdirSync(path.dirname(profilePath), { recursive: true });
     fs.writeFileSync(path.join(currentRoot, 'scripts', 'run-python-clean.sh'), '#!/bin/sh\n');
     fs.writeFileSync(profilePath, 'workspace_root = "."\n');
+    fs.writeFileSync(path.join(currentRoot, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+      domain_id: 'medautoscience',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'fixture_mas_workspace_locator',
+          default_profile_id: 'portfolio',
+          workspace_kind: 'medical_research_workspace',
+          project_kind: 'study',
+          project_collection_label: 'studies',
+          default_workspace_id: 'research-workspace',
+          default_project_id: 'study-001',
+          required_locator_fields: ['profile_ref'],
+          optional_locator_fields: ['workspace_root'],
+          entry_command_template: ['medautosci', 'product-entry-status', '--profile-ref', '{profile_ref}'],
+          manifest_command_template: ['medautosci', 'product-entry-manifest', '--profile-ref', '{profile_ref}'],
+        },
+        runtime: {
+          runtime_domain_id: 'medautoscience',
+          dispatch_command: ['medautosci', 'domain-handler', 'dispatch'],
+          registration_ref: 'contracts/domain_descriptor.json#/runtime',
+        },
+        progress: {
+          deliverable_delta_aliases: ['paper_progress_delta'],
+          platform_delta_aliases: ['platform_repair_delta'],
+        },
+        routing: {
+          explicit_aliases: ['mas'],
+          workstream_ids: ['research_ops'],
+          intent_signals: ['submission_delivery'],
+          ambiguity_policy: 'require_explicit_workstream',
+        },
+      },
+    }, null, 2)}\n`);
     writeRegistry(stateRoot, {
       binding_id: 'stale-mas-binding',
       project_id: 'medautoscience',
@@ -157,6 +193,10 @@ test('workspace bind replaces an active stale MAS locator binding', () => {
     ], { OPL_STATE_DIR: stateRoot }).workspace_catalog;
     assert.equal(catalog.binding.workspace_path, currentRoot);
     assert.equal(
+      catalog.binding.direct_entry.command,
+      `medautosci product-entry-status --profile-ref ${profilePath}`,
+    );
+    assert.equal(
       catalog.bindings.find((entry: { binding_id: string }) => entry.binding_id === 'stale-mas-binding').status,
       'inactive',
     );
@@ -164,6 +204,52 @@ test('workspace bind replaces an active stale MAS locator binding', () => {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(staleRoot, { recursive: true, force: true });
     fs.rmSync(currentRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace bind rejects a descriptor owned by another project', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cross-agent-binding-'));
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cross-agent-repo-'));
+  try {
+    fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+      domain_id: 'med-autoscience',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'mas_workspace',
+          default_profile_id: 'portfolio',
+          workspace_kind: 'medical_research_workspace',
+          project_kind: 'study',
+          project_collection_label: 'studies',
+          default_workspace_id: 'research-workspace',
+          default_project_id: 'study-001',
+          required_locator_fields: ['workspace_root'],
+          optional_locator_fields: [],
+          entry_command_template: ['medautosci', 'status', '{workspace_root}'],
+          manifest_command_template: ['medautosci', 'manifest', '{workspace_root}'],
+        },
+        runtime: { runtime_domain_id: 'medautoscience', dispatch_command: null, registration_ref: null },
+        progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
+        routing: {
+          explicit_aliases: ['mas'],
+          workstream_ids: ['research_ops'],
+          intent_signals: ['research'],
+          ambiguity_policy: 'require_explicit_workstream',
+        },
+      },
+    })}\n`);
+    const failure = runCliFailure([
+      'workspace', 'bind',
+      '--project', 'medautogrant',
+      '--path', repoDir,
+      '--workspace-root', repoDir,
+    ], { OPL_STATE_DIR: stateRoot });
+    assert.equal(failure.payload.error.code, 'contract_shape_invalid');
+    assert.match(failure.payload.error.message, /identity does not match/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
 

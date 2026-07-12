@@ -3,12 +3,19 @@ import path from 'node:path';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
 import {
   randomUUID } from 'node:crypto';
-import { pathToFileURL } from 'node:url';
 
 import { FrameworkContractError } from '../../kernel/contract-validation.ts';
 import { isRecord } from '../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../kernel/json-file.ts';
 import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
+import {
+  assertStandardAgentDescriptorIdentity,
+  materializeStandardAgentCommand,
+  readPackageManagedStandardAgentDescriptor,
+  readStandardAgentDescriptorInterface,
+  type StandardAgentInterface,
+  type StandardAgentLocatorField,
+} from '../../kernel/standard-agent-interface.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
 
@@ -164,13 +171,6 @@ function normalizeWorkspaceBinding(binding: Partial<WorkspaceBinding>): Workspac
     archived_at: binding.archived_at ? String(binding.archived_at) : null,
   };
 
-  if (!normalized.direct_entry.command || !normalized.direct_entry.manifest_command) {
-    const derivedDirectEntry = buildDerivedDirectEntryLocatorForBinding(normalized);
-    normalized.direct_entry.command = normalized.direct_entry.command ?? derivedDirectEntry.command;
-    normalized.direct_entry.manifest_command =
-      normalized.direct_entry.manifest_command ?? derivedDirectEntry.manifest_command;
-  }
-
   return normalized;
 }
 
@@ -279,122 +279,70 @@ function shellSingleQuote(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function buildMasGeneratedProductEntryMaterializer(
-  workspaceRoot: string,
-  profileRef: string,
-  methodName: 'build_product_entry_status' | 'build_product_entry_manifest',
+function resolveStandardAgentInterfaceForWorkspace(
+  projectId: string,
+  project: string,
+  workspacePath: string,
+  workspaceRoot?: string | null,
 ) {
-  if (
-    !fs.existsSync(workspaceRoot)
-    || !fs.statSync(workspaceRoot).isDirectory()
-    || !fs.existsSync(profileRef)
-    || !fs.statSync(profileRef).isFile()
-  ) {
-    throw new FrameworkContractError(
-      'cli_usage_error',
-      'MAS generated product-entry materializer requires an existing bound workspace root and profile.',
-      {
-        workspace_root: workspaceRoot,
-        profile_ref: profileRef,
-      },
-    );
+  const packageManaged = readPackageManagedStandardAgentDescriptor([projectId, project]);
+  if (packageManaged) {
+    const descriptor = assertStandardAgentDescriptorIdentity(packageManaged, {
+      project,
+      domain_id: projectId,
+    });
+    return { descriptor: descriptor.interface, repo_dir: descriptor.repo_dir, source: 'package_lock' as const };
   }
-  const python = [
-    'from med_autoscience.profiles import load_profile',
-    'from med_autoscience.controllers.product_entry import build_product_entry_manifest, build_product_entry_status',
-    'import json',
-    `profile_ref = ${JSON.stringify(profileRef)}`,
-    `print(json.dumps(${methodName}(profile=load_profile(profile_ref), profile_ref=profile_ref), ensure_ascii=False))`,
-  ].join('; ');
-  return [
-    'uv',
-    'run',
-    '--isolated',
-    '--frozen',
-    '--project',
-    shellSingleQuote(workspaceRoot),
-    'python',
-    '-c',
-    shellSingleQuote(python),
-  ].join(' ');
-}
+  const configuredFamilyRoot = normalizeOptionalString(process.env.OPL_FAMILY_WORKSPACE_ROOT);
+  const candidates = [
+    normalizeOptionalString(workspaceRoot),
+    workspacePath,
+    configuredFamilyRoot ? path.join(configuredFamilyRoot, project) : null,
+  ].filter((entry): entry is string => Boolean(entry));
 
-function buildMagGeneratedProductEntryMaterializer(
-  workspaceRoot: string,
-  inputPath: string,
-  methodName: 'build_product_status' | 'build_product_entry_manifest',
-) {
-  const python = [
-    'from med_autogrant.product_entry import MedAutoGrantProductEntry',
-    'import json',
-    `print(json.dumps(MedAutoGrantProductEntry().${methodName}(input_path=${JSON.stringify(inputPath)}), ensure_ascii=False))`,
-  ].join('; ');
-  return [
-    'uv',
-    'run',
-    '--directory',
-    shellSingleQuote(workspaceRoot),
-    'python',
-    '-c',
-    shellSingleQuote(python),
-  ].join(' ');
-}
-
-function buildRedcubeGeneratedProductEntryMaterializer(
-  workspaceRoot: string,
-  methodName: 'getProductStatus' | 'getProductEntryManifest',
-) {
-  const moduleUrl = pathToFileURL(
-    path.join(workspaceRoot, 'packages', 'redcube-domain-entry', 'dist', 'index.js'),
-  ).href;
-  const javascript = [
-    `import(${JSON.stringify(moduleUrl)})`,
-    `.then(async (module) => { const payload = await module.${methodName}({ workspace_root: ${JSON.stringify(workspaceRoot)} }); console.log(JSON.stringify(payload)); })`,
-    '.catch((error) => { console.error(error && error.stack ? error.stack : String(error)); process.exit(1); })',
-  ].join('');
-  return [
-    'node',
-    '-e',
-    shellSingleQuote(javascript),
-  ].join(' ');
+  for (const candidate of [...new Set(candidates.map((entry) => path.resolve(entry)))]) {
+    const candidateDescriptor = readStandardAgentDescriptorInterface(candidate);
+    if (candidateDescriptor) {
+      const descriptor = assertStandardAgentDescriptorIdentity(candidateDescriptor, {
+        project,
+        domain_id: projectId,
+      });
+      return { descriptor: descriptor.interface, repo_dir: candidate, source: 'explicit_workspace' as const };
+    }
+  }
+  return null;
 }
 
 function validateProjectLocatorOptions(
-  projectId: string,
+  standardInterface: StandardAgentInterface | null,
   locatorOptions: {
     workspaceRoot?: string;
     profileRef?: string;
     inputPath?: string;
   },
 ) {
-  const provided = {
+  const provided: Record<StandardAgentLocatorField, boolean> = {
     workspace_root: Boolean(normalizeOptionalString(locatorOptions.workspaceRoot)),
-    profile: Boolean(normalizeOptionalString(locatorOptions.profileRef)),
-    input: Boolean(normalizeOptionalString(locatorOptions.inputPath)),
+    workspace_path: false,
+    profile_ref: Boolean(normalizeOptionalString(locatorOptions.profileRef)),
+    input_path: Boolean(normalizeOptionalString(locatorOptions.inputPath)),
   };
-
+  const accepted = new Set([
+    ...(standardInterface?.workspace_binding.required_locator_fields ?? []),
+    ...(standardInterface?.workspace_binding.optional_locator_fields ?? []),
+    ...(!standardInterface ? ['workspace_root' as const] : []),
+  ]);
   const unsupportedLocatorFields = Object.entries(provided)
     .filter(([, enabled]) => enabled)
     .map(([key]) => key)
-    .filter((key) => {
-      if (projectId === 'medautoscience') {
-        return key !== 'profile' && key !== 'workspace_root';
-      }
-      if (projectId === 'medautogrant') {
-        return key !== 'input';
-      }
-      if (projectId === 'redcube') {
-        return key !== 'workspace_root';
-      }
-      return true;
-    });
+    .filter((key) => !accepted.has(key as StandardAgentLocatorField));
 
   if (unsupportedLocatorFields.length > 0) {
     throw new FrameworkContractError(
       'cli_usage_error',
       'The requested workspace locator fields are not supported for this project surface.',
       {
-        project_id: projectId,
+        descriptor_available: Boolean(standardInterface),
         unsupported_locator_fields: unsupportedLocatorFields,
       },
     );
@@ -402,7 +350,7 @@ function validateProjectLocatorOptions(
 }
 
 function buildWorkspaceLocator(
-  projectId: string,
+  standardInterface: StandardAgentInterface | null,
   workspacePath: string,
   options: {
     workspaceRoot?: string;
@@ -410,135 +358,80 @@ function buildWorkspaceLocator(
     inputPath?: string;
   },
 ): BoundWorkspaceLocator | null {
-  validateProjectLocatorOptions(projectId, options);
-
-  if (projectId === 'medautoscience') {
-    const profileRef = normalizeExistingFilePath(options.profileRef, 'profile');
-    if (!profileRef) {
-      return null;
-    }
-    const workspaceRoot = normalizeExistingDirectoryPath(options.workspaceRoot, 'workspace_root') ?? workspacePath;
-
-    return {
-      surface_kind: 'med_autoscience_workspace_profile',
-      workspace_root: workspaceRoot,
-      profile_ref: profileRef,
-      input_path: null,
-    };
+  validateProjectLocatorOptions(standardInterface, options);
+  if (!standardInterface) {
+    const workspaceRoot = normalizeExistingDirectoryPath(options.workspaceRoot, 'workspace_root');
+    return workspaceRoot
+      ? {
+          surface_kind: 'opl_standard_agent_workspace',
+          workspace_root: workspaceRoot,
+          profile_ref: null,
+          input_path: null,
+        }
+      : null;
   }
-
-  if (projectId === 'medautogrant') {
-    const inputPath = normalizeExistingFilePath(options.inputPath, 'input');
-    if (!inputPath) {
-      return null;
-    }
-
-    return {
-      surface_kind: 'med_autogrant_workspace_input',
-      workspace_root: workspacePath,
-      profile_ref: null,
-      input_path: inputPath,
-    };
+  const accepted = new Set([
+    ...standardInterface.workspace_binding.required_locator_fields,
+    ...standardInterface.workspace_binding.optional_locator_fields,
+  ]);
+  const values: Record<StandardAgentLocatorField, string | null> = {
+    workspace_path: workspacePath,
+    workspace_root: accepted.has('workspace_root')
+      ? normalizeExistingDirectoryPath(options.workspaceRoot, 'workspace_root') ?? workspacePath
+      : null,
+    profile_ref: accepted.has('profile_ref')
+      ? normalizeExistingFilePath(options.profileRef, 'profile_ref')
+      : null,
+    input_path: accepted.has('input_path')
+      ? normalizeExistingFilePath(options.inputPath, 'input_path')
+      : null,
+  };
+  if (standardInterface.workspace_binding.required_locator_fields.some((field) => !values[field])) {
+    return null;
   }
-
-  if (projectId === 'redcube') {
-    return {
-      surface_kind: 'redcube_workspace',
-      workspace_root: normalizeExistingDirectoryPath(options.workspaceRoot, 'workspace_root') ?? workspacePath,
-      profile_ref: null,
-      input_path: null,
-    };
-  }
-
-  return null;
-}
-
-function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator | null) {
-  if (!workspaceLocator) {
-    return {
-      command: null,
-      manifest_command: null,
-    };
-  }
-
-  if (workspaceLocator.surface_kind === 'med_autoscience_workspace_profile' && workspaceLocator.profile_ref) {
-    return {
-      command: buildMasGeneratedProductEntryMaterializer(
-        workspaceLocator.workspace_root ?? '',
-        workspaceLocator.profile_ref,
-        'build_product_entry_status',
-      ),
-      manifest_command: buildMasGeneratedProductEntryMaterializer(
-        workspaceLocator.workspace_root ?? '',
-        workspaceLocator.profile_ref,
-        'build_product_entry_manifest',
-      ),
-    };
-  }
-
-  if (workspaceLocator.surface_kind === 'med_autogrant_workspace_input' && workspaceLocator.input_path) {
-    return {
-      command: buildMagGeneratedProductEntryMaterializer(
-        workspaceLocator.workspace_root ?? '',
-        workspaceLocator.input_path,
-        'build_product_status',
-      ),
-      manifest_command: buildMagGeneratedProductEntryMaterializer(
-        workspaceLocator.workspace_root ?? '',
-        workspaceLocator.input_path,
-        'build_product_entry_manifest',
-      ),
-    };
-  }
-
-  if (workspaceLocator.surface_kind === 'redcube_workspace' && workspaceLocator.workspace_root) {
-    return {
-      command: buildRedcubeGeneratedProductEntryMaterializer(
-        workspaceLocator.workspace_root,
-        'getProductStatus',
-      ),
-      manifest_command: buildRedcubeGeneratedProductEntryMaterializer(
-        workspaceLocator.workspace_root,
-        'getProductEntryManifest',
-      ),
-    };
-  }
-
   return {
-    command: null,
-    manifest_command: null,
+    surface_kind: standardInterface.workspace_binding.locator_surface_kind,
+    workspace_root: values.workspace_root,
+    profile_ref: values.profile_ref,
+    input_path: values.input_path,
   };
 }
 
-function buildDerivedDirectEntryLocatorForBinding(binding: WorkspaceBinding) {
-  try {
-    return buildDerivedDirectEntryLocator(binding.direct_entry.workspace_locator);
-  } catch (error) {
-    if (
-      binding.status === 'active'
-      && !isStaleMasLocatorOnlyBinding(binding, error)
-    ) {
-      throw error;
-    }
+function commandString(tokens: string[]) {
+  return tokens.map((token) => /^[A-Za-z0-9_./:@%+=,-]+$/.test(token) ? token : shellSingleQuote(token)).join(' ');
+}
+
+function buildDerivedDirectEntryLocator(
+  standardInterface: StandardAgentInterface | null,
+  workspacePath: string,
+  workspaceLocator: BoundWorkspaceLocator | null,
+) {
+  if (!standardInterface || !workspaceLocator) {
     return {
       command: null,
       manifest_command: null,
     };
   }
-}
-
-function isStaleMasLocatorOnlyBinding(binding: WorkspaceBinding, error: unknown) {
-  if (binding.direct_entry.workspace_locator?.surface_kind !== 'med_autoscience_workspace_profile') {
-    return false;
-  }
-  if (binding.direct_entry.command || binding.direct_entry.manifest_command) {
-    return false;
-  }
-  return (
-    error instanceof FrameworkContractError
-    && error.code === 'cli_usage_error'
-    && String(error.message).includes('bound workspace root and profile')
-  );
+  const locator = {
+    workspace_path: workspacePath,
+    workspace_root: workspaceLocator.workspace_root,
+    profile_ref: workspaceLocator.profile_ref,
+    input_path: workspaceLocator.input_path,
+  };
+  return {
+    command: standardInterface.workspace_binding.entry_command_template
+      ? commandString(materializeStandardAgentCommand(
+          standardInterface.workspace_binding.entry_command_template,
+          locator,
+        ))
+      : null,
+    manifest_command: standardInterface.workspace_binding.manifest_command_template
+      ? commandString(materializeStandardAgentCommand(
+          standardInterface.workspace_binding.manifest_command_template,
+          locator,
+        ))
+      : null,
+  };
 }
 
 function setProjectActiveBinding(
@@ -566,50 +459,28 @@ function hasManifest(binding: WorkspaceBinding) {
 function buildProjectBindingContract(
   projectId: string,
   projectName: string,
+  bindings: WorkspaceBinding[],
 ): ProjectWorkspaceBindingContract {
-  if (projectId === 'medautoscience') {
+  const activeBinding = bindings.find((binding) =>
+    binding.project_id === projectId && binding.status === 'active'
+  );
+  const resolved = resolveStandardAgentInterfaceForWorkspace(
+    projectId,
+    projectName,
+    activeBinding?.workspace_path ?? process.cwd(),
+    activeBinding?.direct_entry.workspace_locator?.workspace_root,
+  );
+  if (resolved) {
     return {
       surface_id: 'opl_project_workspace_binding_contract',
       project_id: projectId,
       project: projectName,
-      workspace_locator_surface_kind: 'med_autoscience_workspace_profile',
-      required_locator_fields: ['profile_ref'],
-      optional_locator_fields: ['workspace_root'],
-      derived_entry_command_template:
-        'uv run --isolated --frozen --project <workspace_root> python -c <mas_generated_product_status_materializer>',
-      derived_manifest_command_template:
-        'uv run --isolated --frozen --project <workspace_root> python -c <mas_generated_product_entry_manifest_materializer>',
-      quick_bind_hint: '绑定 MAS 课题 workspace_path 与 profile_ref；如果 MAS 代码仓不在课题目录内，用 workspace_root 指向 MAS 代码仓来派生 direct entry 与 manifest surface。',
-    };
-  }
-
-  if (projectId === 'medautogrant') {
-    return {
-      surface_id: 'opl_project_workspace_binding_contract',
-      project_id: projectId,
-      project: projectName,
-      workspace_locator_surface_kind: 'med_autogrant_workspace_input',
-      required_locator_fields: ['input_path'],
-      optional_locator_fields: [],
-      derived_entry_command_template:
-        'uv run --directory <workspace_path> python -c <mag_generated_product_status_materializer>',
-      derived_manifest_command_template:
-        'uv run --directory <workspace_path> python -c <mag_generated_product_entry_manifest_materializer>',
-      quick_bind_hint: '绑定现有 MAG workspace_path 后，再给 input_path，OPL 就能诚实派生 grant direct entry 与 manifest command。',
-    };
-  }
-
-  if (projectId === 'redcube') {
-    return {
-      surface_id: 'opl_project_workspace_binding_contract',
-      project_id: projectId,
-      project: projectName,
-      workspace_locator_surface_kind: 'redcube_workspace',
-      required_locator_fields: [],
-      optional_locator_fields: ['workspace_root'],
-      derived_entry_command_template: 'node -e <redcube_generated_product_status_materializer>',
-      derived_manifest_command_template: 'node -e <redcube_generated_product_entry_manifest_materializer>',
-      quick_bind_hint: '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
+      workspace_locator_surface_kind: resolved.descriptor.workspace_binding.locator_surface_kind,
+      required_locator_fields: resolved.descriptor.workspace_binding.required_locator_fields,
+      optional_locator_fields: resolved.descriptor.workspace_binding.optional_locator_fields,
+      derived_entry_command_template: resolved.descriptor.workspace_binding.entry_command_template?.join(' ') ?? null,
+      derived_manifest_command_template: resolved.descriptor.workspace_binding.manifest_command_template?.join(' ') ?? null,
+      quick_bind_hint: 'Use the locator fields declared by the selected Standard Agent descriptor.',
     };
   }
 
@@ -622,7 +493,7 @@ function buildProjectBindingContract(
     optional_locator_fields: [],
     derived_entry_command_template: null,
     derived_manifest_command_template: null,
-    quick_bind_hint: 'OPL 顶层 workspace binding 只用于 family-level 状态与路由，不直接派生 domain product entry。',
+    quick_bind_hint: 'No Standard Agent descriptor is available; provide explicit entry and manifest commands.',
   };
 }
 
@@ -656,7 +527,7 @@ function buildProjectCatalogEntry(
       direct_entry_ready: directEntryReadyCount,
       manifest_ready: manifestReadyCount,
     },
-    binding_contract: buildProjectBindingContract(projectId, projectName),
+    binding_contract: buildProjectBindingContract(projectId, projectName, bindings),
     last_updated_at: lastUpdatedAt,
     available_actions: [
       'init',
@@ -780,7 +651,13 @@ export function bindWorkspace(
     archived_at: null,
   };
 
-  const workspaceLocator = buildWorkspaceLocator(project.project_id, absolutePath, {
+  const resolvedStandardInterface = resolveStandardAgentInterfaceForWorkspace(
+    project.project_id,
+    project.project,
+    absolutePath,
+    options.workspaceRoot,
+  );
+  const workspaceLocator = buildWorkspaceLocator(resolvedStandardInterface?.descriptor ?? null, absolutePath, {
     workspaceRoot: options.workspaceRoot,
     profileRef: options.profileRef,
     inputPath: options.inputPath,
@@ -790,7 +667,11 @@ export function bindWorkspace(
         command: null,
         manifest_command: null,
       }
-    : buildDerivedDirectEntryLocator(workspaceLocator);
+    : buildDerivedDirectEntryLocator(
+        resolvedStandardInterface?.descriptor ?? null,
+        absolutePath,
+        workspaceLocator,
+      );
 
   binding.project = project.project;
   binding.label = normalizeOptionalString(options.label);

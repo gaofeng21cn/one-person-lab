@@ -263,13 +263,15 @@ test('domain selection routes representative admitted boundary and candidate-lan
     { goal: 'Prepare a xiaohongshu campaign pack.', preferred: 'xiaohongshu', intent: 'create', expected: ['domain_boundary', null, 'redcube'] },
     {
       goal: 'Draft a patent application with claims and embodiments from this medical research result.',
+      intent: 'ip_ops',
       expected: ['unknown_domain', 'ip_ops', undefined],
     },
     {
       goal: 'Prepare a science and technology award application with achievement summary and impact evidence.',
+      intent: 'award_ops',
       expected: ['unknown_domain', 'award_ops', undefined],
     },
-    { goal: 'Build a formal grant proposal operating lane from the supplied topic brief.', intent: 'plan', expected: ['selected_domain_agent_entry', 'grant_ops', 'medautogrant'] },
+    { goal: 'Build a formal grant proposal operating lane from the supplied topic brief.', intent: 'proposal_authoring', expected: ['selected_domain_agent_entry', 'grant_ops', 'medautogrant'] },
   ];
   for (const entry of cliCases) {
     const args = [
@@ -295,7 +297,64 @@ test('domain selection routes representative admitted boundary and candidate-lan
   }
 });
 
-test('selectDomainAgentEntry returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
+test('domain selection uses package-locked domain routing signals for natural-language goals', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-package-lock-'));
+  const domainRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-atlas-domain-'));
+  const previousStateRoot = process.env.OPL_STATE_DIR;
+  try {
+    fs.mkdirSync(path.join(domainRepo, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(domainRepo, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
+      domain_id: 'redcube-ai',
+      standard_agent_interface: {
+        version: 'opl_standard_agent_interface.v1',
+        workspace_binding: {
+          locator_surface_kind: 'redcube_workspace',
+          default_profile_id: 'series',
+          workspace_kind: 'visual_theme_workspace',
+          project_kind: 'slide_deck',
+          project_collection_label: 'deliverables',
+          default_workspace_id: 'visual-workspace',
+          default_project_id: 'deck-001',
+          required_locator_fields: ['workspace_root'],
+          optional_locator_fields: [],
+          entry_command_template: null,
+          manifest_command_template: null,
+        },
+        runtime: { runtime_domain_id: 'redcube', dispatch_command: null, registration_ref: null },
+        progress: { deliverable_delta_aliases: [], platform_delta_aliases: [] },
+        routing: {
+          explicit_aliases: ['rca'],
+          workstream_ids: ['presentation_ops'],
+          intent_signals: ['speaker notes'],
+          ambiguity_policy: 'require_one_declared_signal',
+        },
+      },
+    })}\n`);
+    fs.writeFileSync(path.join(stateRoot, 'agent-package-locks.json'), `${JSON.stringify({
+      packages: [{
+        package_id: 'rca',
+        agent_id: 'rca',
+        managed_runtime_source: { status: 'current', checkout_path: domainRepo },
+      }],
+    })}\n`);
+    process.env.OPL_STATE_DIR = stateRoot;
+    const resolution = selectDomainAgentEntry({
+      intent: 'create',
+      target: 'deliverable',
+      goal: 'Prepare speaker notes for the committee.',
+    }, loadFrameworkContracts(repoRoot));
+    assert.equal(resolution.status, 'selected_domain_agent_entry');
+    assert.equal('domain_id' in resolution ? resolution.domain_id : null, 'redcube');
+    assert.equal('workstream_id' in resolution ? resolution.workstream_id : null, 'presentation_ops');
+  } finally {
+    if (previousStateRoot === undefined) delete process.env.OPL_STATE_DIR;
+    else process.env.OPL_STATE_DIR = previousStateRoot;
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(domainRepo, { recursive: true, force: true });
+  }
+});
+
+test('selectDomainAgentEntry refuses to infer domain semantics from unstructured goal text', () => {
   const output = runCli([
     'domain',
     'select-entry',
@@ -309,13 +368,15 @@ test('selectDomainAgentEntry returns ambiguous_task with explicit boundary evide
 
   assertContractsContext(output, 'cwd');
   assert.equal(output.resolution.status, 'ambiguous_task');
-  assert.deepEqual(output.resolution.candidate_workstreams, ['research_ops', 'presentation_ops']);
-  assert.deepEqual(output.resolution.candidate_domains, ['medautoscience', 'redcube']);
+  assert.deepEqual(output.resolution.candidate_workstreams, []);
+  assert.deepEqual(output.resolution.candidate_domains, []);
   assert.deepEqual(output.resolution.required_clarification, [
-    'Is the primary goal a formal research deliverable or a presentation deliverable?',
-    'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
+    'Select a Standard Agent, admitted workstream, primary family, or top-level intent.',
   ]);
-  assert.deepEqual(output.resolution.selection_evidence, ['research delivery semantics', 'presentation delivery semantics', 'missing primary deliverable']);
+  assert.deepEqual(output.resolution.selection_evidence, [
+    'unmatched_normalized_signal=create',
+    'unmatched_normalized_signal=deliverable',
+  ]);
 });
 
 test('explainDomainBoundary explains admitted presentation stage selection', () => {
@@ -331,9 +392,9 @@ test('explainDomainBoundary explains admitted presentation stage selection', () 
   assert.equal(explanation.boundary_status, 'selected_domain_agent_entry');
   assert.equal(explanation.resolved_domain, 'redcube');
   assert.equal(explanation.resolved_workstream_id, 'presentation_ops');
-  assert.equal(explanation.rejected_domains[0]?.domain_id, 'medautoscience');
-  assert.match(explanation.rejected_domains[0]?.reason ?? '', /research evidence/i);
-  assert.match(explanation.reason, /visual deliverable/i);
+  const rejectedResearch = explanation.rejected_domains.find((entry) => entry.domain_id === 'medautoscience');
+  assert.match(rejectedResearch?.reason ?? '', /no explicit normalized routing signal/i);
+  assert.match(explanation.reason, /admitted workstream selected/i);
 });
 
 test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
@@ -353,7 +414,7 @@ test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
   assertContractsContext(output, 'cwd');
   assert.equal(output.boundary_explanation.resolved_domain, 'redcube');
   assert.equal(output.boundary_explanation.resolved_workstream_id, null);
-  assert.match(output.boundary_explanation.reason, /not automatically equal presentation foundry/i);
+  assert.match(output.boundary_explanation.reason, /cannot infer one active workstream/i);
 });
 
 test('domain explain-boundary explains under-definition requests', () => {
@@ -361,7 +422,7 @@ test('domain explain-boundary explains under-definition requests', () => {
     'domain',
     'explain-boundary',
     '--intent',
-    'plan',
+    'thesis_ops',
     '--target',
     'deliverable',
     '--goal',
@@ -371,7 +432,7 @@ test('domain explain-boundary explains under-definition requests', () => {
   assertContractsContext(output, 'cwd');
   assert.equal(output.boundary_explanation.resolved_domain, null);
   assert.equal(output.boundary_explanation.candidate_workstream_id, 'thesis_ops');
-  assert.match(output.boundary_explanation.reason, /under definition/i);
+  assert.match(output.boundary_explanation.reason, /no active admitted domain owner/i);
 });
 
 test('help returns machine-readable command discovery without retired entries', () => {

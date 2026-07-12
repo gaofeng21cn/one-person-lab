@@ -557,36 +557,9 @@
           "human_gate",
           "stop_loss"
         ],
-        "deliverable_delta_aliases": {
-          "medautoscience": [
-            "paper_progress_delta",
-            "paper_work_progress"
-          ],
-          "medautogrant": [
-            "grant_work_progress"
-          ],
-          "redcube": [
-            "visual_deliverable_progress",
-            "deliverable_progress_delta"
-          ],
-          "opl_meta_agent": [
-            "target_agent_substantive_delta"
-          ]
-        },
-        "platform_delta_aliases": {
-          "medautoscience": [
-            "platform_repair_delta"
-          ],
-          "medautogrant": [
-            "platform_evidence_progress"
-          ],
-          "redcube": [
-            "platform_repair_delta"
-          ],
-          "opl_meta_agent": [
-            "platform_interface_repair_delta"
-          ]
-        },
+        "domain_alias_source": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
+        "deliverable_delta_aliases": {},
+        "platform_delta_aliases": {},
         "platform_only_is_not_deliverable_progress": true,
         "missing_delta_policy": "emit_zero_deliverable_delta_and_next_forced_delta_without_inventing_domain_work",
         "authority_boundary": {
@@ -982,7 +955,7 @@
         },
         "shared_policy_release": {
           "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-          "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+          "policy_bundle_fingerprint": "sha256:ca23195a7055670d3d64626ba13c2b079fa17f94c33cc633ff42c6d9d3090b28",
           "fingerprint_algorithm": "sha256:stable-json",
           "domain_contract_policy_release_pin_required": true,
           "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -1161,36 +1134,9 @@
           ],
           "domain_alias_policy": {
             "aliases_are_domain_specific_only": true,
-            "deliverable_delta_aliases": {
-              "medautoscience": [
-                "paper_progress_delta",
-                "paper_work_progress"
-              ],
-              "medautogrant": [
-                "grant_work_progress"
-              ],
-              "redcube": [
-                "visual_deliverable_progress",
-                "deliverable_progress_delta"
-              ],
-              "opl_meta_agent": [
-                "target_agent_substantive_delta"
-              ]
-            },
-            "platform_delta_aliases": {
-              "medautoscience": [
-                "platform_repair_delta"
-              ],
-              "medautogrant": [
-                "platform_evidence_progress"
-              ],
-              "redcube": [
-                "platform_repair_delta"
-              ],
-              "opl_meta_agent": [
-                "platform_interface_repair_delta"
-              ]
-            }
+            "source_ref": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
+            "deliverable_delta_aliases": {},
+            "platform_delta_aliases": {}
           },
           "authority_boundary": {
             "opl_owns_policy_contract": true,
@@ -1199,7 +1145,7 @@
             "policy_release_can_claim_domain_ready": false
           }
         },
-        "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+        "policy_bundle_fingerprint": "sha256:ca23195a7055670d3d64626ba13c2b079fa17f94c33cc633ff42c6d9d3090b28",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
         "domain_pin_requirements": {
@@ -1405,36 +1351,9 @@
         "human_gate",
         "stop_loss"
       ],
-      "deliverable_delta_aliases": {
-        "medautoscience": [
-          "paper_progress_delta",
-          "paper_work_progress"
-        ],
-        "medautogrant": [
-          "grant_work_progress"
-        ],
-        "redcube": [
-          "visual_deliverable_progress",
-          "deliverable_progress_delta"
-        ],
-        "opl_meta_agent": [
-          "target_agent_substantive_delta"
-        ]
-      },
-      "platform_delta_aliases": {
-        "medautoscience": [
-          "platform_repair_delta"
-        ],
-        "medautogrant": [
-          "platform_evidence_progress"
-        ],
-        "redcube": [
-          "platform_repair_delta"
-        ],
-        "opl_meta_agent": [
-          "platform_interface_repair_delta"
-        ]
-      },
+        "domain_alias_source": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
+        "deliverable_delta_aliases": {},
+        "platform_delta_aliases": {},
       "platform_only_is_not_deliverable_progress": true,
       "missing_delta_policy": "emit_zero_deliverable_delta_and_next_forced_delta_without_inventing_domain_work",
       "authority_boundary": {
@@ -1920,7 +1839,7 @@
       },
       "shared_policy_release": {
         "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-        "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+        "policy_bundle_fingerprint": "sha256:ca23195a7055670d3d64626ba13c2b079fa17f94c33cc633ff42c6d9d3090b28",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_contract_policy_release_pin_required": true,
         "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -2097,39 +2016,12 @@
             ]
           }
         ],
-        "domain_alias_policy": {
-          "aliases_are_domain_specific_only": true,
-          "deliverable_delta_aliases": {
-            "medautoscience": [
-              "paper_progress_delta",
-              "paper_work_progress"
-            ],
-            "medautogrant": [
-              "grant_work_progress"
-            ],
-            "redcube": [
-              "visual_deliverable_progress",
-              "deliverable_progress_delta"
-            ],
-            "opl_meta_agent": [
-              "target_agent_substantive_delta"
-            ]
+          "domain_alias_policy": {
+            "aliases_are_domain_specific_only": true,
+            "source_ref": "contracts/domain_descriptor.json#/standard_agent_interface/progress",
+            "deliverable_delta_aliases": {},
+            "platform_delta_aliases": {}
           },
-          "platform_delta_aliases": {
-            "medautoscience": [
-              "platform_repair_delta"
-            ],
-            "medautogrant": [
-              "platform_evidence_progress"
-            ],
-            "redcube": [
-              "platform_repair_delta"
-            ],
-            "opl_meta_agent": [
-              "platform_interface_repair_delta"
-            ]
-          }
-        },
         "authority_boundary": {
           "opl_owns_policy_contract": true,
           "domains_own_truth_quality_artifact_memory_and_receipts": true,
@@ -2137,7 +2029,7 @@
           "policy_release_can_claim_domain_ready": false
         }
       },
-      "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+      "policy_bundle_fingerprint": "sha256:ca23195a7055670d3d64626ba13c2b079fa17f94c33cc633ff42c6d9d3090b28",
       "fingerprint_algorithm": "sha256:stable-json",
       "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
       "domain_pin_requirements": {

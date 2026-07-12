@@ -46,7 +46,7 @@ function nonAdvancingApplyStateFromReadback(readback: JsonRecord) {
     provider_admission_allowed: metadata.provider_admission_allowed === true,
     current_executable_owner_action_allowed:
       metadata.current_executable_owner_action_allowed === true,
-    paper_progress_delta: metadata.paper_progress_delta === true,
+    deliverable_progress_delta: metadata.deliverable_progress_delta === true,
     runtime_readback_status:
       stringValue(metadata.runtime_readback_status)
       ?? stringValue(record(nonAdvancingReadback.runtime_live_readback).runtime_readback_status),
@@ -65,7 +65,7 @@ function nonAdvancingApplyStateFromReadback(readback: JsonRecord) {
       can_claim_publication_ready: false,
       can_claim_artifact_ready: false,
       provider_completion_is_domain_ready: false,
-      paper_progress_delta: false,
+      deliverable_progress_delta: false,
     },
   } as JsonRecord;
 }
@@ -148,10 +148,10 @@ export function currentControlStateProjection(input: {
         nonAdvancingApplyStates.filter((state) =>
           state.current_executable_owner_action_allowed === true
         ).length,
-      non_advancing_apply_paper_progress_delta_count:
-        nonAdvancingApplyStates.filter((state) => state.paper_progress_delta === true).length,
+      non_advancing_apply_deliverable_progress_delta_count:
+        nonAdvancingApplyStates.filter((state) => state.deliverable_progress_delta === true).length,
       non_advancing_apply_projection_policy:
-        'diagnostic_readback_only_no_provider_admission_owner_action_or_paper_progress_delta',
+        'diagnostic_readback_only_no_provider_admission_owner_action_or_deliverable_progress_delta',
     },
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),

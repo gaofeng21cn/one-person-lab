@@ -20,18 +20,10 @@ export const STANDARD_PROGRESS_DELTA_POLICY = {
     'human_gate',
     'stop_loss',
   ],
-  deliverable_delta_aliases: {
-    medautoscience: ['paper_progress_delta', 'paper_work_progress'],
-    medautogrant: ['grant_work_progress'],
-    redcube: ['visual_deliverable_progress', 'deliverable_progress_delta'],
-    opl_meta_agent: ['target_agent_substantive_delta'],
-  },
-  platform_delta_aliases: {
-    medautoscience: ['platform_repair_delta'],
-    medautogrant: ['platform_evidence_progress'],
-    redcube: ['platform_repair_delta'],
-    opl_meta_agent: ['platform_interface_repair_delta'],
-  },
+  domain_alias_source:
+    'contracts/domain_descriptor.json#/standard_agent_interface/progress',
+  deliverable_delta_aliases: {},
+  platform_delta_aliases: {},
   platform_only_is_not_deliverable_progress: true,
   quality_budget_exhaustion_policy: 'completed_with_quality_debt_and_continue_when_consumable_artifact_exists',
   quality_debt_blocks_stage_transition: false,

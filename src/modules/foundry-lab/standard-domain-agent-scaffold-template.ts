@@ -458,6 +458,37 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
         domain_id: domainId,
         domain_label: domainLabel,
         marker: SCAFFOLD_MARKER,
+        standard_agent_interface: {
+          version: 'opl_standard_agent_interface.v1',
+          workspace_binding: {
+            locator_surface_kind: 'opl_standard_agent_workspace',
+            default_profile_id: 'one_off',
+            workspace_kind: 'standard_agent_workspace',
+            project_kind: 'domain_project',
+            project_collection_label: 'projects',
+            default_workspace_id: `${domainId}-workspace`,
+            default_project_id: `${domainId}-001`,
+            required_locator_fields: ['workspace_root'],
+            optional_locator_fields: [],
+            entry_command_template: null,
+            manifest_command_template: null,
+          },
+          runtime: {
+            runtime_domain_id: domainId,
+            dispatch_command: null,
+            registration_ref: 'contracts/domain_descriptor.json',
+          },
+          progress: {
+            deliverable_delta_aliases: [],
+            platform_delta_aliases: [],
+          },
+          routing: {
+            explicit_aliases: [domainId],
+            workstream_ids: [],
+            intent_signals: [],
+            ambiguity_policy: 'require_explicit_domain_or_workstream',
+          },
+        },
         standard_contract_refs: {
           foundry_agent_series: 'contracts/foundry_agent_series.json',
           foundry_agent_series_policy_release: FOUNDRY_AGENT_SERIES_POLICY_RELEASE.release_contract_ref,

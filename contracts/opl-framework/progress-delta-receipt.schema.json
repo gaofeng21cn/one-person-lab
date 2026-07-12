@@ -49,7 +49,6 @@
     },
     "delta_classification": {
       "enum": [
-        "paper_progress_delta",
         "deliverable_progress_delta",
         "platform_repair_delta",
         "advisory_delta",
