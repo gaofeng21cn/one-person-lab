@@ -40,14 +40,14 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | --- | --- | --- | --- | --- |
 | Framework support / reviewer / router pack | `plugins/opl-foundation-skills/skills/**/SKILL.md` | `plugins/opl-foundation-skills/exposure.json`；禁止默认 global / codex scope。 | `professional_skill` 风格的 support playbook + exposure manifest；authority 留 OPL/domain owner surface。 | 合理，但数量增长需要准入门控制。 |
 | External specialist routing | `opl-external-specialist-skill-router`；scientific 只是 query / trigger specialization，不再保留单独 compatibility entry | workspace / quest 按 manifest 暴露；真实外部 skill 通过 Connect 单个 sync。 | router 是薄 Skill；下载、索引、sync receipt 属于 OPL Connect。 | 合理。避免把 K-Dense / scientific-agent-skills 全量注册成默认 Codex context，也避免 compatibility alias 污染 metadata。 |
-| MAS Scholar Skills capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json` 与 `skills/*/SKILL.md` | package owner 持有清单和正文；OPL 只保留 generic package spec。 | package validation + Connect target-bound sync + provenance receipt；不承接 MAS authority。 | OPL-local plugin pointer 已退役；`opl-scholarskills` 继续 tombstone-only。 |
+| MAS Scholar Skills capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json` 与 `skills/*/SKILL.md` | package owner 持有清单和正文；OPL 只保留 generic package dependency spec。 | package closure validation + target-bound activation + provenance receipt；不承接 MAS authority。 | OPL-local plugin pointer 已退役；`opl-scholarskills` 继续 tombstone-only。 |
 
 ### MAS / MAS Scholar Skills
 
 | 能力模块 | 物理位置 | 暴露方式 | 合理性 |
 | --- | --- | --- | --- |
 | MAS stage prompt / runtime / owner authority | `med-autoscience/agent/**`、contracts 与 runtime/controller owner surfaces | MAS plugin entry + OPL Runway/Stagecraft projection | 合理；不在 OPL 或外部 capability package 签 MAS owner truth。 |
-| MAS Scholar Skills professional capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json`、`skills/*/SKILL.md` 与 package-owned contracts | generic package channel + explicit workspace/quest Connect sync | OPL 不复制 Skill 清单、profile、validator 或正文；具体专业能力以 package owner 当前 source 为准。 |
+| MAS Scholar Skills professional capability package | 外部 `mas-scholar-skills/.codex-plugin/plugin.json`、`skills/*/SKILL.md` 与 package-owned contracts | generic package channel + workspace/quest Packages activation | OPL 不复制 Skill 清单、profile、validator 或正文；具体专业能力以 package owner 当前 source 为准。 |
 
 ### MAG
 

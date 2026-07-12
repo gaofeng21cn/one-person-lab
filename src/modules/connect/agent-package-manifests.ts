@@ -185,6 +185,17 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
     module_id: requiredString(value.module_id, 'capability_dependencies.module_id') as ModuleCapabilityDependency['module_id'],
     package_id: requiredString(value.package_id, 'capability_dependencies.package_id'),
     kind: 'framework_capability_package',
+    required: value.required === true ? true : (() => {
+      throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependency must be required.', {
+        contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
+        field: 'capability_dependencies.required',
+      });
+    })(),
+    version_requirement: requiredString(value.version_requirement, 'capability_dependencies.version_requirement'),
+    capability_abi: requiredString(value.capability_abi, 'capability_dependencies.capability_abi'),
+    required_export_ids: requireStringList(value.required_export_ids, 'capability_dependencies.required_export_ids'),
+    required_module_ids: requireStringList(value.required_module_ids, 'capability_dependencies.required_module_ids'),
+    ...(typeof value.manifest_url === 'string' ? { manifest_url: value.manifest_url } : {}),
     required_for: requireStringList(value.required_for, 'capability_dependencies.required_for'),
     install_owner: 'one-person-lab',
     install_update_source: 'ghcr_capability_packages_channel',
@@ -192,7 +203,6 @@ function normalizeCapabilityDependency(value: unknown): ModuleCapabilityDependen
     opl_distribution: requireLiteral(value.opl_distribution, 'managed_dependency', 'capability_dependencies.opl_distribution'),
     developer_distribution: requireLiteral(value.developer_distribution, 'source_checkout', 'capability_dependencies.developer_distribution'),
     sync_scopes: ['workspace', 'quest'],
-    sync_command_refs: requireStringList(value.sync_command_refs, 'capability_dependencies.sync_command_refs'),
     authority_boundary: {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
@@ -215,6 +225,8 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     });
   }
   const codexSurface = payload.codex_surface;
+  const agentId = requireCanonicalPackageIdentity(payload.agent_id, 'agent_id');
+  const packageId = requireCanonicalPackageIdentity(payload.package_id, 'package_id');
   const capabilityDependencies = Array.isArray(payload.capability_dependencies)
     ? payload.capability_dependencies.map(normalizeCapabilityDependency)
     : null;
@@ -233,8 +245,8 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
     });
   }
   return {
-    agent_id: requireCanonicalPackageIdentity(payload.agent_id, 'agent_id'),
-    package_id: requireCanonicalPackageIdentity(payload.package_id, 'package_id'),
+    agent_id: agentId,
+    package_id: packageId,
     version: requiredString(payload.version, 'version'),
     source: requiredString(payload.source, 'source'),
     carrier_source_role: requireLiteral(

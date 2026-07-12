@@ -8,7 +8,6 @@ import {
   writeStartupPackageChannelFixture,
 } from './system-startup-maintenance-cases/shared.ts';
 import { scholarSkillsPackageFixture } from './system-startup-maintenance-fixtures.ts';
-import { createFakeOplFlowInstallEnv } from './system-install-fixtures.ts';
 
 test('system startup-maintenance installs clean managed modules and returns App reload guidance', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-startup-maintenance-home-'));
@@ -36,7 +35,6 @@ test('system startup-maintenance installs clean managed modules and returns App 
       OPL_PACKAGE_CHANNEL_MANIFEST_REF: 'ghcr.io/owner/one-person-lab-manifest:26.6.10-nightly',
       OPL_GIT_RETRY_ATTEMPTS: '1',
       PATH: `${scholarSkillsChannel.fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
-      ...createFakeOplFlowInstallEnv(homeRoot),
       ...{ OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1' },
     })) as {
       system_action: {
@@ -141,7 +139,7 @@ test('system startup-maintenance installs clean managed modules and returns App 
     ]);
     assert.deepEqual(
       output.system_action.details.capability_targets[0].result.turnkey.skill_sync.command_preview,
-      ['opl', 'connect', 'sync-skills', '--domain', 'mas-scholar-skills', '--scope', 'workspace', '--target-workspace', '<workspace-root>'],
+      ['opl', 'packages', 'activate', 'mas', '--scope', 'workspace', '--target-workspace', '<workspace-root>'],
     );
     assert.equal(
       output.system_action.details.capability_targets[0].result.turnkey.skill_sync.status,

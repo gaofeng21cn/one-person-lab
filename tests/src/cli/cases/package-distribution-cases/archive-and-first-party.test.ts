@@ -12,6 +12,7 @@ import {
   test,
 } from './helpers.ts';
 import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
+import { normalizeCapabilityPackageManifest } from '../../../../../src/modules/connect/agent-package-registry-parts/manifest-normalizers.ts';
 
 const publishedDistributionPayload = {
   payload_kind: 'ghcr_oci_agent_package',
@@ -288,6 +289,23 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
   );
 });
 
+test('MAS Scholar Skills provider manifest separates core Skill exports from module contract ids', () => {
+  const schemaPath = path.join(repoRoot, 'contracts/opl-framework/capability-package-manifest.schema.json');
+  const manifestPath = path.join(repoRoot, 'contracts/opl-framework/agent-packages/mas-scholar-skills.json');
+  const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
+  const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
+  assert.doesNotThrow(() => assertJsonSchemaPayload({
+    schemaId: schema.$id,
+    schema,
+    sourceRef: 'contracts/opl-framework/capability-package-manifest.schema.json',
+  }, manifest));
+  const normalized = normalizeCapabilityPackageManifest(manifest, manifestPath);
+  assert.equal(normalized.required_skill_ids.length, 11);
+  assert.equal(normalized.capability_provider?.module_export_ids.length, 8);
+  assert.equal(normalized.capability_provider?.exports.every((entry) => entry.install_mode === 'core_required'), true);
+  assert.equal(normalized.optional_skill_refs.length, 1);
+});
+
 test('first-party agent package manifest rejects non-canonical identity fields', () => {
   const legacyManifest = {
     agent_id: 'mas',
@@ -311,7 +329,6 @@ test('first-party agent package manifest rejects non-canonical identity fields',
         opl_distribution: 'managed_dependency',
         developer_distribution: 'source_checkout',
         sync_scopes: ['workspace', 'quest'],
-        sync_command_refs: ['opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json'],
         authority_boundary: {
           can_write_domain_truth: false,
           can_sign_owner_receipt: false,

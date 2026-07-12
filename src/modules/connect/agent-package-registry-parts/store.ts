@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
 import {
   readJsonFileOrNull,
@@ -24,6 +26,7 @@ function emptyLockIndex(): AgentPackageLockIndex {
     surface_kind: 'opl_agent_package_lock_index',
     version: 'opl-agent-package-lock-index.v1',
     packages: [],
+    last_known_good_transactions: [],
   };
 }
 
@@ -52,6 +55,11 @@ export function readLockIndex(): AgentPackageLockIndex {
         ? [{ ...entry, package_id: packageId, agent_id: agentId } as AgentPackageLock]
         : [];
     }),
+    last_known_good_transactions: recordList(parsed.last_known_good_transactions ?? [])
+      .filter((entry) => typeof entry.transaction_id === 'string'
+        && typeof entry.closure_digest === 'string'
+        && Array.isArray(entry.package_locks))
+      .slice(0, 4) as AgentPackageLockIndex['last_known_good_transactions'],
   };
 }
 
@@ -101,6 +109,33 @@ export function appendReceipt(receipt: AgentPackageLifecycleReceipt) {
     entry.receipt_ref === next.receipt_ref
   );
   writeLifecycleLedger(ledger);
+}
+
+export function writePackageTransaction(
+  index: AgentPackageLockIndex,
+  receipts: AgentPackageLifecycleReceipt[],
+) {
+  const paths = ensureOplStateDir();
+  const previousLock = fs.existsSync(paths.agent_package_lock_file)
+    ? fs.readFileSync(paths.agent_package_lock_file)
+    : null;
+  const previousLedger = fs.existsSync(paths.agent_package_lifecycle_ledger_file)
+    ? fs.readFileSync(paths.agent_package_lifecycle_ledger_file)
+    : null;
+  const ledger = readLifecycleLedger();
+  upsertJsonReceipts(ledger.receipts, receipts, (entry, next) =>
+    entry.receipt_ref === next.receipt_ref
+  );
+  try {
+    writeJsonPayloadFile(paths.agent_package_lock_file, index);
+    writeJsonReceiptLedger(paths.agent_package_lifecycle_ledger_file, ledger);
+  } catch (error) {
+    if (previousLock) fs.writeFileSync(paths.agent_package_lock_file, previousLock);
+    else fs.rmSync(paths.agent_package_lock_file, { force: true });
+    if (previousLedger) fs.writeFileSync(paths.agent_package_lifecycle_ledger_file, previousLedger);
+    else fs.rmSync(paths.agent_package_lifecycle_ledger_file, { force: true });
+    throw error;
+  }
 }
 
 function normalizeLifecycleReceipt(value: unknown): AgentPackageLifecycleReceipt | null {

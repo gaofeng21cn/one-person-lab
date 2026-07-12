@@ -14,12 +14,187 @@ import {
   validateUrlLike,
 } from './shared.ts';
 import type {
+  AgentPackageCapabilityDependency,
+  AgentPackageCapabilityProvider,
   AgentPackageDistributionPayload,
   AgentPackageManifest,
   AgentPackageOrdinaryUserSource,
+  AgentPackageProfileSurfaceConfig,
   AgentPackageRegistryCache,
   AgentPackageRegistryEntry,
 } from './types.ts';
+
+function normalizeCapabilityDependencies(
+  value: unknown,
+  manifestUrl: string,
+): AgentPackageCapabilityDependency[] {
+  if (!Array.isArray(value)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest capability_dependencies must be an array.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_package_manifest',
+    });
+  }
+  const entries = recordList(value);
+  if (entries.length !== value.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package capability dependencies must be objects.', {
+      manifest_url: manifestUrl,
+      failure_code: 'agent_package_capability_dependency_invalid',
+    });
+  }
+  const dependencies = entries.map((entry, index) => {
+    const packageId = canonicalManifestIdentity(entry.package_id, `capability_dependencies[${index}].package_id`);
+    const required = entry.required === true;
+    const versionRequirement = assertStringValue(
+      entry.version_requirement,
+      `capability_dependencies[${index}].version_requirement`,
+    );
+    const capabilityAbi = assertStringValue(
+      entry.capability_abi,
+      `capability_dependencies[${index}].capability_abi`,
+    );
+    const requiredExportIds = uniqueStrings(stringList(entry.required_export_ids));
+    const requiredModuleIds = uniqueStrings(stringList(entry.required_module_ids));
+    if (!required || requiredExportIds.length === 0 || requiredModuleIds.length === 0) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Required capability dependencies must declare required=true, required_export_ids, and required_module_ids.', {
+        manifest_url: manifestUrl,
+        package_id: packageId,
+        dependency_index: index,
+        failure_code: 'agent_package_capability_dependency_invalid',
+      });
+    }
+    const manifestRef = stringValue(entry.manifest_url);
+    return {
+      package_id: packageId,
+      required,
+      version_requirement: versionRequirement,
+      capability_abi: capabilityAbi,
+      required_export_ids: requiredExportIds,
+      required_module_ids: requiredModuleIds,
+      manifest_url: manifestRef ? resolveManifestRelativeSource(manifestRef, manifestUrl) : null,
+    };
+  });
+  const duplicatePackageIds = dependencies
+    .map((entry) => entry.package_id)
+    .filter((packageId, index, values) => values.indexOf(packageId) !== index);
+  if (duplicatePackageIds.length > 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability dependency package ids must be unique.', {
+      manifest_url: manifestUrl,
+      duplicate_package_ids: uniqueStrings(duplicatePackageIds),
+      failure_code: 'agent_package_capability_dependency_invalid',
+    });
+  }
+  return dependencies;
+}
+
+function normalizeCapabilityProvider(value: unknown): AgentPackageCapabilityProvider | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value) || !Array.isArray(value.exports)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability provider must declare an exports array.', {
+      failure_code: 'agent_package_capability_provider_invalid',
+    });
+  }
+  const capabilityAbi = assertStringValue(value.capability_abi, 'capability_provider.capability_abi');
+  const rawExports = recordList(value.exports);
+  if (rawExports.length !== value.exports.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability provider exports must be objects.', {
+      failure_code: 'agent_package_capability_provider_invalid',
+    });
+  }
+  const exports = rawExports.map((entry, index) => {
+    const installMode = stringValue(entry.install_mode);
+    if (installMode !== 'core_required' && installMode !== 'optional_named_specialty') {
+      throw new FrameworkContractError('contract_shape_invalid', 'Capability provider export install_mode is invalid.', {
+        export_index: index,
+        install_mode: installMode,
+        failure_code: 'agent_package_capability_provider_invalid',
+      });
+    }
+    return {
+      export_id: assertStringValue(entry.export_id, `capability_provider.exports[${index}].export_id`),
+      skill_id: assertStringValue(entry.skill_id, `capability_provider.exports[${index}].skill_id`),
+      install_mode: installMode as 'core_required' | 'optional_named_specialty',
+    };
+  });
+  for (const field of ['export_id', 'skill_id'] as const) {
+    const duplicateValues = exports
+      .map((entry) => entry[field])
+      .filter((entry, index, values) => values.indexOf(entry) !== index);
+    if (duplicateValues.length > 0) {
+      throw new FrameworkContractError('contract_shape_invalid', `Capability provider ${field} values must be unique.`, {
+        duplicate_values: uniqueStrings(duplicateValues),
+        failure_code: 'agent_package_capability_provider_invalid',
+      });
+    }
+  }
+  const moduleExportIds = uniqueStrings(stringList(value.module_export_ids));
+  return { capability_abi: capabilityAbi, exports, module_export_ids: moduleExportIds };
+}
+
+function normalizedRelativePath(value: unknown, field: string) {
+  const raw = assertStringValue(value, field);
+  const normalized = path.normalize(raw);
+  if (path.isAbsolute(raw) || normalized === '.' || normalized === '..' || normalized.startsWith(`..${path.sep}`)) {
+    throw new FrameworkContractError('contract_shape_invalid', `${field} must stay within its declared package or Codex home root.`, {
+      field,
+      value: raw,
+      failure_code: 'agent_package_profile_path_invalid',
+    });
+  }
+  return normalized;
+}
+
+function normalizeProfileSurface(value: unknown): AgentPackageProfileSurfaceConfig | null {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value) || !isRecord(value.runtime_profile)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package profile_surface must declare runtime_profile.', {
+      failure_code: 'agent_package_profile_surface_invalid',
+    });
+  }
+  if (value.existing_profile_policy !== 'semantic_merge_required') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package profile_surface must fail closed to semantic merge for existing profiles.', {
+      failure_code: 'agent_package_profile_surface_invalid',
+      field: 'profile_surface.existing_profile_policy',
+    });
+  }
+  if (value.runtime_profile.target_id !== 'user_agents_profile') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package runtime profile must target the canonical user profile id.', {
+      failure_code: 'agent_package_profile_surface_invalid',
+      field: 'profile_surface.runtime_profile.target_id',
+    });
+  }
+  const authoringSources = recordList(value.authoring_sources ?? []);
+  if (!Array.isArray(value.authoring_sources) || authoringSources.length !== value.authoring_sources.length) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package profile_surface.authoring_sources must be an array of objects.', {
+      failure_code: 'agent_package_profile_surface_invalid',
+    });
+  }
+  if (!Array.isArray(value.merge_context_paths)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Agent package profile_surface.merge_context_paths must be an array.', {
+      failure_code: 'agent_package_profile_surface_invalid',
+    });
+  }
+  return {
+    runtime_profile: {
+      source_path: normalizedRelativePath(value.runtime_profile.source_path, 'profile_surface.runtime_profile.source_path'),
+      target_id: 'user_agents_profile',
+    },
+    authoring_sources: authoringSources.map((entry, index) => {
+      if (entry.target_id !== 'user_taste_source') {
+        throw new FrameworkContractError('contract_shape_invalid', 'Agent package authoring source must target the canonical user authoring id.', {
+          failure_code: 'agent_package_profile_surface_invalid',
+          field: `profile_surface.authoring_sources[${index}].target_id`,
+        });
+      }
+      return {
+        source_path: normalizedRelativePath(entry.source_path, `profile_surface.authoring_sources[${index}].source_path`),
+        target_id: 'user_taste_source' as const,
+      };
+    }),
+    merge_context_paths: stringList(value.merge_context_paths).map((entry, index) =>
+      normalizedRelativePath(entry, `profile_surface.merge_context_paths[${index}]`)),
+    existing_profile_policy: 'semantic_merge_required',
+  };
+}
 
 function normalizeDistributionPayload(value: unknown): AgentPackageDistributionPayload | null {
   if (value === undefined || value === null) {
@@ -254,12 +429,8 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
       failure_code: 'invalid_package_manifest',
     });
   }
-  if (!Array.isArray(payload.capability_dependencies)) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest capability_dependencies must be an array.', {
-      manifest_url: manifestUrl,
-      failure_code: 'invalid_package_manifest',
-    });
-  }
+  const capabilityDependencies = normalizeCapabilityDependencies(payload.capability_dependencies, manifestUrl);
+  const capabilityProvider = normalizeCapabilityProvider(payload.capability_provider);
   const healthCheck = isRecord(payload.health_check) ? payload.health_check : {};
   if (!isRecord(payload.codex_surface)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest codex_surface must be a JSON object.', {
@@ -296,6 +467,22 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
       manifest_url: manifestUrl,
       failure_code: 'invalid_package_manifest',
     });
+  }
+  if (capabilityProvider) {
+    const providerCoreSkillIds = capabilityProvider.exports
+      .filter((entry) => entry.install_mode === 'core_required')
+      .map((entry) => entry.skill_id);
+    if (
+      providerCoreSkillIds.length === 0
+      || providerCoreSkillIds.length !== requiredSkillIds.length
+      || providerCoreSkillIds.some((skillId) => !requiredSkillIds.includes(skillId))
+    ) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Capability provider required_skill_ids must exactly match core_required exports.', {
+        required_skill_ids: requiredSkillIds,
+        provider_core_skill_ids: providerCoreSkillIds,
+        failure_code: 'agent_package_capability_provider_core_mismatch',
+      });
+    }
   }
   const pluginId = stringValue(payload.codex_surface.plugin_id)
     ?? stringList(payload.codex_surface.plugin_ids)[0]
@@ -341,5 +528,121 @@ export function normalizeManifest(payload: unknown, manifestUrl: string): AgentP
     plugin_payload_manifest_url: pluginPayloadManifestUrl,
     plugin_payload_manifest_sha256: null,
     plugin_payload_cache_path: null,
+    profile_surface: normalizeProfileSurface(payload.profile_surface),
+    capability_dependencies: capabilityDependencies,
+    capability_provider: capabilityProvider,
+    content_digest: distributionPayload?.payload_digest_ref ?? null,
+    content_lock_paths: [],
   };
+}
+
+export function normalizeCapabilityPackageManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
+  if (!isRecord(payload) || payload.surface_kind !== 'opl_capability_package_manifest.v2') {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package manifest must use opl_capability_package_manifest.v2.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  if (!isRecord(payload.capability_abi) || !isRecord(payload.exports) || !isRecord(payload.content_lock)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package manifest must declare ABI, exports, and content lock.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  if (payload.exports.optional_skills_installed_by_default !== false) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package optional skills must not be installed by default.', {
+      manifest_url: manifestUrl,
+      failure_code: 'capability_package_optional_default_forbidden',
+    });
+  }
+  const packageId = canonicalManifestIdentity(payload.package_id, 'package_id');
+  const coreSkillIds = uniqueStrings(stringList(payload.exports.core_skill_ids));
+  if (coreSkillIds.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package must export at least one core skill.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  const capabilityAbi = assertStringValue(payload.capability_abi.id, 'capability_abi.id');
+  const contentDigest = assertStringValue(payload.content_lock.digest, 'content_lock.digest');
+  if (!/^sha256:[0-9a-f]{64}$/.test(contentDigest)) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock digest must be sha256.', {
+      manifest_url: manifestUrl,
+      content_digest: contentDigest,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  const contentLockPaths = uniqueStrings(stringList(payload.content_lock.paths).map((entry, index) =>
+    normalizedRelativePath(entry, `content_lock.paths[${index}]`)));
+  const coreModuleIds = uniqueStrings(stringList(payload.exports.core_module_ids));
+  if (coreModuleIds.length === 0) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package must export at least one core module contract id.', {
+      manifest_url: manifestUrl,
+      failure_code: 'invalid_capability_package_manifest',
+    });
+  }
+  const contentSkillIds = contentLockPaths.flatMap((entry) => {
+    const match = entry.match(/^skills\/([^/]+)\/SKILL\.md$/);
+    return match ? [match[1]] : [];
+  });
+  if (
+    contentSkillIds.length !== coreSkillIds.length
+    || contentSkillIds.some((skillId) => !coreSkillIds.includes(skillId))
+  ) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock must contain exactly the declared core skills.', {
+      manifest_url: manifestUrl,
+      core_skill_ids: coreSkillIds,
+      content_skill_ids: contentSkillIds,
+      failure_code: 'capability_package_core_content_mismatch',
+    });
+  }
+  const codexSurface = isRecord(payload.codex_surface) ? payload.codex_surface : {};
+  const pluginId = stringValue(codexSurface.plugin_id) ?? packageId;
+  const pluginSourceRef = stringValue(codexSurface.plugin_source_path);
+  const pluginSourcePath = pluginSourceRef
+    ? resolveManifestRelativeSource(pluginSourceRef, manifestUrl)
+    : null;
+  return {
+    package_id: packageId,
+    agent_id: packageId,
+    display_name: assertStringValue(payload.display_name, 'display_name'),
+    publisher: assertStringValue(payload.publisher, 'publisher'),
+    version: assertStringValue(payload.version, 'version'),
+    source: assertStringValue(payload.source, 'source'),
+    codex_surface: codexSurface,
+    skill_packs: [],
+    entrypoints: [],
+    health_check: {},
+    permissions: [],
+    distribution_payload: null,
+    update_channel: 'manifest_url',
+    rollback_ref: `rollback-ref:${packageId}/dependency-closure-lkg`,
+    codex_visible_entry: pluginId,
+    required_skill_ids: coreSkillIds,
+    optional_skill_refs: [assertStringValue(payload.exports.optional_skill_policy_ref, 'exports.optional_skill_policy_ref')],
+    plugin_id: pluginId,
+    plugin_source_path: pluginSourcePath,
+    plugin_payload_manifest_url: null,
+    plugin_payload_manifest_sha256: null,
+    plugin_payload_cache_path: null,
+    profile_surface: null,
+    capability_dependencies: [],
+    capability_provider: {
+      capability_abi: capabilityAbi,
+      exports: coreSkillIds.map((skillId) => ({
+        export_id: skillId,
+        skill_id: skillId,
+        install_mode: 'core_required' as const,
+      })),
+      module_export_ids: coreModuleIds,
+    },
+    content_digest: contentDigest,
+    content_lock_paths: contentLockPaths,
+  };
+}
+
+export function normalizePackageManifest(payload: unknown, manifestUrl: string): AgentPackageManifest {
+  return isRecord(payload) && payload.surface_kind === 'opl_capability_package_manifest.v2'
+    ? normalizeCapabilityPackageManifest(payload, manifestUrl)
+    : normalizeManifest(payload, manifestUrl);
 }

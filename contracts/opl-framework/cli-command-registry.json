@@ -2708,6 +2708,11 @@
               "status",
               "installed_package_count",
               "installed_packages",
+              "package_dependency_readiness",
+              "materialization_readiness",
+              "operational_ready",
+              "launch_allowed",
+              "allowed_when_blocked",
               "lifecycle_receipts",
               "owner_route_readback",
               "authority_boundary"
@@ -2737,6 +2742,27 @@
           "value_kind": "string",
           "required": false,
           "summary": "Optional installed OPL Agent Package id to inspect."
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Target materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root whose Codex discovery surface is inspected."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root whose Codex discovery surface is inspected."
         }
       ],
       "output_schema": {
@@ -2970,6 +2996,70 @@
         "surface": "opl_packages_lifecycle"
       }
     },
+    "packages_profile_apply": {
+      "command_id": "packages profile apply",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed package id whose reviewed profile merge will be applied."
+        },
+        {
+          "name": "merged-file",
+          "flag": "--merged-file",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Reviewed merged profile file to write through the package lifecycle."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate the merged profile without writing user state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "version",
+          "opl_agent_package_profile_apply"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "const": "g2"
+          },
+          "opl_agent_package_profile_apply": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "package_lock",
+              "profile_migration",
+              "lifecycle_receipt",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      }
+    },
     "packages_install": {
       "command_id": "packages install",
       "owner": "OPL Packages",
@@ -3016,6 +3106,27 @@
           "value_kind": "string",
           "required": false,
           "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Target materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root receiving package core skills."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root receiving package core skills."
         },
         {
           "name": "dry-run",
@@ -3117,6 +3228,27 @@
           "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
         },
         {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Target materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root receiving package core skills."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root receiving package core skills."
+        },
+        {
           "name": "dry-run",
           "flag": "--dry-run",
           "value_kind": "boolean",
@@ -3168,6 +3300,85 @@
         }
       ]
     },
+    "packages_activate": {
+      "command_id": "packages activate",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed OPL Agent Package id to activate."
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": true,
+          "summary": "Target materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root receiving package core skills."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root receiving package core skills."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate package scope activation without writing state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "opl_agent_package_activation"],
+        "additionalProperties": true,
+        "properties": {
+          "version": { "const": "g2" },
+          "opl_agent_package_activation": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "package_id",
+              "materialization_readiness",
+              "operational_ready",
+              "launch_allowed",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
+    },
     "packages_repair": {
       "command_id": "packages repair",
       "owner": "OPL Packages",
@@ -3186,6 +3397,27 @@
           "value_kind": "string",
           "required": false,
           "summary": "Standard Agent checkout to link to the resolved OPL Framework installation."
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Target materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root whose package core skills are repaired."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root whose package core skills are repaired."
         },
         {
           "name": "dry-run",
@@ -3214,6 +3446,86 @@
               "dry_run",
               "package_lock",
               "physical_surface",
+              "lifecycle_receipt",
+              "owner_route_readback",
+              "authority_boundary"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_create_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false,
+        "owner": "OPL Packages",
+        "surface": "opl_packages_lifecycle"
+      },
+      "positional_args": [
+        {
+          "name": "package_id",
+          "required": true,
+          "summary": "First-party OPL Package id or alias."
+        }
+      ]
+    },
+    "packages_rollback": {
+      "command_id": "packages rollback",
+      "owner": "OPL Packages",
+      "parser_adapter": "node_util_parse_args",
+      "options": [
+        {
+          "name": "package-id",
+          "flag": "--package-id",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Installed OPL Agent Package id to roll back."
+        },
+        {
+          "name": "scope",
+          "flag": "--scope",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Target materialization scope: workspace or quest."
+        },
+        {
+          "name": "target-workspace",
+          "flag": "--target-workspace",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Workspace root restored with the package closure."
+        },
+        {
+          "name": "target-quest",
+          "flag": "--target-quest",
+          "value_kind": "string",
+          "required": false,
+          "summary": "Quest root restored with the package closure."
+        },
+        {
+          "name": "dry-run",
+          "flag": "--dry-run",
+          "value_kind": "boolean",
+          "required": false,
+          "summary": "Validate the last-known-good dependency closure without writing state."
+        }
+      ],
+      "output_schema": {
+        "type": "object",
+        "required": ["version", "opl_agent_package_rollback"],
+        "additionalProperties": true,
+        "properties": {
+          "version": { "const": "g2" },
+          "opl_agent_package_rollback": {
+            "type": "object",
+            "required": [
+              "surface_kind",
+              "status",
+              "dry_run",
+              "package_lock",
+              "dependency_package_locks",
               "lifecycle_receipt",
               "owner_route_readback",
               "authority_boundary"

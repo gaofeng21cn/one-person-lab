@@ -64,6 +64,12 @@ export type ModuleCapabilityDependency = {
   module_id: OplModuleId;
   package_id: string;
   kind: 'framework_capability_package';
+  required: true;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: readonly string[];
+  required_module_ids: readonly string[];
+  manifest_url?: string;
   required_for: readonly string[];
   install_owner: 'one-person-lab';
   install_update_source: 'ghcr_capability_packages_channel';
@@ -71,7 +77,6 @@ export type ModuleCapabilityDependency = {
   opl_distribution?: 'managed_dependency';
   developer_distribution?: 'source_checkout';
   sync_scopes: readonly ['workspace', 'quest'];
-  sync_command_refs: readonly string[];
   authority_boundary: {
     can_write_domain_truth: false;
     can_sign_owner_receipt: false;

@@ -69,7 +69,6 @@ test('app action catalog exposes representative safe delegated action refs', () 
     for (const actionId of [
       'codex_update',
       'module_sync',
-      'scholarskills_workspace_sync',
       'provider_scheduler_status',
       'workspace_initialize',
       'workspace_validate',
@@ -90,15 +89,8 @@ test('app action catalog exposes representative safe delegated action refs', () 
     }
     assert.deepEqual(actions.get('module_sync')?.payload_fields, []);
     assert.equal(actions.get('module_sync')?.delegated_surface, 'opl packages update');
-    assert.deepEqual(actions.get('scholarskills_workspace_sync')?.payload_fields, ['workspace_root']);
-    assert.equal(
-      actions.get('scholarskills_workspace_sync')?.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
-    );
-    assert.equal(actions.get('scholarskills_workspace_sync')?.mutates, 'workspace_local_codex_skill');
-    assert.equal(actions.get('scholarskills_workspace_sync')?.dry_run_supported, true);
-    assert.equal(actions.get('scholarskills_workspace_sync')?.route_requires_domain_or_app_payload, true);
-    assert.equal(actions.get('scholarskills_workspace_sync')?.can_submit_to_safe_action_shell, false);
+    assert.equal(actions.has('scholarskills_workspace_sync'), false);
+    assert.equal(actions.has('scholarskills_quest_sync'), false);
     assert.equal(actions.get('provider_scheduler_status')?.submit_via, 'opl app action execute');
     assert.equal(actions.get('provider_scheduler_status')?.execution_policy, 'opl_safe_action_shell');
     assert.equal(actions.get('provider_scheduler_status')?.route_requires_domain_or_app_payload, false);
@@ -175,7 +167,7 @@ test('app action catalog exposes representative safe delegated action refs', () 
   }
 });
 
-test('app action execute exposes ScholarSkills workspace sync as dry-run before mutating workspace skill path', () => {
+test('legacy ScholarSkills workspace action is a no-write Packages activation migration preview', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-home-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-action-scholarskills-workspace-'));
 
@@ -200,13 +192,13 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
         dry_run: boolean;
         delegated_surface: string;
         result: {
-          skill_sync: {
+          package_scope_activation: {
             status: string;
-            domain_id: string;
+            package_id: string;
             scope: string;
-            target_workspace: string;
-            target_skill_path: string;
-            command: string;
+            target_root: string;
+            lifecycle_owner: string;
+            automatic_on: string[];
             authority_boundary: {
               can_write_domain_truth: boolean;
               can_sign_owner_receipt: boolean;
@@ -226,21 +218,16 @@ test('app action execute exposes ScholarSkills workspace sync as dry-run before 
     assert.equal(output.app_action_execution.dry_run, true);
     assert.equal(
       output.app_action_execution.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
+      'opl packages#scope_activation_transaction(workspace)',
     );
-    assert.equal(output.app_action_execution.result.skill_sync.status, 'dry_run');
-    assert.equal(output.app_action_execution.result.skill_sync.domain_id, 'scholarskills');
-    assert.equal(output.app_action_execution.result.skill_sync.scope, 'workspace');
-    assert.equal(output.app_action_execution.result.skill_sync.target_workspace, workspaceRoot);
-    assert.equal(
-      output.app_action_execution.result.skill_sync.target_skill_path,
-      `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
-    );
-    assert.equal(
-      output.app_action_execution.result.skill_sync.command,
-      `opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace ${workspaceRoot} --json`,
-    );
-    assert.deepEqual(output.app_action_execution.result.skill_sync.authority_boundary, {
+    const preview = output.app_action_execution.result.package_scope_activation;
+    assert.equal(preview.status, 'compatibility_migration_preview');
+    assert.equal(preview.package_id, 'med-autoscience');
+    assert.equal(preview.scope, 'workspace');
+    assert.equal(preview.target_root, workspaceRoot);
+    assert.equal(preview.lifecycle_owner, 'opl_packages');
+    assert.deepEqual(preview.automatic_on, ['workspace_activation', 'domain_launch']);
+    assert.deepEqual(preview.authority_boundary, {
       can_write_domain_truth: false,
       can_sign_owner_receipt: false,
       can_create_typed_blocker: false,

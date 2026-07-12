@@ -155,10 +155,9 @@ export function buildInstallerCommandPreview(
   if (spec.domain_id === 'scholarskills') {
     return [
       'opl',
-      'connect',
-      'sync-skills',
-      '--domain',
-      publicDomainId,
+      'packages',
+      'activate',
+      'mas',
       '--scope',
       'workspace',
       '--target-workspace',

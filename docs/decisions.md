@@ -16,8 +16,11 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `opl update status|check|plan|apply|repair|rollback` 只管理 `OPL Base`，不再接受 `--component`。
 - `opl packages list|install|update|enable|disable|repair|uninstall` 是 `OPL Packages` canonical lifecycle；registry validation、status、Framework link 和 shortcut preference 诊断也迁到同一 namespace。旧公共 package namespace 和 legacy component alias 直接退役。
 - `managed_update.components[].component_id` 只允许 `opl_base`、`opl_app`、`opl_packages`。`runtime_substrate`、`installation_carrier`、`capability_packages` 只作为内部 `provider_id`；不能作为 selector 或 lifecycle owner。
-- companion tools 归入 Base 的 `dependency_status` / `integration_status`。Codex skill/plugin sync 归入 Packages 的 `projection_status`，OPL Flow profile semantic merge 归入 `profile_migration_status`；profile 变更必须 fail closed，禁止静默覆盖用户 profile。
+- companion tools 归入 Base 的 `dependency_status` / `integration_status`。Codex skill/plugin sync 归入 Packages 的 `projection_status`，OPL Flow profile semantic merge 归入 `profile_migration_status`；空白 profile 可由 package transaction 安装，已有用户 profile 必须生成单一 current merge packet，并只允许 `opl packages profile apply <package_id> --merged-file <packet-path>` 显式应用 reviewed merge。禁止静默覆盖用户 profile，卸载 Package 也不得删除用户 profile。
 - package transaction 继续要求 immutable digest/content identity、dirty/developer checkout 保护、同 transaction 的 Codex skill/plugin sync 和单一 lifecycle receipt；Framework 复用现有 Agent Package lock/materializer 与 managed module reconciler，不创建第二套 package manager。
+- MAS 的 `mas-scholar-skills` 是 required capability dependency，不是用户单独选择的扩展。`opl packages install mas` 必须解析并安装整个 digest-locked closure；update、repair、rollback 同进同退，provider 被 MAS 引用时不能单独 disable/uninstall。
+- MAS workspace/quest 首次 activation 或 hosted launch 由 Packages transaction 自动物化 provider manifest 声明的 11 个 core Skills 到 `<target>/.codex/skills/` 并写 lifecycle receipt；8 个 module contract ids 只参与 ABI/readiness 校验，不物化为 Skill 目录。已有 scope 缺失、漂移、不兼容或 receipt 缺失时 fail closed，只开放 status/doctor/repair；named specialties 不默认安装。
+- App/Shell 只消费 `package_dependency_readiness`、`materialization_readiness`、`operational_ready` 和 `launch_allowed`。未安装 package 也是明确的 launch blocker；不能用 `installed_package_count=0`、shortcut、deep link 或 stale selection 绕过。
 
 ## 2026-07-11
 
@@ -248,16 +251,16 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 ### 决策：标准 Agent package 可声明 OPL-managed capability dependency
 
-原因：MAS 是标准 OPL Agent package，但医学论文执行还依赖外部 `mas-scholar-skills` 能力包。该能力包不能被物理塞进 MAS 仓、也不能由 MAS 私自安装更新；同时 OPL 在管理 MAS package、Developer Mode 和 workspace / quest skill sync 时必须明确知道这层依赖关系。
+原因：MAS 是标准 OPL Agent package，但医学论文执行还依赖外部 `mas-scholar-skills` 能力包。该能力包不能被物理塞进 MAS 仓、也不能由 MAS 私自安装更新；同时 OPL 在管理 MAS package、Developer Mode 和 workspace / quest activation 时必须明确知道这层依赖关系。
 
 影响：
 
 - `contracts/opl-framework/agent-packages/mas.json` 是 MAS first-party agent package 的依赖单源；`medautoscience` package manifest 和 module readback 只从该 manifest 投影 `capability_dependencies`。其中 `mas-scholar-skills` 的 `kind` 固定为 `framework_capability_package`，安装 / 更新 owner 是 `one-person-lab`，普通用户来源是 GHCR capability packages channel。
-- Codex App 独立安装形态使用 self-contained MAS plugin：MAS plugin 的 required skill ids 必须包含 `mas` 和 `mas-scholar-skills`，用户侧仍是一次安装动作，不能要求用户手动补装外挂专业 skill 库。
-- OPL App 托管形态使用 thin agent package：MAS 和 `mas-scholar-skills` 是两个可独立安装、更新和 Developer Mode 修复的 package target，依赖关系由 MAS manifest 声明，不由 OPL App / package manager hard-code。
+- Codex App、headless CLI 和 Full App 都通过同一 `opl packages install mas` 语义安装 MAS；Packages 自动解析并安装 `mas-scholar-skills` required closure，不能要求用户手动补装外挂专业 Skill 库。
+- MAS 与 `mas-scholar-skills` 是两个独立维护、同一闭包事务管理的 package target；provider 在未安装 MAS 时不是全局默认 package，依赖关系由 MAS manifest 声明，不由 OPL App hard-code。
 - `scholarskills` package manifest 通过 `dependency_of: ["medautoscience"]` 暴露反向关系；这只表达 package 管理关系，不把 MAS Scholar Skills 变成 MAS domain module。
 - Developer Mode target authority resolver 把 `mas-scholar-skills` 解析为 `framework_capability_package` target；有 repo 写权限时可直修，无权限时走 fork / PR。手动打开 Developer Mode 不能授予直接写权限。
-- 论文执行仍必须通过 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ... --json` 把能力包投影到目标 `.codex/skills/`；该投影不写 domain truth、owner receipt、typed blocker 或 runtime queue。
+- 论文执行的 ScholarSkills projection 由 MAS package closure 在 workspace/quest activation 或 launch 时自动确保到目标 `.codex/skills/`；旧 Connect sync 只作为迁移输入，不再是用户安装、激活或修复入口。该投影不写 domain truth、owner receipt、typed blocker 或 runtime queue。
 
 ## 2026-07-04
 
@@ -535,7 +538,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 - `MAS Scholar Skills` 作为 `framework_capability_package` 纳入 `src/package-distribution.ts` 和 GHCR `one-person-lab-manifest` / `one-person-lab-modules/mas-scholar-skills:<version>` package channel。普通 App 用户路径只从 package channel 安装 / 更新 / 回滚，不使用 MAS Scholar Skills 专属 git clone / pull manager。
 - `.github/workflows/daily-package-channel.yml` 继续通过 `packages.yml` 发布统一 package channel；change detector 比较 package source fingerprint，覆盖 domain module、Foundry module 与 framework capability package。新增 capability package 必须复用这条 channel，而不是新建 daily job 或 source manager。
 - `opl packages list/update/repair --json` 与 `opl system startup-maintenance --json` 把 MAS Scholar Skills 作为 package-channel target 处理；dirty package root、Developer Mode checkout、显式 `OPL_MAS_SCHOLAR_SKILLS_REPO_ROOT` / `OPL_MODULE_PATH_SCHOLARSKILLS` 只进入开发者观察或 manual-required 语义，不被普通 App silent update 覆盖。
-- `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ... --json` 仍是论文工作目录的 Codex discovery skill 同步入口。同步来源是当前 managed package，落点是目标 workspace / quest 的 `.codex/skills/mas-scholar-skills/`，不是系统 Codex skill registry，也不是 MAS 程序仓默认 mirror。
+- 论文工作目录的 Codex discovery 由 `opl packages` scope activation transaction 持有。来源是 MAS lock closure 中的当前 provider package，落点是目标 workspace / quest 的 `.codex/skills/`；首次 activation/launch 自动确保，漂移后用 `opl packages repair mas --scope ...` 恢复，不进入系统全局默认 Skill，也不由 MAS 程序仓维护 mirror。
 - 新增 framework capability package 的统一步骤是：声明通用 module/package spec、archive / manifest / checksum、release discipline gate、managed update/startup/workspace sync 测试和人读 owner route；专业 skill IDs、schema 与内容合同留在 package owner 仓，不复制进 OPL contract catalog。
 - 该决策不改变 domain authority。MAS Scholar Skills package channel readiness 不授权 MAS/MAG/RCA/OMA domain truth、quality verdict、artifact authority、owner receipt、typed blocker、runtime queue 或 publication/export readiness。
 
@@ -1311,7 +1314,7 @@ Machine boundary: 本文是核心人读真相面。机器真相继续归 contrac
 
 - `contracts/opl-framework/settings-control-center-action-read-model-contract.json` 冻结 Settings Control Center v2 的 IA、issue status code、action sections、allowed action ids、action taxonomy、action metadata、dry-run / apply / verify 边界和 authority false flags。
 - `opl app state --profile fast|full --json` 输出 `settings_control_center`，并在 operator workbench 中引用同一对象；它是 GUI-ready projection，不写 domain truth、不读取 artifact/memory body、不签 owner receipt、不创建 typed blocker，也不声明 App release ready 或 production ready。v2 增加 `settings_ia`、`app_settings_read_model`、`issue_catalog`、`issue_queue` 和 `action_catalog`，并在 `settings_ia` 中显式列出 ordinary routes 与 Workspace、Local Services、About、Update、Theme secondary/deep-link routes；`app_settings_read_model` 从既有 `core.codex`、`developer_mode`、`modules`、`provider`、`paths`、`release`、IA 和 action catalog 派生页面结构、Codex model/reasoning policy、Access/API key、workspace services 和 local environment 状态，避免 App/Aion shell 维护第二套策略解释。这些字段只从现有 App state / update 状态语言投影用户可读问题，不模拟 domain owner truth。
-- `settings_repair_model_access`、`settings_verify_workspace`、`settings_sync_capabilities`、`settings_apply_opl_packages`、`settings_reload_codex_surface`、`settings_check_app_update`、`settings_prune_runtime_roots_dry_run` 和 `settings_rollback_runtime_substrate` 只通过既有 `opl app action execute` envelope 暴露；更新类动作默认消费 Managed Update coordinator：capability/package apply 走 `opl packages update`，App carrier check 走 `opl app state --profile fast`，runtime restore route 走 `opl update rollback`。workspace / quest target-bound Codex surface reload 仍走显式 `opl connect sync-skills`，因为它需要用户目标路径，不是后台包更新 shell。cleanup 只提供 dry-run plan，不删除 runtime roots。
+- `settings_repair_model_access`、`settings_verify_workspace`、`settings_sync_capabilities`、`settings_apply_opl_packages`、`settings_reload_codex_surface`、`settings_check_app_update`、`settings_prune_runtime_roots_dry_run` 和 `settings_rollback_runtime_substrate` 只通过既有 `opl app action execute` envelope 暴露；更新类动作默认消费 Managed Update coordinator：capability/package apply 走 `opl packages update`，App carrier check 走 `opl app state --profile fast`，runtime restore route 走 `opl update rollback`。workspace / quest target-bound Codex surface reload 复用 Packages scope activation/repair transaction，不暴露第二个 Connect 安装入口。cleanup 只提供 dry-run plan，不删除 runtime roots。
 - App repo 继续持有 GUI product truth、page-state contract、release artifact 和 shell validation；Aion shell 只实现渲染与 IPC adapter，不能把 Settings Control Center 的 domain/runtime truth 搬到 shell。
 
 ### 决策：generic workspace / source / artifact / memory substrate 由 OPL 持有 locator / index / lifecycle / projection，domain agent 持有 truth / body / verdict / authority

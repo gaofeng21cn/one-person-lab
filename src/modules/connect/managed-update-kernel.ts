@@ -259,7 +259,7 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
     post_apply_guidance: {
       required: autoApplyEligible,
       command_refs: autoApplyEligible
-        ? ['opl connect reconcile-modules --json', 'opl connect sync-skills --json']
+        ? ['opl packages status --json']
         : [],
       reload_guidance: reloadGuidance,
     },
@@ -273,29 +273,24 @@ function buildCapabilityPackagesComponent(modules: Record<string, unknown>[], ch
       command_refs: action === 'manual_review'
         ? [
           manualCommand(
-            'inspect_connect_modules',
-            'opl connect modules --json',
-            'Inspect manual, dirty, ahead, diverged, or developer checkout module state.',
+            'inspect_packages',
+            'opl packages status --json',
+            'Inspect canonical package state and manual or developer checkout blockers.',
           ),
         ]
         : action === 'none'
           ? [
             readOnlyCommand(
-              'inspect_connect_modules',
-              'opl connect modules --json',
-              'Read the managed package-channel projection.',
+              'inspect_packages',
+              'opl packages status --json',
+              'Read the canonical package lifecycle projection.',
             ),
           ]
           : [
             controlledCommand(
-              'reconcile_managed_modules',
-              'opl connect reconcile-modules --json',
-              'Install missing modules and update clean managed package-channel modules.',
-            ),
-            controlledCommand(
-              'sync_codex_skills',
-              'opl connect sync-skills --json',
-              'Refresh plugin-packaged skills and generated Codex-visible surfaces after module changes.',
+              'update_packages',
+              'opl packages update --json',
+              'Resolve package dependency closures and refresh their managed Codex projections.',
             ),
           ],
     },

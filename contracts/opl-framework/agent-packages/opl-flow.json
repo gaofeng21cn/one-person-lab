@@ -51,6 +51,24 @@
     "bundled_capability_package_ids": [],
     "user_install_action_count": 1
   },
+  "profile_surface": {
+    "runtime_profile": {
+      "source_path": "profile/runtime-profile",
+      "target_id": "user_agents_profile"
+    },
+    "authoring_sources": [
+      {
+        "source_path": "profile/authoring-source",
+        "target_id": "user_taste_source"
+      }
+    ],
+    "merge_context_paths": [
+      "profile/manifest.json",
+      "profile/modules/user-preferences",
+      "profile/authoring-source"
+    ],
+    "existing_profile_policy": "semantic_merge_required"
+  },
   "carrier_adapters": [
     {
       "adapter_kind": "codex_plugin_carrier",

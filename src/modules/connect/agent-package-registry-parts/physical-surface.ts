@@ -20,6 +20,11 @@ import {
   safePathSegment,
   validateUrlLike,
 } from './shared.ts';
+import {
+  materializePackageProfile,
+  noPackageProfileMigration,
+  retainedPackageProfile,
+} from './profile-surface.ts';
 import type {
   AgentPackageLock,
   AgentPackageManifest,
@@ -215,6 +220,23 @@ function copyDirectory(source: string, target: string) {
   fs.cpSync(source, target, { recursive: true });
 }
 
+function copyContentLockPaths(source: string, target: string, relativePaths: string[]) {
+  fs.rmSync(target, { recursive: true, force: true });
+  for (const relativePath of relativePaths) {
+    const sourcePath = path.join(source, relativePath);
+    if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+      throw new FrameworkContractError('contract_shape_invalid', 'Capability package content lock path is missing from the provider source.', {
+        plugin_source_path: source,
+        content_lock_path: relativePath,
+        failure_code: 'capability_package_content_lock_path_missing',
+      });
+    }
+    const targetPath = path.join(target, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+}
+
 function requiredSkillPath(pluginSourcePath: string, skillId: string) {
   const normalized = skillId.trim();
   if (!normalized || normalized.includes('/') || normalized.includes('\\') || normalized === '.' || normalized === '..') {
@@ -276,6 +298,8 @@ export function materializePhysicalCodexSurface(
       reload_required: false,
       failure_reason: null,
       note: 'Manifest did not request Codex plugin materialization with codex_surface.plugin_source_path and codex_surface.plugin_ids.',
+      profile_config: null,
+      profile_migration: noPackageProfileMigration('Package did not request a physical Codex surface.'),
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
   }
@@ -294,7 +318,11 @@ export function materializePhysicalCodexSurface(
   const materializedRequiredSkills = validateMaterializedRequiredSkills(manifest, pluginSourcePath);
 
   if (!dryRun) {
-    copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
+    if (manifest.content_lock_paths.length > 0) {
+      copyContentLockPaths(pluginSourcePath, paths.codexPluginCachePath!, manifest.content_lock_paths);
+    } else {
+      copyDirectory(pluginSourcePath, paths.codexPluginCachePath!);
+    }
     materializeLocalCodexPluginMarketplace({
       marketplace_id: paths.marketplaceId,
       plugin_id: manifest.plugin_id,
@@ -306,6 +334,12 @@ export function materializePhysicalCodexSurface(
       plugin_id: manifest.plugin_id,
     }, paths.marketplaceRoot);
   }
+  const profileMigration = materializePackageProfile({
+    manifest,
+    sourceRoot: dryRun ? pluginSourcePath : paths.codexPluginCachePath!,
+    codexHome: paths.codexHome,
+    dryRun,
+  });
 
   return {
     surface_kind: 'opl_agent_package_physical_codex_surface',
@@ -333,6 +367,8 @@ export function materializePhysicalCodexSurface(
     reload_required: !dryRun,
     failure_reason: null,
     note: null,
+    profile_config: manifest.profile_surface,
+    profile_migration: profileMigration,
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -381,6 +417,8 @@ export function removePhysicalCodexSurface(
     reload_required: !dryRun && removedPaths.length > 0,
     failure_reason: null,
     note: surface ? null : 'Installed package lock did not contain a physical Codex surface.',
+    profile_config: surface?.profile_config ?? null,
+    profile_migration: retainedPackageProfile(surface?.profile_migration),
     authority_boundary: refsOnlyAuthorityBoundary(),
   };
 }
@@ -414,6 +452,8 @@ export function rematerializePhysicalCodexSurfaceFromLock(
       reload_required: false,
       failure_reason: null,
       note: 'Installed package lock did not request physical Codex surface repair.',
+      profile_config: null,
+      profile_migration: noPackageProfileMigration('Installed package did not request a profile surface.'),
       authority_boundary: refsOnlyAuthorityBoundary(),
     };
   }
@@ -441,5 +481,10 @@ export function rematerializePhysicalCodexSurfaceFromLock(
     plugin_payload_manifest_url: lock.physical_surface.plugin_payload_manifest_url,
     plugin_payload_manifest_sha256: lock.physical_surface.plugin_payload_manifest_sha256,
     plugin_payload_cache_path: lock.physical_surface.plugin_payload_cache_path,
+    profile_surface: lock.physical_surface.profile_config,
+    capability_dependencies: lock.capability_dependencies ?? [],
+    capability_provider: lock.capability_provider ?? null,
+    content_digest: lock.content_digest ?? null,
+    content_lock_paths: lock.content_lock_paths ?? [],
   }, dryRun);
 }

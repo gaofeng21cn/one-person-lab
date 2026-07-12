@@ -226,7 +226,7 @@ function buildAgentPackagePostApplyActions(
     },
     {
       action_id: 'sync_skills',
-      command_ref: 'opl connect sync-skills --json',
+      command_ref: 'opl packages status --json',
       status: skillSyncStatus,
       result_ref: adapterResultRef('opl_packages', operation, skillSyncPayload),
       result: skillSyncPayload,
@@ -244,12 +244,13 @@ function buildAgentPackagePostApplyActions(
           package_channel_auto_update: true,
         },
         skill_sync_summary: skillSyncSummary,
-        target_bound_scholarskills_sync: {
+        target_bound_package_scope_activation: {
           status: skillSyncPacks.some(isExpectedTargetBoundScholarSkillsSkip)
-            ? 'awaiting_workspace_or_quest_target'
+            ? 'automatic_on_workspace_or_quest_activation'
             : 'not_applicable',
-          workspace_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
-          quest_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
+          lifecycle_owner: 'opl_packages',
+          status_command_ref: 'opl packages status --package-id mas --scope <workspace|quest> --json',
+          repair_command_ref: 'opl packages repair mas --scope <workspace|quest> --json',
         },
       },
     },

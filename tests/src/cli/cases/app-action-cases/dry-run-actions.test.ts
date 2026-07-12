@@ -248,7 +248,7 @@ test('app action execute dry-runs Codex, module, scheduler, and worker actions f
 
     assert.equal(
       settingsReload.delegated_surface,
-      'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <target_path>',
+      'opl packages#scope_activation_transaction(workspace)',
     );
     assert.deepEqual(settingsReload.result.settings_control_center_action.payload_fields, ['scope', 'target_path']);
 

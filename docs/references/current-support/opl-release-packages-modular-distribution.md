@@ -86,7 +86,7 @@ Kernel 继续提供统一状态词汇、idempotency lock、受控 runner 和 com
 
 受控 adapter 边界保持不变：`runtime_substrate_adapter` 只写 App-owned runtime root；`capability_packages_adapter` 只处理 clean managed package roots；`installation_carrier_status_adapter` 只读 App/host route。Package transaction 后可刷新 plugin registry、local marketplace、plugin-packaged skills 与 OMA generated carrier，但这些都不是第二套 package truth。OPL Flow profile 只能 semantic merge，禁止静默覆盖用户 Codex profile。
 
-App / Settings 的 `module_sync`、`settings_sync_capabilities` 与 `settings_apply_opl_packages` 委托 `opl packages update`；`settings_check_app_update` 委托 `opl app state --profile fast`；`settings_rollback_runtime_substrate` 委托 `opl update rollback`。target-bound workspace / quest Skill sync 仍直接走 `opl connect sync-skills --domain mas-scholar-skills --scope workspace|quest ...`，因为它需要显式用户目标路径。
+App / Settings 的 `module_sync`、`settings_sync_capabilities` 与 `settings_apply_opl_packages` 委托 `opl packages update`；`settings_check_app_update` 委托 `opl app state --profile fast`；`settings_rollback_runtime_substrate` 委托 `opl update rollback`。target-bound workspace / quest Skill projection 由 Packages scope activation transaction 自动确保；只有 missing/stale/incompatible 时才通过 `opl packages repair mas --scope workspace|quest --target-* <path>` 恢复。
 
 Packages 是 App 不变时的机器更新通道，但不替代 App repo `Releases` 的用户下载入口。普通用户仍从 `one-person-lab-app` 的 `Releases` 获取桌面安装包；package 安装真相必须记录 immutable version、digest、SHA-256、source fingerprint 或 Git head。MAS/MAG/RCA 等 domain repo 不提供第二套用户安装型 Release，domain truth、artifact body、quality/export verdict 与 owner receipt 始终留在 domain owner。
 

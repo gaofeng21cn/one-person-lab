@@ -91,6 +91,7 @@ export function agentPackageManifest(input: {
   agentId?: string;
   permissions?: unknown[];
   distributionPayload?: Record<string, unknown> | null;
+  profileSurface?: Record<string, unknown> | null;
 } = {}) {
   return {
     surface_kind: 'opl_agent_package_manifest.v1',
@@ -108,6 +109,7 @@ export function agentPackageManifest(input: {
       ...(input.pluginSourcePath ? { plugin_source_path: input.pluginSourcePath } : {}),
       ...(input.pluginPayloadManifestUrl ? { plugin_payload_manifest_url: input.pluginPayloadManifestUrl } : {}),
     },
+    ...(input.profileSurface ? { profile_surface: input.profileSurface } : {}),
     capability_dependencies: [],
     skill_packs: [
       {

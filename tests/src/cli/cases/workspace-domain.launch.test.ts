@@ -6,11 +6,19 @@ import {
   fs,
   loadFamilyManifestFixtures,
   os,
+  path,
   repoRoot,
   runCli,
+  runCliAsync,
+  runCliFailure,
   test,
 } from '../helpers.ts';
 import { createAdmittedStagePackFixture } from './workspace-domain-test-helper.ts';
+import {
+  scholarSkillsCoreSkillIds,
+  writeCapabilityProvider,
+  writeMasConsumer,
+} from './packages-cases/capability-fixtures.ts';
 
 test('domain manifests resolves bound manifests and reports owner-action configuration gaps', () => {
   const resolvedState = fs.mkdtempSync(`${os.tmpdir()}/opl-domain-manifest-resolved-`);
@@ -158,6 +166,7 @@ test('domain launch exposes honest direct-entry launcher preview without running
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], { OPL_STATE_DIR: stateRoot });
+    runCli(['packages', 'install', 'rca'], { OPL_STATE_DIR: stateRoot });
 
     const preview = runCli([
       'domain',
@@ -179,5 +188,199 @@ test('domain launch exposes honest direct-entry launcher preview without running
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(shellFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain launch blocks a canonical package that is not installed', () => {
+  const stateRoot = fs.mkdtempSync(`${os.tmpdir()}/opl-domain-launch-package-gate-`);
+  try {
+    runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', repoRoot,
+      '--entry-command', 'printf blocked',
+      '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
+    ], { OPL_STATE_DIR: stateRoot });
+    const failure = runCliFailure([
+      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+    ], { OPL_STATE_DIR: stateRoot });
+    assert.equal(failure.payload.error.details.failure_code, 'agent_package_operational_readiness_blocked');
+    assert.equal(failure.payload.error.details.launch_blocked_reason, 'package_not_installed');
+    assert.deepEqual(failure.payload.error.details.allowed_when_blocked, ['status', 'doctor', 'repair']);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('MAS launch activates a new workspace scope, blocks drift, and resumes after package repair', async () => {
+  const root = fs.mkdtempSync(`${os.tmpdir()}/opl-domain-launch-mas-scope-`);
+  const stateRoot = path.join(root, 'state');
+  const codexHome = path.join(root, 'codex-home');
+  const workspace = path.join(root, 'workspace');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeMasConsumer(root, providerManifest);
+  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome };
+  fs.mkdirSync(workspace, { recursive: true });
+  try {
+    runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+      '--entry-command', 'printf launched',
+      '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
+    ], env);
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+    ], env);
+
+    const firstLaunch = runCli([
+      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+    ], env).domain_entry_launch;
+    assert.equal(firstLaunch.dry_run, true);
+    const skillsRoot = path.join(workspace, '.codex', 'skills');
+    assert.deepEqual(fs.readdirSync(skillsRoot).sort(), [...scholarSkillsCoreSkillIds].sort());
+    assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-optional-specialty')), false);
+    const current = runCli([
+      'packages', 'status', '--package-id', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+    ], env).opl_agent_package_status;
+    assert.equal(current.materialization_readiness.status, 'current');
+    assert.match(current.materialization_readiness.lifecycle_receipt_ref, /^opl:\/\/agent-package\/activate\//);
+
+    fs.rmSync(path.join(skillsRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
+    const blocked = runCliFailure([
+      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+    ], env);
+    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_operational_readiness_blocked');
+    assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
+
+    await runCliAsync([
+      'packages', 'repair', 'mas', '--scope', 'workspace', '--target-workspace', workspace,
+    ], env);
+    const resumed = runCli([
+      'domain', 'launch', '--project', 'medautoscience', '--dry-run',
+    ], env).domain_entry_launch;
+    assert.equal(resumed.dry_run, true);
+    assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-manuscript-writing', 'SKILL.md')), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('quest activation materializes core skills, blocks drift, and repair restores readiness', async () => {
+  const root = fs.mkdtempSync(`${os.tmpdir()}/opl-quest-package-activation-`);
+  const stateRoot = path.join(root, 'state');
+  const codexHome = path.join(root, 'codex-home');
+  const quest = path.join(root, 'quest');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeMasConsumer(root, providerManifest);
+  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome };
+  fs.mkdirSync(quest, { recursive: true });
+  try {
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+    ], env);
+    const preview = runCli([
+      'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest, '--dry-run',
+    ], env).opl_agent_package_activation;
+    assert.equal(preview.status, 'validated_no_write');
+    assert.equal(preview.operational_ready, false);
+    assert.equal(preview.launch_allowed, false);
+    assert.equal(fs.existsSync(path.join(quest, '.codex', 'skills')), false);
+    const activation = runCli([
+      'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest,
+    ], env).opl_agent_package_activation;
+    assert.equal(activation.status, 'activated');
+    assert.equal(activation.package_id, 'med-autoscience');
+    assert.match(activation.lifecycle_receipt_ref, /^opl:\/\/agent-package\/activate\//);
+    const skillsRoot = path.join(quest, '.codex', 'skills');
+    assert.deepEqual(fs.readdirSync(skillsRoot).sort(), [...scholarSkillsCoreSkillIds].sort());
+    assert.equal(fs.existsSync(path.join(skillsRoot, 'medical-optional-specialty')), false);
+    const current = runCli([
+      'packages', 'status', '--package-id', 'mas', '--scope', 'quest', '--target-quest', quest,
+    ], env).opl_agent_package_status;
+    assert.equal(current.materialization_readiness.status, 'current');
+    assert.equal(current.operational_ready, true);
+
+    fs.rmSync(path.join(skillsRoot, 'medical-manuscript-writing'), { recursive: true, force: true });
+    const blocked = runCliFailure([
+      'packages', 'activate', 'mas', '--scope', 'quest', '--target-quest', quest,
+    ], env);
+    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_scope_activation_blocked');
+    assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
+    await runCliAsync([
+      'packages', 'repair', 'mas', '--scope', 'quest', '--target-quest', quest,
+    ], env);
+    const repaired = runCli([
+      'packages', 'status', '--package-id', 'mas', '--scope', 'quest', '--target-quest', quest,
+    ], env).opl_agent_package_status;
+    assert.equal(repaired.materialization_readiness.status, 'current');
+    assert.equal(repaired.operational_ready, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('workspace activation automatically ensures the installed MAS package scope', async () => {
+  const root = fs.mkdtempSync(`${os.tmpdir()}/opl-workspace-package-activation-`);
+  const stateRoot = path.join(root, 'state');
+  const codexHome = path.join(root, 'codex-home');
+  const workspaceA = path.join(root, 'workspace-a');
+  const workspaceB = path.join(root, 'workspace-b');
+  const workspaceC = path.join(root, 'workspace-c');
+  const providerManifest = writeCapabilityProvider(path.join(root, 'provider'));
+  const consumerManifest = writeMasConsumer(root, providerManifest);
+  const env = { OPL_STATE_DIR: stateRoot, CODEX_HOME: codexHome };
+  fs.mkdirSync(workspaceA, { recursive: true });
+  fs.mkdirSync(workspaceB, { recursive: true });
+  fs.mkdirSync(workspaceC, { recursive: true });
+  try {
+    for (const workspace of [workspaceA, workspaceB]) {
+      runCli([
+        'workspace', 'bind', '--project', 'medautoscience', '--path', workspace,
+        '--entry-command', 'printf launched',
+        '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
+      ], env);
+    }
+    await runCliAsync([
+      'packages', 'install', '--manifest-url', consumerManifest, '--trust-tier', 'first_party',
+    ], env);
+
+    assert.deepEqual(
+      fs.readdirSync(path.join(workspaceB, '.codex', 'skills')).sort(),
+      [...scholarSkillsCoreSkillIds].sort(),
+    );
+    runCli([
+      'workspace', 'bind', '--project', 'medautoscience', '--path', workspaceC,
+      '--entry-command', 'printf launched',
+      '--manifest-command', buildManifestCommand(loadFamilyManifestFixtures().medautoscience),
+    ], env);
+    assert.deepEqual(
+      fs.readdirSync(path.join(workspaceC, '.codex', 'skills')).sort(),
+      [...scholarSkillsCoreSkillIds].sort(),
+    );
+
+    runCli(['workspace', 'activate', '--project', 'medautoscience', '--path', workspaceA], env);
+    assert.deepEqual(
+      fs.readdirSync(path.join(workspaceA, '.codex', 'skills')).sort(),
+      [...scholarSkillsCoreSkillIds].sort(),
+    );
+    const current = runCli([
+      'packages', 'status', '--package-id', 'mas',
+      '--scope', 'workspace', '--target-workspace', workspaceA,
+    ], env).opl_agent_package_status;
+    assert.equal(current.materialization_readiness.status, 'current');
+    assert.equal(current.launch_allowed, true);
+    const appState = runCli(['app', 'state', '--profile', 'fast'], env).app_state;
+    assert.equal(appState.agent_packages.status_index.packages['med-autoscience'].operational_ready, true);
+    assert.equal(appState.agent_packages.status_index.packages['med-autoscience'].launch_allowed, true);
+
+    fs.rmSync(path.join(workspaceA, '.codex', 'skills', 'medical-manuscript-writing'), {
+      recursive: true,
+      force: true,
+    });
+    runCli(['workspace', 'activate', '--project', 'medautoscience', '--path', workspaceB], env);
+    const blocked = runCliFailure([
+      'workspace', 'activate', '--project', 'medautoscience', '--path', workspaceA,
+    ], env);
+    assert.equal(blocked.payload.error.details.failure_code, 'agent_package_scope_activation_blocked');
+    assert.equal(blocked.payload.error.details.materialization_readiness.status, 'missing');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

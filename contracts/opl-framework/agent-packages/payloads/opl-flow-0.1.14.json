@@ -54,6 +54,26 @@
       "path": "skills/opl-flow/SKILL.md",
       "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/skills/opl-flow/SKILL.md",
       "sha256": "sha256:30133171b40e01465f3f29a400afd6c8134e7bb4380f5bbdde98334a8396ae9e"
+    },
+    {
+      "path": "profile/runtime-profile",
+      "content_base64": "5L2g5aeL57uI55So5Lit5paH5Zue5aSN44CCCgotIOWFiOe7mee7k+iuuu+8jOihqOi+vuS4k+S4muOAgeeugOa0geOAgemrmOS/oeaBr+WvhuW6puOAggotIOivtOaYjuW/heimgeeahOmAu+i+keOAgeWGs+etluS+neaNruWSjOW9seWTjeiMg+WbtOOAggotIOm7mOiupOWBnOeVmeWcqOeUqOaIt+acieeUqOeahOaKveixoeWxgu+8jOWbnuetlOmVv+W6puS4juS7u+WKoeWkjeadguW6puWMuemFjeOAggotIOS/ruaUueWJjeWFiOehruiupOecn+WunueUn+aViOS9jee9ruOAgeiwg+eUqOmTvuWSjOW9k+WJjemhueebrue6puadn+OAggotIOi/m+WFpeS7k+W6k+WQju+8jOS7peabtOWFt+S9k+eahCByZXBvLWxvY2FsIGBBR0VOVFMubWRg44CB5ZCI5ZCM5ZKM55yf5a6e5a6e546w5Li65YeG44CCCi0gU2hlbGwg6buY6K6k5L2/55SoIGBydGtg77yb6ZyA6KaB5a6M5pW05Y6f5aeL6L6T5Ye65oiW57K+56Gu5rWB6KGM5Li65pe25L2/55So5Y6f55Sf5ZG95Luk44CCCi0g6L+b5YWl5byA5Y+R5LuT5bqT5pe277yM6Iul57y65bCRIGAuY29kZWdyYXBoL2Ag5YiZ6L+Q6KGMIGBjb2RlZ3JhcGggaW5pdCAuYO+8jOehruS/neWug+iiqyBHaXQgaWdub3Jl77yM5bm25ZyoIHJlcG8tbG9jYWwgYEFHRU5UUy5tZGAg5L+d55WZ566A55+tIENvZGVHcmFwaCBibG9ja++8m+e7k+aehOajgOe0ouS8mOWFiCBDb2RlR3JhcGjvvIzlrZfpnaLmlofmnKzmo4DntKLkvb/nlKggYHJnYOOAggo=",
+      "sha256": "sha256:82c89ec0c7bbc0c635baaaf668c0cfdadd6edef43b1253473a6a087251736cdd"
+    },
+    {
+      "path": "profile/authoring-source",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/templates/TASTE.md",
+      "sha256": "sha256:c2cb8d2197fc71b1a68900d2ae87d3cf73507339f28a96031f08105c0adaa01a"
+    },
+    {
+      "path": "profile/manifest.json",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/profile/manifest.json",
+      "sha256": "sha256:7f80dc27cf9c504bd2230c385ba18dd8007a813afebbfa67fcfb4b5502f9440c"
+    },
+    {
+      "path": "profile/modules/user-preferences",
+      "source_url": "https://raw.githubusercontent.com/gaofeng21cn/opl-flow/ad924449f8db69a4d68362288a5d9833347d6928/profile/modules/01-user-preferences.md",
+      "sha256": "sha256:82c89ec0c7bbc0c635baaaf668c0cfdadd6edef43b1253473a6a087251736cdd"
     }
   ]
 }

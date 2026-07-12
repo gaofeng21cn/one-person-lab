@@ -65,7 +65,7 @@
   "opl_managed_surface": {
     "package_shape": "thin_agent_package",
     "dependency_resolution": "managed_dependency_graph",
-    "dependency_update_policy": "independent_package_target",
+    "dependency_update_policy": "consumer_dependency_closure_transaction",
     "developer_mode_dependency_policy": "source_checkout_when_authorized_else_pull_request"
   },
   "capability_dependencies": [
@@ -74,6 +74,32 @@
       "package_id": "mas-scholar-skills",
       "kind": "framework_capability_package",
       "required": true,
+      "version_requirement": ">=0.1.0 <0.2.0",
+      "capability_abi": "mas-scholar-skills.v1",
+      "required_export_ids": [
+        "mas-scholar-skills",
+        "medical-manuscript-writing",
+        "medical-manuscript-review",
+        "medical-figure-design",
+        "medical-figure-style",
+        "medical-figure-composer",
+        "medical-research-lit",
+        "medical-statistical-review",
+        "medical-table-design",
+        "medical-submission-prep",
+        "medical-data-governance"
+      ],
+      "required_module_ids": [
+        "mas-scholar-skills.display",
+        "mas-scholar-skills.tables",
+        "mas-scholar-skills.stats",
+        "mas-scholar-skills.lit",
+        "mas-scholar-skills.write",
+        "mas-scholar-skills.review",
+        "mas-scholar-skills.submit",
+        "mas-scholar-skills.data"
+      ],
+      "manifest_url": "mas-scholar-skills.json",
       "version_policy": "compatible_channel_manifest",
       "codex_distribution": "bundled",
       "opl_distribution": "managed_dependency",
@@ -86,10 +112,6 @@
       "sync_scopes": [
         "workspace",
         "quest"
-      ],
-      "sync_command_refs": [
-        "opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json",
-        "opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json"
       ],
       "authority_boundary": {
         "can_write_domain_truth": false,

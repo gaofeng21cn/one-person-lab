@@ -12,6 +12,8 @@ import type {
   AgentPackageLockIndex,
   AgentPackageManifest,
   AgentPackagePhysicalSurface,
+  AgentPackageResolvedDependency,
+  AgentPackageScopeMaterialization,
   AgentPackageSourceKind,
 } from './types.ts';
 
@@ -44,6 +46,9 @@ export function packageActionStatus(action: AgentPackageLifecycleAction) {
     install: 'installed',
     update: 'updated',
     repair: 'repaired',
+    activate: 'activated',
+    rollback: 'rolled_back',
+    profile_apply: 'profile_applied',
     uninstall: 'uninstalled',
     hide: 'hidden',
     unhide: 'visible',
@@ -93,6 +98,10 @@ export function lifecycleReceipt(input: {
   sourceSha256: string;
   writesPerformed: boolean;
   physicalSurface?: AgentPackagePhysicalSurface;
+  dependencyTransactionId?: string;
+  dependencyClosureDigest?: string;
+  dependencyPackages?: AgentPackageLifecycleReceipt['dependency_packages'];
+  scopeMaterialization?: AgentPackageScopeMaterialization;
 }): AgentPackageLifecycleReceipt {
   const receipt: AgentPackageLifecycleReceipt = {
     surface_kind: 'opl_agent_package_lifecycle_receipt',
@@ -120,6 +129,10 @@ export function lifecycleReceipt(input: {
   if (input.physicalSurface) {
     receipt.physical_surface = input.physicalSurface;
   }
+  if (input.dependencyTransactionId) receipt.dependency_transaction_id = input.dependencyTransactionId;
+  if (input.dependencyClosureDigest) receipt.dependency_closure_digest = input.dependencyClosureDigest;
+  if (input.dependencyPackages) receipt.dependency_packages = input.dependencyPackages;
+  if (input.scopeMaterialization) receipt.scope_materialization = input.scopeMaterialization;
   return receipt;
 }
 
@@ -159,6 +172,10 @@ export function buildLock(input: {
   receiptRef: string;
   physicalSurface: AgentPackagePhysicalSurface;
   previousLock?: AgentPackageLock | null;
+  resolvedDependencies?: AgentPackageResolvedDependency[];
+  dependencyClosureDigest?: string;
+  dependencyTransactionId?: string;
+  scopeMaterialization?: AgentPackageScopeMaterialization | null;
 }): AgentPackageLock {
   const timestamp = nowIso();
   const distributionPayload = input.manifest.distribution_payload;
@@ -197,6 +214,23 @@ export function buildLock(input: {
     physical_surface: input.physicalSurface,
     exposure_state: input.previousLock?.exposure_state ?? 'visible',
     exposure_updated_at: input.previousLock?.exposure_updated_at ?? timestamp,
+    capability_provider: input.manifest.capability_provider,
+    capability_dependencies: input.manifest.capability_dependencies,
+    resolved_dependencies: input.resolvedDependencies ?? [],
+    dependency_closure_digest: input.dependencyClosureDigest ?? '',
+    dependency_transaction_id: input.dependencyTransactionId ?? '',
+    content_digest: input.manifest.content_digest
+      ?? input.manifest.distribution_payload?.payload_digest_ref
+      ?? `sha256:${input.manifestSha256}`,
+    content_lock_paths: input.manifest.content_lock_paths,
+    scope_materializations: input.scopeMaterialization
+      ? [
+          input.scopeMaterialization,
+          ...(input.previousLock?.scope_materializations ?? []).filter((entry) =>
+            entry.scope !== input.scopeMaterialization!.scope
+            || entry.target_root !== input.scopeMaterialization!.target_root),
+        ]
+      : input.previousLock?.scope_materializations ?? [],
   };
 }
 

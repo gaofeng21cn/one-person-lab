@@ -5,10 +5,12 @@ import type { JsonRecord } from '../../kernel/json-record.ts';
 import {
   readBundledCodexDefaultProfile,
   listOplAgentPackages,
+  canonicalAgentPackageId,
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
   runOplAgentPackageStatus,
 } from '../connect/index.ts';
+import { listWorkspaceBindings } from '../workspace/index.ts';
 import {
   buildOplEndpoints,
   familyRuntimePaths,
@@ -483,10 +485,21 @@ export async function buildOplAppState(input: { profile?: AppStateProfile } = {}
   const core = buildCoreState(profile);
   const actions = buildActionCatalog(contracts);
   const agentPackagesReadback = listOplAgentPackages().opl_agent_packages;
+  const activeWorkspaceBindings = listWorkspaceBindings().filter((binding) => binding.status === 'active');
   const agentPackageStatuses = Object.fromEntries(
     agentPackagesReadback.installed_packages.map((lock) => [
       lock.package_id,
-      runOplAgentPackageStatus({ packageId: lock.package_id }).opl_agent_package_status,
+      runOplAgentPackageStatus((() => {
+        const binding = activeWorkspaceBindings.find((entry) =>
+          canonicalAgentPackageId(entry.project_id) === lock.package_id);
+        return binding
+          ? {
+              packageId: lock.package_id,
+              scope: 'workspace' as const,
+              targetWorkspace: binding.workspace_path,
+            }
+          : { packageId: lock.package_id };
+      })()).opl_agent_package_status,
     ]),
   );
   const agentPackagesProjection = {

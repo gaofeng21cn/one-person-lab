@@ -26,6 +26,9 @@ export type AgentPackageLifecycleAction =
   | 'install'
   | 'update'
   | 'repair'
+  | 'activate'
+  | 'rollback'
+  | 'profile_apply'
   | 'uninstall'
   | 'hide'
   | 'unhide'
@@ -40,6 +43,8 @@ export type AgentPackageLifecycleCondition = {
     | 'physical_surface_materialized'
     | 'physical_surface_not_requested'
     | 'physical_surface_removed'
+    | 'profile_semantic_merge_required'
+    | 'profile_current'
     | 'codex_reload_required';
   package_id: string | null;
   status: 'ok' | 'attention_needed';
@@ -69,12 +74,24 @@ export type AgentPackageManifestValidateInput = {
 export type AgentPackageInstallInput = AgentPackageManifestValidateInput & {
   dryRun?: boolean;
   agentRoot?: string | null;
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
 };
 
 export type AgentPackagePackageActionInput = {
   packageId: string;
   dryRun?: boolean;
   agentRoot?: string | null;
+  scope?: 'workspace' | 'quest' | null;
+  targetWorkspace?: string | null;
+  targetQuest?: string | null;
+};
+
+export type AgentPackageProfileApplyInput = {
+  packageId: string;
+  mergedFile: string;
+  dryRun?: boolean;
 };
 
 export type AgentPackageHomeShortcutPreferencesSetInput = {
@@ -165,6 +182,131 @@ export type AgentPackageManifest = {
   plugin_payload_manifest_url: string | null;
   plugin_payload_manifest_sha256: string | null;
   plugin_payload_cache_path: string | null;
+  profile_surface: AgentPackageProfileSurfaceConfig | null;
+  capability_dependencies: AgentPackageCapabilityDependency[];
+  capability_provider: AgentPackageCapabilityProvider | null;
+  content_digest: string | null;
+  content_lock_paths: string[];
+};
+
+export type AgentPackageCapabilityDependency = {
+  package_id: string;
+  required: boolean;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+  manifest_url: string | null;
+};
+
+export type AgentPackageCapabilityExport = {
+  export_id: string;
+  skill_id: string;
+  install_mode: 'core_required' | 'optional_named_specialty';
+};
+
+export type AgentPackageCapabilityProvider = {
+  capability_abi: string;
+  exports: AgentPackageCapabilityExport[];
+  module_export_ids: string[];
+};
+
+export type AgentPackageResolvedDependency = {
+  package_id: string;
+  required: boolean;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+  installed_version: string;
+  manifest_url: string;
+  manifest_sha256: string;
+  content_digest: string;
+  package_lock_ref: string;
+};
+
+export type AgentPackageDependencyReadinessItem = {
+  package_id: string;
+  required: boolean;
+  version_requirement: string;
+  capability_abi: string;
+  required_export_ids: string[];
+  required_module_ids: string[];
+  installed_version: string | null;
+  manifest_sha256: string | null;
+  content_digest: string | null;
+  status: 'missing' | 'current' | 'incompatible';
+  reasons: string[];
+  missing_required_export_ids: string[];
+  missing_required_module_ids: string[];
+};
+
+export type AgentPackageDependencyReadiness = {
+  status: 'missing' | 'current' | 'incompatible';
+  operational_ready: boolean;
+  repair_command: string;
+  dependencies: AgentPackageDependencyReadinessItem[];
+};
+
+export type AgentPackageMaterializationReadiness = {
+  status: 'not_required' | 'scope_required' | 'missing' | 'current' | 'incompatible';
+  scope: 'workspace' | 'quest' | null;
+  target_root: string | null;
+  required_skill_ids: string[];
+  materialized_skill_ids: string[];
+  expected_digest: string | null;
+  actual_digest: string | null;
+  repair_command: string | null;
+  lifecycle_receipt_ref: string | null;
+};
+
+export type AgentPackageScopeMaterialization = {
+  scope: 'workspace' | 'quest';
+  target_root: string;
+  provider_package_id: string;
+  provider_lock_ref: string;
+  transaction_id: string;
+  required_skill_ids: string[];
+  content_digest: string;
+  materialized_at: string;
+  lifecycle_receipt_ref: string;
+};
+
+export type AgentPackageProfileSurfaceConfig = {
+  runtime_profile: {
+    source_path: string;
+    target_id: 'user_agents_profile';
+  };
+  authoring_sources: Array<{
+    source_path: string;
+    target_id: 'user_taste_source';
+  }>;
+  merge_context_paths: string[];
+  existing_profile_policy: 'semantic_merge_required';
+};
+
+export type AgentPackageProfileMigration = {
+  surface_kind: 'opl_package_profile_migration';
+  status:
+    | 'not_requested'
+    | 'validated_no_write'
+    | 'installed'
+    | 'updated'
+    | 'current'
+    | 'semantic_merge_required'
+    | 'semantic_merge_applied'
+    | 'retained_on_uninstall';
+  source_path: string | null;
+  target_path: string | null;
+  source_sha256: string | null;
+  target_sha256: string | null;
+  receipt_path: string | null;
+  merge_packet_path: string | null;
+  apply_command: string | null;
+  authoring_source_paths: string[];
+  installed_authoring_source_paths: string[];
+  writes_performed: boolean;
+  note: string;
 };
 
 export type AgentPackagePhysicalSurface = {
@@ -191,6 +333,8 @@ export type AgentPackagePhysicalSurface = {
   reload_required: boolean;
   failure_reason: string | null;
   note: string | null;
+  profile_config: AgentPackageProfileSurfaceConfig | null;
+  profile_migration: AgentPackageProfileMigration;
   authority_boundary: AgentPackageAuthorityBoundary;
 };
 
@@ -271,6 +415,20 @@ export type AgentPackageLock = {
   physical_surface?: AgentPackagePhysicalSurface;
   exposure_state?: 'visible' | 'hidden' | 'enabled' | 'disabled';
   exposure_updated_at?: string;
+  capability_provider: AgentPackageCapabilityProvider | null;
+  capability_dependencies: AgentPackageCapabilityDependency[];
+  resolved_dependencies: AgentPackageResolvedDependency[];
+  dependency_closure_digest: string;
+  dependency_transaction_id: string;
+  content_digest: string;
+  content_lock_paths: string[];
+  scope_materializations: AgentPackageScopeMaterialization[];
+};
+
+export type AgentPackageLastKnownGood = {
+  transaction_id: string;
+  closure_digest: string;
+  package_locks: AgentPackageLock[];
 };
 
 export type AgentPackageCoreReadback = {
@@ -281,6 +439,9 @@ export type AgentPackageCoreReadback = {
   dependencies: {
     required_skill_ids: string[];
     optional_skill_refs: string[];
+    capability_dependencies: AgentPackageCapabilityDependency[];
+    resolved_dependencies: AgentPackageResolvedDependency[];
+    dependency_readiness: AgentPackageDependencyReadiness;
   };
   trust: {
     trust_tier: string | null;
@@ -318,6 +479,16 @@ export type AgentPackageLifecycleReceipt = {
   source_surface: 'opl_connect_agent_package_registry';
   authority_boundary: AgentPackageAuthorityBoundary;
   physical_surface?: AgentPackagePhysicalSurface;
+  dependency_transaction_id?: string;
+  dependency_closure_digest?: string;
+  dependency_packages?: Array<{
+    package_id: string;
+    package_version: string;
+    manifest_sha256: string;
+    content_digest: string;
+    package_lock_ref: string;
+  }>;
+  scope_materialization?: AgentPackageScopeMaterialization;
 };
 
 export type AgentPackageHomeShortcutPreference = {
@@ -351,6 +522,7 @@ export type AgentPackageLockIndex = {
   surface_kind: 'opl_agent_package_lock_index';
   version: 'opl-agent-package-lock-index.v1';
   packages: AgentPackageLock[];
+  last_known_good_transactions?: AgentPackageLastKnownGood[];
 };
 
 export type AgentPackageLifecycleLedger = {
@@ -361,6 +533,13 @@ export type AgentPackageLifecycleLedger = {
 
 export type AgentPackageOwnerRouteReadbackItem = {
   package_id: string;
+  package_dependency_readiness: AgentPackageDependencyReadiness;
+  materialization_readiness: AgentPackageMaterializationReadiness;
+  operational_ready: boolean;
+  operational_ready_scope: 'package_dependency_and_scope_materialization_only';
+  launch_allowed: boolean;
+  launch_blocked_reason: string | null;
+  allowed_when_blocked: Array<'status' | 'doctor' | 'repair'>;
   descriptor: AgentPackageDescriptorReadback;
   digest: AgentPackageDigestReadback;
   lock: AgentPackageLockReadback;
@@ -378,6 +557,7 @@ export type AgentPackageOwnerRouteReadbackItem = {
     writes_performed: boolean;
     reload_required: boolean;
     failure_reason: string | null;
+    profile_migration: AgentPackageProfileMigration;
   };
   lifecycle_ux: AgentPackageLifecycleUxReadback;
   package_core: AgentPackageCoreReadback;

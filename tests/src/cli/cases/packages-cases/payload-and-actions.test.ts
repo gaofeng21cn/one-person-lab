@@ -140,6 +140,120 @@ test('packages rejects local package payloads missing bundled required skills', 
   }
 });
 
+test('packages owns profile install, semantic merge apply, and non-destructive uninstall', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-profile-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-profile-home-'));
+  const codexHome = path.join(homeDir, '.codex');
+  const pluginSourcePath = createPluginSourceFixture();
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-profile-manifest-'));
+  const existingProfile = '# User profile\n\nKeep this local instruction.\n';
+  const candidateProfile = '# Package profile\n\nUse the managed package preference.\n';
+  const authoringSource = '# Authoring source\n';
+  const env = { OPL_STATE_DIR: stateDir, HOME: homeDir, CODEX_HOME: codexHome };
+
+  try {
+    fs.mkdirSync(path.join(pluginSourcePath, 'templates'), { recursive: true });
+    fs.mkdirSync(path.join(pluginSourcePath, 'profile'), { recursive: true });
+    fs.writeFileSync(path.join(pluginSourcePath, 'templates', 'AGENTS.md'), candidateProfile, 'utf8');
+    fs.writeFileSync(path.join(pluginSourcePath, 'templates', 'TASTE.md'), authoringSource, 'utf8');
+    fs.writeFileSync(path.join(pluginSourcePath, 'profile', 'manifest.json'), '{}\n', 'utf8');
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(path.join(codexHome, 'AGENTS.md'), existingProfile, 'utf8');
+
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({
+      pluginSourcePath,
+      profileSurface: {
+        runtime_profile: { source_path: 'templates/AGENTS.md', target_id: 'user_agents_profile' },
+        authoring_sources: [{ source_path: 'templates/TASTE.md', target_id: 'user_taste_source' }],
+        merge_context_paths: ['profile/manifest.json', 'templates/TASTE.md'],
+        existing_profile_policy: 'semantic_merge_required',
+      },
+    })), 'utf8');
+
+    const install = runCli([
+      'packages',
+      'install',
+      '--manifest-url',
+      manifestPath,
+      '--trust-tier',
+      'third_party_verified',
+    ], env) as any;
+    const migration = install.opl_agent_package_install.physical_surface.profile_migration;
+    assert.equal(migration.status, 'semantic_merge_required');
+    assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), existingProfile);
+    assert.equal(fs.readFileSync(path.join(codexHome, 'TASTE.md'), 'utf8'), authoringSource);
+    assert.equal(fs.existsSync(path.join(migration.merge_packet_path, 'packet.json')), true);
+    assert.match(migration.apply_command, /^opl packages profile apply third\.party\.research /);
+
+    const mergedFile = path.join(migration.merge_packet_path, 'merged', 'AGENTS.md');
+    const mergedProfile = `${existingProfile}\n${candidateProfile}`;
+    fs.writeFileSync(mergedFile, mergedProfile, 'utf8');
+    const applied = runCli([
+      'packages',
+      'profile',
+      'apply',
+      'third.party.research',
+      '--merged-file',
+      mergedFile,
+    ], env) as any;
+    assert.equal(applied.opl_agent_package_profile_apply.status, 'profile_applied');
+    assert.equal(applied.opl_agent_package_profile_apply.profile_migration.status, 'semantic_merge_applied');
+    assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), mergedProfile);
+    assert.equal(fs.existsSync(applied.opl_agent_package_profile_apply.profile_migration.receipt_path), true);
+
+    const uninstall = runCli(['packages', 'uninstall', 'third.party.research'], env) as any;
+    assert.equal(uninstall.opl_agent_package_uninstall.physical_surface.profile_migration.status, 'retained_on_uninstall');
+    assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), mergedProfile);
+    assert.equal(fs.readFileSync(path.join(codexHome, 'TASTE.md'), 'utf8'), authoringSource);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
+test('packages installs a declared profile directly on an empty Codex home', () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-fresh-profile-state-'));
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-fresh-profile-home-'));
+  const pluginSourcePath = createPluginSourceFixture();
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-fresh-profile-manifest-'));
+  const candidateProfile = '# Fresh package profile\n';
+  try {
+    fs.mkdirSync(path.join(pluginSourcePath, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(pluginSourcePath, 'templates', 'AGENTS.md'), candidateProfile, 'utf8');
+    fs.writeFileSync(path.join(pluginSourcePath, 'templates', 'TASTE.md'), '# Fresh authoring source\n', 'utf8');
+    const manifestPath = path.join(fixtureDir, 'manifest.json');
+    fs.writeFileSync(manifestPath, formatJsonPayload(agentPackageManifest({
+      pluginSourcePath,
+      profileSurface: {
+        runtime_profile: { source_path: 'templates/AGENTS.md', target_id: 'user_agents_profile' },
+        authoring_sources: [{ source_path: 'templates/TASTE.md', target_id: 'user_taste_source' }],
+        merge_context_paths: [],
+        existing_profile_policy: 'semantic_merge_required',
+      },
+    })), 'utf8');
+    const codexHome = path.join(homeDir, '.codex');
+    const install = runCli([
+      'packages',
+      'install',
+      '--manifest-url',
+      manifestPath,
+      '--trust-tier',
+      'third_party_verified',
+    ], { OPL_STATE_DIR: stateDir, HOME: homeDir, CODEX_HOME: codexHome }) as any;
+    assert.equal(install.opl_agent_package_install.physical_surface.profile_migration.status, 'installed');
+    assert.equal(fs.readFileSync(path.join(codexHome, 'AGENTS.md'), 'utf8'), candidateProfile);
+    assert.equal(fs.existsSync(path.join(codexHome, 'state', 'third.party.research', 'profile-install-receipt.json')), true);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+    fs.rmSync(homeDir, { recursive: true, force: true });
+    fs.rmSync(pluginSourcePath, { recursive: true, force: true });
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
 test('app action execute routes install_from_manifest_url to Framework package lock receipt writer', () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-app-action-state-'));
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-agent-package-manifest-'));

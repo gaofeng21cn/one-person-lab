@@ -9,6 +9,7 @@ import {
   runOplAgentPackageRepair,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
+  ensureOplAgentPackageScopeActivation,
   runOplModuleAction,
   agentPackageDelegatedSurface,
   buildManagedUpdateKernelProjection,
@@ -20,7 +21,6 @@ import { runFamilyRuntime } from '../../runway/index.ts';
 import { runOplEngineAction } from '../../connect/index.ts';
 import { MANAGED_UPDATE_OWNER_ACTIONS, managedUpdateCommand } from '../../connect/index.ts';
 import { executeWorkspaceAppAction } from '../app-state-workspace-actions.ts';
-import { syncFamilySkillPacks } from '../../connect/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildOplDockerWebuiDoctor } from '../../connect/index.ts';
 import { runOplTurnkeyInstall } from '../../connect/index.ts';
@@ -440,7 +440,7 @@ async function executeDirectAppAction(
   if (options.actionId === 'agent_package_repair') {
     return {
       delegatedSurface: requireAgentPackageDelegatedSurface(options.actionId),
-      result: runOplAgentPackageRepair({
+      result: await runOplAgentPackageRepair({
         ...agentPackageIdPayload(options.actionId, options.payload),
         dryRun: options.dryRun,
       }),
@@ -484,12 +484,12 @@ async function executeDirectAppAction(
     const reload = settingsReloadCodexSurfacePayload(options.payload);
     return {
       delegatedSurface: reload.scope === 'workspace'
-        ? 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <target_path>'
-        : 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <target_path>',
+        ? 'opl packages#scope_activation_transaction(workspace)'
+        : 'opl packages#scope_activation_transaction(quest)',
       result: options.dryRun
         ? buildSettingsControlCenterDryRun(options.actionId, options.payload)
-        : syncFamilySkillPacks({
-            domains: ['scholarskills'],
+        : ensureOplAgentPackageScopeActivation({
+            packageId: 'med-autoscience',
             scope: reload.scope,
             targetWorkspace: reload.scope === 'workspace' ? reload.targetPath : undefined,
             targetQuest: reload.scope === 'quest' ? reload.targetPath : undefined,
@@ -601,17 +601,17 @@ async function executeDirectAppAction(
   if (options.actionId === 'scholarskills_workspace_sync') {
     const workspaceRoot = scholarskillsWorkspaceRootPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace_root>',
+      delegatedSurface: 'opl packages#scope_activation_transaction(workspace)',
       result: options.dryRun
         ? {
-            skill_sync: {
-              surface_id: 'opl_skill_sync',
-              status: 'dry_run',
-              domain_id: 'scholarskills',
+            package_scope_activation: {
+              surface_id: 'opl_package_scope_activation',
+              status: 'compatibility_migration_preview',
+              package_id: 'med-autoscience',
               scope: 'workspace',
-              target_workspace: workspaceRoot,
-              target_skill_path: `${workspaceRoot}/.codex/skills/mas-scholar-skills`,
-              command: `opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace ${workspaceRoot} --json`,
+              target_root: workspaceRoot,
+              lifecycle_owner: 'opl_packages',
+              automatic_on: ['workspace_activation', 'domain_launch'],
               authority_boundary: {
                 can_write_domain_truth: false,
                 can_sign_owner_receipt: false,
@@ -624,8 +624,8 @@ async function executeDirectAppAction(
               },
             },
           }
-        : syncFamilySkillPacks({
-            domains: ['scholarskills'],
+        : ensureOplAgentPackageScopeActivation({
+            packageId: 'med-autoscience',
             scope: 'workspace',
             targetWorkspace: workspaceRoot,
           }),
@@ -635,17 +635,17 @@ async function executeDirectAppAction(
   if (options.actionId === 'scholarskills_quest_sync') {
     const questRoot = scholarskillsQuestRootPayload(options.payload);
     return {
-      delegatedSurface: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest_root>',
+      delegatedSurface: 'opl packages#scope_activation_transaction(quest)',
       result: options.dryRun
         ? {
-            skill_sync: {
-              surface_id: 'opl_skill_sync',
-              status: 'dry_run',
-              domain_id: 'scholarskills',
+            package_scope_activation: {
+              surface_id: 'opl_package_scope_activation',
+              status: 'compatibility_migration_preview',
+              package_id: 'med-autoscience',
               scope: 'quest',
-              target_quest: questRoot,
-              target_skill_path: `${questRoot}/.codex/skills/mas-scholar-skills`,
-              command: `opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest ${questRoot} --json`,
+              target_root: questRoot,
+              lifecycle_owner: 'opl_packages',
+              automatic_on: ['quest_activation', 'domain_launch'],
               authority_boundary: {
                 can_write_domain_truth: false,
                 can_sign_owner_receipt: false,
@@ -658,8 +658,8 @@ async function executeDirectAppAction(
               },
             },
           }
-        : syncFamilySkillPacks({
-            domains: ['scholarskills'],
+        : ensureOplAgentPackageScopeActivation({
+            packageId: 'med-autoscience',
             scope: 'quest',
             targetQuest: questRoot,
           }),

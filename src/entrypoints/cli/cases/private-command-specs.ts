@@ -9,15 +9,56 @@ import { buildOplDashboard, buildOplStart, buildProjectsOverview } from '../../.
 import { runAcpStdioBridge } from '../../../modules/connect/opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
+import {
+  canonicalAgentPackageId,
+  ensureOplAgentPackageScopeActivation,
+  runOplAgentPackageStatus,
+} from '../../../modules/connect/index.ts';
 import { buildSessionLedger } from '../../../modules/runway/session-ledger.ts';
 import { explainDomainBoundary, selectDomainAgentEntry } from '../../../modules/atlas/resolver.ts';
-import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../../modules/workspace/workspace-registry.ts';
+import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog, resolveWorkspaceLocator } from '../../../modules/workspace/workspace-registry.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
 import { buildWorkspaceInitializeCommandSpecs } from './workspace-initialize-command-spec.ts';
 import { buildPrivateAgentCommandSpecs } from './private-command-specs-parts/agents.ts';
 import { buildPrivateRuntimeCommandSpecs } from './private-command-specs-parts/runtime.ts';
 import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, parseExecutorExecArgs, parseExecutorOption, parseExecutorRequestPath, parseKeyValueArgs, parseLaunchDomainArgs, parseProductEntryArgs, parseRegisteredCommandOptions, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, runCodexPassthroughHandled, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
+
+function ensureDomainPackageLaunchReady(projectId: string, workspacePath?: string) {
+  const workspaceLocator = resolveWorkspaceLocator(projectId, workspacePath);
+  if (!workspaceLocator.binding) return;
+  const packageId = canonicalAgentPackageId(projectId);
+  if (!packageId) return;
+  const initialStatus = runOplAgentPackageStatus({ packageId }).opl_agent_package_status;
+  if (initialStatus.installed_package_count > 0) {
+    ensureOplAgentPackageScopeActivation({
+      packageId,
+      scope: 'workspace',
+      targetWorkspace: workspaceLocator.absolute_path,
+    });
+  }
+  const packageStatus = runOplAgentPackageStatus({
+    packageId,
+    scope: 'workspace',
+    targetWorkspace: workspaceLocator.absolute_path,
+  }).opl_agent_package_status;
+  if (packageStatus.launch_allowed === true) return;
+  throw new FrameworkContractError(
+    'contract_shape_invalid',
+    'Domain launch is blocked until the installed package dependency closure and workspace materialization are repaired.',
+    {
+      project_id: projectId,
+      package_id: packageId,
+      launch_allowed: false,
+      launch_blocked_reason: packageStatus.launch_blocked_reason,
+      allowed_when_blocked: packageStatus.allowed_when_blocked,
+      package_dependency_readiness: packageStatus.package_dependency_readiness,
+      materialization_readiness: packageStatus.materialization_readiness,
+      repair_action: packageStatus.repair_action,
+      failure_code: 'agent_package_operational_readiness_blocked',
+    },
+  );
+}
 
 export function buildInternalCommandSpecs(
   parsedInput: ParsedCliInput,
@@ -322,6 +363,7 @@ export function buildInternalCommandSpecs(
           );
         }
 
+        ensureDomainPackageLaunchReady(parsed.projectId, parsed.workspacePath);
         return launchDomainEntry(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,
@@ -494,7 +536,7 @@ resume: {
           );
         }
 
-        return bindWorkspace(getContracts(), {
+        const workspaceBinding = bindWorkspace(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,
           label: parsed.label,
@@ -505,6 +547,21 @@ resume: {
           profileRef: parsed.profileRef,
           inputPath: parsed.inputPath,
         });
+        const packageId = canonicalAgentPackageId(parsed.projectId);
+        const initialStatus = packageId
+          ? runOplAgentPackageStatus({ packageId }).opl_agent_package_status
+          : null;
+        const packageScopeActivation = packageId && initialStatus && initialStatus.installed_package_count > 0
+          ? ensureOplAgentPackageScopeActivation({
+              packageId,
+              scope: 'workspace',
+              targetWorkspace: parsed.workspacePath,
+            })
+          : null;
+        return {
+          ...workspaceBinding,
+          package_scope_activation: packageScopeActivation,
+        };
       },
     },
     'workspace-activate': {
@@ -521,6 +578,36 @@ resume: {
           );
         }
 
+        const locator = resolveWorkspaceLocator(parsed.projectId, parsed.workspacePath);
+        const packageId = canonicalAgentPackageId(parsed.projectId);
+        if (locator.binding && locator.binding.status !== 'archived' && packageId) {
+          ensureOplAgentPackageScopeActivation({
+            packageId,
+            scope: 'workspace',
+            targetWorkspace: locator.absolute_path,
+          });
+          const packageStatus = runOplAgentPackageStatus({
+            packageId,
+            scope: 'workspace',
+            targetWorkspace: locator.absolute_path,
+          }).opl_agent_package_status;
+          if (packageStatus.launch_allowed !== true) {
+            throw new FrameworkContractError(
+              'contract_shape_invalid',
+              'Workspace activation is blocked until package dependency and scope readiness are repaired.',
+              {
+                project_id: parsed.projectId,
+                package_id: packageId,
+                launch_blocked_reason: packageStatus.launch_blocked_reason,
+                allowed_when_blocked: packageStatus.allowed_when_blocked,
+                package_dependency_readiness: packageStatus.package_dependency_readiness,
+                materialization_readiness: packageStatus.materialization_readiness,
+                repair_action: packageStatus.repair_action,
+                failure_code: 'agent_package_scope_activation_blocked',
+              },
+            );
+          }
+        }
         return activateWorkspaceBinding(getContracts(), {
           projectId: parsed.projectId,
           workspacePath: parsed.workspacePath,

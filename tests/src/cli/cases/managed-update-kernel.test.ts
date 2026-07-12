@@ -539,11 +539,12 @@ exit 2
       entry.action_id === 'sync_codex_skill_plugin_projection'
     ));
     assert.deepEqual(
-      (capabilityExposure?.result?.target_bound_scholarskills_sync as Record<string, unknown> | undefined),
+      (capabilityExposure?.result?.target_bound_package_scope_activation as Record<string, unknown> | undefined),
       {
-        status: 'awaiting_workspace_or_quest_target',
-        workspace_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope workspace --target-workspace <workspace-root> --json',
-        quest_command_ref: 'opl connect sync-skills --domain mas-scholar-skills --scope quest --target-quest <quest-root> --json',
+        status: 'automatic_on_workspace_or_quest_activation',
+        lifecycle_owner: 'opl_packages',
+        status_command_ref: 'opl packages status --package-id mas --scope <workspace|quest> --json',
+        repair_command_ref: 'opl packages repair mas --scope <workspace|quest> --json',
       },
     );
     assert.equal(output.managed_update.execution.receipt_record.status, 'recorded');

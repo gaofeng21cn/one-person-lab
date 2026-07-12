@@ -39,14 +39,18 @@ export type {
 } from './capability-registry-resolver.ts';
 export {
   listOplAgentPackages,
+  ensureOplAgentPackageScopeActivation,
   runOplAgentPackageExposureAction,
   runOplAgentPackageFrameworkLink,
   runOplAgentPackageHomeShortcutPreferencesSet,
   runOplAgentPackageInstall,
   runOplAgentPackageManifestValidate,
+  runOplAgentPackageProfileApply,
   runOplAgentPackageRegistryRefresh,
   runOplAgentPackageRepair,
+  runOplAgentPackageRollback,
   runOplAgentPackageStatus,
+  runOplAgentPackageActivate,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
 } from './agent-package-registry.ts';
@@ -55,6 +59,7 @@ export type {
   AgentPackageInstallInput,
   AgentPackageManifestValidateInput,
   AgentPackagePackageActionInput,
+  AgentPackageProfileApplyInput,
 } from './agent-package-registry.ts';
 export { canonicalAgentPackageId } from './agent-package-identity.ts';
 export {

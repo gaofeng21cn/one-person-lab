@@ -119,7 +119,7 @@ test('opl connect skills discovers the family plugin packs through the configure
     assert.equal(scholarSkillsPack?.distribution_role, 'framework_capability_plugin_pack');
     assert.equal(
       scholarSkillsPack?.capability_plugin_distribution?.default_sync_scope,
-      'none_without_explicit_workspace_or_quest_target',
+      'package_activation_transaction_only',
     );
     assert.equal(
       scholarSkillsPack?.ready_to_sync,
@@ -127,10 +127,9 @@ test('opl connect skills discovers the family plugin packs through the configure
     );
     assert.deepEqual(scholarSkillsPack?.command_preview, [
       'opl',
-      'connect',
-      'sync-skills',
-      '--domain',
-      'mas-scholar-skills',
+      'packages',
+      'activate',
+      'mas',
       '--scope',
       'workspace',
       '--target-workspace',
@@ -300,7 +299,7 @@ test('opl connect skills discovers OPL-managed module installs without OPL_FAMIL
     );
     assert.equal(
       scholarSkills.capability_plugin_distribution.default_sync_scope,
-      'none_without_explicit_workspace_or_quest_target',
+      'package_activation_transaction_only',
     );
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
