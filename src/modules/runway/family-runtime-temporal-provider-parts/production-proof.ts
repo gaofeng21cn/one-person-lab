@@ -68,7 +68,6 @@ export function temporalProductionProbeInput(
     closeout_packet: closeoutPacket,
   };
 }
-
 export function temporalProductionTypedCloseoutPacket() {
   return {
     surface_kind: 'stage_attempt_closeout_packet',
@@ -328,7 +327,7 @@ export async function runTemporalProductionResidencyProofForWorker(
         retry_or_dead_letter_boundary_observed:
           blockedState.activity_events.some(
             (event: Record<string, unknown>) => event.activity_kind === 'domain_handler_dispatch_activity'
-              && event.blocked_reason === 'typed_closeout_packet_required',
+              && event.blocked_reason === 'zero_readable_artifact',
           ),
         domain_truth_boundary_preserved:
           completedState.authority_boundary.domain === 'truth_quality_artifact_gate_owner'

@@ -226,7 +226,7 @@ function buildFoundryAgentStageProfile(peer: FoundryAgentPeer, contract: JsonRec
     series_membership: peer.series_membership,
     ordinary_golden_path: peer.ordinary_golden_path,
     domain_pack_example: peer.domain_pack_example,
-    stage_delivery_progress_marker: 'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
+    stage_delivery_progress_marker: 'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
     lifecycle_pipeline: readStringList(
       profile.shared_lifecycle_pipeline,
       'series_design_profile.shared_lifecycle_pipeline',

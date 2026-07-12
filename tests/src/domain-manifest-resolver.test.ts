@@ -415,27 +415,20 @@ test('resolveBindingManifest fails closed when the generated stage source manife
   }
 });
 
-test('resolveBindingManifest consumes a repo-local visual transition profile by contract ref', () => {
+test('resolveBindingManifest ignores a repo-local legacy visual transition profile', () => {
   const workspacePath = createWorkspace();
   try {
     const entry = resolveRcaVisualProfile(workspacePath, rcaVisualProfileRegistry());
 
     assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
-    assert.equal(
-      entry.manifest?.visual_transition_adapter_profile_registry?.surface_kind,
-      'opl_domain_transition_adapter_profile_registry',
-    );
-    assert.equal(
-      entry.manifest?.visual_transition_adapter_profile_registry?.source_ref,
-      'contracts/visual_transition_adapter_profile.json',
-    );
-    assert.equal(entry.manifest?.family_transition.status, 'matrix_evaluated');
+    assert.equal('visual_transition_adapter_profile_registry' in (entry.manifest ?? {}), false);
+    assert.equal('family_transition' in (entry.manifest ?? {}), false);
   } finally {
     fs.rmSync(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('resolveBindingManifest consumes the real RCA visual transition profile by contract ref', {
+test('resolveBindingManifest ignores the real RCA legacy visual transition profile', {
   skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/visual_transition_adapter_profile.json'),
 }, () => {
   const workspacePath = createWorkspace();
@@ -449,21 +442,14 @@ test('resolveBindingManifest consumes the real RCA visual transition profile by 
     const entry = resolveRcaVisualProfile(workspacePath, registry);
 
     assert.equal(entry.status, 'resolved', entry.error?.message ?? undefined);
-    assert.equal(
-      entry.manifest?.visual_transition_adapter_profile_registry?.surface_kind,
-      'opl_domain_transition_adapter_profile_registry',
-    );
-    assert.equal(
-      entry.manifest?.visual_transition_adapter_profile_registry?.source_ref,
-      'contracts/visual_transition_adapter_profile.json',
-    );
-    assert.equal(entry.manifest?.family_transition.status, 'matrix_evaluated');
+    assert.equal('visual_transition_adapter_profile_registry' in (entry.manifest ?? {}), false);
+    assert.equal('family_transition' in (entry.manifest ?? {}), false);
   } finally {
     fs.rmSync(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('resolveBindingManifest rejects conflicting visual transition profile contract refs', () => {
+test('resolveBindingManifest does not admit conflicting legacy visual transition refs as a control plane', () => {
   const workspacePath = createWorkspace();
   try {
     const contractsDir = path.join(workspacePath, 'contracts');
@@ -487,14 +473,14 @@ test('resolveBindingManifest rejects conflicting visual transition profile contr
 
     const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
 
-    assert.equal(entry.status, 'invalid_manifest');
-    assert.match(entry.error?.message ?? '', /visual transition adapter profile refs disagree/i);
+    assert.equal(entry.status, 'resolved');
+    assert.equal('family_transition' in (entry.manifest ?? {}), false);
   } finally {
     fs.rmSync(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('resolveBindingManifest rejects visual transition profile refs that escape the domain repo', () => {
+test('resolveBindingManifest never dereferences an escaping legacy visual transition profile', () => {
   const workspacePath = createWorkspace();
   const externalPath = path.join(os.tmpdir(), `opl-visual-profile-${process.pid}-${Date.now()}.json`);
   try {
@@ -516,8 +502,8 @@ test('resolveBindingManifest rejects visual transition profile refs that escape 
 
     const entry = resolveWithCommand(workspacePath, `${process.execPath} ${scriptPath}`);
 
-    assert.equal(entry.status, 'invalid_manifest');
-    assert.match(entry.error?.message ?? '', /escapes its domain repo/i);
+    assert.equal(entry.status, 'resolved');
+    assert.equal('family_transition' in (entry.manifest ?? {}), false);
   } finally {
     fs.rmSync(workspacePath, { recursive: true, force: true });
     fs.rmSync(externalPath, { force: true });

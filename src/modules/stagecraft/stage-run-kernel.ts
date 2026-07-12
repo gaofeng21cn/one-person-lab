@@ -326,7 +326,7 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
       launchBlockers.push('owner_missing');
     }
     if (stringRefs(input.scope_refs).length === 0) {
-      launchBlockers.push('scope_refs_missing');
+      advisoryWarnings.push('scope_refs_missing_executor_may_infer_with_quality_debt');
     }
     if (!isNonEmptyString(input.selected_executor)) {
       launchBlockers.push('selected_executor_missing');
@@ -335,34 +335,37 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
       launchBlockers.push('authority_boundary_invalid');
     }
     if (stringRefs(input.required_role_artifacts).length === 0) {
-      launchBlockers.push('required_role_artifacts_missing');
+      advisoryWarnings.push('required_role_artifacts_missing_executor_may_start_from_available_inputs');
     }
     if (!isNonEmptyString(input.expected_receipt_or_blocker_shape)) {
-      launchBlockers.push('expected_receipt_or_typed_blocker_shape_missing');
+      advisoryWarnings.push('expected_receipt_shape_missing_framework_will_derive_progress_envelope');
     }
     if (stringRefs(input.input_refs).length === 0) {
-      launchBlockers.push('input_refs_missing');
+      advisoryWarnings.push('input_refs_missing_stage_may_start_from_declared_context');
     }
     if (input.forbidden_write_required === true) {
       launchBlockers.push('forbidden_write_required');
     }
     if (stringRefs(input.replay_audit_refs).length === 0) {
-      launchBlockers.push('replay_audit_lineage_missing');
+      advisoryWarnings.push('replay_audit_lineage_missing_framework_will_derive_lineage');
     }
   } else {
     const requiredRoles = stringRefs(input.required_role_artifacts);
     const producedRoles = stringRefs(input.produced_role_artifacts);
     closeoutBlockers.push(...stageRunIdentityBlockers(input));
     if (input.manifest_valid !== true) {
-      closeoutBlockers.push('manifest_invalid');
+      advisoryWarnings.push('manifest_invalid_framework_derives_minimal_manifest');
+      qualityDebtReasons.push('manifest_invalid_nonblocking');
     }
     for (const role of requiredRoles) {
       if (!producedRoles.includes(role)) {
-        closeoutBlockers.push(`required_role_artifact_missing:${role}`);
+        advisoryWarnings.push(`required_role_artifact_missing:${role}`);
+        qualityDebtReasons.push(`required_role_artifact_missing:${role}`);
       }
     }
     if (requiredRoles.length === 0) {
-      closeoutBlockers.push('required_role_artifacts_missing');
+      advisoryWarnings.push('required_role_artifacts_missing_nonblocking');
+      qualityDebtReasons.push('required_role_artifacts_missing');
     }
     const ownerReceiptRefs = stringRefs(input.owner_receipt_refs);
     const typedBlockerRefs = stringRefs(input.typed_blocker_refs);
@@ -377,10 +380,12 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
       qualityDebtReasons.push('owner_answer_missing_for_quality_or_ready_claim');
     }
     if (stringRefs(input.content_hashes).length === 0) {
-      closeoutBlockers.push('content_hashes_missing');
+      advisoryWarnings.push('content_hashes_missing_framework_derives_hashes');
+      qualityDebtReasons.push('content_hashes_missing');
     }
     if (stringRefs(input.lineage_refs).length === 0) {
-      closeoutBlockers.push('lineage_refs_missing');
+      advisoryWarnings.push('lineage_refs_missing_framework_derives_lineage');
+      qualityDebtReasons.push('lineage_refs_missing');
     }
     if (input.provider_completed === true) {
       advisoryWarnings.push('provider_completed_alone_cannot_authorize_quality_or_ready');
@@ -399,7 +404,6 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
   const defaultBlocked = launchBlockers.length > 0
     || closeoutBlockers.length > 0
     || forbiddenAuthorityFlags.length > 0;
-  const typedHardStopObserved = phase === 'closeout' && stringRefs(input.typed_blocker_refs).length > 0;
   const ownerOrQualityReceiptObserved = phase === 'closeout' && (
     stringRefs(input.owner_receipt_refs).length > 0
     || stringRefs(input.quality_gate_receipt_refs).length > 0
@@ -419,9 +423,7 @@ export function evaluateStageRunAdmission(input: JsonRecord): StageRunAdmissionR
     quality_debt_reasons: [...new Set(qualityDebtReasons)],
     transition_outcome: defaultBlocked
       ? 'blocked'
-      : typedHardStopObserved
-        ? 'hard_stopped'
-        : ownerOrQualityReceiptObserved || phase === 'launch'
+      : ownerOrQualityReceiptObserved || phase === 'launch'
           ? 'completed'
           : 'completed_with_quality_debt',
     default_blocked: defaultBlocked,
@@ -613,7 +615,7 @@ function producerRole(event: StageRunEvent) {
   return optionalRef(event.producer_role) ?? optionalRef(event.producer_kind);
 }
 
-function stageTransitionAuthorityCanAdvance(event: StageRunEvent) {
+function eventIdentityIsProjectable(event: StageRunEvent) {
   if (!currentPointerBindingIsValid(event)) {
     return false;
   }
@@ -673,7 +675,7 @@ function statusAfterEvents(events: StageRunEvent[]): StageRunStatus {
     if (isLifecycleNeutralEvent(event)) {
       continue;
     }
-    if (!stageTransitionAuthorityCanAdvance(event)) {
+    if (!eventIdentityIsProjectable(event)) {
       continue;
     }
     status = statusAfterEvent(event);
@@ -696,11 +698,11 @@ function collectProjection(stageRunId: string, events: StageRunEvent[]): StageRu
   const consumedRefs = currentEvents.flatMap((event) => refs(event.input_refs));
   const artifactRefs = currentEvents.map((event) => optionalRef(event.artifact_ref)).filter((entry): entry is string => Boolean(entry));
   const ownerReceiptRefs = currentEvents
-    .filter((event) => event.event_kind === 'owner_receipt_observed' && stageTransitionAuthorityCanAdvance(event))
+    .filter((event) => event.event_kind === 'owner_receipt_observed' && eventIdentityIsProjectable(event))
     .map((event) => optionalRef(event.owner_receipt_ref))
     .filter((entry): entry is string => Boolean(entry));
   const typedBlockerRefs = currentEvents
-    .filter((event) => event.event_kind === 'typed_blocker_observed' && stageTransitionAuthorityCanAdvance(event))
+    .filter((event) => event.event_kind === 'typed_blocker_observed' && eventIdentityIsProjectable(event))
     .map((event) => optionalRef(event.typed_blocker_ref))
     .filter((entry): entry is string => Boolean(entry));
   const providerAttemptRefs = currentEvents

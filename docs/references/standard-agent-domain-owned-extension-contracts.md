@@ -29,9 +29,9 @@ domain-owned manifest 路径；未声明 manifest 时通用 read-model 返回空
 validation、通用 route classifier 与 renderer，不持 MAS/RCA/OMA 的 scenario、oracle、scorecard 或静态
 passed 结果。
 
-## Transition oracle
+## AI route context
 
-唯一 canonical ABI 是 `domain_transition_oracle`。Domain repo 持有 transition semantics、guard meaning、owner action 与质量/领域判断；OPL Stagecraft 只把表格和 fixture 适配到通用 matrix runner。MAG 旧 `mag_grant_transition_oracle` 不再是 OPL compatibility surface。
+OPL 不定义或执行 transition oracle、matrix runner 或 fixed-point semantic reconciler。Domain repo 可以提供非权威 route context、阴性结果、review finding 与 route-back hint；Codex CLI 独占语义路线选择，可启动任意 declared stage。OPL 只运输 StageRun、artifact refs、attempt ledger 与 currentness identity，不得用 route context 拒绝下一 stage。
 
 ## Source-derived design ABI
 

@@ -15,9 +15,10 @@ export type AgentLabStageCompletionPolicy = {
   policy_ref: string;
   completion_judgment_owner: 'domain_stage' | string;
   closeout_packet_required: boolean;
+  raw_artifact_sufficient_for_progress: boolean;
   provider_completion_is_domain_completion: boolean;
   opl_content_judgment_allowed: boolean;
-  next_stage_transition_owner: 'opl_runtime' | string;
+  next_stage_transition_owner: 'codex_cli' | string;
   required_closeout_outcomes: string[];
   accepted_closeout_ref_fields: string[];
   authority_boundary?: JsonRecord;

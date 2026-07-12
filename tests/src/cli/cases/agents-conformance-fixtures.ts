@@ -83,12 +83,6 @@ const GENERATED_SURFACE_HANDOFFS = [
     current_role: 'projection_refs',
     target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
   },
-  {
-    surface_id: 'functional_harness_cases',
-    current_paths: ['runtime/harness.ts'],
-    current_role: 'oracle_fixture_refs',
-    target_role: 'opl_generated_functional_harness_cases',
-  },
 ] as const;
 
 const SAMPLE_SOURCE_CLASSIFICATIONS = [
@@ -353,16 +347,6 @@ export function buildReadyAgentRepo() {
         active_caller_status: 'opl_hosted_workbench_surface_consumes_domain_projection_refs',
         migration_action: 'declare_workbench_projection_inputs_for_opl_app_generated_shell',
         retained_domain_authority: ['status_projection_refs'],
-      },
-      {
-        module_id: 'sample_brief_functional_harness',
-        classification: 'declarative_pack_generated_surface',
-        owner: 'SampleBriefAgent',
-        code_paths: ['runtime/harness.ts'],
-        active_callers: ['OPL functional harness'],
-        active_caller_status: 'opl_generated_functional_harness_cases_target_domain_handler',
-        migration_action: 'derive_harness_cases_from_declarative_pack_and_opl_functional_runtime_harness',
-        retained_domain_authority: ['fixture_oracle_refs'],
       },
       {
         module_id: 'sample_brief_owner_receipt_signer',
@@ -644,6 +628,33 @@ export function retargetReadyRepo(repoDir: string, domainId: string, domainLabel
   manifest.authority_boundary.domain_truth_owner = domainId;
   writeJson(manifestPath, manifest);
   syncStandardAgentConformanceProfile(repoDir);
+}
+
+export function configureReadyFrameworkCapabilityPackage(repoDir: string) {
+  const packCompilerInputPath = contractPath(repoDir, 'pack_compiler_input.json');
+  const packCompilerInput = readJson(packCompilerInputPath);
+  delete packCompilerInput.implementation_profile;
+  writeJson(packCompilerInputPath, packCompilerInput);
+
+  writeJson(contractPath(repoDir, 'scholar-skills-capability-modules.json'), {
+    contract_id: 'opl_scholarskills_capability_modules',
+    authority_boundary: {
+      can_claim_domain_ready: false,
+      can_claim_runtime_ready: false,
+      can_write_domain_truth: false,
+      can_sign_owner_receipt: false,
+      can_create_typed_blocker: false,
+      can_schedule_runtime: false,
+    },
+  });
+  fs.mkdirSync(path.join(repoDir, '.codex-plugin'), { recursive: true });
+  writeJson(path.join(repoDir, '.codex-plugin', 'plugin.json'), {
+    name: 'mas-scholar-skills',
+    version: '0.0.0-test',
+  });
+  const skillDir = path.join(repoDir, 'skills', 'mas-scholar-skills');
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# MAS Scholar Skills\n', 'utf8');
 }
 
 function setStagePlaneTarget(repoDir: string, domainId: string, owner: string) {

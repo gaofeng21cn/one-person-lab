@@ -4,7 +4,6 @@ import {
 } from './authority-boundary.ts';
 import {
   record,
-  recordList,
   stringValue,
   uniqueRefs,
   uniqueStrings,
@@ -17,71 +16,13 @@ type DrilldownActionRef = JsonRecord & {
   role?: string | null;
 };
 
-function nonAdvancingApplyStateFromReadback(readback: JsonRecord) {
-  const metadata = record(readback.domain_progress_transition_projection_metadata);
-  const nonAdvancingReadback =
-    record(readback.domain_progress_transition_non_advancing_apply_readback);
-  const currentAction = record(recordList(readback.studies)[0]?.current_control_action);
-  const status = stringValue(currentAction.status)
-    ?? stringValue(nonAdvancingReadback.status)
-    ?? 'transition_non_advancing_apply_recorded';
-  return {
-    surface_kind: 'opl_app_drilldown_current_control_state',
-    projection_source: 'opl_current_control_state_latest_readback',
-    source_ref: stringValue(readback.source_ref),
-    domain_id: stringValue(readback.domain_id) ?? 'unknown',
-    study_id:
-      stringValue(readback.study_id)
-      ?? stringValue(recordList(readback.studies)[0]?.study_id)
-      ?? stringValue(nonAdvancingReadback.study_id),
-    reconciliation_status: status,
-    current_attempt_state: 'blocked',
-    current_control_refresh_source:
-      stringValue(readback.current_control_refresh_source),
-    provider_admission_pending_count: readback.provider_admission_pending_count,
-    transition_request_pending_count: readback.transition_request_pending_count,
-    current_executable_owner_action: null,
-    non_advancing_apply: metadata.non_advancing_apply === true
-      || currentAction.non_advancing_apply === true,
-    provider_admission_allowed: metadata.provider_admission_allowed === true,
-    current_executable_owner_action_allowed:
-      metadata.current_executable_owner_action_allowed === true,
-    paper_progress_delta: metadata.paper_progress_delta === true,
-    runtime_readback_status:
-      stringValue(metadata.runtime_readback_status)
-      ?? stringValue(record(nonAdvancingReadback.runtime_live_readback).runtime_readback_status),
-    transaction_complete: metadata.transaction_complete === true
-      || record(nonAdvancingReadback.runtime_live_readback).transaction_complete === true,
-    domain_progress_transition_projection_metadata: metadata,
-    domain_progress_transition_non_advancing_apply_readback: nonAdvancingReadback,
-    authority_boundary: {
-      ...refsOnlyAuthorityBoundary(),
-      reads_domain_latest_or_dispatch_latest: false,
-      can_execute_domain_action: false,
-      can_write_domain_truth: false,
-      can_create_owner_receipt: false,
-      can_create_typed_blocker: false,
-      can_claim_domain_ready: false,
-      can_claim_publication_ready: false,
-      can_claim_artifact_ready: false,
-      provider_completion_is_domain_ready: false,
-      paper_progress_delta: false,
-    },
-  } as JsonRecord;
-}
-
 function currentControlStates(input: {
   attempts: JsonRecord[];
   currentControlReadbacks?: JsonRecord[];
 }) {
-  const attemptStates = input.attempts
+  return input.attempts
     .map((attempt) => record(attempt.current_control_state))
     .filter((state) => Object.keys(state).length > 0);
-  const readbackStates = (input.currentControlReadbacks ?? [])
-    .map(record)
-    .filter((state) => Object.keys(record(state.domain_progress_transition_projection_metadata)).length > 0)
-    .map(nonAdvancingApplyStateFromReadback);
-  return [...attemptStates, ...readbackStates];
 }
 
 export function currentControlStateProjection(input: {
@@ -139,9 +80,7 @@ export function currentControlStateProjection(input: {
       running_provider_attempt_summary_policy:
         'refs_only_liveness_projection_no_domain_ready_publication_ready_or_artifact_ready',
       non_advancing_apply_readback_count: nonAdvancingApplyStates.length,
-      non_advancing_apply_consumable_count: nonAdvancingApplyStates.filter((state) =>
-        record(state.domain_progress_transition_projection_metadata).replay_audit_consumable === true
-      ).length,
+      non_advancing_apply_consumable_count: 0,
       non_advancing_apply_provider_admission_allowed_count:
         nonAdvancingApplyStates.filter((state) => state.provider_admission_allowed === true).length,
       non_advancing_apply_current_executable_owner_action_allowed_count:
@@ -150,8 +89,7 @@ export function currentControlStateProjection(input: {
         ).length,
       non_advancing_apply_paper_progress_delta_count:
         nonAdvancingApplyStates.filter((state) => state.paper_progress_delta === true).length,
-      non_advancing_apply_projection_policy:
-        'diagnostic_readback_only_no_provider_admission_owner_action_or_paper_progress_delta',
+      non_advancing_apply_projection_policy: 'retired_no_programmatic_transition_readback',
     },
     authority_boundary: {
       ...refsOnlyAuthorityBoundary(),

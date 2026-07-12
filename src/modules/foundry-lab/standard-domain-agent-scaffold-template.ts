@@ -101,12 +101,6 @@ function generatedSurfaceHandoffSurfaces() {
       current_role: 'projection_refs',
       target_role: 'opl_hosted_workbench_shell_consuming_domain_refs',
     },
-    {
-      surface_id: 'functional_harness_cases',
-      current_paths: ['runtime/fixtures/README.md'],
-      current_role: 'oracle_fixture_refs',
-      target_role: 'opl_generated_functional_harness_cases',
-    },
   ];
 }
 
@@ -228,19 +222,6 @@ function functionalPrivatizationModules(domainId: string) {
       active_caller_status: 'refs_only_projection_consumed_by_opl_generated_or_hosted_surface',
       migration_action: 'project_domain_refs_without_repo_owned_status_or_workbench_shell',
       retained_domain_authority: ['status_projection_refs', 'artifact_locator_refs', 'owner_receipt_refs'],
-      semantic_equivalence_status: 'cleared_by_boundary',
-      audit_visibility: 'hidden_by_default',
-    },
-    {
-      module_id: `${domainId}.functional-harness-fixtures`,
-      classification: 'provenance_or_fixture',
-      migration_class: 'provenance_or_fixture',
-      code_paths: ['runtime/fixtures/README.md'],
-      current_surface_refs: ['functional_harness_cases'],
-      active_callers: ['OPL generated functional harness cases'],
-      active_caller_status: 'fixture_refs_consumed_by_opl_generated_functional_harness',
-      migration_action: 'derive_harness_cases_from_pack_contracts_and_fixture_refs',
-      retained_domain_authority: ['fixture_oracle_refs'],
       semantic_equivalence_status: 'cleared_by_boundary',
       audit_visibility: 'hidden_by_default',
     },
@@ -781,7 +762,7 @@ export function buildScaffoldFiles(domainId: string, domainLabel: string): Scaff
     },
     {
       path: 'docs/architecture.md',
-      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. OPL owns generic runtime, stage-attempt request/projection, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, transition runner, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
+      content: `# ${domainLabel} Architecture\n\nThis repo owns domain truth, quality/export verdicts, artifact authority, memory body, and owner receipts. Codex CLI owns semantic stage routing. OPL owns StageRun transport, stage-attempt request/projection, ${OBSERVABILITY_ATTEMPT_LEDGER_LABEL}, memory locator transport, artifact lifecycle shell, workbench, and observability projection.\n`,
     },
     {
       path: 'docs/invariants.md',

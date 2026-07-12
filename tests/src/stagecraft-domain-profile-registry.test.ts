@@ -12,19 +12,19 @@ import {
 } from '../../src/kernel/domain-owner-answer-projection-profile.ts';
 import { findOwnerAnswerProjection } from '../../src/modules/stagecraft/domain-owner-answer-projection.ts';
 
-test('Stagecraft domain profile registry readback has no static owner-answer profile', () => {
+test('Stagecraft domain profile registry retires transition adapters and has no static owner-answer profile', () => {
   const readback = buildStagecraftDomainProfileRegistryReadback([]);
 
   assert.equal(readback.surface_kind, 'opl_stagecraft_domain_profile_registry_readback');
   assert.equal(readback.registry_role, 'generic_stagecraft_domain_profile_registry');
   assert.equal(readback.owner_answer_projection.registry_surface_kind, 'opl_domain_owner_answer_projection_profile_registry');
-  assert.equal(readback.transition_adapter.registry_surface_kind, 'opl_domain_transition_adapter_profile_registry');
   assert.deepEqual(readback.owner_answer_projection.profiles, []);
-  assert.deepEqual(readback.transition_adapter.registry_entries, []);
+  assert.equal(Object.hasOwn(readback, 'transition_adapter'), false);
   assert.equal(readback.summary.owner_answer_projection_profile_count, 0);
   assert.equal(readback.summary.owner_answer_projection_compatibility_profile_count, 0);
   assert.equal(readback.summary.transition_adapter_profile_count, 0);
   assert.equal(readback.summary.transition_adapter_compatibility_profile_count, 0);
+  assert.equal(readback.summary.transition_adapter_status, 'retired_single_codex_semantic_control_plane');
   assert.equal(readback.authority_boundary.registry_is_readback_only, true);
   assert.equal(readback.authority_boundary.can_write_domain_truth, false);
   assert.equal(readback.authority_boundary.can_create_owner_receipt, false);

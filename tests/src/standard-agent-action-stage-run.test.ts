@@ -30,7 +30,7 @@ function stageRunFixture() {
         required_stage_refs: ['intake', 'build', 'review'],
         optional_stage_refs: [],
         terminal_stage_refs: ['review'],
-        route_policy: 'ordered_stage_attempts_no_skip',
+        route_policy: 'ai_selected_progress_route',
       },
     }],
   });
@@ -42,7 +42,11 @@ function stageRunFixture() {
     ],
   });
 
-  const readback = (stageId: string, consumedRefs: string[]) => {
+  const readback = (
+    stageId: string,
+    consumedRefs: string[],
+    routeImpact: Record<string, unknown> = {},
+  ) => {
     const attemptId = `${stageId}-attempt`;
     const closeoutId = `${stageId}-closeout`;
     const payloadPath = path.join(workspaceRoot, `${stageId}.json`);
@@ -77,6 +81,7 @@ function stageRunFixture() {
               closeout_id: closeoutId,
               closeout_refs: [outputRef],
               consumed_refs: consumedRefs,
+              route_impact: routeImpact,
               domain_output: {
                 surface_kind: 'domain_owned_stage_output_ref',
                 version: 'domain-owned-stage-output-ref.v1',
@@ -97,7 +102,46 @@ function stageRunFixture() {
     };
   };
 
-  return { repoDir, readback };
+  const rawReadback = (stageId: string) => {
+    const attemptId = `${stageId}-raw-attempt`;
+    const rawPath = path.join(
+      workspaceRoot,
+      'stage-attempt-artifacts',
+      attemptId,
+      'raw-executor-output.txt',
+    );
+    fs.mkdirSync(path.dirname(rawPath), { recursive: true });
+    fs.writeFileSync(rawPath, 'partial but consumable stage result\n');
+    const readbackPath = path.join(repoDir, `${stageId}-raw-readback.json`);
+    writeJson(readbackPath, {
+      family_runtime_stage_attempt_query: {
+        attempt_ref: `opl://stage_attempts/${attemptId}`,
+        stage_attempt_query: {
+          attempt: {
+            stage_id: stageId,
+            stage_attempt_id: attemptId,
+            domain_id: 'sample',
+            status: 'failed',
+            closeout_receipt_status: null,
+            workspace_locator: { workspace_root: workspaceRoot },
+            provider_run: {
+              process_output_summary: {
+                raw_stage_artifact: {
+                  output_ref: pathToFileURL(rawPath).href,
+                },
+              },
+            },
+          },
+          canonical_outcome: 'blocked',
+          conflict_or_blocker_envelopes: [{ reason: 'zero_readable_artifact' }],
+          closeouts: [],
+        },
+      },
+    });
+    return readbackPath;
+  };
+
+  return { repoDir, readback, rawReadback };
 }
 
 test('standard Agent StageRun consumer returns canonical route progress and domain output', (t) => {
@@ -118,29 +162,62 @@ test('standard Agent StageRun consumer returns canonical route progress and doma
   assert.deepEqual(progress.completed_stage_refs, ['intake', 'build', 'review']);
   assert.equal(progress.stage_closeouts[2]?.domain_output_packet.stage_id, 'review');
 });
-
-test('standard Agent StageRun consumer rejects skipped, reversed, or unconsumed predecessor closeouts', (t) => {
+test('standard Agent StageRun accepts skips, repeats, reverse routes, and AI-selected route-back', (t) => {
   const fixture = stageRunFixture();
   t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
   const intake = fixture.readback('intake', []);
   const build = fixture.readback('build', [intake.closeoutRef]);
-  const review = fixture.readback('review', [intake.closeoutRef]);
+  const review = fixture.readback('review', [intake.closeoutRef], {
+    route_back_stage_ref: 'intake',
+  });
 
-  assert.throws(() => evaluateStandardAgentActionStageRun({
+  const skipped = evaluateStandardAgentActionStageRun({
     repoDir: fixture.repoDir,
     actionId: 'build',
     stageRunReadbackPaths: [build.path],
-  }), /first closeout must be intake/);
-  assert.throws(() => evaluateStandardAgentActionStageRun({
+  });
+  assert.deepEqual(skipped.completed_stage_refs, ['build']);
+  assert.equal(skipped.next_stage_ref, 'review');
+
+  const reversed = evaluateStandardAgentActionStageRun({
     repoDir: fixture.repoDir,
     actionId: 'build',
     stageRunReadbackPaths: [intake.path, review.path, build.path],
-  }), /closeout order is unreachable: review -> build/);
-  assert.throws(() => evaluateStandardAgentActionStageRun({
+  });
+  assert.deepEqual(reversed.completed_stage_refs, ['intake', 'review', 'build']);
+
+  const routeBack = evaluateStandardAgentActionStageRun({
     repoDir: fixture.repoDir,
     actionId: 'build',
-    stageRunReadbackPaths: [intake.path, build.path, review.path],
-  }), /must consume preceding accepted closeout ref/);
+    stageRunReadbackPaths: [intake.path, review.path],
+  });
+  assert.equal(routeBack.next_stage_ref, 'intake');
+  assert.equal(routeBack.complete, false);
+
+  const repeated = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [build.path, build.path],
+  });
+  assert.deepEqual(repeated.completed_stage_refs, ['build', 'build']);
+});
+
+test('standard Agent StageRun advances readable raw output without typed closeout', (t) => {
+  const fixture = stageRunFixture();
+  t.after(() => fs.rmSync(fixture.repoDir, { recursive: true, force: true }));
+  const progress = evaluateStandardAgentActionStageRun({
+    repoDir: fixture.repoDir,
+    actionId: 'build',
+    stageRunReadbackPaths: [fixture.rawReadback('build')],
+  });
+
+  assert.deepEqual(progress.completed_stage_refs, ['build']);
+  assert.equal(progress.next_stage_ref, 'review');
+  assert.equal(progress.stage_closeouts[0]?.domain_output_packet.completed_with_quality_debt, true);
+  assert.equal(
+    (progress.stage_closeouts[0]?.canonical_closeout_packet.route_impact as Record<string, unknown>)?.next_stage_may_start,
+    true,
+  );
 });
 
 test('standard Agent StageRun consumer rejects canonical manifest refs that escape the domain repo', (t) => {

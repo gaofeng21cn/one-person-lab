@@ -26,13 +26,7 @@ export { normalizeFamilyStageControlPlane } from './family-stage-control-plane-c
 export type { FamilyStageControlPlane, FamilyStageDescriptor, FamilyStageSurfaceRef } from './family-stage-control-plane-contract.ts';
 export { buildFamilyStageProofBundle } from './family-stage-proof-bundle.ts';
 export { buildFamilyStageRuntimeBudgetProjection } from './family-stage-runtime-budget.ts';
-export { adaptDomainTransitionOracleToFamilyTransitionSpec, buildDomainTransitionOracleMatrixCases, normalizeDomainTransitionOracle } from './family-transition-oracle-ingestion.ts';
-export type { DomainTransitionOracle, DomainTransitionOracleSurfaceKind } from './family-transition-oracle-ingestion.ts';
-export { runFamilyTransitionMatrix } from './family-transition-runner.ts';
-export type { FamilyTransitionInput, FamilyTransitionMatrixCase, FamilyTransitionMatrixResult, FamilyTransitionResult, FamilyTransitionSpec } from './family-transition-runner.ts';
 export { buildStagecraftDomainProfileRegistryReadback } from './domain-profile-registry.ts';
-export { adaptVisualTransitionSpecToFamilyTransitionSpec, buildVisualTransitionAdapterProfileRegistryReadback, buildVisualTransitionMatrixCases, normalizeVisualTransitionAdapterProfileRegistry, normalizeVisualTransitionSpec, resolveVisualTransitionAdapterProfile } from './family-transition-visual-ingestion.ts';
-export type { VisualTransitionAdapterProfile, VisualTransitionAdapterProfileRegistry, VisualTransitionAdapterProfileRegistryEntry, VisualTransitionSpec } from './family-transition-visual-ingestion.ts';
 export { commitStageArtifactAttemptRuntime, conformanceStageArtifactRuntime, explainStageArtifactRuntime, gcStageArtifactRuntime, openStageArtifactAttemptRuntime, promoteStageArtifactRuntime, rebuildStageArtifactRuntime, restoreStageArtifactRuntime, statusStageArtifactRuntime, validateStageArtifactRuntime, workbenchStageArtifactRuntime } from './stage-artifact-runtime.ts';
 export { buildDirectoryArtifactIndex, buildDomainArtifactIndex, readDomainArtifact, writeDomainArtifact } from './domain-artifact-runtime.ts';
 export type { DomainArtifactRole } from './domain-artifact-runtime.ts';
@@ -42,8 +36,6 @@ export type { StageReplayMissingReceiptReceipt } from './stage-replay-missing-re
 export { buildStageReplayMissingReceiptWorkorderPacket, compactStageReplayMissingReceiptWorkorderAttentionItems, compactStageReplayMissingReceiptWorkorderAttentionSummary } from './stage-replay-missing-receipt-workorders.ts';
 export { listStageRunExecutionAuthorizationReceipts, recordStageRunExecutionAuthorizationReceipts } from './stage-run-execution-authorization-ledger.ts';
 export { buildAppStageRunCockpit } from './stage-run-cockpit.ts';
-export { buildStageRunCycleIdentity, buildStageRunCycleManifestFromControlPlane, reduceStageRunCycleState, STAGE_RUN_CANONICAL_LAUNCH_OWNER, STAGE_RUN_CANONICAL_RUNNER_REF, STAGE_RUN_ORCHESTRATION_AUTHORITY_BOUNDARY } from './stage-run-orchestration.ts';
-export type { StageRunControlPlaneManifestInput, StageRunCycleEvent, StageRunCycleIdentity, StageRunCycleIdentityInput, StageRunCycleManifest, StageRunCycleState, StageRunEffectObservation, StageRunRouteDecision } from './stage-run-orchestration.ts';
 export { buildOwnerAnswerProjectionProfileRegistryReadback, findOwnerAnswerProjection } from './domain-owner-answer-projection.ts';
 export type { OwnerAnswerProjectionProfile } from './domain-owner-answer-projection.ts';
 export { STANDARD_PROGRESS_DELTA_POLICY } from './standard-progress-delta-policy.ts';

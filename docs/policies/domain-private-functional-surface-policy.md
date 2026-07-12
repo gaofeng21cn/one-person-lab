@@ -49,7 +49,7 @@ AI-first quality gate 也不能由执行 attempt 自己闭环。标准 OPL Agent
 - Dapr：sidecar / building blocks 承担 state、pub/sub、workflow、jobs 等通用外围，应用代码保留业务 handler。
 - LangGraph / Agents SDK：checkpoint、thread/store、tools、handoffs、tracing 是运行基座，领域 agent 提供 graph、tools 和 policy。
 
-OPL 的对应设计是：OPL 持有 stage attempt、queue、attempt ledger、transition runner、memory/artifact locator、generated surface、workbench 和 observability；domain repo 只保留领域真相、判断和回执。
+OPL 的对应设计是：OPL 持有 stage attempt、queue、attempt ledger、memory/artifact locator、generated surface、workbench 和 observability；domain repo 保留领域真相、判断、回执与非权威 route context，Codex CLI 独占语义 route。
 
 ## 三层审计 taxonomy
 

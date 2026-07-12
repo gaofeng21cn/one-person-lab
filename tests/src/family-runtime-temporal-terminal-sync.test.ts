@@ -69,7 +69,7 @@ for (const [name, taskStatus, attemptStatus, providerStatus] of [
 }
 
 for (const [name, observation, expectedStatus, expectedTaskReason] of [
-  ['blocked', blockedTemporalObservation, 'blocked', 'typed_closeout_packet_required'],
+  ['blocked', blockedTemporalObservation, 'blocked', 'zero_readable_artifact'],
   ['completed', completedTemporalObservation, 'completed', 'domain_route_domain_gate_pending'],
 ] as const) {
   test(`Temporal terminal sync owns generic domain-route ${name} transition`, () => {
@@ -164,7 +164,6 @@ test('Temporal activity terminal sync preserves refs-only domain output through 
     await testEnv.teardown();
   }
 });
-
 test('Temporal cancellation remains provider-only for a generic domain route', () => {
   withStageAttemptDb((db) => {
     const createdAt = new Date().toISOString(), taskId = 'task-generic-canceled';

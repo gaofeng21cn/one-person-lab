@@ -159,10 +159,10 @@
         "domain_policy": "do_not_own_generic_attempt_ledger"
       },
       {
-        "primitive_id": "generic_transition_runner",
+        "primitive_id": "ai_selected_stage_route_transport",
         "owner": "one-person-lab",
-        "replacement_surface": "family_transition_runner",
-        "domain_policy": "own_domain_transition_spec_only"
+        "replacement_surface": "stage_run_ai_route_context_transport",
+        "domain_policy": "codex_cli_selects_any_declared_stage_and_domain_artifacts_are_context_only"
       },
       {
         "primitive_id": "workspace_source_intake_shell",
@@ -294,8 +294,7 @@
         "product_entry_manifest",
         "domain_handler",
         "status_read_model",
-        "workbench_drilldown",
-        "functional_harness_cases"
+        "workbench_drilldown"
       ]
     },
     "generated_surface_contract": {
@@ -311,8 +310,7 @@
         "product_entry_manifest",
         "domain_handler",
         "status_read_model",
-        "workbench_drilldown",
-        "functional_harness_cases"
+        "workbench_drilldown"
       ],
       "authority_boundary": {
         "generated_surface_can_write_domain_truth": false,
@@ -467,20 +465,27 @@
         "surface_kind": "domain_stage_completion_policy",
         "version": "domain-stage-completion-policy.v1",
         "owner": "one-person-lab",
-        "standard_agent_requirement": "domain_stage_owns_completion_judgment_and_emits_standard_closeout_packet",
+        "standard_agent_requirement": "codex_cli_routes_any_readable_artifact_to_any_declared_stage_quality_closeout_is_optional_for_progress",
         "completion_judgment_owner": "domain_stage",
-        "closeout_packet_required": true,
+        "closeout_packet_required": false,
+        "closeout_packet_required_for_quality_acceptance": true,
+        "raw_artifact_sufficient_for_progress": true,
         "provider_completion_is_domain_completion": false,
         "opl_content_judgment_allowed": false,
-        "next_stage_transition_owner": "opl_runtime",
+        "next_stage_transition_owner": "codex_cli",
+        "framework_route_role": "declared_stage_transport_and_passive_projection_only",
         "required_closeout_outcomes": [
           "completed_and_continue",
+          "completed_with_quality_debt",
           "completed_and_wait_owner",
           "route_back",
           "blocked",
           "rejected"
         ],
         "accepted_closeout_ref_fields": [
+          "progress_delta_receipt_ref",
+          "consumable_artifact_ref",
+          "quality_debt_ref",
           "owner_receipt_ref",
           "typed_blocker_ref",
           "human_gate_ref",
@@ -489,7 +494,8 @@
         "authority_boundary": {
           "opl_can_decide_domain_completion": false,
           "provider_completion_counts_as_stage_complete": false,
-          "file_presence_counts_as_stage_complete": false,
+          "readable_file_counts_as_stage_progress": true,
+          "framework_can_accept_reject_or_override_codex_route": false,
           "suite_pass_counts_as_stage_complete": false,
           "conformance_pass_counts_as_stage_complete": false
         }
@@ -703,7 +709,7 @@
             "blocked_shape": "domain_owned_typed_hard_blocker_ref",
             "route_back_shape": "quality_debt_repair_recommendation_or_human_gate_ref",
             "provider_completion_is_closeout": false,
-            "quality_budget_exhaustion_blocks_transition": false,
+            "quality_budget_exhaustion_blocks_route": false,
             "owner_receipt_required_for_quality_or_ready_claim": true,
             "completion_judgment_owner": "domain_stage",
             "opl_content_judgment_allowed": false
@@ -982,7 +988,7 @@
         },
         "shared_policy_release": {
           "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-          "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+          "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
           "fingerprint_algorithm": "sha256:stable-json",
           "domain_contract_policy_release_pin_required": true,
           "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -1058,14 +1064,21 @@
               "ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy",
               "version": "domain-stage-completion-policy.v1",
               "completion_judgment_owner": "domain_stage",
+              "closeout_packet_required": false,
+              "raw_artifact_sufficient_for_progress": true,
+              "next_stage_transition_owner": "codex_cli",
               "required_closeout_outcomes": [
                 "completed_and_continue",
+                "completed_with_quality_debt",
                 "completed_and_wait_owner",
                 "route_back",
                 "blocked",
                 "rejected"
               ],
               "accepted_closeout_ref_fields": [
+                "progress_delta_receipt_ref",
+                "consumable_artifact_ref",
+                "quality_debt_ref",
                 "owner_receipt_ref",
                 "typed_blocker_ref",
                 "human_gate_ref",
@@ -1199,7 +1212,7 @@
             "policy_release_can_claim_domain_ready": false
           }
         },
-        "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+        "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
         "domain_pin_requirements": {
@@ -1315,20 +1328,27 @@
       "surface_kind": "domain_stage_completion_policy",
       "version": "domain-stage-completion-policy.v1",
       "owner": "one-person-lab",
-      "standard_agent_requirement": "domain_stage_owns_completion_judgment_and_emits_standard_closeout_packet",
+      "standard_agent_requirement": "codex_cli_routes_any_readable_artifact_to_any_declared_stage_quality_closeout_is_optional_for_progress",
       "completion_judgment_owner": "domain_stage",
-      "closeout_packet_required": true,
+      "closeout_packet_required": false,
+      "closeout_packet_required_for_quality_acceptance": true,
+      "raw_artifact_sufficient_for_progress": true,
       "provider_completion_is_domain_completion": false,
       "opl_content_judgment_allowed": false,
-      "next_stage_transition_owner": "opl_runtime",
+      "next_stage_transition_owner": "codex_cli",
+      "framework_route_role": "declared_stage_transport_and_passive_projection_only",
       "required_closeout_outcomes": [
         "completed_and_continue",
+        "completed_with_quality_debt",
         "completed_and_wait_owner",
         "route_back",
         "blocked",
         "rejected"
       ],
       "accepted_closeout_ref_fields": [
+        "progress_delta_receipt_ref",
+        "consumable_artifact_ref",
+        "quality_debt_ref",
         "owner_receipt_ref",
         "typed_blocker_ref",
         "human_gate_ref",
@@ -1337,7 +1357,8 @@
       "authority_boundary": {
         "opl_can_decide_domain_completion": false,
         "provider_completion_counts_as_stage_complete": false,
-        "file_presence_counts_as_stage_complete": false,
+        "readable_file_counts_as_stage_progress": true,
+        "framework_can_accept_reject_or_override_codex_route": false,
         "suite_pass_counts_as_stage_complete": false,
         "conformance_pass_counts_as_stage_complete": false
       }
@@ -1641,7 +1662,7 @@
           "blocked_shape": "domain_owned_typed_hard_blocker_ref",
           "route_back_shape": "quality_debt_repair_recommendation_or_human_gate_ref",
           "provider_completion_is_closeout": false,
-          "quality_budget_exhaustion_blocks_transition": false,
+          "quality_budget_exhaustion_blocks_route": false,
           "owner_receipt_required_for_quality_or_ready_claim": true,
           "completion_judgment_owner": "domain_stage",
           "opl_content_judgment_allowed": false
@@ -1920,7 +1941,7 @@
       },
       "shared_policy_release": {
         "policy_release_contract_ref": "contracts/opl-framework/foundry-agent-series-policy-release.json",
-        "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+        "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
         "fingerprint_algorithm": "sha256:stable-json",
         "domain_contract_policy_release_pin_required": true,
         "domain_adapter_must_not_copy_policy_body_as_authority": true,
@@ -1996,14 +2017,21 @@
             "ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy",
             "version": "domain-stage-completion-policy.v1",
             "completion_judgment_owner": "domain_stage",
+            "closeout_packet_required": false,
+            "raw_artifact_sufficient_for_progress": true,
+            "next_stage_transition_owner": "codex_cli",
             "required_closeout_outcomes": [
               "completed_and_continue",
+              "completed_with_quality_debt",
               "completed_and_wait_owner",
               "route_back",
               "blocked",
               "rejected"
             ],
             "accepted_closeout_ref_fields": [
+              "progress_delta_receipt_ref",
+              "consumable_artifact_ref",
+              "quality_debt_ref",
               "owner_receipt_ref",
               "typed_blocker_ref",
               "human_gate_ref",
@@ -2137,7 +2165,7 @@
           "policy_release_can_claim_domain_ready": false
         }
       },
-      "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+      "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
       "fingerprint_algorithm": "sha256:stable-json",
       "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
       "domain_pin_requirements": {
@@ -2195,12 +2223,6 @@
         "owner": "one-person-lab",
         "source_contract": "contracts/generated_surface_handoff.json",
         "domain_policy": "domain_repo_does_not_own_generic_operator_workbench"
-      },
-      {
-        "surface_id": "functional_harness_cases",
-        "owner": "one-person-lab",
-        "source_contract": "contracts/pack_compiler_input.json",
-        "domain_policy": "domain_repo_supplies_fixtures_expected_receipts_and_forbidden_write_assertions"
       }
     ],
     "domain_retained_thin_surfaces": [
@@ -2672,8 +2694,9 @@
         "provider_completion_counts_as_domain_accepted": false,
         "file_presence_counts_as_stage_complete": false,
         "latest_json_counts_as_domain_accepted": false,
-        "read_model_counts_as_transition_authority": false,
-        "validated_consumable_artifact_progress_counts_as_transition": true,
+        "read_model_can_select_semantic_route": false,
+        "readable_artifact_counts_as_progress_input": true,
+        "codex_can_route_to_any_declared_stage": true,
         "quality_debt_counts_as_quality_acceptance": false
       },
       "launch_admission_policy": {
@@ -2683,10 +2706,11 @@
           "scope",
           "selected_executor",
           "authority_boundary",
-          "required_role_artifacts",
-          "receipt_or_blocker_shape",
           "forbidden_write",
-          "replay_audit_lineage"
+          "currentness",
+          "permission_or_credential",
+          "irreversible_action",
+          "explicit_human_gate"
         ],
         "advisory_refs": [
           "prompt_refs",
@@ -2704,12 +2728,14 @@
         "readiness_default": false,
         "replay_packet_default": false
       },
-      "transition_authority": {
-        "terminal_transition_authority": "consumable_artifact_progress_or_owner_answer_or_hard_stop",
-        "provider_completion_counts_as_transition": false,
-        "file_presence_counts_as_transition": false,
-        "quality_budget_exhaustion_blocks_transition": false,
-        "owner_receipt_required_for_quality_or_ready_claim": true
+      "codex_semantic_route_policy": {
+        "semantic_owner": "codex_cli",
+        "readable_artifact_allows_any_declared_stage": true,
+        "provider_completion_is_route_decision": false,
+        "file_presence_without_readability_is_progress": false,
+        "quality_budget_exhaustion_blocks_route": false,
+        "owner_receipt_required_for_quality_or_ready_claim": true,
+        "framework_can_accept_reject_rank_or_override_route": false
       },
       "authority_boundary": {
         "opl_can_write_domain_truth": false,

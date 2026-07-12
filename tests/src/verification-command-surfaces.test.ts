@@ -172,7 +172,6 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   const files = [
     'contracts/opl-framework/runtime-manager-contract.json',
     'contracts/opl-framework/family-runtime-attempt-contract.json',
-    'contracts/opl-framework/functional-agent-runtime-harness-contract.json',
     'contracts/opl-framework/functional-privatization-audit-envelope-contract.json',
     'contracts/opl-framework/family-runtime-online-substrate-contract.json',
     'contracts/opl-framework/fresh-install-test-matrix.json',
@@ -242,12 +241,14 @@ test('policy contract sentinels keep audit, progress, and physical-delete author
     'opl_can_authorize_quality_or_export',
     'provider_completion_counts_as_progress',
     'raw_receipt_count_counts_as_progress',
-    'file_presence_alone_counts_as_progress',
     'artifact_attempt_pointer_can_write_stage_current_pointer',
+    'framework_can_accept_reject_or_override_codex_route',
   ]) {
     assert.equal(progressTruth.authority_boundary[claim], false, `progress truth must not claim ${claim}`);
   }
-  assert.equal(progressTruth.authority_boundary.stage_transition_authority_required_for_stage_run_current, true);
+  assert.equal(progressTruth.authority_boundary.readable_file_counts_as_progress, true);
+  assert.equal(progressTruth.authority_boundary.raw_evidence_envelope_counts_as_progress, true);
+  assert.equal(progressTruth.authority_boundary.codex_cli_route_context_is_semantic_owner, true);
 
   const wrapperRetirement = readJson<Record<string, any>>(
     'contracts/opl-framework/wrapper-retirement-gate-policy.json',

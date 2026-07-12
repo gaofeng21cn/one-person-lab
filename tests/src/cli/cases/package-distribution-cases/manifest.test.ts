@@ -278,11 +278,11 @@ test('packages manifest exposes active package-channel coordinates for module in
   assert.equal(output.packages_manifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
   assert.equal(
     output.packages_manifest.packages.codex_default_profile.base_url_role,
-    'product_default_provider_endpoint',
+    'opl_base_default_provider_endpoint',
   );
   assert.equal(
     output.packages_manifest.packages.codex_default_profile.model_profile_role,
-    'app_catalog_unavailable_fallback_projection',
+    'opl_flow_recommendation_projection',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.artifact,

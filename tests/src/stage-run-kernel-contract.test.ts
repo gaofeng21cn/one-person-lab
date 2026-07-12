@@ -5,7 +5,6 @@ import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 import './stage-run-kernel-contract-cases/read-model-identity-binding.ts';
-import './stage-run-kernel-contract-cases/orchestration.ts';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -197,8 +196,6 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'owner',
     'selected_executor',
     'authority_boundary',
-    'required_role_artifacts',
-    'expected_receipt_or_blocker',
     'provider_attempt_ref',
     'attempt_lease_ref',
     'execution_authorization_decision_ref',
@@ -208,8 +205,6 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'idempotency_key',
   ]);
   assertIncludesAll(writingRules.required_for_closeout, [
-    'current_generation_role_artifacts',
-    'stage_manifest_validity',
     'consumable_artifact_progress_or_owner_answer',
     'current_pointer',
   ]);
@@ -229,6 +224,9 @@ test('StageRun Kernel contract separates launch, closeout, advisory, and forbidd
     'knowledge_refs',
     'rubric_refs',
     'evaluation_refs',
+    'required_role_artifacts',
+    'expected_receipt_or_blocker',
+    'replay_audit_lineage_refs',
   ]);
   assertIncludesAll(writingRules.route_back_when_missing, [
     'prompt_refs',
@@ -276,10 +274,7 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
     'owner',
     'selected_executor',
     'authority_boundary',
-    'required_role_artifacts',
-    'expected_receipt_or_typed_blocker_shape',
     'forbidden_write',
-    'replay_audit_lineage',
     'provider_attempt',
     'attempt_lease',
     'execution_authorization_decision',
@@ -290,14 +285,10 @@ test('StageRun Kernel contract freezes launch closeout and advisory conformance 
   assert.equal(contract.admission_policy.strategy_refs_default, 'advisory_or_route_back');
   assert.equal(contract.admission_policy.prompt_skill_tool_knowledge_missing_blocks_launch_by_default, false);
   assertIncludesAll(contract.admission_policy.closeout_hard_blockers, [
-    'required_role_artifacts',
-    'manifest_validity',
     'zero_consumable_artifact_without_owner_answer_or_hard_stop',
     'current_pointer',
-    'content_hash',
     'generation',
-    'lineage_refs',
-    'closeout_receipt_binding',
+    'invalid_supplied_owner_answer_binding',
   ]);
   assertIncludesAll(contract.conformance_output.layers, [
     'launch_blockers',

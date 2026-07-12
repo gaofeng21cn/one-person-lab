@@ -797,11 +797,6 @@ function workspaceLocatorForProviderHostedTask(row: FamilyRuntimeTaskRow, payloa
     'owner_route_currentness_basis',
     'owner_route',
     'provider_admission_identity',
-    'domain_progress_transition_apply',
-    'domain_progress_transition_runtime',
-    'opl_transition_event',
-    'opl_transition_outbox_item',
-    'projection_metadata',
     'progress_first_closeout_admission',
   ]) {
     if (isRecord(payload[key])) {

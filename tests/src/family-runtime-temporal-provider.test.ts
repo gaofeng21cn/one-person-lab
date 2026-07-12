@@ -77,7 +77,6 @@ test('Temporal stage attempt contract exposes Codex runner total and no-output b
     'OplExecutorKind',
   ]);
 });
-
 test('Temporal visibility readiness requires OPL stage attempt Search Attributes', () => {
   const blocked = buildTemporalStageAttemptVisibilityReadiness({
     namespace: 'opl-test',
@@ -213,7 +212,7 @@ test('Temporal StageAttemptWorkflow blocks provider completion when typed closeo
       (event) => event.activity_kind === 'domain_handler_dispatch_activity',
     );
     assert.equal(dispatchEvent?.activity_status, 'blocked');
-    assert.equal(dispatchEvent?.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(dispatchEvent?.blocked_reason, 'zero_readable_artifact');
   } finally {
     await testEnv.teardown();
   }

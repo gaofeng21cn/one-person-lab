@@ -35,7 +35,7 @@ The active stage-led contract rules are:
 9. Descriptor readiness, read-model availability, generated-surface proof, provider proof, or cleanup proof never equals domain ready, artifact ready, or production evidence complete.
 10. Every blocked or incomplete boundary reports a typed blocker, human gate, receipt conflict, or route-back ref instead of a fallback verdict.
 
-`StructuredCloseoutGate` is the OPL Framework / Runway primitive that enforces rule 10 at stage-attempt closeout. The selected executor may be `Codex CLI`, but `Codex CLI` prose, provider completion, tests passing, file presence, docs updates, read-model refresh, or recovery-repair projection are not closeout authority. OPL accepts only a structured closeout packet / refs, then records transport closeout, routes owner refs, or fails closed with a provider-runtime closeout blocker. Format drift follows `terminal JSON capture -> session recovery -> same-session enforcement -> domain receipt recovery if applicable -> provider-runtime closeout blocker -> recovery-repair projection`. Repair / redrive is a query and decision surface only; it must not forge typed blockers, owner receipts, human gates, domain truth, artifact bodies, memory bodies, quality verdicts, runtime readiness, domain readiness, or production readiness.
+`ProgressCloseoutProjection` is the OPL Framework / Runway closeout projection. The selected executor may return typed JSON or ordinary readable output. OPL persists the raw output and derives refs, hashes, lineage, and a minimal progress envelope; parse, schema, receipt, or formatting gaps are quality debt and never block the next stage. Provider/infrastructure failure is blocking only when no readable artifact exists. OPL still cannot forge typed blockers, owner receipts, human gates, domain truth, artifact bodies, memory bodies, quality verdicts, runtime readiness, domain readiness, or production readiness.
 
 ## Ownership Boundary
 
@@ -149,7 +149,6 @@ For `MAS` v2, the consumable projection anchors are domain-owned `study_charter`
 - `standard_domain_agent_skeleton`
 - `family_action_catalog`
 - `family_stage_control_plane`
-- `family_transition_spec` / `family_transition_matrix_cases` / `family_transition_spec_descriptor`
 - `domain_memory_descriptor`
 - `skill_catalog`
 - `runtime_inventory` / `session_continuity` / `progress_projection` / `artifact_inventory`
@@ -161,7 +160,7 @@ This read model is for CLI/App discovery, maintainer inspection, admission gates
 
 For MAS, this means `mas_publication_route_memory` can be discovered as a `domain_memory_descriptor` through the unified descriptor, while the actual paper-route memory body remains Markdown-first in MAS. OPL only routes operators and agents to the right refs.
 
-`family_transition_spec` and `family_transition_matrix_cases` are the machine entry points for domain-declared transitions. `OPL` may run the matrix runner and emit transition receipt/projection, fail-closed blocker, or dead-letter envelopes. If a domain manifest exposes only `family_transition_spec_descriptor`, the unified descriptor reports `descriptor_only` / `refresh_required` plus locator refs rather than inventing a complete spec. Domain repositories still own the transition table, guards/oracle fixtures, owner actions, quality verdicts, artifact authority, and owner receipts.
+Legacy `family_transition_spec`, matrix-case, visual-adapter, and domain-oracle payloads are inert diagnostic inputs only. OPL no longer materializes them, executes them, validates their guards, or uses them for admission. Codex CLI is the sole semantic route owner; action and stage catalogs declare scope while OPL owns transport, attempt lifecycle, identity/currentness, and declared-stage validation only.
 
 ## Persistence / Lifecycle / Owner-Route Freeze
 

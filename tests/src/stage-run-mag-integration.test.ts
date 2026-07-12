@@ -8,12 +8,9 @@ import { pathToFileURL } from 'node:url';
 import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { runFamilyRuntimeDomainHandlerCommand } from '../../src/modules/runway/family-runtime-domain-handler-process.ts';
 import {
-  buildStageRunCycleIdentity,
-  buildStageRunCycleManifestFromControlPlane,
-  reduceStageRunCycleState,
-  type StageRunCycleManifest,
-  type StageRunCycleState,
-} from '../../src/modules/stagecraft/stage-run-orchestration.ts';
+  evaluateStageRunAdmission,
+  rebuildStageRunReadModel,
+} from '../../src/modules/stagecraft/stage-run-kernel.ts';
 import { compileStandardAgentStageManifest } from '../../src/modules/pack/index.ts';
 
 const expectedStageIds = [
@@ -27,7 +24,7 @@ const expectedStageIds = [
 
 function requiredMagRepo() {
   const requested = process.env.MAG_REPO_DIR?.trim();
-  assert.ok(requested, 'MAG_REPO_DIR is required for the fail-closed StageRun MAG integration gate.');
+  assert.ok(requested, 'MAG_REPO_DIR is required for the currentness-bound StageRun MAG integration gate.');
   const repoDir = fs.realpathSync(requested);
   for (const relativePath of [
     'agent/stages/manifest.json',
@@ -46,7 +43,7 @@ function requiredMagHead() {
   assert.match(
     expected ?? '',
     /^[0-9a-f]{40}$/,
-    'EXPECTED_MAG_HEAD is required for the fail-closed StageRun MAG integration gate.',
+    'EXPECTED_MAG_HEAD is required for the currentness-bound StageRun MAG integration gate.',
   );
   return expected!;
 }
@@ -79,70 +76,7 @@ function runMagJson(repoDir: string, args: string[], env: NodeJS.ProcessEnv) {
   return payload as Record<string, any>;
 }
 
-function eventIdentity(manifest: StageRunCycleManifest) {
-  const identity = buildStageRunCycleIdentity({
-    target_agent_ref: manifest.target_agent_ref,
-    descriptor_ref: manifest.descriptor_ref,
-    stage_ref: manifest.stage_bindings[0].stage_ref,
-    run_ref: manifest.run_ref,
-    cycle_index: 1,
-    attempt_index: 1,
-  });
-  return {
-    manifest_id: manifest.manifest_id,
-    stage_run_id: identity.stage_run_id,
-    cycle_index: 1,
-    attempt_index: 1,
-  };
-}
-
-function routeEvent(manifest: StageRunCycleManifest, stageRef: string, decisionRef: string) {
-  return {
-    ...eventIdentity(manifest),
-    surface_kind: 'opl_stage_run_route_decision_event' as const,
-    version: 'stage-run-cycle-event.v1' as const,
-    event_kind: 'route_decision' as const,
-    route_decision: {
-      decision: 'dispatch' as const,
-      stage_ref: stageRef,
-      decision_refs: [decisionRef],
-    },
-  };
-}
-
-function realCycle(input: {
-  repoDir: string;
-  runRef: string;
-  inputRef: string;
-}) {
-  const manifest_input = {
-    stage_control_plane: compileStandardAgentStageManifest(input.repoDir).stage_control_plane,
-    target_agent_ref: 'mag',
-    descriptor_ref: pathToFileURL(path.join(input.repoDir, 'contracts/domain_descriptor.json')).href,
-    run_ref: input.runRef,
-    input_refs: [input.inputRef],
-    max_cycles: 2,
-    max_attempts_per_cycle: 2,
-  };
-  return {
-    manifest_input,
-    manifest: buildStageRunCycleManifestFromControlPlane(manifest_input),
-  };
-}
-
-test('StageRun consumes real MAG quality route, single-pass result, and typed-blocker refs', () => {
-  const diagnostic = JSON.stringify({
-    reason: 'git_fetch_failed',
-    detail: 'Operation not permitted',
-  });
-  assert.throws(
-    () => runCommand([
-      process.execPath,
-      '-e',
-      `process.stdout.write(${JSON.stringify(diagnostic)}); process.exit(1);`,
-    ], process.cwd(), process.env),
-    /git_fetch_failed.*Operation not permitted/,
-  );
+test('StageRun transports real MAG artifacts without becoming a semantic route oracle', () => {
   const repoDir = requiredMagRepo();
   const expectedMagHead = requiredMagHead();
   const gitHead = runCommand(['git', 'rev-parse', 'HEAD'], repoDir, process.env);
@@ -157,24 +91,21 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
   assert.equal(manifestSource.surface_kind, 'opl_standard_agent_declarative_stage_manifest');
   assert.equal(manifestSource.version, 'opl-standard-agent-declarative-stage-manifest.v1');
   assert.equal(manifestSource.target_domain_id, 'med-autogrant');
-  const stageIds = manifestSource.stages.map((stage: Record<string, any>) => stage.stage_id);
-  assert.deepEqual(stageIds, expectedStageIds);
+  assert.deepEqual(
+    manifestSource.stages.map((stage: Record<string, any>) => stage.stage_id),
+    expectedStageIds,
+  );
+  assert.deepEqual(
+    compileStandardAgentStageManifest(repoDir).stage_control_plane.stages.map((stage) => stage.stage_id),
+    expectedStageIds,
+  );
 
   const p3aPath = path.join(repoDir, 'examples/nsfc_workspace_p3a_ready_for_submission.json');
-  const nextStep = runMagJson(repoDir, [
-    'workspace',
-    'next-step',
-    '--input',
-    p3aPath,
-  ], env);
-  assert.equal(nextStep.surface_kind, 'mag_stage_transition_oracle_recommendation');
-  assert.equal(nextStep.current_stage, 'critique');
-  assert.equal(nextStep.recommended_stage, 'critique');
-  assert.equal(nextStep.quality_gate.action, 'continue');
-  assert.equal(nextStep.quality_gate.recommended_stage, 'critique');
-  assert.equal(nextStep.transition_intent.target_stage, 'critique');
-  assert.equal(nextStep.transition_intent.return_shape, 'typed_blocker');
-  assert.equal(nextStep.requires_human_confirmation, true);
+  const nextStep = runMagJson(repoDir, ['workspace', 'next-step', '--input', p3aPath], env);
+  assert.equal(nextStep.surface_kind, 'mag_ai_route_context');
+  assert.equal(nextStep.semantic_route_owner, 'codex_cli');
+  assert.equal(nextStep.ai_route_policy.program_recommendation_can_block_or_select_route, false);
+  assert.equal(nextStep.authority_boundary.framework_can_accept_reject_or_override_codex_route, false);
 
   const tempRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-stage-run-mag-integration-')));
   try {
@@ -190,41 +121,12 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
       '--source-ref',
       pathToFileURL(p3aPath).href,
       '--closeout-summary',
-      'quality-aware-oracle-requires-critique',
+      'domain-owned-hard-stop-shape',
       '--runtime-root',
       path.join(tempRoot, 'runtime'),
     ], env);
     assert.equal(typedBlocker.owner_receipt_evidence.receipt_shape, 'typed_blocker');
-    const typedBlockerRef = pathToFileURL(
-      typedBlocker.owner_receipt_evidence.receipt_instance_ref,
-    ).href;
     assert.equal(fs.existsSync(typedBlocker.owner_receipt_evidence.receipt_instance_ref), true);
-
-    const blockerCycle = realCycle({
-      repoDir,
-      runRef: `mag://integration/${gitHead}/quality-route`,
-      inputRef: pathToFileURL(p3aPath).href,
-    });
-    const blockerState = reduceStageRunCycleState({
-      manifest_input: blockerCycle.manifest_input,
-      events: [
-        routeEvent(blockerCycle.manifest, 'review_and_rebuttal', typedBlockerRef),
-        {
-          ...eventIdentity(blockerCycle.manifest),
-          surface_kind: 'opl_stage_run_effect_observation_event',
-          version: 'stage-run-cycle-event.v1',
-          event_kind: 'effect_observation',
-          effect: {
-            effect_status: 'typed_blocker',
-            stage_ref: 'review_and_rebuttal',
-            typed_blocker_ref: typedBlockerRef,
-            closeout_refs: [typedBlockerRef],
-          },
-        },
-      ],
-    });
-    assert.equal(blockerState.status, 'blocked');
-    assert.deepEqual(blockerState.typed_blocker_refs, [typedBlockerRef]);
 
     const revisedPath = path.join(tempRoot, 'revised.json');
     const revision = runMagJson(repoDir, [
@@ -236,51 +138,56 @@ test('StageRun consumes real MAG quality route, single-pass result, and typed-bl
       revisedPath,
     ], env);
     assert.equal(revision.ok, true);
-    assert.equal(revision.command, 'execute-revision-pass');
-    assert.equal(revision.output_path, revisedPath);
     assert.equal(fs.existsSync(revisedPath), true);
-    const forwardRoute = runMagJson(repoDir, [
-      'workspace',
-      'next-step',
-      '--input',
-      revisedPath,
-    ], env);
-    assert.equal(forwardRoute.surface_kind, 'mag_stage_transition_oracle_recommendation');
-    assert.equal(forwardRoute.current_stage, 'critique');
-    assert.equal(forwardRoute.recommended_stage, 'argument_building');
-    assert.equal(forwardRoute.quality_gate.action, 'rollback_required');
-    assert.equal(forwardRoute.transition_intent.target_stage, 'argument_building');
-    assert.equal(forwardRoute.transition_intent.return_shape, 'transition_intent_ref');
-    assert.equal(forwardRoute.requires_human_confirmation, false);
-    const domainResultRef = pathToFileURL(revision.output_path).href;
-    const resultCycle = realCycle({
-      repoDir,
-      runRef: `mag://integration/${gitHead}/revision-pass`,
-      inputRef: pathToFileURL(path.join(repoDir, 'examples/nsfc_workspace_p2c_critique.json')).href,
+
+    const routeContext = runMagJson(repoDir, ['workspace', 'next-step', '--input', revisedPath], env);
+    assert.equal(routeContext.surface_kind, 'mag_ai_route_context');
+    assert.equal(routeContext.semantic_route_owner, 'codex_cli');
+    assert.equal(routeContext.ai_route_policy.program_recommendation_can_block_or_select_route, false);
+    assert.equal(routeContext.authority_boundary.framework_can_accept_reject_or_override_codex_route, false);
+
+    const stageRunId = `mag-stage-run-${gitHead}`;
+    const artifactRef = pathToFileURL(revisedPath).href;
+    const admission = evaluateStageRunAdmission({
+      phase: 'closeout',
+      stage_run_id: stageRunId,
+      domain_id: 'mag',
+      stage_id: 'proposal_authoring',
+      generation: 1,
+      current_pointer: { stage_run_id: stageRunId, generation: 1, current: true },
+      manifest_valid: false,
+      required_role_artifacts: ['proposal_draft'],
+      produced_role_artifacts: [],
+      consumable_artifact_refs: [artifactRef],
+      owner_receipt_refs: [],
+      typed_blocker_refs: [],
+      quality_gate_receipt_refs: [],
     });
-    const resultState: StageRunCycleState = reduceStageRunCycleState({
-      manifest_input: resultCycle.manifest_input,
-      events: [
-        routeEvent(resultCycle.manifest, 'proposal_authoring', domainResultRef),
-        {
-          ...eventIdentity(resultCycle.manifest),
-          surface_kind: 'opl_stage_run_effect_observation_event',
-          version: 'stage-run-cycle-event.v1',
-          event_kind: 'effect_observation',
-          effect: {
-            effect_status: 'domain_result',
-            stage_ref: 'proposal_authoring',
-            domain_result_ref: domainResultRef,
-            output_refs: [domainResultRef],
-            checkpoint_ref: domainResultRef,
-            closeout_refs: [domainResultRef],
-          },
-        },
-      ],
-    });
-    assert.deepEqual(resultState.domain_result_refs, [domainResultRef]);
-    assert.equal(resultState.completed_step_count, 1);
-    assert.equal(resultState.authority_boundary.can_spawn_process, false);
+    assert.equal(admission.status, 'passed_with_advisory');
+    assert.equal(admission.transition_outcome, 'completed_with_quality_debt');
+    assert.deepEqual(admission.closeout_blockers, []);
+
+    const readModel = rebuildStageRunReadModel([
+      {
+        surface_kind: 'opl_stage_run_event',
+        event_id: `${stageRunId}:declared`,
+        event_kind: 'stage_run_declared',
+        stage_run_id: stageRunId,
+        generation: 1,
+        observed_at: '2026-07-12T00:00:00.000Z',
+      },
+      {
+        surface_kind: 'opl_stage_run_event',
+        event_id: `${stageRunId}:artifact`,
+        event_kind: 'artifact_ref_observed',
+        stage_run_id: stageRunId,
+        generation: 1,
+        observed_at: '2026-07-12T00:00:01.000Z',
+        artifact_ref: artifactRef,
+      },
+    ]);
+    assert.deepEqual(readModel.stage_runs[0].consumed_refs, [artifactRef]);
+    assert.equal(readModel.authority_boundary.read_model_can_be_truth_source, false);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

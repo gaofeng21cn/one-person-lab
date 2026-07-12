@@ -55,7 +55,6 @@ function installBridgeGate(repoDir: string, gate: Record<string, unknown>, inclu
           'status_read_model',
           'domain_handler',
           'workbench_drilldown',
-          'functional_harness_cases',
         ],
       };
     }

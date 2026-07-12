@@ -1,22 +1,20 @@
 {
   "contract_kind": "opl_stage_artifact_progress_truth_policy.v1",
   "owner": "one-person-lab",
-  "purpose": "Freeze the family-level rule that stage deliverable progress is derived from a complete stage artifact unit, not provider completion, raw receipt counts, or file presence alone.",
+  "purpose": "Freeze the family-level progress-first rule that any readable Stage artifact is consumable progress while quality metadata controls claims only.",
   "state": "active_contract",
   "machine_boundary": "OPL owns progress projection over stage artifact units; domain repositories retain artifact body authority, owner answer authority, quality verdicts, and export readiness.",
   "progress_truth_required_signals": [
-    "physical_output_present",
-    "valid_manifest",
-    "owner_answer_present",
-    "artifact_attempt_pointer_selected"
+    "readable_physical_output_present"
   ],
   "counts_as_deliverable_progress_when_all_required_signals_true": true,
   "single_signal_non_progress_reasons": [
     "provider_completion_only",
     "receipt_verified_without_matching_manifest",
-    "file_presence_without_owner_answer",
-    "historical_attempt_not_selected_by_artifact_attempt_pointer",
-    "raw_evidence_envelope_only"
+    "zero_readable_output",
+    "corrupted_or_unreadable_output",
+    "identity_or_currentness_mismatch",
+    "authority_safety_permission_or_human_gate"
   ],
   "projection_surfaces": [
     "opl_current_owner_delta",
@@ -36,9 +34,10 @@
     "opl_can_authorize_quality_or_export": false,
     "provider_completion_counts_as_progress": false,
     "raw_receipt_count_counts_as_progress": false,
-    "file_presence_alone_counts_as_progress": false
-    ,
+    "readable_file_counts_as_progress": true,
+    "raw_evidence_envelope_counts_as_progress": true,
     "artifact_attempt_pointer_can_write_stage_current_pointer": false,
-    "stage_transition_authority_required_for_stage_run_current": true
+    "codex_cli_route_context_is_semantic_owner": true,
+    "framework_can_accept_reject_or_override_codex_route": false
   }
 }

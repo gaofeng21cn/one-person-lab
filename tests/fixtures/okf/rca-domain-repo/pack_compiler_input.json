@@ -1,1 +1,945 @@
-{"surface_kind":"opl_domain_pack_compiler_input","schema_version":1,"domain_id":"redcube_ai","domain_pack_owner":"redcube_ai","generated_surface_owner":"one-person-lab","declarative_domain_pack":["domain_descriptor","deliverable_family_graph","stage_action_metadata","source_readiness_policy","visual_transition_spec","review_export_policy","artifact_locator_policy","memory_locator_policy","receipt_schema","authority_function_manifest","oracle_fixtures","tool_affordance_catalog","cognitive_kernel_adoption_contract","golden_path_profile"],"canonical_semantic_pack_root":"agent/","canonical_semantic_pack_role":"repo_source_declarative_visual_pack","legacy_detail_asset_roots":["prompts/ppt_deck/","prompts/xiaohongshu/"],"legacy_detail_asset_policy":"implementation_detail_prompt_assets_only_not_stage_control_prompt_refs","required_domain_pack_paths":["agent/prompts/source_intake.md","agent/prompts/communication_strategy.md","agent/prompts/visual_direction.md","agent/prompts/artifact_creation.md","agent/prompts/review_and_revision.md","agent/prompts/package_and_handoff.md","agent/stages/source_intake.md","agent/stages/communication_strategy.md","agent/stages/visual_direction.md","agent/stages/artifact_creation.md","agent/stages/review_and_revision.md","agent/stages/package_and_handoff.md","agent/skills/visual_deliverable_authoring.md","agent/skills/native_helper_policy.md","agent/skills/visual_memory_policy.md","agent/quality_gates/visual_authority_boundaries.md","agent/quality_gates/source_and_truth.md","agent/quality_gates/communication_and_direction.md","agent/quality_gates/visual_pack_discipline.md","agent/quality_gates/package_distribution.md","agent/quality_gates/artifact_authority.md","agent/quality_gates/review_export_memory.md","agent/knowledge/visual_truth_boundaries.md","agent/knowledge/communication_visual_direction.md","agent/knowledge/artifact_and_export_authority.md","agent/knowledge/review_export_memory.md","agent/knowledge/markdown_route_policy.md","agent/knowledge/owner_receipt_policy.md","agent/tools/domain_affordances.md"],"minimal_authority_surface_ids":["source_readiness_verdict","communication_visual_direction_decision","review_export_verdict","artifact_mutation_authorization","visual_memory_accept_reject","owner_receipt_signer","native_helper_implementation"],"minimal_authority_surface_taxonomy":{"surface_kind":"rca_minimal_authority_surface_taxonomy","taxonomy_id":"rca.minimal_authority_surface_taxonomy.v1","owner":"redcube_ai","ai_first_judgment_surface_ids":["source_readiness_verdict","communication_visual_direction_decision","review_export_verdict","visual_memory_accept_reject"],"programmatic_authority_surface_ids":["artifact_mutation_authorization","owner_receipt_signer","native_helper_implementation"],"all_surface_ids":["source_readiness_verdict","communication_visual_direction_decision","review_export_verdict","artifact_mutation_authorization","visual_memory_accept_reject","owner_receipt_signer","native_helper_implementation"],"mechanical_decision_forbidden_for_all_surfaces":true,"programmatic_verdict_generation_allowed":false,"policy":"visual/source/review/memory judgments require AI-first stage artifacts; programmatic surfaces guard owner receipts and refs only"},"minimal_authority_surface_contracts":[{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"source_readiness_verdict","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"ai_first_visual_judgment_surface","judgment_owner":"ai_first_source_readiness_stage_artifact","programmatic_role":"source_pack_ref_validator_and_typed_blocker","ai_stage_artifact_required":true,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["verdict_refs","typed_blocker","owner_receipt_refs"],"output_boundary":{"allowed_return_shapes":["verdict_refs","typed_blocker","owner_receipt_refs"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":true,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}},{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"communication_visual_direction_decision","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"ai_first_visual_judgment_surface","judgment_owner":"ai_authored_communication_strategy_or_visual_direction_stage_artifact","programmatic_role":"visual_direction_ref_materializer","ai_stage_artifact_required":true,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["visual_direction_refs","typed_blocker","owner_receipt_refs"],"output_boundary":{"allowed_return_shapes":["visual_direction_refs","typed_blocker","owner_receipt_refs"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":true,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}},{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"review_export_verdict","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"ai_first_visual_judgment_surface","judgment_owner":"ai_first_visual_review_or_export_gate_artifact","programmatic_role":"review_export_ref_validator_and_receipt_guard","ai_stage_artifact_required":true,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["verdict_refs","typed_blocker","owner_receipt_refs"],"output_boundary":{"allowed_return_shapes":["verdict_refs","typed_blocker","owner_receipt_refs"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":true,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}},{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"artifact_mutation_authorization","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"programmatic_authority_guard_surface","judgment_owner":"rca_owner_receipt_blocked_item_and_repair_target","programmatic_role":"artifact_mutation_materializer_and_guard","ai_stage_artifact_required":false,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["artifact_refs","typed_blocker","owner_receipt_refs"],"output_boundary":{"allowed_return_shapes":["artifact_refs","typed_blocker","owner_receipt_refs"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":false,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}},{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"visual_memory_accept_reject","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"ai_first_visual_judgment_surface","judgment_owner":"ai_first_visual_memory_learning_stage_artifact","programmatic_role":"memory_receipt_writer_and_locator_projection","ai_stage_artifact_required":true,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["memory_receipt_refs","typed_blocker","owner_receipt_refs"],"output_boundary":{"allowed_return_shapes":["memory_receipt_refs","typed_blocker","owner_receipt_refs"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":true,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}},{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"owner_receipt_signer","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"programmatic_authority_guard_surface","judgment_owner":"rca_owner_receipt_schema_and_domain_provenance","programmatic_role":"receipt_schema_signer_and_blocker_guard","ai_stage_artifact_required":false,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["owner_receipt_refs","typed_blocker","no_regression_evidence_refs"],"output_boundary":{"allowed_return_shapes":["owner_receipt_refs","typed_blocker","no_regression_evidence_refs"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":false,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}},{"surface_kind":"rca_minimal_authority_surface","authority_surface_id":"native_helper_implementation","owner":"redcube_ai","retention_class":"rca_minimal_authority_function","generated_by_opl":false,"opl_generated_wrapper_allowed":true,"work_mode":"programmatic_authority_guard_surface","judgment_owner":"rca_native_helper_catalog_and_owner_receipt_policy","programmatic_role":"native_ppt_image_export_helper_implementation","ai_stage_artifact_required":false,"stage_or_owner_receipt_evidence_required":true,"mechanical_decision_forbidden":true,"programmatic_verdict_generation_allowed":false,"allowed_return_shapes":["helper_proof_refs","artifact_refs","typed_blocker"],"output_boundary":{"allowed_return_shapes":["helper_proof_refs","artifact_refs","typed_blocker"],"forbidden_outputs":["visual_truth_write","artifact_blob_write_without_owner_receipt","memory_body_write","mechanical_ready_verdict","programmatic_ready_verdict","ai_free_visual_verdict","schema_completeness_ready_verdict","generic_lifecycle_completion_verdict"]},"forbidden_decision_sources":["schema_completeness","provider_completion","generic_lifecycle_completion","artifact_file_presence","mechanical_screenshot_metrics_alone","controller_route_state","runtime_queue_state"],"decision_boundary":{"ai_first_judgment_required":false,"programmatic_role_may_materialize_refs_only":true,"programmatic_role_may_compute_ready_verdict":false,"owner_receipt_or_typed_blocker_required_when_evidence_missing":true}}],"generated_surfaces_requested":["cli","mcp","skill","product_entry_manifest","domain_handler","status_read_model","workbench_drilldown","functional_harness_cases","product_entry","product_status","product_session","workbench"],"generated_interface_consumption_ref":"/opl_generated_interface_consumption","repo_local_handler_targets":["redcube_cli","redcube_mcp","invokeProductEntry","invokeDomainEntry","domain_handler","product_entry_continuity_refs_adapter"],"repo_local_handlers_are_generated_surface_owners":false,"domain_repo_can_own_generated_surface":false,"stage_pack_required_sections":["prompt_refs","skill_refs","tool_refs","tool_affordance_boundary","knowledge_refs","quality_gate_refs","strategy_refs","candidate_pool_policy","independent_gate_policy","handoff_policy"],"cognitive_kernel_adoption_ref":"contracts/cognitive_kernel_adoption.json","golden_path_profile_ref":"contracts/golden_path_profile.json","tool_refs":[{"ref":"agent/tools/domain_affordances.md","ref_kind":"repo_path","role":"domain_tool_affordance_catalog","catalog_role":"available_affordance_catalog_not_workflow_script"}],"tool_affordance_boundary":{"catalog_role":"available_affordance_catalog_not_workflow_script","capability_refs":[{"ref":"source_context_and_visual_brief_reading","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"visual_direction_and_candidate_generation_support","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"native_ppt_render_screenshot_and_export_helpers","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"visual_review_repair_and_artifact_lineage_support","ref_kind":"policy_ref","role":"capability_boundary"}],"permission_scope_refs":[{"ref":"repo_context_read","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"declared_domain_workspace_read","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"bounded_domain_artifact_write_when_owner_authorized","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"receipt_or_typed_blocker_return","ref_kind":"policy_ref","role":"permission_scope_boundary"}],"credential_boundary_refs":[{"ref":"no_secret_material_in_stage_pack","ref_kind":"policy_ref","role":"credential_boundary_boundary"},{"ref":"executor_must_request_human_gate_for_missing_credentials","ref_kind":"policy_ref","role":"credential_boundary_boundary"}],"write_scope_refs":[{"ref":"visual_workspace_refs_only","ref_kind":"policy_ref","role":"write_scope_boundary"},{"ref":"deliverable_artifact_mutation_only_with_rca_artifact_authority_receipt","ref_kind":"policy_ref","role":"write_scope_boundary"}],"side_effect_risk_refs":[{"ref":"external_network_or_portal_side_effect_requires_explicit_stage_permission","ref_kind":"policy_ref","role":"side_effect_risk_boundary"},{"ref":"artifact_or_package_mutation_requires_domain_owner_receipt","ref_kind":"policy_ref","role":"side_effect_risk_boundary"}],"forbidden_authority_refs":[{"ref":"visual_truth_write_by_opl","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"review_verdict_without_rca_owner_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"export_verdict_without_rca_owner_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"artifact_body_write_without_artifact_authority_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"visual_memory_body_write_by_opl","ref_kind":"policy_ref","role":"forbidden_authority_boundary"}],"executor_autonomy":{"executor_can_choose_tools":true,"executor_can_skip_tools":true,"executor_can_substitute_tools_within_boundary":true,"executor_can_choose_order_and_parallelism":true,"executor_can_request_missing_context_or_human_gate":true,"tool_catalog_can_prescribe_tool_sequence":false,"tool_catalog_can_define_cognitive_strategy":false,"tool_catalog_can_override_stage_goal":false,"tool_catalog_can_authorize_forbidden_write":false},"policy":"redcube_ai tool refs declare available affordances and safety boundaries only; they do not prescribe executor order, stage strategy, stage goal, or forbidden writes."},"visual_pack_discipline_contract":{"owner":"redcube_ai","policy_ref":"agent/quality_gates/visual_pack_discipline.md","required_before_artifact_creation":true,"required_contract_fields":["deliverable_family","route","audience","output_format","canvas_or_aspect_ratio","visual_direction_refs","brand_profile_precedence_refs","material_status_refs","source_material_pass_refs","layout_density_refs","sparse_page_evidence_refs","render_acceptance_refs","review_gate_refs","export_target"],"brand_profile_precedence":{"precedence_order":["explicit_delivery_request_brand_material","rca_visual_direction_judgment","workspace_profile_defaults","user_profile_defaults","built_in_route_defaults"],"approved_task_material_overrides_memory_or_defaults":true,"generated_or_inferred_profile_can_override_approved_material":false,"defaults_fill_missing_fields_only":true,"required_refs":["brand_profile_precedence_refs","approved_brand_material_refs","visual_direction_refs","profile_default_refs","typed_blocker_refs"]},"source_material_pass_transparency":{"required_item_statuses":["approved","provided_unverified","missing","out_of_scope"],"pass_level_evidence_required":true,"per_material_item_required_fields":["material_id","material_kind","status","pass_ref","source_ref","verified","carried_forward","gap_ref","typed_blocker_ref"],"missing_or_unverified_required_material_yields":["source_gap_refs","material_gap_refs","typed_blocker"],"opl_generated_surface_may_summarize_refs_only":true},"layout_density_sparse_page_evidence":{"density_contract_required_before_layout":true,"required_fields":["target_density_band","page_or_frame_inventory_refs","minimum_occupancy_evidence_refs","sparse_page_acceptance_reason_refs","merge_split_decision_refs","blocked_page_refs","screenshot_review_refs","export_gate_refs"],"sparse_page_can_pass_without_rca_rationale":false,"provider_completion_can_accept_sparse_page":false,"schema_completeness_can_accept_sparse_page":false,"allowed_sparse_page_outcomes":["accepted_with_rca_owned_rationale_refs","repair_target_refs","merge_or_split_decision_refs","typed_blocker"]},"material_status_required":true,"render_acceptance_required":true,"mechanical_checks_can_issue_visual_verdict":false,"provider_completion_can_issue_visual_verdict":false,"allowed_machine_outputs":["typed_blocker","repair_target_refs","preserved_page_refs","no_regression_refs","helper_proof_refs"],"forbidden_machine_outputs":["visual_ready_verdict","exportable_verdict","handoffable_verdict","publication_ready_verdict","artifact_body_write_without_owner_receipt"]},"cognitive_stage_pack_contract":{"owner":"redcube_ai","consumer":"opl_pack_compiler","contract_ref":"contracts/opl-framework/cognitive-computation-kernel.json","stage_control_plane_ref":"contracts/stage_control_plane.json","cognitive_kernel_adoption_ref":"contracts/cognitive_kernel_adoption.json","golden_path_profile_ref":"contracts/golden_path_profile.json","domain_affordance_catalog_ref":{"ref":"agent/tools/domain_affordances.md","ref_kind":"repo_path","role":"domain_tool_affordance_catalog","catalog_role":"available_affordance_catalog_not_workflow_script"},"refs_only":true,"user_visible_flow_changed":false,"launch_hard_gate":false,"required_stage_sections":["prompt_refs","skill_refs","tool_refs","tool_affordance_boundary","knowledge_refs","quality_gate_refs","strategy_refs","candidate_pool_policy","independent_gate_policy","handoff_policy"],"stage_strategy_owner":"selected_codex_executor_with_rca_owned_gates","tool_affordance_policy":"available_affordance_catalog_not_workflow_script","tool_affordance_boundary":{"catalog_role":"available_affordance_catalog_not_workflow_script","capability_refs":[{"ref":"source_context_and_visual_brief_reading","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"visual_direction_and_candidate_generation_support","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"native_ppt_render_screenshot_and_export_helpers","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"visual_review_repair_and_artifact_lineage_support","ref_kind":"policy_ref","role":"capability_boundary"}],"permission_scope_refs":[{"ref":"repo_context_read","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"declared_domain_workspace_read","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"bounded_domain_artifact_write_when_owner_authorized","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"receipt_or_typed_blocker_return","ref_kind":"policy_ref","role":"permission_scope_boundary"}],"credential_boundary_refs":[{"ref":"no_secret_material_in_stage_pack","ref_kind":"policy_ref","role":"credential_boundary_boundary"},{"ref":"executor_must_request_human_gate_for_missing_credentials","ref_kind":"policy_ref","role":"credential_boundary_boundary"}],"write_scope_refs":[{"ref":"visual_workspace_refs_only","ref_kind":"policy_ref","role":"write_scope_boundary"},{"ref":"deliverable_artifact_mutation_only_with_rca_artifact_authority_receipt","ref_kind":"policy_ref","role":"write_scope_boundary"}],"side_effect_risk_refs":[{"ref":"external_network_or_portal_side_effect_requires_explicit_stage_permission","ref_kind":"policy_ref","role":"side_effect_risk_boundary"},{"ref":"artifact_or_package_mutation_requires_domain_owner_receipt","ref_kind":"policy_ref","role":"side_effect_risk_boundary"}],"forbidden_authority_refs":[{"ref":"visual_truth_write_by_opl","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"review_verdict_without_rca_owner_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"export_verdict_without_rca_owner_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"artifact_body_write_without_artifact_authority_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"visual_memory_body_write_by_opl","ref_kind":"policy_ref","role":"forbidden_authority_boundary"}],"executor_autonomy":{"executor_can_choose_tools":true,"executor_can_skip_tools":true,"executor_can_substitute_tools_within_boundary":true,"executor_can_choose_order_and_parallelism":true,"executor_can_request_missing_context_or_human_gate":true,"tool_catalog_can_prescribe_tool_sequence":false,"tool_catalog_can_define_cognitive_strategy":false,"tool_catalog_can_override_stage_goal":false,"tool_catalog_can_authorize_forbidden_write":false},"policy":"redcube_ai tool refs declare available affordances and safety boundaries only; they do not prescribe executor order, stage strategy, stage goal, or forbidden writes."},"candidate_pool_policy":"stage_internal_refs_with_lineage_no_user_flow_expansion","independent_gate_policy":"execution_and_review_attempts_must_be_separable_for_quality_progression","authority_boundary":{"opl_can_write_visual_truth":false,"opl_can_write_artifact_body":false,"opl_can_authorize_review_export_verdict":false,"opl_can_sign_owner_receipt":false,"provider_completion_is_visual_ready":false,"same_attempt_self_review_can_close_quality_gate":false}},"markdown_marp_route_policy":{"owner":"redcube_ai","policy_ref":"agent/knowledge/markdown_route_policy.md","route_family":"markdown_marp","route_default":false,"explicit_selection_required":true,"refs_only":true,"allowed_route_use":["operator_explicit_markdown_or_marp_request","source_to_slide_text_structuring_refs","intermediate_outline_or_script_packaging_refs"],"default_visual_route_ref":"author_image_pages","external_runtime_authority_allowed":false,"provider_completion_can_issue_visual_verdict":false},"package_distribution_gate":{"owner":"redcube_ai","policy_ref":"agent/quality_gates/package_distribution.md","gate_id":"rca.package_distribution_consistency.v1","refs_only":true,"required_consistency_checks":["source_to_package_required_domain_pack_paths_match","plugin_skill_refs_resolve_to_repo_tracked_pack_paths","package_manifest_does_not_add_runtime_authority","packaging_does_not_change_route_default"],"package_can_omit_required_domain_pack_refs":false,"packaging_can_change_route_default":false,"external_runtime_authority_allowed":false},"source_refs":{"canonical_semantic_pack":"agent/","action_catalog":"packages/redcube-domain-entry/src/actions/family-action-catalog.ts::buildRedCubeActionMetadata","stage_control_plane":"packages/redcube-domain-entry/src/actions/family-stage-control-plane.ts::buildRedCubeFamilyStageControlPlane","memory_descriptor":"packages/redcube-domain-entry/src/actions/standard-domain-agent-skeleton.ts::buildFamilyDomainMemoryDescriptor","functional_audit":"packages/redcube-domain-entry/src/actions/guarded-domain-actions.ts::buildPrivatizedFunctionalModuleAuditProjection"},"authority_boundary":{"opl_can_write_domain_truth":false,"opl_can_write_memory_body":false,"opl_can_authorize_quality_or_export":false,"domain_can_claim_generated_surface_owner":false}}
+{
+  "surface_kind": "opl_domain_pack_compiler_input",
+  "schema_version": 1,
+  "domain_id": "redcube_ai",
+  "domain_pack_owner": "redcube_ai",
+  "generated_surface_owner": "one-person-lab",
+  "declarative_domain_pack": [
+    "domain_descriptor",
+    "deliverable_family_graph",
+    "stage_action_metadata",
+    "source_readiness_policy",
+    "visual_transition_spec",
+    "review_export_policy",
+    "artifact_locator_policy",
+    "memory_locator_policy",
+    "receipt_schema",
+    "authority_function_manifest",
+    "oracle_fixtures",
+    "tool_affordance_catalog",
+    "cognitive_kernel_adoption_contract",
+    "golden_path_profile"
+  ],
+  "canonical_semantic_pack_root": "agent/",
+  "canonical_semantic_pack_role": "repo_source_declarative_visual_pack",
+  "legacy_detail_asset_roots": [
+    "prompts/ppt_deck/",
+    "prompts/xiaohongshu/"
+  ],
+  "legacy_detail_asset_policy": "implementation_detail_prompt_assets_only_not_stage_control_prompt_refs",
+  "required_domain_pack_paths": [
+    "agent/prompts/source_intake.md",
+    "agent/prompts/communication_strategy.md",
+    "agent/prompts/visual_direction.md",
+    "agent/prompts/artifact_creation.md",
+    "agent/prompts/review_and_revision.md",
+    "agent/prompts/package_and_handoff.md",
+    "agent/stages/source_intake.md",
+    "agent/stages/communication_strategy.md",
+    "agent/stages/visual_direction.md",
+    "agent/stages/artifact_creation.md",
+    "agent/stages/review_and_revision.md",
+    "agent/stages/package_and_handoff.md",
+    "agent/skills/visual_deliverable_authoring.md",
+    "agent/skills/native_helper_policy.md",
+    "agent/skills/visual_memory_policy.md",
+    "agent/quality_gates/visual_authority_boundaries.md",
+    "agent/quality_gates/source_and_truth.md",
+    "agent/quality_gates/communication_and_direction.md",
+    "agent/quality_gates/visual_pack_discipline.md",
+    "agent/quality_gates/package_distribution.md",
+    "agent/quality_gates/artifact_authority.md",
+    "agent/quality_gates/review_export_memory.md",
+    "agent/knowledge/visual_truth_boundaries.md",
+    "agent/knowledge/communication_visual_direction.md",
+    "agent/knowledge/artifact_and_export_authority.md",
+    "agent/knowledge/review_export_memory.md",
+    "agent/knowledge/markdown_route_policy.md",
+    "agent/knowledge/owner_receipt_policy.md",
+    "agent/tools/domain_affordances.md"
+  ],
+  "minimal_authority_surface_ids": [
+    "source_readiness_verdict",
+    "communication_visual_direction_decision",
+    "review_export_verdict",
+    "artifact_mutation_authorization",
+    "visual_memory_accept_reject",
+    "owner_receipt_signer",
+    "native_helper_implementation"
+  ],
+  "minimal_authority_surface_taxonomy": {
+    "surface_kind": "rca_minimal_authority_surface_taxonomy",
+    "taxonomy_id": "rca.minimal_authority_surface_taxonomy.v1",
+    "owner": "redcube_ai",
+    "ai_first_judgment_surface_ids": [
+      "source_readiness_verdict",
+      "communication_visual_direction_decision",
+      "review_export_verdict",
+      "visual_memory_accept_reject"
+    ],
+    "programmatic_authority_surface_ids": [
+      "artifact_mutation_authorization",
+      "owner_receipt_signer",
+      "native_helper_implementation"
+    ],
+    "all_surface_ids": [
+      "source_readiness_verdict",
+      "communication_visual_direction_decision",
+      "review_export_verdict",
+      "artifact_mutation_authorization",
+      "visual_memory_accept_reject",
+      "owner_receipt_signer",
+      "native_helper_implementation"
+    ],
+    "mechanical_decision_forbidden_for_all_surfaces": true,
+    "programmatic_verdict_generation_allowed": false,
+    "policy": "visual/source/review/memory judgments require AI-first stage artifacts; programmatic surfaces guard owner receipts and refs only"
+  },
+  "minimal_authority_surface_contracts": [
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "source_readiness_verdict",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "ai_first_visual_judgment_surface",
+      "judgment_owner": "ai_first_source_readiness_stage_artifact",
+      "programmatic_role": "source_pack_ref_validator_and_typed_blocker",
+      "ai_stage_artifact_required": true,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "verdict_refs",
+        "typed_blocker",
+        "owner_receipt_refs"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "verdict_refs",
+          "typed_blocker",
+          "owner_receipt_refs"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": true,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    },
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "communication_visual_direction_decision",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "ai_first_visual_judgment_surface",
+      "judgment_owner": "ai_authored_communication_strategy_or_visual_direction_stage_artifact",
+      "programmatic_role": "visual_direction_ref_materializer",
+      "ai_stage_artifact_required": true,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "visual_direction_refs",
+        "typed_blocker",
+        "owner_receipt_refs"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "visual_direction_refs",
+          "typed_blocker",
+          "owner_receipt_refs"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": true,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    },
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "review_export_verdict",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "ai_first_visual_judgment_surface",
+      "judgment_owner": "ai_first_visual_review_or_export_gate_artifact",
+      "programmatic_role": "review_export_ref_validator_and_receipt_guard",
+      "ai_stage_artifact_required": true,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "verdict_refs",
+        "typed_blocker",
+        "owner_receipt_refs"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "verdict_refs",
+          "typed_blocker",
+          "owner_receipt_refs"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": true,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    },
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "artifact_mutation_authorization",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "programmatic_authority_guard_surface",
+      "judgment_owner": "rca_owner_receipt_blocked_item_and_repair_target",
+      "programmatic_role": "artifact_mutation_materializer_and_guard",
+      "ai_stage_artifact_required": false,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "artifact_refs",
+        "typed_blocker",
+        "owner_receipt_refs"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "artifact_refs",
+          "typed_blocker",
+          "owner_receipt_refs"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": false,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    },
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "visual_memory_accept_reject",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "ai_first_visual_judgment_surface",
+      "judgment_owner": "ai_first_visual_memory_learning_stage_artifact",
+      "programmatic_role": "memory_receipt_writer_and_locator_projection",
+      "ai_stage_artifact_required": true,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "memory_receipt_refs",
+        "typed_blocker",
+        "owner_receipt_refs"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "memory_receipt_refs",
+          "typed_blocker",
+          "owner_receipt_refs"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": true,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    },
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "owner_receipt_signer",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "programmatic_authority_guard_surface",
+      "judgment_owner": "rca_owner_receipt_schema_and_domain_provenance",
+      "programmatic_role": "receipt_schema_signer_and_blocker_guard",
+      "ai_stage_artifact_required": false,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "owner_receipt_refs",
+        "typed_blocker",
+        "no_regression_evidence_refs"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "owner_receipt_refs",
+          "typed_blocker",
+          "no_regression_evidence_refs"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": false,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    },
+    {
+      "surface_kind": "rca_minimal_authority_surface",
+      "authority_surface_id": "native_helper_implementation",
+      "owner": "redcube_ai",
+      "retention_class": "rca_minimal_authority_function",
+      "generated_by_opl": false,
+      "opl_generated_wrapper_allowed": true,
+      "work_mode": "programmatic_authority_guard_surface",
+      "judgment_owner": "rca_native_helper_catalog_and_owner_receipt_policy",
+      "programmatic_role": "native_ppt_image_export_helper_implementation",
+      "ai_stage_artifact_required": false,
+      "stage_or_owner_receipt_evidence_required": true,
+      "mechanical_decision_forbidden": true,
+      "programmatic_verdict_generation_allowed": false,
+      "allowed_return_shapes": [
+        "helper_proof_refs",
+        "artifact_refs",
+        "typed_blocker"
+      ],
+      "output_boundary": {
+        "allowed_return_shapes": [
+          "helper_proof_refs",
+          "artifact_refs",
+          "typed_blocker"
+        ],
+        "forbidden_outputs": [
+          "visual_truth_write",
+          "artifact_blob_write_without_owner_receipt",
+          "memory_body_write",
+          "mechanical_ready_verdict",
+          "programmatic_ready_verdict",
+          "ai_free_visual_verdict",
+          "schema_completeness_ready_verdict",
+          "generic_lifecycle_completion_verdict"
+        ]
+      },
+      "forbidden_decision_sources": [
+        "schema_completeness",
+        "provider_completion",
+        "generic_lifecycle_completion",
+        "artifact_file_presence",
+        "mechanical_screenshot_metrics_alone",
+        "controller_route_state",
+        "runtime_queue_state"
+      ],
+      "decision_boundary": {
+        "ai_first_judgment_required": false,
+        "programmatic_role_may_materialize_refs_only": true,
+        "programmatic_role_may_compute_ready_verdict": false,
+        "owner_receipt_or_typed_blocker_required_when_evidence_missing": true
+      }
+    }
+  ],
+  "generated_surfaces_requested": [
+    "cli",
+    "mcp",
+    "skill",
+    "product_entry_manifest",
+    "domain_handler",
+    "status_read_model",
+    "workbench_drilldown",
+    "product_entry",
+    "product_status",
+    "product_session",
+    "workbench"
+  ],
+  "generated_interface_consumption_ref": "/opl_generated_interface_consumption",
+  "repo_local_handler_targets": [
+    "redcube_cli",
+    "redcube_mcp",
+    "invokeProductEntry",
+    "invokeDomainEntry",
+    "domain_handler",
+    "product_entry_continuity_refs_adapter"
+  ],
+  "repo_local_handlers_are_generated_surface_owners": false,
+  "domain_repo_can_own_generated_surface": false,
+  "stage_pack_required_sections": [
+    "prompt_refs",
+    "skill_refs",
+    "tool_refs",
+    "tool_affordance_boundary",
+    "knowledge_refs",
+    "quality_gate_refs",
+    "strategy_refs",
+    "candidate_pool_policy",
+    "independent_gate_policy",
+    "handoff_policy"
+  ],
+  "cognitive_kernel_adoption_ref": "contracts/cognitive_kernel_adoption.json",
+  "golden_path_profile_ref": "contracts/golden_path_profile.json",
+  "tool_refs": [
+    {
+      "ref": "agent/tools/domain_affordances.md",
+      "ref_kind": "repo_path",
+      "role": "domain_tool_affordance_catalog",
+      "catalog_role": "available_affordance_catalog_not_workflow_script"
+    }
+  ],
+  "tool_affordance_boundary": {
+    "catalog_role": "available_affordance_catalog_not_workflow_script",
+    "capability_refs": [
+      {
+        "ref": "source_context_and_visual_brief_reading",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "visual_direction_and_candidate_generation_support",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "native_ppt_render_screenshot_and_export_helpers",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "visual_review_repair_and_artifact_lineage_support",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      }
+    ],
+    "permission_scope_refs": [
+      {
+        "ref": "repo_context_read",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      },
+      {
+        "ref": "declared_domain_workspace_read",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      },
+      {
+        "ref": "bounded_domain_artifact_write_when_owner_authorized",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      },
+      {
+        "ref": "receipt_or_typed_blocker_return",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      }
+    ],
+    "credential_boundary_refs": [
+      {
+        "ref": "no_secret_material_in_stage_pack",
+        "ref_kind": "policy_ref",
+        "role": "credential_boundary_boundary"
+      },
+      {
+        "ref": "executor_must_request_human_gate_for_missing_credentials",
+        "ref_kind": "policy_ref",
+        "role": "credential_boundary_boundary"
+      }
+    ],
+    "write_scope_refs": [
+      {
+        "ref": "visual_workspace_refs_only",
+        "ref_kind": "policy_ref",
+        "role": "write_scope_boundary"
+      },
+      {
+        "ref": "deliverable_artifact_mutation_only_with_rca_artifact_authority_receipt",
+        "ref_kind": "policy_ref",
+        "role": "write_scope_boundary"
+      }
+    ],
+    "side_effect_risk_refs": [
+      {
+        "ref": "external_network_or_portal_side_effect_requires_explicit_stage_permission",
+        "ref_kind": "policy_ref",
+        "role": "side_effect_risk_boundary"
+      },
+      {
+        "ref": "artifact_or_package_mutation_requires_domain_owner_receipt",
+        "ref_kind": "policy_ref",
+        "role": "side_effect_risk_boundary"
+      }
+    ],
+    "forbidden_authority_refs": [
+      {
+        "ref": "visual_truth_write_by_opl",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "review_verdict_without_rca_owner_receipt",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "export_verdict_without_rca_owner_receipt",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "artifact_body_write_without_artifact_authority_receipt",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "visual_memory_body_write_by_opl",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      }
+    ],
+    "executor_autonomy": {
+      "executor_can_choose_tools": true,
+      "executor_can_skip_tools": true,
+      "executor_can_substitute_tools_within_boundary": true,
+      "executor_can_choose_order_and_parallelism": true,
+      "executor_can_request_missing_context_or_human_gate": true,
+      "tool_catalog_can_prescribe_tool_sequence": false,
+      "tool_catalog_can_define_cognitive_strategy": false,
+      "tool_catalog_can_override_stage_goal": false,
+      "tool_catalog_can_authorize_forbidden_write": false
+    },
+    "policy": "redcube_ai tool refs declare available affordances and safety boundaries only; they do not prescribe executor order, stage strategy, stage goal, or forbidden writes."
+  },
+  "visual_pack_discipline_contract": {
+    "owner": "redcube_ai",
+    "policy_ref": "agent/quality_gates/visual_pack_discipline.md",
+    "required_before_artifact_creation": true,
+    "required_contract_fields": [
+      "deliverable_family",
+      "route",
+      "audience",
+      "output_format",
+      "canvas_or_aspect_ratio",
+      "visual_direction_refs",
+      "brand_profile_precedence_refs",
+      "material_status_refs",
+      "source_material_pass_refs",
+      "layout_density_refs",
+      "sparse_page_evidence_refs",
+      "render_acceptance_refs",
+      "review_gate_refs",
+      "export_target"
+    ],
+    "brand_profile_precedence": {
+      "precedence_order": [
+        "explicit_delivery_request_brand_material",
+        "rca_visual_direction_judgment",
+        "workspace_profile_defaults",
+        "user_profile_defaults",
+        "built_in_route_defaults"
+      ],
+      "approved_task_material_overrides_memory_or_defaults": true,
+      "generated_or_inferred_profile_can_override_approved_material": false,
+      "defaults_fill_missing_fields_only": true,
+      "required_refs": [
+        "brand_profile_precedence_refs",
+        "approved_brand_material_refs",
+        "visual_direction_refs",
+        "profile_default_refs",
+        "typed_blocker_refs"
+      ]
+    },
+    "source_material_pass_transparency": {
+      "required_item_statuses": [
+        "approved",
+        "provided_unverified",
+        "missing",
+        "out_of_scope"
+      ],
+      "pass_level_evidence_required": true,
+      "per_material_item_required_fields": [
+        "material_id",
+        "material_kind",
+        "status",
+        "pass_ref",
+        "source_ref",
+        "verified",
+        "carried_forward",
+        "gap_ref",
+        "typed_blocker_ref"
+      ],
+      "missing_or_unverified_required_material_yields": [
+        "source_gap_refs",
+        "material_gap_refs",
+        "typed_blocker"
+      ],
+      "opl_generated_surface_may_summarize_refs_only": true
+    },
+    "layout_density_sparse_page_evidence": {
+      "density_contract_required_before_layout": true,
+      "required_fields": [
+        "target_density_band",
+        "page_or_frame_inventory_refs",
+        "minimum_occupancy_evidence_refs",
+        "sparse_page_acceptance_reason_refs",
+        "merge_split_decision_refs",
+        "blocked_page_refs",
+        "screenshot_review_refs",
+        "export_gate_refs"
+      ],
+      "sparse_page_can_pass_without_rca_rationale": false,
+      "provider_completion_can_accept_sparse_page": false,
+      "schema_completeness_can_accept_sparse_page": false,
+      "allowed_sparse_page_outcomes": [
+        "accepted_with_rca_owned_rationale_refs",
+        "repair_target_refs",
+        "merge_or_split_decision_refs",
+        "typed_blocker"
+      ]
+    },
+    "material_status_required": true,
+    "render_acceptance_required": true,
+    "mechanical_checks_can_issue_visual_verdict": false,
+    "provider_completion_can_issue_visual_verdict": false,
+    "allowed_machine_outputs": [
+      "typed_blocker",
+      "repair_target_refs",
+      "preserved_page_refs",
+      "no_regression_refs",
+      "helper_proof_refs"
+    ],
+    "forbidden_machine_outputs": [
+      "visual_ready_verdict",
+      "exportable_verdict",
+      "handoffable_verdict",
+      "publication_ready_verdict",
+      "artifact_body_write_without_owner_receipt"
+    ]
+  },
+  "cognitive_stage_pack_contract": {
+    "owner": "redcube_ai",
+    "consumer": "opl_pack_compiler",
+    "contract_ref": "contracts/opl-framework/cognitive-computation-kernel.json",
+    "stage_control_plane_ref": "contracts/stage_control_plane.json",
+    "cognitive_kernel_adoption_ref": "contracts/cognitive_kernel_adoption.json",
+    "golden_path_profile_ref": "contracts/golden_path_profile.json",
+    "domain_affordance_catalog_ref": {
+      "ref": "agent/tools/domain_affordances.md",
+      "ref_kind": "repo_path",
+      "role": "domain_tool_affordance_catalog",
+      "catalog_role": "available_affordance_catalog_not_workflow_script"
+    },
+    "refs_only": true,
+    "user_visible_flow_changed": false,
+    "launch_hard_gate": false,
+    "required_stage_sections": [
+      "prompt_refs",
+      "skill_refs",
+      "tool_refs",
+      "tool_affordance_boundary",
+      "knowledge_refs",
+      "quality_gate_refs",
+      "strategy_refs",
+      "candidate_pool_policy",
+      "independent_gate_policy",
+      "handoff_policy"
+    ],
+    "stage_strategy_owner": "selected_codex_executor_with_rca_owned_gates",
+    "tool_affordance_policy": "available_affordance_catalog_not_workflow_script",
+    "tool_affordance_boundary": {
+      "catalog_role": "available_affordance_catalog_not_workflow_script",
+      "capability_refs": [
+        {
+          "ref": "source_context_and_visual_brief_reading",
+          "ref_kind": "policy_ref",
+          "role": "capability_boundary"
+        },
+        {
+          "ref": "visual_direction_and_candidate_generation_support",
+          "ref_kind": "policy_ref",
+          "role": "capability_boundary"
+        },
+        {
+          "ref": "native_ppt_render_screenshot_and_export_helpers",
+          "ref_kind": "policy_ref",
+          "role": "capability_boundary"
+        },
+        {
+          "ref": "visual_review_repair_and_artifact_lineage_support",
+          "ref_kind": "policy_ref",
+          "role": "capability_boundary"
+        }
+      ],
+      "permission_scope_refs": [
+        {
+          "ref": "repo_context_read",
+          "ref_kind": "policy_ref",
+          "role": "permission_scope_boundary"
+        },
+        {
+          "ref": "declared_domain_workspace_read",
+          "ref_kind": "policy_ref",
+          "role": "permission_scope_boundary"
+        },
+        {
+          "ref": "bounded_domain_artifact_write_when_owner_authorized",
+          "ref_kind": "policy_ref",
+          "role": "permission_scope_boundary"
+        },
+        {
+          "ref": "receipt_or_typed_blocker_return",
+          "ref_kind": "policy_ref",
+          "role": "permission_scope_boundary"
+        }
+      ],
+      "credential_boundary_refs": [
+        {
+          "ref": "no_secret_material_in_stage_pack",
+          "ref_kind": "policy_ref",
+          "role": "credential_boundary_boundary"
+        },
+        {
+          "ref": "executor_must_request_human_gate_for_missing_credentials",
+          "ref_kind": "policy_ref",
+          "role": "credential_boundary_boundary"
+        }
+      ],
+      "write_scope_refs": [
+        {
+          "ref": "visual_workspace_refs_only",
+          "ref_kind": "policy_ref",
+          "role": "write_scope_boundary"
+        },
+        {
+          "ref": "deliverable_artifact_mutation_only_with_rca_artifact_authority_receipt",
+          "ref_kind": "policy_ref",
+          "role": "write_scope_boundary"
+        }
+      ],
+      "side_effect_risk_refs": [
+        {
+          "ref": "external_network_or_portal_side_effect_requires_explicit_stage_permission",
+          "ref_kind": "policy_ref",
+          "role": "side_effect_risk_boundary"
+        },
+        {
+          "ref": "artifact_or_package_mutation_requires_domain_owner_receipt",
+          "ref_kind": "policy_ref",
+          "role": "side_effect_risk_boundary"
+        }
+      ],
+      "forbidden_authority_refs": [
+        {
+          "ref": "visual_truth_write_by_opl",
+          "ref_kind": "policy_ref",
+          "role": "forbidden_authority_boundary"
+        },
+        {
+          "ref": "review_verdict_without_rca_owner_receipt",
+          "ref_kind": "policy_ref",
+          "role": "forbidden_authority_boundary"
+        },
+        {
+          "ref": "export_verdict_without_rca_owner_receipt",
+          "ref_kind": "policy_ref",
+          "role": "forbidden_authority_boundary"
+        },
+        {
+          "ref": "artifact_body_write_without_artifact_authority_receipt",
+          "ref_kind": "policy_ref",
+          "role": "forbidden_authority_boundary"
+        },
+        {
+          "ref": "visual_memory_body_write_by_opl",
+          "ref_kind": "policy_ref",
+          "role": "forbidden_authority_boundary"
+        }
+      ],
+      "executor_autonomy": {
+        "executor_can_choose_tools": true,
+        "executor_can_skip_tools": true,
+        "executor_can_substitute_tools_within_boundary": true,
+        "executor_can_choose_order_and_parallelism": true,
+        "executor_can_request_missing_context_or_human_gate": true,
+        "tool_catalog_can_prescribe_tool_sequence": false,
+        "tool_catalog_can_define_cognitive_strategy": false,
+        "tool_catalog_can_override_stage_goal": false,
+        "tool_catalog_can_authorize_forbidden_write": false
+      },
+      "policy": "redcube_ai tool refs declare available affordances and safety boundaries only; they do not prescribe executor order, stage strategy, stage goal, or forbidden writes."
+    },
+    "candidate_pool_policy": "stage_internal_refs_with_lineage_no_user_flow_expansion",
+    "independent_gate_policy": "execution_and_review_attempts_must_be_separable_for_quality_acceptance_not_stage_progression",
+    "authority_boundary": {
+      "opl_can_write_visual_truth": false,
+      "opl_can_write_artifact_body": false,
+      "opl_can_authorize_review_export_verdict": false,
+      "opl_can_sign_owner_receipt": false,
+      "provider_completion_is_visual_ready": false,
+      "same_attempt_self_review_can_close_quality_gate": false
+    }
+  },
+  "markdown_marp_route_policy": {
+    "owner": "redcube_ai",
+    "policy_ref": "agent/knowledge/markdown_route_policy.md",
+    "route_family": "markdown_marp",
+    "route_default": false,
+    "explicit_selection_required": true,
+    "refs_only": true,
+    "allowed_route_use": [
+      "operator_explicit_markdown_or_marp_request",
+      "source_to_slide_text_structuring_refs",
+      "intermediate_outline_or_script_packaging_refs"
+    ],
+    "default_visual_route_ref": "author_image_pages",
+    "external_runtime_authority_allowed": false,
+    "provider_completion_can_issue_visual_verdict": false
+  },
+  "package_distribution_gate": {
+    "owner": "redcube_ai",
+    "policy_ref": "agent/quality_gates/package_distribution.md",
+    "gate_id": "rca.package_distribution_consistency.v1",
+    "refs_only": true,
+    "required_consistency_checks": [
+      "source_to_package_required_domain_pack_paths_match",
+      "plugin_skill_refs_resolve_to_repo_tracked_pack_paths",
+      "package_manifest_does_not_add_runtime_authority",
+      "packaging_does_not_change_route_default"
+    ],
+    "package_can_omit_required_domain_pack_refs": false,
+    "packaging_can_change_route_default": false,
+    "external_runtime_authority_allowed": false
+  },
+  "source_refs": {
+    "canonical_semantic_pack": "agent/",
+    "action_catalog": "packages/redcube-domain-entry/src/actions/family-action-catalog.ts::buildRedCubeActionMetadata",
+    "stage_control_plane": "packages/redcube-domain-entry/src/actions/family-stage-control-plane.ts::buildRedCubeFamilyStageControlPlane",
+    "memory_descriptor": "packages/redcube-domain-entry/src/actions/standard-domain-agent-skeleton.ts::buildFamilyDomainMemoryDescriptor",
+    "functional_audit": "packages/redcube-domain-entry/src/actions/guarded-domain-actions.ts::buildPrivatizedFunctionalModuleAuditProjection"
+  },
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "domain_can_claim_generated_surface_owner": false
+  }
+}

@@ -1,1 +1,254 @@
-{"surface_kind":"opl_domain_pack_compiler_input","schema_version":1,"domain_id":"opl-meta-agent","domain_pack_owner":"opl-meta-agent","generated_surface_owner":"one-person-lab","required_domain_pack_paths":["agent/knowledge/opl-boundary-policy.md","agent/knowledge/project-maturity-signals.md","agent/knowledge/trajectory-learning-policy.md","agent/knowledge/transferable-agent-practices.md","agent/prompts/agent-skeleton-build.md","agent/prompts/baseline-delivery.md","agent/prompts/baseline-run.md","agent/prompts/eval-suite-build.md","agent/prompts/intent-intake.md","agent/prompts/online-learning.md","agent/prompts/optimizer-iteration.md","agent/prompts/stage-decomposition.md","agent/prompts/target-agent-takeover.md","agent/prompts/trajectory-learning-intake.md","agent/prompts/web-experience-research.md","agent/quality_gates/baseline-delivery.md","agent/quality_gates/external-suite-self-evolution.md","agent/quality_gates/external-work-order-execution.md","agent/quality_gates/mechanism-patch-adoption.md","agent/quality_gates/takeover.md","agent/quality_gates/trajectory-learning-proposal.md","agent/skills/agent-baseline-build.md","agent/skills/external-suite-improvement.md","agent/skills/external-work-order-execution.md","agent/skills/opl-meta-agent-domain-skill.md","agent/skills/trajectory-learning-intake.md","agent/stages/agent-skeleton-build.md","agent/stages/baseline-delivery.md","agent/stages/baseline-run.md","agent/stages/eval-suite-build.md","agent/stages/intent-intake.md","agent/stages/online-learning.md","agent/stages/optimizer-iteration.md","agent/stages/stage-decomposition.md","agent/stages/target-agent-takeover.md","agent/stages/trajectory-learning-intake.md","agent/stages/web-experience-research.md","agent/tools/domain_affordances.md"],"declarative_domain_pack":["domain_truth_schema","stage_descriptors","transition_table","action_metadata","knowledge_refs","prompt_refs","skill_refs","policy_tables","quality_rubric_refs","artifact_authority_contract","memory_policy","owner_receipt_schema","target_owner_closeout_hook_delegation_policy","domain_fixtures","trajectory_atomization_policy","trajectory_candidate_buffer_policy","skill_prompt_stage_policy_proposal_contract","tool_affordance_catalog","cognitive_kernel_adoption_contract","golden_path_profile"],"minimal_authority_functions":["candidate_agent_package_builder","mechanism_patch_proposal_authorizer"],"generated_surfaces_requested":["cli","mcp","product_entry_manifest","domain_handler","status_read_model","workbench_drilldown","functional_harness_cases"],"domain_repo_can_own_generated_surface":false,"authority_boundary":{"opl_can_write_domain_truth":false,"opl_can_write_memory_body":false,"opl_can_authorize_quality_or_export":false,"domain_pack_can_supply_domain_truth_refs":true,"domain_pack_can_supply_prompt_skill_stage_quality_refs":true,"generated_interface_can_invoke_minimal_authority_functions":true,"generated_interface_can_write_domain_truth":false,"generated_interface_can_write_memory_body":false,"generated_interface_can_authorize_quality_or_export":false,"domain_can_claim_generated_surface_owner":false},"marker":"generated_by_opl_standard_domain_agent_scaffold_v1","canonical_semantic_pack_root":"agent/","canonical_semantic_pack_role":"repo_source_declarative_meta_agent_pack","trajectory_learning_contract_ref":"contracts/trajectory_learning_contract.json","stage_pack_required_sections":["prompt_refs","skill_refs","tool_refs","tool_affordance_boundary","knowledge_refs","quality_gate_refs","strategy_refs","candidate_pool_policy","independent_gate_policy","handoff_policy"],"tool_refs":[{"ref":"agent/tools/domain_affordances.md","ref_kind":"repo_path","role":"domain_tool_affordance_catalog","catalog_role":"available_affordance_catalog_not_workflow_script"}],"tool_affordance_boundary":{"catalog_role":"available_affordance_catalog_not_workflow_script","capability_refs":[{"ref":"target_agent_intent_and_repo_context_reading","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"external_experience_research_and_synthesis","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"stage_decomposition_and_pack_materialization","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"baseline_eval_suite_and_takeover_evidence_runner","ref_kind":"policy_ref","role":"capability_boundary"},{"ref":"optimizer_iteration_and_trajectory_learning_review","ref_kind":"policy_ref","role":"capability_boundary"}],"permission_scope_refs":[{"ref":"repo_context_read","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"declared_domain_workspace_read","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"bounded_domain_artifact_write_when_owner_authorized","ref_kind":"policy_ref","role":"permission_scope_boundary"},{"ref":"receipt_or_typed_blocker_return","ref_kind":"policy_ref","role":"permission_scope_boundary"}],"credential_boundary_refs":[{"ref":"no_secret_material_in_stage_pack","ref_kind":"policy_ref","role":"credential_boundary_boundary"},{"ref":"executor_must_request_human_gate_for_missing_credentials","ref_kind":"policy_ref","role":"credential_boundary_boundary"}],"write_scope_refs":[{"ref":"target_agent_workspace_refs_only_until_user_approved_write","ref_kind":"policy_ref","role":"write_scope_boundary"},{"ref":"generated_agent_contract_artifact_refs_only_until_owner_closeout","ref_kind":"policy_ref","role":"write_scope_boundary"}],"side_effect_risk_refs":[{"ref":"external_network_or_portal_side_effect_requires_explicit_stage_permission","ref_kind":"policy_ref","role":"side_effect_risk_boundary"},{"ref":"artifact_or_package_mutation_requires_domain_owner_receipt","ref_kind":"policy_ref","role":"side_effect_risk_boundary"}],"forbidden_authority_refs":[{"ref":"target_domain_truth_write_by_oma","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"default_agent_promotion_without_gate","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"model_weight_training_or_deployment","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"quality_verdict_without_independent_reviewer_receipt","ref_kind":"policy_ref","role":"forbidden_authority_boundary"},{"ref":"opl_framework_runtime_write_by_domain_repo","ref_kind":"policy_ref","role":"forbidden_authority_boundary"}],"executor_autonomy":{"executor_can_choose_tools":true,"executor_can_skip_tools":true,"executor_can_substitute_tools_within_boundary":true,"executor_can_choose_order_and_parallelism":true,"executor_can_request_missing_context_or_human_gate":true,"tool_catalog_can_prescribe_tool_sequence":false,"tool_catalog_can_define_cognitive_strategy":false,"tool_catalog_can_override_stage_goal":false,"tool_catalog_can_authorize_forbidden_write":false},"policy":"opl-meta-agent tool refs declare available affordances and safety boundaries only; they do not prescribe executor order, stage strategy, stage goal, or forbidden writes."},"cognitive_kernel_adoption_ref":"contracts/cognitive_kernel_adoption.json","golden_path_profile_ref":"contracts/golden_path_profile.json","cognitive_kernel_policy":{"advisory_not_launch_hard_gate":true,"strategy_refs_completeness_is_launch_hard_gate":false,"independent_gate_receipt_required_for_quality_progression":true,"same_attempt_self_review_can_close_quality_gate":false,"route_can_execute_without_stage_attempt":false}}
+{
+  "surface_kind": "opl_domain_pack_compiler_input",
+  "schema_version": 1,
+  "domain_id": "opl-meta-agent",
+  "domain_pack_owner": "opl-meta-agent",
+  "generated_surface_owner": "one-person-lab",
+  "required_domain_pack_paths": [
+    "agent/knowledge/opl-boundary-policy.md",
+    "agent/knowledge/project-maturity-signals.md",
+    "agent/knowledge/trajectory-learning-policy.md",
+    "agent/knowledge/transferable-agent-practices.md",
+    "agent/prompts/agent-skeleton-build.md",
+    "agent/prompts/baseline-delivery.md",
+    "agent/prompts/baseline-run.md",
+    "agent/prompts/eval-suite-build.md",
+    "agent/prompts/intent-intake.md",
+    "agent/prompts/online-learning.md",
+    "agent/prompts/optimizer-iteration.md",
+    "agent/prompts/stage-decomposition.md",
+    "agent/prompts/target-agent-takeover.md",
+    "agent/prompts/trajectory-learning-intake.md",
+    "agent/prompts/web-experience-research.md",
+    "agent/quality_gates/baseline-delivery.md",
+    "agent/quality_gates/external-suite-self-evolution.md",
+    "agent/quality_gates/external-work-order-execution.md",
+    "agent/quality_gates/mechanism-patch-adoption.md",
+    "agent/quality_gates/takeover.md",
+    "agent/quality_gates/trajectory-learning-proposal.md",
+    "agent/skills/agent-baseline-build.md",
+    "agent/skills/external-suite-improvement.md",
+    "agent/skills/external-work-order-execution.md",
+    "agent/skills/opl-meta-agent-domain-skill.md",
+    "agent/skills/trajectory-learning-intake.md",
+    "agent/stages/agent-skeleton-build.md",
+    "agent/stages/baseline-delivery.md",
+    "agent/stages/baseline-run.md",
+    "agent/stages/eval-suite-build.md",
+    "agent/stages/intent-intake.md",
+    "agent/stages/online-learning.md",
+    "agent/stages/optimizer-iteration.md",
+    "agent/stages/stage-decomposition.md",
+    "agent/stages/target-agent-takeover.md",
+    "agent/stages/trajectory-learning-intake.md",
+    "agent/stages/web-experience-research.md",
+    "agent/tools/domain_affordances.md"
+  ],
+  "declarative_domain_pack": [
+    "domain_truth_schema",
+    "stage_descriptors",
+    "transition_table",
+    "action_metadata",
+    "knowledge_refs",
+    "prompt_refs",
+    "skill_refs",
+    "policy_tables",
+    "quality_rubric_refs",
+    "artifact_authority_contract",
+    "memory_policy",
+    "owner_receipt_schema",
+    "target_owner_closeout_hook_delegation_policy",
+    "domain_fixtures",
+    "trajectory_atomization_policy",
+    "trajectory_candidate_buffer_policy",
+    "skill_prompt_stage_policy_proposal_contract",
+    "tool_affordance_catalog",
+    "cognitive_kernel_adoption_contract",
+    "golden_path_profile"
+  ],
+  "minimal_authority_functions": [
+    "candidate_agent_package_builder",
+    "mechanism_patch_proposal_authorizer"
+  ],
+  "generated_surfaces_requested": [
+    "cli",
+    "mcp",
+    "product_entry_manifest",
+    "domain_handler",
+    "status_read_model",
+    "workbench_drilldown"
+  ],
+  "domain_repo_can_own_generated_surface": false,
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "domain_pack_can_supply_domain_truth_refs": true,
+    "domain_pack_can_supply_prompt_skill_stage_quality_refs": true,
+    "generated_interface_can_invoke_minimal_authority_functions": true,
+    "generated_interface_can_write_domain_truth": false,
+    "generated_interface_can_write_memory_body": false,
+    "generated_interface_can_authorize_quality_or_export": false,
+    "domain_can_claim_generated_surface_owner": false
+  },
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1",
+  "canonical_semantic_pack_root": "agent/",
+  "canonical_semantic_pack_role": "repo_source_declarative_meta_agent_pack",
+  "trajectory_learning_contract_ref": "contracts/trajectory_learning_contract.json",
+  "stage_pack_required_sections": [
+    "prompt_refs",
+    "skill_refs",
+    "tool_refs",
+    "tool_affordance_boundary",
+    "knowledge_refs",
+    "quality_gate_refs",
+    "strategy_refs",
+    "candidate_pool_policy",
+    "independent_gate_policy",
+    "handoff_policy"
+  ],
+  "tool_refs": [
+    {
+      "ref": "agent/tools/domain_affordances.md",
+      "ref_kind": "repo_path",
+      "role": "domain_tool_affordance_catalog",
+      "catalog_role": "available_affordance_catalog_not_workflow_script"
+    }
+  ],
+  "tool_affordance_boundary": {
+    "catalog_role": "available_affordance_catalog_not_workflow_script",
+    "capability_refs": [
+      {
+        "ref": "target_agent_intent_and_repo_context_reading",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "external_experience_research_and_synthesis",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "stage_decomposition_and_pack_materialization",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "baseline_eval_suite_and_takeover_evidence_runner",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      },
+      {
+        "ref": "optimizer_iteration_and_trajectory_learning_review",
+        "ref_kind": "policy_ref",
+        "role": "capability_boundary"
+      }
+    ],
+    "permission_scope_refs": [
+      {
+        "ref": "repo_context_read",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      },
+      {
+        "ref": "declared_domain_workspace_read",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      },
+      {
+        "ref": "bounded_domain_artifact_write_when_owner_authorized",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      },
+      {
+        "ref": "receipt_or_typed_blocker_return",
+        "ref_kind": "policy_ref",
+        "role": "permission_scope_boundary"
+      }
+    ],
+    "credential_boundary_refs": [
+      {
+        "ref": "no_secret_material_in_stage_pack",
+        "ref_kind": "policy_ref",
+        "role": "credential_boundary_boundary"
+      },
+      {
+        "ref": "executor_must_request_human_gate_for_missing_credentials",
+        "ref_kind": "policy_ref",
+        "role": "credential_boundary_boundary"
+      }
+    ],
+    "write_scope_refs": [
+      {
+        "ref": "target_agent_workspace_refs_only_until_user_approved_write",
+        "ref_kind": "policy_ref",
+        "role": "write_scope_boundary"
+      },
+      {
+        "ref": "generated_agent_contract_artifact_refs_only_until_owner_closeout",
+        "ref_kind": "policy_ref",
+        "role": "write_scope_boundary"
+      }
+    ],
+    "side_effect_risk_refs": [
+      {
+        "ref": "external_network_or_portal_side_effect_requires_explicit_stage_permission",
+        "ref_kind": "policy_ref",
+        "role": "side_effect_risk_boundary"
+      },
+      {
+        "ref": "artifact_or_package_mutation_requires_domain_owner_receipt",
+        "ref_kind": "policy_ref",
+        "role": "side_effect_risk_boundary"
+      }
+    ],
+    "forbidden_authority_refs": [
+      {
+        "ref": "target_domain_truth_write_by_oma",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "default_agent_promotion_without_gate",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "model_weight_training_or_deployment",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "quality_verdict_without_independent_reviewer_receipt",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      },
+      {
+        "ref": "opl_framework_runtime_write_by_domain_repo",
+        "ref_kind": "policy_ref",
+        "role": "forbidden_authority_boundary"
+      }
+    ],
+    "executor_autonomy": {
+      "executor_can_choose_tools": true,
+      "executor_can_skip_tools": true,
+      "executor_can_substitute_tools_within_boundary": true,
+      "executor_can_choose_order_and_parallelism": true,
+      "executor_can_request_missing_context_or_human_gate": true,
+      "tool_catalog_can_prescribe_tool_sequence": false,
+      "tool_catalog_can_define_cognitive_strategy": false,
+      "tool_catalog_can_override_stage_goal": false,
+      "tool_catalog_can_authorize_forbidden_write": false
+    },
+    "policy": "opl-meta-agent tool refs declare available affordances and safety boundaries only; they do not prescribe executor order, stage strategy, stage goal, or forbidden writes."
+  },
+  "cognitive_kernel_adoption_ref": "contracts/cognitive_kernel_adoption.json",
+  "golden_path_profile_ref": "contracts/golden_path_profile.json",
+  "cognitive_kernel_policy": {
+    "advisory_not_launch_hard_gate": true,
+    "strategy_refs_completeness_is_launch_hard_gate": false,
+    "independent_gate_receipt_required_for_quality_claims": true,
+    "same_attempt_self_review_can_close_quality_gate": false,
+    "route_can_execute_without_stage_attempt": false
+  }
+}

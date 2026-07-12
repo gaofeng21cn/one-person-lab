@@ -126,14 +126,12 @@
       "replacement_opl_primitive": [
         "OPL generated product/status/workbench surface",
         "Runway lifecycle primitives",
-        "DomainProgressTransitionRuntime",
         "App/operator generated action refs"
       ],
       "authority_retained": [
         "fundability_verdict",
         "grant_strategy_memory_body",
         "package_authority",
-        "transition_oracle",
         "owner_receipt",
         "typed_blocker"
       ],

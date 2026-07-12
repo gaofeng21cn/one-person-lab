@@ -36,7 +36,7 @@ export interface FamilyActionSourceOfWork {
   domain_repo_wrapper_policy?: 'handler_target_refs_only_adapter_or_tombstone_candidate';
 }
 
-export type FamilyActionStageRoutePolicy = 'ordered_stage_attempts_no_skip';
+export type FamilyActionStageRoutePolicy = 'ai_selected_progress_route';
 export type FamilyActionStageRouteExemption = 'domain_handler_target_only';
 
 export interface FamilyActionStageRoute {
@@ -246,15 +246,15 @@ function normalizeStageRoute(value: unknown, field: string): FamilyActionStageRo
     throw new Error(`${field}.terminal_stage_refs must belong to the declared route: ${unknownTerminalRefs.join(', ')}`);
   }
   const routePolicy = requireString(value.route_policy, `${field}.route_policy`);
-  if (routePolicy !== 'ordered_stage_attempts_no_skip') {
-    throw new Error(`${field}.route_policy must be ordered_stage_attempts_no_skip.`);
+  if (routePolicy !== 'ai_selected_progress_route') {
+    throw new Error(`${field}.route_policy must be ai_selected_progress_route.`);
   }
   return {
     entry_stage_ref: entryStageRef,
     required_stage_refs: requiredStageRefs,
     optional_stage_refs: optionalStageRefs,
     terminal_stage_refs: terminalStageRefs,
-    route_policy: 'ordered_stage_attempts_no_skip',
+    route_policy: 'ai_selected_progress_route',
   };
 }
 

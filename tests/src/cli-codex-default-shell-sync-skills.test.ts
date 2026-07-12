@@ -187,11 +187,15 @@ test('nested worktree repo roots resolve the family workspace root without OPL_F
 test('relative git worktree metadata resolves the framework workspace root', () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-relative-worktree-'));
   const candidate = path.join(workspaceRoot, 'one-person-lab', '.worktrees', 'candidate');
+  const previousWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT;
   try {
+    delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
     fs.mkdirSync(candidate, { recursive: true });
     fs.writeFileSync(path.join(candidate, '.git'), 'gitdir: ../../.git/worktrees/candidate\n');
     assert.equal(resolveDefaultFamilyWorkspaceRoot({ repoRootHint: candidate }), workspaceRoot);
   } finally {
+    if (previousWorkspaceRoot === undefined) delete process.env.OPL_FAMILY_WORKSPACE_ROOT;
+    else process.env.OPL_FAMILY_WORKSPACE_ROOT = previousWorkspaceRoot;
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

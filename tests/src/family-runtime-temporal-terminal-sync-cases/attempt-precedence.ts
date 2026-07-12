@@ -115,7 +115,6 @@ test('Older terminal failure cannot overwrite newer accepted closeout for the sa
     assert.equal(failureTaskEvents.count, 0);
   });
 });
-
 test('Older terminal blocker cannot overwrite newer live redrive attempt for the same MAS default executor task', () => {
   withStageAttemptDb((db) => {
     const createdAt = new Date().toISOString();
@@ -160,7 +159,7 @@ test('Older terminal blocker cannot overwrite newer live redrive attempt for the
     ).get('task-mas-default-newer-redrive-running') as { count: number };
 
     assert.equal(olderSynced.status, 'blocked');
-    assert.equal(olderSynced.blocked_reason, 'typed_closeout_packet_required');
+    assert.equal(olderSynced.blocked_reason, 'zero_readable_artifact');
     assert.equal(inspectStageAttempt(db, newerAttempt.stage_attempt_id).status, 'running');
     assert.equal(task.status, 'succeeded');
     assert.equal(task.last_error, null);

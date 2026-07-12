@@ -79,15 +79,16 @@ test('package.json exports the unified domain-agent descriptor read model', () =
   );
 });
 
-test('package.json exports the OPL functional agent runtime harness', () => {
+test('package.json does not export the retired transition harness control plane', () => {
   assert.equal(
     packageJson.exports?.['./functional-agent-runtime-harness'],
-    './dist/modules/runway/functional-agent-runtime-harness.js',
+    undefined,
   );
   assert.equal(
     fs.existsSync(path.join(repoRoot, 'src/modules/runway/functional-agent-runtime-harness.ts')),
-    true,
+    false,
   );
+  assert.equal(packageJson.exports?.['./family-transition-runner'], undefined);
 });
 
 test('package.json exposes native helper gate scripts and package dry-run check', () => {

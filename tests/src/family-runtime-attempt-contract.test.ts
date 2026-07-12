@@ -44,28 +44,31 @@ function assertFalseAuthority(boundary: Record<string, unknown>) {
   }
 }
 
-test('family runtime attempt contract keeps Temporal attempt, typed closeout, and refs-only authority boundaries', () => {
+test('family runtime attempt contract keeps Temporal attempt, progress-first closeout, and refs-only authority boundaries', () => {
   const contract = readJson('contracts/opl-framework/family-runtime-attempt-contract.json');
 
   assert.equal(contract.provider_model, 'provider_backed_stage_attempt_runtime');
   assert.deepEqual(contract.allowed_providers, ['temporal']);
-  assert.equal(contract.typed_closeout_contract.required_for_completed_status, true);
-  assert.equal(contract.typed_closeout_contract.free_text_closeout_accepted, false);
-  assert.ok(contract.typed_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
+  assert.equal(contract.progress_closeout_contract.typed_packet_required_for_progress, false);
+  assert.equal(contract.progress_closeout_contract.raw_or_free_text_artifact_accepted_for_progress, true);
+  assert.equal(contract.progress_closeout_contract.framework_derives_minimal_progress_envelope, true);
+  assert.equal(contract.progress_closeout_contract.output_schema_control_plane_enabled, false);
+  assert.equal(contract.progress_closeout_contract.same_session_closeout_enforcement_enabled, false);
+  assert.ok(contract.progress_closeout_contract.tracked_refs.includes('domain_output.output_ref'));
   assert.equal(
-    contract.typed_closeout_contract.domain_output_contract.transport_policy,
+    contract.progress_closeout_contract.domain_output_contract.transport_policy,
     'refs_only_no_domain_output_body_in_temporal_or_opl_ledger',
   );
-  assert.equal(contract.typed_closeout_contract.domain_output_contract.unknown_fields_allowed, false);
-  assert.deepEqual(contract.typed_closeout_contract.domain_output_contract.allowed_fields, [
+  assert.equal(contract.progress_closeout_contract.domain_output_contract.unknown_fields_allowed, false);
+  assert.deepEqual(contract.progress_closeout_contract.domain_output_contract.allowed_fields, [
     'surface_kind',
     'version',
     'domain_id',
     'output_ref',
   ]);
   assert.ok(contract.operator_visibility_fields.includes('domain_output_ref'));
-  assert.equal(contract.typed_closeout_contract.closeout_ref_metadata_contract.unknown_fields_allowed, false);
-  assert.deepEqual(contract.typed_closeout_contract.closeout_ref_metadata_contract.allowed_fields, [
+  assert.equal(contract.progress_closeout_contract.closeout_ref_metadata_contract.unknown_fields_allowed, false);
+  assert.deepEqual(contract.progress_closeout_contract.closeout_ref_metadata_contract.allowed_fields, [
     'ref_kind',
     'kind',
     'uri',

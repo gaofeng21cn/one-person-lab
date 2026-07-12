@@ -22,8 +22,8 @@ interface StageRunAdoptionReport {
     default_read_surface: {
       root: unknown;
     };
-    transition_authority: {
-      terminal_transition_authority: unknown;
+    codex_semantic_route_policy: {
+      semantic_owner: unknown;
     };
   };
   stage_run_canary_evidence_checks: {
@@ -395,8 +395,8 @@ export function buildStageRunDomainAdoptionReadModel(reports: StageRunAdoptionRe
       stage_run_kernel_profile_status: profile.status,
       stage_run_kernel_profile_source: profile.profile_source,
       stage_run_default_read_surface_root: profile.default_read_surface.root,
-      stage_run_terminal_transition_authority:
-        profile.transition_authority.terminal_transition_authority,
+      stage_run_semantic_route_owner:
+        profile.codex_semantic_route_policy.semantic_owner,
       stage_run_canary_evidence_status: canary.status,
       stage_run_canary_evidence_scope: canary.evidence_scope,
       stage_run_canary_operator_status: canary.operator_summary.status,

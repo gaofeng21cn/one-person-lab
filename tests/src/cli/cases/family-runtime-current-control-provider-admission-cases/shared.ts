@@ -41,25 +41,6 @@ export function writeJsonEmitterScript(scriptPath: string, payload: unknown) {
   );
 }
 
-export function providerObservationBoundary() {
-  return {
-    producer_kind: 'runtime_provider',
-    intent_kind: 'provider_observation',
-    stage_transition_authority: 'one-person-lab',
-    intent_can_write_stage_current_pointer: false,
-    intent_can_write_stage_run_terminal_state: false,
-    intent_can_publish_current_owner_delta: false,
-    intent_can_write_domain_truth: false,
-    intent_can_create_owner_receipt: false,
-    intent_can_create_typed_blocker: false,
-    provider_completion_counts_as_stage_transition: false,
-    read_model_update_counts_as_stage_transition: false,
-    worklist_update_counts_as_stage_transition: false,
-    evidence_event_counts_as_stage_transition: false,
-    agent_lab_output_counts_as_stage_transition: false,
-  };
-}
-
 export function createQueueTables(db: DatabaseSync) {
   createFamilyRuntimeQueueTables(db);
 }
@@ -185,10 +166,10 @@ export function currentControlCommandOutboxRecord(input: {
   ].join('::');
   return {
     surface_kind: 'opl_generic_current_control_command_outbox_record',
-    runtime_kind: 'DomainProgressTransitionRuntime',
+    runtime_kind: 'stage_run_transport',
     command_kind: 'provider_admission_requested',
     command_id: input.commandId ?? [
-      'dptc',
+      'stage-run-transport',
       input.studyId,
       input.actionType,
       input.workUnitId,
@@ -220,156 +201,6 @@ export function currentControlCommandOutboxRecord(input: {
   };
 }
 
-export function masDomainProgressTransitionRequest(input: {
-  studyId: string;
-  actionType: string;
-  workUnitId: string;
-  workUnitFingerprint: string;
-  sourceGeneration?: string;
-  expectedVersion?: string;
-  idempotencyKey?: string;
-}) {
-  const sourceGeneration = input.sourceGeneration ?? `generation:${input.workUnitFingerprint}`;
-  const idempotencyKey = input.idempotencyKey ?? [
-    'mas-domain-progress-request',
-    input.studyId,
-    input.actionType,
-    input.workUnitId,
-    input.workUnitFingerprint,
-  ].join('::');
-  return {
-    surface_kind: 'mas_domain_progress_transition_request',
-    target_runtime_kind: 'DomainProgressTransitionRuntime',
-    target_runtime_owner: 'one-person-lab',
-    request_owner: 'med-autoscience',
-    authority_role: 'domain_policy_request_only',
-    mas_can_create_opl_outbox_record: false,
-    runtime_kind: 'DomainProgressTransitionRuntime',
-    recommended_transition_kind: 'StartProviderAttempt',
-    aggregate_identity: {
-      aggregate_kind: 'study_work_unit',
-      aggregate_id: `${input.studyId}::${input.workUnitId}`,
-      study_id: input.studyId,
-      work_unit_id: input.workUnitId,
-      work_unit_fingerprint: input.workUnitFingerprint,
-    },
-    action_type: input.actionType,
-    next_owner: 'ai_reviewer',
-    idempotency_key: idempotencyKey,
-    source_generation: sourceGeneration,
-    expected_version: input.expectedVersion ?? sourceGeneration,
-    required_postcondition: {
-      kind: 'provider_admission_projected_or_blocked',
-      outcome_owner: 'one-person-lab',
-      domain_state_owner: 'med-autoscience',
-    },
-    forbidden_runtime_fields: [
-      'current_control_command_outbox_record',
-      'opl_domain_progress_transition_event',
-      'opl_domain_progress_transition_outbox_item',
-      'stage_run_identity',
-    ],
-  };
-}
-
-export function masPaperMissionOplRuntimeCarrier(input: {
-  studyId: string;
-  actionType: string;
-  workUnitId: string;
-  workUnitFingerprint: string;
-  sourceGeneration?: string;
-  expectedVersion?: string;
-  idempotencyKey?: string;
-  missionId?: string;
-  transactionId?: string;
-  stageRunRef?: string;
-}) {
-  const sourceGeneration = input.sourceGeneration ?? `generation:${input.workUnitFingerprint}`;
-  const idempotencyKey = input.idempotencyKey ?? [
-    'paper-mission-transaction',
-    input.studyId,
-    input.actionType,
-    input.workUnitId,
-    input.workUnitFingerprint,
-  ].join('::');
-  const missionId = input.missionId ?? `mission:${input.studyId}:${input.workUnitId}`;
-  const transactionId = input.transactionId ?? `${missionId}:transaction`;
-  const stageRunRef = input.stageRunRef ?? `mas://paper-mission/${missionId}/stage-run`;
-  return {
-    surface_kind: 'mas_domain_progress_transition_request',
-    schema_version: 1,
-    source_kind: 'paper_mission_transaction_opl_route_command',
-    target_runtime_owner: 'one-person-lab',
-    target_runtime_kind: 'DomainProgressTransitionRuntime',
-    runtime_contract_ref: 'contract://opl/domain-progress-transition-runtime/v1',
-    projection_only: true,
-    transition_request_payload_scope: 'identity_refs_and_contract_metadata_only',
-    paper_mission_transaction_ref: transactionId,
-    stage_terminal_decision_ref: `${transactionId}#stage_terminal_decision`,
-    opl_route_command_ref: `${transactionId}#opl_route_command`,
-    opl_route_command: {
-      route_command: 'start_next_stage',
-      route_target: input.actionType,
-      next_owner: 'ai_reviewer',
-    },
-    stage_run_ref: stageRunRef,
-    study_id: input.studyId,
-    action_type: input.actionType,
-    work_unit_id: input.workUnitId,
-    work_unit_fingerprint: input.workUnitFingerprint,
-    route_identity_key: `${transactionId}::route`,
-    attempt_idempotency_key: `${idempotencyKey}::opl-attempt`,
-    idempotency_key: idempotencyKey,
-    request_idempotency_key: `${idempotencyKey}::opl-request`,
-    source_generation: sourceGeneration,
-    expected_version: input.expectedVersion ?? sourceGeneration,
-    aggregate_identity: {
-      aggregate_kind: 'paper_mission_transaction',
-      aggregate_id: transactionId,
-      mission_id: missionId,
-      study_id: input.studyId,
-      work_unit_id: input.workUnitId,
-      work_unit_fingerprint: input.workUnitFingerprint,
-    },
-    required_postcondition: {
-      kind: 'provider_admission_projected_or_blocked',
-      outcome_owner: 'one-person-lab',
-      domain_state_owner: 'med-autoscience',
-    },
-    authority_boundary: {
-      surface_kind: 'mas_domain_progress_transition_request_boundary',
-      authority: 'med_autoscience.paper_progress_policy_adapter',
-      target_runtime_owner: 'one-person-lab',
-      target_runtime_kind: 'DomainProgressTransitionRuntime',
-      authority_role: 'domain_policy_request_only',
-      mas_can_create_opl_outbox_record: false,
-      mas_can_create_opl_event: false,
-      mas_can_create_opl_stage_run: false,
-      mas_can_authorize_provider_admission: false,
-      mas_can_mark_provider_attempt_running: false,
-      provider_completion_is_domain_completion: false,
-    },
-    forbidden_runtime_fields: [
-      'current_control_command_outbox_record',
-      'opl_domain_progress_transition_event',
-      'opl_domain_progress_transition_outbox_item',
-      'stage_run_identity',
-      'projection_metadata',
-    ],
-    provider_admission_pending: false,
-    provider_admission_requires_opl_runtime_result: true,
-    provider_completion_is_domain_completion: false,
-    dispatch_status: 'transition_request_pending',
-    carrier_status: 'waiting_for_opl_runtime_live_readback',
-    can_claim_provider_running: false,
-    can_claim_paper_progress: false,
-    can_claim_runtime_ready: false,
-    can_write_opl_outbox: false,
-    can_write_opl_event: false,
-    can_write_opl_stage_run: false,
-    can_write_provider_attempt: false,
-  };
-}
 
 export function currentControlActionQueueItem(input: {
   studyId: string;
@@ -417,14 +248,6 @@ export function currentControlActionQueueItem(input: {
     ...(input.recoveryObligationId ? { recovery_obligation_id: input.recoveryObligationId } : {}),
     required_output_surface: 'artifacts/publication_eval/ai_reviewer_responses/*_publication_eval_record.json',
     owner: nextOwner,
-    opl_domain_progress_transition_request: masDomainProgressTransitionRequest({
-      studyId: input.studyId,
-      actionType: input.actionType,
-      workUnitId: input.workUnitId,
-      workUnitFingerprint: input.workUnitFingerprint,
-      sourceGeneration: input.truthEpoch,
-      idempotencyKey: attemptIdempotencyKey,
-    }),
     ...(input.dispatchRef ? { dispatch_ref: input.dispatchRef } : {}),
     ...(input.dispatchPath ? { dispatch_path: input.dispatchPath } : {}),
     ...(input.stagePacketRef ? { stage_packet_ref: input.stagePacketRef } : {}),

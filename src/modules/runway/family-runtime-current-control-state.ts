@@ -68,7 +68,6 @@ function parseRecord(value: unknown) {
     return {};
   }
 }
-
 function parseList(value: string | null | undefined) {
   if (!value) {
     return [];
@@ -269,7 +268,7 @@ function currentStageProgressLog(
     closeoutReceiptStatus: current.closeout_receipt_status,
     nextOwner: stringValue(latestCloseout.next_owner) ?? stringValue(routeImpact.next_owner) ?? current.domain_id,
     domainReadyVerdict: stringValue(latestCloseout.domain_ready_verdict) ?? stringValue(routeImpact.domain_ready_verdict),
-    canonicalOutcome: statusForCurrentAttempt(current),
+    canonicalOutcome: statusForCurrentAttempt(current, providerRun),
     usageProjection,
     modelRouteCostProjection,
     createdAt: current.created_at,
@@ -318,9 +317,20 @@ function staleEpochKinds(taskPayload: Record<string, unknown>, attempt: ControlA
     .map((check) => check.kind);
 }
 
-function statusForCurrentAttempt(attempt: ControlAttemptRow) {
+function rawArtifactRefFromProviderRun(providerRun: Record<string, unknown>) {
+  const processOutput = record(providerRun.process_output_summary);
+  const rawArtifact = record(processOutput.raw_stage_artifact);
+  const progressProjection = record(processOutput.progress_closeout_projection);
+  const acceptedProgress = record(progressProjection.accepted_progress);
+  return stringValue(rawArtifact.output_ref) ?? stringValue(acceptedProgress.raw_artifact_ref);
+}
+
+function statusForCurrentAttempt(attempt: ControlAttemptRow, providerRun: Record<string, unknown>) {
   if (attempt.status === 'completed' && attempt.closeout_receipt_status === 'accepted_typed_closeout') {
     return 'accepted_typed_closeout';
+  }
+  if (attempt.status === 'completed' && rawArtifactRefFromProviderRun(providerRun)) {
+    return 'completed_with_quality_debt';
   }
   return attempt.status;
 }
@@ -330,6 +340,7 @@ function terminalWithoutAcceptedCloseout(attempt: ControlAttemptRow, providerRun
   return (
     (attempt.status === 'completed' || providerStatus === 'completed')
     && attempt.closeout_receipt_status !== 'accepted_typed_closeout'
+    && !rawArtifactRefFromProviderRun(providerRun)
   );
 }
 
@@ -772,7 +783,7 @@ function deriveCurrentControlStateFromRows(
       ...base,
       reconciliation_status: 'blocked_provider_completed_missing_typed_closeout',
       current_attempt_state: 'blocked',
-      blocker_reason: 'typed_closeout_packet_required',
+      blocker_reason: 'zero_readable_artifact',
     };
   }
   const supersededProviderTransportReason = taskSuccessSupersedesProviderTransportObservation(
@@ -791,7 +802,7 @@ function deriveCurrentControlStateFromRows(
       superseded_by_task_status: task.status,
     };
   }
-  const currentState = statusForCurrentAttempt(current);
+  const currentState = statusForCurrentAttempt(current, providerRun);
   return {
     ...base,
     reconciliation_status: currentState,

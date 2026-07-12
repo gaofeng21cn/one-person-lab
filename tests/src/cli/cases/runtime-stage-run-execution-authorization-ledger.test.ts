@@ -70,7 +70,6 @@ test('single-source runtime payload commands reject repeated payload flags', () 
     ['runtime', 'stage-replay-missing-receipt', 'record'],
     ['runtime', 'stage-run-authorization', 'record'],
     ['runtime', 'stage-run-evidence-pack', 'summary'],
-    ['runtime', 'stage-transition-authority', 'record'],
     ['runtime', 'standard-agent-template-consumption', 'record'],
   ];
 

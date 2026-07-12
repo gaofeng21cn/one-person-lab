@@ -22,14 +22,21 @@
         "ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/new_agent_scaffold/stage_completion_policy",
         "version": "domain-stage-completion-policy.v1",
         "completion_judgment_owner": "domain_stage",
+        "closeout_packet_required": false,
+        "raw_artifact_sufficient_for_progress": true,
+        "next_stage_transition_owner": "codex_cli",
         "required_closeout_outcomes": [
           "completed_and_continue",
+          "completed_with_quality_debt",
           "completed_and_wait_owner",
           "route_back",
           "blocked",
           "rejected"
         ],
         "accepted_closeout_ref_fields": [
+          "progress_delta_receipt_ref",
+          "consumable_artifact_ref",
+          "quality_debt_ref",
           "owner_receipt_ref",
           "typed_blocker_ref",
           "human_gate_ref",
@@ -163,7 +170,7 @@
       "policy_release_can_claim_domain_ready": false
     }
   },
-  "policy_bundle_fingerprint": "sha256:503f515e8fa08b3f81ce28cac461368c609d4565de239c9f95c3f910cb758ed5",
+  "policy_bundle_fingerprint": "sha256:7e50ce27f04c5fe801d4da0b385265def3c7e6df1d32b8f3b8ec29410ba5545c",
   "fingerprint_algorithm": "sha256:stable-json",
   "domain_pin_contract_ref": "contracts/foundry_agent_series.json#/shared_policy_release",
   "domain_pin_requirements": {

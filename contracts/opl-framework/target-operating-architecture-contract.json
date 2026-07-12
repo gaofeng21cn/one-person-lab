@@ -12,7 +12,6 @@
     "human_doc:opl_invariants",
     "human_doc:opl_decisions",
     "contracts/opl-framework/surface-budget-policy.json",
-    "contracts/opl-framework/stage-transition-authority-contract.json",
     "contracts/opl-framework/domain-pack-compiler-contract.json",
     "contracts/opl-framework/family-product-operator-projection.json",
     "contracts/opl-framework/brand-module-registry.json",
@@ -23,7 +22,7 @@
   "design_principles": [
     "grip_big_release_small",
     "current_owner_delta_first",
-    "single_writer_stage_transition_authority",
+    "codex_cli_single_semantic_stage_route_owner",
     "declarative_domain_pack_generated_surfaces_authority_abi",
     "passive_evidence_ledger",
     "one_ordinary_golden_path_per_agent",
@@ -83,13 +82,13 @@
         "kind": "StageArtifactUnit",
         "owner": "domain_owner",
         "default_lane": "ordinary",
-        "truth_boundary": "deliverable progress requires physical output, valid manifest, selected artifact pointer, and domain owner answer"
+        "truth_boundary": "any readable physical output is consumable progress; manifest, selected pointer, receipt, and quality gaps are quality debt that restrict claims but do not block the next StageRun"
       },
       {
         "kind": "OwnerAnswer",
         "owner": "domain_or_human_owner",
         "default_lane": "ordinary",
-        "truth_boundary": "only owner receipt, quality gate receipt, human gate, typed blocker, no-regression, long-soak, route-back, delete authorization, or keep-as-authority-adapter refs can close owner wait"
+        "truth_boundary": "owner and human answers authorize their scoped claims or irreversible actions; ordinary StageRun progression does not wait for them when a consumable artifact exists"
       },
       {
         "kind": "EvidenceRef",
@@ -119,46 +118,35 @@
         "kind": "ProgressReconciler",
         "owner": "one-person-lab",
         "default_lane": "ordinary",
-        "truth_boundary": "Progress Reconciler owns desired/current execution reconciliation and semantic progress projection from accepted owner/domain refs. It may request or route work but cannot write domain truth, sign receipts, create typed blockers, evaluate quality, or treat provider completion as semantic closeout."
+        "truth_boundary": "Progress Reconciler passively projects desired/current execution metadata from Codex-selected route context. It cannot accept, reject, rank, select, or override routes; write domain truth; sign receipts; create typed blockers; or evaluate quality."
       }
     ]
   },
-  "stage_transition_authority": {
-    "authority_owner": "one-person-lab",
-    "single_writer": true,
-    "event_log_policy": "append_only_authority_event_log",
-    "derived_state": [
+  "codex_stage_route_owner": {
+    "semantic_owner": "codex_cli",
+    "single_semantic_control_plane": true,
+    "progression_policy": "any_readable_stage_artifact_allows_next_declared_stage_to_start_quality_debt_restricts_claims_only",
+    "route_capabilities": [
+      "advance_to_next_declared_stage",
+      "skip_to_any_declared_stage",
+      "repeat_current_or_prior_stage",
+      "reverse_to_any_declared_stage",
+      "route_back_with_partial_or_negative_results"
+    ],
+    "passive_framework_projections": [
       "stage_current_pointer",
       "stage_run_terminal_state",
       "current_owner_delta",
       "runway_control_loop_status",
       "progress_reconciler_projection"
     ],
-    "accepted_inputs": [
-      "transition_intent",
-      "provider_observation",
-      "owner_answer",
-      "typed_blocker",
-      "human_gate_decision",
-      "agent_lab_observation",
-      "evidence_observation",
-      "runtime_intent",
-      "progress_reconciler_observation",
-      "handoff_gate_decision",
-      "recovery_repair_observation"
-    ],
-    "forbidden_direct_writers": [
-      "domain_agent",
-      "runtime_provider",
-      "one_person_lab_app",
-      "agent_lab",
-      "read_model",
-      "evidence_ledger",
-      "worklist",
-      "runway_control_loop",
-      "progress_reconciler",
-      "worker_supervisor",
-      "temporal_workflow_history"
+    "forbidden_framework_route_decisions": [
+      "accept_or_reject_codex_route",
+      "require_typed_closeout_for_progress",
+      "require_owner_receipt_for_progress",
+      "rank_or_select_stage_candidates",
+      "override_codex_selected_next_stage",
+      "convert_quality_debt_to_execution_blocker"
     ]
   },
   "domain_pack_authority_abi": {
@@ -187,7 +175,6 @@
       "ai_sdk",
       "status_read_model",
       "workbench",
-      "functional_harness",
       "operator_projection"
     ],
     "authority_functions": [

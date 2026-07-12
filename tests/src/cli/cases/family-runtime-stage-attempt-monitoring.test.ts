@@ -38,7 +38,7 @@ test('family-runtime compact timeline exposes filtered public currentness', () =
       '--task',
       task.task_id,
       '--blocked-reason',
-      'typed_closeout_packet_required',
+      'zero_readable_artifact',
     ], env).family_runtime_stage_attempt.attempt;
     const output = runCli([
       'family-runtime',

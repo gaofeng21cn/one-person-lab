@@ -2,6 +2,9 @@ import { buildRepoGeneratedInterfaceBundle } from '../../../../src/modules/pack/
 import { assert, fs, runCli, test } from '../helpers.ts';
 import { buildReadyAgentRepo, retargetReadyRepo } from './agents-conformance-fixtures.ts';
 
+const familyWorkspaceRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT ?? '/Users/gaofeng/workspace';
+const familyRepoPath = (repo: string) => `${familyWorkspaceRoot}/${repo}`;
+
 test('real family-defaults pack compiler preserves JSON readback when all standard agents are ready', {
   skip: ![
     'med-autoscience',
@@ -9,7 +12,7 @@ test('real family-defaults pack compiler preserves JSON readback when all standa
     'redcube-ai',
     'opl-meta-agent',
     'opl-bookforge',
-  ].every((repo) => fs.existsSync(`/Users/gaofeng/workspace/${repo}/contracts/domain_descriptor.json`)),
+  ].every((repo) => fs.existsSync(`${familyRepoPath(repo)}/contracts/domain_descriptor.json`)),
 }, () => {
   const report = runCli(['agents', 'pack-compiler', '--family-defaults']).domain_pack_compiler;
   const domains = new Map<string, Record<string, any>>(report.domains.map((domain: Record<string, any>) => [
@@ -40,7 +43,7 @@ test('real family-defaults generated interfaces preserve JSON readback when all 
     'redcube-ai',
     'opl-meta-agent',
     'opl-bookforge',
-  ].every((repo) => fs.existsSync(`/Users/gaofeng/workspace/${repo}/contracts/domain_descriptor.json`)),
+  ].every((repo) => fs.existsSync(`${familyRepoPath(repo)}/contracts/domain_descriptor.json`)),
 }, () => {
   const report = runCli(['agents', 'interfaces', '--family-defaults']).generated_agent_interfaces;
   const domains = new Map<string, Record<string, any>>(report.reports.map((domain: Record<string, any>) => [
@@ -62,13 +65,13 @@ test('real family-defaults generated interfaces preserve JSON readback when all 
 });
 
 test('RCA real repo exposes canonical agent identity through ready generated interfaces', {
-  skip: !fs.existsSync('/Users/gaofeng/workspace/redcube-ai/contracts/domain_descriptor.json'),
+  skip: !fs.existsSync(`${familyRepoPath('redcube-ai')}/contracts/domain_descriptor.json`),
 }, (t) => {
   const interfaces = runCli([
     'agents',
     'interfaces',
     '--repo-dir',
-    '/Users/gaofeng/workspace/redcube-ai',
+    familyRepoPath('redcube-ai'),
   ]).generated_agent_interfaces;
 
   assert.equal(interfaces.status, 'ready');

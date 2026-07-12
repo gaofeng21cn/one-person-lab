@@ -15,7 +15,6 @@ import {
 } from './family-runtime-queue-projection-boundary.ts';
 import type { StageAttemptRow } from './family-runtime-stage-attempt-ledger.ts';
 import {
-  STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
   isStageNativeOwnerActionFromDomainProfile,
   stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile,
 } from './family-runtime-stage-native-owner-answer.ts';
@@ -136,66 +135,13 @@ function parseTaskPayload(task: LinkedTask) {
   }
 }
 
-function shouldBlockMissingStageNativeProgressOrOwnerAnswer(task: LinkedTask, row: StageAttemptRow) {
+function isMissingStageNativeProgressOrOwnerAnswer(task: LinkedTask, row: StageAttemptRow) {
   const payload = parseTaskPayload(task);
   return isStageNativeOwnerActionFromDomainProfile({ row: task, payload })
     && !stageAttemptRowHasStageNativeProgressOrOwnerAnswerFromDomainProfile({
       row,
       currentPayload: payload,
     });
-}
-
-function blockMissingStageNativeProgressOrOwnerAnswer(
-  db: DatabaseSync,
-  input: {
-    task: LinkedTask;
-    row: StageAttemptRow;
-    observedAt: string;
-  },
-) {
-  db.prepare(`
-    UPDATE tasks
-    SET status = ?, ${taskFailureProjectionSql()}
-    WHERE task_id = ?
-  `).run(
-    FAMILY_RUNTIME_TASK_STATUS.blocked,
-    STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
-    STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
-    input.observedAt,
-    input.task.task_id,
-  );
-  insertEvent(db, {
-    taskId: input.task.task_id,
-    domainId: input.task.domain_id,
-    eventType: 'stage_attempt_terminal_missing_stage_native_progress_or_owner_answer_task',
-    source: 'opl-family-runtime',
-    payload: {
-      stage_attempt_id: input.row.stage_attempt_id,
-      workflow_id: input.row.workflow_id,
-      reason: STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
-      previous_status: input.task.status,
-      cleared_dead_letter_reason: input.task.dead_letter_reason,
-      authority_boundary: {
-        opl: 'provider_attempt_status_projection_and_redrive_guard_only',
-        domain: 'truth_quality_artifact_gate_owner',
-        domain_truth_mutation: false,
-        publication_quality_mutation: false,
-        artifact_gate_mutation: false,
-        current_package_mutation: false,
-        provider_completion_is_domain_ready: false,
-      },
-    },
-  });
-  insertNotification(db, {
-    taskId: input.task.task_id,
-    severity: 'warning',
-    title: 'Family runtime default executor consumable progress or owner answer missing',
-    body: input.row.stage_attempt_id,
-    payload: {
-      stage_attempt_id: input.row.stage_attempt_id,
-      reason: STAGE_NATIVE_PROGRESS_OR_OWNER_ANSWER_MISSING_REASON,
-    },
-  });
 }
 
 export function markLinkedDefaultExecutorTaskCompleted(
@@ -215,14 +161,7 @@ export function markLinkedDefaultExecutorTaskCompleted(
   if (alreadySucceeded || !canSucceedFromTypedCloseout(task)) {
     return;
   }
-  if (shouldBlockMissingStageNativeProgressOrOwnerAnswer(task, input.row)) {
-    blockMissingStageNativeProgressOrOwnerAnswer(db, {
-      task,
-      row: input.row,
-      observedAt: input.observedAt,
-    });
-    return;
-  }
+  const missingRecognizedEnvelope = isMissingStageNativeProgressOrOwnerAnswer(task, input.row);
   db.prepare(`
     UPDATE tasks
     SET status = ?, ${clearTaskLeaseProjectionSql()},
@@ -238,6 +177,13 @@ export function markLinkedDefaultExecutorTaskCompleted(
       stage_attempt_id: input.row.stage_attempt_id,
       workflow_id: input.row.workflow_id,
       reason: 'temporal_stage_attempt_completed',
+      ...(missingRecognizedEnvelope
+        ? {
+            quality_debt: 'stage_native_progress_envelope_missing_but_provider_attempt_completed',
+            next_stage_blocked: false,
+            framework_should_derive_progress_envelope: true,
+          }
+        : {}),
       cleared_dead_letter_reason: task.dead_letter_reason,
       authority_boundary: {
         opl: 'provider_attempt_status_projection_only',
@@ -248,12 +194,17 @@ export function markLinkedDefaultExecutorTaskCompleted(
   });
   insertNotification(db, {
     taskId: input.row.task_id,
-    severity: 'info',
-    title: 'Family runtime default executor attempt completed',
+    severity: missingRecognizedEnvelope ? 'warning' : 'info',
+    title: missingRecognizedEnvelope
+      ? 'Family runtime attempt completed with derived progress debt'
+      : 'Family runtime default executor attempt completed',
     body: input.row.stage_attempt_id,
     payload: {
       stage_attempt_id: input.row.stage_attempt_id,
       reason: 'temporal_stage_attempt_completed',
+      ...(missingRecognizedEnvelope
+        ? { quality_debt: 'stage_native_progress_envelope_missing_nonblocking' }
+        : {}),
     },
   });
 }

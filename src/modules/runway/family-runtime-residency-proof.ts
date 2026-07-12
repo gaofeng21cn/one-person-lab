@@ -62,13 +62,15 @@ export async function buildTemporalResidencyProof(
     GROUP BY s.signal_kind
   `).all() as Array<{ signal_kind: string; count: number }>;
   const signalCounts = Object.fromEntries(signalRows.map((row) => [row.signal_kind, row.count]));
-  const closeoutRequiredProof = {
-    typed_closeout_required_for_completion: true,
+  const progressCloseoutProof = {
+    typed_closeout_required_for_progress: false,
+    raw_artifact_sufficient_for_progress: true,
+    framework_derives_minimal_progress_envelope: true,
     temporal_completed_attempts: temporalCompleted,
     temporal_typed_closeout_accepted_attempts: temporalTypedCloseoutAccepted,
     temporal_blocked_attempts: temporalBlocked,
     proof_status:
-      temporalCompleted === temporalTypedCloseoutAccepted && temporalBlocked > 0
+      temporalCompleted === temporalTypedCloseoutAccepted
         ? 'proven'
         : 'needs_more_evidence',
   };
@@ -108,7 +110,7 @@ export async function buildTemporalResidencyProof(
           : liveProof?.closeout_status === 'production_residency_code_path_proven'
             ? 'production_residency_code_path_proven'
             : (lifecycleProof.proof_status === 'proven'
-              && closeoutRequiredProof.proof_status === 'proven'
+              && progressCloseoutProof.proof_status === 'proven'
               && attemptProof.retry_dead_letter_blocked.proof_status === 'proven')
               ? 'production_residency_proven'
               : 'production_residency_needs_live_evidence',
@@ -123,7 +125,7 @@ export async function buildTemporalResidencyProof(
     proofs: {
       lifecycle: lifecycleProof,
       attempt_start_query_signal: attemptProof,
-      typed_closeout_required: closeoutRequiredProof,
+      progress_closeout: progressCloseoutProof,
     },
     authority_boundary: {
       opl: 'temporal_residency_and_attempt_projection_only',

@@ -273,8 +273,11 @@ function buildStageCompletionPolicyAssessment(task: AgentLabTaskManifest) {
   if (policy && policy.completion_judgment_owner !== 'domain_stage') {
     blockers.push('stage_completion_judgment_must_be_domain_stage_owned');
   }
-  if (policy && policy.closeout_packet_required !== true) {
-    blockers.push('stage_closeout_packet_required');
+  if (policy && policy.closeout_packet_required !== false) {
+    blockers.push('stage_closeout_packet_must_not_gate_progress');
+  }
+  if (policy && policy.raw_artifact_sufficient_for_progress !== true) {
+    blockers.push('stage_raw_artifact_progress_required');
   }
   if (policy && policy.provider_completion_is_domain_completion !== false) {
     blockers.push('provider_completion_must_not_be_domain_completion');
@@ -282,8 +285,8 @@ function buildStageCompletionPolicyAssessment(task: AgentLabTaskManifest) {
   if (policy && policy.opl_content_judgment_allowed !== false) {
     blockers.push('opl_content_judgment_must_be_forbidden');
   }
-  if (policy && policy.next_stage_transition_owner !== 'opl_runtime') {
-    blockers.push('next_stage_transition_owner_must_be_opl_runtime');
+  if (policy && policy.next_stage_transition_owner !== 'codex_cli') {
+    blockers.push('next_stage_transition_owner_must_be_codex_cli');
   }
   if (policy && !includesAll(requiredOutcomes, REQUIRED_STAGE_CLOSEOUT_OUTCOMES)) {
     blockers.push('stage_closeout_outcomes_incomplete');

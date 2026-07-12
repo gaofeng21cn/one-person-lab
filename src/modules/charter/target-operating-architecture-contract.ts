@@ -10,7 +10,6 @@ import {
   requireEveryValue,
 } from './brand-module-contracts.ts';
 import {
-  TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS,
   TARGET_ARCHITECTURE_ACCEPTED_OWNER_ANSWER_SHAPES,
   TARGET_ARCHITECTURE_AGENT_LAB_MAY_PRODUCE,
   TARGET_ARCHITECTURE_AGENT_LAB_MUST_NOT_PRODUCE,
@@ -18,10 +17,10 @@ import {
   TARGET_ARCHITECTURE_APP_DRILLDOWN_FIELDS,
   TARGET_ARCHITECTURE_ATLAS_CATALOGS,
   TARGET_ARCHITECTURE_AUTHORITY_FUNCTIONS,
-  TARGET_ARCHITECTURE_DERIVED_STAGE_STATE,
+  TARGET_ARCHITECTURE_PASSIVE_STAGE_PROJECTIONS,
   TARGET_ARCHITECTURE_DESIGN_PRINCIPLES,
   TARGET_ARCHITECTURE_DOMAIN_PACK_DECLARATIONS,
-  TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS,
+  TARGET_ARCHITECTURE_FORBIDDEN_FRAMEWORK_ROUTE_DECISIONS,
   TARGET_ARCHITECTURE_GENERATED_SURFACES,
   TARGET_ARCHITECTURE_HARD_BLOCKER_CONDITIONS,
   TARGET_ARCHITECTURE_LANES,
@@ -31,6 +30,7 @@ import {
   TARGET_ARCHITECTURE_RECONCILER_LOOPS,
   TARGET_ARCHITECTURE_RESOURCE_FIELDS,
   TARGET_ARCHITECTURE_RESOURCE_KINDS,
+  TARGET_ARCHITECTURE_STAGE_ROUTE_CAPABILITIES,
   TARGET_ARCHITECTURE_SMALL_DETAIL_LANES,
   TARGET_ARCHITECTURE_VAULT_REF_STREAMS,
   expectFalseBoolean,
@@ -58,7 +58,7 @@ export function validateTargetOperatingArchitecture(
   }
 
   const resourceModelRaw = value.resource_model;
-  const stageAuthorityRaw = value.stage_transition_authority;
+  const codexRouteOwnerRaw = value.codex_stage_route_owner;
   const domainPackRaw = value.domain_pack_authority_abi;
   const surfaceBudgetRaw = value.surface_budget_compiler_policy;
   const reconcilerRaw = value.reconciler_model;
@@ -75,7 +75,7 @@ export function validateTargetOperatingArchitecture(
   const multiPlaneRaw = value.multi_plane_operating_system;
   if (
     !isRecord(resourceModelRaw)
-    || !isRecord(stageAuthorityRaw)
+    || !isRecord(codexRouteOwnerRaw)
     || !isRecord(domainPackRaw)
     || !isRecord(surfaceBudgetRaw)
     || !isRecord(reconcilerRaw)
@@ -169,27 +169,27 @@ export function validateTargetOperatingArchitecture(
     filePath,
   );
 
-  const derivedState = expectNonEmptyStringArray(
-    stageAuthorityRaw.derived_state,
-    'stage_transition_authority.derived_state',
+  const passiveFrameworkProjections = expectNonEmptyStringArray(
+    codexRouteOwnerRaw.passive_framework_projections,
+    'codex_stage_route_owner.passive_framework_projections',
     filePath,
   );
-  requireEveryValue(derivedState, TARGET_ARCHITECTURE_DERIVED_STAGE_STATE, 'stage_transition_authority.derived_state', filePath);
-  const acceptedInputs = expectNonEmptyStringArray(
-    stageAuthorityRaw.accepted_inputs,
-    'stage_transition_authority.accepted_inputs',
+  requireEveryValue(passiveFrameworkProjections, TARGET_ARCHITECTURE_PASSIVE_STAGE_PROJECTIONS, 'codex_stage_route_owner.passive_framework_projections', filePath);
+  const routeCapabilities = expectNonEmptyStringArray(
+    codexRouteOwnerRaw.route_capabilities,
+    'codex_stage_route_owner.route_capabilities',
     filePath,
   );
-  requireEveryValue(acceptedInputs, TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS, 'stage_transition_authority.accepted_inputs', filePath);
-  const forbiddenDirectWriters = expectNonEmptyStringArray(
-    stageAuthorityRaw.forbidden_direct_writers,
-    'stage_transition_authority.forbidden_direct_writers',
+  requireEveryValue(routeCapabilities, TARGET_ARCHITECTURE_STAGE_ROUTE_CAPABILITIES, 'codex_stage_route_owner.route_capabilities', filePath);
+  const forbiddenFrameworkRouteDecisions = expectNonEmptyStringArray(
+    codexRouteOwnerRaw.forbidden_framework_route_decisions,
+    'codex_stage_route_owner.forbidden_framework_route_decisions',
     filePath,
   );
   requireEveryValue(
-    forbiddenDirectWriters,
-    TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS,
-    'stage_transition_authority.forbidden_direct_writers',
+    forbiddenFrameworkRouteDecisions,
+    TARGET_ARCHITECTURE_FORBIDDEN_FRAMEWORK_ROUTE_DECISIONS,
+    'codex_stage_route_owner.forbidden_framework_route_decisions',
     filePath,
   );
 
@@ -388,13 +388,19 @@ export function validateTargetOperatingArchitecture(
       },
       resource_kinds: resourceKinds,
     },
-    stage_transition_authority: {
-      authority_owner: expectString(stageAuthorityRaw.authority_owner, 'stage_transition_authority.authority_owner', filePath),
-      single_writer: expectTrueBoolean(stageAuthorityRaw.single_writer, 'stage_transition_authority.single_writer', filePath),
-      event_log_policy: expectString(stageAuthorityRaw.event_log_policy, 'stage_transition_authority.event_log_policy', filePath),
-      derived_state: derivedState,
-      accepted_inputs: acceptedInputs,
-      forbidden_direct_writers: forbiddenDirectWriters,
+    codex_stage_route_owner: {
+      semantic_owner: (() => {
+        const owner = expectString(codexRouteOwnerRaw.semantic_owner, 'codex_stage_route_owner.semantic_owner', filePath);
+        if (owner !== 'codex_cli') {
+          throw new FrameworkContractError('contract_shape_invalid', 'codex_stage_route_owner.semantic_owner must be codex_cli.', { file: filePath, actual: owner });
+        }
+        return 'codex_cli' as const;
+      })(),
+      single_semantic_control_plane: expectTrueBoolean(codexRouteOwnerRaw.single_semantic_control_plane, 'codex_stage_route_owner.single_semantic_control_plane', filePath),
+      progression_policy: expectString(codexRouteOwnerRaw.progression_policy, 'codex_stage_route_owner.progression_policy', filePath),
+      route_capabilities: routeCapabilities,
+      passive_framework_projections: passiveFrameworkProjections,
+      forbidden_framework_route_decisions: forbiddenFrameworkRouteDecisions,
     },
     domain_pack_authority_abi: {
       default_agent_shape: expectString(domainPackRaw.default_agent_shape, 'domain_pack_authority_abi.default_agent_shape', filePath),

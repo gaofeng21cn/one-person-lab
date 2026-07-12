@@ -9,296 +9,125 @@ import {
 import {
   runAgentStageRunner,
 } from '../../../../src/modules/runway/family-runtime-codex-stage-runner.ts';
-test('Codex stage runner resumes the same session to enforce missing typed closeout', async () => {
+
+function restoreEnv(key: string, previous: string | undefined) {
+  if (previous === undefined) delete process.env[key];
+  else process.env[key] = previous;
+}
+
+test('Codex stage runner advances first-turn prose without same-session closeout enforcement', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-workspace-'));
-  const expectedWorkspaceRoot = fs.realpathSync(workspaceRoot);
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    stage_attempt_id: 'sat_closeout_enforcement',
-    closeout_refs: [
-      'opl://stage-attempts/sat_closeout_enforcement/runtime-blockers/closeout-not-materialized',
-    ],
-    consumed_refs: ['packet:dm003-submission'],
-    consumed_memory_refs: [],
-    writeback_receipt_refs: [],
-    rejected_writes: [{
-      blocker_id: 'provider_executor_missing_initial_typed_closeout',
-      reason: 'first_codex_turn_finished_without_typed_closeout_packet',
-      provider_completion_is_domain_ready: false,
-    }],
-    next_owner: 'medautoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-    route_impact: {
-      decision: 'runtime_closeout_enforcement',
-      can_claim_paper_progress: false,
-    },
-    authority_boundary: {
-      opl: 'same_session_closeout_enforcement_transport_only',
-      domain: 'truth_quality_artifact_gate_owner',
-      can_write_domain_truth: false,
-      can_create_owner_receipt: false,
-      can_create_typed_blocker: false,
-      provider_completion_is_domain_ready: false,
-    },
-  };
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-state-'));
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "exec" ] && [ "$2" = "--skip-git-repo-check" ]; then
-  printf '{"type":"thread.started","thread_id":"thread-closeout-enforcement"}\\n'
-  printf '{"type":"turn.started"}\\n'
-  printf '%s\\n' '{"type":"item.completed","item":{"type":"agent_message","id":"msg-progress","text":"checkpoint only"}}'
-  printf '{"type":"turn.completed"}\\n'
-  exit 0
-fi
 if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
-  if [ "$(pwd)" != "${expectedWorkspaceRoot}" ]; then
-    echo "unexpected resume cwd: $(pwd)" >&2
-    exit 66
-  fi
-  session_id=""
-  shift 2
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      --skip-git-repo-check|--json)
-        shift
-        ;;
-      --output-last-message|--output-schema)
-        shift 2
-        ;;
-      *)
-        session_id="$1"
-        break
-        ;;
-    esac
-  done
-  if [ "$session_id" != "thread-closeout-enforcement" ]; then
-    echo "unexpected resume session: $session_id" >&2
-    exit 65
-  fi
-  printf '{"type":"thread.started","thread_id":"thread-closeout-enforcement"}\\n'
+  echo "same-session closeout enforcement must not run" >&2
+  exit 99
+fi
+if [ "$1" = "exec" ]; then
+  printf '{"type":"thread.started","thread_id":"thread-progress-first"}\\n'
   printf '{"type":"turn.started"}\\n'
-  printf '%s\\n' '${JSON.stringify({
-    type: 'item.completed',
-    item: { type: 'agent_message', id: 'msg-closeout', text: JSON.stringify(closeout) },
-  })}'
+  printf '%s\\n' '{"type":"item.completed","item":{"type":"agent_message","id":"msg-progress","text":"partial draft with a negative finding"}}'
   printf '{"type":"turn.completed"}\\n'
   exit 0
 fi
-echo "unexpected fake codex args: $*" >&2
 exit 64
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  const previousBin = process.env.OPL_CODEX_BIN;
   const previousMode = process.env.OPL_CODEX_STAGE_RUNNER_MODE;
+  const previousState = process.env.OPL_STATE_DIR;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
     process.env.OPL_CODEX_STAGE_RUNNER_MODE = 'codex_cli';
+    process.env.OPL_STATE_DIR = stateRoot;
     const receipt = await runAgentStageRunner({
       attempt: {
-        stage_attempt_id: 'sat_closeout_enforcement',
-        idempotency_key: 'idem-closeout-enforcement',
+        stage_attempt_id: 'sat_progress_first',
         domain_id: 'medautoscience',
-        stage_id: 'continue paper-facing submission milestone work',
-        workspace_locator: {
-          workspace_root: workspaceRoot,
-        },
+        stage_id: 'bounded_analysis_campaign',
+        workspace_locator: { workspace_root: workspaceRoot },
         executor_kind: 'codex_cli',
-        checkpoint_refs: ['packet:dm003-submission'],
+        checkpoint_refs: ['packet:analysis'],
       },
-      stagePacketRef: 'packet:dm003-submission',
+      stagePacketRef: 'packet:analysis',
       runnerMode: 'codex_cli',
-      env: {
-        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
-      },
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
       timeoutMs: 10_000,
-      noOutputTimeoutMs: 5_000,
     });
-    const codexReceipt = receipt as {
-      closeout_packet?: typeof closeout | null;
-      process_output_summary?: {
-        session_recovery_status?: string;
-        closeout_enforcement?: {
-          status?: string;
-          thread_id?: string | null;
-          authority_boundary?: {
-            can_write_domain_truth?: boolean;
-          };
-        };
-      };
-      progress_summary: {
-        runner_events: Array<{ event_kind: string }>;
-      };
-    };
-
-    assert.equal(codexReceipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(codexReceipt.closeout_packet?.closeout_refs, closeout.closeout_refs);
-    assert.match(
-      codexReceipt.process_output_summary?.session_recovery_status ?? '',
-      /^session_/,
-    );
-    assert.equal(codexReceipt.process_output_summary?.closeout_enforcement?.status, 'closeout_found');
-    assert.equal(codexReceipt.process_output_summary?.closeout_enforcement?.thread_id, 'thread-closeout-enforcement');
+    const codexReceipt = receipt as Extract<typeof receipt, { closeout_packet: unknown }>;
+    assert.equal(codexReceipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+    assert.equal(codexReceipt.closeout_packet?.route_impact?.next_stage_may_start, true);
     assert.equal(
-      codexReceipt.process_output_summary?.closeout_enforcement?.authority_boundary?.can_write_domain_truth,
+      codexReceipt.process_output_summary?.progress_closeout_projection?.capture_pipeline
+        .same_session_closeout_enforcement_enabled,
       false,
     );
     assert.equal(
-      codexReceipt.progress_summary.runner_events.some((event) =>
-        event.event_kind === 'closeout_enforcement.agent_message'
-      ),
-      true,
+      codexReceipt.progress_summary.runner_events.some((event) => event.event_kind.startsWith('closeout_enforcement.')),
+      false,
     );
   } finally {
-    if (typeof previousCodexBin === 'string') {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    } else {
-      delete process.env.OPL_CODEX_BIN;
-    }
-    if (typeof previousMode === 'string') {
-      process.env.OPL_CODEX_STAGE_RUNNER_MODE = previousMode;
-    } else {
-      delete process.env.OPL_CODEX_STAGE_RUNNER_MODE;
-    }
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_CODEX_STAGE_RUNNER_MODE', previousMode);
+    restoreEnv('OPL_STATE_DIR', previousState);
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('Codex stage runner recovers enforced closeout from output-last-message capture', async () => {
+test('Codex stage runner captures output-last-message without an output schema control plane', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-workspace-'));
-  const expectedWorkspaceRoot = fs.realpathSync(workspaceRoot);
-  const closeout = {
-    surface_kind: 'stage_attempt_closeout_packet',
-    stage_attempt_id: 'sat_closeout_capture',
-    closeout_refs: [
-      'opl://stage-attempts/sat_closeout_capture/runtime-blockers/closeout-not-materialized',
-    ],
-    consumed_refs: ['packet:dm003-submission'],
-    consumed_memory_refs: [],
-    writeback_receipt_refs: [],
-    rejected_writes: [{
-      blocker_id: 'provider_executor_missing_initial_typed_closeout',
-      reason: 'first_codex_turn_finished_without_typed_closeout_packet',
-      provider_completion_is_domain_ready: false,
-    }],
-    next_owner: 'medautoscience',
-    domain_ready_verdict: 'domain_gate_pending',
-    route_impact: {
-      decision: 'runtime_closeout_enforcement',
-      can_claim_paper_progress: false,
-    },
-    authority_boundary: {
-      opl: 'same_session_closeout_enforcement_transport_only',
-      domain: 'truth_quality_artifact_gate_owner',
-      can_write_domain_truth: false,
-      can_create_owner_receipt: false,
-      can_create_typed_blocker: false,
-      provider_completion_is_domain_ready: false,
-    },
-  };
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-stage-runner-state-'));
+  const captureFile = path.join(workspaceRoot, 'args.txt');
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "exec" ] && [ "$2" = "--skip-git-repo-check" ]; then
-  printf '{"type":"session_meta","payload":{"id":"thread-closeout-capture"}}\\n'
-  printf '{"type":"event_msg","payload":{"type":"agent_message","message":"checkpoint only","phase":"commentary"}}\\n'
-  exit 0
-fi
-if [ "$1" = "exec" ] && [ "$2" = "resume" ]; then
-  if [ "$(pwd)" != "${expectedWorkspaceRoot}" ]; then
-    echo "unexpected resume cwd: $(pwd)" >&2
-    exit 66
-  fi
-  output_last_message=""
-  output_schema=""
-  session_id=""
-  shift 2
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      --skip-git-repo-check|--json)
-        shift
-        ;;
-      --output-last-message)
-        output_last_message="$2"
-        shift 2
-        ;;
-      --output-schema)
-        output_schema="$2"
-        shift 2
-        ;;
-      *)
-        session_id="$1"
-        break
-        ;;
-    esac
-  done
-  if [ "$session_id" != "thread-closeout-capture" ]; then
-    echo "unexpected resume session: $session_id" >&2
-    exit 65
-  fi
-  if [ -n "$output_schema" ] && [ ! -f "$output_schema" ]; then
-    echo "missing output schema: $output_schema" >&2
-    exit 67
-  fi
-  printf '%s' '${JSON.stringify(closeout)}' > "$output_last_message"
-  printf '{"type":"thread.started","thread_id":"thread-closeout-capture"}\\n'
-  printf '{"type":"turn.started"}\\n'
-  printf '{"type":"turn.completed"}\\n'
-  exit 0
-fi
-echo "unexpected fake codex args: $*" >&2
-exit 64
+printf '%s\\n' "$@" > ${JSON.stringify(captureFile)}
+output_last_message=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-last-message)
+      output_last_message="$2"
+      shift 2
+      ;;
+    --output-schema)
+      echo "output schema control plane must not be used" >&2
+      exit 98
+      ;;
+    *) shift ;;
+  esac
+done
+printf 'readable final draft' > "$output_last_message"
+printf '{"type":"thread.started","thread_id":"thread-output-capture"}\\n'
+printf '{"type":"turn.completed"}\\n'
 `);
-  const previousCodexBin = process.env.OPL_CODEX_BIN;
-  const previousMode = process.env.OPL_CODEX_STAGE_RUNNER_MODE;
+  const previousBin = process.env.OPL_CODEX_BIN;
+  const previousState = process.env.OPL_STATE_DIR;
   try {
     process.env.OPL_CODEX_BIN = codexPath;
-    process.env.OPL_CODEX_STAGE_RUNNER_MODE = 'codex_cli';
+    process.env.OPL_STATE_DIR = stateRoot;
     const receipt = await runAgentStageRunner({
       attempt: {
-        stage_attempt_id: 'sat_closeout_capture',
-        idempotency_key: 'idem-closeout-capture',
-        domain_id: 'medautoscience',
-        stage_id: 'continue paper-facing submission milestone work',
-        workspace_locator: {
-          workspace_root: workspaceRoot,
-        },
+        stage_attempt_id: 'sat_output_capture',
+        domain_id: 'redcube_ai',
+        stage_id: 'artifact_creation',
+        workspace_locator: { workspace_root: workspaceRoot },
         executor_kind: 'codex_cli',
-        checkpoint_refs: ['packet:dm003-submission'],
+        checkpoint_refs: ['packet:artifact'],
       },
-      stagePacketRef: 'packet:dm003-submission',
+      stagePacketRef: 'packet:artifact',
       runnerMode: 'codex_cli',
-      env: {
-        OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host',
-      },
+      env: { OPL_CODEX_STAGE_SANDBOX_PROVIDER: 'host' },
       timeoutMs: 10_000,
-      noOutputTimeoutMs: 5_000,
     });
-    const codexReceipt = receipt as {
-      closeout_packet?: typeof closeout | null;
-      process_output_summary?: {
-        closeout_enforcement?: {
-          status?: string;
-          captured_last_message_chars?: number;
-        };
-      };
-    };
-
-    assert.equal(codexReceipt.closeout_packet?.surface_kind, 'stage_attempt_closeout_packet');
-    assert.deepEqual(codexReceipt.closeout_packet?.closeout_refs, closeout.closeout_refs);
-    assert.equal(codexReceipt.process_output_summary?.closeout_enforcement?.status, 'closeout_found');
-    assert.equal(
-      (codexReceipt.process_output_summary?.closeout_enforcement?.captured_last_message_chars ?? 0) > 0,
-      true,
-    );
+    const codexReceipt = receipt as Extract<typeof receipt, { closeout_packet: unknown }>;
+    assert.match(codexReceipt.closeout_packet?.closeout_refs[0] ?? '', /^file:\/\//);
+    assert.equal(codexReceipt.closeout_packet?.route_impact?.next_stage_may_start, true);
+    assert.equal(fs.readFileSync(captureFile, 'utf8').includes('--output-schema'), false);
+    assert.equal(fs.readFileSync(captureFile, 'utf8').includes('--output-last-message'), true);
   } finally {
-    if (typeof previousCodexBin === 'string') {
-      process.env.OPL_CODEX_BIN = previousCodexBin;
-    } else {
-      delete process.env.OPL_CODEX_BIN;
-    }
-    if (typeof previousMode === 'string') {
-      process.env.OPL_CODEX_STAGE_RUNNER_MODE = previousMode;
-    } else {
-      delete process.env.OPL_CODEX_STAGE_RUNNER_MODE;
-    }
+    restoreEnv('OPL_CODEX_BIN', previousBin);
+    restoreEnv('OPL_STATE_DIR', previousState);
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });

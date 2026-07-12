@@ -196,11 +196,11 @@
       "provider_completion_is_domain_ready": false
     }
   },
-  "stage_route_arbiter_substrate_contract": {
-    "surface_kind": "opl_stage_route_arbiter_substrate_contract",
+  "stage_route_transport_substrate_contract": {
+    "surface_kind": "opl_stage_route_transport_substrate_contract",
     "schema_version": 1,
     "owner": "one-person-lab",
-    "purpose": "Define the OPL-owned substrate guarantees that let domain agents run a single smooth stage-route loop without false running, repeated pending echo, or no-progress redrive loops.",
+    "purpose": "Define passive OPL transport and currentness guarantees for Codex-selected stage routes without accepting, rejecting, ranking, or overriding semantic route decisions.",
     "ordinary_path": [
       "fresh_current_owner_delta",
       "domain_provider_admission_identity",
@@ -218,409 +218,6 @@
       "stable_domain_typed_blocker",
       "diagnostic_or_stale_residue"
     ],
-    "domain_progress_transition_runtime_first_slice": {
-      "surface_kind": "opl_domain_progress_transition_runtime_first_slice",
-      "schema_version": 1,
-      "source_target_design": "human_doc:domain_progress_transition_runtime_target_design",
-      "status": "runtime_slice_landed_non_ready",
-      "purpose": "Land the minimal generic OPL substrate for domain progress transitions through existing Runway, Pack, Stagecraft, Console, and Ledger responsibilities without creating an eleventh brand module or a domain truth source.",
-      "implementation_refs": {
-        "runtime_source": "src/family-runtime-domain-progress-transition-runtime.ts",
-        "current_control_consumer": "src/family-runtime-domain-intake-parts/current-control-provider-admission.ts",
-        "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts",
-        "provider_admission_regression_test": "tests/src/cli/cases/family-runtime-current-control-provider-admission.test.ts",
-        "policy_adapter_source": "src/family-runtime-domain-progress-transition-runtime-parts/policy-adapter.ts",
-        "policy_adapter_contract_export": "DOMAIN_PROGRESS_POLICY_ADAPTER_CONTRACT",
-        "policy_adapter_focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
-      },
-      "physical_persistence_refs": {
-        "runtime_log_read_api": "readDomainProgressTransitionRuntimeLogJsonl",
-        "runtime_log_append_api": "appendDomainProgressTransitionRuntimeResultJsonl",
-        "idempotency_readback_api": "readDomainProgressTransitionIdempotencyJsonl",
-        "runtime_live_readback_api": "readDomainProgressTransitionRuntimeReadbackJsonl",
-        "replay_audit_api": "auditDomainProgressTransitionReplay",
-        "storage_contract": "append_only_physical_jsonl",
-        "runtime_live_readback_contract": {
-          "complete_transaction_status": "complete_transaction",
-          "incomplete_transaction_status": "incomplete_transaction",
-          "complete_transaction_requires": [
-            "command_event_outbox_entries_present",
-            "event_and_outbox_entry_share_latest_transaction_id",
-            "outbox_entry_item_id_matches_payload_item_id",
-            "outbox_payload_item_id_matches_read_model_latest_outbox_item_id",
-            "outbox_payload_transition_event_id_matches_latest_event_id"
-          ],
-          "incomplete_transaction_fail_closed_reason": "domain_progress_transition_readback_incomplete_transaction",
-          "incomplete_transaction_outcome_kind": "blocked_incomplete_transaction",
-          "projection_metadata_complete_role": "complete_runtime_readback",
-          "projection_metadata_incomplete_role": "fail_closed_runtime_readback",
-          "projection_metadata_consumable_only_when_transaction_complete": true,
-          "replay_audit_surface_kind": "opl_domain_progress_transition_replay_audit",
-          "replay_audit_ready_status": "replay_ready",
-          "replay_audit_fail_closed_status": "fail_closed",
-          "replay_audit_consumable_only_when_complete": true,
-          "authority_boundary": "opl_runtime_primitive_readback_only_no_domain_truth_owner_receipt_or_typed_blocker"
-        },
-        "focused_test": "tests/src/cli/cases/family-runtime-domain-progress-transition-runtime.test.ts"
-      },
-      "brand_module_partition": {
-        "module_count_policy": "no_new_brand_module",
-        "Runway": "owns current-control intake, provider admission, exactly-one transition choice, NonAdvancingApply, and retry/replay guardrails",
-        "Pack": "owns domain-declared transition request and normalized command/outbox/event shape, aggregate identity, expected version, postcondition/outcome, and authority ABI refs",
-        "Stagecraft": "owns StageRun identity, stage packet refs, transition decision vocabulary, and runner/replay semantics",
-        "Console": "owns operator read-model metadata including observed_generation, derived_generation, NonAdvancingApply, and typed blocked reason projection",
-        "Ledger": "owns append-only outbox/event/replay refs and evidence retention without domain body authority"
-      },
-      "allowed_transition_decisions": [
-        "execute_current_owner_delta",
-        "consume_terminal_closeout",
-        "materialize_recovery_action",
-        "wait_for_owner_with_resume_token",
-        "stop_with_stable_typed_blocker",
-        "stop_with_owner_receipt"
-      ],
-      "decision_surface_policy": {
-        "query_role": "read_only_current_obligation_and_evidence_refs",
-        "update_role": "identity_bound_stage_route_or_recovery_obligation_transition",
-        "signal_role": "owner_or_human_resume_token_only",
-        "read_model_can_execute": false,
-        "observability_can_close_owner_answer": false
-      },
-      "concepts": {
-        "StageRunIdentityPacket": {
-          "existing_surfaces": [
-            "stage_run_currentness_identity",
-            "stage-run-kernel-contract.json",
-            "family-runtime-attempt-contract.json",
-            "runtime stage-run-authorization ledger"
-          ],
-          "required_identity_refs": [
-            "stage_run_id",
-            "route_identity_key",
-            "attempt_idempotency_key",
-            "selected_dispatch_ref",
-            "stage_packet_ref",
-            "stage_packet_refs",
-            "provider_attempt_ref",
-            "attempt_lease_ref",
-            "workflow_ref",
-            "source_fingerprint",
-            "truth_epoch",
-            "runtime_health_epoch"
-          ],
-          "authority_boundary": "opl_identity_and_transport_only_no_domain_receipt_or_publication_verdict"
-        },
-        "HumanGateTransport": {
-          "existing_surfaces": [
-            "contracts/family-orchestration/family-human-gate.schema.json",
-            "StageAttemptWorkflow resume signals",
-            "stage_attempt_workbench resume ledger",
-            "owner-answer.schema.json human_decision"
-          ],
-          "required_transport_refs": [
-            "resume_token",
-            "owner",
-            "allowed_decisions",
-            "timeout_policy",
-            "default_safe_branch",
-            "current_identity",
-            "evidence_required"
-          ],
-          "authority_boundary": "opl_transports_resume_token_domain_or_human_owner_supplies_answer"
-        },
-        "TransitionObligationStore": {
-          "existing_surfaces": [
-            "current-owner-delta.schema.json",
-            "state-index-kernel-contract.json"
-          ],
-          "required_obligation_refs": [
-            "obligation_id",
-            "desired_delta_ref",
-            "current_identity",
-            "status",
-            "last_evidence_refs",
-            "stale_read_model_lag",
-            "transition_decision_ref"
-          ],
-          "landed_support": "current-control provider admission now consumes a domain transition request or OPL-native command record, preserves aggregate/study/work-unit identity, and carries OPL-generated transition apply metadata into stage-attempt request/projection locators without domain truth authority",
-          "non_advancing_apply_current_transition_readback": {
-            "landed_support": "authorized default-executor stage packets that require OPL execution authorization but lack a domain transition request or OPL-native command record are recorded as complete DomainProgressTransitionRuntime NonAdvancingApply transactions instead of being admitted as provider tasks",
-            "runtime_log_ref": "runtime/artifacts/supervision/domain_progress_transition_runtime/command_event_log.jsonl",
-            "current_control_refresh_source": "opl_transition_runtime_readback_non_advancing_apply",
-            "current_control_action_status": "transition_non_advancing_apply_recorded",
-            "provider_admission_allowed": false,
-            "current_executable_owner_action_allowed": false,
-            "paper_progress_delta": false,
-            "stale_default_executor_pending_suppressed": true,
-            "authority_boundary": {
-              "opl_can_write_mas_truth": false,
-              "opl_can_create_domain_owner_receipt": false,
-              "opl_can_create_domain_typed_blocker": false,
-              "provider_completion_is_domain_ready": false
-            }
-          },
-          "durable_substrate_first_slice": {
-            "obligation_store": "append_only_physical_jsonl_identity_bound",
-            "command_event_log": "append_only_physical_jsonl_command_event_outbox_entries",
-            "idempotency_readback": "command_event_outbox_transaction_readback_by_idempotency_key",
-            "live_readback": "physical_jsonl_command_event_outbox_transaction_complete_or_fail_closed",
-            "closeout_inbox": "append_only_physical_jsonl_pending_consumed_rejected_identity_bound",
-            "same_identity_redrive_policy": "fail_closed_when_decision_is_not_current_latest_for_identity",
-            "authority_boundary": {
-              "opl_can_write_mas_truth": false,
-              "opl_can_create_domain_owner_receipt": false,
-              "opl_can_create_domain_typed_blocker": false,
-              "provider_completion_is_domain_ready": false
-            }
-          },
-          "remaining_gap": "dedicated provider-backed runtime soak and SQLite/index integration are not yet proven by end-to-end runtime soak"
-        },
-        "TransitionDecisionEngine": {
-          "existing_surfaces": [
-            "runway readiness",
-            "runway reconcile",
-            "runway handoff-gates",
-            "runway recovery-repair",
-            "runway control-loop status",
-            "stage_route_arbiter_substrate_contract"
-          ],
-          "decision_inputs": [
-            "current_owner_delta",
-            "StageRunIdentityPacket",
-            "terminal_closeout_packet_ref",
-            "human_gate_ref",
-            "owner_receipt_ref",
-            "provider_liveness_or_repair_state",
-            "observability_refs"
-          ],
-          "landed_support": "DomainProgressTransitionRuntime first slice uses current-control/provider admission as the generic transition consumer: domain transition request or OPL-native command identity is required, legacy supervisor apply alias is fail-closed, exactly-one advancing transition is selected per StageRun identity, NonAdvancingApply is projected as metadata rather than progress, and replay fixtures remain refs-only",
-          "durable_substrate_first_slice": {
-            "ledger": "append_only_physical_jsonl",
-            "transactional_outbox": "event_and_outbox_item_share_one_runtime_transaction_result_with_dedupe_readback",
-            "live_readback": "read_physical_jsonl_and_require_command_event_outbox_same_transaction_and_outbox_identity_before_consumption",
-            "replay_audit": "latest_transaction_is_consumable_only_when_command_event_outbox_and_stage_run_identity_form_exactly_one_complete_transaction",
-            "fixed_point_reconciler": "observations_and_command_produce_exactly_one_transition_or_non_advancing_apply",
-            "replay_harness": "multi_step_trace_exposes_step_evidence_for_exactly_one_or_non_advancing_apply",
-            "human_gate_resume_token": "transport_shape_landed_without_opl_supplying_human_or_domain_answer",
-            "read_model_rebuild_metadata": "derived_from_event_id_observed_generation_derived_generation_authority_false",
-            "current_latest_policy": "exactly_one_latest_current_decision_per_obligation_identity",
-            "identity_mismatch_policy": "reject_without_current_latest_projection",
-            "stage_attempt_projection_empty_terminal_evidence": false,
-            "authority_boundary": {
-              "opl_can_write_mas_truth": false,
-              "opl_can_create_domain_owner_receipt": false,
-              "opl_can_create_domain_typed_blocker": false,
-              "provider_completion_is_domain_ready": false
-            },
-            "policy_adapter_abi": "domain_policy_request_only_normalized_before_command_materialization"
-          },
-          "remaining_gap": "real domain owner receipt consumption side effects, terminal closeout consumption, end-to-end runtime soak, and live domain progression evidence are not yet proven for all decision classes",
-          "required_decision_refs": {
-            "execute_current_owner_delta": [
-              "current_owner_delta_ref",
-              "provider_admission_identity_ref"
-            ],
-            "consume_terminal_closeout": [
-              "terminal_closeout_ref"
-            ],
-            "materialize_recovery_action": [
-              "recovery_action_ref_or_no_progress_or_inconsistency_ref"
-            ],
-            "wait_for_owner_with_resume_token": [
-              "human_gate_ref",
-              "resume_token"
-            ],
-            "stop_with_stable_typed_blocker": [
-              "typed_blocker_ref",
-              "budget_or_missing_evidence_ref"
-            ],
-            "stop_with_owner_receipt": [
-              "owner_receipt_ref"
-            ]
-          },
-          "runtime_apply_targets": {
-            "execute_current_owner_delta": {
-              "kind": "provider_attempt_or_owner_callable",
-              "provider_admission_required": true,
-              "owner_callable_required": true,
-              "authority_boundary": {
-                "opl_can_write_mas_truth": false,
-                "opl_can_create_domain_owner_receipt": false,
-                "opl_can_create_domain_typed_blocker": false,
-                "provider_completion_is_domain_ready": false
-              }
-            },
-            "consume_terminal_closeout": {
-              "kind": "terminal_closeout_consumption",
-              "provider_admission_required": false,
-              "owner_callable_required": false,
-              "authority_boundary": {
-                "opl_can_write_mas_truth": false,
-                "opl_can_create_domain_owner_receipt": false,
-                "opl_can_create_domain_typed_blocker": false,
-                "provider_completion_is_domain_ready": false
-              }
-            },
-            "materialize_recovery_action": {
-              "kind": "recovery_owner_action_materialization",
-              "provider_admission_required": false,
-              "owner_callable_required": true,
-              "authority_boundary": {
-                "opl_can_write_mas_truth": false,
-                "opl_can_create_domain_owner_receipt": false,
-                "opl_can_create_domain_typed_blocker": false,
-                "provider_completion_is_domain_ready": false
-              }
-            },
-            "wait_for_owner_with_resume_token": {
-              "kind": "human_gate_resume_token",
-              "provider_admission_required": false,
-              "owner_callable_required": false,
-              "authority_boundary": {
-                "opl_can_write_mas_truth": false,
-                "opl_can_create_domain_owner_receipt": false,
-                "opl_can_create_domain_typed_blocker": false,
-                "provider_completion_is_domain_ready": false
-              }
-            },
-            "stop_with_stable_typed_blocker": {
-              "kind": "stable_domain_typed_blocker",
-              "provider_admission_required": false,
-              "owner_callable_required": false,
-              "authority_boundary": {
-                "opl_can_write_mas_truth": false,
-                "opl_can_create_domain_owner_receipt": false,
-                "opl_can_create_domain_typed_blocker": false,
-                "provider_completion_is_domain_ready": false
-              }
-            },
-            "stop_with_owner_receipt": {
-              "kind": "owner_receipt_consumption",
-              "provider_admission_required": false,
-              "owner_callable_required": false,
-              "required_ref": "owner_receipt_ref",
-              "authority_boundary": {
-                "opl_can_write_mas_truth": false,
-                "opl_can_create_domain_owner_receipt": false,
-                "opl_can_create_domain_typed_blocker": false,
-                "provider_completion_is_domain_ready": false
-              }
-            }
-          }
-        },
-        "ReadModelMetadataKernel": {
-          "existing_surfaces": [
-            "state-index-kernel-contract.json",
-            "index doctor",
-            "index rebuild",
-            "operator read-model sqlite sidecar"
-          ],
-          "allowed_payload": [
-            "refs",
-            "fingerprint",
-            "cursor",
-            "checksum",
-            "bounded_preview_hash",
-            "obligation_id",
-            "decision_id"
-          ],
-          "forbidden_payload": [
-            "study_truth_body",
-            "publication_verdict_body",
-            "artifact_body",
-            "memory_body",
-            "paper_body"
-          ]
-        },
-        "ConsoleReadModel": {
-          "existing_surfaces": [
-            "family-product-operator-projection.json",
-            "app state --profile fast",
-            "runtime app-operator-drilldown"
-          ],
-          "default_operator_answers": [
-            "current_owner",
-            "running_truth",
-            "next_safe_action",
-            "human_gate_token_state",
-            "platform_repair_state",
-            "domain_progress_transition_state"
-          ],
-          "drilldown_only": [
-            "DHD",
-            "retired_local_queue",
-            "stage index",
-            "trace",
-            "lineage",
-            "telemetry"
-          ]
-        },
-        "LedgerReplayEvidence": {
-          "existing_surfaces": [
-            "evidence-ledger-event.schema.json",
-            "family-product-operator-projection.runtime_observability_export",
-            "trace_span_correlation_refs"
-          ],
-          "authority_boundary": "telemetry_lineage_and_trace_spans_are_observability_only"
-        }
-      },
-      "not_complete_claims": [
-        "mapping_landed_does_not_mean_domain_progress_transition_runtime_landed",
-        "execute_decision_runtime_admission_path_does_not_mean_all_six_decisions_have_provider_cadence_or_owner_runtime",
-        "human_gate_schema_fields_do_not_mean_human_token_runtime_is_complete",
-        "read_model_projection_does_not_mean_domain_progress",
-        "observability_refs_do_not_close_owner_receipt_quality_gate_or_publication_readiness"
-      ],
-      "policy_adapter_contract": {
-        "surface_kind": "opl_domain_progress_policy_adapter_contract",
-        "runtime_id": "opl_domain_progress_transition_runtime",
-        "runtime_owner": "one-person-lab",
-        "adapter_role": "domain_policy_request_only",
-        "first_consumer": "PaperProgressPolicyAdapter",
-        "accepted_request_surfaces": [
-          "mas_domain_progress_transition_request",
-          "mas_paper_progress_policy_adapter_request",
-          "opl_domain_progress_policy_adapter_request"
-        ],
-        "normalized_request_surface": "mas_domain_progress_transition_request",
-        "required_fields": [
-          "target_runtime_kind=DomainProgressTransitionRuntime",
-          "target_runtime_owner=one-person-lab",
-          "mas_can_create_opl_outbox_record=false or adapter_can_create_opl_outbox_record=false",
-          "aggregate_identity",
-          "idempotency_key",
-          "source_generation",
-          "expected_version",
-          "required_postcondition"
-        ],
-        "fail_closed_reasons": [
-          "domain_progress_policy_adapter_boundary_missing",
-          "domain_progress_policy_adapter_runtime_field_forbidden",
-          "domain_progress_policy_adapter_authority_field_forbidden",
-          "domain_progress_policy_adapter_authority_overclaim",
-          "domain_progress_policy_adapter_identity_or_postcondition_missing"
-        ],
-        "forbidden_domain_adapter_outputs": [
-          "current_control_command_outbox_record",
-          "opl_domain_progress_transition_command",
-          "opl_domain_progress_transition_event",
-          "opl_domain_progress_transition_outbox_item",
-          "stage_run_identity",
-          "owner_receipt",
-          "typed_blocker",
-          "quality_verdict",
-          "domain_ready_verdict"
-        ],
-        "authority_boundary": {
-          "opl_runtime_can_write_domain_truth": false,
-          "adapter_can_create_opl_outbox_record": false,
-          "adapter_can_create_owner_receipt": false,
-          "adapter_can_create_typed_blocker": false,
-          "provider_completion_is_domain_ready": false,
-          "provider_completion_is_domain_completion": false
-        }
-      }
-    },
     "required_substrate_surfaces": {
       "stage_run_currentness_identity": {
         "purpose": "OPL-owned strict StageRun route/run currentness identity used for default-executor live skip, terminal closeout reconciliation, and current-control projection without claiming domain authority.",
@@ -630,7 +227,7 @@
         "comparison_refs": {
           "attempt_match_ref": "src/modules/runway/family-runtime-stage-run-currentness-identity.ts#sameStageRunCurrentnessIdentity",
           "route_currentness_match_ref": "src/modules/runway/family-runtime-stage-run-currentness-identity.ts#sameStageRunRouteCurrentnessIdentity",
-          "route_currentness_match_policy": "sameStageRunRouteCurrentnessIdentity compares route/currentness fields without using stage_attempt_id so an admitted attempt and a fresh candidate for the same selected dispatch/stage packet identity can reconcile, while stale work-unit/source/currentness basis or selected dispatch/stage packet mismatch fails closed"
+          "route_currentness_match_policy": "sameStageRunRouteCurrentnessIdentity compares route/currentness fields without using stage_attempt_id so an admitted attempt and a fresh candidate for the same selected dispatch/stage packet identity can reconcile; mismatch disables reuse and terminal reconciliation only and never blocks Codex from starting another declared stage"
         },
         "consumed_by": [
           {
@@ -665,8 +262,8 @@
           "stage_packet_ref",
           "stage_packet_refs"
         ],
-        "match_policy": "all_required_current_owner_delta_provider_admission_selected_dispatch_and_stage_packet_fields_must_match; missing route_identity_key, attempt_idempotency_key, dispatch_ref, stage_packet_ref, or stage_packet_refs fails closed",
-        "missing_identity_effect": "fail_closed_no_stage_run_currentness_match_no_live_skip_no_terminal_reconcile",
+        "match_policy": "all_required_current_owner_delta_provider_admission_selected_dispatch_and_stage_packet_fields_must_match for reuse or terminal reconciliation only",
+        "missing_identity_effect": "no_stage_run_currentness_match_no_live_skip_no_terminal_reconcile_next_declared_stage_still_may_start",
         "authority_boundary": {
           "opl_can_use_for_live_skip": true,
           "opl_can_use_for_terminal_closeout_reconcile": true,
@@ -689,13 +286,13 @@
           "route_identity_key_required": true,
           "attempt_idempotency_key_required": true,
           "generic_idempotency_key_is_not_attempt_idempotency_key": true,
-          "missing_provider_admission_identity_effect": "fail_closed_no_stage_run_currentness_match"
+          "missing_provider_admission_identity_effect": "no_stage_run_currentness_match_next_declared_stage_still_may_start"
         },
         "selected_dispatch_stage_packet_policy": {
           "dispatch_ref_required": true,
           "stage_packet_ref_required": true,
           "stage_packet_refs_required_non_empty": true,
-          "stale_selected_dispatch_or_stage_packet_effect": "route_currentness_mismatch_fail_closed"
+          "stale_selected_dispatch_or_stage_packet_effect": "route_currentness_mismatch_disables_reuse_only"
         }
       },
       "terminal_closeout_precedes_live_projection": {
@@ -786,6 +383,8 @@
       "opl_can_schedule_stage_attempts": true,
       "opl_can_reconcile_attempt_ledger": true,
       "opl_can_project_operator_read_model": true,
+      "opl_can_choose_semantic_stage_route": false,
+      "opl_can_reject_codex_ai_route": false,
       "opl_can_restart_worker_without_supervisor_guard": false,
       "opl_can_create_domain_owner_receipt": false,
       "opl_can_create_domain_typed_blocker": false,
@@ -828,18 +427,16 @@
       "next_forced_delta",
       "evidence_refs"
     ],
-      "missing_domain_semantics": {
+    "missing_domain_semantics": {
       "projection_status": "missing_domain_fields",
-      "typed_blocker_reason": "domain_closeout_provided_incomplete_user_stage_log",
-      "counts_as_deliverable_progress": false,
+      "quality_debt_reason": "domain_closeout_provided_incomplete_user_stage_log",
+      "counts_as_deliverable_progress_when_readable_artifact_exists": true,
       "counts_as_domain_ready": false,
       "may_trigger_default_redrive": false,
-        "allowed_next_evidence": [
-          "fresh_current_owner_delta",
-          "accepted_domain_owner_answer",
-          "stable_domain_typed_blocker",
-          "human_decision",
-        "provider_hard_gate_clearance"
+      "allowed_next_evidence": [
+        "codex_selected_any_declared_stage",
+        "fresh_current_owner_delta",
+        "human_decision_or_authority_clearance_when_required"
       ]
     },
     "authority_boundary": {

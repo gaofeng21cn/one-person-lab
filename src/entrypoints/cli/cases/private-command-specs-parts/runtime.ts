@@ -43,9 +43,6 @@ import {
   buildRuntimeStageRunAuthorizationCommandSpecs,
 } from '../runtime-stage-run-authorization-command-spec.ts';
 import {
-  buildRuntimeStageTransitionAuthorityCommandSpecs,
-} from '../runtime-stage-transition-authority-command-spec.ts';
-import {
   buildRuntimeStandardAgentTemplateConsumptionCommandSpecs,
 } from '../runtime-standard-agent-template-consumption-command-spec.ts';
 import { buildRuntimeEnvironmentCommandSpecs } from '../runtime-environment-command-spec.ts';
@@ -327,7 +324,6 @@ export function buildPrivateRuntimeCommandSpecs({
     ...buildRuntimeOwnerEvidenceSustainedConsumptionCommandSpecs(),
     ...buildRuntimeStageReplayMissingReceiptCommandSpecs(),
     ...buildRuntimeStageRunAuthorizationCommandSpecs(),
-    ...buildRuntimeStageTransitionAuthorityCommandSpecs(),
     ...buildRuntimeDeveloperModeCloseoutCommandSpecs(),
     ...buildRuntimeStageRunEvidencePackCommandSpecs(),
     ...buildRuntimeStageCandidatePortfolioCommandSpecs(),

@@ -588,7 +588,7 @@ export async function domainHandlerDispatchActivity(input: TemporalStageAttemptW
       next_owner: input.domain_id,
       domain_ready_verdict: null,
       route_impact: runtimeBlocker?.route_impact ?? routeImpact,
-      blocked_reason: providerBlockerReason ?? 'typed_closeout_packet_required',
+      blocked_reason: providerBlockerReason ?? 'zero_readable_artifact',
       closeout_packet_surface_kind: null,
       authority_boundary: {
         opl: 'domain_handler_transport_only',

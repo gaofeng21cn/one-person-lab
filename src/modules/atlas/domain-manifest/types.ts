@@ -7,18 +7,8 @@ import type { FamilyActionCatalog } from '../../../kernel/family-action-catalog-
 import type { FamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import type { FamilyStageControlPlane } from '../../stagecraft/index.ts';
 import type {
-  FamilyTransitionMatrixCase,
-  FamilyTransitionMatrixResult,
-  FamilyTransitionSpec,
-} from '../../stagecraft/index.ts';
-import type {
   FunctionalPrivatizationAudit,
 } from '../../pack/index.ts';
-import type { DomainTransitionOracle } from '../../stagecraft/index.ts';
-import type {
-  VisualTransitionAdapterProfileRegistry,
-  VisualTransitionSpec,
-} from '../../stagecraft/index.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -208,29 +198,6 @@ export interface NormalizedAutomationCatalog {
   summary: string;
   automations: NormalizedAutomationDescriptor[];
   readiness_summary: string | null;
-}
-
-export interface NormalizedFamilyTransitionProjection {
-  surface_kind: 'family_transition_manifest_projection';
-  status: 'missing' | 'descriptor_only' | 'matrix_evaluated' | 'blocked';
-  spec_id: string | null;
-  target_domain_id: string | null;
-  owner: string | null;
-  transition_count: number;
-  case_count: number;
-  refresh_required: boolean;
-  blocked_reason: string | null;
-  adapter_profile_registry_ref: string | null;
-  descriptor: JsonRecord | null;
-  locator_refs: JsonRecord;
-  matrix_result: FamilyTransitionMatrixResult | null;
-  authority_boundary: JsonRecord;
-  non_authority_flags: {
-    opl_interprets_domain_quality: false;
-    opl_executes_domain_action: false;
-    opl_writes_domain_truth: false;
-    opl_authorizes_publication_or_fundability_verdict: false;
-  };
 }
 
 export type DomainManifestStatus =
@@ -503,15 +470,6 @@ export interface NormalizedDomainManifest {
   family_action_catalog_source_ref: NormalizedSurfaceRef | null;
   family_stage_control_plane: FamilyStageControlPlane | null;
   family_stage_control_plane_source_ref: NormalizedSurfaceRef | null;
-  family_transition_spec_descriptor: JsonRecord | null;
-  family_transition_spec: FamilyTransitionSpec | null;
-  family_transition_matrix_cases: FamilyTransitionMatrixCase[];
-  family_transition_materialization: JsonRecord | null;
-  family_transition: NormalizedFamilyTransitionProjection;
-  domain_transition_oracle: DomainTransitionOracle | null;
-  visual_transition_adapter_profile_registry: VisualTransitionAdapterProfileRegistry | null;
-  visual_transition_adapter_profile_registry_ref: string | null;
-  visual_transition_spec: VisualTransitionSpec | null;
   domain_memory_descriptor: FamilyDomainMemoryRef | null;
   standard_domain_agent_skeleton: JsonRecord | null;
   standard_domain_agent_skeleton_source_field: string | null;

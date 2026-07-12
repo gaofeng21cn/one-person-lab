@@ -1,5 +1,4 @@
 import type { BrandModuleId } from '../../kernel/types.ts';
-import { OBSERVABILITY_EVIDENCE_LEDGER_FIELD } from '../../kernel/observability-projection-vocabulary.ts';
 import {
   FrameworkContractError,
   isRecord,
@@ -38,7 +37,7 @@ export function expectFiniteNumber(value: unknown, field: string, filePath: stri
 export const TARGET_ARCHITECTURE_DESIGN_PRINCIPLES = [
   'grip_big_release_small',
   'current_owner_delta_first',
-  'single_writer_stage_transition_authority',
+  'codex_cli_single_semantic_stage_route_owner',
   'declarative_domain_pack_generated_surfaces_authority_abi',
   'passive_evidence_ledger',
   'one_ordinary_golden_path_per_agent',
@@ -150,7 +149,7 @@ export const TARGET_ARCHITECTURE_ACCEPTED_OWNER_ANSWER_SHAPES = [
   'keep_as_authority_adapter_ref',
 ] as const;
 
-export const TARGET_ARCHITECTURE_DERIVED_STAGE_STATE = [
+export const TARGET_ARCHITECTURE_PASSIVE_STAGE_PROJECTIONS = [
   'stage_current_pointer',
   'stage_run_terminal_state',
   'current_owner_delta',
@@ -158,32 +157,21 @@ export const TARGET_ARCHITECTURE_DERIVED_STAGE_STATE = [
   'progress_reconciler_projection',
 ] as const;
 
-export const TARGET_ARCHITECTURE_ACCEPTED_AUTHORITY_INPUTS = [
-  'transition_intent',
-  'provider_observation',
-  'owner_answer',
-  'typed_blocker',
-  'human_gate_decision',
-  'agent_lab_observation',
-  'evidence_observation',
-  'runtime_intent',
-  'progress_reconciler_observation',
-  'handoff_gate_decision',
-  'recovery_repair_observation',
+export const TARGET_ARCHITECTURE_STAGE_ROUTE_CAPABILITIES = [
+  'advance_to_next_declared_stage',
+  'skip_to_any_declared_stage',
+  'repeat_current_or_prior_stage',
+  'reverse_to_any_declared_stage',
+  'route_back_with_partial_or_negative_results',
 ] as const;
 
-export const TARGET_ARCHITECTURE_FORBIDDEN_DIRECT_WRITERS = [
-  'domain_agent',
-  'runtime_provider',
-  'one_person_lab_app',
-  'agent_lab',
-  'read_model',
-  OBSERVABILITY_EVIDENCE_LEDGER_FIELD,
-  'worklist',
-  'runway_control_loop',
-  'progress_reconciler',
-  'worker_supervisor',
-  'temporal_workflow_history',
+export const TARGET_ARCHITECTURE_FORBIDDEN_FRAMEWORK_ROUTE_DECISIONS = [
+  'accept_or_reject_codex_route',
+  'require_typed_closeout_for_progress',
+  'require_owner_receipt_for_progress',
+  'rank_or_select_stage_candidates',
+  'override_codex_selected_next_stage',
+  'convert_quality_debt_to_execution_blocker',
 ] as const;
 
 export const TARGET_ARCHITECTURE_DOMAIN_PACK_DECLARATIONS = [
@@ -211,7 +199,6 @@ export const TARGET_ARCHITECTURE_GENERATED_SURFACES = [
   'ai_sdk',
   'status_read_model',
   'workbench',
-  'functional_harness',
   'operator_projection',
 ] as const;
 

@@ -832,6 +832,10 @@ function compileStageCompletionPolicy(
       policy.closeout_packet_required,
       'observations.tasks[].stage_completion_policy.closeout_packet_required',
     ),
+    raw_artifact_sufficient_for_progress: requiredBoolean(
+      policy.raw_artifact_sufficient_for_progress,
+      'observations.tasks[].stage_completion_policy.raw_artifact_sufficient_for_progress',
+    ),
     provider_completion_is_domain_completion: requiredBoolean(
       policy.provider_completion_is_domain_completion,
       'observations.tasks[].stage_completion_policy.provider_completion_is_domain_completion',

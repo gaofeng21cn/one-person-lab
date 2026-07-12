@@ -14,7 +14,7 @@
       "receipts/"
     ],
     "current_pointer_role": "refs_only_artifact_attempt_pointer_not_stage_run_current_pointer",
-    "stage_transition_authority_required_for_stage_run_current": true,
+    "stage_run_current_is_passive_projection_of_codex_route_context": true,
     "derived_index_role": "rebuildable_projection_not_primary_truth",
     "lineage_root": "lineage/events.jsonl and lineage/graph.json",
     "retention_root": "retention/attempts/<stage_id>/<attempt_id>"
@@ -41,10 +41,7 @@
       "owner_receipt_ref_and_receipt_file"
     ],
     "completed_with_quality_debt_requires": [
-      "valid_manifest",
-      "required_outputs_present",
-      "content_hashes_match",
-      "quality_debt_ref_and_evidence_file"
+      "readable_output_present"
     ],
     "progress_first_policy": {
       "consumable_artifact_advances_stage": true,

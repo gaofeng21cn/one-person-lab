@@ -205,14 +205,17 @@
       "fixture_mode_allowed_without_temporal_server": true
     }
   },
-  "typed_closeout_contract": {
+  "progress_closeout_contract": {
     "accepted_surface_kinds": [
       "stage_attempt_closeout_packet",
       "stage_memory_closeout_packet",
       "domain_stage_closeout_packet"
     ],
-    "required_for_completed_status": true,
-    "free_text_closeout_accepted": false,
+    "typed_packet_required_for_progress": false,
+    "raw_or_free_text_artifact_accepted_for_progress": true,
+    "framework_derives_minimal_progress_envelope": true,
+    "output_schema_control_plane_enabled": false,
+    "same_session_closeout_enforcement_enabled": false,
     "tracked_refs": [
       "closeout_refs",
       "consumed_refs",
@@ -595,7 +598,7 @@
       "stale_route_epoch",
       "stale_source_fingerprint",
       "stale_truth_epoch",
-      "provider_completed_without_typed_closeout"
+      "provider_completed_without_readable_artifact"
     ],
     "temporal_ordering_policy": "newest_queue_or_stage_attempt_wins_over_older_terminal_attempt",
     "authority_boundary": {
@@ -691,8 +694,8 @@
           "receipt_shape",
           "tool_event_proof",
           "timeout_rule",
-          "typed_closeout_rule",
-          "fail_closed_gate"
+          "raw_artifact_progress_rule",
+          "infrastructure_fail_closed_gate"
         ],
         "forbidden_core_semantics": [
           "subprocess_started_equals_success",

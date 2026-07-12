@@ -21,6 +21,7 @@ import {
   type RunnerEventSummary,
 } from './input-prompt.ts';
 import type { TypedStageCloseoutPacket } from './closeout-normalization.ts';
+import type { buildProgressCloseoutProjection } from '../progress-closeout-projection.ts';
 import type { JsonRecord } from './shared.ts';
 
 type CodexStageRunnerStatus = {
@@ -35,8 +36,8 @@ type CodexStageRunnerStatus = {
   timeout_ms: number | null;
   no_output_timeout_ms: number | null;
   command_preview: string[];
-  typed_closeout_required_for_completion: true;
-  free_text_closeout_accepted: false;
+  typed_closeout_required_for_progress: false;
+  raw_artifact_sufficient_for_progress: true;
 };
 
 export type CodexStageRunnerBaseReceipt = {
@@ -51,7 +52,8 @@ export type CodexStageRunnerBaseReceipt = {
     progress_status: 'checkpointed' | 'running';
     stage_id: string;
     stage_packet_ref: string | null;
-    completed_requires_typed_closeout: true;
+    progress_requires_typed_closeout: false;
+    raw_artifact_sufficient_for_progress: true;
     thread_id: string | null;
     runner_events: RunnerEventSummary[];
   };
@@ -72,68 +74,13 @@ export type CodexStageRunnerProcessOutputSummary = {
   no_output_timeout_ms?: number | null;
   command_no_progress_timeout_ms?: number | null;
   captured_last_message_chars?: number;
-  structured_output_schema?: {
-    enabled: boolean;
-    policy:
-      | 'provider_supported_structured_output_request'
-      | 'provider_unknown_preserve_codex_default_structured_output_request'
-      | 'provider_disabled_gflab_structured_output_request';
-    provider: string | null;
-    output_last_message_capture_enabled: true;
+  raw_stage_artifact?: {
+    output_ref: string;
+    metadata_ref: string;
+    sha256: string;
+    size_bytes: number;
   };
-  structured_closeout_gate?: {
-    surface_kind: 'opl_structured_closeout_gate';
-    gate_version: 'structured-closeout-gate.v1';
-    gate_owner: 'one-person-lab';
-    gate_status:
-      | 'accepted_typed_closeout'
-      | 'missing_typed_closeout'
-      | 'provider_runtime_blocker_materialized';
-    stage_attempt_id: string | null;
-    stage_id: string | null;
-    accepted_closeout: {
-      surface_kind: TypedStageCloseoutPacket['surface_kind'];
-      closeout_ref_count: number;
-      provider_runtime_blocker_ref_only: boolean;
-    } | null;
-    capture_pipeline: {
-      terminal_message_json_scan: true;
-      output_last_message_capture_enabled: boolean;
-      output_schema: {
-        enabled: boolean;
-        policy: string;
-        provider: string | null;
-      };
-      session_recovery_status: string | null;
-      session_recovery_attempts: number;
-      same_session_enforcement_status: string | null;
-      domain_receipt_recovery_status: string | null;
-    };
-    failure: {
-      repair_class: string;
-      blocked_reason: string | null;
-      closeout_rejection_reason: string | null;
-      provider_completion_is_domain_ready: false;
-    } | null;
-    repair_action: {
-      action_id: 'structured_closeout_repair_redrive_decision';
-      owner: 'opl_runway';
-      reason: string | null;
-      command: string;
-      mutation: false;
-      blocks_runtime_execution: true;
-      blocks_domain_progress_claim: true;
-    } | null;
-    authority_boundary: {
-      opl: 'structured_closeout_transport_gate_only';
-      domain: 'truth_quality_artifact_gate_owner';
-      can_write_domain_truth: false;
-      can_create_owner_receipt: false;
-      can_create_typed_blocker: false;
-      can_authorize_domain_ready: false;
-      provider_completion_is_domain_ready: false;
-    };
-  };
+  progress_closeout_projection?: ReturnType<typeof buildProgressCloseoutProjection>;
   active_command?: {
     tool_call_id: string;
     title: string;
@@ -217,36 +164,6 @@ export type CodexStageRunnerProcessOutputSummary = {
     credential_material_logged: false;
     forwarded_env_keys: string[];
   };
-  closeout_enforcement?: {
-    status: string;
-    thread_id: string | null;
-    exit_code: number | null;
-    stdout_bytes: number;
-    stderr_bytes: number;
-    final_message_chars: number;
-    captured_last_message_chars?: number;
-    timeout_reason?:
-      | 'total_timeout'
-      | 'no_output_timeout'
-      | 'command_no_progress_timeout'
-      | 'unsupported_tool_protocol'
-      | 'activity_cancelled'
-      | 'provider_unavailable';
-    pending_function_call_count?: number;
-    function_call_names?: string[];
-    unsupported_function_call_session_path?: string;
-    provider_error_count?: number;
-    provider_error_status_codes?: number[];
-    provider_error_messages?: string[];
-    authority_boundary: {
-      opl: 'same_session_closeout_enforcement_transport_only';
-      domain: 'truth_quality_artifact_gate_owner';
-      can_write_domain_truth: false;
-      can_create_owner_receipt: false;
-      can_create_typed_blocker: false;
-      provider_completion_is_domain_ready: false;
-    };
-  };
 };
 
 export type CodexStageRunnerReceipt = CodexStageRunnerBaseReceipt & {
@@ -274,8 +191,8 @@ export function buildAgentStageRunnerReceipt(input: {
       stdout_bytes: Buffer.byteLength(input.agentExecutionReceipt.stdout_preview, 'utf8'),
       stderr_bytes: Buffer.byteLength(input.agentExecutionReceipt.stderr_preview, 'utf8'),
       timeout_ms: null,
-      typed_closeout_required_for_completion: true,
-      free_text_closeout_accepted: false,
+      typed_closeout_required_for_progress: false,
+      raw_artifact_sufficient_for_progress: true,
     },
     heartbeat_summary: {
       heartbeat_status: 'recorded',
@@ -287,7 +204,8 @@ export function buildAgentStageRunnerReceipt(input: {
       progress_status: input.agentExecutionReceipt.closeout_packet ? 'checkpointed' : 'running',
       stage_id: stageIdFromAttempt(input.attempt),
       stage_packet_ref: input.stagePacketRef ?? null,
-      completed_requires_typed_closeout: true,
+      progress_requires_typed_closeout: false,
+      raw_artifact_sufficient_for_progress: true,
       thread_id: input.agentExecutionReceipt.session_id,
       runner_events: input.agentExecutionReceipt.event_summary,
     },
@@ -343,8 +261,8 @@ export function buildCodexStageRunnerReceipt(input: {
       timeout_ms: input.timeoutMs ?? null,
       no_output_timeout_ms: input.noOutputTimeoutMs ?? null,
       command_preview: buildCodexCliPreview(args),
-      typed_closeout_required_for_completion: true,
-      free_text_closeout_accepted: false,
+      typed_closeout_required_for_progress: false,
+      raw_artifact_sufficient_for_progress: true,
     },
     heartbeat_summary: {
       heartbeat_status: 'recorded',
@@ -356,7 +274,8 @@ export function buildCodexStageRunnerReceipt(input: {
       progress_status: checkpointRefs.length > 0 ? 'checkpointed' : 'running',
       stage_id: stageIdFromAttempt(input.attempt),
       stage_packet_ref: stagePacketRef,
-      completed_requires_typed_closeout: true,
+      progress_requires_typed_closeout: false,
+      raw_artifact_sufficient_for_progress: true,
       thread_id: input.threadId ?? null,
       runner_events: input.runnerEvents ?? [],
     },

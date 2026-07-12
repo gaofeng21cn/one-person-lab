@@ -37,7 +37,7 @@
 | B3 | standard conformance | golden path/morphology/residue 由 domain contract 声明 | 各 domain pack | validator 无 MAS/MAG/RCA/OMA 分支和专用常量 |
 | B4 | Agent Lab longline/developer drills | scenario/oracle/scorecard 外置 | 各 domain/eval pack | runner 通用；active source 无静态 domain passed 结果 |
 | B5 | default executor recovery | 移除 MAS 默认 owner | Runway | owner 缺失 fail closed，或从 attempt/pack/registry 解析 |
-| B6 | transition oracle | 退役 MAG alias，保留通用 runner | MAG + Stagecraft | OPL ABI 不再暴露 `mag_grant_transition_oracle` |
+| B6 | transition oracle | 退役 MAG alias 与通用 runner，Codex CLI 独占语义 route | MAG + Stagecraft | OPL ABI 不再暴露 `mag_grant_transition_oracle` 或 transition runner |
 | B7 | agent profile spine | OMA typed-object ABI 改为 generic ABI/adapter | OMA + Foundry Lab | selector 不强制 `opl_meta_agent_*` object kind |
 | B8 | research frontier board | 退役 legacy decoder，保留 candidate portfolio projection | MAS + Runway | legacy caller 为零，研究语义不在 OPL |
 | B9 | Console owner payload summary | MAS/MAG decoder 改为注册式 domain summary projection | MAS/MAG + Console | Console 无 paper/grant payload shape 分支 |
@@ -80,7 +80,7 @@
 | B3 | `done` | 100% | golden path、morphology、residue 由各 domain `standard_agent_conformance_profile.json` 声明；validator 无 domain-id 分支，并移除 retired provenance exact-3 假设。 |
 | B4 | `done` | 100% | Developer Mode/longline 使用显式 domain-owned evaluation manifest；缺省为空或 generic blocked example，非法 manifest fail closed，无静态 MAS/RCA passed 注入。 |
 | B5 | `done` | 100% | default executor owner 从 attempt/pack/registry 解析；缺失返回 `owner_unresolved`，不再默认 MAS。 |
-| B6 | `done` | 100% | `mag_grant_transition_oracle` ABI 退役；OPL 仅保留通用 transition runner。 |
+| B6 | `done` | 100% | `mag_grant_transition_oracle` ABI 与 OPL 通用 transition runner 均退役；StageRun 只运输 declared stage context 与 artifact refs。 |
 | B7 | `done` | 100% | Agent profile selector 使用 generic/source-derived ABI，不要求 `opl_meta_agent_*` typed object。 |
 | B8 | `done` | 100% | legacy research-frontier decoder 已删除，替换为通用 candidate portfolio projection。 |
 | B9 | `done` | 100% | Console owner payload summary 改为注册式 domain summary refs，无 MAS/MAG payload-shape 分支。 |

@@ -131,7 +131,6 @@ test('generated interfaces reject retired wrapper names as implicit canonical su
         { surface_id: 'skill', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'product_status', owner: 'one-person-lab', status: 'descriptor_source_available' },
         { surface_id: 'workbench', owner: 'one-person-lab', status: 'descriptor_source_available' },
-        { surface_id: 'functional_harness_cases', owner: 'one-person-lab', status: 'descriptor_source_available' },
       ],
     },
   );

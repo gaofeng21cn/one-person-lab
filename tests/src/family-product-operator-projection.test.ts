@@ -210,7 +210,6 @@ test('test:meta includes OPL family external orchestration contract tests', () =
 
   for (const testFile of [
     'tests/src/family-runtime-attempt-contract.test.ts',
-    'tests/src/functional-agent-runtime-harness.test.ts',
     'tests/src/family-domain-quality-projection-contract.test.ts',
     'tests/src/family-incident-learning-loop.test.ts',
     'tests/src/family-product-operator-projection.test.ts',

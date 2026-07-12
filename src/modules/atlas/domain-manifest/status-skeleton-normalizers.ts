@@ -1,4 +1,3 @@
-import { normalizeDomainTransitionOracle } from '../../stagecraft/index.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
 import {
   isRecord,
@@ -56,5 +55,5 @@ export function buildStandardDomainAgentSkeletonCandidate(
 }
 
 export function normalizeDomainTransitionOracleSurface(value: unknown) {
-  return isRecord(value) ? normalizeDomainTransitionOracle(value) : null;
+  return isRecord(value) ? value : null;
 }

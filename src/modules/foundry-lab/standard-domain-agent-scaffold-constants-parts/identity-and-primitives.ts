@@ -39,10 +39,10 @@ export const OPL_OWNED_GENERIC_PRIMITIVES = [
     domain_policy: 'do_not_own_generic_attempt_ledger',
   },
   {
-    primitive_id: 'generic_transition_runner',
+    primitive_id: 'ai_selected_stage_route_transport',
     owner: 'one-person-lab',
-    replacement_surface: 'family_transition_runner',
-    domain_policy: 'own_domain_transition_spec_only',
+    replacement_surface: 'stage_run_ai_route_context_transport',
+    domain_policy: 'codex_cli_selects_any_declared_stage_and_domain_artifacts_are_context_only',
   },
   {
     primitive_id: 'workspace_source_intake_shell',

@@ -42,27 +42,29 @@ test('target operating architecture keeps framework-wide ownership and authority
     'ProgressReconciler',
   ]);
 
-  assert.equal(contract.stage_transition_authority.single_writer, true);
-  assert.equal(contract.stage_transition_authority.event_log_policy, 'append_only_authority_event_log');
-  for (const forbiddenWriter of [
-    'domain_agent',
-    'runtime_provider',
-    'one_person_lab_app',
-    'agent_lab',
-    'read_model',
-    'evidence_ledger',
-    'worklist',
-    'runway_control_loop',
-    'progress_reconciler',
-    'worker_supervisor',
-    'temporal_workflow_history',
+  assert.equal(contract.codex_stage_route_owner.semantic_owner, 'codex_cli');
+  assert.equal(contract.codex_stage_route_owner.single_semantic_control_plane, true);
+  assert.equal(
+    contract.codex_stage_route_owner.progression_policy,
+    'any_readable_stage_artifact_allows_next_declared_stage_to_start_quality_debt_restricts_claims_only',
+  );
+  for (const capability of [
+    'advance_to_next_declared_stage',
+    'skip_to_any_declared_stage',
+    'repeat_current_or_prior_stage',
+    'reverse_to_any_declared_stage',
+    'route_back_with_partial_or_negative_results',
   ]) {
     assert.equal(
-      contract.stage_transition_authority.forbidden_direct_writers.includes(forbiddenWriter),
+      contract.codex_stage_route_owner.route_capabilities.includes(capability),
       true,
-      forbiddenWriter,
+      capability,
     );
   }
+  assert.equal(
+    contract.codex_stage_route_owner.forbidden_framework_route_decisions.includes('convert_quality_debt_to_execution_blocker'),
+    true,
+  );
 
   assert.equal(
     contract.domain_pack_authority_abi.default_agent_shape,

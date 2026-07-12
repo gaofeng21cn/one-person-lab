@@ -54,16 +54,19 @@ export function validateUserStageLogContracts(stageControlPlane: unknown) {
       readOptionalString(stageCompletionPolicy?.completion_judgment_owner) === 'domain_stage'
         ? null
         : `stage_completion_policy_owner_invalid:${stageId}`,
-      stageCompletionPolicy?.closeout_packet_required === true
+      stageCompletionPolicy?.closeout_packet_required === false
         ? null
-        : `stage_completion_policy_closeout_packet_not_required:${stageId}`,
+        : `stage_completion_policy_closeout_packet_must_not_gate_progress:${stageId}`,
+      stageCompletionPolicy?.raw_artifact_sufficient_for_progress === true
+        ? null
+        : `stage_completion_policy_raw_artifact_progress_missing:${stageId}`,
       stageCompletionPolicy?.provider_completion_is_domain_completion === false
         ? null
         : `stage_completion_policy_provider_completion_claims_domain_completion:${stageId}`,
       stageCompletionPolicy?.opl_content_judgment_allowed === false
         ? null
         : `stage_completion_policy_opl_content_judgment_allowed:${stageId}`,
-      readOptionalString(stageCompletionPolicy?.next_stage_transition_owner) === 'opl_runtime'
+      readOptionalString(stageCompletionPolicy?.next_stage_transition_owner) === 'codex_cli'
         ? null
         : `stage_completion_policy_next_transition_owner_invalid:${stageId}`,
       closeoutOutcomes.includes('completed_and_continue')

@@ -493,43 +493,6 @@ export function buildPublicRuntimeCommandSpecs(
         examples: ['opl runtime stage-run-authorization list --json'],
         group: 'runtime',
       }),
-    'runtime stage-transition-authority evaluate':
-      cloneCommandSpec(commandSpecs['runtime stage-transition-authority evaluate'], {
-        usage:
-          'opl runtime stage-transition-authority evaluate (--payload <json>|--payload-file <path>)',
-        examples: [
-          'opl runtime stage-transition-authority evaluate --payload-file stage-transition-intent.json --json',
-        ],
-        group: 'runtime',
-      }),
-    'runtime stage-transition-authority read-model':
-      cloneCommandSpec(commandSpecs['runtime stage-transition-authority read-model'], {
-        usage:
-          'opl runtime stage-transition-authority read-model ((--payload <json>|--payload-file <path>)|--from-ledger)',
-        examples: [
-          'opl runtime stage-transition-authority read-model --payload-file stage-transition-intents.json --json',
-          'opl runtime stage-transition-authority read-model --from-ledger --json',
-        ],
-        group: 'runtime',
-      }),
-    'runtime stage-transition-authority record':
-      cloneCommandSpec(commandSpecs['runtime stage-transition-authority record'], {
-        usage:
-          'opl runtime stage-transition-authority record (--payload <json>|--payload-file <path>) [--dry-run]',
-        examples: [
-          'opl runtime stage-transition-authority record --payload-file stage-transition-intent.json --json',
-          'opl runtime stage-transition-authority record --payload-file stage-transition-intent.json --dry-run --json',
-        ],
-        group: 'runtime',
-      }),
-    'runtime stage-transition-authority list':
-      cloneCommandSpec(commandSpecs['runtime stage-transition-authority list'], {
-        usage: 'opl runtime stage-transition-authority list',
-        examples: [
-          'opl runtime stage-transition-authority list --json',
-        ],
-        group: 'runtime',
-      }),
     ...developerModeCloseoutCommandSpecs,
     'runtime action execute': cloneCommandSpec(commandSpecs['runtime action execute'], {
       usage: 'opl runtime action execute --action <action_id> [--payload <json>|--payload-file <path>] [--dry-run] [--approve-domain-action]',

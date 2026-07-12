@@ -44,7 +44,6 @@ Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机
 
 | 项目 | 状态 | 证据与停止条件 |
 | --- | --- | --- |
-| 删除整个 `DomainProgressTransitionRuntime` | rejected | MAS 仍真实消费 `opl_domain_progress_transition_runtime_live_readback` 与对应 contract。只有 MAS consumer 迁到 StageRun/Temporal/current-control 等价 ABI，或落地真正接线的 compatibility adapter 后，才可重新评估物理删除。 |
 | Runway no-progress enforcement | rejected_by_current_contract | `stage-run-kernel-contract.json` 当前声明 `canonical_admission_consumer=null`、`enforcement=advisory_only_outside_stage_run_reducer`、`can_block_or_exhaust_stage_run=false`。只有Runway owner先修改canonical admission contract并给出consumer/回归，才能重开correctness实现。 |
 | OBF source-byproduct caller cutover | blocked | `opl-bookforge/scripts/verify.sh` 仍两处调用 `bookforge_project_hygiene.py --source-byproduct-check`。OPL 的 Workspace source guard 已落地，但 OBF caller 未切换，不能声明 List 1 #13 完成。 |
 | OBF native-helper 私有 shell 退役 | partial | OPL 已提供 `opl pack native-helper probe` receipt envelope；OBF renderer/export authority应留在 OBF。只有 OBF 默认 caller 切到 OPL primitive并删除重复通用 shell后才能关闭。 |
@@ -75,7 +74,6 @@ Machine boundary: 本文只记录当前清理目标、完成度和 blocker。机
 OPL 仓内原始 12 条 overengineering 候选中，11条已关闭；Runway旧策略的物理清理已完成，但follow-up no-progress enforcement按当前contract明确不落地。后续只在以下条件成立时重开：
 
 1. OBF owner 完成 caller cutover并给出 source guard/native-helper no-active-caller evidence。
-2. MAS owner 迁移 `DomainProgressTransitionRuntime` consumer ABI，允许重新审计 runtime retirement。
 3. Runway owner为no-progress enforcement指定canonical admission consumer并修改当前advisory-only contract。
 4. fresh source/readback 发现新的零调用实现、第二真相源或标准库替代机会。
 

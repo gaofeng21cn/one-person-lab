@@ -170,7 +170,7 @@ MAG 的理想定位是基金策略、撰写、评审和提交包 Agent。
 
 - grant truth、funder/program memory、specific aims、strategy/rationale、fundability verdict。
 - authoring quality/export verdict、package authority、submission human gate。
-- grant transition oracle、owner receipt signer、grant helper implementation。
+- non-authoritative grant route context、owner receipt signer、grant helper implementation；Codex CLI 独占 semantic stage route。
 
 上收或退役：
 

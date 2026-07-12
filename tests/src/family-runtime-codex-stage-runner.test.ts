@@ -10,8 +10,6 @@ import { createFakeCodexFixture } from './cli/helpers.ts';
 import { runPublicCodexStageRunner } from './family-runtime-codex-stage-runner-helpers.ts';
 import {
   buildCodexStageActivityInput,
-  createCodexCloseoutCaptureForTest,
-  stageCloseoutOutputSchemaForTest,
 } from '../../src/modules/runway/family-runtime-codex-stage-runner.ts';
 import { FrameworkContractError } from '../../src/modules/charter/contracts.ts';
 
@@ -61,7 +59,7 @@ test('Codex stage activity projection keeps Codex CLI attempts live by default',
   }
 });
 
-test('Codex stage activity command preview carries strict terminal closeout contract', () => {
+test('Codex stage activity accepts readable output without a typed closeout contract', () => {
   const activity = buildCodexStageActivityInput({
     attempt: {
       stage_attempt_id: 'sat_codex_prompt_contract_test',
@@ -75,11 +73,12 @@ test('Codex stage activity command preview carries strict terminal closeout cont
   });
 
   const commandPreview = activity.runner_status.command_preview.join('\n');
-  assert.match(commandPreview, /last non-empty assistant message MUST be exactly one JSON object and nothing else/);
-  assert.match(commandPreview, /Do not wrap the JSON in Markdown/);
-  assert.match(commandPreview, /Do not add prose, code fences, prefixes, suffixes/);
-  assert.equal(activity.expected_closeout.typed_packet_required_for_completion, true);
-  assert.equal(activity.expected_closeout.free_text_closeout_accepted, false);
+  assert.match(commandPreview, /Partial drafts, negative findings, failed attempts/);
+  assert.match(commandPreview, /final message may be structured JSON or ordinary readable text/);
+  assert.match(commandPreview, /route to any declared stage/);
+  assert.equal(activity.expected_closeout.typed_packet_required_for_progress, false);
+  assert.equal(activity.expected_closeout.raw_or_free_text_artifact_accepted_for_progress, true);
+  assert.equal(activity.expected_closeout.framework_derives_progress_envelope, true);
 });
 
 test('Codex stage activity command preview binds explicit Codex executor policy', () => {
@@ -229,45 +228,6 @@ test('Codex stage activity prompt enforces generic domain-route boundaries', () 
   assert.match(commandPreview, /do not report provider liveness or platform repair as domain progress/);
 });
 
-test('Codex stage closeout output schema accepts refs-only object metadata', () => {
-  const schema = stageCloseoutOutputSchemaForTest() as Record<string, any>;
-  const closeoutRefs = schema.properties.closeout_refs;
-  const objectRefSchema = closeoutRefs.items.anyOf.find((entry: Record<string, unknown>) =>
-    entry.type === 'object'
-  );
-
-  assert.ok(objectRefSchema, 'closeout_refs must allow object refs.');
-  assert.deepEqual(objectRefSchema.anyOf, [
-    { required: ['ref'] },
-    { required: ['uri'] },
-  ]);
-  assert.deepEqual(Object.keys(objectRefSchema.properties).sort(), [
-    'kind',
-    'ref',
-    'ref_kind',
-    'sha256',
-    'size_bytes',
-    'uri',
-  ]);
-  assert.equal(objectRefSchema.additionalProperties, false);
-});
-
-test('Codex stage closeout capture cleans temp directory after construction failure', () => {
-  let leakedRoot: string | null = null;
-
-  assert.throws(() => {
-    createCodexCloseoutCaptureForTest({
-      writeFileSync(filePath) {
-        leakedRoot = path.dirname(String(filePath));
-        throw new Error('schema write failed');
-      },
-    });
-  }, /schema write failed/);
-
-  assert.ok(leakedRoot, 'test must observe the allocated capture root.');
-  assert.equal(fs.existsSync(leakedRoot), false);
-});
-
 test('Codex stage runner fails closed when live runner lacks packet or workspace binding', async () => {
   await assert.rejects(
     () => runPublicCodexStageRunner({
@@ -301,7 +261,7 @@ test('Codex stage runner fails closed when live runner lacks packet or workspace
   );
 });
 
-test('Codex stage runner supervises a live Codex CLI process without accepting free-text completion', async () => {
+test('Codex stage runner turns free-text output into consumable progress', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
   printf '{"type":"thread.started","thread_id":"thread-live-runner"}\\n'
@@ -338,8 +298,10 @@ exit 64
     assert.equal(receipt.runner_status.live_process_started, true);
     assert.equal(receipt.runner_status.dry_run_transport, false);
     assert.equal(receipt.runner_status.exit_code, 0);
-    assert.equal(receipt.runner_status.typed_closeout_required_for_completion, true);
-    assert.equal(receipt.runner_status.free_text_closeout_accepted, false);
+    assert.equal(receipt.runner_status.typed_closeout_required_for_progress, false);
+    assert.equal(receipt.runner_status.raw_artifact_sufficient_for_progress, true);
+    assert.equal(receipt.closeout_packet?.domain_ready_verdict, 'completed_with_quality_debt');
+    assert.equal(receipt.closeout_packet?.route_impact?.next_stage_may_start, true);
     assert.equal(receipt.progress_summary.thread_id, 'thread-live-runner');
     assert.deepEqual(receipt.heartbeat_summary.checkpoint_refs, ['checkpoint:seed']);
     const processOutputSummary = receipt.process_output_summary;
@@ -425,7 +387,7 @@ exit 64
       '--config',
       'model_reasoning_effort="high"',
     ]);
-    assert.notEqual(capturedArgs.indexOf('--output-schema'), -1);
+    assert.equal(capturedArgs.indexOf('--output-schema'), -1);
     assert.notEqual(capturedArgs.indexOf('--output-last-message'), -1);
   } finally {
     if (previousCodexBin === undefined) {

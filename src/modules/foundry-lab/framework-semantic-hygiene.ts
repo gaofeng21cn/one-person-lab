@@ -87,7 +87,6 @@ const DOMAIN_SPECIFIC_CARRIER_BOUNDARIES = [
     allowed_machine_role: 'refs_only_quality_or_publication_receipt_projection',
     source_evidence_refs: [
       'src/modules/stagecraft/quality-gate-runtime.ts',
-      'src/modules/stagecraft/stage-transition-authority.ts',
       'src/modules/ledger/current-owner-delta-parts/projection.ts',
     ],
   },

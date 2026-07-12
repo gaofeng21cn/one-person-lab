@@ -35,13 +35,13 @@ export interface TargetOperatingArchitectureContract {
     };
     resource_kinds: TargetOperatingArchitectureResourceKind[];
   };
-  stage_transition_authority: {
-    authority_owner: string;
-    single_writer: true;
-    event_log_policy: string;
-    derived_state: string[];
-    accepted_inputs: string[];
-    forbidden_direct_writers: string[];
+  codex_stage_route_owner: {
+    semantic_owner: 'codex_cli';
+    single_semantic_control_plane: true;
+    progression_policy: string;
+    route_capabilities: string[];
+    passive_framework_projections: string[];
+    forbidden_framework_route_decisions: string[];
   };
   domain_pack_authority_abi: {
     default_agent_shape: string;

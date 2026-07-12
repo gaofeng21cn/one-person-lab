@@ -185,27 +185,6 @@ function runtimeSurfaceResolvedCount(runtimeSurfaces: JsonRecord | null) {
   return Object.values(runtimeSurfaces).filter((surface) => statusOf(surface) === 'resolved').length;
 }
 
-function transitionSurfaceStatus(descriptor: JsonRecord) {
-  const transitionStatus = statusOf(descriptor.family_transition);
-  if (transitionStatus === 'matrix_evaluated' || transitionStatus === 'descriptor_only') {
-    return transitionStatus;
-  }
-  if (transitionStatus === 'blocked') {
-    return 'blocked';
-  }
-  const oracle = isRecord(descriptor.grant_transition_oracle)
-    ? descriptor.grant_transition_oracle
-    : null;
-  const oracleIngestion = isRecord(oracle?.ingestion) ? oracle.ingestion : null;
-  if (
-    statusOf(oracle) === 'resolved'
-    && optionalString(oracleIngestion?.status) === 'matrix_oracle_passed'
-  ) {
-    return 'oracle_evidence_gate';
-  }
-  return transitionStatus ?? 'missing';
-}
-
 function descriptorSurfaceResolved(descriptor: JsonRecord, surface: string) {
   switch (surface) {
     case 'entry':
@@ -216,12 +195,6 @@ function descriptorSurfaceResolved(descriptor: JsonRecord, surface: string) {
       return statusOf(descriptor.family_stage_control_plane) === 'resolved';
     case 'domain_memory_descriptor':
       return statusOf(descriptor.domain_memory_descriptor) === 'resolved';
-    case 'family_transition': {
-      const transitionStatus = transitionSurfaceStatus(descriptor);
-      return transitionStatus === 'matrix_evaluated'
-        || transitionStatus === 'descriptor_only'
-        || transitionStatus === 'oracle_evidence_gate';
-    }
     case 'functional_privatization_audit':
       return statusOf(descriptor.functional_privatization_audit) === 'resolved';
     case 'runtime_surfaces':
@@ -343,8 +316,6 @@ function buildGeneratedArtifactSourceInputs(descriptor: JsonRecord) {
       family_action_catalog: descriptor.family_action_catalog,
       family_stage_control_plane: descriptor.family_stage_control_plane,
       domain_memory_descriptor: descriptor.domain_memory_descriptor,
-      family_transition: descriptor.family_transition,
-      grant_transition_oracle: descriptor.grant_transition_oracle,
       runtime_surfaces: descriptor.runtime_surfaces,
       functional_privatization_audit: descriptor.functional_privatization_audit,
       generated_surface_handoff: descriptor.generated_surface_handoff_contract,
@@ -502,11 +473,6 @@ function buildPackCompilerProjection(descriptor: JsonRecord) {
         stage_control_plane_status: statusOf(descriptor.family_stage_control_plane),
         action_catalog_status: statusOf(descriptor.family_action_catalog),
         domain_memory_descriptor_status: statusOf(descriptor.domain_memory_descriptor),
-        transition_status: transitionSurfaceStatus(descriptor),
-        transition_evidence_gate_status:
-          transitionSurfaceStatus(descriptor) === 'oracle_evidence_gate'
-            ? 'grant_transition_oracle_matrix_passed'
-            : null,
         skill_catalog_status: statusOf(descriptor.skill_catalog),
       },
       minimal_authority_function_refs: minimalAuthorityFunctionRefs(descriptor),

@@ -53,10 +53,11 @@ test('agents conformance keeps StageRun strategy refs advisory and current owner
       'scope',
       'selected_executor',
       'authority_boundary',
-      'required_role_artifacts',
-      'receipt_or_blocker_shape',
       'forbidden_write',
-      'replay_audit_lineage',
+      'currentness',
+      'permission_or_credential',
+      'irreversible_action',
+      'explicit_human_gate',
     ],
     advisory_refs: [
       'prompt_refs',
@@ -112,8 +113,6 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
       'scope',
       'selected_executor',
       'authority_boundary',
-      'required_role_artifacts',
-      'receipt_or_blocker_shape',
       'prompt_refs',
       'skill_refs',
       'knowledge_refs',
@@ -173,12 +172,13 @@ test('agents conformance blocks StageRun profile that turns strategy refs or raw
   );
 });
 
-test('agents conformance requires quality budgets to advance while owner receipts still guard ready claims', () => {
+test('agents conformance rejects a second transition authority plane and keeps quality budgets non-blocking', () => {
   const repoDir = buildReadyAgentRepo();
   const profilePath = path.join(repoDir, 'contracts', 'stage_run_kernel_profile.json');
   const profile = parseJsonText(fs.readFileSync(profilePath, 'utf8')) as Record<string, any>;
-  profile.transition_authority.quality_budget_exhaustion_blocks_transition = true;
-  profile.transition_authority.owner_receipt_required_for_quality_or_ready_claim = false;
+  profile.codex_semantic_route_policy.quality_budget_exhaustion_blocks_route = true;
+  profile.codex_semantic_route_policy.owner_receipt_required_for_quality_or_ready_claim = false;
+  profile.transition_authority = { terminal_transition_authority: 'program_oracle' };
   writeJson(profilePath, profile);
 
   const report = runCli([
@@ -193,7 +193,7 @@ test('agents conformance requires quality budgets to advance while owner receipt
   assert.equal(checks.status, 'blocked');
   assert.equal(
     checks.blockers.includes(
-      'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_transition',
+      'stage_run_kernel_profile_quality_budget_exhaustion_must_not_block_route',
     ),
     true,
   );
@@ -201,6 +201,10 @@ test('agents conformance requires quality budgets to advance while owner receipt
     checks.blockers.includes(
       'stage_run_kernel_profile_owner_receipt_required_for_quality_or_ready_claim',
     ),
+    true,
+  );
+  assert.equal(
+    checks.blockers.includes('stage_run_kernel_profile_second_transition_authority_plane_forbidden'),
     true,
   );
 });

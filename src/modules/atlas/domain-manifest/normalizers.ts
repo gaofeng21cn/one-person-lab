@@ -16,7 +16,6 @@ import {
 import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../../../kernel/managed-runtime-contract.ts';
 import { stringValue as optionalString } from '../../../kernel/json-record.ts';
-import { normalizeFamilyTransitionSurfaces } from './family-transition-normalizer.ts';
 import {
   normalizeArtifactInventory,
   normalizeAutomationCatalog,
@@ -946,8 +945,6 @@ export function normalizeManifest(
     options.repoDir,
   );
   const manifestTargetDomainId = requireString(manifest.target_domain_id, 'target_domain_id');
-  const familyTransitionSurfaces = normalizeFamilyTransitionSurfaces(manifest, manifestTargetDomainId);
-  const domainTransitionOracle = normalizeDomainTransitionOracleSurface(manifest.domain_transition_oracle);
   const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
   const skeletonCandidateFields = ['standard_domain_agent_skeleton'];
   const directSkeletonSourceField =
@@ -1082,12 +1079,6 @@ export function normalizeManifest(
     family_action_catalog_source_ref: familyActionCatalogSurface.sourceRef,
     family_stage_control_plane: familyStageControlPlaneSurface.value,
     family_stage_control_plane_source_ref: familyStageControlPlaneSurface.sourceRef,
-    ...familyTransitionSurfaces,
-    family_transition_materialization: isRecord(manifest.family_transition_materialization)
-      ? manifest.family_transition_materialization
-      : null,
-    domain_transition_oracle: domainTransitionOracle,
-    visual_transition_spec: familyTransitionSurfaces.visual_transition_spec,
     domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,

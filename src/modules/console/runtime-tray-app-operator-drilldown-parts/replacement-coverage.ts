@@ -6,8 +6,8 @@ import {
 } from '../../ledger/index.ts';
 
 type ReplacementCoverage = {
-  coverage_status: 'opl_replacement_surface_available';
-  replacement_owner: 'one-person-lab';
+  coverage_status: 'opl_replacement_surface_available' | 'retired_single_codex_semantic_control_plane';
+  replacement_owner: 'one-person-lab' | 'codex_cli';
   replacement_surface_refs: string[];
   focused_verification_refs: string[];
   live_evidence_still_required: boolean;
@@ -50,7 +50,7 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     ],
     focused_verification_refs: [
       APP_OPERATOR_PROJECTION_TEST_REF,
-      'tests/src/functional-agent-runtime-harness.test.ts',
+      'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
     ],
     live_evidence_still_required: true,
   },
@@ -70,22 +70,7 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
     ],
     live_evidence_still_required: true,
   },
-  generic_transition_runner: {
-    coverage_status: 'opl_replacement_surface_available',
-    replacement_owner: 'one-person-lab',
-    replacement_surface_refs: [
-      'opl framework transition run',
-      'family_transition_matrix',
-      appOperatorProjectionRef('route_graph_refs'),
-      appOperatorProjectionRef('decision_map_refs'),
-    ],
-    focused_verification_refs: [
-      'tests/src/functional-agent-runtime-harness.test.ts',
-      'tests/src/cli/cases/workspace-domain.descriptor.test.ts',
-    ],
-    live_evidence_still_required: true,
-  },
-  functional_harness_queue_stage_attempt_typed_closeout: {
+  stage_run_attempt_transport: {
     coverage_status: 'opl_replacement_surface_available',
     replacement_owner: 'one-person-lab',
     replacement_surface_refs: [
@@ -95,12 +80,12 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       '/runtime_tray_snapshot/stage_attempt_workbench',
     ],
     focused_verification_refs: [
-      'tests/src/functional-agent-runtime-harness.test.ts',
+      'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
       APP_OPERATOR_PROJECTION_TEST_REF,
     ],
     live_evidence_still_required: true,
   },
-  functional_harness_restart_dead_letter_repair_human_gate: {
+  stage_run_recovery_transport: {
     coverage_status: 'opl_replacement_surface_available',
     replacement_owner: 'one-person-lab',
     replacement_surface_refs: [
@@ -110,7 +95,7 @@ const OPL_REPLACEMENT_COVERAGE: Record<string, ReplacementCoverage> = {
       appOperatorProjectionRef('typed_blocker_refs'),
     ],
     focused_verification_refs: [
-      'tests/src/functional-agent-runtime-harness.test.ts',
+      'tests/src/family-runtime-stage-attempt-closeout-ledger.test.ts',
       APP_OPERATOR_PROJECTION_TEST_REF,
     ],
     live_evidence_still_required: true,

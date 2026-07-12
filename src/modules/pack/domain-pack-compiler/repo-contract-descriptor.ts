@@ -783,27 +783,6 @@ function repoContractRuntimeSurfacesProjection(descriptor: JsonRecord) {
   };
 }
 
-function repoContractTransitionProjection(descriptor: JsonRecord) {
-  const stageControlPlane = isRecord(descriptor.family_stage_control_plane)
-    ? descriptor.family_stage_control_plane
-    : null;
-  const rawDescriptor = isRecord(stageControlPlane?.raw_descriptor)
-    ? stageControlPlane.raw_descriptor
-    : null;
-  const stages = Array.isArray(rawDescriptor?.stages) ? rawDescriptor.stages : [];
-  return {
-    status: statusOf(stageControlPlane) === 'resolved' ? 'descriptor_only' : 'missing',
-    source_kind: 'standard_agent_repo_contracts',
-    source_ref: STANDARD_AGENT_STAGE_MANIFEST_REF,
-    transition_count: stages.length,
-    authority_boundary: {
-      transition_projection_can_claim_domain_ready: false,
-      transition_projection_can_authorize_quality_or_export: false,
-      opl_can_write_domain_truth: false,
-    },
-  };
-}
-
 export function repoContractDescriptorForPackCompiler(
   repoProjection: ReturnType<typeof buildRepoContractDescriptor>,
   requestedAgentId: string | null,
@@ -831,7 +810,6 @@ export function repoContractDescriptorForPackCompiler(
     manifest_status: repoProjection.status === 'ready' ? 'resolved' : 'repo_contracts_blocked',
     entry: repoContractEntryProjection(descriptor),
     runtime_surfaces: repoContractRuntimeSurfacesProjection(descriptor),
-    family_transition: repoContractTransitionProjection(descriptor),
   };
 }
 

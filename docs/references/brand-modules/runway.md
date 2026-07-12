@@ -49,12 +49,12 @@ Runway L4/L4+ 的结构强化目标是把长跑 runtime 从“定时 tick + prov
 desired owner route / target state
 -> current stage-attempt projection / attempt / provider / gate / receipt refs
 -> Progress Reconciler
--> exactly one next safe action or typed blocker requirement
+-> zero or one runtime liveness/repair action; never a semantic stage decision
 -> Temporal workflow / worker supervisor / scheduler / owner handoff / gate wait
 -> append-only observation refs and read-model projection
 ```
 
-控制环的职责边界：
+控制环的职责边界：Progress Reconciler 只修复 provider、lease、wakeup、currentness、dead-letter 与不可逆操作边界。它不得依据 receipt、schema、review 或 quality score 选择、接受、拒绝或重写 stage route；可读 artifact 始终可以被 Codex 带入任意 declared stage。
 
 - Desired state 来自 domain owner route、stage pack admission、human gate decision、owner answer shape 或 explicit operator target；Runway 不推断 domain 想要什么，也不把 stale route 当成当前目标。
 - Current state 来自 stage-attempt projection、stage attempt ledger、Temporal provider refs、worker supervisor status、scheduler cadence refs、human gate refs、dead-letter refs、owner receipt refs 和 typed blocker refs；Runway 只读 refs，不读取或保存 artifact/memory/domain body。

@@ -31,7 +31,6 @@ export type OplStatePaths = {
   owner_evidence_sustained_consumption_ledger_file: string;
   stage_replay_missing_receipt_ledger_file: string;
   stage_run_execution_authorization_ledger_file: string;
-  stage_transition_authority_event_ledger_file: string;
   current_owner_delta_read_model_cache_file: string;
   agent_lab_risk_tier_auto_promotion_ledger_file: string;
   agent_lab_feedbackops_event_ledger_file: string;
@@ -121,10 +120,6 @@ export function resolveOplStatePaths(input: { dataDir?: string | null } = {}): O
     stage_run_execution_authorization_ledger_file: path.join(
       stateDir,
       'stage-run-execution-authorization-ledger.json',
-    ),
-    stage_transition_authority_event_ledger_file: path.join(
-      stateDir,
-      'stage-transition-authority-event-ledger.json',
     ),
     current_owner_delta_read_model_cache_file: path.join(
       stateDir,

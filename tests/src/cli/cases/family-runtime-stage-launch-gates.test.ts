@@ -69,7 +69,7 @@ function routedAction(actionId: string, requiredStageRefs: string[], optionalSta
       required_stage_refs: requiredStageRefs,
       optional_stage_refs: optionalStageRefs,
       terminal_stage_refs: [requiredStageRefs.at(-1)],
-      route_policy: 'ordered_stage_attempts_no_skip',
+      route_policy: 'ai_selected_progress_route',
     },
   };
 }

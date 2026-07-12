@@ -75,10 +75,6 @@ export const GENERATED_SURFACES = [
     surface_id: 'workbench_drilldown',
     required_descriptor_surfaces: ['family_stage_control_plane', 'domain_memory_descriptor', 'runtime_surfaces'],
   },
-  {
-    surface_id: 'functional_harness_cases',
-    required_descriptor_surfaces: ['family_transition', 'functional_privatization_audit'],
-  },
 ] as const;
 
 const GENERATED_WRAPPER_CANONICAL_TARGET_IDS: Record<string, string[]> = {

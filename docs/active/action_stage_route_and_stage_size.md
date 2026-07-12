@@ -14,7 +14,7 @@ Action 不能再只声明“哪些 Stage 允许它”，还可以声明一条可
 - `required_stage_refs` 是按顺序必须完成的 Stage attempt，不能跳过；
 - `optional_stage_refs` 只表达同一目标内的条件分支或有界修订，不替代 required Stage；
 - `terminal_stage_refs` 是该 Action 可以合法结束或交棒的位置；
-- `route_policy=ordered_stage_attempts_no_skip` 要求 executor 按已有 StageRun/attempt/closeout primitive 推进。
+- `route_policy=ai_selected_progress_route` 以声明 stage 集合作为拓扑边界；Codex CLI 可按语义判断进入下一 stage 或携带证据 route-back 到任一已声明 stage，重复进入上游 stage 属于正常迭代。
 
 declarative manifest 可以从 route-free Pack 渐进迁移：没有 mutating Action 声明 route 时维持既有 launch；一旦任一 mutating Action 声明 route，全部 mutating Action 都必须声明。read-only Action 只观察当前 Stage，不伪装成要执行的多 Stage workflow，其可观察范围继续由 Stage `allowed_action_refs` 表达。OPL 会校验 Stage 存在性、action allow-list 双向一致、required 顺序可达性和 optional 分支的 entry-to-terminal 可达性，并把 route 投影到 generated interfaces。
 
