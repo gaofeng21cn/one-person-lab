@@ -424,6 +424,7 @@ test('one-click installer defaults to the headless base contract before invoking
   const stateDir = path.join(homeRoot, 'opl-state');
   const flowInstallerPath = path.join(stateDir, 'modules', 'opl-flow', 'scripts', 'install_local_plugin.py');
   const gitLog = path.join(homeRoot, 'git.log');
+  const curlLog = path.join(homeRoot, 'curl.log');
   const npmLog = path.join(homeRoot, 'npm.log');
   const oplLog = path.join(homeRoot, 'opl.log');
   fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
@@ -452,6 +453,36 @@ test('one-click installer defaults to the headless base contract before invoking
   );
   fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
   fs.writeFileSync(
+    path.join(fakeBin, 'curl'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `printf '%s\\n' "$*" >> ${JSON.stringify(curlLog)}`,
+      'output=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  if [ "$1" = "-o" ]; then output="$2"; shift 2; continue; fi',
+      '  shift',
+      'done',
+      '[ -n "$output" ]',
+      ': > "$output"',
+    ].join('\n'),
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, 'tar'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'destination=""',
+      'while [ "$#" -gt 0 ]; do',
+      '  if [ "$1" = "-C" ]; then destination="$2"; shift 2; continue; fi',
+      '  shift',
+      'done',
+      '[ -n "$destination" ]',
+      'mkdir -p "$destination/opl-flow-main/scripts"',
+      "printf 'import json\\nprint(json.dumps({\\\"surface_kind\\\": \\\"opl_flow_plugin_install_receipt.v1\\\", \\\"status\\\": \\\"installed\\\"}))\\n' > \"$destination/opl-flow-main/scripts/install_local_plugin.py\"",
+    ].join('\n'),
+  );
+  fs.writeFileSync(
     path.join(fakeBin, 'npm'),
     [
       '#!/usr/bin/env bash',
@@ -471,7 +502,7 @@ test('one-click installer defaults to the headless base contract before invoking
       'exit 0',
     ].join('\n'),
   );
-  for (const command of ['git', 'node', 'npm', 'opl']) {
+  for (const command of ['git', 'node', 'npm', 'opl', 'curl', 'tar']) {
     fs.chmodSync(path.join(fakeBin, command), 0o755);
   }
 
@@ -483,7 +514,7 @@ test('one-click installer defaults to the headless base contract before invoking
         HOME: homeRoot,
         OPL_INSTALL_DIR: installDir,
         OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
-        OPL_FLOW_REPO_URL: 'https://example.invalid/opl-flow.git',
+        OPL_FLOW_SOURCE_ARCHIVE_URL: 'https://example.invalid/opl-flow.tar.gz',
         OPL_STATE_DIR: stateDir,
         PATH: `${fakeBin}:/usr/bin:/bin`,
       },
@@ -498,7 +529,8 @@ test('one-click installer defaults to the headless base contract before invoking
       'system initialize',
     ]);
     assert.equal(fs.existsSync(flowInstallerPath), true);
-    assert.match(fs.readFileSync(gitLog, 'utf8'), /clone --depth 1 https:\/\/example\.invalid\/opl-flow\.git/);
+    assert.doesNotMatch(fs.readFileSync(gitLog, 'utf8'), /clone/);
+    assert.match(fs.readFileSync(curlLog, 'utf8'), /https:\/\/example\.invalid\/opl-flow\.tar\.gz/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

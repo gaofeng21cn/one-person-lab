@@ -168,7 +168,7 @@ resolve_opl_modules_root() {
 }
 
 materialize_opl_flow_source() {
-  local modules_root flow_dir flow_tmp flow_url installer_path
+  local modules_root flow_dir flow_tmp flow_archive_tmp flow_extract_root flow_source_dir flow_archive_url installer_path
   modules_root=$(resolve_opl_modules_root)
   flow_dir="$modules_root/opl-flow"
   installer_path="$flow_dir/scripts/install_local_plugin.py"
@@ -181,21 +181,37 @@ materialize_opl_flow_source() {
     exit 1
   fi
 
-  flow_url=${OPL_FLOW_REPO_URL:-https://github.com/gaofeng21cn/opl-flow.git}
+  flow_archive_url=${OPL_FLOW_SOURCE_ARCHIVE_URL:-https://github.com/gaofeng21cn/opl-flow/archive/refs/heads/${OPL_FLOW_BRANCH:-main}.tar.gz}
   flow_tmp="${flow_dir}.tmp.$$"
+  flow_archive_tmp=$(mktemp "${TMPDIR:-/tmp}/opl-flow.XXXXXX")
+  flow_extract_root=$(mktemp -d "${TMPDIR:-/tmp}/opl-flow-src.XXXXXX")
+  cleanup_opl_flow_tmp() {
+    rm -f "$flow_archive_tmp"
+    rm -rf "$flow_extract_root" "$flow_tmp"
+  }
+  trap cleanup_opl_flow_tmp EXIT
   mkdir -p "$modules_root"
   rm -rf "$flow_tmp"
   log "Preparing mandatory OPL Flow source"
-  if ! git clone --depth 1 "$flow_url" "$flow_tmp"; then
-    rm -rf "$flow_tmp"
+  need_cmd curl
+  need_cmd tar
+  curl --http1.1 --connect-timeout 20 --max-time 300 --retry 3 --retry-delay 2 --retry-all-errors -fsSL \
+    "$flow_archive_url" \
+    -o "$flow_archive_tmp"
+  tar -xzf "$flow_archive_tmp" -C "$flow_extract_root"
+  flow_source_dir=$(find "$flow_extract_root" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+  if [ -z "$flow_source_dir" ] || [ ! -d "$flow_source_dir" ]; then
+    printf 'Downloaded OPL Flow source archive did not contain an installable directory.\n' >&2
     exit 1
   fi
+  mv "$flow_source_dir" "$flow_tmp"
   if [ ! -f "$flow_tmp/scripts/install_local_plugin.py" ]; then
-    rm -rf "$flow_tmp"
     printf 'Downloaded OPL Flow source is missing scripts/install_local_plugin.py\n' >&2
     exit 1
   fi
   mv "$flow_tmp" "$flow_dir"
+  trap - EXIT
+  cleanup_opl_flow_tmp
 }
 
 need_cmd() {
