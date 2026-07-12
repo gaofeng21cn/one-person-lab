@@ -258,6 +258,8 @@ type DeveloperSupervisorCliInput = {
   developerSupervisorEnabled?: 'auto' | 'on' | 'off';
   developerSupervisorMode?: 'external_observe' | 'developer_apply_safe';
   developerSupervisorAutoEnableGithubLogin?: string;
+  developerSupervisorModuleId?: string;
+  developerSupervisorModuleSource?: 'auto' | 'managed' | 'developer';
 };
 
 type SystemConfigureCodexCliInput = {

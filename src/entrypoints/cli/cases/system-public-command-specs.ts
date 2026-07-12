@@ -164,12 +164,13 @@ export function buildPublicSystemCommandSpecs(
 
   const systemDeveloperSupervisorSpec: CommandSpec = {
     usage:
-      'opl system developer-supervisor [--enabled <auto|on|off>] [--mode <external_observe|developer_apply_safe>] [--auto-enable-github-login <login>|--github-login <login>]',
+      'opl system developer-supervisor [--enabled <auto|on|off>] [--mode <external_observe|developer_apply_safe>] [--auto-enable-github-login <login>|--github-login <login>] [--module <module-id> --module-source <auto|managed|developer>]',
     summary:
       'Read or update Developer Mode and its developer_profile/capabilities projection for source channel, workspace trust, GitHub authority, agent automation, and runtime mutation scope.',
     examples: [
       'opl system developer-supervisor',
       'opl system developer-supervisor --enabled on --mode developer_apply_safe --github-login gaofeng21cn',
+      'opl system developer-supervisor --module medautoscience --module-source developer',
     ],
     group: 'system',
     handler: async (args) => {

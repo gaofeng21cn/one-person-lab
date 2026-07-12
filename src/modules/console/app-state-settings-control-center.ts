@@ -626,6 +626,8 @@ function buildConfigurationCatalog(input: BuildSettingsControlCenterInput) {
           'developerSupervisorEnabled',
           'developerSupervisorMode',
           'developerSupervisorAutoEnableGithubLogin',
+          'developerSupervisorModuleId',
+          'developerSupervisorModuleSource',
         ],
         payload_required: true,
         mutates: 'opl_developer_supervisor_config',

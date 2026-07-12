@@ -268,6 +268,14 @@ async function executeDirectAppAction(
           developerSupervisorMode: stringPayloadField(options.payload, 'developerSupervisorMode') as 'external_observe' | 'developer_apply_safe' | undefined,
           developerSupervisorAutoEnableGithubLogin:
             stringPayloadField(options.payload, 'developerSupervisorAutoEnableGithubLogin') ?? undefined,
+          developerSupervisorModuleId:
+            stringPayloadField(options.payload, 'developerSupervisorModuleId') ?? undefined,
+          developerSupervisorModuleSource:
+            stringPayloadField(options.payload, 'developerSupervisorModuleSource') as
+              | 'auto'
+              | 'managed'
+              | 'developer'
+              | undefined,
         }),
     };
   }

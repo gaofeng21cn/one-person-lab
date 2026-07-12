@@ -323,12 +323,17 @@ export async function runOplSystemAction(
     const hasUpdate =
       input.developerSupervisorEnabled !== undefined
       || input.developerSupervisorMode !== undefined
-      || input.developerSupervisorAutoEnableGithubLogin !== undefined;
+      || input.developerSupervisorAutoEnableGithubLogin !== undefined
+      || input.developerSupervisorModuleSource !== undefined;
     const payload = hasUpdate
       ? writeOplDeveloperSupervisorConfig({
         enabled: input.developerSupervisorEnabled,
         mode: input.developerSupervisorMode,
         auto_enable_github_login: input.developerSupervisorAutoEnableGithubLogin,
+        module_source_preferences:
+          input.developerSupervisorModuleId && input.developerSupervisorModuleSource
+            ? { [input.developerSupervisorModuleId]: input.developerSupervisorModuleSource }
+            : undefined,
       })
       : readOplDeveloperSupervisorConfig();
     return {

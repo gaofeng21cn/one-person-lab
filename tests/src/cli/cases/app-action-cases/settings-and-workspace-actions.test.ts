@@ -28,6 +28,8 @@ test('app action execute owns settings, release channel, workspace root, and pro
         developerSupervisorEnabled: 'on',
         developerSupervisorMode: 'developer_apply_safe',
         developerSupervisorAutoEnableGithubLogin: 'gaofeng21cn',
+        developerSupervisorModuleId: 'medautoscience',
+        developerSupervisorModuleSource: 'developer',
       }),
     ], {
       HOME: homeRoot,
@@ -38,6 +40,10 @@ test('app action execute owns settings, release channel, workspace root, and pro
     assert.equal(developer.delegated_surface, 'opl system developer-supervisor');
     assert.equal(developer.result.system_action.action, 'developer_supervisor');
     assert.equal(developer.result.system_action.status, 'completed');
+    assert.equal(
+      developer.result.system_action.developer_supervisor.module_source_preferences.medautoscience,
+      'developer',
+    );
 
     const channel = runCli([
       'app',

@@ -71,6 +71,10 @@ test('developer supervisor persists direct-route developer mode only from explic
       'developer_apply_safe',
       '--github-login',
       'gaofeng21cn',
+      '--module',
+      'medautoscience',
+      '--module-source',
+      'developer',
     ], env).system_action;
 
     assert.equal(initial.developer_mode.status, 'ready');
@@ -86,10 +90,16 @@ test('developer supervisor persists direct-route developer mode only from explic
 
     const persisted = parseJsonText(
       fs.readFileSync(path.join(stateDir, 'developer-supervisor.json'), 'utf8'),
-    ) as { enabled: string; mode: string; auto_enable_github_login: string };
+    ) as {
+      enabled: string;
+      mode: string;
+      auto_enable_github_login: string;
+      module_source_preferences: Record<string, string>;
+    };
     assert.equal(persisted.enabled, 'on');
     assert.equal(persisted.mode, 'developer_apply_safe');
     assert.equal(persisted.auto_enable_github_login, 'gaofeng21cn');
+    assert.equal(persisted.module_source_preferences.medautoscience, 'developer');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

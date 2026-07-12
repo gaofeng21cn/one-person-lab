@@ -1,5 +1,6 @@
 import { buildOplDeveloperModeProjection } from '../developer-mode.ts';
 import type { OplEndpoints } from '../../runway/index.ts';
+import { readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
 
 import type { OplInitializeActionDescriptor } from './shared.ts';
 
@@ -16,6 +17,8 @@ export function buildOplDeveloperModeAction(endpoints: OplEndpoints): OplInitial
       'developerSupervisorEnabled',
       'developerSupervisorMode',
       'developerSupervisorAutoEnableGithubLogin',
+      'developerSupervisorModuleId',
+      'developerSupervisorModuleSource',
     ],
     payload_template: {
       action: 'developer_supervisor',
@@ -32,6 +35,7 @@ export function buildOplDeveloperModeSurface(
 
   return {
     ...projection,
+    developer_workspace: readOplWorkspaceRoot(),
     setting_status: 'config_surface_available',
     runtime_projection_status: projection.status,
     description:
@@ -43,6 +47,7 @@ export function buildOplDeveloperModeSurface(
       control_kind: 'developer_mode_switch',
       enabled_options: ['auto', 'on', 'off'],
       mode_options: ['external_observe', 'developer_apply_safe'],
+      module_source_options: ['auto', 'managed', 'developer'],
       consumes_system_action: 'developer_supervisor',
     },
     capability_projection: {

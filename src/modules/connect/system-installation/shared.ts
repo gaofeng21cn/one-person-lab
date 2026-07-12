@@ -255,7 +255,12 @@ export type ModuleSourcePolicy = {
     | 'env_source_mode'
     | 'module_path_override'
     | 'module_repo_url_override'
-    | 'full_runtime_override';
+    | 'full_runtime_override'
+    | 'developer_mode_managed_override'
+    | 'developer_mode_package_override';
+  source_preference: 'auto' | 'managed' | 'developer';
+  developer_checkout_path: string;
+  fallback_reason: 'developer_checkout_unavailable' | 'developer_mode_inactive' | null;
   package_channel_auto_update: boolean;
   app_setting_surface: 'Developer Mode' | null;
   low_level_override_env: string | null;
@@ -306,6 +311,8 @@ export type OplSystemActionInput = Partial<{
   developerSupervisorEnabled: 'auto' | 'on' | 'off';
   developerSupervisorMode: 'external_observe' | 'developer_apply_safe';
   developerSupervisorAutoEnableGithubLogin: string;
+  developerSupervisorModuleId: string;
+  developerSupervisorModuleSource: 'auto' | 'managed' | 'developer';
   dependencyProfile: string;
   startupMaintenanceScope: 'all' | 'runtime_substrate';
   seedDir: string;

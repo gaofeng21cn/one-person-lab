@@ -11,6 +11,7 @@ import {
 export type OplUpdateChannel = 'stable' | 'preview';
 export type OplDeveloperSupervisorEnabled = 'auto' | 'on' | 'off';
 export type OplDeveloperSupervisorMode = 'external_observe' | 'developer_apply_safe';
+export type OplModuleSourcePreference = 'auto' | 'managed' | 'developer';
 
 export type OplWorkspaceRoot = {
   version: 'g1';
@@ -39,9 +40,20 @@ export type OplDeveloperSupervisorConfigFile = {
   enabled: OplDeveloperSupervisorEnabled;
   mode: OplDeveloperSupervisorMode;
   auto_enable_github_login: string;
+  module_source_preferences?: Record<string, OplModuleSourcePreference>;
   updated_at: string;
   source: 'default' | 'user_config';
 };
+
+function normalizeModuleSourcePreferences(value: unknown): Record<string, OplModuleSourcePreference> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, OplModuleSourcePreference] =>
+        Boolean(entry[0].trim()) && ['auto', 'managed', 'developer'].includes(String(entry[1])),
+    ),
+  );
+}
 
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -248,6 +260,7 @@ function readDeveloperSupervisorConfigFile(): OplDeveloperSupervisorConfigFile |
       enabled: normalizeDeveloperSupervisorEnabled(parsed.enabled),
       mode: normalizeDeveloperSupervisorMode(parsed.mode),
       auto_enable_github_login: normalizeAutoEnableGithubLogin(parsed.auto_enable_github_login),
+      module_source_preferences: normalizeModuleSourcePreferences(parsed.module_source_preferences),
       updated_at:
         typeof parsed.updated_at === 'string' && parsed.updated_at.trim().length > 0
           ? parsed.updated_at
@@ -273,6 +286,7 @@ export function readOplDeveloperSupervisorConfig(): OplDeveloperSupervisorConfig
     enabled: 'auto',
     mode: 'developer_apply_safe',
     auto_enable_github_login: 'gaofeng21cn',
+    module_source_preferences: {},
     updated_at: nowIso(),
     source: 'default',
   };
@@ -282,6 +296,7 @@ export function writeOplDeveloperSupervisorConfig(input: Partial<{
   enabled: OplDeveloperSupervisorEnabled;
   mode: OplDeveloperSupervisorMode;
   auto_enable_github_login: string;
+  module_source_preferences: Record<string, OplModuleSourcePreference>;
 }>) {
   const paths = ensureOplStateDir(resolveOplStatePaths());
   const current = readOplDeveloperSupervisorConfig();
@@ -292,6 +307,16 @@ export function writeOplDeveloperSupervisorConfig(input: Partial<{
     auto_enable_github_login: normalizeAutoEnableGithubLogin(
       input.auto_enable_github_login ?? current.auto_enable_github_login,
     ),
+    module_source_preferences: (() => {
+      const next = {
+        ...current.module_source_preferences,
+        ...normalizeModuleSourcePreferences(input.module_source_preferences),
+      };
+      for (const [moduleId, source] of Object.entries(next)) {
+        if (source === 'auto') delete next[moduleId];
+      }
+      return next;
+    })(),
     updated_at: nowIso(),
     source: 'user_config',
   };

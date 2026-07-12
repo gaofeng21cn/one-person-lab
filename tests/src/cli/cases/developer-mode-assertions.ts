@@ -4,6 +4,8 @@ const developerModeActionFields = [
   'developerSupervisorEnabled',
   'developerSupervisorMode',
   'developerSupervisorAutoEnableGithubLogin',
+  'developerSupervisorModuleId',
+  'developerSupervisorModuleSource',
 ];
 
 export function assertDeveloperModeAction(action: any) {

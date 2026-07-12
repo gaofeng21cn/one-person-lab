@@ -385,7 +385,6 @@ test('modules projection prefers local developer checkouts when Developer Mode i
 
     const env = {
       HOME: homeRoot,
-      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
       OPL_STATE_DIR: stateDir,
       OPL_DEVELOPER_MODE_GH_FIXTURE: JSON.stringify({
         user: { login: 'gaofeng21cn' },
@@ -398,6 +397,8 @@ test('modules projection prefers local developer checkouts when Developer Mode i
         },
       }),
     };
+
+    runCliInCwd(['workspace', 'root', 'set', '--path', workspaceRoot], onePersonLabRoot, env);
 
     runCliInCwd(
       [
@@ -420,6 +421,8 @@ test('modules projection prefers local developer checkouts when Developer Mode i
     assert.equal(mas?.install_origin, 'sibling_workspace');
     assert.equal(mas?.checkout_path, siblingCheckout);
     assert.equal(mas?.managed_checkout_path, path.join(modulesRoot, 'med-autoscience'));
+    assert.equal(mas?.source_policy.source_preference, 'auto');
+    assert.equal(mas?.source_policy.developer_checkout_path, siblingCheckout);
     assert.deepEqual(mas?.capabilities.source_channel, {
       status: 'ready',
       level: 'local_checkout',
@@ -427,6 +430,41 @@ test('modules projection prefers local developer checkouts when Developer Mode i
       impact: 'This module is read from a local developer checkout.',
     });
     assert.equal(output.modules.summary.managed_default_modules_count, 0);
+
+    runCliInCwd(
+      ['system', 'developer-supervisor', '--module', 'medautoscience', '--module-source', 'managed'],
+      onePersonLabRoot,
+      env,
+    );
+    const managedOutput = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as any;
+    const managedMas = managedOutput.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
+    assert.equal(managedMas?.install_origin, 'managed_root');
+    assert.equal(managedMas?.source_policy.source_preference, 'managed');
+    assert.equal(managedMas?.source_policy.configured_by, 'developer_mode_managed_override');
+
+    runCliInCwd(
+      ['system', 'developer-supervisor', '--enabled', 'off'],
+      onePersonLabRoot,
+      env,
+    );
+    runCliInCwd(
+      ['system', 'developer-supervisor', '--module', 'medautoscience', '--module-source', 'developer'],
+      onePersonLabRoot,
+      env,
+    );
+    const developerOutput = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as any;
+    const developerMas = developerOutput.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
+    assert.equal(developerMas?.install_origin, 'sibling_workspace');
+    assert.equal(developerMas?.source_policy.source_preference, 'developer');
+    assert.equal(developerMas?.source_policy.configured_by, 'developer_mode_package_override');
+
+    fs.rmSync(siblingCheckout, { recursive: true, force: true });
+    fs.mkdirSync(siblingCheckout, { recursive: true });
+    const fallbackOutput = runCliInCwd(['connect', 'modules'], onePersonLabRoot, env) as any;
+    const fallbackMas = fallbackOutput.modules.items.find((entry: any) => entry.module_id === 'medautoscience');
+    assert.equal(fallbackMas?.install_origin, 'managed_root');
+    assert.equal(fallbackMas?.source_policy.source_preference, 'developer');
+    assert.equal(fallbackMas?.source_policy.fallback_reason, 'developer_checkout_unavailable');
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });

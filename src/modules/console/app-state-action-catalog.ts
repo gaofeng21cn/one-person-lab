@@ -254,6 +254,8 @@ export function buildActionCatalog(contracts: FrameworkContracts) {
         'developerSupervisorEnabled',
         'developerSupervisorMode',
         'developerSupervisorAutoEnableGithubLogin',
+        'developerSupervisorModuleId',
+        'developerSupervisorModuleSource',
       ],
       mutates: 'opl_developer_supervisor_config',
     },

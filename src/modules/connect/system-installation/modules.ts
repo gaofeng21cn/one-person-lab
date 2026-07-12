@@ -9,6 +9,11 @@ import {
   isRecord,
 } from '../../../kernel/contract-validation.ts';
 import { parseJsonText } from '../../../kernel/json-file.ts';
+import {
+  readOplDeveloperSupervisorConfig,
+  readOplWorkspaceRoot,
+  type OplModuleSourcePreference,
+} from '../../../kernel/system-preferences.ts';
 import { ensureOplStateDir } from '../../../kernel/runtime-state-paths.ts';
 import { resolveDefaultFamilyWorkspaceRoot } from '../opl-skills.ts';
 import { developerModePrefersLocalCheckouts } from '../developer-mode-source-policy.ts';
@@ -81,6 +86,10 @@ function resolveRepoRoot() {
 }
 
 function resolveSiblingWorkspaceRoot() {
+  const workspace = readOplWorkspaceRoot();
+  if (workspace.selected_path && workspace.exists && workspace.source !== 'default_home') {
+    return workspace.selected_path;
+  }
   return resolveDefaultFamilyWorkspaceRoot({ repoRootHint: resolveRepoRoot() });
 }
 
@@ -151,14 +160,20 @@ function explicitGitCheckoutSourceMode() {
   return moduleSourceMode() === 'git_checkout';
 }
 
-function developerModeUsesGitCheckouts() {
-  return developerModePrefersLocalCheckouts();
+function moduleSourcePreference(spec: DomainModuleSpec): OplModuleSourcePreference {
+  return readOplDeveloperSupervisorConfig().module_source_preferences?.[spec.module_id] ?? 'auto';
+}
+
+function developerModeUsesGitCheckouts(spec: DomainModuleSpec) {
+  const sourcePreference = moduleSourcePreference(spec);
+  return sourcePreference === 'developer'
+    || (sourcePreference === 'auto' && developerModePrefersLocalCheckouts());
 }
 
 function shouldUsePackageChannel(spec: DomainModuleSpec) {
   return !explicitGitCheckoutSourceMode()
     && !moduleHasGitCheckoutOverride(spec)
-    && !developerModeUsesGitCheckouts();
+    && !developerModeUsesGitCheckouts(spec);
 }
 
 function resolveManagedModulePath(spec: DomainModuleSpec) {
@@ -192,6 +207,7 @@ function externalCheckoutSyncAvailable(
       installOrigin === 'sibling_workspace'
       && (
         sourcePolicy.configured_by === 'developer_mode'
+        || sourcePolicy.configured_by === 'developer_mode_package_override'
         || sourcePolicy.configured_by === 'env_source_mode'
       )
     );
@@ -200,8 +216,15 @@ function externalCheckoutSyncAvailable(
 function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
   const pathOverride = moduleHasPathOverride(spec);
   const repoUrlOverride = moduleHasRepoUrlOverride(spec);
+  const sourcePreference = moduleSourcePreference(spec);
+  const sourceSelection = {
+    source_preference: sourcePreference,
+    developer_checkout_path: path.join(resolveSiblingWorkspaceRoot(), spec.repo_name),
+    fallback_reason: null,
+  };
   if (pathOverride && fullRuntimeModuleOverridesAreLaunchSources()) {
     return {
+      ...sourceSelection,
       effective_install_update_source: 'full_runtime',
       configured_by: 'full_runtime_override',
       package_channel_auto_update: false,
@@ -211,6 +234,7 @@ function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
   }
   if (pathOverride) {
     return {
+      ...sourceSelection,
       effective_install_update_source: 'git_checkout',
       configured_by: 'module_path_override',
       package_channel_auto_update: false,
@@ -220,6 +244,7 @@ function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
   }
   if (repoUrlOverride) {
     return {
+      ...sourceSelection,
       effective_install_update_source: 'git_checkout',
       configured_by: 'module_repo_url_override',
       package_channel_auto_update: false,
@@ -229,6 +254,7 @@ function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
   }
   if (explicitGitCheckoutSourceMode()) {
     return {
+      ...sourceSelection,
       effective_install_update_source: 'git_checkout',
       configured_by: 'env_source_mode',
       package_channel_auto_update: false,
@@ -236,22 +262,45 @@ function buildModuleSourcePolicy(spec: DomainModuleSpec): ModuleSourcePolicy {
       low_level_override_env: 'OPL_MODULE_SOURCE_MODE',
     };
   }
-  if (developerModeUsesGitCheckouts()) {
+  if (sourcePreference === 'managed') {
     return {
+      ...sourceSelection,
+      effective_install_update_source: 'package_channel',
+      configured_by: 'developer_mode_managed_override',
+      package_channel_auto_update: true,
+      app_setting_surface: 'Developer Mode',
+      low_level_override_env: null,
+    };
+  }
+  if (developerModeUsesGitCheckouts(spec)) {
+    return {
+      ...sourceSelection,
       effective_install_update_source: 'git_checkout',
-      configured_by: 'developer_mode',
+      configured_by:
+        sourcePreference === 'developer' ? 'developer_mode_package_override' : 'developer_mode',
       package_channel_auto_update: false,
       app_setting_surface: 'Developer Mode',
       low_level_override_env: null,
     };
   }
   return {
+    ...sourceSelection,
     effective_install_update_source: 'package_channel',
     configured_by: 'agent_latest_package_channel',
     package_channel_auto_update: true,
     app_setting_surface: null,
     low_level_override_env: null,
   };
+}
+
+function sourcePolicyForOrigin(
+  sourcePolicy: ModuleSourcePolicy,
+  installOrigin: OplModuleInstallOrigin,
+): ModuleSourcePolicy {
+  if (sourcePolicy.effective_install_update_source === 'git_checkout' && installOrigin === 'managed_root') {
+    return { ...sourcePolicy, fallback_reason: 'developer_checkout_unavailable' };
+  }
+  return sourcePolicy;
 }
 
 function buildModuleCapabilities(
@@ -324,7 +373,9 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
   const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
   const sourcePolicy = buildModuleSourcePolicy(spec);
-  const preferLocalDeveloperCheckout = !explicitModulesRoot && developerModePrefersLocalCheckouts();
+  const preferLocalDeveloperCheckout =
+    !explicitModulesRoot
+    && developerModeUsesGitCheckouts(spec);
 
   if (envCheckoutPath) {
     candidates.push({
@@ -378,7 +429,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         managed_checkout_path: managedCheckoutPath,
         health_status: packagedModule.dirty ? 'dirty' : 'ready',
         git: packagedModule.git,
-        source_policy: sourcePolicy,
+        source_policy: sourcePolicyForOrigin(sourcePolicy, candidate.origin),
         capabilities: buildModuleCapabilities(sourcePolicy, candidate.origin, true),
         available_actions: candidate.origin === 'managed_root'
           ? [...(!packagedModule.dirty ? (['update'] as const) : []), 'reinstall', 'remove']
@@ -388,6 +439,9 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
     }
 
     if (!isGitRepo(candidate.path)) {
+      if (candidate.origin === 'sibling_workspace') {
+        continue;
+      }
       return {
         module_id: spec.module_id,
         label: spec.label,
@@ -402,7 +456,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
         managed_checkout_path: managedCheckoutPath,
         health_status: 'invalid_checkout',
         git: null,
-        source_policy: sourcePolicy,
+        source_policy: sourcePolicyForOrigin(sourcePolicy, candidate.origin),
         capabilities: buildModuleCapabilities(sourcePolicy, 'invalid_checkout', false),
         available_actions: candidate.origin === 'managed_root' ? ['reinstall', 'remove'] : [],
         recommended_action: candidate.origin === 'managed_root' ? 'reinstall' : null,
@@ -435,7 +489,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
       managed_checkout_path: managedCheckoutPath,
       health_status: git.dirty ? 'dirty' : 'ready',
       git,
-      source_policy: sourcePolicy,
+      source_policy: sourcePolicyForOrigin(sourcePolicy, candidate.origin),
       capabilities: buildModuleCapabilities(sourcePolicy, candidate.origin, true),
       available_actions: availableActions,
       recommended_action: updateAvailable ? 'update' : null,
@@ -456,7 +510,7 @@ function inspectModule(spec: DomainModuleSpec, profile: ModuleInspectionProfile 
     managed_checkout_path: managedCheckoutPath,
     health_status: 'missing',
     git: null,
-    source_policy: sourcePolicy,
+    source_policy: sourcePolicyForOrigin(sourcePolicy, 'missing'),
     capabilities: buildModuleCapabilities(sourcePolicy, 'missing', false),
     available_actions: ['install'],
     recommended_action: 'install',

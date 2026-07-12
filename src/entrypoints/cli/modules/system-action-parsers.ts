@@ -692,6 +692,8 @@ function parseDeveloperSupervisorArgs(
     'auto-enable-github-login': { type: 'string', multiple: true },
     enabled: { type: 'string' },
     mode: { type: 'string' },
+    module: { type: 'string' },
+    'module-source': { type: 'string' },
   });
   const enabled = parsed.enabled as string | undefined;
   const mode = parsed.mode as string | undefined;
@@ -708,11 +710,27 @@ function parseDeveloperSupervisorArgs(
       { option: '--mode', value: mode },
     );
   }
+  const moduleId = parsed.module as string | undefined;
+  const moduleSource = parsed['module-source'] as string | undefined;
+  if (Boolean(moduleId) !== Boolean(moduleSource)) {
+    throw buildUsageError('system developer-supervisor requires --module and --module-source together.', spec, {
+      required_together: ['--module', '--module-source'],
+    });
+  }
+  if (moduleSource && !['auto', 'managed', 'developer'].includes(moduleSource)) {
+    throw buildUsageError('system developer-supervisor --module-source requires auto, managed, or developer.', spec, {
+      option: '--module-source',
+      value: moduleSource,
+    });
+  }
   return {
     developerSupervisorEnabled: enabled as DeveloperSupervisorCliInput['developerSupervisorEnabled'],
     developerSupervisorMode: mode as DeveloperSupervisorCliInput['developerSupervisorMode'],
     developerSupervisorAutoEnableGithubLogin:
       (parsed['auto-enable-github-login'] as string[] | undefined)?.at(-1),
+    developerSupervisorModuleId: moduleId,
+    developerSupervisorModuleSource:
+      moduleSource as DeveloperSupervisorCliInput['developerSupervisorModuleSource'],
   };
 }
 
