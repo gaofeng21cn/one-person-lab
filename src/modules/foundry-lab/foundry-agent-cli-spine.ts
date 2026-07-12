@@ -75,10 +75,10 @@ function buildPeerSeriesSummary(peer: FoundryAgentPeer) {
     domain_id: peer.domain_id,
     label: peer.label,
     series_membership: peer.series_membership,
-    brand_cli: peer.brand_cli,
-    domain_alias: peer.domain_alias,
-    work_alias: peer.work_alias,
-    ordinary_golden_path: peer.ordinary_golden_path,
+    brand_cli: peer.agent_id,
+    domain_alias: peer.agent_id,
+    work_alias: 'work',
+    ordinary_golden_path: 'domain_pack -> stage -> domain_owner_answer -> handoff',
   };
 }
 
@@ -226,8 +226,8 @@ function buildFoundryAgentStageProfile(peer: FoundryAgentPeer, contract: JsonRec
     profile_id: readString(profile.profile_id, 'series_design_profile.profile_id'),
     applies_to_agent_id: peer.agent_id,
     series_membership: peer.series_membership,
-    ordinary_golden_path: peer.ordinary_golden_path,
-    domain_pack_example: peer.domain_pack_example,
+    ordinary_golden_path: 'domain_pack -> stage -> domain_owner_answer -> handoff',
+    domain_pack_example: 'Declarative Domain Pack',
     stage_delivery_progress_marker: 'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
     lifecycle_pipeline: readStringList(
       profile.shared_lifecycle_pipeline,
@@ -289,7 +289,14 @@ function buildFoundryAgentOwnerAnswerShape(peer: FoundryAgentPeer, contract: Jso
       closeout.route_back_shape,
       'series_design_profile.shared_closeout_contract.route_back_shape',
     ),
-    domain_authority_kernel_examples: peer.domain_authority_kernel_examples,
+    domain_authority_kernel_examples: [
+      'domain truth',
+      'artifact authority',
+      'quality or export verdict',
+      'memory accept or reject',
+      'owner receipt signer',
+      'typed blocker signer',
+    ],
     opl_base_authority: buildOplBaseDomainAuthorityBoundary(),
   };
 }
@@ -427,7 +434,7 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
   const brandCliPathSafe = false;
   const foundryOperations = FOUNDRY_AGENT_OPERATIONS.map((operation) => `opl agents foundry ${operation}`);
   const cliSmoke = {
-    executable_brand_cli_command_surface: brandCliPathSafe ? `${peer.brand_cli} foundry` : null,
+    executable_brand_cli_command_surface: brandCliPathSafe ? `${peer.agent_id} foundry` : null,
     status_json_command: `${agentInspectCommandSurface} --json`,
     json_flag_aliases: ['--json'],
     help_smoke_commands: [
@@ -452,15 +459,15 @@ function buildPeerProjection(peer: FoundryAgentPeer) {
       command_pattern: agentInspectCommandSurface,
       domain_alias:
         object === 'work'
-          ? peer.work_alias
+          ? 'work'
           : object === 'stage'
             ? 'stage'
             : null,
     })),
     work_object: {
       canonical_object: 'work',
-      natural_alias: peer.work_alias,
-      alias_rule: `${peer.work_alias} is a domain-specific alias for the Foundry Agent series work object.`,
+      natural_alias: 'work',
+      alias_rule: 'work is the standard Foundry Agent work object.',
     },
     connect_command_surfaces: {
       install: `opl connect install --module ${peer.domain_id}`,

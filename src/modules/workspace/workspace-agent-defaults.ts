@@ -4,6 +4,8 @@ import {
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../kernel/standard-agent-registry.ts';
+import { assertStandardAgentDescriptorIdentity } from '../../kernel/standard-agent-interface.ts';
+import { readStandardAgentDescriptorForDomain } from '../connect/standard-agent-interface-discovery.ts';
 
 type WorkspaceAgentRegistryEntry = Extract<
   typeof STANDARD_AGENT_REGISTRY[number],
@@ -26,17 +28,24 @@ export type WorkspaceAgentProfile = {
 };
 
 function workspaceProfile(entry: WorkspaceAgentRegistryEntry): WorkspaceAgentProfile {
+  const descriptor = readStandardAgentDescriptorForDomain(entry.target_domain_id);
+  const declared = descriptor
+    ? assertStandardAgentDescriptorIdentity(descriptor, {
+        project: entry.project,
+        domain_id: entry.target_domain_id,
+      }).interface.workspace_binding
+    : null;
   return {
     agent_id: entry.agent_id,
-    project_id: entry.domain_id,
+    project_id: entry.target_domain_id,
     project: entry.project,
     label: entry.label,
-    workspace_kind: entry.workspace_profile.workspace_kind,
-    project_kind: entry.workspace_profile.project_kind,
-    project_collection_label: entry.workspace_profile.project_collection_label,
-    default_workspace_id: entry.workspace_profile.default_workspace_id,
-    default_project_id: entry.workspace_profile.default_project_id,
-    default_profile_id: entry.workspace_profile.default_profile_id,
+    workspace_kind: declared?.workspace_kind ?? 'standard_agent_workspace',
+    project_kind: declared?.project_kind ?? 'project',
+    project_collection_label: declared?.project_collection_label ?? 'projects',
+    default_workspace_id: declared?.default_workspace_id ?? `${entry.agent_id}-workspace`,
+    default_project_id: declared?.default_project_id ?? `${entry.agent_id}-001`,
+    default_profile_id: declared?.default_profile_id ?? 'one_off',
   };
 }
 

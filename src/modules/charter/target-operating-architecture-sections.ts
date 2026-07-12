@@ -11,19 +11,15 @@ import {
   requireEveryValue,
 } from './brand-module-contracts.ts';
 import {
+  listStandardDomainAgentIds,
   STANDARD_AGENT_REGISTRY_REF,
 } from '../../kernel/standard-agent-registry.ts';
 import {
-  TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
-  TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
-  TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS,
-  TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS,
   TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES,
   TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CONFORMANCE_CLAIMS,
   TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS,
   TARGET_ARCHITECTURE_GENERATED_SURFACES,
   TARGET_ARCHITECTURE_LANES,
-  TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS,
   TARGET_ARCHITECTURE_PLANE_FORBIDDEN_CLAIMS,
   TARGET_ARCHITECTURE_PLANES,
   expectBrandModuleIdArray,
@@ -71,82 +67,12 @@ export function validateFoundryAgentOsStandard(filePath: string, value: unknown)
     });
   }
 
-  const appliesToDomainAgents = expectNonEmptyStringArray(
-    value.applies_to_domain_agents,
-    'foundry_agent_os_standard.applies_to_domain_agents',
-    filePath,
-  );
-  requireEveryValue(
-    appliesToDomainAgents,
-    TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS,
-    'foundry_agent_os_standard.applies_to_domain_agents',
-    filePath,
-  );
-
-  const frameworkCapabilityPackagesRaw = value.framework_capability_packages;
-  const frameworkCapabilityPackages = Array.isArray(frameworkCapabilityPackagesRaw)
-    ? frameworkCapabilityPackagesRaw.map((entry, index) => {
-        if (!isRecord(entry)) {
-          throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.framework_capability_packages entries must be objects.', {
-            file: filePath,
-            field: `foundry_agent_os_standard.framework_capability_packages[${index}]`,
-          });
-        }
-        return {
-          agent_id: expectString(entry.agent_id, `foundry_agent_os_standard.framework_capability_packages[${index}].agent_id`, filePath),
-          package_scope: expectString(entry.package_scope, `foundry_agent_os_standard.framework_capability_packages[${index}].package_scope`, filePath),
-          capability_pack_example: expectString(entry.capability_pack_example, `foundry_agent_os_standard.framework_capability_packages[${index}].capability_pack_example`, filePath),
-          authority_ref_examples: expectNonEmptyStringArray(entry.authority_ref_examples, `foundry_agent_os_standard.framework_capability_packages[${index}].authority_ref_examples`, filePath),
-          capability_contract_ref: expectString(entry.capability_contract_ref, `foundry_agent_os_standard.framework_capability_packages[${index}].capability_contract_ref`, filePath),
-          public_projection: expectString(entry.public_projection, `foundry_agent_os_standard.framework_capability_packages[${index}].public_projection`, filePath),
-          authority_boundary: validateFalseBoundaryRecord(
-            filePath,
-            entry.authority_boundary,
-            `foundry_agent_os_standard.framework_capability_packages[${index}].authority_boundary`,
-          ),
-        };
-      })
-    : [];
-  const frameworkCapabilityPackageIds = frameworkCapabilityPackages.map((entry) => entry.agent_id);
-  if (!frameworkCapabilityPackageIds.includes('mas-scholar-skills')) {
-    throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.framework_capability_packages must include mas-scholar-skills.', {
-      file: filePath,
-      field: 'foundry_agent_os_standard.framework_capability_packages',
-    });
-  }
-  for (const entry of frameworkCapabilityPackages) {
-    if (entry.agent_id === 'mas-scholar-skills' && entry.package_scope !== 'framework_capability_package') {
-      throw new FrameworkContractError('contract_shape_invalid', 'ScholarSkills must stay a framework capability package.', {
-        file: filePath,
-        field: 'foundry_agent_os_standard.framework_capability_packages',
-        actual: entry.package_scope,
-      });
-    }
-  }
-
-const domainPackExamplesRaw = value.domain_pack_examples;
-const domainAuthorityKernelExamplesRaw = value.domain_authority_kernel_examples;
 const capabilityRegistryRaw = value.capability_registry_boundary;
-  if (!isRecord(domainPackExamplesRaw) || !isRecord(domainAuthorityKernelExamplesRaw) || !isRecord(capabilityRegistryRaw)) {
+  if (!isRecord(capabilityRegistryRaw)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'foundry_agent_os_standard must declare domain pack examples, authority kernel examples, and capability registry boundary.',
+      'foundry_agent_os_standard must declare the capability registry boundary.',
       { file: filePath, field: 'foundry_agent_os_standard' },
-    );
-  }
-
-  const domainPackExamples: Record<string, string> = {};
-  const domainAuthorityKernelExamples: Record<string, string[]> = {};
-  for (const agentId of appliesToDomainAgents) {
-    domainPackExamples[agentId] = expectString(
-      domainPackExamplesRaw[agentId],
-      `foundry_agent_os_standard.domain_pack_examples.${agentId}`,
-      filePath,
-    );
-    domainAuthorityKernelExamples[agentId] = expectNonEmptyStringArray(
-      domainAuthorityKernelExamplesRaw[agentId],
-      `foundry_agent_os_standard.domain_authority_kernel_examples.${agentId}`,
-      filePath,
     );
   }
 
@@ -359,8 +285,9 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
     'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
     filePath,
   );
+  const standardDomainAgentIds = listStandardDomainAgentIds();
   for (const agentId of defaultOwnerRoutePolicyAgentIds) {
-    if (!appliesToDomainAgents.includes(agentId)) {
+    if (!standardDomainAgentIds.includes(agentId as typeof standardDomainAgentIds[number])) {
       throw new FrameworkContractError('contract_shape_invalid', 'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids must reference standard domain agents.', {
         file: filePath,
         field: 'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
@@ -370,7 +297,7 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
   }
   requireEveryValue(
     defaultOwnerRoutePolicyAgentIds,
-    ['mag', 'rca', 'oma', 'obf'],
+    standardDomainAgentIds,
     'foundry_agent_os_standard.default_owner_route_policy.applies_to_agent_ids',
     filePath,
   );
@@ -527,10 +454,6 @@ const capabilityRegistryRaw = value.capability_registry_boundary;
     source_pattern_ref: expectString(value.source_pattern_ref, 'foundry_agent_os_standard.source_pattern_ref', filePath),
     standard_agent_registry_ref: standardAgentRegistryRef,
     target_shape: targetShape,
-    applies_to_domain_agents: appliesToDomainAgents,
-    framework_capability_packages: frameworkCapabilityPackages,
-    domain_pack_examples: domainPackExamples,
-    domain_authority_kernel_examples: domainAuthorityKernelExamples,
     new_agent_baseline_handoff_policy: {
       surface_kind: newAgentBaselineHandoffSurfaceKind,
       policy_id: expectString(
@@ -775,112 +698,6 @@ export function validateTargetOperatingArchitectureMultiPlaneModel(
       filePath,
       value.cross_plane_authority_boundary,
       'multi_plane_operating_system.cross_plane_authority_boundary',
-    ),
-  };
-}
-
-export function validateFlagshipExperienceMapping(
-  filePath: string,
-  value: unknown,
-): TargetOperatingArchitectureContract['flagship_experience_mapping'] {
-  if (!isRecord(value)) {
-    throw new FrameworkContractError(
-      'contract_shape_invalid',
-      'target-operating-architecture-contract.json must declare flagship_experience_mapping.',
-      { file: filePath, field: 'flagship_experience_mapping' },
-    );
-  }
-
-  const mappingId = expectString(value.mapping_id, 'flagship_experience_mapping.mapping_id', filePath);
-  if (mappingId !== 'mas_research_foundry_flagship_experience.v1') {
-    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.mapping_id must freeze the MAS Research Foundry flagship mapping.', {
-      file: filePath,
-      field: 'flagship_experience_mapping.mapping_id',
-      actual: mappingId,
-    });
-  }
-  const flagshipAgentId = expectString(
-    value.flagship_agent_id,
-    'flagship_experience_mapping.flagship_agent_id',
-    filePath,
-  );
-  if (flagshipAgentId !== 'mas') {
-    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.flagship_agent_id must stay scoped to MAS.', {
-      file: filePath,
-      field: 'flagship_experience_mapping.flagship_agent_id',
-      actual: flagshipAgentId,
-    });
-  }
-  const standardAgentShape = expectString(
-    value.standard_agent_shape,
-    'flagship_experience_mapping.standard_agent_shape',
-    filePath,
-  );
-  if (standardAgentShape !== 'Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions') {
-    throw new FrameworkContractError('contract_shape_invalid', 'flagship_experience_mapping.standard_agent_shape must keep the standard agent target shape explicit.', {
-      file: filePath,
-      field: 'flagship_experience_mapping.standard_agent_shape',
-      actual: standardAgentShape,
-    });
-  }
-
-  const journeyArtifacts = expectNonEmptyStringArray(
-    value.journey_artifacts,
-    'flagship_experience_mapping.journey_artifacts',
-    filePath,
-  );
-  requireEveryValue(
-    journeyArtifacts,
-    TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS,
-    'flagship_experience_mapping.journey_artifacts',
-    filePath,
-  );
-  const privatePlatformResidueInputs = expectNonEmptyStringArray(
-    value.private_platform_residue_inputs,
-    'flagship_experience_mapping.private_platform_residue_inputs',
-    filePath,
-  );
-  requireEveryValue(
-    privatePlatformResidueInputs,
-    TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS,
-    'flagship_experience_mapping.private_platform_residue_inputs',
-    filePath,
-  );
-  const oplContractSurfaces = expectNonEmptyStringArray(
-    value.opl_contract_surfaces,
-    'flagship_experience_mapping.opl_contract_surfaces',
-    filePath,
-  );
-  requireEveryValue(
-    oplContractSurfaces,
-    TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES,
-    'flagship_experience_mapping.opl_contract_surfaces',
-    filePath,
-  );
-  const falseReadyClaims = expectNonEmptyStringArray(
-    value.false_ready_claims,
-    'flagship_experience_mapping.false_ready_claims',
-    filePath,
-  );
-  requireEveryValue(
-    falseReadyClaims,
-    TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS,
-    'flagship_experience_mapping.false_ready_claims',
-    filePath,
-  );
-
-  return {
-    mapping_id: mappingId,
-    flagship_agent_id: flagshipAgentId,
-    standard_agent_shape: standardAgentShape,
-    journey_artifacts: journeyArtifacts,
-    private_platform_residue_inputs: privatePlatformResidueInputs,
-    opl_contract_surfaces: oplContractSurfaces,
-    false_ready_claims: falseReadyClaims,
-    authority_boundary: validateFalseBoundaryRecord(
-      filePath,
-      value.authority_boundary,
-      'flagship_experience_mapping.authority_boundary',
     ),
   };
 }

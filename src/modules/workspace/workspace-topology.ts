@@ -156,7 +156,7 @@ export const WORKSPACE_TOPOLOGY_PROFILE_CONTRACT = {
   },
   domain_profile_defaults: Object.fromEntries(STANDARD_AGENT_REGISTRY
     .filter((entry) => entry.series_membership === STANDARD_AGENT_SERIES_MEMBERSHIP)
-    .map((entry) => [entry.agent_id, entry.workspace_profile.default_profile_id])),
+    .map((entry) => [entry.agent_id, 'one_off'])),
   default_user_inspection_surface: {
     ordinary_user_default_surface: 'workspace_local_project_stage_outputs',
     project_stage_outputs_pattern: '<project-root>/artifacts/stage_outputs/<stage-id>/',

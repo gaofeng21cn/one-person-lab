@@ -1,5 +1,6 @@
 import { unique } from './standard-domain-agent-conformance-utils.ts';
 import {
+  STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_REGISTRY_REF,
   resolveStandardAgent,
 } from '../atlas/index.ts';
@@ -32,7 +33,6 @@ function canonicalFoundryAgentId(report: RepoConformanceReport) {
 function buildFoundryAgentOsDomainConformance(
   report: RepoConformanceReport,
   expectedAgents: string[],
-  flagshipMapping: FrameworkContracts['targetOperatingArchitecture']['flagship_experience_mapping'],
   defaultOwnerRoutePolicy: DefaultOwnerRoutePolicy | null,
 ) {
   const canonicalAgentId = canonicalFoundryAgentId(report);
@@ -165,17 +165,6 @@ function buildFoundryAgentOsDomainConformance(
         }
       : null,
     domain_authority_kernel_status: statusFromBlockers(domainAuthorityBlockers),
-    flagship_experience_mapping: canonicalAgentId === flagshipMapping.flagship_agent_id
-      ? {
-          mapping_id: flagshipMapping.mapping_id,
-          standard_agent_shape: flagshipMapping.standard_agent_shape,
-          journey_artifacts: flagshipMapping.journey_artifacts,
-          private_platform_residue_inputs: flagshipMapping.private_platform_residue_inputs,
-          opl_contract_surfaces: flagshipMapping.opl_contract_surfaces,
-          false_ready_claims: flagshipMapping.false_ready_claims,
-          authority_boundary: flagshipMapping.authority_boundary,
-        }
-      : null,
     false_authority_flags: {
       conformance_pass_can_claim_domain_ready: false,
       conformance_pass_can_claim_production_ready: false,
@@ -212,7 +201,6 @@ function buildFoundryAgentOsFrameworkCapabilityConformance(
     capability_registry_policy_status: statusFromBlockers(blockers),
     optional_ref_policy: 'fail_open_unless_current_owner_delta_requires_route_ref',
     domain_authority_kernel_status: statusFromBlockers(blockers),
-    flagship_experience_mapping: null,
     package_scope: report.package_scope,
     capability_contract_ref: report.capability_contract_ref,
     false_authority_flags: {
@@ -237,12 +225,8 @@ function buildFoundryAgentOsFrameworkCapabilityConformance(
 
 function buildFoundryAgentOsFrameworkCapabilityConformanceFromRepoReport(
   report: RepoConformanceReport,
-  standard: FrameworkContracts['targetOperatingArchitecture']['foundry_agent_os_standard'],
 ) {
   const canonicalAgentId = canonicalFoundryAgentId(report);
-  const packageContract = standard.framework_capability_packages?.find((entry) =>
-    entry.agent_id === canonicalAgentId
-  );
   const blockers: string[] = unique(
     report.blockers.filter((entry): entry is string => typeof entry === 'string'),
   );
@@ -253,8 +237,8 @@ function buildFoundryAgentOsFrameworkCapabilityConformanceFromRepoReport(
     canonical_agent_id: canonicalAgentId ?? report.domain_id,
     package_scope: 'framework_capability_package',
     status: blockers.length === 0 ? 'passed' : 'blocked',
-    contract_status: packageContract ? 'resolved' : 'missing',
-    capability_contract_ref: packageContract?.capability_contract_ref ?? 'contracts/opl-framework/target-operating-architecture-contract.json#foundry_agent_os_standard.framework_capability_packages',
+    contract_status: 'resolved',
+    capability_contract_ref: `package:${canonicalAgentId}#/capability_provider`,
     plugin_manifest_path: '',
     skill_entry_path: '',
     authority_boundary: {
@@ -279,9 +263,12 @@ export function buildFoundryAgentOsConformance(
     default_owner_route_policy?: DefaultOwnerRoutePolicy;
   };
   const defaultOwnerRoutePolicy = standardWithDefaultOwnerRoutePolicy.default_owner_route_policy ?? null;
-  const flagshipMapping = contracts.targetOperatingArchitecture.flagship_experience_mapping;
-  const expectedAgents = standard.applies_to_domain_agents;
-  const expectedFrameworkCapabilityPackages = standard.framework_capability_packages?.map((entry) => entry.agent_id) ?? [];
+  const expectedAgents = STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === 'standard_domain_agent')
+    .map((entry) => entry.agent_id);
+  const expectedFrameworkCapabilityPackages: string[] = STANDARD_AGENT_REGISTRY
+    .filter((entry) => entry.series_membership === 'framework_capability_package')
+    .map((entry) => entry.agent_id);
   const standardDomainReports = reports.filter((report) =>
     !expectedFrameworkCapabilityPackages.includes(canonicalFoundryAgentId(report))
   );
@@ -289,13 +276,13 @@ export function buildFoundryAgentOsConformance(
     expectedFrameworkCapabilityPackages.includes(canonicalFoundryAgentId(report))
   );
   const domainReports = standardDomainReports.map((report) =>
-    buildFoundryAgentOsDomainConformance(report, expectedAgents, flagshipMapping, defaultOwnerRoutePolicy)
+    buildFoundryAgentOsDomainConformance(report, expectedAgents, defaultOwnerRoutePolicy)
   );
   const frameworkCapabilityDomainReports = frameworkCapabilityPackages.map((report) =>
     buildFoundryAgentOsFrameworkCapabilityConformance(report)
   );
   const frameworkCapabilityDomainReportsFromRepoReports = frameworkCapabilityRepoReports.map((report) =>
-    buildFoundryAgentOsFrameworkCapabilityConformanceFromRepoReport(report, standard)
+    buildFoundryAgentOsFrameworkCapabilityConformanceFromRepoReport(report)
   );
   const allDomainReports = [
     ...domainReports,
@@ -363,7 +350,6 @@ export function buildFoundryAgentOsConformance(
       route_required_ref_missing: standard.capability_registry_boundary.route_required_ref_missing,
     },
     default_owner_route_policy: defaultOwnerRoutePolicy,
-    flagship_experience_mapping: flagshipMapping,
     standard_membership_policy: {
       policy_id: 'foundry_agent_standard_membership_is_not_surface_origin.v1',
       source_ref: STANDARD_AGENT_REGISTRY_REF,

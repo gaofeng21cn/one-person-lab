@@ -21,17 +21,18 @@ test('family runtime support and aliases derive from standard-agent runtime prof
   assert.deepEqual(FAMILY_RUNTIME_DOMAIN_IDS, [
     'medautoscience',
     'medautogrant',
-    'redcube',
+    'redcube_ai',
     'opl-meta-agent',
+    'opl-bookforge',
   ]);
   assert.equal(resolveFamilyRuntimeDomainId('mas'), 'medautoscience');
-  assert.equal(resolveFamilyRuntimeDomainId('redcube-ai'), 'redcube');
-  assert.equal(resolveFamilyRuntimeDomainId('obf'), null);
+  assert.equal(resolveFamilyRuntimeDomainId('redcube-ai'), 'redcube_ai');
+  assert.equal(resolveFamilyRuntimeDomainId('obf'), 'opl-bookforge');
 
   const mas = runtimeDomainProfileFor('medautoscience');
   assert.ok(mas);
-  assert.deepEqual(mas.dispatch_command, ['medautosci', 'domain-handler', 'dispatch']);
-  assert.equal(mas.runtime_manager_registration?.domain_owner, 'med-autoscience');
+  assert.equal(mas.dispatch_command, undefined);
+  assert.equal(mas.registration_ref, null);
 });
 
 test('family-runtime scheduler parser binds a profile to an explicit registry runtime domain', () => {
@@ -47,45 +48,30 @@ test('family-runtime scheduler parser binds a profile to an explicit registry ru
     mode: 'scheduler_status',
     providerKind: 'temporal',
     domainProfiles: {
-      redcube: '/tmp/profile.toml',
+      redcube_ai: '/tmp/profile.toml',
     },
   });
 });
 
-test('family-runtime scheduler rejects runtime-only domains without a scheduler registration', () => {
-  assert.throws(
-    () => parseSchedulerLifecycleArgs([
-      'status',
-      '--provider',
-      'temporal',
-      '--domain',
-      'oma',
-      '--profile',
-      '/tmp/oma.toml',
-    ]),
-    (error) => {
-      assert.equal(error instanceof FrameworkContractError, true);
-      const contractError = error as FrameworkContractError;
-      assert.equal(contractError.code, 'cli_usage_error');
-      assert.deepEqual(contractError.details?.allowed_domain_ids, [
-        'medautoscience',
-        'medautogrant',
-        'redcube',
-      ]);
-      return true;
-    },
+test('family-runtime scheduler treats every standard Agent through the generic registration path', () => {
+  const parsed = parseSchedulerLifecycleArgs([
+    'status',
+    '--provider',
+    'temporal',
+    '--domain',
+    'oma',
+    '--profile',
+    '/tmp/oma.toml',
+  ]);
+  assert.equal(parsed.mode, 'scheduler_status');
+  assert.equal(
+    parsed.mode === 'scheduler_status' ? parsed.domainProfiles?.['opl-meta-agent'] : null,
+    '/tmp/oma.toml',
   );
-
-  assert.throws(
-    () => buildTemporalSchedulerTickWorkflowArgs({
-      domainProfiles: { 'opl-meta-agent': '/tmp/oma.toml' },
-    }),
-    (error) => {
-      assert.equal(error instanceof FrameworkContractError, true);
-      assert.equal((error as FrameworkContractError).code, 'contract_shape_invalid');
-      return true;
-    },
-  );
+  const workflowArgs = buildTemporalSchedulerTickWorkflowArgs({
+    domainProfiles: { 'opl-meta-agent': '/tmp/oma.toml' },
+  });
+  assert.equal(workflowArgs.domain_profiles?.['opl-meta-agent'], '/tmp/oma.toml');
 });
 
 test('family-runtime registry parser reuses shared option walking without changing command payloads', () => {

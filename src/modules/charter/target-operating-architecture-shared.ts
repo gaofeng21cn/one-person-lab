@@ -8,7 +8,6 @@ import {
   BRAND_MODULE_IDS,
   expectNonEmptyStringArray,
 } from './brand-module-contracts.ts';
-import { listStandardDomainAgentIds } from '../../kernel/standard-agent-registry.ts';
 
 export function expectFalseBoolean(value: unknown, field: string, filePath: string) {
   if (value !== false) {
@@ -324,8 +323,6 @@ export const TARGET_ARCHITECTURE_ONE_SHOT_PLAN_STATUSES = [
   'external_owner_gated',
 ] as const;
 
-export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_AGENTS = listStandardDomainAgentIds();
-
 export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_CAPABILITY_REGISTRY_MODULES = [
   'atlas',
   'pack',
@@ -351,36 +348,6 @@ export const TARGET_ARCHITECTURE_FOUNDRY_AGENT_OS_FORBIDDEN_CLAIMS = [
   'ledger_ref_is_owner_receipt_authority',
   'runway_provider_completion_is_domain_completion',
   'console_view_is_app_release_ready',
-] as const;
-
-export const TARGET_ARCHITECTURE_MAS_FLAGSHIP_JOURNEY_ARTIFACTS = [
-  'Evidence Map',
-  'Analysis Pack',
-  'Manuscript Draft',
-  'Reviewer Letter',
-  'Revision Packet',
-  'Publication Handoff',
-] as const;
-
-export const TARGET_ARCHITECTURE_FLAGSHIP_PRIVATE_RESIDUE_INPUTS = [
-  'private_scheduler',
-  'private_runner',
-  'private_workbench',
-  'private_status_shell',
-] as const;
-
-export const TARGET_ARCHITECTURE_FLAGSHIP_CONTRACT_SURFACES = [
-  'target_operating_architecture_contract',
-  'standard_domain_agent_conformance',
-  'foundry_agent_os_conformance',
-  'pack_compiler_projection',
-] as const;
-
-export const TARGET_ARCHITECTURE_FLAGSHIP_FALSE_READY_CLAIMS = [
-  'mas_ready',
-  'paper_done',
-  'brand_l5_done',
-  'production_ready',
 ] as const;
 
 export function expectBrandModuleIdArray(value: unknown, field: string, filePath: string) {

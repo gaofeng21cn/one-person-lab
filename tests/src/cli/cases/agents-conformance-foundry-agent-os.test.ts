@@ -110,9 +110,15 @@ test('foundry agents inspect exposes stage profile and owner-answer shape withou
       'domain_owner_receipt_ref_or_domain_owned_typed_blocker_ref',
     );
     assert.equal(inspect.owner_answer_shape.applies_to_agent_id, agentId);
-    assert.equal(inspect.owner_answer_shape.success_shape, 'domain_owner_receipt_ref');
-    assert.equal(inspect.owner_answer_shape.blocked_shape, 'domain_owned_typed_blocker_ref');
-    assert.equal(inspect.owner_answer_shape.route_back_shape, 'route_back_or_human_gate_ref');
+    assert.equal(
+      inspect.owner_answer_shape.success_shape,
+      'validated_consumable_artifact_progress_ref_or_domain_owner_receipt_ref',
+    );
+    assert.equal(inspect.owner_answer_shape.blocked_shape, 'domain_owned_typed_hard_blocker_ref');
+    assert.equal(
+      inspect.owner_answer_shape.route_back_shape,
+      'quality_debt_repair_recommendation_or_human_gate_ref',
+    );
     assert.equal(inspect.owner_answer_shape.opl_base_authority.can_ready, false);
     assert.equal(inspect.owner_answer_shape.opl_base_authority.can_truth, false);
     assert.equal(inspect.owner_answer_shape.opl_base_authority.can_receipt, false);

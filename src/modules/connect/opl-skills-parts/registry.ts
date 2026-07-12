@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import {
   STANDARD_AGENT_REGISTRY,
@@ -148,12 +146,14 @@ export function listFamilySkillPackSpecs(): SkillPackSpec[] {
     label: entry.label,
     plugin_name: entry.plugin_name,
     canonical_plugin_name: entry.canonical_plugin_name,
-    source_kind: entry.source_kind,
+    source_kind: entry.series_membership === 'framework_capability_package'
+      ? 'repo_plugin_installer' as const
+      : 'opl_standard_codex_carrier' as const,
     distribution_role: entry.series_membership === 'framework_capability_package'
       ? 'framework_capability_plugin_pack' as const
       : 'domain_agent_plugin_pack' as const,
-    installer_kind: entry.installer_kind,
-    installer_relative_paths: entry.installer_relative_paths.map((relativePath) => path.join(...relativePath.split('/'))),
+    installer_kind: 'node' as const,
+    installer_relative_paths: [],
   }));
   return cachedFamilySkillPackSpecs;
 }

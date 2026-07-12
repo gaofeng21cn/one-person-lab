@@ -38,7 +38,6 @@ import {
   validateFalseBoundaryRecord,
 } from './target-operating-architecture-shared.ts';
 import {
-  validateFlagshipExperienceMapping,
   validateFoundryAgentOsStandard,
   validateOneShotPlanLandingModel,
   validateTargetOperatingArchitectureExperienceModel,
@@ -71,7 +70,6 @@ export function validateTargetOperatingArchitecture(
   const agentLabRaw = value.agent_lab_improvement_plane;
   const oneShotPlanLandingModelRaw = value.one_shot_plan_landing_model;
   const foundryAgentOsStandardRaw = value.foundry_agent_os_standard;
-  const flagshipExperienceMappingRaw = value.flagship_experience_mapping;
   const multiPlaneRaw = value.multi_plane_operating_system;
   if (
     !isRecord(resourceModelRaw)
@@ -86,7 +84,6 @@ export function validateTargetOperatingArchitecture(
     || !isRecord(agentLabRaw)
     || !isRecord(oneShotPlanLandingModelRaw)
     || !isRecord(foundryAgentOsStandardRaw)
-    || !isRecord(flagshipExperienceMappingRaw)
     || !isRecord(multiPlaneRaw)
   ) {
     throw new FrameworkContractError(
@@ -96,9 +93,7 @@ export function validateTargetOperatingArchitecture(
         file: filePath,
         field: !isRecord(multiPlaneRaw)
           ? 'multi_plane_operating_system'
-          : !isRecord(flagshipExperienceMappingRaw)
-            ? 'flagship_experience_mapping'
-            : !isRecord(experienceOperatingModelRaw)
+          : !isRecord(experienceOperatingModelRaw)
               ? 'experience_operating_model'
             : !isRecord(oneShotPlanLandingModelRaw)
               ? 'one_shot_plan_landing_model'
@@ -535,10 +530,6 @@ export function validateTargetOperatingArchitecture(
     foundry_agent_os_standard: validateFoundryAgentOsStandard(
       filePath,
       foundryAgentOsStandardRaw,
-    ),
-    flagship_experience_mapping: validateFlagshipExperienceMapping(
-      filePath,
-      flagshipExperienceMappingRaw,
     ),
     authority_boundary: validateFalseBoundaryRecord(filePath, value.authority_boundary, 'authority_boundary'),
     forbidden_claims: expectNonEmptyStringArray(value.forbidden_claims, 'forbidden_claims', filePath),

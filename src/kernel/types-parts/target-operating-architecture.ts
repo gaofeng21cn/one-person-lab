@@ -117,13 +117,6 @@ export interface TargetOperatingArchitectureContract {
       machine_checks: string[];
       forbidden_regressions: string[];
     }>;
-    flagship_agent_default: {
-      agent_id: string;
-      expected_path: string;
-      domain_pack_role: string;
-      opl_role: string;
-      private_runtime_disposition: string;
-    };
     authority_boundary: Record<string, false>;
     forbidden_claims: string[];
   };
@@ -162,18 +155,6 @@ export interface TargetOperatingArchitectureContract {
     source_pattern_ref: string;
     standard_agent_registry_ref: string;
     target_shape: string;
-    applies_to_domain_agents: string[];
-    framework_capability_packages?: Array<{
-      agent_id: string;
-      package_scope: string;
-      capability_pack_example: string;
-      authority_ref_examples: string[];
-      capability_contract_ref: string;
-      public_projection: string;
-      authority_boundary: Record<string, false>;
-    }>;
-    domain_pack_examples: Record<string, string>;
-    domain_authority_kernel_examples: Record<string, string[]>;
     new_agent_baseline_handoff_policy: {
       surface_kind: string;
       policy_id: string;
@@ -218,16 +199,6 @@ export interface TargetOperatingArchitectureContract {
     implementation_lane_refs: string[];
     authority_boundary: Record<string, false>;
     forbidden_claims: string[];
-  };
-  flagship_experience_mapping: {
-    mapping_id: string;
-    flagship_agent_id: string;
-    standard_agent_shape: string;
-    journey_artifacts: string[];
-    private_platform_residue_inputs: string[];
-    opl_contract_surfaces: string[];
-    false_ready_claims: string[];
-    authority_boundary: Record<string, false>;
   };
   authority_boundary: Record<string, false>;
   forbidden_claims: string[];

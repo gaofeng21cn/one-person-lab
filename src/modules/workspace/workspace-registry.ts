@@ -11,11 +11,11 @@ import { ensureOplStateDir } from '../../kernel/runtime-state-paths.ts';
 import {
   assertStandardAgentDescriptorIdentity,
   materializeStandardAgentCommand,
-  readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorInterface,
   type StandardAgentInterface,
   type StandardAgentLocatorField,
 } from '../../kernel/standard-agent-interface.ts';
+import { readPackageManagedStandardAgentDescriptor } from '../connect/standard-agent-interface-discovery.ts';
 import type { FrameworkContracts } from '../../kernel/types.ts';
 import { OPL_WORKSPACE_AGENT_PROFILES } from './workspace-agent-defaults.ts';
 

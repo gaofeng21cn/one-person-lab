@@ -54,13 +54,13 @@ test('workspace agent identity and supported agents derive from the standard-age
     })),
     registryAgents.map((entry) => ({
       agent_id: entry.agent_id,
-      project_id: entry.domain_id,
+      project_id: entry.target_domain_id,
       project: entry.project,
-      workspace_kind: entry.workspace_profile.workspace_kind,
-      project_kind: entry.workspace_profile.project_kind,
-      default_workspace_id: entry.workspace_profile.default_workspace_id,
-      default_project_id: entry.workspace_profile.default_project_id,
-      default_profile_id: entry.workspace_profile.default_profile_id,
+      workspace_kind: 'standard_agent_workspace',
+      project_kind: 'project',
+      default_workspace_id: `${entry.agent_id}-workspace`,
+      default_project_id: `${entry.agent_id}-001`,
+      default_profile_id: 'one_off',
     })),
   );
 

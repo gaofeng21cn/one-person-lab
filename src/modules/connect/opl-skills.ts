@@ -194,8 +194,8 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
     );
   }
   const foundryAgentId = standardAgent.agent_id;
-  const brandCli = standardAgent.brand_cli;
-  const workAlias = standardAgent.work_alias;
+  const brandCli = standardAgent.agent_id;
+  const workAlias = 'work';
   const ordinaryOperations = readStringListField(commandSurface, 'ordinary_operations');
   const ordinarySpine = readStringListField(commandSurface, 'ordinary_public_command_surface_spine');
   const defaultFoundryCommandSurface = `opl foundry agents inspect ${foundryAgentId}`;
@@ -216,7 +216,7 @@ function buildFoundryAgentSeriesProjection(spec: SkillPackSpec) {
       policy_release_ref: readStringField(policyRelease, 'policy_release_contract_ref'),
       brand_cli: brandCli,
       default_foundry_command_surface: defaultFoundryCommandSurface,
-      ordinary_golden_path: standardAgent.ordinary_golden_path,
+      ordinary_golden_path: 'domain_pack -> stage -> domain_owner_answer -> handoff',
     },
     command_surface_spine: {
       surface_kind: 'opl_foundry_agent_skill_command_surface_spine_projection',

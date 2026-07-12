@@ -206,11 +206,10 @@ export function validateTargetOperatingArchitectureExperienceModel(
   }
   const defaultUserPathRaw = value.default_user_path;
   const targetAxesRaw = value.target_axes;
-  const flagshipAgentRaw = value.flagship_agent_default;
-  if (!isRecord(defaultUserPathRaw) || !Array.isArray(targetAxesRaw) || !isRecord(flagshipAgentRaw)) {
+  if (!isRecord(defaultUserPathRaw) || !Array.isArray(targetAxesRaw)) {
     throw new FrameworkContractError(
       'contract_shape_invalid',
-      'experience_operating_model must declare default_user_path, target_axes, and flagship_agent_default.',
+      'experience_operating_model must declare default_user_path and target_axes.',
       { file: filePath, field: 'experience_operating_model' },
     );
   }
@@ -296,33 +295,6 @@ export function validateTargetOperatingArchitectureExperienceModel(
       ),
     },
     target_axes: targetAxes,
-    flagship_agent_default: {
-      agent_id: expectString(
-        flagshipAgentRaw.agent_id,
-        'experience_operating_model.flagship_agent_default.agent_id',
-        filePath,
-      ),
-      expected_path: expectString(
-        flagshipAgentRaw.expected_path,
-        'experience_operating_model.flagship_agent_default.expected_path',
-        filePath,
-      ),
-      domain_pack_role: expectString(
-        flagshipAgentRaw.domain_pack_role,
-        'experience_operating_model.flagship_agent_default.domain_pack_role',
-        filePath,
-      ),
-      opl_role: expectString(
-        flagshipAgentRaw.opl_role,
-        'experience_operating_model.flagship_agent_default.opl_role',
-        filePath,
-      ),
-      private_runtime_disposition: expectString(
-        flagshipAgentRaw.private_runtime_disposition,
-        'experience_operating_model.flagship_agent_default.private_runtime_disposition',
-        filePath,
-      ),
-    },
     authority_boundary: validateFalseBoundaryRecord(
       filePath,
       value.authority_boundary,

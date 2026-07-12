@@ -17,7 +17,6 @@
     "contracts/opl-framework/family-product-operator-projection.json",
     "contracts/opl-framework/brand-module-registry.json",
     "contracts/opl-framework/brand-module-surfaces.json",
-    "human_doc:mas_opl_agent_os_target_operating_architecture",
     "human_doc:foundry_agent_os_family_target_implementation_plan"
   ],
   "design_principles": [
@@ -716,13 +715,6 @@
         ]
       }
     ],
-    "flagship_agent_default": {
-      "agent_id": "mas",
-      "expected_path": "declarative_domain_pack_plus_opl_generated_hosted_surfaces_plus_minimal_domain_authority_kernel",
-      "domain_pack_role": "medical_research_stage_semantics_quality_gate_refs_artifact_policy_memory_policy_and_owner_answer_schema",
-      "opl_role": "activation_runtime_projection_app_cockpit_pack_generated_surfaces_refs_only_evidence_and_reconciler",
-      "private_runtime_disposition": "migration_input_not_target_architecture"
-    },
     "authority_boundary": {
       "can_claim_domain_ready": false,
       "can_claim_quality_verdict": false,
@@ -730,7 +722,6 @@
       "can_claim_production_ready": false,
       "can_claim_brand_l5_ready": false,
       "can_claim_app_release_ready": false,
-      "can_claim_mas_paper_done": false,
       "can_write_domain_truth": false,
       "can_sign_owner_receipt": false,
       "can_create_typed_blocker": false
@@ -739,8 +730,7 @@
       "ideal_experience_contract_is_l5_ready",
       "smooth_runtime_is_domain_ready",
       "quality_axis_is_quality_verdict",
-      "brand_profile_is_release_ready",
-      "mas_flagship_mapping_is_paper_done"
+      "brand_profile_is_release_ready"
     ]
   },
   "one_shot_plan_landing_model": {
@@ -836,7 +826,7 @@
         "false_completion_claims": [
           "progress_delta_receipt_is_owner_receipt",
           "stage_artifact_projection_writes_stage_current_pointer",
-          "platform_repair_is_paper_progress"
+          "platform_repair_is_deliverable_progress"
         ]
       },
       {
@@ -937,7 +927,7 @@
           "rtk npm run test:fast",
           "rtk npm run test:meta"
         ],
-        "remaining_owner_gate": "MAS_MAG_RCA_OMA_owner_chain_evidence_App_release_owner_verdict_and_runtime_long_soak_refs",
+        "remaining_owner_gate": "registered_standard_agent_owner_chain_evidence_App_release_owner_verdict_and_runtime_long_soak_refs",
         "false_completion_claims": [
           "zero_worklist_count_is_domain_ready",
           "same_cohort_diagnostic_is_app_release_ready",
@@ -961,7 +951,6 @@
       "can_claim_app_release_ready": false,
       "can_claim_brand_l5_ready": false,
       "can_claim_production_ready": false,
-      "can_claim_mas_paper_done": false,
       "can_write_domain_truth": false,
       "can_sign_owner_receipt": false,
       "can_create_typed_blocker": false,
@@ -1017,64 +1006,9 @@
   ],
   "foundry_agent_os_standard": {
     "pattern_id": "foundry_agent_os_standard.v1",
-    "source_pattern_ref": "human_doc:mas_opl_agent_os_target_operating_architecture",
+    "source_pattern_ref": "human_doc:opl_standard_agent_boundary",
     "standard_agent_registry_ref": "src/kernel/standard-agent-registry.ts",
     "target_shape": "OPL Agent OS + Domain Declarative Pack + Domain Minimal Authority Kernel + Domain Capability Registry",
-    "applies_to_domain_agents": [
-      "mas",
-      "mag",
-      "rca",
-      "oma",
-      "obf"
-    ],
-    "domain_pack_examples": {
-      "mas": "Medical Research Pack",
-      "mag": "Grant Pack",
-      "rca": "Visual Deliverable Pack",
-      "oma": "Agent-Building Pack",
-      "obf": "Book Manuscript Pack"
-    },
-    "domain_authority_kernel_examples": {
-      "mas": [
-        "medical research truth",
-        "publication quality verdict",
-        "paper artifact authority",
-        "medical memory accept/reject",
-        "owner receipt signer",
-        "typed blocker signer"
-      ],
-      "mag": [
-        "grant truth",
-        "fundability quality/export verdict",
-        "package authority",
-        "grant strategy memory accept/reject",
-        "owner receipt signer",
-        "typed blocker signer"
-      ],
-      "rca": [
-        "visual truth",
-        "layout review/export verdict",
-        "visual artifact mutation authority",
-        "visual memory accept/reject",
-        "owner receipt signer",
-        "typed blocker signer"
-      ],
-      "oma": [
-        "agent-building semantics",
-        "developer work-order materialization",
-        "mechanism proposal materialization",
-        "target-agent no-forbidden-write proof",
-        "target-agent typed blocker signer"
-      ],
-      "obf": [
-        "book manuscript truth",
-        "manuscript quality/export verdict",
-        "book artifact authority",
-        "style/reference memory accept/reject",
-        "owner receipt signer",
-        "typed blocker signer"
-      ]
-    },
     "opl_module_mapping": [
       {
         "target_capability": "pack_compiler_generated_surfaces",
@@ -1166,6 +1100,7 @@
     "default_owner_route_policy": {
       "surface_kind": "foundry_agent_default_owner_route_policy",
       "applies_to_agent_ids": [
+        "mas",
         "mag",
         "rca",
         "oma",
@@ -1287,73 +1222,6 @@
         "oma_can_claim_target_domain_ready": false,
         "oma_can_promote_default_agent_without_gate": false
       }
-    },
-    "framework_capability_packages": [
-      {
-        "agent_id": "mas-scholar-skills",
-        "package_scope": "framework_capability_package",
-        "capability_contract_ref": "mas-scholar-skills/contracts/scholar-skills-capability-modules.json",
-        "public_projection": "opl_foundry_agent_series_refs_only_capability_package",
-        "authority_boundary": {
-          "can_claim_domain_ready": false,
-          "can_claim_runtime_ready": false,
-          "can_claim_quality_verdict": false,
-          "can_claim_artifact_authority": false,
-          "can_claim_publication_readiness": false,
-          "can_write_domain_truth": false,
-          "can_sign_owner_receipt": false,
-          "can_create_typed_blocker": false,
-          "can_schedule_runtime": false
-        },
-        "capability_pack_example": "Scholar Capability Pack",
-        "authority_ref_examples": [
-          "professional skill source refs",
-          "package manifest and lock refs",
-          "workspace or quest sync receipts",
-          "domain owner consumption handoff refs"
-        ]
-      }
-    ]
-  },
-  "flagship_experience_mapping": {
-    "mapping_id": "mas_research_foundry_flagship_experience.v1",
-    "flagship_agent_id": "mas",
-    "standard_agent_shape": "Declarative Domain Pack + OPL generated/hosted surfaces + minimal authority functions",
-    "journey_artifacts": [
-      "Evidence Map",
-      "Analysis Pack",
-      "Manuscript Draft",
-      "Reviewer Letter",
-      "Revision Packet",
-      "Publication Handoff"
-    ],
-    "private_platform_residue_inputs": [
-      "private_scheduler",
-      "private_runner",
-      "private_workbench",
-      "private_status_shell"
-    ],
-    "opl_contract_surfaces": [
-      "target_operating_architecture_contract",
-      "standard_domain_agent_conformance",
-      "foundry_agent_os_conformance",
-      "pack_compiler_projection"
-    ],
-    "false_ready_claims": [
-      "mas_ready",
-      "paper_done",
-      "brand_l5_done",
-      "production_ready"
-    ],
-    "authority_boundary": {
-      "can_claim_mas_ready": false,
-      "can_claim_paper_done": false,
-      "can_claim_brand_l5_done": false,
-      "can_claim_production_ready": false,
-      "can_write_mas_truth": false,
-      "can_sign_mas_owner_receipt": false,
-      "can_create_mas_typed_blocker": false,
-      "can_authorize_publication_readiness": false
     }
   }
 }

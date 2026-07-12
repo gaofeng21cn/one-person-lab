@@ -13,6 +13,7 @@ import {
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../../../src/kernel/standard-agent-registry.ts';
 import { validateJsonSchemaPayload } from '../../../../src/kernel/schema-registry.ts';
+import { OPL_WORKSPACE_AGENT_PROFILES } from '../../../../src/modules/workspace/workspace-agent-defaults.ts';
 
 import './workspace-domain-initializer-cases/bookforge-artifact-lifecycle.ts';
 import './workspace-domain-initializer-cases/resource-provenance.ts';
@@ -103,10 +104,11 @@ test('workspace init and validate roundtrip every standard-agent registry profil
   );
 
   for (const agent of agents) {
+    const workspaceProfile = OPL_WORKSPACE_AGENT_PROFILES.find((entry) => entry.agent_id === agent.agent_id)!;
     const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-workspace-${agent.agent_id}-state-`));
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-workspace-${agent.agent_id}-root-`));
     try {
-      const projectId = `${agent.domain_alias}-roundtrip`;
+      const projectId = `${agent.agent_id}-roundtrip`;
       const initialized = runCli([
         'workspace',
         'init',
@@ -135,8 +137,8 @@ test('workspace init and validate roundtrip every standard-agent registry profil
 
       assert.equal(validated.workspace_validation.status, 'passed', agent.agent_id);
       assert.equal(schemaValidation.ok, true, `${agent.agent_id}: ${JSON.stringify(schemaValidation)}`);
-      assert.equal(workspaceIndex.agent.project_kind, agent.workspace_profile.project_kind, agent.agent_id);
-      assert.equal(workspaceIndex.profile_binding.profile_id, agent.workspace_profile.default_profile_id, agent.agent_id);
+      assert.equal(workspaceIndex.agent.project_kind, workspaceProfile.project_kind, agent.agent_id);
+      assert.equal(workspaceIndex.profile_binding.profile_id, workspaceProfile.default_profile_id, agent.agent_id);
     } finally {
       fs.rmSync(stateRoot, { recursive: true, force: true });
       fs.rmSync(workspaceRoot, { recursive: true, force: true });

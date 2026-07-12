@@ -1,10 +1,10 @@
 import { findDomainOrThrow, findWorkstreamOrThrow } from '../charter/index.ts';
 import {
   assertStandardAgentDescriptorIdentity,
-  readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorInterface,
   type StandardAgentInterface,
 } from '../../kernel/standard-agent-interface.ts';
+import { readPackageManagedStandardAgentDescriptor } from '../connect/standard-agent-interface-discovery.ts';
 import type {
   BoundaryExplanation,
   DomainContract,

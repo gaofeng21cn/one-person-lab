@@ -13,8 +13,7 @@ const CANONICAL_PACKAGE_IDS = new Map<string, string>([
     .flatMap((entry) => [
       entry.agent_id,
       entry.domain_id,
-      entry.domain_alias,
-      entry.work_alias,
+      entry.target_domain_id,
       entry.project,
       entry.plugin_name,
       entry.canonical_plugin_name,

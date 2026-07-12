@@ -6,7 +6,6 @@ import {
   isRecord,
 } from './contract-validation.ts';
 import { parseJsonText } from './json-file.ts';
-import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export const STANDARD_AGENT_INTERFACE_VERSION = 'opl_standard_agent_interface.v1' as const;
 export const STANDARD_AGENT_DESCRIPTOR_RELATIVE_PATH = 'contracts/domain_descriptor.json' as const;
@@ -385,81 +384,6 @@ export function assertStandardAgentDescriptorIdentity(
     );
   }
   return descriptor;
-}
-
-function packageManagedStandardAgentDescriptors(
-  packageIds?: readonly string[],
-) {
-  const lockPath = resolveOplStatePaths().agent_package_lock_file;
-  if (!fs.existsSync(lockPath)) return [];
-  const lockIndex = parseJsonText(fs.readFileSync(lockPath, 'utf8'));
-  if (!isRecord(lockIndex) || !Array.isArray(lockIndex.packages)) return [];
-  const accepted = packageIds ? new Set(packageIds.map(normalizedIdentity)) : null;
-  const descriptors: StandardAgentDescriptorInterface[] = [];
-  for (const value of lockIndex.packages) {
-    if (!isRecord(value)) continue;
-    const packageIdentity = [value.package_id, value.agent_id]
-      .filter((entry): entry is string => typeof entry === 'string')
-      .map(normalizedIdentity);
-    if (accepted && !packageIdentity.some((entry) => accepted.has(entry))) continue;
-    const managedSource = isRecord(value.managed_runtime_source) ? value.managed_runtime_source : null;
-    const physicalSurface = isRecord(value.physical_surface) ? value.physical_surface : null;
-    const candidates = [
-      managedSource?.status === 'current' && typeof managedSource.checkout_path === 'string'
-        ? managedSource.checkout_path
-        : null,
-      typeof physicalSurface?.plugin_source_path === 'string'
-        ? physicalSurface.plugin_source_path
-        : null,
-    ].filter((entry): entry is string => Boolean(entry));
-    for (const candidate of candidates) {
-      const descriptor = readStandardAgentDescriptorInterface(candidate);
-      if (descriptor) descriptors.push(descriptor);
-    }
-  }
-  return descriptors;
-}
-
-export function readPackageManagedStandardAgentDescriptor(
-  packageIds: readonly string[],
-): StandardAgentDescriptorInterface | null {
-  return packageManagedStandardAgentDescriptors(packageIds)[0] ?? null;
-}
-
-export function readStandardAgentDescriptorForDomain(
-  domainId: string,
-): StandardAgentDescriptorInterface | null {
-  const target = normalizedIdentity(domainId);
-  const managed = packageManagedStandardAgentDescriptors().find((descriptor) =>
-    [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
-      .map(normalizedIdentity)
-      .includes(target)
-  );
-  if (managed) return managed;
-
-  const configuredRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT?.trim();
-  if (!configuredRoot || !fs.existsSync(configuredRoot)) return null;
-  for (const entry of fs.readdirSync(configuredRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const descriptor = readStandardAgentDescriptorInterface(path.join(configuredRoot, entry.name));
-    if (
-      descriptor
-      && [descriptor.domain_id, descriptor.interface.runtime.runtime_domain_id]
-        .map(normalizedIdentity)
-        .includes(target)
-    ) return descriptor;
-  }
-  return null;
-}
-
-export function standardAgentProgressDeltaKeys(
-  domainId: string,
-  kind: 'deliverable' | 'platform',
-) {
-  const aliases = readStandardAgentDescriptorForDomain(domainId)?.interface.progress;
-  return kind === 'deliverable'
-    ? ['deliverable_progress_delta', ...(aliases?.deliverable_delta_aliases ?? [])]
-    : ['platform_repair_delta', ...(aliases?.platform_delta_aliases ?? [])];
 }
 
 export function materializeStandardAgentCommand(

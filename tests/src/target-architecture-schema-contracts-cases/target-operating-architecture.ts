@@ -152,9 +152,6 @@ test('target operating architecture keeps framework-wide ownership and authority
     assert.equal(axis.forbidden_regressions.includes('ready_claim_without_owner_evidence'), true);
     assert.equal(axis.forbidden_regressions.includes('diagnostic_tail_becomes_default_route'), true);
   }
-  assert.equal(experience.flagship_agent_default.agent_id, 'mas');
-  assert.equal(experience.flagship_agent_default.private_runtime_disposition, 'migration_input_not_target_architecture');
-
   const oneShot = contract.one_shot_plan_landing_model;
   assert.equal(oneShot.model_id, 'opl_family_one_shot_plan_landing.v1');
   assert.deepEqual(oneShot.implementation_slices.map((slice) => slice.plan_id), [
@@ -191,24 +188,10 @@ test('target operating architecture keeps framework-wide ownership and authority
 
   const foundry = contract.foundry_agent_os_standard;
   assert.equal(foundry.pattern_id, 'foundry_agent_os_standard.v1');
-  assert.deepEqual(foundry.applies_to_domain_agents, ['mas', 'mag', 'rca', 'oma', 'obf']);
-  assert.deepEqual(foundry.framework_capability_packages?.map((entry) => entry.agent_id), ['mas-scholar-skills']);
-  assert.equal(foundry.framework_capability_packages?.[0]?.package_scope, 'framework_capability_package');
-  assert.equal(foundry.framework_capability_packages?.[0]?.authority_boundary.can_claim_publication_readiness, false);
   assert.equal(foundry.os_readback_contract.requires_lane_to_plan_mapping, true);
   assert.equal(foundry.os_readback_contract.requires_main_session_fresh_verification, true);
   assert.equal(foundry.os_readback_contract.docs_refs_tests_commit_only_can_score_100, false);
   assert.equal(foundry.os_readback_contract.readback_contract_landed_can_claim_complete, false);
-
-  const flagship = contract.flagship_experience_mapping;
-  assert.equal(flagship.mapping_id, 'mas_research_foundry_flagship_experience.v1');
-  assert.equal(flagship.flagship_agent_id, 'mas');
-  assert.deepEqual(flagship.false_ready_claims, [
-    'mas_ready',
-    'paper_done',
-    'brand_l5_done',
-    'production_ready',
-  ]);
 
   for (const [boundaryName, boundary] of Object.entries({
     target_architecture: contract.authority_boundary,
@@ -217,7 +200,6 @@ test('target operating architecture keeps framework-wide ownership and authority
     experience: experience.authority_boundary,
     one_shot: oneShot.authority_boundary,
     foundry_agent_os: foundry.authority_boundary,
-    flagship: flagship.authority_boundary,
   })) {
     for (const [claim, allowed] of Object.entries(boundary)) {
       assert.equal(allowed, false, `${boundaryName} must not claim ${claim}`);

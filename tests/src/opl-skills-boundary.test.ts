@@ -206,7 +206,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     } else if (pack.canonical_plugin_name === 'obf') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'obf');
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect obf');
-      assert.equal(pack.command_surface_spine.work_alias, 'book');
+      assert.equal(pack.command_surface_spine.work_alias, 'work');
     } else if (pack.canonical_plugin_name === 'mas') {
       assert.equal(pack.foundry_agent_series.brand_cli, 'mas');
       assert.equal(pack.foundry_agent_series.default_foundry_command_surface, 'opl foundry agents inspect mas');

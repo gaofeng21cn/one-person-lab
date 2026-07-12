@@ -114,7 +114,7 @@ test('opl connect skills discovers the family plugin packs through the configure
       'series_membership',
       'standard_agent_registry_ref',
     ]);
-    assert.equal(bookforgePack?.command_surface_spine?.work_alias, 'book');
+    assert.equal(bookforgePack?.command_surface_spine?.work_alias, 'work');
     const scholarSkillsPack = output.skill_catalog.packs.find((entry: { domain_id: string }) => entry.domain_id === 'scholarskills');
     assert.equal(scholarSkillsPack?.distribution_role, 'framework_capability_plugin_pack');
     assert.equal(

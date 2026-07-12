@@ -8,12 +8,14 @@ import {
   assertStandardAgentDescriptorIdentity,
   materializeStandardAgentCommand,
   parseStandardAgentInterface,
-  readPackageManagedStandardAgentDescriptor,
   readStandardAgentDescriptorInterface,
   readStandardAgentInterface,
   STANDARD_AGENT_INTERFACE_VERSION,
-  standardAgentProgressDeltaKeys,
 } from '../../src/kernel/standard-agent-interface.ts';
+import {
+  readPackageManagedStandardAgentDescriptor,
+  standardAgentProgressDeltaKeys,
+} from '../../src/modules/connect/standard-agent-interface-discovery.ts';
 
 function fixture() {
   return {
@@ -119,36 +121,52 @@ test('standard Agent interface parser enforces closed objects and declared place
   );
 });
 
-test('package lock managed source is the canonical descriptor discovery path', () => {
-  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-state-'));
+test('package readiness is the canonical managed descriptor discovery gate', () => {
   const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-standard-interface-managed-'));
-  const previousStateDir = process.env.OPL_STATE_DIR;
   try {
     fs.mkdirSync(path.join(repoDir, 'contracts'), { recursive: true });
     fs.writeFileSync(path.join(repoDir, 'contracts', 'domain_descriptor.json'), `${JSON.stringify({
       domain_id: 'fixture-agent',
       standard_agent_interface: fixture(),
     })}\n`);
-    fs.writeFileSync(path.join(stateDir, 'agent-package-locks.json'), `${JSON.stringify({
-      surface_kind: 'opl_agent_package_lock_index',
-      version: 'opl-agent-package-lock-index.v1',
-      packages: [{
-        package_id: 'fixture',
-        agent_id: 'fixture',
-        managed_runtime_source: {
-          status: 'current',
-          checkout_path: repoDir,
-        },
-      }],
-    })}\n`);
-    process.env.OPL_STATE_DIR = stateDir;
-    const descriptor = readPackageManagedStandardAgentDescriptor(['fixture']);
+    const statusReader = ((input: { packageId?: string | null }) => ({
+      opl_agent_package_status: input.packageId === 'mas'
+        ? {
+            operational_ready: true,
+            runtime_source_readiness: {
+              status: 'current',
+              operational_ready: true,
+              checkout_path: repoDir,
+              expected_tree_sha256: 'sha256:current',
+              actual_tree_sha256: 'sha256:current',
+            },
+          }
+        : {
+            operational_ready: false,
+            runtime_source_readiness: {
+              status: 'missing',
+              operational_ready: false,
+              checkout_path: null,
+              expected_tree_sha256: null,
+              actual_tree_sha256: null,
+            },
+          },
+    })) as any;
+    const descriptor = readPackageManagedStandardAgentDescriptor(['mas'], statusReader);
     assert.equal(descriptor?.repo_dir, repoDir);
     assert.equal(descriptor?.interface.runtime.runtime_domain_id, 'fixture');
-    assert.deepEqual(standardAgentProgressDeltaKeys('fixture-agent', 'deliverable'), [
+    assert.deepEqual(standardAgentProgressDeltaKeys('fixture-agent', 'deliverable', statusReader), [
       'deliverable_progress_delta',
       'fixture_deliverable_delta',
     ]);
+    const staleStatusReader = ((input: { packageId?: string | null }) => {
+      const readback = statusReader(input);
+      if (input.packageId === 'mas') {
+        readback.opl_agent_package_status.runtime_source_readiness.actual_tree_sha256 = 'sha256:stale';
+      }
+      return readback;
+    }) as any;
+    assert.equal(readPackageManagedStandardAgentDescriptor(['mas'], staleStatusReader), null);
     assert.throws(
       () => assertStandardAgentDescriptorIdentity(descriptor!, {
         project: 'different-agent',
@@ -158,9 +176,6 @@ test('package lock managed source is the canonical descriptor discovery path', (
     );
     assert.equal(readStandardAgentDescriptorInterface(repoDir)?.domain_id, 'fixture-agent');
   } finally {
-    if (previousStateDir === undefined) delete process.env.OPL_STATE_DIR;
-    else process.env.OPL_STATE_DIR = previousStateDir;
-    fs.rmSync(stateDir, { recursive: true, force: true });
     fs.rmSync(repoDir, { recursive: true, force: true });
   }
 });
