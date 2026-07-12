@@ -7,25 +7,25 @@ import { parseRequiredValueOptions } from './required-value-options.mjs';
 import { readJsonFile } from './script-json-boundary.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const appSourcePrefix = 'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json';
+const workflowSourcePrefix = 'gaofeng21cn/opl-flow:contracts/workflow-policy.json';
 
 function parseCliOptions(argv) {
   const parsed = {
-    appProductProfile: null,
+    workflowPolicy: null,
     out: path.join(repoRoot, 'contracts', 'opl-framework', 'codex-default-profile.json'),
   };
 
   parseRequiredValueOptions(argv, {
-    '--app-product-profile': (value) => {
-      parsed.appProductProfile = path.resolve(value);
+    '--workflow-policy': (value) => {
+      parsed.workflowPolicy = path.resolve(value);
     },
     '--out': (value) => {
       parsed.out = path.resolve(value);
     },
   });
 
-  if (!parsed.appProductProfile) {
-    throw new Error('--app-product-profile is required.');
+  if (!parsed.workflowPolicy) {
+    throw new Error('--workflow-policy is required.');
   }
   return parsed;
 }
@@ -51,124 +51,74 @@ function assertEqual(actual, expected, field, expectedField) {
   }
 }
 
-function buildProfile(appProfile) {
-  const root = record(appProfile, 'root');
+function buildProfile(workflowPolicy) {
+  const root = record(workflowPolicy, 'root');
   assertEqual(
-    requiredString(root.owner, 'owner'),
-    'one-person-lab-app',
-    'owner',
-    'one-person-lab-app',
+    requiredString(root.schema, 'schema'),
+    'opl_flow_workflow_policy.v1',
+    'schema',
+    'opl_flow_workflow_policy.v1',
   );
+  const packageProfile = record(root.package, 'package');
   assertEqual(
-    requiredString(root.purpose, 'purpose'),
-    'app_owned_product_profile',
-    'purpose',
-    'app_owned_product_profile',
+    requiredString(packageProfile.id, 'package.id'),
+    'opl-flow',
+    'package.id',
+    'opl-flow',
   );
-  const session = record(root.default_session_profile, 'default_session_profile');
-  const codex = record(root.codex, 'codex');
-  const autoPolicy = codex.auto_model_policy == null
-    ? null
-    : record(codex.auto_model_policy, 'codex.auto_model_policy');
+  const autoPolicy = record(root.codex_model_policy, 'codex_model_policy');
   const configuredDefault = record(
     autoPolicy?.configured_default,
-    'codex.auto_model_policy.configured_default',
-  );
-  const fallback = autoPolicy?.catalog_unavailable_fallback == null
-    ? null
-    : record(
-      autoPolicy.catalog_unavailable_fallback,
-      'codex.auto_model_policy.catalog_unavailable_fallback',
-    );
-  const defaultModel = requiredString(codex.default_model, 'codex.default_model');
-  const defaultReasoningEffort = requiredString(
-    codex.default_reasoning_effort,
-    'codex.default_reasoning_effort',
+    'codex_model_policy.configured_default',
   );
   const model = requiredString(
     configuredDefault.model,
-    'codex.auto_model_policy.configured_default.model',
+    'codex_model_policy.configured_default.model',
   );
   const reasoningEffort = requiredString(
     configuredDefault.reasoning_effort,
-    'codex.auto_model_policy.configured_default.reasoning_effort',
+    'codex_model_policy.configured_default.reasoning_effort',
   );
-  const provider = requiredString(session.provider, 'default_session_profile.provider');
-  const baseUrl = requiredString(session.base_url, 'default_session_profile.base_url');
-
-  assertEqual(model, defaultModel, 'fallback model', 'codex.default_model');
-  assertEqual(reasoningEffort, defaultReasoningEffort, 'fallback reasoning effort', 'codex.default_reasoning_effort');
-  assertEqual(
-    requiredString(fallback?.model, 'codex.auto_model_policy.catalog_unavailable_fallback.model'),
-    model,
-    'catalog fallback model',
-    'configured default model',
-  );
-  assertEqual(
-    requiredString(fallback?.reasoning_effort, 'codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort'),
-    reasoningEffort,
-    'catalog fallback reasoning effort',
-    'configured default reasoning effort',
-  );
-  assertEqual(
-    requiredString(session.model, 'default_session_profile.model'),
-    model,
-    'default_session_profile.model',
-    'Codex fallback model',
-  );
-  assertEqual(
-    requiredString(session.reasoning_effort, 'default_session_profile.reasoning_effort'),
-    reasoningEffort,
-    'default_session_profile.reasoning_effort',
-    'Codex fallback reasoning effort',
-  );
-
-  const modelSource = `${appSourcePrefix}#codex.auto_model_policy.configured_default.model`;
-  const reasoningSource = `${appSourcePrefix}#codex.auto_model_policy.configured_default.reasoning_effort`;
+  const modelSource = `${workflowSourcePrefix}#codex_model_policy.configured_default.model`;
+  const reasoningSource = `${workflowSourcePrefix}#codex_model_policy.configured_default.reasoning_effort`;
 
   return {
     surface_id: 'opl_codex_default_profile',
     version: 'g2',
     owner: 'one-person-lab',
-    purpose: 'app_owned_codex_install_default_projection',
+    purpose: 'workflow_owned_codex_install_default_projection',
     state: 'generated_projection',
-    machine_boundary: 'Bundled install fallback only; App auto mode and Codex CLI model catalog remain the runtime selection owners.',
+    machine_boundary: 'OPL Flow owns the recommendation; OPL Base writes config, the fresh Codex catalog resolves auto mode, and explicit user overrides remain highest priority.',
     generated_projection: {
-      source_owner: 'one-person-lab-app',
-      source_repo: 'gaofeng21cn/one-person-lab-app',
-      source_ref: `${appSourcePrefix}#${autoPolicy ? 'codex.auto_model_policy' : 'codex'}`,
+      source_owner: 'opl-flow',
+      source_repo: 'gaofeng21cn/opl-flow',
+      source_ref: `${workflowSourcePrefix}#codex_model_policy`,
       source_field_refs: {
         model: modelSource,
-        model_consistency: `${appSourcePrefix}#codex.default_model`,
         reasoning_effort: reasoningSource,
-        reasoning_effort_consistency: `${appSourcePrefix}#codex.default_reasoning_effort`,
-        session_model_consistency: `${appSourcePrefix}#default_session_profile.model`,
-        session_reasoning_effort_consistency: `${appSourcePrefix}#default_session_profile.reasoning_effort`,
-        provider: `${appSourcePrefix}#default_session_profile.provider`,
-        base_url: `${appSourcePrefix}#default_session_profile.base_url`,
       },
       generator: 'scripts/export-codex-default-profile.mjs',
       generation_stage: 'development_or_release_sync',
       runtime_source_checkout_required: false,
     },
-    model_provider: provider,
+    model_provider: 'gflab',
     model,
     model_reasoning_effort: reasoningEffort,
-    provider_name: provider,
-    base_url: baseUrl,
-    base_url_role: 'product_default_provider_endpoint',
-    model_profile_role: 'app_catalog_unavailable_fallback_projection',
+    provider_name: 'gflab',
+    base_url: 'https://gflabtoken.cn/v1',
+    base_url_role: 'opl_base_default_provider_endpoint',
+    model_profile_role: 'opl_flow_recommendation_projection',
   };
 }
 
 function main() {
   const options = parseCliOptions(process.argv.slice(2));
-  const profile = buildProfile(readJsonFile(options.appProductProfile));
+  const profile = buildProfile(readJsonFile(options.workflowPolicy));
   fs.mkdirSync(path.dirname(options.out), { recursive: true });
   fs.writeFileSync(options.out, `${JSON.stringify(profile, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify({
     status: 'completed',
-    source: options.appProductProfile,
+    source: options.workflowPolicy,
     output: options.out,
     profile: {
       model_provider: profile.model_provider,

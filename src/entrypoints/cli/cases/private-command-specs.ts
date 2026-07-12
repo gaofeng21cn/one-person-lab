@@ -265,16 +265,15 @@ export function buildInternalCommandSpecs(
           targetQuest: parsed.targetQuest,
           targetRoot: parsed.targetRoot,
           companionMode: parsed.companionMode,
-          superpowersProfile: parsed.superpowersProfile,
         });
       },
     },
     'skill-companion-status': {
-      usage: 'opl skill companion status [--home <home_path>] [--superpowers <keep|lite|full>]',
+      usage: 'opl skill companion status [--home <home_path>]',
       summary: 'Inspect the OPL recommended companion skill ecosystem without changing user skill configuration.',
       examples: [
         'opl skill companion status',
-        'opl skill companion status --superpowers lite',
+        'opl skill companion status --home /tmp/codex-home',
       ],
       handler: (args) => {
         const parsed = parseSkillPackArgs(args, commandSpecs['skill-companion-status']);
@@ -282,18 +281,15 @@ export function buildInternalCommandSpecs(
           version: 'g2',
           companion_skills: syncOplCompanionSkills(parsed.home, {
             mode: 'observe',
-            superpowersProfile: parsed.superpowersProfile ?? 'keep',
           }),
         };
       },
     },
     'skill-companion-apply': {
-      usage: 'opl skill companion apply --mode <ask_to_apply|managed> [--home <home_path>] [--superpowers <keep|lite|full>]',
+      usage: 'opl skill companion apply --mode <ask_to_apply|managed> [--home <home_path>]',
       summary: 'Apply OPL companion skill recommendations only when the user or OPL-managed profile explicitly permits it.',
       examples: [
-        'opl skill companion apply --mode managed --superpowers keep',
-        'opl skill companion apply --mode managed --superpowers lite',
-        'opl skill companion apply --mode managed --superpowers full',
+        'opl skill companion apply --mode managed',
       ],
       handler: (args) => {
         const parsed = parseSkillPackArgs(args, commandSpecs['skill-companion-apply']);
@@ -302,7 +298,6 @@ export function buildInternalCommandSpecs(
           version: 'g2',
           companion_skills: syncOplCompanionSkills(parsed.home, {
             mode,
-            superpowersProfile: parsed.superpowersProfile ?? 'keep',
           }),
         };
       },

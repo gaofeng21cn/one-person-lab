@@ -80,7 +80,7 @@
     "packages:release-discipline": "node ./scripts/package-release-discipline.mjs",
     "packages:daily-check": "node ./scripts/package-channel-daily-check.mjs",
     "packages:cleanup-ghcr": "node --experimental-strip-types ./scripts/cleanup-ghcr-package-versions.mjs",
-    "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs",
+    "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs --workflow-policy ../opl-flow/contracts/workflow-policy.json",
     "capability-map:audit": "node ./scripts/capability-map-audit.mjs",
     "docs:whitepaper": "node --experimental-strip-types ./scripts/build-opl-whitepaper.ts",
     "docs:whitepapers:family": "bash ./scripts/build-opl-family-whitepapers.sh",

@@ -9,15 +9,6 @@ function packagedSkillPath(packagedSkillsRoot: string | null, skillId: string): 
   return packagedSkillsRoot ? [path.join(packagedSkillsRoot, skillId, 'SKILL.md')] : [];
 }
 
-function packagedSuperpowersPaths(packagedSkillsRoot: string | null): string[] {
-  return packagedSkillsRoot
-    ? [
-      path.join(packagedSkillsRoot, 'superpowers', 'skills', 'using-superpowers', 'SKILL.md'),
-      path.join(packagedSkillsRoot, 'superpowers', 'skills', 'verification-before-completion', 'SKILL.md'),
-    ]
-    : [];
-}
-
 function primaryRuntimeSkillPaths(codexHome: string, packageId: string, skillId: string): string[] {
   const packageRoot = path.join(codexHome, 'plugins', 'cache', 'openai-primary-runtime', packageId);
   if (!fs.existsSync(packageRoot) || !fs.statSync(packageRoot).isDirectory()) return [];
@@ -29,28 +20,11 @@ function primaryRuntimeSkillPaths(codexHome: string, packageId: string, skillId:
 
 export function buildOplRecommendedSkillSpecs(options: {
   codexHome: string;
-  superpowersRepoDir: string;
-  agentsSuperpowersDir: string;
   skillsManagerHome: string;
   packagedSkillsRoot: string | null;
 }): RecommendedSkillSpec[] {
-  const { codexHome, superpowersRepoDir, agentsSuperpowersDir, skillsManagerHome, packagedSkillsRoot } = options;
+  const { codexHome, skillsManagerHome, packagedSkillsRoot } = options;
   return [
-    {
-      skill_id: 'superpowers',
-      label: 'Superpowers process skills',
-      required: false,
-      source: 'superpowers',
-      expected_paths: [
-        path.join(superpowersRepoDir, 'skills', 'using-superpowers', 'SKILL.md'),
-        path.join(superpowersRepoDir, 'skills', 'verification-before-completion', 'SKILL.md'),
-        path.join(agentsSuperpowersDir, 'using-superpowers', 'SKILL.md'),
-        ...packagedSuperpowersPaths(packagedSkillsRoot),
-      ],
-      install_hint: 'OPL installs the official Superpowers bundle by cloning https://github.com/obra/superpowers.git into ~/.codex/superpowers and linking ~/.agents/skills/superpowers to the full skills directory.',
-      update_hint: 'Update with: cd ~/.codex/superpowers && git pull --ff-only. The ~/.agents/skills/superpowers symlink makes updates visible after Codex/App restart.',
-      supports: ['planning', 'debugging', 'verification', 'branch_finish', 'skill_methodology'],
-    },
     {
       skill_id: 'officecli',
       label: 'officecli core skill',

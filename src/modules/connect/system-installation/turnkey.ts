@@ -4,10 +4,7 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
-import {
-  installOplFlowPluginIfAvailable,
-  requireOplFlowPluginInstaller,
-} from '../codexcont-intelligence-mode.ts';
+import { runWorkflowPackageAction } from '../workflow-package-lifecycle.ts';
 import { bootstrapLocalCodexDefaults } from '../../../kernel/local-codex-defaults.ts';
 import { runFamilyRuntime, runNativeHelperRepairAction, runRuntimeManagerAction } from '../../runway/index.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
@@ -318,7 +315,6 @@ export async function runOplTurnkeyInstall(
   input: OplTurnkeyInstallInput = {},
 ) {
   const installMode = input.withApp ? 'desktop' : 'headless';
-  const oplFlowInstaller = requireOplFlowPluginInstaller();
   const skipModules = input.skipModules ?? !input.modules?.length;
   const modules = skipModules ? [] : normalizeModuleSelection(input.modules);
   const selectedEngines: OplEngineId[] = input.noOnlineRuntime ? ['codex'] : [...DEFAULT_ENGINES];
@@ -359,7 +355,9 @@ export async function runOplTurnkeyInstall(
         }
         return runOplEngineAction(contracts, 'install', engineId);
       }));
-    const oplFlowPlugin = installOplFlowPluginIfAvailable(oplFlowInstaller);
+    const oplFlowPackage = input.withApp
+      ? runWorkflowPackageAction('install', { packageId: 'opl-flow' })
+      : null;
     const codexConfigBootstrap = bootstrapLocalCodexDefaults();
     const moduleActions = skipModules
       ? []
@@ -421,7 +419,11 @@ export async function runOplTurnkeyInstall(
         }),
       );
     }
-    const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed', superpowersProfile: 'keep' });
+    const packageDependencySync = oplFlowPackage && 'dependency_sync' in oplFlowPackage.workflow_package
+      ? oplFlowPackage.workflow_package.dependency_sync
+      : null;
+    const companionSkillSync = packageDependencySync
+      ?? syncOplCompanionSkills(undefined, { mode: 'observe', skillIds: [], toolIds: [] });
     const initialize = await buildOplInitialize(contracts);
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('install_completed', {
@@ -457,16 +459,16 @@ export async function runOplTurnkeyInstall(
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
         companion_skill_sync: companionSkillSync,
-        opl_flow_plugin: oplFlowPlugin,
+        opl_flow_package: oplFlowPackage?.workflow_package ?? null,
         system_initialize: initialize.system_initialize,
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,
         notes: [
           installMode === 'headless'
-            ? 'Headless mode installs the OPL Framework runtime, Codex CLI, configured family runtime provider, selected family modules, recommended skills, and native helpers without installing or opening the desktop App.'
+            ? 'Headless mode installs the OPL Framework runtime, Codex CLI, configured family runtime provider, selected family modules, and native helpers without installing the OPL Flow workflow dependency closure or opening the desktop App.'
             : 'This command is the user-facing one-shot path for OPL + Codex CLI + configured family runtime provider + family modules + recommended Codex skills + desktop GUI.',
           'Full online family readiness requires the configured family runtime provider. --no-online-runtime is a development/offline diagnostic mode and reports degraded readiness.',
-          'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
+          'Recommended skill sync follows the selected package dependency policy; existing user-managed skill directories are preserved and missing optional sources are reported for Environment Management.',
           installMode === 'headless'
             ? 'The OPL base is headless by default. Install or open the optional desktop App only with --with-app.'
             : 'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab-app release asset before opening the app.',

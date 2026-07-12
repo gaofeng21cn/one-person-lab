@@ -204,7 +204,6 @@ function buildAgentPackagePostApplyActions(
 
   const skillSync = syncFamilySkillPacks({
     companionMode: 'observe',
-    superpowersProfile: 'keep',
   }) as unknown as Record<string, unknown>;
   const skillSyncPayload = nestedRecord(skillSync, 'skill_sync');
   const skillSyncSummary = nestedRecord(skillSyncPayload, 'summary');

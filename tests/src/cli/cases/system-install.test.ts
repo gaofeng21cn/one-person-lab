@@ -120,7 +120,6 @@ test('install --headless --modules rca installs the framework payload without in
       OPL_OPEN_BIN: forbiddenGuiTool,
       PATH: '/usr/bin:/bin',
       ...createFakeNativeHelperRepairEnv(homeRoot),
-      ...createFakeCompanionInstallEnv(homeRoot),
       ...createFakeOplFlowInstallEnv(homeRoot),
     }) as any;
 
@@ -134,7 +133,8 @@ test('install --headless --modules rca installs the framework payload without in
     assert.equal(output.install.native_helper_action.action, 'repair_native_helpers');
     assert.equal(output.install.native_helper_action.status, 'completed');
     assert.equal(output.install.native_helper_action.after.runtime.status, 'available');
-    assert.equal(output.install.companion_skill_sync.mode, 'managed');
+    assert.equal(output.install.companion_skill_sync.mode, 'observe');
+    assert.equal(output.install.companion_skill_sync.summary.total, 0);
     assert.equal(fs.existsSync(guiToolLogPath), false);
     assert.equal(fs.existsSync(path.join(homeRoot, 'Applications')), false);
   } finally {
@@ -183,7 +183,6 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     PATH: '/usr/bin:/bin',
-    ...createFakeCompanionInstallEnv(homeRoot),
   };
 
   try {
@@ -209,39 +208,15 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');
     assert.equal(output.install.codex_config_bootstrap.api_key_present, false);
     assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
-    assert.equal(output.install.companion_skill_sync.mode, 'managed');
-    assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
-    assert.deepEqual(
-      output.install.companion_skill_sync.tools.map((entry: any) => [entry.tool_id, entry.status, entry.action, entry.version]),
-      [
-        ['officecli', 'installed', 'install', '1.0.70-test'],
-        ['mineru-open-api', 'installed', 'install', 'mineru-open-api version v0.1.3-test'],
-      ],
-    );
-    assert.equal(output.install.companion_skill_sync.summary.tools_ready, 2);
-    assert.equal(output.install.companion_skill_sync.summary.tools_total, 2);
-    assert.equal(output.install.opl_flow_plugin.status, 'installed');
+    assert.equal(output.install.companion_skill_sync.mode, 'observe');
+    assert.equal(output.install.companion_skill_sync.summary.total, 0);
+    assert.deepEqual(output.install.companion_skill_sync.items, []);
+    assert.deepEqual(output.install.companion_skill_sync.tools, []);
+    assert.equal(output.install.opl_flow_package, null);
     assert.equal(output.install.runtime_manager_action.executed_actions.some((entry: any) => ['install_hermes_online_runtime', 'repair_hermes_legacy_provider'].includes(entry.action_id)), false);
-    for (const skillName of [
-      'officecli',
-      'officecli-docx',
-      'officecli-pptx',
-      'officecli-xlsx',
-      'officecli-academic-paper',
-      'officecli-data-dashboard',
-      'officecli-financial-model',
-      'officecli-pitch-deck',
-      'ui-ux-pro-max',
-      'mineru-document-extractor',
-    ]) {
-      const item = output.install.companion_skill_sync.items.find((entry: any) => entry.skill_id === skillName);
-      assert.equal(item?.status, 'synced');
-      assert.equal(item?.action, 'symlink');
-      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
-      assert.match(fs.readFileSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md'), 'utf8'), /#/);
-    }
-    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'officecli')), true);
-    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'mineru-open-api')), true);
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'officecli')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'officecli')), false);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'mineru-open-api')), false);
     assert.equal(output.install.first_run_log.surface_id, 'opl_first_run_log');
     assert.equal(output.install.first_run_log.event_schema_version, 'opl_first_run_event.v1');
     assert.equal(output.install.first_run_log.log_path, path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl'));
@@ -301,7 +276,7 @@ test('managed companion sync writes materialized skills with readable permission
   fs.chmodSync(mineruMetaPath, 0o200);
 
   try {
-    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed', '--superpowers', 'keep'], {
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
@@ -452,7 +427,7 @@ test('recommended system companion skills exclude MAS/MDS project-local stage sk
   }
 });
 
-test('recommended system companion skills keep family domain skills plugin-only when packaged Full runtime is present', () => {
+test('managed companion materializer keeps family domain skills plugin-only when packaged Full runtime is present', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-packaged-family-skills-home-'));
   const packagedSkillsRoot = path.join(homeRoot, 'runtime', 'current', 'skills');
 
@@ -462,7 +437,6 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'mag',
       'rca',
       'opl-meta-agent',
-      'superpowers',
       'officecli',
       'officecli-docx',
       'officecli-pptx',
@@ -475,46 +449,26 @@ test('recommended system companion skills keep family domain skills plugin-only 
       'mineru-document-extractor',
     ]) {
       fs.mkdirSync(path.join(packagedSkillsRoot, skillId), { recursive: true });
-      if (skillId === 'superpowers') {
-        fs.mkdirSync(path.join(packagedSkillsRoot, skillId, 'skills', 'using-superpowers'), { recursive: true });
-        fs.mkdirSync(
-          path.join(packagedSkillsRoot, skillId, 'skills', 'verification-before-completion'),
-          { recursive: true },
-        );
-        fs.writeFileSync(
-          path.join(packagedSkillsRoot, skillId, 'skills', 'using-superpowers', 'SKILL.md'),
-          '# using-superpowers\n',
-        );
-        fs.writeFileSync(
-          path.join(packagedSkillsRoot, skillId, 'skills', 'verification-before-completion', 'SKILL.md'),
-          '# verification-before-completion\n',
-        );
-      } else {
-        fs.writeFileSync(
-          path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
-          `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
-        );
-      }
+      fs.writeFileSync(
+        path.join(packagedSkillsRoot, skillId, 'SKILL.md'),
+        `---\nname: ${skillId}\ndescription: packaged ${skillId}\n---\n\n# ${skillId}\n`,
+      );
     }
 
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
+    const output = runCli(['skill', 'companion', 'apply', '--mode', 'managed'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_PACKAGED_SKILLS_ROOT: packagedSkillsRoot,
       OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
-      ...createFakeOplFlowInstallEnv(homeRoot),
       PATH: `${path.join(homeRoot, '.local', 'bin')}:/usr/bin:/bin`,
     }) as any;
 
-    const syncedById = new Map(output.install.companion_skill_sync.items.map((item: any) => [item.skill_id, item.status]));
+    const syncedById = new Map(output.companion_skills.items.map((item: any) => [item.skill_id, item.status]));
     for (const skillId of ['mas', 'mag', 'rca', 'opl-meta-agent']) {
       assert.equal(syncedById.has(skillId), false);
       assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillId, 'SKILL.md')), false);
     }
-    assert.equal(syncedById.get('superpowers'), 'ready');
-    assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'superpowers')), false);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'superpowers', 'SKILL.md')), false);
     for (const skillId of [
       'officecli',
       'officecli-docx',
@@ -543,7 +497,6 @@ test('recommended system companion skills keep family domain skills plugin-only 
     const readyById = new Map(
       ready.system_initialize.recommended_skills.skills.map((skill: any) => [skill.skill_id, skill.status]),
     );
-    assert.equal(readyById.get('superpowers'), 'ready');
     for (const skillId of [
       'officecli',
       'officecli-docx',
@@ -573,8 +526,6 @@ test('managed companion sync does not mirror MAS/MDS project-local stage skills 
       'apply',
       '--mode',
       'managed',
-      '--superpowers',
-      'keep',
     ], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
@@ -776,62 +727,6 @@ test('install command upgrades an existing OPL Gateway alias while preserving it
   }
 });
 
-test('install command upgrades an OPL Flow intelligence proxy without requiring a bearer token', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-existing-opl-proxy-home-'));
-  const codexHome = path.join(homeRoot, 'codex-home');
-  const codexContHome = path.join(homeRoot, 'codexcont-home');
-  const configPath = path.join(codexHome, 'config.toml');
-
-  try {
-    fs.mkdirSync(codexHome, { recursive: true });
-    fs.mkdirSync(codexContHome, { recursive: true });
-    fs.writeFileSync(
-      configPath,
-      [
-        'model_provider = "proxy-alias"',
-        'model = "gpt-5.5"',
-        'model_reasoning_effort = "xhigh"',
-        '',
-        '[model_providers.proxy-alias]',
-        'name = "OPL Flow Proxy"',
-        'base_url = "http://127.0.0.1:8787/v1/"',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
-    fs.writeFileSync(
-      path.join(codexContHome, 'opl-flow-intelligence-enhancement.json'),
-      `${JSON.stringify({
-        surface_kind: 'opl_flow_intelligence_enhancement_receipt.v1',
-        status: 'enabled',
-        previous_provider_base_url: OPL_GATEWAY_BASE_URL,
-      }, null, 2)}\n`,
-      'utf8',
-    );
-
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
-      HOME: homeRoot,
-      CODEX_HOME: codexHome,
-      OPL_CODEXCONT_HOME: codexContHome,
-      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...createFakeOplFlowInstallEnv(homeRoot),
-      ...disableRemoteCompanionInstall(),
-    }) as any;
-
-    const bootstrap = output.install.codex_config_bootstrap;
-    assert.equal(bootstrap.status, 'completed');
-    assert.equal(bootstrap.api_key_present, false);
-    assert.equal(bootstrap.management_receipt.provider_route, 'intelligence_proxy');
-    assert.equal(output.install.system_initialize.core_engines.codex.opl_gateway_configured, true);
-    const config = fs.readFileSync(configPath, 'utf8');
-    assert.match(config, /model_provider = "proxy-alias"/);
-    assertBundledCodexModel(bootstrap, config);
-    assert.doesNotMatch(config, /experimental_bearer_token/);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
 test('install command does not upgrade a direct OPL Gateway config without a bearer token', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-tokenless-direct-gateway-home-'));
   const codexHome = path.join(homeRoot, 'codex-home');
@@ -920,62 +815,6 @@ test('install command does not overwrite a third-party provider using the gflab 
     assert.match(config, /\[model_providers\.opl_gateway\]/);
     assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
     assert.match(config, /experimental_bearer_token = "new-opl-key"/);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
-test('install command fails when the mandatory OPL Flow plugin source is unavailable', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-missing-flow-home-'));
-
-  try {
-    const failure = runCliFailure(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
-      HOME: homeRoot,
-      CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_FLOW_INSTALLER_SCRIPT: '',
-      OPL_FLOW_REPO_ROOT: '',
-      OPL_MODULES_ROOT: path.join(homeRoot, 'missing-modules'),
-      OPL_CODEX_API_KEY: 'must-not-be-written-before-flow-preflight',
-      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...disableRemoteCompanionInstall(),
-    });
-
-    assert.equal(failure.payload.error.code, 'surface_not_found');
-    assert.match(failure.payload.error.message, /OPL Flow plugin installer/);
-    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'config.toml')), false);
-    assert.equal(
-      fs.existsSync(path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl')),
-      false,
-    );
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
-test('install command discovers the mandatory OPL Flow installer from the managed modules root', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-managed-flow-home-'));
-  const modulesRoot = path.join(homeRoot, 'managed-modules');
-  const installerPath = path.join(modulesRoot, 'opl-flow', 'scripts', 'install_local_plugin.py');
-
-  try {
-    fs.mkdirSync(path.dirname(installerPath), { recursive: true });
-    fs.writeFileSync(
-      installerPath,
-      'import json\nprint(json.dumps({"surface_kind": "opl_flow_plugin_install_receipt.v1", "status": "installed"}))\n',
-      'utf8',
-    );
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--headless', '--skip-native-helper-repair'], {
-      HOME: homeRoot,
-      CODEX_HOME: path.join(homeRoot, 'codex-home'),
-      OPL_FLOW_INSTALLER_SCRIPT: '',
-      OPL_FLOW_REPO_ROOT: '',
-      OPL_MODULES_ROOT: modulesRoot,
-      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      ...disableRemoteCompanionInstall(),
-    }) as any;
-
-    assert.equal(output.install.opl_flow_plugin.status, 'installed');
-    assert.equal(output.install.opl_flow_plugin.installer_path, installerPath);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

@@ -65,12 +65,12 @@ export type CodexDefaultProfile = {
   surface_id: 'opl_codex_default_profile';
   version: 'g2';
   owner: 'one-person-lab';
-  purpose: 'app_owned_codex_install_default_projection';
+  purpose: 'workflow_owned_codex_install_default_projection';
   state: 'generated_projection';
   machine_boundary: string;
   generated_projection: {
-    source_owner: 'one-person-lab-app';
-    source_repo: 'gaofeng21cn/one-person-lab-app';
+    source_owner: 'opl-flow';
+    source_repo: 'gaofeng21cn/opl-flow';
     source_ref: string;
     source_field_refs: Record<string, string>;
     generator: 'scripts/export-codex-default-profile.mjs';
@@ -87,7 +87,6 @@ export type CodexDefaultProfile = {
 };
 
 export const OPL_GATEWAY_BASE_URL = 'https://gflabtoken.cn/v1';
-export const OPL_CODEXCONT_PROXY_BASE_URL = 'http://127.0.0.1:8787/v1';
 
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -266,16 +265,10 @@ function readGeneratedProjection(profile: Record<string, unknown>): CodexDefault
       { profile_path: resolveBundledCodexDefaultProfilePath() },
     );
   }
-  const sourcePrefix = 'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json';
+  const sourcePrefix = 'gaofeng21cn/opl-flow:contracts/workflow-policy.json';
   const expectedSourceFieldRefs = {
-    model: `${sourcePrefix}#codex.auto_model_policy.configured_default.model`,
-    model_consistency: `${sourcePrefix}#codex.default_model`,
-    reasoning_effort: `${sourcePrefix}#codex.auto_model_policy.configured_default.reasoning_effort`,
-    reasoning_effort_consistency: `${sourcePrefix}#codex.default_reasoning_effort`,
-    session_model_consistency: `${sourcePrefix}#default_session_profile.model`,
-    session_reasoning_effort_consistency: `${sourcePrefix}#default_session_profile.reasoning_effort`,
-    provider: `${sourcePrefix}#default_session_profile.provider`,
-    base_url: `${sourcePrefix}#default_session_profile.base_url`,
+    model: `${sourcePrefix}#codex_model_policy.configured_default.model`,
+    reasoning_effort: `${sourcePrefix}#codex_model_policy.configured_default.reasoning_effort`,
   };
   for (const [key, expected] of Object.entries(expectedSourceFieldRefs)) {
     if (normalizedSourceFieldRefs[key] !== expected) {
@@ -299,11 +292,11 @@ function readGeneratedProjection(profile: Record<string, unknown>): CodexDefault
     );
   }
   return {
-    source_owner: exact('source_owner', 'one-person-lab-app'),
-    source_repo: exact('source_repo', 'gaofeng21cn/one-person-lab-app'),
+    source_owner: exact('source_owner', 'opl-flow'),
+    source_repo: exact('source_repo', 'gaofeng21cn/opl-flow'),
     source_ref: exact(
       'source_ref',
-      'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy',
+      'gaofeng21cn/opl-flow:contracts/workflow-policy.json#codex_model_policy',
     ),
     source_field_refs: normalizedSourceFieldRefs as Record<string, string>,
     generator: exact('generator', 'scripts/export-codex-default-profile.mjs'),
@@ -333,7 +326,7 @@ export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
     purpose: readRequiredExactProfileString(
       parsed,
       'purpose',
-      'app_owned_codex_install_default_projection',
+      'workflow_owned_codex_install_default_projection',
     ),
     state: readRequiredExactProfileString(parsed, 'state', 'generated_projection'),
     machine_boundary: readRequiredProfileString(parsed, 'machine_boundary'),
@@ -511,7 +504,6 @@ function providerRoute(baseUrl: string, active: boolean): CodexConfigManagementR
   if (!active) return 'inactive_provider';
   const normalized = normalizeBaseUrl(baseUrl);
   if (normalized === normalizeBaseUrl(OPL_GATEWAY_BASE_URL)) return 'direct_gateway';
-  if (normalized === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL)) return 'intelligence_proxy';
   return 'opl_custom_route';
 }
 
@@ -525,49 +517,12 @@ function hasLocalOverride(existing: LocalCodexDefaults, receipt: CodexConfigMana
     || existing.reasoning_effort !== receipt.last_applied_values.model_reasoning_effort;
 }
 
-function hasEnabledOplFlowIntelligenceReceipt() {
-  const homeDir = normalizeOptionalString(process.env.HOME) ?? os.homedir();
-  const codexContHome = normalizeOptionalString(process.env.OPL_CODEXCONT_HOME)
-    ?? path.join(homeDir, '.codexcont');
-  const receiptPath = path.join(codexContHome, 'opl-flow-intelligence-enhancement.json');
-  if (!fs.existsSync(receiptPath) || !fs.statSync(receiptPath).isFile()) return false;
-
-  try {
-    const value = readJsonPayloadFile(receiptPath) as Record<string, unknown>;
-    return value.surface_kind === 'opl_flow_intelligence_enhancement_receipt.v1'
-      && value.status === 'enabled'
-      && normalizeBaseUrl(typeof value.previous_provider_base_url === 'string'
-        ? value.previous_provider_base_url
-        : null) === normalizeBaseUrl(OPL_GATEWAY_BASE_URL);
-  } catch {
-    return false;
-  }
-}
-
-function hasMatchingIntelligenceManagementReceipt(
-  existing: LocalCodexDefaults,
-  receipt: CodexConfigManagementReceipt | null,
-) {
-  return Boolean(
-    receipt
-    && receipt.config_path === existing.config_path
-    && receipt.provider_id === existing.model_provider
-    && receipt.provider_route === 'intelligence_proxy'
-    && normalizeBaseUrl(receipt.last_applied_values.provider_base_url)
-      === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL),
-  );
-}
-
 function isOplManagedActiveProvider(
   existing: LocalCodexDefaults | null,
-  receipt: CodexConfigManagementReceipt | null,
+  _receipt: CodexConfigManagementReceipt | null,
 ) {
   if (!existing?.model_provider) return false;
-  const baseUrl = normalizeBaseUrl(existing.provider_base_url);
-  if (baseUrl === normalizeBaseUrl(OPL_GATEWAY_BASE_URL)) return true;
-  if (baseUrl !== normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL)) return false;
-  return hasEnabledOplFlowIntelligenceReceipt()
-    || hasMatchingIntelligenceManagementReceipt(existing, receipt);
+  return normalizeBaseUrl(existing.provider_base_url) === normalizeBaseUrl(OPL_GATEWAY_BASE_URL);
 }
 
 function selectInactiveProviderId(
@@ -638,8 +593,6 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const selectedProviderApiKey = oplProviderActive
     ? explicitProviderApiKey ?? oplEnvironmentProviderApiKey ?? existing?.provider_api_key ?? null
     : providerApiKey;
-  const activeOplIntelligenceProxy = oplProviderActive
-    && normalizeBaseUrl(existing?.provider_base_url) === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL);
 
   if (existing && !oplProviderActive && !providerApiKey) {
     return {
@@ -655,7 +608,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
     };
   }
 
-  if (!model || !providerBaseUrl || (!selectedProviderApiKey && !activeOplIntelligenceProxy)) {
+  if (!model || !providerBaseUrl || !selectedProviderApiKey) {
     return {
       status: 'skipped_missing_input' as const,
       config_path: configPath,
@@ -848,10 +801,7 @@ function readLocalCodexDefaults(): LocalCodexDefaults {
     isOplGatewayBaseUrl(entry.get('base_url'))
     && Boolean(normalizeOptionalString(entry.get('experimental_bearer_token')))
   ));
-  const selectedIntelligenceProxyConfigured = normalizeBaseUrl(providerBaseUrl)
-    === normalizeBaseUrl(OPL_CODEXCONT_PROXY_BASE_URL)
-    && hasEnabledOplFlowIntelligenceReceipt();
-  const oplGatewayConfigured = directOplGatewayConfigured || selectedIntelligenceProxyConfigured;
+  const oplGatewayConfigured = directOplGatewayConfigured;
 
   return {
     config_path: configPath,

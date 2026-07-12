@@ -421,10 +421,7 @@ test('one-click installer defaults to the headless base contract before invoking
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-complete-args-'));
   const fakeBin = path.join(homeRoot, 'bin');
   const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
-  const stateDir = path.join(homeRoot, 'opl-state');
-  const flowInstallerPath = path.join(stateDir, 'modules', 'opl-flow', 'scripts', 'install_local_plugin.py');
   const gitLog = path.join(homeRoot, 'git.log');
-  const curlLog = path.join(homeRoot, 'curl.log');
   const npmLog = path.join(homeRoot, 'npm.log');
   const oplLog = path.join(homeRoot, 'opl.log');
   fs.mkdirSync(path.join(installDir, '.git'), { recursive: true });
@@ -441,47 +438,10 @@ test('one-click installer defaults to the headless base contract before invoking
       '  printf "git version 2.50.0\\n"',
       '  exit 0',
       'fi',
-      'if [ "${1:-}" = "clone" ]; then',
-      '  target=""',
-      '  for arg in "$@"; do target="$arg"; done',
-      '  mkdir -p "$target/scripts"',
-      "  printf 'import json\\nprint(json.dumps({\\\"surface_kind\\\": \\\"opl_flow_plugin_install_receipt.v1\\\", \\\"status\\\": \\\"installed\\\"}))\\n' > \"$target/scripts/install_local_plugin.py\"",
-      '  exit 0',
-      'fi',
       'exit 0',
     ].join('\n'),
   );
   fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
-  fs.writeFileSync(
-    path.join(fakeBin, 'curl'),
-    [
-      '#!/usr/bin/env bash',
-      'set -euo pipefail',
-      `printf '%s\\n' "$*" >> ${JSON.stringify(curlLog)}`,
-      'output=""',
-      'while [ "$#" -gt 0 ]; do',
-      '  if [ "$1" = "-o" ]; then output="$2"; shift 2; continue; fi',
-      '  shift',
-      'done',
-      '[ -n "$output" ]',
-      ': > "$output"',
-    ].join('\n'),
-  );
-  fs.writeFileSync(
-    path.join(fakeBin, 'tar'),
-    [
-      '#!/usr/bin/env bash',
-      'set -euo pipefail',
-      'destination=""',
-      'while [ "$#" -gt 0 ]; do',
-      '  if [ "$1" = "-C" ]; then destination="$2"; shift 2; continue; fi',
-      '  shift',
-      'done',
-      '[ -n "$destination" ]',
-      'mkdir -p "$destination/opl-flow-main/scripts"',
-      "printf 'import json\\nprint(json.dumps({\\\"surface_kind\\\": \\\"opl_flow_plugin_install_receipt.v1\\\", \\\"status\\\": \\\"installed\\\"}))\\n' > \"$destination/opl-flow-main/scripts/install_local_plugin.py\"",
-    ].join('\n'),
-  );
   fs.writeFileSync(
     path.join(fakeBin, 'npm'),
     [
@@ -494,15 +454,11 @@ test('one-click installer defaults to the headless base contract before invoking
     path.join(fakeBin, 'opl'),
     [
       '#!/usr/bin/env bash',
-      'if [ "${1:-}" = "install" ] && [ ! -f "$OPL_STATE_DIR/modules/opl-flow/scripts/install_local_plugin.py" ]; then',
-      '  echo "OPL Flow payload missing before opl install" >&2',
-      '  exit 91',
-      'fi',
       `printf '%s\\n' "$*" >> ${JSON.stringify(oplLog)}`,
       'exit 0',
     ].join('\n'),
   );
-  for (const command of ['git', 'node', 'npm', 'opl', 'curl', 'tar']) {
+  for (const command of ['git', 'node', 'npm', 'opl']) {
     fs.chmodSync(path.join(fakeBin, command), 0o755);
   }
 
@@ -514,8 +470,6 @@ test('one-click installer defaults to the headless base contract before invoking
         HOME: homeRoot,
         OPL_INSTALL_DIR: installDir,
         OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
-        OPL_FLOW_SOURCE_ARCHIVE_URL: 'https://example.invalid/opl-flow.tar.gz',
-        OPL_STATE_DIR: stateDir,
         PATH: `${fakeBin}:/usr/bin:/bin`,
       },
     });
@@ -528,9 +482,7 @@ test('one-click installer defaults to the headless base contract before invoking
       'install --headless',
       'system initialize',
     ]);
-    assert.equal(fs.existsSync(flowInstallerPath), true);
-    assert.doesNotMatch(fs.readFileSync(gitLog, 'utf8'), /clone/);
-    assert.match(fs.readFileSync(curlLog, 'utf8'), /https:\/\/example\.invalid\/opl-flow\.tar\.gz/);
+    assert.doesNotMatch(fs.readFileSync(gitLog, 'utf8'), /opl-flow/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -643,7 +595,7 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.match(matrix.ci_policy.docker, /Do not use Docker/);
 });
 
-test('bundled Codex profile carries the App-owned install fallback without runtime App checkout dependency', () => {
+test('bundled Codex profile carries the OPL Flow recommendation without runtime source checkout dependency', () => {
   const profile = parseJsonText(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
     surface_id: string;
     version: string;
@@ -671,16 +623,16 @@ test('bundled Codex profile carries the App-owned install fallback without runti
   assert.equal(profile.surface_id, 'opl_codex_default_profile');
   assert.equal(profile.version, 'g2');
   assert.equal(profile.owner, 'one-person-lab');
-  assert.equal(profile.purpose, 'app_owned_codex_install_default_projection');
+  assert.equal(profile.purpose, 'workflow_owned_codex_install_default_projection');
   assert.equal(profile.state, 'generated_projection');
-  assert.equal(profile.generated_projection.source_owner, 'one-person-lab-app');
+  assert.equal(profile.generated_projection.source_owner, 'opl-flow');
   assert.equal(
     profile.generated_projection.source_ref,
-    'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy',
+    'gaofeng21cn/opl-flow:contracts/workflow-policy.json#codex_model_policy',
   );
   assert.equal(
     profile.generated_projection.source_field_refs.model,
-    'gaofeng21cn/one-person-lab-app:contracts/app-product-profile.json#codex.auto_model_policy.configured_default.model',
+    'gaofeng21cn/opl-flow:contracts/workflow-policy.json#codex_model_policy.configured_default.model',
   );
   assert.equal(profile.generated_projection.generator, 'scripts/export-codex-default-profile.mjs');
   assert.equal(profile.generated_projection.generation_stage, 'development_or_release_sync');
@@ -689,16 +641,16 @@ test('bundled Codex profile carries the App-owned install fallback without runti
   assert.equal(profile.model.length > 0, true);
   assert.equal(profile.model_reasoning_effort.length > 0, true);
   assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
-  assert.equal(profile.base_url_role, 'product_default_provider_endpoint');
-  assert.equal(profile.model_profile_role, 'app_catalog_unavailable_fallback_projection');
+  assert.equal(profile.base_url_role, 'opl_base_default_provider_endpoint');
+  assert.equal(profile.model_profile_role, 'opl_flow_recommendation_projection');
   assert.equal(profile.provider_name.length > 0, true);
   assert.equal(serialized.includes('experimental_bearer_token'), false);
   assert.equal(serialized.toLowerCase().includes('api_key'), false);
 });
 
-test('Codex default profile exporter deterministically projects the App-owned fallback', () => {
+test('Codex default profile exporter deterministically projects the OPL Flow recommendation', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-default-profile-projection-'));
-  const sourcePath = path.join(tempRoot, 'app-product-profile.json');
+  const sourcePath = path.join(tempRoot, 'workflow-policy.json');
   const firstOutputPath = path.join(tempRoot, 'first.json');
   const secondOutputPath = path.join(tempRoot, 'second.json');
   const bundledProfile = parseJsonText(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
@@ -708,37 +660,23 @@ test('Codex default profile exporter deterministically projects the App-owned fa
     provider_name: string;
     base_url: string;
   };
-  const appProfile = {
-    owner: 'one-person-lab-app',
-    purpose: 'app_owned_product_profile',
-    default_session_profile: {
-      provider: 'gflab',
-      base_url: 'https://gflabtoken.cn/v1',
-      model: bundledProfile.model,
-      reasoning_effort: bundledProfile.model_reasoning_effort,
-    },
-    codex: {
-      default_model: bundledProfile.model,
-      default_reasoning_effort: bundledProfile.model_reasoning_effort,
-      auto_model_policy: {
-        configured_default: {
-          model: bundledProfile.model,
-          reasoning_effort: bundledProfile.model_reasoning_effort,
-        },
-        catalog_unavailable_fallback: {
-          model: bundledProfile.model,
-          reasoning_effort: bundledProfile.model_reasoning_effort,
-        },
+  const workflowPolicy = {
+    schema: 'opl_flow_workflow_policy.v1',
+    package: { id: 'opl-flow' },
+    codex_model_policy: {
+      configured_default: {
+        model: bundledProfile.model,
+        reasoning_effort: bundledProfile.model_reasoning_effort,
       },
     },
   };
 
   try {
-    fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(sourcePath, `${JSON.stringify(workflowPolicy, null, 2)}\n`, 'utf8');
     for (const out of [firstOutputPath, secondOutputPath]) {
       const result = spawnSync(process.execPath, [
         codexDefaultProfileExporterPath,
-        '--app-product-profile', sourcePath,
+        '--workflow-policy', sourcePath,
         '--out', out,
       ], {
         cwd: repoRoot,
@@ -753,18 +691,12 @@ test('Codex default profile exporter deterministically projects the App-owned fa
 
     const futureModel = 'future-model';
     const futureReasoningEffort = 'future-effort';
-    appProfile.default_session_profile.model = futureModel;
-    appProfile.default_session_profile.reasoning_effort = futureReasoningEffort;
-    appProfile.codex.default_model = futureModel;
-    appProfile.codex.default_reasoning_effort = futureReasoningEffort;
-    appProfile.codex.auto_model_policy.configured_default.model = futureModel;
-    appProfile.codex.auto_model_policy.configured_default.reasoning_effort = futureReasoningEffort;
-    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.model = futureModel;
-    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = futureReasoningEffort;
-    fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
+    workflowPolicy.codex_model_policy.configured_default.model = futureModel;
+    workflowPolicy.codex_model_policy.configured_default.reasoning_effort = futureReasoningEffort;
+    fs.writeFileSync(sourcePath, `${JSON.stringify(workflowPolicy, null, 2)}\n`, 'utf8');
     const changed = spawnSync(process.execPath, [
       codexDefaultProfileExporterPath,
-      '--app-product-profile', sourcePath,
+      '--workflow-policy', sourcePath,
       '--out', firstOutputPath,
     ], {
       cwd: repoRoot,
@@ -778,18 +710,18 @@ test('Codex default profile exporter deterministically projects the App-owned fa
     assert.match(changedFixture, /model = "future-model"/);
     assert.match(changedFixture, /model_reasoning_effort = "future-effort"/);
 
-    appProfile.codex.auto_model_policy.catalog_unavailable_fallback.reasoning_effort = 'mismatch';
-    fs.writeFileSync(sourcePath, `${JSON.stringify(appProfile, null, 2)}\n`, 'utf8');
+    workflowPolicy.schema = 'wrong_schema';
+    fs.writeFileSync(sourcePath, `${JSON.stringify(workflowPolicy, null, 2)}\n`, 'utf8');
     const mismatch = spawnSync(process.execPath, [
       codexDefaultProfileExporterPath,
-      '--app-product-profile', sourcePath,
+      '--workflow-policy', sourcePath,
       '--out', firstOutputPath,
     ], {
       cwd: repoRoot,
       encoding: 'utf8',
     });
     assert.notEqual(mismatch.status, 0);
-    assert.match(mismatch.stderr, /catalog fallback reasoning effort must match configured default reasoning effort/);
+    assert.match(mismatch.stderr, /schema must match opl_flow_workflow_policy.v1/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

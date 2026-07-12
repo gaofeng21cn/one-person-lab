@@ -11,7 +11,7 @@ export type CodexConfigManagementReceipt = {
   config_path: string;
   provider_id: string;
   selection_mode: CodexConfigSelectionMode;
-  provider_route: 'direct_gateway' | 'intelligence_proxy' | 'opl_custom_route' | 'inactive_provider';
+  provider_route: 'direct_gateway' | 'opl_custom_route' | 'inactive_provider';
   owned_keys: string[];
   last_applied_values: {
     model_provider: string | null;

@@ -195,74 +195,6 @@ test('system configure-codex preserves an existing custom provider and registers
   }
 });
 
-test('system configure-codex updates a legacy OPL model while preserving the intelligence proxy route', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-proxy-home-'));
-  const codexHome = path.join(homeRoot, 'codex-home');
-
-  try {
-    fs.mkdirSync(codexHome, { recursive: true });
-    fs.writeFileSync(
-      path.join(codexHome, 'config.toml'),
-      [
-        'model_provider = "gflab"',
-        'model = "gpt-5.5"',
-        'model_reasoning_effort = "xhigh"',
-        '',
-        '[model_providers.gflab]',
-        'name = "gflab"',
-        'base_url = "http://127.0.0.1:8787/v1"',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
-    const codexContHome = path.join(homeRoot, '.codexcont');
-    fs.mkdirSync(codexContHome, { recursive: true });
-    fs.writeFileSync(
-      path.join(codexContHome, 'opl-flow-intelligence-enhancement.json'),
-      `${JSON.stringify({
-        surface_kind: 'opl_flow_intelligence_enhancement_receipt.v1',
-        status: 'enabled',
-        previous_provider_base_url: 'https://gflabtoken.cn/v1',
-      }, null, 2)}\n`,
-      'utf8',
-    );
-
-    const output = runCliWithStdin(
-      ['system', 'configure-codex', '--api-key-stdin'],
-      'proxy-key\n',
-      {
-        HOME: homeRoot,
-        CODEX_HOME: codexHome,
-        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-      },
-    ) as {
-      codex_config: {
-        bootstrap: {
-          model: string;
-          reasoning_effort: string;
-          provider_base_url: string;
-          management_receipt: {
-            selection_mode: string;
-            provider_route: string;
-            backup_path: string | null;
-          };
-        };
-      };
-    };
-
-    assert.equal(output.codex_config.bootstrap.provider_base_url, 'http://127.0.0.1:8787/v1');
-    assert.equal(output.codex_config.bootstrap.management_receipt.selection_mode, 'auto');
-    assert.equal(output.codex_config.bootstrap.management_receipt.provider_route, 'intelligence_proxy');
-    assert.equal(fs.existsSync(output.codex_config.bootstrap.management_receipt.backup_path!), true);
-
-    const config = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
-    assertBundledCodexModel(output.codex_config.bootstrap, config);
-    assert.match(config, /base_url = "http:\/\/127\.0\.0\.1:8787\/v1"/);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
 test('system configure-codex preserves model and reasoning values changed after the last OPL receipt', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-local-override-home-'));
   const codexHome = path.join(homeRoot, 'codex-home');
@@ -431,7 +363,6 @@ test('system configure-codex syncs packaged Full companion skills after API key 
       codex_config: {
         companion_skill_sync: {
           mode: string;
-          superpowers_profile: string;
           items: Array<{ skill_id: string; status: string; action: string }>;
           tools: Array<{ tool_id: string; status: string; action: string; binary_path: string | null }>;
         };
@@ -439,9 +370,7 @@ test('system configure-codex syncs packaged Full companion skills after API key 
     };
 
     assert.equal(output.codex_config.companion_skill_sync.mode, 'managed');
-    assert.equal(output.codex_config.companion_skill_sync.superpowers_profile, 'keep');
     const itemById = new Map(output.codex_config.companion_skill_sync.items.map((item) => [item.skill_id, item]));
-    assert.equal(fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'superpowers')), false);
     for (const skillId of [
       'officecli',
       'officecli-docx',

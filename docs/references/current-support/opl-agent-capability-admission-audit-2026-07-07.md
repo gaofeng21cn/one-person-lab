@@ -30,7 +30,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | RCA | 7 个 repo-local professional skills，全部进入 capability map；stage prompts / control plane 对主要 PPT specialist 有直接 refs。 | 合理。视觉方法、template profiling、native PPT design 与 memory curation 分层清楚。 | `agent/skills/*.md` 作为 legacy policy ref 的边界要继续保持，不能退回成“又一套 professional skill”。 |
 | OMA | 9 个 repo-local professional skills，全部进入 capability map；`agent/skills/*.md` 明确是 domain skill declarations。 | 合理。OMA 的 target-agent improvement / work-order / suite design 等是元智能体专业方法。 | 继续防止把 action flow、target truth 或 takeover authority 写进 professional Skill。 |
 | BookForge | 9 个 repo-local professional skills，全部进入 capability map；book stage prompt 只做目标和 handoff，方法下沉到 professional skills。 | 合理。长文写作、style、reference absorption、publication design 与 source claim review 是专业方法。 | PDF/export 后端属于 helper/connector/authority 边界，不应放进 professional Skill 正文。 |
-| OPL App companion skills | 当前 repo-native asset 只有 `cron`、`pdf`、`mineru-document-extractor`；App contract 还声明 officecli、ui-ux、superpowers 等 managed companion payload。 | 基本合理。它们是通用 companion tool skills，不是 domain agent professional skills。 | 新增 companion skill 要走 App install exposure policy；`tmp/**`、VM evidence 和 generated cache 不能当 current skill source。 |
+| OPL App companion skills | App Full 从 OPL Flow 的 `requires + recommends` 闭包打包 OfficeCLI、MinerU、UI/UX 等通用能力。 | 合理。它们是 workflow dependency，不是 domain agent professional skills，也不由 App 维护第二份清单。 | 新增 companion skill 要先进入 OPL Flow policy，再由 Framework package lifecycle 执行；`tmp/**`、VM evidence 和 generated cache 不能当 current skill source。 |
 
 ## 详细审计表
 
@@ -109,7 +109,7 @@ Machine boundary: 本文是人读审计与治理建议；机器真相仍归各 r
 | Scheduled task companion | `cron` | `one-person-lab-app/assets/companion-skills/cron/SKILL.md` | App install exposure policy -> user skill discovery path | 合理；这是 companion tool，不是 domain professional skill。 |
 | PDF companion | `pdf` | `assets/companion-skills/pdf/SKILL.md` | App install exposure policy | 合理；通用文件工具。 |
 | MinerU extraction companion | `mineru-document-extractor` | `assets/companion-skills/mineru-document-extractor/SKILL.md` | App install exposure policy | 合理；通用 extraction connector/skill。 |
-| Managed external companion payloads | officecli、ui-ux、superpowers 等 | App contract refs / managed payload source | App install exposure policy | 合理但需继续显式用户级安装边界；新增 companion 不应混入 domain plugin semantic mirror。 |
+| Managed external companion payloads | OfficeCLI、MinerU、UI/UX 等 | OPL Flow workflow policy | Framework package lifecycle | 合理；App Full 只打包 policy 闭包，新增 companion 不应混入 domain plugin semantic mirror。 |
 
 ## 风险与处理
 

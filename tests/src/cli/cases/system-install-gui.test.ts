@@ -107,6 +107,12 @@ exit 1
       ...disableRemoteCompanionInstall(),
     }) as {
       install: {
+        opl_flow_package: {
+          package_id: string;
+          status: string;
+          dependency_sync: { mode: string; items: unknown[] };
+        };
+        companion_skill_sync: { mode: string; items: unknown[] };
         gui_open_action: {
           status: string;
           strategy: string;
@@ -116,6 +122,10 @@ exit 1
       };
     };
 
+    assert.equal(output.install.opl_flow_package.package_id, 'opl-flow');
+    assert.equal(output.install.opl_flow_package.status, 'completed');
+    assert.deepEqual(output.install.companion_skill_sync, output.install.opl_flow_package.dependency_sync);
+    assert.equal(output.install.companion_skill_sync.mode, 'managed');
     assert.equal(output.install.gui_open_action?.status, 'completed');
     assert.equal(output.install.gui_open_action?.strategy, 'install_release_asset_then_open_app');
     assert.match(output.install.gui_open_action?.release_asset ?? '', /^One-Person-Lab-26\.4\.25-mac-/);

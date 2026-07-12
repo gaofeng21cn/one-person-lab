@@ -20,7 +20,7 @@ Source of truth:
 2. 安装或刷新 One Person Lab Framework CLI，并验证 `opl help --text`、`opl system initialize --json` 和必要的 runtime readiness。
 3. 安装或打开 One Person Lab App；macOS Apple Silicon 首次安装优先使用最新 Full DMG，命令行路径使用 App 仓库 one-shot installer。
 4. 运行 `opl connect sync-skills`，让 MAS/MAG/RCA/OMA/Book Forge 作为 repo-local full-copy Codex plugin carriers 可见。
-5. 安装并验证 OPL Flow，让 Codex 获得用户级 AGENTS.md、TASTE.md、planner/executor/debugger/verifier 角色库和 opl-flow 插件。
+5. 通过 OPL package lifecycle 安装并验证 OPL Flow，让 Codex 获得最小用户级 AGENTS.md/TASTE.md、opl-flow 插件、推荐依赖和旧工作流迁移回执。
 6. 安装并验证 OPL Doc，让 Codex 获得 opl-doc canonical skill、opl-doc-governance 兼容 skill 和 opl-doc-doctor。
 7. 检查推荐 companion skills/tools 的状态；只按 OPL CLI/App/Full payload 的受管路径安装或同步，不手工制造第二真相源。
 8. 完成后报告安装路径、关键命令输出摘要、验证结果、需要我手动处理的权限/密钥/GitHub/macOS 系统阻塞。
@@ -40,9 +40,9 @@ Source of truth:
 | Framework / runtime | `one-person-lab` | `opl` CLI、初始化、Connect 模块发现、runtime/provider/readiness、`opl connect sync-skills`、App 可消费 state/action surface |
 | Product / first install | `one-person-lab-app` | Desktop App、Full first-install DMG、one-shot App installer、release gates、首启用户路径 |
 | Domain agents | MAS/MAG/RCA/OMA default visible surfaces; Book Forge explicit repo until default admission | domain truth、action/stage semantics、quality/export/artifact authority、domain skill metadata |
-| Codex workflow | `opl-flow` | 用户级 `AGENTS.md`、`TASTE.md`、角色库、subagent contract、Direct/Inline/Durable 工作流 |
+| Codex workflow | `opl-flow` | 最小 `AGENTS.md`/`TASTE.md`、dependency/conflict/model policy；普通开发保持 model-native |
 | Docs governance | `opl-doc` | OPL-native 文档生命周期治理 skill、`opl-doc-doctor`、`opl-doc-governance` 历史转发入口 |
-| Companion skills/tools | OPL CLI/App managed profile | OfficeCLI、MinerU、Superpowers、UI/UX、PDF/Office 等辅助能力的检测、同步和受管路径 |
+| Recommended skills/tools | OPL Flow policy + OPL Framework executor | OfficeCLI、MinerU、UI/UX 等依赖闭包；Superpowers/Ponytail/CodexCont 属迁移冲突 |
 
 ## 推荐执行顺序
 
@@ -69,16 +69,16 @@ npm install
 npm link
 ```
 
-#### Codex 安装默认值的 App 投影
+#### Codex 安装默认值的 OPL Flow 投影
 
-`contracts/opl-framework/codex-default-profile.json` 是 App-owned product profile 的仓内生成投影，不再从维护者本机 `~/.codex/config.toml` 导出，也不允许在 Framework 内单独手改模型、推理档位或 provider endpoint。开发或发布同步阶段使用显式 App profile path 生成：
+`contracts/opl-framework/codex-default-profile.json` 从 OPL Flow workflow policy 生成模型与推理推荐；Framework 保持 `config.toml` 唯一写入者，provider endpoint 仍由 Base 管理，用户固定选择优先。开发或发布同步阶段使用显式 workflow policy path 生成：
 
 ```bash
 npm run codex:export-default-profile -- \
-  --app-product-profile /absolute/path/to/one-person-lab-app/contracts/app-product-profile.json
+  --workflow-policy /absolute/path/to/opl-flow/contracts/workflow-policy.json
 ```
 
-默认模型和推理档的唯一人工维护入口是 App 仓 `contracts/app-product-profile.json#codex.auto_model_policy.configured_default`。先在 App 仓运行 `npm run codex:model-policy:sync`，再运行上面的 exporter；不要手改本仓生成结果、`codex.default_*`、`default_session_profile` 或 `catalog_unavailable_fallback`。生成器读取 `configured_default`，并校验这些兼容投影一致；provider 与 base URL 继续来自 `default_session_profile`。生成结果携带 App owner/source/ref 与字段 refs，且声明 runtime 不需要 App checkout。`bootstrapLocalCodexDefaults` 只消费仓内结果，继续尊重显式环境输入、用户固定模型/推理档位和已有非 OPL Codex 配置。完整策略和消费者维护顺序见 App 仓 `docs/product/gui/codex-auto-model-policy.md#维护默认模型`。
+默认模型和推理档的唯一人工维护入口是 OPL Flow `contracts/workflow-policy.json#codex_model_policy`。Framework 的 `codex-default-profile.json` 与 App 的模型 UI 都是该策略的投影，不得维护第二套默认值；provider 与 base URL 仍由 OPL Base 管理。`bootstrapLocalCodexDefaults` 消费 Framework 内生成结果，并继续尊重显式用户选择、用户固定模型/推理档位和已有非 OPL Codex 配置。
 
 ### 2. 安装 One Person Lab App
 
@@ -118,14 +118,11 @@ opl connect skills --json
 ### 5. 安装 OPL Flow
 
 ```bash
-git clone https://github.com/gaofeng21cn/opl-flow.git
-cd opl-flow
-python3 scripts/install_local_plugin.py
-python3 scripts/install_local_plugin.py --verify-only
-python3 scripts/verify.py
+opl packages install opl-flow
+opl packages update opl-flow
 ```
 
-这一步安装 Codex workflow profile 和 `opl-flow` 插件。它不拥有 MAS/MAG/RCA runtime 或 OPL Framework 安装，只负责 Codex 的工作方式。
+这一步由 Framework 解析 OPL Flow policy，安装在线推荐依赖、归档明确冲突的旧工作流、注册插件、同步 profile/model policy，并写入可回滚 receipt。出现用户 AGENTS.md 语义冲突时，命令返回 merge packet；完成合并后使用 `opl packages profile-apply opl-flow --packet <path>`。只有开发 OPL Flow checkout 时才使用仓内 `scripts/install_local_plugin.py` 做 local-source staging/verify，它不是普通用户安装入口。
 
 ### 6. 安装 OPL Doc
 
@@ -155,8 +152,7 @@ Codex 报告完成前，至少应给出这些新鲜证据：
 opl help --text
 opl system initialize --json
 opl connect sync-skills
-python3 <opl-flow-checkout>/scripts/install_local_plugin.py --verify-only
-python3 <opl-flow-checkout>/scripts/verify.py
+opl packages install opl-flow
 python3 <opl-doc-checkout>/scripts/install_local_plugin.py --verify-only
 ```
 
@@ -178,7 +174,7 @@ npm run new-machine:codex-bootstrap:docker-smoke
 - MAS 和 RCA 可以作为 managed domain modules 安装，并通过 `opl connect sync-skills --domain mas --domain rca` 注册为 Codex plugin。
 - `~/.codex/config.toml` 出现 `med-autoscience@med-autoscience-local` 与 `redcube-ai@redcube-ai-local` plugin 配置。
 - 不生成重复的 `~/.codex/skills/{mas,rca}` 裸 skill mirror。
-- `opl-flow` 可在干净 HOME 中安装插件、`AGENTS.md`、`TASTE.md` 和 planner/executor/debugger/verifier 角色库。
+- `opl packages install opl-flow` 可在干净 HOME 中安装插件与最小 profile，解析依赖闭包并生成 package/migration receipt。
 
 这个 smoke 不覆盖 macOS Full DMG、桌面 App 首启、Codex API key 配置、在线 runtime provider、GitHub 权限、推荐 companion skills 全量安装或 OPL Doc 的最终使用质量。需要连带验证 OPL Doc 安装时，可以运行：
 

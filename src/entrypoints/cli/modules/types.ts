@@ -275,7 +275,6 @@ type SkillPacksCliInput = {
   targetRoot?: string;
   quiet?: boolean;
   companionMode?: 'observe' | 'ask_to_apply' | 'managed';
-  superpowersProfile?: 'keep' | 'lite' | 'full';
 };
 
 type AgentExecutorCliInput = {

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../../kernel/local-codex-defaults.ts';
 import { buildOplFrameworkSemanticHygieneAudit } from '../../../modules/foundry-lab/framework-semantic-hygiene.ts';
 import { syncOplCompanionSkills } from '../../../modules/connect/install-companions.ts';
-import { installOplFlowPluginIfAvailable } from '../../../modules/connect/codexcont-intelligence-mode.ts';
 import { syncFamilySkillPacks } from '../../../modules/connect/opl-skills.ts';
 import { buildOplSystemDependencyDoctor } from '../../../modules/connect/system-installation/dependency-doctor.ts';
 import { buildOplDockerWebuiDoctor } from '../../../modules/connect/system-installation/docker-webui-doctor.ts';
@@ -62,7 +61,6 @@ function syncPackagedFullCompanionSkillsIfAvailable() {
   try {
     return syncOplCompanionSkills(undefined, {
       mode: 'managed',
-      superpowersProfile: 'keep',
     });
   } finally {
     if (previousDisableRemoteInstall === undefined) {
@@ -92,7 +90,6 @@ function syncFullRuntimeFamilyCodexPluginsIfAvailable() {
   return syncFamilySkillPacks({
     domains,
     companionMode: 'observe',
-    superpowersProfile: 'keep',
   });
 }
 
@@ -195,7 +192,6 @@ export function buildPublicSystemCommandSpecs(
         });
       }
 
-      const oplFlowPlugin = installOplFlowPluginIfAvailable();
       const defaultProfile = readBundledCodexDefaultProfile();
       const bootstrap = bootstrapLocalCodexDefaults({
         provider_api_key: apiKey,
@@ -223,7 +219,6 @@ export function buildPublicSystemCommandSpecs(
           },
           ...(familySkillSync ? { skill_sync: familySkillSync.skill_sync } : {}),
           ...(companionSkillSync ? { companion_skill_sync: companionSkillSync } : {}),
-          opl_flow_plugin: oplFlowPlugin,
         },
       };
     },

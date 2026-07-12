@@ -77,6 +77,7 @@ import { buildBrandCommandSpecs } from './public-command-specs-parts/brand.ts';
 import { buildConnectCommandSpecs } from './public-command-specs-parts/connect.ts';
 import { buildFoundryCommandSpecs } from './public-command-specs-parts/foundry.ts';
 import { buildOkfCommandSpecs } from './public-command-specs-parts/okf.ts';
+import { buildPackageCommandSpecs } from './public-command-specs-parts/packages.ts';
 import { buildProfileCommandSpecs } from './public-command-specs-parts/profiles.ts';
 import { buildStageCommandSpecs, validateStageDerivedLensCommandSpecs } from './public-command-specs-parts/stages.ts';
 import { buildUpdateCommandSpecs } from './public-command-specs-parts/update.ts';
@@ -175,6 +176,7 @@ export function buildPublicCommandSpecs(
   const connectCommandSpecs = buildConnectCommandSpecs(commandSpecs, systemCommandSpecs);
   const foundryCommandSpecs = buildFoundryCommandSpecs();
   const okfCommandSpecs = buildOkfCommandSpecs();
+  const packageCommandSpecs = buildPackageCommandSpecs();
   const profileCommandSpecs = buildProfileCommandSpecs();
   const stageCommandSpecs = buildStageCommandSpecs(getContracts);
   const updateCommandSpecs = buildUpdateCommandSpecs(getContracts);
@@ -410,11 +412,11 @@ export function buildPublicCommandSpecs(
       },
     },
     'skill companion status': cloneCommandSpec(commandSpecs['skill-companion-status'], {
-      usage: 'opl skill companion status [--home <home_path>] [--superpowers <keep|lite|full>]',
+      usage: 'opl skill companion status [--home <home_path>]',
       group: 'skill',
     }),
     'skill companion apply': cloneCommandSpec(commandSpecs['skill-companion-apply'], {
-      usage: 'opl skill companion apply --mode <ask_to_apply|managed> [--home <home_path>] [--superpowers <keep|lite|full>]',
+      usage: 'opl skill companion apply --mode <ask_to_apply|managed> [--home <home_path>]',
       group: 'skill',
     }),
     exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
@@ -867,6 +869,7 @@ export function buildPublicCommandSpecs(
       group: 'contract',
     }),
     ...systemCommandSpecs,
+    ...packageCommandSpecs,
     'engine install': engineInstallSpec,
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,

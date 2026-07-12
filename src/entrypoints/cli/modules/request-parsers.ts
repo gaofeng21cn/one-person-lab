@@ -367,20 +367,15 @@ function parseSkillPackArgs(
     'target-quest': { type: 'string' },
     'target-root': { type: 'string' },
     mode: { type: 'string' },
-    superpowers: { type: 'string' },
     quiet: { type: 'boolean' },
   });
   const scope = values.scope as string | undefined;
   const mode = values.mode as string | undefined;
-  const superpowers = values.superpowers as string | undefined;
   if (scope && scope !== 'codex' && scope !== 'workspace' && scope !== 'quest') {
     throw buildUsageError('Option --scope requires codex, workspace, or quest.', spec, { option: '--scope', value: scope });
   }
   if (mode && mode !== 'observe' && mode !== 'ask_to_apply' && mode !== 'managed') {
     throw buildUsageError('Option --mode requires observe, ask_to_apply, or managed.', spec, { option: '--mode', value: mode });
-  }
-  if (superpowers && superpowers !== 'keep' && superpowers !== 'lite' && superpowers !== 'full') {
-    throw buildUsageError('Option --superpowers requires keep, lite, or full.', spec, { option: '--superpowers', value: superpowers });
   }
   parsed.domains = (values.domain as string[] | undefined) ?? [];
   parsed.quiet = values.quiet === true;
@@ -390,9 +385,6 @@ function parseSkillPackArgs(
   if (values['target-quest'] !== undefined) parsed.targetQuest = values['target-quest'] as string;
   if (values['target-root'] !== undefined) parsed.targetRoot = values['target-root'] as string;
   if (mode !== undefined) parsed.companionMode = mode as SkillPacksCliInput['companionMode'];
-  if (superpowers !== undefined) {
-    parsed.superpowersProfile = superpowers as SkillPacksCliInput['superpowersProfile'];
-  }
   return parsed;
 }
 

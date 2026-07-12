@@ -1,7 +1,5 @@
 import { readOplUpdateChannel, readOplWorkspaceRoot } from '../../../kernel/system-preferences.ts';
-import { FrameworkContractError } from '../../../kernel/contract-validation.ts';
 import type { FrameworkContracts } from '../../../kernel/types.ts';
-import { runOplFlowIntelligenceEnhancementAction } from '../codexcont-intelligence-mode.ts';
 import { recordManagedInstallUpdateReceipts } from '../managed-install-update-ledger.ts';
 
 import { buildOplEnvironment } from './environment.ts';
@@ -45,16 +43,6 @@ type StartupMaintenanceTarget = StartupMaintenanceModuleTarget | StartupMaintena
 type StartupMaintenanceFrameworkTarget = ReturnType<typeof runOplFrameworkSelfUpdate>;
 type StartupMaintenanceCapabilityTarget = StartupMaintenanceModuleTarget;
 type StartupMaintenanceScope = 'all' | 'runtime_substrate';
-type StartupMaintenanceIntelligenceEnhancementTarget = {
-  target_type: 'opl_flow_intelligence_enhancement';
-  target_id: 'codexcont';
-  status: 'completed' | 'skipped' | 'manual_required';
-  reason: string;
-  action: 'repair' | null;
-  status_before: Record<string, unknown> | null;
-  result: Record<string, unknown> | null;
-  error: Record<string, unknown> | null;
-};
 
 function buildTarget(
   module: ModuleStatus,
@@ -173,12 +161,6 @@ function normalizeError(error: unknown) {
     code: 'startup_maintenance_failed',
     message: error instanceof Error ? error.message : String(error),
   };
-}
-
-function isOplFlowScriptMissing(error: unknown) {
-  return error instanceof FrameworkContractError
-    && error.code === 'codex_command_failed'
-    && error.message === 'OPL Flow intelligence enhancement script is not installed.';
 }
 
 function readBlockedWorkflowStep(target: StartupMaintenanceModuleTarget) {
@@ -349,112 +331,6 @@ function summarizeCapabilityTargets(targets: StartupMaintenanceCapabilityTarget[
   };
 }
 
-function summarizeIntelligenceEnhancementTargets(targets: StartupMaintenanceIntelligenceEnhancementTarget[]) {
-  return {
-    total_targets_count: targets.length,
-    completed_targets_count: targets.filter((entry) => entry.status === 'completed').length,
-    skipped_targets_count: targets.filter((entry) => entry.status === 'skipped').length,
-    manual_required_targets_count: targets.filter((entry) => entry.status === 'manual_required').length,
-  };
-}
-
-async function maybeRunIntelligenceEnhancementStartupMaintenance(): Promise<StartupMaintenanceIntelligenceEnhancementTarget> {
-  try {
-    const statusReadback = await runOplFlowIntelligenceEnhancementAction('status', {}, false);
-    const statusBefore = readNestedRecord(statusReadback, 'opl_flow_intelligence_enhancement');
-    if (!statusBefore || typeof statusBefore !== 'object') {
-      return {
-        target_type: 'opl_flow_intelligence_enhancement',
-        target_id: 'codexcont',
-        status: 'manual_required',
-        reason: 'intelligence_enhancement_status_unavailable',
-        action: null,
-        status_before: null,
-        result: null,
-        error: {
-          code: 'intelligence_enhancement_status_unavailable',
-          message: 'OPL Flow intelligence enhancement status readback is unavailable.',
-        },
-      };
-    }
-
-    const service = readNestedRecord(statusBefore, 'service');
-    const serviceMode = readString(service, 'mode');
-    const enabled = readBoolean(statusBefore, 'enabled') === true;
-    const proxyRunning = readBoolean(statusBefore, 'proxy_running') === true;
-    const definitionInstalled = readBoolean(service, 'definition_installed') === true;
-    const scriptInstalled = readBoolean(service, 'script_installed') === true;
-
-    if (!enabled) {
-      return {
-        target_type: 'opl_flow_intelligence_enhancement',
-        target_id: 'codexcont',
-        status: 'skipped',
-        reason: 'intelligence_enhancement_disabled',
-        action: null,
-        status_before: statusBefore as Record<string, unknown>,
-        result: null,
-        error: null,
-      };
-    }
-
-    const reason = serviceMode === 'container'
-      ? 'container_startup_repair_required'
-      : !definitionInstalled || !scriptInstalled
-        ? 'persistent_service_definition_repair_required'
-        : !proxyRunning
-          ? 'persistent_service_proxy_repair_required'
-          : null;
-    if (!reason) {
-      return {
-        target_type: 'opl_flow_intelligence_enhancement',
-        target_id: 'codexcont',
-        status: 'skipped',
-        reason: 'intelligence_enhancement_service_healthy',
-        action: null,
-        status_before: statusBefore as Record<string, unknown>,
-        result: null,
-        error: null,
-      };
-    }
-
-    const repairResult = await runOplFlowIntelligenceEnhancementAction('repair', {}, false);
-    return {
-      target_type: 'opl_flow_intelligence_enhancement',
-      target_id: 'codexcont',
-      status: 'completed',
-      reason,
-      action: 'repair',
-      status_before: statusBefore as Record<string, unknown>,
-      result: readNestedRecord(repairResult, 'opl_flow_intelligence_enhancement_action') as Record<string, unknown> | null,
-      error: null,
-    };
-  } catch (error) {
-    if (isOplFlowScriptMissing(error)) {
-      return {
-        target_type: 'opl_flow_intelligence_enhancement',
-        target_id: 'codexcont',
-        status: 'skipped',
-        reason: 'intelligence_enhancement_script_not_installed',
-        action: null,
-        status_before: null,
-        result: null,
-        error: null,
-      };
-    }
-    return {
-      target_type: 'opl_flow_intelligence_enhancement',
-      target_id: 'codexcont',
-      status: 'manual_required',
-      reason: 'intelligence_enhancement_startup_repair_failed',
-      action: 'repair',
-      status_before: null,
-      result: null,
-      error: normalizeError(error),
-    };
-  }
-}
-
 async function maybeRunEngineStartupMaintenance(
   contracts: FrameworkContracts,
   environment: OplSystemEnvironment,
@@ -549,12 +425,10 @@ export async function runOplStartupMaintenance(
   const capabilityTargets: StartupMaintenanceCapabilityTarget[] = initialModules
     .filter((module) => module.scope === 'framework_capability_package')
     .map((module) => runModuleStartupMaintenance(module));
-  const intelligenceEnhancementTargets = [await maybeRunIntelligenceEnhancementStartupMaintenance()];
   const frameworkSummary = summarizeFrameworkTargets(frameworkTargets);
   const engineSummary = summarizeTargets(engineTargets);
   const summary = summarizeTargets(moduleTargets);
   const capabilitySummary = summarizeCapabilityTargets(capabilityTargets);
-  const intelligenceEnhancementSummary = summarizeIntelligenceEnhancementTargets(intelligenceEnhancementTargets);
   const managedReceiptRecord = recordManagedInstallUpdateReceipts(
     moduleTargets
       .map(buildManagedReceiptInput)
@@ -576,7 +450,6 @@ export async function runOplStartupMaintenance(
         || engineSummary.manual_required_targets_count > 0
         || frameworkSummary.manual_required_targets_count > 0
         || capabilitySummary.manual_required_targets_count > 0
-        || intelligenceEnhancementSummary.manual_required_targets_count > 0
         ? 'manual_required'
         : 'completed',
       update_channel: readOplUpdateChannel().channel,
@@ -590,12 +463,10 @@ export async function runOplStartupMaintenance(
         framework_summary: frameworkSummary,
         engine_summary: engineSummary,
         capability_summary: capabilitySummary,
-        intelligence_enhancement_summary: intelligenceEnhancementSummary,
         summary,
         framework_targets: frameworkTargets,
         engine_targets: engineTargets,
         capability_targets: capabilityTargets,
-        intelligence_enhancement_targets: intelligenceEnhancementTargets,
         module_targets: moduleTargets,
         seed_boundary: seedApply.seed_apply,
         docker_webui_startup: {
@@ -644,7 +515,6 @@ export async function runOplStartupMaintenance(
           'Startup maintenance refreshes the managed OPL Framework runtime only when an explicit framework update source is configured.',
           'Startup maintenance updates clean OPL-managed module checkouts and syncs repo-local plugin carriers.',
           'Startup maintenance installs or updates MAS Scholar Skills from the managed GHCR capability packages channel so App workspace/quest sync can materialize it into the active paper directory.',
-          'Startup maintenance repairs the OPL Flow intelligence enhancement CodexCont service only when the local Codex config already has that mode enabled and the service needs startup recovery.',
           'Dirty, ahead, diverged, no-upstream, env override, sibling workspace, and invalid checkouts are reported for manual review.',
           'MAS Scholar Skills is a framework capability plugin pack, not a domain module; workspace/quest-local sync is still explicit and target-bound.',
           'Docker/WebUI startup records image seed, /data, and /projects boundaries in the OPL state install manifest without claiming runtime or domain readiness.',

@@ -9,7 +9,6 @@ import {
   runOplAgentPackageRepair,
   runOplAgentPackageUninstall,
   runOplAgentPackageUpdate,
-  runOplFlowIntelligenceEnhancementAction,
   runOplModuleAction,
   agentPackageDelegatedSurface,
   buildManagedUpdateKernelProjection,
@@ -292,23 +291,6 @@ async function executeDirectAppAction(
             },
           }
         : await runOplSystemAction(contracts, 'developer_supervisor'),
-    };
-  }
-
-  const intelligenceEnhancementActions = {
-    intelligence_enhancement_status: 'status',
-    intelligence_enhancement_enable: 'enable',
-    intelligence_enhancement_disable: 'disable',
-    intelligence_enhancement_repair: 'repair',
-    intelligence_enhancement_uninstall: 'uninstall',
-  } as const;
-  if (options.actionId in intelligenceEnhancementActions) {
-    const action = intelligenceEnhancementActions[
-      options.actionId as keyof typeof intelligenceEnhancementActions
-    ];
-    return {
-      delegatedSurface: `opl flow intelligence-enhancement ${action}`,
-      result: await runOplFlowIntelligenceEnhancementAction(action, options.payload, options.dryRun),
     };
   }
 

@@ -9,7 +9,7 @@ import {
   parseJsonText,
   readJsonFileResult,
 } from '../../kernel/json-file.ts';
-import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
+import { syncOplCompanionSkills, type OplCompanionSkillApplyMode } from './install-companions.ts';
 import {
   registerOplFamilyCodexPlugins,
   type CodexPluginRegistryPackId,
@@ -79,7 +79,6 @@ type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   targetQuest?: string;
   targetRoot?: string;
   companionMode?: OplCompanionSkillApplyMode;
-  superpowersProfile?: OplSuperpowersProfile;
 };
 
 const FOUNDRY_AGENT_SERIES_CONTRACT_REF = 'contracts/opl-framework/foundry-agent-series-contract.json';
@@ -886,7 +885,6 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     : null;
   const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined, {
     mode: options.companionMode ?? 'observe',
-    superpowersProfile: options.superpowersProfile ?? 'keep',
   });
 
   return {

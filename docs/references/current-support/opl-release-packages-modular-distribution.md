@@ -32,7 +32,7 @@ Agent package 与 capability dependency 采用双形态单源：MAS、MAS Schola
 | RCA | 默认 GHCR `one-person-lab-modules/redcube-ai`；Developer Mode 可显式切到 git checkout / path / repo URL | 否 | 交付物链路可能较大，不应拖慢 App 更新 |
 | OMA (`oma`; package / repo carrier `opl-meta-agent`) | 默认 GHCR `one-person-lab-modules/opl-meta-agent`；Developer Mode 可显式切到 git checkout / path / repo URL | 否 | Agent Foundry 的 managed builder/tester module，随 App/OPL 环境维护；`opl-meta-agent` 是 carrier 名，不替代 `oma` 作为 standard-agent canonical id，也不作为默认 Home assistant 入口 |
 | MAS Scholar Skills | 默认 GHCR `one-person-lab-modules/mas-scholar-skills`；Developer Mode 可显式切到 local checkout / path / repo URL | 否 | MAS required capability package；Codex standalone MAS plugin 应随包 bundle，OPL App 托管时作为 managed dependency package 独立安装、更新和修复，供 MAS/MAG/RCA/OMA 等 agent 同步到 workspace / quest 使用 |
-| OPL Flow | 不属于 `one-person-lab-modules/*` package；从 `gaofeng21cn/opl-flow` 安装 Codex workflow plugin/profile | 否 | 只负责 Codex 工作流 profile、角色库和 managed instruction block，不是 domain module 或 GHCR module package |
+| OPL Flow | 独立 workflow package；Framework 通过 `opl packages install|update|rollback opl-flow` 执行其 policy | 否 | 声明最小 profile、依赖、冲突迁移和模型推荐；不是 domain module 或 GHCR module package |
 | WebUI Docker 镜像 | App-owned GitHub Packages container registry | 否 | 实际坐标、构建发布、digest 和 release evidence 归 `one-person-lab-app`；Framework package manifest 不再暴露该 App-owned reference |
 
 表中的 package、repo、plugin 和 module 名是分发 / carrier 名，不是 standard-agent identity 轴。标准 domain agent canonical ids 仍是 `mas`、`mag`、`rca`、`oma`、`obf`；`opl-meta-agent` / `opl-bookforge` 这类名称只在对应 repo、package、plugin、alias 或 carrier 语境中读取。`mas-scholar-skills` 是 framework capability package，不是 standard domain agent。
@@ -145,7 +145,7 @@ Fresh 读法按机器入口分层：
 - 每个制品必须有版本、来源、校验和、回滚目标和安装策略。
 - 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，并且 cleanup 只能是 `dry_run_first_explicit_execute_required`。`latest` moving tag 和显式 protected tag 始终受保护；后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态；真正删除 package version 需要显式执行与 package admin / `delete:packages` 权限，不在普通 release workflow 中隐式发生。
 - `MDS` 不进入默认 manifest / Full payload；如 MAS 需要 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle，只能通过 MAS 明确声明的可选 companion 路径读取。
-- `OPL Meta Agent` 与 `MAS Scholar Skills` 当前源码已纳入 Framework package manifest 的 active package 集合；实际可拉取性以 workflow 发布结果和 GHCR package 可见性为准。`opl-flow` 不属于这个集合，它走 Codex workflow plugin/profile 安装边界。
+- `OPL Meta Agent` 与 `MAS Scholar Skills` 当前源码已纳入 Framework package manifest 的 active package 集合；实际可拉取性以 workflow 发布结果和 GHCR package 可见性为准。`opl-flow` 不属于 domain module 集合，它走 Framework-owned workflow package lifecycle。
 - 若后续改变 package channel、override 语义或重新引入 Framework WebUI reference，先改 `src/package-distribution.ts`、release discipline、workflow 和相关测试，再更新本文。
 
 ## App 内置策略

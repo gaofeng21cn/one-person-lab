@@ -29,7 +29,6 @@ type OplCompanionSkillSourceCandidate = {
 };
 export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_source' | 'synced' | 'available' | 'installed' | 'failed';
 export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
-export type OplSuperpowersProfile = 'keep' | 'lite' | 'full';
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
@@ -43,7 +42,6 @@ export type OplCompanionSkillSyncItem = {
 export type OplCompanionSkillSyncResult = {
   surface_id: 'opl_companion_skill_sync';
   mode: OplCompanionSkillApplyMode;
-  superpowers_profile: OplSuperpowersProfile;
   codex_skills_dir: string;
   agents_skills_dir: string;
   items: OplCompanionSkillSyncItem[];
@@ -63,7 +61,7 @@ export type OplRecommendedSkill = {
   skill_id: string;
   label: string;
   required: boolean;
-  source: 'superpowers' | 'skills_manager' | 'codex_builtin' | 'github';
+  source: 'skills_manager' | 'codex_builtin' | 'github';
   expected_paths: string[];
   install_source_paths?: string[];
   status: OplCompanionSkillStatus;
@@ -127,10 +125,6 @@ function resolveAgentsSkillsDir(home: string) {
   return path.join(home, '.agents', 'skills');
 }
 
-function resolveSuperpowersRepoDir(home: string) {
-  return process.env.OPL_SUPERPOWERS_DIR?.trim() || path.join(resolveCodexHome(home), 'superpowers');
-}
-
 function resolveCompanionSourcesRoot(home: string) {
   return process.env.OPL_COMPANION_SOURCES_ROOT?.trim() || path.join(resolveCodexHome(home), 'opl-companion-sources');
 }
@@ -142,10 +136,6 @@ function resolvePackagedSkillsRoot() {
   }
   const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
   return runtimeHome ? path.join(runtimeHome, 'skills') : null;
-}
-
-function getSuperpowersRepoUrl() {
-  return process.env.OPL_SUPERPOWERS_REPO_URL?.trim() || 'https://github.com/obra/superpowers.git';
 }
 
 function getOfficeCliRepoUrl() {
@@ -186,73 +176,6 @@ function isUserManagedSkillDirectory(targetPath: string) {
 
 function isSameResolvedPath(left: string, right: string) {
   return path.resolve(left) === path.resolve(right);
-}
-
-function removeLegacySuperpowersCodexSkillLink(home: string) {
-  const legacyPath = path.join(resolveCodexSkillsDir(home), 'superpowers');
-  if (!pathExists(legacyPath)) {
-    return;
-  }
-
-  try {
-    const stat = fs.lstatSync(legacyPath);
-    if (stat.isSymbolicLink()) {
-      fs.rmSync(legacyPath, { recursive: true, force: true });
-    }
-  } catch {
-    // Leave non-removable user-managed paths alone; the install report still records the official target.
-  }
-}
-
-function isSuperpowersBundleReady(repoDir: string) {
-  return (
-    pathExists(path.join(repoDir, 'skills', 'using-superpowers', 'SKILL.md'))
-    && pathExists(path.join(repoDir, 'skills', 'verification-before-completion', 'SKILL.md'))
-  );
-}
-
-function resolveSuperpowersSourceCandidate(home: string): OplCompanionSkillSourceCandidate | null {
-  const repoDir = resolveSuperpowersRepoDir(home);
-  if (!isSuperpowersBundleReady(repoDir)) {
-    return null;
-  }
-  return { report_path: repoDir, link_path: path.join(repoDir, 'skills') };
-}
-
-function resolvePackagedSuperpowersSourceCandidate(): OplCompanionSkillSourceCandidate | null {
-  const packagedSkillsRoot = resolvePackagedSkillsRoot();
-  if (!packagedSkillsRoot) {
-    return null;
-  }
-  const packagedBundleRoot = path.join(packagedSkillsRoot, 'superpowers');
-  if (!isSuperpowersBundleReady(packagedBundleRoot)) {
-    return null;
-  }
-  return { report_path: packagedBundleRoot, link_path: path.join(packagedBundleRoot, 'skills') };
-}
-
-function ensureSuperpowersSource(home: string) {
-  const repoDir = resolveSuperpowersRepoDir(home);
-  const existing = resolveSuperpowersSourceCandidate(home);
-  if (existing) {
-    const pullResult = runGit(['pull', '--ff-only'], repoDir);
-    if (pullResult.exitCode !== 0) {
-      return { source: existing, action: 'symlink' as const, note: pullResult.stderr || pullResult.stdout || 'Superpowers update skipped.' };
-    }
-    return { source: existing, action: 'update_and_symlink' as const, note: null };
-  }
-
-  if (pathExists(repoDir) && !pathExists(path.join(repoDir, '.git'))) {
-    return { source: null, action: 'clone_and_symlink' as const, note: `Superpowers path exists but is not a git checkout: ${repoDir}` };
-  }
-
-  fs.mkdirSync(path.dirname(repoDir), { recursive: true });
-  const cloneResult = runGit(['clone', getSuperpowersRepoUrl(), repoDir]);
-  if (cloneResult.exitCode !== 0) {
-    return { source: null, action: 'clone_and_symlink' as const, note: cloneResult.stderr || cloneResult.stdout || 'Superpowers git clone failed.' };
-  }
-
-  return { source: resolveSuperpowersSourceCandidate(home), action: 'clone_and_symlink' as const, note: null };
 }
 
 function resolveSkillSourceCandidate(candidatePath: string): OplCompanionSkillSourceCandidate | null {
@@ -511,35 +434,12 @@ function ensureRecommendedSkillSource(home: string, skill: OplRecommendedSkill) 
   return null;
 }
 
-function resolveSuperpowersLiteSource(home: string): OplCompanionSkillSourceCandidate | null {
-  const liteSkillPath = path.join(home, '.skills-manager', 'skills', 'superpowers-lite');
-  return resolveSkillSourceCandidate(liteSkillPath);
-}
-
-function resolveRecommendedSkillTarget(home: string, skill: OplRecommendedSkill, superpowersProfile: OplSuperpowersProfile) {
-  if (skill.source !== 'superpowers') {
-    return path.join(resolveCodexSkillsDir(home), skill.skill_id);
-  }
-  if (superpowersProfile === 'lite') {
-    return path.join(resolveAgentsSkillsDir(home), 'superpowers-lite');
-  }
-  if (superpowersProfile === 'full') {
-    return path.join(resolveAgentsSkillsDir(home), 'superpowers');
-  }
-  return path.join(resolveAgentsSkillsDir(home), 'superpowers');
-}
-
 function buildObservedCompanionItem(
   home: string,
   skill: OplRecommendedSkill,
-  superpowersProfile: OplSuperpowersProfile,
 ): OplCompanionSkillSyncItem {
-  const targetPath = resolveRecommendedSkillTarget(home, skill, superpowersProfile);
-  const source = skill.source === 'superpowers'
-    ? (superpowersProfile === 'lite'
-      ? resolveSuperpowersLiteSource(home)
-      : (resolvePackagedSuperpowersSourceCandidate() ?? resolveSuperpowersSourceCandidate(home)))
-    : pickFirstExistingSkillSource(skill.expected_paths);
+  const targetPath = path.join(resolveCodexSkillsDir(home), skill.skill_id);
+  const source = pickFirstExistingSkillSource(skill.expected_paths);
 
   return {
     skill_id: skill.skill_id,
@@ -554,16 +454,23 @@ function buildObservedCompanionItem(
 function buildNoApplyCompanionResult(
   home: string,
   mode: OplCompanionSkillApplyMode,
-  superpowersProfile: OplSuperpowersProfile,
+  skillIds?: string[],
+  toolIds?: OplCompanionToolId[],
 ): OplCompanionSkillSyncResult {
-  const items = buildOplRecommendedSkills(home).map((skill) => buildObservedCompanionItem(home, skill, superpowersProfile));
-  return buildCompanionResult(home, mode, superpowersProfile, items);
+  const selectedSkills = skillIds ? new Set(skillIds) : null;
+  const selectedTools = toolIds ? new Set(toolIds) : null;
+  const items = buildOplRecommendedSkills(home)
+    .filter((skill) => !selectedSkills || selectedSkills.has(skill.skill_id))
+    .map((skill) => buildObservedCompanionItem(home, skill));
+  const tools = [resolveOfficeCliTool(home), resolveMineruOpenApiTool(home)]
+    .filter((tool): tool is OplCompanionToolSyncItem => Boolean(tool))
+    .filter((tool) => !selectedTools || selectedTools.has(tool.tool_id));
+  return buildCompanionResult(home, mode, items, tools);
 }
 
 function buildCompanionResult(
   home: string,
   mode: OplCompanionSkillApplyMode,
-  superpowersProfile: OplSuperpowersProfile,
   items: OplCompanionSkillSyncItem[],
   tools: OplCompanionToolSyncItem[] = [
     resolveOfficeCliTool(home) ?? {
@@ -587,7 +494,6 @@ function buildCompanionResult(
   return {
     surface_id: 'opl_companion_skill_sync',
     mode,
-    superpowers_profile: superpowersProfile,
     codex_skills_dir: resolveCodexSkillsDir(home),
     agents_skills_dir: resolveAgentsSkillsDir(home),
     items,
@@ -608,103 +514,27 @@ export function syncOplCompanionSkills(
   home = resolveHomeDir(),
   options: Partial<{
     mode: OplCompanionSkillApplyMode;
-    superpowersProfile: OplSuperpowersProfile;
+    skillIds: string[];
+    toolIds: OplCompanionToolId[];
   }> = {},
 ): OplCompanionSkillSyncResult {
   const mode = options.mode ?? 'observe';
-  const superpowersProfile = options.superpowersProfile ?? 'keep';
   if (mode !== 'managed') {
-    return buildNoApplyCompanionResult(home, mode, superpowersProfile);
+    return buildNoApplyCompanionResult(home, mode, options.skillIds, options.toolIds);
   }
 
   const codexSkillsDir = resolveCodexSkillsDir(home);
-  const recommendedSkills = buildOplRecommendedSkills(home);
+  const selectedSkills = options.skillIds ? new Set(options.skillIds) : null;
+  const recommendedSkills = buildOplRecommendedSkills(home)
+    .filter((skill) => !selectedSkills || selectedSkills.has(skill.skill_id));
   const items: OplCompanionSkillSyncItem[] = [];
-  const tools = [ensureOfficeCliTool(home), ensureMineruOpenApiTool(home)];
+  const selectedTools = options.toolIds ? new Set(options.toolIds) : null;
+  const tools = [
+    ...(selectedTools && !selectedTools.has('officecli') ? [] : [ensureOfficeCliTool(home)]),
+    ...(selectedTools && !selectedTools.has('mineru-open-api') ? [] : [ensureMineruOpenApiTool(home)]),
+  ];
 
   for (const skill of recommendedSkills) {
-    if (skill.source === 'superpowers') {
-      const targetPath = resolveRecommendedSkillTarget(home, skill, superpowersProfile);
-      if (superpowersProfile === 'keep') {
-        items.push(buildObservedCompanionItem(home, skill, superpowersProfile));
-        continue;
-      }
-      if (superpowersProfile === 'lite') {
-        const source = resolveSuperpowersLiteSource(home);
-        if (!source) {
-          items.push({
-            skill_id: skill.skill_id,
-            source_path: null,
-            target_path: targetPath,
-            status: 'missing_source',
-            action: 'symlink',
-            note: 'Superpowers lite profile requires ~/.skills-manager/skills/superpowers-lite.',
-          });
-          continue;
-        }
-        try {
-          forceSymlinkDirectory(source.link_path, targetPath);
-          items.push({
-            skill_id: skill.skill_id,
-            source_path: source.report_path,
-            target_path: targetPath,
-            status: 'synced',
-            action: 'symlink',
-            note: 'Preserved lite Superpowers profile instead of enabling upstream using-superpowers.',
-          });
-        } catch (error) {
-          items.push({
-            skill_id: skill.skill_id,
-            source_path: source.report_path,
-            target_path: targetPath,
-            status: 'failed',
-            action: 'symlink',
-            note: error instanceof Error ? error.message : String(error),
-          });
-        }
-        continue;
-      }
-
-      const packagedSource = resolvePackagedSuperpowersSourceCandidate();
-      const ensured = packagedSource
-        ? { source: packagedSource, action: 'symlink' as const, note: null }
-        : ensureSuperpowersSource(home);
-      if (!ensured.source) {
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: null,
-          target_path: targetPath,
-          status: 'missing_source',
-          action: ensured.action,
-          note: ensured.note || skill.install_hint,
-        });
-        continue;
-      }
-
-      try {
-        forceSymlinkDirectory(ensured.source.link_path, targetPath);
-        removeLegacySuperpowersCodexSkillLink(home);
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: ensured.source.report_path,
-          target_path: targetPath,
-          status: ensured.action === 'clone_and_symlink' ? 'installed' : 'synced',
-          action: ensured.action,
-          note: ensured.note,
-        });
-      } catch (error) {
-        items.push({
-          skill_id: skill.skill_id,
-          source_path: ensured.source.report_path,
-          target_path: targetPath,
-          status: 'failed',
-          action: ensured.action,
-          note: error instanceof Error ? error.message : String(error),
-        });
-      }
-      continue;
-    }
-
     const source = ensureRecommendedSkillSource(home, skill);
     const targetPath = path.join(codexSkillsDir, skill.skill_id);
     if (!source) {
@@ -783,13 +613,11 @@ export function syncOplCompanionSkills(
     }
   }
 
-  return buildCompanionResult(home, mode, superpowersProfile, items, tools);
+  return buildCompanionResult(home, mode, items, tools);
 }
 
 export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommendedSkill[] {
   const codexHome = resolveCodexHome(home);
-  const superpowersRepoDir = resolveSuperpowersRepoDir(home);
-  const agentsSuperpowersDir = path.join(resolveAgentsSkillsDir(home), 'superpowers');
   const skillsManagerHome = path.join(home, '.skills-manager');
   const packagedSkillsRoot = resolvePackagedSkillsRoot();
   const toolReadyById: Record<OplCompanionToolId, boolean> = {
@@ -799,20 +627,18 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
 
   const specs = buildOplRecommendedSkillSpecs({
     codexHome,
-    superpowersRepoDir,
-    agentsSuperpowersDir,
     skillsManagerHome,
     packagedSkillsRoot,
   });
 
   return specs.map((spec) => {
-    const expectedPaths = spec.source === 'codex_builtin' || spec.source === 'superpowers'
+    const expectedPaths = spec.source === 'codex_builtin'
       ? spec.expected_paths
       : [
         ...spec.expected_paths,
         path.join(codexHome, 'skills', spec.skill_id, 'SKILL.md'),
       ];
-    const installSourcePaths = spec.source === 'codex_builtin' || spec.source === 'superpowers'
+    const installSourcePaths = spec.source === 'codex_builtin'
       ? spec.expected_paths
       : [
         ...expectedPaths,
