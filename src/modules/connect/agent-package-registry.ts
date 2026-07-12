@@ -1980,9 +1980,21 @@ export function runOplAgentPackageStatus(input: {
   scope?: 'workspace' | 'quest' | null;
   targetWorkspace?: string | null;
   targetQuest?: string | null;
+  recoverRuntimeSource?: boolean;
 } = {}) {
   const packageId = canonicalAgentPackageId(input.packageId);
-  const { index: lockIndex, runtimeSourceRecovery } = readRecoveredLockIndex();
+  const { index: lockIndex, runtimeSourceRecovery } = input.recoverRuntimeSource === false
+    ? {
+        index: readLockIndex(),
+        runtimeSourceRecovery: {
+          status: 'deferred_read_only' as const,
+          recovered_transaction_count: 0,
+          cleanup_completed_count: 0,
+          cleared_prepared_transaction_count: 0,
+          recovered_transaction_ids: [] as string[],
+        },
+      }
+    : readRecoveredLockIndex();
   const lifecycleLedger = readLifecycleLedger();
   const paths = resolveOplStatePaths();
   const registryCache = readRegistryCache();

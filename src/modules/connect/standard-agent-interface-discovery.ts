@@ -38,7 +38,7 @@ function currentDescriptorFromStatus(
 ): StandardAgentDescriptorInterface | null {
   let status: ReturnType<PackageStatusReader>['opl_agent_package_status'];
   try {
-    status = readStatus({ packageId }).opl_agent_package_status;
+    status = readStatus({ packageId, recoverRuntimeSource: false }).opl_agent_package_status;
   } catch {
     return null;
   }

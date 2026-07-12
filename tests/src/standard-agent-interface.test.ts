@@ -129,7 +129,10 @@ test('package readiness is the canonical managed descriptor discovery gate', () 
       domain_id: 'fixture-agent',
       standard_agent_interface: fixture(),
     })}\n`);
-    const statusReader = ((input: { packageId?: string | null }) => ({
+    const statusReads: Array<{ packageId?: string | null; recoverRuntimeSource?: boolean }> = [];
+    const statusReader = ((input: { packageId?: string | null; recoverRuntimeSource?: boolean }) => {
+      statusReads.push(input);
+      return {
       opl_agent_package_status: input.packageId === 'mas'
         ? {
             operational_ready: true,
@@ -151,10 +154,12 @@ test('package readiness is the canonical managed descriptor discovery gate', () 
               actual_tree_sha256: null,
             },
           },
-    })) as any;
+      };
+    }) as any;
     const descriptor = readPackageManagedStandardAgentDescriptor(['mas'], statusReader);
     assert.equal(descriptor?.repo_dir, repoDir);
     assert.equal(descriptor?.interface.runtime.runtime_domain_id, 'fixture');
+    assert.equal(statusReads[0]?.recoverRuntimeSource, false);
     assert.deepEqual(standardAgentProgressDeltaKeys('fixture-agent', 'deliverable', statusReader), [
       'deliverable_progress_delta',
       'fixture_deliverable_delta',
